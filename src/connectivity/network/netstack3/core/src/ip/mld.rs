@@ -33,7 +33,10 @@ use crate::wire::icmp::mld::{
     MulticastListenerReport,
 };
 use crate::wire::icmp::{IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
-use crate::wire::ipv6::Ipv6PacketBuilder;
+use crate::wire::ipv6::ext_hdrs::{
+    ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData,
+};
+use crate::wire::ipv6::{Ipv6PacketBuilder, Ipv6PacketBuilderWithHBHOptions};
 use crate::Instant;
 
 /// Metadata for sending an MLD packet in an IP packet.
@@ -381,8 +384,17 @@ fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
     let body = Mldv1MessageBuilder::<M>::new_with_max_resp_delay(group_addr, max_resp_delay)
         .into_serializer()
         .encapsulate(IcmpPacketBuilder::new(src_ip, dst_ip.get(), IcmpUnusedCode, msg))
-        .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip.get(), 1, IpProto::Icmpv6));
-    // TODO: set a Hop-by-hop Router Alert option.
+        .encapsulate(
+            Ipv6PacketBuilderWithHBHOptions::new(
+                Ipv6PacketBuilder::new(src_ip, dst_ip.get(), 1, IpProto::Icmpv6),
+                &[HopByHopOption {
+                    action: ExtensionHeaderOptionAction::SkipAndContinue,
+                    mutable: false,
+                    data: HopByHopOptionData::RouterAlert { data: 0 },
+                }],
+            )
+            .unwrap(),
+        );
     ctx.send_frame(MldFrameMetadata::new(device, dst_ip.get()), body)
         .map_err(|_| MldError::SendFailure { addr: group_addr.into() })
 }
@@ -513,13 +525,21 @@ mod tests {
 
     // ensure the multicast address field in the MLD packet is correct.
     fn ensure_multicast_addr(frame: &[u8], ip: Ipv6Addr) {
-        ensure_slice_addr(frame, 62, 78, ip);
+        ensure_slice_addr(frame, 70, 86, ip);
     }
 
     // ensure a sent frame meets the requirement
     fn ensure_frame(frame: &[u8], op: u8, dst: Ipv6Addr, multicast: Ipv6Addr) {
         ensure_ttl(frame);
-        assert_eq!(frame[54], op);
+        assert_eq!(frame[62], op);
+        // Ensure the length our payload is 32 = 8 (hbh_ext_hdr) + 24 (mld)
+        assert_eq!(frame[19], 32);
+        // Ensure the next header is our HopByHop Extension Header.
+        assert_eq!(frame[20], 0);
+        // Ensure the hop limit is 1.
+        assert_eq!(frame[21], 1);
+        // Ensure there is a RouterAlert HopByHopOption in our sent frame
+        assert_eq!(&frame[54..62], &[58, 0, 5, 2, 0, 0, 1, 0]);
         ensure_ttl(&frame[..]);
         ensure_dst_addr(&frame[..], dst);
         ensure_multicast_addr(&frame[..], multicast);

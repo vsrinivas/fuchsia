@@ -7,10 +7,13 @@
 use std::convert::TryFrom;
 use std::marker::PhantomData;
 
-use byteorder::{ByteOrder, NetworkEndian};
+use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
 use packet::BufferView;
 
 use crate::ip::{IpProto, Ipv6ExtHdrType};
+use crate::wire::records::options::{
+    AlignedOptionsSerializerImpl, OptionsImplLayout, OptionsSerializerImpl,
+};
 use crate::wire::records::{
     Records, RecordsContext, RecordsImpl, RecordsImplLayout, RecordsRawImpl,
 };
@@ -47,7 +50,7 @@ pub(crate) enum Ipv6ExtensionHeaderData<'a> {
 //
 
 /// Possible errors that can happen when parsing IPv6 Extension Headers.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Ipv6ExtensionHeaderParsingError {
     // `pointer` is the offset from the beginning of the first extension header
     // to the point of error. `must_send_icmp` is a flag that requires us to send
@@ -438,13 +441,24 @@ impl<'a> RecordsRawImpl<'a> for Ipv6ExtensionHeaderImpl {
 // Hop-By-Hop Options
 //
 
-type HopByHopOption<'a> = ExtensionHeaderOption<HopByHopOptionData<'a>>;
-type HopByHopOptionsImpl = ExtensionHeaderOptionImpl<HopByHopOptionDataImpl>;
+pub(crate) type HopByHopOption<'a> = ExtensionHeaderOption<HopByHopOptionData<'a>>;
+pub(crate) type HopByHopOptionsImpl = ExtensionHeaderOptionImpl<HopByHopOptionDataImpl>;
+
+/// Hop-By-Hop Option Type number as per [RFC 2711 section-2.1]
+///
+/// [RFC 2711 section-2.1]: https://tools.ietf.org/html/rfc2711#section-2.1
+const HBH_OPTION_KIND_RTRALRT: u8 = 5;
+
+/// Length for RouterAlert as per [RFC 2711 section-2.1]
+///
+/// [RFC 2711 section-2.1]: https://tools.ietf.org/html/rfc2711#section-2.1
+const HBH_OPTION_RTRALRT_LEN: usize = 2;
 
 /// HopByHop Options Extension header data.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) enum HopByHopOptionData<'a> {
     Unrecognized { kind: u8, len: u8, data: &'a [u8] },
+    RouterAlert { data: u16 },
 }
 
 /// Impl for Hop By Hop Options parsing.
@@ -463,11 +477,95 @@ impl<'a> ExtensionHeaderOptionDataImpl<'a> for HopByHopOptionDataImpl {
         data: &'a [u8],
         context: &mut Self::Context,
         allow_unrecognized: bool,
-    ) -> Option<Self::OptionData> {
-        if allow_unrecognized {
-            Some(HopByHopOptionData::Unrecognized { kind, len: data.len() as u8, data })
-        } else {
-            None
+    ) -> ExtensionHeaderOptionDataParseResult<Self::OptionData> {
+        match kind {
+            HBH_OPTION_KIND_RTRALRT => {
+                if data.len() == HBH_OPTION_RTRALRT_LEN {
+                    ExtensionHeaderOptionDataParseResult::Ok(HopByHopOptionData::RouterAlert {
+                        data: NetworkEndian::read_u16(data),
+                    })
+                } else {
+                    // Since the length is wrong, and the length is indicated at the second byte within
+                    // the option itself. We count from 0 of course.
+                    ExtensionHeaderOptionDataParseResult::ErrorAt(1)
+                }
+            }
+            _ => {
+                if allow_unrecognized {
+                    ExtensionHeaderOptionDataParseResult::Ok(HopByHopOptionData::Unrecognized {
+                        kind,
+                        len: data.len() as u8,
+                        data,
+                    })
+                } else {
+                    ExtensionHeaderOptionDataParseResult::UnrecognizedKind
+                }
+            }
+        }
+    }
+}
+
+impl OptionsImplLayout for HopByHopOptionsImpl {
+    type Error = ();
+    const LENGTH_OFFSET: usize = 2;
+}
+
+impl<'a> OptionsSerializerImpl<'a> for HopByHopOptionsImpl {
+    type Option = HopByHopOption<'a>;
+
+    fn get_option_length(option: &Self::Option) -> usize {
+        match option.data {
+            HopByHopOptionData::RouterAlert { .. } => HBH_OPTION_RTRALRT_LEN,
+            HopByHopOptionData::Unrecognized { len, .. } => len as usize,
+        }
+    }
+
+    fn get_option_kind(option: &Self::Option) -> u8 {
+        let action: u8 = option.action.into();
+        let mutable = option.mutable as u8;
+        let type_number = match option.data {
+            HopByHopOptionData::Unrecognized { kind, .. } => kind,
+            HopByHopOptionData::RouterAlert { .. } => HBH_OPTION_KIND_RTRALRT,
+        };
+        (action << 6) | (mutable << 5) | type_number
+    }
+
+    fn serialize(mut buffer: &mut [u8], option: &Self::Option) {
+        match option.data {
+            HopByHopOptionData::Unrecognized { data, .. } => buffer.copy_from_slice(data),
+            HopByHopOptionData::RouterAlert { data } => {
+                // If the buffer doesn't contain enough space, it is a
+                // contract violation, panic here.
+                buffer.write_u16::<NetworkEndian>(data).unwrap()
+            }
+        }
+    }
+}
+
+impl<'a> AlignedOptionsSerializerImpl<'a> for HopByHopOptionsImpl {
+    fn get_alignment_requirement(option: &HopByHopOption<'a>) -> (usize, usize) {
+        match option.data {
+            // RouterAlert must be aligned at 2 * n + 0 bytes.
+            // See: https://tools.ietf.org/html/rfc2711#section-2.1
+            HopByHopOptionData::RouterAlert { .. } => (2, 0),
+            _ => (1, 0),
+        }
+    }
+
+    fn padding(buf: &mut [u8], length: usize) {
+        assert!(length <= buf.len());
+        assert!(length <= (std::u8::MAX as usize) + 2);
+
+        if length == 1 {
+            // Use Pad1
+            buf[0] = 0
+        } else if length > 1 {
+            // Use PadN
+            buf[0] = 1;
+            buf[1] = (length - 2) as u8;
+            for i in 2..length {
+                buf[i] = 0
+            }
         }
     }
 }
@@ -571,11 +669,15 @@ impl<'a> ExtensionHeaderOptionDataImpl<'a> for DestinationOptionDataImpl {
         data: &'a [u8],
         context: &mut Self::Context,
         allow_unrecognized: bool,
-    ) -> Option<Self::OptionData> {
+    ) -> ExtensionHeaderOptionDataParseResult<Self::OptionData> {
         if allow_unrecognized {
-            Some(DestinationOptionData::Unrecognized { kind, len: data.len() as u8, data })
+            ExtensionHeaderOptionDataParseResult::Ok(DestinationOptionData::Unrecognized {
+                kind,
+                len: data.len() as u8,
+                data,
+            })
         } else {
-            None
+            ExtensionHeaderOptionDataParseResult::UnrecognizedKind
         }
     }
 }
@@ -614,6 +716,23 @@ pub(crate) trait ExtensionHeaderOptionDataImplLayout {
     type Context: RecordsContext;
 }
 
+/// The result of parsing an extension header option data.
+#[derive(PartialEq, Eq, Debug)]
+pub(crate) enum ExtensionHeaderOptionDataParseResult<D> {
+    /// Successfully parsed data.
+    Ok(D),
+
+    /// An error occurred at the indicated offset within the option.
+    ///
+    /// For example, if the data length goes wrong, you should probably
+    /// make the offset to be 1 because in most (almost all) cases, the
+    /// length is at the second byte of the option.
+    ErrorAt(u32),
+
+    /// The option kind is not recognized.
+    UnrecognizedKind,
+}
+
 /// An implementation of an extension header specific option data parser.
 pub(crate) trait ExtensionHeaderOptionDataImpl<'a>:
     ExtensionHeaderOptionDataImplLayout
@@ -628,17 +747,19 @@ pub(crate) trait ExtensionHeaderOptionDataImpl<'a>:
     /// Parse an option of a given `kind` from `data`.
     ///
     /// When `kind` is recognized returns `Ok(o)` where `o` is a successfully parsed
-    /// option. When `kind` is not recognized, returned `None` if `allow_unrecognized`
+    /// option. When `kind` is not recognized, returns `UnrecognizedKind` if `allow_unrecognized`
     /// is `false`. If `kind` is not recognized but `allow_unrecognized` is `true`,
     /// returns an `Ok(o)` where `o` holds option data without actually parsing it
     /// (i.e. an unrecognized type that simply keeps track of the `kind` and `data`
-    /// that was passed to `parse_option`).
+    /// that was passed to `parse_option`). A recognized option `kind` with incorrect
+    /// `data` must return `ErrorAt(offset)`, where the offset indicates where the
+    /// erroneous field is within the option data buffer.
     fn parse_option(
         kind: u8,
         data: &'a [u8],
         context: &mut Self::Context,
         allow_unrecognized: bool,
-    ) -> Option<Self::OptionData>;
+    ) -> ExtensionHeaderOptionDataParseResult<Self::OptionData>;
 }
 
 /// Generic implementation of extension header options parsing.
@@ -720,20 +841,30 @@ where
             &mut context.specific_context,
             action == ExtensionHeaderOptionAction::SkipAndContinue,
         ) {
-            Some(o) => {
+            ExtensionHeaderOptionDataParseResult::Ok(o) => {
                 // Update context.
                 context.options_parsed += 1;
                 context.bytes_parsed += 2 + (len as usize);
 
                 Ok(Some(Some(ExtensionHeaderOption { action, mutable, data: o })))
             }
-            None => {
+            ExtensionHeaderOptionDataParseResult::ErrorAt(offset) => {
+                // The precondition here is that `bytes_parsed + offset` must point inside the
+                // packet. So as reasoned in the next match arm, it is not possible to exceed
+                // `std::u32::max`. Given this reasoning, we know the call to `unwrap` should not
+                // panic.
+                Err(ExtensionHeaderOptionParsingError::ErroneousOptionField {
+                    pointer: u32::try_from(context.bytes_parsed + offset as usize).unwrap(),
+                })
+            }
+            ExtensionHeaderOptionDataParseResult::UnrecognizedKind => {
                 // Unrecognized option type.
                 match action {
-                    // `O::parse_option` should never return `None` when the action is
-                    // `ExtensionHeaderOptionAction::SkipAndContinue` because we expect
-                    // `O::parse_option` to return something that holds the option data
-                    // without actually parsing it since we pass `true` for its
+                    // `O::parse_option` should never return
+                    // `ExtensionHeaderOptionDataParseResult::UnrecognizedKind` when the
+                    // action is `ExtensionHeaderOptionAction::SkipAndContinue` because
+                    // we expect `O::parse_option` to return something that holds the
+                    // option data without actually parsing it since we pass `true` for its
                     // `allow_unrecognized` parameter.
                     ExtensionHeaderOptionAction::SkipAndContinue => unreachable!(
                         "Should never end up here since action was set to skip and continue"
@@ -761,6 +892,7 @@ where
 /// Possible errors when parsing extension header options.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum ExtensionHeaderOptionParsingError {
+    ErroneousOptionField { pointer: u32 },
     UnrecognizedOption { pointer: u32, action: ExtensionHeaderOptionAction },
     BufferExhausted,
 }
@@ -770,7 +902,7 @@ pub(crate) enum ExtensionHeaderOptionParsingError {
 /// `ExtensionHeaderOptionAction` is an action that MUST be taken (according
 /// to RFC 8200 section 4.2) when an IPv6 processing node does not
 /// recognize an option's type.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(crate) enum ExtensionHeaderOptionAction {
     /// Skip over the option and continue processing the header.
     /// value = 0.
@@ -825,6 +957,7 @@ impl Into<u8> for ExtensionHeaderOptionAction {
 /// Generic Extension header option type that has extension header specific
 /// option data (`data`) defined by an `O`. The common option format is defined in
 /// section 4.2 of RFC 8200, outlining actions and mutability for option types.
+#[derive(PartialEq, Eq, Debug)]
 pub(crate) struct ExtensionHeaderOption<O> {
     /// Action to take if the option type is unrecognized.
     pub(crate) action: ExtensionHeaderOptionAction,
@@ -901,6 +1034,17 @@ fn ext_hdr_opt_err_to_ext_hdr_err(
     err: ExtensionHeaderOptionParsingError,
 ) -> Ipv6ExtensionHeaderParsingError {
     match err {
+        ExtensionHeaderOptionParsingError::ErroneousOptionField { pointer } => {
+            Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
+                pointer: offset + pointer,
+                // TODO: RFC only suggests we SHOULD generate an ICMP message,
+                // and ideally, we should generate ICMP messages only when the problem
+                // is severe enough, we do not want to flood the network. So we
+                // should investigate the criteria for this field to become true.
+                must_send_icmp: false,
+                header_len,
+            }
+        }
         ExtensionHeaderOptionParsingError::UnrecognizedOption { pointer, action } => {
             Ipv6ExtensionHeaderParsingError::UnrecognizedOption {
                 pointer: offset + pointer,
@@ -918,7 +1062,7 @@ fn ext_hdr_opt_err_to_ext_hdr_err(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::records::Records;
+    use crate::wire::records::{AlignedRecordsSerializer, Records, RecordsSerializerImpl};
 
     #[test]
     fn test_is_valid_next_header_upper_layer() {
@@ -1347,6 +1491,31 @@ mod tests {
             assert!(must_send_icmp);
             assert_eq!(header_len, 0);
             assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast);
+        } else {
+            panic!("Should have matched with UnrecognizedOption: {:?}", error);
+        }
+
+        // Test with valid option type and invalid data w/ action = skip & continue
+        let context =
+            Ipv6ExtensionHeaderParsingContext::new(Ipv6ExtHdrType::HopByHopOptions.into());
+        #[rustfmt::skip]
+            let buffer = [
+            IpProto::Tcp.into(),      // Next Header
+            0,                        // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            5,   3, 0, 0, 0,          // RouterAlert, but with a wrong data length.
+            0,                        // Pad1
+        ];
+        let error =
+            Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
+                .expect_err(
+                    "Should fail to parse the header because one of the option is malformed",
+                );
+        if let Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
+            pointer, header_len, ..
+        } = error
+        {
+            assert_eq!(pointer, 3);
+            assert_eq!(header_len, 0);
         } else {
             panic!("Should have matched with UnrecognizedOption: {:?}", error);
         }
@@ -1894,4 +2063,92 @@ mod tests {
             panic!("Should have matched with UnrecognizedNextHeader: {:?}", error);
         }
     }
+
+    #[test]
+    fn test_serialize_hbh_router_alert() {
+        let mut buffer = [0u8; 4];
+        let option = HopByHopOption {
+            action: ExtensionHeaderOptionAction::SkipAndContinue,
+            mutable: false,
+            data: HopByHopOptionData::RouterAlert { data: 0 },
+        };
+        <HopByHopOptionsImpl as RecordsSerializerImpl>::serialize(&mut buffer, &option);
+        assert_eq!(&buffer[..], &[5, 2, 0, 0]);
+    }
+
+    #[test]
+    fn test_parse_hbh_router_alert() {
+        // Test RouterAlert with correct data length.
+        let context = ExtensionHeaderOptionContext::new();
+        let buffer = [5, 2, 0, 0];
+
+        let options =
+            Records::<_, HopByHopOptionsImpl>::parse_with_context(&buffer[..], context).unwrap();
+        let rtralrt = options.iter().nth(0).unwrap();
+        assert!(!rtralrt.mutable);
+        assert_eq!(rtralrt.action, ExtensionHeaderOptionAction::SkipAndContinue);
+        assert_eq!(rtralrt.data, HopByHopOptionData::RouterAlert { data: 0 });
+
+        // Test RouterAlert with wrong data length.
+        let result = <HopByHopOptionDataImpl as ExtensionHeaderOptionDataImpl>::parse_option(
+            5,
+            &buffer[1..],
+            &mut (),
+            false,
+        );
+        assert_eq!(result, ExtensionHeaderOptionDataParseResult::ErrorAt(1));
+
+        let context = ExtensionHeaderOptionContext::new();
+        let buffer = [5, 3, 0, 0, 0];
+
+        let error = Records::<_, HopByHopOptionsImpl>::parse_with_context(&buffer[..], context)
+            .expect_err(
+                "Parsing a malformed option with recognized kind but with wrong data should fail",
+            );
+        assert_eq!(error, ExtensionHeaderOptionParsingError::ErroneousOptionField { pointer: 1 });
+    }
+
+    // Construct a bunch of `HopByHopOption`s according to lengths:
+    // if `length` is
+    //   - `None`: RouterAlert is generated.
+    //   - `Some(l)`: the Unrecognized option with length `l - 2` is constructed.
+    //     It is `l - 2` so that the whole record has size l.
+    // This function is used so that the alignment of RouterAlert can be tested.
+    fn trivial_hbh_options(lengths: &[Option<usize>]) -> Vec<HopByHopOption<'static>> {
+        static ZEROES: [u8; 16] = [0u8; 16];
+        lengths
+            .into_iter()
+            .map(|l| HopByHopOption {
+                mutable: false,
+                action: ExtensionHeaderOptionAction::SkipAndContinue,
+                data: match l {
+                    Some(l) => HopByHopOptionData::Unrecognized {
+                        kind: 1,
+                        len: (*l - 2) as u8,
+                        data: &ZEROES[0..*l - 2],
+                    },
+                    None => HopByHopOptionData::RouterAlert { data: 0 },
+                },
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_aligned_records_serializer() {
+        // Test whether we can serialize our RouterAlert at 2-byte boundary
+        for i in 2..12 {
+            let options = trivial_hbh_options(&[Some(i), None]);
+            let ser =
+                AlignedRecordsSerializer::<'_, HopByHopOptionsImpl, HopByHopOption<'_>, _>::new(
+                    2,
+                    options.iter(),
+                );
+            let mut buf = [0u8; 16];
+            ser.serialize_records(&mut buf[0..16]);
+            let base = ((i + 1) & !1);
+            // we want to make sure that our RouterAlert is aligned at 2-byte boundary.
+            assert_eq!(&buf[base..base + 4], &[5, 2, 0, 0]);
+        }
+    }
+
 }

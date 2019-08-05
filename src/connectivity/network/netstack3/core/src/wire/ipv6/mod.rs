@@ -6,6 +6,7 @@
 
 pub(crate) mod ext_hdrs;
 
+use std::convert::TryFrom;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Range;
 
@@ -21,7 +22,8 @@ use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
 use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv6ExtHdrType};
 use crate::wire::icmp::Icmpv6ParameterProblemCode;
-use crate::wire::records::{Records, RecordsRaw};
+use crate::wire::ipv6::ext_hdrs::{HopByHopOption, HopByHopOptionData, HopByHopOptionsImpl};
+use crate::wire::records::{AlignedRecordsSerializer, Records, RecordsRaw};
 use crate::wire::{FromRaw, MaybeParsed, U16};
 
 use ext_hdrs::{
@@ -39,6 +41,11 @@ pub(crate) const IPV6_PAYLOAD_LEN_BYTE_RANGE: Range<usize> = 4..6;
 
 // Offset to the Next Header field within the fixed IPv6 header
 const NEXT_HEADER_OFFSET: usize = 6;
+
+// The maximum length for Hop-by-Hop Options. The stored byte's maximum
+// representable value is `std::u8::MAX` and it means the header has
+// that many 8-octets, not including the first 8 octets.
+const IPV6_HBH_OPTIONS_MAX_LEN: usize = (std::u8::MAX as usize) * 8 + 8;
 
 /// Convert an extension header parsing error to an IP packet
 /// parsing error.
@@ -649,6 +656,87 @@ impl Ipv6PacketBuilder {
     }
 }
 
+type OptionsSerializer<'a, I> =
+    AlignedRecordsSerializer<'a, HopByHopOptionsImpl, HopByHopOption<'a>, I>;
+
+/// A builder for Ipv6 packets with HBH Options.
+#[derive(Debug)]
+pub(crate) struct Ipv6PacketBuilderWithHBHOptions<
+    'a,
+    I: Clone + Iterator<Item = &'a HopByHopOption<'a>>,
+> {
+    prefix_builder: Ipv6PacketBuilder,
+    hbh_options: OptionsSerializer<'a, I>,
+}
+
+impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>>
+    Ipv6PacketBuilderWithHBHOptions<'a, I>
+{
+    pub(crate) fn new<T: IntoIterator<Item = I::Item, IntoIter = I>>(
+        prefix_builder: Ipv6PacketBuilder,
+        options: T,
+    ) -> Option<Ipv6PacketBuilderWithHBHOptions<'a, I>> {
+        let iter = options.into_iter();
+        // https://tools.ietf.org/html/rfc2711#section-2.1 specifies that
+        // an RouterAlert option can only appear once.
+        if iter
+            .clone()
+            .filter(|r| match r.data {
+                HopByHopOptionData::RouterAlert { .. } => true,
+                _ => false,
+            })
+            .count()
+            > 1
+        {
+            return None;
+        }
+        let hbh_options = OptionsSerializer::new(2, iter);
+        // And we don't want our options to become too long.
+        if next_multiple_of_eight(2 + hbh_options.records_bytes_len()) > IPV6_HBH_OPTIONS_MAX_LEN {
+            return None;
+        }
+        Some(Ipv6PacketBuilderWithHBHOptions { prefix_builder, hbh_options })
+    }
+
+    fn aligned_hbh_len(&self) -> usize {
+        let opt_len = self.hbh_options.records_bytes_len();
+        let hbh_len = opt_len + 2;
+        next_multiple_of_eight(hbh_len)
+    }
+}
+
+fn next_multiple_of_eight(x: usize) -> usize {
+    (x + 7) & (!7)
+}
+
+impl Ipv6PacketBuilder {
+    fn serialize_fixed_hdr<B: ByteSliceMut>(
+        &self,
+        fixed_hdr: &mut LayoutVerified<B, FixedHeader>,
+        payload_len: usize,
+        next_hdr: u8,
+    ) {
+        fixed_hdr.version_tc_flowlabel = [
+            (6u8 << 4) | self.ds >> 2,
+            ((self.ds & 0b11) << 6) | (self.ecn << 4) | (self.flowlabel >> 16) as u8,
+            ((self.flowlabel >> 8) & 0xFF) as u8,
+            (self.flowlabel & 0xFF) as u8,
+        ];
+        // The caller promises to supply a body whose length does not exceed
+        // max_body_len. Doing this as a debug_assert (rather than an assert) is
+        // fine because, with debug assertions disabled, we'll just write an
+        // incorrect header value, which is acceptable if the caller has
+        // violated their contract.
+        debug_assert!(payload_len <= std::u16::MAX as usize);
+        let payload_len = payload_len as u16;
+        fixed_hdr.payload_len = U16::new(payload_len);
+        fixed_hdr.next_hdr = next_hdr;
+        fixed_hdr.hop_limit = self.hop_limit;
+        fixed_hdr.src_ip = self.src_ip;
+        fixed_hdr.dst_ip = self.dst_ip;
+    }
+}
+
 impl PacketBuilder for Ipv6PacketBuilder {
     fn constraints(&self) -> PacketConstraints {
         // TODO(joshlf): Update when we support serializing extension headers
@@ -663,25 +751,39 @@ impl PacketBuilder for Ipv6PacketBuilder {
         // TODO(tkilbourn): support extension headers
         let mut fixed_hdr =
             header.take_obj_front_zero::<FixedHeader>().expect("too few bytes for IPv6 header");
+        self.serialize_fixed_hdr(&mut fixed_hdr, body.len(), self.next_hdr);
+    }
+}
 
-        fixed_hdr.version_tc_flowlabel = [
-            (6u8 << 4) | self.ds >> 2,
-            ((self.ds & 0b11) << 6) | (self.ecn << 4) | (self.flowlabel >> 16) as u8,
-            ((self.flowlabel >> 8) & 0xFF) as u8,
-            (self.flowlabel & 0xFF) as u8,
-        ];
-        // The caller promises to supply a body whose length does not exceed
-        // max_body_len. Doing this as a debug_assert (rather than an assert) is
-        // fine because, with debug assertions disabled, we'll just write an
-        // incorrect header value, which is acceptable if the caller has
-        // violated their contract.
-        debug_assert!(body.len() <= std::u16::MAX as usize);
-        let payload_len = body.len() as u16;
-        fixed_hdr.payload_len = U16::new(payload_len);
-        fixed_hdr.next_hdr = self.next_hdr;
-        fixed_hdr.hop_limit = self.hop_limit;
-        fixed_hdr.src_ip = self.src_ip;
-        fixed_hdr.dst_ip = self.dst_ip;
+impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
+    for Ipv6PacketBuilderWithHBHOptions<'a, I>
+{
+    fn constraints(&self) -> PacketConstraints {
+        let header_len = IPV6_FIXED_HDR_LEN + self.aligned_hbh_len();
+        PacketConstraints::new(header_len, 0, 0, (1 << 16) - 1)
+    }
+
+    fn serialize(&self, buffer: &mut SerializeBuffer) {
+        let (mut header, body, _) = buffer.parts();
+        let mut header = &mut header;
+
+        let mut fixed_hdr =
+            header.take_obj_front_zero::<FixedHeader>().expect("too few bytes for IPv6 header");
+        let aligned_hbh_len = self.aligned_hbh_len();
+        let mut hbh_extension_header = header
+            .take_back_zero(aligned_hbh_len)
+            .expect("too few bytes for Hop-by-Hop extension header");
+        let mut hbh_pointer = &mut hbh_extension_header;
+        // take the first two bytes to write in next_header and length information.
+        let next_header_and_len = hbh_pointer.take_front_zero(2).unwrap();
+        next_header_and_len[0] = self.prefix_builder.next_hdr;
+        next_header_and_len[1] =
+            u8::try_from((aligned_hbh_len - 8) / 8).expect("extension header too big");
+        // After the first two bytes, we can serialize our real options.
+        let options = hbh_pointer.take_rest_front_zero();
+        self.hbh_options.serialize_records(options);
+        // The next header in the fixed header now should be 0 (Hop-by-Hop Extension Header)
+        self.prefix_builder.serialize_fixed_hdr(&mut fixed_hdr, body.len() + aligned_hbh_len, 0);
     }
 }
 
@@ -1524,5 +1626,19 @@ mod tests {
         expected_bytes.extend_from_slice(&bytes[..IPV6_FIXED_HDR_LEN]);
         expected_bytes.extend_from_slice(&bytes[IPV6_FIXED_HDR_LEN + 8..bytes.len() - 5]);
         assert_eq!(&copied_bytes[..], &expected_bytes[..]);
+    }
+
+    #[test]
+    fn test_next_multiple_of_eight() {
+        for x in 0usize..=IPV6_HBH_OPTIONS_MAX_LEN {
+            let y = next_multiple_of_eight(x);
+            assert_eq!(y % 8, 0);
+            assert!(y >= x);
+            if x % 8 == 0 {
+                assert_eq!(x, y);
+            } else {
+                assert_eq!(x + (8 - x % 8), y);
+            }
+        }
     }
 }

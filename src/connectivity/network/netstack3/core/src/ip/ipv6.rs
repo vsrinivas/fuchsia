@@ -133,6 +133,8 @@ fn handle_hop_by_hop_options_ext_hdr<
             // Safely skip and continue, as we know that if we parsed an unrecognized
             // option, the option's action was set to skip and continue.
             HopByHopOptionData::Unrecognized { kind, len, data } => {}
+            // Also skip RouterAlert because router part of MLD is not implemented.
+            HopByHopOptionData::RouterAlert { .. } => {}
         }
     }
 

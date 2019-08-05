@@ -245,7 +245,12 @@ mod tests {
     use std::fmt::Debug;
 
     use super::*;
+    use crate::ip::IpProto;
     use crate::wire::icmp::{IcmpPacket, IcmpPacketBuilder, IcmpParseArgs, MessageBody};
+    use crate::wire::ipv6::ext_hdrs::{
+        ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData, Ipv6ExtensionHeaderData,
+    };
+    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder, Ipv6PacketBuilderWithHBHOptions};
 
     fn serialize_to_bytes<
         B: ByteSlice + Debug,
@@ -255,10 +260,21 @@ mod tests {
         dst_ip: Ipv6Addr,
         icmp: &IcmpPacket<Ipv6, B, M>,
     ) -> Vec<u8> {
+        let ip = Ipv6PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Icmpv6);
+        let with_options = Ipv6PacketBuilderWithHBHOptions::new(
+            ip,
+            &[HopByHopOption {
+                action: ExtensionHeaderOptionAction::SkipAndContinue,
+                mutable: false,
+                data: HopByHopOptionData::RouterAlert { data: 0 },
+            }],
+        )
+        .unwrap();
         icmp.message_body
             .bytes()
             .into_serializer()
             .encapsulate(icmp.builder(src_ip, dst_ip))
+            .encapsulate(with_options)
             .serialize_vec_outer()
             .unwrap()
             .as_ref()
@@ -267,18 +283,22 @@ mod tests {
 
     fn test_parse_and_serialize<
         M: for<'a> IcmpMessage<Ipv6, &'a [u8]> + Mldv1MessageType + Debug,
-        F: for<'a> FnOnce(&IcmpPacket<Ipv6, &'a [u8], M>),
+        F: FnOnce(&Ipv6Packet<&[u8]>),
+        G: for<'a> FnOnce(&IcmpPacket<Ipv6, &'a [u8], M>),
     >(
         src_ip: Ipv6Addr,
         dst_ip: Ipv6Addr,
         mut req: &[u8],
-        check: F,
+        check_ip: F,
+        check_icmp: G,
     ) {
         let orig_req = &req[..];
 
+        let ip = req.parse_with::<_, Ipv6Packet<_>>(()).unwrap();
+        check_ip(&ip);
         let icmp =
             req.parse_with::<_, IcmpPacket<_, _, M>>(IcmpParseArgs::new(src_ip, dst_ip)).unwrap();
-        check(&icmp);
+        check_icmp(&icmp);
 
         let data = serialize_to_bytes(src_ip, dst_ip, &icmp);
         assert_eq!(&data[..], orig_req);
@@ -291,47 +311,110 @@ mod tests {
         group_addr: M::GroupAddr,
         max_resp_delay: M::MaxRespDelay,
     ) -> Vec<u8> {
+        let ip = Ipv6PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Icmpv6);
+        let with_options = Ipv6PacketBuilderWithHBHOptions::new(
+            ip,
+            &[HopByHopOption {
+                action: ExtensionHeaderOptionAction::SkipAndContinue,
+                mutable: false,
+                data: HopByHopOptionData::RouterAlert { data: 0 },
+            }],
+        )
+        .unwrap();
         // Serialize an MLD(ICMPv6) packet using the builder.
         Mldv1MessageBuilder::<M>::new_with_max_resp_delay(group_addr, max_resp_delay)
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::new(src_ip, dst_ip, IcmpUnusedCode, msg))
+            .encapsulate(with_options)
             .serialize_vec_outer()
             .unwrap()
             .as_ref()
             .to_vec()
     }
 
+    fn check_ip<B: ByteSlice>(ip: &Ipv6Packet<B>, src_ip: Ipv6Addr, dst_ip: Ipv6Addr) {
+        assert_eq!(ip.src_ip(), src_ip);
+        assert_eq!(ip.dst_ip(), dst_ip);
+        assert_eq!(ip.iter_extension_hdrs().count(), 1);
+        let hbh = ip.iter_extension_hdrs().nth(0).unwrap();
+        match hbh.data() {
+            Ipv6ExtensionHeaderData::HopByHopOptions { options } => {
+                assert_eq!(options.iter().count(), 1);
+                assert_eq!(
+                    options.iter().nth(0).unwrap(),
+                    HopByHopOption {
+                        action: ExtensionHeaderOptionAction::SkipAndContinue,
+                        mutable: false,
+                        data: HopByHopOptionData::RouterAlert { data: 0 },
+                    }
+                );
+            }
+            _ => panic!("Wrong extension header"),
+        }
+    }
+
+    fn check_icmp<
+        B: ByteSlice,
+        M: IcmpMessage<Ipv6, B, Body = Mldv1Body<B>> + Mldv1MessageType + Debug,
+    >(
+        icmp: &IcmpPacket<Ipv6, B, M>,
+        max_resp_code: u16,
+        group_addr: Ipv6Addr,
+    ) {
+        assert_eq!(icmp.message_body._reserved.get(), 0);
+        assert_eq!(icmp.message_body.max_response_delay.get(), max_resp_code);
+        assert_eq!(icmp.message_body.group_addr, group_addr);
+    }
+
     #[test]
     fn test_mld_parse_and_serialize_query() {
         use crate::wire::icmp::mld::MulticastListenerQuery;
         use crate::wire::testdata::mld_router_query::*;
-        test_parse_and_serialize::<MulticastListenerQuery, _>(SRC_IP, DST_IP, QUERY, |icmp| {
-            assert_eq!(icmp.message_body._reserved.get(), 0);
-            assert_eq!(icmp.message_body.max_response_delay.get(), MAX_RESP_CODE);
-            assert_eq!(icmp.message_body.group_addr, Ipv6Addr::new(HOST_GROUP_ADDRESS));
-        });
+        test_parse_and_serialize::<MulticastListenerQuery, _, _>(
+            SRC_IP,
+            DST_IP,
+            QUERY,
+            |ip| {
+                check_ip(ip, SRC_IP, DST_IP);
+            },
+            |icmp| {
+                check_icmp(icmp, MAX_RESP_CODE, HOST_GROUP_ADDRESS);
+            },
+        );
     }
 
     #[test]
-    fn test_mld_parse_and_serialize_response() {
+    fn test_mld_parse_and_serialize_report() {
         use crate::wire::icmp::mld::MulticastListenerReport;
         use crate::wire::testdata::mld_router_report::*;
-        test_parse_and_serialize::<MulticastListenerReport, _>(SRC_IP, DST_IP, REPORT, |icmp| {
-            assert_eq!(icmp.message_body._reserved.get(), 0);
-            assert_eq!(icmp.message_body.max_response_delay.get(), 0);
-            assert_eq!(icmp.message_body.group_addr, Ipv6Addr::new(HOST_GROUP_ADDRESS));
-        });
+        test_parse_and_serialize::<MulticastListenerReport, _, _>(
+            SRC_IP,
+            DST_IP,
+            REPORT,
+            |ip| {
+                check_ip(ip, SRC_IP, DST_IP);
+            },
+            |icmp| {
+                check_icmp(icmp, 0, HOST_GROUP_ADDRESS);
+            },
+        );
     }
 
     #[test]
     fn test_mld_parse_and_serialize_done() {
         use crate::wire::icmp::mld::MulticastListenerDone;
         use crate::wire::testdata::mld_router_done::*;
-        test_parse_and_serialize::<MulticastListenerDone, _>(SRC_IP, DST_IP, DONE, |icmp| {
-            assert_eq!(icmp.message_body._reserved.get(), 0);
-            assert_eq!(icmp.message_body.max_response_delay.get(), 0);
-            assert_eq!(icmp.message_body.group_addr, Ipv6Addr::new(HOST_GROUP_ADDRESS));
-        });
+        test_parse_and_serialize::<MulticastListenerDone, _, _>(
+            SRC_IP,
+            DST_IP,
+            DONE,
+            |ip| {
+                check_ip(ip, SRC_IP, DST_IP);
+            },
+            |icmp| {
+                check_icmp(icmp, 0, HOST_GROUP_ADDRESS);
+            },
+        );
     }
 
     #[test]
@@ -342,19 +425,19 @@ mod tests {
             SRC_IP,
             DST_IP,
             MulticastListenerQuery,
-            Ipv6Addr::new(HOST_GROUP_ADDRESS),
+            HOST_GROUP_ADDRESS,
             Duration::from_secs(1).try_into().unwrap(),
         );
         assert_eq!(&bytes[..], QUERY);
         let mut req = &bytes[..];
+        let ip = req.parse_with::<_, Ipv6Packet<_>>(()).unwrap();
+        check_ip(&ip, SRC_IP, DST_IP);
         let icmp = req
             .parse_with::<_, IcmpPacket<_, _, MulticastListenerQuery>>(IcmpParseArgs::new(
                 SRC_IP, DST_IP,
             ))
             .unwrap();
-        assert_eq!(icmp.message_body._reserved.get(), 0);
-        assert_eq!(icmp.message_body.max_response_delay.get(), 1000);
-        assert_eq!(icmp.message_body.group_addr, Ipv6Addr::new(HOST_GROUP_ADDRESS));
+        check_icmp(&icmp, MAX_RESP_CODE, HOST_GROUP_ADDRESS);
     }
 
     #[test]
@@ -365,19 +448,19 @@ mod tests {
             SRC_IP,
             DST_IP,
             MulticastListenerReport,
-            MulticastAddr::new(Ipv6Addr::new(HOST_GROUP_ADDRESS)).unwrap(),
+            MulticastAddr::new(HOST_GROUP_ADDRESS).unwrap(),
             (),
         );
         assert_eq!(&bytes[..], REPORT);
         let mut req = &bytes[..];
+        let ip = req.parse_with::<_, Ipv6Packet<_>>(()).unwrap();
+        check_ip(&ip, SRC_IP, DST_IP);
         let icmp = req
             .parse_with::<_, IcmpPacket<_, _, MulticastListenerReport>>(IcmpParseArgs::new(
                 SRC_IP, DST_IP,
             ))
             .unwrap();
-        assert_eq!(icmp.message_body._reserved.get(), 0);
-        assert_eq!(icmp.message_body.max_response_delay.get(), 0);
-        assert_eq!(icmp.message_body.group_addr, Ipv6Addr::new(HOST_GROUP_ADDRESS));
+        check_icmp(&icmp, 0, HOST_GROUP_ADDRESS);
     }
 
     #[test]
@@ -388,18 +471,18 @@ mod tests {
             SRC_IP,
             DST_IP,
             MulticastListenerDone,
-            MulticastAddr::new(Ipv6Addr::new(HOST_GROUP_ADDRESS)).unwrap(),
+            MulticastAddr::new(HOST_GROUP_ADDRESS).unwrap(),
             (),
         );
         assert_eq!(&bytes[..], DONE);
         let mut req = &bytes[..];
+        let ip = req.parse_with::<_, Ipv6Packet<_>>(()).unwrap();
+        check_ip(&ip, SRC_IP, DST_IP);
         let icmp = req
             .parse_with::<_, IcmpPacket<_, _, MulticastListenerDone>>(IcmpParseArgs::new(
                 SRC_IP, DST_IP,
             ))
             .unwrap();
-        assert_eq!(icmp.message_body._reserved.get(), 0);
-        assert_eq!(icmp.message_body.max_response_delay.get(), 0);
-        assert_eq!(icmp.message_body.group_addr, Ipv6Addr::new(HOST_GROUP_ADDRESS));
+        check_icmp(&icmp, 0, HOST_GROUP_ADDRESS);
     }
 }

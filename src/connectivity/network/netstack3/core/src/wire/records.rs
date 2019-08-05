@@ -390,6 +390,18 @@ pub(crate) trait RecordsSerializerImpl<'a> {
     fn serialize(data: &mut [u8], record: &Self::Record);
 }
 
+/// An implementation of a serializer for records with alignment requirements.
+pub(crate) trait AlignedRecordsSerializerImpl<'a>: RecordsSerializerImpl<'a> {
+    /// Returned (x, y) is interpreted as the record must be aligned at
+    /// x * n + y bytes from the beginning.
+    ///
+    /// `x` must be non-zero and `y` must be smaller than `x`.
+    fn get_alignment_requirement(record: &Self::Record) -> (usize, usize);
+
+    /// Padding between the aligned records.
+    fn padding(buf: &mut [u8], length: usize);
+}
+
 /// An instance of records serialization.
 ///
 /// `RecordsSerializer` is instantiated with an `Iterator` that provides
@@ -443,6 +455,91 @@ where
             S::serialize(b.take_front_zero(S::record_length(r)).unwrap(), r);
         }
     }
+}
+
+/// An instance of aligned records serialization.
+///
+/// `AlignedRecordsSerializer` is instantiated with an `Iterator` that provides
+/// items to be serialized by a `AlignedRecordsSerializerImpl`.
+#[derive(Debug)]
+pub(crate) struct AlignedRecordsSerializer<'a, S, R: 'a, I>
+where
+    S: AlignedRecordsSerializerImpl<'a, Record = R>,
+    I: Iterator<Item = &'a R> + Clone,
+{
+    start_pos: usize,
+    records: I,
+    _marker: PhantomData<S>,
+}
+
+impl<'a, S, R: 'a, I> AlignedRecordsSerializer<'a, S, R, I>
+where
+    S: AlignedRecordsSerializerImpl<'a, Record = R>,
+    I: Iterator<Item = &'a R> + Clone,
+{
+    /// Creates a new `AlignedRecordsSerializer` with given `records` and `start_pos`.
+    ///
+    /// `records` must produce the same sequence of values from every iterator,
+    /// even if cloned. See `RecordsSerializer` for more details. `start_pos` is
+    /// the place where the records serialization starts. For example, for HopByHop
+    /// Options, you will want it to be 2 because The HopByHop Extension Header has
+    /// 2 bytes at the very beginning and alignment requirements documented in RFCs include
+    /// these 2 bytes. If not needed, just pass 0.
+    pub(crate) fn new(start_pos: usize, records: I) -> Self {
+        Self { start_pos, records, _marker: PhantomData }
+    }
+
+    /// Returns the total length, in bytes, of the serialized records contained
+    /// within the `AlignedRecordsSerializer`. And with that length, all records
+    /// can be put at the places that meet their alignment requirements.
+    pub(crate) fn records_bytes_len(&self) -> usize {
+        let mut pos = self.start_pos;
+        self.records
+            .clone()
+            .map(|r| {
+                let (x, y) = S::get_alignment_requirement(r);
+                let new_pos = align_up_to(pos, x, y) + S::record_length(r);
+                let result = new_pos - pos;
+                pos = new_pos;
+                result
+            })
+            .sum()
+    }
+
+    /// `serialize_records` serializes all the records contained within the
+    /// `AlignedRecordsSerializer`.
+    ///
+    /// # Panics
+    ///
+    /// `serialize_records` expects that `buffer` has enough bytes to serialize
+    /// the contained records (as obtained from `records_bytes_len`, otherwise
+    /// it's considered a violation of the API contract and the call will panic.
+    pub(crate) fn serialize_records(&self, buffer: &mut [u8]) {
+        let mut b = &mut &mut buffer[..];
+        let mut pos = self.start_pos;
+        for r in self.records.clone() {
+            let (x, y) = S::get_alignment_requirement(r);
+            let aligned = align_up_to(pos, x, y);
+            let pad_len = aligned - pos;
+            let pad = b.take_front_zero(pad_len).unwrap();
+            S::padding(pad, pad_len);
+            pos = aligned;
+            // SECURITY: Take a zeroed buffer from b to prevent leaking
+            // information from packets previously stored in this buffer.
+            S::serialize(b.take_front_zero(S::record_length(r)).unwrap(), r);
+            pos += S::record_length(r);
+        }
+        // we have to pad the containing header to 8-octet boundary.
+        let padding = b.take_rest_front_zero();
+        S::padding(padding, padding.len());
+    }
+}
+
+/// Return the aligned offset which is at `x * n + y`.
+fn align_up_to(offset: usize, x: usize, y: usize) -> usize {
+    assert!(x != 0 && y < x);
+    // first add `x` to prevent overflow.
+    (offset + x - 1 - y) / x * x + y
 }
 
 impl<'a, S, R: 'a, I> InnerPacketBuilder for RecordsSerializer<'a, S, R, I>
@@ -1244,13 +1341,28 @@ pub(crate) mod options {
             // option length not fitting in u8 is a contract violation. Without
             // debug assertions on, this will cause the packet to be malformed.
             debug_assert!(length <= std::u8::MAX.into());
-            data[1] = length as u8;
+            data[1] = (length - O::LENGTH_OFFSET) as u8;
             // because padding may have occurred, we zero-fill data before
             // passing it along
             for b in data[2..].iter_mut() {
                 *b = 0;
             }
             O::serialize(&mut data[2..], record)
+        }
+    }
+
+    impl<'a, O> AlignedRecordsSerializerImpl<'a> for O
+    where
+        O: AlignedOptionsSerializerImpl<'a>,
+    {
+        fn get_alignment_requirement(record: &Self::Record) -> (usize, usize) {
+            // Use the underlying option's alignment requirement as the alignment
+            // requirement for the record.
+            O::get_alignment_requirement(record)
+        }
+
+        fn padding(buf: &mut [u8], length: usize) {
+            O::padding(buf, length);
         }
     }
 
@@ -1292,6 +1404,12 @@ pub(crate) mod options {
 
         /// The No-op type (if one exists).
         const NOP: Option<u8> = Some(NOP);
+
+        /// The offset need to be considered when serializing length information
+        ///
+        /// For example, an IPv4 Option's length field is the length of the whole option;
+        /// an IPv6 Option's length field is the length of its data.
+        const LENGTH_OFFSET: usize = 0;
     }
 
     /// An implementation of an options parser.
@@ -1355,6 +1473,22 @@ pub(crate) mod options {
         /// `data` is guaranteed to be long enough to fit `option` based on the
         /// value returned by `get_option_length`.
         fn serialize(data: &mut [u8], option: &Self::Option);
+    }
+
+    pub(crate) trait AlignedOptionsSerializerImpl<'a>: OptionsSerializerImpl<'a> {
+        /// Get the associated alignment requirement.
+        ///
+        /// The return value (x, y) is interpreted as: the option must
+        /// only appear at `x * n + y` bytes from the beginning of the
+        /// _header_. For example, Router Alert for Ipv6 HBH options
+        /// have alignment (2, 0), and Jumbo Payload has (4, 2).
+        /// (1, 0) means there is no alignment Requirement.
+        ///
+        /// `x` must be non-zero and `y` must be smaller than `x`.
+        fn get_alignment_requirement(option: &Self::Option) -> (usize, usize);
+
+        /// Padding between the aligned options.
+        fn padding(buf: &mut [u8], length: usize);
     }
 
     fn next<'a, BV, O>(
@@ -1434,6 +1568,31 @@ pub(crate) mod options {
 
             fn serialize(data: &mut [u8], option: &Self::Option) {
                 data.copy_from_slice(&option.1);
+            }
+        }
+
+        impl<'a> AlignedOptionsSerializerImpl<'a> for DummyOptionsImpl {
+            // for our `DummyOption`, we simply regard (length, kind) as their
+            // alignment requirement.
+            fn get_alignment_requirement(option: &Self::Option) -> (usize, usize) {
+                (option.1.len(), option.0 as usize)
+            }
+
+            fn padding(buf: &mut [u8], length: usize) {
+                assert!(length <= buf.len());
+                assert!(length <= (std::u8::MAX as usize) + 2);
+
+                if length == 1 {
+                    // Use Pad1
+                    buf[0] = 0
+                } else if length > 1 {
+                    // Use PadN
+                    buf[0] = 1;
+                    buf[1] = (length - 2) as u8;
+                    for i in 2..length {
+                        buf[i] = 0
+                    }
+                }
             }
         }
 
@@ -1660,6 +1819,69 @@ pub(crate) mod options {
             let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
 
             assert_eq!(serialized, bytes);
+        }
+
+        #[test]
+        fn test_align_up_to() {
+            // We are doing some sort of property testing here:
+            // We generate a random alignment requirement (x, y) and a random offset `pos`.
+            // The resulting `new_pos` must:
+            //   - 1. be at least as large as the original `pos`.
+            //   - 2. be in form of x * n + y for some integer n.
+            //   - 3. for any number in between, they shouldn't be in form of x * n + y.
+            use rand::{thread_rng, Rng};
+            let mut rng = thread_rng();
+            for _ in 0..100_000 {
+                let x = rng.gen_range(1usize, 256);
+                let y = rng.gen_range(0, x);
+                let pos = rng.gen_range(0usize, 65536);
+                let new_pos = align_up_to(pos, x, y);
+                // 1)
+                assert!(new_pos >= pos);
+                // 2)
+                assert_eq!((new_pos - y) % x, 0);
+                // 3) Note: `p` is not guaranteed to be bigger than `y`, plus `x` to avoid overflow.
+                assert!((pos..new_pos).all(|p| (p + x - y) % x != 0))
+            }
+        }
+
+        #[test]
+        #[rustfmt::skip]
+        fn test_aligned_dummy_options_serializer() {
+            // testing for cases: 2n+{0,1}, 3n+{1,2}, 1n+0, 4n+2
+            let dummy_options = [
+                // alignment requirement: 2 * n + 1,
+                //
+                (1, vec![42, 42]),
+                (0, vec![42, 42]),
+                (1, vec![1, 2, 3]),
+                (2, vec![3, 2, 1]),
+                (0, vec![42]),
+                (2, vec![9, 9, 9, 9]),
+            ];
+            let ser = AlignedRecordsSerializer::<'_, DummyOptionsImpl, (u8, Vec<u8>), _>::new(
+                0,
+                dummy_options.iter(),
+            );
+            assert_eq!(ser.records_bytes_len(), 32);
+            let mut buf = [0u8; 32];
+            ser.serialize_records(&mut buf[..]);
+            assert_eq!(
+                &buf[..],
+                &[
+                    0, // Pad1 padding
+                    1, 4, 42, 42, // (1, [42, 42]) starting at 2 * 0 + 1 = 3
+                    0,  // Pad1 padding
+                    0, 4, 42, 42, // (0, [42, 42]) starting at 2 * 3 + 0 = 6
+                    1, 5, 1, 2, 3, // (1, [1, 2, 3]) starting at 3 * 2 + 1 = 7
+                    1, 0, // PadN padding
+                    2, 5, 3, 2, 1, // (2, [3, 2, 1]) starting at 3 * 4 + 2 = 14
+                    0, 3, 42, // (0, [42]) starting at 1 * 19 + 0 = 19
+                    0,  // PAD1 padding
+                    2, 6, 9, 9, 9, 9 // (2, [9, 9, 9, 9]) starting at 4 * 6 + 2 = 26
+                    // total length: 32
+                ]
+            );
         }
     }
 }
