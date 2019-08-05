@@ -5,6 +5,7 @@
 use crate::appendable::{Appendable, BufferTooSmall};
 
 pub mod fake_frames;
+pub mod fake_stas;
 
 pub struct FixedSizedTestBuffer(Vec<u8>);
 impl FixedSizedTestBuffer {

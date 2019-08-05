@@ -8,6 +8,7 @@
 #![cfg_attr(feature = "benchmark", feature(test))]
 pub mod appendable;
 pub mod big_endian;
+pub mod bss;
 pub mod buffer_reader;
 pub mod buffer_writer;
 pub mod channel;

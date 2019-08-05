@@ -187,3 +187,32 @@ pub fn make_data_frame_amsdu_padding_too_short() -> Vec<u8> {
     amsdu_data_frame.extend(MSDU_2_PAYLOAD);
     amsdu_data_frame
 }
+
+pub fn fake_wpa1_ie_body() -> Vec<u8> {
+    vec![
+        0x01, 0x00, // WPA version
+        0x00, 0x50, 0xf2, 0x02, // multicast cipher: AKM
+        0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 unicast cipher: TKIP
+        0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
+    ]
+}
+
+pub fn fake_wpa1_ie() -> Vec<u8> {
+    let mut ie = vec![
+        0xdd, 0x16, 0x00, 0x50, 0xf2, // IE header
+        0x01, // MSFT specific IE type (WPA)
+    ];
+    ie.append(&mut fake_wpa1_ie_body());
+    ie
+}
+
+pub fn fake_wpa2_rsne() -> Vec<u8> {
+    vec![
+        // Element header
+        48, 18, // Version
+        1, 0, // Group Cipher: CCMP-128
+        0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+        1, 0, 0x00, 0x0F, 0xAC, 4, // 1 AKM: PSK
+        1, 0, 0x00, 0x0F, 0xAC, 2,
+    ]
+}

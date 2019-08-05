@@ -5,8 +5,7 @@
 use {
     crate::{
         client::{
-            bss::{get_channel_map, get_standard_map, ClientConfig},
-            scan, ConnectFailure, ConnectResult, ConnectionAttemptId, ScanTxnId, Standard,
+            bss::ClientConfig, scan, ConnectFailure, ConnectResult, ConnectionAttemptId, ScanTxnId,
         },
         sink::InfoSink,
         Ssid,
@@ -16,6 +15,7 @@ use {
     fuchsia_zircon::{self as zx, prelude::DurationNum},
     log::warn,
     std::collections::{HashMap, VecDeque},
+    wlan_common::bss::{get_channel_map, get_phy_standard_map, Standard},
 };
 
 #[derive(Debug, PartialEq)]
@@ -418,7 +418,7 @@ impl StatsCollector {
         let discovery_stats = bss_list.map(|bss_list| {
             let bss_count = bss_list.len();
             let ess_count = cfg.group_networks(&bss_list).len();
-            let num_bss_by_standard = get_standard_map(&bss_list);
+            let num_bss_by_standard = get_phy_standard_map(&bss_list);
             let num_bss_by_channel = get_channel_map(&bss_list);
 
             DiscoveryStats { bss_count, ess_count, num_bss_by_standard, num_bss_by_channel }
@@ -658,7 +658,9 @@ impl PendingConnectStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client::test_utils::{fake_protected_bss_description, fake_scan_request};
+    use crate::client::test_utils::{
+        fake_bss_with_rates, fake_protected_bss_description, fake_scan_request,
+    };
 
     use maplit::hashmap;
     use wlan_common::assert_variant;
@@ -670,7 +672,7 @@ mod tests {
         let is_connected = true;
         assert!(stats_collector.report_discovery_scan_started(req, is_connected).is_none());
 
-        let bss_desc = fake_protected_bss_description(b"foo".to_vec());
+        let bss_desc = fake_bss_with_rates(b"foo".to_vec(), vec![12]);
         let cfg = ClientConfig::default();
         let stats = stats_collector.report_discovery_scan_ended(
             ScanResult::Success,
@@ -686,7 +688,7 @@ mod tests {
                 bss_count: 1,
                 ess_count: 1,
                 num_bss_by_channel: hashmap! { 1 => 1 },
-                num_bss_by_standard: hashmap! { Standard::G => 1 },
+                num_bss_by_standard: hashmap! { Standard::Dot11G => 1 },
             }));
         })
     }

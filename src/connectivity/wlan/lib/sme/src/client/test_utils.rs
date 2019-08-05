@@ -66,6 +66,10 @@ pub fn fake_bss_with_bssid(ssid: Ssid, bssid: [u8; 6]) -> fidl_mlme::BssDescript
     fidl_mlme::BssDescription { bssid, ..fake_unprotected_bss_description(ssid) }
 }
 
+pub fn fake_bss_with_rates(ssid: Ssid, basic_rate_set: Vec<u8>) -> fidl_mlme::BssDescription {
+    fidl_mlme::BssDescription { basic_rate_set, ..fake_unprotected_bss_description(ssid) }
+}
+
 pub fn fake_unprotected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
     fake_bss_description(ssid, None)
 }

@@ -23,8 +23,7 @@ use futures::channel::{mpsc, oneshot};
 use log::error;
 use std::sync::Arc;
 use wep_deprecated;
-use wlan_common::format::MacFmt;
-use wlan_common::RadioConfig;
+use wlan_common::{self, bss::BssDescriptionExt, format::MacFmt, RadioConfig};
 use wlan_inspect::wrappers::InspectWlanChan;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
@@ -115,15 +114,6 @@ pub type EssDiscoveryResult = Result<Vec<EssInfo>, fidl_mlme::ScanResultCodes>;
 pub struct Status {
     pub connected_to: Option<BssInfo>,
     pub connecting_to: Option<Ssid>,
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum Standard {
-    B,
-    G,
-    A,
-    N,
-    Ac,
 }
 
 impl ClientSme {
@@ -383,19 +373,21 @@ pub fn get_protection(
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
 ) -> Result<Protection, failure::Error> {
-    match bss::get_protection(bss) {
-        bss::Protection::Open => match credential {
+    match bss.get_protection() {
+        wlan_common::bss::Protection::Open => match credential {
             fidl_sme::Credential::None(_) => Ok(Protection::Open),
             _ => bail!("password provided for open network, but none expected"),
         },
-        bss::Protection::Wep => match credential {
+        wlan_common::bss::Protection::Wep => match credential {
             fidl_sme::Credential::Password(pwd) => wep_deprecated::derive_key(&pwd[..])
                 .map(Protection::Wep)
                 .map_err(|e| format_err!("error deriving WEP key from input: {}", e)),
             _ => bail!("unsupported credential type"),
         },
-        bss::Protection::Wpa1 => get_legacy_wpa_association(device_info, credential, bss),
-        bss::Protection::Rsna => get_rsna(device_info, credential, bss),
+        wlan_common::bss::Protection::Wpa1 => {
+            get_legacy_wpa_association(device_info, credential, bss)
+        }
+        wlan_common::bss::Protection::Rsna => get_rsna(device_info, credential, bss),
     }
 }
 
@@ -407,13 +399,13 @@ mod tests {
     use fuchsia_inspect as finspect;
     use info::ConnectionMilestone;
     use maplit::hashmap;
-    use wlan_common::{assert_variant, RadioConfig};
+    use wlan_common::{assert_variant, bss::Standard, RadioConfig};
 
     use super::info::DiscoveryStats;
     use super::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
-        expect_stream_empty, fake_protected_bss_description, fake_unprotected_bss_description,
-        fake_wep_bss_description,
+        expect_stream_empty, fake_bss_with_rates, fake_protected_bss_description,
+        fake_unprotected_bss_description, fake_wep_bss_description,
     };
 
     use crate::test_utils;
@@ -952,7 +944,7 @@ mod tests {
         let _recv = sme.on_scan_command(fidl_common::ScanType::Active);
         expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 });
 
-        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+        report_fake_scan_result(&mut sme, fake_bss_with_rates(b"foo".to_vec(), vec![12]));
 
         expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::DiscoveryScanStats(scan_stats, discovery_stats))) => {
@@ -964,7 +956,7 @@ mod tests {
                 bss_count: 1,
                 ess_count: 1,
                 num_bss_by_channel: hashmap! { 1 => 1 },
-                num_bss_by_standard: hashmap! { Standard::G => 1 },
+                num_bss_by_standard: hashmap! { Standard::Dot11G => 1 },
             }));
         });
     }

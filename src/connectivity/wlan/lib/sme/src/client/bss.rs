@@ -2,19 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::format_err;
-use fidl_fuchsia_wlan_mlme::BssDescription;
-use std::cmp::Ordering;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::hash::Hash;
-use wlan_common::ie::{self, rsn::rsne, wpa::WpaIe, Id, Reader, VendorIe};
-
-use super::rsn::is_rsn_compatible;
-use crate::client::Standard;
-use crate::clone_utils::clone_bss_desc;
-use crate::Config;
-use crate::Ssid;
+use {
+    super::rsn::is_rsn_compatible,
+    crate::{clone_utils::clone_bss_desc, Config, Ssid},
+    fidl_fuchsia_wlan_mlme::BssDescription,
+    std::{cmp::Ordering, collections::HashMap},
+    wlan_common::{
+        bss::{BssDescriptionExt, Protection},
+        ie::rsn::rsne,
+    },
+};
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ClientConfig(Config);
@@ -43,13 +40,13 @@ impl ClientConfig {
     pub fn compare_bss(&self, left: &BssDescription, right: &BssDescription) -> Ordering {
         self.is_bss_compatible(left)
             .cmp(&self.is_bss_compatible(right))
-            .then(get_protection(left).cmp(&get_protection(right)))
+            .then(left.get_protection().cmp(&right.get_protection()))
             .then(get_rx_dbm(left).cmp(&get_rx_dbm(right)))
     }
 
     /// Determines whether a given BSS is compatible with this client SME configuration.
     pub fn is_bss_compatible(&self, bss: &BssDescription) -> bool {
-        match get_protection(bss) {
+        match bss.get_protection() {
             Protection::Open => true,
             Protection::Wep => self.0.wep_supported,
             Protection::Wpa1 => self.0.wpa1_supported,
@@ -102,14 +99,6 @@ pub struct EssInfo {
     pub best_bss: BssInfo,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
-pub enum Protection {
-    Open = 0,
-    Wep = 1,
-    Wpa1 = 2,
-    Rsna = 3,
-}
-
 fn get_rx_dbm(bss: &BssDescription) -> i8 {
     if bss.rcpi_dbmh != 0 {
         (bss.rcpi_dbmh / 2) as i8
@@ -120,87 +109,13 @@ fn get_rx_dbm(bss: &BssDescription) -> i8 {
     }
 }
 
-fn find_wpa_ie(bss: &BssDescription) -> Option<&[u8]> {
-    let ies = bss.vendor_ies.as_ref()?;
-    Reader::new(&ies[..])
-        .filter_map(|(id, ie)| match id {
-            Id::VENDOR_SPECIFIC => match ie::parse_vendor_ie(ie) {
-                Ok(VendorIe::MsftLegacyWpa(body)) => Some(&body[..]),
-                _ => None,
-            },
-            _ => None,
-        })
-        .next()
-}
-
-pub fn get_wpa_ie(bss: &BssDescription) -> Result<WpaIe, failure::Error> {
-    ie::parse_wpa_ie(find_wpa_ie(bss).ok_or(format_err!("no wpa ie found"))?).map_err(|e| e.into())
-}
-
-pub fn get_protection(bss: &BssDescription) -> Protection {
-    match bss.rsn.as_ref() {
-        Some(_) => Protection::Rsna,
-        None if !bss.cap.privacy => Protection::Open,
-        None if find_wpa_ie(bss).is_some() => Protection::Wpa1,
-        None => Protection::Wep,
-    }
-}
-
-pub fn expects_eapol(bss: &BssDescription) -> bool {
-    match get_protection(bss) {
-        Protection::Rsna | Protection::Wpa1 => true,
-        _ => false,
-    }
-}
-
-pub fn get_standard_map(bss_list: &Vec<BssDescription>) -> HashMap<Standard, usize> {
-    get_info_map(bss_list, get_standard)
-}
-
-pub fn get_channel_map(bss_list: &Vec<BssDescription>) -> HashMap<u8, usize> {
-    get_info_map(bss_list, |bss| bss.chan.primary)
-}
-
-fn get_info_map<F, T>(bss_list: &Vec<BssDescription>, f: F) -> HashMap<T, usize>
-where
-    T: Eq + Hash,
-    F: Fn(&BssDescription) -> T,
-{
-    let mut info_map: HashMap<T, usize> = HashMap::new();
-    for bss in bss_list {
-        match info_map.entry(f(&bss)) {
-            Entry::Vacant(e) => {
-                e.insert(1);
-            }
-            Entry::Occupied(mut e) => {
-                *e.get_mut() += 1;
-            }
-        }
-    }
-    info_map
-}
-
-fn get_standard(bss: &BssDescription) -> Standard {
-    if bss.vht_cap.is_some() && bss.vht_op.is_some() {
-        Standard::Ac
-    } else if bss.ht_cap.is_some() && bss.ht_op.is_some() {
-        Standard::N
-    } else if bss.chan.primary >= 36 {
-        Standard::A
-    } else {
-        // TODO(NET-1587): Differentiate between 802.11b and 802.11g
-        Standard::G
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl_fuchsia_wlan_common as fidl_common;
-    use fidl_fuchsia_wlan_mlme as fidl_mlme;
-    use std::cmp::Ordering;
-
-    use crate::client::test_utils::fake_bss_with_bssid;
+    use {
+        super::*, crate::client::test_utils::fake_bss_with_bssid,
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
+        std::cmp::Ordering,
+    };
 
     enum ProtectionCfg {
         Open,
@@ -301,29 +216,6 @@ mod tests {
     }
 
     #[test]
-    fn test_get_protection() {
-        assert_eq!(Protection::Open, get_protection(&bss(-30, -10, ProtectionCfg::Open)));
-        assert_eq!(Protection::Wep, get_protection(&bss(-30, -10, ProtectionCfg::Wep)));
-        assert_eq!(Protection::Wpa1, get_protection(&bss(-30, -10, ProtectionCfg::Wpa1)));
-        assert_eq!(Protection::Rsna, get_protection(&bss(-30, -10, ProtectionCfg::Wpa2)));
-        assert_eq!(
-            Protection::Rsna,
-            get_protection(&bss(-30, -10, ProtectionCfg::Wpa2Wpa3MixedMode))
-        );
-        assert_eq!(Protection::Rsna, get_protection(&bss(-30, -10, ProtectionCfg::Wpa2NoPrivacy)));
-        assert_eq!(Protection::Rsna, get_protection(&bss(-30, -10, ProtectionCfg::Wpa3)));
-    }
-
-    #[test]
-    fn test_expects_eapol() {
-        assert!(expects_eapol(&bss(-30, -10, ProtectionCfg::Wpa1)));
-        assert!(expects_eapol(&bss(-30, -10, ProtectionCfg::Wpa2)));
-
-        assert!(!expects_eapol(&bss(-30, -10, ProtectionCfg::Open)));
-        assert!(!expects_eapol(&bss(-30, -10, ProtectionCfg::Wep)));
-    }
-
-    #[test]
     fn verify_compatibility() {
         // Compatible:
         let cfg = ClientConfig::default();
@@ -341,17 +233,6 @@ mod tests {
         // WEP support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default().with_wep());
         assert!(cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
-    }
-
-    #[test]
-    fn test_get_wpa_ie() {
-        let mut buf = vec![];
-        get_wpa_ie(&bss(-30, -10, ProtectionCfg::Wpa1))
-            .expect("failed to find WPA1 IE")
-            .write_into(&mut buf)
-            .expect("failed to serialize WPA1 IE");
-        assert_eq!(fake_wpa1_ie_body(), buf);
-        get_wpa_ie(&bss(-30, -10, ProtectionCfg::Wpa2)).expect_err("found unexpected WPA1 IE");
     }
 
     #[test]

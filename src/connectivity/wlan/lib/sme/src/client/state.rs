@@ -7,12 +7,14 @@ use fuchsia_inspect_contrib::{inspect_log, log::InspectBytes};
 use fuchsia_zircon as zx;
 use log::{error, warn};
 use wep_deprecated;
-use wlan_common::{format::MacFmt, ie::rsn::cipher, ie::write_wpa1_ie, RadioConfig};
+use wlan_common::{
+    bss::BssDescriptionExt, format::MacFmt, ie::rsn::cipher, ie::write_wpa1_ie, RadioConfig,
+};
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocStatus, SecAssocUpdate};
 use wlan_rsn::ProtectionInfo;
 
-use super::bss::{expects_eapol, ClientConfig};
+use super::bss::ClientConfig;
 use super::rsn::Rsna;
 use super::{ConnectFailure, ConnectResult, Status};
 
@@ -249,7 +251,7 @@ impl State {
                 MlmeEvent::SignalReport { ind } => {
                     State::Associated { cfg, bss, last_rssi: ind.rssi_dbm, link_state, radio_cfg }
                 }
-                MlmeEvent::EapolInd { ref ind } if expects_eapol(bss.as_ref()) => {
+                MlmeEvent::EapolInd { ref ind } if bss.needs_eapol_exchange() => {
                     // Reject EAPOL frames from other BSS.
                     if ind.src_addr != bss.bssid {
                         let eapol_pdu = &ind.data[..];
@@ -602,36 +604,35 @@ fn handle_mlme_assoc_conf(
         fidl_mlme::AssociateResultCodes::Success => {
             context.info.report_assoc_success(context.att_id);
             match cmd.protection {
-                Protection::Rsna(mut rsna) | Protection::LegacyWpa(mut rsna) => match rsna
-                    .supplicant
-                    .start()
-                {
-                    Err(e) => {
-                        handle_supplicant_start_failure(cmd.responder, cmd.bss, context, e);
-                        state_change_msg.replace("supplicant failed to start".to_string());
-                        State::Idle { cfg }
-                    }
-                    Ok(_) => {
-                        context.info.report_rsna_started(context.att_id);
+                Protection::Rsna(mut rsna) | Protection::LegacyWpa(mut rsna) => {
+                    match rsna.supplicant.start() {
+                        Err(e) => {
+                            handle_supplicant_start_failure(cmd.responder, cmd.bss, context, e);
+                            state_change_msg.replace("supplicant failed to start".to_string());
+                            State::Idle { cfg }
+                        }
+                        Ok(_) => {
+                            context.info.report_rsna_started(context.att_id);
 
-                        let rsna_timeout =
-                            Some(context.timer.schedule(event::EstablishingRsnaTimeout));
-                        state_change_msg.replace("successful association".to_string());
-                        let last_rssi = cmd.bss.rssi_dbm;
-                        State::Associated {
-                            cfg,
-                            bss: cmd.bss,
-                            last_rssi,
-                            link_state: LinkState::EstablishingRsna {
-                                responder: cmd.responder,
-                                rsna,
-                                rsna_timeout,
-                                resp_timeout: None,
-                            },
-                            radio_cfg: cmd.radio_cfg,
+                            let rsna_timeout =
+                                Some(context.timer.schedule(event::EstablishingRsnaTimeout));
+                            state_change_msg.replace("successful association".to_string());
+                            let last_rssi = cmd.bss.rssi_dbm;
+                            State::Associated {
+                                cfg,
+                                bss: cmd.bss,
+                                last_rssi,
+                                link_state: LinkState::EstablishingRsna {
+                                    responder: cmd.responder,
+                                    rsna,
+                                    rsna_timeout,
+                                    resp_timeout: None,
+                                },
+                                radio_cfg: cmd.radio_cfg,
+                            }
                         }
                     }
-                },
+                }
                 Protection::Open | Protection::Wep(_) => {
                     report_connect_finished(cmd.responder, context, ConnectResult::Success);
                     let now = now();

@@ -21,8 +21,9 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::ops::Sub;
 use std::sync::Arc;
+use wlan_common::bss::Standard;
 use wlan_metrics_registry as metrics;
-use wlan_sme::client::{ConnectFailure, ConnectResult, Standard};
+use wlan_sme::client::{ConnectFailure, ConnectResult};
 
 use crate::device::IfaceMap;
 use fuchsia_cobalt::CobaltSender;
@@ -301,11 +302,11 @@ pub fn report_standards(
 ) {
     use metrics::NeighborNetworksWlanStandardsCountMetricDimensionWlanStandardType as StandardLabel;
     const ALL_STANDARDS: [(Standard, StandardLabel); 5] = [
-        (Standard::B, StandardLabel::_802_11b),
-        (Standard::G, StandardLabel::_802_11g),
-        (Standard::A, StandardLabel::_802_11a),
-        (Standard::N, StandardLabel::_802_11n),
-        (Standard::Ac, StandardLabel::_802_11ac),
+        (Standard::Dot11B, StandardLabel::_802_11b),
+        (Standard::Dot11G, StandardLabel::_802_11g),
+        (Standard::Dot11A, StandardLabel::_802_11a),
+        (Standard::Dot11N, StandardLabel::_802_11n),
+        (Standard::Dot11Ac, StandardLabel::_802_11ac),
     ];
     ALL_STANDARDS.into_iter().for_each(|(standard, label)| {
         let count = match num_bss_by_standard.entry(standard.clone()) {

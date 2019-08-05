@@ -6,12 +6,12 @@ use failure::{bail, format_err};
 use fidl_fuchsia_wlan_mlme::BssDescription;
 
 use fidl_fuchsia_wlan_sme as fidl_sme;
+use wlan_common::bss::BssDescriptionExt;
 use wlan_common::ie::rsn::{akm, cipher};
 use wlan_common::ie::wpa::WpaIe;
 use wlan_common::organization::Oui;
 use wlan_rsn::{self, nonce::NonceReader, NegotiatedProtection, ProtectionInfo};
 
-use super::bss::get_wpa_ie;
 use super::rsn::{compute_psk, Rsna};
 use crate::{client::state::Protection, DeviceInfo};
 
@@ -37,7 +37,7 @@ pub fn get_legacy_wpa_association(
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
 ) -> Result<Protection, failure::Error> {
-    let a_wpa = get_wpa_ie(bss)?;
+    let a_wpa = bss.get_wpa_ie()?;
     if !is_legacy_wpa_compatible(&a_wpa) {
         bail!("incompatible legacy WPA {:?}", a_wpa);
     }
