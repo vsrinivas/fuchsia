@@ -177,7 +177,7 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
   auto svcs = CreateServices();
   fuchsia::sys::LaunchInfo linfo;
   linfo.url = "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
-  linfo.arguments.push_back("--disable-klog");
+  linfo.arguments.emplace({"--disable-klog"});
   fuchsia::sys::LaunchInfo linfo_dup;
   ASSERT_EQ(ZX_OK, linfo.Clone(&linfo_dup));
   svcs->AddServiceWithLaunchInfo(std::move(linfo), fuchsia::logger::Log::Name_);
