@@ -43,17 +43,17 @@ ContextWriterImpl::~ContextWriterImpl() {}
 
 namespace {
 
-fidl::VectorPtr<std::string> Deprecated_GetTypesFromJsonEntity(const fidl::StringPtr& content) {
+std::vector<std::string> Deprecated_GetTypesFromJsonEntity(const fidl::StringPtr& content) {
   // If the content has the @type attribute, take its contents and populate the
   // fuchsia::modular::EntityMetadata appropriately, overriding whatever is
   // there.
   std::vector<std::string> types;
-  if (!ExtractEntityTypesFromJson(content, &types)) {
+  if (!ExtractEntityTypesFromJson(content.value_or(""), &types)) {
     FXL_LOG(WARNING) << "Invalid entity metadata in JSON value: " << content;
     return {};
   }
 
-  return fidl::VectorPtr(types);
+  return types;
 }
 
 void MaybeFillEntityTypeMetadata(const std::vector<std::string>& types,
@@ -158,7 +158,7 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
   // somewhere other places can reach it.
   std::unique_ptr<fuchsia::modular::EntityPtr> entity =
       std::make_unique<fuchsia::modular::EntityPtr>();
-  entity_resolver_->ResolveEntity(reference, entity->NewRequest());
+  entity_resolver_->ResolveEntity(reference.value_or(""), entity->NewRequest());
 
   auto fallback = fit::defer([done = done.share(), reference] {
     // The contents of the fuchsia::modular::Entity value could be a deprecated

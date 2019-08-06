@@ -27,8 +27,9 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
   launch_info.directory_request = services_.NewRequest();
   launch_info.url = config.url;
   std::vector<std::string> args;
+  launch_info.arguments.emplace();
   for (const auto& arg : *config.args) {
-    launch_info.arguments.push_back(arg);
+    launch_info.arguments->push_back(arg);
   }
 
   if (!data_origin.empty()) {

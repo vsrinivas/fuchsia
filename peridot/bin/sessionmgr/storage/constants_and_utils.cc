@@ -15,12 +15,12 @@ namespace modular {
 
 std::string MakeDeviceKey(const fidl::StringPtr& device_name) {
   // Not escaped, because only one component after the prefix.
-  return kDeviceKeyPrefix + device_name.get();
+  return kDeviceKeyPrefix + device_name.value_or("");
 }
 
 std::string MakeFocusKey(const fidl::StringPtr& device_name) {
   // Not escaped, because only one component after the prefix.
-  return kFocusKeyPrefix + device_name.get();
+  return kFocusKeyPrefix + device_name.value_or("");
 }
 
 std::string MakeMessageQueuesPrefix(const std::string& component_namespace) {
@@ -60,7 +60,7 @@ std::string EncodeLinkPath(const fuchsia::modular::LinkPath& link_path) {
   std::string output;
   output.append(EncodeModulePath(link_path.module_path));
   output.append(kSeparator);
-  output.append(StringEscape(link_path.link_name.get(), kCharsToEscape, kEscaper));
+  output.append(StringEscape(link_path.link_name.value_or(""), kCharsToEscape, kEscaper));
   return output;
 }
 

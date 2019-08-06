@@ -108,7 +108,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   }
 
   void StartStoryById(const fidl::StringPtr& story_id) {
-    story_provider_->GetController(story_id, story_controller_.NewRequest());
+    story_provider_->GetController(story_id.value_or(""), story_controller_.NewRequest());
     story_controller_.set_error_handler([story_id](zx_status_t status) {
       FXL_LOG(ERROR) << "Story controller for story " << story_id
                      << " died. Does this story exist?";
@@ -120,8 +120,8 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
     story_controller_->RequestStart();
     focus_controller_->Set(story_id);
-    auto visible_stories = fidl::VectorPtr<std::string>::New(0);
-    visible_stories.push_back(story_id);
+    std::vector<std::string> visible_stories;
+    visible_stories.push_back(story_id.value_or(""));
     visible_stories_controller_->Set(std::move(visible_stories));
 
     if (!settings_.root_link.empty()) {

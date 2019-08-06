@@ -110,9 +110,9 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
   auto future_all_data = storage->GetAllStoryData();
   future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.reset(std::move(data));
+    all_data.emplace(std::move(data));
   });
-  RunLoopUntil([&] { return !!all_data; });
+  RunLoopUntil([&] { return all_data.has_value(); });
 
   EXPECT_EQ(1u, all_data->size());
   EXPECT_TRUE(fidl::Equals(cached_data, all_data->at(0)));
@@ -137,10 +137,10 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   auto future_all_data = storage->GetAllStoryData();
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
   future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.reset(std::move(data));
+    all_data.emplace(std::move(data));
   });
 
-  RunLoopUntil([&] { return !!all_data; });
+  RunLoopUntil([&] { return all_data.has_value(); });
 
   // Given the ordering, we expect the story we created to show up.
   EXPECT_EQ(1u, all_data->size());
@@ -149,9 +149,9 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   future_all_data = storage->GetAllStoryData();
   all_data.reset();
   future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.reset(std::move(data));
+    all_data.emplace(std::move(data));
   });
-  RunLoopUntil([&] { return !!all_data; });
+  RunLoopUntil([&] { return all_data.has_value(); });
   EXPECT_EQ(0u, all_data->size());
 }
 
@@ -187,9 +187,9 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   auto future_all_data = storage->GetAllStoryData();
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
   future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.reset(std::move(data));
+    all_data.emplace(std::move(data));
   });
-  RunLoopUntil([&] { return !!all_data; });
+  RunLoopUntil([&] { return all_data.has_value(); });
 
   EXPECT_EQ(2u, all_data->size());
 
@@ -201,9 +201,9 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   future_all_data = storage->GetAllStoryData();
   all_data.reset();
   future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.reset(std::move(data));
+    all_data.emplace(std::move(data));
   });
-  RunLoopUntil([&] { return !!all_data; });
+  RunLoopUntil([&] { return all_data.has_value(); });
 
   EXPECT_TRUE(delete_done);
   EXPECT_EQ(1u, all_data->size());

@@ -25,7 +25,7 @@ class RemoveModCall : public Operation<fuchsia::modular::ExecuteResult> {
 
     // Prefer |mod_name_transitional| over |mod_name|
     std::vector<std::string> mod_name{};
-    if (!command_.mod_name_transitional.is_null()) {
+    if (command_.mod_name_transitional.has_value()) {
       mod_name.push_back(*command_.mod_name_transitional);
     } else {
       mod_name = command_.mod_name;

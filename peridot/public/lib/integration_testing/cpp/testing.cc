@@ -88,21 +88,21 @@ TestRunnerStore* GetStore() {
 }
 
 void Put(const fidl::StringPtr& key, const fidl::StringPtr& value) {
-  modular::testing::GetStore()->Put(key, value, [] {});
+  modular::testing::GetStore()->Put(key.value_or(""), value.value_or(""), [] {});
 }
 
 void Get(const fidl::StringPtr& key,
          fit::function<void(fidl::StringPtr)> callback) {
-  modular::testing::GetStore()->Get(key, std::move(callback));
+  modular::testing::GetStore()->Get(key.value_or(""), std::move(callback));
 }
 
 void Signal(const fidl::StringPtr& condition) {
-  modular::testing::GetStore()->Put(condition, condition, [] {});
+  modular::testing::GetStore()->Put(condition.value_or(""), condition.value_or(""), [] {});
 }
 
 void Await(const fidl::StringPtr& condition, fit::function<void()> cont) {
   modular::testing::GetStore()->Get(
-      condition, [cont = std::move(cont)](fidl::StringPtr) { cont(); });
+      condition.value_or(""), [cont = std::move(cont)](fidl::StringPtr) { cont(); });
 }
 
 void RegisterTestPoint(const std::string& label) {

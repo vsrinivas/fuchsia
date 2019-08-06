@@ -31,7 +31,7 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
   void SetUp() override {
     testing::TestWithSessionStorage::SetUp();
     session_storage_ = MakeSessionStorage("page");
-    story_id_ = CreateStory(session_storage_.get());
+    story_id_ = CreateStory(session_storage_.get()).value_or("");
     story_storage_ = GetStoryStorage(session_storage_.get(), story_id_);
     fake_module_resolver_->Connect(module_resolver_.NewRequest());
     fake_entity_resolver_->Connect(entity_resolver_.NewRequest());
@@ -129,7 +129,7 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name_transitional = mod_name;
     if (!parent_mod_name.empty()) {
-      add_mod.surface_parent_mod_name.reset({parent_mod_name});
+      add_mod.surface_parent_mod_name.emplace({parent_mod_name});
     }
     add_mod.surface_relation.emphasis = surface_emphasis;
     intent.Clone(&add_mod.intent);
@@ -153,7 +153,10 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     fuchsia::modular::IntentParameter parameter;
     parameter.name = name;
     parameter.data.set_entity_reference(reference);
-    intent->parameters.push_back(std::move(parameter));
+    if (!intent->parameters.has_value()) {
+      intent->parameters.emplace();
+    }
+    intent->parameters->push_back(std::move(parameter));
   }
 
   void AddEntityTypeParameter(fuchsia::modular::Intent* intent, const std::string& name,
@@ -161,7 +164,10 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     fuchsia::modular::IntentParameter parameter;
     parameter.name = name;
     parameter.data.set_entity_type(types);
-    intent->parameters.push_back(std::move(parameter));
+    if (!intent->parameters.has_value()) {
+      intent->parameters.emplace();
+    }
+    intent->parameters->push_back(std::move(parameter));
   }
 
   void AddParameterWithoutName(fuchsia::modular::Intent* intent) {
@@ -169,7 +175,10 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString("10", &vmo));
     parameter.data.set_json(std::move(vmo).ToTransport());
-    intent->parameters.push_back(std::move(parameter));
+    if (!intent->parameters.has_value()) {
+      intent->parameters.emplace();
+    }
+    intent->parameters->push_back(std::move(parameter));
   }
 
   void AddJsonParameter(fuchsia::modular::Intent* intent, const std::string& name,
@@ -179,7 +188,10 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(json, &vmo));
     parameter.data.set_json(std::move(vmo).ToTransport());
-    intent->parameters.push_back(std::move(parameter));
+    if (!intent->parameters.has_value()) {
+      intent->parameters.emplace();
+    }
+    intent->parameters->push_back(std::move(parameter));
   }
 
   void AddInvalidParameter(fuchsia::modular::Intent* intent, const std::string& name) {
@@ -188,7 +200,10 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     fuchsia::modular::IntentParameter parameter;
     parameter.name = name;
     parameter.data = std::move(data);
-    intent->parameters.push_back(std::move(parameter));
+    if (!intent->parameters.has_value()) {
+      intent->parameters.emplace();
+    }
+    intent->parameters->push_back(std::move(parameter));
   }
 
   // Initializes a parent mod for the mod created during the test. The goal of
@@ -227,11 +242,12 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
 TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
   // Set up command
   auto intent = CreateEmptyIntent("intent_action", "mod_url");
-  intent.parameters.resize(0);
+  intent.parameters.emplace();
   auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
+  manifest->intent_filters.emplace();
+  manifest->intent_filters->push_back(MakeIntentFilter("intent_action", {}));
   manifest->binary = "mod_url";
 
   // Set up fake module resolver and set validation of GetModuleManifest call.
@@ -279,11 +295,12 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
 // internally.
 TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
   auto intent = CreateEmptyIntent("intent_action", "mod_url");
-  intent.parameters.resize(0);
+  intent.parameters.emplace();
   auto command = MakeAddModCommand("mod", "" /* parent mod is null */, 0.5, intent);
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
-  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
+  manifest->intent_filters.emplace();
+  manifest->intent_filters->push_back(MakeIntentFilter("intent_action", {}));
   manifest->binary = "mod_url";
 
   // Set up fake module resolver and set validation of GetModuleManifest call.
@@ -334,13 +351,14 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
   // Set up command
   auto intent = CreateEmptyIntent("intent_action");
   AddJsonParameter(&intent, "param_json", R"({"@type": "foo"})");
-  AddEntityRefParameter(&intent, "param_ref", reference);
+  AddEntityRefParameter(&intent, "param_ref", reference.value_or(""));
   AddEntityTypeParameter(&intent, "param_type", {"entity_type2"});
   auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
   manifest->binary = "mod_url";
-  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
+  manifest->intent_filters.emplace();
+  manifest->intent_filters->push_back(MakeIntentFilter("intent_action", {}));
   fuchsia::modular::FindModulesResult result;
   result.module_id = "mod_url";
   fidl::Clone(manifest, &result.manifest);
@@ -440,7 +458,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidParameter) {
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
   manifest->binary = "mod_url";
-  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
+  manifest->intent_filters.emplace();
+  manifest->intent_filters->push_back(MakeIntentFilter("intent_action", {}));
 
   // Set up fake module resolver.
   fuchsia::modular::ModuleManifestPtr manifest_out;
@@ -470,7 +489,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidParameterWithResulution) {
   // Set up fake module resolver.
   auto manifest = fuchsia::modular::ModuleManifest::New();
   manifest->binary = "mod_url";
-  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
+  manifest->intent_filters.emplace();
+  manifest->intent_filters->push_back(MakeIntentFilter("intent_action", {}));
   fuchsia::modular::FindModulesResult result;
   result.module_id = "mod_url";
   fidl::Clone(manifest, &result.manifest);
@@ -520,7 +540,8 @@ TEST_F(AddModCommandRunnerTest, ExecuteInvalidJsonParamResolution) {
   // Set up fake module resolver.
   auto manifest = fuchsia::modular::ModuleManifest::New();
   manifest->binary = "mod_url";
-  manifest->intent_filters.push_back(MakeIntentFilter("intent_action", {}));
+  manifest->intent_filters.emplace();
+  manifest->intent_filters->push_back(MakeIntentFilter("intent_action", {}));
   fuchsia::modular::FindModulesResult result;
   result.module_id = "mod_url";
   fidl::Clone(manifest, &result.manifest);
@@ -545,7 +566,8 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
   manifest->binary = "mod_url";
-  manifest->intent_filters.push_back(MakeIntentFilter(
+  manifest->intent_filters.emplace();
+  manifest->intent_filters->push_back(MakeIntentFilter(
       "intent_action", {fuchsia::modular::ParameterConstraint{"param_json", "foo"}}));
 
   // Set up fake module resolver, set validaiton of GetModuleManifest call, and
@@ -631,7 +653,8 @@ TEST_F(AddModCommandRunnerTest, AcceptsModNameTransitional) {
 
   auto manifest = fuchsia::modular::ModuleManifest::New();
   manifest->binary = "mod_url";
-  manifest->intent_filters.push_back(MakeIntentFilter(
+  manifest->intent_filters.emplace();
+  manifest->intent_filters->push_back(MakeIntentFilter(
       "intent_action", {fuchsia::modular::ParameterConstraint{"param_json", "foo"}}));
 
   // Set up fake module resolver, set validaiton of GetModuleManifest call, and

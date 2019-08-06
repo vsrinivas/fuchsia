@@ -310,7 +310,7 @@ class StoryBenchmarkTest : public modular::testing::TestHarnessFixture {
         return;
       }
 
-      link_value_ = fxl::StringToNumber<int>(json.get());
+      link_value_ = fxl::StringToNumber<int>(json.value_or(""));
 
       // Corresponding TRACE_FLOW_BEGIN() is in the module.
       TRACE_FLOW_END("benchmark", "link/trans", link_value_);

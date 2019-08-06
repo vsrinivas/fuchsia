@@ -155,7 +155,7 @@ void SessionUserProviderImpl::Login(fuchsia::modular::UserLoginParams params) {
 }
 
 void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) {
-  bool login_as_guest = params.account_id.is_null() || params.account_id == "";
+  bool login_as_guest = params.account_id.value_or("") == "";
   if (login_as_guest) {
     FXL_LOG(INFO) << "fuchsia::modular::UserProvider::Login() Login as guest";
     // If requested, login as guest  by creating token managers with token
@@ -242,7 +242,7 @@ void SessionUserProviderImpl::RemoveUser(std::string account_id, RemoveUserCallb
 
 void SessionUserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
   FXL_LOG(INFO) << "PreviousUsers() is not implemented yet";
-  fidl::VectorPtr<::fuchsia::modular::auth::Account> users;
+  std::vector<::fuchsia::modular::auth::Account> users;
   callback(std::move(users));
 }
 

@@ -236,17 +236,17 @@ void EntityProviderRunner::ResolveDataEntity(
     fidl::StringPtr entity_reference,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) {
   std::map<std::string, std::string> entity_data;
-  if (!DecodeEntityDataReference(entity_reference, &entity_data)) {
+  if (!DecodeEntityDataReference(entity_reference.value_or(""), &entity_data)) {
     FXL_LOG(INFO) << "Could not decode entity reference: " << entity_reference;
     return;
     // |entity_request| closes here.
   }
 
-  auto inserted = data_entities_.emplace(std::make_pair(entity_reference.get(), nullptr));
+  auto inserted = data_entities_.emplace(std::make_pair(entity_reference.value_or(""), nullptr));
   if (inserted.second) {
     // This is a new entity.
     inserted.first->second =
-        std::make_unique<DataEntity>(this, entity_reference.get(), std::move(entity_data));
+        std::make_unique<DataEntity>(this, entity_reference.value_or(""), std::move(entity_data));
   }
   inserted.first->second->AddBinding(std::move(entity_request));
 }

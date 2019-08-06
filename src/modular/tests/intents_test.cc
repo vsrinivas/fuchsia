@@ -52,7 +52,8 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(parameter_data, &vmo));
     intent_parameter.data.set_json(std::move(vmo).ToTransport());
-    intent.parameters.push_back(std::move(intent_parameter));
+    intent.parameters.emplace();
+    intent.parameters->push_back(std::move(intent_parameter));
 
     return intent;
   }

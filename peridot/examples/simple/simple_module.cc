@@ -51,7 +51,7 @@ class SimpleModule : public fuchsia::ui::app::ViewProvider {
     // Get the token for the message queue and send it to the agent.
     message_queue_.GetToken(
         [agent_service = std::move(agent_service)](fidl::StringPtr token) {
-          agent_service->SetMessageQueue(token);
+          agent_service->SetMessageQueue(token.value_or(""));
         });
     FXL_LOG(INFO) << "Initialized Simple Module.";
   }

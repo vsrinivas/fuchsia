@@ -24,7 +24,7 @@ ModuleContextImpl::ModuleContextImpl(
       story_visibility_system_(info.story_visibility_system),
       component_context_impl_(
           info.component_context_info,
-          EncodeModuleComponentNamespace(info.story_controller_impl->GetStoryId()),
+          EncodeModuleComponentNamespace(info.story_controller_impl->GetStoryId().value_or("")),
           EncodeModulePath(module_data_->module_path), module_data_->module_url),
       user_intelligence_provider_(info.user_intelligence_provider),
       discover_registry_(info.discover_registry) {
@@ -41,7 +41,7 @@ ModuleContextImpl::ModuleContextImpl(
         auto module_scope = fuchsia::modular::ModuleScope::New();
         module_scope->module_path = module_data_->module_path;
         module_scope->url = module_data_->module_url;
-        module_scope->story_id = story_controller_impl_->GetStoryId();
+        module_scope->story_id = story_controller_impl_->GetStoryId().value_or("");
 
         auto scope = fuchsia::modular::ComponentScope::New();
         scope->set_module_scope(std::move(*module_scope));
@@ -51,7 +51,7 @@ ModuleContextImpl::ModuleContextImpl(
   service_provider_impl_.AddService<fuchsia::app::discover::ModuleOutputWriter>(
       [this](auto request) {
         fuchsia::app::discover::ModuleIdentifier module_scope;
-        module_scope.set_story_id(story_controller_impl_->GetStoryId());
+        module_scope.set_story_id(story_controller_impl_->GetStoryId().value_or(""));
         module_scope.set_module_path(module_data_->module_path);
         discover_registry_->RegisterModuleOutputWriter(std::move(module_scope), std::move(request));
       });
@@ -64,7 +64,7 @@ void ModuleContextImpl::GetLink(fidl::StringPtr name,
                                 fidl::InterfaceRequest<fuchsia::modular::Link> request) {
   fuchsia::modular::LinkPathPtr link_path;
   // See if there's a parameter mapping for this link.
-  link_path = story_controller_impl_->GetLinkPathForParameterName(module_data_->module_path, name);
+  link_path = story_controller_impl_->GetLinkPathForParameterName(module_data_->module_path, name.value_or(""));
   story_controller_impl_->ConnectLinkPath(std::move(link_path), std::move(request));
 }
 
@@ -120,7 +120,7 @@ void ModuleContextImpl::GetComponentContext(
 }
 
 void ModuleContextImpl::GetStoryId(GetStoryIdCallback callback) {
-  callback(story_controller_impl_->GetStoryId());
+  callback(story_controller_impl_->GetStoryId().value_or(""));
 }
 
 void ModuleContextImpl::RequestFocus() {

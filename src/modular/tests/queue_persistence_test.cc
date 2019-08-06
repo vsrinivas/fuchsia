@@ -42,7 +42,7 @@ class TestAgent : public modular::testing::FakeComponent,
   // |test::modular::queuepersistence::QueuePersistenceTestService|
   void GetMessageQueueToken(GetMessageQueueTokenCallback callback) override {
     msg_queue_.GetToken(
-        [callback = std::move(callback)](const fidl::StringPtr& token) { callback(token); });
+        [callback = std::move(callback)](const fidl::StringPtr& token) { callback(token.value_or("")); });
   }
 
   // |modular::testing::FakeComponent|
@@ -139,7 +139,7 @@ TEST_F(QueuePersistenceTest, MessagePersistedToQueue) {
   // Fetch the queue token from the agent's queue persistence service.
   std::string queue_token;
   test_module.agent_service()->GetMessageQueueToken(
-      [&](const fidl::StringPtr& token) { queue_token = token; });
+      [&](const fidl::StringPtr& token) { queue_token = token.value_or(""); });
   RunLoopUntil([&] { return !queue_token.empty(); });
 
   // Disconnect from the agent. This should tear down the agent.

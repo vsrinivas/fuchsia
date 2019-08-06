@@ -84,9 +84,9 @@ class SysLoaderForTest : fuchsia::sys::Loader {
   // |AddLoadInfo| is called again.
   void AddLoadInfo(fidl::StringPtr url, fuchsia::sys::PackagePtr pkg) {
     if (url->find("//") == std::string::npos) {
-      url = fxl::Substitute("file://$0", url.get());
+      url = fxl::Substitute("file://$0", url.value_or(""));
     }
-    load_info_[url.get()] = std::move(pkg);
+    load_info_[url.value_or("")] = std::move(pkg);
   }
 
  private:

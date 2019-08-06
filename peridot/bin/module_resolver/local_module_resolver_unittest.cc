@@ -110,7 +110,8 @@ TEST_F(FindModulesTest, Null) {
 
   fuchsia::modular::ModuleManifest entry;
   entry.binary = "id1";
-  entry.intent_filters.push_back(MakeIntentFilter("verb wont match", {}));
+  entry.intent_filters.emplace();
+  entry.intent_filters->push_back(MakeIntentFilter("verb wont match", {}));
   source->add("1", std::move(entry));
   source->idle();
 
@@ -129,19 +130,22 @@ TEST_F(FindModulesTest, Simpleaction) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.intent_filters.push_back(MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
+    entry.intent_filters.emplace();
+    entry.intent_filters->push_back(MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
     source1->add("module1", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module2";
-    entry.intent_filters.push_back(MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
+    entry.intent_filters.emplace();
+    entry.intent_filters->push_back(MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
     source2->add("module2", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module3";
-    entry.intent_filters.push_back(MakeIntentFilter("com.google.fuchsia.exist.vinfinity", {}));
+    entry.intent_filters.emplace();
+    entry.intent_filters->push_back(MakeIntentFilter("com.google.fuchsia.exist.vinfinity", {}));
     source1->add("module3", std::move(entry));
   }
 
@@ -192,7 +196,8 @@ TEST_F(FindModulesTest, SimpleParameterTypes) {
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "baz";
-    entry.intent_filters.push_back(MakeIntentFilter(
+    entry.intent_filters.emplace();
+    entry.intent_filters->push_back(MakeIntentFilter(
         "com.google.fuchsia.navigate.v1", {std::move(parameter1), std::move(parameter2)}));
     source->add("1", std::move(entry));
   }
@@ -205,7 +210,8 @@ TEST_F(FindModulesTest, SimpleParameterTypes) {
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "froozle";
-    entry.intent_filters.push_back(MakeIntentFilter(
+    entry.intent_filters.emplace();
+    entry.intent_filters->push_back(MakeIntentFilter(
         "com.google.fuchsia.navigate.v1", {std::move(parameter1), std::move(parameter2)}));
     source->add("2", std::move(entry));
   }
@@ -215,7 +221,8 @@ TEST_F(FindModulesTest, SimpleParameterTypes) {
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "with";
     parameter.type = "compantionCube";
-    entry.intent_filters.push_back(
+    entry.intent_filters.emplace();
+    entry.intent_filters->push_back(
         MakeIntentFilter("com.google.fuchsia.exist.vinfinity", {std::move(parameter)}));
     source->add("3", std::move(entry));
   }
@@ -254,7 +261,8 @@ TEST_F(FindModulesTest, ReAddExistingEntries) {
 
   fuchsia::modular::ModuleManifest entry;
   entry.binary = "id1";
-  entry.intent_filters.push_back(MakeIntentFilter("action1", {}));
+  entry.intent_filters.emplace();
+  entry.intent_filters->push_back(MakeIntentFilter("action1", {}));
 
   fuchsia::modular::ModuleManifest entry1;
   entry.Clone(&entry1);
@@ -285,7 +293,8 @@ TEST_F(FindModulesTest, QueryWithActionMatchesBothParameterNamesAndTypes) {
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
-    entry.intent_filters.push_back(
+    entry.intent_filters.emplace();
+    entry.intent_filters->push_back(
         MakeIntentFilter("com.google.fuchsia.navigate.v1", {std::move(parameter)}));
     source->add("1", std::move(entry));
   }
@@ -308,9 +317,10 @@ TEST_F(FindModulesTest, MultipleIntentFilters) {
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
-    entry.intent_filters.push_back(
+    entry.intent_filters.emplace();
+    entry.intent_filters->push_back(
         MakeIntentFilter("com.google.fuchsia.navigate.v1", {modular::CloneStruct(parameter)}));
-    entry.intent_filters.push_back(
+    entry.intent_filters->push_back(
         MakeIntentFilter("com.google.fuchsia.navigate.v2", {modular::CloneStruct(parameter)}));
 
     source->add("1", std::move(entry));

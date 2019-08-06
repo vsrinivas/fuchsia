@@ -109,12 +109,12 @@ TEST_F(TriggerTest, AgentWakesUpOnExplicitMessageQueueDelete) {
   bool schedule_task_complete = false;
   std::string explicit_msg_queue_token;
   explicit_msg_queue->GetToken([&](fidl::StringPtr token) {
-    explicit_msg_queue_token = token;
+    explicit_msg_queue_token = token.value_or("");
 
     // Schedule a task to process a message queue deletion.
     fuchsia::modular::TaskInfo task_info;
-    task_info.task_id = token;
-    task_info.trigger_condition.set_queue_deleted(token);
+    task_info.task_id = token.value_or("");
+    task_info.trigger_condition.set_queue_deleted(token.value_or(""));
     fake_agent_->agent_context()->ScheduleTaskWithCompletion(
         std::move(task_info), [&](bool finished) { schedule_task_complete = finished; });
   });

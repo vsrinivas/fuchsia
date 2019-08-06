@@ -74,7 +74,7 @@ constexpr auto kUpdateSnapshotTimeout = zx::sec(1);
 namespace {
 
 constexpr char kSurfaceIDSeparator[] = ":";
-fidl::StringPtr ModulePathToSurfaceID(const std::vector<std::string>& module_path) {
+std::string ModulePathToSurfaceID(const std::vector<std::string>& module_path) {
   std::vector<std::string> path;
   // Sanitize all the |module_name|s that make up this |module_path|.
   for (const auto& module_name : module_path) {
@@ -438,7 +438,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     view_connection.view_holder_token = std::move(view_holder_token);
 
     fuchsia::modular::SurfaceInfo surface_info;
-    surface_info.parent_id = anchor_surface_id;
+    surface_info.parent_id = anchor_surface_id.value_or("");
     surface_info.surface_relation = std::move(module_data_.surface_relation);
     surface_info.module_manifest = std::move(module_manifest_);
     surface_info.module_source = std::move(module_data_.module_source);
@@ -996,7 +996,7 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
       story_shell_context_impl_{story_id_, story_provider_impl, this},
       weak_factory_(this) {
   auto story_scope = fuchsia::modular::StoryScope::New();
-  story_scope->story_id = story_id_;
+  story_scope->story_id = story_id_.value_or("");
   auto scope = fuchsia::modular::ComponentScope::New();
   scope->set_story_scope(std::move(*story_scope));
   story_provider_impl_->user_intelligence_provider()->GetComponentIntelligenceServices(
@@ -1027,9 +1027,8 @@ bool StoryControllerImpl::IsRunning() {
   }
 }
 
-fidl::VectorPtr<fuchsia::modular::OngoingActivityType> StoryControllerImpl::GetOngoingActivities() {
-  fidl::VectorPtr<fuchsia::modular::OngoingActivityType> ongoing_activities;
-  ongoing_activities.resize(0);
+std::vector<fuchsia::modular::OngoingActivityType> StoryControllerImpl::GetOngoingActivities() {
+  std::vector<fuchsia::modular::OngoingActivityType> ongoing_activities;
   for (auto& entry : ongoing_activities_.bindings()) {
     ongoing_activities.push_back(entry->impl()->GetType());
   }
@@ -1188,7 +1187,7 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
 
   if (added_keys.size()) {
     for (auto& key : added_keys) {
-      pending_story_shell_views_.erase(key);
+      pending_story_shell_views_.erase(key.value_or(""));
     }
     ProcessPendingStoryShellViews();
   }
@@ -1215,7 +1214,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   // If this call enters a race with a StoryProvider.DeleteStory() call,
   // resulting in |this| being destroyed, |callback| will be dropped.
   operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)] {
-    auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_);
+    auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_.value_or(""));
     FXL_CHECK(story_info);
     callback(std::move(*story_info), story_observer_->model().runtime_state());
   }));
@@ -1374,7 +1373,7 @@ void StoryControllerImpl::InitStoryEnvironment() {
       new std::vector<std::string>{fuchsia::modular::ContextWriter::Name_};
   story_environment_ =
       std::make_unique<Environment>(story_provider_impl_->user_environment(),
-                                    kStoryEnvironmentLabelPrefix + story_id_.get(), *kEnvServices,
+                                    kStoryEnvironmentLabelPrefix + story_id_.value_or(""), *kEnvServices,
                                     /* kill_on_oom = */ false);
   story_environment_->AddService<fuchsia::modular::ContextWriter>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
@@ -1411,12 +1410,12 @@ void StoryControllerImpl::CreateEntity(
     std::string type, fuchsia::mem::Buffer data,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
     fit::function<void(std::string /* entity_reference */)> callback) {
-  story_provider_impl_->CreateEntity(story_id_, type, std::move(data), std::move(entity_request),
+  story_provider_impl_->CreateEntity(story_id_.value_or(""), type, std::move(data), std::move(entity_request),
                                      std::move(callback));
 }
 
 void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {
-  auto module_path = ModulePathFromSurfaceID(surface_id);
+  auto module_path = ModulePathFromSurfaceID(surface_id.value_or(""));
 
   for (auto& watcher : watchers_.ptrs()) {
     (*watcher)->OnModuleFocused(std::move(module_path));

@@ -43,7 +43,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
     // resolve the (action, parameter) and the supplied optional handler to a
     // module. If the module resolver doesn't recognize a supplied handler, we
     // forgivingly execute the handler anyway.
-    if (!add_mod_params_.intent.action.is_null()) {
+    if (add_mod_params_.intent.action.has_value()) {
       AddFindModulesOperation(
           &operation_queue_, module_resolver_, entity_resolver_,
           CloneOptional(add_mod_params_.intent), add_mod_params_.parent_mod_path,
@@ -70,7 +70,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
               } break;
 
               case fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER: {
-                candidate_module_.module_id = add_mod_params_.intent.handler;
+                candidate_module_.module_id = add_mod_params_.intent.handler.value_or("");
               } break;
             }
 
@@ -78,9 +78,9 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
           });
     } else {
       // We arrive here if the Intent has a handler, but no action.
-      FXL_DCHECK(!add_mod_params_.intent.handler.is_null())
+      FXL_DCHECK(add_mod_params_.intent.handler.has_value())
           << "Cannot start a module without an action or a handler";
-      candidate_module_.module_id = add_mod_params_.intent.handler;
+      candidate_module_.module_id = add_mod_params_.intent.handler.value_or("");
 
       CreateLinks(flow);
     }
@@ -150,7 +150,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
         case fuchsia::modular::IntentParameterData::Tag::Invalid: {
           out_result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
           out_result_.error_message = fxl::StringPrintf("Invalid data for parameter with name: %s",
-                                                        param.name.get().c_str());
+                                                        param.name.value_or("").c_str());
           done();
           return;
         }
@@ -165,7 +165,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
     Wait("AddModCommandRunner::AddModCall::Wait", did_get_entries)
         ->Then([this, done = std::move(done),
                 flow](std::vector<fuchsia::modular::CreateModuleParameterMapEntry> entries) {
-          parameter_info_->property_info.reset(std::move(entries));
+          parameter_info_->property_info.emplace(std::move(entries));
           done();
         });
   }

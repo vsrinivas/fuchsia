@@ -99,7 +99,7 @@ class ReadDataCall : public PageOperation<DataPtr> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    this->page()->GetSnapshot(page_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+    this->page()->GetSnapshot(page_snapshot_.NewRequest(), {},
                               nullptr);
     page_snapshot_->Get(
         to_array(key_), [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
@@ -233,7 +233,7 @@ class DumpPageSnapshotCall : public PageOperation<std::string> {
   void Run() override {
     FlowToken flow{this, &dump_};
 
-    page()->GetSnapshot(page_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    page()->GetSnapshot(page_snapshot_.NewRequest(), {}, nullptr);
     GetEntries(page_snapshot_.get(), &entries_, [this, flow] { Cont(flow); });
   }
 

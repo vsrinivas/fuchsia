@@ -33,11 +33,11 @@ TEST_F(ClipboardTest, PushAndPeekToTheSameClipboard) {
   bool clipboard_peek_success = false;
 
   // Expect nothing in the initialized clipboard
-  clipboard_ptr->Peek([&](std::string text) { EXPECT_EQ(text, ""); });
+  clipboard_ptr->Peek([&](fidl::StringPtr text) { EXPECT_EQ(text.value_or(""), ""); });
   clipboard_ptr->Push(expected_value);
-  clipboard_ptr->Peek([&](std::string text) {
+  clipboard_ptr->Peek([&](fidl::StringPtr text) {
     clipboard_peek_success = true;
-    EXPECT_EQ(text, expected_value);
+    EXPECT_EQ(text.value_or(""), expected_value);
   });
   RunLoopUntil([&] { return clipboard_peek_success; });
 }
@@ -52,9 +52,9 @@ TEST_F(ClipboardTest, NoopClipboard) {
 
   clipboard_ptr->Push("noop");
   bool clipboard_peek_success = false;
-  clipboard_ptr->Peek([&](std::string text) {
+  clipboard_ptr->Peek([&](fidl::StringPtr text) {
     clipboard_peek_success = true;
-    EXPECT_EQ(text, "");
+    EXPECT_EQ(text.value_or(""), "");
   });
   RunLoopUntil([&] { return clipboard_peek_success; });
 }
@@ -85,9 +85,9 @@ TEST_F(ClipboardTest, ClipboardAgentProvidesClipboard) {
 
   clipboard_ptr->Push(expected_value);
 
-  clipboard_ptr->Peek([&](std::string text) {
+  clipboard_ptr->Peek([&](fidl::StringPtr text) {
     clipboard_peek_success = true;
-    EXPECT_EQ(text, expected_value);
+    EXPECT_EQ(text.value_or(""), expected_value);
   });
 
   RunLoopUntil([&] { return clipboard_peek_success; });

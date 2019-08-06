@@ -245,7 +245,7 @@ class MessageQueueManager::GetQueueTokenCall : public PageOperation<fidl::String
 
     snapshot_.set_error_handler(
         [](zx_status_t status) { FXL_LOG(WARNING) << "Error on snapshot connection"; });
-    page()->GetSnapshot(snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    page()->GetSnapshot(snapshot_.NewRequest(), {}, nullptr);
 
     key_ = MakeMessageQueueTokenKey(component_namespace_, component_instance_id_, queue_name_);
     snapshot_->Get(to_array(key_), [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
@@ -293,7 +293,7 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
   void Run() override {
     FlowToken flow{this};
 
-    page()->GetSnapshot(snapshot_.NewRequest(), std::vector<uint8_t>(), nullptr);
+    page()->GetSnapshot(snapshot_.NewRequest(), {}, nullptr);
     std::string key = MakeMessageQueueKey(token_);
     snapshot_->Get(to_array(key), [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
       if (result.is_err()) {
@@ -363,9 +363,9 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
     operation_collection_.Add(std::make_unique<GetQueueTokenCall>(
         page(), message_queue_info_.component_namespace, message_queue_info_.component_instance_id,
         message_queue_info_.queue_name, [this, flow](fidl::StringPtr token) {
-          if (token) {
+          if (token.has_value()) {
             // Queue token was found in the ledger.
-            message_queue_info_.queue_token = token.get();
+            message_queue_info_.queue_token = token.value();
             Finish(flow);
             return;
           }
@@ -434,7 +434,7 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
     operation_collection_.Add(std::make_unique<GetQueueTokenCall>(
         page(), message_queue_info_.component_namespace, message_queue_info_.component_instance_id,
         message_queue_info_.queue_name, [this, flow](fidl::StringPtr token) {
-          if (!token) {
+          if (!token.has_value()) {
             FXL_LOG(WARNING) << trace_name() << " " << message_queue_info_.queue_name << " "
                              << "Request to delete queue not found in ledger"
                              << " for component instance "
@@ -442,7 +442,7 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
             return;
           }
 
-          message_queue_info_.queue_token = token.get();
+          message_queue_info_.queue_token = token.value();
 
           std::string message_queue_key = MakeMessageQueueKey(message_queue_info_.queue_token);
 

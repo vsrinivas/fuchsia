@@ -455,7 +455,7 @@ class XdrContext {
   void Value(fidl::VectorPtr<D>* const data, const XdrFilterType<V> filter) {
     switch (op_) {
       case XdrOp::TO_JSON:
-        if (data->is_null()) {
+        if (!data->has_value()) {
           value_->SetNull();
 
         } else {
@@ -478,16 +478,10 @@ class XdrContext {
             return;
           }
 
-          // The resize() call has two purposes:
-          //
-          // (1) Setting data to non-null, even if there are only zero
-          //     elements. This is essential, otherwise the FIDL output
-          //     is wrong (i.e., the FIDL output cannot be used in FIDL
-          //     method calls without crashing).
-          //
-          // (2) It saves on allocations for growing the underlying
-          //     vector one by one.
-          data->resize(value_->Size());
+          // Set the VectorPtr to contain a value.
+          data->emplace();
+          // Save on allocations for growing the underlying vector by one.
+          (*data)->resize(value_->Size());
 
           for (size_t i = 0; i < value_->Size(); ++i) {
             Element(i).Value(&(*data)->at(i), filter);

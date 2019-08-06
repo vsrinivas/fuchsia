@@ -221,14 +221,14 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   factory->CreateReference("my_cookie",
                            [&entity_ref](fidl::StringPtr retval) { entity_ref = retval; });
 
-  RunLoopWithTimeoutOrUntil([&entity_ref] { return !entity_ref.is_null(); });
-  EXPECT_FALSE(entity_ref.is_null());
+  RunLoopWithTimeoutOrUntil([&entity_ref] { return entity_ref.has_value(); });
+  EXPECT_TRUE(entity_ref.has_value());
 
   // 3. Resolve the reference into an |fuchsia::modular::Entity|, make calls to
   // GetTypes and
   //    GetData, which should route into our |MyEntityProvider|.
   fuchsia::modular::EntityPtr entity;
-  dummy_agent->entity_resolver()->ResolveEntity(entity_ref, entity.NewRequest());
+  dummy_agent->entity_resolver()->ResolveEntity(entity_ref.value(), entity.NewRequest());
 
   std::map<std::string, uint32_t> counts;
   entity->GetTypes([&counts](const std::vector<std::string>& types) {
@@ -261,8 +261,8 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
 
   fidl::VectorPtr<std::string> output_types;
   entity->GetTypes(
-      [&output_types](std::vector<std::string> result) { output_types.reset(std::move(result)); });
-  RunLoopWithTimeoutOrUntil([&output_types] { return !output_types.is_null(); });
+      [&output_types](std::vector<std::string> result) { output_types.emplace(std::move(result)); });
+  RunLoopWithTimeoutOrUntil([&output_types] { return output_types.has_value(); });
 
   EXPECT_EQ(data.size(), output_types->size());
   EXPECT_EQ("type1", output_types->at(0));
@@ -273,7 +273,7 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
     FXL_CHECK(fsl::StringFromVmo(*result, &data_string));
     output_data = data_string;
   });
-  RunLoopWithTimeoutOrUntil([&output_data] { return !output_data.is_null(); });
+  RunLoopWithTimeoutOrUntil([&output_data] { return output_data.has_value(); });
   EXPECT_EQ("data1", output_data);
 }
 

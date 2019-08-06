@@ -73,7 +73,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Called by StoryProviderImpl.
   //
   // Returns a list of the ongoing activities in this story.
-  fidl::VectorPtr<fuchsia::modular::OngoingActivityType> GetOngoingActivities();
+  std::vector<fuchsia::modular::OngoingActivityType> GetOngoingActivities();
 
   void Sync(fit::function<void()> done);
 

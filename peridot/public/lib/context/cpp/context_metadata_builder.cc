@@ -35,7 +35,7 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetModuleUrl(
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetModulePath(
     const std::vector<std::string>& path) {
-  ModuleMetadata()->path.reset(path);
+  ModuleMetadata()->path = path;
   return *this;
 }
 
@@ -55,17 +55,20 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTopic(
 }
 ContextMetadataBuilder& ContextMetadataBuilder::AddEntityType(
     const fidl::StringPtr& type) {
-  EntityMetadata()->type.push_back(type);
+  if (!EntityMetadata()->type.has_value()) {
+    EntityMetadata()->type.emplace();
+  }
+  EntityMetadata()->type->push_back(type.value_or(""));
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTypes(
     const std::vector<std::string>& types) {
-  EntityMetadata()->type.reset(types);
+  EntityMetadata()->type = types;
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetLinkPath(
     const std::vector<std::string>& module_path, const std::string& name) {
-  LinkMetadata()->module_path.reset(module_path);
+  LinkMetadata()->module_path = module_path;
   LinkMetadata()->name = name;
   return *this;
 }

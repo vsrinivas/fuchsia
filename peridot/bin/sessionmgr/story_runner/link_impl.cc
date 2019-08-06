@@ -28,8 +28,8 @@ namespace {
 void ApplyOp(fidl::StringPtr* value_str, const std::vector<std::string>& path,
              fit::function<void(CrtJsonDoc& doc, CrtJsonPointer& pointer)> apply_fn) {
   CrtJsonDoc value;
-  if (!value_str->is_null()) {
-    value.Parse(*value_str);
+  if (value_str->has_value()) {
+    value.Parse(value_str->value());
   }
   auto pointer = CreatePointer(value, path);
   apply_fn(value, pointer);
@@ -39,7 +39,7 @@ void ApplyOp(fidl::StringPtr* value_str, const std::vector<std::string>& path,
 bool ApplySetOp(fidl::StringPtr* value_str, const fidl::VectorPtr<std::string>& path,
                 const fidl::StringPtr& new_value_at_path_str) {
   CrtJsonDoc new_value_at_path;
-  new_value_at_path.Parse(new_value_at_path_str);
+  new_value_at_path.Parse(new_value_at_path_str.value_or(""));
   if (new_value_at_path.HasParseError()) {
     return false;
   }
@@ -47,7 +47,7 @@ bool ApplySetOp(fidl::StringPtr* value_str, const fidl::VectorPtr<std::string>& 
   auto apply_fn = [&new_value_at_path](CrtJsonDoc& doc, CrtJsonPointer& p) {
     p.Set(doc, std::move(new_value_at_path));
   };
-  ApplyOp(value_str, path, apply_fn);
+  ApplyOp(value_str, path.value_or({}), apply_fn);
   return true;
 }
 
@@ -100,7 +100,7 @@ void LinkImpl::Get(fidl::VectorPtr<std::string> path, GetCallback callback) {
                   } else {
                     // Extract just the |path| portion of the value.
                     CrtJsonDoc json;
-                    json.Parse(value);
+                    json.Parse(value.value_or(""));
                     if (json.HasParseError()) {
                       return std::string("null");
                     }
@@ -167,7 +167,7 @@ void LinkImpl::GetEntity(GetEntityCallback callback) {
         }
         // Convert the contents to an Entity reference, if possible.
         std::string ref;
-        if (!EntityReferenceFromJson(value, &ref)) {
+        if (!EntityReferenceFromJson(value.value_or(""), &ref)) {
           FXL_LOG(ERROR) << "Link value for " << link_path_ << " is not an entity reference.";
           callback(nullptr);
           return;
@@ -179,7 +179,7 @@ void LinkImpl::GetEntity(GetEntityCallback callback) {
 
 void LinkImpl::SetEntity(fidl::StringPtr entity_reference) {
   // SetEntity() is just a variation on Set(), so delegate to Set().
-  Set(nullptr, EntityReferenceToJson(entity_reference));
+  Set(nullptr, EntityReferenceToJson(entity_reference.value_or("")));
 }
 
 void LinkImpl::Sync(SyncCallback callback) {
@@ -192,13 +192,13 @@ void LinkImpl::OnLinkValueChanged(const fidl::StringPtr& value, const void* cont
   // different StoryStorage altogether (even on a different device).
   if (context != this) {
     for (auto& dst : normal_watchers_.ptrs()) {
-      (*dst)->Notify(StringToVmo(value));
+      (*dst)->Notify(StringToVmo(value.value_or("")));
     }
   }
 
   // No matter what, everyone in |everything_watchers_| sees everything.
   for (auto& dst : everything_watchers_.ptrs()) {
-    (*dst)->Notify(StringToVmo(value));
+    (*dst)->Notify(StringToVmo(value.value_or("")));
   }
 }
 

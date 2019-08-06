@@ -59,7 +59,7 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    auto i = story_runtime_containers_->find(story_id_);
+    auto i = story_runtime_containers_->find(story_id_.value_or(""));
     if (i == story_runtime_containers_->end()) {
       FXL_LOG(WARNING) << "I was told to teardown story " << story_id_ << ", but I can't find it.";
       return;
@@ -81,8 +81,8 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
     //
     // TODO(thatguy); Understand the above comment, and rewrite it.
     async::PostTask(async_get_default_dispatcher(), [this, flow] {
-      story_runtime_containers_->erase(story_id_);
-      message_queue_manager_->DeleteNamespace(EncodeModuleComponentNamespace(story_id_), [flow] {});
+      story_runtime_containers_->erase(story_id_.value_or(""));
+      message_queue_manager_->DeleteNamespace(EncodeModuleComponentNamespace(story_id_.value_or("")), [flow] {});
     });
   }
 
@@ -113,7 +113,7 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
     // Use the existing controller, if possible.
     // This won't race against itself because it's managed by an operation
     // queue.
-    auto i = story_provider_impl_->story_runtime_containers_.find(story_id_);
+    auto i = story_provider_impl_->story_runtime_containers_.find(story_id_.value_or(""));
     if (i != story_provider_impl_->story_runtime_containers_.end()) {
       story_runtime_container_ = &i->second;
       return;
@@ -384,13 +384,13 @@ std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
   // of launching the story shell as a separate component. In this case, there
   // is also nothing to preload, so ignore |preloaded_story_shell_app_|.
   if (story_shell_factory_) {
-    story_shell_factory_->AttachStory(story_id, std::move(story_shell_request));
+    story_shell_factory_->AttachStory(story_id.value_or(""), std::move(story_shell_request));
 
     auto on_teardown = [this, story_id = std::move(story_id)](fit::function<void()> done) {
-      story_shell_factory_->DetachStory(story_id, std::move(done));
+      story_shell_factory_->DetachStory(story_id.value_or(""), std::move(done));
     };
 
-    return std::make_unique<ClosureAsyncHolder>(story_id /* name */, std::move(on_teardown));
+    return std::make_unique<ClosureAsyncHolder>(story_id.value_or("") /* name */, std::move(on_teardown));
   }
 
   MaybeLoadStoryShell();
@@ -488,19 +488,19 @@ void StoryProviderImpl::AttachView(fidl::StringPtr story_id,
                                    fuchsia::ui::views::ViewHolderToken view_holder_token) {
   FXL_CHECK(session_shell_);
   fuchsia::modular::ViewIdentifier view_id;
-  view_id.story_id = std::move(story_id);
+  view_id.story_id = story_id.value_or("");
   session_shell_->AttachView2(std::move(view_id), std::move(view_holder_token));
 }
 
 void StoryProviderImpl::DetachView(fidl::StringPtr story_id, fit::function<void()> done) {
   FXL_CHECK(session_shell_);
   fuchsia::modular::ViewIdentifier view_id;
-  view_id.story_id = std::move(story_id);
+  view_id.story_id = story_id.value_or("");
   session_shell_->DetachView(std::move(view_id), std::move(done));
 }
 
 void StoryProviderImpl::NotifyStoryStateChange(fidl::StringPtr story_id) {
-  auto it = story_runtime_containers_.find(story_id);
+  auto it = story_runtime_containers_.find(story_id.value_or(""));
   if (it == story_runtime_containers_.end()) {
     // If this call arrives while DeleteStory() is in
     // progress, the story controller might already be gone
@@ -515,8 +515,9 @@ void StoryProviderImpl::NotifyStoryStateChange(fidl::StringPtr story_id) {
 void StoryProviderImpl::NotifyStoryActivityChange(
     fidl::StringPtr story_id,
     fidl::VectorPtr<fuchsia::modular::OngoingActivityType> ongoing_activities) {
+  const std::vector<fuchsia::modular::OngoingActivityType> activities(ongoing_activities.value_or({}));
   for (const auto& i : activity_watchers_.ptrs()) {
-    (*i)->OnStoryActivityChange(story_id, ongoing_activities.Clone());
+    (*i)->OnStoryActivityChange(story_id.value_or(""), activities);
   }
 }
 
@@ -601,7 +602,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(fidl::StringPtr story_id,
     i->second.current_data = CloneOptional(story_data);
   } else {
     fuchsia::modular::StoryControllerPtr story_controller;
-    GetController(story_id, story_controller.NewRequest());
+    GetController(story_id.value_or(""), story_controller.NewRequest());
     story_controller->RequestStart();
   }
   NotifyStoryWatchers(&story_data, runtime_state, visibility_state);
@@ -612,7 +613,7 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
       story_id, false /* bulk */, &story_runtime_containers_,
       component_context_info_.message_queue_manager, [this, story_id] {
         for (const auto& i : watchers_.ptrs()) {
-          (*i)->OnDelete(story_id);
+          (*i)->OnDelete(story_id.value_or(""));
         }
       }));
 }
@@ -624,11 +625,11 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
       return;
     }
 
-    if (info->focused_story_id.is_null()) {
+    if (!info->focused_story_id.has_value()) {
       return;
     }
 
-    auto i = story_runtime_containers_.find(info->focused_story_id.get());
+    auto i = story_runtime_containers_.find(info->focused_story_id.value());
     if (i == story_runtime_containers_.end()) {
       FXL_LOG(ERROR) << "Story controller not found for focused story " << info->focused_story_id;
       return;
@@ -674,7 +675,7 @@ void StoryProviderImpl::CreateEntity(
         // Once the entity provider for the given story is available, create
         // the entity.
         entity_provider->CreateEntity(
-            type, std::move(data),
+            type.value_or(""), std::move(data),
             [this, story_id, callback = std::move(callback),
              entity_request = std::move(entity_request)](std::string cookie) mutable {
               if (cookie.empty()) {

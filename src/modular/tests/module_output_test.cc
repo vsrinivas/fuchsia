@@ -51,7 +51,7 @@ TEST_F(ModuleOutputTest, ModuleWritesToOutput) {
       kTestType, std::move(vmo).ToTransport(), entity.NewRequest(),
       [&reference](fidl::StringPtr entity_reference) { reference = std::move(entity_reference); });
 
-  RunLoopUntil([&] { return !reference.is_null(); });
+  RunLoopUntil([&] { return reference.has_value(); });
 
   fuchsia::app::discover::ModuleOutputWriterPtr module_output;
   test_module_->component_context()->svc()->Connect(module_output.NewRequest());

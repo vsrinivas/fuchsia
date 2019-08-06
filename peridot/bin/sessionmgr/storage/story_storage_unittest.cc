@@ -54,7 +54,7 @@ TEST_F(StoryStorageTest, ReadAllModuleData_Empty) {
   fidl::VectorPtr<ModuleData> all_module_data;
   storage->ReadAllModuleData()->Then([&](std::vector<ModuleData> data) {
     read_done = true;
-    all_module_data.reset(std::move(data));
+    all_module_data.emplace(std::move(data));
   });
 
   RunLoopUntil([&] { return read_done; });
@@ -106,7 +106,7 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   // Read the same data back with ReadAllModuleData().
   fidl::VectorPtr<ModuleData> all_module_data;
   storage->ReadAllModuleData()->Then(
-      [&](std::vector<ModuleData> data) { all_module_data.reset(std::move(data)); });
+      [&](std::vector<ModuleData> data) { all_module_data.emplace(std::move(data)); });
   RunLoopUntil([&] { return !!all_module_data; });
   EXPECT_EQ(2u, all_module_data->size());
   EXPECT_TRUE(fidl::Equals(module_data1, all_module_data->at(0)));
@@ -242,7 +242,7 @@ TEST_F(StoryStorageTest, UpdateLinkValue) {
       ->UpdateLinkValue(
           MakeLinkPath("link"),
           [](fidl::StringPtr* current_value) {
-            EXPECT_TRUE(current_value->is_null());
+            EXPECT_FALSE(current_value->has_value());
             *current_value = "10";
           },
           &context)

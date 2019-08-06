@@ -155,13 +155,13 @@ TEST_F(DispatchStoryCommandExecutorTest, Sequential) {
   AddCommandRunner(
       fuchsia::modular::StoryCommand::Tag::kAddMod,
       [&](fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
-        names.push_back(command.add_mod().mod_name_transitional);
+        names.push_back(command.add_mod().mod_name_transitional.value_or(""));
         return fuchsia::modular::ExecuteStatus::OK;
       },
       true /* delay_done */);
   AddCommandRunner(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
                    [&](fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
-                     names.push_back(command.remove_mod().mod_name_transitional);
+                     names.push_back(command.remove_mod().mod_name_transitional.value_or(""));
                      return fuchsia::modular::ExecuteStatus::OK;
                    });
 

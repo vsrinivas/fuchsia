@@ -152,7 +152,8 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
   const std::string initial_json = R"({"created-with-info": true})";
   ASSERT_TRUE(fsl::VmoFromString(initial_json, &vmo));
   param.data.set_json(std::move(vmo).ToTransport());
-  add_mod.intent.parameters.push_back(std::move(param));
+  add_mod.intent.parameters.emplace();
+  add_mod.intent.parameters->push_back(std::move(param));
 
   StoryCommand command;
   command.set_add_mod(std::move(add_mod));

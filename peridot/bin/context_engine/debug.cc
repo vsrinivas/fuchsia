@@ -91,31 +91,33 @@ void ContextDebugImpl::WaitUntilIdle(WaitUntilIdleCallback callback) {
 }
 
 void ContextDebugImpl::DispatchOneValue(fuchsia::modular::ContextDebugValue value) {
-  fidl::VectorPtr<fuchsia::modular::ContextDebugValue> values;
+  std::vector<fuchsia::modular::ContextDebugValue> values;
   values.push_back(std::move(value));
   DispatchValues(std::move(values));
 }
 
 void ContextDebugImpl::DispatchValues(fidl::VectorPtr<fuchsia::modular::ContextDebugValue> values) {
+  FXL_DCHECK(values.has_value());
   for (const auto& listener : listeners_.ptrs()) {
-    fidl::VectorPtr<fuchsia::modular::ContextDebugValue> values_clone;
-    fidl::Clone(values, &values_clone);
-    (*listener)->OnValuesChanged(values_clone.take());
+    std::vector<fuchsia::modular::ContextDebugValue> values_clone;
+    fidl::Clone(values.value(), &values_clone);
+    (*listener)->OnValuesChanged(std::move(values_clone));
   }
 }
 
 void ContextDebugImpl::DispatchOneSubscription(fuchsia::modular::ContextDebugSubscription value) {
-  fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription> values;
+  std::vector<fuchsia::modular::ContextDebugSubscription> values;
   values.push_back(std::move(value));
   DispatchSubscriptions(std::move(values));
 }
 
 void ContextDebugImpl::DispatchSubscriptions(
     fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription> subscriptions) {
+  FXL_DCHECK(subscriptions.has_value());
   for (const auto& listener : listeners_.ptrs()) {
-    fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription> subscriptions_clone;
-    fidl::Clone(subscriptions, &subscriptions_clone);
-    (*listener)->OnSubscriptionsChanged(subscriptions_clone.take());
+    std::vector<fuchsia::modular::ContextDebugSubscription> subscriptions_clone;
+    fidl::Clone(subscriptions.value(), &subscriptions_clone);
+    (*listener)->OnSubscriptionsChanged(std::move(subscriptions_clone));
   }
 }
 

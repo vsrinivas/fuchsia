@@ -32,7 +32,7 @@ class PuppetMasterTest : public testing::TestWithSessionStorage {
 
   fuchsia::modular::StoryPuppetMasterPtr ControlStory(fidl::StringPtr story_name) {
     fuchsia::modular::StoryPuppetMasterPtr ptr;
-    ptr_->ControlStory(story_name, ptr.NewRequest());
+    ptr_->ControlStory(story_name.value_or(""), ptr.NewRequest());
     return ptr;
   }
 
@@ -336,8 +336,8 @@ TEST_F(PuppetMasterTest, CreateStoryWithStoryInfoExtra) {
   done = false;
   storage_->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
     ASSERT_NE(nullptr, data);
-    ASSERT_FALSE(data->story_info().extra.is_null());
-    auto extra_info = data->story_info().extra.get();
+    ASSERT_TRUE(data->story_info().extra.has_value());
+    auto extra_info = data->story_info().extra.value();
     ASSERT_EQ(extra_info.size(), extra_info_size);
     EXPECT_EQ(extra_info.at(0).key, extra_entry_key);
     EXPECT_EQ(extra_info.at(0).value, extra_entry_value);
@@ -415,7 +415,7 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterCreateStory) {
   // to creating the story.
   done = false;
   storage_->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    ASSERT_TRUE(data->story_info().extra.is_null());
+    ASSERT_FALSE(data->story_info().extra.has_value());
     done = true;
   });
   RunLoopUntil([&] { return done; });
@@ -471,7 +471,7 @@ TEST_F(PuppetMasterTest, DeleteStory) {
 
   // Create a story.
   storage_->CreateStory("foo", {} /* extra_info */, {} /* story_options */)
-      ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { story_id = id; });
+      ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { story_id = id.value_or(""); });
 
   // Delete it
   bool done{};

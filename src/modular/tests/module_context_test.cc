@@ -223,10 +223,10 @@ TEST_F(ModuleContextTest, CreateEntity) {
     ASSERT_TRUE(fsl::VmoFromString("42", &buffer));
     module.module_context()->CreateEntity("entity_type", std::move(buffer), entity.NewRequest(),
                                           [&](fidl::StringPtr new_reference) {
-                                            ASSERT_FALSE(new_reference.is_null());
+                                            ASSERT_TRUE(new_reference.has_value());
                                             reference = new_reference;
                                           });
-    RunLoopUntil([&] { return !reference.is_null(); });
+    RunLoopUntil([&] { return reference.has_value(); });
   }
 
   // Get the types and value from the handle returned by CreateEntity() and
@@ -258,7 +258,8 @@ TEST_F(ModuleContextTest, CreateEntity) {
     fuchsia::modular::EntityResolverPtr resolver;
     module.modular_component_context()->GetEntityResolver(resolver.NewRequest());
     fuchsia::modular::EntityPtr entity_from_reference;
-    resolver->ResolveEntity(reference, entity_from_reference.NewRequest());
+    ASSERT_TRUE(reference.has_value());
+    resolver->ResolveEntity(reference.value(), entity_from_reference.NewRequest());
 
     std::vector<std::string> types;
     bool gettypes_done = false;

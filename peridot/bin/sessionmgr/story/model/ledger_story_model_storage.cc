@@ -272,7 +272,7 @@ fit::promise<> LedgerStoryModelStorage::Load() {
   auto state = std::make_unique<State>();
 
   page()->GetSnapshot(state->page_snapshot.NewRequest(),
-                      fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */, nullptr /* watcher */);
+                      {} /* key_prefix */, nullptr /* watcher */);
   auto key = MakeDeviceKey(device_id_);
   auto read_promise =
       PageSnapshotPromise::GetInline(state->page_snapshot.get(), key)
@@ -328,7 +328,7 @@ fit::promise<> LedgerStoryModelStorage::Execute(std::vector<StoryModelMutation> 
                             commands = std::move(commands)]() mutable -> fit::promise<> {
            page()->StartTransaction();
            page()->GetSnapshot(state->page_snapshot.NewRequest(),
-                               fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */,
+                               {} /* key_prefix */,
                                nullptr /* watcher */);
 
            // Partition up the commands into those that affect device-only

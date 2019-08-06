@@ -18,7 +18,7 @@ class SetLinkValueCommandRunnerTest : public testing::TestWithSessionStorage {
     testing::TestWithSessionStorage::SetUp();
     session_storage_ = MakeSessionStorage("page");
     runner_ = MakeRunner();
-    story_id_ = CreateStory(session_storage_.get());
+    story_id_ = CreateStory(session_storage_.get()).value_or("");
     story_storage_ = GetStoryStorage(session_storage_.get(), story_id_);
   }
 

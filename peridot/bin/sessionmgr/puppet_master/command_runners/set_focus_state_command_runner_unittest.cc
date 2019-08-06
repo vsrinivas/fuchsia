@@ -22,7 +22,7 @@ class FocusHandler : fuchsia::modular::FocusProvider {
   std::string request_called_with_story_id() { return request_called_with_story_id_; }
 
   // |fuchsia::modular::FocusProvider|
-  void Request(fidl::StringPtr story_id) override { request_called_with_story_id_ = story_id; };
+  void Request(fidl::StringPtr story_id) override { request_called_with_story_id_ = story_id.value_or(""); };
   void Query(QueryCallback callback) override{};
   void Watch(fidl::InterfaceHandle<fuchsia::modular::FocusWatcher> watcher) override{};
 

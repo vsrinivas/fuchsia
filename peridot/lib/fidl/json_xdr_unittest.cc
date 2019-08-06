@@ -414,7 +414,7 @@ TEST(Xdr, FidlOptional) {
   EXPECT_TRUE(fidl::Equals(t1, t0)) << json;
 
   // See comment in FidlRequired.
-  EXPECT_FALSE(t1.string.is_null());
+  EXPECT_TRUE(t1.string.has_value());
   EXPECT_EQ("1", t1.string);
 
   EXPECT_FALSE(nullptr == t1.struct_);
@@ -436,7 +436,7 @@ TEST(Xdr, FidlOptional) {
   EXPECT_TRUE(fidl::Equals(t2, t1)) << json;
 
   // See comment in FidlRequired.
-  EXPECT_TRUE(t2.string.is_null());
+  EXPECT_FALSE(t2.string.has_value());
   EXPECT_TRUE(nullptr == t2.struct_);
   EXPECT_TRUE(nullptr == t2.union_);
 }
@@ -544,7 +544,7 @@ TEST(Xdr, FidlRequiredRepeatedOptional) {
   EXPECT_EQ(1u, t1.struct_.size());
   EXPECT_EQ(1u, t1.union_.size());
 
-  EXPECT_FALSE(t1.string.at(0).is_null());
+  EXPECT_TRUE(t1.string.at(0).has_value());
   EXPECT_EQ("1", t1.string.at(0));
 
   EXPECT_FALSE(nullptr == t1.struct_.at(0));
@@ -570,7 +570,7 @@ TEST(Xdr, FidlRequiredRepeatedOptional) {
   EXPECT_EQ(1u, t2.struct_.size());
   EXPECT_EQ(1u, t2.union_.size());
 
-  EXPECT_TRUE(t2.string.at(0).is_null());
+  EXPECT_FALSE(t2.string.at(0).has_value());
   EXPECT_TRUE(nullptr == t2.struct_.at(0));
   EXPECT_TRUE(nullptr == t2.union_.at(0));
 }
@@ -586,23 +586,24 @@ TEST(Xdr, FidlOptionalRepeatedRequired) {
 
   json_xdr_unittest::OptionalRepeatedRequiredData t0;
 
-  t0.string.push_back("1");
-  t0.bool_.push_back(true);
-  t0.int8.push_back(2);
-  t0.int16.push_back(3);
-  t0.int32.push_back(4);
-  t0.int64.push_back(5);
-  t0.uint8.push_back(6);
-  t0.uint16.push_back(7);
-  t0.uint32.push_back(8);
-  t0.uint64.push_back(9);
-  t0.float32.push_back(10);
-  t0.float64.push_back(11);
-  t0.struct_.push_back({12});
-  t0.enum_.push_back(json_xdr_unittest::Enum::ONE);
+  t0.string.emplace({"1"});
+  t0.bool_.emplace({true});
+  t0.int8.emplace({2});
+  t0.int16.emplace({3});
+  t0.int32.emplace({4});
+  t0.int64.emplace({5});
+  t0.uint8.emplace({6});
+  t0.uint16.emplace({7});
+  t0.uint32.emplace({8});
+  t0.uint64.emplace({9});
+  t0.float32.emplace({10});
+  t0.float64.emplace({11});
+  t0.struct_.emplace({{12}});
+  t0.enum_.emplace({json_xdr_unittest::Enum::ONE});
   json_xdr_unittest::Union u;
   u.set_int32(13);
-  t0.union_.push_back(std::move(u));
+  t0.union_.emplace();
+  t0.union_->push_back(std::move(u));
 
   XdrWrite(&json, &t0, XdrOptionalRepeatedRequiredData);
 
@@ -611,21 +612,21 @@ TEST(Xdr, FidlOptionalRepeatedRequired) {
 
   EXPECT_TRUE(fidl::Equals(t1, t0)) << json;
 
-  EXPECT_FALSE(t1.string.is_null());
-  EXPECT_FALSE(t1.bool_.is_null());
-  EXPECT_FALSE(t1.int8.is_null());
-  EXPECT_FALSE(t1.int16.is_null());
-  EXPECT_FALSE(t1.int32.is_null());
-  EXPECT_FALSE(t1.int64.is_null());
-  EXPECT_FALSE(t1.uint8.is_null());
-  EXPECT_FALSE(t1.uint16.is_null());
-  EXPECT_FALSE(t1.uint32.is_null());
-  EXPECT_FALSE(t1.uint64.is_null());
-  EXPECT_FALSE(t1.float32.is_null());
-  EXPECT_FALSE(t1.float64.is_null());
-  EXPECT_FALSE(t1.struct_.is_null());
-  EXPECT_FALSE(t1.enum_.is_null());
-  EXPECT_FALSE(t1.union_.is_null());
+  EXPECT_TRUE(t1.string.has_value());
+  EXPECT_TRUE(t1.bool_.has_value());
+  EXPECT_TRUE(t1.int8.has_value());
+  EXPECT_TRUE(t1.int16.has_value());
+  EXPECT_TRUE(t1.int32.has_value());
+  EXPECT_TRUE(t1.int64.has_value());
+  EXPECT_TRUE(t1.uint8.has_value());
+  EXPECT_TRUE(t1.uint16.has_value());
+  EXPECT_TRUE(t1.uint32.has_value());
+  EXPECT_TRUE(t1.uint64.has_value());
+  EXPECT_TRUE(t1.float32.has_value());
+  EXPECT_TRUE(t1.float64.has_value());
+  EXPECT_TRUE(t1.struct_.has_value());
+  EXPECT_TRUE(t1.enum_.has_value());
+  EXPECT_TRUE(t1.union_.has_value());
 
   EXPECT_EQ(1u, t1.string->size());
   EXPECT_EQ(1u, t1.bool_->size());
@@ -683,21 +684,21 @@ TEST(Xdr, FidlOptionalRepeatedRequired) {
 
   EXPECT_TRUE(fidl::Equals(t2, t1)) << json;
 
-  EXPECT_TRUE(t2.string.is_null());
-  EXPECT_TRUE(t2.bool_.is_null());
-  EXPECT_TRUE(t2.int8.is_null());
-  EXPECT_TRUE(t2.int16.is_null());
-  EXPECT_TRUE(t2.int32.is_null());
-  EXPECT_TRUE(t2.int64.is_null());
-  EXPECT_TRUE(t2.uint8.is_null());
-  EXPECT_TRUE(t2.uint16.is_null());
-  EXPECT_TRUE(t2.uint32.is_null());
-  EXPECT_TRUE(t2.uint64.is_null());
-  EXPECT_TRUE(t2.float32.is_null());
-  EXPECT_TRUE(t2.float64.is_null());
-  EXPECT_TRUE(t2.struct_.is_null());
-  EXPECT_TRUE(t2.enum_.is_null());
-  EXPECT_TRUE(t2.union_.is_null());
+  EXPECT_FALSE(t2.string.has_value());
+  EXPECT_FALSE(t2.bool_.has_value());
+  EXPECT_FALSE(t2.int8.has_value());
+  EXPECT_FALSE(t2.int16.has_value());
+  EXPECT_FALSE(t2.int32.has_value());
+  EXPECT_FALSE(t2.int64.has_value());
+  EXPECT_FALSE(t2.uint8.has_value());
+  EXPECT_FALSE(t2.uint16.has_value());
+  EXPECT_FALSE(t2.uint32.has_value());
+  EXPECT_FALSE(t2.uint64.has_value());
+  EXPECT_FALSE(t2.float32.has_value());
+  EXPECT_FALSE(t2.float64.has_value());
+  EXPECT_FALSE(t2.struct_.has_value());
+  EXPECT_FALSE(t2.enum_.has_value());
+  EXPECT_FALSE(t2.union_.has_value());
 
   EXPECT_EQ(0u, t2.string->size());
   EXPECT_EQ(0u, t2.bool_->size());
@@ -726,15 +727,17 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   std::string json;
 
   json_xdr_unittest::OptionalRepeatedOptionalData t0;
-  t0.string.push_back("1");
+  t0.string.emplace({"1"});
 
   json_xdr_unittest::StructPtr s = json_xdr_unittest::Struct::New();
   s->item = 12;
-  t0.struct_.push_back(std::move(s));
+  t0.struct_.emplace();
+  t0.struct_->push_back(std::move(s));
 
   json_xdr_unittest::UnionPtr u = json_xdr_unittest::Union::New();
   u->set_int32(13);
-  t0.union_.push_back(std::move(u));
+  t0.union_.emplace();
+  t0.union_->push_back(std::move(u));
 
   XdrWrite(&json, &t0, XdrOptionalRepeatedOptionalData);
 
@@ -744,15 +747,15 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   EXPECT_TRUE(fidl::Equals(t1, t0)) << json;
 
   // See comment in FidlRequired.
-  EXPECT_FALSE(t1.string.is_null());
-  EXPECT_FALSE(t1.struct_.is_null());
-  EXPECT_FALSE(t1.union_.is_null());
+  EXPECT_TRUE(t1.string.has_value());
+  EXPECT_TRUE(t1.struct_.has_value());
+  EXPECT_TRUE(t1.union_.has_value());
 
   EXPECT_EQ(1u, t1.string->size());
   EXPECT_EQ(1u, t1.struct_->size());
   EXPECT_EQ(1u, t1.union_->size());
 
-  EXPECT_FALSE(t1.string->at(0).is_null());
+  EXPECT_TRUE(t1.string->at(0).has_value());
   EXPECT_EQ("1", t1.string->at(0));
 
   EXPECT_FALSE(nullptr == t1.struct_->at(0));
@@ -774,15 +777,15 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   EXPECT_TRUE(fidl::Equals(t2, t1)) << json;
 
   // See comment in FidlRequired.
-  EXPECT_FALSE(t2.string.is_null());
-  EXPECT_FALSE(t2.struct_.is_null());
-  EXPECT_FALSE(t2.union_.is_null());
+  EXPECT_TRUE(t2.string.has_value());
+  EXPECT_TRUE(t2.struct_.has_value());
+  EXPECT_TRUE(t2.union_.has_value());
 
   EXPECT_EQ(1u, t2.string->size());
   EXPECT_EQ(1u, t2.struct_->size());
   EXPECT_EQ(1u, t2.union_->size());
 
-  EXPECT_TRUE(t2.string->at(0).is_null());
+  EXPECT_FALSE(t2.string->at(0).has_value());
   EXPECT_TRUE(nullptr == t2.struct_->at(0));
   EXPECT_TRUE(nullptr == t2.union_->at(0));
 
@@ -798,9 +801,9 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   EXPECT_TRUE(fidl::Equals(t3, t2)) << json;
 
   // See comment in FidlRequired.
-  EXPECT_TRUE(t3.string.is_null());
-  EXPECT_TRUE(t3.struct_.is_null());
-  EXPECT_TRUE(t3.union_.is_null());
+  EXPECT_FALSE(t3.string.has_value());
+  EXPECT_FALSE(t3.struct_.has_value());
+  EXPECT_FALSE(t3.union_.has_value());
 
   EXPECT_EQ(0u, t3.string->size());
   EXPECT_EQ(0u, t3.struct_->size());

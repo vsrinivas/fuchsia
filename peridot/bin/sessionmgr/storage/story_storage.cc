@@ -176,7 +176,7 @@ class ReadVmoCall : public Operation<fit::result<fuchsia::mem::Buffer, fuchsia::
     FlowToken flow{this, &result_};
 
     page_snapshot_ = page_client_->NewSnapshot();
-    page_snapshot_->Get(to_array(key_),
+    page_snapshot_->Get(to_array(key_.value_or("")),
                         [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
                           if (result.is_err()) {
                             result_ = fit::error(result.err());
@@ -510,8 +510,8 @@ class UpdateLinkCall : public Operation<bool, StoryStorage::Status, fidl::String
 
             // If we succeeded AND we set a new value, we need to wait for
             // confirmation from the ledger.
-            if (status == StoryStorage::Status::OK && new_value_) {
-              wait_for_write_fn_(key_, new_value_)->Then([this, flow] {
+            if (status == StoryStorage::Status::OK && new_value_.has_value()) {
+              wait_for_write_fn_(key_, new_value_.value())->Then([this, flow] {
                 Done(true, std::move(status_), std::move(new_value_));
               });
             }

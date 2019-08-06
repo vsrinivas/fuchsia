@@ -31,18 +31,18 @@ bool StartsWith(const std::string& string, const std::string& prefix) {
   return string.compare(0, prefix.size(), prefix) == 0;
 }
 
-fidl::StringPtr StoryNameToStoryDataKey(fidl::StringPtr story_name) {
+std::string StoryNameToStoryDataKey(fidl::StringPtr story_name) {
   // Not escaped, because only one component after the prefix.
-  return kStoryDataKeyPrefix + story_name.get();
+  return kStoryDataKeyPrefix + story_name.value_or("");
 }
 
-fidl::StringPtr StoryNameFromStoryDataKey(fidl::StringPtr key) {
+std::string StoryNameFromStoryDataKey(fidl::StringPtr key) {
   return key->substr(sizeof(kStoryDataKeyPrefix) - 1);
 }
 
-fidl::StringPtr StoryNameToStorySnapshotKey(fidl::StringPtr story_name) {
+std::string StoryNameToStorySnapshotKey(fidl::StringPtr story_name) {
   // Not escaped, because only one component after the prefix.
-  return kStorySnapshotKeyPrefix + story_name.get();
+  return kStorySnapshotKeyPrefix + story_name.value_or("");
 }
 
 std::unique_ptr<OperationBase> MakeGetStoryDataCall(
@@ -95,10 +95,10 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
     }
 
     story_data_ = fuchsia::modular::internal::StoryData::New();
-    story_data_->set_story_name(story_name_);
+    story_data_->set_story_name(story_name_.value_or(""));
     story_data_->set_story_options(std::move(story_options_));
     story_data_->set_story_page_id(std::move(story_page_id_));
-    story_data_->mutable_story_info()->id = story_name_;
+    story_data_->mutable_story_info()->id = story_name_.value_or("");
     story_data_->mutable_story_info()->last_focus_time = 0;
     story_data_->mutable_story_info()->extra = std::move(extra_info_);
     operation_queue_.Add(MakeWriteStoryDataCall(page(), std::move(story_data_), [flow] {}));
@@ -323,7 +323,7 @@ class WriteSnapshotCall : public Operation<> {
   }
 
   void PutReference(fuchsia::ledger::Reference reference, FlowToken flow) {
-    page_client_->page()->PutReference(to_array(key_), std::move(reference),
+    page_client_->page()->PutReference(to_array(key_.value_or("")), std::move(reference),
                                        // TODO(MI4-1425): Experiment with declaring lazy priority.
                                        fuchsia::ledger::Priority::EAGER);
   }
@@ -345,7 +345,7 @@ class ReadSnapshotCall : public Operation<fuchsia::mem::BufferPtr> {
     FlowToken flow{this, &snapshot_};
 
     page_snapshot_ = page_client_->NewSnapshot();
-    page_snapshot_->Get(to_array(key_), [this,
+    page_snapshot_->Get(to_array(key_.value_or("")), [this,
                                          flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
       if (result.is_response()) {
         snapshot_ = fidl::MakeOptional(std::move(result.response().buffer));

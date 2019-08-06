@@ -20,7 +20,7 @@ class GetTypesFromEntityCall : public Operation<std::vector<std::string>> {
 
  private:
   void Run() override {
-    entity_resolver_->ResolveEntity(entity_reference_, entity_.NewRequest());
+    entity_resolver_->ResolveEntity(entity_reference_.value_or(""), entity_.NewRequest());
     entity_->GetTypes([this](const std::vector<std::string>& types) { Done(types); });
   }
 

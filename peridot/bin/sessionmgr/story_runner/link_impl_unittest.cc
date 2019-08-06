@@ -175,12 +175,12 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
     "one": 1,
     "two": 2
   })");
-  fidl::VectorPtr<std::string> path;
-  path->push_back("two");
+  std::vector<std::string> path;
+  path.push_back("two");
   SetLink(link.get(), std::move(path), R"("two")");
 
-  path->clear();
-  path->push_back("three");
+  path.clear();
+  path.push_back("three");
   SetLink(link.get(), std::move(path), R"(3)");
 
   bool synced{};

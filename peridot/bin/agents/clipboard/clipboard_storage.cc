@@ -10,9 +10,9 @@
 namespace modular {
 namespace {
 
-fidl::VectorPtr<uint8_t> ToArray(const std::string& str) {
-  auto array = fidl::VectorPtr<uint8_t>::New(str.size());
-  memcpy(array->data(), str.data(), str.size());
+std::vector<uint8_t> ToArray(const std::string& str) {
+  std::vector<uint8_t> array(str.size());
+  memcpy(array.data(), str.data(), str.size());
   return array;
 }
 
@@ -43,7 +43,7 @@ class ClipboardStorage::PushCall : public Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    impl_->page()->Put(ToArray(kCurrentValueKey), ToArray(text_));
+    impl_->page()->Put(ToArray(kCurrentValueKey), ToArray(text_.value_or("")));
   }
 
   ClipboardStorage* const impl_;  // not owned
@@ -57,13 +57,13 @@ class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
     // No error checking: Absent ledger value yields "", not
     // null. TODO(mesch): Once we support types, distinction of
     // null may make sense.
-    text_.reset("");
+    text_ = "";
   }
 
  private:
   void Run() override {
     FlowToken flow{this, &text_};
-    impl_->page()->GetSnapshot(snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    impl_->page()->GetSnapshot(snapshot_.NewRequest(), {}, nullptr);
     snapshot_->Get(ToArray(kCurrentValueKey),
                    [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
                      if (result.is_response()) {

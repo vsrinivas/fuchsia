@@ -52,7 +52,7 @@ void XdrIntentParameterData(XdrContext* const xdr,
       if (tag == kEntityReference) {
         fidl::StringPtr value;
         xdr->Field(kEntityReference, &value);
-        data->set_entity_reference(std::move(value));
+        data->set_entity_reference(value.value_or(""));
       } else if (tag == kJson) {
         fidl::StringPtr value;
         xdr->Field(kJson, &value);

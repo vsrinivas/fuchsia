@@ -49,16 +49,16 @@ TEST(IndexTest, Encode_Differences) {
   meta1.story->focused->state = fuchsia::modular::FocusedStateState::FOCUSED;
   meta1.mod = fuchsia::modular::ModuleMetadata::New();
   meta1.mod->url = "url1";
-  meta1.mod->path = fidl::VectorPtr<std::string>::New(0);
-  meta1.mod->path.push_back("1");
-  meta1.mod->path.push_back("2");
+  meta1.mod->path.emplace();
+  meta1.mod->path->push_back("1");
+  meta1.mod->path->push_back("2");
   meta1.mod->focused = fuchsia::modular::FocusedState::New();
   meta1.mod->focused->state = fuchsia::modular::FocusedStateState::FOCUSED;
   meta1.entity = fuchsia::modular::EntityMetadata::New();
   meta1.entity->topic = "topic1";
-  meta1.entity->type = fidl::VectorPtr<std::string>::New(0);
-  meta1.entity->type.push_back("type1");
-  meta1.entity->type.push_back("type2");
+  meta1.entity->type.emplace();
+  meta1.entity->type->push_back("type1");
+  meta1.entity->type->push_back("type2");
 
   auto meta2 = fuchsia::modular::ContextMetadata::New();
   meta2->story = fuchsia::modular::StoryMetadata::New();
@@ -67,16 +67,16 @@ TEST(IndexTest, Encode_Differences) {
   meta2->story->focused->state = fuchsia::modular::FocusedStateState::NOT_FOCUSED;
   meta2->mod = fuchsia::modular::ModuleMetadata::New();
   meta2->mod->url = "url2";
-  meta2->mod->path = fidl::VectorPtr<std::string>::New(0);
-  meta2->mod->path.push_back("2");
+  meta2->mod->path.emplace();
+  meta2->mod->path->push_back("2");
   meta2->mod->focused = fuchsia::modular::FocusedState::New();
   meta2->mod->focused->state = fuchsia::modular::FocusedStateState::NOT_FOCUSED;
   meta2->entity = fuchsia::modular::EntityMetadata::New();
   meta2->entity->topic = "topic2";
-  meta2->entity->type = fidl::VectorPtr<std::string>::New(0);
-  meta2->entity->type.push_back("type3");
-  meta2->entity->type.push_back("type4");
-  meta2->entity->type.push_back("type5");
+  meta2->entity->type.emplace();
+  meta2->entity->type->push_back("type3");
+  meta2->entity->type->push_back("type4");
+  meta2->entity->type->push_back("type5");
 
   auto encoded1 = internal::EncodeMetadataAndType(kEntity, meta1);
   auto encoded2 = internal::EncodeMetadataAndType(kStory, meta2);
@@ -118,9 +118,9 @@ TEST(IndexTest, AddRemoveQuery) {
   meta1.story->id = "story1";
   meta1.entity = fuchsia::modular::EntityMetadata::New();
   meta1.entity->topic = "topic1";
-  meta1.entity->type = fidl::VectorPtr<std::string>::New(0);
-  meta1.entity->type.push_back("type1");
-  meta1.entity->type.push_back("type2");
+  meta1.entity->type.emplace();
+  meta1.entity->type->push_back("type1");
+  meta1.entity->type->push_back("type2");
 
   index.Add("e1", kEntity, meta1);
 
@@ -147,7 +147,7 @@ TEST(IndexTest, AddRemoveQuery) {
 
   // Add more to the query that we know will match.
   query1->entity = fuchsia::modular::EntityMetadata::New();
-  query1->entity->type.push_back("type1");
+  query1->entity->type.emplace({"type1"});
   res.clear();
   index.Query(kEntity, query1, &res);
   EXPECT_EQ(1ul, res.size());
@@ -155,7 +155,7 @@ TEST(IndexTest, AddRemoveQuery) {
 
   // Add a new entity.
   auto meta2 = fidl::Clone(meta1);
-  meta2.entity->type.push_back("type3");
+  meta2.entity->type->push_back("type3");
   index.Add("e2", kEntity, meta2);
 
   res.clear();

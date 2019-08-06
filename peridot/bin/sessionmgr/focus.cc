@@ -76,15 +76,17 @@ void FocusHandler::Watch(fidl::InterfaceHandle<fuchsia::modular::FocusWatcher> w
 
 // |fuchsia::modular::FocusProvider|
 void FocusHandler::Request(fidl::StringPtr story_id) {
-  for (const auto& watcher : request_watchers_) {
-    watcher->OnFocusRequest(story_id);
+  if (story_id.has_value()) {
+    for (const auto& watcher : request_watchers_) {
+      watcher->OnFocusRequest(story_id.value());
+    }
   }
 }
 
 // |fuchsia::modular::FocusController|
 void FocusHandler::Set(fidl::StringPtr story_id) {
   fuchsia::modular::FocusInfoPtr data = fuchsia::modular::FocusInfo::New();
-  data->device_id = device_id_;
+  data->device_id = device_id_.value_or("");
   data->focused_story_id = story_id;
   data->last_focus_change_timestamp = time(nullptr);
 

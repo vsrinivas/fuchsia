@@ -89,8 +89,8 @@ class LocalModuleResolver::FindModulesCall
     FlowToken flow{this, &response_};
 
     // 1. If a handler is specified, use only that for |candidates_|.
-    if (!query_.handler.is_null()) {
-      auto found_handlers = local_module_resolver_->FindHandlers(query_.handler);
+    if (query_.handler.has_value()) {
+      auto found_handlers = local_module_resolver_->FindHandlers(query_.handler.value_or(""));
       if (found_handlers.empty()) {
         response_ =
             CreateEmptyResponseWithStatus(fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER);
@@ -182,7 +182,7 @@ class LocalModuleResolver::FindModulesCall
       fuchsia::modular::FindModulesResult result;
       result.module_id = manifest.binary;
       result.manifest = fuchsia::modular::ModuleManifest::New();
-      result.manifest->intent_filters.resize(0);
+      result.manifest->intent_filters.emplace();
       fidl::Clone(manifest, result.manifest.get());
 
       response_.results.push_back(std::move(result));
@@ -238,7 +238,7 @@ void LocalModuleResolver::OnNewManifestEntry(const std::string& source_name, std
     OnRemoveManifestEntry(source_name, module_uri);
   }
   if (new_manifest.intent_filters->size() == 0) {
-    new_manifest.intent_filters.resize(0);
+    new_manifest.intent_filters.emplace();
   }
   auto ret = manifests_.emplace(manifest_id, std::move(new_manifest));
   FXL_CHECK(ret.second);

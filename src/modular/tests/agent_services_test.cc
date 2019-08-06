@@ -127,9 +127,10 @@ class AgentServicesTest : public modular::testing::TestHarnessFixture {
 
     clipboard_service_ptr->Push(kTestContent);
     bool got_peek_content = false;
-    clipboard_service_ptr->Peek([&](std::string content) {
+    clipboard_service_ptr->Peek([&](fidl::StringPtr content) {
+      ASSERT_TRUE(content.has_value());
       got_peek_content = true;
-      EXPECT_EQ(content, kTestContent);
+      EXPECT_EQ(content.value(), kTestContent);
     });
 
     RunLoopUntil([&] {

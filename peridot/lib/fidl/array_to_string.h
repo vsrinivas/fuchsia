@@ -52,16 +52,16 @@ inline std::string to_hex_string(const std::vector<uint8_t>& data) {
 }
 
 // If possible use convert::ToArray instead.
-inline fidl::VectorPtr<uint8_t> to_array(const std::string& val) {
-  fidl::VectorPtr<uint8_t> ret = fidl::VectorPtr<uint8_t>::New(0);
+inline std::vector<uint8_t> to_array(const std::string& val) {
+  std::vector<uint8_t> ret;
   for (char c : val) {
     ret.push_back(c);
   }
   return ret;
 }
 
-inline fidl::VectorPtr<fidl::StringPtr> to_array(const std::vector<std::string>& val) {
-  fidl::VectorPtr<fidl::StringPtr> ret = fidl::VectorPtr<fidl::StringPtr>::New(0);
+inline std::vector<fidl::StringPtr> to_array(const std::vector<std::string>& val) {
+  std::vector<fidl::StringPtr> ret;
   for (const std::string& s : val) {
     ret.push_back(s);
   }

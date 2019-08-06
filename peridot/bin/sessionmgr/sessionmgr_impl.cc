@@ -158,7 +158,7 @@ class SessionmgrImpl::PresentationProviderImpl : public PresentationProvider {
     if (impl_->session_shell_app_) {
       fuchsia::modular::SessionShellPresentationProviderPtr provider;
       impl_->session_shell_app_->services().ConnectToService(provider.NewRequest());
-      provider->GetPresentation(std::move(story_id), std::move(request));
+      provider->GetPresentation(story_id.value_or(""), std::move(request));
     }
   }
 
@@ -168,7 +168,7 @@ class SessionmgrImpl::PresentationProviderImpl : public PresentationProvider {
     if (impl_->session_shell_app_) {
       fuchsia::modular::SessionShellPresentationProviderPtr provider;
       impl_->session_shell_app_->services().ConnectToService(provider.NewRequest());
-      provider->WatchVisualState(std::move(story_id), std::move(watcher));
+      provider->WatchVisualState(story_id.value_or(""), std::move(watcher));
     }
   }
 

@@ -18,7 +18,7 @@ void ArgvInjectingLauncher::CreateComponent(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   auto it = per_component_argv_.find(launch_info.url);
   if (it != per_component_argv_.end()) {
-    launch_info.arguments.reset(it->second);
+    launch_info.arguments = it->second;
   }
 
   parent_launcher_->CreateComponent(std::move(launch_info), std::move(controller));
