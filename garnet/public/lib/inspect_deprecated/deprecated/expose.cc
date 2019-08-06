@@ -27,16 +27,16 @@ fuchsia::inspect::Property Property::ToFidl(const std::string& name) const {
   if (std::holds_alternative<std::string>(value_)) {
     ret.value.set_str(std::get<std::string>(value_));
   } else if (std::holds_alternative<ByteVector>(value_)) {
-    fidl::VectorPtr<uint8_t> vec;
+    std::vector<uint8_t> vec;
     auto& val = std::get<ByteVector>(value_);
-    std::copy(val.begin(), val.end(), std::back_inserter(*vec));
+    std::copy(val.begin(), val.end(), std::back_inserter(vec));
     ret.value.set_bytes(std::move(vec));
   } else if (std::holds_alternative<StringValueCallback>(value_)) {
     ret.value.set_str(std::get<StringValueCallback>(value_)());
   } else if (std::holds_alternative<VectorValueCallback>(value_)) {
-    fidl::VectorPtr<uint8_t> vec;
+    std::vector<uint8_t> vec;
     auto val = std::get<VectorValueCallback>(value_)();
-    std::copy(val.begin(), val.end(), std::back_inserter(*vec));
+    std::copy(val.begin(), val.end(), std::back_inserter(vec));
     ret.value.set_bytes(std::move(vec));
   }
   return ret;
@@ -165,7 +165,7 @@ void Object::AddBinding(fidl::InterfaceRequest<Inspect> chan, fit::deferred_call
 void Object::ReadData(ReadDataCallback callback) { callback(ToFidl()); }
 
 fidl::VectorPtr<std::string> Object::ListUnmanagedChildNames() {
-  StringOutputVector child_names;
+  std::vector<std::string> child_names;
   // Lock the local child vector. No need to lock children since we are only
   // reading their constant name.
   std::lock_guard lock(mutex_);
@@ -197,7 +197,7 @@ void Object::ListChildren(ListChildrenCallback callback) {
           all_child_names.insert(child->name());
         }
       }
-      StringOutputVector child_names;
+      std::vector<std::string> child_names;
       for (const auto& child_name : all_child_names) {
         child_names.push_back(child_name);
       }
@@ -383,11 +383,13 @@ fuchsia::inspect::Object Object::ToFidl() {
   std::lock_guard lock(mutex_);
   fuchsia::inspect::Object ret;
   ret.name = name_.data();
+  ret.properties.emplace();
   for (const auto& it : properties_) {
-    ret.properties.push_back(it.second.ToFidl(it.first));
+    ret.properties->push_back(it.second.ToFidl(it.first));
   }
+  ret.metrics.emplace();
   for (const auto& it : metrics_) {
-    ret.metrics.push_back(it.second.ToFidl(it.first));
+    ret.metrics->push_back(it.second.ToFidl(it.first));
   }
   return ret;
 }

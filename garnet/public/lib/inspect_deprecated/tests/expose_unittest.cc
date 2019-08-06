@@ -215,7 +215,7 @@ TEST(Object, SetTakeChild) {
 
   object->SetChild(Object::Make("child1"));
   children_list = ListChildren(object);
-  EXPECT_THAT(*children_list, UnorderedElementsAre(fidl::StringPtr("child1")));
+  EXPECT_THAT(*children_list, UnorderedElementsAre("child1"));
 
   auto child = object->TakeChild("child1");
   children_list = ListChildren(object);
@@ -232,7 +232,7 @@ TEST(Object, ChildrenCallback) {
 
   children_list = ListChildren(object);
   EXPECT_THAT(*children_list,
-              UnorderedElementsAre(fidl::StringPtr("concrete1"), fidl::StringPtr("concrete2")));
+              UnorderedElementsAre("concrete1", "concrete2"));
 
   // Set the callback and ensure it is merged with the concrete objects.
   object->SetChildrenCallback([](component::Object::ObjectVector* out) {
@@ -242,9 +242,9 @@ TEST(Object, ChildrenCallback) {
   });
   children_list = ListChildren(object);
   EXPECT_THAT(*children_list,
-              UnorderedElementsAre(fidl::StringPtr("concrete1"), fidl::StringPtr("concrete2"),
-                                   fidl::StringPtr("dynamic1"), fidl::StringPtr("dynamic2"),
-                                   fidl::StringPtr("dynamic3")));
+              UnorderedElementsAre("concrete1", "concrete2",
+                                   "dynamic1", "dynamic2",
+                                   "dynamic3"));
 }
 
 }  // namespace

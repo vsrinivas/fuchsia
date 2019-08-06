@@ -41,8 +41,7 @@ class IqueryGoldenTest : public sys::testing::TestWithEnvironment,
     launch_info.url =
         "fuchsia-pkg://fuchsia.com/iquery_golden_test#meta/"
         "iquery_example_component.cmx";
-    launch_info.arguments.push_back("--rows=5");
-    launch_info.arguments.push_back("--columns=3");
+    launch_info.arguments.emplace({"--rows=5", "--columns=3"});
     controller_ = environment_->CreateComponent(std::move(launch_info));
     // Wait until the component's output directory shows up, and save the path
     // to it.
