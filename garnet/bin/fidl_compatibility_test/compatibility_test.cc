@@ -350,86 +350,93 @@ void ExpectEq(const Struct& a, const Struct& b) {
     }
   }
 
-  EXPECT_EQ(a.vectors.b_nullable_0.is_null(), b.vectors.b_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.i8_nullable_0.is_null(), b.vectors.i8_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.i16_nullable_0.is_null(), b.vectors.i16_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.i32_nullable_0.is_null(), b.vectors.i32_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.i64_nullable_0.is_null(), b.vectors.i64_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.u8_nullable_0.is_null(), b.vectors.u8_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.u16_nullable_0.is_null(), b.vectors.u16_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.u32_nullable_0.is_null(), b.vectors.u32_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.u64_nullable_0.is_null(), b.vectors.u64_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.f32_nullable_0.is_null(), b.vectors.f32_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.f64_nullable_0.is_null(), b.vectors.f64_nullable_0.is_null());
-  EXPECT_EQ(a.vectors.handle_nullable_0.is_null(), b.vectors.handle_nullable_0.is_null());
+  EXPECT_EQ(a.vectors.b_nullable_0.has_value(), b.vectors.b_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.i8_nullable_0.has_value(), b.vectors.i8_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.i16_nullable_0.has_value(), b.vectors.i16_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.i32_nullable_0.has_value(), b.vectors.i32_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.i64_nullable_0.has_value(), b.vectors.i64_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.u8_nullable_0.has_value(), b.vectors.u8_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.u16_nullable_0.has_value(), b.vectors.u16_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.u32_nullable_0.has_value(), b.vectors.u32_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.u64_nullable_0.has_value(), b.vectors.u64_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.f32_nullable_0.has_value(), b.vectors.f32_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.f64_nullable_0.has_value(), b.vectors.f64_nullable_0.has_value());
+  EXPECT_EQ(a.vectors.handle_nullable_0.has_value(), b.vectors.handle_nullable_0.has_value());
 
-  EXPECT_EQ(a.vectors.b_nullable_1.is_null(), b.vectors.b_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.i8_nullable_1.is_null(), b.vectors.i8_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.i16_nullable_1.is_null(), b.vectors.i16_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.i32_nullable_1.is_null(), b.vectors.i32_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.i64_nullable_1.is_null(), b.vectors.i64_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.u8_nullable_1.is_null(), b.vectors.u8_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.u16_nullable_1.is_null(), b.vectors.u16_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.u32_nullable_1.is_null(), b.vectors.u32_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.u64_nullable_1.is_null(), b.vectors.u64_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.f32_nullable_1.is_null(), b.vectors.f32_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.f64_nullable_1.is_null(), b.vectors.f64_nullable_1.is_null());
-  EXPECT_EQ(a.vectors.handle_nullable_1.is_null(), b.vectors.handle_nullable_1.is_null());
+  EXPECT_EQ(a.vectors.b_nullable_1.has_value(), b.vectors.b_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.i8_nullable_1.has_value(), b.vectors.i8_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.i16_nullable_1.has_value(), b.vectors.i16_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.i32_nullable_1.has_value(), b.vectors.i32_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.i64_nullable_1.has_value(), b.vectors.i64_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.u8_nullable_1.has_value(), b.vectors.u8_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.u16_nullable_1.has_value(), b.vectors.u16_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.u32_nullable_1.has_value(), b.vectors.u32_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.u64_nullable_1.has_value(), b.vectors.u64_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.f32_nullable_1.has_value(), b.vectors.f32_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.f64_nullable_1.has_value(), b.vectors.f64_nullable_1.has_value());
+  EXPECT_EQ(a.vectors.handle_nullable_1.has_value(), b.vectors.handle_nullable_1.has_value());
 
+  ASSERT_TRUE(a.vectors.i8_nullable_1.has_value());
+  ASSERT_TRUE(b.vectors.i8_nullable_1.has_value());
   for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
-    EXPECT_EQ(a.vectors.i8_nullable_1.get()[i], b.vectors.i8_nullable_1.get()[i]);
+    EXPECT_EQ(a.vectors.i8_nullable_1->at(i), b.vectors.i8_nullable_1->at(i));
   }
 
-  EXPECT_EQ(a.vectors.b_nullable_sized_0.is_null(), b.vectors.b_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.i8_nullable_sized_0.is_null(), b.vectors.i8_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.i16_nullable_sized_0.is_null(), b.vectors.i16_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.i32_nullable_sized_0.is_null(), b.vectors.i32_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.i64_nullable_sized_0.is_null(), b.vectors.i64_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.u8_nullable_sized_0.is_null(), b.vectors.u8_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.u16_nullable_sized_0.is_null(), b.vectors.u16_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.u32_nullable_sized_0.is_null(), b.vectors.u32_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.u64_nullable_sized_0.is_null(), b.vectors.u64_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.f32_nullable_sized_0.is_null(), b.vectors.f32_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.f64_nullable_sized_0.is_null(), b.vectors.f64_nullable_sized_0.is_null());
-  EXPECT_EQ(a.vectors.handle_nullable_sized_0.is_null(),
-            b.vectors.handle_nullable_sized_0.is_null());
+  EXPECT_EQ(a.vectors.b_nullable_sized_0.has_value(), b.vectors.b_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.i8_nullable_sized_0.has_value(), b.vectors.i8_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.i16_nullable_sized_0.has_value(), b.vectors.i16_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.i32_nullable_sized_0.has_value(), b.vectors.i32_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.i64_nullable_sized_0.has_value(), b.vectors.i64_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.u8_nullable_sized_0.has_value(), b.vectors.u8_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.u16_nullable_sized_0.has_value(), b.vectors.u16_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.u32_nullable_sized_0.has_value(), b.vectors.u32_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.u64_nullable_sized_0.has_value(), b.vectors.u64_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.f32_nullable_sized_0.has_value(), b.vectors.f32_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.f64_nullable_sized_0.has_value(), b.vectors.f64_nullable_sized_0.has_value());
+  EXPECT_EQ(a.vectors.handle_nullable_sized_0.has_value(),
+            b.vectors.handle_nullable_sized_0.has_value());
 
-  EXPECT_EQ(a.vectors.i16_nullable_sized_0.get(), b.vectors.i16_nullable_sized_0.get());
+  if (a.vectors.i16_nullable_sized_0.has_value()) {
+    EXPECT_EQ(a.vectors.i16_nullable_sized_0.value(), b.vectors.i16_nullable_sized_0.value());
+  }
 
-  EXPECT_EQ(a.vectors.b_nullable_sized_1.is_null(), b.vectors.b_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.i8_nullable_sized_1.is_null(), b.vectors.i8_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.i16_nullable_sized_1.is_null(), b.vectors.i16_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.i32_nullable_sized_1.is_null(), b.vectors.i32_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.i64_nullable_sized_1.is_null(), b.vectors.i64_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.u8_nullable_sized_1.is_null(), b.vectors.u8_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.u16_nullable_sized_1.is_null(), b.vectors.u16_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.u32_nullable_sized_1.is_null(), b.vectors.u32_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.u64_nullable_sized_1.is_null(), b.vectors.u64_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.f32_nullable_sized_1.is_null(), b.vectors.f32_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.f64_nullable_sized_1.is_null(), b.vectors.f64_nullable_sized_1.is_null());
-  EXPECT_EQ(a.vectors.handle_nullable_sized_1.is_null(),
-            b.vectors.handle_nullable_sized_1.is_null());
+  EXPECT_EQ(a.vectors.b_nullable_sized_1.has_value(), b.vectors.b_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.i8_nullable_sized_1.has_value(), b.vectors.i8_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.i16_nullable_sized_1.has_value(), b.vectors.i16_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.i32_nullable_sized_1.has_value(), b.vectors.i32_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.i64_nullable_sized_1.has_value(), b.vectors.i64_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.u8_nullable_sized_1.has_value(), b.vectors.u8_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.u16_nullable_sized_1.has_value(), b.vectors.u16_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.u32_nullable_sized_1.has_value(), b.vectors.u32_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.u64_nullable_sized_1.has_value(), b.vectors.u64_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.f32_nullable_sized_1.has_value(), b.vectors.f32_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.f64_nullable_sized_1.has_value(), b.vectors.f64_nullable_sized_1.has_value());
+  EXPECT_EQ(a.vectors.handle_nullable_sized_1.has_value(),
+            b.vectors.handle_nullable_sized_1.has_value());
 
-  EXPECT_EQ(a.vectors.f64_nullable_sized_1.get(), b.vectors.f64_nullable_sized_1.get());
+  EXPECT_EQ(a.vectors.f64_nullable_sized_1.has_value(), b.vectors.f64_nullable_sized_1.has_value());
+  if (a.vectors.f64_nullable_sized_1.has_value()) {
+    EXPECT_EQ(a.vectors.f64_nullable_sized_1.value(), b.vectors.f64_nullable_sized_1.value());
+  }
 
-  EXPECT_EQ(a.vectors.b_nullable_sized_2.is_null(), b.vectors.b_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.i8_nullable_sized_2.is_null(), b.vectors.i8_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.i16_nullable_sized_2.is_null(), b.vectors.i16_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.i32_nullable_sized_2.is_null(), b.vectors.i32_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.i64_nullable_sized_2.is_null(), b.vectors.i64_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.u8_nullable_sized_2.is_null(), b.vectors.u8_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.u16_nullable_sized_2.is_null(), b.vectors.u16_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.u32_nullable_sized_2.is_null(), b.vectors.u32_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.u64_nullable_sized_2.is_null(), b.vectors.u64_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.f32_nullable_sized_2.is_null(), b.vectors.f32_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.f64_nullable_sized_2.is_null(), b.vectors.f64_nullable_sized_2.is_null());
-  EXPECT_EQ(a.vectors.handle_nullable_sized_2.is_null(),
-            b.vectors.handle_nullable_sized_2.is_null());
+  EXPECT_EQ(a.vectors.b_nullable_sized_2.has_value(), b.vectors.b_nullable_sized_2.has_value());
+  EXPECT_EQ(a.vectors.i8_nullable_sized_2.has_value(), b.vectors.i8_nullable_sized_2.has_value());
+  EXPECT_EQ(a.vectors.i16_nullable_sized_2.has_value(), b.vectors.i16_nullable_sized_2.has_value());
+  EXPECT_EQ(a.vectors.i32_nullable_sized_2.has_value(), b.vectors.i32_nullable_sized_2.has_value());
+  EXPECT_EQ(a.vectors.i64_nullable_sized_2.has_value(), b.vectors.i64_nullable_sized_2.has_value());
+  EXPECT_EQ(a.vectors.u8_nullable_sized_2.has_value(), b.vectors.u8_nullable_sized_2.has_value());
+  EXPECT_EQ(a.vectors.u16_nullable_sized_2.has_value(), b.vectors.u16_nullable_sized_2.has_value());
+  EXPECT_EQ(a.vectors.u32_nullable_sized_2.has_value(), b.vectors.u32_nullable_sized_2.has_value());
+  EXPECT_EQ(a.vectors.u64_nullable_sized_2.has_value(), b.vectors.u64_nullable_sized_2.has_value());
+  EXPECT_EQ(a.vectors.f32_nullable_sized_2.has_value(), b.vectors.f32_nullable_sized_2.has_value());
+  EXPECT_EQ(a.vectors.f64_nullable_sized_2.has_value(), b.vectors.f64_nullable_sized_2.has_value());
+  EXPECT_TRUE(a.vectors.handle_nullable_sized_2.has_value());
+  EXPECT_TRUE(b.vectors.handle_nullable_sized_2.has_value());
 
   for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
     for (uint8_t j = 0; j < kArbitraryConstant; ++j) {
-      EXPECT_TRUE(HandlesEq(a.vectors.handle_nullable_sized_2.get()[i][j],
-                            b.vectors.handle_nullable_sized_2.get()[i][j]));
+      EXPECT_TRUE(HandlesEq(a.vectors.handle_nullable_sized_2.value()[i][j],
+                            b.vectors.handle_nullable_sized_2.value()[i][j]));
     }
   }
 
@@ -467,8 +474,11 @@ void ExpectEq(const Struct& a, const Struct& b) {
   EXPECT_EQ(a.strings.s, b.strings.s);
   EXPECT_EQ(a.strings.size_0_s, b.strings.size_0_s);
   EXPECT_EQ(a.strings.size_1_s, b.strings.size_1_s);
-  EXPECT_EQ(a.strings.nullable_size_0_s.get(), b.strings.nullable_size_0_s.get());
-  EXPECT_EQ(a.strings.nullable_size_1_s.is_null(), b.strings.nullable_size_1_s.is_null());
+  EXPECT_EQ(a.strings.nullable_size_0_s.has_value(), b.strings.nullable_size_0_s.has_value());
+  if (a.strings.nullable_size_0_s.has_value() && b.strings.nullable_size_0_s.has_value()) {
+    EXPECT_EQ(a.strings.nullable_size_0_s.value(), b.strings.nullable_size_0_s.value());
+  }
+  EXPECT_EQ(a.strings.nullable_size_1_s.has_value(), b.strings.nullable_size_1_s.has_value());
 
   // enums
   EXPECT_EQ(a.default_enum, b.default_enum);
@@ -622,28 +632,17 @@ void InitializeStruct(Struct* s) {
   }
 
   // vectors
-  s->vectors.b_0 =
-      VectorPtr<bool>(std::vector<bool>(kArbitraryVectorSize, bool_distribution(rand_engine)));
-  s->vectors.i8_0 =
-      VectorPtr<int8_t>(std::vector<int8_t>(kArbitraryVectorSize, int8_distribution(rand_engine)));
-  s->vectors.i16_0 = VectorPtr<int16_t>(
-      std::vector<int16_t>(kArbitraryVectorSize, int16_distribution(rand_engine)));
-  s->vectors.i32_0 = VectorPtr<int32_t>(
-      std::vector<int32_t>(kArbitraryVectorSize, int32_distribution(rand_engine)));
-  s->vectors.i64_0 = VectorPtr<int64_t>(
-      std::vector<int64_t>(kArbitraryVectorSize, int64_distribution(rand_engine)));
-  s->vectors.u8_0 = VectorPtr<uint8_t>(
-      std::vector<uint8_t>(kArbitraryVectorSize, uint8_distribution(rand_engine)));
-  s->vectors.u16_0 = VectorPtr<uint16_t>(
-      std::vector<uint16_t>(kArbitraryVectorSize, uint16_distribution(rand_engine)));
-  s->vectors.u32_0 = VectorPtr<uint32_t>(
-      std::vector<uint32_t>(kArbitraryVectorSize, uint32_distribution(rand_engine)));
-  s->vectors.u64_0 = VectorPtr<uint64_t>(
-      std::vector<uint64_t>(kArbitraryVectorSize, uint64_distribution(rand_engine)));
-  s->vectors.f32_0 =
-      VectorPtr<float>(std::vector<float>(kArbitraryVectorSize, float_distribution(rand_engine)));
-  s->vectors.f64_0 = VectorPtr<double>(
-      std::vector<double>(kArbitraryVectorSize, double_distribution(rand_engine)));
+  s->vectors.b_0 = std::vector<bool>(kArbitraryVectorSize, bool_distribution(rand_engine));
+  s->vectors.i8_0 = std::vector<int8_t>(kArbitraryVectorSize, int8_distribution(rand_engine));
+  s->vectors.i16_0 = std::vector<int16_t>(kArbitraryVectorSize, int16_distribution(rand_engine));
+  s->vectors.i32_0 = std::vector<int32_t>(kArbitraryVectorSize, int32_distribution(rand_engine));
+  s->vectors.i64_0 = std::vector<int64_t>(kArbitraryVectorSize, int64_distribution(rand_engine));
+  s->vectors.u8_0 = std::vector<uint8_t>(kArbitraryVectorSize, uint8_distribution(rand_engine));
+  s->vectors.u16_0 = std::vector<uint16_t>(kArbitraryVectorSize, uint16_distribution(rand_engine));
+  s->vectors.u32_0 = std::vector<uint32_t>(kArbitraryVectorSize, uint32_distribution(rand_engine));
+  s->vectors.u64_0 = std::vector<uint64_t>(kArbitraryVectorSize, uint64_distribution(rand_engine));
+  s->vectors.f32_0 = std::vector<float>(kArbitraryVectorSize, float_distribution(rand_engine));
+  s->vectors.f64_0 = std::vector<double>(kArbitraryVectorSize, double_distribution(rand_engine));
 
   {
     std::vector<zx::handle> underlying_vec;
@@ -709,23 +708,23 @@ void InitializeStruct(Struct* s) {
     s->vectors.handle_1 = std::vector<std::vector<zx::handle>>(std::move(handle_outer_vector));
   }
 
-  s->vectors.b_sized_0 = VectorPtr<bool>(std::vector<bool>{bool_distribution(rand_engine)});
-  s->vectors.i8_sized_0 = VectorPtr<int8_t>(std::vector<int8_t>{int8_distribution(rand_engine)});
+  s->vectors.b_sized_0 = std::vector<bool>{bool_distribution(rand_engine)};
+  s->vectors.i8_sized_0 = std::vector<int8_t>{int8_distribution(rand_engine)};
   s->vectors.i16_sized_0 =
-      VectorPtr<int16_t>(std::vector<int16_t>{int16_distribution(rand_engine)});
+      std::vector<int16_t>{int16_distribution(rand_engine)};
   s->vectors.i32_sized_0 =
-      VectorPtr<int32_t>(std::vector<int32_t>{int32_distribution(rand_engine)});
+      std::vector<int32_t>{int32_distribution(rand_engine)};
   s->vectors.i64_sized_0 =
-      VectorPtr<int64_t>(std::vector<int64_t>{int64_distribution(rand_engine)});
-  s->vectors.u8_sized_0 = VectorPtr<uint8_t>(std::vector<uint8_t>{uint8_distribution(rand_engine)});
+      std::vector<int64_t>{int64_distribution(rand_engine)};
+  s->vectors.u8_sized_0 = std::vector<uint8_t>{uint8_distribution(rand_engine)};
   s->vectors.u16_sized_0 =
-      VectorPtr<uint16_t>(std::vector<uint16_t>{uint16_distribution(rand_engine)});
+      std::vector<uint16_t>{uint16_distribution(rand_engine)};
   s->vectors.u32_sized_0 =
-      VectorPtr<uint32_t>(std::vector<uint32_t>{uint32_distribution(rand_engine)});
+      std::vector<uint32_t>{uint32_distribution(rand_engine)};
   s->vectors.u64_sized_0 =
-      VectorPtr<uint64_t>(std::vector<uint64_t>{uint64_distribution(rand_engine)});
-  s->vectors.f32_sized_0 = VectorPtr<float>(std::vector<float>{float_distribution(rand_engine)});
-  s->vectors.f64_sized_0 = VectorPtr<double>(std::vector<double>{double_distribution(rand_engine)});
+      std::vector<uint64_t>{uint64_distribution(rand_engine)};
+  s->vectors.f32_sized_0 = std::vector<float>{float_distribution(rand_engine)};
+  s->vectors.f64_sized_0 = std::vector<double>{double_distribution(rand_engine)};
 
   {
     std::vector<zx::handle> underlying_vec;
@@ -733,28 +732,28 @@ void InitializeStruct(Struct* s) {
     s->vectors.handle_sized_0 = std::vector<zx::handle>(std::move(underlying_vec));
   }
 
-  s->vectors.b_sized_1 = VectorPtr<bool>(
-      std::vector<bool>(fidl::test::compatibility::vectors_size, bool_distribution(rand_engine)));
-  s->vectors.i8_sized_1 = VectorPtr<int8_t>(
-      std::vector<int8_t>(fidl::test::compatibility::vectors_size, int8_distribution(rand_engine)));
-  s->vectors.i16_sized_1 = VectorPtr<int16_t>(std::vector<int16_t>(
-      fidl::test::compatibility::vectors_size, int16_distribution(rand_engine)));
-  s->vectors.i32_sized_1 = VectorPtr<int32_t>(std::vector<int32_t>(
-      fidl::test::compatibility::vectors_size, int32_distribution(rand_engine)));
-  s->vectors.i64_sized_1 = VectorPtr<int64_t>(std::vector<int64_t>(
-      fidl::test::compatibility::vectors_size, int64_distribution(rand_engine)));
-  s->vectors.u8_sized_1 = VectorPtr<uint8_t>(std::vector<uint8_t>(
-      fidl::test::compatibility::vectors_size, uint8_distribution(rand_engine)));
-  s->vectors.u16_sized_1 = VectorPtr<uint16_t>(std::vector<uint16_t>(
-      fidl::test::compatibility::vectors_size, uint16_distribution(rand_engine)));
-  s->vectors.u32_sized_1 = VectorPtr<uint32_t>(std::vector<uint32_t>(
-      fidl::test::compatibility::vectors_size, uint32_distribution(rand_engine)));
-  s->vectors.u64_sized_1 = VectorPtr<uint64_t>(std::vector<uint64_t>(
-      fidl::test::compatibility::vectors_size, uint64_distribution(rand_engine)));
-  s->vectors.f32_sized_1 = VectorPtr<float>(
-      std::vector<float>(fidl::test::compatibility::vectors_size, float_distribution(rand_engine)));
-  s->vectors.f64_sized_1 = VectorPtr<double>(std::vector<double>(
-      fidl::test::compatibility::vectors_size, double_distribution(rand_engine)));
+  s->vectors.b_sized_1 = 
+      std::vector<bool>(fidl::test::compatibility::vectors_size, bool_distribution(rand_engine));
+  s->vectors.i8_sized_1 = 
+      std::vector<int8_t>(fidl::test::compatibility::vectors_size, int8_distribution(rand_engine));
+  s->vectors.i16_sized_1 = std::vector<int16_t>(
+      fidl::test::compatibility::vectors_size, int16_distribution(rand_engine));
+  s->vectors.i32_sized_1 = std::vector<int32_t>(
+      fidl::test::compatibility::vectors_size, int32_distribution(rand_engine));
+  s->vectors.i64_sized_1 = std::vector<int64_t>(
+      fidl::test::compatibility::vectors_size, int64_distribution(rand_engine));
+  s->vectors.u8_sized_1 = std::vector<uint8_t>(
+      fidl::test::compatibility::vectors_size, uint8_distribution(rand_engine));
+  s->vectors.u16_sized_1 = std::vector<uint16_t>(
+      fidl::test::compatibility::vectors_size, uint16_distribution(rand_engine));
+  s->vectors.u32_sized_1 = std::vector<uint32_t>(
+      fidl::test::compatibility::vectors_size, uint32_distribution(rand_engine));
+  s->vectors.u64_sized_1 = std::vector<uint64_t>(
+      fidl::test::compatibility::vectors_size, uint64_distribution(rand_engine));
+  s->vectors.f32_sized_1 = 
+      std::vector<float>(fidl::test::compatibility::vectors_size, float_distribution(rand_engine));
+  s->vectors.f64_sized_1 = std::vector<double>(
+      fidl::test::compatibility::vectors_size, double_distribution(rand_engine));
   {
     std::vector<zx::handle> underlying_vec;
     for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
@@ -880,10 +879,10 @@ void InitializeStruct(Struct* s) {
   s->handles.nullable_handle_handle = Handle();
 
   // strings
-  s->strings.s = fidl::StringPtr(random_string);
-  s->strings.size_0_s = fidl::StringPtr(random_short_string);
-  s->strings.size_1_s = fidl::StringPtr(random_string);
-  s->strings.nullable_size_0_s = fidl::StringPtr(random_short_string);
+  s->strings.s = random_string;
+  s->strings.size_0_s = random_short_string;
+  s->strings.size_1_s = random_string;
+  s->strings.nullable_size_0_s = random_short_string;
 
   // enums
   s->default_enum = fidl::test::compatibility::default_enum::kOne;
@@ -904,10 +903,10 @@ void InitializeStruct(Struct* s) {
   s->u64_bits = fidl::test::compatibility::u64_bits::kFour;
 
   // structs
-  s->structs.s.s = fidl::StringPtr(random_string);
+  s->structs.s.s = random_string;
 
   // unions
-  s->unions.u.set_s(fidl::StringPtr(random_string));
+  s->unions.u.set_s(random_string);
   s->unions.nullable_u = this_is_a_union::New();
   s->unions.nullable_u->set_b(bool_distribution(rand_engine));
 
@@ -958,8 +957,9 @@ void InitializeArraysStruct(ArraysStruct* value, DataGenerator& gen) {
     }
 
     if (gen.next<bool>()) {
+      value->nullable_vectors[i].emplace();
       for (size_t j = 0; j < fidl::test::compatibility::arrays_size; j++) {
-        value->nullable_vectors[i].push_back(gen.next<uint32_t>());
+        value->nullable_vectors[i]->push_back(gen.next<uint32_t>());
       }
     }
 
@@ -1046,8 +1046,9 @@ void InitializeVectorsStruct(VectorsStruct* value, DataGenerator& gen) {
 
     value->nullable_vectors.push_back(fidl::VectorPtr<uint32_t>());
     if (gen.next<bool>()) {
+      value->nullable_vectors.back().emplace();
       for (size_t j = 0; j < fidl::test::compatibility::vectors_size; j++) {
-        value->nullable_vectors.back().push_back(gen.next<uint32_t>());
+        value->nullable_vectors.back()->push_back(gen.next<uint32_t>());
       }
     } else {
       value->nullable_vectors.back().reset();
