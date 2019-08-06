@@ -10,10 +10,13 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/register.h"
+#include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/expr/eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
@@ -54,7 +57,16 @@ class InlineFrame final : public Frame {
     return physical_frame_->GetSymbolDataProvider();
   }
   fxl::RefPtr<EvalContext> GetEvalContext() const override {
-    return physical_frame_->GetEvalContext();
+    if (!symbol_eval_context_) {
+      // Tolerate a null thread here because it makes testing much simpler. The EvalContext supports
+      // a null ProcessSymbols for this case.
+      fxl::WeakPtr<const ProcessSymbols> process_syms;
+      if (Thread* thread = GetThread())
+        process_syms = thread->GetProcess()->GetSymbols()->GetWeakPtr();
+      symbol_eval_context_ =
+          fxl::MakeRefCounted<EvalContextImpl>(process_syms, GetSymbolDataProvider(), location_);
+    }
+    return symbol_eval_context_;
   }
   bool IsAmbiguousInlineLocation() const override {
     const Location& loc = GetLocation();
@@ -80,6 +92,8 @@ class InlineFrame final : public Frame {
  private:
   Frame* physical_frame_;  // Non-owning.
   Location location_;
+
+  mutable fxl::RefPtr<EvalContextImpl> symbol_eval_context_;  // Lazy.
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InlineFrame);
 };

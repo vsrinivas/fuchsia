@@ -7,12 +7,17 @@
 #include <map>
 
 #include "gtest/gtest.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
+#include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/type_test_support.h"
+#include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -370,6 +375,67 @@ TEST_F(StackTest, UpdateExisting) {
   EXPECT_EQ(raw_frames[0].sp, stack[0]->GetStackPointer());
   EXPECT_EQ(raw_frames[1].ip, stack[1]->GetAddress());
   EXPECT_EQ(raw_frames[1].sp, stack[1]->GetStackPointer());
+}
+
+// Tests that variables in inline functions are found during evaluation.
+//
+// This sets up an inline frame and makes sure we can read a local variable out of it.
+TEST_F(StackTest, InlineVars) {
+  constexpr uint64_t kInlineAddr = 0x1002;
+  constexpr uint64_t kPhysAddr = 0x1000;
+
+  MockStackDelegate delegate;
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  // Make inline function.
+  auto inline_func = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  inline_func->set_code_ranges(AddressRanges(AddressRange(kInlineAddr, kInlineAddr + 8)));
+
+  // The inline function has a local variable ("var") that always evaluates to 3.
+  VariableLocation::Entry loc_entry;
+  loc_entry.expression = {llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_stack_value};
+  VariableLocation var_loc({loc_entry});
+
+  auto int32_type = MakeInt32Type();
+  auto inline_var =
+      fxl::MakeRefCounted<Variable>(DwarfTag::kVariable, "var", LazySymbol(int32_type), var_loc);
+  inline_func->set_variables({LazySymbol(inline_var)});
+
+  // Make physical fuction.
+  auto phys_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  phys_func->set_code_ranges(AddressRanges(AddressRange(kPhysAddr, kPhysAddr + 16)));
+  inline_func->set_containing_block(phys_func);
+
+  // Physical stack frame.
+  Location phys_location(kPhysAddr, FileLine("file.cc", 200), 0, symbol_context, phys_func);
+  delegate.AddLocation(phys_location);
+
+  // Inline frame on top of that.
+  Location inline_location(kInlineAddr, FileLine("file.cc", 100), 0, symbol_context, inline_func);
+  delegate.AddLocation(inline_location);
+
+  Stack stack(&delegate);
+  delegate.set_stack(&stack);
+
+  stack.SetFrames(debug_ipc::ThreadRecord::StackAmount::kFull,
+                  {debug_ipc::StackFrame(kInlineAddr, kTopSP, kBottomSP)});
+  ASSERT_EQ(2u, stack.size());  // Should have expanded the inline frame.
+
+  // ACTUAL TEST.
+
+  // Evaluate "var + 1" which should be "4" given var evaluates to 3.
+  auto eval_context = stack[0]->GetEvalContext();
+  bool called = false;
+  EvalExpression("var + 1", eval_context, true, [&called](const Err& err, ExprValue value) mutable {
+    called = true;
+    EXPECT_FALSE(err.has_error());
+
+    int64_t result = 0;
+    Err e = value.PromoteTo64(&result);
+    EXPECT_FALSE(e.has_error());
+    EXPECT_EQ(4, result);
+  });
+  EXPECT_TRUE(called);  // Callback should have been issued.
 }
 
 }  // namespace zxdb
