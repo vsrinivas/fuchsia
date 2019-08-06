@@ -7,7 +7,7 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
@@ -56,7 +56,7 @@ constexpr bool alwaysReturnFailure = false;
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class CrashpadAgentTest : public gtest::RealLoopFixture {
+class CrashpadAgentTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     // The underlying agent is initialized with a default config, but can be reset via ResetAgent()
@@ -165,14 +165,11 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     FXL_CHECK(fsl::VmoFromString(attachment, &crash_log));
 
     Analyzer_OnKernelPanicCrashLog_Result out_result;
-    bool has_out_result = false;
-    agent_->OnKernelPanicCrashLog(
-        std::move(crash_log),
-        [&out_result, &has_out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
-          out_result = std::move(result);
-          has_out_result = true;
-        });
-    RunLoopUntil([&has_out_result] { return has_out_result; });
+    agent_->OnKernelPanicCrashLog(std::move(crash_log),
+                                  [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
+                                    out_result = std::move(result);
+                                  });
+    FXL_CHECK(RunLoopUntilIdle());
     return out_result;
   }
 
@@ -252,14 +249,10 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
 
   Analyzer_OnNativeException_Result out_result;
-  bool has_out_result = false;
   agent_->OnNativeException(
       std::move(process), std::move(thread),
-      [&out_result, &has_out_result](Analyzer_OnNativeException_Result result) {
-        out_result = std::move(result);
-        has_out_result = true;
-      });
-  RunLoopUntil([&has_out_result] { return has_out_result; });
+      [&out_result](Analyzer_OnNativeException_Result result) { out_result = std::move(result); });
+  ASSERT_TRUE(RunLoopUntilIdle());
 
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments();
@@ -282,14 +275,12 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_Dart_Basic) {
   dart_exception.set_dart(std::move(exception));
 
   Analyzer_OnManagedRuntimeException_Result out_result;
-  bool has_out_result = false;
   agent_->OnManagedRuntimeException(
       "component_url", std::move(dart_exception),
-      [&out_result, &has_out_result](Analyzer_OnManagedRuntimeException_Result result) {
+      [&out_result](Analyzer_OnManagedRuntimeException_Result result) {
         out_result = std::move(result);
-        has_out_result = true;
       });
-  RunLoopUntil([&has_out_result] { return has_out_result; });
+  ASSERT_TRUE(RunLoopUntilIdle());
 
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"DartError"});
@@ -303,14 +294,12 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
   unknown_exception.set_unknown_(std::move(exception));
 
   Analyzer_OnManagedRuntimeException_Result out_result;
-  bool has_out_result = false;
   agent_->OnManagedRuntimeException(
       "component_url", std::move(unknown_exception),
-      [&out_result, &has_out_result](Analyzer_OnManagedRuntimeException_Result result) {
+      [&out_result](Analyzer_OnManagedRuntimeException_Result result) {
         out_result = std::move(result);
-        has_out_result = true;
       });
-  RunLoopUntil([&has_out_result] { return has_out_result; });
+  ASSERT_TRUE(RunLoopUntilIdle());
 
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"data"});
@@ -322,14 +311,11 @@ TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
   ASSERT_TRUE(fsl::VmoFromString("ZIRCON KERNEL PANIC", &crash_log));
 
   Analyzer_OnKernelPanicCrashLog_Result out_result;
-  bool has_out_result = false;
-  agent_->OnKernelPanicCrashLog(
-      std::move(crash_log),
-      [&out_result, &has_out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
-        out_result = std::move(result);
-        has_out_result = true;
-      });
-  RunLoopUntil([&has_out_result] { return has_out_result; });
+  agent_->OnKernelPanicCrashLog(std::move(crash_log),
+                                [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
+                                  out_result = std::move(result);
+                                });
+  ASSERT_TRUE(RunLoopUntilIdle());
 
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"kernel_panic_crash_log"});
@@ -477,8 +463,9 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackDataProvider) {
 
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnFeedbackDataProviderTakingTooLong) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
-  // We use a timeout of 1ms for the feedback data collection as the test will need to wait that
-  // long before skipping feedback data collection.
+  // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
+  // set it arbitrary long.
+  const zx::duration feedback_data_collection_timeout = zx::sec(1);
   ResetAgent(
       Config{/*crashpad_database=*/
              {
@@ -490,10 +477,13 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnFeedbackDataProviderTakingTooLong) {
                  /*enable_upload=*/true,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              },
-             /*feedback_data_collection_timeout_in_milliseconds=*/1u},
+             /*feedback_data_collection_timeout_in_milliseconds=*/
+             static_cast<uint64_t>(feedback_data_collection_timeout.to_msecs())},
       std::make_unique<StubCrashServer>(alwaysReturnSuccess));
 
-  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  Analyzer_OnKernelPanicCrashLog_Result result = RunOneCrashAnalysis();
+  RunLoopFor(feedback_data_collection_timeout);
+  EXPECT_TRUE(result.is_response());
   // The only attachment should be the one from the crash analysis as no feedback data will be
   // retrieved.
   CheckAttachments({"kernel_panic_crash_log"});
@@ -514,12 +504,10 @@ TEST_F(CrashpadAgentTest, OneFeedbackDataProviderConnectionPerAnalysis) {
                                     out_results.push_back(std::move(result));
                                   });
   }
-  RunLoopUntil([&out_results] { return out_results.size() == num_calls; });
+  ASSERT_TRUE(RunLoopUntilIdle());
 
   EXPECT_EQ(total_num_feedback_data_provider_bindings(), num_calls);
-  // The unbinding is asynchronous so we need to run the loop until all the outstanding connections
-  // are actually closed in the stub.
-  RunLoopUntil([this] { return current_num_feedback_data_provider_bindings() == 0u; });
+  EXPECT_EQ(current_num_feedback_data_provider_bindings(), 0u);
 }
 
 TEST_F(CrashpadAgentTest, ReportIsReflectedInInspect) {
