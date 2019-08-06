@@ -289,30 +289,24 @@ impl<D: EventDispatcher> StateContext<DeviceId, MldInterface<D::Instant>> for Co
     }
 }
 
-// These `AsRef` and `AsMut` impls provide us with an implementation of
-// `StateContext<(), IpLayerFragmentCache<I>>`.
-impl<I: Ip, D: EventDispatcher> AsRef<IpLayerFragmentCache<I>> for Context<D> {
-    fn as_ref(&self) -> &IpLayerFragmentCache<I> {
+impl<I: Ip, D: EventDispatcher> StateContext<(), IpLayerFragmentCache<I>> for Context<D> {
+    fn get_state(&self, _id: ()) -> &IpLayerFragmentCache<I> {
         &get_state_inner(self.state()).fragment_cache
     }
-}
 
-impl<I: Ip, D: EventDispatcher> AsMut<IpLayerFragmentCache<I>> for Context<D> {
-    fn as_mut(&mut self) -> &mut IpLayerFragmentCache<I> {
+    fn get_state_mut(&mut self, _id: ()) -> &mut IpLayerFragmentCache<I> {
         &mut get_state_inner_mut(self.state_mut()).fragment_cache
     }
 }
 
-// These `AsRef` and `AsMut` impls provide us with an implementation of
-// `StateContext<(), IpLayerPathMtuCache<I, D::Instant>>`.
-impl<I: Ip, D: EventDispatcher> AsRef<IpLayerPathMtuCache<I, D::Instant>> for Context<D> {
-    fn as_ref(&self) -> &IpLayerPathMtuCache<I, D::Instant> {
+impl<I: Ip, D: EventDispatcher> StateContext<(), IpLayerPathMtuCache<I, D::Instant>>
+    for Context<D>
+{
+    fn get_state(&self, _id: ()) -> &IpLayerPathMtuCache<I, D::Instant> {
         &get_state_inner(self.state()).path_mtu
     }
-}
 
-impl<I: Ip, D: EventDispatcher> AsMut<IpLayerPathMtuCache<I, D::Instant>> for Context<D> {
-    fn as_mut(&mut self) -> &mut IpLayerPathMtuCache<I, D::Instant> {
+    fn get_state_mut(&mut self, _id: ()) -> &mut IpLayerPathMtuCache<I, D::Instant> {
         &mut get_state_inner_mut(self.state_mut()).path_mtu
     }
 }
@@ -1436,26 +1430,22 @@ where
     crate::device::send_ip_frame(ctx, device, dst_ip, body).map_err(|ser| ser.into_inner())
 }
 
-impl<D: EventDispatcher> AsRef<Icmpv4State> for Context<D> {
-    fn as_ref(&self) -> &Icmpv4State {
+impl<D: EventDispatcher> StateContext<(), Icmpv4State> for Context<D> {
+    fn get_state(&self, _id: ()) -> &Icmpv4State {
         &self.state().ip.icmp.v4
     }
-}
 
-impl<D: EventDispatcher> AsMut<Icmpv4State> for Context<D> {
-    fn as_mut(&mut self) -> &mut Icmpv4State {
+    fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv4State {
         &mut self.state_mut().ip.icmp.v4
     }
 }
 
-impl<D: EventDispatcher> AsRef<Icmpv6State> for Context<D> {
-    fn as_ref(&self) -> &Icmpv6State {
+impl<D: EventDispatcher> StateContext<(), Icmpv6State> for Context<D> {
+    fn get_state(&self, _id: ()) -> &Icmpv6State {
         &self.state().ip.icmp.v6
     }
-}
 
-impl<D: EventDispatcher> AsMut<Icmpv6State> for Context<D> {
-    fn as_mut(&mut self) -> &mut Icmpv6State {
+    fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv6State {
         &mut self.state_mut().ip.icmp.v6
     }
 }

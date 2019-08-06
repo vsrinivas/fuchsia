@@ -648,14 +648,12 @@ mod tests {
         }
     }
 
-    impl AsRef<ArpState<Ipv4Addr, Mac>> for DummyContext {
-        fn as_ref(&self) -> &ArpState<Ipv4Addr, Mac> {
+    impl StateContext<(), ArpState<Ipv4Addr, Mac>> for DummyContext {
+        fn get_state(&self, _id: ()) -> &ArpState<Ipv4Addr, Mac> {
             &self.get_ref().arp_state
         }
-    }
 
-    impl AsMut<ArpState<Ipv4Addr, Mac>> for DummyContext {
-        fn as_mut(&mut self) -> &mut ArpState<Ipv4Addr, Mac> {
+        fn get_state_mut(&mut self, _id: ()) -> &mut ArpState<Ipv4Addr, Mac> {
             &mut self.get_mut().arp_state
         }
     }

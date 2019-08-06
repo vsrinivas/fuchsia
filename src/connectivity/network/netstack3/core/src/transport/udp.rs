@@ -126,8 +126,8 @@ pub trait BufferUdpContext<I: Ip, B: BufferMut>:
     }
 }
 
-impl<I: Ip, D: EventDispatcher> AsRef<UdpState<I>> for Context<D> {
-    fn as_ref(&self) -> &UdpState<I> {
+impl<I: Ip, D: EventDispatcher> StateContext<(), UdpState<I>> for Context<D> {
+    fn get_state(&self, _id: ()) -> &UdpState<I> {
         #[specialize_ip]
         fn get_state<I: Ip, D: EventDispatcher>(ctx: &Context<D>) -> &UdpState<I> {
             #[ipv4]
@@ -138,10 +138,8 @@ impl<I: Ip, D: EventDispatcher> AsRef<UdpState<I>> for Context<D> {
 
         get_state(self)
     }
-}
 
-impl<I: Ip, D: EventDispatcher> AsMut<UdpState<I>> for Context<D> {
-    fn as_mut(&mut self) -> &mut UdpState<I> {
+    fn get_state_mut(&mut self, _id: ()) -> &mut UdpState<I> {
         #[specialize_ip]
         fn get_state_mut<I: Ip, D: EventDispatcher>(ctx: &mut Context<D>) -> &mut UdpState<I> {
             #[ipv4]

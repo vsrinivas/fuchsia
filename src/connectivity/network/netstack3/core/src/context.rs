@@ -193,16 +193,6 @@ pub trait StateContext<Id, State> {
     fn get_state_mut(&mut self, id: Id) -> &mut State;
 }
 
-impl<State, T: AsRef<State> + AsMut<State>> StateContext<(), State> for T {
-    fn get_state(&self, _id: ()) -> &State {
-        self.as_ref()
-    }
-
-    fn get_state_mut(&mut self, _id: ()) -> &mut State {
-        self.as_mut()
-    }
-}
-
 /// A context for sending frames.
 pub trait FrameContext<B: BufferMut, Meta> {
     // TODO(joshlf): Add an error type parameter or associated type once we need
