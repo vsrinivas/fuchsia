@@ -8,8 +8,7 @@ use {
         framework::FrameworkCapability,
         model::{addable_directory::AddableDirectory, *},
     },
-    cm_rust::{CapabilityPath, FrameworkCapabilityDecl},
-    failure::format_err,
+    cm_rust::FrameworkCapabilityDecl,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_async as fasync,
@@ -215,23 +214,18 @@ impl HubInjectionTestHook {
     ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
         // This Hook is about injecting itself between the Hub and the Model.
         // If the Hub hasn't been installed, then there's nothing to do here.
-        if capability.is_none() {
-            return Ok(None);
-        }
-
-        let capability_path = match capability_decl {
-            FrameworkCapabilityDecl::Directory(source_path) => source_path.clone(),
+        let mut relative_path = match (&capability, capability_decl) {
+            (Some(_), FrameworkCapabilityDecl::Directory(source_path)) => source_path.split(),
             _ => return Ok(capability),
         };
-        let mut dir_path = capability_path.split();
 
-        if dir_path.is_empty() || dir_path.remove(0) != "hub" {
+        if relative_path.is_empty() || relative_path.remove(0) != "hub" {
             return Ok(capability);
         }
 
         Ok(Some(Box::new(HubInjectionCapability::new(
             realm.abs_moniker.clone(),
-            capability_path,
+            relative_path,
             capability.take().expect("Unable to take original capability."),
         ))))
     }
@@ -267,17 +261,17 @@ impl Hook for HubInjectionTestHook {
 
 struct HubInjectionCapability {
     abs_moniker: AbsoluteMoniker,
-    capability_path: CapabilityPath,
+    relative_path: Vec<String>,
     intercepted_capability: Box<dyn FrameworkCapability>,
 }
 
 impl HubInjectionCapability {
     pub fn new(
         abs_moniker: AbsoluteMoniker,
-        capability_path: CapabilityPath,
+        relative_path: Vec<String>,
         intercepted_capability: Box<dyn FrameworkCapability>,
     ) -> Self {
-        HubInjectionCapability { abs_moniker, capability_path, intercepted_capability }
+        HubInjectionCapability { abs_moniker, relative_path, intercepted_capability }
     }
 
     pub async fn open_async(
@@ -287,14 +281,7 @@ impl HubInjectionCapability {
         relative_path: String,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
-        let mut dir_path = self.capability_path.split();
-        if dir_path.is_empty() || dir_path.remove(0) != "hub" {
-            return Err(ModelError::unsupported_hook_error(format_err!(
-                "HubInjectionCapability does not support the capability {}",
-                self.capability_path.to_string()
-            )));
-        }
-
+        let mut dir_path = self.relative_path.clone();
         dir_path.append(
             &mut relative_path
                 .split("/")

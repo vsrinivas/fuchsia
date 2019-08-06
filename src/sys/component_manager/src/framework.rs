@@ -103,12 +103,8 @@ impl FrameworkServicesHook {
     ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
         // If some other capability has already been installed, then there's nothing to
         // do here.
-        if capability.is_some() {
-            return Ok(capability);
-        }
-
-        let capability_path = match &capability_decl {
-            FrameworkCapabilityDecl::Service(source_path) => source_path.clone(),
+        let capability_path = match (&capability, capability_decl) {
+            (None, FrameworkCapabilityDecl::Service(source_path)) => source_path.clone(),
             _ => return Ok(capability),
         };
 

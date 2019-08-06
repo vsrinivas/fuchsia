@@ -12,7 +12,7 @@ use {
             error::ModelError,
         },
     },
-    cm_rust::{CapabilityPath, FrameworkCapabilityDecl},
+    cm_rust::FrameworkCapabilityDecl,
     failure::format_err,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS},
@@ -28,17 +28,17 @@ use {
 
 struct HubCapability {
     abs_moniker: model::AbsoluteMoniker,
-    capability_path: CapabilityPath,
+    relative_path: Vec<String>,
     instances: Arc<Mutex<HashMap<model::AbsoluteMoniker, Instance>>>,
 }
 
 impl HubCapability {
     pub fn new(
         abs_moniker: model::AbsoluteMoniker,
-        capability_path: CapabilityPath,
+        relative_path: Vec<String>,
         instances: Arc<Mutex<HashMap<model::AbsoluteMoniker, Instance>>>,
     ) -> Self {
-        HubCapability { abs_moniker, capability_path, instances }
+        HubCapability { abs_moniker, relative_path, instances }
     }
 
     pub async fn open_async(
@@ -48,14 +48,7 @@ impl HubCapability {
         relative_path: String,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
-        let mut dir_path = self.capability_path.split();
-        if dir_path.is_empty() || dir_path.remove(0) != "hub" {
-            return Err(ModelError::unsupported_hook_error(format_err!(
-                "HubCapability does not support the capability {}",
-                self.capability_path.to_string()
-            )));
-        }
-
+        let mut dir_path = self.relative_path.clone();
         dir_path.append(
             &mut relative_path
                 .split("/")
@@ -371,28 +364,21 @@ impl Hub {
         capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
-        // If there is already a capability for this capability then it's not a
-        // capability destined for the hub.
-        if capability.is_some() {
-            return Ok(capability);
-        }
-
         // If this capability is not a directory, then it's not a hub capability.
-        let capability_path = match capability_decl {
-            FrameworkCapabilityDecl::Directory(source_path) => source_path.clone(),
+        let mut relative_path = match (&capability, capability_decl) {
+            (None, FrameworkCapabilityDecl::Directory(source_path)) => source_path.split(),
             _ => return Ok(capability),
         };
-        let mut dir_path = capability_path.split();
 
         // If this capability's source path doesn't begin with 'hub', then it's
         // not a hub capability.
-        if dir_path.is_empty() || dir_path.remove(0) != "hub" {
+        if relative_path.is_empty() || relative_path.remove(0) != "hub" {
             return Ok(capability);
         }
 
         Ok(Some(Box::new(HubCapability::new(
             realm.abs_moniker.clone(),
-            capability_path,
+            relative_path,
             self.instances.clone(),
         ))))
     }
