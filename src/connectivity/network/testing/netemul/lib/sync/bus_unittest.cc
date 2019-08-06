@@ -312,26 +312,27 @@ TEST_F(BusTest, WaitForClients) {
 
   bool got_callback = false;
   cli_async->WaitForClients({"c1"}, zx::msec(0).to_nsecs(),
-                            [&got_callback](bool result, std::vector<std::string> absent) {
+                            [&got_callback](bool result, fidl::VectorPtr<std::string> absent) {
                               EXPECT_TRUE(result);
-                              EXPECT_TRUE(absent.empty());
+                              EXPECT_FALSE(absent.has_value());
                               got_callback = true;
                             });
   WAIT_FOR_OK_AND_RESET(got_callback);
 
   cli_async->WaitForClients({"doesn't exist"}, zx::msec(10).to_nsecs(),
-                            [&got_callback](bool result, std::vector<std::string> absent) {
+                            [&got_callback](bool result, fidl::VectorPtr<std::string> absent) {
                               EXPECT_FALSE(result);
-                              ASSERT_EQ(absent.size(), 1ul);
-                              EXPECT_EQ(absent[0], "doesn't exist");
+                              ASSERT_TRUE(absent.has_value());
+                              ASSERT_EQ(absent->size(), 1ul);
+                              EXPECT_EQ(absent->at(0), "doesn't exist");
                               got_callback = true;
                             });
   WAIT_FOR_OK_AND_RESET(got_callback);
 
   cli_async->WaitForClients({"c1", "c2"}, zx::msec(1000).to_nsecs(),
-                            [&got_callback](bool result, std::vector<std::string> absent) {
+                            [&got_callback](bool result, fidl::VectorPtr<std::string> absent) {
                               EXPECT_TRUE(result);
-                              EXPECT_TRUE(absent.empty());
+                              EXPECT_FALSE(absent.has_value());
                               got_callback = true;
                             });
   RunLoopUntilIdle();
@@ -351,7 +352,7 @@ TEST_F(BusTest, DestroyWithClientWaiting) {
 
   cli_async->WaitForClients(
       {"c1"}, zx::msec(0).to_nsecs(),
-      [](bool result, std::vector<std::string> absent) { FAIL() << "Mustn't reach callback"; });
+      [](bool result, fidl::VectorPtr<std::string> absent) { FAIL() << "Mustn't reach callback"; });
 }
 
 TEST_F(BusTest, WaitForEvent) {

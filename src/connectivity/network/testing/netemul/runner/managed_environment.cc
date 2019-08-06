@@ -102,7 +102,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         fuchsia::sys::LaunchInfo linfo;
         linfo.url = kLogSinkServiceURL;
         if (disable_klog) {
-          linfo.arguments.push_back(kLogServiceNoKLogOption);
+          linfo.arguments.emplace({kLogServiceNoKLogOption});
         }
         linfo.out = loggers_->CreateLogger(kLogSinkServiceURL, false);
         linfo.err = loggers_->CreateLogger(kLogSinkServiceURL, true);
@@ -118,7 +118,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         fuchsia::sys::LaunchInfo linfo;
         linfo.url = kLogServiceURL;
         if (disable_klog) {
-          linfo.arguments.push_back(kLogServiceNoKLogOption);
+          linfo.arguments.emplace({kLogServiceNoKLogOption});
         }
         linfo.out = loggers_->CreateLogger(kLogServiceURL, false);
         linfo.err = loggers_->CreateLogger(kLogServiceURL, true);

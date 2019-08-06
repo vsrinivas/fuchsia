@@ -22,7 +22,7 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
   fuchsia::sys::LaunchInfo MakeLoggerLaunchInfo() {
     fuchsia::sys::LaunchInfo ret;
     ret.url = kLoggerUrl;
-    ret.arguments.push_back(kLoggerDisableKlog);
+    ret.arguments.emplace({kLoggerDisableKlog});
     return ret;
   }
 

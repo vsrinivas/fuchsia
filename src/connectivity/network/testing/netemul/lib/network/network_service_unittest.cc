@@ -213,7 +213,7 @@ TEST_F(NetworkServiceTest, NetworkLifecycle) {
   zx_status_t status;
   fidl::InterfaceHandle<FNetwork> neth;
   // can create network ok
-  ASSERT_OK(netm->CreateNetwork(fidl::StringPtr(netname), std::move(config), &status, &neth));
+  ASSERT_OK(netm->CreateNetwork(netname, std::move(config), &status, &neth));
   auto net = neth.BindSync();
   ASSERT_OK(status);
   ASSERT_TRUE(net.is_bound());
@@ -263,7 +263,7 @@ TEST_F(NetworkServiceTest, EndpointLifecycle) {
   zx_status_t status;
   fidl::InterfaceHandle<FEndpoint> eph;
   // can create endpoint ok
-  ASSERT_OK(epm->CreateEndpoint(fidl::StringPtr(epname), std::move(config), &status, &eph));
+  ASSERT_OK(epm->CreateEndpoint(epname, std::move(config), &status, &eph));
   auto ep = eph.BindSync();
   ASSERT_OK(status);
   ASSERT_TRUE(ep.is_bound());
@@ -664,7 +664,7 @@ TEST_F(NetworkServiceTest, FakeEndpoints) {
     eth1.Send(test_buff2.data(), test_buff2.size());
     WAIT_FOR_OK_AND_RESET(ok);
     // send buff 1 from fake endpoint:
-    fake_ep->Write(fidl::VectorPtr<uint8_t>(test_buff1));
+    fake_ep->Write(test_buff1);
     WAIT_FOR_OK_AND_RESET(ok);
   }
 }

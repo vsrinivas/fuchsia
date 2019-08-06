@@ -177,15 +177,17 @@ class SandboxTest : public ::gtest::RealLoopFixture {
       // doing so may result in flaky tests due to timing
       // this is here mostly to catch bad test setups
       std::cout << "Observed client " << client << std::endl;
-      ASSERT_TRUE(observed_clients_.find(client) == observed_clients_.end());
-      observed_clients_.insert(client);
+      ASSERT_TRUE(client.has_value());
+      ASSERT_TRUE(observed_clients_.find(client.value()) == observed_clients_.end());
+      observed_clients_.insert(client.value());
       if (on_event_) {
         on_event_(EventType::OnClientAttached);
       }
     };
     bus_.events().OnClientDetached = [this](fidl::StringPtr client) {
       // just keep a record of detached clients
-      detached_clients_.insert(client);
+      ASSERT_TRUE(client.has_value());
+      detached_clients_.insert(client.value());
       if (on_event_) {
         on_event_(EventType::OnClientDetached);
       }

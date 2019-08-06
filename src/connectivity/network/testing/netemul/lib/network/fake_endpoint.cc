@@ -26,8 +26,8 @@ fxl::WeakPtr<data::Consumer> FakeEndpoint::GetPointer() { return weak_ptr_factor
 
 void FakeEndpoint::Consume(const void* data, size_t len) {
   // copy data to fidl vec:
-  fidl::VectorPtr<uint8_t> vec(len);
-  memcpy(vec->data(), data, len);
+  std::vector<uint8_t> vec(len);
+  memcpy(vec.data(), data, len);
   binding_.events().OnData(std::move(vec));
 }
 
