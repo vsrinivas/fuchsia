@@ -44,7 +44,7 @@ bool TimerManager::isReady(const std::unique_ptr<TimerVal>& timer_val_ptr) {
 
 bool TimerManager::isValidTimerArguments(fidl::StringPtr timer_id, int64_t timestamp,
                                          uint32_t timeout_s) {
-  if (timer_id.is_null() || timer_id.get() == "") {
+  if (!timer_id.has_value() || timer_id.value().empty()) {
     FXL_DLOG(ERROR) << "Invalid timer_id.";
     return false;
   }

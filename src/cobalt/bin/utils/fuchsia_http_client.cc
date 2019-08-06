@@ -36,11 +36,12 @@ http::URLRequest MakeRequest(fxl::RefPtr<NetworkRequest> network_request) {
   FXL_CHECK(result);
 
   fx_request.body->set_buffer(std::move(data).ToTransport());
+  fx_request.headers.emplace();
   for (const auto& header : network_request->request().headers) {
     http::HttpHeader hdr;
     hdr.name = header.first;
     hdr.value = header.second;
-    fx_request.headers.push_back(std::move(hdr));
+    fx_request.headers->push_back(std::move(hdr));
   }
   return fx_request;
 }

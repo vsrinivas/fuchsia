@@ -174,23 +174,23 @@ void LoggerImpl::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event,
 
     case EventPayload::Tag::kEventCount:
       callback(ToCobaltStatus(logger_.LogEventCount(
-          event.metric_id, event.event_codes, event.component,
+          event.metric_id, event.event_codes, event.component.value_or(""),
           event.payload.event_count().period_duration_micros, event.payload.event_count().count)));
       return;
 
     case EventPayload::Tag::kElapsedMicros:
       callback(ToCobaltStatus(logger_.LogElapsedTime(
-          event.metric_id, event.event_codes, event.component, event.payload.elapsed_micros())));
+          event.metric_id, event.event_codes, event.component.value_or(""), event.payload.elapsed_micros())));
       return;
 
     case EventPayload::Tag::kFps:
       callback(ToCobaltStatus(logger_.LogFrameRate(event.metric_id, event.event_codes,
-                                                   event.component, event.payload.fps())));
+                                                   event.component.value_or(""), event.payload.fps())));
       return;
 
     case EventPayload::Tag::kMemoryBytesUsed:
       callback(ToCobaltStatus(logger_.LogMemoryUsage(
-          event.metric_id, event.event_codes, event.component, event.payload.memory_bytes_used())));
+          event.metric_id, event.event_codes, event.component.value_or(""), event.payload.memory_bytes_used())));
       return;
 
     case EventPayload::Tag::kStringEvent:
@@ -206,7 +206,7 @@ void LoggerImpl::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event,
         bucket->set_count((*it).count);
       }
       callback(ToCobaltStatus(logger_.LogIntHistogram(event.metric_id, event.event_codes,
-                                                      event.component, std::move(histogram_ptr))));
+                                                      event.component.value_or(""), std::move(histogram_ptr))));
       return;
     }
 

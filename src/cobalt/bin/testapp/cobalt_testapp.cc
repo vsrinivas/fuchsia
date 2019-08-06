@@ -119,41 +119,42 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx";
   launch_info.directory_request = directory.NewRequest().TakeChannel();
+  launch_info.arguments.emplace();
   {
     std::ostringstream stream;
     stream << "--schedule_interval_seconds=" << schedule_interval_seconds;
-    launch_info.arguments.push_back(stream.str());
+    launch_info.arguments->push_back(stream.str());
   }
 
   if (initial_interval_seconds > 0) {
     std::ostringstream stream;
     stream << "--initial_interval_seconds=" << initial_interval_seconds;
-    launch_info.arguments.push_back(stream.str());
+    launch_info.arguments->push_back(stream.str());
   }
 
   {
     std::ostringstream stream;
     stream << "--min_interval_seconds=" << min_interval_seconds;
-    launch_info.arguments.push_back(stream.str());
+    launch_info.arguments->push_back(stream.str());
   }
 
   {
     std::ostringstream stream;
     stream << "--event_aggregator_backfill_days=" << event_aggregator_backfill_days;
-    launch_info.arguments.push_back(stream.str());
+    launch_info.arguments->push_back(stream.str());
   }
 
   {
     std::ostringstream stream;
     stream << "--start_event_aggregator_worker="
            << (start_event_aggregator_worker ? "true" : "false");
-    launch_info.arguments.push_back(stream.str());
+    launch_info.arguments->push_back(stream.str());
   }
 
   {
     std::ostringstream stream;
     stream << "--verbose=" << fxl::GetVlogVerbosity();
-    launch_info.arguments.push_back(stream.str());
+    launch_info.arguments->push_back(stream.str());
   }
 
   fuchsia::sys::LauncherPtr launcher;

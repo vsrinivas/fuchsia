@@ -70,9 +70,9 @@ class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
     return cobalt_app_->system_make_data().system_profile().channel();
   }
 
-  VectorPtr<fuchsia::cobalt::Experiment> ExperimentVectorWithIdAndArmId(int64_t experiment_id,
-                                                                        int64_t arm_id) {
-    VectorPtr<fuchsia::cobalt::Experiment> vector;
+  std::vector<fuchsia::cobalt::Experiment> ExperimentVectorWithIdAndArmId(int64_t experiment_id,
+                                                                          int64_t arm_id) {
+    std::vector<fuchsia::cobalt::Experiment> vector;
 
     fuchsia::cobalt::Experiment experiment;
     experiment.experiment_id = experiment_id;
