@@ -68,7 +68,7 @@ App::App(Config config)
     // configuration.
     bool missing_services = false;
     for (auto& dep : update_dependencies) {
-      if (std::find(svc_names_->begin(), svc_names_->end(), dep) == svc_names_->end()) {
+      if (std::find(svc_names_.begin(), svc_names_.end(), dep) == svc_names_.end()) {
         FXL_LOG(WARNING) << "missing service required for auto updates: " << dep;
         missing_services = true;
       }

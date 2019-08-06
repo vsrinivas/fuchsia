@@ -96,8 +96,7 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
 
   fuchsia::pkg::UpdatePolicy update_policy;
   update_policy.fetch_if_absent = true;
-  fidl::VectorPtr<std::string> selectors;
-  selectors.reset({});
+  std::vector<std::string> selectors;
 
   // TODO: if the resolver became unavailable in between the start of this
   // method and the following call to Resolve, our reconnection logic won't have

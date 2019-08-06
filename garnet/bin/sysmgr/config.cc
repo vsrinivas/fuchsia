@@ -129,8 +129,9 @@ fuchsia::sys::LaunchInfoPtr Config::GetLaunchInfo(const rapidjson::Document::Val
     if (!array.Empty() && std::all_of(array.begin(), array.end(),
                                       [](const rapidjson::Value& val) { return val.IsString(); })) {
       launch_info->url = array[0].GetString();
+      launch_info->arguments.emplace();
       for (size_t i = 1; i < array.Size(); ++i) {
-        launch_info->arguments.push_back(array[i].GetString());
+        launch_info->arguments->push_back(array[i].GetString());
       }
       return launch_info;
     }

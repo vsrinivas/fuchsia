@@ -54,7 +54,7 @@ class App {
   fuchsia::sys::LauncherPtr env_launcher_;
 
   vfs::PseudoDir svc_root_;
-  fidl::VectorPtr<std::string> svc_names_;
+  std::vector<std::string> svc_names_;
 
   std::unique_ptr<PackageUpdatingLoader> package_updating_loader_;
   fuchsia::sys::LoaderPtr loader_;

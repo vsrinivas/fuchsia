@@ -154,9 +154,9 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   fidl::examples::echo::EchoPtr echo;
   ConnectToServiceAt(std::move(h1), echo.NewRequest());
   const std::string message = "component launched";
-  fidl::StringPtr ret_msg = "";
+  std::string ret_msg = "";
   echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
-  RunLoopUntil([&] { return std::string(ret_msg) == message; });
+  RunLoopUntil([&] { return ret_msg == message; });
 
   // Verify that Resolve was called with the expected arguments.
   fuchsia::pkg::UpdatePolicy policy;
@@ -183,10 +183,10 @@ TEST_F(PackageUpdatingLoaderTest, Failure) {
   fidl::examples::echo::EchoPtr echo;
   ConnectToServiceAt(std::move(h1), echo.NewRequest());
   const std::string message = "component launched";
-  fidl::StringPtr ret_msg = "";
+  std::string ret_msg = "";
   echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
   // Even though the update failed, the loader should load the component anyway.
-  RunLoopUntil([&] { return std::string(ret_msg) == message; });
+  RunLoopUntil([&] { return ret_msg == message; });
 }
 
 TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
@@ -207,10 +207,10 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
     ConnectToServiceAt(std::move(h1), echo.NewRequest());
 
     const std::string message = "component launched";
-    fidl::StringPtr ret_msg = "";
+    std::string ret_msg = "";
 
     echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
-    RunLoopUntil([&] { return std::string(ret_msg) == message; });
+    RunLoopUntil([&] { return ret_msg == message; });
   }
 
   // since the connection to the package resolver is initiated lazily, we need
@@ -230,11 +230,11 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
     ConnectToServiceAt(std::move(h1), echo.NewRequest());
 
     const std::string message = "component launched";
-    fidl::StringPtr ret_msg = "";
+    std::string ret_msg = "";
 
     FXL_LOG(INFO) << "sending echo message.";
     echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
-    RunLoopUntil([&] { return std::string(ret_msg) == message; });
+    RunLoopUntil([&] { return ret_msg == message; });
   }
 
   // an initial connection and a retry
@@ -255,11 +255,11 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
     ConnectToServiceAt(std::move(h1), echo.NewRequest());
 
     const std::string message = "component launched";
-    fidl::StringPtr ret_msg = "";
+    std::string ret_msg = "";
 
     FXL_LOG(INFO) << "sending echo message.";
     echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
-    RunLoopUntil([&] { return std::string(ret_msg) == message; });
+    RunLoopUntil([&] { return ret_msg == message; });
   }
 
   // one more connection
