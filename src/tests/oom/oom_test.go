@@ -54,4 +54,8 @@ func TestOOM(t *testing.T) {
 
 	// Ensure the OOM thread reboots the target.
 	i.WaitForLogMessage("OOM: rebooting")
+
+	// Ensure that the reboot has stowed a correct crashlog.
+	i.WaitForLogMessage("stowing crashlog")
+	i.WaitForLogMessage("ZIRCON OOM")
 }

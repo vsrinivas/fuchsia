@@ -37,7 +37,7 @@ static struct udisplay_info g_udisplay = {};
 zx_status_t udisplay_init(void) { return ZX_OK; }
 
 void dlog_bluescreen_halt(void) {
-  size_t len = crashlog_to_string(crashlogbuf, sizeof(crashlogbuf));
+  size_t len = crashlog_to_string(crashlogbuf, sizeof(crashlogbuf), CrashlogType::PANIC);
   platform_stow_crashlog(crashlogbuf, len);
   if (g_udisplay.framebuffer_virt == 0)
     return;

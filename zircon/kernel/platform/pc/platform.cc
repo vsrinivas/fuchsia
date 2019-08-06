@@ -427,6 +427,10 @@ static size_t efi_stow_crashlog(void* log, size_t len) {
 }
 
 size_t platform_stow_crashlog(void* log, size_t len) {
+  printf("stowing crashlog:\n");
+  hexdump(log, MIN(64u, len));
+  printf("...\n");
+
   if (bootloader.nvram.base) {
     return nvram_stow_crashlog(log, len);
   } else {

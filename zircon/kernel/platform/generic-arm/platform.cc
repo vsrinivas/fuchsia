@@ -638,6 +638,10 @@ typedef struct {
 #define NVRAM_MAGIC (0x6f8962d66b28504fULL)
 
 size_t platform_stow_crashlog(void* log, size_t len) {
+  printf("stowing crashlog:\n");
+  hexdump(log, MIN(64u, len));
+  printf("...\n");
+
   if (lastlog_nvram.length < sizeof(log_hdr_t)) {
     return 0;
   }

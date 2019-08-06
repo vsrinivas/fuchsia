@@ -16,14 +16,15 @@
 
 crashlog_t crashlog = {};
 
-size_t crashlog_to_string(char* out, const size_t out_len) {
+size_t crashlog_to_string(char* out, const size_t out_len, CrashlogType type) {
   char* buf = out;
   size_t remain = out_len;
   size_t len;
+  const bool is_oom = type == CrashlogType::OOM;
 
   buf[0] = '\0';
 
-  len = snprintf(buf, remain, "ZIRCON KERNEL PANIC\n\n");
+  len = snprintf(buf, remain, "ZIRCON %s\n\n", is_oom ? "OOM" : "KERNEL PANIC");
   if (len > remain) {
     return out_len;
   }
@@ -46,12 +47,17 @@ size_t crashlog_to_string(char* out, const size_t out_len) {
 #endif
   len = snprintf(buf, remain,
                  "VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx name=zircon.elf\n\n", arch,
-                 version.buildid, version.elf_build_id, crashlog.base_address);
+                 version.buildid, version.elf_build_id, is_oom ? 0u : crashlog.base_address);
   if (len > remain) {
     return out_len;
   }
   remain -= len;
   buf += len;
+
+  if (is_oom) {
+    // If OOM, then including a backtrace doesn't make sense, return early.
+    return out_len - remain;
+  }
 
   if (crashlog.iframe) {
 #if defined(__aarch64__)

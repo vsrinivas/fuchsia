@@ -58,6 +58,7 @@ library("object") {
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/counters",
+    "$zx/kernel/lib/crashlog",
     "$zx/kernel/lib/fbl",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/region-alloc",

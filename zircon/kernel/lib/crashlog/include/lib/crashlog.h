@@ -24,7 +24,11 @@ typedef struct {
 
 extern crashlog_t crashlog;
 
-// Serialize the crashlog to string in `out' up to `len' characters.
-size_t crashlog_to_string(char* out, size_t len);
+enum class CrashlogType { PANIC, OOM };
+
+// Serialize the crashlog to string in `out' up to `len' characters. If `type'
+// is OOM, then a different preamble will be used, and the backtrace will not be
+// included.
+size_t crashlog_to_string(char* out, const size_t len, CrashlogType type);
 
 #endif  // ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_
