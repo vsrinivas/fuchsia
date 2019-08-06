@@ -16,7 +16,7 @@ use futures::StreamExt;
 mod setup;
 
 static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../garnet/bin/fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
+    include_bytes!("../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
 
 struct RecoveryUI<'a, T: PixelSink> {
     face: FontFace<'a>,

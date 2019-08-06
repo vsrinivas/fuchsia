@@ -16,8 +16,8 @@ base_package_labels += [
 
 cache_package_labels += [
   "//garnet/bin/developer/tiles",
-  "//garnet/bin/fonts",
   "//garnet/bin/terminal",
+  "//src/fonts",
 ]
 
 # End to end (E2E) product test runtime dependencies. Must be added to cache,

@@ -47,7 +47,7 @@ group("netcfg") {
 group("fonts") {
   testonly = true
   public_deps = [
-    "//garnet/bin/fonts",
+    "//src/fonts",
   ]
 }
 
@@ -207,7 +207,6 @@ group("all") {
     "//garnet/packages/prod:drivers",
     "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:far",
-    "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:fortune",
     "//garnet/packages/prod:guest_runner",
     "//garnet/packages/prod:insntrace",
@@ -277,6 +276,7 @@ group("all") {
     "//src/connectivity/wlan:service",
     "//src/connectivity/wlan:tools",
     "//src/developer/memory/mem",
+    "//src/fonts",
     "//src/ui/a11y:a11y",
   ]
 }

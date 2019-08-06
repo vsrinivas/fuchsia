@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 // This font creation method isn't ideal. The correct method would be to ask the Fuchsia
 // font service for the font data.
 static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../bin/fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
+    include_bytes!("../../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
 
 lazy_static! {
     pub static ref FONT_FACE: FontFace<'static> =

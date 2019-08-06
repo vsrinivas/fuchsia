@@ -11,13 +11,13 @@ group("interactive_minimal") {
     "//garnet/packages/config:mediasession",
     "//garnet/packages/config:shortcut",
     "//garnet/packages/prod:display_manager",
-    "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec",
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/products:graphical",
+    "//src/fonts",
     "//src/ui/a11y",
   ]
 }

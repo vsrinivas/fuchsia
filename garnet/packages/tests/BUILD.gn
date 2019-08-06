@@ -51,8 +51,8 @@ group("fidlext_tests") {
 group("fonts") {
   testonly = true
   public_deps = [
-    "//garnet/bin/fonts:font_provider_tests",
-    "//garnet/packages/prod:fonts",
+    "//src/fonts",
+    "//src/fonts:tests",
   ]
 }
 

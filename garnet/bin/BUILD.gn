@@ -18,7 +18,6 @@ group("bin") {
     "display_manager",
     "far",
     "fidl_compatibility_test",
-    "fonts",
     "glob",
     "http",
     "insntrace",

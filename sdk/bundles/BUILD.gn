@@ -7,7 +7,6 @@ group("tools") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:factory_reset",
-    "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:iquery",
     "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec",
@@ -20,6 +19,7 @@ group("tools") {
     "//garnet/packages/testing:run_test_component",
     "//peridot/packages/prod:sessionctl",
     "//src/connectivity/network/mdns/bundles:utils",
+    "//src/fonts",
     "//src/modular/bundles:framework",
     "//src/modular/bundles:tools",
     "//topaz/packages/prod:chromium",

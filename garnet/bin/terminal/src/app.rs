@@ -13,7 +13,7 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 
 static FONT_DATA: &'static [u8] =
-    include_bytes!("../../fonts/third_party/robotomono/RobotoMono-Regular.ttf");
+    include_bytes!("../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf");
 
 pub struct App {
     face: FontFacePtr,
