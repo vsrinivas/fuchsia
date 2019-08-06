@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub use fidl_fuchsia_pkg::ExperimentToggle as Experiment;
 use {
     failure::Error,
-    fidl_fuchsia_pkg::{
-        ExperimentToggle, PackageResolverAdminRequest, PackageResolverAdminRequestStream,
-    },
+    fidl_fuchsia_pkg::{PackageResolverAdminRequest, PackageResolverAdminRequestStream},
     fuchsia_inspect as inspect,
     futures::prelude::*,
     inspect::Property,
@@ -15,17 +14,46 @@ use {
     std::sync::Arc,
 };
 
-pub(crate) struct State {
-    state: HashSet<ExperimentToggle>,
+// A read-only view of current experiment states.
+#[derive(Clone, Debug)]
+pub struct Experiments(Arc<RwLock<State>>);
+
+impl Experiments {
+    pub fn get(&self, experiment: Experiment) -> bool {
+        self.0.read().get_state(experiment)
+    }
+
+    #[cfg(test)]
+    pub fn none() -> Self {
+        Self(Arc::new(RwLock::new(State::new_test())))
+    }
+}
+
+impl From<Arc<RwLock<State>>> for Experiments {
+    fn from(x: Arc<RwLock<State>>) -> Self {
+        Self(x)
+    }
+}
+
+#[derive(Debug)]
+pub struct State {
+    state: HashSet<Experiment>,
     inspect: inspect::Node,
-    inspect_states: HashMap<ExperimentToggle, inspect::IntProperty>,
+    inspect_states: HashMap<Experiment, inspect::IntProperty>,
 }
 
 impl State {
     pub fn new(inspect: inspect::Node) -> Self {
         Self { state: HashSet::new(), inspect, inspect_states: HashMap::new() }
     }
-    pub fn set_state(&mut self, experiment: ExperimentToggle, state: bool) {
+
+    #[cfg(test)]
+    pub fn new_test() -> Self {
+        let null_node = inspect::Inspector::new().root().create_child("test");
+        Self::new(null_node)
+    }
+
+    pub fn set_state(&mut self, experiment: Experiment, state: bool) {
         if state {
             self.state.insert(experiment);
         } else {
@@ -40,9 +68,7 @@ impl State {
         };
     }
 
-    // allow dead_code here to allow for future experiment use
-    #[allow(dead_code)]
-    pub fn get_state(&self, experiment: ExperimentToggle) -> bool {
+    pub fn get_state(&self, experiment: Experiment) -> bool {
         self.state.contains(&experiment)
     }
 }
@@ -71,7 +97,7 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("experiments");
         let state = State::new(node);
-        assert_eq!(state.get_state(ExperimentToggle::Lightbulb), false);
+        assert_eq!(state.get_state(Experiment::Lightbulb), false);
         assert_inspect_tree!(
             inspector,
             root: {
@@ -85,8 +111,8 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("experiments");
         let mut state = State::new(node);
-        state.set_state(ExperimentToggle::Lightbulb, true);
-        assert_eq!(state.get_state(ExperimentToggle::Lightbulb), true);
+        state.set_state(Experiment::Lightbulb, true);
+        assert_eq!(state.get_state(Experiment::Lightbulb), true);
         assert_inspect_tree!(
             inspector,
             root: {
@@ -102,9 +128,9 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("experiments");
         let mut state = State::new(node);
-        state.set_state(ExperimentToggle::Lightbulb, true);
-        state.set_state(ExperimentToggle::Lightbulb, false);
-        assert_eq!(state.get_state(ExperimentToggle::Lightbulb), false);
+        state.set_state(Experiment::Lightbulb, true);
+        state.set_state(Experiment::Lightbulb, false);
+        assert_eq!(state.get_state(Experiment::Lightbulb), false);
         assert_inspect_tree!(
             inspector,
             root: {

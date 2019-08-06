@@ -31,6 +31,7 @@ mod rewrite_service;
 mod test_util;
 
 use crate::amber_connector::AmberConnector;
+use crate::experiment::Experiments;
 use crate::font_package_manager::{FontPackageManager, FontPackageManagerBuilder};
 use crate::repository_manager::{RepositoryManager, RepositoryManagerBuilder};
 use crate::repository_service::RepositoryService;
@@ -62,22 +63,24 @@ fn main() -> Result<(), Error> {
 
     let amber_connector = AmberConnector::new();
 
-    let repo_manager = Arc::new(RwLock::new(load_repo_manager(amber_connector)));
-    let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node)));
     let experiment_state = Arc::new(RwLock::new(experiment::State::new(experiment_inspect_node)));
+    let experiments = Arc::clone(&experiment_state).into();
+
     let font_package_manager = Arc::new(load_font_package_manager());
+    let repo_manager = Arc::new(RwLock::new(load_repo_manager(amber_connector, experiments)));
+    let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node)));
 
     let resolver_cb = {
         // Capture a clone of repo and rewrite manager's Arc so the new client callback has a copy
         // from which to make new clones.
-        let repo_manager = repo_manager.clone();
-        let rewrite_manager = rewrite_manager.clone();
+        let repo_manager = Arc::clone(&repo_manager);
+        let rewrite_manager = Arc::clone(&rewrite_manager);
         let cache = cache.clone();
         move |stream| {
             fasync::spawn(
                 resolver_service::run_resolver_service(
-                    rewrite_manager.clone(),
-                    repo_manager.clone(),
+                    Arc::clone(&rewrite_manager),
+                    Arc::clone(&repo_manager),
                     cache.clone(),
                     stream,
                 )
@@ -87,15 +90,15 @@ fn main() -> Result<(), Error> {
     };
 
     let font_resolver_fb = {
-        let repo_manager = repo_manager.clone();
-        let rewrite_manager = rewrite_manager.clone();
+        let repo_manager = Arc::clone(&repo_manager);
+        let rewrite_manager = Arc::clone(&rewrite_manager);
         let cache = cache.clone();
         move |stream| {
             fasync::spawn(
                 resolver_service::run_font_resolver_service(
-                    font_package_manager.clone(),
-                    rewrite_manager.clone(),
-                    repo_manager.clone(),
+                    Arc::clone(&font_package_manager),
+                    Arc::clone(&rewrite_manager),
+                    Arc::clone(&repo_manager),
                     cache.clone(),
                     stream,
                 )
@@ -105,7 +108,7 @@ fn main() -> Result<(), Error> {
     };
 
     let repo_cb = move |stream| {
-        let repo_manager = repo_manager.clone();
+        let repo_manager = Arc::clone(&repo_manager);
 
         fasync::spawn(
             async move {
@@ -117,7 +120,7 @@ fn main() -> Result<(), Error> {
     };
 
     let rewrite_cb = move |stream| {
-        let mut rewrite_service = RewriteService::new(rewrite_manager.clone());
+        let mut rewrite_service = RewriteService::new(Arc::clone(&rewrite_manager));
 
         fasync::spawn(
             async move { rewrite_service.handle_client(stream).await }
@@ -126,7 +129,7 @@ fn main() -> Result<(), Error> {
     };
 
     let admin_cb = move |stream| {
-        let experiment_state = experiment_state.clone();
+        let experiment_state = Arc::clone(&experiment_state);
         fasync::spawn(async move {
             experiment::run_admin_service(experiment_state, stream)
                 .await
@@ -151,10 +154,13 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn load_repo_manager(amber_connector: AmberConnector) -> RepositoryManager<AmberConnector> {
+fn load_repo_manager(
+    amber_connector: AmberConnector,
+    experiments: Experiments,
+) -> RepositoryManager<AmberConnector> {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
-    RepositoryManagerBuilder::new(DYNAMIC_REPO_PATH, amber_connector)
+    RepositoryManagerBuilder::new(DYNAMIC_REPO_PATH, amber_connector, experiments)
         .unwrap_or_else(|(builder, err)| {
             fx_log_err!("error loading dynamic repo config: {}", err);
             builder

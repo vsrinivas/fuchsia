@@ -24,4 +24,7 @@ protocol PackageResolverAdmin {
 enum ExperimentToggle : uint64 {
     /// Does nothing, but visible in inspect.
     LIGHTBULB = 0;
+
+    /// Perform blob downloading in the package resolver instead of amber.
+    DOWNLOAD_BLOB = 1;
 };

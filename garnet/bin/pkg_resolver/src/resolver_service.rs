@@ -173,6 +173,7 @@ fn handle_bad_package_url(parse_error: ParseError, pkg_url: &str) -> Result<(), 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::experiment::{Experiment, Experiments};
     use crate::font_package_manager::FontPackageManagerBuilder;
     use crate::repository_manager::RepositoryManagerBuilder;
     use crate::rewrite_manager::{tests::make_rule_config, RewriteManagerBuilder};
@@ -356,6 +357,7 @@ mod tests {
         static_rewrite_rules: Vec<Rule>,
         dynamic_rewrite_rules: Vec<Rule>,
         font_package_urls: Vec<String>,
+        experiments: Option<Experiments>,
     }
 
     impl ResolveTestBuilder {
@@ -369,7 +371,13 @@ mod tests {
                 static_rewrite_rules: vec![],
                 dynamic_rewrite_rules: vec![],
                 font_package_urls: vec![],
+                experiments: None,
             }
+        }
+
+        fn experiments(mut self, experiments: Experiments) -> Self {
+            self.experiments = Some(experiments);
+            self
         }
 
         fn source_packages<I: IntoIterator<Item = Package>>(self, packages: I) -> Self {
@@ -431,12 +439,15 @@ mod tests {
             let dynamic_repo_dir = TempDir::new().unwrap();
 
             let dynamic_configs_path = dynamic_repo_dir.path().join("config");
-            let repo_manager =
-                RepositoryManagerBuilder::new(dynamic_configs_path, amber_connector.clone())
-                    .unwrap()
-                    .load_static_configs_dir(static_repo_dir.path())
-                    .unwrap()
-                    .build();
+            let repo_manager = RepositoryManagerBuilder::new(
+                dynamic_configs_path,
+                amber_connector.clone(),
+                self.experiments.unwrap_or_else(Experiments::none),
+            )
+            .unwrap()
+            .load_static_configs_dir(static_repo_dir.path())
+            .unwrap()
+            .build();
 
             let font_config_dir = create_dir(vec![("font_packages.json", self.font_package_urls)]);
             let font_package_manager = FontPackageManagerBuilder::new()
@@ -515,6 +526,27 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_download_blob_experiment_fails() {
+        let experiments = Arc::new(RwLock::new(crate::experiment::State::new_test()));
+
+        let test = ResolveTestBuilder::new()
+            .source_packages(vec![Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok)])
+            .experiments(Arc::clone(&experiments).into())
+            .build();
+
+        // Succeeds without experiment enabled.
+        test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Ok(vec![gen_merkle_file('a')])).await;
+
+        // Picks up new experiment state and fails as expected.
+        experiments.write().set_state(Experiment::DownloadBlob, true);
+        test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Err(Status::INTERNAL)).await;
+
+        // Succeeds after disabling experiment.
+        experiments.write().set_state(Experiment::DownloadBlob, false);
+        test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Ok(vec![gen_merkle_file('a')])).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package_error() {
         let test = ResolveTestBuilder::new()
             .source_packages(vec![
@@ -535,7 +567,6 @@ mod tests {
         test.run_resolve("fuchsia-pkg://fuchsia.com/foo/beta", Err(Status::NOT_FOUND)).await;
 
         // Unavailable package
-
         test.run_resolve("fuchsia-pkg://fuchsia.com/unavailable/0", Err(Status::UNAVAILABLE)).await;
 
         // Bad package URL
@@ -616,7 +647,6 @@ mod tests {
         test.run_resolve("fuchsia-pkg://example.com/foo/beta", Err(Status::NOT_FOUND)).await;
 
         // Unavailable package
-
         test.run_resolve("fuchsia-pkg://example.com/unavailable/0", Err(Status::UNAVAILABLE)).await;
 
         // Bad package URL
