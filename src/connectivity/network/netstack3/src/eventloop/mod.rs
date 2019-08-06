@@ -788,13 +788,17 @@ impl UdpEventDispatcher for EventLoopInner {}
 
 impl TransportLayerEventDispatcher for EventLoopInner {}
 
-impl IcmpEventDispatcher for EventLoopInner {
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: &[u8]) {
+impl<B: BufferMut> IcmpEventDispatcher<B> for EventLoopInner {
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
         #[cfg(test)]
-        self.send_test_event(TestEvent::IcmpEchoReply { conn, seq_num, data: data.to_owned() });
+        self.send_test_event(TestEvent::IcmpEchoReply {
+            conn,
+            seq_num,
+            data: data.as_ref().to_owned(),
+        });
 
         // TODO(brunodalbo) implement actual handling of icmp echo replies
     }
 }
 
-impl IpLayerEventDispatcher for EventLoopInner {}
+impl<B: BufferMut> IpLayerEventDispatcher<B> for EventLoopInner {}

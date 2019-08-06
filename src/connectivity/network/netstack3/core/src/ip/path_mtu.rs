@@ -14,7 +14,7 @@ use net_types::ip::{Ip, IpAddress};
 use specialize_ip_macro::specialize_ip;
 
 use crate::context::{InstantContext, StateContext, TimerContext};
-use crate::{Context, EventDispatcher, Instant};
+use crate::Instant;
 
 /// [RFC 791 section 3.2] requires that an IPv4 node be able to forward
 /// datagrams of up to 68 octets without further fragmentation. That is,
@@ -110,10 +110,83 @@ pub(crate) fn get_pmtu<A: IpAddress, C: PmtuContext<A::Version>>(
     ctx.get_state(()).get_pmtu(src_ip, dst_ip)
 }
 
-/// Update the PMTU between `src_ip` and `dst_ip`.
+/// A handler for PMTU events.
 ///
-/// See [`update_pmtu_inner`].
-pub(crate) fn update_pmtu<A: IpAddress, C: PmtuContext<A::Version>>(
+/// `PmtuHandler<I>` is implemented by any type which also implements
+/// [`PmtuContext<I>`], and it can also be mocked for use in testing.
+pub(crate) trait PmtuHandler<I: Ip> {
+    /// Update the PMTU between `src_ip` and `dst_ip` if `new_mtu` is less than
+    /// the current PMTU and does not violate the minimum MTU size requirements
+    /// for an IP.
+    fn update_pmtu_if_less(
+        &mut self,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        new_mtu: u32,
+    ) -> Result<Option<u32>, Option<u32>>;
+
+    /// Update the PMTU between `src_ip` and `dst_ip` to the next lower estimate
+    /// from `from`.
+    ///
+    /// Returns `Ok((a, b))` on successful update (a lower PMTU value, `b`,
+    /// exists that does not violate IP specific minimum MTU requirements and it
+    /// is less than the current PMTU estimate, `a`). Returns `Err(a)`
+    /// otherwise, where `a` is the same `a` as in the success case.
+    fn update_pmtu_next_lower(
+        &mut self,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        from: u32,
+    ) -> Result<(Option<u32>, u32), Option<u32>>;
+}
+
+impl<I: Ip, C: PmtuContext<I>> PmtuHandler<I> for C {
+    fn update_pmtu_if_less(
+        &mut self,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        new_mtu: u32,
+    ) -> Result<Option<u32>, Option<u32>> {
+        let prev_mtu = get_pmtu(self, src_ip, dst_ip);
+
+        match prev_mtu {
+            // No PMTU exists so update.
+            None => update_pmtu(self, src_ip, dst_ip, new_mtu),
+            // A PMTU exists but it is greater than `new_mtu` so update.
+            Some(mtu) if new_mtu < mtu => update_pmtu(self, src_ip, dst_ip, new_mtu),
+            // A PMTU exists but it is less than or equal to `new_mtu` so no need to update.
+            _ => {
+                trace!("update_pmtu_if_less: Not updating the PMTU  between src {} and dest {} to {}; is {}", src_ip, dst_ip, new_mtu, prev_mtu.unwrap());
+                Ok(prev_mtu)
+            }
+        }
+    }
+
+    fn update_pmtu_next_lower(
+        &mut self,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        from: u32,
+    ) -> Result<(Option<u32>, u32), Option<u32>> {
+        if let Some(next_pmtu) = next_lower_pmtu_plateau(from) {
+            trace!(
+            "update_pmtu_next_lower: Attempting to update PMTU between src {} and dest {} to {}",
+            src_ip,
+            dst_ip,
+            next_pmtu
+        );
+
+            self.update_pmtu_if_less(src_ip, dst_ip, next_pmtu).map(|x| (x, next_pmtu))
+        } else {
+            // TODO(ghanan): Should we make sure the current PMTU value is set to the
+            //               IP specific minimum MTU value?
+            trace!("update_pmtu_next_lower: Not updating PMTU between src {} and dest {} as there is no lower PMTU value from {}", src_ip, dst_ip, from);
+            Err(get_pmtu(self, src_ip, dst_ip))
+        }
+    }
+}
+
+fn update_pmtu<A: IpAddress, C: PmtuContext<A::Version>>(
     ctx: &mut C,
     src_ip: A,
     dst_ip: A,
@@ -128,62 +201,6 @@ pub(crate) fn update_pmtu<A: IpAddress, C: PmtuContext<A::Version>>(
         ret
     );
     ret
-}
-
-/// Update the PMTU between `src_ip` and `dst_ip` if `new_mtu` is less than
-/// the current PMTU and does not violate the minimum MTU size requirements
-/// for an IP.
-///
-/// See [`IpLayerPathMtuCache::update`].
-pub(crate) fn update_pmtu_if_less<A: IpAddress, D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    src_ip: A,
-    dst_ip: A,
-    new_mtu: u32,
-) -> Result<Option<u32>, Option<u32>> {
-    let prev_mtu = get_pmtu(ctx, src_ip, dst_ip);
-
-    match prev_mtu {
-        // No PMTU exists so update.
-        None => update_pmtu(ctx, src_ip, dst_ip, new_mtu),
-        // A PMTU exists but it is greater than `new_mtu` so update.
-        Some(mtu) if new_mtu < mtu => update_pmtu(ctx, src_ip, dst_ip, new_mtu),
-        // A PMTU exists but it is less than or equal to `new_mtu` so no need to update.
-        _ => {
-            trace!("update_pmtu_if_less: Not updating the PMTU  between src {} and dest {} to {}; is {}", src_ip, dst_ip, new_mtu, prev_mtu.unwrap());
-            Ok(prev_mtu)
-        }
-    }
-}
-
-/// Update the PMTU between `src_ip` and `dst_ip` to the next lower estimate
-/// from `from`.
-///
-/// Returns `Ok((a, b))` on successful update (a lower PMTU value, `b`,
-/// exists that does not violate IP specific minimum MTU requirements and
-/// it is less than the current PMTU estimate, `a`. Returns `Err(a)`
-/// otherwise, where `a` is the same `a` in the success case.
-pub(crate) fn update_pmtu_next_lower<A: IpAddress, D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    src_ip: A,
-    dst_ip: A,
-    from: u32,
-) -> Result<(Option<u32>, u32), Option<u32>> {
-    if let Some(next_pmtu) = next_lower_pmtu_plateau(from) {
-        trace!(
-            "update_pmtu_next_lower: Attempting to update PMTU between src {} and dest {} to {}",
-            src_ip,
-            dst_ip,
-            next_pmtu
-        );
-
-        update_pmtu_if_less(ctx, src_ip, dst_ip, next_pmtu).map(|x| (x, next_pmtu))
-    } else {
-        // TODO(ghanan): Should we make sure the current PMTU value is set to the
-        //               IP specific minimum MTU value?
-        trace!("update_pmtu_next_lower: Not updating PMTU between src {} and dest {} as there is no lower PMTU value from {}", src_ip, dst_ip, from);
-        Err(get_pmtu(ctx, src_ip, dst_ip))
-    }
 }
 
 /// Get next lower PMTU plateau value, if one exists.
@@ -394,6 +411,7 @@ mod tests {
     use crate::testutil::{
         get_dummy_config, run_for, DummyEventDispatcher, DummyEventDispatcherBuilder,
     };
+    use crate::{Context, EventDispatcher};
 
     /// Get the last updated [`Instant`] when the PMTU between `src_ip`
     /// and `dst_ip` was updated.
@@ -515,9 +533,14 @@ mod tests {
         // PMTU should be updated to `new_mtu3` and last updated instant
         // should be updated to the start of the test + 5s.
         assert_eq!(
-            update_pmtu_if_less(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip, new_mtu3)
-                .unwrap()
-                .unwrap(),
+            PmtuHandler::<I>::update_pmtu_if_less(
+                &mut ctx,
+                dummy_config.local_ip,
+                dummy_config.remote_ip,
+                new_mtu3
+            )
+            .unwrap()
+            .unwrap(),
             new_mtu2
         );
 
@@ -545,9 +568,14 @@ mod tests {
 
         // Make sure update only if new PMTU is less than current (it isn't)
         assert_eq!(
-            update_pmtu_if_less(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip, new_mtu4)
-                .unwrap()
-                .unwrap(),
+            PmtuHandler::<I>::update_pmtu_if_less(
+                &mut ctx,
+                dummy_config.local_ip,
+                dummy_config.remote_ip,
+                new_mtu4
+            )
+            .unwrap()
+            .unwrap(),
             new_mtu3
         );
 
@@ -572,9 +600,14 @@ mod tests {
 
         // Updating with mtu value less than the minimum MTU should fail.
         assert_eq!(
-            update_pmtu_if_less(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip, low_mtu)
-                .unwrap_err()
-                .unwrap(),
+            PmtuHandler::<I>::update_pmtu_if_less(
+                &mut ctx,
+                dummy_config.local_ip,
+                dummy_config.remote_ip,
+                low_mtu
+            )
+            .unwrap_err()
+            .unwrap(),
             new_mtu3
         );
 

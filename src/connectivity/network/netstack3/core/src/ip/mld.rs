@@ -9,7 +9,6 @@
 //! Protocol 58) message types, rather than IGMP (IP Protocol 2) message types.
 
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::time::Duration;
 
 use failure::Fail;
@@ -26,8 +25,7 @@ use crate::context::{
     FrameContext, InstantContext, RngContext, RngContextExt, StateContext, TimerContext,
 };
 use crate::ip::gmp::{Action, Actions, GmpAction, GmpStateMachine, ProtocolSpecific};
-use crate::ip::types::IpProto;
-use crate::ip::{Ip, IpAddress, Ipv6, Ipv6Addr};
+use crate::ip::{Ip, IpAddress, IpDeviceIdContext, IpProto, Ipv6, Ipv6Addr};
 use crate::wire::icmp::mld::{
     IcmpMldv1MessageType, Mldv1Body, Mldv1MessageBuilder, MulticastListenerDone,
     MulticastListenerReport,
@@ -58,47 +56,72 @@ impl<D> MldFrameMetadata<D> {
 }
 
 /// The execution context for the Multicast Listener Discovery (MLD) protocol.
-pub(crate) trait MldContext:
-    TimerContext<MldReportDelay<<Self as MldContext>::DeviceId>>
-    + RngContext
-    + StateContext<<Self as MldContext>::DeviceId, MldInterface<<Self as InstantContext>::Instant>>
-    + FrameContext<EmptyBuf, MldFrameMetadata<<Self as MldContext>::DeviceId>>
+pub(crate) trait MldContext: IpDeviceIdContext
+    + TimerContext<
+        MldReportDelay<<Self as IpDeviceIdContext>::DeviceId>,
+    > + RngContext
+    + StateContext<
+        <Self as IpDeviceIdContext>::DeviceId,
+        MldInterface<<Self as InstantContext>::Instant>,
+    > + FrameContext<
+        EmptyBuf,
+        MldFrameMetadata<<Self as IpDeviceIdContext>::DeviceId>,
+    >
 {
-    /// An ID that identifies a particular device.
-    type DeviceId: Copy + Display;
-
     /// Gets an IP address and subnet associated with this device.
     fn get_ip_addr_subnet(&self, device: Self::DeviceId) -> Option<AddrSubnet<Ipv6Addr>>;
 }
 
-/// Receive an MLD message in an ICMPv6 packet.
-pub(crate) fn receive_mld_packet<C: MldContext, B: ByteSlice>(
-    ctx: &mut C,
-    device: C::DeviceId,
-    src_ip: Ipv6Addr,
-    dst_ip: Ipv6Addr,
-    packet: Icmpv6Packet<B>,
-) {
-    if let Err(e) = match packet {
-        Icmpv6Packet::MulticastListenerQuery(msg) => {
-            let now = ctx.now();
-            let max_response_delay: Duration = msg.body().max_response_delay();
-            handle_mld_message(ctx, device, msg.body(), |rng, state| {
-                state.query_received(rng, max_response_delay, now)
-            })
+/// A handler for incoming MLD packets.
+///
+/// `MldHandler` is implemented by any type which also implements
+/// [`MldContext`], and it can also be mocked for use in testing.
+pub(crate) trait MldHandler: IpDeviceIdContext {
+    /// Receive an MLD packet.
+    ///
+    /// # Panics
+    ///
+    /// `receive_mld_packet` panics if `packet` is not one of
+    /// `MulticastListenerQuery`, `MulticastListenerReport`, or
+    /// `MulticastListenerDone`.
+    fn receive_mld_packet<B: ByteSlice>(
+        &mut self,
+        device: Self::DeviceId,
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+        packet: Icmpv6Packet<B>,
+    );
+}
+
+impl<C: MldContext> MldHandler for C {
+    fn receive_mld_packet<B: ByteSlice>(
+        &mut self,
+        device: Self::DeviceId,
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+        packet: Icmpv6Packet<B>,
+    ) {
+        if let Err(e) = match packet {
+            Icmpv6Packet::MulticastListenerQuery(msg) => {
+                let now = self.now();
+                let max_response_delay: Duration = msg.body().max_response_delay();
+                handle_mld_message(self, device, msg.body(), |rng, state| {
+                    state.query_received(rng, max_response_delay, now)
+                })
+            }
+            Icmpv6Packet::MulticastListenerReport(msg) => {
+                handle_mld_message(self, device, msg.body(), |_, state| state.report_received())
+            }
+            Icmpv6Packet::MulticastListenerDone(_) => {
+                debug!("Hosts are not interested in Done messages");
+                return;
+            }
+            _ => {
+                unreachable!("It is not an MLD packet");
+            }
+        } {
+            error!("Error occurred when handling MLD message: {}", e);
         }
-        Icmpv6Packet::MulticastListenerReport(msg) => {
-            handle_mld_message(ctx, device, msg.body(), |_, state| state.report_received())
-        }
-        Icmpv6Packet::MulticastListenerDone(_) => {
-            debug!("Hosts are not interested in Done messages");
-            return;
-        }
-        _ => {
-            unreachable!("It is not an MLD packet");
-        }
-    } {
-        error!("Error occurred when handling MLD message: {}", e);
     }
 }
 

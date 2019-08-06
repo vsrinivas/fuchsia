@@ -46,13 +46,13 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
     }
 }
 
-impl IcmpEventDispatcher for BenchmarkEventDispatcher {
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: &[u8]) {
+impl<B: BufferMut> IcmpEventDispatcher<B> for BenchmarkEventDispatcher {
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
         unimplemented!()
     }
 }
 
-impl IpLayerEventDispatcher for BenchmarkEventDispatcher {}
+impl<B: BufferMut> IpLayerEventDispatcher<B> for BenchmarkEventDispatcher {}
 
 impl EventDispatcher for BenchmarkEventDispatcher {
     type Instant = std::time::Instant;

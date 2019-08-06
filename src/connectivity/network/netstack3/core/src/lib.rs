@@ -324,8 +324,16 @@ impl Instant for time::Instant {
 ///
 /// `D: BufferDispatcher<B>` is shorthand for `D: EventDispatcher +
 /// DeviceLayerEventDispatcher<B>`.
-pub trait BufferDispatcher<B: BufferMut>: EventDispatcher + DeviceLayerEventDispatcher<B> {}
-impl<B: BufferMut, D: EventDispatcher + DeviceLayerEventDispatcher<B>> BufferDispatcher<B> for D {}
+pub trait BufferDispatcher<B: BufferMut>:
+    EventDispatcher + DeviceLayerEventDispatcher<B> + IpLayerEventDispatcher<B>
+{
+}
+impl<
+        B: BufferMut,
+        D: EventDispatcher + DeviceLayerEventDispatcher<B> + IpLayerEventDispatcher<B>,
+    > BufferDispatcher<B> for D
+{
+}
 
 // TODO(joshlf): Should we add a `for<'a> DeviceLayerEventDispatcher<&'a mut
 // [u8]>` bound? Would anything get more efficient if we were able to stack
@@ -341,7 +349,8 @@ impl<B: BufferMut, D: EventDispatcher + DeviceLayerEventDispatcher<B>> BufferDis
 pub trait EventDispatcher:
     DeviceLayerEventDispatcher<Buf<Vec<u8>>>
     + DeviceLayerEventDispatcher<EmptyBuf>
-    + IpLayerEventDispatcher
+    + IpLayerEventDispatcher<Buf<Vec<u8>>>
+    + IpLayerEventDispatcher<EmptyBuf>
     + TransportLayerEventDispatcher
 {
     /// The type of an instant in time.

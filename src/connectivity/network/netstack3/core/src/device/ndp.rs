@@ -33,7 +33,7 @@ use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
 use crate::device::{DeviceId, DeviceLayerTimerId, DeviceProtocol, Tentative};
-use crate::ip::{is_router, IpProto};
+use crate::ip::{is_router, IpDeviceIdContext, IpProto};
 use crate::wire::icmp::ndp::{
     self, options::NdpOption, NeighborAdvertisement, NeighborSolicitation, Options,
     RouterSolicitation,
@@ -1190,32 +1190,55 @@ fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B: ByteSlice, M>(
     );
 }
 
-pub(crate) fn receive_ndp_packet<D: EventDispatcher, B>(
-    ctx: &mut Context<D>,
-    device: Option<DeviceId>,
-    src_ip: Ipv6Addr,
-    dst_ip: Ipv6Addr,
-    packet: Icmpv6Packet<B>,
-) where
-    B: ByteSlice,
-{
-    trace!("receive_ndp_packet");
+/// A handler for incoming NDP packets.
+///
+/// `NdpPacketHandler` is implemented by any `Context<D>` where `D:
+/// EventDispatcher`, and it can also be mocked for use in testing.
+pub(crate) trait NdpPacketHandler: IpDeviceIdContext {
+    /// Receive an NDP packet.
+    ///
+    /// # Panics
+    ///
+    /// `receive_ndp_packet` panics if `packet` is not one of
+    /// `RouterSolicitation`, `RouterAdvertisement`, `NeighborSolicitation`,
+    /// `NeighborAdvertisement`, or `Redirect`.
+    fn receive_ndp_packet<B: ByteSlice>(
+        &mut self,
+        device: Option<Self::DeviceId>,
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+        packet: Icmpv6Packet<B>,
+    ) {
 
-    match device {
-        Some(d) => {
-            // TODO(brunodalbo) we're assuming the device Id is for an ethernet
-            //  device, but it could be for another protocol.
-            receive_ndp_packet_inner::<_, EthernetNdpDevice, _>(
-                ctx,
-                d.id(),
-                src_ip,
-                dst_ip,
-                packet,
-            );
-        }
-        None => {
-            // NDP needs a device identifier context to operate on.
-            debug!("Got NDP packet without device identifier. Ignoring it.");
+    }
+}
+
+impl<D: EventDispatcher> NdpPacketHandler for Context<D> {
+    fn receive_ndp_packet<B: ByteSlice>(
+        &mut self,
+        device: Option<DeviceId>,
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+        packet: Icmpv6Packet<B>,
+    ) {
+        trace!("receive_ndp_packet");
+
+        match device {
+            Some(d) => {
+                // TODO(brunodalbo) we're assuming the device Id is for an ethernet
+                //  device, but it could be for another protocol.
+                receive_ndp_packet_inner::<_, EthernetNdpDevice, _>(
+                    self,
+                    d.id(),
+                    src_ip,
+                    dst_ip,
+                    packet,
+                );
+            }
+            None => {
+                // NDP needs a device identifier context to operate on.
+                debug!("Got NDP packet without device identifier. Ignoring it.");
+            }
         }
     }
 }
@@ -1608,7 +1631,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
             }
         }
         Icmpv6Packet::Redirect(p) => log_unimplemented!((), "NDP Redirect not implemented"),
-        _ => debug_assert!(false, "Invalid ICMP packet passed to NDP"),
+        _ => unreachable!("Invalid ICMP packet passed to NDP"),
     }
 }
 
@@ -2139,7 +2162,7 @@ mod tests {
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
 
-        receive_ndp_packet(&mut ctx, device, src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 0);
 
         //
@@ -2154,7 +2177,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 1);
 
         //
@@ -2180,7 +2203,7 @@ mod tests {
                 config.local_ip,
             ))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, unspecified_source, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, unspecified_source, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 1);
     }
 
@@ -2202,7 +2225,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 0);
 
         //
@@ -2215,7 +2238,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
     }
 
@@ -2239,7 +2262,7 @@ mod tests {
             .unwrap();
         assert!(!EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id)
             .has_default_router(&src_ip));
-        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         // We should have the new router in our list with our NDP parameters updated.
@@ -2262,7 +2285,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         assert!(ndp_state.has_default_router(&src_ip));
@@ -2288,7 +2311,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         assert!(ndp_state.has_default_router(&src_ip));
@@ -2306,7 +2329,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 4);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         assert!(ndp_state.has_default_router(&src_ip));
@@ -2330,7 +2353,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 5);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         // Router should no longer be in our list.
@@ -2358,7 +2381,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 6);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         // Router should be re-added.
@@ -2407,7 +2430,7 @@ mod tests {
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         assert!(!ndp_state.has_default_router(&src_ip));
         assert!(ndp_state.neighbors.get_neighbor_state(&src_ip).is_none());
-        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         // We should have the new router in our list with our NDP parameters updated.
@@ -2432,7 +2455,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         assert!(ndp_state.has_default_router(&src_ip));
@@ -2477,7 +2500,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         assert!(ndp_state.has_default_router(&src_ip));
@@ -2492,7 +2515,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         assert!(ndp_state.has_default_router(&src_ip));
@@ -2507,7 +2530,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         assert!(ndp_state.has_default_router(&src_ip));
@@ -2572,7 +2595,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, Some(device), src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         // Prefix should be in our list now.
@@ -2589,7 +2612,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, Some(device), src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         // Should remove the prefix from our list now.
@@ -2607,7 +2630,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, Some(device), src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         // Prefix should be in our list now.
@@ -2624,7 +2647,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, Some(device), src_ip, config.local_ip, icmpv6_packet);
+        ctx.receive_ndp_packet(Some(device), src_ip, config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 4);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         // Prefix should be in our list still.

@@ -24,6 +24,7 @@ use crate::context::{
     FrameContext, InstantContext, RngContext, RngContextExt, StateContext, TimerContext,
 };
 use crate::ip::gmp::{Action, Actions, GmpAction, GmpStateMachine, ProtocolSpecific};
+use crate::ip::IpDeviceIdContext;
 use crate::wire::igmp::{
     messages::{IgmpLeaveGroup, IgmpMembershipReportV1, IgmpMembershipReportV2, IgmpPacket},
     IgmpMessage, IgmpPacketBuilder, MessageType,
@@ -49,20 +50,15 @@ impl<D> IgmpPacketMetadata<D> {
 }
 
 /// The execution context for the Internet Group Management Protocol (IGMP).
-pub(crate) trait IgmpContext: TimerContext<
-        IgmpTimerId<<Self as IgmpContext>::DeviceId>,
-    > + RngContext
+pub(crate) trait IgmpContext:
+    IpDeviceIdContext
+    + TimerContext<IgmpTimerId<<Self as IpDeviceIdContext>::DeviceId>>
+    + RngContext
     + StateContext<
-        <Self as IgmpContext>::DeviceId,
+        <Self as IpDeviceIdContext>::DeviceId,
         IgmpInterface<<Self as InstantContext>::Instant>,
-    > + FrameContext<
-        EmptyBuf,
-        IgmpPacketMetadata<<Self as IgmpContext>::DeviceId>,
-    >
+    > + FrameContext<EmptyBuf, IgmpPacketMetadata<<Self as IpDeviceIdContext>::DeviceId>>
 {
-    /// An ID that identifies a particular device.
-    type DeviceId: Copy + Display + Debug + Send + Sync + 'static;
-
     /// Gets an IP address and subnet associated with this device.
     fn get_ip_addr_subnet(&self, device: Self::DeviceId) -> Option<AddrSubnet<Ipv4Addr>>;
 }

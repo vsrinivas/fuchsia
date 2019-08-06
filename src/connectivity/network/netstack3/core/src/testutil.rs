@@ -895,14 +895,14 @@ impl UdpEventDispatcher for DummyEventDispatcher {}
 
 impl TransportLayerEventDispatcher for DummyEventDispatcher {}
 
-impl IcmpEventDispatcher for DummyEventDispatcher {
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: &[u8]) {
+impl<B: BufferMut> IcmpEventDispatcher<B> for DummyEventDispatcher {
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
         let replies = self.icmp_replies.entry(conn).or_insert_with(Vec::default);
-        replies.push((seq_num, data.to_owned()))
+        replies.push((seq_num, data.as_ref().to_owned()))
     }
 }
 
-impl IpLayerEventDispatcher for DummyEventDispatcher {}
+impl<B: BufferMut> IpLayerEventDispatcher<B> for DummyEventDispatcher {}
 
 impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyEventDispatcher {
     fn send_frame<S: Serializer<Buffer = B>>(
