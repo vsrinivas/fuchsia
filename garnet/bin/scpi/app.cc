@@ -114,7 +114,7 @@ zx_status_t App::Start() {
 
 void App::GetDvfsInfo(const uint32_t power_domain, GetDvfsInfoCallback callback) {
   fuchsia_hardware_thermal_OperatingPoint opps;
-  auto result = fidl::VectorPtr<fuchsia::scpi::DvfsOpp>::New(0);
+  std::vector<fuchsia::scpi::DvfsOpp> result;
   zx_status_t status, status2;
   status = fuchsia_hardware_thermal_DeviceGetDvfsInfo(thermal_handle_.get(), power_domain, &status2,
                                                       &opps);
