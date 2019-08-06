@@ -29,7 +29,7 @@ TEST(File, ReadWriteFileAt) {
   ScopedTempDir dir;
   std::string filename = "bar";
   std::string content = "content";
-  fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.path().c_str(), O_RDONLY));
 
   EXPECT_TRUE(files::WriteFileAt(dirfd.get(), filename, content.c_str(), content.size()));
 
@@ -44,7 +44,7 @@ TEST(File, IsFileAt) {
 
   ASSERT_TRUE(dir.NewTempFile(&path));
 
-  fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.path().c_str(), O_RDONLY));
   ASSERT_TRUE(dirfd.get() != -1);
   EXPECT_TRUE(IsFileAt(dirfd.get(), GetBaseName(path)));
 }
@@ -67,7 +67,7 @@ TEST(File, GetFileSize) {
 
 TEST(File, GetFileSizeAt) {
   ScopedTempDir dir;
-  fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
+  fbl::unique_fd dirfd(open(dir.path().c_str(), O_RDONLY));
   ASSERT_TRUE(dirfd.get() != -1);
 
   std::string full_path;

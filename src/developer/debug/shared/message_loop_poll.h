@@ -59,8 +59,8 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   int next_watch_id_ = 1;
 
   // Pipe used to wake up the message loop for posted events.
-  fxl::UniqueFD wakeup_pipe_out_;
-  fxl::UniqueFD wakeup_pipe_in_;
+  fbl::unique_fd wakeup_pipe_out_;
+  fbl::unique_fd wakeup_pipe_in_;
   WatchHandle wakeup_pipe_watch_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MessageLoopPoll);

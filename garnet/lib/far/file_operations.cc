@@ -12,7 +12,7 @@
 namespace archive {
 
 bool CopyPathToFile(const char* src_path, int dst_fd, uint64_t length) {
-  fxl::UniqueFD src_fd(open(src_path, O_RDONLY));
+  fbl::unique_fd src_fd(open(src_path, O_RDONLY));
   if (!src_fd.is_valid()) {
     FXL_LOG(INFO) << "Failed to open " << src_path;
     return false;
@@ -21,7 +21,7 @@ bool CopyPathToFile(const char* src_path, int dst_fd, uint64_t length) {
 }
 
 bool CopyFileToPath(int src_fd, const char* dst_path, uint64_t length) {
-  fxl::UniqueFD dst_fd(
+  fbl::unique_fd dst_fd(
       open(dst_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH));
   if (!dst_fd.is_valid())
     return false;

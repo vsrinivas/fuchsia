@@ -497,7 +497,7 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
       callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
       return;
     }
-    fxl::UniqueFD dirfd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+    fbl::unique_fd dirfd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
     zx::channel chan;
     if (DynamicLibraryLoader::Start(std::move(dirfd), &chan) != ZX_OK) {
@@ -669,7 +669,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
                                        ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateComponentFromPackage", "package.resolved_url",
                  package->resolved_url, "launch_info.url", launch_info.url);
-  fxl::UniqueFD fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+  fbl::unique_fd fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
   // Parse cmx manifest file, if it's there.
   CmxMetadata cmx;

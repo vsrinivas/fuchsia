@@ -78,7 +78,7 @@ class FXL_EXPORT DeviceWatcher {
                                                                IdleCallback idle_callback);
 
  private:
-  DeviceWatcher(fxl::UniqueFD dir_fd, zx::channel dir_watch, ExistsCallback exists_callback,
+  DeviceWatcher(fbl::unique_fd dir_fd, zx::channel dir_watch, ExistsCallback exists_callback,
                 IdleCallback idle_callback);
 
   static void ListDevices(fxl::WeakPtr<DeviceWatcher> weak, int dir_fd);
@@ -86,7 +86,7 @@ class FXL_EXPORT DeviceWatcher {
   void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal* signal);
 
-  fxl::UniqueFD dir_fd_;
+  fbl::unique_fd dir_fd_;
   zx::channel dir_watch_;
   ExistsCallback exists_callback_;
   IdleCallback idle_callback_;

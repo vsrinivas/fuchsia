@@ -29,7 +29,7 @@ struct PathComparator {
 
 }  // namespace
 
-ArchiveReader::ArchiveReader(fxl::UniqueFD fd) : fd_(std::move(fd)) {}
+ArchiveReader::ArchiveReader(fbl::unique_fd fd) : fd_(std::move(fd)) {}
 
 ArchiveReader::~ArchiveReader() = default;
 
@@ -110,7 +110,7 @@ bool ArchiveReader::GetDirectoryIndexByPath(fxl::StringView archive_path, uint64
   return true;
 }
 
-fxl::UniqueFD ArchiveReader::TakeFileDescriptor() { return std::move(fd_); }
+fbl::unique_fd ArchiveReader::TakeFileDescriptor() { return std::move(fd_); }
 
 fxl::StringView ArchiveReader::GetPathView(const DirectoryTableEntry& entry) const {
   return fxl::StringView(path_data_.data() + entry.name_offset, entry.name_length);

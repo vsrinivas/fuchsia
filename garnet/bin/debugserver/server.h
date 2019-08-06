@@ -153,7 +153,7 @@ class RspServer final : public inferior_control::ServerWithIO {
 
   // File descriptor for the socket used for listening for incoming
   // connections (e.g. from gdb or lldb).
-  fxl::UniqueFD server_sock_;
+  fbl::unique_fd server_sock_;
 
   // Buffer used for writing outgoing bytes.
   std::array<char, kMaxBufferSize> out_buffer_;

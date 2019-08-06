@@ -173,7 +173,7 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
     launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
     launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
 
-    fxl::UniqueFD tmp_dir_fd(open("/tmp", O_DIRECTORY | O_RDONLY));
+    fbl::unique_fd tmp_dir_fd(open("/tmp", O_DIRECTORY | O_RDONLY));
     launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
     launch_info.flat_namespace->paths.push_back("/tmp");
     launch_info.flat_namespace->directories.push_back(

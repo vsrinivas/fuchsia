@@ -21,7 +21,7 @@ class BufferedFD final : public FDWatcher, public StreamBuffer::Writer {
   ~BufferedFD();
 
   // A MessageLoop must already be set up on the current thread. Returns true on success.
-  bool Init(fxl::UniqueFD fd);
+  bool Init(fbl::unique_fd fd);
 
   void set_data_available_callback(DataAvailableCallback cb) { callback_ = cb; }
   void set_error_callback(ErrorCallback cb) { error_callback_ = cb; }
@@ -39,7 +39,7 @@ class BufferedFD final : public FDWatcher, public StreamBuffer::Writer {
   // StreamBuffer::Writer implementation.
   size_t ConsumeStreamBufferData(const char* data, size_t len) override;
 
-  fxl::UniqueFD fd_;
+  fbl::unique_fd fd_;
   StreamBuffer stream_;
   MessageLoop::WatchHandle watch_handle_;
 

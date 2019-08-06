@@ -34,7 +34,7 @@ void ModuleFacetReaderImpl::GetModuleManifest(const std::string& module_url,
       callback({});
       return;
     }
-    fxl::UniqueFD fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+    fbl::unique_fd fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
     component::FuchsiaPkgUrl pkg_url;
     std::string cmx_path;

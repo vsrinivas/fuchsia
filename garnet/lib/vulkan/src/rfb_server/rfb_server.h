@@ -22,7 +22,7 @@ class RFBServer {
  private:
   int ReadEntireMessage(void* data, uint32_t size);
 
-  fxl::UniqueFD fd_;
+  fbl::unique_fd fd_;
   uint32_t width_;
   uint32_t height_;
   bool initialization_attempted_ = false;

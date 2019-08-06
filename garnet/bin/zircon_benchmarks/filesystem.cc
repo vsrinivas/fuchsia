@@ -30,7 +30,7 @@ bool OpenTest() {
 
 // Measure the time taken by fstat() on an FD for the current directory.
 bool FstatTest(perftest::RepeatState* state) {
-  fxl::UniqueFD fd(open(".", O_RDONLY));
+  fbl::unique_fd fd(open(".", O_RDONLY));
   FXL_CHECK(fd.is_valid());
 
   while (state->KeepRunning()) {

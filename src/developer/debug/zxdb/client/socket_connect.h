@@ -17,7 +17,7 @@ class Err;
 //
 // This function will take care for differences each OS has when connecting
 // through a socket.
-Err ConnectToHost(const std::string& host, uint16_t port, fxl::UniqueFD* socket);
+Err ConnectToHost(const std::string& host, uint16_t port, fbl::unique_fd* socket);
 
 }  // namespace zxdb
 

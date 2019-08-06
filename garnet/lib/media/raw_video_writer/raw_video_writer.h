@@ -133,7 +133,7 @@ class RawVideoWriter {
   bool is_initialized_ = false;
   bool is_done_ = false;
   std::string file_name_;
-  fxl::UniqueFD file_;
+  fbl::unique_fd file_;
 
   static std::atomic<uint32_t> instance_count_;
 

@@ -35,7 +35,7 @@ std::string StripLeadingSlash(std::string str) {
 
 }  // namespace
 
-ModularConfigReader::ModularConfigReader(fxl::UniqueFD dir_fd) {
+ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {
   FXL_CHECK(dir_fd.get() >= 0);
 
   // 1.  Figure out where the config file is.
@@ -63,7 +63,7 @@ ModularConfigReader::ModularConfigReader(std::string config, std::string config_
 
 // static
 ModularConfigReader ModularConfigReader::CreateFromNamespace() {
-  return ModularConfigReader(fxl::UniqueFD(open("/", O_RDONLY)));
+  return ModularConfigReader(fbl::unique_fd(open("/", O_RDONLY)));
 }
 
 ModularConfigReader::~ModularConfigReader() {}

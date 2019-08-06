@@ -36,7 +36,7 @@ bool FileReader::MapBuffer(const std::string& name, uint32_t trace_num) {
                    << strerror(errno);
     return false;
   }
-  fxl::UniqueFD fd(raw_fd);
+  fbl::unique_fd fd(raw_fd);
   file_size_ = lseek(raw_fd, 0, SEEK_END);
   lseek(raw_fd, 0, SEEK_SET);
 #ifdef __Fuchsia__

@@ -40,7 +40,7 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
     char devname[128];
 
     snprintf(devname, sizeof(devname), "%s/%s", kDevMidiPath, de->d_name);
-    fxl::UniqueFD dev_fd(open(devname, O_RDWR | O_NONBLOCK));
+    fbl::unique_fd dev_fd(open(devname, O_RDWR | O_NONBLOCK));
     if (!dev_fd.is_valid()) {
       continue;
     }

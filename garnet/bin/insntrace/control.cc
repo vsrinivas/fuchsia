@@ -365,7 +365,7 @@ static zx_status_t WriteBufferData(const IptConfig& config, const ControllerSync
     return ZX_ERR_INTERNAL;
   }
 
-  fxl::UniqueFD fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
+  fbl::unique_fd fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (!fd.is_valid()) {
     FXL_LOG(ERROR) << fxl::StringPrintf("Failed writing file: %s", c_path) << ", "
                    << debugger_utils::ErrnoString(errno);

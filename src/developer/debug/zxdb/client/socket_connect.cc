@@ -67,13 +67,13 @@ Err ResolveTargetAddress(const std::string& host, uint16_t port, SockAddrVariant
 
 }  // namespace
 
-Err ConnectToHost(const std::string& host, uint16_t port, fxl::UniqueFD* socket_out) {
+Err ConnectToHost(const std::string& host, uint16_t port, fbl::unique_fd* socket_out) {
   SockAddrVariant addr_variant;
   Err err = ResolveTargetAddress(host, port, &addr_variant);
   if (err.has_error())
     return err;
 
-  fxl::UniqueFD res_socket;
+  fbl::unique_fd res_socket;
 
   // Is it IPv6?
   if (std::holds_alternative<sockaddr_in6>(addr_variant)) {
@@ -149,13 +149,13 @@ Err ResolveAddress(const std::string& host, uint16_t port, addrinfo* addr) {
 
 }  // namespace
 
-Err ConnectToHost(const std::string& host, uint16_t port, fxl::UniqueFD* socket_out) {
+Err ConnectToHost(const std::string& host, uint16_t port, fbl::unique_fd* socket_out) {
   addrinfo addr;
   Err err = ResolveAddress(host, port, &addr);
   if (err.has_error())
     return err;
 
-  fxl::UniqueFD res_socket;
+  fbl::unique_fd res_socket;
 
   res_socket.reset(socket(addr.ai_family, SOCK_STREAM, IPPROTO_TCP));
   if (!res_socket.is_valid())

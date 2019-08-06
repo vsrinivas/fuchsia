@@ -112,7 +112,7 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
   // HelloCompleteMainThread to create the buffer so needs no synchronization.
   // It would be cleaner to pass this in the lambdas to avoid threading
   // confusion, but move-only types can't be bound.
-  fxl::UniqueFD socket_;
+  fbl::unique_fd socket_;
   std::unique_ptr<debug_ipc::BufferedFD> buffer_;
 
   // Callback when the connection is complete (or fails). Access only on the

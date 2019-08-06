@@ -38,8 +38,8 @@ DetachedPath DetachedPath::SubPath(std::initializer_list<fxl::StringView> compon
   return DetachedPath(root_fd_, std::move(end_path));
 }
 
-fxl::UniqueFD DetachedPath::OpenFD(DetachedPath* detatched_path) const {
-  fxl::UniqueFD fd(openat(root_fd_, path_.c_str(), O_RDONLY | O_DIRECTORY));
+fbl::unique_fd DetachedPath::OpenFD(DetachedPath* detatched_path) const {
+  fbl::unique_fd fd(openat(root_fd_, path_.c_str(), O_RDONLY | O_DIRECTORY));
   if (fd.is_valid()) {
     *detatched_path = ledger::DetachedPath(fd.get());
   }

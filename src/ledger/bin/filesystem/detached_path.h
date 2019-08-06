@@ -46,7 +46,7 @@ class DetachedPath {
 
   // Opens a UniqueFD at the current path. If the operation fails, the returned
   // UniqueFd will be invalid.
-  fxl::UniqueFD OpenFD(DetachedPath* detatched_path) const;
+  fbl::unique_fd OpenFD(DetachedPath* detatched_path) const;
 
  private:
   int root_fd_;

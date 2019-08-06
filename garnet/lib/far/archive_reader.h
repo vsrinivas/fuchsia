@@ -15,7 +15,7 @@ namespace archive {
 
 class ArchiveReader {
  public:
-  explicit ArchiveReader(fxl::UniqueFD fd);
+  explicit ArchiveReader(fbl::unique_fd fd);
   ~ArchiveReader();
   ArchiveReader(const ArchiveReader& other) = delete;
 
@@ -44,7 +44,7 @@ class ArchiveReader {
 
   bool GetDirectoryIndexByPath(fxl::StringView archive_path, uint64_t* index) const;
 
-  fxl::UniqueFD TakeFileDescriptor();
+  fbl::unique_fd TakeFileDescriptor();
 
   fxl::StringView GetPathView(const DirectoryTableEntry& entry) const;
 
@@ -54,7 +54,7 @@ class ArchiveReader {
 
   const IndexEntry* GetIndexEntry(uint64_t type) const;
 
-  fxl::UniqueFD fd_;
+  fbl::unique_fd fd_;
   std::vector<IndexEntry> index_;
   std::vector<DirectoryTableEntry> directory_table_;
   std::vector<char> path_data_;

@@ -96,7 +96,7 @@ int DecoderState::ProcessKtraceRecord(debugger_utils::KtraceRecord* rec, void* a
 bool DecoderState::ReadKtraceFile(const std::string& file) {
   FXL_LOG(INFO) << "Loading ktrace data from " << file;
 
-  fxl::UniqueFD fd(open(file.c_str(), O_RDONLY));
+  fbl::unique_fd fd(open(file.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
     FXL_LOG(ERROR) << "error opening ktrace file"
                    << ", " << debugger_utils::ErrnoString(errno);

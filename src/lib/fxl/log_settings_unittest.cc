@@ -27,7 +27,7 @@ class LogSettingsFixture : public ::testing::Test {
 
  private:
   LogSettings old_settings_;
-  fxl::UniqueFD old_stderr_;
+  fbl::unique_fd old_stderr_;
 };
 
 TEST(LogSettings, DefaultOptions) {

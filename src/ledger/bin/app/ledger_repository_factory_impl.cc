@@ -115,7 +115,7 @@ bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path, st
 // requests and callbacks and fires them when the repository is available.
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
-  explicit LedgerRepositoryContainer(fxl::UniqueFD root_fd) : root_fd_(std::move(root_fd)) {
+  explicit LedgerRepositoryContainer(fbl::unique_fd root_fd) : root_fd_(std::move(root_fd)) {
     // Ensure that we close the repository if the underlying filesystem closes
     // too. This prevents us from trying to write on disk when there's no disk
     // anymore. This situation can happen when the Ledger is shut down, if the
@@ -199,7 +199,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     }
   }
 
-  fxl::UniqueFD root_fd_;
+  fbl::unique_fd root_fd_;
   zx::channel fd_chan_;
   std::unique_ptr<async::Wait> fd_wait_;
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
@@ -254,7 +254,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, std::string user_id,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
     fit::function<void(Status)> callback) {
-  fxl::UniqueFD root_fd = fsl::OpenChannelAsFileDescriptor(std::move(repository_handle));
+  fbl::unique_fd root_fd = fsl::OpenChannelAsFileDescriptor(std::move(repository_handle));
   if (!root_fd.is_valid()) {
     callback(Status::IO_ERROR);
     return;
@@ -264,7 +264,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
 }
 
 void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
-    fxl::UniqueFD root_fd, fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+    fbl::unique_fd root_fd, fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
     std::string user_id,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
     fit::function<void(Status)> callback) {

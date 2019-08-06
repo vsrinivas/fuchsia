@@ -23,24 +23,24 @@ TEST_F(PseudoDirServerTest, OpenAt) {
 
   {
     // Paths with leading '/' don't work.
-    fxl::UniqueFD fd = server.OpenAt("/a");
+    fbl::unique_fd fd = server.OpenAt("/a");
     EXPECT_FALSE(fd.is_valid());
   }
   {
     // 'x' doesn't exist, so not valid.
-    fxl::UniqueFD fd = server.OpenAt("x");
+    fbl::unique_fd fd = server.OpenAt("x");
     EXPECT_FALSE(fd.is_valid());
   }
   {
-    fxl::UniqueFD fd = server.OpenAt("a");
+    fbl::unique_fd fd = server.OpenAt("a");
     EXPECT_TRUE(fd.is_valid());
   }
   {
-    fxl::UniqueFD fd = server.OpenAt("a/b");
+    fbl::unique_fd fd = server.OpenAt("a/b");
     EXPECT_TRUE(fd.is_valid());
   }
   {
-    fxl::UniqueFD fd = server.OpenAt("a/b/c");
+    fbl::unique_fd fd = server.OpenAt("a/b/c");
     EXPECT_TRUE(fd.is_valid());
 
     std::string contents;

@@ -43,7 +43,7 @@ bool SetNonBlocking(int fd) {
 
 // Creates a nonblocking temporary pipe pipe and assigns the two ends of it to
 // the two out parameters. Returns true on success.
-bool CreateLocalNonBlockingPipe(fxl::UniqueFD* out_end, fxl::UniqueFD* in_end) {
+bool CreateLocalNonBlockingPipe(fbl::unique_fd* out_end, fbl::unique_fd* in_end) {
 #if defined(OS_LINUX)
   int fds[2];
   if (pipe2(fds, O_CLOEXEC | O_NONBLOCK) != 0)
@@ -56,8 +56,8 @@ bool CreateLocalNonBlockingPipe(fxl::UniqueFD* out_end, fxl::UniqueFD* in_end) {
   if (pipe(fds) != 0)
     return false;
 
-  fxl::UniqueFD fd_out(fds[0]);
-  fxl::UniqueFD fd_in(fds[1]);
+  fbl::unique_fd fd_out(fds[0]);
+  fbl::unique_fd fd_in(fds[1]);
   if (!SetCloseOnExec(fd_out.get()))
     return false;
   if (!SetCloseOnExec(fd_in.get()))

@@ -71,7 +71,7 @@ bool App::ReadMemStats() {
 }
 
 zx_status_t App::Start() {
-  fxl::UniqueFD dirfd(open(kThermalDir, O_DIRECTORY | O_RDONLY));
+  fbl::unique_fd dirfd(open(kThermalDir, O_DIRECTORY | O_RDONLY));
   if (!dirfd.is_valid()) {
     return ZX_ERR_NOT_DIR;
   }

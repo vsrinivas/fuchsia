@@ -64,7 +64,7 @@ TEST(DetatchedPathTest, OpenFD) {
 
   DetachedPath new_subpath;
   ASSERT_TRUE(files::CreateDirectoryAt(subpath.root_fd(), subpath.path()));
-  fxl::UniqueFD fd = path.OpenFD(&new_subpath);
+  fbl::unique_fd fd = path.OpenFD(&new_subpath);
   EXPECT_TRUE(fd.is_valid());
   EXPECT_NE(subpath.root_fd(), new_subpath.root_fd());
   EXPECT_EQ(new_subpath.path(), ".");

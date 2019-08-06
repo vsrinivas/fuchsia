@@ -28,7 +28,7 @@ class ScopedTmpFS {
   async_loop_config_t config_;
   async::Loop loop_;
   memfs_filesystem_t* memfs_;
-  fxl::UniqueFD root_fd_;
+  fbl::unique_fd root_fd_;
 };
 
 }  // namespace scoped_tmpfs

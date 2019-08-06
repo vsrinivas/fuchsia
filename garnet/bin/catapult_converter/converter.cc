@@ -220,7 +220,7 @@ void RandBytes(void* output, size_t output_length) {
 #if defined(OS_FUCHSIA)
   zx_cprng_draw(output, output_length);
 #else
-  fxl::UniqueFD fd(open("/dev/urandom", O_RDONLY | O_CLOEXEC));
+  fbl::unique_fd fd(open("/dev/urandom", O_RDONLY | O_CLOEXEC));
   FXL_CHECK(fd.is_valid());
   const ssize_t len = fxl::ReadFileDescriptor(fd.get(), static_cast<char*>(output), output_length);
   FXL_CHECK(len >= 0 && static_cast<size_t>(len) == output_length);

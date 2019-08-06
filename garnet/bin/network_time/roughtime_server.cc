@@ -63,7 +63,7 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
     return {NETWORK_ERROR, {}};
   }
   auto ac1 = fit::defer([&]() { freeaddrinfo(addrs); });
-  fxl::UniqueFD sock_ufd(socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
+  fbl::unique_fd sock_ufd(socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
   if (!sock_ufd.is_valid()) {
     FX_LOGS(ERROR) << "creating UDP socket: " << strerror(errno);
     return {NETWORK_ERROR, {}};

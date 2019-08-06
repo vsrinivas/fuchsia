@@ -76,7 +76,7 @@ class MdnsInterfaceTransceiver {
 
   MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name, uint32_t index);
 
-  const fxl::UniqueFD& socket_fd() const { return socket_fd_; }
+  const fbl::unique_fd& socket_fd() const { return socket_fd_; }
   const MdnsAddresses& addresses() const {
     FXL_DCHECK(addresses_);
     return *addresses_;
@@ -120,7 +120,7 @@ class MdnsInterfaceTransceiver {
   inet::IpAddress alternate_address_;
   std::string name_;
   uint32_t index_;
-  fxl::UniqueFD socket_fd_;
+  fbl::unique_fd socket_fd_;
   fsl::FDWaiter fd_waiter_;
   std::vector<uint8_t> inbound_buffer_;
   std::vector<uint8_t> outbound_buffer_;

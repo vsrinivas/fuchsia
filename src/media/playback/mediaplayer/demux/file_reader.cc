@@ -19,7 +19,7 @@ std::shared_ptr<FileReader> FileReader::Create(zx::channel file_channel) {
   return std::make_shared<FileReader>(fsl::OpenChannelAsFileDescriptor(std::move(file_channel)));
 }
 
-FileReader::FileReader(fxl::UniqueFD fd)
+FileReader::FileReader(fbl::unique_fd fd)
     : dispatcher_(async_get_default_dispatcher()), fd_(std::move(fd)) {
   FXL_DCHECK(dispatcher_);
 

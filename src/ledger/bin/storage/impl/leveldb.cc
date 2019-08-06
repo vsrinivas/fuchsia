@@ -158,7 +158,7 @@ Status LevelDb::Init() {
     FXL_LOG(ERROR) << "Failed to create directory under " << db_path_.path();
     return Status::INTERNAL_ERROR;
   }
-  fxl::UniqueFD unique_fd;
+  fbl::unique_fd unique_fd;
   ledger::DetachedPath db_path = db_path_;
   if (db_path_.path() != ".") {
     // Open a UniqueFD at the db path.

@@ -127,7 +127,7 @@ bool ManagedLauncher::UpdateLaunchInfo(fuchsia::sys::PackagePtr package,
   }
 
   component::CmxMetadata cmx;
-  fxl::UniqueFD fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+  fbl::unique_fd fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
   json::JSONParser json_parser;
   if (!cmx.ParseFromFileAt(fd.get(), fp.resource_path(), &json_parser)) {

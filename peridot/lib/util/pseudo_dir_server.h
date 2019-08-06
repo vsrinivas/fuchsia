@@ -37,7 +37,7 @@ class PseudoDirServer final {
   ~PseudoDirServer();
 
   // Opens a read-only FD at |path|.  |path| must not lead with a '/'.
-  fxl::UniqueFD OpenAt(std::string path);
+  fbl::unique_fd OpenAt(std::string path);
 
   // Returns a directory connection for this pseudo dir. This directory is
   // served on a different thread than the caller's thread.

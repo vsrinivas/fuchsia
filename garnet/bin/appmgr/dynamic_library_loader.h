@@ -13,7 +13,7 @@
 namespace component {
 namespace DynamicLibraryLoader {
 
-zx_status_t Start(fxl::UniqueFD fd, zx::channel* result);
+zx_status_t Start(fbl::unique_fd fd, zx::channel* result);
 
 }  // namespace DynamicLibraryLoader
 }  // namespace component

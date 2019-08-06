@@ -22,14 +22,14 @@ class MidiKeyboard {
  private:
   friend std::unique_ptr<MidiKeyboard>::deleter_type;
 
-  MidiKeyboard(Tones* owner, fxl::UniqueFD dev) : owner_(owner), dev_(std::move(dev)) {}
+  MidiKeyboard(Tones* owner, fbl::unique_fd dev) : owner_(owner), dev_(std::move(dev)) {}
   ~MidiKeyboard();
 
   void Wait();
   void HandleEvent();
 
   Tones* const owner_;
-  const fxl::UniqueFD dev_;
+  const fbl::unique_fd dev_;
   fsl::FDWaiter fd_waiter_;
   bool waiting_ = false;
 };

@@ -24,7 +24,7 @@ TEST(VMOAndFile, VmoFromFd) {
   std::string path;
   EXPECT_TRUE(temp_dir.NewTempFile(&path));
 
-  fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
+  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   EXPECT_TRUE(fd.is_valid());
   constexpr fxl::StringView payload = "Payload";
   EXPECT_EQ(static_cast<ssize_t>(payload.size()), write(fd.get(), payload.data(), payload.size()));
@@ -44,7 +44,7 @@ TEST(VMOAndFile, VmoFromFilename) {
   std::string path;
   EXPECT_TRUE(temp_dir.NewTempFile(&path));
 
-  fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
+  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   EXPECT_TRUE(fd.is_valid());
   constexpr fxl::StringView payload = "Another playload";
   EXPECT_EQ(static_cast<ssize_t>(payload.size()), write(fd.get(), payload.data(), payload.size()));

@@ -58,7 +58,7 @@ TEST(NamespaceBuilder, Control) {
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/goldfish-control") != paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/goldfish-pipe") != paths.end());
 
-  fxl::UniqueFD dir(
+  fbl::unique_fd dir(
       open("/pkgfs/packages/config-data/0/data/vulkan-icd/icd.d", O_DIRECTORY | O_RDONLY));
   if (dir.is_valid()) {
     EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/config/vulkan/icd.d") != paths.end());

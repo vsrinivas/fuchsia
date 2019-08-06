@@ -68,7 +68,7 @@ bool SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serv
   memset(&addr, 0, sizeof(addr));
 
   socklen_t addrlen = sizeof(addr);
-  fxl::UniqueFD client(accept(server_fd, reinterpret_cast<sockaddr*>(&addr), &addrlen));
+  fbl::unique_fd client(accept(server_fd, reinterpret_cast<sockaddr*>(&addr), &addrlen));
   if (!client.is_valid()) {
     FXL_LOG(ERROR) << "Couldn't accept connection.";
     return false;

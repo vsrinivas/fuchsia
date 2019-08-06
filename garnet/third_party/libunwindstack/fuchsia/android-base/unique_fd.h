@@ -12,7 +12,7 @@
 namespace android {
 namespace base {
 
-using unique_fd = fxl::UniqueFD;
+using unique_fd = fbl::unique_fd;
 
 }  // namespace base
 }  // namespace android

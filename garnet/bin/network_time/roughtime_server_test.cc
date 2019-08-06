@@ -68,7 +68,7 @@ TEST(RoughTimeServerTest, TestServerRequest) {
   struct sockaddr_in serveraddr;
 
   memset(&serveraddr, 0, sizeof(serveraddr));
-  fxl::UniqueFD sock_ufd(socket(AF_INET, SOCK_DGRAM, 0));
+  fbl::unique_fd sock_ufd(socket(AF_INET, SOCK_DGRAM, 0));
   ASSERT_TRUE(sock_ufd.is_valid()) << "udp server: socket call" << strerror(errno);
   int sock = sock_ufd.get();
 

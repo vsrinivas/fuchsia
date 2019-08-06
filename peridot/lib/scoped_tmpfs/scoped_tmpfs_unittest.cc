@@ -18,7 +18,7 @@ TEST(ScopedTmpFsTest, ScopedTmpFs) {
 
   EXPECT_GE(scoped_tmpfs.root_fd(), 0);
 
-  fxl::UniqueFD fd(openat(scoped_tmpfs.root_fd(), "foo", O_WRONLY | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(openat(scoped_tmpfs.root_fd(), "foo", O_WRONLY | O_CREAT | O_EXCL));
   ASSERT_TRUE(fd.is_valid());
   EXPECT_GT(write(fd.get(), "Hello", 6), 0);
   fd.reset(openat(scoped_tmpfs.root_fd(), "foo", O_RDONLY));

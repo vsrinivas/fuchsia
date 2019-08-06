@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   syslog::InitLogger({"crash"});
 
   const char filepath[] = "/boot/log/last-panic.txt";
-  fxl::UniqueFD fd(open(filepath, O_RDONLY));
+  fbl::unique_fd fd(open(filepath, O_RDONLY));
   if (!fd.is_valid()) {
     FX_LOGS(INFO) << "no kernel crash log found";
     return EXIT_SUCCESS;

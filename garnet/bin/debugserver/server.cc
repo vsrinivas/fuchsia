@@ -163,7 +163,7 @@ bool RspServer::Listen() {
   FXL_DCHECK(!server_sock_.is_valid());
   FXL_DCHECK(!client_sock_.is_valid());
 
-  fxl::UniqueFD server_sock(socket(AF_INET, SOCK_STREAM, 0));
+  fbl::unique_fd server_sock(socket(AF_INET, SOCK_STREAM, 0));
   if (!server_sock.is_valid()) {
     FXL_LOG(ERROR) << "Failed to open socket"
                    << ", " << debugger_utils::ErrnoString(errno);
@@ -193,7 +193,7 @@ bool RspServer::Listen() {
 
   // Reuse |addr| here for the destination address.
   socklen_t addrlen = sizeof(addr);
-  fxl::UniqueFD client_sock(accept(server_sock.get(), (struct sockaddr*)&addr, &addrlen));
+  fbl::unique_fd client_sock(accept(server_sock.get(), (struct sockaddr*)&addr, &addrlen));
   if (!client_sock.is_valid()) {
     FXL_LOG(ERROR) << "Accept failed"
                    << ", " << debugger_utils::ErrnoString(errno);

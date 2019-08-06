@@ -20,7 +20,7 @@
 
 namespace fsl {
 
-DeviceWatcher::DeviceWatcher(fxl::UniqueFD dir_fd, zx::channel dir_watch,
+DeviceWatcher::DeviceWatcher(fbl::unique_fd dir_fd, zx::channel dir_watch,
                              ExistsCallback exists_callback, IdleCallback idle_callback)
     : dir_fd_(std::move(dir_fd)),
       dir_watch_(std::move(dir_watch)),
@@ -62,8 +62,8 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
     return nullptr;
   }
 
-  // This weird handshake is necessary because fxl::UniqueFD != fbl::unique_fd.
-  fxl::UniqueFD dir_fd_alt(caller.release().release());
+  // This weird handshake is necessary because fbl::unique_fd != fbl::unique_fd.
+  fbl::unique_fd dir_fd_alt(caller.release().release());
 
   return std::unique_ptr<DeviceWatcher>(new DeviceWatcher(std::move(dir_fd_alt), std::move(client),
                                                           std::move(exists_callback),

@@ -24,8 +24,8 @@ namespace {
 
 class CopyToFileHandler {
  public:
-  CopyToFileHandler(zx::socket source, fxl::UniqueFD destination, async_dispatcher_t* dispatcher,
-                    fit::function<void(bool, fxl::UniqueFD)> callback);
+  CopyToFileHandler(zx::socket source, fbl::unique_fd destination, async_dispatcher_t* dispatcher,
+                    fit::function<void(bool, fbl::unique_fd)> callback);
 
  private:
   ~CopyToFileHandler();
@@ -35,16 +35,16 @@ class CopyToFileHandler {
                      const zx_packet_signal_t* signal);
 
   zx::socket source_;
-  fxl::UniqueFD destination_;
-  fit::function<void(bool, fxl::UniqueFD)> callback_;
+  fbl::unique_fd destination_;
+  fit::function<void(bool, fbl::unique_fd)> callback_;
   async::WaitMethod<CopyToFileHandler, &CopyToFileHandler::OnHandleReady> wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CopyToFileHandler);
 };
 
-CopyToFileHandler::CopyToFileHandler(zx::socket source, fxl::UniqueFD destination,
+CopyToFileHandler::CopyToFileHandler(zx::socket source, fbl::unique_fd destination,
                                      async_dispatcher_t* dispatcher,
-                                     fit::function<void(bool, fxl::UniqueFD)> callback)
+                                     fit::function<void(bool, fbl::unique_fd)> callback)
     : source_(std::move(source)),
       destination_(std::move(destination)),
       callback_(std::move(callback)),
@@ -100,8 +100,8 @@ void CopyToFileHandler::OnHandleReady(async_dispatcher_t* dispatcher, async::Wai
 
 class CopyFromFileHandler {
  public:
-  CopyFromFileHandler(fxl::UniqueFD source, zx::socket destination, async_dispatcher_t* dispatcher,
-                      fit::function<void(bool, fxl::UniqueFD)> callback);
+  CopyFromFileHandler(fbl::unique_fd source, zx::socket destination, async_dispatcher_t* dispatcher,
+                      fit::function<void(bool, fbl::unique_fd)> callback);
 
  private:
   ~CopyFromFileHandler();
@@ -110,10 +110,10 @@ class CopyFromFileHandler {
   void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal_t* signal);
 
-  fxl::UniqueFD source_;
+  fbl::unique_fd source_;
   zx::socket destination_;
   async::WaitMethod<CopyFromFileHandler, &CopyFromFileHandler::OnHandleReady> wait_;
-  fit::function<void(bool, fxl::UniqueFD)> callback_;
+  fit::function<void(bool, fbl::unique_fd)> callback_;
   std::vector<char> buffer_;
   size_t buffer_offset_;
   size_t buffer_end_;
@@ -121,9 +121,9 @@ class CopyFromFileHandler {
   FXL_DISALLOW_COPY_AND_ASSIGN(CopyFromFileHandler);
 };
 
-CopyFromFileHandler::CopyFromFileHandler(fxl::UniqueFD source, zx::socket destination,
+CopyFromFileHandler::CopyFromFileHandler(fbl::unique_fd source, zx::socket destination,
                                          async_dispatcher_t* dispatcher,
-                                         fit::function<void(bool, fxl::UniqueFD)> callback)
+                                         fit::function<void(bool, fbl::unique_fd)> callback)
     : source_(std::move(source)),
       destination_(std::move(destination)),
       wait_(this, destination_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED),
@@ -184,15 +184,15 @@ void CopyFromFileHandler::OnHandleReady(async_dispatcher_t* dispatcher, async::W
 
 }  // namespace
 
-void CopyToFileDescriptor(zx::socket source, fxl::UniqueFD destination,
+void CopyToFileDescriptor(zx::socket source, fbl::unique_fd destination,
                           async_dispatcher_t* dispatcher,
-                          fit::function<void(bool, fxl::UniqueFD)> callback) {
+                          fit::function<void(bool, fbl::unique_fd)> callback) {
   new CopyToFileHandler(std::move(source), std::move(destination), dispatcher, std::move(callback));
 }
 
-void CopyFromFileDescriptor(fxl::UniqueFD source, zx::socket destination,
+void CopyFromFileDescriptor(fbl::unique_fd source, zx::socket destination,
                             async_dispatcher_t* dispatcher,
-                            fit::function<void(bool, fxl::UniqueFD)> callback) {
+                            fit::function<void(bool, fbl::unique_fd)> callback) {
   new CopyFromFileHandler(std::move(source), std::move(destination), dispatcher,
                           std::move(callback));
 }

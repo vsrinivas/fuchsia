@@ -58,7 +58,7 @@ bool MdnsInterfaceTransceiver::Start(const MdnsAddresses& addresses,
   std::cerr << "Starting mDNS on interface " << name_ << " " << address_ << " using port "
             << addresses.port() << "\n";
 
-  socket_fd_ = fxl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
+  socket_fd_ = fbl::unique_fd(socket(address_.family(), SOCK_DGRAM, 0));
 
   if (!socket_fd_.is_valid()) {
     FXL_LOG(ERROR) << "Failed to open socket, " << strerror(errno);

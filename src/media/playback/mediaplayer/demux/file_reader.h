@@ -18,7 +18,7 @@ class FileReader : public Reader {
  public:
   static std::shared_ptr<FileReader> Create(zx::channel file_channel);
 
-  FileReader(fxl::UniqueFD fd);
+  FileReader(fbl::unique_fd fd);
 
   ~FileReader() override;
 
@@ -30,7 +30,7 @@ class FileReader : public Reader {
 
  private:
   async_dispatcher_t* dispatcher_;
-  fxl::UniqueFD fd_;
+  fbl::unique_fd fd_;
   zx_status_t status_ = ZX_OK;
   uint64_t size_ = kUnknownSize;
 };

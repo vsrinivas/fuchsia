@@ -13,7 +13,7 @@ namespace debug_ipc {
 BufferedFD::BufferedFD() = default;
 BufferedFD::~BufferedFD() = default;
 
-bool BufferedFD::Init(fxl::UniqueFD fd) {
+bool BufferedFD::Init(fbl::unique_fd fd) {
   FXL_DCHECK(!fd_.is_valid());  // Can't be initialized more than once.
   fd_ = std::move(fd);
   stream_.set_writer(this);

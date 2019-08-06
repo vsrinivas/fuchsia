@@ -39,7 +39,7 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params, fit::closure quit_call
 
     if (url.SchemeIsFile()) {
       player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(
-          fxl::UniqueFD(open(url.path().c_str(), O_RDONLY)).get()));
+          fbl::unique_fd(open(url.path().c_str(), O_RDONLY)).get()));
     } else {
       player_->SetHttpSource(params.url(), nullptr);
     }

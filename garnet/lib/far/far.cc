@@ -25,7 +25,7 @@ bool far_reader_destroy(far_reader_t reader) {
 }
 
 bool far_reader_read_fd(far_reader_t reader, int fd) {
-  reader->impl = new archive::ArchiveReader(fxl::UniqueFD(fd));
+  reader->impl = new archive::ArchiveReader(fbl::unique_fd(fd));
   return reader->impl->Read();
 }
 

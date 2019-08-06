@@ -28,7 +28,7 @@ class ModularConfigReader {
   //  /config/data/startup.config
   //
   // If one doesn't exist, uses defaults.
-  explicit ModularConfigReader(fxl::UniqueFD dir_fd);
+  explicit ModularConfigReader(fbl::unique_fd dir_fd);
 
   // Parses |config| into modular configs. If |config| cannot be parsed,
   // defaults will be used.

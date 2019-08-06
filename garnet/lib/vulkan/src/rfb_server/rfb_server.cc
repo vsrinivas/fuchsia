@@ -70,7 +70,7 @@ bool RFBServer::Initialize(uint32_t width, uint32_t height, uint32_t port) {
   }
 
   fprintf(stderr, "RFB layer waiting on port %u\n", port);
-  fd_ = fxl::UniqueFD(accept(listen_fd, nullptr, nullptr));
+  fd_ = fbl::unique_fd(accept(listen_fd, nullptr, nullptr));
   if (!fd_.is_valid()) {
     perror("accept failed\n");
     return false;

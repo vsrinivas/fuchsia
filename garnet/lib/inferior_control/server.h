@@ -166,7 +166,7 @@ class ServerWithIO : public Server, public IOLoop::Delegate {
 
   // File descriptor for the socket (or terminal) used for communication.
   // TODO(dje): Rename from *sock* after things are working.
-  fxl::UniqueFD client_sock_;
+  fbl::unique_fd client_sock_;
 };
 
 }  // namespace inferior_control

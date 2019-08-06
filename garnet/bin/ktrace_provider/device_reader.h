@@ -20,7 +20,7 @@ class DeviceReader : public Reader {
 
   void ReadMoreData() override;
 
-  fxl::UniqueFD fd_;
+  fbl::unique_fd fd_;
 
   char buffer_[kChunkSize];
 

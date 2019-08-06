@@ -62,7 +62,7 @@ class WavWriter {
   uint32_t bits_per_sample_ = 0;
 
   std::string file_name_;
-  fxl::UniqueFD file_;
+  fbl::unique_fd file_;
   size_t payload_written_ = 0;
 
   static std::atomic<uint32_t> instance_count_;

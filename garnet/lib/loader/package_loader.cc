@@ -43,7 +43,7 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
 
   package.resolved_url = fuchsia_url.ToString();
 
-  fxl::UniqueFD package_dir(open(fuchsia_url.pkgfs_dir_path().c_str(), O_DIRECTORY | O_RDONLY));
+  fbl::unique_fd package_dir(open(fuchsia_url.pkgfs_dir_path().c_str(), O_DIRECTORY | O_RDONLY));
   if (!package_dir.is_valid()) {
     FXL_VLOG(1) << "Could not open directory " << fuchsia_url.pkgfs_dir_path() << " "
                 << strerror(errno);

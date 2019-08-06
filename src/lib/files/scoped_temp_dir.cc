@@ -43,21 +43,21 @@ void GenerateRandName(char* tp) {
 }
 
 // Creates a unique temporary file under |root_fd| from template |tp|.
-fxl::UniqueFD MksTempAt(int root_fd, char* tp, size_t tp_length) {
+fbl::unique_fd MksTempAt(int root_fd, char* tp, size_t tp_length) {
   FXL_DCHECK(strlen(tp) == tp_length);
   FXL_DCHECK(tp_length >= 6);
   FXL_DCHECK(memcmp(tp + tp_length - 6, "XXXXXX", 6) == 0);
   int retries = 100;
   do {
     GenerateRandName(tp + tp_length - 6);
-    fxl::UniqueFD result(HANDLE_EINTR(openat(root_fd, tp, O_CREAT | O_EXCL, 0700)));
+    fbl::unique_fd result(HANDLE_EINTR(openat(root_fd, tp, O_CREAT | O_EXCL, 0700)));
     if (result.is_valid()) {
       return result;
     }
   } while (--retries && errno == EEXIST);
 
   memcpy(tp + tp_length - 6, "XXXXXX", 6);
-  return fxl::UniqueFD();
+  return fbl::unique_fd();
 }
 
 // Creates a unique temporary directory under |root_fd| from template |tp|.
@@ -105,7 +105,7 @@ int ScopedTempDirAt::root_fd() { return root_fd_; }
 bool ScopedTempDirAt::NewTempFile(std::string* output) {
   // MksTempAt replaces "XXXXXX" so that the resulting file path is unique.
   std::string file_path = directory_path_ + "/XXXXXX";
-  fxl::UniqueFD fd = MksTempAt(root_fd_, &file_path[0], file_path.size());
+  fbl::unique_fd fd = MksTempAt(root_fd_, &file_path[0], file_path.size());
   if (!fd.is_valid()) {
     return false;
   }

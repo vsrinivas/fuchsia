@@ -68,13 +68,13 @@ void DumpKtraceBuffer(const char* output_path_prefix, const char* output_path_su
                    << ", " << debugger_utils::ErrnoString(errno);
     return;
   }
-  fxl::UniqueFD ktrace_fd{fd};
+  fbl::unique_fd ktrace_fd{fd};
 
   std::string ktrace_output_path =
       fxl::StringPrintf("%s.%s", output_path_prefix, output_path_suffix);
   const char* ktrace_c_path = ktrace_output_path.c_str();
 
-  fxl::UniqueFD dest_fd(open(ktrace_c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
+  fbl::unique_fd dest_fd(open(ktrace_c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (dest_fd.is_valid()) {
     ssize_t count;
     char buf[1024];

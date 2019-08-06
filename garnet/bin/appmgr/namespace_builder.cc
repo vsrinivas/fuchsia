@@ -175,7 +175,7 @@ void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
 void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path, std::string dst_path) {
   if (std::find(paths_.begin(), paths_.end(), dst_path) != paths_.end())
     return;
-  fxl::UniqueFD dir(open(src_path.c_str(), O_DIRECTORY | O_RDONLY));
+  fbl::unique_fd dir(open(src_path.c_str(), O_DIRECTORY | O_RDONLY));
   if (!dir.is_valid())
     return;
   zx::channel handle = fsl::CloneChannelFromFileDescriptor(dir.get());

@@ -85,7 +85,7 @@ class PostFileApp {
 
     std::string boundary = "XXXX";  // TODO: make an option to change this
 
-    fxl::UniqueFD fd(open(upload_file.c_str(), O_RDONLY));
+    fbl::unique_fd fd(open(upload_file.c_str(), O_RDONLY));
     if (!fd.is_valid()) {
       printf("cannot open %s\n", upload_file.c_str());
       return false;
@@ -114,7 +114,7 @@ class PostFileApp {
 
     async_dispatcher_t* dispatcher = async_get_default_dispatcher();
     fsl::CopyFromFileDescriptor(std::move(fd), std::move(producer), dispatcher,
-                                [this](bool result, fxl::UniqueFD fd) {
+                                [this](bool result, fbl::unique_fd fd) {
                                   if (!result) {
                                     printf("file read error\n");
                                     loop_->Quit();

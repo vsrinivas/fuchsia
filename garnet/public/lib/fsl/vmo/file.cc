@@ -13,7 +13,7 @@
 
 namespace fsl {
 
-bool VmoFromFd(fxl::UniqueFD fd, SizedVmo* handle_ptr) {
+bool VmoFromFd(fbl::unique_fd fd, SizedVmo* handle_ptr) {
   FXL_CHECK(handle_ptr);
 
   struct stat stat_struct;
@@ -31,14 +31,14 @@ bool VmoFromFilename(const std::string& filename, SizedVmo* handle_ptr) {
   int fd = open(filename.c_str(), O_RDONLY);
   if (fd == -1)
     return false;
-  return VmoFromFd(fxl::UniqueFD(fd), handle_ptr);
+  return VmoFromFd(fbl::unique_fd(fd), handle_ptr);
 }
 
 bool VmoFromFilenameAt(int dirfd, const std::string& filename, SizedVmo* handle_ptr) {
   int fd = openat(dirfd, filename.c_str(), O_RDONLY);
   if (fd == -1)
     return false;
-  return VmoFromFd(fxl::UniqueFD(fd), handle_ptr);
+  return VmoFromFd(fbl::unique_fd(fd), handle_ptr);
 }
 
 }  // namespace fsl

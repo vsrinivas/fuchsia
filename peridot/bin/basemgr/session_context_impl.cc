@@ -81,7 +81,7 @@ fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace() {
     }
   }
   // Clone basemgr's config directory.
-  fxl::UniqueFD dir(open(config_dir.c_str(), O_DIRECTORY | O_RDONLY));
+  fbl::unique_fd dir(open(config_dir.c_str(), O_DIRECTORY | O_RDONLY));
   auto flat_namespace = fuchsia::sys::FlatNamespace::New();
   flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
   flat_namespace->directories.push_back(fsl::CloneChannelFromFileDescriptor(dir.get()));

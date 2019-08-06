@@ -38,7 +38,7 @@ class TestSettingsFixture : public ::testing::Test {
 
  private:
   LogSettings old_settings_;
-  fxl::UniqueFD old_stderr_;
+  fbl::unique_fd old_stderr_;
   char *random_seed_;
 };
 

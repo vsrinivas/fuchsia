@@ -27,7 +27,7 @@ const char kSysinfoDevice[] = "/dev/misc/sysinfo";
 // get the root job handle. It will likely need to be updated when a better
 // way to get the root job is found.
 zx::job GetRootJob() {
-  fxl::UniqueFD fd(open(kSysinfoDevice, O_RDWR));
+  fbl::unique_fd fd(open(kSysinfoDevice, O_RDWR));
   if (!fd.is_valid()) {
     FXL_LOG(ERROR) << "unable to open " << kSysinfoDevice;
     return zx::job();

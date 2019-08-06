@@ -29,7 +29,7 @@ PseudoDirServer::~PseudoDirServer() {
 }
 
 // Opens a read-only FD at |path|.  Path must not begin with '/'.
-fxl::UniqueFD PseudoDirServer::OpenAt(std::string path) {
+fbl::unique_fd PseudoDirServer::OpenAt(std::string path) {
   fuchsia::io::NodePtr node;
   dir_->Open(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_DESCRIBE,  // flags
              0u,                                                                  // mode

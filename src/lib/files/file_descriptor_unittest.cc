@@ -22,7 +22,7 @@ TEST(FileDescriptor, WriteAndRead) {
   std::string path;
   ASSERT_TRUE(temp_dir.NewTempFile(&path));
 
-  fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
+  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   ASSERT_TRUE(fd.is_valid());
 
   std::string string = "one, two, three";

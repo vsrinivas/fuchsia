@@ -56,7 +56,7 @@ class SocketServer {
   bool connected() const { return !!connection_; }
 
  private:
-  fxl::UniqueFD server_socket_;
+  fbl::unique_fd server_socket_;
   std::unique_ptr<SocketConnection> connection_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketServer);

@@ -65,7 +65,7 @@ int Create(const fxl::CommandLine& command_line) {
     if (!archive::ReadManifest(manifest_path, &writer))
       return -1;
   }
-  fxl::UniqueFD fd(open(archive_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
+  fbl::unique_fd fd(open(archive_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
                         S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH));
   if (!fd.is_valid())
     return -1;
@@ -77,7 +77,7 @@ int List(const fxl::CommandLine& command_line) {
   if (!GetOptionValue(command_line, kArchive, kListUsage, &archive_path))
     return -1;
 
-  fxl::UniqueFD fd(open(archive_path.c_str(), O_RDONLY));
+  fbl::unique_fd fd(open(archive_path.c_str(), O_RDONLY));
   if (!fd.is_valid())
     return -1;
   archive::ArchiveReader reader(std::move(fd));
@@ -98,7 +98,7 @@ int Extract(const fxl::CommandLine& command_line) {
   if (!GetOptionValue(command_line, kOutput, kExtractUsage, &output_dir))
     return -1;
 
-  fxl::UniqueFD fd(open(archive_path.c_str(), O_RDONLY));
+  fbl::unique_fd fd(open(archive_path.c_str(), O_RDONLY));
   if (!fd.is_valid())
     return -1;
   archive::ArchiveReader reader(std::move(fd));
@@ -122,7 +122,7 @@ int ExtractFile(const fxl::CommandLine& command_line) {
   if (!GetOptionValue(command_line, kOutput, kExtractFileUsage, &output_path))
     return -1;
 
-  fxl::UniqueFD fd(open(archive_path.c_str(), O_RDONLY));
+  fbl::unique_fd fd(open(archive_path.c_str(), O_RDONLY));
   if (!fd.is_valid())
     return -1;
   archive::ArchiveReader reader(std::move(fd));
@@ -142,7 +142,7 @@ int Cat(const fxl::CommandLine& command_line) {
   if (!GetOptionValue(command_line, kFile, kCatUsage, &file_path))
     return -1;
 
-  fxl::UniqueFD fd(open(archive_path.c_str(), O_RDONLY));
+  fbl::unique_fd fd(open(archive_path.c_str(), O_RDONLY));
   if (!fd.is_valid())
     return -1;
   archive::ArchiveReader reader(std::move(fd));

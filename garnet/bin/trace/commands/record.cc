@@ -488,7 +488,7 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(fxl::StringView address
     return nullptr;
   }
 
-  fxl::UniqueFD fd(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
+  fbl::unique_fd fd(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!fd.is_valid()) {
     FXL_LOG(ERROR) << "Failed to create socket: " << strerror(errno);
     return nullptr;

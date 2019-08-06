@@ -40,7 +40,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
     launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
     launch_info.flat_namespace->paths.push_back("/data");
 
-    fxl::UniqueFD dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
+    fbl::unique_fd dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
     if (!dir.is_valid()) {
       FXL_LOG(ERROR) << "Unable to open directory at " << data_origin << ". errno: " << errno;
       return;

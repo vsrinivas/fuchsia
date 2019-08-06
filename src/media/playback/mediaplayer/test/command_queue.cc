@@ -123,7 +123,7 @@ void CommandQueue::SetUrlCommand::Execute(CommandQueue* command_queue) {
   url::GURL url = url::GURL(url_);
 
   if (url.SchemeIsFile()) {
-    auto fd = fxl::UniqueFD(open(url.path().c_str(), O_RDONLY));
+    auto fd = fbl::unique_fd(open(url.path().c_str(), O_RDONLY));
     FXL_CHECK(fd.is_valid());
     command_queue->player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
   } else {
@@ -140,7 +140,7 @@ void CommandQueue::SetFileCommand::Execute(CommandQueue* command_queue) {
     std::cerr << "SetFile\n";
   }
 
-  auto fd = fxl::UniqueFD(open(path_.c_str(), O_RDONLY));
+  auto fd = fbl::unique_fd(open(path_.c_str(), O_RDONLY));
   FXL_CHECK(fd.is_valid());
   command_queue->player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
   command_queue->prev_seek_position_ = 0;

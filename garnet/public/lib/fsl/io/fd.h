@@ -14,7 +14,7 @@ namespace fsl {
 
 FXL_EXPORT zx::channel CloneChannelFromFileDescriptor(int fd);
 
-FXL_EXPORT fxl::UniqueFD OpenChannelAsFileDescriptor(zx::channel channel);
+FXL_EXPORT fbl::unique_fd OpenChannelAsFileDescriptor(zx::channel channel);
 
 }  // namespace fsl
 

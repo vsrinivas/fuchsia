@@ -285,7 +285,7 @@ zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
     FXL_LOG(ERROR) << "Unable to create directory at " << kLedgerRepositoryDirectory;
     return zx::channel();
   }
-  fxl::UniqueFD dir(open(kLedgerRepositoryDirectory, O_RDONLY));
+  fbl::unique_fd dir(open(kLedgerRepositoryDirectory, O_RDONLY));
   if (!dir.is_valid()) {
     FXL_LOG(ERROR) << "Unable to open directory at " << kLedgerRepositoryDirectory
                    << ". errno: " << errno;

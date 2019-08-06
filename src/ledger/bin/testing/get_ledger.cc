@@ -43,7 +43,7 @@ Status GetLedger(sys::ComponentContext* context,
                  cloud_provider::CloudProviderPtr cloud_provider, std::string user_id,
                  std::string ledger_name, const DetachedPath& ledger_repository_path,
                  fit::function<void()> error_handler, LedgerPtr* ledger) {
-  fxl::UniqueFD dir(
+  fbl::unique_fd dir(
       openat(ledger_repository_path.root_fd(), ledger_repository_path.path().c_str(), O_RDONLY));
   if (!dir.is_valid()) {
     FXL_LOG(ERROR) << "Unable to open directory at " << ledger_repository_path.path()
