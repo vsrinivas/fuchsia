@@ -57,12 +57,17 @@ BT_SET_UP() {
   if $TEST_WITH_MOCK; then
     local -r serve_updates="${FUCHSIA_DIR}/tools/devshell/serve-updates"
     btf::make_mock "${serve_updates}"
+
     # When the mock serve-updates is called, serve a mock json file on the port
+    local nc_opts=( -l ${SERVE_UPDATES_PORT} )
+    if [[ "$(uname -s)" != "Darwin" ]]; then
+      nc_opts+=( -q 0 )
+    fi
     cat > "${serve_updates}.mock_side_effects" <<EOF
       while [[ ! -e ${REPODIR}/repository/targets.json ]]; do
         sleep 1
       done
-      nc -l ${SERVE_UPDATES_PORT} <${REPODIR}/repository/targets.json >/dev/null || exit $?
+      nc ${nc_opts[@]} <${REPODIR}/repository/targets.json >/dev/null || exit $?
 EOF
   fi
 }
