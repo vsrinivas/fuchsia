@@ -24,11 +24,8 @@
 #include "sim-fw/sim_fw.h"
 
 struct brcmf_simdev {
-  struct brcmf_device dev = {};
-  struct brcmf_bus bus_if;
-  struct brcmf_mp_device* settings;
-
   std::unique_ptr<SimFirmware> sim_fw;
+  struct brcmf_mp_device* settings;
 };
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_
