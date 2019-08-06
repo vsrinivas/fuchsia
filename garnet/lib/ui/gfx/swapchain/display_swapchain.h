@@ -9,14 +9,14 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
 
-#include <vulkan/vulkan.hpp>
-
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/flib/fence_listener.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace scenic_impl {
 namespace gfx {
@@ -34,7 +34,7 @@ class DisplaySwapchain : public Swapchain {
 
   // Callback to call on every vsync. Arguments are:
   // - the timestamp of the vsync.
-  using OnVsyncCallback = fit::function<void(zx_time_t vsync_timestamp)>;
+  using OnVsyncCallback = fit::function<void(zx::time vsync_timestamp)>;
 
   // |Swapchain|
   bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings, const HardwareLayerAssignment& hla,
@@ -82,9 +82,9 @@ class DisplaySwapchain : public Swapchain {
 
   // When a frame is presented, the previously-presented frame becomes available
   // as a render target.
-  void OnFrameRendered(size_t frame_index, zx_time_t render_finished_time);
+  void OnFrameRendered(size_t frame_index, zx::time render_finished_time);
 
-  void OnVsync(zx_time_t timestamp, const std::vector<uint64_t>& image_ids);
+  void OnVsync(zx::time timestamp, const std::vector<uint64_t>& image_ids);
 
   // A nullable Escher (good for testing) means some resources must be accessed
   // through its (valid) pointer.

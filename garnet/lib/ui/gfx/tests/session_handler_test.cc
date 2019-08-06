@@ -83,7 +83,7 @@ void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
 }
 
 SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
-    std::unordered_set<SessionId> sessions_to_update, zx_time_t presentation_time,
+    std::unordered_set<SessionId> sessions_to_update, zx::time presentation_time,
     uint64_t trace_id) {
   UpdateResults update_results;
   CommandContext context(nullptr);
@@ -110,7 +110,7 @@ SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
   return update_results;
 }
 
-void SessionHandlerTest::PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) {}
+void SessionHandlerTest::PrepareFrame(zx::time presentation_time, uint64_t trace_id) {}
 
 }  // namespace test
 }  // namespace gfx

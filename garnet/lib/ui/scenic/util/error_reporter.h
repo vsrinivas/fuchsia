@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_SCENIC_UTIL_ERROR_REPORTER_H_
 #define GARNET_LIB_UI_SCENIC_UTIL_ERROR_REPORTER_H_
 
+#include <lib/zx/time.h>
+
 #include <sstream>
 
 #include "src/lib/fxl/logging.h"
@@ -28,6 +30,16 @@ class ErrorReporter {
     template <typename T>
     Report& operator<<(const T& val) {
       stream_ << val;
+      return *this;
+    }
+
+    Report& operator<<(const zx::time& val) {
+      stream_ << val.get();
+      return *this;
+    }
+
+    Report& operator<<(const zx::duration& val) {
+      stream_ << val.get();
       return *this;
     }
 
@@ -57,7 +69,6 @@ class ErrorReporter {
  private:
   virtual void ReportError(fxl::LogSeverity severity, std::string error_string) = 0;
 };
-
 }  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_SCENIC_UTIL_ERROR_REPORTER_H_

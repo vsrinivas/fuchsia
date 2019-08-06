@@ -4,8 +4,9 @@
 
 #include "garnet/lib/ui/gfx/displays/display.h"
 
-#include <trace/event.h>
 #include <zircon/syscalls.h>
+
+#include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/util/time.h"
 #include "src/lib/fxl/logging.h"
@@ -36,8 +37,8 @@ void Display::Unclaim() {
   claimed_ = false;
 }
 
-void Display::OnVsync(zx_time_t timestamp) {
-  zx_duration_t time_since_last_vsync = timestamp - last_vsync_time_;
+void Display::OnVsync(zx::time timestamp) {
+  zx::duration time_since_last_vsync = timestamp - last_vsync_time_;
   last_vsync_time_ = timestamp;
 
   // Estimate current vsync interval. Need to include a maximum to mitigate any
@@ -45,8 +46,8 @@ void Display::OnVsync(zx_time_t timestamp) {
   vsync_interval_ =
       time_since_last_vsync < kMaximumVsyncInterval ? time_since_last_vsync : vsync_interval_;
 
-  TRACE_INSTANT("gfx", "Display::OnVsync", TRACE_SCOPE_PROCESS, "Timestamp", timestamp,
-                "Vsync interval", vsync_interval_);
+  TRACE_INSTANT("gfx", "Display::OnVsync", TRACE_SCOPE_PROCESS, "Timestamp", timestamp.get(),
+                "Vsync interval", vsync_interval_.get());
 }
 
 }  // namespace gfx

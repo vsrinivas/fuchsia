@@ -18,10 +18,10 @@ namespace test {
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
   EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
       std::vector<zx::event>(), [](auto) {}));
   EXPECT_FALSE(session()->ScheduleUpdate(
-      /*presentation_time*/ 0, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      /*presentation*/ zx::time(0), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
       std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(
       "scenic_impl::gfx::Session: Present called with out-of-order "
@@ -32,21 +32,21 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
   EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
       std::vector<zx::event>(), [](auto) {}));
   EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
       std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(nullptr);
 }
 
 TEST_F(SessionTest, ScheduleUpdated_ShouldBeAppliedOnTime) {
   EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation_time*/ 100, std::vector<::fuchsia::ui::gfx::Command>(),
+      /*presentation*/ zx::time(100), std::vector<::fuchsia::ui::gfx::Command>(),
       std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
 
   auto command_context = CreateCommandContext();
-  auto update_result = session()->ApplyScheduledUpdates(&command_context, 100);
+  auto update_result = session()->ApplyScheduledUpdates(&command_context, zx::time(100));
   EXPECT_TRUE(update_result.success);
   EXPECT_TRUE(update_result.needs_render);
 }

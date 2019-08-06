@@ -7,10 +7,11 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
-#include <trace/event.h>
 
 #include <memory>
 #include <utility>
+
+#include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
@@ -95,16 +96,16 @@ Session::~Session() {
 
 EventReporter* Session::event_reporter() const { return event_reporter_.get(); }
 
-bool Session::ScheduleUpdate(uint64_t requested_presentation_time,
+bool Session::ScheduleUpdate(zx::time requested_presentation_time,
                              std::vector<::fuchsia::ui::gfx::Command> commands,
                              std::vector<zx::event> acquire_fences,
                              std::vector<zx::event> release_events,
                              fuchsia::ui::scenic::Session::PresentCallback callback) {
   TRACE_DURATION("gfx", "Session::ScheduleUpdate", "session_id", id_, "session_debug_name",
-                 debug_name_, "requested time", requested_presentation_time);
+                 debug_name_, "requested time", requested_presentation_time.get());
 
   // Logic verifying client requests presents in-order.
-  uint64_t last_scheduled_presentation_time = last_applied_update_presentation_time_;
+  zx::time last_scheduled_presentation_time = last_applied_update_presentation_time_;
   if (!scheduled_updates_.empty()) {
     last_scheduled_presentation_time =
         std::max(last_scheduled_presentation_time, scheduled_updates_.back().presentation_time);
@@ -134,13 +135,13 @@ bool Session::ScheduleUpdate(uint64_t requested_presentation_time,
                                  std::move(acquire_fence_set), std::move(release_events),
                                  std::move(callback)});
 
-  inspect_last_requested_presentation_time_.Set(requested_presentation_time);
+  inspect_last_requested_presentation_time_.Set(requested_presentation_time.get());
 
   return true;
 }
 
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* command_context,
-                                                          uint64_t target_presentation_time) {
+                                                          zx::time target_presentation_time) {
   ApplyUpdateResult update_results{
       .success = false, .needs_render = false, .all_fences_ready = true};
 
@@ -152,8 +153,8 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
     if (!update.acquire_fences->ready()) {
       TRACE_INSTANT("gfx", "Session missed frame", TRACE_SCOPE_PROCESS, "session_id", id(),
                     "session_debug_name", debug_name_, "target presentation time",
-                    target_presentation_time, "session target presentation time",
-                    scheduled_updates_.front().presentation_time);
+                    target_presentation_time.get(), "session target presentation time",
+                    scheduled_updates_.front().presentation_time.get());
       update_results.all_fences_ready = false;
       break;
     }
@@ -186,8 +187,9 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
 
     // TODO(SCN-1202): gather statistics about how close the actual
     // presentation_time was to the requested time.
-    inspect_last_applied_requested_presentation_time_.Set(last_applied_update_presentation_time_);
-    inspect_last_applied_target_presentation_time_.Set(target_presentation_time);
+    inspect_last_applied_requested_presentation_time_.Set(
+        last_applied_update_presentation_time_.get());
+    inspect_last_applied_target_presentation_time_.Set(target_presentation_time.get());
     inspect_resource_count_.Set(resource_count_);
   }
 

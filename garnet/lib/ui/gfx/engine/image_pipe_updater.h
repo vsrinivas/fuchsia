@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_IMAGE_PIPE_UPDATER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_IMAGE_PIPE_UPDATER_H_
 
+#include <lib/zx/time.h>
+
 #include <queue>
 
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"  // for CommandContext
@@ -41,18 +43,18 @@ class ImagePipeUpdater {
   // Called by ImagePipe::PresentImage(). Stashes the arguments without applying them; they will
   // later be applied by ApplyScheduledUpdates(). This method can also be used to clean up after an
   // ImagePipe when it is being closed/cleaned-up; in this case, pass in a null ImagePipe.
-  void ScheduleImagePipeUpdate(uint64_t presentation_time, const ImagePipePtr& image_pipe);
+  void ScheduleImagePipeUpdate(zx::time presentation_time, const ImagePipePtr& image_pipe);
 
  private:
   // Make it clear that ImagePipe should only call ScheduleImagePipeUpdate(); the session is
   // responsible for deciding when to apply the updates.
   friend class Session;
   ApplyScheduledUpdatesResult ApplyScheduledUpdates(
-      CommandContext* command_context, uint64_t target_presentation_time,
+      CommandContext* command_context, zx::time target_presentation_time,
       escher::ReleaseFenceSignaller* release_fence_signaller);
 
   struct ImagePipeUpdate {
-    uint64_t presentation_time;
+    zx::time presentation_time;
     fxl::WeakPtr<ImagePipe> image_pipe;
 
     bool operator>(const ImagePipeUpdate& rhs) const {

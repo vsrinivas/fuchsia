@@ -7,11 +7,12 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
-#include <trace/event.h>
 
 #include <set>
 #include <string>
 #include <unordered_set>
+
+#include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
@@ -104,12 +105,13 @@ std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(const Composit
   };
 }
 
-bool Engine::RenderFrame(const FrameTimingsPtr& timings, zx_time_t presentation_time) {
+bool Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time presentation_time) {
   uint64_t frame_number = timings->frame_number();
 
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
   // without also updating the "process_gfx_trace.go" script.
-  TRACE_DURATION("gfx", "RenderFrame", "frame_number", frame_number, "time", presentation_time);
+  TRACE_DURATION("gfx", "RenderFrame", "frame_number", frame_number, "time",
+                 presentation_time.get());
 
   TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
 
@@ -153,7 +155,7 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings, zx_time_t presentation_
     success &= hla.swapchain->DrawAndPresentFrame(
         timings, hla,
         [is_last_hla, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()}](
-            zx_time_t target_presentation_time, const escher::ImagePtr& output_image,
+            zx::time target_presentation_time, const escher::ImagePtr& output_image,
             const HardwareLayerAssignment::Item hla_item,
             const escher::SemaphorePtr& acquire_semaphore,
             const escher::SemaphorePtr& frame_done_semaphore) {
@@ -188,10 +190,10 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings, zx_time_t presentation_
   return true;
 }
 
-void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
+void Engine::UpdateAndDeliverMetrics(zx::time presentation_time) {
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
   // without also updating the "process_gfx_trace.go" script.
-  TRACE_DURATION("gfx", "UpdateAndDeliverMetrics", "time", presentation_time);
+  TRACE_DURATION("gfx", "UpdateAndDeliverMetrics", "time", presentation_time.get());
 
   // Gather all of the scene which might need to be updated.
   std::set<Scene*> scenes;

@@ -28,7 +28,7 @@ class DisplayManager {
   ~DisplayManager();
 
   using VsyncCallback =
-      fit::function<void(zx_time_t timestamp, const std::vector<uint64_t>& images)>;
+      fit::function<void(zx::time timestamp, const std::vector<uint64_t>& images)>;
 
   // Waits for the default display to become available then invokes the
   // callback.

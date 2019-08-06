@@ -20,7 +20,7 @@ DisplayCompositor::DisplayCompositor(Session* session, ResourceId id, SceneGraph
                  std::move(display_swapchain)) {
   FXL_CHECK(display);
   static_cast<DisplaySwapchain*>(this->swapchain())
-      ->RegisterVsyncListener([display](zx_time_t timestamp) { display->OnVsync(timestamp); });
+      ->RegisterVsyncListener([display](zx::time timestamp) { display->OnVsync(timestamp); });
 }
 
 }  // namespace gfx

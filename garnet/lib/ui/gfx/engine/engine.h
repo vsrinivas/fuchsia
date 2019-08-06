@@ -5,12 +5,13 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_ENGINE_H_
 #define GARNET_LIB_UI_GFX_ENGINE_ENGINE_H_
 
-#include <fbl/ref_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
 
 #include <set>
 #include <vector>
+
+#include <fbl/ref_ptr.h>
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine_renderer.h"
@@ -103,7 +104,7 @@ class Engine : public FrameRenderer {
   // |FrameRenderer|
   //
   // Renders a new frame. Returns true if successful, false otherwise.
-  bool RenderFrame(const FrameTimingsPtr& frame, zx_time_t presentation_time) override;
+  bool RenderFrame(const FrameTimingsPtr& frame, zx::time presentation_time) override;
 
  private:
   // Initialize all inspect_deprecated::Nodes, so that the Engine state can be observed.
@@ -128,7 +129,7 @@ class Engine : public FrameRenderer {
 
   // Update and deliver metrics for all nodes which subscribe to metrics
   // events.
-  void UpdateAndDeliverMetrics(uint64_t presentation_time);
+  void UpdateAndDeliverMetrics(zx::time presentation_time);
 
   // Update reported metrics for nodes which subscribe to metrics events.
   // If anything changed, append the node to |updated_nodes|.

@@ -7,13 +7,15 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
+#include <zircon/syscalls.h>
+
 #include <src/lib/fxl/logging.h>
 #include <trace/event.h>
-#include <zircon/syscalls.h>
 
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
 #include "garnet/lib/ui/gfx/util/collection_utils.h"
+#include "garnet/lib/ui/gfx/util/time.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -52,7 +54,8 @@ void DefaultFrameScheduler::AddSessionUpdater(fxl::WeakPtr<SessionUpdater> sessi
 
 void DefaultFrameScheduler::OnFrameRendered(const FrameTimings& timings) {
   TRACE_INSTANT("gfx", "DefaultFrameScheduler::OnFrameRendered", TRACE_SCOPE_PROCESS, "Timestamp",
-                timings.GetTimestamps().render_done_time, "frame_number", timings.frame_number());
+                timings.GetTimestamps().render_done_time.get(), "frame_number",
+                timings.frame_number());
 
   auto current_timestamps = timings.GetTimestamps();
 
@@ -60,9 +63,9 @@ void DefaultFrameScheduler::OnFrameRendered(const FrameTimings& timings) {
     return;
   }
 
-  zx_duration_t duration =
+  zx::duration duration =
       current_timestamps.render_done_time - current_timestamps.render_start_time;
-  FXL_DCHECK(duration > 0);
+  FXL_DCHECK(duration.get() > 0);
 
   frame_predictor_->ReportRenderDuration(zx::duration(duration));
 }
@@ -74,21 +77,19 @@ void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
   }
 }
 
-std::pair<zx_time_t, zx_time_t>
-DefaultFrameScheduler::ComputePresentationAndWakeupTimesForTargetTime(
-    const zx_time_t requested_presentation_time) const {
-  const zx_time_t last_vsync_time = display_->GetLastVsyncTime();
-  const zx_duration_t vsync_interval = display_->GetVsyncInterval();
-  const zx_time_t now = async_now(dispatcher_);
+std::pair<zx::time, zx::time> DefaultFrameScheduler::ComputePresentationAndWakeupTimesForTargetTime(
+    const zx::time requested_presentation_time) const {
+  const zx::time last_vsync_time = display_->GetLastVsyncTime();
+  const zx::duration vsync_interval = display_->GetVsyncInterval();
+  const zx::time now = zx::time(async_now(dispatcher_));
 
-  // TODO(SCN-1467): Standardize zx::time/zx_time_t use.
-  PredictedTimes times = frame_predictor_->GetPrediction(
-      {.now = zx::time(now),
-       .requested_presentation_time = zx::time(requested_presentation_time),
-       .last_vsync_time = zx::time(last_vsync_time),
-       .vsync_interval = zx::duration(vsync_interval)});
+  PredictedTimes times =
+      frame_predictor_->GetPrediction({.now = now,
+                                       .requested_presentation_time = requested_presentation_time,
+                                       .last_vsync_time = last_vsync_time,
+                                       .vsync_interval = vsync_interval});
 
-  return std::make_pair(times.presentation_time.get(), times.latch_point_time.get());
+  return std::make_pair(times.presentation_time, times.latch_point_time);
 }
 
 void DefaultFrameScheduler::RequestFrame() {
@@ -99,9 +100,9 @@ void DefaultFrameScheduler::RequestFrame() {
     FXL_LOG(INFO) << "RequestFrame";
   }
 
-  zx_time_t requested_presentation_time = render_continuously_ || render_pending_
-                                              ? 0
-                                              : update_manager_.EarliestRequestedPresentationTime();
+  zx::time requested_presentation_time = render_continuously_ || render_pending_
+                                             ? zx::time(0)
+                                             : update_manager_.EarliestRequestedPresentationTime();
 
   auto next_times = ComputePresentationAndWakeupTimesForTargetTime(requested_presentation_time);
   auto new_presentation_time = next_times.first;
@@ -122,7 +123,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   FXL_DCHECK(frame_renderer_);
 
   auto presentation_time = next_presentation_time_;
-  TRACE_DURATION("gfx", "FrameScheduler::MaybeRenderFrame", "presentation_time", presentation_time);
+  TRACE_DURATION("gfx", "FrameScheduler::MaybeRenderFrame", "presentation_time",
+                 presentation_time.get());
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
@@ -131,16 +133,16 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   }
 
   // Apply all updates
-  const zx_time_t update_start_time = async_now(dispatcher_);
+  const zx::time update_start_time = zx::time(async_now(dispatcher_));
 
   const UpdateManager::ApplyUpdatesResult update_result = ApplyUpdates(presentation_time);
 
   if (update_result.needs_render) {
-    inspect_last_successful_update_start_time_.Set(update_start_time);
+    inspect_last_successful_update_start_time_.Set(update_start_time.get());
   }
 
   // TODO(SCN-1482) Revisit how we do this.
-  const zx_time_t update_end_time = async_now(dispatcher_);
+  const zx::time update_end_time = zx::time(async_now(dispatcher_));
   frame_predictor_->ReportUpdateDuration(zx::duration(update_end_time - update_start_time));
 
   if (!update_result.needs_render && !render_pending_ && !render_continuously_) {
@@ -166,8 +168,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   }
 
   TRACE_INSTANT("gfx", "Render start", TRACE_SCOPE_PROCESS, "Expected presentation time",
-                presentation_time, "frame_number", frame_number_);
-  const zx_time_t frame_render_start_time = async_now(dispatcher_);
+                presentation_time.get(), "frame_number", frame_number_);
+  const zx::time frame_render_start_time = zx::time(async_now(dispatcher_));
 
   // Ratchet the Present callbacks to signal that all outstanding Present() calls until this point
   // are applied to the next Scenic frame.
@@ -184,14 +186,14 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   currently_rendering_ = frame_renderer_->RenderFrame(frame_timings, presentation_time);
 
   // See SCN-1505 for details of measuring render time.
-  const zx_time_t frame_render_end_cpu_time = async_now(dispatcher_);
+  const zx::time frame_render_end_cpu_time = zx::time(async_now(dispatcher_));
   frame_timings->OnFrameCpuRendered(frame_render_end_cpu_time);
 
   if (currently_rendering_) {
     outstanding_frames_.push_back(frame_timings);
     render_pending_ = false;
 
-    inspect_last_successful_render_start_time_.Set(presentation_time);
+    inspect_last_successful_render_start_time_.Set(presentation_time.get());
   } else {
     // TODO(SCN-1344): Handle failed rendering somehow.
     FXL_LOG(WARNING) << "RenderFrame failed. "
@@ -207,7 +209,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   }
 }
 
-void DefaultFrameScheduler::ScheduleUpdateForSession(zx_time_t presentation_time,
+void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
                                                      scenic_impl::SessionId session_id) {
   update_manager_.ScheduleUpdate(presentation_time, session_id);
 
@@ -221,7 +223,7 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx_time_t presentation_time
 }
 
 DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult DefaultFrameScheduler::ApplyUpdates(
-    zx_time_t presentation_time) {
+    zx::time presentation_time) {
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
     FXL_LOG(INFO) << "ApplyScheduledSessionUpdates presentation_time=" << presentation_time
@@ -254,22 +256,23 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
   } else {
     if (TRACE_CATEGORY_ENABLED("gfx")) {
       // Log trace data..
-      zx_duration_t target_vs_actual =
+      zx::duration target_vs_actual =
           timestamps.actual_presentation_time - timestamps.target_presentation_time;
 
-      zx_time_t now = async_now(dispatcher_);
-      zx_duration_t elapsed_since_presentation = now - timestamps.actual_presentation_time;
-      FXL_DCHECK(elapsed_since_presentation >= 0);
+      zx::time now = zx::time(async_now(dispatcher_));
+      zx::duration elapsed_since_presentation = now - timestamps.actual_presentation_time;
+      FXL_DCHECK(elapsed_since_presentation.get() >= 0);
 
       TRACE_INSTANT("gfx", "FramePresented", TRACE_SCOPE_PROCESS, "frame_number",
                     timings.frame_number(), "presentation time",
-                    timestamps.actual_presentation_time, "target time missed by", target_vs_actual,
-                    "elapsed time since presentation", elapsed_since_presentation);
+                    timestamps.actual_presentation_time.get(), "target time missed by",
+                    target_vs_actual.get(), "elapsed time since presentation",
+                    elapsed_since_presentation.get());
     }
 
     auto presentation_info = fuchsia::images::PresentationInfo();
-    presentation_info.presentation_time = timestamps.actual_presentation_time;
-    presentation_info.presentation_interval = display_->GetVsyncInterval();
+    presentation_info.presentation_time = timestamps.actual_presentation_time.get();
+    presentation_info.presentation_interval = display_->GetVsyncInterval().get();
 
     update_manager_.SignalPresentCallbacks(presentation_info);
   }
@@ -293,11 +296,11 @@ void DefaultFrameScheduler::UpdateManager::AddSessionUpdater(
 }
 
 DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult
-DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx_time_t presentation_time,
-                                                   zx_time_t vsync_interval,
+DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time presentation_time,
+                                                   zx::duration vsync_interval,
                                                    uint64_t frame_number) {
   // NOTE: this name is used by scenic_processing_helpers.go
-  TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time", presentation_time);
+  TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time", presentation_time.get());
 
   std::unordered_set<SessionId> sessions_to_update;
   while (!updatable_sessions_.empty() &&
@@ -331,13 +334,13 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx_time_t presentation_time,
                             .needs_reschedule = !updatable_sessions_.empty()};
 }
 
-void DefaultFrameScheduler::UpdateManager::ScheduleUpdate(zx_time_t presentation_time,
+void DefaultFrameScheduler::UpdateManager::ScheduleUpdate(zx::time presentation_time,
                                                           SessionId session_id) {
   updatable_sessions_.push(
       {.session_id = session_id, .requested_presentation_time = presentation_time});
 }
 
-void DefaultFrameScheduler::UpdateManager::RatchetPresentCallbacks(zx_time_t presentation_time,
+void DefaultFrameScheduler::UpdateManager::RatchetPresentCallbacks(zx::time presentation_time,
                                                                    uint64_t frame_number) {
   MoveAllItemsFromQueueToQueue(&callbacks_this_frame_, &pending_callbacks_);
   ApplyToCompactedVector(&session_updaters_,

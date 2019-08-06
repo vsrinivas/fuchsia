@@ -890,7 +890,8 @@ bool GfxCommandApplier::ApplySetCameraPoseBufferCmd(
     return false;
   }
 
-  camera->SetPoseBuffer(buffer, command.num_entries, command.base_time, command.time_interval);
+  camera->SetPoseBuffer(buffer, command.num_entries, zx::time(command.base_time),
+                        zx::duration(command.time_interval));
 
   return true;
 }

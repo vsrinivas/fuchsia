@@ -20,9 +20,9 @@ class FrameTimingsTest : public ErrorReportingTest {
     frame_scheduler_ = std::make_unique<MockFrameScheduler>();
     frame_timings_ = fxl::MakeRefCounted<FrameTimings>(frame_scheduler_.get(),
                                                        /* frame number */ 1,
-                                                       /* target presentation time */ 1,
-                                                       /* latch_point_time */ 0,
-                                                       /* render started time */ 0);
+                                                       /* target presentation */ zx::time(1),
+                                                       /* latch point */ zx::time(0),
+                                                       /* render started */ zx::time(0));
     swapchain_index_ = frame_timings_->RegisterSwapchain();
   }
   void TearDown() override {
@@ -41,12 +41,12 @@ TEST_F(FrameTimingsTest, ReceivingCallsInOrder_ShouldTriggerFrameSchedulerCallsI
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
-  frame_timings_->OnFrameRendered(swapchain_index_, /* time */ 1);
+  frame_timings_->OnFrameRendered(swapchain_index_, zx::time(1));
 
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 1u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
-  frame_timings_->OnFramePresented(swapchain_index_, /* time */ 2);
+  frame_timings_->OnFramePresented(swapchain_index_, zx::time(2));
 
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 1u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 1u);
@@ -60,12 +60,12 @@ TEST_F(FrameTimingsTest, ReceivingCallsOutOfOrder_ShouldTriggerFrameSchedulerCal
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
-  frame_timings_->OnFramePresented(swapchain_index_, /* time */ 5);
+  frame_timings_->OnFramePresented(swapchain_index_, zx::time(5));
 
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
-  frame_timings_->OnFrameRendered(swapchain_index_, /* time */ 3);
+  frame_timings_->OnFrameRendered(swapchain_index_, zx::time(3));
 
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 1u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 1u);
@@ -80,12 +80,12 @@ TEST_F(FrameTimingsTest, ReceivingCallsAndTimesOutOfOrder_ShouldTriggerFrameSche
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
-  frame_timings_->OnFramePresented(swapchain_index_, /* time */ 2);
+  frame_timings_->OnFramePresented(swapchain_index_, zx::time(2));
 
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
-  frame_timings_->OnFrameRendered(swapchain_index_, /* time */ 3);
+  frame_timings_->OnFrameRendered(swapchain_index_, zx::time(3));
 
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 1u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 1u);
@@ -100,12 +100,12 @@ TEST_F(FrameTimingsTest, ReceivingTimesOutOfOrder_ShouldRecordTimesInOrder) {
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
-  frame_timings_->OnFrameRendered(swapchain_index_, /* time */ 3);
+  frame_timings_->OnFrameRendered(swapchain_index_, zx::time(3));
 
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 1u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
-  frame_timings_->OnFramePresented(swapchain_index_, /* time */ 2);
+  frame_timings_->OnFramePresented(swapchain_index_, zx::time(2));
 
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 1u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 1u);
@@ -120,10 +120,9 @@ TEST_F(FrameTimingsTest, FrameDroppedAfterRender_ShouldNotTriggerSecondFrameRend
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
-  const zx_time_t render_finished_time = 2;
+  const zx::time render_finished_time = zx::time(2);
 
-  frame_timings_->OnFrameRendered(swapchain_index_,
-                                  /* time */ render_finished_time);
+  frame_timings_->OnFrameRendered(swapchain_index_, zx::time(render_finished_time));
 
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 1u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
@@ -152,7 +151,7 @@ TEST_F(FrameTimingsTest, FrameDroppedBeforeRender_ShouldStillTriggerFrameRendere
   EXPECT_TRUE(frame_timings_->FrameWasDropped());
   EXPECT_FALSE(frame_timings_->finalized());
 
-  const zx_time_t render_finished_time = zx::usec(500).get();
+  const zx::time render_finished_time = zx::time(500);
   frame_timings_->OnFrameRendered(swapchain_index_, render_finished_time);
 
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 1u);
@@ -166,27 +165,27 @@ TEST_F(FrameTimingsTest, FrameDroppedBeforeRender_ShouldStillTriggerFrameRendere
 }
 
 TEST_F(FrameTimingsTest, LargerRenderingCpuDuration_ShouldBeReturned) {
-  frame_timings_->OnFrameRendered(0, 100);
-  frame_timings_->OnFrameCpuRendered(400);
+  frame_timings_->OnFrameRendered(0, zx::time(100));
+  frame_timings_->OnFrameCpuRendered(zx::time(400));
 
   FrameTimings::Timestamps timestamps = frame_timings_->GetTimestamps();
-  EXPECT_EQ(timestamps.render_done_time, 400);
+  EXPECT_EQ(timestamps.render_done_time, zx::time(400));
 }
 
 TEST_F(FrameTimingsTest, LargerRenderingGpuDuration_ShouldBeReturned) {
-  frame_timings_->OnFrameCpuRendered(100);
-  frame_timings_->OnFrameRendered(0, 400);
+  frame_timings_->OnFrameCpuRendered(zx::time(100));
+  frame_timings_->OnFrameRendered(0, zx::time(400));
 
   FrameTimings::Timestamps timestamps = frame_timings_->GetTimestamps();
-  EXPECT_EQ(timestamps.render_done_time, 400);
+  EXPECT_EQ(timestamps.render_done_time, zx::time(400));
 }
 
 TEST_F(FrameTimingsTest, RenderingCpu_Duration_ShouldBeMaxed) {
-  frame_timings_->OnFrameCpuRendered(400);
-  frame_timings_->OnFrameCpuRendered(100);
+  frame_timings_->OnFrameCpuRendered(zx::time(400));
+  frame_timings_->OnFrameCpuRendered(zx::time(100));
 
   FrameTimings::Timestamps timestamps = frame_timings_->GetTimestamps();
-  EXPECT_EQ(timestamps.render_done_time, 400);
+  EXPECT_EQ(timestamps.render_done_time, zx::time(400));
 }
 
 TEST(FrameTimings, DroppedAndUnitializedTimesAreUnique) {
@@ -194,9 +193,9 @@ TEST(FrameTimings, DroppedAndUnitializedTimesAreUnique) {
 }
 
 TEST(FrameTimings, InitTimestamps) {
-  const zx_time_t target_present_time = zx::msec(16).get();
-  const zx_time_t latch_time = zx::msec(10).get();
-  const zx_time_t render_start_time = zx::msec(12).get();
+  const zx::time target_present_time(16);
+  const zx::time latch_time(10);
+  const zx::time render_start_time(12);
   const uint64_t frame_number = 5;
   auto timings = fxl::MakeRefCounted<FrameTimings>(
       /* frame_scheduler */ nullptr, frame_number, target_present_time, latch_time,

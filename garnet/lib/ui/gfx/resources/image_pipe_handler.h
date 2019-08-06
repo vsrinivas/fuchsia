@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_HANDLER_H_
 
 #include <fuchsia/images/cpp/fidl.h>
+#include <lib/zx/time.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 

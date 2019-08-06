@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/gfx/engine/engine_renderer.h"
 
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/engine_renderer_visitor.h"
@@ -48,7 +49,7 @@ EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher, vk::Format dep
 
 EngineRenderer::~EngineRenderer() = default;
 
-void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx_time_t target_presentation_time,
+void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target_presentation_time,
                                   const escher::ImagePtr& output_image,
                                   const std::vector<Layer*>& layers) {
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
@@ -121,7 +122,7 @@ static escher::PaperRendererShadowType GetPaperRendererShadowType(
   }
 }
 
-void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx_time_t target_presentation_time,
+void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx::time target_presentation_time,
                                Layer* layer, const escher::ImagePtr& output_image,
                                const escher::Model& overlay_model) {
   FXL_DCHECK(layer->IsDrawable());
@@ -158,7 +159,7 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx_time_t target_p
 
 std::vector<escher::Camera> EngineRenderer::GenerateEscherCamerasForPaperRenderer(
     const escher::FramePtr& frame, Camera* camera, escher::ViewingVolume viewing_volume,
-    zx_time_t target_presentation_time) {
+    zx::time target_presentation_time) {
   if (camera->IsKindOf<StereoCamera>()) {
     auto stereo_camera = camera->As<StereoCamera>();
     escher::Camera left_camera = stereo_camera->GetEscherCamera(StereoCamera::Eye::LEFT);
@@ -167,7 +168,7 @@ std::vector<escher::Camera> EngineRenderer::GenerateEscherCamerasForPaperRendere
     escher::BufferPtr latched_pose_buffer;
     if (escher::hmd::PoseBuffer pose_buffer = camera->GetEscherPoseBuffer()) {
       latched_pose_buffer = pose_buffer_latching_shader_->LatchStereoPose(
-          frame, left_camera, right_camera, pose_buffer, target_presentation_time);
+          frame, left_camera, right_camera, pose_buffer, target_presentation_time.get());
       left_camera.SetLatchedPoseBuffer(latched_pose_buffer, escher::CameraEye::kLeft);
       right_camera.SetLatchedPoseBuffer(latched_pose_buffer, escher::CameraEye::kRight);
     }
@@ -179,7 +180,7 @@ std::vector<escher::Camera> EngineRenderer::GenerateEscherCamerasForPaperRendere
     escher::BufferPtr latched_pose_buffer;
     if (escher::hmd::PoseBuffer pose_buffer = camera->GetEscherPoseBuffer()) {
       latched_pose_buffer = pose_buffer_latching_shader_->LatchPose(
-          frame, escher_camera, pose_buffer, target_presentation_time);
+          frame, escher_camera, pose_buffer, target_presentation_time.get());
       escher_camera.SetLatchedPoseBuffer(latched_pose_buffer, escher::CameraEye::kLeft);
     }
 
@@ -188,7 +189,7 @@ std::vector<escher::Camera> EngineRenderer::GenerateEscherCamerasForPaperRendere
 }
 
 void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
-                                                zx_time_t target_presentation_time, Layer* layer,
+                                                zx::time target_presentation_time, Layer* layer,
                                                 const escher::PaperRendererShadowType shadow_type,
                                                 const escher::ImagePtr& output_image,
                                                 const escher::Model& overlay_model) {

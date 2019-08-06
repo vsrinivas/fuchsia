@@ -16,7 +16,7 @@ ImagePipeUpdater::ImagePipeUpdater(SessionId id, std::shared_ptr<FrameScheduler>
 
 ImagePipeUpdater::~ImagePipeUpdater() { scheduled_image_pipe_updates_ = {}; }
 
-void ImagePipeUpdater::ScheduleImagePipeUpdate(uint64_t presentation_time,
+void ImagePipeUpdater::ScheduleImagePipeUpdate(zx::time presentation_time,
                                                const ImagePipePtr& image_pipe) {
   // Some tests don't create a frame scheduler, but those should definitely not be triggering
   // ImagePipe updates.
@@ -30,7 +30,7 @@ void ImagePipeUpdater::ScheduleImagePipeUpdate(uint64_t presentation_time,
 }
 
 ImagePipeUpdater::ApplyScheduledUpdatesResult ImagePipeUpdater::ApplyScheduledUpdates(
-    CommandContext* command_context, uint64_t target_presentation_time,
+    CommandContext* command_context, zx::time target_presentation_time,
     escher::ReleaseFenceSignaller* release_fence_signaller) {
   ApplyScheduledUpdatesResult result{.needs_render = false};
 

@@ -27,8 +27,8 @@ void Camera::SetTransform(const glm::vec3& eye_position, const glm::vec3& eye_lo
 
 void Camera::SetProjection(const float fovy) { fovy_ = fovy; }
 
-void Camera::SetPoseBuffer(fxl::RefPtr<Buffer> buffer, uint32_t num_entries, uint64_t base_time,
-                           uint64_t time_interval) {
+void Camera::SetPoseBuffer(fxl::RefPtr<Buffer> buffer, uint32_t num_entries, zx::time base_time,
+                           zx::duration time_interval) {
   pose_buffer_ = buffer;
   num_entries_ = num_entries;
   base_time_ = base_time;
@@ -48,7 +48,7 @@ escher::Camera Camera::GetEscherCamera(const escher::ViewingVolume& volume) cons
 
 escher::hmd::PoseBuffer Camera::GetEscherPoseBuffer() const {
   return pose_buffer_ ? escher::hmd::PoseBuffer(pose_buffer_->escher_buffer(), num_entries_,
-                                                base_time_, time_interval_)
+                                                base_time_.get(), time_interval_.get())
                       : escher::hmd::PoseBuffer();  // NOTE: has operator bool
 }
 

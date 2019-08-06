@@ -9,6 +9,7 @@
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
+#include "garnet/lib/ui/gfx/util/time.h"
 #include "src/ui/lib/escher/flib/fence.h"
 
 namespace scenic_impl {
@@ -86,7 +87,7 @@ void ImagePipe::CloseConnectionAndCleanUp() {
   images_.clear();
 
   // Schedule a new frame.
-  image_pipe_updater_->ScheduleImagePipeUpdate(0, ImagePipePtr());
+  image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), ImagePipePtr());
 }
 
 void ImagePipe::OnConnectionError() { CloseConnectionAndCleanUp(); }
@@ -107,7 +108,7 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
   }
 };
 
-void ImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
+void ImagePipe::PresentImage(uint32_t image_id, zx::time presentation_time,
                              ::std::vector<zx::event> acquire_fences,
                              ::std::vector<zx::event> release_fences,
                              fuchsia::images::ImagePipe::PresentImageCallback callback) {
@@ -147,7 +148,7 @@ void ImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
 };
 
 ImagePipeUpdateResults ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
-                                         uint64_t presentation_time) {
+                                         zx::time presentation_time) {
   FXL_DCHECK(release_fence_signaller);
 
   ImagePipeUpdateResults results{.image_updated = false};

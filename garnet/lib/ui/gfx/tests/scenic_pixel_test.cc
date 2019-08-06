@@ -548,18 +548,18 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   status = pose_buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &remote_vmo);
   FXL_CHECK(status == ZX_OK);
 
-  zx_time_t base_time = zx::clock::get_monotonic().get();
+  zx::time base_time = zx::clock::get_monotonic();
   // Normally the time interval is the period of time between each entry in the
   // pose buffer. In this example we only use one entry so the time interval is
   // pretty meaningless. Set to 1 for simplicity (see ARGO-21).
-  zx_time_t time_interval = 1;
+  zx::time time_interval(1);
   uint32_t num_entries = 1;
 
   scenic::Memory mem(session, std::move(remote_vmo), kVmoSize,
                      fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   scenic::Buffer pose_buffer(mem, 0, kVmoSize);
 
-  camera.SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
+  camera.SetPoseBuffer(pose_buffer, num_entries, base_time.get(), time_interval.get());
 
   // Set up scene.
 

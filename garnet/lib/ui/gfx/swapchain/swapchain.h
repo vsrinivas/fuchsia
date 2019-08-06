@@ -36,7 +36,7 @@ class Swapchain {
   // - the semaphore to wait upon before rendering into the framebuffer
   // - the semaphore to signal when rendering is complete.
   using DrawCallback =
-      fit::function<void(zx_time_t target_presentation_time, const escher::ImagePtr&,
+      fit::function<void(zx::time target_presentation_time, const escher::ImagePtr&,
                          const HardwareLayerAssignment::Item&, const escher::SemaphorePtr&,
                          const escher::SemaphorePtr&)>;
 

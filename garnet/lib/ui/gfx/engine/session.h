@@ -5,11 +5,11 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_SESSION_H_
 #define GARNET_LIB_UI_GFX_ENGINE_SESSION_H_
 
-#include <vector>
-
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/inspect_deprecated/inspect.h>
+
+#include <vector>
 
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
 #include "garnet/lib/ui/gfx/engine/image_pipe_updater.h"
@@ -86,7 +86,7 @@ class Session {
 
   // Called by SessionHandler::Present().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
-  bool ScheduleUpdate(uint64_t presentation_time, std::vector<::fuchsia::ui::gfx::Command> commands,
+  bool ScheduleUpdate(zx::time presentation_time, std::vector<::fuchsia::ui::gfx::Command> commands,
                       std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
                       PresentCallback callback);
 
@@ -101,7 +101,7 @@ class Session {
   // |presentation_interval| is the estimated time until next frame and is
   // returned to the client.
   ApplyUpdateResult ApplyScheduledUpdates(CommandContext* command_context,
-                                          uint64_t target_presentation_time);
+                                          zx::time target_presentation_time);
 
   // Convenience.  Forwards an event to the EventReporter.
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
@@ -118,7 +118,7 @@ class Session {
   bool SetRootView(fxl::WeakPtr<View> view);
 
   struct Update {
-    uint64_t presentation_time;
+    zx::time presentation_time;
 
     std::vector<::fuchsia::ui::gfx::Command> commands;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
@@ -133,7 +133,7 @@ class Session {
   std::queue<Update> scheduled_updates_;
   std::vector<zx::event> fences_to_release_on_next_update_;
 
-  uint64_t last_applied_update_presentation_time_ = 0;
+  zx::time last_applied_update_presentation_time_ = zx::time(0);
 
   const SessionId id_;
   std::string debug_name_;

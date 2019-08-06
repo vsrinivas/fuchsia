@@ -8,6 +8,8 @@
 #include <lib/async/default.h>
 #include <lib/async/time.h>
 
+#include <ostream>
+
 namespace scenic_impl {
 namespace gfx {
 
@@ -25,7 +27,15 @@ namespace gfx {
 //   zx::time now = async::Now(dispatcher);
 inline zx_time_t dispatcher_clock_now() { return async_now(async_get_default_dispatcher()); }
 
+inline std::ostream& operator<<(std::ostream& os, const zx::time value) {
+  return os << value.get();
+}
+
+inline std::ostream& operator<<(std::ostream& os, const zx::duration value) {
+  return os << value.get();
+}
 }  // namespace gfx
+
 }  // namespace scenic_impl
 
 #endif  // GARNET_LIB_UI_GFX_UTIL_TIME_H_

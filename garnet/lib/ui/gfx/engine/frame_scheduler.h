@@ -7,10 +7,11 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include <queue>
 #include <unordered_set>
+
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "garnet/lib/ui/gfx/id.h"
 
@@ -45,12 +46,12 @@ class SessionUpdater {
   // update is one that is scheduled at or before |presentation_time|, and for which all other
   // preconditions have been met (for example, all acquire fences have been signaled).
   virtual UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
-                                       zx_time_t presentation_time, uint64_t trace_id) = 0;
+                                       zx::time presentation_time, uint64_t trace_id) = 0;
 
   // Notify updater that no more sessions will be updated before rendering the next frame; now is
   // the time to do any necessary work before the frame is rendered.  For example, animations might
   // be run now.
-  virtual void PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) = 0;
+  virtual void PrepareFrame(zx::time presentation_time, uint64_t trace_id) = 0;
 };
 
 // Interface for rendering frames.
@@ -67,7 +68,7 @@ class FrameRenderer {
   // frame.
   // TODO(SCN-1089): these return value semantics are not ideal.  See comments in
   // Engine::RenderFrame() regarding this same issue.
-  virtual bool RenderFrame(const FrameTimingsPtr& frame_timings, zx_time_t presentation_time) = 0;
+  virtual bool RenderFrame(const FrameTimingsPtr& frame_timings, zx::time presentation_time) = 0;
 };
 
 // The FrameScheduler is responsible for scheduling frames to be drawn in response to requests from
@@ -94,7 +95,7 @@ class FrameScheduler {
 
   // Tell the FrameScheduler to schedule a frame. This is also used for updates triggered by
   // something other than a Session update i.e. an ImagePipe with a new Image to present.
-  virtual void ScheduleUpdateForSession(zx_time_t presentation_time,
+  virtual void ScheduleUpdateForSession(zx::time presentation_time,
                                         scenic_impl::SessionId session) = 0;
 
  protected:

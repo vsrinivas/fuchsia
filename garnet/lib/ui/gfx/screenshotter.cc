@@ -154,7 +154,7 @@ void Screenshotter::TakeScreenshot(
   escher::FramePtr frame = escher->NewFrame("Scenic Compositor", 0);
 
   std::vector<Layer*> drawable_layers = compositor->GetDrawableLayers();
-  engine->renderer()->RenderLayers(frame, dispatcher_clock_now(), image, drawable_layers);
+  engine->renderer()->RenderLayers(frame, zx::time(dispatcher_clock_now()), image, drawable_layers);
 
   // TODO(SCN-1096): Nobody signals this semaphore, so there's no point.  One
   // way that it could be used is export it as a zx::event and watch for that to

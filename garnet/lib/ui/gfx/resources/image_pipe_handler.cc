@@ -26,7 +26,7 @@ void ImagePipeHandler::PresentImage(uint32_t image_id, uint64_t presentation_tim
                                     ::std::vector<zx::event> acquire_fences,
                                     ::std::vector<zx::event> release_fences,
                                     PresentImageCallback callback) {
-  image_pipe_->PresentImage(image_id, presentation_time, std::move(acquire_fences),
+  image_pipe_->PresentImage(image_id, zx::time(presentation_time), std::move(acquire_fences),
                             std::move(release_fences), std::move(callback));
 }
 

@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_ENGINE_RENDERER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_ENGINE_RENDERER_H_
 
+#include <lib/zx/time.h>
+
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
@@ -23,14 +25,14 @@ class EngineRenderer {
 
   // Use GPU to render all layers into separate images, and compose them all
   // into |output_image|.
-  void RenderLayers(const escher::FramePtr& frame, zx_time_t target_presentation_time,
+  void RenderLayers(const escher::FramePtr& frame, zx::time target_presentation_time,
                     const escher::ImagePtr& output_image, const std::vector<Layer*>& layers);
 
  private:
-  void DrawLayer(const escher::FramePtr& frame, zx_time_t target_presentation_time, Layer* layer,
+  void DrawLayer(const escher::FramePtr& frame, zx::time target_presentation_time, Layer* layer,
                  const escher::ImagePtr& output_image, const escher::Model& overlay_model);
 
-  void DrawLayerWithPaperRenderer(const escher::FramePtr& frame, zx_time_t target_presentation_time,
+  void DrawLayerWithPaperRenderer(const escher::FramePtr& frame, zx::time target_presentation_time,
                                   Layer* layer, escher::PaperRendererShadowType shadow_type,
                                   const escher::ImagePtr& output_image,
                                   const escher::Model& overlay_model);
@@ -39,7 +41,7 @@ class EngineRenderer {
 
   std::vector<escher::Camera> GenerateEscherCamerasForPaperRenderer(
       const escher::FramePtr& frame, Camera* camera, escher::ViewingVolume viewing_volume,
-      zx_time_t target_presentation_time);
+      zx::time target_presentation_time);
 
   const escher::EscherWeakPtr escher_;
   escher::PaperRendererPtr paper_renderer_;

@@ -51,7 +51,7 @@ class ImagePipe : public ImageBase {
                 fuchsia::images::MemoryType memory_type);
   void RemoveImage(uint32_t image_id);
 
-  void PresentImage(uint32_t image_id, uint64_t presentation_time,
+  void PresentImage(uint32_t image_id, zx::time presentation_time,
                     ::std::vector<zx::event> acquire_fences,
                     ::std::vector<zx::event> release_fences,
                     fuchsia::images::ImagePipe::PresentImageCallback callback);
@@ -72,7 +72,7 @@ class ImagePipe : public ImageBase {
   // assuming that there are no intervening calls to PresentImage() with an earlier target
   // time.
   ImagePipeUpdateResults Update(escher::ReleaseFenceSignaller* release_fence_signaller,
-                                uint64_t presentation_time);
+                                zx::time presentation_time);
 
   // Updates the Escher image to the current frame. This should be called after
   // Update() indicates the current Image changed, and before calling
@@ -107,7 +107,7 @@ class ImagePipe : public ImageBase {
   // Present().
   struct Frame {
     ImagePtr image;
-    uint64_t presentation_time;
+    zx::time presentation_time;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
     ::fidl::VectorPtr<zx::event> release_fences;
 

@@ -33,8 +33,8 @@ class Camera : public Resource {
 
   // Sets the buffer for this camera. For details see SetCameraPoseBufferCmd
   // in //sdk/fidl/fuchsia.ui.gfx/commands.fidl
-  void SetPoseBuffer(fxl::RefPtr<Buffer> buffer, uint32_t num_entries, uint64_t base_time,
-                     uint64_t time_interval);
+  void SetPoseBuffer(fxl::RefPtr<Buffer> buffer, uint32_t num_entries, zx::time base_time,
+                     zx::duration time_interval);
 
   const glm::vec3& eye_position() const { return eye_position_; }
   const glm::vec3& eye_look_at() const { return eye_look_at_; }
@@ -67,8 +67,8 @@ class Camera : public Resource {
   // PoseBuffer parameters
   fxl::RefPtr<Buffer> pose_buffer_;
   uint32_t num_entries_ = 0;
-  uint64_t base_time_ = 0;
-  uint64_t time_interval_ = 0;
+  zx::time base_time_ = zx::time(0);
+  zx::duration time_interval_ = zx::duration(0);
 };
 
 using CameraPtr = fxl::RefPtr<Camera>;

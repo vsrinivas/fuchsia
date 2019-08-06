@@ -24,7 +24,7 @@ class MockFrameScheduler : public FrameScheduler {
   void AddSessionUpdater(fxl::WeakPtr<SessionUpdater> session_updater) override {}
 
   void SetRenderContinuously(bool render_continuously) override {}
-  void ScheduleUpdateForSession(zx_time_t presentation_time,
+  void ScheduleUpdateForSession(zx::time presentation_time,
                                 scenic_impl::SessionId session) override {}
 
   void OnFramePresented(const FrameTimings& timings) override { ++frame_presented_call_count_; }
@@ -47,8 +47,8 @@ class FakeDisplay : public Display {
 
   // Manually sets the values returned by
   // GetVsyncInterval() and GetLastVsyncTime().
-  void SetVsyncInterval(zx_duration_t new_interval) { vsync_interval_ = new_interval; }
-  void SetLastVsyncTime(zx_duration_t new_last_vsync) { last_vsync_time_ = new_last_vsync; }
+  void SetVsyncInterval(zx::duration new_interval) { vsync_interval_ = new_interval; }
+  void SetLastVsyncTime(zx::time new_last_vsync) { last_vsync_time_ = new_last_vsync; }
 };
 
 class MockSessionUpdater : public SessionUpdater {
@@ -57,11 +57,11 @@ class MockSessionUpdater : public SessionUpdater {
 
   // |SessionUpdater|
   SessionUpdater::UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
-                                               zx_time_t presentation_time,
+                                               zx::time presentation_time,
                                                uint64_t trace_id = 0) override;
 
   // |SessionUpdater|
-  void PrepareFrame(zx_time_t presentation_time, uint64_t frame_number) override {
+  void PrepareFrame(zx::time presentation_time, uint64_t frame_number) override {
     ++prepare_frame_call_count_;
   }
 
@@ -85,8 +85,8 @@ class MockSessionUpdater : public SessionUpdater {
     // true.
     PresentationInfo presentation_info;
   };
-  std::shared_ptr<const CallbackStatus> AddCallback(SessionId id, zx_time_t presentation_time,
-                                                    zx_time_t acquire_fence_time);
+  std::shared_ptr<const CallbackStatus> AddCallback(SessionId id, zx::time presentation_time,
+                                                    zx::time acquire_fence_time);
 
   // By default, rendering is enabled and |UpdateSessions()| will return ".needs_render = true" if
   // any session updates were applied.  This allows a test to override that behavior to
@@ -123,9 +123,9 @@ class MockSessionUpdater : public SessionUpdater {
   // scene, and the corresponding frame rendered.
   struct Update {
     // Target presentation time.
-    zx_time_t target;
+    zx::time target;
     // Time that the fences will be finished.
-    zx_time_t fences_done;
+    zx::time fences_done;
     // Updated to allow the test to track progress.
     std::shared_ptr<CallbackStatus> status;
     // Callback that will be invoked when UpdateManager::SignalPresentCallbacks() is called.
@@ -149,21 +149,21 @@ class MockFrameRenderer : public FrameRenderer {
   MockFrameRenderer() : weak_factory_(this) {}
 
   // |FrameRenderer|
-  bool RenderFrame(const FrameTimingsPtr& frame_timings, zx_time_t presentation_time);
+  bool RenderFrame(const FrameTimingsPtr& frame_timings, zx::time presentation_time);
 
   // Need to call this in order to trigger the OnFramePresented() callback in
   // FrameScheduler, but is not valid to do until after RenderFrame has returned
   // to FrameScheduler. Hence this separate method.
-  void EndFrame(size_t frame_index, zx_time_t time_done);
+  void EndFrame(size_t frame_index, zx::time time_done);
 
   // Signal frame |frame_index| that it has been rendered.
-  void SignalFrameRendered(uint64_t frame_number, zx_time_t time_done);
+  void SignalFrameRendered(uint64_t frame_number, zx::time time_done);
 
   // Signal frame |frame_index| that the CPU portion of rendering is done.
-  void SignalFrameCpuRendered(uint64_t frame_number, zx_time_t time_done);
+  void SignalFrameCpuRendered(uint64_t frame_number, zx::time time_done);
 
   // Signal frame |frame_index| that it has been presented.
-  void SignalFramePresented(uint64_t frame_number, zx_time_t time_done);
+  void SignalFramePresented(uint64_t frame_number, zx::time time_done);
 
   // Signal frame |frame_index| that it has been dropped.
   void SignalFrameDropped(uint64_t frame_number);

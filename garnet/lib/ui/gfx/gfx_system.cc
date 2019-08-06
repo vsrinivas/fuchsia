@@ -8,8 +8,9 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/vfs/cpp/pseudo_file.h>
-#include <trace/event.h>
 #include <zircon/assert.h>
+
+#include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_predictor.h"
@@ -367,7 +368,7 @@ void GfxSystem::GetDisplayOwnershipEvent(
 // Applies scheduled updates to a session. If the update fails, the session is
 // killed. Returns true if a new render is needed, false otherwise.
 SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
-    std::unordered_set<SessionId> sessions_to_update, zx_time_t presentation_time,
+    std::unordered_set<SessionId> sessions_to_update, zx::time presentation_time,
     uint64_t trace_id) {
   SessionUpdater::UpdateResults update_results;
 
@@ -378,7 +379,7 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
 
   for (auto session_id : sessions_to_update) {
     TRACE_DURATION("gfx", "GfxSystem::UpdateSessions", "session_id", session_id,
-                   "target_presentation_time", presentation_time);
+                   "target_presentation_time", presentation_time.get());
     auto session_handler = session_manager_->FindSessionHandler(session_id);
     if (!session_handler) {
       // This means the session that requested the update died after the
@@ -429,7 +430,7 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
   return update_results;
 }
 
-void GfxSystem::PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) {
+void GfxSystem::PrepareFrame(zx::time presentation_time, uint64_t trace_id) {
   while (processed_needs_render_count_ < needs_render_count_) {
     TRACE_FLOW_END("gfx", "needs_render", processed_needs_render_count_);
     ++processed_needs_render_count_;

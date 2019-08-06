@@ -46,9 +46,9 @@ class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
 
   // |SessionUpdater|
   UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
-                               zx_time_t presentation_time, uint64_t trace_id) override;
+                               zx::time presentation_time, uint64_t trace_id) override;
   // |SessionUpdater|
-  void PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) override;
+  void PrepareFrame(zx::time presentation_time, uint64_t trace_id) override;
 
   std::unique_ptr<sys::ComponentContext> app_context_;
   std::unique_ptr<Scenic> scenic_;

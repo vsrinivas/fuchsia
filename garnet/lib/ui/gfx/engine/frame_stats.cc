@@ -9,6 +9,8 @@
 #include <list>
 #include <string>
 
+#include "garnet/lib/ui/gfx/util/time.h"
+
 namespace scenic_impl {
 namespace gfx {
 
@@ -23,7 +25,7 @@ FrameStats::FrameStats(inspect_deprecated::Node inspect_node)
 }
 
 void FrameStats::RecordFrame(FrameTimings::Timestamps timestamps,
-                             zx_duration_t display_vsync_interval) {
+                             zx::duration display_vsync_interval) {
   ++frame_count_;
 
   if (timestamps.actual_presentation_time == FrameTimings::kTimeDropped) {
@@ -58,19 +60,18 @@ void FrameStats::RecordDelayedFrame(const FrameTimings::Timestamps timestamps) {
 }
 
 /* static */
-zx_duration_t FrameStats::CalculateAverageDuration(
+zx::duration FrameStats::CalculateAverageDuration(
     const std::deque<const FrameTimings::Timestamps>& timestamps,
-    std::function<zx_duration_t(const FrameTimings::Timestamps&)> duration_func,
+    std::function<zx::duration(const FrameTimings::Timestamps&)> duration_func,
     uint32_t percentile) {
-  // TODO(SCN-1467) Consolidate on zx::duration over zx_duration_t.
   FXL_DCHECK(percentile <= 100);
 
   const size_t num_frames = timestamps.size();
-  std::list<const zx_duration_t> durations;
+  std::list<const zx::duration> durations;
   for (auto& times : timestamps) {
     durations.emplace_back(duration_func(times));
   }
-  durations.sort(std::greater<zx_time_t>());
+  durations.sort(std::greater<zx::duration>());
 
   // Time the sorted durations to only calculate the desired percentile.
   double trim_index =
@@ -82,10 +83,10 @@ zx_duration_t FrameStats::CalculateAverageDuration(
   }
 
   if (durations.size() == 0u) {
-    return 0;
+    return zx::duration(0);
   }
 
-  zx_duration_t total_duration = 0;
+  auto total_duration = zx::duration(0);
   for (auto& duration : durations) {
     total_duration += duration;
   }
@@ -109,17 +110,17 @@ void FrameStats::ReportStats(std::ostream* output) const {
   *output << "Number of Delayed Frames (missed VSYNC): " << delayed_frame_count_ << " ("
           << delayed_percentage << "%)\n";
 
-  auto prediction_accuracy = [](const FrameTimings::Timestamps& times) -> zx_duration_t {
+  auto prediction_accuracy = [](const FrameTimings::Timestamps& times) -> zx::duration {
     return times.actual_presentation_time - times.target_presentation_time;
   };
-  auto total_frame_time = [](const FrameTimings::Timestamps& times) -> zx_duration_t {
+  auto total_frame_time = [](const FrameTimings::Timestamps& times) -> zx::duration {
     return times.actual_presentation_time - times.latch_point_time;
   };
-  auto latency = [](const FrameTimings::Timestamps& times) -> zx_duration_t {
+  auto latency = [](const FrameTimings::Timestamps& times) -> zx::duration {
     return times.actual_presentation_time - times.render_done_time;
   };
 
-  auto pretty_print_ms = [](zx_duration_t duration) -> float {
+  auto pretty_print_ms = [](zx::duration duration) -> float {
     zx::duration dur(duration);
     uint64_t usec_duration = dur.to_usecs();
     float msec = static_cast<float>(usec_duration) / 1000.f;

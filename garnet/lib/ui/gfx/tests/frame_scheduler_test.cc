@@ -44,9 +44,9 @@ std::unique_ptr<DefaultFrameScheduler> FrameSchedulerTest::CreateDefaultFrameSch
 void FrameSchedulerTest::SetupDefaultVsyncValues() {
   // Needs to be big enough so that FrameScheduler can always fit a latch point
   // in the frame.
-  const auto vsync_interval = zx::msec(100).get();
+  const auto vsync_interval = zx::msec(100);
   fake_display_->SetVsyncInterval(vsync_interval);
-  fake_display_->SetLastVsyncTime(0);
+  fake_display_->SetLastVsyncTime(zx::time(0));
 }
 
 }  // namespace test

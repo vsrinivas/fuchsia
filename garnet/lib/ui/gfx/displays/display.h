@@ -30,13 +30,13 @@ class Display {
 
   // Should be registered by DisplayCompositor to be called on every received
   // vsync signal.
-  void OnVsync(zx_time_t timestamp);
+  void OnVsync(zx::time timestamp);
 
   // Obtain the time of the last Vsync, in nanoseconds.
-  zx_time_t GetLastVsyncTime() const { return last_vsync_time_; }
+  zx::time GetLastVsyncTime() const { return last_vsync_time_; }
 
   // Obtain the interval between Vsyncs, in nanoseconds.
-  zx_duration_t GetVsyncInterval() const { return vsync_interval_; };
+  zx::duration GetVsyncInterval() const { return vsync_interval_; };
 
   // Claiming a display means that no other display renderer can use it.
   bool is_claimed() const { return claimed_; }
@@ -61,16 +61,16 @@ class Display {
 
  protected:
   // Protected for testing purposes.
-  zx_duration_t vsync_interval_;
-  zx_time_t last_vsync_time_;
+  zx::duration vsync_interval_;
+  zx::time last_vsync_time_;
 
  private:
   // The maximum vsync interval we would ever expect.
-  static constexpr zx_duration_t kMaximumVsyncInterval = 100'000'000;  // 100 ms
+  static constexpr zx::duration kMaximumVsyncInterval = zx::msec(100);
 
   // Vsync interval of a 60 Hz screen.
   // Used as a default value before real timings arrive.
-  static constexpr zx_duration_t kNsecsFor60fps = 16'666'667;
+  static constexpr zx::duration kNsecsFor60fps = zx::duration(16'666'667);  // 16.666667ms
 
   // This is the color transform used by the display controller
   // to augment the final display color. See |ColorTransform|

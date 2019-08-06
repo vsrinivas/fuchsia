@@ -4,8 +4,9 @@
 
 #include "garnet/lib/ui/gfx/swapchain/display_swapchain.h"
 
-#include <fbl/auto_call.h>
 #include <lib/async/default.h>
+
+#include <fbl/auto_call.h>
 #include <trace/event.h>
 
 #include "fuchsia/sysmem/cpp/fidl.h"
@@ -393,7 +394,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
       record->render_finished_event.get(), escher::kFenceSignalled, ZX_WAIT_ASYNC_TIMESTAMP,
       [this, index = next_frame_index_](async_dispatcher_t* dispatcher, async::Wait* wait,
                                         zx_status_t status, const zx_packet_signal_t* signal) {
-        OnFrameRendered(index, signal->timestamp);
+        OnFrameRendered(index, zx::time(signal->timestamp));
       });
 
   // TODO(SCN-244): What to do if rendering fails?
@@ -472,7 +473,7 @@ void DisplaySwapchain::SetDisplayColorConversion(const ColorTransform& transform
   display_manager_->SetDisplayColorConversion(display_, transform);
 }
 
-void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx_time_t render_finished_time) {
+void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finished_time) {
   FXL_DCHECK(frame_index < kSwapchainImageCount);
   auto& record = frames_[frame_index];
 
@@ -490,7 +491,7 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx_time_t render_fini
   // See ::OnVsync for comment about finalization.
 }
 
-void DisplaySwapchain::OnVsync(zx_time_t timestamp, const std::vector<uint64_t>& image_ids) {
+void DisplaySwapchain::OnVsync(zx::time timestamp, const std::vector<uint64_t>& image_ids) {
   if (on_vsync_) {
     on_vsync_(timestamp);
   }

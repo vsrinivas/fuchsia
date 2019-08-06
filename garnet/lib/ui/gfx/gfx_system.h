@@ -38,10 +38,10 @@ class GfxSystem : public System, public TempScenicDelegate, public SessionUpdate
 
   // |SessionUpdater|
   virtual UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
-                                       zx_time_t presentation_time, uint64_t trace_id) override;
+                                       zx::time presentation_time, uint64_t trace_id) override;
 
   // |SessionUpdater|
-  virtual void PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) override;
+  virtual void PrepareFrame(zx::time presentation_time, uint64_t trace_id) override;
 
   // TODO(SCN-906): Break out Engine, instead of coupling it to GfxSystem.
   CompositorWeakPtr GetCompositor(GlobalId compositor_id) const;

@@ -20,7 +20,7 @@ class FrameStats {
  public:
   explicit FrameStats(inspect_deprecated::Node inspect_node);
 
-  void RecordFrame(FrameTimings::Timestamps timestamps, zx_duration_t display_vsync_interval);
+  void RecordFrame(FrameTimings::Timestamps timestamps, zx::duration display_vsync_interval);
 
  private:
   static constexpr size_t kNumFramesToReport = 200;
@@ -31,9 +31,9 @@ class FrameStats {
   static void FrameTimingsOutputToCsv(const std::deque<const FrameTimings::Timestamps>& timestamps,
                                       std::ostream* output);
 
-  static zx_duration_t CalculateAverageDuration(
+  static zx::duration CalculateAverageDuration(
       const std::deque<const FrameTimings::Timestamps>& timestamps,
-      std::function<zx_duration_t(const FrameTimings::Timestamps&)> duration_func,
+      std::function<zx::duration(const FrameTimings::Timestamps&)> duration_func,
       uint32_t percentile);
 
   void RecordDroppedFrame(const FrameTimings::Timestamps timestamps);
