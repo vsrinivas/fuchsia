@@ -17,6 +17,7 @@ enum class ExprTokenType : size_t {
   kInteger,      // 123, 0x89ab
   kEquals,       // =
   kEquality,     // ==
+  kInequality,   // !=
   kDot,          // .
   kComma,        // ,
   kStar,         // *
@@ -32,6 +33,7 @@ enum class ExprTokenType : size_t {
   kLess,         // <
   kGreater,      // >
   kMinus,        // - (by itself, not part of "->")
+  kBang,         // !
   kPlus,         // +
   kSlash,        // /
   kCaret,        // ^

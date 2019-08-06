@@ -110,7 +110,7 @@ Err GetRealm(const Type* type, MathRealm* realm) {
     return Err();
   }
 
-  return Err("Invalid type for operator.");
+  return Err("Invalid non-numeric type '%s' for operator.", type->GetFullName().c_str());
 }
 
 // Collects the computed information for one parameter for passing around more conveniently.
@@ -424,6 +424,9 @@ ErrOrValue DoPointerOperation(fxl::RefPtr<EvalContext> context, const OpValue& l
 
 void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
                         const ExprToken& op, const ExprValue& right_value, EvalCallback cb) {
+  if (!left_value.type() || !right_value.type())
+    return cb(Err("No type information."));
+
   // Handle assignement specially.
   if (op.type() == ExprTokenType::kEquals)
     return DoAssignment(std::move(context), left_value, right_value, std::move(cb));
@@ -559,60 +562,87 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<Expr
 }
 
 void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value, EvalCallback cb) {
-  // This manually extracts the value rather than calling PromoteTo64() so that the result type is
-  // exactly the same as the input type.
-  //
-  // TODO(brettw) when we add more mathematical operations we'll want a more flexible system for
-  // getting the results out.
-  if (op_token.type() == ExprTokenType::kMinus) {
-    // Currently "-" is the only unary operator.  Since this is a debugger primarily for C-like
-    // languages, use the C rules for negating values: the result type is the same as the input, and
-    // negating an unsigned value gives the two's compliment (C++11 standard section 5.3.1).
-    switch (value.GetBaseType()) {
-      case BaseType::kBaseTypeSigned:
-        switch (value.data().size()) {
-          case sizeof(int8_t):
-            // TODO(brettw) these will have the wrong result type, it should have the same type as
-            // the input.
-            cb(ExprValue(-value.GetAs<int8_t>()));
-            return;
-          case sizeof(int16_t):
-            cb(ExprValue(-value.GetAs<int16_t>()));
-            return;
-          case sizeof(int32_t):
-            cb(ExprValue(-value.GetAs<int32_t>()));
-            return;
-          case sizeof(int64_t):
-            cb(ExprValue(-value.GetAs<int64_t>()));
-            return;
-        }
-        break;
+  if (!value.type())
+    return cb(Err("No type information."));
 
-      case BaseType::kBaseTypeUnsigned:
-        switch (value.data().size()) {
-          case sizeof(uint8_t):
-            cb(ExprValue(-value.GetAs<uint8_t>()));
-            return;
-          case sizeof(uint16_t):
-            cb(ExprValue(-value.GetAs<uint16_t>()));
-            return;
-          case sizeof(uint32_t):
-            cb(ExprValue(-value.GetAs<uint32_t>()));
-            return;
-          case sizeof(uint64_t):
-            cb(ExprValue(-value.GetAs<uint64_t>()));
-            return;
-        }
-        break;
+  MathRealm realm;
+  if (Err err = GetRealm(value.type(), &realm); err.has_error())
+    return cb(err);
 
-      default:
-        FXL_NOTREACHED();
-    }
-    cb(Err("Negation for this value is not supported."));
-    return;
+    // Implements a unary operator that applies C rules for the 4 different sized types. The types
+    // are passed in so that this can work with both signed and unsigned input.
+    //
+    // C has a bunch of rules (see "integer promotion" at the top of this file).
+    //
+    // This logic implicitly takes advantage of the C rules but the type names produced will be the
+    // sized C++ stdint.h types rather than what C would use (int/unsigned, etc.) or whatever the
+    // current language would produce (e.g. u32 on Rust). Since these are temporaries, the type
+    // names usually aren't very important so the simplicity of this approach is preferrable.
+#define IMPLEMENT_UNARY_INTEGER_OP(c_op, type8, type16, type32, type64)                    \
+  switch (value.data().size()) {                                                           \
+    case sizeof(type8):                                                                    \
+      result = ExprValue(c_op value.GetAs<type8>());                                       \
+      break;                                                                               \
+    case sizeof(type16):                                                                   \
+      result = ExprValue(c_op value.GetAs<type16>());                                      \
+      break;                                                                               \
+    case sizeof(type32):                                                                   \
+      result = ExprValue(c_op value.GetAs<type32>());                                      \
+      break;                                                                               \
+    case sizeof(type64):                                                                   \
+      result = ExprValue(c_op value.GetAs<type64>());                                      \
+      break;                                                                               \
+    default:                                                                               \
+      result = Err("Unsupported size for unary operator '%s'.", op_token.value().c_str()); \
+      break;                                                                               \
   }
-  FXL_NOTREACHED();
-  cb(Err("Internal error evaluating unary operator."));
+
+  ErrOrValue result((ExprValue()));
+  switch (op_token.type()) {
+    // -
+    case ExprTokenType::kMinus:
+      switch (realm) {
+        case MathRealm::kSigned:
+          IMPLEMENT_UNARY_INTEGER_OP(-, int8_t, int16_t, int32_t, int64_t);
+          break;
+        case MathRealm::kUnsigned:
+          IMPLEMENT_UNARY_INTEGER_OP(-, uint8_t, uint16_t, uint32_t, uint64_t);
+          break;
+        default:
+          result =
+              Err("Invalid type '%s' for unary operator '-'.", value.type()->GetFullName().c_str());
+          break;
+      }
+      break;
+
+    // !
+    case ExprTokenType::kBang:
+      switch (realm) {
+        case MathRealm::kSigned:
+          IMPLEMENT_UNARY_INTEGER_OP(!, int8_t, int16_t, int32_t, int64_t);
+          break;
+        case MathRealm::kPointer:  // ! can treat a pointer like an unsigned int.
+        case MathRealm::kUnsigned:
+          IMPLEMENT_UNARY_INTEGER_OP(!, uint8_t, uint16_t, uint32_t, uint64_t);
+          break;
+        case MathRealm::kFloat:
+          switch (value.data().size()) {
+            case sizeof(float):
+              result = ExprValue(!value.GetAs<float>());
+              break;
+            case sizeof(double):
+              result = ExprValue(!value.GetAs<double>());
+              break;
+          }
+          break;
+      }
+      break;
+
+    default:
+      result = Err("Invalid unary operator '%s'.", op_token.value().c_str());
+      break;
+  }
+  cb(result);
 }
 
 }  // namespace zxdb

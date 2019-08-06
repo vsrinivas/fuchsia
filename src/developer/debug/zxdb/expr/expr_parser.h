@@ -109,7 +109,7 @@ class ExprParser {
   fxl::RefPtr<ExprNode> LessInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> LiteralPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> GreaterInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
-  fxl::RefPtr<ExprNode> MinusPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> UnaryPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> NamePrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> StarPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> CastPrefix(const ExprToken& token);

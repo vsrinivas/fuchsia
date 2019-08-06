@@ -90,7 +90,8 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::NamePrefix,      nullptr,                      -1},                         // kName
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                         // kInteger
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},      // kEquals
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},        // kEqualsEquals
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},        // kEquality
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},        // kInequality
     {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},      // kDot
     {nullptr,                      nullptr,                      -1},                         // kComma
     {&ExprParser::StarPrefix,      &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},  // kStar
@@ -103,9 +104,10 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      nullptr,                      -1},                         // kRightSquare
     {&ExprParser::LeftParenPrefix, &ExprParser::LeftParenInfix,  kPrecedenceCallAccess},      // kLeftParen
     {nullptr,                      nullptr,                      -1},                         // kRightParen
-    {nullptr,                      &ExprParser::LessInfix,       kPrecedenceUnary},           // kLess
+    {nullptr,                      nullptr,                      -1},                         // kLess
     {nullptr,                      nullptr,                      -1},                         // kGreater
-    {&ExprParser::MinusPrefix,     &ExprParser::BinaryOpInfix,   kPrecedenceAddition},        // kMinus
+    {&ExprParser::UnaryPrefix,     &ExprParser::BinaryOpInfix,   kPrecedenceAddition},        // kMinus
+    {&ExprParser::UnaryPrefix,     nullptr,                      kPrecedenceUnary},           // kBang
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAddition},        // kPlus
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},  // kSlash
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseXor},      // kCaret
@@ -670,12 +672,10 @@ fxl::RefPtr<ExprNode> ExprParser::GreaterInfix(fxl::RefPtr<ExprNode> left, const
   return nullptr;
 }
 
-fxl::RefPtr<ExprNode> ExprParser::MinusPrefix(const ExprToken& token) {
-  // Currently we only implement "-" as a prefix which is for unary "-" when you type "-5" or
-  // "-foo[6]". An infix version would be needed to parse the binary operator for "a - 6".
+fxl::RefPtr<ExprNode> ExprParser::UnaryPrefix(const ExprToken& token) {
   auto inner = ParseExpression(kPrecedenceUnary);
   if (!has_error() && !inner)
-    SetError(token, "Expected expression for '-'.");
+    SetError(token, fxl::StringPrintf("Expected expression for '%s'.", token.value().c_str()));
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<UnaryOpExprNode>(token, std::move(inner));

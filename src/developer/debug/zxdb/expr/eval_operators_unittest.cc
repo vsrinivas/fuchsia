@@ -356,7 +356,40 @@ TEST_F(EvalOperators, UnaryMinus) {
                      {0, 0, 0});
   ErrOrValue out = SyncEvalUnaryOperator(ExprTokenType::kMinus, original);
   ASSERT_TRUE(out.err().has_error());
-  EXPECT_EQ("Negation for this value is not supported.", out.err().msg());
+  // Note: in real life the operator string will be inside the '' but the test harness doesn't
+  // set the actual operator text.
+  EXPECT_EQ("Unsupported size for unary operator ''.", out.err().msg());
+}
+
+TEST_F(EvalOperators, UnaryBang) {
+  // Nonzero char -> false.
+  ErrOrValue out = SyncEvalUnaryOperator(ExprTokenType::kBang, ExprValue('a'));
+  ASSERT_TRUE(out.ok());
+  ASSERT_EQ(1u, out.value().data().size());
+  EXPECT_EQ(0, out.value().GetAs<uint8_t>());
+  EXPECT_EQ("bool", out.value().type()->GetFullName());
+
+  // !0 in 64-bit = true.
+  out = SyncEvalUnaryOperator(ExprTokenType::kBang, ExprValue(static_cast<uint64_t>(0)));
+  ASSERT_TRUE(out.ok());
+  EXPECT_EQ(1, out.value().GetAs<uint8_t>());
+
+  // Pointer.
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, MakeInt32Type());
+  out = SyncEvalUnaryOperator(ExprTokenType::kBang, ExprValue(ptr_type, {1, 2, 3, 4, 5, 6, 7, 8}));
+  ASSERT_TRUE(out.ok());
+  EXPECT_EQ(0, out.value().GetAs<uint8_t>());
+
+  // Double.
+  out = SyncEvalUnaryOperator(ExprTokenType::kBang, ExprValue(0.0));
+  ASSERT_TRUE(out.ok());
+  EXPECT_EQ(1, out.value().GetAs<uint8_t>());
+
+  // Try one that's not a number.
+  auto coll = MakeCollectionType(DwarfTag::kStructureType, "Struct", {});
+  out = SyncEvalUnaryOperator(ExprTokenType::kBang, ExprValue(coll, {}));
+  ASSERT_TRUE(out.has_error());
+  EXPECT_EQ("Invalid non-numeric type 'Struct' for operator.", out.err().msg());
 }
 
 }  // namespace zxdb

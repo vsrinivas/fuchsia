@@ -273,6 +273,11 @@ TEST_F(ExprParserTest, UnaryMath) {
       GetParseString(" - 5 "));
 
   EXPECT_EQ(
+      "UNARY(!)\n"
+      " IDENTIFIER(\"foo\")\n",
+      GetParseString("!foo "));
+
+  EXPECT_EQ(
       "UNARY(-)\n"
       " DEREFERENCE\n"
       "  IDENTIFIER(\"foo\")\n",
@@ -456,7 +461,7 @@ TEST_F(ExprParserTest, Templates) {
   // Duplicate template spec.
   result = Parse("Foo<Bar><Baz>");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Comparisons not supported yet.", parser().err().msg());
+  EXPECT_EQ("Unexpected input, did you forget an operator?", parser().err().msg());
 
   // Empty value.
   result = Parse("Foo<1,,2>");
