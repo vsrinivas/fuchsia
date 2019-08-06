@@ -61,9 +61,10 @@ void SuspendTask::Run() {
 
   // The device is about to be unbound, wait for it to complete.
   if (device_->state() == Device::State::kUnbinding) {
-    auto unbind_task = device_->GetActiveUnbind();
-    ZX_ASSERT(unbind_task != nullptr);
-    AddDependency(unbind_task);
+    // The remove task depends on the unbind task, so wait for that to complete.
+    auto remove_task = device_->GetActiveRemove();
+    ZX_ASSERT(remove_task != nullptr);
+    AddDependency(remove_task);
     return;
   }
 

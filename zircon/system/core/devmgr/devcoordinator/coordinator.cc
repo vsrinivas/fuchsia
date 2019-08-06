@@ -627,18 +627,18 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
 }
 
 void Coordinator::ScheduleRemove(const fbl::RefPtr<Device>& dev) {
-  dev->RequestUnbindTask(
+  dev->CreateUnbindRemoveTasks(
       UnbindTaskOpts{.do_unbind = false, .post_on_create = true, .devhost_requested = false});
 }
 
 void Coordinator::ScheduleDevhostRequestedRemove(const fbl::RefPtr<Device>& dev, bool do_unbind) {
-  dev->RequestUnbindTask(
+  dev->CreateUnbindRemoveTasks(
       UnbindTaskOpts{.do_unbind = do_unbind, .post_on_create = true, .devhost_requested = true});
 }
 
 void Coordinator::ScheduleDevhostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent) {
   for (auto& child : parent->children()) {
-    child.RequestUnbindTask(
+    child.CreateUnbindRemoveTasks(
         UnbindTaskOpts{.do_unbind = true, .post_on_create = true, .devhost_requested = true});
   }
 }

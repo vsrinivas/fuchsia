@@ -31,6 +31,7 @@ namespace devmgr {
 class Coordinator;
 class Devhost;
 struct Devnode;
+class RemoveTask;
 class SuspendContext;
 class SuspendTask;
 class UnbindTask;
@@ -87,6 +88,7 @@ class Device : public fbl::RefCounted<Device>,
                  llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config,
                  ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) override;
   void UnbindDone(UnbindDoneCompleter::Sync _completer) override;
+  void RemoveDone(RemoveDoneCompleter::Sync _completer) override;
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync _completer) override;
   void AddCompositeDevice(
       ::fidl::StringView name, ::fidl::VectorView<uint64_t> props,
@@ -305,13 +307,13 @@ class Device : public fbl::RefCounted<Device>,
   zx_status_t SendSuspend(uint32_t flags, SuspendCompletion completion);
 
   using UnbindCompletion = fit::callback<void(zx_status_t)>;
-  // Issue an Unbind request to this device. This is equivalent to running the unbind hook
-  // of a device followed by a CompleteRemoval request
+  using RemoveCompletion = fit::callback<void(zx_status_t)>;
+  // Issue an Unbind request to this device, which will run the unbind hook.
   // When the response comes in, the given completion will be invoked.
   zx_status_t SendUnbind(UnbindCompletion completion);
-  // Issue a CompleteRemoval request to this device. When the response comes in, the
-  // given completion will be invoked.
-  zx_status_t SendCompleteRemoval(UnbindCompletion completion);
+  // Issue a CompleteRemoval request to this device.
+  // When the response comes in, the given completion will be invoked.
+  zx_status_t SendCompleteRemoval(RemoveCompletion completion);
 
   // Break the relationship between this device object and its parent
   void DetachFromParent();
@@ -381,16 +383,21 @@ class Device : public fbl::RefCounted<Device>,
   // Device.
   void CompleteSuspend(zx_status_t status);
 
+  // Creates the unbind and remove tasks for the device if they do not already exist.
+  // |opts| is used to configure the unbind task.
+  void CreateUnbindRemoveTasks(UnbindTaskOpts opts);
+
   // Returns the in-progress unbind task if it exists, nullptr otherwise.
-  // Unbind tasks are used to facilitate |Unbind| as well as |CompleteRemoval| requests.
+  // Unbind tasks are used to facilitate |Unbind| requests.
   fbl::RefPtr<UnbindTask> GetActiveUnbind() { return active_unbind_; }
-  // Creates a new unbind task if necessary and returns a reference to it.
-  // If one is already in-progress, a reference to it is returned instead.
-  // |opts| are used to configure the unbind task.
-  fbl::RefPtr<UnbindTask> RequestUnbindTask(UnbindTaskOpts opts);
+  // Returns the in-progress remove task if it exists, nullptr otherwise.
+  // Remove tasks are used to facilitate |CompleteRemoval| requests.
+  fbl::RefPtr<RemoveTask> GetActiveRemove() { return active_remove_; }
 
   // Run the completion for the outstanding unbind, if any.
   zx_status_t CompleteUnbind();
+  // Run the completion for the outstanding remove, if any.
+  zx_status_t CompleteRemove();
 
   zx_status_t DriverCompatibiltyTest();
 
@@ -415,7 +422,7 @@ class Device : public fbl::RefCounted<Device>,
     kActive,
     kSuspending,  // The devhost is in the process of suspending the device.
     kSuspended,
-    kUnbinding,  // The devhost is in the process of unbinding the device.
+    kUnbinding,  // The devhost is in the process of unbinding and removing the device.
     kDead,       // The device has been remove()'d
   };
 
@@ -529,6 +536,13 @@ class Device : public fbl::RefCounted<Device>,
   // completed. It will likely mark |active_unbind_| as completed and clear
   // it.
   UnbindCompletion unbind_completion_;
+
+  // If a remove is in-progress, this task represents it.
+  fbl::RefPtr<RemoveTask> active_remove_;
+  // If a remove is in-progress, this completion will be invoked when it is
+  // completed. It will likely mark |active_remove_| as completed and clear
+  // it.
+  RemoveCompletion remove_completion_;
 
   // For attaching as an open connection to the proxy device,
   // or once the device becomes visible.

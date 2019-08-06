@@ -199,8 +199,11 @@ protocol Coordinator {
     /// Requests the devcoordinator schedule the unbinding of this device's children.
     ScheduleUnbindChildren();
 
-    /// Sent as the response to |Unbind| or |CompleteRemoval|.
+    /// Sent as the response to |Unbind|.
     UnbindDone();
+
+    /// Sent as the response to |CompleteRemoval|.
+    RemoveDone();
 
     /// Record the removal of this device.
     RemoveDevice() -> () error zx.status;

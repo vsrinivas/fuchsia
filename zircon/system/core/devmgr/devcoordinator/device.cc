@@ -253,9 +253,14 @@ void Device::CompleteSuspend(zx_status_t status) {
   }
 }
 
-fbl::RefPtr<UnbindTask> Device::RequestUnbindTask(UnbindTaskOpts opts) {
-  if (active_unbind_ == nullptr) {
+void Device::CreateUnbindRemoveTasks(UnbindTaskOpts opts) {
+  if (state_ == Device::State::kDead) {
+    return;
+  }
+  // Create the tasks if they do not exist yet. We always create both.
+  if (active_unbind_ == nullptr && active_remove_ == nullptr) {
     active_unbind_ = UnbindTask::Create(fbl::WrapRefPtr(this), opts);
+    active_remove_ = RemoveTask::Create(fbl::WrapRefPtr(this));
   } else if (state_ != Device::State::kUnbinding) {
     // |do_unbind| may not match the stored field in the existing unbind task due to
     // the current device_remove / unbind model.
@@ -265,7 +270,6 @@ fbl::RefPtr<UnbindTask> Device::RequestUnbindTask(UnbindTaskOpts opts) {
       active_unbind_->set_do_unbind(opts.do_unbind);
     }
   }
-  return active_unbind_;
 }
 
 zx_status_t Device::SendUnbind(UnbindCompletion completion) {
@@ -284,8 +288,8 @@ zx_status_t Device::SendUnbind(UnbindCompletion completion) {
 }
 
 zx_status_t Device::SendCompleteRemoval(UnbindCompletion completion) {
-  if (unbind_completion_) {
-    // We already have a pending unbind
+  if (remove_completion_) {
+    // We already have a pending remove.
     return ZX_ERR_UNAVAILABLE;
   }
   log(DEVLC, "devcoordinator: complete removal dev %p name='%s'\n", this, name_.data());
@@ -294,7 +298,7 @@ zx_status_t Device::SendCompleteRemoval(UnbindCompletion completion) {
     return status;
   }
   state_ = Device::State::kUnbinding;
-  unbind_completion_ = std::move(completion);
+  remove_completion_ = std::move(completion);
   return ZX_OK;
 }
 
@@ -303,11 +307,23 @@ zx_status_t Device::CompleteUnbind() {
     log(ERROR, "devcoordinator: rpc: unexpected unbind reply for '%s'\n", name_.data());
     return ZX_ERR_IO;
   }
-  coordinator->RemoveDevice(fbl::WrapRefPtr(this), false);
   if (unbind_completion_) {
     unbind_completion_(ZX_OK);
   }
   active_unbind_ = nullptr;
+  return ZX_OK;
+}
+
+zx_status_t Device::CompleteRemove() {
+  if (!remove_completion_) {
+    log(ERROR, "devcoordinator: rpc: unexpected remove reply for '%s'\n", name_.data());
+    return ZX_ERR_IO;
+  }
+  coordinator->RemoveDevice(fbl::WrapRefPtr(this), false);
+  if (remove_completion_) {
+    remove_completion_(ZX_OK);
+  }
+  active_remove_ = nullptr;
   return ZX_OK;
 }
 
@@ -823,6 +839,14 @@ void Device::UnbindDone(UnbindDoneCompleter::Sync completer) {
   log(DEVLC, "devcoordinator: unbind done '%s'\n", dev->name().data());
 
   dev->CompleteUnbind();
+}
+
+void Device::RemoveDone(RemoveDoneCompleter::Sync completer) {
+  auto dev = fbl::WrapRefPtr(this);
+
+  log(DEVLC, "devcoordinator: remove done '%s'\n", dev->name().data());
+
+  dev->CompleteRemove();
 }
 
 void Device::RemoveDevice(RemoveDeviceCompleter::Sync completer) {

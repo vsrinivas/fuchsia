@@ -3447,6 +3447,8 @@ class Coordinator final {
 
   using UnbindDoneRequest = ::fidl::AnyZeroArgMessage;
 
+  using RemoveDoneRequest = ::fidl::AnyZeroArgMessage;
+
   struct RemoveDeviceResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -3755,6 +3757,17 @@ class Coordinator final {
       using Super::error;
       using Super::ok;
     };
+    class RemoveDone_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      RemoveDone_Impl(zx::unowned_channel _client_end);
+      ~RemoveDone_Impl() = default;
+      RemoveDone_Impl(RemoveDone_Impl&& other) = default;
+      RemoveDone_Impl& operator=(RemoveDone_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
     template <typename ResponseType>
     class RemoveDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
@@ -3930,6 +3943,7 @@ class Coordinator final {
     using ScheduleRemove = ScheduleRemove_Impl;
     using ScheduleUnbindChildren = ScheduleUnbindChildren_Impl;
     using UnbindDone = UnbindDone_Impl;
+    using RemoveDone = RemoveDone_Impl;
     using RemoveDevice = RemoveDevice_Impl<RemoveDeviceResponse>;
     using MakeVisible = MakeVisible_Impl<MakeVisibleResponse>;
     using BindDevice = BindDevice_Impl<BindDeviceResponse>;
@@ -4006,6 +4020,17 @@ class Coordinator final {
       ~UnbindDone_Impl() = default;
       UnbindDone_Impl(UnbindDone_Impl&& other) = default;
       UnbindDone_Impl& operator=(UnbindDone_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+    class RemoveDone_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      RemoveDone_Impl(zx::unowned_channel _client_end);
+      ~RemoveDone_Impl() = default;
+      RemoveDone_Impl(RemoveDone_Impl&& other) = default;
+      RemoveDone_Impl& operator=(RemoveDone_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -4185,6 +4210,7 @@ class Coordinator final {
     using ScheduleRemove = ScheduleRemove_Impl;
     using ScheduleUnbindChildren = ScheduleUnbindChildren_Impl;
     using UnbindDone = UnbindDone_Impl;
+    using RemoveDone = RemoveDone_Impl;
     using RemoveDevice = RemoveDevice_Impl<RemoveDeviceResponse>;
     using MakeVisible = MakeVisible_Impl<MakeVisibleResponse>;
     using BindDevice = BindDevice_Impl<BindDeviceResponse>;
@@ -4305,13 +4331,21 @@ class Coordinator final {
     // Requests the devcoordinator schedule the unbinding of this device's children.
     zx_status_t ScheduleUnbindChildren_Deprecated();
 
-    // Sent as the response to |Unbind| or |CompleteRemoval|.
+    // Sent as the response to |Unbind|.
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UnbindDone UnbindDone();
 
 
-    // Sent as the response to |Unbind| or |CompleteRemoval|.
+    // Sent as the response to |Unbind|.
     zx_status_t UnbindDone_Deprecated();
+
+    // Sent as the response to |CompleteRemoval|.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::RemoveDone RemoveDone();
+
+
+    // Sent as the response to |CompleteRemoval|.
+    zx_status_t RemoveDone_Deprecated();
 
     // Record the removal of this device.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -4677,13 +4711,21 @@ class Coordinator final {
     // Requests the devcoordinator schedule the unbinding of this device's children.
     static zx_status_t ScheduleUnbindChildren_Deprecated(zx::unowned_channel _client_end);
 
-    // Sent as the response to |Unbind| or |CompleteRemoval|.
+    // Sent as the response to |Unbind|.
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UnbindDone UnbindDone(zx::unowned_channel _client_end);
 
 
-    // Sent as the response to |Unbind| or |CompleteRemoval|.
+    // Sent as the response to |Unbind|.
     static zx_status_t UnbindDone_Deprecated(zx::unowned_channel _client_end);
+
+    // Sent as the response to |CompleteRemoval|.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::RemoveDone RemoveDone(zx::unowned_channel _client_end);
+
+
+    // Sent as the response to |CompleteRemoval|.
+    static zx_status_t RemoveDone_Deprecated(zx::unowned_channel _client_end);
 
     // Record the removal of this device.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -4975,8 +5017,11 @@ class Coordinator final {
     // Requests the devcoordinator schedule the unbinding of this device's children.
     static ::fidl::internal::StatusAndError ScheduleUnbindChildren(zx::unowned_channel _client_end);
 
-    // Sent as the response to |Unbind| or |CompleteRemoval|.
+    // Sent as the response to |Unbind|.
     static ::fidl::internal::StatusAndError UnbindDone(zx::unowned_channel _client_end);
+
+    // Sent as the response to |CompleteRemoval|.
+    static ::fidl::internal::StatusAndError RemoveDone(zx::unowned_channel _client_end);
 
     // Record the removal of this device.
     static ::fidl::DecodeResult<RemoveDeviceResponse> RemoveDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -5081,6 +5126,10 @@ class Coordinator final {
     using UnbindDoneCompleter = ::fidl::Completer<>;
 
     virtual void UnbindDone(UnbindDoneCompleter::Sync _completer) = 0;
+
+    using RemoveDoneCompleter = ::fidl::Completer<>;
+
+    virtual void RemoveDone(RemoveDoneCompleter::Sync _completer) = 0;
 
     class RemoveDeviceCompleterBase : public _Base {
      public:

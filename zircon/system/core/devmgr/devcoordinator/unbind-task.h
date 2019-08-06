@@ -20,7 +20,8 @@ struct UnbindTaskOpts {
   bool devhost_requested;
 };
 
-// This is used for sending both |CompleteRemoval| and |Unbind| requests.
+// This is used for sending |Unbind| requests, and scheduling additional unbind and remove
+// tasks.
 // For compatibility with the current device lifecycle model, unbind is not invoked
 // on the device that |ScheduleRemove| was called on.
 class UnbindTask final : public Task {
@@ -41,13 +42,34 @@ class UnbindTask final : public Task {
   void ScheduleUnbindChildren();
   void Run() final;
 
-  // The device being removed or unbound.
+  // The device being unbound.
   fbl::RefPtr<Device> device_;
-  // If true, |Unbind| will be sent to the devhost, otherwise |CompleteRemoval|.
+  // If true, |Unbind| will be sent to the devhost.
   bool do_unbind_;
   // True if this task is for the device that had |ScheduleRemove| called on it by a devhost,
   // false otherwise.
   bool devhost_requested_;
+};
+
+// This is used for sending |CompleteRemoval| requests.
+class RemoveTask final : public Task {
+ public:
+  static fbl::RefPtr<RemoveTask> Create(fbl::RefPtr<Device> device,
+                                        Completion completion = nullptr);
+
+  // Don't invoke this, use Create
+  RemoveTask(fbl::RefPtr<Device> device, Completion completion);
+
+  ~RemoveTask() final;
+
+ protected:
+  friend class UnbindTask;
+
+ private:
+  void Run() final;
+
+  // The device being removed.
+  fbl::RefPtr<Device> device_;
 };
 
 }  // namespace devmgr

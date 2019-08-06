@@ -2977,6 +2977,8 @@ constexpr uint64_t kCoordinator_ScheduleUnbindChildren_Ordinal = 0x59a4dcaf00000
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_UnbindDone_Ordinal = 0x4503c92800000000lu;
 [[maybe_unused]]
+constexpr uint64_t kCoordinator_RemoveDone_Ordinal = 0x2ebb580c00000000lu;
+[[maybe_unused]]
 constexpr uint64_t kCoordinator_RemoveDevice_Ordinal = 0x1e76778800000000lu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDeviceResponseTable;
 [[maybe_unused]]
@@ -3565,6 +3567,67 @@ zx_status_t Coordinator::Call::UnbindDone_Deprecated(zx::unowned_channel _client
   ::fidl::DecodedMessage<UnbindDoneRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+
+Coordinator::ResultOf::RemoveDone_Impl::RemoveDone_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDoneRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, RemoveDoneRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDoneRequest));
+  ::fidl::DecodedMessage<RemoveDoneRequest> _decoded_request(std::move(_request_bytes));
+  Super::operator=(
+      Coordinator::InPlace::RemoveDone(std::move(_client_end)));
+}
+
+Coordinator::ResultOf::RemoveDone Coordinator::SyncClient::RemoveDone() {
+  return ResultOf::RemoveDone(zx::unowned_channel(this->channel_));
+}
+
+Coordinator::ResultOf::RemoveDone Coordinator::Call::RemoveDone(zx::unowned_channel _client_end) {
+  return ResultOf::RemoveDone(std::move(_client_end));
+}
+
+zx_status_t Coordinator::SyncClient::RemoveDone_Deprecated() {
+  return Coordinator::Call::RemoveDone_Deprecated(zx::unowned_channel(this->channel_));
+}
+
+zx_status_t Coordinator::Call::RemoveDone_Deprecated(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDoneRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<RemoveDoneRequest*>(_write_bytes);
+  _request._hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDoneRequest));
+  ::fidl::DecodedMessage<RemoveDoneRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+}
+
+::fidl::internal::StatusAndError Coordinator::InPlace::RemoveDone(zx::unowned_channel _client_end) {
+  constexpr uint32_t _write_num_bytes = sizeof(RemoveDoneRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<RemoveDoneRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kCoordinator_RemoveDone_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -5188,6 +5251,17 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       }
       impl->UnbindDone(
         Interface::UnbindDoneCompleter::Sync(txn));
+      return true;
+    }
+    case kCoordinator_RemoveDone_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<RemoveDoneRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->RemoveDone(
+        Interface::RemoveDoneCompleter::Sync(txn));
       return true;
     }
     case kCoordinator_RemoveDevice_Ordinal:
