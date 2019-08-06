@@ -979,7 +979,7 @@ From //build/config/BUILDCONFIG.gn:15
 
 ### kernel_cmdline_args
 List of kernel command line arguments to bake into the boot image.
-See also //zircon/docs/kernel_cmdline.md and
+See also [kernel_cmdline](/docs/zircon/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
 **Current value for `target_cpu = "arm64"`:** `["dummy=arg"]`
@@ -2426,7 +2426,7 @@ From //build/config/fuchsia/zbi.gni:11
 
 ### zedboot_cmdline_args
 List of kernel command line arguments to bake into the Zedboot image.
-See //zircon/docs/kernel_cmdline.md and
+See //docs/zircon/kernel_cmdline.md and
 [`zedboot_devmgr_config`](#zedboot_devmgr_config).
 
 **Current value (from the default):** `[]`
@@ -2458,7 +2458,7 @@ arguments to fx flash script
 From //build/images/BUILD.gn:41
 
 ### zircon_args
-[Zircon GN build arguments](../../zircon/docs/gen/build_arguments.md).
+[Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
 The default passes through GOMA/ccache settings and
 [`select_variant`](#select_variant) shorthand selectors.
 **Only set this if you want to wipe out all the defaults that
@@ -2549,14 +2549,14 @@ From //products/core.gni:10
 From //BUILD.gn:56
 
 ### zircon_extra_args
-[Zircon GN build arguments](../../zircon/docs/gen/build_arguments.md).
+[Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
 This is included in the default value of [`zircon_args`](#zircon_args) so
 you can set this to add things there without wiping out the defaults.
 When you set `zircon_args` directly, then this has no effect at all.
 Arguments you set here override any arguments in the default
 `zircon_args`.  There is no way to append to a value from the defaults.
 Note that for just setting simple (string-only) values in Zircon GN's
-[`variants`](../../zircon/docs/gen/build_arguments.md#variants), the
+[`variants`](/docs/gen/zircon_build_arguments.md#variants), the
 default [`zircon_args`](#zircon_args) uses a `variants` value derived from
 [`select_variant`](#select_variant) so for simple cases there is no need
 to explicitly set Zircon's `variants` here.

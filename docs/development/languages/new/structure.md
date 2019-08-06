@@ -6,17 +6,17 @@ Fuchsia.
 ## System calls
 
 The lowest level of Fuchsia support in a language provides access to the
-[Zircon system calls](/zircon/docs/syscalls/).
+[Zircon system calls](/docs/zircon/syscalls/).
 Exposing these system calls lets programs written in the language interact with
 the kernel and, transitively, with the rest of the system.
 
 Programs cannot issue system calls directly. Instead, they make system calls by
-calling functions in the [vDSO](/zircon/docs/vdso.md),
+calling functions in the [vDSO](/docs/zircon/vdso.md),
 which is loaded into newly created processes by their creator.
 
 The public entry points for the vDSO are defined in
 [syscalls.banjo](/zircon/system/public/zircon/syscalls.banjo).
-This file is processed by the [abigen](/zircon/docs/vdso.md#abigen-tool)
+This file is processed by the [abigen](/docs/zircon/vdso.md#abigen-tool)
 tool. When adding a new language, consider using the `-json` flag to dump
 [a JSON representation](/zircon/tools/abigen/syscall_schema.json)
 of the Zircon system calls:
@@ -36,9 +36,9 @@ sending messages to other processes), and then go back to sleep in their event
 loop.
 
 The fundamental building block for event loops in Fuchsia is the
-[port](/zircon/docs/objects/port.md)
+[port](/docs/zircon/objects/port.md)
 object. A thread can sleep in a port using
-[`zx_port_wait`](/zircon/docs/syscalls/port_wait.md).
+[`zx_port_wait`](/docs/zircon/syscalls/port_wait.md).
 When the kernel wakes up the thread, the kernel provides a *packet*, which is a
 data structure that describes why the kernel woke up the thread.
 
@@ -48,7 +48,7 @@ Rather than expose the port directly, language mantainers usually provide
 a library that abstracts over a port and provides asynchronous wait operations.
 
 Most asynchronous wait operations bottom out in
-[`zx_object_wait_async`](/zircon/docs/syscalls/object_wait_async.md). Typically, the `port` and `key`
+[`zx_object_wait_async`](/docs/zircon/syscalls/object_wait_async.md). Typically, the `port` and `key`
 arguments are provided by the library and the `handle` and `signals`
 arguments are provided by the clients. When establishing a wait, the clients
 also typically provide an upcall (e.g., a closure) for the library to invoke
@@ -58,7 +58,7 @@ the upcall (e.g., from a hash table).
 No additional kernel object is needed to wake a thread up from another thread.
 You can wake up a thread by simply queuing a user packet to the thread's port
 using
-[zx_port_queue](/zircon/docs/syscalls/port_queue.md).
+[zx_port_queue](/docs/zircon/syscalls/port_queue.md).
 
 ### Examples
 
@@ -72,7 +72,7 @@ using
 The Zircon kernel itself largely provides memory management, scheduling, and
 interprocess communication. Rather than being provided directly by the kernel,
 the bulk of the system interface is actually provided through interprocess
-communication, typically using [channels](/zircon/docs/objects/channel.md).
+communication, typically using [channels](/docs/zircon/objects/channel.md).
 The protocols used for interprocess communication are defined in
 [Fuchsia Interface Definition Language (FIDL)](../fidl/README.md).
 
@@ -133,13 +133,13 @@ Typically the generated code will contain the following types of code:
 Some languages offer multiple options for some of these types of generated code.
 For example, a common pattern is to offer both *synchronous* and *asynchronous*
 proxy objects. The synchronous proxies make use of
-[`zx_channel_call`](/zircon/docs/syscalls/channel_call.md)
+[`zx_channel_call`](/docs/zircon/syscalls/channel_call.md)
 to efficiently write a message, block waiting for a response, and then read the
 response, whereas asynchronous proxies use
-[`zx_channel_write`](/zircon/docs/syscalls/channel_write.md),
-[`zx_object_wait_async`](/zircon/docs/syscalls/object_wait_async.md),
+[`zx_channel_write`](/docs/zircon/syscalls/channel_write.md),
+[`zx_object_wait_async`](/docs/zircon/syscalls/object_wait_async.md),
 and
-[`zx_channel_read`](/zircon/docs/syscalls/channel_read.md)
+[`zx_channel_read`](/docs/zircon/syscalls/channel_read.md)
 to avoid blocking on the remote end of the channel.
 
 Generally, we prefer to use *asynchronous* code whenever possible. Many FIDL

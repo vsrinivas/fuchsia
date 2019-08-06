@@ -265,10 +265,10 @@ children with `use` declarations; it must use `BindChild()`.
 [cap-routing]: #the-open-triggers-capability-routing
 [binding]: #binding-to-a-component-and-sending-a-service-channel
 
-[handle]: ../../../zircon/docs/handles.md
-[channel]: ../../../zircon/docs/objects/channel.md
+[handle]: /docs/zircon/handles.md
+[channel]: /docs/zircon/objects/channel.md
 [namespaces]: ../namespaces.md
 [component-manifests]: component_manifests.md
-[fuchsia.io]: ../../../zircon/system/fidl/fuchsia-io/io.fidl
-[abi-system]: ../../development/abi/system.md
-[realm.fidl]: ../../../sdk/fidl/fuchsia.sys2/realm.fidl
+[fuchsia.io]: /zircon/system/fidl/fuchsia-io/io.fidl
+[abi-system]: /docs/development/abi/system.md
+[realm.fidl]: /sdk/fidl/fuchsia.sys2/realm.fidl

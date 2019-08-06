@@ -8,7 +8,7 @@ Fuchsia.
 Note: The Fuchsia source includes [Zircon](/zircon/README.md),
 the core platform that underpins Fuchsia. The Fuchsia build process will
 build Zircon as a side-effect; to work on Zircon only, read and follow
-Zircon's [Getting Started](/zircon/docs/getting_started.md) doc.
+Zircon's [Getting Started](/docs/zircon/getting_started.md) doc.
 
 [TOC]
 
@@ -111,7 +111,7 @@ Note: A quick overview of the basic build-and-pave workflow can be found
 ### Boot from QEMU
 
 If you don't have the supported hardware, you can run Fuchsia under emulation
-using [QEMU](/zircon/docs/qemu.md).
+using [QEMU](/docs/zircon/qemu.md).
 Fuchsia includes prebuilt binaries for QEMU under `prebuilt/third_party/qemu`.
 
 The `fx run` command will launch Zircon within QEMU, using the locally built
@@ -148,7 +148,7 @@ fx run -g
 
 #### Enabling Network
 
-First, [configure](/zircon/docs/qemu.md#Enabling-Networking-under-QEMU) a
+First, [configure](/docs/zircon/qemu.md#Enabling-Networking-under-QEMU) a
 virtual interface for QEMU's use.
 
 Once this is done you can add the `-N` and `-u` flags to `fx run`:
@@ -272,7 +272,7 @@ You may wish to peruse the [testing FAQ](development/workflows/testing_faq.md).
 
 * [Fuchsia documentation](README.md) hub
 * Working with Zircon - [copying files, network booting, log viewing, and
-more](/zircon/docs/getting_started.md#Copying-files-to-and-from-Zircon)
+more](/docs/zircon/getting_started.md#Copying-files-to-and-from-Zircon)
 * [Documentation Standards](best-practices/documentation_standards.md) - best practices
   for documentation
 * [Information on the system bootstrap component](/garnet/bin/sysmgr/).

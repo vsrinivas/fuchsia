@@ -50,11 +50,11 @@ exports a number of symbols with a C calling convention. The source of truth for
 these symbols is
 [syscalls.banjo](/zircon/system/public/zircon/syscalls.banjo).
 Their semantics are described in
-[the documentation](/zircon/docs/syscalls/).
+[the documentation](/docs/zircon/syscalls/).
 
 Of particular importance are the semantics of the clocks defined by
 `libzircon.so`. The semantics of these clocks are described by
-[clock_get.md](/zircon/docs/syscalls/clock_get.md#supported-clock-ids)
+[clock_get.md](/docs/zircon/syscalls/clock_get.md#supported-clock-ids)
 
 ### FIDL protocols
 
@@ -146,7 +146,7 @@ executable running in the process, but some of the initial structure of the
 process is controlled by the system and part of the system ABI.
 
 For additional details, see
-[Program Loading](/zircon/docs/program_loading.md).
+[Program Loading](/docs/zircon/program_loading.md).
 
 #### ELF loader
 

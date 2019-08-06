@@ -158,7 +158,7 @@ Add the commands to `$FUCHSIA_DIR/local/kernel_cmdline.txt`, e.g. to enable full
 
 Using `fx set` writes these values into the image, so they will survive a restart.
 
-For more detail on driver logging, see [Zircon driver logging](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/driver-development.md#logging)
+For more detail on driver logging, see [Zircon driver logging](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/ddk/driver-development.md#logging)
 
 #### bin/bt-gap
 

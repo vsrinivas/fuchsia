@@ -34,7 +34,7 @@ a specific part of the code should be kept in the same directory as the source c
 Documentation that should be generally available to developers must be
 available in one of two locations:
 
-* Zircon specific documentation should be created in `/zircon/docs`.
+* Zircon specific documentation should be created in `/docs/zircon`.
 * Fuchsia documentation that is not specific to Zircon specific should
    be created in `/docs`.  In the `/docs/` directory, you should create your
    documentation or images in one of these sub-directories:
@@ -84,7 +84,7 @@ created by a large number of contributors can flow together. See
 ## How can I link to source code in my documentation?
 
 Use absolute paths starting with '/', like [`/zircon/public/sysroot/BUILD.gn`](/zircon/public/sysroot/BUILD.gn).
-Never use relative paths with ".." that point to content outside of `/docs` or `/zircon/docs` directories.
+Never use relative paths with ".." that point to content outside of `/docs`.
 
 ## How can I expose my documentation?
 

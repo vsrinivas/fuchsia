@@ -19,9 +19,9 @@ To change the documentation navigation for an existing document:
    tree.
 
    For example, if you want to modify the navigation for the
-   [concepts page of Zircon](/zircon/docs/concepts.md),
+   [concepts page of Zircon](/docs/zircon/concepts.md),
    you can see that there is a
-   [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/zircon/docs/_toc.yaml)
+   [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/zircon/_toc.yaml)
    file in the same directory.
 
 1. Edit the `_toc.yaml` file.
@@ -59,13 +59,12 @@ with multiple entries:
   * Paths to directories in fuchsia.dev are different than paths
     the Fuchsia source code:
     * Replace the `/docs/` path with `/fuchsia-src/`.
-    * Replace the `/zircon/docs/` path with `/fuchsia-src/zircon/`.
   * Paths to `index.md` or `README.md` should point to the
     directory name without including the filename. For example, to reference
     `/fuchsia-src/zircon/index.md` you should use `/fuchsia-src/zircon`.
 
   For example, to add an entry for the Zircon `concepts.md`
-  page in its respective [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/zircon/docs/_toc.yaml),
+  page in its respective [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/zircon/_toc.yaml),
   you should add an entry:
 
   ```

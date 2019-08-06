@@ -16,7 +16,7 @@ The stub currently communicates with GDB over a TCP connection using BSD sockets
 and thus requires a working Fuchsia network stack and a network connection
 between the target and host environments. Follow the general network set up
 instructions (click
-[here](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/qemu.md#Enabling-Networking-under-Qemu-x86_64-only)
+[here](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/qemu.md#Enabling-Networking-under-Qemu-x86_64-only)
 for enabling network under QEMU)
 
 **N.B.** If using QEMU make sure you are using version 2.5.0 or later.

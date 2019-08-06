@@ -56,5 +56,4 @@ need to build a compilation database with `fx compdb`.
 
 ## See also
 
-[Zircon editor integration](
-https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/editors.md)
+[Zircon editor integration](/docs/zircon/editors.md)

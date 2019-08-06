@@ -70,4 +70,4 @@ For more information on Zircon command line options see
 [kernel\_cmdline][kernel_cmdline].
 
 
-[kernel_cmdline]: /zircon/docs/kernel_cmdline.md
+[kernel_cmdline]: /docs/zircon/kernel_cmdline.md

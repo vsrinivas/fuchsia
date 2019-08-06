@@ -13,7 +13,7 @@ import("//build/images/zxcrypt.gni")
 
 declare_args() {
   # List of kernel command line arguments to bake into the Zedboot image.
-  # See //zircon/docs/kernel_cmdline.md and
+  # See //docs/zircon/kernel_cmdline.md and
   # [`zedboot_devmgr_config`](#zedboot_devmgr_config).
   zedboot_cmdline_args = []
 

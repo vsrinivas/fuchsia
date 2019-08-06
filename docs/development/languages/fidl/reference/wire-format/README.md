@@ -862,8 +862,8 @@ Zero is also the value of the `ZX_HANDLE_INVALID` constant.
 
 Read [The Lost Art of Structure Packing][lostart] for an in-depth treatise on the subject.
 
-[channel call]: /zircon/docs/syscalls/channel_call.md
-[channel write]: /zircon/docs/syscalls/channel_write.md
+[channel call]: /docs/zircon/syscalls/channel_call.md
+[channel write]: /docs/zircon/syscalls/channel_write.md
 [ftp-030]: /docs/development/languages/fidl/reference/ftp/ftp-030.md
 [ordinal hashing]: /docs/development/languages/fidl/reference/ftp/ftp-020.md
 [lostart]: http://www.catb.org/esr/structure-packing/

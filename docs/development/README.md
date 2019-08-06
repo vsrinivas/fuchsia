@@ -96,13 +96,13 @@ This section covers Fuchsia-wide conventions and best practices.
  - [Component Inspection](inspect/README.md)
 
 
-[acer_12]: /zircon/docs/targets/acer12.md "Acer 12"
-[intel_nuc]: /zircon/docs/targets/nuc.md "Intel NUC"
+[acer_12]: /docs/zircon/targets/acer12.md "Acer 12"
+[intel_nuc]: /docs/zircon/targets/nuc.md "Intel NUC"
 [pixelbook]: hardware/pixelbook.md "Pixelbook"
-[toulouse]: /zircon/docs/targets/toulouse.md "Toulouse"
-[khadas-vim]: /zircon/docs/targets/khadas-vim.md "Khadas VIM2"
-[imx8mevk]: /zircon/docs/targets/imx8mevk.md "iMX8M EVK"
-[hikey960]: /zircon/docs/targets/hikey960.md "HiKey960 (96boards.org)"
+[toulouse]: /docs/zircon/targets/toulouse.md "Toulouse"
+[khadas-vim]: /docs/zircon/targets/khadas-vim.md "Khadas VIM2"
+[imx8mevk]: /docs/zircon/targets/imx8mevk.md "iMX8M EVK"
+[hikey960]: /docs/zircon/targets/hikey960.md "HiKey960 (96boards.org)"
 
 [fidl-style]: /docs/development/languages/fidl/style.md
 [fidl-api]: /docs/development/api/fidl.md

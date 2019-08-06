@@ -57,7 +57,7 @@ Magma supports multiple contexts per connection; this is to allow for more than 
 When a client connection is closed, to avoid gpu fault the address space must remain alive while gpu is executing work using that address space; therefore, context takes a shared reference on the address space.
 
 ### Buffers and Mappings
-Currently Magma requires a unified memory architecture, as is the case with most mobile hardware, where cpu and gpu access the same physical memory.   Magma buffers are just zircon virtual memory objects ([VMOs](/zircon/docs/objects/vm_object.md)). Client drivers allocate buffers and register those buffers with the system driver.
+Currently Magma requires a unified memory architecture, as is the case with most mobile hardware, where cpu and gpu access the same physical memory.   Magma buffers are just zircon virtual memory objects ([VMOs](/docs/zircon/objects/vm_object.md)). Client drivers allocate buffers and register those buffers with the system driver.
 
 Gpu address space management may be performed by the client or by the system driver. The client driver design may dictate the model.
 
@@ -76,7 +76,7 @@ Pre-emption of inflight command buffers, if supported by hardware, can be used t
 
 ### Semaphores
 
-Magma provides semaphores as a general signalling mechanism that can be used to implement Vulkan fences and semaphores.  Magma semaphores are built on zircon [events](/zircon/docs/objects/event.md).
+Magma provides semaphores as a general signalling mechanism that can be used to implement Vulkan fences and semaphores.  Magma semaphores are built on zircon [events](/docs/zircon/objects/event.md).
 
 ### Summary of object ownership
 * Client: owns connections; shared ownership of buffers, mappings, contexts
@@ -90,7 +90,7 @@ Magma provides semaphores as a general signalling mechanism that can be used to 
 
 The thread model used for each installed GPU device and driver is as follows:
 
-The msd is typically loaded by the [platform bus driver](/zircon/docs/ddk/platform-bus.md) and a msd main devhost thread is created.  The msd main thread in turn creates a device thread to talk to the GPU and a driver-dependent number of interrupt threads to service GPU interrupts.
+The msd is typically loaded by the [platform bus driver](/docs/zircon/ddk/platform-bus.md) and a msd main devhost thread is created.  The msd main thread in turn creates a device thread to talk to the GPU and a driver-dependent number of interrupt threads to service GPU interrupts.
 
 A client driver library that implements the Vulkan api is referred to as a **vcd** (Vulkan Client Driver).  When a Vulkan application starts and makes a new VkDevice, the vcd makes a request to the msd to establish a connection for the device over which all Vulkan commands will be communicated.  The msd main thread responds to this call by creating a new connection thread to service all client commands. The connection thread in turn creates two zircon communication channels: the primary channel and the notification channel.
 

@@ -91,4 +91,4 @@ ELF. The `fdio_spawn` function family knows how to turn an ELF and some initial
 state into a running process.
 
 
-[zircon-concepts-message-passing]: /zircon/docs/concepts.md#message-passing-sockets-and-channels
+[zircon-concepts-message-passing]: /docs/zircon/concepts.md#message-passing-sockets-and-channels

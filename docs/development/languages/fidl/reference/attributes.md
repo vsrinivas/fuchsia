@@ -211,10 +211,10 @@ specifying `[Transport="Foo"]` disables `Channel` and uses only
 `Foo`).
 
 <!-- xrefs -->
-[channel]: /zircon/docs/objects/channel.md
+[channel]: /docs/zircon/objects/channel.md
 [FTP-013]: ftp/ftp-013.md
 [FTP-020]: ftp/ftp-020.md
 [FTP-021]: ftp/ftp-021.md
 [FTP-024]: ftp/ftp-024.md
 [composition]: /docs/development/languages/fidl/reference/language.md#Protocol-Composition
-[socketwrite]: /zircon/docs/syscalls/socket_write.md
+[socketwrite]: /docs/zircon/syscalls/socket_write.md

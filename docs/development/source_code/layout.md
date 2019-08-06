@@ -231,7 +231,6 @@ separate repositories that are mapped into the directory structure using `jiri`
     * `testing/`
     * `updater/`
     * `virtualization/`
-    * `zircon/docs/`
     * `zircon/kernel/`
     * `zircon/drivers/`
     * `zircon/userspace/`

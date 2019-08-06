@@ -22,7 +22,7 @@ The gpu vendor supplies and maintains the system driver using the Zircon DDK.
 
 ### Tasks
 
-* Initialize hardware: register access, clocks, regulators, interrupts, firmware.  **Note** where the GPU block is agnostic of these concerns, they should be configured in a separate board driver; see Zircon [platform-bus](/zircon/docs/ddk/platform-bus.md).
+* Initialize hardware: register access, clocks, regulators, interrupts, firmware.  **Note** where the GPU block is agnostic of these concerns, they should be configured in a separate board driver; see Zircon [platform-bus](/docs/zircon/ddk/platform-bus.md).
 	* *msd_driver_create*
 	* *msd_driver_configure*
 	* *msd_driver_destroy*

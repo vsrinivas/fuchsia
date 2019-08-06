@@ -98,10 +98,10 @@ also provides core drivers and Fuchsia's libc implementation.
  - Verified boot
  - Updater
 
-[zircon-concepts]: /zircon/docs/concepts.md
-[zircon-syscalls]: /zircon/docs/syscalls.md
-[zircon-vdso]: /zircon/docs/vdso.md
-[zircon-ddk]: /zircon/docs/ddk/overview.md
+[zircon-concepts]: /docs/zircon/concepts.md
+[zircon-syscalls]: /docs/zircon/syscalls.md
+[zircon-vdso]: /docs/zircon/vdso.md
+[zircon-ddk]: /docs/zircon/ddk/overview.md
 [FIDL]: ../development/languages/fidl/README.md
 [framework-overview]: modular/overview.md
 [framework-story]: modular/story.md

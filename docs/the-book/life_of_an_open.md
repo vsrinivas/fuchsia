@@ -73,11 +73,11 @@ need to send a request to a remote server to “please open foo”. How can this
 accomplished? The program has the following tools:
 
   * One or more **handles** representing a connection to the CWD
-  * [zx_channel_write](/zircon/docs/syscalls/channel_write.md):
+  * [zx_channel_write](/docs/zircon/syscalls/channel_write.md):
     A system call which can send bytes and handles (over a channel)
-  * [zx_channel_read](/zircon/docs/syscalls/channel_read.md):
+  * [zx_channel_read](/docs/zircon/syscalls/channel_read.md):
     A system call which can receive bytes and handles (over a channel)
-  * [zx_object_wait_one](/zircon/docs/syscalls/object_wait_one.md):
+  * [zx_object_wait_one](/docs/zircon/syscalls/object_wait_one.md):
     A system call which can wait for a handle to be readable / writable
 
 Using these primitives, the client can write a message to the filesystem server
