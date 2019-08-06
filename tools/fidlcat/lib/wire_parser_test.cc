@@ -380,35 +380,32 @@ TEST_DECODE_WIRE(TwoStringArrayInt, TwoStringArrayInt, R"({"arr":["harpo","chico
 
 namespace {
 
-fidl::VectorPtr<std::string> TwoStringVectorFromVals(std::string v1, std::string v2) {
-  std::vector<std::string> brother_vector;
-  brother_vector.push_back(v1);
-  brother_vector.push_back(v2);
-  return fidl::VectorPtr(brother_vector);
+std::vector<std::string> TwoStringVectorFromVals(std::string v1, std::string v2) {
+  return std::vector<std::string>({v1, v2});
 }
 
-fidl::VectorPtr<uint8_t> VectorUint8() {
+std::vector<uint8_t> VectorUint8() {
   std::vector<std::uint8_t> result;
   for (int i = 0; i <= 40; ++i) {
     result.push_back(i);
   }
-  return fidl::VectorPtr(result);
+  return result;
 }
 
-fidl::VectorPtr<uint8_t> VectorUint8(const char* text) {
+std::vector<uint8_t> VectorUint8(const char* text) {
   std::vector<std::uint8_t> result;
   while (*text != 0) {
     result.push_back(*text++);
   }
-  return fidl::VectorPtr(result);
+  return result;
 }
 
-fidl::VectorPtr<uint32_t> VectorUint32() {
+std::vector<uint32_t> VectorUint32() {
   std::vector<std::uint32_t> result;
   for (int i = 0; i <= 25; ++i) {
     result.push_back(i + ((i & 1) << 16));
   }
-  return fidl::VectorPtr(result);
+  return result;
 }
 
 }  // namespace
