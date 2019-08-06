@@ -7,7 +7,8 @@
 #include "macros.h"
 
 ContiguousPooledSystemRamMemoryAllocator::ContiguousPooledSystemRamMemoryAllocator(
-    Owner* parent_device, const char* allocation_name, uint64_t size, bool is_cpu_accessible)
+    Owner* parent_device, const char* allocation_name, uint64_t size,
+    bool is_cpu_accessible)
     : parent_device_(parent_device),
       allocation_name_(allocation_name),
       region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())),
@@ -23,6 +24,14 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Init(uint32_t alignment_lo
   }
   contiguous_vmo_.set_property(ZX_PROP_NAME, allocation_name_, strlen(allocation_name_));
 
+  // TODO(ZX-4807): Ideally we'd set ZX_CACHE_POLICY_UNCACHED when !is_cpu_accessible_, since
+  // IIUC on aarch64 it's possible for a cached mapping to secure/protected memory + speculative
+  // execution to cause random faults, while an uncached mapping only faults if the uncached mapping
+  // is actually touched.  However, currently for a VMO created with zx::vmo::create_contiguous(),
+  // the .set_cache_policy() doesn't work because the VMO already has pages.  For now use this
+  // private member var since we're very likely to need it again.
+  (void)is_cpu_accessible_;
+
   zx_paddr_t addrs;
   zx::pmt pmt;
   status = parent_device_->bti().pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
@@ -33,92 +42,56 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Init(uint32_t alignment_lo
   }
 
   start_ = addrs;
-  ralloc_region_t region = {start_, size_};
+  ralloc_region_t region = {0, size_};
   region_allocator_.AddRegion(region);
   return ZX_OK;
 }
 
-zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx::vmo* vmo) {
-  zx::vmo result_vmo;
-
-  // Try to clean up all unused outstanding regions.
-  for (uint32_t i = 0; i < regions_.size();) {
-    fbl::unique_ptr<Region>& region = regions_[i];
-    zx_info_handle_count_t count;
-    zx_status_t status =
-        region->vmo.get_info(ZX_INFO_HANDLE_COUNT, &count, sizeof(count), nullptr, nullptr);
-    ZX_ASSERT(status == ZX_OK);
-    zx_info_vmo_t vmo_info;
-    status = region->vmo.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
-    ZX_ASSERT(status == ZX_OK);
-
-    // This is racy because a syscall using the handle (e.g. a map) could be in progress while
-    // the handle is being closed on another thread, which would allow it to later be mapped
-    // even if there's no other handle.
-    // TODO: Hand out clones of a VMO using a non-COW clone (once that's implemented), then use
-    // ZX_VMO_ZERO_CHILDREN to determine when no other references exist.
-    if (count.handle_count == 1 && vmo_info.num_mappings == 0) {
-      regions_.erase(i);
-    } else {
-      i++;
-    }
-  }
-
-  auto region = std::make_unique<Region>();
+zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx::vmo* parent_vmo) {
+  RegionAllocator::Region::UPtr region;
+  zx::vmo result_parent_vmo;
 
   // TODO: Use a fragmentation-reducing allocator (such as best fit).
-  zx_status_t status = region_allocator_.GetRegion(size, ZX_PAGE_SIZE, region->region);
-
+  //
+  // The "region" param is an out ref.
+  zx_status_t status = region_allocator_.GetRegion(size, ZX_PAGE_SIZE, region);
   if (status != ZX_OK) {
-    DRIVER_INFO("GetRegion failed (out of space?)\n");
+    DRIVER_INFO("GetRegion failed (out of space?) - size: %zu status: %d\n", size, status);
     DumpPoolStats();
     return status;
   }
 
-  // The VMO created here is a sub-region of contiguous_vmo_.
-  // TODO: stop handing out physical VMOs when we can hand out non-COW clone VMOs instead.
-  // Please do not use get_root_resource() in new code. See ZX-1467.
-  status = parent_device_->CreatePhysicalVmo(region->region->base, size, &result_vmo);
+  // The result_parent_vmo created here is a VMO window to a sub-region of contiguous_vmo_.
+  status = contiguous_vmo_.create_child(ZX_VMO_CHILD_SLICE, region->base, size, &result_parent_vmo);
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed to create physical VMO: %d\n", status);
+    DRIVER_ERROR("Failed vmo.create_child(ZX_VMO_CHILD_SLICE, ...): %d\n", status);
     return status;
   }
 
   // If you see a sysmem-contig VMO you should know that it doesn't actually
   // take up any space, because the same memory is backed by contiguous_vmo_.
   const char* kSysmemContig = "sysmem-contig";
-  result_vmo.set_property(ZX_PROP_NAME, kSysmemContig, strlen(kSysmemContig));
-
-  // Regardless of CPU or RAM domain, if we use the CPU to access the RAM we
-  // want to use the CPU cache.  The default for physical VMOs is non-cached
-  // so this is required because we're using zx_vmo_create_physical() above.
-  //
-  // Without this, in addition to presumably being slower, memcpy tends to
-  // fail with non-aligned access faults / syscalls that are trying to copy
-  // directly to the VMO can fail without it being obvious that it's an
-  // underlying non-aligned access fault triggered by memcpy.
-  //
-  // We don't do this for protected memory.  IIUC, it's possible for a cached
-  // mapping to protected memory + speculative execution to cause random
-  // faults, while a non-cached mapping only faults if a non-cached mapping is
-  // actually touched.
-  if (is_cpu_accessible_) {
-    status = result_vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED);
-    if (status != ZX_OK) {
-      DRIVER_ERROR("Failed to set_cache_policy(): %d\n", status);
-      return status;
-    }
-  }
-
-  status = result_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &region->vmo);
+  status = result_parent_vmo.set_property(ZX_PROP_NAME, kSysmemContig, strlen(kSysmemContig));
   if (status != ZX_OK) {
-    DRIVER_ERROR("Failed to create duplicate VMO: %d\n", status);
+    DRIVER_ERROR("Failed vmo.set_property(ZX_PROP_NAME, ...): %d\n", status);
     return status;
   }
-  regions_.push_back(std::move(region));
 
-  *vmo = std::move(result_vmo);
+  regions_.emplace(std::make_pair(result_parent_vmo.get(), std::move(region)));
+  *parent_vmo = std::move(result_parent_vmo);
   return ZX_OK;
+}
+
+zx_status_t ContiguousPooledSystemRamMemoryAllocator::SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) {
+  // nothing to do here
+  return ZX_OK;
+}
+
+void ContiguousPooledSystemRamMemoryAllocator::Delete(zx::vmo parent_vmo) {
+  auto it = regions_.find(parent_vmo.get());
+  ZX_ASSERT(it != regions_.end());
+  regions_.erase(it);
+  // ~parent_vmo
 }
 
 void ContiguousPooledSystemRamMemoryAllocator::DumpPoolStats() {

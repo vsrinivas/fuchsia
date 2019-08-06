@@ -162,6 +162,47 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   BufferCollectionInfo allocation_result_info_{BufferCollectionInfo::Null};
 
   MemoryAllocator* memory_allocator_ = nullptr;
+
+  // We keep LogicalBufferCollection alive as long as there are child VMOs
+  // outstanding (no revoking of child VMOs for now).
+  //
+  // This tracking is for the benefit of MemoryAllocator sub-classes that need
+  // a Delete() call, such as to clean up a slab allocation and/or to inform
+  // an external allocator of delete.
+  class TrackedParentVmo {
+  public:
+    using DoDelete = fit::callback<void(TrackedParentVmo* parent)>;
+    // The do_delete callback will be invoked upon the sooner of (A) the client
+    // code causing ~ParentVmo, or (B) ZX_VMO_ZERO_CHILDREN occurring async
+    // after StartWait() is called.
+    TrackedParentVmo(fbl::RefPtr<LogicalBufferCollection> buffer_collection,
+                     zx::vmo vmo,
+                     DoDelete do_delete);
+    ~TrackedParentVmo();
+    // This should only be called after client code has created a child VMO, and
+    // will begin the wait for ZX_VMO_ZERO_CHILDREN.
+    zx_status_t StartWait();
+    zx::vmo TakeVmo();
+    const zx::vmo& vmo() const;
+
+    TrackedParentVmo(const TrackedParentVmo&) = delete;
+    TrackedParentVmo(TrackedParentVmo&&) = delete;
+    TrackedParentVmo& operator=(const TrackedParentVmo&) = delete;
+    TrackedParentVmo& operator=(TrackedParentVmo&&) = delete;
+  private:
+    void OnZeroChildren(async_dispatcher_t* dispatcher,
+                        async::WaitBase* wait,
+                        zx_status_t status,
+                        const zx_packet_signal_t* signal);
+    fbl::RefPtr<LogicalBufferCollection> buffer_collection_;
+    zx::vmo vmo_;
+    DoDelete do_delete_;
+    async::WaitMethod<TrackedParentVmo, &TrackedParentVmo::OnZeroChildren> zero_children_wait_;
+    // Only for asserts:
+    bool waiting_ = {};
+  };
+  using ParentVmoMap = std::map<zx_handle_t, std::unique_ptr<TrackedParentVmo>>;
+  ParentVmoMap parent_vmos_;
 };
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
