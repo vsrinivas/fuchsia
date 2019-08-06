@@ -7,6 +7,10 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+# Only including packages built inside this file.
+have_libvulkan_img =
+    build_libvulkan_img_rgx != [] || have_prebuilt_libvulkan_img
+
 group("magma-vulkan") {
   if (magma_enable_developer_build) {
     testonly = true
@@ -18,7 +22,7 @@ group("magma-vulkan") {
     ":magma-img-rgx-mt8167",
     ":magma-img-rgx-mt8167-firmware",
   ]
-  if (build_libvulkan_img_rgx != []) {
+  if (have_libvulkan_img) {
     public_deps += [ ":magma-img-rgx-mt8167-config" ]
   }
 }
@@ -70,6 +74,13 @@ package("magma-img-rgx-mt8167") {
         name = "libvulkan_img_rgx_mt8167.so"
       },
     ]
+  } else if (have_prebuilt_libvulkan_img) {
+    libraries = [
+      {
+        name = "libvulkan_img_rgx_mt8167.so"
+        source = rebase_path(prebuilt_libvulkan_img_path)
+      },
+    ]
   }
   drivers = [
     {
@@ -90,7 +101,7 @@ package("magma-img-rgx-no-hardware") {
   ]
 }
 
-if (build_libvulkan_img_rgx != []) {
+if (have_libvulkan_img) {
   icd_config_data("magma-img-rgx-mt8167-config") {
     icds = [
       {
