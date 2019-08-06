@@ -821,7 +821,7 @@ async fn test_add_device_routes() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_list_del_device_routes() {
+async fn test_list_del_routes() {
     // create a stack and add a single endpoint to it so we have the interface
     // id:
     let mut t = TestSetupBuilder::new()
@@ -844,9 +844,7 @@ async fn test_list_del_device_routes() {
     .unwrap();
     let route2 = EntryEither::new(
         SubnetEither::new(Ipv4Addr::from([10, 0, 0, 0]).into(), 24).unwrap(),
-        EntryDest::Local {
-            device: test_stack.event_loop.ctx.dispatcher().get_core_id(if_id).unwrap(),
-        },
+        EntryDest::Remote { next_hop: Ipv4Addr::from([10, 0, 0, 1]).into() },
     )
     .unwrap();
 
@@ -870,7 +868,7 @@ async fn test_list_del_device_routes() {
     let mut fidl = route1.into_subnet_dest().0.into_fidl();
     let () = await!(test_stack.run_future(stack.del_forwarding_entry(&mut fidl)))
         .squash_result()
-        .expect("can delete forwarding entry");
+        .expect("can delete device forwarding entry");
     // can't delete again:
     let mut fidl = route1.into_subnet_dest().0.into_fidl();
     assert_eq!(
@@ -886,15 +884,31 @@ async fn test_list_del_device_routes() {
         netstack3_core::get_all_routes(&mut test_stack.event_loop.ctx).collect();
     assert!(!all_routes.iter().any(|e| e == &route1));
     assert!(all_routes.iter().any(|e| e == &route2));
+
+    // delete route2:
+    let mut fidl = route2.into_subnet_dest().0.into_fidl();
+    let () = await!(test_stack.run_future(stack.del_forwarding_entry(&mut fidl)))
+        .squash_result()
+        .expect("can delete next-hop forwarding entry");
+    // can't delete again:
+    let mut fidl = route2.into_subnet_dest().0.into_fidl();
+    assert_eq!(
+        await!(test_stack.run_future(stack.del_forwarding_entry(&mut fidl)))
+            .unwrap()
+            .unwrap()
+            .type_,
+        fidl_net_stack::ErrorType::NotFound
+    );
+
+    // check that both routes were deleted (should've disappeared from core)
+    let all_routes: Vec<_> =
+        netstack3_core::get_all_routes(&mut test_stack.event_loop.ctx).collect();
+    assert!(!all_routes.iter().any(|e| e == &route1));
+    assert!(!all_routes.iter().any(|e| e == &route2));
 }
 
 #[fasync::run_singlethreaded(test)]
-#[should_panic]
-async fn test_remote_routes() {
-    // NOTE(brunodalbo): successfully adding remote routes will panic because
-    //  it's not implemented in core. Once they do get implemented in core,
-    //  though, this test will start failing meaning we should complete it.
-
+async fn test_add_remote_routes() {
     let mut t = await!(TestSetupBuilder::new().add_empty_stack().build()).unwrap();
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
@@ -912,6 +926,25 @@ async fn test_remote_routes() {
     let () = await!(test_stack.run_future(stack.add_forwarding_entry(&mut fwd_entry)))
         .squash_result()
         .expect("Add forwarding entry succeeds");
+
+    // finally, check that bad routes will fail:
+    // a duplicate entry should fail with AlreadyExists:
+    let mut bad_entry = fidl_net_stack::ForwardingEntry {
+        subnet: fidl_net::Subnet {
+            addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [192, 168, 0, 0] }),
+            prefix_len: 24,
+        },
+        destination: fidl_net_stack::ForwardingDestination::NextHop(fidl_net::IpAddress::Ipv4(
+            fidl_net::Ipv4Address { addr: [192, 168, 0, 1] },
+        )),
+    };
+    assert_eq!(
+        await!(test_stack.run_future(stack.add_forwarding_entry(&mut bad_entry)))
+            .unwrap()
+            .unwrap()
+            .type_,
+        fidl_net_stack::ErrorType::AlreadyExists
+    );
 }
 
 async fn test_main_loop() {

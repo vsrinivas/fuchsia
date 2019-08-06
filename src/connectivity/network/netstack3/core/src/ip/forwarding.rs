@@ -4,13 +4,13 @@
 
 use std::fmt::{self, Debug, Formatter};
 
+use log::warn;
 use net_types::ip::{Ip, Subnet};
 
 use crate::device::DeviceId;
 use crate::ip::*;
 
 // TODO(joshlf):
-// - Implement route deletion.
 // - How do we detect circular routes? Do we attempt to detect at rule
 //   installation time? At runtime? Using what algorithm?
 
@@ -19,6 +19,8 @@ use crate::ip::*;
 // whose subnet is a subset of the loopback subnet from being installed; they
 // will never get triggered anyway, so implementing the logic of detecting these
 // rules is a needless complexity.
+
+const MAX_RECURSE_DEPTH: u8 = 16;
 
 /// The destination of an outbound IP packet.
 ///
@@ -127,7 +129,7 @@ impl<I: Ip> ForwardingTable<I> {
         );
 
         if !address.is_unspecified() {
-            let dst = self.lookup_helper(address);
+            let dst = self.lookup_helper(address, 0);
             trace!("lookup({}) -> {:?}", address, dst);
             dst
         } else {
@@ -139,7 +141,12 @@ impl<I: Ip> ForwardingTable<I> {
         self.entries.iter()
     }
 
-    fn lookup_helper(&self, address: I::Addr) -> Option<Destination<I>> {
+    fn lookup_helper(&self, address: I::Addr, depth: u8) -> Option<Destination<I>> {
+        if depth > MAX_RECURSE_DEPTH {
+            warn!("forwarding table lookup hit recursion depth limit");
+            return None;
+        }
+
         let best_match = self
             .entries
             .iter()
@@ -151,7 +158,7 @@ impl<I: Ip> ForwardingTable<I> {
                 Some(Destination { next_hop: address, device: *device })
             }
             Some(Entry { dest: EntryDest::Remote { next_hop }, .. }) => {
-                self.lookup_helper(*next_hop)
+                self.lookup_helper(*next_hop, depth + 1)
             }
             None => None,
         }

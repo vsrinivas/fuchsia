@@ -55,7 +55,7 @@ pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
 
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnetEither, Ipv4Addr, Ipv6Addr, SubnetEither};
+use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
 use packet::{Buf, BufferMut, EmptyBuf};
 use rand::{CryptoRng, RngCore};
 use std::time;
@@ -64,15 +64,20 @@ use crate::device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder};
 use crate::ip::{IpLayerState, IpLayerTimerId};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
 
-/// Map an expression over either version of an address.
+/// Map an expression over either version of one or more addresses.
 ///
-/// `map_addr_version!` takes a type which is an enum with two variants - `V4`
-/// and `V6` - and a value of that type. It matches on the variants, and for
-/// both variants, invokes an expression on the inner contents. `$addr` is both
-/// the name of the variable to match on, and the name that the address will be
-/// bound to for the scope of the expression.
+/// `map_addr_version!` when given a value of a type which is an enum with two
+/// variants - `V4` and `V6` - matches on the variants, and for both variants,
+/// invokes an expression on the inner contents. `$addr` is both the name of the
+/// variable to match on, and the name that the address will be bound to for the
+/// scope of the expression.
 ///
-/// To make it concrete, the expression `map_addr_version!(Foo, bar, blah(bar))`
+/// `map_addr_version!` when given a list of values and their types (all enums
+/// with variants `V4` and `V6`), matches on the tuple of values and invokes the
+/// `$match` expression when all values are of the same variant. Otherwise the
+/// `$mismatch` expression is invoked.
+///
+/// To make it concrete, the expression `map_addr_version!(bar: Foo; blah(bar))`
 /// desugars to:
 ///
 /// ```rust,ignore
@@ -81,16 +86,35 @@ use crate::transport::{TransportLayerState, TransportLayerTimerId};
 ///     Foo::V6(bar) => blah(bar),
 /// }
 /// ```
+///
+/// Also,
+/// `map_addr_version!((foo: Foo, bar: Bar); blah(foo, bar), unreachable!())`
+/// desugars to:
+///
+/// ```rust,ignore
+/// match (foo, bar) {
+///     (Foo::V4(foo), Bar::V4(bar)) => blah(foo, bar),
+///     (Foo::V6(foo), Bar::V6(bar)) => blah(foo, bar),
+///     _ => unreachable!(),
+/// }
+/// ```
 #[macro_export]
 macro_rules! map_addr_version {
-    ($ty:tt, $addr:ident, $expr:expr) => {
+    ($addr:ident: $ty:tt; $expr:expr) => {
         match $addr {
             $ty::V4($addr) => $expr,
             $ty::V6($addr) => $expr,
         }
     };
-    ($ty:tt, $addr:ident, $expr:expr,) => {
-        map_addr_version!($addr, $expr)
+    (( $( $addr:ident : $ty:tt ),+ ); $match:expr, $mismatch:expr) => {
+        match ( $( $addr ),+ ) {
+            ( $( $ty::V4( $addr ) ),+ ) => $match,
+            ( $( $ty::V6( $addr ) ),+ ) => $match,
+            _ => $mismatch,
+        }
+    };
+    (( $( $addr:ident : $ty:tt ),+ ); $match:expr, $mismatch:expr,) => {
+        map_addr_version!(($( $addr: $ty ),+); $match, $mismatch)
     };
 }
 
@@ -404,8 +428,7 @@ pub fn set_ip_addr_subnet<D: EventDispatcher>(
     addr_sub: AddrSubnetEither,
 ) {
     map_addr_version!(
-        AddrSubnetEither,
-        addr_sub,
+        addr_sub: AddrSubnetEither;
         crate::device::set_ip_addr_subnet(ctx, device, addr_sub)
     );
 }
@@ -418,12 +441,16 @@ pub fn add_route<D: EventDispatcher>(
     let (subnet, dest) = entry.into_subnet_dest();
     match dest {
         EntryDest::Local { device } => map_addr_version!(
-            SubnetEither,
-            subnet,
+            subnet: SubnetEither;
             crate::ip::add_device_route(ctx, subnet, device)
         )
         .map_err(From::from),
-        _ => unimplemented!("Non-local route destinations not supported yet."),
+        EntryDest::Remote { next_hop } => map_addr_version!(
+            (subnet: SubnetEither, next_hop: IpAddr);
+            crate::ip::add_route(ctx, subnet, next_hop),
+            unreachable!(),
+        )
+        .map_err(From::from),
     }
 }
 
@@ -433,7 +460,7 @@ pub fn del_device_route<D: EventDispatcher>(
     ctx: &mut Context<D>,
     subnet: SubnetEither,
 ) -> Result<(), error::NetstackError> {
-    map_addr_version!(SubnetEither, subnet, crate::ip::del_device_route(ctx, subnet))
+    map_addr_version!(subnet: SubnetEither; crate::ip::del_device_route(ctx, subnet))
         .map_err(From::from)
 }
 
