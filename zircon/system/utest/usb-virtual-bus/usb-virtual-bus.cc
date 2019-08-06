@@ -166,9 +166,9 @@ void USBVirtualBus::InitFtdi(fbl::String* devpath) {
   ASSERT_TRUE(context.state_changed);
   ASSERT_EQ(ZX_OK,
             FidlCall(fuchsia_hardware_usb_virtual_bus_BusConnect, virtual_bus_handle_.get()));
-  fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/serial-impl", O_RDONLY));
+  fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/serial", O_RDONLY));
   while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {
   }
-  *devpath = fbl::String::Concat({fbl::String("class/serial-impl/"), *devpath});
+  *devpath = fbl::String::Concat({fbl::String("class/serial/"), *devpath});
 }
 }  // namespace usb_virtual_bus
