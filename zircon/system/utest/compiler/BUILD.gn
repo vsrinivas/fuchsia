@@ -5,6 +5,7 @@
 test("compiler") {
   sources = [
     "integer.cc",
+    "no-unique-address.cc",
   ]
   configs += [ "$zx/public/gn/config:integer-paranoia" ]
   deps = [

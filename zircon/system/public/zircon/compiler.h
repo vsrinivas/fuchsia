@@ -61,6 +61,10 @@
 #define __has_feature(x) 0
 #endif
 
+#ifndef __has_cpp_attribute
+#define __has_cpp_attribute(x) 0
+#endif
+
 #define __ALWAYS_INLINE __attribute__((__always_inline__))
 #define __MAY_ALIAS __attribute__((__may_alias__))
 #define __NONNULL(x) __attribute__((__nonnull__ x))
@@ -72,6 +76,15 @@
 #define __LOCAL __attribute__((__visibility__("hidden")))
 #define __THREAD __thread
 #define __offsetof(type, field) __builtin_offsetof(type, field)
+
+// Only define __NO_UNIQUE_ADDRESS for C++, since it doesn't make sense in C.
+#ifdef __cplusplus
+#if __has_cpp_attribute(no_unique_address)
+#define __NO_UNIQUE_ADDRESS [[no_unique_address]]
+#else
+#define __NO_UNIQUE_ADDRESS
+#endif
+#endif  // ifdef __cplusplus
 
 #if defined(__cplusplus) && __cplusplus >= 201703L
 #define __FALLTHROUGH [[fallthrough]]
