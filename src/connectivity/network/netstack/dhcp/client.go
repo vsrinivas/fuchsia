@@ -148,16 +148,18 @@ func (c *Client) request(ctx context.Context, ep tcpip.Endpoint, wq *waiter.Queu
 	}
 
 	// DHCPDISCOVER
+	commonOpts := options{
+		{optParamReq, []byte{
+			1,  // request subnet mask
+			3,  // request router
+			15, // domain name
+			6,  // domain name server
+		}},
+	}
 	{
-		discOpts := options{
+		discOpts := append(options{
 			{optDHCPMsgType, []byte{byte(dhcpDISCOVER)}},
-			{optParamReq, []byte{
-				1,  // request subnet mask
-				3,  // request router
-				15, // domain name
-				6,  // domain name server
-			}},
-		}
+		}, commonOpts...)
 		if len(requestedAddr) != 0 {
 			discOpts = append(discOpts, option{optReqIPAddr, []byte(requestedAddr)})
 		}
@@ -240,11 +242,16 @@ func (c *Client) request(ctx context.Context, ep tcpip.Endpoint, wq *waiter.Queu
 
 	// DHCPREQUEST
 	err = func() error {
-		reqOpts := options{
+		// Per https://tools.ietf.org/html/rfc2131#section-3.5:
+		//
+		// If the client includes a list of parameters in a
+		// DHCPDISCOVER message, it MUST include that list in any
+		// subsequent DHCPREQUEST messages.
+		reqOpts := append(options{
 			{optDHCPMsgType, []byte{byte(dhcpREQUEST)}},
 			{optReqIPAddr, []byte(c.addr)},
 			{optDHCPServer, []byte(cfg.ServerAddress)},
-		}
+		}, commonOpts...)
 		h := make(header, headerBaseSize+reqOpts.len()+1)
 		h.init()
 		h.setOp(opRequest)
