@@ -54,12 +54,12 @@ class TimezoneImpl : public fuchsia::timezone::Timezone,
   // Destroys a watcher proxy (called upon a connection error).
   void ReleaseWatcher(fuchsia::deprecatedtimezone::TimezoneWatcher* watcher);
   // Alerts all watchers when an update has occurred.
-  void NotifyWatchers(const fidl::StringPtr& new_timezone_id);
+  void NotifyWatchers(const std::string& new_timezone_id);
   // Returns true if |timezone_id| is a valid timezone.
-  bool IsValidTimezoneId(const fidl::StringPtr& timezone_id);
+  bool IsValidTimezoneId(const std::string& timezone_id);
   // Private implementation of TimezoneImpl::GetTimezoneId, for use in other
   // methods. Returns a guaranteed-valid timezone ID.
-  fidl::StringPtr GetTimezoneIdImpl();
+  std::string GetTimezoneIdImpl();
 
   std::unique_ptr<sys::ComponentContext> context_;
   const char* const icu_data_path_;

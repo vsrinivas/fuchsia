@@ -67,8 +67,8 @@ void TimezoneImpl::GetTimezoneOffsetMinutes(int64_t milliseconds_since_epoch,
     callback(0, 0);
     return;
   }
-  fidl::StringPtr timezone_id = GetTimezoneIdImpl();
-  std::unique_ptr<icu::TimeZone> timezone(icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
+  std::string timezone_id = GetTimezoneIdImpl();
+  std::unique_ptr<icu::TimeZone> timezone(icu::TimeZone::createTimeZone(timezone_id.c_str()));
   int32_t local_offset = 0, dst_offset = 0;
   UErrorCode error = U_ZERO_ERROR;
   // Local time is set to false, and local_offset/dst_offset/error are mutated
@@ -88,7 +88,7 @@ void TimezoneImpl::GetTimezoneOffsetMinutes(int64_t milliseconds_since_epoch,
   callback(local_offset, dst_offset);
 }
 
-void TimezoneImpl::NotifyWatchers(const fidl::StringPtr& new_timezone_id) {
+void TimezoneImpl::NotifyWatchers(const std::string& new_timezone_id) {
   for (auto& watcher : watchers_) {
     watcher->OnTimezoneOffsetChange(new_timezone_id);
   }
@@ -97,8 +97,8 @@ void TimezoneImpl::NotifyWatchers(const fidl::StringPtr& new_timezone_id) {
   }
 }
 
-bool TimezoneImpl::IsValidTimezoneId(const fidl::StringPtr& timezone_id) {
-  std::unique_ptr<icu::TimeZone> timezone(icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
+bool TimezoneImpl::IsValidTimezoneId(const std::string& timezone_id) {
+  std::unique_ptr<icu::TimeZone> timezone(icu::TimeZone::createTimeZone(timezone_id.c_str()));
   if ((*timezone) == icu::TimeZone::getUnknown()) {
     return false;
   }
@@ -130,7 +130,7 @@ void TimezoneImpl::SetTimezone(std::string timezone_id, SetTimezoneCallback call
 
 void TimezoneImpl::GetTimezoneId(GetTimezoneIdCallback callback) { callback(GetTimezoneIdImpl()); }
 
-fidl::StringPtr TimezoneImpl::GetTimezoneIdImpl() {
+std::string TimezoneImpl::GetTimezoneIdImpl() {
   if (!valid_) {
     return kDefaultTimezone;
   }

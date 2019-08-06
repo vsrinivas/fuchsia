@@ -51,7 +51,7 @@ TEST_F(DeprecatedTimeZoneUnitTest, SetTimezone_Unknown) {
 TEST_F(DeprecatedTimeZoneUnitTest, SetTimezone_GetTimezoneId) {
   auto timezone_ptr = timezone();
   bool success = false;
-  fidl::StringPtr expected_timezone = "America/Los_Angeles";
+  std::string expected_timezone = "America/Los_Angeles";
   timezone_ptr->SetTimezone(expected_timezone, [&success](bool retval) { success = retval; });
   RunLoopUntilIdle();
   ASSERT_TRUE(success);
