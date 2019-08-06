@@ -54,7 +54,7 @@ fit::promise<std::string> GetDeviceBoardName() {
     FX_PLOGS(ERROR, out_status) << "failed to get device board name";
     return fit::make_result_promise<std::string>(fit::error());
   }
-  return fit::make_ok_promise(std::string(out_board_name));
+  return fit::make_ok_promise(out_board_name.value_or(""));
 }
 
 fit::promise<std::string> ReadStringFromFile(const std::string& filepath) {
