@@ -294,22 +294,29 @@ TEST_P(TimeoutSockoptsTest, Timeout) {
   int server_fd;
   ASSERT_GE(server_fd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
-  const int64_t timeout_us = 1150000;
-
-  // Set the timeout.
-  struct timeval tv = {
-      .tv_sec = timeout_us / 1000000,
-      .tv_usec = timeout_us % 1000000,
-  };
-  EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0) << strerror(errno);
+  // We're done with the listener.
+  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
 
   // Filling the sending buffer so that write timeout condition could be
   // triggered for testing.
   if (optname == SO_SNDTIMEO) {
+    // Use a very small timeout while we're filling the buffer. Using a value smaller than this
+    // produces flakiness on Linux.
+    const struct timeval tv = {
+        .tv_sec = 0,
+        .tv_usec = 200000,
+    };
+    EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0) << strerror(errno);
+
+    int sndbuf;
+    socklen_t optlen = sizeof(sndbuf);
+    EXPECT_EQ(getsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, &optlen), 0) << strerror(errno);
+    EXPECT_EQ(optlen, sizeof(sndbuf));
+
     // buf size should be neither too small in which case too many writes operation is required
     // to fill out the sending buffer nor too big in which case a big stack is needed for the buf
-    // array. Here 20k bytes are used.
-    char buf[2048 * 10];
+    // array.
+    char buf[sndbuf >> 4];
     int size = 0;
     int cnt = 0;
     while ((size = write(client_fd, buf, sizeof(buf))) > 0) {
@@ -319,72 +326,89 @@ TEST_P(TimeoutSockoptsTest, Timeout) {
     ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
   }
 
-  std::thread timeout_thread([server_fd]() {
-    // This is long enough for the test to succeed. If this sleep ends before the
-    // immediately following read/write ends, this thread will close the connection and cause the
-    // test to fail.
-    int64_t timeout_ns = timeout_us * 1000 * 3;
-    struct timespec timeout = {
-        .tv_sec = timeout_ns / 1000000000,
-        .tv_nsec = timeout_ns % 1000000000,
+  // We want this to be a small number so the test is fast, but at least 1
+  // second so that we exercise `tv_sec`.
+  const auto timeout = std::chrono::seconds(1) + std::chrono::milliseconds(50);
+  {
+    const auto sec = std::chrono::duration_cast<std::chrono::seconds>(timeout);
+    const struct timeval tv = {
+        .tv_sec = sec.count(),
+        .tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(timeout - sec).count(),
     };
-    ASSERT_EQ(nanosleep(&timeout, NULL), 0) << strerror(errno);
-    EXPECT_EQ(close(server_fd), 0) << strerror(errno);
-  });
+    EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0) << strerror(errno);
+  }
 
-  // Try to read/write, which should time out. If the timeout thread closes the connection, that
-  // will also cause the read/write to return.
-  timespec current_time;
-  ASSERT_EQ(clock_gettime(CLOCK_MONOTONIC, &current_time), 0) << strerror(errno);
-  int64_t start_time_ns = current_time.tv_sec * 1000000000 + current_time.tv_nsec;
+  const auto margin = std::chrono::milliseconds(50);
 
   char buf[16];
-  switch (optname) {
-    case SO_RCVTIMEO:
-      EXPECT_EQ(read(client_fd, buf, sizeof(buf)), -1);
-      break;
-    case SO_SNDTIMEO:
-      EXPECT_EQ(write(client_fd, buf, sizeof(buf)), -1);
-      break;
+
+  // Perform the read/write. This is the core of the test - we expect the operation to time out
+  // per our setting of the timeout above.
+  //
+  // The operation is performed asynchronously so that in the event of regression, this test can
+  // fail gracefully rather than deadlocking.
+  {
+    const auto fut = std::async(std::launch::async, [=, &buf]() {
+      const auto start = std::chrono::steady_clock::now();
+
+      switch (optname) {
+        case SO_RCVTIMEO:
+          EXPECT_EQ(read(client_fd, buf, sizeof(buf)), -1);
+          break;
+        case SO_SNDTIMEO:
+          EXPECT_EQ(write(client_fd, buf, sizeof(buf)), -1);
+          break;
+      }
+      ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
+
+      const auto elapsed = std::chrono::steady_clock::now() - start;
+
+      // Check that the actual time waited was close to the expectation.
+      const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
+      EXPECT_LT(elapsed, timeout + margin)
+          << "elapsed=" << elapsed_ms.count() << "ms (which is not within " << margin.count()
+          << "ms of " << std::chrono::milliseconds(timeout).count() << "ms)";
+      EXPECT_GT(elapsed, timeout - margin)
+          << "elapsed=" << elapsed_ms.count() << "ms (which is not within " << margin.count()
+          << "ms of " << std::chrono::milliseconds(timeout).count() << "ms)";
+    });
+    EXPECT_EQ(fut.wait_for(timeout + 2 * margin), std::future_status::ready);
   }
-  ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
-
-  ASSERT_EQ(clock_gettime(CLOCK_MONOTONIC, &current_time), 0) << strerror(errno);
-  int64_t end_time_ns = current_time.tv_sec * 1000000000 + current_time.tv_nsec;
-
-  int64_t total_ns = end_time_ns - start_time_ns;
-  // Check that the actual time waited was within 100ms of the expectation.
-  EXPECT_LT(total_ns, 1000 * (timeout_us + 100000)) << "timeout waited too long";
-  EXPECT_GT(total_ns, 1000 * (timeout_us - 100000)) << "timeout didn't wait long enough";
 
   // Remove the timeout
-  tv = {
-      .tv_sec = 0,
-      .tv_usec = 0,
-  };
+  const struct timeval tv = {};
   EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0) << strerror(errno);
 
-  // This read/write should never timeout.  timeout_thread should close the connection
-  // eventually.  Note that read and write return different value when the peer
-  // is closed.
-  switch (optname) {
-    case SO_RCVTIMEO:
-      EXPECT_EQ(read(client_fd, buf, sizeof(buf)), 0) << strerror(errno);
-      break;
-    case SO_SNDTIMEO:
-      EXPECT_EQ(write(client_fd, buf, sizeof(buf)), -1);
+  // Wrap the read/write in a future to enable a timeout. We expect the future
+  // to time out.
+  {
+    const auto fut = std::async(std::launch::async, [=, &buf]() {
+      switch (optname) {
+        case SO_RCVTIMEO:
+          EXPECT_EQ(read(client_fd, buf, sizeof(buf)), 0) << strerror(errno);
+          break;
+        case SO_SNDTIMEO:
+          EXPECT_EQ(write(client_fd, buf, sizeof(buf)), -1);
 
 // TODO(NET-2462): Investigate why different errnos are returned
 // for Linux and Fuchsia.
 #if defined(__linux__)
-      EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
+          EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
 #else
-      EXPECT_EQ(errno, EPIPE) << strerror(errno);
+          EXPECT_EQ(errno, EPIPE) << strerror(errno);
 #endif
-      break;
+          break;
+      }
+    });
+    EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
+
+    // Closing the remote end should cause the read/write to complete.
+    EXPECT_EQ(close(server_fd), 0) << strerror(errno);
+
+    EXPECT_EQ(fut.wait_for(margin), std::future_status::ready);
   }
 
-  timeout_thread.join();  // Clean up the thread.
+  EXPECT_EQ(close(client_fd), 0) << strerror(errno);
 }
 
 TEST_P(TimeoutSockoptsTest, TimeoutSockopts) {
