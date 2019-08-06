@@ -10,6 +10,7 @@
 #include <lib/fake-i2c/fake-i2c.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/interrupt.h>
 #include <stdbool.h>
 #include <stdint.h>
