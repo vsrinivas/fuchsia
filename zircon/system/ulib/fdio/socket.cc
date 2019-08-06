@@ -218,12 +218,6 @@ static ssize_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int fla
     return ZX_ERR_NOT_SUPPORTED;
   }
   // TODO: support flags and control messages
-  if (*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED) {
-    // if connected, can't specify address
-    if (msg->msg_name != NULL || msg->msg_namelen != 0) {
-      return ZX_ERR_ALREADY_EXISTS;
-    }
-  }
   zxio_socket_t* sio = fdio_get_zxio_socket(io);
   size_t actual = 0u;
   zx_status_t status = zxs_sendmsg(&sio->socket, msg, &actual);

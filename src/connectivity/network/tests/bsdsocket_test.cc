@@ -260,9 +260,9 @@ TEST(NetStreamTest, BlockingAcceptWrite) {
 
   EXPECT_STREQ(msg, out.c_str());
 
-  EXPECT_EQ(0, close(acptfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 class TimeoutSockoptsTest : public ::testing::TestWithParam<int /* optname */> {};
@@ -525,9 +525,9 @@ TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
     EXPECT_STREQ(msg, out[i].c_str());
   }
 
-  EXPECT_EQ(0, close(acptfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, BlockingAcceptDupWrite) {
@@ -567,9 +567,9 @@ TEST(NetStreamTest, BlockingAcceptDupWrite) {
 
   EXPECT_STREQ(msg, out.c_str());
 
-  EXPECT_EQ(0, close(acptfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, NonBlockingAcceptWrite) {
@@ -611,9 +611,9 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
 
   EXPECT_STREQ(msg, out.c_str());
 
-  EXPECT_EQ(0, close(acptfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
@@ -659,9 +659,9 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
 
   EXPECT_STREQ(msg, out.c_str());
 
-  EXPECT_EQ(0, close(acptfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, NonBlockingConnectWrite) {
@@ -714,9 +714,9 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
 
   EXPECT_STREQ(msg, out.c_str());
 
-  EXPECT_EQ(0, close(acptfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, NonBlockingConnectRead) {
@@ -774,9 +774,9 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
 
     EXPECT_STREQ(msg, out.c_str());
 
-    EXPECT_EQ(0, close(acptfd));
-    EXPECT_EQ(0, close(ntfyfd[0]));
-    EXPECT_EQ(0, close(ntfyfd[1]));
+    EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+    EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+    EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
   }
 }
 
@@ -815,9 +815,8 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
     ASSERT_EQ(ECONNREFUSED, val);
   }
 
-  ASSERT_EQ(0, close(connfd));
-
-  EXPECT_EQ(0, close(acptfd));
+  EXPECT_EQ(close(connfd), 0) << strerror(errno);
+  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, GetTcpInfo) {
@@ -872,45 +871,174 @@ TEST(NetStreamTest, Shutdown) {
   EXPECT_EQ(close(inbound), 0) << strerror(errno);
 }
 
-TEST(NetDatagramTest, DatagramSendto) {
+enum sendMethod {
+  SENDTO,
+  SENDMSG,
+};
+
+// Use this routine to test blocking socket reads. On failure, this attempts to recover the blocked
+// thread.
+// Return value:
+//      (1) actual length of read data on successful recv
+//      (2) 0, when we abort a blocked recv
+//      (3) -1, on failure of both of the above operations.
+static ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flags,
+                               struct sockaddr_in* addr, socklen_t* addrlen, int socketType) {
+  std::future<ssize_t> recv = std::async(std::launch::async, [recvfd, buf, len, flags]() {
+    ssize_t readlen;
+    memset(buf, 0, len);
+    readlen = recvfrom(recvfd, buf, len, flags, nullptr, nullptr);
+    return readlen;
+  });
+
+  if (recv.wait_for(std::chrono::milliseconds(kTimeout)) == std::future_status::ready) {
+    return recv.get();
+  }
+
+  // recover the blocked receiver thread
+  switch (socketType) {
+    case SOCK_STREAM: {
+      // shutdown() would unblock the receiver thread with recv returning 0.
+      EXPECT_EQ(shutdown(recvfd, SHUT_RD), 0) << strerror(errno);
+      EXPECT_EQ(recv.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
+      EXPECT_EQ(recv.get(), 0);
+      break;
+    }
+    case SOCK_DGRAM: {
+      // Send a valid packet to unblock the receiver.
+      // This would ensure that the async-task deterministically exits before call to future`s
+      // destructor. Calling close() on recvfd when the async task is blocked on recv(),
+      // __does_not__ cause recv to return; this can result in undefined behavior, as the descriptor
+      // can get reused. Instead of sending a valid packet to unblock the recv() task, we could call
+      // shutdown(), but that returns ENOTCONN (unconnected) but still causing recv() to return.
+      // shutdown() becomes unreliable for unconnected UDP sockets because, irrespective of the
+      // effect of calling this call, it returns error.
+      // TODO(NET-2558): dgram send should accept 0 length payload, once that is fixed, fix this revert
+      // code
+      char shut[] = "shutdown";
+      EXPECT_EQ(
+          sendto(sendfd, shut, sizeof(shut), 0, reinterpret_cast<struct sockaddr*>(addr), *addrlen),
+          static_cast<ssize_t>(sizeof(shut)))
+          << strerror(errno);
+      EXPECT_EQ(recv.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
+      EXPECT_EQ(recv.get(), static_cast<ssize_t>(sizeof(shut)));
+      EXPECT_STREQ(shut, buf);
+      break;
+    }
+    default: {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+class DatagramSendTest : public ::testing::TestWithParam<enum sendMethod> {};
+
+TEST_P(DatagramSendTest, DatagramSend) {
+  enum sendMethod sendMethod = GetParam();
   int recvfd;
   ASSERT_GE(recvfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
 
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
+  struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-  ASSERT_EQ(bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
+  EXPECT_EQ(bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(recvfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
-
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
-
-  std::string out;
-  std::thread thrd(DatagramRead, recvfd, &out, &addr, &addrlen, ntfyfd[1], kTimeout);
+  EXPECT_EQ(getsockname(recvfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
+  EXPECT_EQ(addrlen, sizeof(addr));
 
   const char* msg = "hello";
+  char recvbuf[32] = {};
+  struct iovec iov = {};
+  iov.iov_base = (void*)msg;
+  iov.iov_len = strlen(msg);
+  struct msghdr msghdr = {};
+  msghdr.msg_iov = &iov;
+  msghdr.msg_iovlen = 1;
+  msghdr.msg_name = &addr;
+  msghdr.msg_namelen = addrlen;
 
   int sendfd;
-  ASSERT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(sendto(sendfd, msg, strlen(msg), 0, (struct sockaddr*)&addr, addrlen),
-            (ssize_t)strlen(msg))
-      << strerror(errno);
-  ASSERT_EQ(0, close(sendfd));
+  EXPECT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
+  switch (sendMethod) {
+    case SENDTO: {
+      EXPECT_EQ(sendto(sendfd, msg, strlen(msg), 0, (struct sockaddr*)&addr, addrlen),
+                (ssize_t)strlen(msg))
+          << strerror(errno);
+      break;
+    }
+    case SENDMSG: {
+      EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)strlen(msg)) << strerror(errno);
+      break;
+    }
+    default: {
+      FAIL() << "unexpected test variant " << sendMethod;
+      break;
+    }
+  }
+  EXPECT_EQ(
+      asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen, SOCK_DGRAM),
+      (ssize_t)strlen(msg));
+  EXPECT_STREQ(recvbuf, msg);
+  EXPECT_EQ(close(sendfd), 0) << strerror(errno);
 
-  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-  thrd.join();
+  // sendto/sendmsg on connected sockets does accept sockaddr input argument and
+  // also lets the dest sockaddr be overridden from what was passed for connect.
+  EXPECT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
+  EXPECT_EQ(connect(sendfd, (struct sockaddr*)&addr, addrlen), 0) << strerror(errno);
+  switch (sendMethod) {
+    case SENDTO: {
+      EXPECT_EQ(sendto(sendfd, msg, strlen(msg), 0, (struct sockaddr*)&addr, addrlen),
+                (ssize_t)strlen(msg))
+          << strerror(errno);
+      break;
+    }
+    case SENDMSG: {
+      EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)strlen(msg)) << strerror(errno);
+      break;
+    }
+    default: {
+      FAIL() << "unexpected test variant " << sendMethod;
+      break;
+    }
+  }
+  EXPECT_EQ(
+      asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen, SOCK_DGRAM),
+      (ssize_t)strlen(msg));
+  EXPECT_STREQ(recvbuf, msg);
 
-  EXPECT_STREQ(msg, out.c_str());
+  // Test sending to an address that is different from what we're connected to.
+  addr.sin_port = htons(ntohs(addr.sin_port) + 1);
+  switch (sendMethod) {
+    case SENDTO: {
+      EXPECT_EQ(sendto(sendfd, msg, strlen(msg), 0, (struct sockaddr*)&addr, addrlen),
+                (ssize_t)strlen(msg))
+          << strerror(errno);
+      break;
+    }
+    case SENDMSG: {
+      EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)strlen(msg)) << strerror(errno);
+      break;
+    }
+    default: {
+      FAIL() << "unexpected test variant " << sendMethod;
+      break;
+    }
+  }
+  // Expect blocked receiver and try to recover it by sending a packet to the
+  // original connected sockaddr.
+  addr.sin_port = htons(ntohs(addr.sin_port) - 1);
+  EXPECT_EQ(
+      asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen, SOCK_DGRAM),
+      (ssize_t)0);
 
-  EXPECT_EQ(0, close(recvfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(sendfd), 0) << strerror(errno);
+  EXPECT_EQ(close(recvfd), 0) << strerror(errno);
 }
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSendTest, ::testing::Values(SENDTO, SENDMSG));
 
 TEST(NetDatagramTest, DatagramConnectWrite) {
   int recvfd;
@@ -946,9 +1074,9 @@ TEST(NetDatagramTest, DatagramConnectWrite) {
 
   EXPECT_STREQ(msg, out.c_str());
 
-  EXPECT_EQ(0, close(recvfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(recvfd), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetDatagramTest, DatagramPartialRecv) {
@@ -1002,11 +1130,10 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
   recv_result = recvmsg(recvfd, &msg, 0);
   ASSERT_EQ(kTestMsgSize, recv_result);
   ASSERT_EQ(std::string(kTestMsg, kTestMsgSize), std::string(recv_buf, kTestMsgSize));
-  EXPECT_EQ(0, msg.msg_flags);
+  EXPECT_EQ(msg.msg_flags, 0);
 
-  ASSERT_EQ(0, close(sendfd));
-
-  EXPECT_EQ(0, close(recvfd));
+  EXPECT_EQ(close(sendfd), 0) << strerror(errno);
+  EXPECT_EQ(close(recvfd), 0) << strerror(errno);
 }
 
 // TODO port reuse
@@ -1068,9 +1195,9 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
   ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
   thrd.join();
 
-  EXPECT_EQ(0, close(recvfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(recvfd), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 // DatagramSendtoRecvfromV6 tests if UDP send automatically binds an ephemeral
@@ -1130,9 +1257,9 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
   thrd.join();
 
-  EXPECT_EQ(0, close(recvfd));
-  EXPECT_EQ(0, close(ntfyfd[0]));
-  EXPECT_EQ(0, close(ntfyfd[1]));
+  EXPECT_EQ(close(recvfd), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetDatagramTest, ConnectAnyV4) {

@@ -11,6 +11,8 @@
 #include <zircon/device/ioctl.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 zx_status_t zxs_close(zxs_socket_t socket) {
   zx_status_t status;
   zx_status_t io_status = socket.control.Close_Deprecated(&status);
@@ -62,6 +64,9 @@ static zx_status_t zxs_sendmsg_stream(const zxs_socket_t* socket, const struct m
 
 static zx_status_t zxs_sendmsg_dgram(const zxs_socket_t* socket, const struct msghdr* msg,
                                      size_t* out_actual) {
+  if (msg->msg_namelen > sizeof((fdio_socket_msg_t*)nullptr)->addr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   size_t total = 0u;
   for (int i = 0; i < msg->msg_iovlen; i++) {
     struct iovec* iov = &msg->msg_iov[i];
@@ -72,10 +77,9 @@ static zx_status_t zxs_sendmsg_dgram(const zxs_socket_t* socket, const struct ms
   }
   size_t encoded_size = total + FDIO_SOCKET_MSG_HEADER_SIZE;
 
-  // TODO: avoid malloc m
-  fdio_socket_msg_t* m = static_cast<fdio_socket_msg_t*>(malloc(encoded_size));
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[encoded_size]);
+  fdio_socket_msg_t* m = reinterpret_cast<fdio_socket_msg_t*>(buf.get());
   if (msg->msg_name != nullptr) {
-    // TODO(abarth): Validate msg->msg_namelen against sizeof(m->addr).
     memcpy(&m->addr, msg->msg_name, msg->msg_namelen);
   }
   m->addrlen = msg->msg_namelen;
@@ -88,7 +92,6 @@ static zx_status_t zxs_sendmsg_dgram(const zxs_socket_t* socket, const struct ms
   }
   size_t actual = 0u;
   zx_status_t status = zxs_write(socket, m, encoded_size, &actual);
-  free(m);
   if (status == ZX_OK) {
     *out_actual = total;
   }
@@ -130,16 +133,14 @@ static zx_status_t zxs_recvmsg_dgram(const zxs_socket_t* socket, struct msghdr* 
     encoded_size += iov->iov_len;
   }
 
-  // TODO: avoid malloc
-  fdio_socket_msg_t* m = static_cast<fdio_socket_msg_t*>(malloc(encoded_size));
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[encoded_size]);
+  fdio_socket_msg_t* m = reinterpret_cast<fdio_socket_msg_t*>(buf.get());
   size_t actual = 0u;
   zx_status_t status = zxs_read(socket, m, encoded_size, &actual);
   if (status != ZX_OK) {
-    free(m);
     return status;
   }
   if (actual < FDIO_SOCKET_MSG_HEADER_SIZE) {
-    free(m);
     return ZX_ERR_INTERNAL;
   }
   actual -= FDIO_SOCKET_MSG_HEADER_SIZE;
@@ -169,7 +170,6 @@ static zx_status_t zxs_recvmsg_dgram(const zxs_socket_t* socket, struct msghdr* 
     actual -= remaining;
   }
 
-  free(m);
   *out_actual = actual;
   return ZX_OK;
 }

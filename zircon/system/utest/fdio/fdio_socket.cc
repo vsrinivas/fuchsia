@@ -9,8 +9,14 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/zxs/protocol.h>
+#include <netinet/in.h>
+#include <string.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
+
+#include <array>
 
 #include <zxtest/zxtest.h>
 
@@ -239,6 +245,53 @@ TEST(SocketTest, SendmsgNonblockBoundary) {
   // 3. Push again 2 packets of <memlength> bytes, observe only one sent.
   EXPECT_EQ((ssize_t)memlength, sendmsg(fd, &msg, 0));
 
+  EXPECT_EQ(close(fd), 0, "%s", strerror(errno));
+}
+
+TEST(SocketTest, DatagramSendMsg) {
+  zx::channel client_channel, server_channel;
+  ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
+
+  zx::socket client_socket, server_socket;
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &client_socket, &server_socket));
+
+  Server server(std::move(client_socket));
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
+  ASSERT_OK(loop.StartThread("fake-socket-server"));
+
+  int fd;
+  ASSERT_OK(fdio_fd_create(client_channel.release(), &fd));
+
+  struct sockaddr_in addr = {};
+  socklen_t addrlen = sizeof(addr);
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(0);
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+  const char buf[] = "hello";
+  char rcv_buf[4096] = {0};
+  std::array<struct iovec, 1> iov = {{{
+      .iov_base = (void *)buf,
+      .iov_len = sizeof(buf),
+  }}};
+
+  struct msghdr msg = {};
+  msg.msg_name = &addr;
+  msg.msg_namelen = addrlen;
+  msg.msg_iov = iov.data();
+  msg.msg_iovlen = iov.size();
+
+  EXPECT_EQ(sendmsg(fd, &msg, 0), sizeof(buf), "%s", strerror(errno));
+
+  // Expect sendmsg() to fail when msg_namelen is greater than sizeof(struct sockaddr_storage).
+  msg.msg_namelen = sizeof(sockaddr_storage) + 1;
+  EXPECT_EQ(sendmsg(fd, &msg, 0), -1);
+  EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
+
+  size_t actual = 0;
+  EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));
+  EXPECT_EQ(actual - FDIO_SOCKET_MSG_HEADER_SIZE, sizeof(buf));
   EXPECT_EQ(close(fd), 0, "%s", strerror(errno));
 }
 
