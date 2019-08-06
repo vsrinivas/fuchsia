@@ -54,7 +54,9 @@ class EnclosedGuest {
   bool Ready() const { return ready_; }
 
   // Execute |command| on the guest serial and wait for the |result|.
-  virtual zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr);
+  virtual zx_status_t Execute(const std::vector<std::string>& argv,
+                              const std::unordered_map<std::string, std::string>& env = {},
+                              std::string* result = nullptr, int32_t* return_code = nullptr);
 
   // Run a test util named |util| with |argv| in the guest and wait for the
   // |result|.
@@ -167,7 +169,9 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
 
   std::vector<std::string> GetTestUtilCommand(const std::string& util,
                                               const std::vector<std::string>& argv) override;
-  zx_status_t Execute(const std::vector<std::string>& argv, std::string* result) override;
+  zx_status_t Execute(const std::vector<std::string>& argv,
+                      const std::unordered_map<std::string, std::string>& env,
+                      std::string* result, int32_t* return_code) override;
 
  protected:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override;

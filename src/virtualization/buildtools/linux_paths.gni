@@ -5,8 +5,8 @@
 # Construct "" or "-asan" string
 _variant = ""
 _variants = select_variant + [ "" ]
-if (_variants[0] != "") {
-  _variant = "-" + _variants[0]
+if (_variants[0] == "asan") {
+  _variant = "-asan"
 }
 
 linux_lib_toolchain = "//build/toolchain:linux_${current_cpu}-shared"

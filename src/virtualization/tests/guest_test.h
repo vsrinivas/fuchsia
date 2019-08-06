@@ -33,8 +33,15 @@ class GuestTest : public ::testing::Test {
     ASSERT_TRUE(enclosed_guest_->Ready()) << "Guest setup failed";
   }
 
-  static zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr) {
-    return enclosed_guest_->Execute(argv, result);
+  static zx_status_t Execute(const std::vector<std::string>& argv,
+                             std::string* result = nullptr, int32_t* return_code = nullptr) {
+    return enclosed_guest_->Execute(argv, {}, result, return_code);
+  }
+
+  static zx_status_t Execute(const std::vector<std::string>& argv,
+                             const std::unordered_map<std::string, std::string>& env,
+                             std::string* result = nullptr, int32_t* return_code = nullptr) {
+    return enclosed_guest_->Execute(argv, env, result, return_code);
   }
 
   static zx_status_t RunUtil(const std::string& util, const std::vector<std::string>& argv,

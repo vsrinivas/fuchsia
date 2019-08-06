@@ -2,14 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests_linux") {
-  testonly = true
-
-  deps = [
-    "unit_tests",
-  ]
-}
-
 source_set("drm_test_runner") {
   testonly = true
 

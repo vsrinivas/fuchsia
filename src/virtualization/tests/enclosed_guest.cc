@@ -10,8 +10,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/zx/clock.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <string.h>
 #include <sys/mount.h>
 #include <unistd.h>
@@ -21,6 +19,9 @@
 #include <algorithm>
 #include <optional>
 #include <string>
+
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/tests/logger.h"
@@ -72,7 +73,13 @@ static std::string JoinArgVector(const std::vector<std::string>& argv) {
 }
 
 // Execute |command| on the guest serial and wait for the |result|.
-zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv, std::string* result) {
+zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
+                                   const std::unordered_map<std::string, std::string>& env,
+                                   std::string* result, int32_t* return_code) {
+  if (env.size() > 0) {
+    FXL_LOG(ERROR) << "Only TerminaEnclosedGuest::Execute accepts environment variables.";
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   auto command = JoinArgVector(argv);
   return console_->ExecuteBlocking(command, ShellPrompt(), result);
 }
@@ -174,7 +181,7 @@ zx_status_t EnclosedGuest::Start() {
 
 zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<std::string>& argv,
                                    std::string* result) {
-  return Execute(GetTestUtilCommand(util, argv), result);
+  return Execute(GetTestUtilCommand(util, argv), {}, result);
 }
 
 zx_status_t ZirconEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) {
@@ -188,7 +195,7 @@ zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
   for (size_t i = 0; i != kNumRetries; ++i) {
     logger.LogIfRequired();
     std::string ps;
-    zx_status_t status = Execute({"ps"}, &ps);
+    zx_status_t status = Execute({"ps"}, {}, &ps);
     if (status != ZX_OK) {
       continue;
     }
@@ -221,7 +228,7 @@ zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
   for (size_t i = 0; i != kNumRetries; ++i) {
     logger.LogIfRequired();
     std::string response;
-    zx_status_t status = Execute({"echo", "guest ready"}, &response);
+    zx_status_t status = Execute({"echo", "guest ready"}, {}, &response);
     if (status != ZX_OK) {
       continue;
     }
@@ -262,6 +269,21 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo
   launch_info->block_devices.emplace();
   launch_info->block_devices->push_back({
       "linux_tests",
+      fuchsia::virtualization::BlockMode::READ_ONLY,
+      fuchsia::virtualization::BlockFormat::RAW,
+      fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle)),
+  });
+  // Add non-prebuilt test extras.
+  fd = open("/pkg/data/extras.img", O_RDONLY);
+  if (fd < 0) {
+    return ZX_ERR_BAD_STATE;
+  }
+  status = fdio_get_service_handle(fd, &handle);
+  if (status != ZX_OK) {
+    return status;
+  }
+  launch_info->block_devices.push_back({
+      "extras",
       fuchsia::virtualization::BlockMode::READ_ONLY,
       fuchsia::virtualization::BlockFormat::RAW,
       fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle)),
@@ -319,16 +341,19 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
   command_runner_ =
       std::make_unique<vsh::BlockingCommandRunner>(std::move(endpoint), GetGuestCid());
 
-  // Create mountpoint for test utils. The root filesystem is read only so we
-  // put this mountpoint under /tmp.
+  // Create mountpoints for test utils and extras. The root filesystem is read only so we
+  // put these under /tmp.
   {
-    auto command_result = command_runner_->Execute({
-        {"mkdir", "-p", "/tmp/test_utils"},
-        {},
-    });
-    if (!command_result.is_ok()) {
-      FXL_LOG(ERROR) << "Command fails with error " << zx_status_get_string(command_result.error());
-      return command_result.error();
+    for (auto dir : {"/tmp/test_utils", "/tmp/extras"}) {
+      auto command_result = command_runner_->Execute({
+          {"mkdir", "-p", dir},
+          {},
+      });
+      if (!command_result.is_ok()) {
+        FXL_LOG(ERROR) << "Command fails with error "
+                       << zx_status_get_string(command_result.error());
+        return command_result.error();
+      }
     }
   }
 
@@ -354,6 +379,28 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
     }
   }
 
+  // Mount the extras disk image.
+  {
+    grpc::ClientContext context;
+    vm_tools::MountRequest request;
+    vm_tools::MountResponse response;
+
+    request.mutable_source()->assign("/dev/vdc");
+    request.mutable_target()->assign("/tmp/extras");
+    request.mutable_fstype()->assign("romfs");
+    request.set_mountflags(MS_RDONLY);
+
+    auto grpc_status = maitred_->Mount(&context, request, &response);
+    if (!grpc_status.ok()) {
+      FXL_LOG(ERROR) << "Failed to mount extras filesystem: " << grpc_status.error_message();
+      return ZX_ERR_IO;
+    }
+    if (response.error() != 0) {
+      FXL_LOG(ERROR) << "extras mount failed: " << response.error();
+      return ZX_ERR_IO;
+    }
+  }
+
   return ZX_OK;
 }
 
@@ -365,15 +412,21 @@ void TerminaEnclosedGuest::WaitForSystemStopped() {
 }
 
 zx_status_t TerminaEnclosedGuest::Execute(const std::vector<std::string>& argv,
-                                          std::string* result) {
-  auto command_result = command_runner_->Execute({argv, {}});
+                                          const std::unordered_map<std::string, std::string>& env,
+                                          std::string* result, int32_t* return_code) {
+  auto command_result = command_runner_->Execute({argv, env});
   if (command_result.is_error()) {
     return command_result.error();
   }
-  *result = std::move(command_result.value().out);
-  if (!command_result.value().err.empty()) {
-    *result += "\n";
-    *result += std::move(command_result.value().err);
+  if (result) {
+    *result = std::move(command_result.value().out);
+    if (!command_result.value().err.empty()) {
+      *result += "\n";
+      *result += std::move(command_result.value().err);
+    }
+  }
+  if (return_code) {
+    *return_code = command_result.value().return_code;
   }
   return ZX_OK;
 }
