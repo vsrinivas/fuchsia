@@ -10,9 +10,6 @@ config("glm_config") {
 
     # Use Vulkan NDC (normalized depth coordinates): [0..1] instead of [-1..1]
     "GLM_FORCE_DEPTH_ZERO_TO_ONE",
-
-    # Disable SIMD code paths that seem unstable on Fuchsia.
-    "GLM_FORCE_PURE",
   ]
 }
 

@@ -21,11 +21,11 @@ using escher::vec3;
 using escher::vec4;
 
 constexpr float kSqrt2_2 = M_SQRT2 / 2.f;
-constexpr vec4 kDownVector{0.f, 0.f, 1.f, 0.f};
-constexpr vec4 kUpVector{0.f, 0.f, -1.f, 0.f};
-constexpr vec4 kSideVector{1.f, 0.f, 0.f, 0.f};
-constexpr vec4 kZeroVector{0.f, 0.f, 0.f, 0.f};
-constexpr vec4 kAngledVector{2.f, -1.f, .5f, 0.f};
+const vec4 kDownVector{0.f, 0.f, 1.f, 0.f};
+const vec4 kUpVector{0.f, 0.f, -1.f, 0.f};
+const vec4 kSideVector{1.f, 0.f, 0.f, 0.f};
+const vec4 kZeroVector{0.f, 0.f, 0.f, 0.f};
+const vec4 kAngledVector{2.f, -1.f, .5f, 0.f};
 }  // namespace
 
 using ShapeTest = SessionTest;
