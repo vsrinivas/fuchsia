@@ -144,7 +144,6 @@ template("test_package") {
                              "resources",
                              "rootjob_svc",
                              "rootresource_svc",
-                             "system_deprecated_data",
                            ])
   }
 }

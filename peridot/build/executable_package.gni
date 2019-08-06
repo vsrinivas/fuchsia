@@ -31,7 +31,6 @@ template("executable_package") {
                              "meta",
                              "public_deps",
                              "resources",
-                             "system_deprecated_data",
                              "testonly",
                              "tests",
                            ])

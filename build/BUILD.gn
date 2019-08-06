@@ -109,22 +109,6 @@ group("deprecated_shell_allowlist") {
   ]
 }
 
-group("system_deprecated_data_allowlist") {
-  #  ________  _________  ________  ________
-  # |\   ____\|\___   ___\\   __  \|\   __  \
-  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
-  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
-  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
-  #     ____\_\  \   \ \__\ \ \_______\ \__\
-  #    |\_________\   \|__|  \|_______|\|__|
-  #    \|_________|
-  # This is an allowlist of components manifests that are allowed to include
-  # the "deprecated-data" value in their "system" capability. Do not add to
-  # this list. Instead, use the config_data() template to gather data from
-  # other build entities that your component would like to use at run time.
-  visibility = []
-}
-
 group("rootresource_svc_allowlist") {
   #  ________  _________  ________  ________
   # |\   ____\|\___   ___\\   __  \|\   __  \
