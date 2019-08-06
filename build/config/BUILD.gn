@@ -236,6 +236,11 @@ config("default_warnings") {
     "-Wextra",
     "-Wnewline-eof",
     "-Wno-unused-parameter",
+
+    # TODO(TC-620): disable -Wimplicit-int-float-conversion which has been
+    # introduced in https://reviews.llvm.org/D64666 until our source is clean.
+    "-Wno-unknown-warning-option",
+    "-Wno-implicit-int-float-conversion",
   ]
 }
 
