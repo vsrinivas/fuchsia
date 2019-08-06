@@ -15,8 +15,8 @@ use {
         directory::{self, entry::DirectoryEntry},
         file::simple::read_only,
     },
-    futures::future::FutureObj,
     futures::lock::Mutex,
+    futures::future::BoxFuture,
     futures::prelude::*,
     std::{
         collections::{HashMap, HashSet},
@@ -130,8 +130,8 @@ impl MockResolver {
 }
 
 impl Resolver for MockResolver {
-    fn resolve(&self, component_url: &str) -> FutureObj<Result<fsys::Component, ResolverError>> {
-        FutureObj::new(Box::new(self.resolve_async(component_url.to_string())))
+    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
+        Box::pin(self.resolve_async(component_url.to_string()))
     }
 }
 
@@ -184,8 +184,8 @@ impl MockRunner {
 }
 
 impl Runner for MockRunner {
-    fn start(&self, start_info: fsys::ComponentStartInfo) -> FutureObj<Result<(), RunnerError>> {
-        FutureObj::new(Box::new(self.start_async(start_info)))
+    fn start(&self, start_info: fsys::ComponentStartInfo) -> BoxFuture<Result<(), RunnerError>> {
+        Box::pin(self.start_async(start_info))
     }
 }
 
@@ -200,12 +200,12 @@ impl FrameworkServiceHost for MockFrameworkServiceHost {
         _model: Model,
         realm: Arc<Realm>,
         stream: fsys::RealmRequestStream,
-    ) -> FutureObj<Result<(), FrameworkServiceError>> {
-        FutureObj::new(Box::new(async move {
+    ) -> BoxFuture<Result<(), FrameworkServiceError>> {
+        Box::pin(async move {
             await!(self.do_serve_realm_service(realm, stream))
                 .expect(&format!("serving {} failed", REALM_SERVICE.to_string()));
             Ok(())
-        }))
+        })
     }
 }
 

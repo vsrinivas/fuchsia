@@ -6,6 +6,7 @@ mod library_loader;
 
 use {
     crate::{
+        clonable_error::ClonableError,
         constants::PKG_PATH,
         model::{Runner, RunnerError},
         startup::{Arguments, BuiltinRootServices},
@@ -27,7 +28,7 @@ use {
     },
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased},
     futures::{
-        future::{AbortHandle, Abortable, FutureObj},
+        future::{AbortHandle, Abortable, BoxFuture},
         lock::Mutex,
     },
     rand::Rng,
@@ -50,7 +51,7 @@ impl Drop for RuntimeDirectory {
 }
 
 /// Errors produced by `ElfRunner`.
-#[derive(Debug, Fail)]
+#[derive(Debug, Clone, Fail)]
 pub enum ElfRunnerError {
     #[fail(
         display = "failed to retrieve process koid for component with url \"{}\": {}",
@@ -59,13 +60,13 @@ pub enum ElfRunnerError {
     ComponentProcessIdError {
         url: String,
         #[fail(cause)]
-        err: Error,
+        err: ClonableError,
     },
     #[fail(display = "failed to retrieve job koid for component with url \"{}\": {}", url, err)]
     ComponentJobIdError {
         url: String,
         #[fail(cause)]
-        err: Error,
+        err: ClonableError,
     },
     #[fail(display = "failed to add runtime/elf directory for component with url \"{}\".", url)]
     ComponentElfDirectoryError { url: String },
@@ -76,11 +77,11 @@ impl ElfRunnerError {
         url: impl Into<String>,
         err: impl Into<Error>,
     ) -> ElfRunnerError {
-        ElfRunnerError::ComponentProcessIdError { url: url.into(), err: err.into() }
+        ElfRunnerError::ComponentProcessIdError { url: url.into(), err: err.into().into() }
     }
 
     pub fn component_job_id_error(url: impl Into<String>, err: impl Into<Error>) -> ElfRunnerError {
-        ElfRunnerError::ComponentJobIdError { url: url.into(), err: err.into() }
+        ElfRunnerError::ComponentJobIdError { url: url.into(), err: err.into().into() }
     }
 
     pub fn component_elf_directory_error(url: impl Into<String>) -> ElfRunnerError {
@@ -90,7 +91,7 @@ impl ElfRunnerError {
 
 impl From<ElfRunnerError> for RunnerError {
     fn from(err: ElfRunnerError) -> Self {
-        RunnerError::ComponentRuntimeDirectoryError { err: err.into() }
+        RunnerError::component_runtime_directory_error(err)
     }
 }
 
@@ -367,7 +368,7 @@ impl ElfRunner {
 
             Ok(process_koid)
         })
-        .map_err(|e| RunnerError::component_launch_error(resolved_url.clone(), e))?;
+            .map_err(|e| RunnerError::component_launch_error(resolved_url.clone(), e))?;
 
         if let Some(runtime_dir) = runtime_dir {
             await!(self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid))?;
@@ -386,8 +387,8 @@ impl ElfRunner {
 }
 
 impl Runner for ElfRunner {
-    fn start(&self, start_info: fsys::ComponentStartInfo) -> FutureObj<Result<(), RunnerError>> {
-        FutureObj::new(Box::new(self.start_async(start_info)))
+    fn start(&self, start_info: fsys::ComponentStartInfo) -> BoxFuture<Result<(), RunnerError>> {
+        Box::pin(self.start_async(start_info))
     }
 }
 

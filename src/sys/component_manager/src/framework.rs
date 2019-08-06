@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::BoxFuture,
-    futures::future::FutureObj,
     futures::prelude::*,
     log::*,
     std::cmp,
@@ -163,11 +162,11 @@ impl FrameworkServiceHost for RealFrameworkServiceHost {
         model: Model,
         realm: Arc<Realm>,
         stream: fsys::RealmRequestStream,
-    ) -> FutureObj<'static, Result<(), FrameworkServiceError>> {
-        FutureObj::new(Box::new(async move {
+    ) -> BoxFuture<Result<(), FrameworkServiceError>> {
+        Box::pin(async move {
             await!(Self::do_serve_realm_service(model, realm, stream))
                 .map_err(|e| FrameworkServiceError::service_error(REALM_SERVICE.to_string(), e))
-        }))
+        })
     }
 }
 

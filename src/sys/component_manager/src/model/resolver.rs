@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    crate::clonable_error::ClonableError,
     failure::{Error, Fail},
     fidl_fuchsia_sys2 as fsys,
-    futures::future,
-    futures::future::FutureObj,
+    futures::future::{self, BoxFuture},
     std::collections::HashMap,
     url::Url,
 };
@@ -15,11 +15,10 @@ use {
 /// TODO: Consider defining an internal representation for `fsys::Component` so as to
 /// further isolate the `Model` from FIDL interfacting concerns.
 pub trait Resolver {
-    fn resolve<'a>(
-        &'a self,
-        component_url: &'a str,
-    ) -> FutureObj<'a, Result<fsys::Component, ResolverError>>;
+    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a>;
 }
+
+pub type ResolverFut<'a> = BoxFuture<'a, Result<fsys::Component, ResolverError>>;
 
 /// Resolves a component URL using a resolver selected based on the URL's scheme.
 pub struct ResolverRegistry {
@@ -41,46 +40,40 @@ impl ResolverRegistry {
 }
 
 impl Resolver for ResolverRegistry {
-    fn resolve<'a>(
-        &'a self,
-        component_url: &'a str,
-    ) -> FutureObj<'a, Result<fsys::Component, ResolverError>> {
+    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
         match Url::parse(component_url) {
             Ok(parsed_url) => {
                 if let Some(ref resolver) = self.resolvers.get(parsed_url.scheme()) {
                     resolver.resolve(component_url)
                 } else {
-                    FutureObj::new(Box::new(future::err(ResolverError::SchemeNotRegistered)))
+                    Box::pin(future::err(ResolverError::SchemeNotRegistered))
                 }
             }
-            Err(e) => FutureObj::new(Box::new(future::err(ResolverError::url_parse_error(
-                component_url,
-                e,
-            )))),
+            Err(e) => Box::pin(future::err(ResolverError::url_parse_error(component_url, e))),
         }
     }
 }
 
 /// Errors produced by `Resolver`.
-#[derive(Debug, Fail)]
+#[derive(Debug, Fail, Clone)]
 pub enum ResolverError {
     #[fail(display = "component not available with url \"{}\": {}", url, err)]
     ComponentNotAvailable {
         url: String,
         #[fail(cause)]
-        err: Error,
+        err: ClonableError,
     },
     #[fail(display = "component manifest not available for url \"{}\": {}", url, err)]
     ManifestNotAvailable {
         url: String,
         #[fail(cause)]
-        err: Error,
+        err: ClonableError,
     },
     #[fail(display = "component manifest invalid for url \"{}\": {}", url, err)]
     ManifestInvalid {
         url: String,
         #[fail(cause)]
-        err: Error,
+        err: ClonableError,
     },
     #[fail(display = "scheme not registered")]
     SchemeNotRegistered,
@@ -88,7 +81,7 @@ pub enum ResolverError {
     UrlParseError {
         url: String,
         #[fail(cause)]
-        err: Error,
+        err: ClonableError,
     },
     #[fail(display = "url missing resource \"{}\"", url)]
     UrlMissingResourceError { url: String },
@@ -96,19 +89,19 @@ pub enum ResolverError {
 
 impl ResolverError {
     pub fn component_not_available(url: impl Into<String>, err: impl Into<Error>) -> ResolverError {
-        ResolverError::ComponentNotAvailable { url: url.into(), err: err.into() }
+        ResolverError::ComponentNotAvailable { url: url.into(), err: err.into().into() }
     }
 
     pub fn manifest_not_available(url: impl Into<String>, err: impl Into<Error>) -> ResolverError {
-        ResolverError::ManifestNotAvailable { url: url.into(), err: err.into() }
+        ResolverError::ManifestNotAvailable { url: url.into(), err: err.into().into() }
     }
 
     pub fn manifest_invalid(url: impl Into<String>, err: impl Into<Error>) -> ResolverError {
-        ResolverError::ManifestInvalid { url: url.into(), err: err.into() }
+        ResolverError::ManifestInvalid { url: url.into(), err: err.into().into() }
     }
 
     pub fn url_parse_error(url: impl Into<String>, err: impl Into<Error>) -> ResolverError {
-        ResolverError::UrlParseError { url: url.into(), err: err.into() }
+        ResolverError::UrlParseError { url: url.into(), err: err.into().into() }
     }
 
     pub fn url_missing_resource_error(url: impl Into<String>) -> ResolverError {
@@ -126,12 +119,9 @@ mod tests {
     }
 
     impl Resolver for MockOkResolver {
-        fn resolve(
-            &self,
-            component_url: &str,
-        ) -> FutureObj<Result<fsys::Component, ResolverError>> {
+        fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
             assert_eq!(self.expected_url, component_url);
-            FutureObj::new(Box::new(future::ok(fsys::Component {
+            Box::pin(future::ok(fsys::Component {
                 resolved_url: Some(self.resolved_url.clone()),
                 decl: Some(fsys::ComponentDecl {
                     program: None,
@@ -144,7 +134,7 @@ mod tests {
                     storage: None,
                 }),
                 package: None,
-            })))
+            }))
         }
     }
 
@@ -154,12 +144,9 @@ mod tests {
     }
 
     impl Resolver for MockErrorResolver {
-        fn resolve(
-            &self,
-            component_url: &str,
-        ) -> FutureObj<Result<fsys::Component, ResolverError>> {
+        fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
             assert_eq!(self.expected_url, component_url);
-            FutureObj::new(Box::new(future::err((self.error)(component_url))))
+            Box::pin(future::err((self.error)(component_url)))
         }
     }
 

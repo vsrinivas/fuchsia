@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{Resolver, ResolverError},
+    crate::model::{Resolver, ResolverError, ResolverFut},
     cm_fidl_translator::translate,
     failure::Error,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::boot_url::BootUrl,
-    futures::future::FutureObj,
     std::path::Path,
 };
 
@@ -92,11 +91,8 @@ impl FuchsiaBootResolver {
 }
 
 impl Resolver for FuchsiaBootResolver {
-    fn resolve<'a>(
-        &'a self,
-        component_url: &'a str,
-    ) -> FutureObj<'a, Result<fsys::Component, ResolverError>> {
-        FutureObj::new(Box::new(self.resolve_async(component_url)))
+    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut {
+        Box::pin(self.resolve_async(component_url))
     }
 }
 

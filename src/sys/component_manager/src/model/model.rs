@@ -15,7 +15,7 @@ use {
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
-        future::{join_all, BoxFuture, FutureObj},
+        future::{join_all, BoxFuture},
         lock::Mutex,
     },
     std::sync::Arc,
@@ -269,9 +269,7 @@ impl Model {
             let futures: Vec<_> = instances_to_bind
                 .iter()
                 .map(|realm| {
-                    FutureObj::new(Box::new(async move {
-                        await!(self.bind_single_instance(realm.clone()))
-                    }))
+                    Box::pin(async move { await!(self.bind_single_instance(realm.clone())) })
                 })
                 .collect();
             let res = await!(join_all(futures));

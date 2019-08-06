@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{Resolver, ResolverError},
+    crate::model::{Resolver, ResolverError, ResolverFut},
     cm_fidl_translator,
     failure::format_err,
     fidl::endpoints::{ClientEnd, ServerEnd},
@@ -12,7 +12,6 @@ use {
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon as zx,
-    futures::future::FutureObj,
     std::path::Path,
 };
 
@@ -87,11 +86,8 @@ impl FuchsiaPkgResolver {
 }
 
 impl Resolver for FuchsiaPkgResolver {
-    fn resolve<'a>(
-        &'a self,
-        component_url: &'a str,
-    ) -> FutureObj<'a, Result<fsys::Component, ResolverError>> {
-        FutureObj::new(Box::new(self.resolve_async(component_url)))
+    fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut {
+        Box::pin(self.resolve_async(component_url))
     }
 }
 

@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_vfs_pseudo_fs as fvfs,
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
     fuchsia_zircon as zx,
-    futures::future::{AbortHandle, Abortable, FutureObj},
+    futures::future::{AbortHandle, Abortable, BoxFuture},
     log::*,
     std::{collections::HashMap, iter},
 };
@@ -132,7 +132,7 @@ impl IncomingNamespace {
     /// terminates.
     fn add_directory_use(
         ns: &mut fsys::ComponentNamespace,
-        waiters: &mut Vec<FutureObj<()>>,
+        waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
         model: Model,
         abs_moniker: AbsoluteMoniker,
@@ -146,7 +146,7 @@ impl IncomingNamespace {
     /// terminates.
     fn add_storage_use(
         ns: &mut fsys::ComponentNamespace,
-        waiters: &mut Vec<FutureObj<()>>,
+        waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
         model: Model,
         abs_moniker: AbsoluteMoniker,
@@ -156,7 +156,7 @@ impl IncomingNamespace {
 
     fn add_directory_helper(
         ns: &mut fsys::ComponentNamespace,
-        waiters: &mut Vec<FutureObj<()>>,
+        waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
         model: Model,
         abs_moniker: AbsoluteMoniker,
@@ -201,7 +201,7 @@ impl IncomingNamespace {
             }
         };
 
-        waiters.push(FutureObj::new(Box::new(route_on_usage)));
+        waiters.push(Box::pin(route_on_usage));
         ns.paths.push(target_path);
         ns.directories.push(client_end);
         Ok(())
@@ -211,7 +211,7 @@ impl IncomingNamespace {
     /// the abort handles to the IncomingNamespace.
     fn start_directory_waiters(
         &mut self,
-        directory_waiters: Vec<FutureObj<'static, ()>>,
+        directory_waiters: Vec<BoxFuture<'static, ()>>,
     ) -> Result<(), ModelError> {
         for waiter in directory_waiters {
             let (abort_handle, abort_registration) = AbortHandle::new_pair();

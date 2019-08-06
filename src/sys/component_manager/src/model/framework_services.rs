@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    crate::clonable_error::ClonableError,
     crate::model::*,
     cm_rust::CapabilityPath,
     failure::{Error, Fail},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::FutureObj,
+    futures::future::BoxFuture,
     lazy_static::lazy_static,
     log::*,
     std::{convert::TryInto, sync::Arc},
@@ -19,9 +20,9 @@ lazy_static! {
     pub static ref REALM_SERVICE: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().unwrap();
 }
 
-/// Represents component manager's framework_services environment, which provides framework_services services to
-/// components. An framework_services service is a service that is offered by component manager itself,
-/// which any component may use.
+/// Represents component manager's framework_services environment, which provides
+/// framework_services services to components. An framework_services service is a service that is
+/// offered by component manager itself, which any component may use.
 ///
 /// The following framework_services services are currently implemented:
 /// - fuchsia.sys2.Realm
@@ -32,11 +33,11 @@ pub trait FrameworkServiceHost: Send + Sync {
         model: Model,
         realm: Arc<Realm>,
         stream: fsys::RealmRequestStream,
-    ) -> FutureObj<Result<(), FrameworkServiceError>>;
+    ) -> BoxFuture<Result<(), FrameworkServiceError>>;
 }
 
 /// Errors produced by `FrameworkServiceHost`.
-#[derive(Debug, Fail)]
+#[derive(Debug, Fail, Clone)]
 pub enum FrameworkServiceError {
     #[fail(display = "framework_services service unsupported: {}", path)]
     ServiceUnsupported { path: String },
@@ -44,7 +45,7 @@ pub enum FrameworkServiceError {
     ServiceError {
         path: String,
         #[fail(cause)]
-        err: Error,
+        err: ClonableError,
     },
 }
 
@@ -53,7 +54,7 @@ impl FrameworkServiceError {
         FrameworkServiceError::ServiceUnsupported { path: path.into() }
     }
     pub fn service_error(path: impl Into<String>, err: impl Into<Error>) -> FrameworkServiceError {
-        FrameworkServiceError::ServiceError { path: path.into(), err: err.into() }
+        FrameworkServiceError::ServiceError { path: path.into(), err: err.into().into() }
     }
 }
 
