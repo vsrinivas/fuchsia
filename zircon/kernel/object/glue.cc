@@ -49,23 +49,7 @@ static void on_lowmem() {
   // See ZX-3637 for the product details on when this path vs. the reboot
   // should be used.
 
-  bool found = false;
-  JobDispatcher::ForEachJob([&found](JobDispatcher* job) {
-    if (job->get_kill_on_oom()) {
-      // The traversal order of ForEachJob() is going to favor killing newer
-      // jobs, this helps in case more than one is eligible.
-      if (job->Kill(ZX_TASK_RETCODE_OOM_KILL)) {
-        found = true;
-        char name[ZX_MAX_NAME_LEN];
-        job->get_name(name);
-        printf("OOM: killing job %6" PRIu64 " '%s'\n", job->get_koid(), name);
-        return ZX_ERR_STOP;
-      }
-    }
-    return ZX_OK;
-  });
-
-  if (!found) {
+  if (!root_job->KillJobWithKillOnOOM()) {
     printf("OOM: no alive job has a kill bit\n");
   }
 

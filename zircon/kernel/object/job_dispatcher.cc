@@ -150,11 +150,6 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/, fbl::RefPtr<JobDispatcher> pare
       exceptionate_(ExceptionPort::Type::JOB),
       debug_exceptionate_(ExceptionPort::Type::JOB_DEBUGGER) {
   kcounter_add(dispatcher_job_create_count, 1);
-
-  if (parent_ == nullptr) {
-    Guard<Mutex> guard{AllJobsLock::Get()};
-    all_jobs_list_.push_back(this);
-  }
 }
 
 JobDispatcher::~JobDispatcher() {
@@ -179,9 +174,6 @@ bool JobDispatcher::AddChildProcess(const fbl::RefPtr<ProcessDispatcher>& proces
 bool JobDispatcher::AddChildJob(const fbl::RefPtr<JobDispatcher>& job) {
   canary_.Assert();
 
-  // Maintain consistent lock ordering by grabbing the all-jobs lock before
-  // any individual JobDispatcher lock.
-  Guard<fbl::Mutex> all_jobs_guard{AllJobsLock::Get()};
   Guard<fbl::Mutex> guard{get_lock()};
 
   if (state_ != State::READY)
@@ -197,8 +189,6 @@ bool JobDispatcher::AddChildJob(const fbl::RefPtr<JobDispatcher>& job) {
   // of any job tree.
   DEBUG_ASSERT(!job->dll_job_raw_.InContainer());
   DEBUG_ASSERT(neighbor != job.get());
-
-  all_jobs_list_.insert(all_jobs_list_.make_iterator(*neighbor), job.get());
 
   jobs_.push_back(job.get());
   ++job_count_;
@@ -254,12 +244,6 @@ void JobDispatcher::RemoveFromJobTreesUnlocked() {
 
   if (parent_)
     parent_->RemoveChildJob(this);
-
-  {
-    Guard<Mutex> guard{AllJobsLock::Get()};
-    if (dll_all_jobs_.InContainer())
-      all_jobs_list_.erase(*this);
-  }
 }
 
 bool JobDispatcher::IsReadyForDeadTransitionLocked() {
@@ -336,6 +320,62 @@ void JobDispatcher::UpdateSignalsIncrementLocked() {
 JobPolicy JobDispatcher::GetPolicy() const {
   Guard<fbl::Mutex> guard{get_lock()};
   return policy_;
+}
+
+bool JobDispatcher::KillJobWithKillOnOOM() {
+  // Get list of jobs with kill bit set.
+  OOMBitJobArray oom_jobs;
+  int count = 0;
+  CollectJobsWithOOMBit(&oom_jobs, &count);
+  if (count == 0) {
+    printf("OOM: no jobs with kill_on_oom found\n");
+    return false;
+  }
+
+  // Sort by max height. TODO(scottmg): This is not stable, which makes the
+  // ordering unpredictable in theory. We don't currently have a stable sort in
+  // kernel.
+  qsort(reinterpret_cast<void*>(oom_jobs.begin()), count, sizeof(oom_jobs[0]),
+        [](const void* a, const void* b) -> int {
+          const auto& ta = *reinterpret_cast<const fbl::RefPtr<JobDispatcher>*>(a);
+          const auto& tb = *reinterpret_cast<const fbl::RefPtr<JobDispatcher>*>(b);
+          return ta->max_height() < tb->max_height();
+        });
+
+  // Kill lowest to highest until we find something to kill.
+  for (int i = count - 1; i >= 0; --i) {
+    auto& job = oom_jobs[i];
+    if (job->Kill(ZX_TASK_RETCODE_OOM_KILL)) {
+      char name[ZX_MAX_NAME_LEN];
+      job->get_name(name);
+      printf("OOM: killing %" PRIu64 " '%s'\n", job->get_koid(), name);
+      return true;
+    }
+  }
+
+  printf("OOM: no job found to kill\n");
+  return false;
+}
+
+void JobDispatcher::CollectJobsWithOOMBit(OOMBitJobArray* into, int* count) {
+  Guard<fbl::Mutex> guard{get_lock()};
+
+  if (kill_on_oom_) {
+    if (*count >= static_cast<int>(into->size())) {
+      printf("OOM: skipping some jobs, exceeded max count\n");
+      return;
+    }
+
+    auto cref = ::fbl::MakeRefPtrUpgradeFromRaw(this, get_lock());
+    if (!cref)
+      return;
+    (*into)[*count] = ktl::move(cref);
+    *count += 1;
+  }
+
+  for (auto& job : jobs_) {
+    job.CollectJobsWithOOMBit(into, count);
+  }
 }
 
 bool JobDispatcher::Kill(int64_t return_code) {
@@ -534,9 +574,6 @@ zx_status_t JobDispatcher::set_name(const char* name, size_t len) {
 
   return name_.set(name, len);
 }
-
-// Global list of all jobs.
-JobDispatcher::AllJobsList JobDispatcher::all_jobs_list_;
 
 zx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
   canary_.Assert();

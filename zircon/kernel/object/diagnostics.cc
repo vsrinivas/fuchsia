@@ -43,6 +43,28 @@ static ProcessWalker<ProcessCallbackType> MakeProcessWalker(ProcessCallbackType 
   return ProcessWalker<ProcessCallbackType>(cb);
 }
 
+// Machinery to walk over a job tree and run a callback on each job.
+template <typename JobCallbackType>
+class JobWalker final : public JobEnumerator {
+ public:
+  JobWalker(JobCallbackType cb) : cb_(cb) {}
+  JobWalker(const JobWalker&) = delete;
+  JobWalker(JobWalker&& other) : cb_(other.cb_) {}
+
+ private:
+  bool OnJob(JobDispatcher* job) final {
+    cb_(job);
+    return true;
+  }
+
+  const JobCallbackType cb_;
+};
+
+template <typename JobCallbackType>
+static JobWalker<JobCallbackType> MakeJobWalker(JobCallbackType cb) {
+  return JobWalker<JobCallbackType>(cb);
+}
+
 static void DumpProcessListKeyMap() {
   printf("id  : process id number\n");
   printf("#h  : total number of handles\n");
@@ -170,12 +192,12 @@ void DumpProcessList() {
 void DumpJobList() {
   printf("All jobs:\n");
   printf("%7s %s\n", "koid", "name");
-  JobDispatcher::ForEachJob([&](JobDispatcher* job) {
+  auto walker = MakeJobWalker([](JobDispatcher* job) {
     char name[ZX_MAX_NAME_LEN];
     job->get_name(name);
     printf("%7" PRIu64 " '%s'\n", job->get_koid(), name);
-    return ZX_OK;
   });
+  GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }
 
 void DumpProcessChannels(fbl::RefPtr<ProcessDispatcher> process) {

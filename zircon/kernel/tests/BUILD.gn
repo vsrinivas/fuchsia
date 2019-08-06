@@ -13,6 +13,7 @@ source_set("tests") {
     "clock_tests.cc",
     "dpc_tests.cc",
     "fibo.cc",
+    "job_tests.cc",
     "lock_dep_tests.cc",
     "mem_tests.cc",
     "mmu_tests.cc",

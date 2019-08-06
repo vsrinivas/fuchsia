@@ -17,6 +17,7 @@
 #include <fbl/name.h>
 #include <fbl/ref_counted.h>
 #include <kernel/lockdep.h>
+#include <ktl/array.h>
 #include <object/dispatcher.h>
 #include <object/exceptionate.h>
 #include <object/excp_port.h>
@@ -119,19 +120,9 @@ class JobDispatcher final : public SoloDispatcher<JobDispatcher, ZX_DEFAULT_JOB_
 
   JobPolicy GetPolicy() const;
 
-  // Calls the provided |zx_status_t func(JobDispatcher*)| on every
-  // JobDispatcher in the system. Stops if |func| returns an error,
-  // returning the error value.
-  template <typename T>
-  static zx_status_t ForEachJob(T func) {
-    Guard<Mutex> guard{AllJobsLock::Get()};
-    for (auto& job : all_jobs_list_) {
-      zx_status_t s = func(&job);
-      if (s != ZX_OK)
-        return s;
-    }
-    return ZX_OK;
-  }
+  // Kills its lowest child job that has get_kill_on_oom() set.
+  // Returns false if no alive child job had get_kill_on_oom() set.
+  bool KillJobWithKillOnOOM();
 
   // Walks the job/process tree and invokes |je| methods on each node. If
   // |recurse| is false, only visits direct children of this job. Returns
@@ -202,6 +193,15 @@ class JobDispatcher final : public SoloDispatcher<JobDispatcher, ZX_DEFAULT_JOB_
 
   bool CanSetPolicy() TA_REQ(get_lock());
 
+  using OOMBitJobArray = ktl::array<fbl::RefPtr<JobDispatcher>, 8>;
+
+  // Collects all jobs with get_kill_on_oom() up to the maxiumum fixed size of a
+  // OOMBitJobArray array. RefPtrs stored in |into| must be released once the
+  // corresponding job lock has been released. |count| is an in/out parameter
+  // that must start at 0, and will indicate the number of elements in |into| on
+  // return. |count| will not exceed the fixed capacity of OOMBitJobArray.
+  void CollectJobsWithOOMBit(OOMBitJobArray* into, int* count);
+
   const fbl::RefPtr<JobDispatcher> parent_;
   const uint32_t max_height_;
 
@@ -241,22 +241,6 @@ class JobDispatcher final : public SoloDispatcher<JobDispatcher, ZX_DEFAULT_JOB_
   fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(get_lock());
   Exceptionate exceptionate_;
   Exceptionate debug_exceptionate_;
-
-  // Global list of JobDispatchers, ordered by hierarchy and
-  // creation order. Used to find victims in low-resource
-  // situations (for example OOM).
-  fbl::DoublyLinkedListNodeState<JobDispatcher*> dll_all_jobs_;
-  struct ListTraitsAllJobs {
-    static fbl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(JobDispatcher& obj) {
-      return obj.dll_all_jobs_;
-    }
-  };
-  using AllJobsList = fbl::DoublyLinkedList<JobDispatcher*, ListTraitsAllJobs>;
-
-  DECLARE_SINGLETON_MUTEX(AllJobsLock);
-
-  // All jobs in the system.
-  static AllJobsList all_jobs_list_ TA_GUARDED(AllJobsLock::Get());
 };
 
 // Returns the job that is the ancestor of all other tasks.
