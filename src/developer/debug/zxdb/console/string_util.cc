@@ -37,14 +37,10 @@ std::string GetExclamation() {
 }
 
 std::string GetRightArrow() {
-#if defined(__APPLE__)
   // U+2794 HEAVY WIDE-HEADED RIGHTWARDS ARROW
-  // (Apple doesn't have the slightly heavier and better-looking one below.)
+  // Note that U+1F87A (" 🡺 ")looks better on Linux but isn't supported on Mac or ChromeOS, and
+  // we need to support at least ssh-ing from these platforms.
   return "➔";
-#else
-  // U+1F87A WIDE-HEADED RIGHTWARDS HEAVY BARB ARROW
-  return "🡺";
-#endif
 }
 
 size_t UnicodeCharWidth(const std::string& str) {
