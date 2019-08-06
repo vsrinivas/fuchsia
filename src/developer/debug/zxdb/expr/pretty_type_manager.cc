@@ -97,10 +97,11 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
 
   // std::string_view
   cpp_.emplace_back(InternalGlob("std::__2::basic_string_view<char, std::__2::char_traits<char> >"),
-                    std::make_unique<PrettyHeapString>(
-                        "__data", "__size",
-                        GetterList{{"data", "__data"}, {"size", "__size"}, {"length", "__size"},
-                                   /* {"empty", "__size == 0"} */}));
+                    std::make_unique<PrettyHeapString>("__data", "__size",
+                                                       GetterList{{"data", "__data"},
+                                                                  {"size", "__size"},
+                                                                  {"length", "__size"},
+                                                                  {"empty", "__size == 0"}}));
 
   // std::vector
   //
@@ -109,10 +110,10 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
   // result in errors but it will be better than misleading results.
   cpp_.emplace_back(
       InternalGlob("std::__2::vector<*>"),
-      std::make_unique<PrettyArray>(
-          "__begin_", "__end_ - __begin_",
-          GetterList{{"size", "__end_ - __begin_"}, {"capacity", "__end_cap_.__value_ - __begin_"},
-                     /* {"empty", "__end_ == __begin_"} */}));
+      std::make_unique<PrettyArray>("__begin_", "__end_ - __begin_",
+                                    GetterList{{"size", "__end_ - __begin_"},
+                                               {"capacity", "__end_cap_.__value_ - __begin_"},
+                                               {"empty", "__end_ == __begin_"}}));
   cpp_.emplace_back(InternalGlob("std::__2::vector<bool, *>"),
                     std::make_unique<PrettyArray>("vector_bool_printer_not_implemented_yet",
                                                   "vector_bool_printer_not_implemented_yet"));
@@ -122,31 +123,33 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
   // Rust's "&str" type won't parse as an identifier, construct an Identifier manually.
   rust_.emplace_back(TypeGlob(ParsedIdentifier(IdentifierQualification::kRelative,
                                                ParsedIdentifierComponent("&str"))),
-                     std::make_unique<PrettyHeapString>(
-                         "data_ptr", "length",
-                         GetterList{
-                             {"as_ptr", "data_ptr"}, {"as_mut_ptr", "data_ptr"}, {"len", "length"},
-                             /* {"is_empty", "length == 0"}, */
-                         }));
+                     std::make_unique<PrettyHeapString>("data_ptr", "length",
+                                                        GetterList{{"as_ptr", "data_ptr"},
+                                                                   {"as_mut_ptr", "data_ptr"},
+                                                                   {"len", "length"},
+                                                                   {"is_empty", "length == 0"}}));
   rust_.emplace_back(
       InternalGlob("alloc::string::String"),
       std::make_unique<PrettyHeapString>("(char*)vec.buf.ptr.pointer", "vec.len",
-                                         GetterList{{"len", "vec.len"}, {"capacity", "vec.buf.cap"},
-                                                    /* {"is_empty", "vec.len == 0"} */}));
+                                         GetterList{{"as_ptr", "(char*)vec.buf.ptr.pointer"},
+                                                    {"as_mut_ptr", "(char*)vec.buf.ptr.pointer"},
+                                                    {"len", "vec.len"},
+                                                    {"capacity", "vec.buf.cap"},
+                                                    {"is_empty", "vec.len == 0"}}));
   rust_.emplace_back(InternalGlob("alloc::vec::Vec<*>"),
                      std::make_unique<PrettyArray>("buf.ptr.pointer", "len",
                                                    GetterList{{"as_ptr", "buf.ptr.pointer"},
                                                               {"as_mut_ptr", "buf.ptr.pointer"},
                                                               {"len", "len"},
                                                               {"capacity", "buf.cap"},
-                                                              /* {"is_empty", "len == 0"} */}));
+                                                              {"is_empty", "len == 0"}}));
 
   // A BinaryHeap is a wrapper around a "Vec" named "data".
-  rust_.emplace_back(
-      InternalGlob("alloc::collections::binary_heap::BinaryHeap<*>"),
-      std::make_unique<PrettyArray>("data.buf.ptr.pointer", "data.len",
-                                    GetterList{{"len", "data.len"}, {"capacity", "data.buf.cap"},
-                                               /* {"is_empty", "data.len == 0"} */}));
+  rust_.emplace_back(InternalGlob("alloc::collections::binary_heap::BinaryHeap<*>"),
+                     std::make_unique<PrettyArray>("data.buf.ptr.pointer", "data.len",
+                                                   GetterList{{"len", "data.len"},
+                                                              {"capacity", "data.buf.cap"},
+                                                              {"is_empty", "data.len == 0"}}));
 }
 
 }  // namespace zxdb
