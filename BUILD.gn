@@ -92,7 +92,7 @@ declare_args() {
       # propagate the default because Zircon has proper incremental build
       # dependencies on toolchain updates only if it knows it's using the
       # prebuilt.
-      clang_tool_dir = clang_prefix
+      clang_tool_dir = rebase_path(clang_prefix, "", root_build_dir)
     }
     variants = zircon_variants
     default_deps = [ "//:legacy-$target_cpu" ] + zircon_extra_deps
