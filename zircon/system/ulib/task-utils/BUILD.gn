@@ -7,15 +7,20 @@ library("task-utils") {
   sdk_headers = [
     "task-utils/get.h",
     "task-utils/walker.h",
+    "task-utils/ps-utils.h",
   ]
   sources = [
     "get.c",
     "walker.cc",
+    "dump-threads.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/inspector",
+    "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
