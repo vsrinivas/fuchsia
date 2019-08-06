@@ -89,7 +89,8 @@ group("tests") {
   testonly = true
   data_deps = [
     ":bootsvc-unit-test",
-    ":bootsvc-integration-tests",
+    # TODO(ZX-4844): Re-enable tests once fixed.
+    # ":bootsvc-integration-tests",
   ]
 }
 
