@@ -120,7 +120,7 @@ bool Add(std::string url, bool allow_focus, std::vector<std::string> args) {
   if (!tiles)
     return false;
   uint32_t key = 0;
-  fidl::VectorPtr<std::string> arguments;
+  std::vector<std::string> arguments;
   for (const auto& it : args) {
     arguments.push_back(it);
   }

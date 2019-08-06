@@ -49,9 +49,9 @@ void TileView::ConnectViews() {
     launch_info.directory_request = services.NewRequest();
 
     if (split_url.size() > 1) {
-      launch_info.arguments = fidl::VectorPtr<std::string>::New(0);
+      launch_info.arguments.emplace();
       for (auto it = split_url.begin() + 1; it != split_url.end(); it++) {
-        launch_info.arguments.push_back(*it);
+        launch_info.arguments->push_back(*it);
       }
     }
 

@@ -30,7 +30,7 @@ Tiles::Tiles(scenic::ViewContext view_context, std::vector<std::string> urls, in
 
   // Add initial tiles.
   for (const auto& url : urls) {
-    AddTileFromURL(fidl::StringPtr(url), true, {}, {});
+    AddTileFromURL(url, true, {}, {});
   }
 
   // Make ourselves available as a |fuchsia.developer.TilesController|.
@@ -104,10 +104,10 @@ void Tiles::ListTiles(ListTilesCallback callback) {
                           it.second->view_properties.bounding_box.min);
     focusabilities.push_back(it.second->view_properties.focus_change);
   };
-  callback(fidl::VectorPtr<uint32_t>(std::move(child_keys)),
-           fidl::VectorPtr<std::string>(std::move(child_urls)),
-           fidl::VectorPtr<fuchsia::ui::gfx::vec3>(std::move(child_sizes)),
-           fidl::VectorPtr<bool>(std::move(focusabilities)));
+  callback(std::move(child_keys),
+           std::move(child_urls),
+           std::move(child_sizes),
+           std::move(focusabilities));
 }
 
 void Tiles::Quit() { exit(0); }
