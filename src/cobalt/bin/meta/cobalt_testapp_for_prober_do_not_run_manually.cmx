@@ -16,7 +16,8 @@
     "program": {
         "args": [
             "--test_for_prober",
-            "--override_prober_warning"
+            "--override_prober_warning",
+            "--verbose=9"
         ],
         "binary": "bin/cobalt_testapp"
     },
