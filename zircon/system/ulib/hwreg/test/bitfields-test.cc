@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <stdio.h>
+
 #include <climits>
 #include <limits>
-#include <stdio.h>
-#include <zxtest/zxtest.h>
 
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
+#include <zxtest/zxtest.h>
 
 // This function exists so that the resulting code can be inspected easily in the
 // object file.
@@ -615,6 +616,101 @@ void printer_size_reduction() {
   class TestRegWithoutPrinter : public hwreg::RegisterBase<TestRegWithoutPrinter, uint64_t> {};
 
   static_assert(sizeof(TestRegWithPrinter) > sizeof(TestRegWithoutPrinter), "");
+}
+
+void type_size() {
+  class TestReg8 : public hwreg::RegisterBase<TestReg8, uint8_t> {
+   public:
+    DEF_RSVDZ_BIT(7);
+    DEF_RSVDZ_BIT(6);
+    DEF_RSVDZ_BIT(5);
+    DEF_RSVDZ_BIT(4);
+    DEF_RSVDZ_BIT(3);
+    DEF_RSVDZ_BIT(2);
+    DEF_RSVDZ_BIT(1);
+    DEF_RSVDZ_BIT(0);
+
+    static auto Get() { return hwreg::RegisterAddr<TestReg8>(0); }
+  };
+  class TestReg16 : public hwreg::RegisterBase<TestReg16, uint16_t> {
+   public:
+    DEF_RSVDZ_BIT(15);
+    DEF_RSVDZ_BIT(14);
+    DEF_RSVDZ_BIT(13);
+    DEF_RSVDZ_BIT(12);
+    DEF_RSVDZ_BIT(11);
+    DEF_RSVDZ_BIT(10);
+    DEF_RSVDZ_BIT(9);
+    DEF_RSVDZ_BIT(8);
+    DEF_RSVDZ_BIT(7);
+    DEF_RSVDZ_BIT(6);
+    DEF_RSVDZ_BIT(5);
+    DEF_RSVDZ_BIT(4);
+    DEF_RSVDZ_BIT(3);
+    DEF_RSVDZ_BIT(2);
+    DEF_RSVDZ_BIT(1);
+    DEF_RSVDZ_BIT(0);
+
+    static auto Get() { return hwreg::RegisterAddr<TestReg16>(0); }
+  };
+  class TestReg32 : public hwreg::RegisterBase<TestReg32, uint32_t> {
+   public:
+    DEF_RSVDZ_BIT(15);
+    DEF_RSVDZ_BIT(14);
+    DEF_RSVDZ_BIT(13);
+    DEF_RSVDZ_BIT(12);
+    DEF_RSVDZ_BIT(11);
+    DEF_RSVDZ_BIT(10);
+    DEF_RSVDZ_BIT(9);
+    DEF_RSVDZ_BIT(8);
+    DEF_RSVDZ_BIT(7);
+    DEF_RSVDZ_BIT(6);
+    DEF_RSVDZ_BIT(5);
+    DEF_RSVDZ_BIT(4);
+    DEF_RSVDZ_BIT(3);
+    DEF_RSVDZ_BIT(2);
+    DEF_RSVDZ_BIT(1);
+    DEF_RSVDZ_BIT(0);
+
+    static auto Get() { return hwreg::RegisterAddr<TestReg32>(0); }
+  };
+  class TestReg64 : public hwreg::RegisterBase<TestReg64, uint64_t> {
+   public:
+    DEF_RSVDZ_BIT(15);
+    DEF_RSVDZ_BIT(14);
+    DEF_RSVDZ_BIT(13);
+    DEF_RSVDZ_BIT(12);
+    DEF_RSVDZ_BIT(11);
+    DEF_RSVDZ_BIT(10);
+    DEF_RSVDZ_BIT(9);
+    DEF_RSVDZ_BIT(8);
+    DEF_RSVDZ_BIT(7);
+    DEF_RSVDZ_BIT(6);
+    DEF_RSVDZ_BIT(5);
+    DEF_RSVDZ_BIT(4);
+    DEF_RSVDZ_BIT(3);
+    DEF_RSVDZ_BIT(2);
+    DEF_RSVDZ_BIT(1);
+    DEF_RSVDZ_BIT(0);
+
+    static auto Get() { return hwreg::RegisterAddr<TestReg64>(0); }
+  };
+
+  // This C++ feature allows us to reduce the storage requirements.  Without
+  // this, instances of derivatives of RegisterBase that escape the compiler's
+  // analysis will pay a cost of 1 byte per internal field (so 1 for each
+  // BIT/FIELD declaration and 2 for each RSVDZ_BIT/FIELD declaration).
+#if __has_cpp_attribute(no_unique_address)
+  static_assert(sizeof(TestReg8) == 8);
+  static_assert(sizeof(TestReg16) == 12);
+  static_assert(sizeof(TestReg32) == 16);
+  static_assert(sizeof(TestReg64) == 32);
+#else
+  static_assert(sizeof(TestReg8) == 24);
+  static_assert(sizeof(TestReg16) == 44);
+  static_assert(sizeof(TestReg32) == 52);
+  static_assert(sizeof(TestReg64) == 72);
+#endif
 }
 
 }  // namespace

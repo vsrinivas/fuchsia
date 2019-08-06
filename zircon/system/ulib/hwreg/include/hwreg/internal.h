@@ -4,13 +4,15 @@
 
 #pragma once
 
-#include <fbl/algorithm.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
 
 #include <type_traits>
+
+#include <fbl/algorithm.h>
 
 namespace hwreg {
 
@@ -56,13 +58,13 @@ class FieldPrinter {
 
 // Structure used to reduce the storage cost of the pretty-printing features if
 // they are not enabled.
-template <typename T, typename IntType>
+template <bool Enabled, typename IntType>
 struct FieldPrinterList {
   void AppendField(const char* name, uint32_t bit_high_incl, uint32_t bit_low) {}
 };
 
 template <typename IntType>
-struct FieldPrinterList<EnablePrinter, IntType> {
+struct FieldPrinterList<true, IntType> {
   // These two members are used for implementing the Print() function above.
   // They will typically be optimized away if Print() is not used.
   FieldPrinter fields[sizeof(IntType) * CHAR_BIT];
@@ -74,38 +76,54 @@ struct FieldPrinterList<EnablePrinter, IntType> {
   }
 };
 
+template <bool PrinterEnabled, typename ValueType>
+struct FieldParameters {
+  ValueType rsvdz_mask = 0;
+  ValueType fields_mask = 0;
+
+  __NO_UNIQUE_ADDRESS FieldPrinterList<PrinterEnabled, ValueType> printer;
+};
+
 // Used to record information about a field at construction time.  This enables
 // checking for overlapping fields and pretty-printing.
-template <class RegType>
+// The UnusedMarker argument is to give each Field member its own type.  This,
+// combined with __NO_UNIQUE_ADDRESS, allows the compiler to use no storage
+// for the Field members.
+template <class RegType, typename UnusedMarker>
 class Field {
  private:
   using IntType = typename RegType::ValueType;
 
  public:
-  Field(RegType* reg, const char* name, uint32_t bit_high_incl, uint32_t bit_low) {
+  Field(FieldParameters<RegType::PrinterEnabled::value, IntType>* reg, const char* name,
+        uint32_t bit_high_incl, uint32_t bit_low) {
     IntType mask = static_cast<IntType>(internal::ComputeMask<IntType>(bit_high_incl - bit_low + 1)
                                         << bit_low);
     // Check for overlapping bit ranges
-    ZX_DEBUG_ASSERT((reg->fields_mask_ & mask) == 0ull);
-    reg->fields_mask_ = static_cast<IntType>(reg->fields_mask_ | mask);
+    ZX_DEBUG_ASSERT((reg->fields_mask & mask) == 0ull);
+    reg->fields_mask = static_cast<IntType>(reg->fields_mask | mask);
 
-    reg->printer_.AppendField(name, bit_high_incl, bit_low);
+    reg->printer.AppendField(name, bit_high_incl, bit_low);
   }
 };
 
 // Used to record information about reserved-zero fields at construction time.
 // This enables auto-zeroing of reserved-zero fields on register write.
 // Represents a field that must be zeroed on write.
-template <class RegType>
+// The UnusedMarker argument is to give each RsvdZField member its own type.
+// This, combined with __NO_UNIQUE_ADDRESS, allows the compiler to use no
+// storage for the RsvdZField members.
+template <class RegType, typename UnusedMarker>
 class RsvdZField {
  private:
   using IntType = typename RegType::ValueType;
 
  public:
-  RsvdZField(RegType* reg, uint32_t bit_high_incl, uint32_t bit_low) {
+  RsvdZField(FieldParameters<RegType::PrinterEnabled::value, IntType>* reg, uint32_t bit_high_incl,
+             uint32_t bit_low) {
     IntType mask = static_cast<IntType>(internal::ComputeMask<IntType>(bit_high_incl - bit_low + 1)
                                         << bit_low);
-    reg->rsvdz_mask_ = static_cast<IntType>(reg->rsvdz_mask_ | mask);
+    reg->rsvdz_mask = static_cast<IntType>(reg->rsvdz_mask | mask);
   }
 };
 
