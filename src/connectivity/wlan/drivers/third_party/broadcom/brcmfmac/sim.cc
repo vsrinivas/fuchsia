@@ -16,16 +16,14 @@
 
 #include "sim.h"
 
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include <zircon/status.h>
-
-#include <memory>
 
 #include "bus.h"
 #include "chip.h"
 #include "common.h"
 #include "debug.h"
 #include "device.h"
-#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 
 #define BUS_OP(dev) dev->bus->bus_priv.sim->sim_fw
 static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
@@ -55,15 +53,15 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
 #undef BUS_OP
 
 // Get device-specific information
-zx_status_t brcmf_sim_probe(struct brcmf_bus* bus) {
+zx_status_t brcmf_sim_probe(brcmf_simdev* simdev) {
   uint32_t chip, chiprev;
 
-  bus->bus_priv.sim->sim_fw->GetChipInfo(&chip, &chiprev);
-  bus->chip = chip;
-  bus->chiprev = chiprev;
+  simdev->sim_fw->GetChipInfo(&chip, &chiprev);
+  simdev->bus_if.chip = chip;
+  simdev->bus_if.chiprev = chiprev;
 
-  bus->bus_priv.sim->settings = brcmf_get_module_param(bus->dev, BRCMF_BUS_TYPE_SIM, chip, chiprev);
-  if (bus->bus_priv.sim->settings == nullptr) {
+  simdev->settings = brcmf_get_module_param(simdev->bus_if.dev, BRCMF_BUS_TYPE_SIM, chip, chiprev);
+  if (simdev->settings == nullptr) {
     BRCMF_ERR("Failed to get device parameters\n");
     return ZX_ERR_INTERNAL;
   }
@@ -72,26 +70,31 @@ zx_status_t brcmf_sim_probe(struct brcmf_bus* bus) {
 }
 
 // Allocate necessary memory and initialize simulator-specific structures
-zx_status_t brcmf_sim_register(struct brcmf_device* device) {
+zx_status_t brcmf_sim_register(zx_device_t* zxdev) {
   zx_status_t status = ZX_OK;
   auto simdev = std::make_unique<brcmf_simdev>();
-  auto bus_if = std::make_unique<brcmf_bus>();
-
-  // Initialize inter-structure pointers
-  simdev->sim_fw = std::make_unique<SimFirmware>();
-  bus_if->bus_priv.sim = simdev.get();
-  bus_if->dev = device;
+  struct brcmf_bus* bus_if = &simdev->bus_if;
 
   BRCMF_DBG(SIM, "Registering simulator target\n");
-  status = brcmf_sim_probe(bus_if.get());
+
+  simdev->sim_fw = std::make_unique<SimFirmware>();
+
+  // Initialize inter-structure pointers
+  brcmf_device* dev = &simdev->dev;
+  dev->zxdev = zxdev;
+  bus_if->bus_priv.sim = simdev.get();
+  dev->bus = bus_if;
+  bus_if->dev = dev;
+
+  status = brcmf_sim_probe(simdev.get());
   if (status != ZX_OK) {
     BRCMF_ERR("sim_probe failed: %s\n", zx_status_get_string(status));
     return status;
   }
 
   bus_if->ops = &brcmf_sim_bus_ops;
-  device->bus = std::move(bus_if);
-  status = brcmf_attach(device, simdev->settings);
+
+  status = brcmf_attach(&simdev->dev, simdev->settings);
   if (status != ZX_OK) {
     BRCMF_ERR("brcmf_attach failed\n");
     return status;
@@ -112,9 +115,6 @@ zx_status_t brcmf_sim_register(struct brcmf_device* device) {
   return ZX_OK;
 }
 
-void brcmf_sim_exit(struct brcmf_device* device) {
-  delete device->bus->bus_priv.sim;
-  device->bus->bus_priv.sim = nullptr;
-
-  device->bus.reset();
+void brcmf_sim_exit(void) {
+  // TODO (WLAN-1057): Free memory associated with the brcmf_simdev instance.
 }

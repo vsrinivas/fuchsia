@@ -14,23 +14,20 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio.h"
-
-#include <lib/fake_ddk/fake_ddk.h>
-#include <zircon/types.h>
-
 #include <tuple>
 
 #include <ddk/device.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/sdio.h>
+#include <lib/fake_ddk/fake_ddk.h>
 #include <mock/ddktl/protocol/gpio.h>
 #include <mock/ddktl/protocol/sdio.h>
 #include <wifi/wifi-config.h>
+#include <zircon/types.h>
 #include <zxtest/zxtest.h>
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "../bus.h"
+#include "../sdio.h"
 
 // This is required to use ddk::MockSdio.
 bool operator==(const sdio_rw_txn_t& lhs, const sdio_rw_txn_t& rhs) {
@@ -78,8 +75,7 @@ TEST(Sdio, IntrRegister) {
   wifi_config_t config = {ZX_INTERRUPT_MODE_LEVEL_LOW};
   ddk.SetMetadata(&config, sizeof(config));
 
-  brcmf_device dev = {};
-  brcmf_sdio_dev sdio_dev = {};
+  brcmf_sdio_dev dev = {};
   sdio_func func1 = {};
   MockSdio sdio1;
   MockSdio sdio2;
@@ -87,13 +83,12 @@ TEST(Sdio, IntrRegister) {
   brcmf_bus bus_if = {};
   brcmf_mp_device settings = {};
 
-  sdio_dev.func1 = &func1;
-  sdio_dev.gpios[WIFI_OOB_IRQ_GPIO_INDEX] = *gpio.GetProto();
-  sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
-  sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
-  sdio_dev.dev = &dev;
-  sdio_dev.bus_if = &bus_if;
-  sdio_dev.settings = &settings;
+  dev.func1 = &func1;
+  dev.gpios[WIFI_OOB_IRQ_GPIO_INDEX] = *gpio.GetProto();
+  dev.sdio_proto_fn1 = *sdio1.GetProto();
+  dev.sdio_proto_fn2 = *sdio2.GetProto();
+  dev.bus_if = &bus_if;
+  dev.settings = &settings;
 
   gpio.ExpectConfigIn(ZX_OK, GPIO_NO_PULL)
       .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_LEVEL_LOW, zx::interrupt(ZX_HANDLE_INVALID));
@@ -101,7 +96,7 @@ TEST(Sdio, IntrRegister) {
       ZX_OK, true, SDIO_CCCR_BRCM_SEPINT, SDIO_CCCR_BRCM_SEPINT_MASK | SDIO_CCCR_BRCM_SEPINT_OE, 0);
   sdio2.ExpectEnableFnIntr(ZX_OK);
 
-  EXPECT_OK(brcmf_sdiod_intr_register(&sdio_dev));
+  EXPECT_OK(brcmf_sdiod_intr_register(&dev));
 
   gpio.VerifyAndClear();
   sdio1.VerifyAndClear();
@@ -109,49 +104,46 @@ TEST(Sdio, IntrRegister) {
 }
 
 TEST(Sdio, IntrUnregister) {
-  brcmf_device dev = {};
-  brcmf_sdio_dev sdio_dev = {};
+  brcmf_sdio_dev dev = {};
   sdio_func func1 = {};
 
   MockSdio sdio1;
   MockSdio sdio2;
-  sdio_dev.func1 = &func1;
-  sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
-  sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
-  sdio_dev.dev = &dev;
-  sdio_dev.oob_irq_requested = true;
+  dev.func1 = &func1;
+  dev.sdio_proto_fn1 = *sdio1.GetProto();
+  dev.sdio_proto_fn2 = *sdio2.GetProto();
+  dev.oob_irq_requested = true;
 
   sdio1.ExpectDoVendorControlRwByte(ZX_OK, true, 0xf2, 0, 0).ExpectDisableFnIntr(ZX_OK);
   sdio2.ExpectDisableFnIntr(ZX_OK);
 
-  brcmf_sdiod_intr_unregister(&sdio_dev);
+  brcmf_sdiod_intr_unregister(&dev);
 
   sdio1.VerifyAndClear();
   sdio2.VerifyAndClear();
 
-  sdio_dev = {};
+  dev = {};
   func1 = {};
 
-  sdio_dev.func1 = &func1;
-  sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
-  sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
-  sdio_dev.dev = &dev;
-  sdio_dev.sd_irq_requested = true;
+  dev.func1 = &func1;
+  dev.sdio_proto_fn1 = *sdio1.GetProto();
+  dev.sdio_proto_fn2 = *sdio2.GetProto();
+  dev.sd_irq_requested = true;
 
   sdio1.ExpectDisableFnIntr(ZX_OK);
   sdio2.ExpectDisableFnIntr(ZX_OK);
 
-  brcmf_sdiod_intr_unregister(&sdio_dev);
+  brcmf_sdiod_intr_unregister(&dev);
 
   sdio1.VerifyAndClear();
   sdio2.VerifyAndClear();
 }
 
 TEST(Sdio, VendorControl) {
-  brcmf_sdio_dev sdio_dev = {};
+  brcmf_sdio_dev dev = {};
 
   MockSdio sdio1;
-  sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
+  dev.sdio_proto_fn1 = *sdio1.GetProto();
 
   sdio1.ExpectDoVendorControlRwByte(ZX_ERR_IO, false, 0xf0, 0, 0xab)
       .ExpectDoVendorControlRwByte(ZX_OK, false, 0xf3, 0, 0x12)
@@ -160,54 +152,54 @@ TEST(Sdio, VendorControl) {
 
   zx_status_t status;
 
-  EXPECT_EQ(brcmf_sdiod_vendor_control_rb(&sdio_dev, 0xf0, &status), 0xab);
+  EXPECT_EQ(brcmf_sdiod_vendor_control_rb(&dev, 0xf0, &status), 0xab);
   EXPECT_EQ(status, ZX_ERR_IO);
-  EXPECT_EQ(brcmf_sdiod_vendor_control_rb(&sdio_dev, 0xf3, nullptr), 0x12);
+  EXPECT_EQ(brcmf_sdiod_vendor_control_rb(&dev, 0xf3, nullptr), 0x12);
 
-  brcmf_sdiod_vendor_control_wb(&sdio_dev, 0xff, 0x55, nullptr);
-  brcmf_sdiod_vendor_control_wb(&sdio_dev, 0xfd, 0x79, &status);
+  brcmf_sdiod_vendor_control_wb(&dev, 0xff, 0x55, nullptr);
+  brcmf_sdiod_vendor_control_wb(&dev, 0xfd, 0x79, &status);
   EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
 
   sdio1.VerifyAndClear();
 }
 
 TEST(Sdio, Transfer) {
-  brcmf_sdio_dev sdio_dev = {};
+  brcmf_sdio_dev dev = {};
 
   MockSdio sdio1;
   MockSdio sdio2;
-  sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
-  sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
+  dev.sdio_proto_fn1 = *sdio1.GetProto();
+  dev.sdio_proto_fn2 = *sdio2.GetProto();
 
   sdio1.ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x458ef43b, 0xd25d48bb, true, true));
   sdio2.ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x216977b9, 0x9a1d98ed, true, true))
       .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x9da7a590, 0xdc8290a3, true, true))
       .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0xecf0a024, 0x57d91422, true, true));
 
-  EXPECT_OK(brcmf_sdiod_write(&sdio_dev, SDIO_FN_1, 0x458ef43b, nullptr, 0xd25d48bb));
-  EXPECT_OK(brcmf_sdiod_write(&sdio_dev, SDIO_FN_2, 0x216977b9, nullptr, 0x9a1d98ed));
-  EXPECT_OK(brcmf_sdiod_write(&sdio_dev, 0, 0x9da7a590, nullptr, 0xdc8290a3));
-  EXPECT_OK(brcmf_sdiod_write(&sdio_dev, 200, 0xecf0a024, nullptr, 0x57d91422));
+  EXPECT_OK(brcmf_sdiod_write(&dev, SDIO_FN_1, 0x458ef43b, nullptr, 0xd25d48bb));
+  EXPECT_OK(brcmf_sdiod_write(&dev, SDIO_FN_2, 0x216977b9, nullptr, 0x9a1d98ed));
+  EXPECT_OK(brcmf_sdiod_write(&dev, 0, 0x9da7a590, nullptr, 0xdc8290a3));
+  EXPECT_OK(brcmf_sdiod_write(&dev, 200, 0xecf0a024, nullptr, 0x57d91422));
 
   sdio1.VerifyAndClear();
   sdio2.VerifyAndClear();
 }
 
 TEST(Sdio, IoAbort) {
-  brcmf_sdio_dev sdio_dev = {};
+  brcmf_sdio_dev dev = {};
 
   MockSdio sdio1;
   MockSdio sdio2;
-  sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
-  sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
+  dev.sdio_proto_fn1 = *sdio1.GetProto();
+  dev.sdio_proto_fn2 = *sdio2.GetProto();
 
   sdio1.ExpectIoAbort(ZX_OK);
   sdio2.ExpectIoAbort(ZX_OK).ExpectIoAbort(ZX_OK).ExpectIoAbort(ZX_OK);
 
-  EXPECT_OK(brcmf_sdiod_abort(&sdio_dev, 1));
-  EXPECT_OK(brcmf_sdiod_abort(&sdio_dev, 2));
-  EXPECT_OK(brcmf_sdiod_abort(&sdio_dev, 0));
-  EXPECT_OK(brcmf_sdiod_abort(&sdio_dev, 200));
+  EXPECT_OK(brcmf_sdiod_abort(&dev, 1));
+  EXPECT_OK(brcmf_sdiod_abort(&dev, 2));
+  EXPECT_OK(brcmf_sdiod_abort(&dev, 0));
+  EXPECT_OK(brcmf_sdiod_abort(&dev, 200));
 
   sdio1.VerifyAndClear();
   sdio2.VerifyAndClear();
