@@ -338,7 +338,7 @@ static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t of
 
 void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state) {
   struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr.get();
+  struct brcmf_pub* drvr = bus_if->drvr;
 
   BRCMF_DBG(TRACE, "Enter\n");
 
@@ -356,7 +356,7 @@ void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* 
       brcmf_fws_bustxfail(bcdc->fws, txp);
     }
   } else {
-    if (brcmf_proto_bcdc_hdrpull(bus_if->drvr.get(), false, txp, &ifp)) {
+    if (brcmf_proto_bcdc_hdrpull(bus_if->drvr, false, txp, &ifp)) {
       brcmu_pkt_buf_free_netbuf(txp);
     } else {
       brcmf_txfinalize(ifp, txp, success);

@@ -17,15 +17,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEVICE_H_
 
+#include <ddk/device.h>
 #include <lib/async-loop/loop.h>  // to start the worker thread
 #include <lib/async/task.h>       // for async_post_task()
 #include <lib/sync/completion.h>
 #include <pthread.h>
 #include <zircon/types.h>
-
-#include <memory>
-
-#include <ddk/device.h>
 
 extern async_dispatcher_t* default_dispatcher;
 
@@ -52,13 +49,13 @@ struct brcmf_bus;
 struct brcmf_device {
   void* of_node;
   void* parent;
-  std::unique_ptr<struct brcmf_bus> bus;
+  struct brcmf_bus* bus;
   zx_device_t* zxdev;
   zx_device_t* phy_zxdev;
   zx_device_t* if_zxdev;
 };
 
-static inline struct brcmf_bus* dev_to_bus(struct brcmf_device* dev) { return dev->bus.get(); }
+static inline struct brcmf_bus* dev_to_bus(struct brcmf_device* dev) { return dev->bus; }
 
 // TODO(cphoenix): Wrap around whatever completion functions exist in PCIE and SDIO.
 // TODO(cphoenix): To improve efficiency, analyze which spinlocks only need to protect small

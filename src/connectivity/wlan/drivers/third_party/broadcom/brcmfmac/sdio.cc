@@ -16,24 +16,23 @@
 
 #include "sdio.h"
 
-#include <lib/sync/completion.h>
-#include <zircon/status.h>
-
 #include <algorithm>
 #include <atomic>
 
 #include <ddk/device.h>
 #include <ddk/trace/event.h>
+#include <lib/sync/completion.h>
+#include <zircon/status.h>
 
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE
 #endif
 #include <threads.h>
 
-#include "bcdc.h"
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
+#include "bcdc.h"
 #include "chip.h"
 #include "common.h"
 #include "core.h"
@@ -97,8 +96,9 @@ struct rte_console {
 };
 
 #endif /* !defined(NDEBUG) */
-#include "bus.h"
 #include "chipcommon.h"
+
+#include "bus.h"
 #include "debug.h"
 #include "device.h"
 
@@ -1571,9 +1571,9 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
                          brcmf_netbuf_list_prev(&bus->glom, pfirst));
       brcmf_netbuf_list_remove(&bus->glom, pfirst);
       if (brcmf_sdio_fromevntchan(&dptr[SDPCM_HWHDR_LEN])) {
-        brcmf_rx_event(bus->sdiodev->dev, pfirst);
+        brcmf_rx_event(&bus->sdiodev->dev, pfirst);
       } else {
-        brcmf_rx_frame(bus->sdiodev->dev, pfirst, false);
+        brcmf_rx_frame(&bus->sdiodev->dev, pfirst, false);
       }
       bus->sdcnt.rxglompkts++;
     }
@@ -1884,9 +1884,9 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
     if (pkt->len == 0) {
       brcmu_pkt_buf_free_netbuf(pkt);
     } else if (rd->channel == SDPCM_EVENT_CHANNEL) {
-      brcmf_rx_event(bus->sdiodev->dev, pkt);
+      brcmf_rx_event(&bus->sdiodev->dev, pkt);
     } else {
-      brcmf_rx_frame(bus->sdiodev->dev, pkt, false);
+      brcmf_rx_frame(&bus->sdiodev->dev, pkt, false);
     }
 
     /* prepare the descriptor for the next read */
@@ -2056,7 +2056,7 @@ done:
   }
   brcmf_netbuf_list_for_every_safe(pktq, pkt_next, tmp) {
     brcmf_netbuf_list_remove(pktq, pkt_next);
-    brcmf_proto_bcdc_txcomplete(bus->sdiodev->dev, pkt_next, ret == ZX_OK);
+    brcmf_proto_bcdc_txcomplete(&bus->sdiodev->dev, pkt_next, ret == ZX_OK);
   }
   return ret;
 }
@@ -2119,7 +2119,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
   /* Deflow-control stack if needed */
   if ((bus->sdiodev->state == BRCMF_SDIOD_DATA) && bus->txoff && (pktq_len(&bus->txq) < TXLOW)) {
     bus->txoff = false;
-    brcmf_proto_bcdc_txflowblock(bus->sdiodev->dev, false);
+    brcmf_proto_bcdc_txflowblock(&bus->sdiodev->dev, false);
   }
 
   return cnt;
@@ -3001,7 +3001,7 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
   }
 
   bus->tx_hdrlen = SDPCM_HWHDR_LEN + SDPCM_SWHDR_LEN;
-  brcmf_bus_add_txhdrlen(bus->sdiodev->dev, bus->tx_hdrlen);
+  brcmf_bus_add_txhdrlen(&bus->sdiodev->dev, bus->tx_hdrlen);
 
 done:
   return err;
@@ -3456,7 +3456,7 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
   }
 
   sdiodev->settings =
-      brcmf_get_module_param(sdiodev->dev, BRCMF_BUS_TYPE_SDIO, bus->ci->chip, bus->ci->chiprev);
+      brcmf_get_module_param(&sdiodev->dev, BRCMF_BUS_TYPE_SDIO, bus->ci->chip, bus->ci->chiprev);
   if (!sdiodev->settings) {
     BRCMF_ERR("Failed to get device parameters\n");
     err = ZX_ERR_INTERNAL;
@@ -3798,7 +3798,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   /* single-threaded workqueue */
   char name[WORKQUEUE_NAME_MAXLEN];
   static int queue_uniquify = 0;
-  snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%s%d", device_get_name(sdiodev->dev->zxdev),
+  snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%s%d", device_get_name(sdiodev->dev.zxdev),
            queue_uniquify++);
   wq = workqueue_create(name);
   if (!wq) {
@@ -3835,7 +3835,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->dpc_running = false;
 
   /* Assign bus interface call back */
-  bus->sdiodev->bus_if->dev = sdiodev->dev;
+  bus->sdiodev->bus_if->dev = &bus->sdiodev->dev;
   bus->sdiodev->bus_if->ops = &brcmf_sdio_bus_ops;
   bus->sdiodev->bus_if->chip = bus->ci->chip;
   bus->sdiodev->bus_if->chiprev = bus->ci->chiprev;
@@ -3844,7 +3844,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->tx_hdrlen = SDPCM_HWHDR_LEN + SDPCM_SWHDR_LEN;
 
   /* Attach to the common layer, reserve hdr space */
-  ret = brcmf_attach(bus->sdiodev->dev, bus->sdiodev->settings);
+  ret = brcmf_attach(&bus->sdiodev->dev, bus->sdiodev->settings);
   if (ret != ZX_OK) {
     BRCMF_ERR("brcmf_attach failed\n");
     goto fail;
@@ -3895,7 +3895,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     goto fail;
   }
 
-  ret = brcmf_fw_get_firmwares(sdiodev->dev, BRCMF_FW_REQUEST_NVRAM, sdiodev->fw_name,
+  ret = brcmf_fw_get_firmwares(&sdiodev->dev, BRCMF_FW_REQUEST_NVRAM, sdiodev->fw_name,
                                sdiodev->nvram_name, brcmf_sdio_firmware_callback);
   if (ret != ZX_OK) {
     BRCMF_ERR("async firmware request failed: %d\n", ret);
@@ -3917,7 +3917,7 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
     /* De-register interrupt handler */
     brcmf_sdiod_intr_unregister(bus->sdiodev);
 
-    brcmf_detach(bus->sdiodev->dev);
+    brcmf_detach(&bus->sdiodev->dev);
 
     workqueue_cancel_work(&bus->datawork);
     if (bus->brcmf_wq) {

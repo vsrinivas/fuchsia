@@ -18,13 +18,10 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
 
 #include <atomic>
-#include <memory>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-#include "core.h"
-#include "device.h"
 #include "netbuf.h"
 
 // HW/SW bus in use
@@ -123,7 +120,7 @@ struct brcmf_bus {
     struct brcmf_simdev* sim;
   } bus_priv;
   struct brcmf_device* dev;
-  std::unique_ptr<struct brcmf_pub> drvr;
+  struct brcmf_pub* drvr;
   enum brcmf_bus_state state;
   struct brcmf_bus_stats stats;
   uint maxctl;
@@ -235,7 +232,7 @@ zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, const char* name, voi
 void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len);
 
 // Interface to the system bus.
-zx_status_t brcmf_bus_register(struct brcmf_device* device);
-void brcmf_bus_exit(struct brcmf_device* device);
+zx_status_t brcmf_bus_register(zx_device_t* zxdev);
+void brcmf_bus_exit(void);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_

@@ -91,7 +91,7 @@ zx_status_t brcmf_sdiod_get_bootloader_macaddr(struct brcmf_sdio_dev* sdiodev, u
   uint8_t bootloader_macaddr[8];
   size_t actual_len;
   zx_status_t ret =
-      device_get_metadata(sdiodev->dev->zxdev, DEVICE_METADATA_MAC_ADDRESS, bootloader_macaddr,
+      device_get_metadata(sdiodev->dev.zxdev, DEVICE_METADATA_MAC_ADDRESS, bootloader_macaddr,
                           sizeof(bootloader_macaddr), &actual_len);
 
   if (ret != ZX_OK || actual_len < ETH_ALEN) {
@@ -113,7 +113,7 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
   pdata->oob_irq_supported = false;
   wifi_config_t config;
   size_t actual;
-  ret = device_get_metadata(sdiodev->dev->zxdev, DEVICE_METADATA_WIFI_CONFIG, &config,
+  ret = device_get_metadata(sdiodev->dev.zxdev, DEVICE_METADATA_WIFI_CONFIG, &config,
                             sizeof(wifi_config_t), &actual);
   if ((ret != ZX_OK && ret != ZX_ERR_NOT_FOUND) ||
       (ret == ZX_OK && actual != sizeof(wifi_config_t))) {
@@ -769,11 +769,12 @@ static const struct sdio_device_id brcmf_sdmmc_ids[] = {
     {/* end: all zeroes */}};
 #endif  // TODO_ADD_SDIO_IDS
 
-zx_status_t brcmf_sdio_register(struct brcmf_device* device) {
+zx_status_t brcmf_sdio_register(zx_device_t* zxdev) {
   zx_status_t err;
+  struct brcmf_device* dev;
   zx_status_t status;
 
-  std::unique_ptr<struct brcmf_bus> bus_if;
+  struct brcmf_bus* bus_if = NULL;
   struct sdio_func* func1 = NULL;
   struct sdio_func* func2 = NULL;
   struct brcmf_sdio_dev* sdiodev = NULL;
@@ -781,7 +782,7 @@ zx_status_t brcmf_sdio_register(struct brcmf_device* device) {
   BRCMF_DBG(SDIO, "Enter\n");
 
   composite_protocol_t composite_proto = {};
-  status = device_get_protocol(device->zxdev, ZX_PROTOCOL_COMPOSITE, &composite_proto);
+  status = device_get_protocol(zxdev, ZX_PROTOCOL_COMPOSITE, &composite_proto);
   if (status != ZX_OK) {
     return status;
   }
@@ -856,7 +857,11 @@ zx_status_t brcmf_sdio_register(struct brcmf_device* device) {
   /* Set MMC_QUIRK_LENIENT_FN0 for this card */
   // func->card->quirks |= MMC_QUIRK_LENIENT_FN0;
 
-  bus_if = std::make_unique<struct brcmf_bus>();
+  bus_if = static_cast<decltype(bus_if)>(calloc(1, sizeof(struct brcmf_bus)));
+  if (!bus_if) {
+    err = ZX_ERR_NO_MEMORY;
+    goto fail;
+  }
   func1 = static_cast<decltype(func1)>(calloc(1, sizeof(struct sdio_func)));
   if (!func1) {
     err = ZX_ERR_NO_MEMORY;
@@ -886,6 +891,8 @@ zx_status_t brcmf_sdio_register(struct brcmf_device* device) {
     err = ZX_ERR_NO_MEMORY;
     goto fail;
   }
+  dev = &sdiodev->dev;
+  dev->zxdev = zxdev;
   memcpy(&sdiodev->sdio_proto_fn1, &sdio_proto_fn1, sizeof(sdiodev->sdio_proto_fn1));
   memcpy(&sdiodev->sdio_proto_fn2, &sdio_proto_fn2, sizeof(sdiodev->sdio_proto_fn2));
   memcpy(&sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX], &gpio_protos[WIFI_OOB_IRQ_GPIO_INDEX],
@@ -895,12 +902,11 @@ zx_status_t brcmf_sdio_register(struct brcmf_device* device) {
            sizeof(gpio_protos[DEBUG_GPIO_INDEX]));
     sdiodev->has_debug_gpio = true;
   }
-  sdiodev->bus_if = bus_if.get();
+  sdiodev->bus_if = bus_if;
   sdiodev->func1 = func1;
   sdiodev->func2 = func2;
-  sdiodev->dev = device;
   bus_if->bus_priv.sdio = sdiodev;
-  device->bus = std::move(bus_if);
+  dev->bus = bus_if;
 
   sdiodev->manufacturer_id = devinfo.funcs_hw_info[SDIO_FN_1].manufacturer_id;
   sdiodev->product_id = devinfo.funcs_hw_info[SDIO_FN_1].product_id;
@@ -928,11 +934,14 @@ fail:
     pthread_mutex_destroy(&func1->lock);
     free(func1);
   }
+  free(bus_if);
   pthread_mutexattr_destroy(&mutex_attr);
   return err;
 }
 
 static void brcmf_ops_sdio_remove(struct brcmf_sdio_dev* sdiodev) {
+  struct brcmf_bus* bus_if;
+
   BRCMF_DBG(SDIO, "Enter\n");
   if (sdiodev == NULL) {
     return;
@@ -940,18 +949,23 @@ static void brcmf_ops_sdio_remove(struct brcmf_sdio_dev* sdiodev) {
   BRCMF_DBG(SDIO, "sdio vendor ID: 0x%04x\n", sdiodev->manufacturer_id);
   BRCMF_DBG(SDIO, "sdio device ID: 0x%04x\n", sdiodev->product_id);
 
-  /* start by unregistering irqs */
-  brcmf_sdiod_intr_unregister(sdiodev);
+  bus_if = dev_to_bus(&sdiodev->dev);
+  if (bus_if) {
+    /* start by unregistering irqs */
+    brcmf_sdiod_intr_unregister(sdiodev);
 
-  brcmf_sdiod_remove(sdiodev);
+    brcmf_sdiod_remove(sdiodev);
 
-  if (sdiodev->func1) {
-    pthread_mutex_destroy(&sdiodev->func1->lock);
-    free(sdiodev->func1);
-  }
-  if (sdiodev->func2) {
-    pthread_mutex_destroy(&sdiodev->func2->lock);
-    free(sdiodev->func2);
+    free(bus_if);
+    if (sdiodev->func1) {
+      pthread_mutex_destroy(&sdiodev->func1->lock);
+      free(sdiodev->func1);
+    }
+    if (sdiodev->func2) {
+      pthread_mutex_destroy(&sdiodev->func2->lock);
+      free(sdiodev->func2);
+    }
+    free(sdiodev);
   }
 
   BRCMF_DBG(SDIO, "Exit\n");
@@ -965,10 +979,9 @@ void brcmf_sdio_wowl_config(struct brcmf_device* dev, bool enabled) {
   sdiodev->wowl_enabled = enabled;
 }
 
-void brcmf_sdio_exit(struct brcmf_device* device) {
+void brcmf_sdio_exit(void) {
   BRCMF_DBG(SDIO, "Enter\n");
 
-  brcmf_ops_sdio_remove(device->bus->bus_priv.sdio);
-  delete device->bus->bus_priv.sdio;
-  device->bus.reset();
+  // TODO(cphoenix): Hook up the actual remove pathway.
+  brcmf_ops_sdio_remove(NULL);
 }

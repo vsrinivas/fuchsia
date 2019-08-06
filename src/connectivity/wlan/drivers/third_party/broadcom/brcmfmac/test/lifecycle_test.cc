@@ -14,28 +14,20 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <stdio.h>
-
 #include <ddk/device.h>
 #include <gtest/gtest.h>
+#include <stdio.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
 namespace {
 
+static zx_device_t* sim_dev = reinterpret_cast<zx_device_t*>(0x123456543210);
+
 TEST(LifecycleTest, StartStop) {
-  zx_status_t status = ZX_OK;
-  brcmf_device device = {};
-
-  status = brcmfmac_module_init();
+  zx_status_t status = brcmfmac_module_init(sim_dev);
   EXPECT_EQ(status, ZX_OK);
-  status = brcmf_core_init(&device);
-  EXPECT_EQ(status, ZX_OK);
-
-  brcmf_core_exit(&device);
-  brcmfmac_module_exit();
+  brcmf_core_exit();
 }
 
 }  // namespace
