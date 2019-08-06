@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_BOOTLOADER_INCLUDE_UNISTD_H_
+#define ZIRCON_BOOTLOADER_INCLUDE_UNISTD_H_
 
 #include <sys/types.h>
+
+#endif  // ZIRCON_BOOTLOADER_INCLUDE_UNISTD_H_

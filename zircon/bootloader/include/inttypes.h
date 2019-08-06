@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_BOOTLOADER_INCLUDE_INTTYPES_H_
+#define ZIRCON_BOOTLOADER_INCLUDE_INTTYPES_H_
 
 #include <stdint.h>
 
@@ -25,3 +26,5 @@
 #define PRIx64 "lx"
 #define PRIu64 "lu"
 #endif
+
+#endif  // ZIRCON_BOOTLOADER_INCLUDE_INTTYPES_H_

@@ -2,35 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdlib.h>
-
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
-#define ATOx(T, fn)             \
-T fn(const char* nptr) {            \
+#define ATOx(T, fn)                   \
+  T fn(const char* nptr) {            \
     while (nptr && isspace(*nptr)) {  \
-        nptr++;                       \
+      nptr++;                         \
     }                                 \
                                       \
     bool neg = false;                 \
     if (*nptr == '-') {               \
-        neg = true;                   \
-        nptr++;                       \
+      neg = true;                     \
+      nptr++;                         \
     }                                 \
                                       \
     T ret = 0;                        \
     for (; nptr; nptr++) {            \
-        if (!isdigit(*nptr)) break;   \
-        ret = 10*ret + (*nptr - '0'); \
+      if (!isdigit(*nptr))            \
+        break;                        \
+      ret = 10 * ret + (*nptr - '0'); \
     }                                 \
                                       \
-    if (neg) ret = -ret;              \
+    if (neg)                          \
+      ret = -ret;                     \
     return ret;                       \
-}
+  }
 
-
-ATOx(int, atoi)
-ATOx(long, atol)
-ATOx(long long, atoll)
+ATOx(int, atoi) ATOx(long, atol) ATOx(long long, atoll)

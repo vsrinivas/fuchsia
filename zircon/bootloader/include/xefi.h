@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_BOOTLOADER_INCLUDE_XEFI_H_
+#define ZIRCON_BOOTLOADER_INCLUDE_XEFI_H_
 
 #include <efi/boot-services.h>
-#include <efi/system-table.h>
-#include <efi/types.h>
 #include <efi/protocol/device-path.h>
 #include <efi/protocol/file.h>
 #include <efi/protocol/simple-text-output.h>
+#include <efi/system-table.h>
+#include <efi/types.h>
 
 void xefi_init(efi_handle img, efi_system_table* sys);
 
@@ -54,3 +55,5 @@ extern xefi_global xefi_global_state;
 #define gSys (xefi_global_state.sys)
 #define gBS (xefi_global_state.bs)
 #define gConOut (xefi_global_state.conout)
+
+#endif  // ZIRCON_BOOTLOADER_INCLUDE_XEFI_H_

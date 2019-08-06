@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_BOOTLOADER_INCLUDE_STDIO_H_
+#define ZIRCON_BOOTLOADER_INCLUDE_STDIO_H_
 
 #ifndef NULL
 #define NULL ((void*)0)
 #endif
 
-#include <stdint.h>
 #include <printf.h>
 #include <stddef.h>
+#include <stdint.h>
 
 int puts16(char16_t* str);
+
+#endif  // ZIRCON_BOOTLOADER_INCLUDE_STDIO_H_

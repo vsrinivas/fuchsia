@@ -14,25 +14,20 @@
 
 uint16_t htons(uint16_t val) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    return __builtin_bswap16(val);
+  return __builtin_bswap16(val);
 #else
-    return val;
+  return val;
 #endif
 }
 
-uint16_t ntohs(uint16_t val) {
-    return htons(val);
-}
+uint16_t ntohs(uint16_t val) { return htons(val); }
 
 uint32_t htonl(uint32_t val) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    return __builtin_bswap32(val);
+  return __builtin_bswap32(val);
 #else
-    return val;
+  return val;
 #endif
 }
 
-uint32_t ntohl(uint32_t val) {
-    return htonl(val);
-}
-
+uint32_t ntohl(uint32_t val) { return htonl(val); }

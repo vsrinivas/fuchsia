@@ -5,14 +5,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __LIB_PRINTF_H
-#define __LIB_PRINTF_H
+#ifndef ZIRCON_BOOTLOADER_INCLUDE_PRINTF_H_
+#define ZIRCON_BOOTLOADER_INCLUDE_PRINTF_H_
 
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <uchar.h>
-
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
@@ -44,4 +43,4 @@ int puts16(char16_t *str);
 
 __END_CDECLS
 
-#endif
+#endif  // ZIRCON_BOOTLOADER_INCLUDE_PRINTF_H_

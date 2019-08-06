@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_BOOTLOADER_SRC_CMDLINE_H_
+#define ZIRCON_BOOTLOADER_SRC_CMDLINE_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -20,3 +21,5 @@ uint32_t cmdline_get_uint32(const char* key, uint32_t _default);
 
 // obtain the entire commandline as a string
 size_t cmdline_to_string(char* ptr, size_t max);
+
+#endif  // ZIRCON_BOOTLOADER_SRC_CMDLINE_H_

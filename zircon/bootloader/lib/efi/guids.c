@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <efi/protocol/block-io.h>
-#include <efi/protocol/device-path.h>
 #include <efi/protocol/device-path-to-text.h>
+#include <efi/protocol/device-path.h>
 #include <efi/protocol/disk-io.h>
 #include <efi/protocol/driver-binding.h>
 #include <efi/protocol/file.h>

@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_BOOTLOADER_SRC_NETIFC_H_
+#define ZIRCON_BOOTLOADER_SRC_NETIFC_H_
+
+#include <stdint.h>
 
 // setup networking
 int netifc_open(void);
@@ -21,3 +24,5 @@ void netifc_set_timer(uint32_t ms);
 
 // returns true once the timer has expired
 int netifc_timer_expired(void);
+
+#endif  // ZIRCON_BOOTLOADER_SRC_NETIFC_H_

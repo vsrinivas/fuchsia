@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_BOOTLOADER_SRC_OSBOOT_H_
+#define ZIRCON_BOOTLOADER_SRC_OSBOOT_H_
 
 #include <stdint.h>
 
-#include <efi/system-table.h>
 #include <efi/protocol/graphics-output.h>
+#include <efi/system-table.h>
 
 #define PAGE_SIZE (4096)
 #define PAGE_MASK (PAGE_SIZE - 1)
@@ -54,3 +55,5 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* sz,
 // Where to start the kernel from
 extern size_t kernel_zone_size;
 extern efi_physical_addr kernel_zone_base;
+
+#endif  // ZIRCON_BOOTLOADER_SRC_OSBOOT_H_
