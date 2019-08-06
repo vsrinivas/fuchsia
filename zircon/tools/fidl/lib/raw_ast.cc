@@ -315,6 +315,9 @@ void File::Accept(TreeVisitor* visitor) const {
   for (auto& i : using_list) {
     visitor->OnUsing(i);
   }
+  for (auto& i : bits_declaration_list) {
+    visitor->OnBitsDeclaration(i);
+  }
   for (auto& i : const_declaration_list) {
     visitor->OnConstDeclaration(i);
   }

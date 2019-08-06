@@ -37,6 +37,7 @@ void Usage() {
          "             [--json JSON_PATH]\n"
          "             [--name LIBRARY_NAME]\n"
          "             [--werror]\n"
+         "             [--json-schema]\n"
          "             [--files [FIDL_FILE...]...]\n"
          "             [--help]\n"
          "\n"
@@ -294,7 +295,6 @@ int main(int argc, char* argv[]) {
   while (args->Remaining()) {
     // Try to parse an output type.
     std::string behavior_argument = args->Claim();
-    std::fstream output_file;
     if (behavior_argument == "--help") {
       Usage();
       exit(0);

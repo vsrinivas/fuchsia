@@ -615,7 +615,7 @@ void GetMethodParameters(const flat::Library* library, const CGenerator::NamedMe
   }
 
   if (response && method_info.response) {
-    response->reserve(method_info.request->parameters.size());
+    response->reserve(method_info.response->parameters.size());
     for (const auto& parameter : method_info.response->parameters) {
       response->push_back(CreateMember(library, parameter));
     }
@@ -1293,7 +1293,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
     }
     file_ << "}\n\n";
   }
-}  // namespace fidl
+}
 
 void CGenerator::ProduceProtocolServerDeclaration(const NamedProtocol& named_protocol) {
   file_ << "typedef struct " << named_protocol.c_name << "_ops {\n";

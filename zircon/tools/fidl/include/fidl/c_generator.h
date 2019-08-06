@@ -173,7 +173,6 @@ class CGenerator {
   void ProduceMessageDeclaration(const NamedMessage& named_message);
   void ProduceProtocolDeclaration(const NamedProtocol& named_protocol);
   void ProduceStructDeclaration(const NamedStruct& named_struct);
-  void ProduceTableDeclaration(const NamedStruct& named_struct);
   void ProduceUnionDeclaration(const NamedUnion& named_union);
   void ProduceXUnionDeclaration(const NamedXUnion& named_xunion);
 

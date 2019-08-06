@@ -13,7 +13,7 @@ their source location (a file and position).
 ### Parsing a file
 
 The FIDL compiler first parses each file into an in-memory AST, which is defined
-by the structures in [ast.h](include/fidl/ast.h). This parsing operation starts
+by the structures in [ast.h](include/fidl/raw_ast.h). This parsing operation starts
 by reading the file into memory, and then lexing the contents into a
 [token](include/fidl/token.h) stream. The [parser](lib/parser.cpp) proper then
 parses the stream into the hierarchical AST. At this point names of types are
