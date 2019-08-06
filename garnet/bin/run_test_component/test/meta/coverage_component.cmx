@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/coverage_component"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.debugdata.DebugData"
+        ]
+    }
+}

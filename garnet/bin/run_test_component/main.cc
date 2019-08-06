@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/debugdata/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -17,11 +18,13 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
 #include <string>
 
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
+#include "lib/vfs/cpp/service.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -104,10 +107,13 @@ int main(int argc, const char** argv) {
     fprintf(stderr, "Error parsing config file %s: %s\n", kConfigPath, config.error_str().c_str());
     return 1;
   }
-  auto env_services = sys::ServiceDirectory::CreateFromNamespace();
+
+  // Services which we get from /svc. They might be different depending on in which shell this
+  // binary is launched from, so can't use it to create underlying environment.
+  auto namespace_services = sys::ServiceDirectory::CreateFromNamespace();
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  auto parse_result = run::ParseArgs(env_services, argc, argv);
+  auto parse_result = run::ParseArgs(namespace_services, argc, argv);
   if (parse_result.error) {
     if (parse_result.error_msg != "") {
       fprintf(stderr, "%s\n", parse_result.error_msg.c_str());
@@ -131,7 +137,8 @@ int main(int argc, const char** argv) {
   // data is up to date before continuing to try and parse the CMX file.
   // TODO(raggi): replace this with fuchsia.pkg.Resolver, once it is stable.
   fuchsia::process::ResolverSyncPtr resolver;
-  zx_status_t status = env_services->Connect<fuchsia::process::Resolver>(resolver.NewRequest());
+  zx_status_t status =
+      namespace_services->Connect<fuchsia::process::Resolver>(resolver.NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "connect to %s failed: %s. Can not continue.\n",
             fuchsia::process::Resolver::Name_, zx_status_get_string(status));
@@ -189,12 +196,24 @@ int main(int argc, const char** argv) {
     parse_result.launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
     parent_env->GetLauncher(launcher.NewRequest());
   } else {
-    env_services->Connect(parent_env.NewRequest());
-    auto env_services = sys::testing::EnvironmentServices::Create(parent_env);
+    namespace_services->Connect(parent_env.NewRequest());
+
+    // Our bots run tests in zircon shell which do not have all required services, so create the
+    // test environment from `parent_env` (i.e. the sys environment) instead of the services in the
+    // namespace. But pass DebugData from the namespace because it is not available in `parent_env`.
+    sys::testing::EnvironmentServices::ParentOverrides parent_overrides;
+    parent_overrides.debug_data_service_ =
+        std::make_shared<vfs::Service>([namespace_services = namespace_services](
+                                           zx::channel channel, async_dispatcher_t* dispatcher) {
+          namespace_services->Connect(fuchsia::debugdata::DebugData::Name_, std::move(channel));
+        });
+
+    auto test_env_services = sys::testing::EnvironmentServices::CreateWithParentOverrides(
+        parent_env, std::move(parent_overrides));
     auto services = test_metadata.TakeServices();
     bool provide_real_log_sink = true;
     for (auto& service : services) {
-      env_services->AddServiceWithLaunchInfo(std::move(service.second), service.first);
+      test_env_services->AddServiceWithLaunchInfo(std::move(service.second), service.first);
       if (service.first == fuchsia::logger::LogSink::Name_) {
         // don't add global log sink service if test component is injecting
         // it.
@@ -202,11 +221,11 @@ int main(int argc, const char** argv) {
       }
     }
     if (provide_real_log_sink) {
-      env_services->AllowParentService(fuchsia::logger::LogSink::Name_);
+      test_env_services->AllowParentService(fuchsia::logger::LogSink::Name_);
     }
     auto& system_services = test_metadata.system_services();
     for (auto& service : system_services) {
-      env_services->AllowParentService(service);
+      test_env_services->AllowParentService(service);
     }
 
     uint32_t rand;
@@ -214,7 +233,7 @@ int main(int argc, const char** argv) {
     std::string env_label = fxl::StringPrintf("%s%08x", kEnvPrefix, rand);
     fuchsia::sys::EnvironmentOptions env_opt{.delete_storage_on_death = true};
     enclosing_env = sys::testing::EnclosingEnvironment::Create(
-        std::move(env_label), parent_env, std::move(env_services), std::move(env_opt));
+        std::move(env_label), parent_env, std::move(test_env_services), std::move(env_opt));
     launcher = enclosing_env->launcher_ptr();
   }
 

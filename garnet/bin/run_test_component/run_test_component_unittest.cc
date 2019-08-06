@@ -49,15 +49,17 @@ TEST(RunTest, ParseArgs) {
   }
 
   {
-    std::string expected_urls[] = {
+    std::vector<std::string> expected_urls = {
         "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
         "run_test_component_test.cmx",
         "fuchsia-pkg://fuchsia.com/run_test_component_unittests#meta/"
-        "run_test_component_unittests.cmx"};
+        "run_test_component_unittests.cmx",
+        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+        "coverage_component.cmx"};
     const char* argv[] = {kBinName, "run_test_component"};
     auto result = ParseArgs(env_services, 2, argv);
     EXPECT_FALSE(result.error);
-    EXPECT_EQ(2u, result.matching_urls.size());
+    EXPECT_EQ(expected_urls.size(), result.matching_urls.size());
     EXPECT_THAT(result.matching_urls, ::testing::UnorderedElementsAreArray(expected_urls));
   }
 

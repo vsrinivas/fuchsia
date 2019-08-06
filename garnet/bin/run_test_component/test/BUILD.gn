@@ -22,9 +22,31 @@ executable("bin") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
+    "//zircon/public/fidl/fuchsia-debugdata",
+    "//zircon/public/fidl/fuchsia-process",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("coverage_component") {
+  testonly = true
+
+  sources = [
+    "coverage_component.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/fidl/fuchsia-debugdata",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -33,6 +55,20 @@ test_package("run_test_component_test") {
 
   deps = [
     ":bin",
+    ":coverage_component",
+  ]
+
+  binaries = [
+    {
+      name = "coverage_component"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/coverage_component.cmx")
+      dest = "coverage_component.cmx"
+    },
   ]
 
   tests = [
