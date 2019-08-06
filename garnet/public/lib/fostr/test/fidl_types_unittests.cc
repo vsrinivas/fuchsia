@@ -219,9 +219,8 @@ TEST(FidlTypes, VectorPtr) {
   fidl::VectorPtr<std::string> null_vector;
   fidl::VectorPtr<std::string> empty_vector;
   fidl::VectorPtr<std::string> utensil_vector;
-  empty_vector.resize(0);
-  utensil_vector.push_back("knife");
-  utensil_vector.push_back("spork");
+  empty_vector.emplace();
+  utensil_vector.emplace({"knife", "spork"});
 
   os << fostr::Indent << "null:" << null_vector << ", empty:" << empty_vector
      << ", utensil:" << utensil_vector;
@@ -241,14 +240,17 @@ TEST(FidlTypes, VectorPtrOfUint8) {
   fidl::VectorPtr<uint8_t> small_vector;
   fidl::VectorPtr<uint8_t> medium_vector;
   fidl::VectorPtr<uint8_t> large_vector;
-  empty_vector.resize(0);
+  empty_vector.emplace();
+  small_vector.emplace();
+  medium_vector.emplace();
+  large_vector.emplace();
   for (uint8_t i = 0; i < 10; ++i) {
-    small_vector.push_back(i);
-    large_vector.push_back(i);
+    small_vector->push_back(i);
+    large_vector->push_back(i);
   }
   for (uint8_t i = 0; i < 255; ++i) {
-    medium_vector.push_back(i);
-    large_vector.push_back(i);
+    medium_vector->push_back(i);
+    large_vector->push_back(i);
   }
 
   os << fostr::Indent << "null:" << null_vector << ", empty:" << empty_vector << fostr::NewLine
@@ -314,14 +316,17 @@ TEST(FidlTypes, VectorPtrOfInt8) {
   fidl::VectorPtr<int8_t> small_vector;
   fidl::VectorPtr<int8_t> medium_vector;
   fidl::VectorPtr<int8_t> large_vector;
-  empty_vector.resize(0);
+  empty_vector.emplace();
+  small_vector.emplace();
+  medium_vector.emplace();
+  large_vector.emplace();
   for (uint8_t i = 0; i < 10; ++i) {
-    small_vector.push_back(static_cast<int8_t>(i));
-    large_vector.push_back(static_cast<int8_t>(i));
+    small_vector->push_back(static_cast<int8_t>(i));
+    large_vector->push_back(static_cast<int8_t>(i));
   }
   for (uint8_t i = 0; i < 255; ++i) {
-    medium_vector.push_back(static_cast<int8_t>(i));
-    large_vector.push_back(static_cast<int8_t>(i));
+    medium_vector->push_back(static_cast<int8_t>(i));
+    large_vector->push_back(static_cast<int8_t>(i));
   }
 
   os << fostr::Indent << "null:" << null_vector << ", empty:" << empty_vector << fostr::NewLine

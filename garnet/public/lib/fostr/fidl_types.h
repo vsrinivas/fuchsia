@@ -88,15 +88,15 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const VectorPtr<T>& value) {
-  if (value.is_null()) {
+  if (!value.has_value()) {
     return os << "<null>";
   }
 
-  if (value.get().empty()) {
+  if (value.value().empty()) {
     return os << "<empty>";
   }
 
-  fostr::internal::insert_sequence_container(os, value.get().cbegin(), value.get().cend());
+  fostr::internal::insert_sequence_container(os, value.value().cbegin(), value.value().cend());
   return os;
 }
 
