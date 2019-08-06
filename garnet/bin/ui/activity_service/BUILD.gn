@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("lib") {
+  sources = [
+    "activity_state_machine.cc",
+    "activity_state_machine.h",
+    "state_machine_driver.cc",
+    "state_machine_driver.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.activity",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("activity_service_test") {
+  testonly = true
+  output_name = "activity_service_test"
+
+  sources = [
+    "activity_state_machine_test.cc",
+    "state_machine_driver_test.cc",
+  ]
+  deps = [
+    ":lib",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("activity_service_test_pkg") {
+  deps = [
+    ":activity_service_test",
+  ]
+  tests = [
+    {
+      name = "activity_service_test"
+    },
+  ]
+}
