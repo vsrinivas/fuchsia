@@ -382,10 +382,10 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
         frac_source_for_first_mix_job_frame - mixer.neg_filter_width() -
         frac_source_for_first_packet_frame);
     AUD_LOG_OBJ(ERROR, audio_renderer.get())
-        << ", skip pkt [" << frac_source_for_first_packet_frame << ","
-        << frac_source_for_final_packet_frame << "]: missed "
+        << ", skipping packet [" << frac_source_for_first_packet_frame << ","
+        << frac_source_for_final_packet_frame << "]: missed mix-start "
         << frac_source_for_first_mix_job_frame - mixer.neg_filter_width() << " by "
-        << static_cast<double>(clock_mono_late) / ZX_MSEC(1) << "ms";
+        << static_cast<double>(clock_mono_late) / ZX_MSEC(1) << " ms";
     return true;
   }
 
@@ -426,7 +426,15 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
     FXL_DCHECK(dest_offset_64 > 0);
 
     frac_source_offset_64 += dest_to_src.Scale(dest_offset_64);
-    AUD_LOG_OBJ(WARNING, audio_renderer.get()) << " skipped " << dest_offset_64 << " output frames";
+
+    if (abs(frac_source_offset_64) >= (Mixer::FRAC_ONE >> 1)) {
+      AUD_LOG_OBJ(WARNING, audio_renderer.get())
+          << " skipped " << dest_offset_64 << " output frames; frac_source_offset is 0x" << std::hex
+          << frac_source_offset_64;
+    } else {
+      AUD_VLOG_OBJ(TRACE, audio_renderer.get())
+          << " skipped " << dest_offset_64 << " output frames to align with source timestamp";
+    }
   }
 
   FXL_DCHECK(dest_offset_64 >= 0);
