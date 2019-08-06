@@ -8,6 +8,7 @@ import("//build/config.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
+import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/images/boot.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/custom_signing.gni")
@@ -1859,6 +1860,51 @@ compiled_action("package-ids.txt") {
   args = rebase_path(inputs + outputs + [ depfile ], root_build_dir)
 }
 
+# The vDSO doesn't appear in any package and so doesn't get into any
+# ids.txt file produced by generate_manifest().  But it appears in memory
+# at runtime and in backtraces, so it should be in the aggregated ids.txt
+# for symbolization.  Likewise for the kernel itself, whose build ID is
+# useful to have in the map.
+action("kernel-ids.txt") {
+  outputs = [
+    "$target_out_dir/kernel-ids.txt",
+  ]
+
+  foreach(entry, zircon_legacy_sysroot) {
+    if (defined(entry.vdso)) {
+      vdso = entry.vdso
+    }
+  }
+
+  entries = []
+  binaries = read_file("$zircon_root_build_dir/binaries.json", "json")
+  foreach(entry, binaries) {
+    if (entry.cpu == target_cpu && entry.os == "fuchsia") {
+      if (defined(entry.debug) &&
+          (entry.debug == vdso ||
+           get_path_info(entry.debug, "file") == "zircon.elf")) {
+        entries += [ entry ]
+      }
+    }
+  }
+
+  sources = []
+  command = "("
+  foreach(entry, entries) {
+    sources += [ "$zircon_root_build_dir/${entry.debug}" ]
+    id = rebase_path(entry.elf_build_id, root_build_dir, zircon_root_build_dir)
+    file = rebase_path(entry.debug, root_build_dir, zircon_root_build_dir)
+    command += "echo \"\$(cat \"$id\") $file\"; "
+  }
+  command += ") > " + rebase_path(outputs[0], root_build_dir)
+
+  script = "/bin/sh"
+  args = [
+    "-c",
+    command,
+  ]
+}
+
 # Combine the /boot, /system, and package build ID maps into one.
 # Nothing in the build uses this, but top-level targets always update
 # it so that debugging tools can rely on it.
@@ -1884,31 +1930,6 @@ action("ids.txt") {
            "-u",
            "-o",
          ] + rebase_path(outputs + sources, root_build_dir)
-}
-
-# The vDSO doesn't appear in any package and so doesn't get into any
-# ids.txt file produced by generate_manifest().  But it appears in memory
-# at runtime and in backtraces, so it should be in the aggregated ids.txt
-# for symbolization.  The vDSO doesn't appear in zircon_boot_manifests, so
-# fetching it out of Zircon's own ids.txt by name is the only thing to do.
-# Likewise for the kernel itself, whose build ID is useful to have in the map.
-action("kernel-ids.txt") {
-  script = "manifest.py"
-  sources = [
-    "$zircon_root_build_dir/ids-$current_cpu.txt",
-  ]
-  outputs = [
-    "$target_out_dir/kernel-ids.txt",
-  ]
-  args = [
-    "--separator= ",
-    "--absolute",
-    "--output=" + rebase_path(outputs[0], root_build_dir),
-    "--include-source=*/libzircon.so.debug",
-    "--include-source=*/zircon.elf",
-    "--cwd=" + rebase_path(zircon_root_build_dir, root_build_dir),
-    "--manifest=" + rebase_path(sources[0], root_build_dir),
-  ]
 }
 
 images += [
