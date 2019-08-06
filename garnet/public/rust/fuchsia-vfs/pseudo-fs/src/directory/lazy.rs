@@ -913,7 +913,7 @@ mod tests {
         },
         crate::file::simple::{read_only, read_only_static},
         fidl_fuchsia_io::{
-            DirectoryObject, NodeAttributes, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
+            NodeAttributes, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
             MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, WATCH_MASK_ADDED,
             WATCH_MASK_EXISTING, WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
         },

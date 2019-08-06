@@ -8,8 +8,8 @@
 pub mod reexport {
     pub use {
         fidl_fuchsia_io::{
-            DirectoryEvent, DirectoryMarker, FileEvent, FileMarker, FileObject, NodeInfo,
-            SeekOrigin,
+            DirectoryEvent, DirectoryMarker, DirectoryObject, FileEvent, FileMarker, FileObject,
+            NodeInfo, SeekOrigin, OPEN_RIGHT_READABLE,
         },
         fuchsia_zircon::Status,
         futures::stream::StreamExt,
@@ -84,7 +84,7 @@ impl ClonableProxy for DirectoryProxy {
 #[macro_export]
 macro_rules! assert_read {
     ($proxy:expr, $expected:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, content) = $proxy.read($expected.len() as u64).await.expect("read failed");
 
@@ -97,7 +97,7 @@ macro_rules! assert_read {
 #[macro_export]
 macro_rules! assert_read_err {
     ($proxy:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, content) = $proxy.read(100).await.expect("read failed");
 
@@ -110,8 +110,6 @@ macro_rules! assert_read_err {
 #[macro_export]
 macro_rules! assert_read_fidl_err {
     ($proxy:expr, $expected_error:pat) => {{
-        use $crate::test_utils::reexport::*;
-
         match $proxy.read(100).await {
             Err($expected_error) => (),
             Err(error) => panic!("read() returned unexpected error: {:?}", error),
@@ -126,7 +124,7 @@ macro_rules! assert_read_fidl_err {
 #[macro_export]
 macro_rules! assert_get_buffer {
     ($proxy:expr, $expected:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{Status, OPEN_RIGHT_READABLE};
 
         let (status, buffer) =
             $proxy.get_buffer(OPEN_RIGHT_READABLE).await.expect("get buffer failed");
@@ -145,7 +143,7 @@ macro_rules! assert_get_buffer {
 #[macro_export]
 macro_rules! assert_get_buffer_err {
     ($proxy:expr, $flags:expr, $expected_status: expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, buffer) = $proxy.get_buffer($flags).await.expect("get buffer failed");
 
@@ -158,7 +156,7 @@ macro_rules! assert_get_buffer_err {
 #[macro_export]
 macro_rules! assert_read_at {
     ($proxy:expr, $offset:expr, $expected:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, content) =
             $proxy.read_at($expected.len() as u64, $offset).await.expect("read failed");
@@ -172,7 +170,7 @@ macro_rules! assert_read_at {
 #[macro_export]
 macro_rules! assert_read_at_err {
     ($proxy:expr, $offset:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, content) = $proxy.read_at(100, $offset).await.expect("read failed");
 
@@ -185,7 +183,7 @@ macro_rules! assert_read_at_err {
 #[macro_export]
 macro_rules! assert_write {
     ($proxy:expr, $content:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, len_written) =
             $proxy.write(&mut $content.bytes()).await.expect("write failed");
@@ -199,7 +197,7 @@ macro_rules! assert_write {
 #[macro_export]
 macro_rules! assert_write_err {
     ($proxy:expr, $content:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, len_written) =
             $proxy.write(&mut $content.bytes()).await.expect("write failed");
@@ -227,7 +225,7 @@ macro_rules! assert_write_fidl_err {
 #[macro_export]
 macro_rules! assert_write_at {
     ($proxy:expr, $offset:expr, $content:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, len_written) =
             $proxy.write_at(&mut $content.bytes(), $offset).await.expect("write failed");
@@ -241,7 +239,7 @@ macro_rules! assert_write_at {
 #[macro_export]
 macro_rules! assert_write_at_err {
     ($proxy:expr, $offset:expr, $content:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, len_written) =
             $proxy.write_at(&mut $content.bytes(), $offset).await.expect("write failed");
@@ -255,7 +253,7 @@ macro_rules! assert_write_at_err {
 #[macro_export]
 macro_rules! assert_seek {
     ($proxy:expr, $pos:expr, Start) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{SeekOrigin, Status};
 
         let (status, actual) = $proxy.seek($pos, SeekOrigin::Start).await.expect("seek failed");
 
@@ -263,7 +261,7 @@ macro_rules! assert_seek {
         assert_eq!(actual, $pos);
     }};
     ($proxy:expr, $pos:expr, $start:ident, $expected:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{SeekOrigin, Status};
 
         let (status, actual) = $proxy.seek($pos, SeekOrigin::$start).await.expect("seek failed");
 
@@ -276,7 +274,7 @@ macro_rules! assert_seek {
 #[macro_export]
 macro_rules! assert_seek_err {
     ($proxy:expr, $pos:expr, $start:ident, $expected_status:expr, $actual_pos:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{SeekOrigin, Status};
 
         let (status, actual) = $proxy.seek($pos, SeekOrigin::$start).await.expect("seek failed");
 
@@ -289,7 +287,7 @@ macro_rules! assert_seek_err {
 #[macro_export]
 macro_rules! assert_truncate {
     ($proxy:expr, $length:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let status = $proxy.truncate($length).await.expect("truncate failed");
 
@@ -301,7 +299,7 @@ macro_rules! assert_truncate {
 #[macro_export]
 macro_rules! assert_truncate_err {
     ($proxy:expr, $length:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let status = $proxy.truncate($length).await.expect("truncate failed");
 
@@ -313,7 +311,7 @@ macro_rules! assert_truncate_err {
 #[macro_export]
 macro_rules! assert_get_attr {
     ($proxy:expr, $expected:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, attrs) = $proxy.get_attr().await.expect("get_attr failed");
 
@@ -335,7 +333,7 @@ macro_rules! assert_describe {
 #[macro_export]
 macro_rules! assert_close {
     ($proxy:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let status = $proxy.close().await.expect("close failed");
 
@@ -347,7 +345,7 @@ macro_rules! assert_close {
 #[macro_export]
 macro_rules! assert_close_err {
     ($proxy:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let status = $proxy.close().await.expect("close failed");
 
@@ -369,7 +367,7 @@ macro_rules! assert_close_err {
 #[macro_export]
 macro_rules! assert_event {
     ($proxy:expr, $expected_pattern:pat, $expected_assertion:block) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::StreamExt;
 
         let event_stream = $proxy.take_event_stream();
         match event_stream.into_future().await {
@@ -385,7 +383,7 @@ macro_rules! assert_event {
 #[macro_export]
 macro_rules! assert_no_event {
     ($proxy:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::StreamExt;
 
         let event_stream = $proxy.take_event_stream();
         match event_stream.into_future().await {
@@ -413,7 +411,7 @@ macro_rules! open_get_proxy_assert {
 #[macro_export]
 macro_rules! open_get_file_proxy_assert_ok {
     ($proxy:expr, $flags:expr, $path:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{FileEvent, FileMarker, FileObject, NodeInfo, Status};
 
         open_get_proxy_assert!($proxy, $flags, $path, FileMarker, FileEvent::OnOpen_ { s, info }, {
             assert_eq!(Status::from_raw(s), Status::OK);
@@ -426,7 +424,7 @@ macro_rules! open_get_file_proxy_assert_ok {
 #[macro_export]
 macro_rules! open_as_file_assert_err {
     ($proxy:expr, $flags:expr, $path:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{FileEvent, FileMarker, Status};
 
         open_get_proxy_assert!(
             $proxy,
@@ -446,7 +444,9 @@ macro_rules! open_as_file_assert_err {
 #[macro_export]
 macro_rules! open_get_directory_proxy_assert_ok {
     ($proxy:expr, $flags:expr, $path:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{
+            DirectoryEvent, DirectoryMarker, DirectoryObject, NodeInfo, Status,
+        };
 
         open_get_proxy_assert!(
             $proxy,
@@ -466,7 +466,7 @@ macro_rules! open_get_directory_proxy_assert_ok {
 #[macro_export]
 macro_rules! open_as_directory_assert_err {
     ($proxy:expr, $flags:expr, $path:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{DirectoryEvent, DirectoryMarker, Status};
 
         open_get_proxy_assert!(
             $proxy,
@@ -496,7 +496,7 @@ macro_rules! clone_get_proxy_assert {
 #[macro_export]
 macro_rules! clone_get_file_proxy_assert_ok {
     ($proxy:expr, $flags:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{FileEvent, FileMarker, FileObject, NodeInfo, Status};
 
         clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
             assert_eq!(Status::from_raw(s), Status::OK);
@@ -509,7 +509,7 @@ macro_rules! clone_get_file_proxy_assert_ok {
 #[macro_export]
 macro_rules! clone_as_file_assert_err {
     ($proxy:expr, $flags:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{FileEvent, FileMarker, Status};
 
         clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
             assert_eq!(Status::from_raw(s), $expected_status);
@@ -522,7 +522,9 @@ macro_rules! clone_as_file_assert_err {
 #[macro_export]
 macro_rules! clone_get_directory_proxy_assert_ok {
     ($proxy:expr, $flags:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{
+            DirectoryEvent, DirectoryMarker, DirectoryObject, NodeInfo, Status,
+        };
 
         clone_get_proxy_assert!(
             $proxy,
@@ -541,7 +543,7 @@ macro_rules! clone_get_directory_proxy_assert_ok {
 #[macro_export]
 macro_rules! clone_as_directory_assert_err {
     ($proxy:expr, $flags:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::{DirectoryEvent, DirectoryMarker, Status};
 
         clone_get_proxy_assert!(
             $proxy,
@@ -560,7 +562,7 @@ macro_rules! clone_as_directory_assert_err {
 #[macro_export]
 macro_rules! assert_read_dirents {
     ($proxy:expr, $max_bytes:expr, $expected:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, entries) = $proxy.read_dirents($max_bytes).await.expect("read_dirents failed");
 
@@ -573,7 +575,7 @@ macro_rules! assert_read_dirents {
 #[macro_export]
 macro_rules! assert_read_dirents_err {
     ($proxy:expr, $max_bytes:expr, $expected_status:expr) => {{
-        use $crate::test_utils::reexport::*;
+        use $crate::test_utils::reexport::Status;
 
         let (status, entries) = $proxy.read_dirents($max_bytes).await.expect("read_dirents failed");
 

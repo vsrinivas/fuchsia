@@ -564,11 +564,11 @@ mod tests {
         },
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::{
-            FileMarker, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE,
+            FileEvent, FileMarker, FileObject, NodeInfo, OPEN_FLAG_DESCRIBE,
+            OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
-        fuchsia_zircon::sys::ZX_OK,
+        fuchsia_zircon::{sys::ZX_OK, Status},
         futures::{
             channel::{mpsc, oneshot},
             future::{join, lazy},
