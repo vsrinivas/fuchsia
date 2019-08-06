@@ -89,13 +89,20 @@ bool KernelWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
     os << inin << "/* NOTREACHED */\n";
     os << inin << "return ZX_ERR_BAD_STATE;\n";
   } else {
-    for (const auto& arg : out_handles) {
-      os << inin << "if (out_handle_" << arg << ".begin_copyout(current_process, make_user_out_ptr("
-         << arg << ")))\n"
-         << inin << in << "return ZX_ERR_INVALID_ARGS;\n";
-    }
-    for (const auto& arg : out_handles) {
-      os << inin << "out_handle_" << arg << ".finish_copyout(current_process);\n";
+    if (!out_handles.empty()) {
+      // Don't try to copy handles to userspace on syscall error to avoid
+      // leaking any handles that might have been set before failing.
+      os << inin << "if (result != ZX_OK)\n";
+      os << inin << in << "return result;\n";
+
+      for (const auto& arg : out_handles) {
+        os << inin << "if (out_handle_" << arg
+           << ".begin_copyout(current_process, make_user_out_ptr(" << arg << ")))\n"
+           << inin << in << "return ZX_ERR_INVALID_ARGS;\n";
+      }
+      for (const auto& arg : out_handles) {
+        os << inin << "out_handle_" << arg << ".finish_copyout(current_process);\n";
+      }
     }
     os << inin << "return result;\n";
   }

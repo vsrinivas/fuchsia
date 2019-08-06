@@ -1311,6 +1311,9 @@ protocol Api {
         (zx.status status);
 
     syscall_test_wrapper(int32 a, int32 b, int32 c) -> (zx.status status);
+
+    [argtype="out handle_acquire"]
+    syscall_test_handle_create(zx.status return_value) -> (zx.status status, handle<event> out);
 };
 
 // vim: set ft=fidl:

@@ -32,3 +32,14 @@ zx_status_t sys_syscall_test_8(int a, int b, int c, int d, int e, int f, int g, 
 }
 // zx_status_t zx_syscall_test_wrapper
 zx_status_t sys_syscall_test_wrapper(int a, int b, int c) { return a + b + c; }
+
+// zx_status_t zx_syscall_test_handle_create
+//
+// Unconditionally create a valid handle. If we return a non-OK status, the
+// syscall wrappers should not copy the handle back to userspace.
+zx_status_t sys_syscall_test_handle_create(zx_status_t return_value, user_out_handle* handle_out) {
+  if (sys_event_create(0, handle_out) != ZX_OK) {
+    return ZX_ERR_INTERNAL;
+  }
+  return return_value;
+}

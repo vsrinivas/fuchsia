@@ -4,12 +4,12 @@
 
 test("abigen") {
   sources = [
-    "abigen.c",
+    "abigen.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/launchpad",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
   ]
 }
