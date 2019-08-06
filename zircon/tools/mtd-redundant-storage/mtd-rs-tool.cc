@@ -4,6 +4,9 @@
 
 #include <fcntl.h>
 #include <getopt.h>
+#include <lib/cksum.h>
+#include <lib/mtd/mtd-interface.h>
+#include <lib/nand-redundant-storage/nand-redundant-storage.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -15,9 +18,6 @@
 #include <vector>
 
 #include <fbl/unique_fd.h>
-#include <lib/cksum.h>
-#include <lib/mtd/mtd-interface.h>
-#include <lib/nand-redundant-storage/nand-redundant-storage.h>
 
 constexpr const char kOptString[] = "i:n:o:h";
 constexpr const option kLongOpts[] = {

@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
 #include <inttypes.h>
+#include <sys/stat.h>
+
+#include <algorithm>
 #include <thread>
 #include <utility>
 #include <vector>
 
 #include <blobfs/fsck.h>
 #include <fbl/auto_call.h>
-#include <sys/stat.h>
 
 #include "blobfs.h"
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TOOLS_ABIGEN_GENERATOR_H_
+#define ZIRCON_TOOLS_ABIGEN_GENERATOR_H_
 
 #include <ctime>
 #include <fstream>
@@ -143,3 +144,5 @@ void write_syscall_invocation(std::ofstream& os, const Syscall& sc, const std::s
                               const std::string& name_prefix);
 
 void write_argument_annotation(std::ofstream& os, const TypeSpec& arg);
+
+#endif  // ZIRCON_TOOLS_ABIGEN_GENERATOR_H_

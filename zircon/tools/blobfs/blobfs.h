@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TOOLS_BLOBFS_BLOBFS_H_
+#define ZIRCON_TOOLS_BLOBFS_BLOBFS_H_
+
+#include <lib/fit/defer.h>
 
 #include <vector>
 
@@ -11,7 +14,6 @@
 #include <fbl/array.h>
 #include <fbl/vector.h>
 #include <fs-host/common.h>
-#include <lib/fit/defer.h>
 
 class BlobfsCreator : public FsCreator {
  public:
@@ -67,3 +69,5 @@ class BlobfsCreator : public FsCreator {
   // A list of Merkle Information for blobs in |blob_list_|.
   std::vector<blobfs::MerkleInfo> merkle_list_;
 };
+
+#endif  // ZIRCON_TOOLS_BLOBFS_BLOBFS_H_

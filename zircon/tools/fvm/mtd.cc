@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
-
-#include <memory>
+#include "mtd.h"
 
 #include <lib/ftl-mtd/ftl-volume-wrapper.h>
 #include <lib/ftl-mtd/nand-volume-driver.h>
 #include <lib/mtd/mtd-interface.h>
+#include <unistd.h>
 #include <zircon/types.h>
 
-#include "mtd.h"
+#include <memory>
 
 zx_status_t CreateFileWrapperFromMtd(const char* path, uint32_t offset, uint32_t max_bad_blocks,
                                      fbl::unique_ptr<fvm::host::FileWrapper>* wrapper) {

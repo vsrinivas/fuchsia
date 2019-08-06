@@ -2,6 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
+#include <fcntl.h>
+#include <fnmatch.h>
+#include <getopt.h>
+#include <lib/cksum.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <zircon/boot/bootfs.h>
+#include <zircon/boot/image.h>
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -11,13 +23,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <deque>
-#include <dirent.h>
-#include <fcntl.h>
 #include <filesystem>
-#include <fnmatch.h>
 #include <forward_list>
 #include <functional>
-#include <getopt.h>
 #include <limits>
 #include <list>
 #include <map>
@@ -25,11 +33,7 @@
 #include <numeric>
 #include <set>
 #include <string>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/uio.h>
 #include <thread>
-#include <unistd.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -39,10 +43,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
-#include <lib/cksum.h>
 #include <lz4/lz4frame.h>
-#include <zircon/boot/bootfs.h>
-#include <zircon/boot/image.h>
 #include <zstd/zstd.h>
 
 namespace {

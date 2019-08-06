@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TOOLS_ABIGEN_ABIGEN_GENERATOR_H_
+#define ZIRCON_TOOLS_ABIGEN_ABIGEN_GENERATOR_H_
 
 #include <fstream>
 #include <functional>
@@ -36,3 +37,5 @@ class AbigenGenerator {
   int next_index_ = 0;
   const bool verbose_;
 };
+
+#endif  // ZIRCON_TOOLS_ABIGEN_ABIGEN_GENERATOR_H_

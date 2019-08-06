@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TOOLS_NETPROTOCOL_NETPROTOCOL_H_
+#define ZIRCON_TOOLS_NETPROTOCOL_NETPROTOCOL_H_
 
 #include <arpa/inet.h>
 #include <getopt.h>
 #include <stdbool.h>
 #include <stdint.h>
-
 #include <zircon/boot/netboot.h>
 
 #define MAXSIZE 1024
@@ -54,3 +54,5 @@ int netboot_open(const char* hostname, const char* ifname, struct sockaddr_in6* 
                  bool make_connection);
 
 int netboot_txn(int s, msg* in, msg* out, int outlen);
+
+#endif  // ZIRCON_TOOLS_NETPROTOCOL_NETPROTOCOL_H_

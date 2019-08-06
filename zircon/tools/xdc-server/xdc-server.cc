@@ -2,15 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/defer.h>
-#include <xdc-host-utils/conn.h>
-#include <xdc-server-utils/msg.h>
-#include <xdc-server-utils/packet.h>
-#include <xdc-server-utils/stream.h>
+#include "xdc-server.h"
 
-#include <cassert>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdio.h>
@@ -20,8 +16,14 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <cassert>
+
+#include <xdc-host-utils/conn.h>
+#include <xdc-server-utils/msg.h>
+#include <xdc-server-utils/packet.h>
+#include <xdc-server-utils/stream.h>
+
 #include "usb-handler.h"
-#include "xdc-server.h"
 
 namespace xdc {
 

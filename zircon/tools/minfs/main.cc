@@ -8,13 +8,13 @@
 #include <limits.h>
 #include <string.h>
 
+#include <utility>
+
 #include <fbl/algorithm.h>
 #include <minfs/fsck.h>
 #include <minfs/host.h>
 #include <minfs/minfs.h>
 #include <minfs/transaction-limits.h>
-
-#include <utility>
 
 #include "minfs.h"
 

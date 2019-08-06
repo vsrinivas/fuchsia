@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "abigen_generator.h"
+
 #include <algorithm>
 #include <ctime>
 
 #include "generator.h"
 #include "header_generator.h"
 #include "vdso_wrapper_generator.h"
-
-#include "abigen_generator.h"
 
 using std::map;
 using std::string;

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TOOLS_ABIGEN_TYPES_H_
+#define ZIRCON_TOOLS_ABIGEN_TYPES_H_
 
 #include <functional>
 #include <map>
@@ -88,3 +89,5 @@ const std::string map_override(const std::string& name,
                                const std::map<std::string, std::string>& overrides);
 bool has_attribute(const char* attr, const std::vector<std::string>& attrs);
 void dump_attributes(const std::vector<std::string>& attrs);
+
+#endif  // ZIRCON_TOOLS_ABIGEN_TYPES_H_

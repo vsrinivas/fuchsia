@@ -2140,7 +2140,9 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       }
       break;
     }
-    default: { assert(false && "unexpected kind"); }
+    default: {
+      assert(false && "unexpected kind");
+    }
   }
 
   auto constant_kind = [](const types::PrimitiveSubtype primitive_subtype) {
@@ -2203,7 +2205,9 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           primitive_type = static_cast<const PrimitiveType*>(bits_decl->subtype_ctor->type);
           break;
         }
-        default: { assert(false && "Compiler bug: identifier not of const-able type."); }
+        default: {
+          assert(false && "Compiler bug: identifier not of const-able type.");
+        }
       }
       if (decl->name != identifier_type->type_decl->name) {
         std::ostringstream msg;
@@ -2216,7 +2220,9 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         goto fail_cannot_convert;
       break;
     }
-    default: { assert(false && "Compiler bug: identifier not of const-able type."); }
+    default: {
+      assert(false && "Compiler bug: identifier not of const-able type.");
+    }
   }
 
   identifier_constant->ResolveTo(std::move(resolved_val));

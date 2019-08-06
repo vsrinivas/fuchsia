@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TOOLS_BOOTSERVER_BOOTSERVER_H_
+#define ZIRCON_TOOLS_BOOTSERVER_BOOTSERVER_H_
+
+#include <netinet/in.h>
+#include <stdbool.h>
+#include <stddef.h>
 
 void initialize_status(const char* name, size_t size);
 void update_status(size_t bytes_so_far);
@@ -17,3 +22,5 @@ extern char* appname;
 extern int64_t us_between_packets;
 extern uint16_t* tftp_block_size;
 extern uint16_t* tftp_window_size;
+
+#endif  // ZIRCON_TOOLS_BOOTSERVER_BOOTSERVER_H_

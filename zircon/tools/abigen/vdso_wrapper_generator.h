@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TOOLS_ABIGEN_VDSO_WRAPPER_GENERATOR_H_
+#define ZIRCON_TOOLS_ABIGEN_VDSO_WRAPPER_GENERATOR_H_
 
 #include "generator.h"
 
@@ -43,3 +44,5 @@ class BlockingRetryWrapper : public CallWrapper {
   void preCall(std::ofstream& os, const Syscall& sc) const override;
   void postCall(std::ofstream& os, const Syscall& sc, std::string return_var) const override;
 };
+
+#endif  // ZIRCON_TOOLS_ABIGEN_VDSO_WRAPPER_GENERATOR_H_

@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TOOLS_XDC_SERVER_USB_HANDLER_H_
+#define ZIRCON_TOOLS_XDC_SERVER_USB_HANDLER_H_
 
-#include <xdc-server-utils/packet.h>
 #include <zircon/types.h>
 
 #include <map>
 #include <set>
 #include <vector>
+
+#include <xdc-server-utils/packet.h>
 
 namespace xdc {
 
@@ -117,3 +119,5 @@ class UsbHandler {
 };
 
 }  // namespace xdc
+
+#endif  // ZIRCON_TOOLS_XDC_SERVER_USB_HANDLER_H_

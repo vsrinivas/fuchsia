@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TOOLS_ABIGEN_HEADER_GENERATOR_H_
+#define ZIRCON_TOOLS_ABIGEN_HEADER_GENERATOR_H_
 
 #include <map>
 #include <string>
@@ -39,3 +40,5 @@ class HeaderGenerator : public Generator {
 HeaderGenerator kernel_header_generator();
 HeaderGenerator user_header_generator();
 HeaderGenerator vdso_header_generator();
+
+#endif  // ZIRCON_TOOLS_ABIGEN_HEADER_GENERATOR_H_

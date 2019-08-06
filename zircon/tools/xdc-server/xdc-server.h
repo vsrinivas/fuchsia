@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_TOOLS_XDC_SERVER_XDC_SERVER_H_
+#define ZIRCON_TOOLS_XDC_SERVER_XDC_SERVER_H_
 
-#include <fbl/unique_fd.h>
-#include <map>
 #include <poll.h>
+
+#include <map>
 #include <set>
 #include <vector>
+
+#include <fbl/unique_fd.h>
+#include <xdc-server-utils/msg.h>
 
 #include "usb-handler.h"
 
@@ -121,3 +125,5 @@ class XdcServer {
 };
 
 }  // namespace xdc
+
+#endif  // ZIRCON_TOOLS_XDC_SERVER_XDC_SERVER_H_

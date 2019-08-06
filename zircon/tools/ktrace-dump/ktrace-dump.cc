@@ -5,13 +5,13 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/zircon-internal/ktrace.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
-#include <lib/zircon-internal/ktrace.h>
 
 constexpr uint32_t kChunkSize = 65536;
 
