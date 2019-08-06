@@ -209,8 +209,16 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
     }
   }
 
+  // Truncate the name on the left so the more important stuff on the right part of the path stays
+  // in the name.
+  const char* test_name_trunc = test_name;
+  size_t test_name_length = strlen(test_name_trunc);
+  if (test_name_length > ZX_MAX_NAME_LEN - 1) {
+    test_name_trunc += test_name_length - (ZX_MAX_NAME_LEN - 1);
+  }
+
   fbl::Vector<fdio_spawn_action_t> fdio_actions = {
-      fdio_spawn_action_t{.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = test_name}},
+      fdio_spawn_action_t{.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = test_name_trunc}},
   };
 
   zx_status_t status;
