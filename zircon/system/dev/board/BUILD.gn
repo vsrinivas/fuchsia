@@ -7,7 +7,7 @@ group("board") {
   deps = [
     "integration-test",
     "machina",
-    "qemu",
+    "qemu-arm64",
   ]
   if (current_cpu == "arm64") {
     deps += [
