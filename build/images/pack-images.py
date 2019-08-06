@@ -43,8 +43,9 @@ set -x
     return script
 
 
+# Produces a gzip compressed tarball archive.
 class TGZArchiver(object):
-    """Public interface needs to match ZipArchiver."""
+    """Public interface needs to match {Nil,Zip}Archiver."""
 
     def __init__(self, outfile):
         self._archive = tarfile.open(outfile, 'w:gz', dereference=True)
@@ -78,8 +79,9 @@ class TGZArchiver(object):
         self._archive.addfile(info, StringIO.StringIO(contents))
 
 
+# Produces a deflated zip archive.
 class ZipArchiver(object):
-    """Public interface needs to match TGZArchiver."""
+    """Public interface needs to match {TGZ,Nil}Archiver."""
 
     def __init__(self, outfile):
         self._archive = zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED)
@@ -98,8 +100,33 @@ class ZipArchiver(object):
         self._archive.writestr(name, contents)
 
 
+# Does not produce an archive but validates that all input paths are valid.
+class NilArchiver(object):
+    """ Public interface needs to match {TGZ,Nil}Archive."""
+
+    def __init__(self, outfile):
+        self._outfile = outfile
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, unused_type, unused_value, unused_traceback):
+        with open(self._outfile, 'w') as f:
+            pass
+
+    def add_path(self, path, name, executable):
+        # Check that the source path exists.
+        assert(os.path.exists(path))
+
+    def add_contents(self, contents, name, executable):
+        pass
+
+
 def format_archiver(outfile, format):
-    return {'tgz': TGZArchiver, 'zip': ZipArchiver}[format](outfile)
+    return {'tgz': TGZArchiver,
+            'zip': ZipArchiver,
+            'nil': NilArchiver}[format](outfile)
 
 
 def write_archive(outfile, format, images, board_name, additional_bootserver_arguments):
@@ -175,6 +202,8 @@ def archive_format(args, outfile):
         return 'zip'
     if outfile.endswith('.tgz') or outfile.endswith('.tar.gz'):
         return 'tgz'
+    if outfile.endswith('.nil'):
+        return 'nil'
     sys.stderr.write('''\
 Cannot guess archive format from file name %r; use --format.
 ''' % outfile)
@@ -201,7 +230,7 @@ def main():
     parser.add_argument('--symbol-archive',
                         metavar='FILE',
                         help='Write symbol archive to FILE')
-    parser.add_argument('--format', choices=['tgz', 'zip'],
+    parser.add_argument('--format', choices=['tgz', 'zip', 'nil'],
                         help='Archive format (default: from FILE suffix)')
     parser.add_argument('--board_name',
                         help='Board name images were built for')

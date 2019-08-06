@@ -1298,10 +1298,21 @@ group("record_filesystem_sizes") {
   deps = record_filesystem_sizes_deps
 }
 
+# These steps run through the build and symbol archiving logic to make sure they
+# work but does not produce populated archives.
+group("nil-archives") {
+  testonly = true
+  deps = [
+    ":archive-nil",
+    ":symbol-archive-nil",
+  ]
+}
+
 group("images") {
   testonly = true
   deps = [
     ":ids.txt",
+    ":nil-archives",
     ":package_lists",
     ":paver-script",
     ":record_filesystem_sizes",
@@ -1378,6 +1389,7 @@ foreach(format,
         [
           "tgz",
           "zip",
+          "nil",
         ]) {
   paver_targets += [
     {
