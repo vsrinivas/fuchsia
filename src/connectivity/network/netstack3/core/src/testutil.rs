@@ -29,7 +29,7 @@ use crate::transport::tcp::TcpOption;
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::EthernetFrame;
-use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpParseArgs};
+use crate::wire::icmp::{IcmpIpExt, IcmpMessage, IcmpPacket, IcmpParseArgs};
 use crate::wire::ipv4::Ipv4Packet;
 use crate::wire::ipv6::Ipv6Packet;
 use crate::wire::tcp::TcpSegment;
@@ -425,7 +425,7 @@ pub(crate) fn parse_ip_packet<I: Ip>(
 /// some important fields. Before returning, it invokes the callback `f` on the
 /// parsed packet.
 pub(crate) fn parse_icmp_packet<
-    I: Ip,
+    I: IcmpIpExt,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
     F: for<'a> Fn(&IcmpPacket<I, &'a [u8], M>),
@@ -475,7 +475,7 @@ pub(crate) fn parse_ip_packet_in_ethernet_frame<I: Ip>(
 /// headers. Before returning, it invokes the callback `f` on the parsed packet.
 #[allow(clippy::type_complexity)]
 pub(crate) fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
-    I: Ip,
+    I: IcmpIpExt,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
     F: for<'a> Fn(&IcmpPacket<I, &'a [u8], M>),
@@ -487,12 +487,10 @@ where
     for<'a> IcmpPacket<I, &'a [u8], M>:
         ParsablePacket<&'a [u8], IcmpParseArgs<I::Addr>, Error = ParseError>,
 {
-    use crate::wire::icmp::IcmpIpExt;
-
     let (mut body, src_mac, dst_mac, src_ip, dst_ip, proto) =
         parse_ip_packet_in_ethernet_frame::<I>(buf)?;
-    if proto != <I as IcmpIpExt<&[u8]>>::IP_PROTO {
-        debug!("unexpected IP protocol: {} (wanted {})", proto, <I as IcmpIpExt<&[u8]>>::IP_PROTO);
+    if proto != I::IP_PROTO {
+        debug!("unexpected IP protocol: {} (wanted {})", proto, I::IP_PROTO);
         return Err(ParseError::NotExpected.into());
     }
     let (message, code) = parse_icmp_packet(body, src_ip, dst_ip, f)?;
@@ -1619,14 +1617,14 @@ mod tests {
             let alice = net.context("alice");
             assert_eq!(*alice.state.test_counters.get("timer::nop"), alice_nop);
             assert_eq!(
-                *alice.state.test_counters.get("receive_icmp_packet::echo_reply"),
+                *alice.state.test_counters.get("receive_icmpv4_packet::echo_reply"),
                 alice_echo_response
             );
 
             let bob = net.context("bob");
             assert_eq!(*bob.state.test_counters.get("timer::nop"), bob_nop);
             assert_eq!(
-                *bob.state.test_counters.get("receive_icmp_packet::echo_request"),
+                *bob.state.test_counters.get("receive_icmpv4_packet::echo_request"),
                 bob_echo_request
             );
         }

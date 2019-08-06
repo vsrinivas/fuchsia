@@ -22,7 +22,7 @@ macro_rules! impl_icmp_message {
 
             type Body = $body_type;
 
-            const TYPE: <$ip as IcmpIpExt<B>>::IcmpMessageType =
+            const TYPE: <$ip as IcmpIpExt>::IcmpMessageType =
                 impl_icmp_message_inner_message_type!($ip, $msg_variant);
 
             fn code_from_u8(u: u8) -> Option<Self::Code> {

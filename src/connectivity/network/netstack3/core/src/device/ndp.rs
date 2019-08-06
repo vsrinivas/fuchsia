@@ -1863,7 +1863,7 @@ mod tests {
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
         net.step();
         assert_eq!(
-            *net.context("remote").state().test_counters.get("receive_icmp_packet::echo_request"),
+            *net.context("remote").state().test_counters.get("receive_icmpv6_packet::echo_request"),
             1
         );
 

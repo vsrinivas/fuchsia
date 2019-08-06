@@ -424,7 +424,7 @@ mod tests {
     use super::*;
     use crate::device::{set_ip_addr_subnet, DeviceId};
     use crate::ip::gmp::{Action, GmpAction, MemberState};
-    use crate::ip::icmp::receive_icmp_packet;
+    use crate::ip::icmp::receive_icmpv6_packet;
     use crate::ip::IPV6_ALL_ROUTERS;
     use crate::testutil;
     use crate::testutil::new_rng;
@@ -474,7 +474,7 @@ mod tests {
         ))
         .serialize_vec_outer()
         .unwrap();
-        receive_icmp_packet(ctx, Some(device), router_addr, my_addr, buffer);
+        receive_icmpv6_packet(ctx, Some(device), router_addr, my_addr, buffer);
     }
 
     fn receive_mld_report(ctx: &mut Context<DummyEventDispatcher>, device: DeviceId) {
@@ -492,7 +492,7 @@ mod tests {
         ))
         .serialize_vec_outer()
         .unwrap();
-        receive_icmp_packet(ctx, Some(device), router_addr, my_addr, buffer);
+        receive_icmpv6_packet(ctx, Some(device), router_addr, my_addr, buffer);
     }
 
     fn setup_simple_test_environment() -> (Context<DummyEventDispatcher>, DeviceId) {

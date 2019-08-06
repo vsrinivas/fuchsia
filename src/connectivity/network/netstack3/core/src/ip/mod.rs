@@ -488,7 +488,7 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
         // IPv4-only.
         #[ipv4addr]
         IpProto::Icmp => {
-            icmp::receive_icmp_packet(ctx, device, src_ip, dst_ip, buffer);
+            icmp::receive_icmpv4_packet(ctx, device, src_ip, dst_ip, buffer);
             Ok(())
         }
 
@@ -508,7 +508,7 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
         // IPv6-only.
         #[ipv6addr]
         IpProto::Icmpv6 => {
-            icmp::receive_icmp_packet(ctx, device, src_ip, dst_ip, buffer);
+            icmp::receive_icmpv6_packet(ctx, device, src_ip, dst_ip, buffer);
             Ok(())
         }
 
@@ -528,7 +528,19 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
             // contains the entire original IP packet.
             let meta = parse_metadata.unwrap();
             buffer.undo_parse(meta);
-            icmp::send_icmp_protocol_unreachable(
+            #[ipv4addr]
+            icmp::send_icmpv4_protocol_unreachable(
+                ctx,
+                device.unwrap(),
+                frame_dst,
+                src_ip,
+                dst_ip,
+                proto,
+                buffer,
+                meta.header_len(),
+            );
+            #[ipv6addr]
+            icmp::send_icmpv6_protocol_unreachable(
                 ctx,
                 device.unwrap(),
                 frame_dst,
@@ -555,7 +567,8 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
         // the buffer will be back to containing the entire original IP packet.
         let meta = parse_metadata.unwrap();
         buffer.undo_parse(meta);
-        icmp::send_icmp_port_unreachable(
+        #[ipv4addr]
+        icmp::send_icmpv4_port_unreachable(
             ctx,
             device.unwrap(),
             frame_dst,
@@ -564,6 +577,9 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
             buffer,
             meta.header_len(),
         );
+
+        #[ipv6addr]
+        icmp::send_icmpv6_port_unreachable(ctx, device.unwrap(), frame_dst, src_ip, dst_ip, buffer);
     }
 }
 
@@ -918,7 +934,19 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
             // https://tools.ietf.org/html/rfc791#page-14
             let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-            icmp::send_icmp_ttl_expired(
+            #[ipv4]
+            icmp::send_icmpv4_ttl_expired(
+                ctx,
+                device,
+                frame_dst,
+                src_ip,
+                dst_ip,
+                proto,
+                buffer,
+                meta.header_len(),
+            );
+            #[ipv6]
+            icmp::send_icmpv6_ttl_expired(
                 ctx,
                 device,
                 frame_dst,
@@ -932,7 +960,20 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
         }
     } else {
         let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-        icmp::send_icmp_net_unreachable(
+        #[ipv4]
+        icmp::send_icmpv4_net_unreachable(
+            ctx,
+            device,
+            frame_dst,
+            src_ip,
+            dst_ip,
+            proto,
+            buffer,
+            meta.header_len(),
+        );
+
+        #[ipv6]
+        icmp::send_icmpv6_net_unreachable(
             ctx,
             device,
             frame_dst,
@@ -1472,9 +1513,9 @@ mod tests {
     use crate::testutil::*;
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::icmp::{
-        IcmpDestUnreachable, IcmpEchoRequest, IcmpIpExt, IcmpPacketBuilder, IcmpParseArgs,
-        IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig,
-        Icmpv6ParameterProblemCode, MessageBody,
+        IcmpDestUnreachable, IcmpEchoRequest, IcmpPacketBuilder, IcmpParseArgs, IcmpUnusedCode,
+        Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblemCode,
+        MessageBody,
     };
     use crate::wire::ipv4::Ipv4PacketBuilder;
     use crate::wire::ipv6::ext_hdrs::ExtensionHeaderOptionAction;
@@ -1505,9 +1546,8 @@ mod tests {
         assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip);
         assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip);
         assert_eq!(proto, IpProto::Icmpv6);
-        let icmp = buffer
-            .parse_with::<_, <Ipv6 as IcmpIpExt<&[u8]>>::Packet>(IcmpParseArgs::new(src_ip, dst_ip))
-            .unwrap();
+        let icmp =
+            buffer.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)).unwrap();
         if let Icmpv6Packet::ParameterProblem(icmp) = icmp {
             assert_eq!(icmp.code(), code);
             assert_eq!(icmp.message().pointer(), pointer);

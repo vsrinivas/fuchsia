@@ -123,18 +123,12 @@ impl IcmpIpTypes for Ipv6 {
 }
 
 /// An extension trait adding ICMP-related functionality to `Ipv4` and `Ipv6`.
-pub(crate) trait IcmpIpExt<B: ByteSlice>: Ip {
+pub(crate) trait IcmpIpExt: Ip {
     /// The type of ICMP messages.
     ///
     /// For `Ipv4`, this is `Icmpv4MessageType`, and for `Ipv6`, this is
     /// `Icmpv6MessageType`.
     type IcmpMessageType: IcmpMessageType;
-
-    /// The type of ICMP Packet.
-    ///
-    /// For `Ipv4`, this is `Icmpv4Packet`, and for `Ipv6`, this is
-    /// `Icmpv6Packet`.
-    type Packet: IcmpPacketType<B, Self>;
 
     const IP_PROTO: IpProto;
 
@@ -147,31 +141,8 @@ pub(crate) trait IcmpIpExt<B: ByteSlice>: Ip {
     fn header_len(bytes: &[u8]) -> usize;
 }
 
-// A default implementation for any I: Ip. This is to convince the Rust compiler
-// that, given an I: Ip, it's guaranteed to implement IcmpIpExt. We humans know
-// that Ipv4 and Ipv6 are the only types implementing Ip and so, since we
-// implement IcmpIpExt for both of these types, this is fine. The compiler isn't
-// so smart. This implementation should never actually be used.
-impl<B: ByteSlice, I: Ip> IcmpIpExt<B> for I {
-    default type IcmpMessageType = Never;
-    default type Packet = Never;
-
-    // divide by 0 will only happen during constant evaluation, which will only
-    // happen if this implementation is monomorphized, which should never happen
-    default const IP_PROTO: IpProto = {
-        #[allow(const_err, clippy::eq_op, clippy::erasing_op)]
-        let _ = 0 / 0;
-        IpProto::Other(255)
-    };
-
-    default fn header_len(bytes: &[u8]) -> usize {
-        unreachable!()
-    }
-}
-
-impl<B: ByteSlice> IcmpIpExt<B> for Ipv4 {
+impl IcmpIpExt for Ipv4 {
     type IcmpMessageType = Icmpv4MessageType;
-    type Packet = Icmpv4Packet<B>;
 
     const IP_PROTO: IpProto = IpProto::Icmp;
 
@@ -185,9 +156,8 @@ impl<B: ByteSlice> IcmpIpExt<B> for Ipv4 {
     }
 }
 
-impl<B: ByteSlice> IcmpIpExt<B> for Ipv6 {
+impl IcmpIpExt for Ipv6 {
     type IcmpMessageType = Icmpv6MessageType;
-    type Packet = Icmpv6Packet<B>;
 
     const IP_PROTO: IpProto = IpProto::Icmpv6;
 
@@ -270,7 +240,7 @@ impl<B> MessageBody<B> for () {
 pub(crate) struct OriginalPacket<B>(B);
 
 impl<B: ByteSlice + Deref<Target = [u8]>> OriginalPacket<B> {
-    pub(crate) fn body<I: IcmpIpExt<B>>(&self) -> &[u8] {
+    pub(crate) fn body<I: IcmpIpExt>(&self) -> &[u8] {
         // TODO(joshlf): Can these debug_asserts be triggered by external input?
         let header_len = I::header_len(&self.0);
         debug_assert!(header_len <= self.0.len());
@@ -323,7 +293,7 @@ impl<B, O: for<'a> OptionsImpl<'a>> MessageBody<B> for Options<B, O> {
 }
 
 /// An ICMP message.
-pub(crate) trait IcmpMessage<I: IcmpIpExt<B>, B: ByteSlice>:
+pub(crate) trait IcmpMessage<I: IcmpIpExt, B: ByteSlice>:
     Sized + Copy + FromBytes + AsBytes + Unaligned
 {
     /// The type of codes used with this message.
@@ -354,7 +324,7 @@ pub(crate) trait IcmpMessage<I: IcmpIpExt<B>, B: ByteSlice>:
 ///
 /// `IcmpMessageType` is implemented by `Icmpv4MessageType` and
 /// `Icmpv6MessageType`.
-pub trait IcmpMessageType: Into<u8> + Copy {
+pub trait IcmpMessageType: TryFrom<u8> + Into<u8> + Copy {
     /// Is this an error message?
     ///
     /// For ICMP, this is true for the Destination Unreachable, Redirect, Source
@@ -368,7 +338,7 @@ pub trait IcmpMessageType: Into<u8> + Copy {
 ///
 /// An `IcmpPacket` shares its underlying memory with the byte slice it was
 /// parsed from, meaning that no copying or extra allocation is necessary.
-pub(crate) struct IcmpPacket<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> {
+pub(crate) struct IcmpPacket<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> {
     header: LayoutVerified<B, Header>,
     message: LayoutVerified<B, M>,
     message_body: M::Body,
@@ -376,7 +346,7 @@ pub(crate) struct IcmpPacket<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>
 }
 
 impl<
-        I: IcmpIpExt<B>,
+        I: IcmpIpExt,
         B: ByteSlice,
         MB: fmt::Debug + MessageBody<B>,
         M: IcmpMessage<I, B, Body = MB> + fmt::Debug,
@@ -404,7 +374,7 @@ impl<A: IpAddress> IcmpParseArgs<A> {
     }
 }
 
-impl<B: ByteSlice, I: IcmpIpExt<B>, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpParseArgs<I::Addr>>
+impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpParseArgs<I::Addr>>
     for IcmpPacket<I, B, M>
 {
     type Error = ParseError;
@@ -451,7 +421,7 @@ impl<B: ByteSlice, I: IcmpIpExt<B>, M: IcmpMessage<I, B>> ParsablePacket<B, Icmp
     }
 }
 
-impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
+impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     /// Get the ICMP message.
     pub(crate) fn message(&self) -> &M {
         &self.message
@@ -477,7 +447,7 @@ impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     }
 }
 
-impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
+impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     /// Compute the checksum, skipping the checksum field itself.
     ///
     /// `compute_checksum` returns `None` if the version is IPv6 and the total
@@ -507,7 +477,7 @@ impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     }
 }
 
-impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B, Body = OriginalPacket<B>>>
+impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = OriginalPacket<B>>>
     IcmpPacket<I, B, M>
 {
     /// Get the body of the packet that caused this ICMP message.
@@ -526,9 +496,7 @@ impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B, Body = OriginalPacket<B
     }
 }
 
-impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B, Body = ndp::Options<B>>>
-    IcmpPacket<I, B, M>
-{
+impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = ndp::Options<B>>> IcmpPacket<I, B, M> {
     /// Get the pared list of NDP options from the ICMP message.
     pub(crate) fn ndp_options(&self) -> &ndp::Options<B> {
         &self.message_body
@@ -537,14 +505,14 @@ impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B, Body = ndp::Options<B>>
 
 /// A builder for ICMP packets.
 #[derive(Debug)]
-pub(crate) struct IcmpPacketBuilder<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> {
+pub(crate) struct IcmpPacketBuilder<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> {
     src_ip: I::Addr,
     dst_ip: I::Addr,
     code: M::Code,
     msg: M,
 }
 
-impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacketBuilder<I, B, M> {
+impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacketBuilder<I, B, M> {
     /// Construct a new `IcmpPacketBuilder`.
     pub(crate) fn new(
         src_ip: I::Addr,
@@ -559,7 +527,7 @@ impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacketBuilder<I, B
 // TODO(joshlf): Figure out a way to split body and non-body message types by
 // trait and implement PacketBuilder for some and InnerPacketBuilder for others.
 
-impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> PacketBuilder
+impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> PacketBuilder
     for IcmpPacketBuilder<I, B, M>
 {
     fn constraints(&self) -> PacketConstraints {
