@@ -35,7 +35,7 @@ template <typename T, typename U>
 struct TypeConverter<std::vector<T>, fidl::VectorPtr<U>> {
   static std::vector<T> Convert(const fidl::VectorPtr<U>& value) {
     std::vector<T> result;
-    if (!value.is_null()) {
+    if (value.has_value()) {
       result.resize(value->size());
       for (size_t i = 0; i < value->size(); ++i) {
         result[i] = To<T>((*value)[i]);

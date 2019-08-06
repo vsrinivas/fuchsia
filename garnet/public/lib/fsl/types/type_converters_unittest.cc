@@ -38,7 +38,7 @@ TEST(TypeConversionTest, Vector) {
   std::vector<int> vec = {1, 2, 3};
   fidl::VectorPtr<int> vecptr = fidl::To<fidl::VectorPtr<int>>(vec);
 
-  EXPECT_FALSE(vecptr.is_null());
+  EXPECT_TRUE(vecptr.has_value());
   EXPECT_TRUE(vecptr);
   EXPECT_EQ(vec, *vecptr);
 
@@ -53,7 +53,7 @@ TEST(TypeConversionTest, Vector_DifferentTypes) {
   vec.push_back(MyInteger(3));
 
   fidl::VectorPtr<int> vecptr = fidl::To<fidl::VectorPtr<int>>(vec);
-  EXPECT_FALSE(vecptr.is_null());
+  EXPECT_TRUE(vecptr.has_value());
   for (size_t i = 0; i < 3; ++i) {
     EXPECT_EQ(fidl::To<int>(vec[i]), (*vecptr)[i]);
   }
@@ -109,7 +109,7 @@ TEST(TypeConversionTest, Array_Vector_DifferentTypes) {
 TEST(TypeConversionTest, String) {
   std::string str = "hello world";
   fidl::StringPtr strptr = fidl::To<fidl::StringPtr>(str);
-  EXPECT_FALSE(strptr.is_null());
+  EXPECT_TRUE(strptr.has_value());
   EXPECT_EQ(str, *strptr);
 
   std::string str2 = fidl::To<std::string>(strptr);
