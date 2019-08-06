@@ -52,7 +52,8 @@ impl From<NavigationControllerError> for AuthProviderError {
     fn from(navigation_error: NavigationControllerError) -> Self {
         AuthProviderError {
             status: match navigation_error {
-                NavigationControllerError::InvalidUrl => AuthProviderStatus::InternalError,
+                NavigationControllerError::InvalidUrl
+                | NavigationControllerError::InvalidHeader => AuthProviderStatus::InternalError,
             },
             cause: Some(format_err!("Web browser navigation error: {:?}", navigation_error)),
         }

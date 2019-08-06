@@ -3,5 +3,5 @@
   "fidl/fuchsia.web/cookie.fidl": "683213c82dc168ff29b6b3bb12ba1ea8",
   "fidl/fuchsia.web/debug.fidl": "a5f00329a4c99475aec80f11927fa777",
   "fidl/fuchsia.web/frame.fidl": "d36b5be44cc48531dad83e3f672883bb",
-  "fidl/fuchsia.web/navigation.fidl": "07d97387d3e137af16d0c096e7abea90"
+  "fidl/fuchsia.web/navigation.fidl": "b0b13293efd693afcd7dbf3f392bb7ff"
 }

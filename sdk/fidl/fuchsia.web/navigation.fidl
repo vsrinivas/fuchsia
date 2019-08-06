@@ -23,19 +23,24 @@ protocol NavigationEventListener {
 enum NavigationControllerError : int32 {
     /// The provided URL is invalid.
     INVALID_URL = 1;
+
+    /// At least one of the provided headers was invalid.
+    INVALID_HEADER = 2;
 };
 
 /// Provides methods for controlling and querying the navigation state
 /// of a Frame.
 protocol NavigationController {
     /// Tells the Frame to navigate to a `url`.
+    /// * `url`:    The address to navigate to.
+    /// * `params`: Additional parameters that affect how the resource will be
+    ///   loaded (e.g. cookies, HTTP headers, etc.)
     ///
-    /// `url`:    The address to navigate to.
-    /// `params`: Additional parameters that affect how the resource will be
-    ///           loaded (e.g. cookies, HTTP headers, etc.)
-    ///
-    /// If an error occured, the NavigationControllerError will be set:
-    /// `INVALID_URL`: The `url` parameter is invalid.
+    /// If an error occured, the [`fuchsia.web.NavigationControllerError`] will
+    /// be set:
+    /// * `INVALID_URL`: The `url` parameter is invalid.
+    /// * `INVALID_HEADER`: At least one of the headers in
+    ///   [`fuchsia.web.LoadUrlParams/headers`] is invalid.
     LoadUrl(Url url, LoadUrlParams params)
         -> () error NavigationControllerError;
 
