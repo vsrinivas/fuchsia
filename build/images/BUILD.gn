@@ -66,6 +66,10 @@ assert(
 assert(custom_signing_script == "" || !use_vboot,
        "custom_signing_script and use_vboot cannot be used together!")
 
+assert(
+    !include_devmgr_config_in_vbmeta || use_vbmeta,
+    "include_devmgr_config_in_vbmeta cannot be used if use_vbmeta is not set!")
+
 board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
 
@@ -659,7 +663,7 @@ zbi("fuchsia") {
     zircon_kernel_zbi,
   ]
   manifest = []
-  if (!use_vbmeta) {
+  if (!include_devmgr_config_in_vbmeta) {
     manifest += [
       {
         outputs = [
@@ -795,21 +799,23 @@ if (use_vbmeta) {
       ]
       zbi = get_target_outputs(":fuchsia")
     }
-    deps += [ ":devmgr_config.txt" ]
+    if (include_devmgr_config_in_vbmeta) {
+      deps += [ ":devmgr_config.txt" ]
 
-    boot_args_file = get_target_outputs(":devmgr_config.txt")
+      boot_args_file = get_target_outputs(":devmgr_config.txt")
 
-    # expecting a single file
-    assert([ boot_args_file[0] ] == boot_args_file,
-           "expect a single output file form 'devmgr_config.txt' target")
+      # expecting a single file
+      assert([ boot_args_file[0] ] == boot_args_file,
+             "expect a single output file form 'devmgr_config.txt' target")
 
-    prop_from_file = [
-      {
-        # zbi item type w/o ZBI_TYPE_ prefix
-        type = "IMAGE_ARGS"
-        file = boot_args_file[0]
-      },
-    ]
+      prop_from_file = [
+        {
+          # zbi item type w/o ZBI_TYPE_ prefix
+          type = "IMAGE_ARGS"
+          file = boot_args_file[0]
+        },
+      ]
+    }
   }
 
   images += [

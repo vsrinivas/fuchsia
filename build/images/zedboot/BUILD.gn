@@ -154,7 +154,7 @@ zbi("zbi") {
   manifest =
       [ "config/zxcrypt=" +
         rebase_path("$target_out_dir/zxcrypt_config.txt", root_build_dir) ]
-  if (!use_vbmeta) {
+  if (!include_devmgr_config_in_vbmeta) {
     manifest += [
       {
         outputs = [
@@ -257,21 +257,23 @@ if (use_vbmeta) {
       ]
       zbi = get_target_outputs(":zbi")
     }
-    deps += [ ":devmgr_config.txt" ]
+    if (include_devmgr_config_in_vbmeta) {
+      deps += [ ":devmgr_config.txt" ]
 
-    boot_args_file = get_target_outputs(":devmgr_config.txt")
+      boot_args_file = get_target_outputs(":devmgr_config.txt")
 
-    # expecting a single file
-    assert([ boot_args_file[0] ] == boot_args_file,
-           "expect a single output file form 'devmgr_config.txt' target")
+      # expecting a single file
+      assert([ boot_args_file[0] ] == boot_args_file,
+             "expect a single output file form 'devmgr_config.txt' target")
 
-    prop_from_file = [
-      {
-        # zbi item type w/o ZBI_TYPE_ prefix
-        type = "IMAGE_ARGS"
-        file = boot_args_file[0]
-      },
-    ]
+      prop_from_file = [
+        {
+          # zbi item type w/o ZBI_TYPE_ prefix
+          type = "IMAGE_ARGS"
+          file = boot_args_file[0]
+        },
+      ]
+    }
   }
   zedboot_images += [
     {
