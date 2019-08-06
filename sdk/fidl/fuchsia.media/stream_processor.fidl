@@ -1597,9 +1597,6 @@ protocol StreamProcessor {
     // processor creation for this stream only.  The next stream will default
     // back to the format details set during stream processor creation.
     //
-    // For now, QueueInputFormatDetails() sent mid-stream will fail the
-    // StreamProcessor channel.  Clients shouldn't do this for now.
-    //
     // This message is permitted at the start of the first stream (just like at
     // the start of any stream).  The format specified need not match what was
     // specified during stream processor creation, but if it doesn't match, the
