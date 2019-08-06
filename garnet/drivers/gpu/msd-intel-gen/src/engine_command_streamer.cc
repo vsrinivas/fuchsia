@@ -694,20 +694,20 @@ bool RenderEngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu
 void RenderEngineCommandStreamer::ResetCurrentContext() {
   DLOG("ResetCurrentContext");
 
-  DASSERT(!inflight_command_sequences_.empty());
+  if (!inflight_command_sequences_.empty()) {
+    auto context = inflight_command_sequences_.front().GetContext().lock();
+    DASSERT(context);
 
-  auto context = inflight_command_sequences_.front().GetContext().lock();
-  DASSERT(context);
+    // Cleanup resources for any inflight command sequences on this context
+    while (!inflight_command_sequences_.empty()) {
+      auto& sequence = inflight_command_sequences_.front();
+      if (sequence.mapped_batch()->was_scheduled())
+        scheduler_->CommandBufferCompleted(inflight_command_sequences_.front().GetContext().lock());
+      inflight_command_sequences_.pop();
+    }
 
-  // Cleanup resources for any inflight command sequences on this context
-  while (!inflight_command_sequences_.empty()) {
-    auto& sequence = inflight_command_sequences_.front();
-    if (sequence.mapped_batch()->was_scheduled())
-      scheduler_->CommandBufferCompleted(inflight_command_sequences_.front().GetContext().lock());
-    inflight_command_sequences_.pop();
+    context->Kill();
   }
-
-  context->Kill();
 
   // Reset the engine hardware
   EngineCommandStreamer::Reset();

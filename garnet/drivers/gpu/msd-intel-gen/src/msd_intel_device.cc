@@ -353,9 +353,30 @@ int MsdIntelDevice::DeviceThreadLoop() {
     // The reset may race with subsequent enqueue/signals on the semaphore,
     // which is fine because we process everything available in the queue
     // before returning here to wait.
-    bool timed_out = !device_request_semaphore_->Wait(timeout.count());
-    if (timed_out)
-      HangCheckTimeout();
+    magma::Status status = device_request_semaphore_->Wait(timeout.count());
+    switch (status.get()) {
+      case MAGMA_STATUS_OK:
+        break;
+      case MAGMA_STATUS_TIMED_OUT:
+        // Sometimes the interrupt thread has been observed to be massively delayed in
+        // responding to a pending interrupt.  In that case the InterruptRequest can be posted
+        // after the timeout has expired, so always check if there is work to do before jumping
+        // to conclusions.
+        {
+          lock.lock();
+          bool empty = device_request_list_.empty();
+          lock.unlock();
+          if (empty) {
+            HangCheckTimeout();
+          }
+        }
+        break;
+      default:
+        magma::log(magma::LOG_WARNING, "device_request_semaphore_ Wait failed: %d", status.get());
+        DASSERT(false);
+        // TODO(MA-683): should we trigger a restart of the driver?
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+    }
 
     while (true) {
       lock.lock();
@@ -462,6 +483,7 @@ void MsdIntelDevice::HangCheckTimeout() {
              "Suspected GPU hang: last submitted sequence number "
              "0x%x master_interrupt_control 0x%08x\n%s",
              progress_->last_submitted_sequence_number(), master_interrupt_control, s.c_str());
+  suspected_gpu_hang_count_ += 1;
   RenderEngineReset();
 }
 

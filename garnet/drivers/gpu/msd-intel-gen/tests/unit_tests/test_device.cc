@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "device_request.h"
 #include "gtest/gtest.h"
 #include "helper/platform_device_helper.h"
 #include "mock/mock_mmio.h"
@@ -339,6 +340,91 @@ class TestMsdIntelDevice {
     if (eu_total != 24u)
       EXPECT_EQ(23u, eu_total);
   }
+
+  class FakeSemaphore : public magma::PlatformSemaphore {
+   public:
+    uint64_t id() override { return 1; }
+
+    bool duplicate_handle(uint32_t* handle_out) override { return false; }
+
+    void Signal() override {
+      signal_count_ += 1;
+      if (pass_thru_) {
+        sem1_->Signal();
+      }
+    }
+
+    void Reset() override {}
+
+    magma::Status WaitNoReset(uint64_t timeout_ms) override { return MAGMA_STATUS_UNIMPLEMENTED; }
+
+    magma::Status Wait(uint64_t timeout_ms) override {
+      sem0_->Signal();
+      sem1_->Wait();
+      return wait_return_.load();
+    }
+
+    bool WaitAsync(magma::PlatformPort* platform_port) override { return false; }
+
+    std::unique_ptr<magma::PlatformSemaphore> sem0_ = magma::PlatformSemaphore::Create();
+    std::unique_ptr<magma::PlatformSemaphore> sem1_ = magma::PlatformSemaphore::Create();
+    std::atomic<uint64_t> signal_count_ = 0;
+    std::atomic<uint64_t> wait_return_ = MAGMA_STATUS_OK;
+    bool pass_thru_ = false;
+  };
+
+  void HangcheckTimeout(bool spurious) {
+    magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
+    ASSERT_NE(platform_device, nullptr);
+
+    std::unique_ptr<MsdIntelDevice> device = std::unique_ptr<MsdIntelDevice>(new MsdIntelDevice());
+
+    constexpr bool kExecInitBatch = false;
+    ASSERT_TRUE(device->Init(platform_device->GetDeviceHandle(), kExecInitBatch));
+
+    EXPECT_EQ(device->suspected_gpu_hang_count_.load(), 0u);
+
+    device->device_request_semaphore_ = std::make_unique<FakeSemaphore>();
+
+    auto semaphore = static_cast<FakeSemaphore*>(device->device_request_semaphore_.get());
+
+    device->StartDeviceThread();
+
+    // Wait for device thread to idle
+    while (true) {
+      uint64_t signal_count = semaphore->signal_count_;
+      EXPECT_EQ(MAGMA_STATUS_OK, semaphore->sem0_->Wait(2000).get());
+      if (semaphore->signal_count_ == signal_count)
+        break;
+      semaphore->sem1_->Signal();
+    }
+
+    printf("%s:%d\n", __FILE__, __LINE__);
+
+    if (spurious) {
+      // If work is enqueued then we should not hangcheck
+      device->EnqueueDeviceRequest(std::make_unique<DeviceRequest<MsdIntelDevice>>());
+    }
+
+    semaphore->wait_return_ = MAGMA_STATUS_TIMED_OUT;
+    semaphore->sem1_->Signal();
+
+    // Wait for device thread to idle
+    while (true) {
+      uint64_t signal_count = semaphore->signal_count_;
+      EXPECT_EQ(MAGMA_STATUS_OK, semaphore->sem0_->Wait(2000).get());
+      if (semaphore->signal_count_ == signal_count)
+        break;
+      semaphore->sem1_->Signal();
+    }
+
+    EXPECT_EQ(device->suspected_gpu_hang_count_.load(), spurious ? 0u : 1u);
+
+    // For device thread cleanup
+    semaphore->wait_return_ = MAGMA_STATUS_OK;
+    semaphore->pass_thru_ = true;
+    device.reset();
+  }
 };
 
 TEST(MsdIntelDevice, CreateAndDestroy) {
@@ -385,3 +471,7 @@ TEST(MsdIntelDevice, QuerySliceInfo) {
   TestMsdIntelDevice test;
   test.QuerySliceInfo();
 }
+
+TEST(MsdIntelDevice, HangcheckTimeout) { TestMsdIntelDevice().HangcheckTimeout(false); }
+
+TEST(MsdIntelDevice, SpuriousHangcheckTimeout) { TestMsdIntelDevice().HangcheckTimeout(true); }
