@@ -72,6 +72,25 @@ pub fn make_data_frame_single_llc(addr4: Option<[u8; 6]>, ht_ctrl: Option<[u8; 4
     bytes
 }
 
+pub fn make_null_data_frame() -> Vec<u8> {
+    let fc = FrameControl(0)
+        .with_frame_type(FrameType::DATA)
+        .with_data_subtype(DataSubtype(0).with_null(true))
+        .with_to_ds(true);
+    let fc = fc.0.to_le_bytes();
+
+    #[rustfmt::skip]
+    let bytes = vec![
+        fc[0], fc[1], // FC
+        2, 2, // duration
+        3, 3, 3, 3, 3, 3, // addr1
+        4, 4, 4, 4, 4, 4, // addr2
+        5, 5, 5, 5, 5, 5, // addr3
+        6, 6, // sequence control
+    ];
+    bytes
+}
+
 pub fn make_data_frame_with_padding() -> Vec<u8> {
     let mut bytes = make_data_hdr(None, [1, 1], None);
     #[rustfmt::skip]

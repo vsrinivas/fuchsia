@@ -10,4 +10,10 @@ SequenceManager NewSequenceManager() {
   return SequenceManager(mlme_sequence_manager_new(), mlme_sequence_manager_delete);
 }
 
+ClientStation NewClientStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
+                               common::MacAddr bssid, common::MacAddr iface_mac) {
+  return ClientStation(client_sta_new(device, buf_provider, &bssid.byte, &iface_mac.byte),
+                       client_sta_delete);
+}
+
 }  // namespace wlan

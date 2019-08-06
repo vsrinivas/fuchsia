@@ -8,13 +8,17 @@
 #include <memory>
 
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
+#include <wlan/common/macaddr.h>
 
 namespace wlan {
 
 using SequenceManager =
     std::unique_ptr<mlme_sequence_manager_t, void (*)(mlme_sequence_manager_t*)>;
+using ClientStation = std::unique_ptr<wlan_client_sta_t, void (*)(wlan_client_sta_t*)>;
 
 SequenceManager NewSequenceManager();
+ClientStation NewClientStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
+                               common::MacAddr bssid, common::MacAddr iface_mac);
 
 }  // namespace wlan
 

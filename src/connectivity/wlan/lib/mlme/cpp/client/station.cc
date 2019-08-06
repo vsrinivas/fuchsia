@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <inttypes.h>
+#include <zircon/status.h>
 
 #include <algorithm>
 #include <cstring>
 #include <utility>
 
-#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/band.h>
 #include <wlan/common/buffer_writer.h>
@@ -28,7 +29,6 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
-#include <zircon/status.h>
 
 namespace wlan {
 
@@ -41,16 +41,28 @@ using common::dBm;
 Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelScheduler* chan_sched,
                  JoinContext* join_ctx)
     : device_(device),
+      rust_client_(nullptr, client_sta_delete),
       timer_mgr_(std::move(timer_mgr)),
       chan_sched_(chan_sched),
-      join_ctx_(join_ctx),
-      seq_mgr_(NewSequenceManager()) {
-  rust_device_ = {
-      .device = static_cast<void*>(device),
-      .deliver_ethernet = [](void* device, const uint8_t* data, size_t len) -> zx_status_t {
-        return static_cast<DeviceInterface*>(device)->DeliverEthernet({data, len});
+      join_ctx_(join_ctx) {
+  auto rust_device = mlme_device_ops_t{
+      .device = static_cast<void*>(this),
+      .deliver_eth_frame = [](void* sta, const uint8_t* data, size_t len) -> zx_status_t {
+        return static_cast<Station*>(sta)->device_->DeliverEthernet({data, len});
+      },
+      .send_wlan_frame = [](void* sta, mlme_out_buf_t buf, uint32_t flags) -> zx_status_t {
+        auto pkt = FromRustOutBuf(buf);
+        if (MgmtFrameView<>::CheckType(pkt.get())) {
+          return static_cast<Station*>(sta)->SendMgmtFrame(std::move(pkt));
+        } else if (DataFrameView<>::CheckType(pkt.get())) {
+          return static_cast<Station*>(sta)->SendDataFrame(std::move(pkt), flags);
+        }
+        return static_cast<Station*>(sta)->SendCtrlFrame(std::move(pkt));
       },
   };
+  rust_client_ =
+      NewClientStation(rust_device, rust_buffer_provider, join_ctx_->bssid(), self_addr());
+
   Reset();
 }
 
@@ -124,11 +136,11 @@ zx_status_t Station::HandleMgmtFrame(MgmtFrame<>&& frame) {
   return ZX_OK;
 }
 
-void HandleDataFrameInRust(mlme_device_ops_t* rust_device, fbl::unique_ptr<Packet> pkt) {
+void HandleDataFrameInRust(wlan_client_sta_t* sta, fbl::unique_ptr<Packet> pkt) {
   const auto rx_info = pkt->ctrl_data<wlan_rx_info>();
   const bool has_padding =
       rx_info != nullptr && rx_info->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
-  mlme_handle_data_frame(rust_device, pkt->data(), pkt->len(), has_padding);
+  client_sta_handle_data_frame(sta, pkt->data(), pkt->len(), has_padding);
 }
 
 zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
@@ -149,7 +161,7 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
 
   if (data_frame.CheckBodyType<AmsduSubframeHeader>().CheckLength() &&
       controlled_port_ == eapol::PortState::kOpen) {
-    HandleDataFrameInRust(&rust_device_, frame.Take());
+    HandleDataFrameInRust(rust_client_.get(), frame.Take());
   } else if (auto llc_frame = data_frame.CheckBodyType<LlcHeader>().CheckLength()) {
     HandleDataFrame(llc_frame.IntoOwned(frame.Take()));
   } else if (auto null_frame = data_frame.CheckBodyType<NullDataHdr>().CheckLength()) {
@@ -177,18 +189,8 @@ zx_status_t Station::Authenticate(wlan_mlme::AuthenticationTypes auth_type, uint
 
   debugjoin("authenticating to %s\n", join_ctx_->bssid().ToString().c_str());
 
-  mlme_out_buf_t out_buf;
-  auto status = mlme_write_open_auth_frame(rust_buffer_provider, seq_mgr_.get(),
-                                           &join_ctx_->bssid().byte, &self_addr().byte, &out_buf);
-  if (status != ZX_OK) {
-    errorf("could not write open auth frame: %d\n", status);
-    service::SendAuthConfirm(device_, join_ctx_->bssid(),
-                             wlan_mlme::AuthenticateResultCodes::REFUSED);
-    return status;
-  }
-
   zx::time deadline = deadline_after_bcn_period(timeout);
-  status = timer_mgr_.Schedule(deadline, {}, &auth_timeout_);
+  zx_status_t status = timer_mgr_.Schedule(deadline, {}, &auth_timeout_);
   if (status != ZX_OK) {
     errorf("could not set authentication timeout event: %s\n", zx_status_get_string(status));
     // This is the wrong result code, but we need to define our own codes at
@@ -198,9 +200,10 @@ zx_status_t Station::Authenticate(wlan_mlme::AuthenticationTypes auth_type, uint
     return status;
   }
 
-  status = SendMgmtFrame(FromRustOutBuf(out_buf));
+  status = client_sta_send_open_auth_frame(rust_client_.get());
   if (status != ZX_OK) {
-    errorf("could not send authentication frame: %d\n", status);
+    errorf("could not send open auth frame: %d\n", status);
+    timer_mgr_.Cancel(auth_timeout_);
     service::SendAuthConfirm(device_, join_ctx_->bssid(),
                              wlan_mlme::AuthenticateResultCodes::REFUSED);
     return status;
@@ -219,12 +222,7 @@ zx_status_t Station::Deauthenticate(wlan_mlme::ReasonCode reason_code) {
     return ZX_OK;
   }
 
-  auto status = SendDeauthFrame(reason_code);
-  if (status != ZX_OK) {
-    errorf("could not send deauth packet: %d\n", status);
-    // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to
-    // do.
-  }
+  client_sta_send_deauth_frame(rust_client_.get(), static_cast<uint16_t>(reason_code));
   infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
         debug::ToAsciiOrHexStr(join_ctx_->bss()->ssid).c_str(),
         join_ctx_->bssid().ToString().c_str(), reason_code);
@@ -273,7 +271,8 @@ zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
   mgmt_hdr->addr1 = join_ctx_->bssid();
   mgmt_hdr->addr2 = self_addr();
   mgmt_hdr->addr3 = join_ctx_->bssid();
-  auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
+  auto seq_mgr = client_sta_seq_mgr(rust_client_.get());
+  auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr, &mgmt_hdr->addr1.byte);
   mgmt_hdr->sc.set_seq(seq_num);
 
   auto ifc_info = device_->GetWlanInfo().ifc_info;
@@ -581,7 +580,8 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
   mgmt_hdr->addr1 = join_ctx_->bssid();
   mgmt_hdr->addr2 = self_addr();
   mgmt_hdr->addr3 = join_ctx_->bssid();
-  auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
+  auto seq_mgr = client_sta_seq_mgr(rust_client_.get());
+  auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr, &mgmt_hdr->addr1.byte);
   mgmt_hdr->sc.set_seq(seq_num);
 
   w.Write<ActionFrame>()->category = ActionFrameBlockAck::ActionCategory();
@@ -641,7 +641,7 @@ zx_status_t Station::HandleNullDataFrame(DataFrame<NullDataHdr>&& frame) {
   // Some AP's such as Netgear Routers send periodic NULL data frames to test
   // whether a client timed out. The client must respond with a NULL data frame
   // itself to not get deauthenticated.
-  SendKeepAliveResponse();
+  client_sta_send_keep_alive_resp_frame(rust_client_.get());
   return ZX_OK;
 }
 
@@ -679,7 +679,7 @@ zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
     SendPsPoll();
   }
 
-  HandleDataFrameInRust(&rust_device_, frame.Take());
+  HandleDataFrameInRust(rust_client_.get(), frame.Take());
   return ZX_OK;
 }
 
@@ -700,22 +700,9 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
       join_ctx_->bss()->rsn.has_value() && controlled_port_ == eapol::PortState::kOpen;
   auto eth_hdr = eth_frame.hdr();
   auto payload = eth_frame.body_data();
-  mlme_out_buf_t out_buf;
-  auto status =
-      mlme_write_data_frame(rust_buffer_provider, seq_mgr_.get(), &join_ctx_->bssid().byte,
-                            &eth_hdr->src.byte, &eth_hdr->dest.byte, needs_protection, IsQosReady(),
-                            eth_hdr->ether_type(), payload.data(), payload.size_bytes(), &out_buf);
-  if (status != ZX_OK) {
-    errorf("could not write data frame: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  status = SendDataFrame(FromRustOutBuf(out_buf), eth_hdr->dest.IsUcast());
-  if (status != ZX_OK) {
-    errorf("could not send WLAN data frame: %s\n", zx_status_get_string(status));
-    return status;
-  }
-  return status;
+  return client_sta_send_data_frame(rust_client_.get(), &eth_hdr->src.byte, &eth_hdr->dest.byte,
+                                    needs_protection, IsQosReady(), eth_hdr->ether_type(),
+                                    payload.data(), payload.size_bytes());
 }
 
 zx_status_t Station::HandleTimeout() {
@@ -759,10 +746,7 @@ zx_status_t Station::HandleTimeout() {
 
         auto reason_code = wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH;
         service::SendDeauthIndication(device_, join_ctx_->bssid(), reason_code);
-        auto status = SendDeauthFrame(reason_code);
-        if (status != ZX_OK) {
-          errorf("could not send deauth packet: %d\n", status);
-        }
+        client_sta_send_deauth_frame(rust_client_.get(), static_cast<uint16_t>(reason_code));
       }
     }
   });
@@ -773,28 +757,6 @@ zx_status_t Station::HandleTimeout() {
   }
 
   return status;
-}
-
-zx_status_t Station::SendKeepAliveResponse() {
-  if (state_ != WlanState::kAssociated) {
-    warnf("cannot send keep alive response before being associated\n");
-    return ZX_OK;
-  }
-
-  mlme_out_buf_t out_buf;
-  auto status = mlme_write_keep_alive_resp_frame(
-      rust_buffer_provider, seq_mgr_.get(), &join_ctx_->bssid().byte, &self_addr().byte, &out_buf);
-  if (status != ZX_OK) {
-    errorf("could not write keep alive frame: %d\n", status);
-    return status;
-  }
-
-  status = SendDataFrame(FromRustOutBuf(out_buf), true);
-  if (status != ZX_OK) {
-    errorf("could not send keep alive frame: %d\n", status);
-    return status;
-  }
-  return ZX_OK;
 }
 
 zx_status_t Station::SendAddBaRequestFrame() {
@@ -822,7 +784,8 @@ zx_status_t Station::SendAddBaRequestFrame() {
   mgmt_hdr->addr1 = join_ctx_->bssid();
   mgmt_hdr->addr2 = self_addr();
   mgmt_hdr->addr3 = join_ctx_->bssid();
-  auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
+  auto seq_mgr = client_sta_seq_mgr(rust_client_.get());
+  auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr, &mgmt_hdr->addr1.byte);
   mgmt_hdr->sc.set_seq(seq_num);
 
   auto action_hdr = w.Write<ActionFrame>();
@@ -874,17 +837,9 @@ zx_status_t Station::SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
 
   bool needs_protection =
       join_ctx_->bss()->rsn.has_value() && controlled_port_ == eapol::PortState::kOpen;
-  mlme_out_buf_t out_buf;
-  auto status =
-      mlme_write_data_frame(rust_buffer_provider, seq_mgr_.get(), &join_ctx_->bssid().byte,
-                            &src.byte, &dst.byte, needs_protection, false /* don't use QoS */,
-                            0x888E, eapol_frame.data(), eapol_frame.size_bytes(), &out_buf);
-  if (status != ZX_OK) {
-    errorf("could not write eapol frame: %d\n", status);
-    return status;
-  }
-
-  status = SendDataFrame(FromRustOutBuf(out_buf), true, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
+  auto status = client_sta_send_data_frame(rust_client_.get(), &src.byte, &dst.byte,
+                                           needs_protection, false /* don't use QoS */, 0x888E,
+                                           eapol_frame.data(), eapol_frame.size_bytes());
   if (status != ZX_OK) {
     errorf("could not send eapol request packet: %d\n", status);
     service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
@@ -892,7 +847,6 @@ zx_status_t Station::SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
   }
 
   service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::SUCCESS);
-
   return status;
 }
 
@@ -977,8 +931,7 @@ void Station::DumpDataFrame(const DataFrameView<>& frame) {
   finspect("  msdu    : %s\n", debug::HexDump(frame.body_data()).c_str());
 }
 
-zx_status_t Station::SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw,
-                                   wlan_info_phy_type_t phy) {
+zx_status_t Station::SendCtrlFrame(fbl::unique_ptr<Packet> packet) {
   chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
   return SendWlan(std::move(packet));
 }
@@ -988,7 +941,7 @@ zx_status_t Station::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
   return SendWlan(std::move(packet));
 }
 
-zx_status_t Station::SendDataFrame(fbl::unique_ptr<Packet> packet, bool unicast, uint32_t flags) {
+zx_status_t Station::SendDataFrame(fbl::unique_ptr<Packet> packet, uint32_t flags) {
   return SendWlan(std::move(packet), flags);
 }
 
@@ -1012,11 +965,12 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
   data_hdr->addr1 = join_ctx_->bssid();
   data_hdr->addr2 = self_addr();
   data_hdr->addr3 = join_ctx_->bssid();
-  auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &data_hdr->addr1.byte);
+  auto seq_mgr = client_sta_seq_mgr(rust_client_.get());
+  auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr, &data_hdr->addr1.byte);
   data_hdr->sc.set_seq(seq_num);
 
   packet->set_len(w.WrittenBytes());
-  auto status = SendDataFrame(std::move(packet), true);
+  auto status = SendDataFrame(std::move(packet));
   if (status != ZX_OK) {
     errorf("could not send power management frame to set to %d: %s\n", ps_mode,
            zx_status_get_string(status));
@@ -1048,29 +1002,13 @@ zx_status_t Station::SendPsPoll() {
   ps_poll->bssid = join_ctx_->bssid();
   ps_poll->ta = self_addr();
 
-  CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
-
   packet->set_len(w.WrittenBytes());
-  auto status = SendCtrlFrame(std::move(packet), cbw, WLAN_INFO_PHY_TYPE_HT);
+  auto status = SendCtrlFrame(std::move(packet));
   if (status != ZX_OK) {
     errorf("could not send power management packet: %d\n", status);
     return status;
   }
   return ZX_OK;
-}
-
-zx_status_t Station::SendDeauthFrame(wlan_mlme::ReasonCode reason_code) {
-  debugfn();
-
-  mlme_out_buf_t out_buf;
-  auto status =
-      mlme_write_deauth_frame(rust_buffer_provider, seq_mgr_.get(), &join_ctx_->bssid().byte,
-                              &self_addr().byte, static_cast<uint16_t>(reason_code), &out_buf);
-  if (status != ZX_OK) {
-    errorf("could not write deauth frame: %d\n", status);
-    return status;
-  }
-  return SendMgmtFrame(FromRustOutBuf(out_buf));
 }
 
 zx_status_t Station::SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) {

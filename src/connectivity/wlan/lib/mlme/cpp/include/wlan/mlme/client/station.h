@@ -5,13 +5,15 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_STATION_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_STATION_H_
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <fuchsia/wlan/stats/cpp/fidl.h>
+#include <zircon/types.h>
+
 #include <optional>
 #include <vector>
 
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/moving_average.h>
 #include <wlan/common/stats.h>
@@ -27,7 +29,6 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer_manager.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/types.h>
 
 namespace wlan {
 
@@ -91,14 +92,12 @@ class Station : public ClientInterface {
   zx_status_t HandleAddBaRequest(const AddBaRequestFrame&);
 
   zx_status_t SendAddBaRequestFrame();
-  zx_status_t SendKeepAliveResponse();
 
-  zx_status_t SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw, wlan_info_phy_type_t phy);
+  zx_status_t SendCtrlFrame(fbl::unique_ptr<Packet> packet);
   zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet);
-  zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet, bool unicast, uint32_t flags = 0);
+  zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet, uint32_t flags = 0);
   zx_status_t SetPowerManagementMode(bool ps_mode);
   zx_status_t SendPsPoll();
-  zx_status_t SendDeauthFrame(::fuchsia::wlan::mlme::ReasonCode reason_code);
   zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags = 0);
   void DumpDataFrame(const DataFrameView<>&);
 
@@ -125,11 +124,10 @@ class Station : public ClientInterface {
   zx_status_t NotifyAssocContext();
 
   DeviceInterface* device_;
-  mlme_device_ops_t rust_device_;
+  ClientStation rust_client_;
   TimerManager<> timer_mgr_;
   ChannelScheduler* chan_sched_;
   JoinContext* join_ctx_;
-  SequenceManager seq_mgr_;
 
   WlanState state_ = WlanState::kIdle;
   TimeoutId auth_timeout_;

@@ -9,7 +9,7 @@ autogen_warning = """
 // Do not modify this file manually.
 """
 
-include_guard = "GARNET_LIB_RUST_WLAN_MLME_C_BINDINGS_H_"
+include_guard = "SRC_CONNECTIVITY_WLAN_LIB_MLME_RUST_C_BINDING_BINDINGS_H_"
 language = "C"
 
 [parse]
@@ -19,7 +19,7 @@ include = ["wlan_mlme", "wlan_common"]
 [export]
 # Explicitly declare types to export as cbindgen seems to have trouble
 # detecting their usage.
-include = ["BufferProvider", "Device", "InBuf", "OutBuf"]
+include = ["BufferProvider", "Device", "InBuf", "OutBuf", "ClientStation"]
 
 [export.rename]
 # Unfortunately cbindgen's rename machinery is rather simple
@@ -30,8 +30,7 @@ include = ["BufferProvider", "Device", "InBuf", "OutBuf"]
 "InBuf" = "mlme_in_buf_t"
 "OutBuf" = "mlme_out_buf_t"
 "SequenceManager" = "mlme_sequence_manager_t"
-"ReasonCode" = "wlan_reason_code"
-"StatusCode" = "wlan_status_code"
+"ClientStation" = "wlan_client_sta_t"
 
 [fn]
 prefix = 'extern "C"'

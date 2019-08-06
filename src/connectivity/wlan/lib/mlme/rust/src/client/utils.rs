@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{auth, device},
-    failure::Error,
+    crate::{auth, device, error::Error},
     fuchsia_zircon::sys as zx,
     std::{ops::Deref, ops::DerefMut},
     wlan_common::{
@@ -82,39 +81,6 @@ pub fn write_keep_alive_resp_frame<B: Appendable>(
     Ok(())
 }
 
-/// Extracts aggregated and non-aggregated MSDUs from the data frame,
-/// converts those into Ethernet frames and delivers those frames via the given device.
-pub fn handle_data_frame<B: ByteSlice>(device: &device::Device, bytes: B, has_padding: bool) {
-    if let Some(msdus) = mac::MsduIterator::from_raw_data_frame(bytes, has_padding) {
-        deliver_msdus(device, msdus);
-    }
-}
-
-/// Delivers MSDUs parsed from a data frame to the underlying device.
-pub fn deliver_msdus<B: ByteSlice>(device: &device::Device, msdus: mac::MsduIterator<B>) {
-    let mut buf = [0u8; mac::MAX_ETH_FRAME_LEN];
-    for mac::Msdu { dst_addr, src_addr, llc_frame } in msdus {
-        let mut writer = BufferWriter::new(&mut buf[..]);
-        let write_result = write_eth_frame(
-            &mut writer,
-            dst_addr,
-            src_addr,
-            llc_frame.hdr.protocol_id.to_native(),
-            &llc_frame.body,
-        );
-        match write_result {
-            Ok(_) => {
-                if let Err(e) = device.deliver_ethernet(writer.into_written()) {
-                    println!("error delivering ethernet frame: {}", e);
-                }
-            }
-            Err(e) => {
-                println!("error writing ethernet frame with len {}: {}", llc_frame.body.len(), e);
-            }
-        }
-    }
-}
-
 pub fn write_eth_frame<B: Appendable>(
     buf: &mut B,
     dst_addr: MacAddr,
@@ -180,7 +146,11 @@ pub fn write_data_frame<B: Appendable>(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::device::FakeDevice, wlan_common::test_utils::fake_frames::*};
+    use {
+        super::*,
+        crate::device::FakeDevice,
+        wlan_common::{assert_variant, test_utils::fake_frames::*},
+    };
 
     #[test]
     fn open_auth_frame() {
@@ -269,7 +239,7 @@ mod tests {
         let mut buf = [7u8; 22];
         let write_result =
             write_eth_frame(&mut BufferWriter::new(&mut buf[..]), [1; 6], [2; 6], 3333, &[4; 9]);
-        assert!(write_result.is_err());
+        assert_variant!(write_result, Err(Error::BufferTooSmall));
     }
 
     #[test]
@@ -403,63 +373,6 @@ mod tests {
             0xABCD,
             &[4, 5, 6],
         );
-        assert!(result.is_err(), "expect writing eapol frame to fail");
-    }
-
-    #[test]
-    fn data_frame_to_ethernet_single_llc() {
-        let data_frame = make_data_frame_single_llc(None, None);
-        let mut fake_device = FakeDevice::default();
-        handle_data_frame(&fake_device.as_device(), &data_frame[..], false);
-        assert_eq!(fake_device.eth_queue.len(), 1);
-        #[rustfmt::skip]
-        assert_eq!(fake_device.eth_queue[0], [
-            3, 3, 3, 3, 3, 3, // dst_addr
-            4, 4, 4, 4, 4, 4, // src_addr
-            9, 10, // ether_type
-            11, 11, 11, // payload
-        ]);
-    }
-
-    #[test]
-    fn data_frame_to_ethernet_amsdu() {
-        let data_frame = make_data_frame_amsdu();
-        let mut fake_device = FakeDevice::default();
-        handle_data_frame(&fake_device.as_device(), &data_frame[..], false);
-        let queue = &fake_device.eth_queue;
-        assert_eq!(queue.len(), 2);
-        #[rustfmt::skip]
-        let mut expected_first_eth_frame = vec![
-            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, // dst_addr
-            0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, // src_addr
-            0x08, 0x00, // ether_type
-        ];
-        expected_first_eth_frame.extend_from_slice(MSDU_1_PAYLOAD);
-        assert_eq!(queue[0], &expected_first_eth_frame[..]);
-        #[rustfmt::skip]
-        let mut expected_second_eth_frame = vec![
-            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x04, // dst_addr
-            0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xac, // src_addr
-            0x08, 0x01, // ether_type
-        ];
-        expected_second_eth_frame.extend_from_slice(MSDU_2_PAYLOAD);
-        assert_eq!(queue[1], &expected_second_eth_frame[..]);
-    }
-
-    #[test]
-    fn data_frame_to_ethernet_amsdu_padding_too_short() {
-        let data_frame = make_data_frame_amsdu_padding_too_short();
-        let mut fake_device = FakeDevice::default();
-        handle_data_frame(&fake_device.as_device(), &data_frame[..], false);
-        let queue = &fake_device.eth_queue;
-        assert_eq!(queue.len(), 1);
-        #[rustfmt::skip]
-        let mut expected_first_eth_frame = vec![
-            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, // dst_addr
-            0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, // src_addr
-            0x08, 0x00, // ether_type
-        ];
-        expected_first_eth_frame.extend_from_slice(MSDU_1_PAYLOAD);
-        assert_eq!(queue[0], &expected_first_eth_frame[..]);
+        assert_variant!(result, Err(Error::BufferTooSmall));
     }
 }

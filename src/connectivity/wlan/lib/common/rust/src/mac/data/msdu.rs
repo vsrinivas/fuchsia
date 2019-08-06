@@ -45,21 +45,29 @@ impl<B: ByteSlice> LlcFrame<B> {
     }
 }
 
+/// A single MSDU.
 pub struct Msdu<B> {
     pub dst_addr: MacAddr,
     pub src_addr: MacAddr,
     pub llc_frame: LlcFrame<B>,
 }
 
+/// An iterator to iterate over aggregated and non-aggregated MSDUs.
+/// For convenience, the iterator also supports NULL data frames.
 pub enum MsduIterator<B> {
+    /// Iterator for a regular data frame carrying a single MSDU.
     Llc { dst_addr: MacAddr, src_addr: MacAddr, body: Option<B> },
+    /// Iterator for data frames carrying aggregated MSDUs.
     Amsdu(BufferReader<B>),
+    /// Iterator for NULL data frames.
+    Null,
 }
 
 impl<B: ByteSlice> Iterator for MsduIterator<B> {
     type Item = Msdu<B>;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
+            MsduIterator::Null => None,
             MsduIterator::Llc { dst_addr, src_addr, body } => {
                 let body = body.take()?;
                 let llc_frame = LlcFrame::parse(body)?;
@@ -81,7 +89,7 @@ impl<B: ByteSlice> MsduIterator<B> {
             MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
                 let fc = fixed_fields.frame_ctrl;
                 if fc.data_subtype().null() {
-                    None
+                    Some(MsduIterator::Null)
                 } else if qos_ctrl.map_or(false, |x| x.get().amsdu_present()) {
                     Some(MsduIterator::Amsdu(BufferReader::new(body)))
                 } else {
@@ -156,5 +164,13 @@ mod tests {
             },
             "expected data frame"
         );
+    }
+
+    #[test]
+    fn parse_null_data() {
+        let bytes = make_null_data_frame();
+        let msdus = MsduIterator::from_raw_data_frame(&bytes[..], true);
+        assert_variant!(msdus, Some(MsduIterator::Null), "expected NULL MSDU-Iterator");
+        assert!(msdus.unwrap().next().is_none());
     }
 }

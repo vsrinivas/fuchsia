@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    failure::{ensure, Error},
+    crate::error::Error,
+    failure::ensure,
     std::{
         ffi::c_void,
         ops::{Deref, DerefMut},
@@ -23,9 +24,11 @@ impl BufferProvider {
     pub fn get_buffer(&self, min_len: usize) -> Result<InBuf, Error> {
         // Resulting buffer is checked for null pointers.
         let buf = unsafe { (self.get_buffer)(min_len) };
-        ensure!(!buf.raw.is_null(), "buffer's raw ptr must not be null");
-        ensure!(!buf.data.is_null(), "buffer's data ptr must not be null");
-        Ok(buf)
+        if buf.raw.is_null() || buf.data.is_null() {
+            Err(Error::NoResources(min_len))
+        } else {
+            Ok(buf)
+        }
     }
 }
 
@@ -116,6 +119,45 @@ impl OutBuf {
         let outbuf = OutBuf { raw: buf.raw, data: buf.data, written_bytes };
         std::mem::forget(buf);
         outbuf
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        if self.data.is_null() {
+            &[]
+        } else {
+            // `data` pointer is never null.
+            unsafe { slice::from_raw_parts(self.data, self.written_bytes) }
+        }
+    }
+}
+
+#[cfg(test)]
+pub struct FakeBufferProvider;
+
+#[cfg(test)]
+impl FakeBufferProvider {
+    pub fn new() -> BufferProvider {
+        BufferProvider { get_buffer: Self::get_buffer }
+    }
+
+    pub extern "C" fn free_buffer(raw: *mut c_void) {
+        let data = raw as *mut Vec<u8>;
+        unsafe {
+            drop(Box::from_raw(data));
+        }
+    }
+
+    pub extern "C" fn get_buffer(min_len: usize) -> InBuf {
+        let mut data = vec![0u8; min_len];
+        let data_ptr = (&mut data[..]).as_mut_ptr();
+        let ptr = data.as_mut_ptr();
+        std::mem::forget(data);
+        InBuf {
+            free_buffer: Self::free_buffer,
+            raw: ptr as *mut c_void,
+            data: data_ptr,
+            len: min_len,
+        }
     }
 }
 

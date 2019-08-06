@@ -11,3 +11,4 @@ pub mod auth;
 pub mod buffer;
 pub mod client;
 pub mod device;
+pub mod error;
