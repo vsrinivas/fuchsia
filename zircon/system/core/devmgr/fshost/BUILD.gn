@@ -89,8 +89,8 @@ executable("fshost") {
   deps = [
     ":block-watcher",
     ":fshost-registry",
-    "$zx/system/ulib/bootdata",
     "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/hermetic-decompressor",
     "$zx/system/ulib/loader-service",
     "$zx/system/ulib/ramdevice-client",
   ]

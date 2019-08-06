@@ -5,25 +5,25 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <stdio.h>
-
-#include <bootdata/decompress.h>
-#include <fbl/unique_fd.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
+#include <lib/hermetic-decompressor/hermetic-decompressor.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
-#include <loader-service/loader-service.h>
-#include <ramdevice-client/ramdisk.h>
+#include <stdio.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/vfs.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include "../shared/env.h"
+#include <fbl/unique_fd.h>
+#include <loader-service/loader-service.h>
+#include <ramdevice-client/ramdisk.h>
 
+#include "../shared/env.h"
 #include "block-watcher.h"
 #include "fs-manager.h"
 
@@ -36,18 +36,41 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
   }
 
   zx::vmo ramdisk_vmo = std::move(*static_cast<zx::vmo*>(cookie));
-  size_t size;
-  zx_status_t status = ramdisk_vmo.get_size(&size);
+
+  zbi_header_t header;
+  zx_status_t status = ramdisk_vmo.read(&header, 0, sizeof(header));
   if (status != ZX_OK) {
+    printf("fshost: cannot read ZBI_TYPE_STORAGE_RAMDISK item header: %s\n",
+           zx_status_get_string(status));
+    return ZX_ERR_STOP;
+  }
+  if (!(header.flags & ZBI_FLAG_VERSION) || header.magic != ZBI_ITEM_MAGIC ||
+      header.type != ZBI_TYPE_STORAGE_RAMDISK) {
+    printf("fshost: invalid ZBI_TYPE_STORAGE_RAMDISK item header\n");
     return ZX_ERR_STOP;
   }
 
-  const char* errmsg;
   zx::vmo vmo;
-  status = decompress_bootdata(zx_vmar_root_self(), ramdisk_vmo.get(), 0, size,
-                               vmo.reset_and_get_address(), &errmsg);
-  if (status != ZX_OK) {
-    printf("fshost: failed to decompress ramdisk: %s\n", errmsg);
+  if (header.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
+    status = zx::vmo::create(header.extra, 0, &vmo);
+    if (status != ZX_OK) {
+      printf("fshost: cannot create VMO for uncompressed RAMDISK: %s\n",
+             zx_status_get_string(status));
+      return ZX_ERR_STOP;
+    }
+    HermeticDecompressor decompressor;
+    status = decompressor(ramdisk_vmo, sizeof(zbi_header_t), header.length, vmo, 0, header.extra);
+    if (status != ZX_OK) {
+      printf("fshost: failed to decompress RAMDISK: %s\n", zx_status_get_string(status));
+      return ZX_ERR_STOP;
+    }
+  } else {
+    // TODO(ZX-4824): The old code ignored uncompressed items too, and
+    // silently.  Really the protocol should be cleaned up so the VMO arrives
+    // without the header in it and then it could just be used here directly
+    // if uncompressed (or maybe bootsvc deals with decompression in the first
+    // place so the uncompressed VMO is always what we get).
+    printf("fshost: ignoring uncompressed RAMDISK item in ZBI\n");
     return ZX_ERR_STOP;
   }
 
