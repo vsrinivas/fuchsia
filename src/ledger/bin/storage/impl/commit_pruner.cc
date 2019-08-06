@@ -38,10 +38,10 @@ Status ExploreGeneration(
 }  // namespace
 
 CommitPruner::CommitPruner(ledger::Environment* environment, storage::PageStorage* storage,
-                           LiveCommitTracker* tracker, CommitPruningPolicy policy)
+                           LiveCommitTracker* commit_tracker, CommitPruningPolicy policy)
     : environment_(environment),
       storage_(storage),
-      tracker_(tracker),
+      commit_tracker_(commit_tracker),
       policy_(policy),
       coroutine_manager_(environment_->coroutine_service()) {}
 
@@ -96,7 +96,7 @@ void CommitPruner::Prune(fit::function<void(Status)> callback) {
 // with the same generation.
 Status CommitPruner::FindLatestUniqueCommonAncestorSync(
     coroutine::CoroutineHandler* handler, std::unique_ptr<const storage::Commit>* result) {
-  auto live_commits = tracker_->GetLiveCommits();
+  auto live_commits = commit_tracker_->GetLiveCommits();
   std::set<std::unique_ptr<const storage::Commit>, storage::GenerationComparator> commits(
       std::move_iterator(live_commits.begin()), std::move_iterator(live_commits.end()));
 

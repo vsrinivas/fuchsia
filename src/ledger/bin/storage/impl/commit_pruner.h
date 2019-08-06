@@ -16,8 +16,8 @@ namespace storage {
 // Commit pruner computes which commits should be removed from the page storage.
 class CommitPruner {
  public:
-  CommitPruner(ledger::Environment* environment, PageStorage* storage, LiveCommitTracker* tracker,
-               CommitPruningPolicy policy);
+  CommitPruner(ledger::Environment* environment, PageStorage* storage,
+               LiveCommitTracker* commit_tracker, CommitPruningPolicy policy);
   ~CommitPruner();
 
   // Performs a pruning cycle.
@@ -35,7 +35,7 @@ class CommitPruner {
 
   ledger::Environment* const environment_;
   PageStorage* const storage_;
-  LiveCommitTracker* const tracker_;
+  LiveCommitTracker* const commit_tracker_;
 
   // Policy for pruning commits. By default, we don't prune.
   CommitPruningPolicy const policy_;

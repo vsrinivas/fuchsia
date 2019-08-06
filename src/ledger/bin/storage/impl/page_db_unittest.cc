@@ -18,7 +18,7 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
-#include "src/ledger/bin/storage/impl/commit_impl.h"
+#include "src/ledger/bin/storage/impl/commit_factory.h"
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
@@ -169,10 +169,10 @@ TEST_F(PageDbTest, Commits) {
     std::vector<std::unique_ptr<const Commit>> parents;
     parents.emplace_back(std::make_unique<CommitRandomImpl>(
         environment_.random(), page_storage_.GetObjectIdentifierFactory()));
-    LiveCommitTracker tracker;
+    CommitFactory factory(page_storage_.GetObjectIdentifierFactory());
 
-    std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        &tracker, environment_.clock(), RandomObjectIdentifier(), std::move(parents));
+    std::unique_ptr<const Commit> commit = factory.FromContentAndParents(
+        environment_.clock(), RandomObjectIdentifier(), std::move(parents));
 
     std::string storage_bytes;
     EXPECT_EQ(page_db_.GetCommitStorageBytes(handler, commit->GetId(), &storage_bytes),

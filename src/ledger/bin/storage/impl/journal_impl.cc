@@ -14,7 +14,7 @@
 
 #include "src/ledger/bin/storage/impl/btree/builder.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
-#include "src/ledger/bin/storage/impl/commit_impl.h"
+#include "src/ledger/bin/storage/impl/commit_factory.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -147,8 +147,8 @@ Status JournalImpl::CreateCommitFromChanges(
   }
 
   std::unique_ptr<const storage::Commit> new_commit =
-      CommitImpl::FromContentAndParents(page_storage_->GetCommitTracker(), environment_->clock(),
-                                        object_identifier, std::move(parents));
+      page_storage_->GetCommitFactory()->FromContentAndParents(
+          environment_->clock(), object_identifier, std::move(parents));
 
   if (coroutine::SyncCall(
           handler,

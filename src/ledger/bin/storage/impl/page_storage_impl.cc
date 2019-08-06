@@ -29,7 +29,7 @@
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/storage/impl/btree/diff.h"
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
-#include "src/ledger/bin/storage/impl/commit_impl.h"
+#include "src/ledger/bin/storage/impl/commit_factory.h"
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/file_index.h"
 #include "src/ledger/bin/storage/impl/file_index_generated.h"
@@ -104,7 +104,8 @@ PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
     : environment_(environment),
       encryption_service_(encryption_service),
       page_id_(std::move(page_id)),
-      commit_pruner_(environment_, this, &commit_tracker_, policy),
+      commit_factory_(&object_identifier_factory_),
+      commit_pruner_(environment_, this, &commit_factory_, policy),
       db_(std::move(page_db)),
       page_sync_(nullptr),
       coroutine_manager_(environment->coroutine_service()) {}
@@ -124,7 +125,7 @@ void PageStorageImpl::SetSyncDelegate(PageSyncDelegate* page_sync) { page_sync_ 
 
 Status PageStorageImpl::GetHeadCommits(std::vector<std::unique_ptr<const Commit>>* head_commits) {
   FXL_DCHECK(head_commits);
-  *head_commits = commit_tracker_.GetHeads();
+  *head_commits = commit_factory_.GetHeads();
   return Status::OK;
 }
 
@@ -1042,7 +1043,7 @@ ObjectIdentifierFactory* PageStorageImpl::GetObjectIdentifierFactory() {
   return &object_identifier_factory_;
 }
 
-LiveCommitTracker* PageStorageImpl::GetCommitTracker() { return &commit_tracker_; }
+CommitFactory* PageStorageImpl::GetCommitFactory() { return &commit_factory_; }
 
 Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   // Add the default page head if this page is empty.
@@ -1079,7 +1080,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
       return s;
     }
   }
-  commit_tracker_.AddHeads(std::move(commits));
+  commit_factory_.AddHeads(std::move(commits));
 
   // Cache whether this page is online or not.
   return db_->IsPageOnline(handler, &page_is_online_);
@@ -1092,7 +1093,7 @@ Status PageStorageImpl::SynchronousGetCommit(CoroutineHandler* handler, CommitId
     if (coroutine::SyncCall(
             handler,
             [this](fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
-              CommitImpl::Empty(this, &commit_tracker_, std::move(callback));
+              commit_factory_.Empty(this, std::move(callback));
             },
             &s, commit) == coroutine::ContinuationStatus::INTERRUPTED) {
       return Status::INTERRUPTED;
@@ -1104,8 +1105,7 @@ Status PageStorageImpl::SynchronousGetCommit(CoroutineHandler* handler, CommitId
   if (s != Status::OK) {
     return s;
   }
-  return CommitImpl::FromStorageBytes(&object_identifier_factory_, &commit_tracker_, commit_id,
-                                      std::move(bytes), commit);
+  return commit_factory_.FromStorageBytes(commit_id, std::move(bytes), commit);
 }
 
 Status PageStorageImpl::SynchronousAddCommitFromLocal(CoroutineHandler* handler,
@@ -1161,8 +1161,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
     }
 
     std::unique_ptr<const Commit> commit;
-    status = CommitImpl::FromStorageBytes(&object_identifier_factory_, &commit_tracker_, id,
-                                          std::move(storage_bytes), &commit);
+    status = commit_factory_.FromStorageBytes(id, std::move(storage_bytes), &commit);
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
       return status;
@@ -1406,14 +1405,14 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
   }
 
   // Only update the cache of heads after a successful update of the PageDb.
-  commit_tracker_.RemoveHeads(std::move(removed_heads));
+  commit_factory_.RemoveHeads(std::move(removed_heads));
   std::vector<std::unique_ptr<const Commit>> new_heads;
   std::transform(std::make_move_iterator(heads_to_add.begin()),
                  std::make_move_iterator(heads_to_add.end()), std::back_inserter(new_heads),
                  [](std::pair<CommitId, std::unique_ptr<const Commit>>&& head) {
                    return std::move(std::get<std::unique_ptr<const Commit>>(head));
                  });
-  commit_tracker_.AddHeads(std::move(new_heads));
+  commit_factory_.AddHeads(std::move(new_heads));
   NotifyWatchersOfNewCommits(commits_to_send, source);
   commit_pruner_.Prune([](Status status) {
     if (status != Status::OK) {

@@ -34,6 +34,8 @@ class CommitEmptyImpl : public Commit {
   ObjectIdentifier GetRootIdentifier() const override;
 
   fxl::StringView GetStorageBytes() const override;
+
+  bool IsAlive() const override;
 };
 
 }  // namespace storage

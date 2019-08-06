@@ -10,13 +10,13 @@
 #include <vector>
 
 #include "peridot/lib/rng/random.h"
-#include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 
 namespace storage {
 
-// Implementation of Commit returning random values (fixed for each instance).
-class CommitRandomImpl : public Commit {
+// Implementaton of Commit returning random values (fixed for each instance).
+class CommitRandomImpl : public CommitEmptyImpl {
  public:
   CommitRandomImpl(rng::Random* random, ObjectIdentifierFactory* factory);
   ~CommitRandomImpl() override;

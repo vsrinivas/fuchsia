@@ -47,6 +47,9 @@ class Commit {
   static bool TimestampOrdered(const std::unique_ptr<const Commit>& commit1,
                                const std::unique_ptr<const Commit>& commit2);
 
+  // Returns true if new commits can use this commit object as parent. False otherwise.
+  virtual bool IsAlive() const = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Commit);
 };

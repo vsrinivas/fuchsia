@@ -44,4 +44,9 @@ fxl::StringView CommitEmptyImpl::GetStorageBytes() const {
   return "NOT_IMPLEMENTED";
 }
 
+bool CommitEmptyImpl::IsAlive() const {
+  FXL_NOTIMPLEMENTED();
+  return true;
+}
+
 }  // namespace storage
