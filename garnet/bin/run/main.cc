@@ -78,8 +78,9 @@ int main(int argc, const char** argv) {
   launch_info.url = program_name;
   launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
   launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
+  launch_info.arguments.emplace();
   while (argc) {
-    launch_info.arguments.push_back(*argv);
+    launch_info.arguments->push_back(*argv);
     consume_arg(&argc, &argv);
   }
 
