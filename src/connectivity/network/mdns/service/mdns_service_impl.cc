@@ -237,7 +237,7 @@ void MdnsServiceImpl::Subscriber::InstanceDiscovered(const std::string& service,
               .service_instance =
                   fuchsia::net::mdns::ServiceInstance{.service = service,
                                                       .instance = instance,
-                                                      .text = fidl::VectorPtr<std::string>(text),
+                                                      .text = text,
                                                       .srv_priority = srv_priority,
                                                       .srv_weight = srv_weight}};
   if (v4_address) {
@@ -262,7 +262,7 @@ void MdnsServiceImpl::Subscriber::InstanceChanged(const std::string& service,
               .service_instance =
                   fuchsia::net::mdns::ServiceInstance{.service = service,
                                                       .instance = instance,
-                                                      .text = fidl::VectorPtr<std::string>(text),
+                                                      .text = text,
                                                       .srv_priority = srv_priority,
                                                       .srv_weight = srv_weight}};
   if (v4_address) {

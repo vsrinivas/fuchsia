@@ -220,7 +220,7 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder {
   void OnPublication(bool query, fidl::StringPtr subtype, OnPublicationCallback callback) override {
     auto publication = fuchsia::net::mdns::Publication::New();
     publication->port = kPort;
-    publication->text = fidl::To<fidl::VectorPtr<std::string>>(kText);
+    publication->text = kText;
     publication->srv_priority = kPriority;
     publication->srv_weight = kWeight;
 

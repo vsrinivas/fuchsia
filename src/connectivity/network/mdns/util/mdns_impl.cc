@@ -217,7 +217,7 @@ void MdnsImpl::OnPublication(bool query, fidl::StringPtr subtype, OnPublicationC
 
   auto publication = fuchsia::net::mdns::Publication::New();
   publication->port = publication_port_;
-  publication->text = fidl::To<fidl::VectorPtr<std::string>>(publication_text_);
+  publication->text = publication_text_;
 
   callback(std::move(publication));
 }

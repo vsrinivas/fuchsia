@@ -22,7 +22,7 @@ fuchsia::net::mdns::ServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
 
   service_instance->service = service;
   service_instance->instance = instance;
-  service_instance->text = fidl::To<fidl::VectorPtr<std::string>>(text);
+  service_instance->text = text;
 
   if (v4_address.is_valid()) {
     service_instance->endpoints.push_back(CreateEndpointV4(v4_address));
@@ -40,7 +40,7 @@ void MdnsFidlUtil::UpdateServiceInstance(
     const fuchsia::net::mdns::ServiceInstancePtr& service_instance,
     const inet::SocketAddress& v4_address, const inet::SocketAddress& v6_address,
     const std::vector<std::string>& text) {
-  service_instance->text = fidl::To<fidl::VectorPtr<std::string>>(text);
+  service_instance->text = text;
 
   service_instance->endpoints.clear();
 
