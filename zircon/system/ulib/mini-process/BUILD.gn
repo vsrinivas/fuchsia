@@ -45,8 +45,23 @@ if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
       "$zx/system/ulib/zircon",
     ]
 
-    # No real sanitizers should be enabled in this variant anyway.
-    # But this also disables SafeStack, which is on by default.
-    configs += [ "$zx/public/gn/config:no_sanitizers" ]
+    configs += [
+      # No real sanitizers should be enabled in this variant anyway.
+      # But this also disables SafeStack, which is on by default.
+      "$zx/public/gn/config:no_sanitizers",
+
+      # This defeats optimizations that break the assumptions.
+      ":subprocess.config",
+    ]
+  }
+
+  config("subprocess.config") {
+    visibility = [ ":subprocess" ]
+
+    # Always compile with some optimization so that always_inline functions
+    # actually get inlined (which they don't at -O0).  Less optimization than
+    # the default should not be a problem for this code and might actually be
+    # helpful because of its special constraints (see subprocess.c).
+    cflags = [ "-O1" ]
   }
 }

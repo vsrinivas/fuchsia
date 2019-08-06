@@ -8,16 +8,12 @@
 
 #include <mini-process/mini-process.h>
 
-static uintptr_t ReadFromThreadPointer(void) {
-#ifdef __x86_64__
-  uintptr_t word;
-  __asm__("mov %%fs:0, %0" : "=r"(word));
-  return word;
-#else
-  return *(uintptr_t*)__builtin_thread_pointer();
-#endif
-}
-
+// This file assumes that it's compiled with minimal optimization to avoid
+// things like the compiler splitting the code into hot and code sections that
+// are no longer contiguous.  The use of minipr_thread_loop assumes that the
+// function is one self-contained contiguous chunk of code.  So it cannot be
+// split up, and it cannot make any direct calls.
+//
 // This function is the entire program that the child process will execute. It
 // gets directly mapped into the child process via zx_vmo_write() so it,
 //
@@ -27,6 +23,10 @@ static uintptr_t ReadFromThreadPointer(void) {
 //
 // If you find that this program is crashing for no apparent reason, check to
 // see if it has outgrown its VMO. See kSizeLimit in mini-process.c.
+
+// Specify an explicit section for the function defeats hot/cold section
+// splitting optimizations.
+__attribute__((section(".text.not-split")))
 void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
   if (fnptr == 0) {
     // In this mode we don't have a VDSO so we don't care what the handle is
@@ -221,7 +221,13 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
         }
         if (what & MINIP_CMD_CHECK_THREAD_POINTER) {
           what &= ~MINIP_CMD_CHECK_THREAD_POINTER;
-          if (ReadFromThreadPointer() == MINIP_THREAD_POINTER_CHECK_VALUE) {
+          uintptr_t value;
+#ifdef __x86_64__
+          __asm__("mov %%fs:0, %0" : "=r"(value));
+#else
+          value = *(uintptr_t*)__builtin_thread_pointer();
+#endif
+          if (value == MINIP_THREAD_POINTER_CHECK_VALUE) {
             cmd.status = ZX_OK;
           } else {
             cmd.status = ZX_ERR_BAD_STATE;
