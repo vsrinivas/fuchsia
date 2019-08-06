@@ -65,7 +65,7 @@ pub(crate) struct HeaderPrefix {
     flags_frag_off: [u8; 2],
     ttl: u8,
     proto: u8,
-    hdr_checksum: U16,
+    hdr_checksum: [u8; 2],
     src_ip: Ipv4Addr,
     dst_ip: Ipv4Addr,
 }
@@ -226,18 +226,16 @@ impl<B: ByteSlice> FromRaw<Ipv4PacketRaw<B>, ()> for Ipv4Packet<B> {
         };
 
         let packet = Ipv4Packet { hdr_prefix, options, body };
-        if packet.compute_header_checksum() != packet.hdr_prefix.hdr_checksum.get() {
+        if packet.compute_header_checksum() != [0, 0] {
             return debug_err!(Err(ParseError::Checksum.into()), "invalid checksum");
         }
         Ok(packet)
     }
 }
 
-fn compute_header_checksum(hdr_prefix: &[u8], options: &[u8]) -> u16 {
+fn compute_header_checksum(hdr_prefix: &[u8], options: &[u8]) -> [u8; 2] {
     let mut c = Checksum::new();
-    // the header checksum is at bytes 10 and 11
-    c.add_bytes(&hdr_prefix[..IPV4_CHECKSUM_BYTE_RANGE.start]);
-    c.add_bytes(&hdr_prefix[IPV4_CHECKSUM_BYTE_RANGE.end..]);
+    c.add_bytes(hdr_prefix);
     c.add_bytes(options);
     c.checksum()
 }
@@ -249,7 +247,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     }
 
     // Compute the header checksum, skipping the checksum field itself.
-    fn compute_header_checksum(&self) -> u16 {
+    fn compute_header_checksum(&self) -> [u8; 2] {
         compute_header_checksum(self.hdr_prefix.bytes(), self.options.bytes())
     }
 
@@ -329,9 +327,8 @@ where
         // of the header.
         let old_bytes = [self.hdr_prefix.ttl, self.hdr_prefix.proto];
         let new_bytes = [ttl, self.hdr_prefix.proto];
-        let checksum =
-            internet_checksum::update(self.hdr_prefix.hdr_checksum.get(), &old_bytes, &new_bytes);
-        self.hdr_prefix.hdr_checksum = U16::new(checksum);
+        self.hdr_prefix.hdr_checksum =
+            internet_checksum::update(self.hdr_prefix.hdr_checksum, &old_bytes, &new_bytes);
         self.hdr_prefix.ttl = ttl;
     }
 }
@@ -597,7 +594,7 @@ impl Ipv4PacketBuilder {
         hdr_prefix.src_ip = self.src_ip;
         hdr_prefix.dst_ip = self.dst_ip;
         let checksum = compute_header_checksum(hdr_prefix.bytes(), options);
-        hdr_prefix.hdr_checksum = U16::new(checksum);
+        hdr_prefix.hdr_checksum = checksum;
     }
 }
 
@@ -818,7 +815,7 @@ mod tests {
         hdr_prefix.proto = IpProto::Tcp.into();
         hdr_prefix.src_ip = DEFAULT_SRC_IP;
         hdr_prefix.dst_ip = DEFAULT_DST_IP;
-        hdr_prefix.hdr_checksum = U16::from([0xa6, 0xcf]);
+        hdr_prefix.hdr_checksum = [0xa6, 0xcf];
         hdr_prefix
     }
 

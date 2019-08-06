@@ -34,6 +34,73 @@
 //! [RFC 1141]: https://tools.ietf.org/html/rfc1141
 //! [RFC 1624]: https://tools.ietf.org/html/rfc1624
 
+// Benchmarks on x86-64 gLinux workstation
+//
+// The following microbenchmarks were performed on a gLinux machine.
+// Two operations are being measured: `checksum` and `update`. Metrics
+// are latency and throughput, measured with SIMD enabled/disabled, and
+// when the computation is endian-aware/unaware.
+//
+// We can notice that by applying the technique described in Section 2(B)
+// of [RFC 1071], there is a speed up in both operations on an LE machine,
+// but when combined with SIMD, the improvement is marginal. The improvement
+// comes from eliminating all the `ror` instructions in the inner loop. According
+// to `perf`, ~20% time is spent on the `ror` instructions (simd disabled) and
+// the result roughly matches this observation. Theoretically speaking, this
+// technique will have even more insignificant improvement on BE machines.
+//
+// TODO: Run the benchmark on product machines.
+//
+// Checksum latency
+// +-------+----------------------+--------------------+-----------------+-------------------+
+// | Bytes | end_unaware__no_simd | end_aware__no_simd | end_aware__simd | end_unaware__simd |
+// +-------+----------------------+--------------------+-----------------+-------------------+
+// |  1024 |        196 ns        |       250 ns       |      81 ns      |       54 ns       |
+// |   256 |        47 ns         |       63 ns        |      33 ns      |       31 ns       |
+// |   128 |        24 ns         |       30 ns        |      29 ns      |       28 ns       |
+// |    64 |         8 ns         |       11 ns        |      27 ns      |       25 ns       |
+// |    32 |         3 ns         |        4 ns        |       4 ns      |        3 ns       |
+// |    31 |         3 ns         |        4 ns        |       4 ns      |        3 ns       |
+// +-------+----------------------+--------------------+-----------------+-------------------+
+//
+// Update latency
+// +-------+----------------------+--------------------+-----------------+-------------------+
+// | Bytes | end_unaware__no_simd | end_aware__no_simd | end_aware__simd | end_unaware__simd |
+// +-------+----------------------+--------------------+-----------------+-------------------+
+// |  1024 |        387 ns        |       535 ns       |      117 ns     |       112 ns      |
+// |   256 |        106 ns        |       149 ns       |      71 ns      |       66 ns       |
+// |   128 |        53 ns         |       73 ns        |      54 ns      |       51 ns       |
+// |    64 |        28 ns         |       37 ns        |      52 ns      |       54 ns       |
+// |    32 |        16 ns         |       21 ns        |      27 ns      |       23 ns       |
+// |    31 |        21 ns         |       25 ns        |      31 ns      |       27 ns       |
+// |    16 |        11 ns         |       13 ns        |      16 ns      |       15 ns       |
+// +-------+----------------------+--------------------+-----------------+-------------------+
+//
+// Checksum throughput
+// +-------+----------------------+--------------------+-----------------+-------------------+
+// | Bytes | end_unaware__no_simd | end_aware__no_simd | end_aware__simd | end_unaware__simd |
+// +-------+----------------------+--------------------+-----------------+-------------------+
+// |  1024 |     4982.5 MB/s      |    3906.2 MB/s     |   12056.3 MB/s  |    18084.5 MB/s   |
+// |   256 |     5194.5 MB/s      |    3875.2 MB/s     |   7398.2 MB/s   |    7875.5 MB/s    |
+// |   128 |     5086.3 MB/s      |    4069.0 MB/s     |   4209.3 MB/s   |    4359.7 MB/s    |
+// |    64 |     7629.4 MB/s      |    5548.7 MB/s     |   2260.6 MB/s   |    2441.4 MB/s    |
+// |    32 |     10172.5 MB/s     |    7629.4 MB/s     |   7629.4 MB/s   |    10172.5 MB/s   |
+// |    31 |     9854.6 MB/s      |    7391.0 MB/s     |   7391.0 MB/s   |    9854.6 MB/s    |
+// +-------+----------------------+--------------------+-----------------+-------------------+
+//
+// Update throughput
+// +-------+----------------------+--------------------+-----------------+-------------------+
+// | Bytes | end_unaware__no_simd | end_aware__no_simd | end_aware__simd | end_unaware__simd |
+// +-------+----------------------+--------------------+-----------------+-------------------+
+// |  1024 |     2523.4 MB/s      |    1825.4 MB/s     |   8346.7 MB/s   |    8719.3 MB/s    |
+// |   256 |     2303.2 MB/s      |    1638.5 MB/s     |   3438.6 MB/s   |    3699.1 MB/s    |
+// |   128 |     2303.2 MB/s      |    1672.2 MB/s     |   2260.6 MB/s   |    2393.5 MB/s    |
+// |    64 |     2179.8 MB/s      |    1649.6 MB/s     |   1173.8 MB/s   |    1130.3 MB/s    |
+// |    32 |     1907.3 MB/s      |    1453.2 MB/s     |   1130.3 MB/s   |    1326.9 MB/s    |
+// |    31 |     1407.8 MB/s      |    1182.6 MB/s     |    953.7 MB/s   |    1095.0 MB/s    |
+// |    16 |     1387.2 MB/s      |    1173.8 MB/s     |    953.7 MB/s   |    1017.3 MB/s    |
+// +-------+----------------------+--------------------+-----------------+-------------------+
+
 // TODO(joshlf): Right-justify the columns above
 
 #![cfg_attr(feature = "benchmark", feature(test))]
@@ -44,7 +111,7 @@ extern crate test;
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64;
 
-use byteorder::{ByteOrder, NetworkEndian};
+use byteorder::{ByteOrder, NativeEndian};
 
 // TODO(joshlf):
 // - Investigate optimizations proposed in RFC 1071 Section 2. The most
@@ -67,7 +134,7 @@ use byteorder::{ByteOrder, NetworkEndian};
 /// # };
 /// ```
 #[inline]
-pub fn checksum(bytes: &[u8]) -> u16 {
+pub fn checksum(bytes: &[u8]) -> [u8; 2] {
     let mut c = Checksum::new();
     c.add_bytes(bytes);
     c.checksum()
@@ -91,13 +158,12 @@ pub fn checksum(bytes: &[u8]) -> u16 {
 ///
 /// [RFC 1624]: https://tools.ietf.org/html/rfc1624
 #[inline]
-pub fn update(checksum: u16, old: &[u8], new: &[u8]) -> u16 {
+pub fn update(checksum: [u8; 2], old: &[u8], new: &[u8]) -> [u8; 2] {
     assert_eq!(old.len(), new.len());
-
     // We compute on the sum, not the one's complement of the sum. checksum
     // is the one's complement of the sum, so we need to get back to the
     // sum. Thus, we negate checksum.
-    let mut sum = u32::from(!checksum);
+    let mut sum = u32::from(!NativeEndian::read_u16(&checksum[..]));
 
     // First, process as much as we can with SIMD.
     let (mut old, mut new) = Checksum::update_simd(&mut sum, old, new);
@@ -105,8 +171,8 @@ pub fn update(checksum: u16, old: &[u8], new: &[u8]) -> u16 {
     // Continue with the normal algorithm to finish up whatever we couldn't
     // process with SIMD.
     while old.len() > 1 {
-        let old_u16 = NetworkEndian::read_u16(old);
-        let new_u16 = NetworkEndian::read_u16(new);
+        let old_u16 = NativeEndian::read_u16(old);
+        let new_u16 = NativeEndian::read_u16(new);
         // RFC 1624 Eqn. 3
         Checksum::add_u16(&mut sum, !old_u16);
         Checksum::add_u16(&mut sum, new_u16);
@@ -114,13 +180,15 @@ pub fn update(checksum: u16, old: &[u8], new: &[u8]) -> u16 {
         new = &new[2..];
     }
     if old.len() == 1 {
-        let old_u16 = NetworkEndian::read_u16(&[old[0], 0]);
-        let new_u16 = NetworkEndian::read_u16(&[new[0], 0]);
+        let old_u16 = NativeEndian::read_u16(&[old[0], 0]);
+        let new_u16 = NativeEndian::read_u16(&[new[0], 0]);
         // RFC 1624 Eqn. 3
         Checksum::add_u16(&mut sum, !old_u16);
         Checksum::add_u16(&mut sum, new_u16);
     }
-    !Checksum::normalize(sum)
+    let mut cksum = [0u8; 2];
+    NativeEndian::write_u16(&mut cksum[..], !Checksum::normalize(sum));
+    cksum
 }
 
 /// RFC 1071 "internet checksum" computation.
@@ -176,7 +244,7 @@ impl Checksum {
 
         // if there's a trailing byte, consume it first
         if let Some(byte) = self.trailing_byte {
-            Self::add_u16(&mut self.sum, NetworkEndian::read_u16(&[byte, bytes[0]]));
+            Self::add_u16(&mut self.sum, NativeEndian::read_u16(&[byte, bytes[0]]));
             bytes = &bytes[1..];
             self.trailing_byte = None;
         }
@@ -187,7 +255,7 @@ impl Checksum {
         // Continue with the normal algorithm to finish up whatever we couldn't
         // process with SIMD.
         while bytes.len() > 1 {
-            Self::add_u16(&mut self.sum, NetworkEndian::read_u16(bytes));
+            Self::add_u16(&mut self.sum, NativeEndian::read_u16(bytes));
             bytes = &bytes[2..];
         }
         if bytes.len() == 1 {
@@ -195,7 +263,16 @@ impl Checksum {
         }
     }
 
-    /// Computes the checksum.
+    /// Computes the checksum, but in big endian byte order.
+    fn checksum_inner(&self) -> u16 {
+        let mut sum = self.sum;
+        if let Some(byte) = self.trailing_byte {
+            Self::add_u16(&mut sum, NativeEndian::read_u16(&[byte, 0]));
+        }
+        !Self::normalize(sum)
+    }
+
+    /// Computes the checksum, and returns the array representation.
     ///
     /// `checksum` returns the checksum of all data added using `add_bytes` so
     /// far. Calling `checksum` does *not* reset the checksum. More bytes may be
@@ -206,12 +283,10 @@ impl Checksum {
     /// computed as though a single 0 byte had been added at the end in order to
     /// even out the length of the input.
     #[inline]
-    pub fn checksum(&self) -> u16 {
-        let mut sum = self.sum;
-        if let Some(byte) = self.trailing_byte {
-            Self::add_u16(&mut sum, NetworkEndian::read_u16(&[byte, 0]));
-        }
-        !Self::normalize(sum)
+    pub fn checksum(&self) -> [u8; 2] {
+        let mut cksum = [0u8; 2];
+        NativeEndian::write_u16(&mut cksum[..], self.checksum_inner());
+        cksum
     }
 
     /// Normalizes a 32-bit accumulator by mopping up the overflow until it fits
@@ -348,7 +423,7 @@ impl Checksum {
             // Iterate over the accumulator data 2 bytes (16 bits) at a time,
             // and add it to `sum`.
             for x in (0..32).step_by(2) {
-                Self::add_u16(sum, NetworkEndian::read_u16(&data[x..x + 2]));
+                Self::add_u16(sum, NativeEndian::read_u16(&data[x..x + 2]));
             }
         }
 
@@ -515,6 +590,69 @@ mod benchmarks {
             test::black_box(c.checksum());
         });
     }
+
+    #[bench]
+    fn bench_update_1024(b: &mut test::Bencher) {
+        b.iter(|| {
+            let old = test::black_box([0x42; 1024]);
+            let new = test::black_box([0xa0; 1024]);
+            test::black_box(update([42; 2], &old[..], &new[..]));
+        });
+    }
+
+    #[bench]
+    fn bench_update_256(b: &mut test::Bencher) {
+        b.iter(|| {
+            let old = test::black_box([0x42; 256]);
+            let new = test::black_box([0xa0; 256]);
+            test::black_box(update([42; 2], &old[..], &new[..]));
+        });
+    }
+
+    #[bench]
+    fn bench_update_128(b: &mut test::Bencher) {
+        b.iter(|| {
+            let old = test::black_box([0x42; 128]);
+            let new = test::black_box([0xa0; 128]);
+            test::black_box(update([42; 2], &old[..], &new[..]));
+        });
+    }
+
+    #[bench]
+    fn bench_update_64(b: &mut test::Bencher) {
+        b.iter(|| {
+            let old = test::black_box([0x42; 64]);
+            let new = test::black_box([0xa0; 64]);
+            test::black_box(update([42; 2], &old[..], &new[..]));
+        });
+    }
+
+    #[bench]
+    fn bench_update_32(b: &mut test::Bencher) {
+        b.iter(|| {
+            let old = test::black_box([0x42; 32]);
+            let new = test::black_box([0xa0; 32]);
+            test::black_box(update([42; 2], &old[..], &new[..]));
+        });
+    }
+
+    #[bench]
+    fn bench_update_31(b: &mut test::Bencher) {
+        b.iter(|| {
+            let old = test::black_box([0x42; 31]);
+            let new = test::black_box([0xa0; 31]);
+            test::black_box(update([42; 2], &old[..], &new[..]));
+        });
+    }
+
+    #[bench]
+    fn bench_update_16(b: &mut test::Bencher) {
+        b.iter(|| {
+            let old = test::black_box([0x42; 16]);
+            let new = test::black_box([0xa0; 16]);
+            test::black_box(update([42; 2], &old[..], &new[..]));
+        });
+    }
 }
 
 #[cfg(test)]
@@ -548,14 +686,14 @@ mod tests {
             // compute the checksum as normal
             let mut c = Checksum::new();
             c.add_bytes(&buf);
-            assert_eq!(c.checksum(), 0);
+            assert_eq!(c.checksum(), [0u8; 2]);
             // compute the checksum one byte at a time to make sure our
             // trailing_byte logic works
             let mut c = Checksum::new();
             for byte in *buf {
                 c.add_bytes(&[*byte]);
             }
-            assert_eq!(c.checksum(), 0);
+            assert_eq!(c.checksum(), [0u8; 2]);
 
             // Make sure that it works even if we overflow u32. Performing this
             // loop 2 * 2^16 times is guaranteed to cause such an overflow
@@ -575,7 +713,7 @@ mod tests {
                 prev_sum = c.sum;
             }
             assert!(overflowed);
-            assert_eq!(c.checksum(), 0);
+            assert_eq!(c.checksum(), [0u8; 2]);
         }
 
         // Make sure that checksum works with add_bytes taking a buffer big
@@ -586,7 +724,7 @@ mod tests {
         // * 1 overflow + 79 extra bytes = 2^20 + 79
         let buf = vec![0xFF; (1 << 20) + 79];
         c.add_bytes(&buf);
-        assert_eq!(c.checksum(), 0xFF);
+        assert_eq!(c.checksum(), [0, 0xFF]);
     }
 
     #[test]
@@ -628,7 +766,7 @@ mod tests {
 
             let mut c = Checksum::new();
             c.add_bytes(&buf);
-            assert_eq!(c.checksum(), 0);
+            assert_eq!(c.checksum(), [0u8; 2]);
 
             // replace the destination IP with the loopback address
             let old = [buf[16], buf[17], buf[18], buf[19]];

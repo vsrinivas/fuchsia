@@ -7,8 +7,8 @@
 #[cfg(test)]
 use std::fmt::{self, Debug, Formatter};
 use std::num::NonZeroU16;
+use std::ops::Range;
 
-use byteorder::{ByteOrder, NetworkEndian};
 use net_types::ip::IpAddress;
 use packet::{
     BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
@@ -27,6 +27,7 @@ use self::options::TcpOptionsImpl;
 
 const HDR_PREFIX_LEN: usize = 20;
 const CHECKSUM_OFFSET: usize = 16;
+const CHECKSUM_RANGE: Range<usize> = CHECKSUM_OFFSET..CHECKSUM_OFFSET + 2;
 pub(crate) const TCP_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
 #[cfg(test)]
 pub(crate) const TCP_MAX_HDR_LEN: usize = 60;
@@ -40,7 +41,7 @@ struct HeaderPrefix {
     ack: U32,
     data_offset_reserved_flags: U16,
     window_size: U16,
-    checksum: U16,
+    checksum: [u8; 2],
     urg_ptr: U16,
 }
 
@@ -134,7 +135,7 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<TcpSegmentRaw<B>, TcpParseArgs<A>> for 
             compute_transport_checksum_parts(args.src_ip, args.dst_ip, IpProto::Tcp, parts.iter())
                 .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?;
 
-        if checksum != 0 {
+        if checksum != [0, 0] {
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
 
@@ -424,7 +425,7 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         segment.hdr_prefix.urg_ptr = U16::ZERO;
         // Initialize the checksum to 0 so that we will get the correct
         // value when we compute it below.
-        segment.hdr_prefix.checksum = U16::ZERO;
+        segment.hdr_prefix.checksum = [0, 0];
 
         // NOTE: We stop using segment at this point so that it no longer
         // borrows the buffer, and we can use the buffer directly.
@@ -442,7 +443,7 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
                 segment_len
             )
         });
-        NetworkEndian::write_u16(&mut buffer.as_mut()[CHECKSUM_OFFSET..], checksum);
+        buffer.as_mut()[CHECKSUM_RANGE].copy_from_slice(&checksum[..]);
     }
 }
 
@@ -529,6 +530,7 @@ impl<B> Debug for TcpSegment<B> {
 
 #[cfg(test)]
 mod tests {
+    use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6Addr};
     use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
     use std::num::NonZeroU16;
@@ -620,7 +622,7 @@ mod tests {
         hdr_prefix.dst_port = U16::new(2);
         // data offset of 5
         hdr_prefix.data_offset_reserved_flags = U16::new(5u16 << 12);
-        hdr_prefix.checksum = U16::from([0x9f, 0xce]);
+        hdr_prefix.checksum = [0x9f, 0xce];
         hdr_prefix
     }
 
@@ -647,7 +649,7 @@ mod tests {
             let checksum =
                 compute_transport_checksum(TEST_SRC_IPV4, TEST_DST_IPV4, IpProto::Tcp, buf)
                     .unwrap();
-            NetworkEndian::write_u16(&mut buf[CHECKSUM_OFFSET..], checksum);
+            buf[CHECKSUM_RANGE].copy_from_slice(&checksum[..]);
             assert_eq!(
                 buf.parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4))
                     .unwrap_err(),

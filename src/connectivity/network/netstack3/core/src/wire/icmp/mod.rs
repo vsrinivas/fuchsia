@@ -46,7 +46,7 @@ use crate::wire::U16;
 struct Header {
     msg_type: u8,
     code: u8,
-    checksum: U16,
+    checksum: [u8; 2],
     /* NOTE: The "Rest of Header" field is stored in message types rather than
      * in the Header. This helps consolidate how callers access data about the
      * packet, and is consistent with ICMPv6, which treats the field as part of
@@ -404,16 +404,15 @@ impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpPar
             "unrecognized code: {}",
             header.code
         ))?;
-        if header.checksum.get()
-            != Self::compute_checksum(
-                &header,
-                message.bytes(),
-                &message_body,
-                args.src_ip,
-                args.dst_ip,
-            )
-            .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?
-        {
+        let checksum = Self::compute_checksum(
+            &header,
+            message.bytes(),
+            &message_body,
+            args.src_ip,
+            args.dst_ip,
+        )
+        .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?;
+        if checksum != [0, 0] {
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
         let message_body = M::Body::parse(message_body)?;
@@ -448,7 +447,7 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
 }
 
 impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
-    /// Compute the checksum, skipping the checksum field itself.
+    /// Compute the checksum, including the checksum field itself.
     ///
     /// `compute_checksum` returns `None` if the version is IPv6 and the total
     /// ICMP packet length overflows a u32.
@@ -458,7 +457,7 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
         message_body: &[u8],
         src_ip: I::Addr,
         dst_ip: I::Addr,
-    ) -> Option<u16> {
+    ) -> Option<[u8; 2]> {
         let mut c = Checksum::new();
         if I::VERSION.is_v6() {
             c.add_bytes(src_ip.bytes());
@@ -471,6 +470,7 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
             c.add_bytes(&[IpProto::Icmpv6.into()]);
         }
         c.add_bytes(&[header.msg_type, header.code]);
+        c.add_bytes(&header.checksum);
         c.add_bytes(message);
         c.add_bytes(message_body);
         Some(c.checksum())
@@ -584,7 +584,7 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> PacketBuilder
                 header.bytes().len() + message.bytes().len() + message_body.len(),
             )
         });
-        header.checksum = U16::new(checksum);
+        header.checksum = checksum;
     }
 }
 

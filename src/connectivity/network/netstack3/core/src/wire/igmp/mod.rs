@@ -29,7 +29,6 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use self::messages::IgmpMessageType;
 use crate::error::ParseError;
-use crate::wire::U16;
 
 /// Trait specifying serialization behavior for IGMP messages.
 ///
@@ -164,7 +163,7 @@ impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
         *header = self.message_header;
 
         let checksum = IgmpMessage::<B, M>::compute_checksum(&header_prefix, &header.bytes(), body);
-        header_prefix.checksum = U16::new(checksum);
+        header_prefix.checksum = checksum;
     }
 }
 
@@ -218,7 +217,7 @@ pub(crate) struct HeaderPrefix {
     /// a value *Max Response Time* is performed by the `MaxRespType` type in
     /// the `MessageType` trait.
     max_resp_code: u8,
-    checksum: U16,
+    checksum: [u8; 2],
 }
 
 impl HeaderPrefix {
@@ -255,9 +254,10 @@ impl<B: ByteSlice, M: MessageType<B>> IgmpMessage<B, M> {
 }
 
 impl<B, M: MessageType<B>> IgmpMessage<B, M> {
-    fn compute_checksum(header_prefix: &HeaderPrefix, header: &[u8], body: &[u8]) -> u16 {
+    fn compute_checksum(header_prefix: &HeaderPrefix, header: &[u8], body: &[u8]) -> [u8; 2] {
         let mut c = Checksum::new();
         c.add_bytes(&[header_prefix.msg_type, header_prefix.max_resp_code]);
+        c.add_bytes(&header_prefix.checksum);
         c.add_bytes(header);
         c.add_bytes(body);
         c.checksum()
@@ -287,13 +287,12 @@ impl<B: ByteSlice, M: MessageType<B>> ParsablePacket<B, ()> for IgmpMessage<B, M
             .take_obj_front::<M::FixedHeader>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
 
-        let checksum_expect = Self::compute_checksum(&prefix, &header.bytes(), buffer.as_ref());
-        if prefix.checksum.get() != checksum_expect {
+        let checksum = Self::compute_checksum(&prefix, &header.bytes(), buffer.as_ref());
+        if checksum != [0, 0] {
             return debug_err!(
                 Err(ParseError::Checksum),
-                "invalid checksum, expected 0x{:04x}, but got 0x{:04x}",
-                checksum_expect,
-                prefix.checksum.get()
+                "invalid checksum, got 0x{:x?}",
+                prefix.checksum
             );
         }
 

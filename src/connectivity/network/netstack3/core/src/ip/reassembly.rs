@@ -636,7 +636,7 @@ fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
         let mut c = Checksum::new();
         c.add_bytes(&bytes[..IPV4_CHECKSUM_BYTE_RANGE.start]);
         c.add_bytes(&bytes[IPV4_CHECKSUM_BYTE_RANGE.end..header.len()]);
-        NetworkEndian::write_u16(&mut bytes[IPV4_CHECKSUM_BYTE_RANGE], c.checksum());
+        bytes[IPV4_CHECKSUM_BYTE_RANGE].copy_from_slice(&c.checksum()[..]);
     }
 
     #[ipv6]

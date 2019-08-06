@@ -130,7 +130,7 @@ pub(crate) fn compute_transport_checksum_parts<'a, A: IpAddress, I>(
     dst_ip: A,
     proto: IpProto,
     parts: I,
-) -> Option<u16>
+) -> Option<[u8; 2]>
 where
     I: Iterator<Item = &'a &'a [u8]> + Clone,
 {
@@ -154,7 +154,7 @@ pub(crate) fn compute_transport_checksum<A: IpAddress>(
     dst_ip: A,
     proto: IpProto,
     packet: &[u8],
-) -> Option<u16> {
+) -> Option<[u8; 2]> {
     let mut checksum = Checksum::new();
     update_transport_checksum_pseudo_header(&mut checksum, src_ip, dst_ip, proto, packet.len())
         .ok()?;

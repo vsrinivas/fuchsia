@@ -8,8 +8,8 @@ use std::convert::TryInto;
 #[cfg(test)]
 use std::fmt::{self, Debug, Formatter};
 use std::num::NonZeroU16;
+use std::ops::Range;
 
-use byteorder::{ByteOrder, NetworkEndian};
 use net_types::ip::{Ip, IpAddress};
 use packet::{
     BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
@@ -26,6 +26,7 @@ use crate::wire::{FromRaw, MaybeParsed, U16};
 pub(crate) const HEADER_BYTES: usize = 8;
 const LENGTH_OFFSET: usize = 4;
 const CHECKSUM_OFFSET: usize = 6;
+const CHECKSUM_RANGE: Range<usize> = CHECKSUM_OFFSET..CHECKSUM_OFFSET + 2;
 
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -33,7 +34,7 @@ struct Header {
     src_port: U16,
     dst_port: U16,
     length: U16,
-    checksum: U16,
+    checksum: [u8; 2],
 }
 
 /// A UDP packet.
@@ -72,17 +73,11 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<UdpPacketRaw<B>, UdpParseArgs<A>> for U
             .ok_or_else(|_| debug_err!(ParseError::Format, "too few bytes for header"))?;
         let body = raw.body.ok_or_else(|_| debug_err!(ParseError::Format, "incomplete body"))?;
 
-        let checksum = header.checksum.get();
+        let checksum = header.checksum;
         // A 0 checksum indicates that the checksum wasn't computed. In IPv4,
         // this means that it shouldn't be validated. In IPv6, the checksum is
         // mandatory, so this is an error.
-        if checksum != 0 {
-            // When computing the checksum, a checksum of 0 is sent as 0xFFFF.
-            // Since we normally expect the sum of all bytes including the
-            // checksum to be 0, but we've added an extra factor of (0xFFFF - 0)
-            // = 0xFFFF, we expect the sum to be 0xFFFF.
-            let target = if checksum == 0xFFFF { 0xFFFF } else { 0 };
-
+        if checksum != [0, 0] {
             let parts = [header.bytes(), body.deref().as_ref()];
             let checksum = compute_transport_checksum_parts(
                 args.src_ip,
@@ -92,12 +87,18 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<UdpPacketRaw<B>, UdpParseArgs<A>> for U
             )
             .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?;
 
-            if target != checksum {
+            // Even the checksum is transmitted as 0xFFFF, the checksum of the whole
+            // UDP packet should still be 0. This is because in 1's complement, it is
+            // not possible to produce +0(0) from adding non-zero 16-bit words.
+            // Since our 0xFFFF ensures there is at least one non-zero 16-bit word,
+            // the addition can only produce -0(0xFFFF) and after negation, it is
+            // still 0. A test `test_udp_checksum_0xffff` is included to make sure
+            // this is true.
+            if checksum != [0, 0] {
                 return debug_err!(
                     Err(ParseError::Checksum),
-                    "invalid checksum {:04X}, expected {:04X}",
-                    checksum,
-                    target
+                    "invalid checksum {:X?}",
+                    header.checksum,
                 );
             }
         } else if A::Version::VERSION.is_v6() {
@@ -363,12 +364,12 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         packet.header.length = U16::new(len_field);
         // Initialize the checksum to 0 so that we will get the correct
         // value when we compute it below.
-        packet.header.checksum = U16::ZERO;
+        packet.header.checksum = [0, 0];
 
         // NOTE: We stop using packet at this point so that it no longer borrows
         // the buffer, and we can use the buffer directly.
         let packet_len = buffer.as_ref().len();
-        let checksum =
+        let mut checksum =
             compute_transport_checksum(self.src_ip, self.dst_ip, IpProto::Udp, buffer.as_ref())
                 .unwrap_or_else(|| {
                     panic!(
@@ -376,15 +377,10 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
                     packet_len
                 )
                 });
-        NetworkEndian::write_u16(
-            &mut buffer.as_mut()[CHECKSUM_OFFSET..],
-            if checksum == 0 {
-                // When computing the checksum, a checksum of 0 is sent as 0xFFFF.
-                0xFFFF
-            } else {
-                checksum
-            },
-        );
+        if checksum == [0, 0] {
+            checksum = [0xFF, 0xFF];
+        }
+        buffer.as_mut()[CHECKSUM_RANGE].copy_from_slice(&checksum[..]);
     }
 }
 
@@ -398,6 +394,7 @@ impl<B> Debug for UdpPacket<B> {
 
 #[cfg(test)]
 mod tests {
+    use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
     use std::num::NonZeroU16;
@@ -704,6 +701,31 @@ mod tests {
         let body = packet.body.as_ref().unwrap();
         assert_eq!(header.bytes(), &buf[..8]);
         assert_eq!(&body[..], &buf[8..]);
+    }
+
+    #[test]
+    fn test_udp_checksum_0xffff() {
+        // Test the behavior when a UDP packet has to
+        // flip its checksum field.
+        let builder = (&[0xff, 0xd9]).into_serializer().encapsulate(UdpPacketBuilder::new(
+            Ipv4Addr::new([0, 0, 0, 0]),
+            Ipv4Addr::new([0, 0, 0, 0]),
+            None,
+            NonZeroU16::new(1).unwrap(),
+        ));
+        let buf = builder.serialize_vec_outer().unwrap();
+        // The serializer has flipped the bits for us.
+        // Normally, 0xFFFF can't be checksum because -0
+        // can not be produced by adding non-negtive 16-bit
+        // words
+        assert_eq!(buf.as_ref()[7], 0xFF);
+        assert_eq!(buf.as_ref()[8], 0xFF);
+
+        // When validating the checksum, just add'em up.
+        let mut c = internet_checksum::Checksum::new();
+        c.add_bytes(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 0, 10]);
+        c.add_bytes(buf.as_ref());
+        assert!(c.checksum() == [0, 0]);
     }
 
     // TODO(joshlf): Figure out why compiling this test (yes, just compiling!)
