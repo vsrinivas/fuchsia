@@ -397,7 +397,8 @@ TEST_P(TimeoutSockoptsTest, TimeoutSockopts) {
   // Set the timeout.
   const struct timeval expected_tv = {
       .tv_sec = 39,
-      .tv_usec = 500000,
+      // NB: for some reason, Linux's resolution is limited to 4ms.
+      .tv_usec = 504000,
   };
   EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, optname, &expected_tv, sizeof(expected_tv)), 0)
       << strerror(errno);
