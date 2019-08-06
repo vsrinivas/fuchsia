@@ -33,9 +33,6 @@ toc:
 - title: "Editors"
   path: /fuchsia-src/zircon/editors
 
-- title: "Self-hosted build"
-  path: /fuchsia-src/zircon/self_hosting
-
 - title: "libc support"
   path: /fuchsia-src/zircon/libc
 
