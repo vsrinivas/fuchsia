@@ -1160,12 +1160,16 @@ class FileOpener final {
   }
 
   // Like OpenFile, but also accept a directory.
-  const File* OpenFileOrDir(std::filesystem::path file) {
+  const File* OpenFileOrDir(std::filesystem::path file, bool ignore_missing = false) {
     file.make_preferred();
     auto& cache = name_cache_[file];
     if (!cache) {
       struct stat st;
-      auto [cached_file, fd] = Open(file, &st);
+      auto [cached_file, fd] = Open(file, &st, ignore_missing);
+      if (!cached_file) {
+        assert(ignore_missing);
+        return nullptr;
+      }
       if (S_ISDIR(st.st_mode)) {
         OpenDirectory(cached_file, std::move(fd), std::move(file));
       } else {
@@ -1240,10 +1244,14 @@ class FileOpener final {
   // State of -C switches.
   std::filesystem::path cwd_{"."};
 
-  std::pair<File*, fbl::unique_fd> Open(const std::filesystem::path& file, struct stat* st) {
+  std::pair<File*, fbl::unique_fd> Open(const std::filesystem::path& file, struct stat* st,
+                                        bool ignore_missing = false) {
     auto path = cwd_ / file;
     fbl::unique_fd fd(open(path.c_str(), O_RDONLY));
     if (!fd) {
+      if (errno == ENOENT && ignore_missing) {
+        return {};
+      }
       perror(file.c_str());
       exit(1);
     }
@@ -1994,7 +2002,7 @@ class DirectoryTreeBuilder final {
   // Insert a file with complete target path, e.g. from a manifest entry.
   void Insert(std::filesystem::path at, const File* file) { Insert(std::move(at), file, replace_); }
 
-  void ImportManifest(const FileContents& file, const char* manifest_name) {
+  void ImportManifest(const FileContents& file, const char* manifest_name, bool ignore_missing) {
     auto root = std::make_unique<Directory>();
 
     auto read_ptr = static_cast<const char*>(file.View().iov_base);
@@ -2013,7 +2021,10 @@ class DirectoryTreeBuilder final {
                 static_cast<int>(eol - line), line);
         exit(1);
       }
-      Insert({line, eq}, opener_->OpenFileOrDir({eq + 1, eol}), replace_);
+      auto file_or_dir = opener_->OpenFileOrDir({eq + 1, eol}, ignore_missing);
+      if (file_or_dir) {
+        Insert({line, eq}, file_or_dir, replace_);
+      }
     }
   }
 
@@ -2198,7 +2209,7 @@ enum LongOnlyOpt : int {
   kOptRecompress = 0x100,
 };
 
-constexpr const char kOptString[] = "-B:c::C:d:D:e:FxXRhto:p:T:uv";
+constexpr const char kOptString[] = "-B:c::C:d:D:e:FixXRhto:p:T:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", optional_argument, nullptr, 'c'},
@@ -2210,6 +2221,7 @@ constexpr const option kLongOpts[] = {
     {"extract-raw", no_argument, nullptr, 'R'},
     {"files", no_argument, nullptr, 'F'},
     {"help", no_argument, nullptr, 'h'},
+    {"ignore-missing-files", no_argument, nullptr, 'i'},
     {"list", no_argument, nullptr, 't'},
     {"output", required_argument, nullptr, 'o'},
     {"output-dir", required_argument, nullptr, 'D'},
@@ -2252,6 +2264,8 @@ Input control switches apply to subsequent input arguments:\n\
     --compressed[=HOW], -c [HOW]   compress storage images (see below)\n\
     --uncompressed, -u             do not compress storage images\n\
     --recompress                   recompress input items already compressed\n\
+    --ignore-missing-files, -i     a manifest entry whose source file doesn't\n\
+                                   exist is ignored without error\n\
 \n\
 Input arguments:\n\
     --entry=TEXT, -e TEXT          like an input file containing only TEXT\n\
@@ -2349,6 +2363,7 @@ int main(int argc, char** argv) {
   bool list_contents = false;
   bool verbose = false;
   bool recompress = false;
+  bool ignore_missing_files = false;
   ItemList items;
   DirectoryTreeBuilder bootfs(&opener);
   std::filesystem::path outdir;
@@ -2374,6 +2389,10 @@ int main(int argc, char** argv) {
 
       case 'C':
         opener.ChangeDirectory(optarg);
+        continue;
+
+      case 'i':
+        ignore_missing_files = true;
         continue;
 
       case 'F':
@@ -2454,7 +2473,7 @@ int main(int argc, char** argv) {
 
       case 'e':
         if (input_manifest) {
-          bootfs.ImportManifest({optarg, false}, "<command-line>");
+          bootfs.ImportManifest({optarg, false}, "<command-line>", ignore_missing_files);
         } else if (input_type == ZBI_TYPE_CONTAINER) {
           fprintf(stderr, "cannot use --entry (-e) with --target=CONTAINER\n");
           exit(1);
@@ -2489,7 +2508,7 @@ int main(int argc, char** argv) {
         // It's another file in ZBI format.
       } else if (input_manifest) {
         // It must be a manifest file.
-        bootfs.ImportManifest(*input->AsContents(), optarg);
+        bootfs.ImportManifest(*input->AsContents(), optarg, ignore_missing_files);
       } else {
         fprintf(stderr, "%s: not a Zircon Boot Image file\n", optarg);
         exit(1);
