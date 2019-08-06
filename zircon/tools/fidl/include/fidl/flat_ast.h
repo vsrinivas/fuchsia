@@ -278,8 +278,8 @@ struct NumericConstantValue final : ConstantValue {
       }
       case Kind::kFloat32: {
         if (!std::is_floating_point<ValueType>::value ||
-            value < std::numeric_limits<float>::lowest() ||
-            value > std::numeric_limits<float>::max()) {
+            static_cast<float>(value) < std::numeric_limits<float>::lowest() ||
+            static_cast<float>(value) > std::numeric_limits<float>::max()) {
           return false;
         }
         *out_value = std::make_unique<NumericConstantValue<float>>(static_cast<float>(value));
@@ -287,8 +287,8 @@ struct NumericConstantValue final : ConstantValue {
       }
       case Kind::kFloat64: {
         if (!std::is_floating_point<ValueType>::value ||
-            value < std::numeric_limits<double>::lowest() ||
-            value > std::numeric_limits<double>::max()) {
+            static_cast<double>(value) < std::numeric_limits<double>::lowest() ||
+            static_cast<double>(value) > std::numeric_limits<double>::max()) {
           return false;
         }
         *out_value = std::make_unique<NumericConstantValue<double>>(static_cast<double>(value));
