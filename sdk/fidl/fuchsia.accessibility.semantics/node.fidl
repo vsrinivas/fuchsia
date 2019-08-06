@@ -23,9 +23,8 @@ enum Role {
 /// Example: A button with a label attribute 'ok' should never change to 'cancel', as this is not
 /// the same element.
 table Attributes {
-    /// The label for an element. If longer than MAX_LABEL_SIZE the client is responsible for
-    /// truncating the label.
-    1: string label;
+    /// The label for an element.
+    1: string:MAX_LABEL_SIZE label;
 };
 
 /// A state is a dynamic property of an element that may change in response to
@@ -58,13 +57,14 @@ table Node {
     /// A table of attributes of this node.
     4: Attributes attributes;
 
-    /// A list of actions that can be performed on this node.
-    5: vector<Action> actions;
+    /// List of actions that can be performed on this node.
+    5: vector<Action>:100 actions;
 
-    /// The list of child IDs of this node, in traversal order. Runtimes supplying semantic tree
-    /// information are responsible for ensuring the tree does not contain cycles. Each node may
-    /// have only one parent.
-    6: vector<uint32> child_ids;
+    /// The ordered list of children IDs  of this node.
+    /// It is assumed that runtimes supplying semantic tree information will not
+    /// create cycles inside the tree.
+    /// It is also assumed that each node can have only one parent.
+    6: vector<uint32>:MAX_FAN_OUT child_ids;
 
     /// Local bounding box of this element.
     7: fuchsia.ui.gfx.BoundingBox location;
