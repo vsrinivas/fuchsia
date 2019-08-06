@@ -203,6 +203,14 @@
 #   #
 #   # The current working directory will be set to the directory containing the
 #   # BT_SET_UP bash function (from within the temporary root directory).
+#   #
+#   # Important: BT_TEAR_DOWN is only called after the test function returns or
+#   # exits, *and* closes the stdout stream. If the test starts a background task
+#   # witout redirecting stdout, and the test fails before completing or killing
+#   # that background task, stdout will remain open and the test will hang. To
+#   # avoid this, always redirect background task stdout. Among the typical
+#   # alternatives are redirecting stdout to stderr ("some_program >&2"), a
+#   # variable, a file, or /dev/null.
 #   #######################################
 #   # BT_TEAR_DOWN() {
 #   # }
