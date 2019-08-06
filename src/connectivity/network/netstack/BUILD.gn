@@ -148,35 +148,35 @@ go_library("netstack_lib") {
 }
 
 go_test("netstack_connectivity_test") {
-  gopackage = "netstack/connectivity"
+  gopackages = ["netstack/connectivity"]
   deps = [
     ":netstack_lib",
   ]
 }
 
 go_test("netstack_fidlconv_test") {
-  gopackage = "netstack/fidlconv"
+  gopackages = ["netstack/fidlconv"]
   deps = [
     ":netstack_lib",
   ]
 }
 
 go_test("netstack_filter_test") {
-  gopackage = "netstack/filter"
+  gopackages = ["netstack/filter"]
   deps = [
     ":netstack_lib",
   ]
 }
 
 go_test("netstack_link_eth_test") {
-  gopackage = "netstack/link/eth"
+  gopackages = ["netstack/link/eth"]
   deps = [
     ":netstack_lib",
   ]
 }
 
 go_test("netstack_test") {
-  gopackage = "netstack"
+  gopackages = ["netstack"]
   deps = [
     ":netstack_lib",
   ]

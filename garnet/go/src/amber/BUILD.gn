@@ -179,7 +179,7 @@ test_targets = [
 ]
 foreach(test, test_targets) {
   go_test(test.name) {
-    gopackage = test.gopkg
+    gopackages = [test.gopkg]
 
     deps = [
       ":lib",

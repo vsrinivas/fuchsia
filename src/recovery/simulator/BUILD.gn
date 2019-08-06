@@ -27,7 +27,7 @@ if (is_linux) {
   }
 
   go_test("recovery_simulator_tests") {
-    gopackage = "fuchsia.googlesource.com/recovery/simulator"
+    gopackages = ["fuchsia.googlesource.com/recovery/simulator"]
     deps = [
       ":lib",
     ]

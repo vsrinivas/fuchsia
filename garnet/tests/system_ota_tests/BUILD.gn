@@ -33,7 +33,7 @@ go_library("system_ota_tests_lib") {
 }
 
 go_test("system_ota_tests_upgrade") {
-  gopackage = "fuchsia.googlesource.com/system_ota_tests/upgrade_test"
+  gopackages = ["fuchsia.googlesource.com/system_ota_tests/upgrade_test"]
   disabled = true
   deps = [
     ":system_ota_tests_lib",

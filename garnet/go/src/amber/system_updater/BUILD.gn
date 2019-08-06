@@ -25,7 +25,7 @@ go_library("lib") {
 }
 
 go_test("system_updater_test") {
-  gopackage = "system_updater"
+  gopackages = ["system_updater"]
   deps = [
     ":lib",
   ]

@@ -7,7 +7,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_test("go_tuf_repo_test") {
-  gopackage = "github.com/flynn/go-tuf"
+  gopackages = ["github.com/flynn/go-tuf"]
 
   deps = [
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
@@ -16,7 +16,7 @@ go_test("go_tuf_repo_test") {
 }
 
 go_test("go_tuf_data_test") {
-  gopackage = "github.com/flynn/go-tuf/data"
+  gopackages = ["github.com/flynn/go-tuf/data"]
 
   deps = [
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
@@ -25,7 +25,7 @@ go_test("go_tuf_data_test") {
 }
 
 go_test("go_tuf_leveldbstore_test") {
-  gopackage = "github.com/flynn/go-tuf/client/leveldbstore"
+  gopackages = ["github.com/flynn/go-tuf/client/leveldbstore"]
 
   deps = [
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
@@ -34,7 +34,7 @@ go_test("go_tuf_leveldbstore_test") {
 }
 
 go_test("go_tuf_encrypted_test") {
-  gopackage = "github.com/flynn/go-tuf/encrypted"
+  gopackages = ["github.com/flynn/go-tuf/encrypted"]
 
   deps = [
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
@@ -43,7 +43,7 @@ go_test("go_tuf_encrypted_test") {
 }
 
 go_test("go_tuf_util_test") {
-  gopackage = "github.com/flynn/go-tuf/util"
+  gopackages = ["github.com/flynn/go-tuf/util"]
 
   deps = [
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
@@ -52,7 +52,7 @@ go_test("go_tuf_util_test") {
 }
 
 go_test("go_tuf_verify_test") {
-  gopackage = "github.com/flynn/go-tuf/verify"
+  gopackages = ["github.com/flynn/go-tuf/verify"]
 
   deps = [
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",

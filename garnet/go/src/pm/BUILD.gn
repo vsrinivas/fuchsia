@@ -34,7 +34,7 @@ foreach(pkg, test_packages) {
   pkg_ = string_replace(pkg, "/", "_")
   name = "pm_${pkg_}_test"
   go_test(name) {
-    gopackage = "fuchsia.googlesource.com/pm/${pkg}"
+    gopackages = ["fuchsia.googlesource.com/pm/${pkg}"]
     deps = [
       ":pm_lib",
     ]

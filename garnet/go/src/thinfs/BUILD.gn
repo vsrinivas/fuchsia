@@ -19,7 +19,7 @@ go_library("thinfs_lib") {
 }
 
 go_test("thinfs_bitops_test") {
-  gopackage = "thinfs/bitops"
+  gopackages = ["thinfs/bitops"]
 
   deps = [
     ":thinfs_lib",
@@ -27,7 +27,7 @@ go_test("thinfs_bitops_test") {
 }
 
 go_test("thinfs_block_fake_test") {
-  gopackage = "thinfs/block/fake"
+  gopackages = ["thinfs/block/fake"]
 
   deps = [
     ":thinfs_lib",
@@ -35,7 +35,7 @@ go_test("thinfs_block_fake_test") {
 }
 
 go_test("thinfs_block_file_test") {
-  gopackage = "thinfs/block/file"
+  gopackages = ["thinfs/block/file"]
 
   deps = [
     ":thinfs_lib",
@@ -43,7 +43,7 @@ go_test("thinfs_block_file_test") {
 }
 
 go_test("thinfs_cache_test") {
-  gopackage = "thinfs/cache"
+  gopackages = ["thinfs/cache"]
 
   deps = [
     ":thinfs_lib",
@@ -51,7 +51,7 @@ go_test("thinfs_cache_test") {
 }
 
 go_test("thinfs_gpt_test") {
-  gopackage = "thinfs/gpt"
+  gopackages = ["thinfs/gpt"]
 
   deps = [
     ":thinfs_lib",
@@ -59,7 +59,7 @@ go_test("thinfs_gpt_test") {
 }
 
 go_test("thinfs_mbr_test") {
-  gopackage = "thinfs/mbr"
+  gopackages = ["thinfs/mbr"]
 
   deps = [
     ":thinfs_lib",
@@ -67,7 +67,7 @@ go_test("thinfs_mbr_test") {
 }
 
 go_test("thinfs_thinio_test") {
-  gopackage = "thinfs/thinio"
+  gopackages = ["thinfs/thinio"]
 
   deps = [
     ":thinfs_lib",
@@ -75,7 +75,7 @@ go_test("thinfs_thinio_test") {
 }
 
 go_test("thinfs_zircon_rpc_test") {
-  gopackage = "thinfs/zircon/rpc"
+  gopackages = ["thinfs/zircon/rpc"]
 
   deps = [
     ":thinfs_lib",

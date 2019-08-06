@@ -33,7 +33,7 @@ if (is_linux) {
   }
 
   go_test("oom_tests") {
-    gopackage = "fuchsia.googlesource.com/tests/oom"
+    gopackages = ["fuchsia.googlesource.com/tests/oom"]
     deps = [
       ":lib",
     ]

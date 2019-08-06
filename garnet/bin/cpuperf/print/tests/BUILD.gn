@@ -39,7 +39,7 @@ go_library("raw_printer_test_lib") {
 }
 
 go_test("cpuperf_raw_printer_test") {
-  gopackage = "cpuperf/printer/tests"
+  gopackages = ["cpuperf/printer/tests"]
   deps = [
     ":raw_printer_test_lib",
   ]

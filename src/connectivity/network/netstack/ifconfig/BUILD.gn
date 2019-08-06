@@ -28,7 +28,7 @@ go_library("ifconfig_lib") {
 }
 
 go_test("netstack_ifconfig_test") {
-  gopackage = "netstack/ifconfig"
+  gopackages = ["netstack/ifconfig"]
   deps = [
     ":ifconfig_lib",
   ]

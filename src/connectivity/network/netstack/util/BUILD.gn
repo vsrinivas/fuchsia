@@ -5,7 +5,7 @@
 import("//build/go/go_test.gni")
 
 go_test("netstack_util_test") {
-  gopackage = "netstack/util"
+  gopackages = ["netstack/util"]
 
   deps = [
     "../:netstack_lib",

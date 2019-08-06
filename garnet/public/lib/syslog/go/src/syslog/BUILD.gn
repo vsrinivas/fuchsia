@@ -18,7 +18,7 @@ go_library("syslog") {
 }
 
 go_test("syslog_test") {
-  gopackage = "syslog"
+  gopackages = ["syslog"]
   deps = [
     ":syslog",
   ]

@@ -16,7 +16,7 @@ go_binary("netstat") {
 }
 
 go_test("netstack_netstat_test") {
-  gopackage = "netstack/netstat"
+  gopackages = ["netstack/netstat"]
 
   deps = [
     "../:netstack_lib",

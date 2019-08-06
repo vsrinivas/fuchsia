@@ -10,7 +10,7 @@ go_library("sse") {
 }
 
 go_test("sse_test") {
-  gopackage = "fuchsia.googlesource.com/sse"
+  gopackages = ["fuchsia.googlesource.com/sse"]
   deps = [
     ":sse",
   ]

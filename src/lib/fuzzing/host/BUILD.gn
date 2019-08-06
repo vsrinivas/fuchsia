@@ -17,7 +17,7 @@ go_library("host_fuzzers_test_lib") {
 }
 
 go_test("host_fuzzers_test") {
-  gopackage = "fuzzing"
+  gopackages = ["fuzzing"]
   deps = [
     ":host_fuzzers_test_lib",
   ]

@@ -33,7 +33,7 @@ install_host_tools("host") {
 }
 
 go_test("gidl_parser_test") {
-  gopackage = "gidl/parser"
+  gopackages = ["gidl/parser"]
 
   deps = [
     ":lib",
@@ -41,7 +41,7 @@ go_test("gidl_parser_test") {
 }
 
 go_test("gidl_dart_test") {
-  gopackage = "gidl/dart"
+  gopackages = ["gidl/dart"]
 
   deps = [
     ":lib",

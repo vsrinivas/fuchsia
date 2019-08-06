@@ -28,7 +28,7 @@ test_packages = [
 ]
 foreach(testpkg, test_packages) {
   go_test("pmd_${testpkg}_test") {
-    gopackage = "fuchsia.googlesource.com/pmd/${testpkg}"
+    gopackages = ["fuchsia.googlesource.com/pmd/${testpkg}"]
     deps = [
       ":pmd",
     ]

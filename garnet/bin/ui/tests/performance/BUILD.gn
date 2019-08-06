@@ -75,7 +75,7 @@ go_library("process_trace_lib") {
 }
 
 go_test("process_trace_helpers_test") {
-  gopackage = "process_gfx_trace"
+  gopackages = ["process_gfx_trace"]
 
   deps = [
     ":process_trace_lib",

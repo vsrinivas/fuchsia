@@ -40,7 +40,7 @@ go_binary("remote_module_resolver") {
 }
 
 go_test("remote_module_resolver_test") {
-  gopackage = "remote_module_resolver/repository"
+  gopackages = ["remote_module_resolver/repository"]
   deps = [
     ":remote_module_resolver_lib",
   ]

@@ -13,7 +13,7 @@ go_library("device_settings") {
 }
 
 go_test("device_settings_integration_test") {
-  gopackage = "device_settings"
+  gopackages = ["device_settings"]
 
   deps = [
     ":device_settings",
