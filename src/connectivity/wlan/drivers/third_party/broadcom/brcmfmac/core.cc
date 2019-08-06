@@ -16,16 +16,16 @@
 
 #include "core.h"
 
-#include <algorithm>
 #include <endian.h>
+#include <netinet/if_ether.h>
 #include <pthread.h>
 #include <threads.h>
+#include <zircon/status.h>
+
+#include <algorithm>
 #include <atomic>
 
-#include <ddk/protocol/wlanphyimpl.h>
-#include <netinet/if_ether.h>
 #include <wlan/common/phy.h>
-#include <zircon/status.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -380,7 +380,7 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
 void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* netbuf, bool handle_event) {
   struct brcmf_if* ifp;
   struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr;
+  struct brcmf_pub* drvr = bus_if->drvr.get();
 
   BRCMF_DBG(DATA, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
 
@@ -404,7 +404,7 @@ void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* netbuf, bool 
 void brcmf_rx_event(struct brcmf_device* dev, struct brcmf_netbuf* netbuf) {
   struct brcmf_if* ifp;
   struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr;
+  struct brcmf_pub* drvr = bus_if->drvr.get();
 
   BRCMF_DBG(EVENT, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
 
@@ -484,18 +484,6 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev) {
   return ZX_OK;
 }
 
-static void brcmf_release_zx_phy_device(void* ctx) {
-  // TODO(cphoenix): Implement release
-  // Unbind - remove device from tree
-  // Release - dealloc resources
-  BRCMF_ERR("* * Need to unload and release all driver structs");
-}
-
-static zx_protocol_device_t phy_impl_device_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .release = brcmf_release_zx_phy_device,
-};
-
 zx_status_t brcmf_phy_query(void* ctx, wlanphy_impl_info_t* phy_info) {
   struct brcmf_if* ifp = static_cast<decltype(ifp)>(ctx);
   // See wlan/protocol/info.h
@@ -525,6 +513,62 @@ zx_status_t brcmf_phy_query(void* ctx, wlanphy_impl_info_t* phy_info) {
   return ZX_OK;
 }
 
+static void brcmf_release_zx_if_device(void* ctx) {
+  // TODO(cphoenix): Implement unbind/release
+  // Unbind - remove device from tree
+  // Release - dealloc resources
+  BRCMF_ERR("* * Need to unload and release all driver structs");
+}
+
+static zx_protocol_device_t if_impl_device_ops = {
+    .version = DEVICE_OPS_VERSION,
+    .release = brcmf_release_zx_if_device,
+};
+
+zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
+                                   uint16_t* out_iface_id) {
+  struct brcmf_if* ifp = static_cast<decltype(ifp)>(ctx);
+  struct net_device* ndev = ifp->ndev;
+  struct wireless_dev* wdev = ndev_to_wdev(ndev);
+  zx_status_t result;
+
+  BRCMF_DBG(TEMP, "brcmf_phy_create_iface called!");
+
+  device_add_args_t args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "broadcom-wlanif",  // TODO(cphoenix): Uniquify this?
+      .ctx = ndev,
+      .ops = &if_impl_device_ops,
+      .proto_id = ZX_PROTOCOL_WLANIF_IMPL,
+      .proto_ops = &if_impl_proto_ops,
+  };
+
+  struct brcmf_device* device = ifp->drvr->bus_if->dev;
+  struct brcmf_bus* bus = device->bus.get();
+
+  BRCMF_DBG(TEMP, "About to add if_dev");
+  result = brcmf_bus_device_add(bus, device->phy_zxdev, &args, &device->if_zxdev);
+  if (result != ZX_OK) {
+    BRCMF_ERR("Failed to device_add: %s", zx_status_get_string(result));
+    return result;
+  }
+  BRCMF_DBG(TEMP, "device_add() succeeded. Added iface hooks.");
+
+  *out_iface_id = 42;
+
+  wdev->iftype = req->role;
+
+  /* set appropriate operations */
+  ndev->initialized_for_ap = true;
+
+  /* set the mac address & netns */
+  memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
+  ndev->priv_destructor = &brcmf_free_net_device_vif;
+  BRCMF_DBG(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
+
+  return ZX_OK;
+}
+
 zx_status_t brcmf_phy_destroy_iface(void* ctx, uint16_t id) {
   BRCMF_ERR("Don't know how to destroy iface yet");
   return ZX_ERR_IO;
@@ -540,48 +584,18 @@ zx_status_t brcmf_phy_set_country(void* ctx, const wlanphy_country_t* country) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static wlanphy_impl_protocol_ops_t phy_impl_proto_ops = {
-    .query = brcmf_phy_query,
-    .create_iface = brcmf_phy_create_iface,
-    .destroy_iface = brcmf_phy_destroy_iface,
-    .set_country = brcmf_phy_set_country,
-};
-
 zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
   struct brcmf_pub* drvr = ifp->drvr;
   struct net_device* ndev = ifp->ndev;
-  zx_status_t result;
-
   BRCMF_DBG(TRACE, "Enter-New, bsscfgidx=%d mac=%pM\n", ifp->bsscfgidx, ifp->mac_addr);
 
   ndev->needed_headroom += drvr->hdrlen;
-
   workqueue_init_work(&ifp->multicast_work, _brcmf_set_multicast_list);
+  device_make_visible(ifp->drvr->bus_if->dev->phy_zxdev);
 
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "broadcom-wlanphy",
-      .ctx = ifp,
-      .ops = &phy_impl_device_ops,
-      .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
-      .proto_ops = &phy_impl_proto_ops,
-  };
-
-  struct brcmf_device* device = if_to_dev(ifp);
-  struct brcmf_bus* bus = device->bus;
-
-  result = brcmf_bus_device_add(bus, device->zxdev, &args, &device->phy_zxdev);
-  if (result != ZX_OK) {
-    BRCMF_ERR("device_add failed: %s", zx_status_get_string(result));
-    goto fail;
-  }
-  BRCMF_DBG(TEMP, "device_add() succeeded. Added phy hooks.\n");
+  BRCMF_DBG(TEMP, "device_make_visible() succeeded. Activated phy hooks.\n");
 
   return ZX_OK;
-
-fail:
-  drvr->iflist[ifp->bsscfgidx] = NULL;
-  return ZX_ERR_IO_NOT_PRESENT;
 }
 
 static void brcmf_net_detach(struct net_device* ndev, bool rtnl_locked) {
@@ -774,14 +788,13 @@ void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked) {
 }
 
 zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* settings) {
-  struct brcmf_pub* drvr = NULL;
   zx_status_t ret = ZX_OK;
   int i;
 
   BRCMF_DBG(TRACE, "Enter\n");
 
   /* Allocate primary brcmf_info */
-  drvr = static_cast<decltype(drvr)>(calloc(1, sizeof(struct brcmf_pub)));
+  auto drvr = std::make_unique<struct brcmf_pub>();
   if (!drvr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -795,19 +808,19 @@ zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* setti
   /* Link to bus module */
   drvr->hdrlen = 0;
   drvr->bus_if = dev_to_bus(dev);
-  drvr->bus_if->drvr = drvr;
   drvr->settings = settings;
 
   /* Attach and link in the protocol */
-  ret = brcmf_proto_attach(drvr);
+  ret = brcmf_proto_attach(drvr.get());
   if (ret != ZX_OK) {
     BRCMF_ERR("brcmf_prot_attach failed\n");
     goto fail;
   }
 
   /* attach firmware event handler */
-  brcmf_fweh_attach(drvr);
+  brcmf_fweh_attach(drvr.get());
 
+  drvr->bus_if->drvr = std::move(drvr);
   return ret;
 
 fail:
@@ -819,7 +832,7 @@ fail:
 zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
   zx_status_t ret = ZX_ERR_IO;
   struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr;
+  struct brcmf_pub* drvr = bus_if->drvr.get();
   struct brcmf_if* ifp;
   struct brcmf_if* p2p_ifp;
   zx_status_t err;
@@ -900,7 +913,7 @@ fail:
 
 void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len) {
   struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr;
+  struct brcmf_pub* drvr = bus_if->drvr.get();
 
   if (drvr) {
     drvr->hdrlen += len;
@@ -909,7 +922,7 @@ void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len) {
 
 void brcmf_dev_reset(struct brcmf_device* dev) {
   struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr;
+  struct brcmf_pub* drvr = bus_if->drvr.get();
 
   if (drvr == NULL) {
     return;
@@ -923,7 +936,7 @@ void brcmf_dev_reset(struct brcmf_device* dev) {
 void brcmf_detach(struct brcmf_device* dev) {
   int32_t i;
   struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr;
+  struct brcmf_pub* drvr = bus_if->drvr.get();
 
   BRCMF_DBG(TRACE, "Enter\n");
 
@@ -947,8 +960,7 @@ void brcmf_detach(struct brcmf_device* dev) {
 
   brcmf_proto_detach(drvr);
 
-  bus_if->drvr = NULL;
-  free(drvr);
+  bus_if->drvr.reset();
 }
 
 zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, const char* name, void* data,
@@ -1000,7 +1012,7 @@ void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {
 }
 
 void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
-  struct brcmf_pub* drvr = bus->drvr;
+  struct brcmf_pub* drvr = bus->drvr.get();
   struct net_device* ndev;
   int ifidx;
 
@@ -1019,7 +1031,7 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
   }
 }
 
-zx_status_t brcmf_core_init(zx_device_t* device) {
+zx_status_t brcmf_core_init(struct brcmf_device* device) {
   pthread_mutexattr_t pmutex_attributes;
   zx_status_t result;
 
@@ -1036,4 +1048,4 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
   return result;
 }
 
-void brcmf_core_exit(void) { brcmf_bus_exit(); }
+void brcmf_core_exit(struct brcmf_device* device) { brcmf_bus_exit(device); }

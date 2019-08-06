@@ -25,10 +25,12 @@
 #include <atomic>
 
 #include <ddk/protocol/ethernet.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <netinet/if_ether.h>
 #include <lib/sync/completion.h>
 #include <wlan/protocol/if-impl.h>
 
+#include "device.h"
 #include "fweh.h"
 #include "linuxisms.h"
 #include "netbuf.h"
@@ -238,8 +240,8 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
 void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool success);
 void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
-zx_status_t brcmf_core_init(zx_device_t* dev);
-void brcmf_core_exit(void);
+zx_status_t brcmf_core_init(struct brcmf_device* dev);
+void brcmf_core_exit(struct brcmf_device* dev);
 
 // Used in net_device.flags to indicate interface is up.
 #define IFF_UP 1
@@ -272,5 +274,11 @@ struct net_device {
   int reg_state;
   int needs_free_net_device;
 };
+
+zx_status_t brcmf_phy_query(void* ctx, wlanphy_impl_info_t* phy_info);
+zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
+                                   uint16_t* out_iface_id);
+zx_status_t brcmf_phy_destroy_iface(void* ctx, uint16_t id);
+zx_status_t brcmf_phy_set_country(void* ctx, const wlanphy_country_t* country);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_
