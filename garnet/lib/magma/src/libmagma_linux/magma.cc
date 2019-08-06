@@ -132,7 +132,8 @@ void magma_execute_command_buffer_with_resources(magma_connection_t connection, 
 
   int32_t file_descriptor = connection_wrapped->Parent().first;
 
-  bool success = virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
-                                        sizeof(response));
-  assert(success);
+  if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
+                              sizeof(response))) {
+    assert(false);
+  }
 }
