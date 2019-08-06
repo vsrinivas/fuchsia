@@ -9,7 +9,6 @@
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
@@ -60,7 +59,7 @@ constexpr char kTokenManagerFactoryUrl[] =
 
 }  // namespace
 
-BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
+BasemgrImpl::BasemgrImpl(fuchsia::modular::session::BasemgrConfig config,
                          const std::shared_ptr<sys::ServiceDirectory> incoming_services,
                          fuchsia::sys::LauncherPtr launcher,
                          fuchsia::ui::policy::PresenterPtr presenter,
@@ -100,8 +99,7 @@ void BasemgrImpl::StartBaseShell() {
     return;
   }
 
-  auto base_shell_config =
-      fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().base_shell().app_config());
+  auto base_shell_config = fidl::To<fuchsia::modular::AppConfig>(config_.base_shell().app_config());
 
   fuchsia::sys::ServiceProviderPtr service_provider;
   services_.AddBinding(service_provider.NewRequest());
@@ -177,33 +175,31 @@ FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
 }
 
 void BasemgrImpl::Start() {
-  if (config_.basemgr_config().test()) {
+  if (config_.test()) {
     // Print test banner.
     FXL_LOG(INFO) << std::endl
                   << std::endl
-                  << "======================== Starting Test ["
-                  << config_.basemgr_config().test_name() << "]" << std::endl
+                  << "======================== Starting Test [" << config_.test_name() << "]"
+                  << std::endl
                   << "============================================================" << std::endl;
   }
 
   // Wait for persistent data to come up.
-  if (config_.basemgr_config().use_minfs()) {
+  if (config_.use_minfs()) {
     WaitForMinfs();
   }
 
-  auto sessionmgr_config =
-      fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().sessionmgr());
-
+  auto sessionmgr_config = fidl::To<fuchsia::modular::AppConfig>(config_.sessionmgr());
   auto story_shell_config =
-      fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().story_shell().app_config());
+      fidl::To<fuchsia::modular::AppConfig>(config_.story_shell().app_config());
   session_provider_.reset(new SessionProvider(
       /* delegate= */ this, component_context_services_, launcher_.get(),
       std::move(device_administrator_), std::move(sessionmgr_config),
       CloneStruct(session_shell_config_), std::move(story_shell_config),
-      config_.basemgr_config().use_session_shell_for_story_shell_factory(), CloneStruct(config_),
+      config_.use_session_shell_for_story_shell_factory(),
       /* on_zero_sessions= */
       [this] {
-        if (config_.basemgr_config().base_shell().keep_alive_after_login()) {
+        if (config_.base_shell().keep_alive_after_login()) {
           // TODO(MI4-1117): Integration tests currently
           // expect base shell to always be running. So, if
           // we're running under a test, DidLogin() will not
@@ -258,11 +254,10 @@ void BasemgrImpl::Shutdown() {
 
   FXL_DLOG(INFO) << "fuchsia::modular::BaseShellContext::Shutdown()";
 
-  if (config_.basemgr_config().test()) {
+  if (config_.test()) {
     FXL_LOG(INFO) << std::endl
                   << "============================================================" << std::endl
-                  << "======================== [" << config_.basemgr_config().test_name()
-                  << "] Done";
+                  << "======================== [" << config_.test_name() << "] Done";
   }
 
   // |session_provider_| teardown is asynchronous because it holds the
@@ -307,14 +302,14 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
   // TODO(MI4-1117): Integration tests currently expect base shell to always be
   // running. So, if we're running under a test, do not shut down the base shell
   // after login.
-  if (!config_.basemgr_config().base_shell().keep_alive_after_login()) {
+  if (!config_.base_shell().keep_alive_after_login()) {
     FXL_DLOG(INFO) << "Stopping base shell due to login";
     StopBaseShell();
   }
 
   // Ownership of the Presenter should be moved to the session shell for tests
   // that enable presenter, and production code.
-  if (!config_.basemgr_config().test() || config_.basemgr_config().enable_presenter()) {
+  if (!config_.test() || config_.enable_presenter()) {
     presentation_container_ = std::make_unique<PresentationContainer>(
         presenter_.get(), std::move(view_holder_token),
         /* shell_config= */ GetActiveSessionShellConfig(),
@@ -329,12 +324,12 @@ void BasemgrImpl::SelectNextSessionShell(SelectNextSessionShellCallback callback
     return;
   }
 
-  if (config_.basemgr_config().session_shell_map().empty()) {
+  if (config_.session_shell_map().empty()) {
     FXL_DLOG(INFO) << "No session shells has been defined";
     callback();
     return;
   }
-  auto shell_count = config_.basemgr_config().session_shell_map().size();
+  auto shell_count = config_.session_shell_map().size();
   if (shell_count <= 1) {
     FXL_DLOG(INFO) << "Only one session shell has been defined so switch is disabled";
     callback();
@@ -353,28 +348,20 @@ void BasemgrImpl::SelectNextSessionShell(SelectNextSessionShellCallback callback
 }
 
 fuchsia::modular::session::SessionShellConfig BasemgrImpl::GetActiveSessionShellConfig() {
-  return CloneStruct(config_.basemgr_config()
-                         .session_shell_map()
-                         .at(active_session_shell_configs_index_)
-                         .config());
+  return CloneStruct(config_.session_shell_map().at(active_session_shell_configs_index_).config());
 }
 
 void BasemgrImpl::UpdateSessionShellConfig() {
-  session_shell_config_ =
-      CloneStruct(fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config()
-                                                            .session_shell_map()
-                                                            .at(active_session_shell_configs_index_)
-                                                            .config()
-                                                            .app_config()));
+  session_shell_config_ = CloneStruct(fidl::To<fuchsia::modular::AppConfig>(
+      config_.session_shell_map().at(active_session_shell_configs_index_).config().app_config()));
 }
 
 void BasemgrImpl::ShowSetupOrLogin() {
   auto show_setup_or_login = [this] {
     // If there are no session shell settings specified, default to showing
     // setup.
-    if (!config_.basemgr_config().test() &&
-        active_session_shell_configs_index_ >=
-            config_.basemgr_config().session_shell_map().size()) {
+    if (!config_.test() &&
+        active_session_shell_configs_index_ >= config_.session_shell_map().size()) {
       StartBaseShell();
       return;
     }

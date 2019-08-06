@@ -19,7 +19,6 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
-
 #include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/fidl/app_client.h"
@@ -68,7 +67,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
                      fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
                      fuchsia::modular::auth::AccountPtr account,
                      fuchsia::ui::views::ViewToken view_token,
-                     fuchsia::sys::ServiceListPtr additional_services, zx::channel config_handle,
+                     fuchsia::sys::ServiceListPtr additional_services,
                      GetPresentationCallback get_presentation,
                      OnSessionShutdownCallback on_session_shutdown);
 
@@ -86,7 +85,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // Determines where current configurations are being read from, and forwards
   // that directory into a flat namespace that will be added to sessionmgr's
   // launch info.
-  fuchsia::sys::FlatNamespacePtr MakeConfigNamespace(zx::channel config_handle);
+  fuchsia::sys::FlatNamespacePtr MakeConfigNamespace();
 
   // |fuchsia::modular::internal::SessionContext|
   void Logout() override;

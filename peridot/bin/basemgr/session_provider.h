@@ -9,7 +9,6 @@
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
@@ -47,7 +46,6 @@ class SessionProvider {
                   fuchsia::modular::AppConfig sessionmgr, fuchsia::modular::AppConfig session_shell,
                   fuchsia::modular::AppConfig story_shell,
                   bool use_session_shell_for_story_shell_factory,
-                  fuchsia::modular::session::ModularConfig config,
                   fit::function<void()> on_zero_sessions);
 
   // Target constructor.
@@ -61,7 +59,6 @@ class SessionProvider {
                   fuchsia::modular::AppConfig story_shell,
                   bool use_session_shell_for_story_shell_factory,
                   std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
-                  fuchsia::modular::session::ModularConfig config,
                   fit::function<void()> on_zero_sessions);
 
   // Starts a new sessionmgr process if there isn't one already. Returns false
@@ -113,15 +110,6 @@ class SessionProvider {
   // will be served to child `Sessionmgr`s.
   vfs::PseudoDir sessionmgr_service_dir_;
   std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider_;
-
-  // A copy of the modular configuration to be served to sessionmgr.
-  fuchsia::modular::session::ModularConfig config_;
-
-  // A directory used to serve configurations to sessionmgr.
-  std::unique_ptr<vfs::PseudoDir> config_dir_;
-
-  // A channel shared with sessionmgr for configurations.
-  zx::channel config_request_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionProvider);
 };

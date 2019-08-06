@@ -58,7 +58,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |device_settings_manager| Service to look-up whether device needs factory
   // reset.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
-  explicit BasemgrImpl(fuchsia::modular::session::ModularConfig config,
+  explicit BasemgrImpl(fuchsia::modular::session::BasemgrConfig config,
                        const std::shared_ptr<sys::ServiceDirectory> incoming_services,
                        fuchsia::sys::LauncherPtr launcher,
                        fuchsia::ui::policy::PresenterPtr presenter,
@@ -134,7 +134,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |SessionProvider::Delegate| and |fuchsia::modular::BaseShellContext|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
 
-  fuchsia::modular::session::ModularConfig config_;
+  fuchsia::modular::session::BasemgrConfig config_;
 
   // Used to configure which session shell component to launch.
   fuchsia::modular::AppConfig session_shell_config_;

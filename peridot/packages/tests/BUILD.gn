@@ -99,7 +99,6 @@ group("modular_unittests") {
     "//peridot/bin/agents/clipboard:clipboard_unittests",
     "//peridot/bin/basemgr:basemgr_unittests",
     "//peridot/bin/basemgr/intl_property_provider_impl:intl_property_provider_impl_tests",
-    "//peridot/bin/basemgr_launcher:basemgr_launcher_tests",
     "//peridot/bin/module_resolver_rs:module_resolver_rs_tests",
     "//peridot/bin/sessionctl:sessionctl_unittests",
     "//peridot/bin/sessionmgr:sessionmgr_unittests",
