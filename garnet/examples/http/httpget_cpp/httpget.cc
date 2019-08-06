@@ -20,7 +20,7 @@ class ResponsePrinter {
   void Run(async::Loop* loop, http::URLResponse response) const {
     if (response.error) {
       printf("Got error: %d (%s)\n", response.error->code,
-             response.error->description.get().c_str());
+             response.error->description.value_or("").c_str());
       exit(1);
     } else {
       PrintResponse(response);
@@ -32,7 +32,7 @@ class ResponsePrinter {
 
   void PrintResponse(const http::URLResponse& response) const {
     printf(">>> Headers <<< \n");
-    printf("  %s\n", response.status_line.get().c_str());
+    printf("  %s\n", response.status_line.value_or("").c_str());
     if (response.headers) {
       for (size_t i = 0; i < response.headers->size(); ++i)
         printf("  %s=%s\n", response.headers->at(i).name.c_str(),

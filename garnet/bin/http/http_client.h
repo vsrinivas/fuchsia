@@ -464,7 +464,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
         ParseHeaderField(header, &name, &value);
         hdr.name = std::move(name);
         hdr.value = std::move(value);
-        response.headers.push_back(std::move(hdr));
+        response.headers.emplace({std::move(hdr)});
       }
 
       response.body = std::make_unique<::fuchsia::net::oldhttp::URLBody>();

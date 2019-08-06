@@ -23,7 +23,7 @@ class ResponseConsumer {
   void Run(http::URLResponse response) const {
     if (response.error) {
       printf("#%d: Got error: %d (%s)\n", id_, response.error->code,
-             response.error->description.get().c_str());
+             response.error->description.value_or("").c_str());
     } else {
       ReadResponseBody(std::move(response.body->stream()));
     }
