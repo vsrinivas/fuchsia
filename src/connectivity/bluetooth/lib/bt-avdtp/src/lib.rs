@@ -31,7 +31,7 @@ use crate::types::{
 };
 
 pub use crate::{
-    stream_endpoint::{MediaStream, StreamEndpoint},
+    stream_endpoint::{MediaStream, StreamEndpoint, StreamEndpointUpdateCallback, StreamState},
     types::{
         ContentProtectionType, EndpointType, Error, ErrorCode, MediaCodecType, MediaType, Result,
         ServiceCapability, StreamEndpointId, StreamInformation,

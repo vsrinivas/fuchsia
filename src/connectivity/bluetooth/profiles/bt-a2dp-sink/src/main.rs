@@ -6,12 +6,17 @@
 #![recursion_limit = "256"]
 
 use {
+    crate::inspect_types::{RemoteCapabilitiesInspect, RemotePeerInspect, StreamingInspectData},
     bt_a2dp_sink_metrics as metrics, bt_avdtp as avdtp,
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::AUDIO_ENCODING_SBC,
     fuchsia_async as fasync,
+    fuchsia_bluetooth::inspect::DebugExt,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
+    fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::{self as inspect, Property},
+    fuchsia_inspect_contrib::nodes::ManagedNode,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
@@ -20,7 +25,12 @@ use {
     },
     lazy_static::lazy_static,
     parking_lot::RwLock,
-    std::{collections::hash_map::Entry, collections::HashMap, string::String, sync::Arc},
+    std::{
+        collections::hash_map::{self, Entry},
+        collections::HashMap,
+        string::String,
+        sync::Arc,
+    },
 };
 
 lazy_static! {
@@ -36,10 +46,8 @@ fn get_cobalt_logger() -> CobaltSender {
     COBALT_SENDER.clone()
 }
 
+mod inspect_types;
 mod player;
-
-/// When true, the service will display a byte count while streaming.
-const DEBUG_STREAM_STATS: bool = false;
 
 /// Make the SDP definition for the A2DP sink service.
 fn make_profile_service_definition() -> ServiceDefinition {
@@ -109,7 +117,7 @@ impl Stream {
     }
 
     /// Attempt to start the media decoding task.
-    fn start(&mut self) -> Result<(), avdtp::ErrorCode> {
+    fn start(&mut self, inspect: StreamingInspectData) -> Result<(), avdtp::ErrorCode> {
         let start_res = self.endpoint.start();
         if start_res.is_err() || self.suspend_sender.is_some() {
             fx_log_info!("Start when streaming: {:?} {:?}", start_res, self.suspend_sender);
@@ -117,10 +125,12 @@ impl Stream {
         }
         let (send, receive) = mpsc::channel(1);
         self.suspend_sender = Some(send);
+
         fuchsia_async::spawn_local(decode_media_stream(
             self.endpoint.take_transport(),
             self.encoding.clone(),
             receive,
+            inspect,
         ));
         Ok(())
     }
@@ -135,6 +145,16 @@ impl Stream {
             None => Err(avdtp::ErrorCode::BadState),
             Some(mut sender) => sender.try_send(()).or(Err(avdtp::ErrorCode::BadState)),
         }
+    }
+
+    /// Pass update callback to StreamEndpoint that will be called anytime a `StreamEndpoint` is
+    /// modified.
+    /// Passing in a value of `None` removes the callback.
+    fn set_endpoint_update_callback(
+        &mut self,
+        callback: Option<avdtp::StreamEndpointUpdateCallback>,
+    ) {
+        self.endpoint.set_update_callback(callback)
     }
 }
 
@@ -160,7 +180,7 @@ impl Streams {
     }
 
     /// Builds a set of endpoints from the available codecs.
-    async fn build() -> Result<Streams, Error> {
+    async fn build(inspect: &mut ManagedNode) -> Result<Streams, Error> {
         let mut s = Streams::new();
         // TODO(BT-533): detect codecs, add streams for each codec
         if let Ok(_player) = player::Player::new(AUDIO_ENCODING_SBC.to_string()).await {
@@ -190,7 +210,24 @@ impl Streams {
             )?;
             s.insert(sbc_stream, AUDIO_ENCODING_SBC.to_string());
         }
+        s.construct_inspect_data(inspect);
         Ok(s)
+    }
+
+    /// Constructs an inspect tree enumerating all local stream endpoints with encoding and
+    /// capability properties. The values in this tree are static and represent `Streams` inspect
+    /// data at the point in time when `Streams` was built.
+    ///
+    /// This function should be called by `Streams::build` as part of construction.
+    fn construct_inspect_data(&self, inspect: &mut ManagedNode) {
+        let mut writer = inspect.writer();
+        for stream in self.0.values() {
+            let id = stream.endpoint.local_id();
+            let capabilities = stream.endpoint.capabilities();
+            let mut writer = writer.create_child(&format!("stream {}", id));
+            writer.create_string("encoding", &stream.encoding);
+            writer.create_string("capabilities", capabilities.debug());
+        }
     }
 
     /// Adds a stream, indexing it by the endoint id, associated with an encoding,
@@ -219,16 +256,24 @@ impl Streams {
     fn len(&self) -> usize {
         self.0.len()
     }
+
+    fn iter_mut(&mut self) -> hash_map::IterMut<avdtp::StreamEndpointId, Stream> {
+        self.0.iter_mut()
+    }
 }
 
 /// Discovers any remote streams and reports their information to the log.
-async fn discover_remote_streams(peer: Arc<avdtp::Peer>) {
+async fn discover_remote_streams(
+    peer: Arc<avdtp::Peer>,
+    remote_capabilities_inspect: RemoteCapabilitiesInspect,
+) {
     let mut cobalt = get_cobalt_logger();
     let streams = peer.discover().await.expect("Failed to discover source streams");
     fx_log_info!("Discovered {} streams", streams.len());
     for info in streams {
         match peer.get_all_capabilities(info.id()).await {
             Ok(capabilities) => {
+                remote_capabilities_inspect.append(info.id(), &capabilities).await;
                 fx_log_info!("Stream {:?}", info);
                 for cap in capabilities {
                     fx_log_info!("  - {:?}", cap);
@@ -267,18 +312,35 @@ struct RemotePeer {
     opening: Option<avdtp::StreamEndpointId>,
     /// The stream endpoint collection for this peer.
     streams: Streams,
+
+    /// The inspect data for this peer.
+    inspect: RemotePeerInspect,
 }
 
 type RemotesMap = HashMap<String, RemotePeer>;
 
 impl RemotePeer {
-    fn new(peer: avdtp::Peer, streams: Streams) -> RemotePeer {
-        RemotePeer { peer: Arc::new(peer), opening: None, streams }
+    fn new(peer: avdtp::Peer, mut streams: Streams, inspect: inspect::Node) -> RemotePeer {
+        // Setup inspect nodes for the remote peer and for each of the streams that it holds
+        let mut inspect = RemotePeerInspect::new(inspect);
+        for (id, stream) in streams.iter_mut() {
+            let stream_state_property = inspect.create_stream_state_inspect(id);
+            let callback = move |stream: &avdtp::StreamEndpoint| {
+                stream_state_property.set(&format!("{:?}", stream))
+            };
+            stream.set_endpoint_update_callback(Some(Box::new(callback)));
+        }
+
+        RemotePeer { peer: Arc::new(peer), opening: None, streams, inspect }
     }
 
     /// Provides a reference to the AVDTP peer.
     fn peer(&self) -> Arc<avdtp::Peer> {
         self.peer.clone()
+    }
+
+    fn remote_capabilities_inspect(&self) -> RemoteCapabilitiesInspect {
+        self.inspect.remote_capabilities_inspect()
     }
 
     /// Provide a new established L2CAP channel to this remote peer.
@@ -368,7 +430,7 @@ impl RemotePeer {
                     Some(stream) => stream,
                 };
                 // TODO(BT-695): Confirm the MediaCodec parameters are OK
-                match stream.configure(&remote_stream_id, capabilities) {
+                match stream.configure(&remote_stream_id, capabilities.clone()) {
                     Ok(_) => responder.send(),
                     Err(e) => {
                         // Only happens when this is already configured.
@@ -407,7 +469,12 @@ impl RemotePeer {
             }
             avdtp::Request::Start { responder, stream_ids } => {
                 for seid in stream_ids {
-                    if let Err(code) = self.streams.get_mut(&seid).and_then(|x| x.start()) {
+                    let inspect = &mut self.inspect;
+                    let res = self.streams.get_mut(&seid).and_then(|stream| {
+                        let inspect = inspect.create_streaming_inspect_data(&seid);
+                        stream.start(inspect)
+                    });
+                    if let Err(code) = res {
                         return responder.reject(&seid, code);
                     }
                 }
@@ -442,8 +509,8 @@ async fn decode_media_stream(
     mut stream: avdtp::MediaStream,
     encoding: String,
     mut end_signal: Receiver<()>,
+    mut inspect: StreamingInspectData,
 ) -> () {
-    let mut total_bytes = 0;
     let mut player = match player::Player::new(encoding.clone()).await {
         Ok(v) => v,
         Err(e) => {
@@ -453,7 +520,7 @@ async fn decode_media_stream(
     };
 
     let start_time = zx::Time::get(zx::ClockId::Monotonic);
-
+    inspect.stream_started();
     loop {
         select! {
             item = stream.next().fuse() => {
@@ -469,18 +536,10 @@ async fn decode_media_stream(
                             }
                             _ => (),
                         };
-                        total_bytes += pkt.len();
                         if !player.playing() {
                             player.play().unwrap_or_else(|e| fx_log_info!("Problem playing: {:}", e));
                         }
-                        // TODO(BT-696): Report rx stats to the hub.
-                        if DEBUG_STREAM_STATS {
-                            eprint!(
-                                "Media Packet received: +{} bytes = {} \r",
-                                pkt.len(),
-                                total_bytes,
-                                );
-                        }
+                        inspect.accumulated_bytes += pkt.len() as u64;
                     }
                     Err(e) => {
                         fx_log_info!("Error in media stream: {:?}", e);
@@ -502,6 +561,9 @@ async fn decode_media_stream(
                     };
                 }
             }
+            _ = inspect.update_interval.next() => {
+                inspect.update_rx_statistics();
+            }
             _ = end_signal.next().fuse() => {
                 fx_log_info!("Stream ending on end signal");
                 break;
@@ -521,7 +583,17 @@ async fn decode_media_stream(
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["a2dp-sink"]).expect("Can't init logger");
 
-    let streams = Streams::build().await?;
+    let inspect = inspect::Inspector::new();
+    let mut fs = ServiceFs::new();
+    inspect.export(&mut fs);
+    if let Err(e) = fs.take_and_serve_directory_handle() {
+        fx_log_warn!("Unable to serve Inspect service directory: {}", e);
+    }
+    fasync::spawn(fs.collect::<()>());
+
+    let mut stream_inspect =
+        ManagedNode::new(inspect.root().create_child("local stream endpoints"));
+    let streams = Streams::build(&mut stream_inspect).await?;
 
     if streams.len() == 0 {
         return Err(format_err!("Can't play media - no codecs found or media player missing"));
@@ -579,10 +651,14 @@ async fn main() -> Result<(), Error> {
                                 continue;
                             }
                         };
-                        let remote = entry.insert(RemotePeer::new(peer, streams.clone()));
+                        let inspect = inspect.root().create_child(format!("peer {}", device_id));
+                        let remote = entry.insert(RemotePeer::new(peer, streams.clone(), inspect));
                         // Spawn tasks to handle this remote
                         remote.start_requests_task(remotes.clone(), device_id);
-                        fuchsia_async::spawn(discover_remote_streams(remote.peer()));
+                        fuchsia_async::spawn(discover_remote_streams(
+                            remote.peer(),
+                            remote.remote_capabilities_inspect(),
+                        ));
                     }
                 }
             }

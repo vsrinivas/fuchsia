@@ -461,7 +461,7 @@ impl fmt::Display for StreamEndpointId {
 /// Associated constants are provided that specify the value of `MediaCodecType`
 /// for different codecs given the `MediaType::Audio`.
 /// See https://www.bluetooth.com/specifications/assigned-numbers/audio-video
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct MediaCodecType(u8);
 
 impl MediaCodecType {
@@ -473,6 +473,19 @@ impl MediaCodecType {
 
     pub fn new(num: u8) -> MediaCodecType {
         MediaCodecType(num)
+    }
+}
+
+impl fmt::Debug for MediaCodecType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &Self::AUDIO_SBC => write!(f, "MediaCodecType::AUDIO_SBC"),
+            &Self::AUDIO_MPEG12 => write!(f, "MediaCodecType::AUDIO_MPEG12"),
+            &Self::AUDIO_AAC => write!(f, "MediaCodecType::AUDIO_AAC"),
+            &Self::AUDIO_ATRAC => write!(f, "MediaCodecType::AUDIO_ATRAC"),
+            &Self::AUDIO_NON_A2DP => write!(f, "MediaCodecType::AUDIO_NON_A2DP"),
+            _ => f.debug_tuple("MediaCodecType").field(&self.0).finish(),
+        }
     }
 }
 

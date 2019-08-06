@@ -26,6 +26,8 @@ rustc_binary("bin") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-inspect",
+    "//garnet/public/rust/fuchsia-inspect-contrib",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",

@@ -7,7 +7,7 @@ use {
     fuchsia_zircon::{DurationNum, Signals, Status},
     futures::{stream::Stream, task::Context, Poll},
     parking_lot::Mutex,
-    std::{pin::Pin, sync::Arc, sync::Weak},
+    std::{fmt, pin::Pin, sync::Arc, sync::Weak},
 };
 
 use crate::{
@@ -18,8 +18,10 @@ use crate::{
     Peer, SimpleResponder,
 };
 
-#[derive(PartialEq)]
-enum StreamState {
+pub type StreamEndpointUpdateCallback = Box<Fn(&StreamEndpoint) -> () + Sync + Send>;
+
+#[derive(PartialEq, Debug)]
+pub enum StreamState {
     Idle,
     Configured,
     // An Open command has been accepted, but streams have not been established yet.
@@ -67,6 +69,22 @@ pub struct StreamEndpoint {
     remote_id: Option<StreamEndpointId>,
     /// The current configuration of this endpoint.  Empty if the stream has never been configured.
     configuration: Vec<ServiceCapability>,
+    /// Callback that is run whenever the endpoint is updated
+    update_callback: Option<StreamEndpointUpdateCallback>,
+}
+
+impl fmt::Debug for StreamEndpoint {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("StreamEndpoint")
+            .field("id", &self.id.to_string())
+            .field("endpoint_type", &self.endpoint_type)
+            .field("media_type", &self.media_type)
+            .field("state", &self.state)
+            .field("capabilities", &self.capabilities)
+            .field("remote_id", &self.remote_id.as_ref().map(|id| id.to_string()))
+            .field("configuration", &self.configuration)
+            .finish()
+    }
 }
 
 impl StreamEndpoint {
@@ -90,6 +108,7 @@ impl StreamEndpoint {
             stream_held: Arc::new(Mutex::new(false)),
             remote_id: None,
             configuration: vec![],
+            update_callback: None,
         })
     }
 
@@ -101,6 +120,22 @@ impl StreamEndpoint {
             self.capabilities.clone(),
         )
         .expect("as_new")
+    }
+
+    /// Set the state to the given value and run the `update_callback` afterwards
+    fn set_state(&mut self, state: StreamState) {
+        self.state = state;
+        self.update_callback();
+    }
+
+    /// Pass update callback to StreamEndpoint that will be called anytime `StreamEndpoint` is
+    /// modified.
+    pub fn set_update_callback(&mut self, callback: Option<StreamEndpointUpdateCallback>) {
+        self.update_callback = callback;
+    }
+
+    fn update_callback(&self) {
+        self.update_callback.as_ref().map(|cb| cb(self));
     }
 
     /// Attempt to Configure this stream using the capabilities given.
@@ -125,7 +160,7 @@ impl StreamEndpoint {
             }
         }
         self.configuration = capabilities;
-        self.state = StreamState::Configured;
+        self.set_state(StreamState::Configured);
         Ok(())
     }
 
@@ -149,6 +184,7 @@ impl StreamEndpoint {
             !to_replace.contains(&disc)
         });
         self.configuration.append(&mut capabilities);
+        self.update_callback();
         Ok(())
     }
 
@@ -177,7 +213,7 @@ impl StreamEndpoint {
         self.transport = Some(Arc::new(c));
         self.stream_held = Arc::new(Mutex::new(false));
         // TODO(jamuraa, NET-1674, NET-1675): Reporting and Recovery channels
-        self.state = StreamState::Open;
+        self.set_state(StreamState::Open);
         Ok(false)
     }
 
@@ -187,7 +223,7 @@ impl StreamEndpoint {
         if self.state != StreamState::Configured || self.transport.is_some() {
             return Err(Error::InvalidState);
         }
-        self.state = StreamState::Opening;
+        self.set_state(StreamState::Opening);
         Ok(())
     }
 
@@ -202,7 +238,7 @@ impl StreamEndpoint {
         if self.state != StreamState::Open && self.state != StreamState::Streaming {
             return responder.reject(ErrorCode::BadState);
         }
-        self.state = StreamState::Closing;
+        self.set_state(StreamState::Closing);
         responder.send()?;
         if let Some(sock) = &self.transport {
             let timeout = 3.seconds().after_now();
@@ -218,7 +254,7 @@ impl StreamEndpoint {
         // Closing returns this endpoint to the Idle state.
         self.configuration.clear();
         self.remote_id = None;
-        self.state = StreamState::Idle;
+        self.set_state(StreamState::Idle);
         Ok(())
     }
 
@@ -228,7 +264,7 @@ impl StreamEndpoint {
         if self.state != StreamState::Open {
             return Err(Error::InvalidState);
         }
-        self.state = StreamState::Streaming;
+        self.set_state(StreamState::Streaming);
         Ok(())
     }
 
@@ -238,7 +274,7 @@ impl StreamEndpoint {
         if self.state != StreamState::Streaming {
             return Err(Error::InvalidState);
         }
-        self.state = StreamState::Open;
+        self.set_state(StreamState::Open);
         Ok(())
     }
 
@@ -249,13 +285,13 @@ impl StreamEndpoint {
         if let Some(peer) = peer {
             if let Some(seid) = &self.remote_id {
                 let _ = peer.abort(&seid).await;
-                self.state = StreamState::Aborting;
+                self.set_state(StreamState::Aborting);
             }
         }
         self.configuration.clear();
         self.remote_id = None;
         self.transport = None;
-        self.state = StreamState::Idle;
+        self.set_state(StreamState::Idle);
         Ok(())
     }
 
@@ -697,5 +733,74 @@ mod tests {
         }
 
         assert_eq!(Err(Error::InvalidState), s.get_configuration());
+    }
+
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
+
+    /// Create a callback that tracks how many times it has been called
+    fn call_count_callback() -> (Option<StreamEndpointUpdateCallback>, Arc<AtomicUsize>) {
+        let call_count = Arc::new(AtomicUsize::new(0));
+        let call_count_reader = call_count.clone();
+        let count_cb: StreamEndpointUpdateCallback = Box::new(move |_stream: &StreamEndpoint| {
+            call_count.fetch_add(1, Ordering::SeqCst);
+        });
+        (Some(count_cb), call_count_reader)
+    }
+
+    /// Test that the update callback is run at least once for all methods that mutate the state of
+    /// the StreamEndpoint. This is done through an atomic counter in the callback that increments
+    /// when the callback is run.
+    ///
+    /// Note that the _results_ of calling these mutating methods on the state of StreamEndpoint are
+    /// not validated here. They are validated in other tests.
+    #[test]
+    fn update_callback() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut s = StreamEndpoint::new(
+            REMOTE_ID_VAL,
+            MediaType::Audio,
+            EndpointType::Sink,
+            vec![ServiceCapability::MediaTransport],
+        )
+        .unwrap();
+        let (cb, call_count) = call_count_callback();
+        s.set_update_callback(cb);
+
+        s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
+            .expect("Configure to succeed in test");
+        assert!(call_count.load(Ordering::SeqCst) > 0, "Update callback called at least once");
+        call_count.store(0, Ordering::SeqCst); // clear call count
+
+        s.establish().expect("Establish to succeed in test");
+        assert!(call_count.load(Ordering::SeqCst) > 0, "Update callback called at least once");
+        call_count.store(0, Ordering::SeqCst); // clear call count
+
+        let (_, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        s.receive_channel(fasync::Socket::from_socket(transport).unwrap())
+            .expect("Receive channel to succeed in test");
+        assert!(call_count.load(Ordering::SeqCst) > 0, "Update callback called at least once");
+        call_count.store(0, Ordering::SeqCst); // clear call count
+
+        s.start().expect("Start to succeed in test");
+        assert!(call_count.load(Ordering::SeqCst) > 0, "Update callback called at least once");
+        call_count.store(0, Ordering::SeqCst); // clear call count
+
+        s.suspend().expect("Suspend to succeed in test");
+        assert!(call_count.load(Ordering::SeqCst) > 0, "Update callback called at least once");
+        call_count.store(0, Ordering::SeqCst); // clear call count
+
+        s.reconfigure(vec![]).expect("Reconfigure to succeed in test");
+        assert!(call_count.load(Ordering::SeqCst) > 0, "Update callback called at least once");
+        call_count.store(0, Ordering::SeqCst); // clear call count
+
+        {
+            // Abort this stream, putting it back to the idle state.
+            let mut abort_fut = Box::pin(s.abort(None));
+            let _ = exec.run_until_stalled(&mut abort_fut);
+            assert!(call_count.load(Ordering::SeqCst) > 0, "Update callback called at least once");
+        }
     }
 }

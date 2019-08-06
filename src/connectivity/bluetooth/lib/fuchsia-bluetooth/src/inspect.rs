@@ -14,13 +14,13 @@ const TRUE_VALUE: u64 = 1;
 /// for other use cases. It shouldn't be used outside of the Bluetooth project.
 pub trait ToProperty {
     type PropertyType;
-    fn to_property(self) -> Self::PropertyType;
+    fn to_property(&self) -> Self::PropertyType;
 }
 
 impl ToProperty for bool {
     type PropertyType = u64;
-    fn to_property(self) -> Self::PropertyType {
-        if self {
+    fn to_property(&self) -> Self::PropertyType {
+        if *self {
             TRUE_VALUE
         } else {
             FALSE_VALUE
@@ -30,24 +30,41 @@ impl ToProperty for bool {
 
 impl ToProperty for Option<bool> {
     type PropertyType = u64;
-    fn to_property(self) -> Self::PropertyType {
-        self.map(bool::to_property).unwrap_or(FALSE_VALUE)
+    fn to_property(&self) -> Self::PropertyType {
+        self.as_ref().map(bool::to_property).unwrap_or(FALSE_VALUE)
     }
 }
 
-/// Vectors of Strings show up as a comma separated list string property
-impl ToProperty for &Vec<String> {
+impl ToProperty for String {
     type PropertyType = String;
-    fn to_property(self) -> Self::PropertyType {
-        self.join(", ")
+    fn to_property(&self) -> Self::PropertyType {
+        self.to_string()
     }
 }
 
-/// Vectors of Strings show up as a comma separated list string property. `None` types are
+impl<T, V> ToProperty for Vec<T>
+where
+    T: ToProperty<PropertyType = V>,
+    V: ToString,
+{
+    type PropertyType = String;
+    fn to_property(&self) -> Self::PropertyType {
+        self.iter()
+            .map(|t| <T as ToProperty>::to_property(t).to_string())
+            .collect::<Vec<String>>()
+            .join(", ")
+    }
+}
+
+/// Vectors of T show up as a comma separated list string property. `None` types are
 /// represented as an empty string.
-impl ToProperty for &Option<Vec<String>> {
+impl<T, V> ToProperty for Option<Vec<T>>
+where
+    T: ToProperty<PropertyType = V>,
+    V: ToString,
+{
     type PropertyType = String;
-    fn to_property(self) -> Self::PropertyType {
+    fn to_property(&self) -> Self::PropertyType {
         self.as_ref().map(ToProperty::to_property).unwrap_or_else(String::new)
     }
 }
@@ -143,7 +160,7 @@ mod tests {
 
     #[test]
     fn optional_bool_to_property() {
-        let b = None.to_property();
+        let b: u64 = None::<bool>.to_property();
         assert_eq!(b, FALSE_VALUE);
         let b = Some(false).to_property();
         assert_eq!(b, FALSE_VALUE);
@@ -153,7 +170,7 @@ mod tests {
 
     #[test]
     fn string_vec_to_property() {
-        let s = vec![].to_property();
+        let s = Vec::<String>::new().to_property();
         assert_eq!(s, "");
         let s = vec!["foo".to_string()].to_property();
         assert_eq!(s, "foo");
