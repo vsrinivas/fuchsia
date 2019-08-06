@@ -200,7 +200,7 @@ void TestRunContext::ReportResult(TestResult result) {
 void TestRunContext::Fail(const fidl::StringPtr& log_msg) {
   success_ = false;
   std::string msg("FAIL: ");
-  msg += log_msg;
+  msg += log_msg.value_or("");
   test_runner_connection_->SendMessage(test_id_, "log", msg);
 }
 

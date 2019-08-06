@@ -46,7 +46,7 @@ class ScopeServices {
 
   std::unique_ptr<fs::SynchronousVfs> vfs_;
   fbl::RefPtr<fs::PseudoDir> svc_;
-  fidl::VectorPtr<std::string> svc_names_;
+  std::vector<std::string> svc_names_;
 };
 
 // Provides fate separation of sets of applications run by one application. The
