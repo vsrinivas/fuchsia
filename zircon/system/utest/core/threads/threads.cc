@@ -490,9 +490,7 @@ static bool TestGetLastScheduledCpu() {
   ASSERT_EQ(state.started.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), /*pending=*/nullptr),
             ZX_OK);
 
-  // Ensure the last-reported thread is valid.
-  //
-  // TODO(ZX-3828): Use userspace affinity controls to set and verify the last running CPU is valid.
+  // Ensure the last-reported thread looks reasonable.
   ASSERT_EQ(
       zx_object_get_info(thread_h, ZX_INFO_THREAD_STATS, &info, sizeof(info), nullptr, nullptr),
       ZX_OK);
