@@ -5,16 +5,7 @@
 #include "intel-i915.h"
 
 #include <assert.h>
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/intelgpucore.h>
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/sysmem.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
 #include <fuchsia/sysmem/c/fidl.h>
-#include <hw/inout.h>
 #include <inttypes.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/image-format/image_format.h>
@@ -28,6 +19,16 @@
 #include <zircon/types.h>
 
 #include <utility>
+
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/intelgpucore.h>
+#include <ddk/protocol/pci.h>
+#include <ddk/protocol/sysmem.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
+#include <hw/inout.h>
 
 #include "dp-display.h"
 #include "hdmi-display.h"
@@ -854,8 +855,7 @@ static bool ConvertPixelFormatToType(fuchsia_sysmem_PixelFormat format, uint32_t
   }
 
   if (!format.has_format_modifier) {
-    *type_out = IMAGE_TYPE_SIMPLE;
-    return true;
+    return false;
   }
 
   switch (format.format_modifier.value) {
@@ -869,6 +869,10 @@ static bool ConvertPixelFormatToType(fuchsia_sysmem_PixelFormat format, uint32_t
 
     case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED:
       *type_out = IMAGE_TYPE_YF_TILED;
+      return true;
+
+    case fuchsia_sysmem_FORMAT_MODIFIER_LINEAR:
+      *type_out = IMAGE_TYPE_SIMPLE;
       return true;
 
     default:
@@ -1753,14 +1757,15 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
       constraints.image_format_constraints[0];
 
   image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+  image_constraints.pixel_format.has_format_modifier = true;
   switch (config->type) {
     case IMAGE_TYPE_SIMPLE:
+      image_constraints.pixel_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
       image_constraints.bytes_per_row_divisor = 64;
       image_constraints.start_offset_divisor = 64;
       break;
 
     case IMAGE_TYPE_X_TILED:
-      image_constraints.pixel_format.has_format_modifier = true;
       image_constraints.pixel_format.format_modifier.value =
           fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED;
       image_constraints.start_offset_divisor = 4096;
@@ -1768,7 +1773,6 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
       break;
 
     case IMAGE_TYPE_Y_LEGACY_TILED:
-      image_constraints.pixel_format.has_format_modifier = true;
       image_constraints.pixel_format.format_modifier.value =
           fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED;
       image_constraints.start_offset_divisor = 4096;
@@ -1776,7 +1780,6 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
       break;
 
     case IMAGE_TYPE_YF_TILED:
-      image_constraints.pixel_format.has_format_modifier = true;
       image_constraints.pixel_format.format_modifier.value =
           fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED;
       image_constraints.start_offset_divisor = 4096;

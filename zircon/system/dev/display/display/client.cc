@@ -4,10 +4,6 @@
 
 #include "client.h"
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/edid/edid.h>
@@ -19,6 +15,11 @@
 #include <zircon/pixelformat.h>
 
 #include <utility>
+
+#include <ddk/debug.h>
+#include <ddk/trace/event.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 
 #define BEGIN_TABLE_CASE if (false) {
 #define SELECT_TABLE_CASE(NAME)                                       \
@@ -520,6 +521,9 @@ void Client::HandleSetBufferCollectionConstraints(
       case ZX_PIXEL_FORMAT_RGB_x888:
       case ZX_PIXEL_FORMAT_ARGB_8888:
         image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+        image_constraints.pixel_format.has_format_modifier = true;
+        image_constraints.pixel_format.format_modifier.value =
+            fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
         break;
     }
 

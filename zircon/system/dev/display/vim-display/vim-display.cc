@@ -5,6 +5,18 @@
 #include "vim-display.h"
 
 #include <assert.h>
+#include <fuchsia/sysmem/c/fidl.h>
+#include <lib/device-protocol/platform-device.h>
+#include <lib/image-format/image_format.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <zircon/assert.h>
+#include <zircon/pixelformat.h>
+#include <zircon/syscalls.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -18,19 +30,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/sysmem/c/fidl.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
-#include <lib/device-protocol/platform-device.h>
-#include <lib/image-format/image_format.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <zircon/assert.h>
-#include <zircon/pixelformat.h>
-#include <zircon/syscalls.h>
 
 #include "hdmitx.h"
 
@@ -277,7 +278,10 @@ zx_status_t vim_import_image(void* ctx, image_t* image, zx_unowned_handle_t hand
       return ZX_ERR_INVALID_ARGS;
     }
     ZX_DEBUG_ASSERT(
-        !collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+        collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+    ZX_DEBUG_ASSERT(
+        collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
+        fuchsia_sysmem_FORMAT_MODIFIER_LINEAR);
 
     uint32_t minimum_row_bytes;
     if (!ImageFormatMinimumRowBytes(&collection_info.settings.image_format_constraints,
@@ -507,10 +511,14 @@ static zx_status_t set_buffer_collection_constraints(void* ctx, const image_t* c
       constraints.image_format_constraints[0];
   if (config->pixel_format == ZX_PIXEL_FORMAT_NV12) {
     image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.pixel_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_REC709;
   } else {
     image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.pixel_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
   }

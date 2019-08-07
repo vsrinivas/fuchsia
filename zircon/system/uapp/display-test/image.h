@@ -10,6 +10,8 @@
 #include <zircon/types.h>
 #include <zircon/pixelformat.h>
 
+#include "fuchsia/hardware/display/c/fidl.h"
+
 #define TILE_PIXEL_WIDTH 32u
 #define TILE_PIXEL_HEIGHT 32u
 #define TILE_BYTES_PER_PIXEL 4u

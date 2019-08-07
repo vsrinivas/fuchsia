@@ -9,10 +9,24 @@ library("image-format") {
     "image_format.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-sysmem:c",
+  ]
   deps = [
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/zircon",
+  ]
+}
+
+test("image-format-test") {
+  sources = [
+    "image-format-test.cc",
+  ]
+  deps = [
+    ":image-format",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
   ]
 }

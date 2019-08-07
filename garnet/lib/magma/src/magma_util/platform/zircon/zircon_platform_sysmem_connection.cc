@@ -171,8 +171,12 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid format: %d",
                         format_constraints->image_format);
     }
-    constraints.pixel_format.has_format_modifier = format_constraints->has_format_modifier;
-    constraints.pixel_format.format_modifier.value = format_constraints->format_modifier;
+    constraints.pixel_format.has_format_modifier = true;
+    if (!format_constraints->has_format_modifier) {
+      constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+    } else {
+      constraints.pixel_format.format_modifier.value = format_constraints->format_modifier;
+    }
     constraints.layers = format_constraints->layers;
     constraints.bytes_per_row_divisor = format_constraints->bytes_per_row_divisor;
     return MAGMA_STATUS_OK;

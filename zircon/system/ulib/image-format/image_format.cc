@@ -4,11 +4,12 @@
 
 #include "lib/image-format/image_format.h"
 
-#include <fbl/algorithm.h>
 #include <zircon/assert.h>
 
 #include <map>
 #include <set>
+
+#include <fbl/algorithm.h>
 
 namespace {
 
@@ -222,12 +223,13 @@ constexpr const ImageFormatSet* kImageFormats[] = {
 
 bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a,
                                    const fuchsia_sysmem_PixelFormat& b) {
-  return a.type == b.type &&
-         // !has_format_modifier is for consistency with making format_modifier
-         // optional in future.
-         a.has_format_modifier == b.has_format_modifier &&
-         // Must be 0 if !has_format_modifier.
-         a.format_modifier.value == b.format_modifier.value;
+  if (a.type != b.type)
+    return false;
+  uint64_t format_modifier_a =
+      a.has_format_modifier ? a.format_modifier.value : fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+  uint64_t format_modifier_b =
+      b.has_format_modifier ? b.format_modifier.value : fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+  return format_modifier_a == format_modifier_b;
 }
 
 bool ImageFormatIsSupportedColorSpaceForPixelFormat(
@@ -418,7 +420,9 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_form
 bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* constraints,
                                 uint32_t width, uint32_t* minimum_row_bytes_out) {
   // Bytes per row is not well-defined for tiled types.
-  ZX_DEBUG_ASSERT(!constraints->pixel_format.has_format_modifier);
+  ZX_DEBUG_ASSERT(!constraints->pixel_format.has_format_modifier ||
+                  constraints->pixel_format.format_modifier.value ==
+                      fuchsia_sysmem_FORMAT_MODIFIER_LINEAR);
   if (width < constraints->min_coded_width || width > constraints->max_coded_width) {
     return false;
   }

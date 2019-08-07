@@ -2,25 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <lib/fdio/unsafe.h>
+#include "image.h"
+
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <limits>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/device/display-controller.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <limits>
+
+#include <fbl/algorithm.h>
+
 #include "fuchsia/hardware/display/c/fidl.h"
 #include "fuchsia/sysmem/c/fidl.h"
-#include "image.h"
 #include "utils.h"
 
 static constexpr uint32_t kRenderPeriod = 120;
@@ -170,11 +173,14 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
         .type = fuchsia_sysmem_ColorSpaceType_REC709,
     };
   }
+  image_constraints.pixel_format.has_format_modifier = true;
   if (use_intel_y_tiling) {
-    image_constraints.pixel_format.has_format_modifier = true;
     image_constraints.pixel_format.format_modifier.value =
         fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+  } else {
+    image_constraints.pixel_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
   }
+
   image_constraints.min_coded_width = width;
   image_constraints.max_coded_width = width;
   image_constraints.min_coded_height = height;

@@ -209,6 +209,8 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
     result.image_format_constraints_count = 1;
     fuchsia::sysmem::ImageFormatConstraints& image_constraints = result.image_format_constraints[0];
     image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
     // TODO(MTWN-251): confirm that REC709 is always what we want here, or plumb
     // actual YUV color space if it can ever be REC601_*.  Since 2020 and 2100
     // are minimum 10 bits per Y sample and we're outputting NV12, 601 is the

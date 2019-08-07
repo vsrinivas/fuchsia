@@ -3,15 +3,16 @@
 // found in the LICENSE file.
 #include "mt8167s-display.h"
 
+#include <fuchsia/sysmem/c/fidl.h>
+#include <lib/image-format/image_format.h>
+#include <lib/zx/pmt.h>
+#include <zircon/pixelformat.h>
+
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
-#include <fuchsia/sysmem/c/fidl.h>
-#include <lib/image-format/image_format.h>
-#include <lib/zx/pmt.h>
-#include <zircon/pixelformat.h>
 
 #include "common.h"
 #include "registers-ovl.h"
@@ -173,7 +174,10 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportImage(image_t* image,
   ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
                   fuchsia_sysmem_PixelFormatType_BGRA32);
   ZX_DEBUG_ASSERT(
-      !collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+      collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+  ZX_DEBUG_ASSERT(
+      collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
+      fuchsia_sysmem_FORMAT_MODIFIER_LINEAR);
 
   uint32_t minimum_row_bytes;
   if (!ImageFormatMinimumRowBytes(&collection_info.settings.image_format_constraints, image->width,
@@ -363,6 +367,8 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   fuchsia_sysmem_ImageFormatConstraints& image_constraints =
       constraints.image_format_constraints[0];
   image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+  image_constraints.pixel_format.has_format_modifier = true;
+  image_constraints.pixel_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
   image_constraints.min_coded_width = 0;
