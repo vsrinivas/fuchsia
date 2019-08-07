@@ -6,14 +6,6 @@ hardware. The binary blob is available in the driver's namespace for loading.
 Device firmware are stored in CIPD (Chrome Infrastructure Package Deployment)
 and mirrored in Google Storage.
 
-## Before You Start
-
-Ensure that CIPD is available. cipd must be either in PATH or
-`zircon/../buildtools/cipd`.
-
-The buildtools repository is available
-[here](/buildtools/).
-
 ## Create a Firmware Package
 
 To create a firmware package, create a directory containing the following
@@ -35,13 +27,13 @@ If this is the first time you uploaded to CIPD from the host system,
 authenticate with CIPD:
 
 ```
-cipd auth-login
+fx cipd auth-login
 ```
 
 Upload and tag the package in CIPD using the following command:
 
 ```
-cipd create -in <package-directory> -install-mode copy \
+fx cipd create -in <package-directory> -install-mode copy \
     -name <package-name> \
     -tag git_repository:<source-git-repositry> \
     -tag git_revision:<source-git-revision>
