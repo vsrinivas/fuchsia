@@ -5,7 +5,7 @@
 **Base** - collection of software that constitutes the core of the system and is
 updated atomically as part of a system update.
 
-**component** - a unit of execution started by the component franework which
+**component** - a unit of execution started by the component framework which
 constructs its sandbox environment.
 
 **[package](/garnet/go/src/pm/README.md#structure-of-a-fuchsia-package)** - a unit of distribution in Fuchsia which is a collection of files

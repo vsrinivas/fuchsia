@@ -13,7 +13,7 @@ their libc which calls an `open` system call. Sometimes these are
 cross-platform standards, such as pthreads. Others are interfaces to
 kernel-specific functionality, such as `epoll` or `kqueue`. In any
 case, this library is present on the system itself and is a stable
-interface. In constast, Windows does not provide a systemwide libc in
+interface. In contrast, Windows does not provide a systemwide libc in
 its stable win32 interface.
 
 On Fuchsia the story is a bit different from Posix systems. First, the

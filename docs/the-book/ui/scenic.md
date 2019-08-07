@@ -222,7 +222,7 @@ Add sections to discuss all other kinds of resources: shapes, materials,
 links, memory, images, buffers, animations, variables, renderers etc.
 
 ## Coordinate Frames and Units
-Scenic manages a global scene graph in a three dimensional space. Some of the charactaristics of
+Scenic manages a global scene graph in a three dimensional space. Some of the characteristics of
 this space are defined by Scenic itself, whereas some are defined by the root presenter or even
 other clients.
 

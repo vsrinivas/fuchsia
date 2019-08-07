@@ -486,7 +486,7 @@ On some devices (most arm64 devices at present) there are also some useful flags
 
 This command tells whether the given CL is merged, and if so whether it passed
 Global Integration. The query can be either a Gerrit review URL, a CL number, a
-Change-Id, or a git revisioin.
+Change-Id, or a git revision.
 
 ```shell
 $ fx whereiscl fxr/286748

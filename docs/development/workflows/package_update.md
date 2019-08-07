@@ -90,7 +90,7 @@ the update sources available to it. To OTA update a build made on the dev host t
 a  target on the same LAN, first build the system you want. If `fx serve [-v]`
 isn't already running, start it so the target can use the development host as an
 update source. The `-v` option will show more information about the files the
-target is requesting from the host. If the  the `-v` flag was used there should
+target is requesting from the host. If the `-v` flag was used there should
 be a flurry of output as the target retrieves all the new files. Following
 completion of the OTA the device will reboot.
 

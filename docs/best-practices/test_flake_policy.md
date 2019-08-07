@@ -114,5 +114,5 @@ These include:
 -   "Deflaking" infrastructure, to re-run tests in high volume before they are
     committed. Tracked by IN-1231.
 
-When these improvments are available, this document will update to include the
+When these improvements are available, this document will update to include the
 adjusted policy.

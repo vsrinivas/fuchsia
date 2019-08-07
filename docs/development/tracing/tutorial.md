@@ -587,7 +587,7 @@ most patient of users).
 
 # Asynchronous tracing
 
-All of the examples so far have been "synchronous" &mdash; that is, occuring
+All of the examples so far have been "synchronous" &mdash; that is, occurring
 in a linear fashion in one thread.
 
 There's a set of "asynchronous" tracing functions that are used when the
