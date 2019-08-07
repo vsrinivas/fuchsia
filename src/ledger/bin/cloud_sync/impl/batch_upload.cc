@@ -9,11 +9,12 @@
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <trace/event.h>
 
 #include <algorithm>
 #include <set>
 #include <utility>
+
+#include <trace/event.h>
 
 #include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/fxl/logging.h"
@@ -225,33 +226,33 @@ void BatchUpload::FilterAndUploadCommits() {
 void BatchUpload::UploadCommits() {
   FXL_DCHECK(!errored_);
   std::vector<storage::CommitId> ids;
-  auto waiter =
-      fxl::MakeRefCounted<callback::Waiter<encryption::Status, cloud_provider::CommitPackEntry>>(
-          encryption::Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<encryption::Status, cloud_provider::Commit>>(
+      encryption::Status::OK);
   for (auto& storage_commit : commits_) {
     storage::CommitId id = storage_commit->GetId();
     encryption_service_->EncryptCommit(
         storage_commit->GetStorageBytes().ToString(),
         [id, callback = waiter->NewCallback()](encryption::Status status,
                                                std::string encrypted_storage_bytes) mutable {
-          cloud_provider::CommitPackEntry entry;
-          entry.id = std::move(id);
-          entry.data = std::move(encrypted_storage_bytes);
-          callback(status, std::move(entry));
+          cloud_provider::Commit remote_commit;
+          *remote_commit.mutable_id() = convert::ToArray(id);
+          *remote_commit.mutable_data() = convert::ToArray(encrypted_storage_bytes);
+          callback(status, std::move(remote_commit));
         });
     ids.push_back(std::move(id));
   }
   waiter->Finalize(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
       [this, ids = std::move(ids)](encryption::Status status,
-                                   std::vector<cloud_provider::CommitPackEntry> entries) mutable {
+                                   std::vector<cloud_provider::Commit> commits) mutable {
         if (status != encryption::Status::OK) {
           errored_ = true;
           on_error_(ErrorType::PERMANENT);
           return;
         }
         cloud_provider::CommitPack commit_pack;
-        if (!cloud_provider::EncodeCommitPack(entries, &commit_pack)) {
+        cloud_provider::Commits commits_container{std::move(commits)};
+        if (!cloud_provider::EncodeToBuffer(&commits_container, &commit_pack.buffer)) {
           errored_ = true;
           on_error_(ErrorType::PERMANENT);
           return;

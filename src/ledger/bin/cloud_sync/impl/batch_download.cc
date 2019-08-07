@@ -7,9 +7,10 @@
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <trace/event.h>
 
 #include <utility>
+
+#include <trace/event.h>
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -18,12 +19,12 @@ namespace cloud_sync {
 
 BatchDownload::BatchDownload(storage::PageStorage* storage,
                              encryption::EncryptionService* encryption_service,
-                             std::vector<cloud_provider::CommitPackEntry> entries,
+                             std::vector<cloud_provider::Commit> remote_commits,
                              std::unique_ptr<cloud_provider::PositionToken> position_token,
                              fit::closure on_done, fit::closure on_error)
     : storage_(storage),
       encryption_service_(encryption_service),
-      entries_(std::move(entries)),
+      remote_commits_(std::move(remote_commits)),
       position_token_(std::move(position_token)),
       on_done_(std::move(on_done)),
       on_error_(std::move(on_error)),
@@ -42,12 +43,18 @@ void BatchDownload::Start() {
   auto waiter = fxl::MakeRefCounted<
       callback::Waiter<encryption::Status, storage::PageStorage::CommitIdAndBytes>>(
       encryption::Status::OK);
-  for (auto& entry : entries_) {
+  for (auto& remote_commit : remote_commits_) {
+    if (!remote_commit.has_id() || !remote_commit.has_data()) {
+      FXL_LOG(ERROR) << "Received invalid commits from the cloud provider";
+      on_error_();
+      return;
+    }
     encryption_service_->DecryptCommit(
-        entry.data, [id = entry.id, callback = waiter->NewCallback()](encryption::Status status,
-                                                                      std::string content) mutable {
-          callback(status,
-                   storage::PageStorage::CommitIdAndBytes(std::move(id), std::move(content)));
+        remote_commit.data(),
+        [id = std::move(remote_commit.id()), callback = waiter->NewCallback()](
+            encryption::Status status, std::string content) mutable {
+          callback(status, storage::PageStorage::CommitIdAndBytes(convert::ToString(id),
+                                                                  std::move(content)));
         });
   }
   waiter->Finalize(callback::MakeScoped(

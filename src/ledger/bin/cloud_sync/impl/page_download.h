@@ -66,7 +66,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
   void SetRemoteWatcher(bool is_retry);
 
   // Downloads the given batch of commits.
-  void DownloadBatch(std::vector<cloud_provider::CommitPackEntry> entries,
+  void DownloadBatch(std::vector<cloud_provider::Commit> entries,
                      std::unique_ptr<cloud_provider::PositionToken> position_token,
                      fit::closure on_done);
 
@@ -122,7 +122,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
   // The current batch of remote commits being downloaded.
   std::unique_ptr<BatchDownload> batch_download_;
   // Pending remote commits to download.
-  std::vector<cloud_provider::CommitPackEntry> commits_to_download_;
+  std::vector<cloud_provider::Commit> commits_to_download_;
   std::unique_ptr<cloud_provider::PositionToken> position_token_;
   // Container for in-progress datasource.
   callback::ManagedContainer managed_container_;

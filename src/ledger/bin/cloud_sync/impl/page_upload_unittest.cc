@@ -4,10 +4,6 @@
 
 #include "src/ledger/bin/cloud_sync/impl/page_upload.h"
 
-#include <memory>
-#include <utility>
-#include <vector>
-
 #include <lib/backoff/backoff.h>
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/capture.h>
@@ -15,6 +11,12 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include <gmock/gmock.h>
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
@@ -28,6 +30,9 @@
 
 namespace cloud_sync {
 namespace {
+
+using ::testing::Each;
+using ::testing::Truly;
 
 constexpr zx::duration kBackoffInterval = zx::msec(10);
 constexpr zx::duration kHalfBackoffInterval = zx::msec(5);
@@ -93,11 +98,12 @@ TEST_F(PageUploadTest, UploadBacklog) {
   ASSERT_TRUE(upload_is_idle);
 
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
-  EXPECT_EQ(page_cloud_.received_commits[0].id, "id1");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data),
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits[0].id(), convert::ToArray("id1"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data()),
             "content1");
-  EXPECT_EQ(page_cloud_.received_commits[1].id, "id2");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data),
+  EXPECT_EQ(page_cloud_.received_commits[1].id(), convert::ToArray("id2"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data()),
             "content2");
   EXPECT_EQ(storage_.commits_marked_as_synced.size(), 2u);
   EXPECT_EQ(storage_.commits_marked_as_synced.count("id1"), 1u);
@@ -131,14 +137,15 @@ TEST_F(PageUploadTest, UploadBacklogOnlyOnSingleHead) {
 
   // Verify that all local commits were uploaded.
   ASSERT_EQ(page_cloud_.received_commits.size(), 3u);
-  EXPECT_EQ(page_cloud_.received_commits[0].id, "id0");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data),
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits[0].id(), convert::ToArray("id0"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data()),
             "content0");
-  EXPECT_EQ(page_cloud_.received_commits[1].id, "id1");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data),
+  EXPECT_EQ(page_cloud_.received_commits[1].id(), convert::ToArray("id1"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data()),
             "content1");
-  EXPECT_EQ(page_cloud_.received_commits[2].id, "id2");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[2].data),
+  EXPECT_EQ(page_cloud_.received_commits[2].id(), convert::ToArray("id2"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[2].data()),
             "content2");
   EXPECT_EQ(storage_.commits_marked_as_synced.size(), 3u);
   EXPECT_EQ(storage_.commits_marked_as_synced.count("id0"), 1u);
@@ -180,11 +187,12 @@ TEST_F(PageUploadTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
   ASSERT_TRUE(upload_is_idle);
 
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
-  EXPECT_EQ(page_cloud_.received_commits[0].id, "local1");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data),
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits[0].id(), convert::ToArray("local1"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data()),
             "content1");
-  EXPECT_EQ(page_cloud_.received_commits[1].id, "local2");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data),
+  EXPECT_EQ(page_cloud_.received_commits[1].id(), convert::ToArray("local2"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data()),
             "content2");
   ASSERT_EQ(storage_.commits_marked_as_synced.size(), 2u);
   EXPECT_EQ(storage_.commits_marked_as_synced.count("local1"), 1u);
@@ -216,11 +224,12 @@ TEST_F(PageUploadTest, UploadNewCommits) {
   ASSERT_TRUE(upload_is_idle);
 
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
-  EXPECT_EQ(page_cloud_.received_commits[0].id, "id1");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data),
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits[0].id(), convert::ToArray("id1"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data()),
             "content1");
-  EXPECT_EQ(page_cloud_.received_commits[1].id, "id3");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data),
+  EXPECT_EQ(page_cloud_.received_commits[1].id(), convert::ToArray("id3"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data()),
             "content3");
   EXPECT_EQ(storage_.commits_marked_as_synced.size(), 2u);
   EXPECT_EQ(storage_.commits_marked_as_synced.count("id1"), 1u);
@@ -247,8 +256,9 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   ASSERT_TRUE(upload_is_idle);
   upload_is_idle = false;
   ASSERT_EQ(page_cloud_.received_commits.size(), 1u);
-  EXPECT_EQ(page_cloud_.received_commits[0].id, "id0");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data),
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits[0].id(), convert::ToArray("id0"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data()),
             "content0");
   EXPECT_EQ(storage_.commits_marked_as_synced.count("id0"), 1u);
 
@@ -273,11 +283,12 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
-  EXPECT_EQ(page_cloud_.received_commits[0].id, "id1");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data),
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits[0].id(), convert::ToArray("id1"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data()),
             "content1");
-  EXPECT_EQ(page_cloud_.received_commits[1].id, "id2");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data),
+  EXPECT_EQ(page_cloud_.received_commits[1].id(), convert::ToArray("id2"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data()),
             "content2");
   EXPECT_EQ(storage_.commits_marked_as_synced.count("id1"), 1u);
   EXPECT_EQ(storage_.commits_marked_as_synced.count("id2"), 1u);
@@ -299,11 +310,12 @@ TEST_F(PageUploadTest, UploadExistingAndNewCommits) {
   ASSERT_TRUE(upload_is_idle);
 
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
-  EXPECT_EQ(page_cloud_.received_commits[0].id, "id1");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data),
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits[0].id(), convert::ToArray("id1"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data()),
             "content1");
-  EXPECT_EQ(page_cloud_.received_commits[1].id, "id2");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data),
+  EXPECT_EQ(page_cloud_.received_commits[1].id(), convert::ToArray("id2"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data()),
             "content2");
   EXPECT_EQ(storage_.commits_marked_as_synced.size(), 2u);
   EXPECT_EQ(storage_.commits_marked_as_synced.count("id1"), 1u);

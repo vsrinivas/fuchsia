@@ -14,6 +14,8 @@
 #include <map>
 #include <utility>
 
+#include <gmock/gmock.h>
+
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
@@ -26,8 +28,11 @@
 
 namespace cloud_sync {
 namespace {
+
 using ::storage::fake::FakeObject;
 using ::storage::fake::FakePiece;
+using ::testing::Each;
+using ::testing::Truly;
 
 template <typename E>
 class BaseBatchUploadTest : public gtest::TestLoopFixture {
@@ -99,9 +104,11 @@ TEST_F(BatchUploadTest, SingleCommit) {
 
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
-  EXPECT_EQ(page_cloud_.received_commits.front().id, "id");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data),
-            "content");
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(
+      encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
+      "content");
   EXPECT_TRUE(page_cloud_.received_objects.empty());
 
   // Verify the sync status in storage.
@@ -125,11 +132,12 @@ TEST_F(BatchUploadTest, MultipleCommits) {
   // Verify that the commits were uploaded correctly and in a single call.
   EXPECT_EQ(page_cloud_.add_commits_calls, 1u);
   ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
-  EXPECT_EQ(page_cloud_.received_commits[0].id, "id0");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data),
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits[0].id(), convert::ToArray("id0"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[0].data()),
             "content0");
-  EXPECT_EQ(page_cloud_.received_commits[1].id, "id1");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data),
+  EXPECT_EQ(page_cloud_.received_commits[1].id(), convert::ToArray("id1"));
+  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits[1].data()),
             "content1");
   EXPECT_TRUE(page_cloud_.received_objects.empty());
 
@@ -158,9 +166,11 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
 
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
-  EXPECT_EQ(page_cloud_.received_commits.front().id, "id");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data),
-            "content");
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(
+      encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
+      "content");
   EXPECT_EQ(page_cloud_.received_objects.size(), 2u);
   EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
                 page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]),
@@ -321,9 +331,11 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
 
   // Verify the artifacts uploaded to cloud provider.
   EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
-  EXPECT_EQ(page_cloud_.received_commits.front().id, "id");
-  EXPECT_EQ(encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data),
-            "content");
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(
+      encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
+      "content");
   EXPECT_EQ(page_cloud_.received_objects.size(), 2u);
   EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
                 page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]),

@@ -27,7 +27,7 @@ namespace cloud_sync {
 class BatchDownload {
  public:
   BatchDownload(storage::PageStorage* storage, encryption::EncryptionService* encryption_service,
-                std::vector<cloud_provider::CommitPackEntry> entries,
+                std::vector<cloud_provider::Commit> commits,
                 std::unique_ptr<cloud_provider::PositionToken> position_token, fit::closure on_done,
                 fit::closure on_error);
   ~BatchDownload();
@@ -40,7 +40,7 @@ class BatchDownload {
 
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
-  std::vector<cloud_provider::CommitPackEntry> entries_;
+  std::vector<cloud_provider::Commit> remote_commits_;
   std::unique_ptr<cloud_provider::PositionToken> position_token_;
   fit::closure on_done_;
   fit::closure on_error_;
