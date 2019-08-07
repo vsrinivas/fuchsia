@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FILESYSTEM_MOUNTER_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FILESYSTEM_MOUNTER_H_
+
+#include <lib/zx/channel.h>
+#include <zircon/types.h>
 
 #include <memory>
 
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
-#include <lib/zx/channel.h>
-#include <zircon/types.h>
 
 #include "fs-manager.h"
+#include "metrics.h"
 
 namespace devmgr {
 
@@ -43,6 +46,9 @@ class FilesystemMounter {
   // Fails if already mounted.
   zx_status_t MountBlob(fbl::unique_fd fd, mount_options_t* options);
 
+  // Returns a pointer to the |FsHostMetrics| instance.
+  FsHostMetrics* mutable_metrics() { return fshost_->mutable_metrics(); }
+
  private:
   std::unique_ptr<FsManager> fshost_;
   const bool netboot_ = false;
@@ -53,3 +59,5 @@ class FilesystemMounter {
 };
 
 }  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FILESYSTEM_MOUNTER_H_

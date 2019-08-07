@@ -2,31 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "fs-manager.h"
+
 #include <fcntl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
+#include <lib/zircon-internal/debug.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <threads.h>
+#include <zircon/device/vfs.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+
+#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/fdio/directory.h>
-#include <lib/zircon-internal/debug.h>
-#include <lib/fdio/io.h>
-#include <zircon/device/vfs.h>
-#include <zircon/processargs.h>
-#include <zircon/syscalls.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
-#include <utility>
-
-#include "fs-manager.h"
+#include "cobalt-client/cpp/collector.h"
+#include "metrics.h"
 
 #define ZXDEBUG 0
 
@@ -62,10 +65,19 @@ zx::channel fs_clone(const char* path) {
   return client;
 }
 
-FsManager::FsManager(zx::event fshost_event)
+cobalt_client::CollectorOptions FsManager::CollectorOptions() {
+  cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::GeneralAvailability();
+  options.project_name = "local_storage";
+  options.initial_response_deadline = zx::msec(10);
+  options.response_deadline = zx::usec(10);
+  return options;
+}
+
+FsManager::FsManager(zx::event fshost_event, FsHostMetrics metrics)
     : event_(std::move(fshost_event)),
       global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToThread)),
-      registry_(global_loop_.get()) {
+      registry_(global_loop_.get()),
+      metrics_(std::move(metrics)) {
   ZX_ASSERT(global_root_ == nullptr);
 }
 
@@ -79,8 +91,10 @@ FsManager::~FsManager() {
   }
 }
 
-zx_status_t FsManager::Create(zx::event fshost_event, std::unique_ptr<FsManager>* out) {
-  auto fs_manager = std::unique_ptr<FsManager>(new FsManager(std::move(fshost_event)));
+zx_status_t FsManager::Create(zx::event fshost_event, FsHostMetrics metrics,
+                              std::unique_ptr<FsManager>* out) {
+  auto fs_manager =
+      std::unique_ptr<FsManager>(new FsManager(std::move(fshost_event), std::move(metrics)));
   zx_status_t status = fs_manager->Initialize();
   if (status != ZX_OK) {
     return status;

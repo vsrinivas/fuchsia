@@ -2,22 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include "block-device.h"
 
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
-#include <fbl/string_buffer.h>
-#include <fbl/unique_fd.h>
-#include <fs-management/mount.h>
+#include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <gpt/gpt.h>
+#include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -27,9 +18,10 @@
 #include <lib/fzl/time.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
-#include <loader-service/loader-service.h>
-#include <minfs/fsck.h>
-#include <minfs/minfs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <zircon/device/block.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -37,7 +29,16 @@
 
 #include <utility>
 
-#include "block-device.h"
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/string_buffer.h>
+#include <fbl/unique_fd.h>
+#include <fs-management/mount.h>
+#include <gpt/gpt.h>
+#include <loader-service/loader-service.h>
+#include <minfs/fsck.h>
+#include <minfs/minfs.h>
+
 #include "block-watcher.h"
 #include "encrypted-volume.h"
 #include "pkgfs-launcher.h"
@@ -236,6 +237,8 @@ zx_status_t BlockDevice::CheckFilesystem() {
       status = minfs::Fsck(std::move(bc));
 
       if (status != ZX_OK) {
+        mounter_->mutable_metrics()->LogMinfsCorruption();
+        mounter_->mutable_metrics()->mutable_collector()->Flush();
         fprintf(stderr, "--------------------------------------------------------------\n");
         fprintf(stderr, "|                                                             \n");
         fprintf(stderr, "|   WARNING: fshost fsck failure!                             \n");

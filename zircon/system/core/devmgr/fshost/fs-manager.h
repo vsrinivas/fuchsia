@@ -2,22 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FS_MANAGER_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FS_MANAGER_H_
 
-#include <fs/vfs.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/memfs/cpp/vnode.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <zircon/compiler.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
+
+#include <fs/vfs.h>
 
 // Used for fshost signals.
 #include "../shared/fdio.h"
-
+#include "metrics.h"
 #include "registry.h"
 
 namespace devmgr {
@@ -26,7 +28,11 @@ namespace devmgr {
 // in-memory filesystem.
 class FsManager {
  public:
-  static zx_status_t Create(zx::event fshost_event, std::unique_ptr<FsManager>* out);
+  static zx_status_t Create(zx::event fshost_event, FsHostMetrics metrics,
+                            std::unique_ptr<FsManager>* out);
+
+  // Set of options for logging FsHost metrics with cobalt service.
+  static cobalt_client::CollectorOptions CollectorOptions();
 
   ~FsManager();
 
@@ -49,8 +55,11 @@ class FsManager {
   // Sets FSHOST_SIGNAL_EXIT_DONE when unmounting is complete.
   void WatchExit();
 
+  // Returns a pointer to the |FsHostMetrics| instance.
+  FsHostMetrics* mutable_metrics() { return &metrics_; }
+
  private:
-  FsManager(zx::event fshost_event);
+  FsManager(zx::event fshost_event, FsHostMetrics metrics);
   zx_status_t Initialize();
 
   // Event on which "FSHOST_SIGNAL_XXX" signals are set.
@@ -75,6 +84,11 @@ class FsManager {
   // Controls the external fshost vnode, as well as registration of filesystems
   // dynamically within the fshost.
   fshost::Registry registry_;
+
+  // Keeps a collection of metrics being track at the FsHost level.
+  FsHostMetrics metrics_;
 };
 
 }  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FS_MANAGER_H_

@@ -19,6 +19,8 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <bootdata/decompress.h>
+#include <cobalt-client/cpp/collector.h>
 #include <fbl/unique_fd.h>
 #include <loader-service/loader-service.h>
 #include <ramdevice-client/ramdisk.h>
@@ -26,9 +28,14 @@
 #include "../shared/env.h"
 #include "block-watcher.h"
 #include "fs-manager.h"
+#include "metrics.h"
 
 namespace devmgr {
 namespace {
+
+FsHostMetrics MakeMetrics() {
+  return FsHostMetrics(std::make_unique<cobalt_client::Collector>(FsManager::CollectorOptions()));
+}
 
 zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) {
   if (event != WATCH_EVENT_ADD_FILE || strcmp(fn, "ramctl") != 0) {
@@ -188,7 +195,8 @@ int main(int argc, char** argv) {
 
   // First, initialize the local filesystem in isolation.
   fbl::unique_ptr<devmgr::FsManager> fs_manager;
-  zx_status_t status = devmgr::FsManager::Create(std::move(fshost_event), &fs_manager);
+  zx_status_t status =
+      devmgr::FsManager::Create(std::move(fshost_event), devmgr::MakeMetrics(), &fs_manager);
   if (status != ZX_OK) {
     printf("fshost: Cannot create FsManager\n");
     return status;

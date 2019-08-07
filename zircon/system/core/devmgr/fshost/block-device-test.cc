@@ -2,23 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
+#include "block-device.h"
 
+#include <fcntl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/namespace.h>
-#include <ramdevice-client/ramdisk.h>
 #include <zircon/assert.h>
 #include <zircon/hw/gpt.h>
+
+#include <cobalt-client/cpp/collector.h>
+#include <cobalt-client/cpp/in-memory-logger.h>
+#include <minfs/format.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
-#include "block-device.h"
 #include "filesystem-mounter.h"
 #include "fs-manager.h"
+#include "metrics.h"
 
 namespace devmgr {
 namespace {
 
 using devmgr_integration_test::IsolatedDevmgr;
+
+FsHostMetrics MakeMetrics(cobalt_client::InMemoryLogger** logger) {
+  std::unique_ptr<cobalt_client::InMemoryLogger> logger_ptr =
+      std::make_unique<cobalt_client::InMemoryLogger>();
+  *logger = logger_ptr.get();
+  return FsHostMetrics(std::make_unique<cobalt_client::Collector>(std::move(logger_ptr)));
+}
 
 class BlockDeviceHarness : public zxtest::Test {
  public:
@@ -28,7 +40,7 @@ class BlockDeviceHarness : public zxtest::Test {
     ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_));
 
     // Initialize FilesystemMounter.
-    ASSERT_OK(FsManager::Create(std::move(event), &manager_));
+    ASSERT_OK(FsManager::Create(std::move(event), MakeMetrics(&logger_), &manager_));
 
     // Fshost really likes mounting filesystems at "/fs".
     // Let's make that available in our namespace.
@@ -61,6 +73,9 @@ class BlockDeviceHarness : public zxtest::Test {
   std::unique_ptr<FsManager> TakeManager() { return std::move(manager_); }
 
   fbl::unique_fd devfs_root() { return devmgr_.devfs_root().duplicate(); }
+
+ protected:
+  cobalt_client::InMemoryLogger* logger_ = nullptr;
 
  private:
   zx::event event_;
@@ -267,6 +282,50 @@ TEST_F(BlockDeviceHarness, TestBlobfs) {
   EXPECT_NOT_OK(device.FormatFilesystem());
   EXPECT_OK(device.CheckFilesystem());
   EXPECT_NOT_OK(device.MountFilesystem());
+
+  ASSERT_OK(ramdisk_destroy(ramdisk));
+}
+
+TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
+  std::unique_ptr<FsManager> manager = TakeManager();
+
+  bool netboot = false;
+  bool check_filesystems = true;
+  FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
+
+  // Initialize Ramdisk with a data GUID.
+  constexpr uint64_t kBlockSize = 512;
+  constexpr uint64_t kBlockCount = 1 << 20;
+  ramdisk_client_t* ramdisk;
+  const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
+  ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount, data_guid,
+                                        sizeof(data_guid), &ramdisk));
+  fbl::unique_fd fd;
+  ASSERT_OK(
+      devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk), &fd));
+
+  ASSERT_TRUE(fd);
+
+  BlockDevice device(&mounter, std::move(fd));
+  device.SetFormat(DISK_FORMAT_MINFS);
+  EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
+  // Format minfs.
+  EXPECT_OK(device.FormatFilesystem());
+
+  // Corrupt minfs.
+  int ramdisk_fd = ramdisk_get_block_fd(ramdisk);
+  uint64_t buffer_size = minfs::kMinfsBlockSize * 8;
+  std::unique_ptr<uint8_t[]> zeroed_buffer(new uint8_t[buffer_size]);
+  memset(zeroed_buffer.get(), 0, buffer_size);
+  ASSERT_EQ(write(ramdisk_fd, zeroed_buffer.get(), buffer_size), buffer_size);
+
+  EXPECT_NOT_OK(device.CheckFilesystem());
+
+  // Verify a corruption event was logged.
+  uint32_t metric_id = static_cast<std::underlying_type<fs_metrics::Event>::type>(
+      fs_metrics::Event::kDataCorruption);
+  ASSERT_NE(logger_->counters().find(metric_id), logger_->counters().end());
+  ASSERT_EQ(logger_->counters().at(metric_id), 1);
 
   ASSERT_OK(ramdisk_destroy(ramdisk));
 }

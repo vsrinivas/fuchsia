@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_METRICS_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_METRICS_H_
 
 #include <memory>
 #include <unordered_map>
@@ -23,7 +24,7 @@ class FsHostMetrics {
   FsHostMetrics() = delete;
   explicit FsHostMetrics(std::unique_ptr<cobalt_client::Collector> collector);
   FsHostMetrics(const FsHostMetrics&) = delete;
-  FsHostMetrics(FsHostMetrics&&) = delete;
+  FsHostMetrics(FsHostMetrics&&) = default;
   FsHostMetrics& operator=(const FsHostMetrics&) = delete;
   FsHostMetrics& operator=(FsHostMetrics&&) = delete;
   ~FsHostMetrics();
@@ -40,3 +41,5 @@ class FsHostMetrics {
 };
 
 }  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_METRICS_H_

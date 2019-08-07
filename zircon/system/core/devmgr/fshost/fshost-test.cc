@@ -2,19 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <fbl/ref_ptr.h>
-#include <fs/pseudo-dir.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
+
+#include <cobalt-client/cpp/collector.h>
+#include <cobalt-client/cpp/in-memory-logger.h>
+#include <fbl/algorithm.h>
+#include <fbl/ref_ptr.h>
+#include <fs/pseudo-dir.h>
 #include <zxtest/zxtest.h>
 
 #include "fs-manager.h"
+#include "metrics.h"
 #include "registry.h"
 #include "vnode.h"
 
 namespace {
+
+std::unique_ptr<cobalt_client::Collector> MakeCollector() {
+  return std::make_unique<cobalt_client::Collector>(
+      std::make_unique<cobalt_client::InMemoryLogger>());
+}
 
 // Test that when no filesystems have been added to the fshost vnode, it
 // stays empty.
@@ -57,7 +66,8 @@ TEST(FsManagerTestCase, WatchExit) {
   ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
 
   fbl::unique_ptr<devmgr::FsManager> manager;
-  zx_status_t status = devmgr::FsManager::Create(std::move(event), &manager);
+  zx_status_t status =
+      devmgr::FsManager::Create(std::move(event), devmgr::FsHostMetrics(MakeCollector()), &manager);
   ASSERT_OK(status);
   manager->WatchExit();
 

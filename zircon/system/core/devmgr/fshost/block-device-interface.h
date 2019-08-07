@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_BLOCK_DEVICE_INTERFACE_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_BLOCK_DEVICE_INTERFACE_H_
 
-#include <memory>
-
-#include <fs-management/mount.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
+
+#include <memory>
+
+#include <fbl/string_piece.h>
+#include <fs-management/mount.h>
 
 namespace devmgr {
 
@@ -82,3 +85,5 @@ class BlockDeviceInterface {
 };
 
 }  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_BLOCK_DEVICE_INTERFACE_H_

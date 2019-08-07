@@ -9,6 +9,7 @@ source_set("fshost-registry") {
     "vnode.cc",
   ]
   public_deps = [
+    ":metrics",
     "$zx/system/fidl/fuchsia-fshost:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fit",
@@ -35,6 +36,7 @@ source_set("metrics") {
   ]
   public_deps = [
     "$zx/system/ulib/cobalt-client:headers",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
   ]
   deps = [
     "$zx/system/ulib/cobalt-client",
@@ -51,6 +53,7 @@ source_set("block-watcher") {
     "pkgfs-launcher.cc",
   ]
   public_deps = [
+    ":metrics",
     "$zx/system/fidl/fuchsia-fshost:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fit",
@@ -89,6 +92,9 @@ executable("fshost") {
   deps = [
     ":block-watcher",
     ":fshost-registry",
+    ":metrics",
+    "$zx/system/ulib/bootdata",
+    "$zx/system/ulib/cobalt-client",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/hermetic-decompressor",
     "$zx/system/ulib/loader-service",
@@ -103,6 +109,9 @@ test("fshost-test") {
   ]
   deps = [
     ":fshost-registry",
+    ":metrics",
+    "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/zxtest",
   ]
 }
@@ -129,7 +138,10 @@ test("block-watcher-test") {
   ]
   deps = [
     ":block-watcher",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
+    "$zx/system/ulib/minfs",
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/zxtest",
   ]
