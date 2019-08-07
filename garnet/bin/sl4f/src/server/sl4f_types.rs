@@ -139,7 +139,7 @@ impl FacadeType {
             "file_facade" => FacadeType::FileFacade,
             "gatt_client_facade" => FacadeType::GattClientFacade,
             "gatt_server_facade" => FacadeType::GattServerFacade,
-            "logging" => FacadeType::LoggingFacade,
+            "logging_facade" => FacadeType::LoggingFacade,
             "netstack_facade" => FacadeType::NetstackFacade,
             "profile_server_facade" => FacadeType::ProfileServerFacade,
             "scenic_facade" => FacadeType::ScenicFacade,
