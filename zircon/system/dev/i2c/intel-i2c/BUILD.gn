@@ -5,7 +5,7 @@
 driver("intel-i2c") {
   sources = [
     "intel-i2c-controller.c",
-    "intel-i2c-slave.c",
+    "intel-i2c-subordinate.c",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",

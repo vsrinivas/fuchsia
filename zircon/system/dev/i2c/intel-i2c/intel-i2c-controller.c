@@ -28,7 +28,7 @@
 #include <hw/reg.h>
 
 #include "binding.h"
-#include "intel-i2c-slave.h"
+#include "intel-i2c-subordinate.h"
 
 #define DEVIDLE_CONTROL 0x24c
 #define DEVIDLE_CONTROL_CMD_IN_PROGRESS 0
@@ -56,8 +56,8 @@
 
 static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
                                i2c_transact_callback transact_cb, void* cookie) {
-  intel_serialio_i2c_slave_device_t* slave = ctx;
-  i2c_slave_segment_t segs[I2C_MAX_RW_OPS];
+  intel_serialio_i2c_subordinate_device_t* subordinate = ctx;
+  i2c_subordinate_segment_t segs[I2C_MAX_RW_OPS];
   if (cnt >= I2C_MAX_RW_OPS) {
     transact_cb(cookie, ZX_ERR_NOT_SUPPORTED, NULL, 0);
     return;
@@ -85,9 +85,9 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
     }
     segs[i].len = ops[i].data_size;
   }
-  zx_status_t status = intel_serialio_i2c_slave_transfer(slave, segs, cnt);
+  zx_status_t status = intel_serialio_i2c_subordinate_transfer(subordinate, segs, cnt);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "intel-i2c-controller: intel_serialio_i2c_slave_transfer: %d\n", status);
+    zxlogf(ERROR, "intel-i2c-controller: intel_serialio_i2c_subordinate_transfer: %d\n", status);
     free(read_buffer);
     transact_cb(cookie, status, NULL, 0);
     return;
@@ -122,8 +122,8 @@ static uint32_t intel_i2c_extract_rx_fifo_depth_from_param(uint32_t param) {
 }
 
 static zx_status_t intel_i2c_get_interrupt(void* ctx, uint32_t flags, zx_handle_t* out_handle) {
-  intel_serialio_i2c_slave_device_t* slave = ctx;
-  return intel_serialio_i2c_slave_get_irq(slave, out_handle);
+  intel_serialio_i2c_subordinate_device_t* subordinate = ctx;
+  return intel_serialio_i2c_subordinate_get_irq(subordinate, out_handle);
 }
 
 i2c_protocol_ops_t i2c_protocol_ops = {
@@ -134,23 +134,25 @@ i2c_protocol_ops_t i2c_protocol_ops = {
 
 static uint32_t chip_addr_mask(int width) { return ((1 << width) - 1); }
 
-static zx_status_t intel_serialio_i2c_find_slave(intel_serialio_i2c_slave_device_t** slave,
-                                                 intel_serialio_i2c_device_t* device,
-                                                 uint16_t address) {
-  assert(slave);
+static zx_status_t intel_serialio_i2c_find_subordinate(
+    intel_serialio_i2c_subordinate_device_t** subordinate, intel_serialio_i2c_device_t* device,
+    uint16_t address) {
+  assert(subordinate);
 
-  list_for_every_entry (&device->slave_list, *slave, intel_serialio_i2c_slave_device_t,
-                        slave_list_node) {
-    if ((*slave)->chip_address == address)
+  list_for_every_entry (&device->subordinate_list, *subordinate,
+                        intel_serialio_i2c_subordinate_device_t, subordinate_list_node) {
+    if ((*subordinate)->chip_address == address)
       return ZX_OK;
   }
 
   return ZX_ERR_NOT_FOUND;
 }
 
-static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* device, uint8_t width,
-                                                uint16_t address, uint32_t protocol_id,
-                                                zx_device_prop_t* moreprops, uint32_t propcount) {
+static zx_status_t intel_serialio_i2c_add_subordinate(intel_serialio_i2c_device_t* device,
+                                                      uint8_t width, uint16_t address,
+                                                      uint32_t protocol_id,
+                                                      zx_device_prop_t* moreprops,
+                                                      uint32_t propcount) {
   zx_status_t status;
 
   if ((width != I2C_7BIT_ADDRESS && width != I2C_10BIT_ADDRESS) ||
@@ -158,12 +160,12 @@ static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* dev
     return ZX_ERR_INVALID_ARGS;
   }
 
-  intel_serialio_i2c_slave_device_t* slave;
+  intel_serialio_i2c_subordinate_device_t* subordinate;
 
   mtx_lock(&device->mutex);
 
-  // Make sure a slave with the given address doesn't already exist.
-  status = intel_serialio_i2c_find_slave(&slave, device, address);
+  // Make sure a subordinate with the given address doesn't already exist.
+  status = intel_serialio_i2c_find_subordinate(&subordinate, device, address);
   if (status == ZX_OK) {
     status = ZX_ERR_ALREADY_EXISTS;
   }
@@ -172,20 +174,20 @@ static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* dev
     return status;
   }
 
-  slave = calloc(1, sizeof(*slave));
-  if (!slave) {
+  subordinate = calloc(1, sizeof(*subordinate));
+  if (!subordinate) {
     status = ZX_ERR_NO_MEMORY;
     mtx_unlock(&device->mutex);
     return status;
   }
-  slave->chip_address_width = width;
-  slave->chip_address = address;
-  slave->controller = device;
+  subordinate->chip_address_width = width;
+  subordinate->chip_address = address;
+  subordinate->controller = device;
 
-  list_add_head(&device->slave_list, &slave->slave_list_node);
+  list_add_head(&device->subordinate_list, &subordinate->subordinate_list_node);
   mtx_unlock(&device->mutex);
 
-  // Temporarily add binding support for the i2c slave. The real way to do
+  // Temporarily add binding support for the i2c subordinate. The real way to do
   // this will involve ACPI/devicetree enumeration, but for now we publish PCI
   // VID/DID and i2c ADDR as binding properties.
   pci_protocol_t pci;
@@ -203,7 +205,7 @@ static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* dev
 
   zx_device_prop_t props[8];
   if (countof(props) < 3 + propcount) {
-    zxlogf(ERROR, "i2c: slave at 0x%02x has too many props! (%u)\n", address, propcount);
+    zxlogf(ERROR, "i2c: subordinate at 0x%02x has too many props! (%u)\n", address, propcount);
     status = ZX_ERR_INVALID_ARGS;
     goto fail;
   }
@@ -221,8 +223,8 @@ static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* dev
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
       .name = name,
-      .ctx = slave,
-      .ops = &intel_serialio_i2c_slave_device_proto,
+      .ctx = subordinate,
+      .ops = &intel_serialio_i2c_subordinate_device_proto,
       .proto_id = protocol_id,
       .props = props,
       .prop_count = count,
@@ -232,7 +234,7 @@ static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* dev
     args.proto_ops = &i2c_protocol_ops;
   }
 
-  status = device_add(device->zxdev, &args, &slave->zxdev);
+  status = device_add(device->zxdev, &args, &subordinate->zxdev);
   if (status != ZX_OK) {
     goto fail;
   }
@@ -240,14 +242,14 @@ static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* dev
 
 fail:
   mtx_lock(&device->mutex);
-  list_delete(&slave->slave_list_node);
+  list_delete(&subordinate->subordinate_list_node);
   mtx_unlock(&device->mutex);
-  free(slave);
+  free(subordinate);
   return status;
 }
 
-static zx_status_t intel_serialio_i2c_remove_slave(intel_serialio_i2c_device_t* device,
-                                                   uint8_t width, uint16_t address) {
+static zx_status_t intel_serialio_i2c_remove_subordinate(intel_serialio_i2c_device_t* device,
+                                                         uint8_t width, uint16_t address) {
   zx_status_t status;
 
   if ((width != I2C_7BIT_ADDRESS && width != I2C_10BIT_ADDRESS) ||
@@ -255,28 +257,28 @@ static zx_status_t intel_serialio_i2c_remove_slave(intel_serialio_i2c_device_t* 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  intel_serialio_i2c_slave_device_t* slave;
+  intel_serialio_i2c_subordinate_device_t* subordinate;
 
   mtx_lock(&device->mutex);
 
-  // Find the slave we're trying to remove.
-  status = intel_serialio_i2c_find_slave(&slave, device, address);
+  // Find the subordinate we're trying to remove.
+  status = intel_serialio_i2c_find_subordinate(&subordinate, device, address);
   if (status < 0)
-    goto remove_slave_finish;
-  if (slave->chip_address_width != width) {
+    goto remove_subordinate_finish;
+  if (subordinate->chip_address_width != width) {
     zxlogf(ERROR, "Chip address width mismatch.\n");
     status = ZX_ERR_NOT_FOUND;
-    goto remove_slave_finish;
+    goto remove_subordinate_finish;
   }
 
-  status = device_remove(slave->zxdev);
+  status = device_remove(subordinate->zxdev);
   if (status < 0)
-    goto remove_slave_finish;
+    goto remove_subordinate_finish;
 
-  list_delete(&slave->slave_list_node);
-  free(slave);
+  list_delete(&subordinate->subordinate_list_node);
+  free(subordinate);
 
-remove_slave_finish:
+remove_subordinate_finish:
   mtx_unlock(&device->mutex);
   return status;
 }
@@ -758,9 +760,9 @@ static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent, pci_
   uint32_t bus_speed = 0;
   while (count--) {
     zxlogf(TRACE,
-           "i2c: got child[%u] bus_master=%d ten_bit=%d address=0x%x bus_speed=%u"
+           "i2c: got child[%u] bus_controller=%d ten_bit=%d address=0x%x bus_speed=%u"
            " protocol_id=0x%08x\n",
-           count, child->bus_master, child->ten_bit, child->address, child->bus_speed,
+           count, child->is_bus_controller, child->ten_bit, child->address, child->bus_speed,
            child->protocol_id);
 
     if (bus_speed && bus_speed != child->bus_speed) {
@@ -771,9 +773,9 @@ static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent, pci_
       intel_serialio_i2c_set_bus_frequency(parent, child->bus_speed);
       bus_speed = child->bus_speed;
     }
-    intel_serialio_i2c_add_slave(parent, child->ten_bit ? I2C_10BIT_ADDRESS : I2C_7BIT_ADDRESS,
-                                 child->address, child->protocol_id, child->props,
-                                 child->propcount);
+    intel_serialio_i2c_add_subordinate(
+        parent, child->ten_bit ? I2C_10BIT_ADDRESS : I2C_7BIT_ADDRESS, child->address,
+        child->protocol_id, child->props, child->propcount);
     child += 1;
   }
 }
@@ -787,7 +789,7 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
   if (!device)
     return ZX_ERR_NO_MEMORY;
 
-  list_initialize(&device->slave_list);
+  list_initialize(&device->subordinate_list);
   mtx_init(&device->mutex, mtx_plain);
   mtx_init(&device->irq_mask_mutex, mtx_plain);
   device->pcidev = dev;

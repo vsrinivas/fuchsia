@@ -223,7 +223,7 @@ int cmd_transfer(int fd, int argc, const char** argv) {
     return ZX_ERR_INVALID_ARGS;
   zx_status_t status;
   size_t out_actual;
-  zx_status_t res = fuchsia_hardware_i2c_DeviceSlaveTransfer(
+  zx_status_t res = fuchsia_hardware_i2c_DeviceSubordinateTransfer(
       fdio_unsafe_borrow_channel(io), in_buf, in_len, &status, out_buf, out_len, &out_actual);
   fdio_unsafe_release(io);  // Release the channel manually.
   if (out_actual < out_len) {

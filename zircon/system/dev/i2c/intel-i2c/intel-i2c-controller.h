@@ -160,7 +160,7 @@ typedef struct intel_serialio_i2c_device {
   uint8_t rx_fifo_depth;
   uint8_t tx_fifo_depth;
 
-  struct list_node slave_list;
+  struct list_node subordinate_list;
 
   mtx_t mutex;
   mtx_t irq_mask_mutex;

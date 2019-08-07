@@ -6,8 +6,8 @@
 #define DDK_PROTOCOL_AUXDATA_H_
 
 #include <zircon/compiler.h>
-#include <zircon/types.h>
 #include <zircon/driver/binding.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -15,7 +15,7 @@ __BEGIN_CDECLS
 
 typedef struct {
   // i2c bus config
-  uint8_t bus_master;
+  uint8_t is_bus_controller;
   uint8_t ten_bit;
   uint16_t address;
   uint32_t bus_speed;

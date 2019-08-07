@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
+#include "pciroot.h"
+
 #include <endian.h>
+#include <inttypes.h>
+#include <zircon/compiler.h>
+#include <zircon/hw/i2c.h>
+#include <zircon/syscalls/resource.h>
+#include <zircon/types.h>
 
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
 #include <ddk/protocol/sysmem.h>
-#include <inttypes.h>
 #include <pci/pio.h>
-#include <zircon/compiler.h>
-#include <zircon/hw/i2c.h>
-#include <zircon/syscalls/resource.h>
-#include <zircon/types.h>
 
 #include "acpi-private.h"
 #include "dev.h"
@@ -22,7 +24,6 @@
 #include "iommu.h"
 #include "pci.h"
 #include "pci_allocators.h"
-#include "pciroot.h"
 
 static ACPI_STATUS find_pci_child_callback(ACPI_HANDLE object, uint32_t nesting_level,
                                            void* context, void** out_value) {
@@ -66,7 +67,7 @@ static ACPI_STATUS pci_child_data_resources_callback(ACPI_RESOURCE* res, void* c
   }
 
   ACPI_RESOURCE_I2C_SERIALBUS* i2c = &res->Data.I2cSerialBus;
-  child->bus_master = i2c->SlaveMode;
+  child->is_bus_controller = i2c->SlaveMode;
   child->ten_bit = i2c->AccessMode;
   child->address = i2c->SlaveAddress;
   child->bus_speed = i2c->ConnectionSpeed;

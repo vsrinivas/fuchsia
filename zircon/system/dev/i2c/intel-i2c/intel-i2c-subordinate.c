@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "intel-i2c-slave.h"
+#include "intel-i2c-subordinate.h"
 
 #include <fuchsia/hardware/i2c/c/fidl.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -42,7 +42,7 @@ static const zx_duration_t timeout_ns = ZX_SEC(2);
 
 #define WAIT_FOR(condition, poll_interval) DO_UNTIL(condition, , poll_interval)
 
-// Implement the functionality of the i2c slave devices.
+// Implement the functionality of the i2c subordinate devices.
 
 static int bus_is_idle(intel_serialio_i2c_device_t* controller) {
   uint32_t i2c_sta = readl(&controller->regs->i2c_sta);
@@ -63,9 +63,9 @@ static int rx_fifo_empty(intel_serialio_i2c_device_t* controller) {
 // Thread safety analysis cannot see the control flow through the
 // gotos, and cannot prove that the lock is unheld at return through
 // all paths.
-zx_status_t intel_serialio_i2c_slave_transfer(intel_serialio_i2c_slave_device_t* slave,
-                                              i2c_slave_segment_t* segments,
-                                              int segment_count) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t intel_serialio_i2c_subordinate_transfer(
+    intel_serialio_i2c_subordinate_device_t* subordinate, i2c_subordinate_segment_t* segments,
+    int segment_count) TA_NO_THREAD_SAFETY_ANALYSIS {
   zx_status_t status = ZX_OK;
 
   for (int i = 0; i < segment_count; i++) {
@@ -76,14 +76,14 @@ zx_status_t intel_serialio_i2c_slave_transfer(intel_serialio_i2c_slave_device_t*
     }
   }
 
-  intel_serialio_i2c_device_t* controller = slave->controller;
+  intel_serialio_i2c_device_t* controller = subordinate->controller;
 
   uint32_t ctl_addr_mode_bit;
   uint32_t tar_add_addr_mode_bit;
-  if (slave->chip_address_width == I2C_7BIT_ADDRESS) {
+  if (subordinate->chip_address_width == I2C_7BIT_ADDRESS) {
     ctl_addr_mode_bit = CTL_ADDRESSING_MODE_7BIT;
     tar_add_addr_mode_bit = TAR_ADD_WIDTH_7BIT;
-  } else if (slave->chip_address_width == I2C_10BIT_ADDRESS) {
+  } else if (subordinate->chip_address_width == I2C_10BIT_ADDRESS) {
     ctl_addr_mode_bit = CTL_ADDRESSING_MODE_10BIT;
     tar_add_addr_mode_bit = TAR_ADD_WIDTH_10BIT;
   } else {
@@ -92,7 +92,7 @@ zx_status_t intel_serialio_i2c_slave_transfer(intel_serialio_i2c_slave_device_t*
     goto transfer_finish_2;
   }
 
-  mtx_lock(&slave->controller->mutex);
+  mtx_lock(&subordinate->controller->mutex);
 
   if (!WAIT_FOR(bus_is_idle(controller), ZX_USEC(50))) {
     status = ZX_ERR_TIMED_OUT;
@@ -101,7 +101,7 @@ zx_status_t intel_serialio_i2c_slave_transfer(intel_serialio_i2c_slave_device_t*
 
   // Set the target adress value and width.
   RMWREG32(&controller->regs->ctl, CTL_ADDRESSING_MODE, 1, ctl_addr_mode_bit);
-  writel((tar_add_addr_mode_bit << TAR_ADD_WIDTH) | (slave->chip_address << TAR_ADD_IC_TAR),
+  writel((tar_add_addr_mode_bit << TAR_ADD_WIDTH) | (subordinate->chip_address << TAR_ADD_IC_TAR),
          &controller->regs->tar_add);
 
   // Enable the controller.
@@ -249,41 +249,41 @@ transfer_finish_2:
   return status;
 }
 
-// Implement the char protocol for the slave devices.
+// Implement the char protocol for the subordinate devices.
 
-static zx_status_t intel_serialio_i2c_slave_read(void* ctx, void* buf, size_t count, zx_off_t off,
-                                                 size_t* actual) {
-  intel_serialio_i2c_slave_device_t* slave = ctx;
-  i2c_slave_segment_t segment = {
+static zx_status_t intel_serialio_i2c_subordinate_read(void* ctx, void* buf, size_t count,
+                                                       zx_off_t off, size_t* actual) {
+  intel_serialio_i2c_subordinate_device_t* subordinate = ctx;
+  i2c_subordinate_segment_t segment = {
       .type = fuchsia_hardware_i2c_SegmentType_READ,
       .buf = buf,
       .len = count,
   };
-  zx_status_t status = intel_serialio_i2c_slave_transfer(slave, &segment, 1);
+  zx_status_t status = intel_serialio_i2c_subordinate_transfer(subordinate, &segment, 1);
   if (status == ZX_OK) {
     *actual = count;
   }
   return status;
 }
 
-static zx_status_t intel_serialio_i2c_slave_write(void* ctx, const void* buf, size_t count,
-                                                  zx_off_t off, size_t* actual) {
-  intel_serialio_i2c_slave_device_t* slave = ctx;
-  i2c_slave_segment_t segment = {
+static zx_status_t intel_serialio_i2c_subordinate_write(void* ctx, const void* buf, size_t count,
+                                                        zx_off_t off, size_t* actual) {
+  intel_serialio_i2c_subordinate_device_t* subordinate = ctx;
+  i2c_subordinate_segment_t segment = {
       .type = fuchsia_hardware_i2c_SegmentType_WRITE,
       .buf = (void*)buf,
       .len = count,
   };
-  zx_status_t status = intel_serialio_i2c_slave_transfer(slave, &segment, 1);
+  zx_status_t status = intel_serialio_i2c_subordinate_transfer(subordinate, &segment, 1);
   if (status == ZX_OK) {
     *actual = count;
   }
   return status;
 }
 
-static zx_status_t intel_serialio_i2c_slave_transfer_helper(
-    intel_serialio_i2c_slave_device_t* slave, const void* in_buf, size_t in_len, void* out_buf,
-    size_t out_len, size_t* out_actual) {
+static zx_status_t intel_serialio_i2c_subordinate_transfer_helper(
+    intel_serialio_i2c_subordinate_device_t* subordinate, const void* in_buf, size_t in_len,
+    void* out_buf, size_t out_len, size_t* out_actual) {
   zx_status_t status;
   const size_t base_size = sizeof(fuchsia_hardware_i2c_Segment);
 
@@ -302,7 +302,7 @@ static zx_status_t intel_serialio_i2c_slave_transfer_helper(
     }
     if ((void*)((uint8_t*)segment + base_size) > end) {
       status = ZX_ERR_INVALID_ARGS;
-      goto slave_transfer_finish_2;
+      goto subordinate_transfer_finish_2;
     }
 
     int len = segment->len;
@@ -320,21 +320,21 @@ static zx_status_t intel_serialio_i2c_slave_transfer_helper(
   }
   if ((void*)((uint8_t*)segment + write_len) != end) {
     status = ZX_ERR_INVALID_ARGS;
-    goto slave_transfer_finish_2;
+    goto subordinate_transfer_finish_2;
   }
   if (out_len < read_len) {
     status = ZX_ERR_INVALID_ARGS;
-    goto slave_transfer_finish_2;
+    goto subordinate_transfer_finish_2;
   }
   uint8_t* data = (uint8_t*)segment;
 
   // Build a list of segments to transfer.
-  i2c_slave_segment_t* segments = calloc(segment_count, sizeof(*segments));
+  i2c_subordinate_segment_t* segments = calloc(segment_count, sizeof(*segments));
   if (!segments) {
     status = ZX_ERR_NO_MEMORY;
-    goto slave_transfer_finish_2;
+    goto subordinate_transfer_finish_2;
   }
-  i2c_slave_segment_t* cur_segment = segments;
+  i2c_subordinate_segment_t* cur_segment = segments;
   uintptr_t out_addr = (uintptr_t)out_buf;
   segment = (const fuchsia_hardware_i2c_Segment*)in_buf;
   for (int i = 0; i < segment_count; i++) {
@@ -356,7 +356,7 @@ static zx_status_t intel_serialio_i2c_slave_transfer_helper(
       default:
         // invalid segment type
         status = ZX_ERR_INVALID_ARGS;
-        goto slave_transfer_finish_1;
+        goto subordinate_transfer_finish_1;
         break;
     }
 
@@ -364,20 +364,20 @@ static zx_status_t intel_serialio_i2c_slave_transfer_helper(
     segment++;
   }
 
-  status = intel_serialio_i2c_slave_transfer(slave, segments, segment_count);
+  status = intel_serialio_i2c_subordinate_transfer(subordinate, segments, segment_count);
   if (status == ZX_OK) {
     *out_actual = read_len;
   }
 
-slave_transfer_finish_1:
+subordinate_transfer_finish_1:
   free(segments);
-slave_transfer_finish_2:
+subordinate_transfer_finish_2:
   return status;
 }
 
-zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* slave,
-                                             zx_handle_t* out) {
-  if (slave->chip_address == 0xa) {
+zx_status_t intel_serialio_i2c_subordinate_get_irq(
+    intel_serialio_i2c_subordinate_device_t* subordinate, zx_handle_t* out) {
+  if (subordinate->chip_address == 0xa) {
     zx_handle_t irq;
     // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_status_t status =
@@ -387,7 +387,7 @@ zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* 
     }
     *out = irq;
     return ZX_OK;
-  } else if (slave->chip_address == 0x49) {
+  } else if (subordinate->chip_address == 0x49) {
     zx_handle_t irq;
     // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_status_t status =
@@ -397,7 +397,7 @@ zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* 
     }
     *out = irq;
     return ZX_OK;
-  } else if (slave->chip_address == 0x10) {
+  } else if (subordinate->chip_address == 0x10) {
     // Acer12
     zx_handle_t irq;
     // Please do not use get_root_resource() in new code. See ZX-1467.
@@ -408,7 +408,7 @@ zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* 
     }
     *out = irq;
     return ZX_OK;
-  } else if (slave->chip_address == 0x50) {
+  } else if (subordinate->chip_address == 0x50) {
     zx_handle_t irq;
     // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_status_t status =
@@ -423,35 +423,35 @@ zx_status_t intel_serialio_i2c_slave_get_irq(intel_serialio_i2c_slave_device_t* 
   return ZX_ERR_NOT_FOUND;
 }
 
-static void intel_serialio_i2c_slave_release(void* ctx) {
-  intel_serialio_i2c_slave_device_t* slave = ctx;
-  free(slave);
+static void intel_serialio_i2c_subordinate_release(void* ctx) {
+  intel_serialio_i2c_subordinate_device_t* subordinate = ctx;
+  free(subordinate);
 }
 
-static zx_status_t fidl_SlaveTransfer(void* ctx, const unsigned char* in_buf,
-                                      long unsigned int in_len, fidl_txn_t* txn) {
-  intel_serialio_i2c_slave_device_t* slave = ctx;
+static zx_status_t fidl_SubordinateTransfer(void* ctx, const unsigned char* in_buf,
+                                            long unsigned int in_len, fidl_txn_t* txn) {
+  intel_serialio_i2c_subordinate_device_t* subordinate = ctx;
   uint8_t out_data[fuchsia_hardware_i2c_MAX_TRANSFER_SIZE];
   size_t out_actual = 0;
-  zx_status_t status = intel_serialio_i2c_slave_transfer_helper(
-      slave, in_buf, in_len, out_data, fuchsia_hardware_i2c_MAX_TRANSFER_SIZE, &out_actual);
-  return fuchsia_hardware_i2c_DeviceSlaveTransfer_reply(txn, status, out_data, out_actual);
+  zx_status_t status = intel_serialio_i2c_subordinate_transfer_helper(
+      subordinate, in_buf, in_len, out_data, fuchsia_hardware_i2c_MAX_TRANSFER_SIZE, &out_actual);
+  return fuchsia_hardware_i2c_DeviceSubordinateTransfer_reply(txn, status, out_data, out_actual);
 }
 
 static fuchsia_hardware_i2c_Device_ops_t fidl_ops = {
-    .SlaveTransfer = fidl_SlaveTransfer,
+    .SubordinateTransfer = fidl_SubordinateTransfer,
 };
 
 zx_status_t intel_serialio_i2c_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_i2c_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
-// Implement the device protocol for the slave devices.
+// Implement the device protocol for the subordinate devices.
 
-zx_protocol_device_t intel_serialio_i2c_slave_device_proto = {
+zx_protocol_device_t intel_serialio_i2c_subordinate_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .read = intel_serialio_i2c_slave_read,
-    .write = intel_serialio_i2c_slave_write,
+    .read = intel_serialio_i2c_subordinate_read,
+    .write = intel_serialio_i2c_subordinate_write,
     .message = intel_serialio_i2c_message,
-    .release = intel_serialio_i2c_slave_release,
+    .release = intel_serialio_i2c_subordinate_release,
 };
