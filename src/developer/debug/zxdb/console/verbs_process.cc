@@ -17,6 +17,7 @@
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
@@ -32,20 +33,29 @@ namespace zxdb {
 
 namespace {
 
-// Verifies that the given target can be run or attached.
-Err AssertRunnableTarget(Target* target) {
-  Target::State state = target->GetState();
-  if (state == Target::State::kStarting || state == Target::State::kAttaching) {
+// Makes sure there is a runnable target, creating one if necessary. In the success case, the
+// returned target should be used instead of the one from the command (it may be a new one).
+ErrOr<Target*> GetRunnableTarget(ConsoleContext* context, const Command& cmd) {
+  Target::State state = cmd.target()->GetState();
+  if (state == Target::State::kNone)
+    return cmd.target();  // Current one is usable.
+
+  if (cmd.GetNounIndex(Noun::kProcess) != Command::kNoIndex) {
+    // A process was specified explicitly in the command. Since it's not usable, report an error.
+    if (state == Target::State::kStarting || state == Target::State::kAttaching) {
+      return Err(
+          "The specified process is in the process of starting or attaching.\n"
+          "Either \"kill\" it or create a \"new\" process context.");
+    }
     return Err(
-        "The current process is in the process of starting or attaching.\n"
+        "The specified process is already running.\n"
         "Either \"kill\" it or create a \"new\" process context.");
   }
-  if (state == Target::State::kRunning) {
-    return Err(
-        "The current process is already running.\n"
-        "Either \"kill\" it or create a \"new\" process context.");
-  }
-  return Err();
+
+  // Create a new target based on the given one.
+  Target* new_target = context->session()->system().CreateNewTarget(cmd.target());
+  context->SetActiveTarget(new_target);
+  return new_target;
 }
 
 // Verifies that the given job_context can be run or attached.
@@ -238,9 +248,11 @@ Err DoRun(ConsoleContext* context, const Command& cmd, CommandCallback callback 
   if (err.has_error())
     return err;
 
-  err = AssertRunnableTarget(cmd.target());
-  if (err.has_error())
-    return err;
+  // May need to create a new target.
+  auto err_or_target = GetRunnableTarget(context, cmd);
+  if (err_or_target.has_error())
+    return err_or_target.err();
+  Target* target = err_or_target.value();
 
   // Output warning about this possibly not working.
   OutputBuffer warning(Syntax::kWarning, GetExclamation());
@@ -252,13 +264,13 @@ Err DoRun(ConsoleContext* context, const Command& cmd, CommandCallback callback 
   if (!cmd.HasSwitch(kRunComponentSwitch)) {
     if (cmd.args().empty()) {
       // Use the args already set on the target.
-      if (cmd.target()->GetArgs().empty())
+      if (target->GetArgs().empty())
         return Err("No program to run. Try \"run <program name>\".");
     } else {
-      cmd.target()->SetArgs(cmd.args());
+      target->SetArgs(cmd.args());
     }
 
-    cmd.target()->Launch(
+    target->Launch(
         [callback = std::move(callback)](fxl::WeakPtr<Target> target, const Err& err) mutable {
           // The ConsoleContext displays messages for new processes, so don't display messages when
           // successfully starting.
@@ -469,23 +481,24 @@ Err DoAttach(ConsoleContext* context, const Command& cmd, CommandCallback callba
         return err;
       return DoAttachFilter(context, cmd, std::move(callback));
     }
-    // Attach a process.
-    err = AssertRunnableTarget(cmd.target());
-    if (err.has_error())
-      return err;
 
-    // Should have one arg which is the koid.
+    // Attach a process: Should have one arg which is the koid or PID.
     uint64_t koid = 0;
     err = ReadUint64Arg(cmd, 0, "process koid", &koid);
     if (err.has_error()) {
+      // Not a number, make a filter instead.
       if (!cmd.HasNoun(Noun::kProcess)) {
         return DoAttachFilter(context, cmd, std::move(callback));
       }
       return err;
     }
 
-    cmd.target()->Attach(koid, [callback = std::move(callback)](fxl::WeakPtr<Target> target,
-                                                                const Err& err) mutable {
+    // Attach to a process by KOID.
+    auto err_or_target = GetRunnableTarget(context, cmd);
+    if (err_or_target.has_error())
+      return err_or_target.err();
+    err_or_target.value()->Attach(koid, [callback = std::move(callback)](
+                                            fxl::WeakPtr<Target> target, const Err& err) mutable {
       ProcessCommandCallback(target, true, err, std::move(callback));
     });
   }
