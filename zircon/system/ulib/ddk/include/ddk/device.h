@@ -6,9 +6,9 @@
 #define DDK_DEVICE_H_
 
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <zircon/listnode.h>
 
 __BEGIN_CDECLS
 
@@ -203,7 +203,7 @@ typedef struct zx_protocol_device {
 // Device Accessors
 const char* device_get_name(zx_device_t* dev);
 
-zx_device_t* device_get_parent(zx_device_t* dev);
+zx_device_t* device_get_parent(zx_device_t* dev) __DEPRECATE;
 
 // protocols look like:
 // typedef struct {

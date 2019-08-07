@@ -76,7 +76,12 @@ static zx_status_t x86_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
+  // TODO(ZX-4858): Remove this use of device_get_parent().  For now, suppress this
+  // deprecation warning to not spam the build logs
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   zx_device_t* sys_root = device_get_parent(parent);
+#pragma GCC diagnostic pop
   if (sys_root == NULL) {
     free(x86);
     zxlogf(ERROR, "%s: failed to find parent node of platform (expected sys)\n", __func__);
