@@ -169,6 +169,10 @@ void ResolveArrayItem(fxl::RefPtr<EvalContext> eval_context, const ExprValue& ar
     if (auto array_access = pretty->GetArrayAccess())
       return array_access(eval_context, array, index, std::move(*shared_cb));
   }
+
+  (*shared_cb)(Err("Can't resolve an array access on type '%s'.",
+                   array.type() ? array.type()->GetFullName().c_str() : "<Unknown>"),
+               ExprValue());
 }
 
 }  // namespace zxdb

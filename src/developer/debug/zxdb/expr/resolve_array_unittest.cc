@@ -143,6 +143,30 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
   EXPECT_EQ(kBaseAddress + kTypeSize, single_result.source().address());
 }
 
+TEST_F(ResolveArrayTest, Invalid) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+
+  // Resolving an array on an empty ExprValue.
+  bool called = false;
+  ResolveArrayItem(eval_context, ExprValue(), 1,
+               [&called](const Err& err, ExprValue values) {
+                 called = true;
+                 EXPECT_TRUE(err.has_error());
+                 EXPECT_EQ("No type information.", err.msg());
+               });
+  EXPECT_TRUE(called);
+
+  // Resolving an array on an integer type.
+  called = false;
+  ResolveArrayItem(eval_context, ExprValue(56), 1,
+               [&called](const Err& err, ExprValue values) {
+                 called = true;
+                 EXPECT_TRUE(err.has_error());
+                 EXPECT_EQ("Can't resolve an array access on type 'int32_t'.", err.msg());
+               });
+  EXPECT_TRUE(called);
+}
+
 // Tests a PrettyType's implementation of [].
 TEST_F(ResolveArrayTest, PrettyArray) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
