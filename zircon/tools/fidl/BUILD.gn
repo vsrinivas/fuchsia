@@ -28,6 +28,7 @@ if (defined(zx)) {
       "lib/tables_generator.cc",
       "lib/template_string.cc",
       "lib/tree_visitor.cc",
+      "lib/type_shape.cc",
       "lib/utils.cc",
       "lib/virtual_source_file.cc",
     ]
@@ -131,6 +132,7 @@ if (defined(zx)) {
       "lib/source_manager.cc",
       "lib/tables_generator.cc",
       "lib/tree_visitor.cc",
+      "lib/type_shape.cc",
     ]
   }
 }

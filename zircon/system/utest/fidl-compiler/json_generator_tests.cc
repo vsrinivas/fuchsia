@@ -632,7 +632,7 @@ union PizzaOrPasta {
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": true
     },
     {
       "name": "fidl.test.json/Pasta",
@@ -666,7 +666,7 @@ union PizzaOrPasta {
       "max_out_of_line": 16,
       "alignment": 8,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": true
     }
   ],
   "table_declarations": [],
@@ -958,7 +958,7 @@ protocol sub {
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
-          "maybe_request_has_padding": false,
+          "maybe_request_has_padding": true,
           "has_response": true,
           "maybe_response": [
             {
@@ -1025,7 +1025,7 @@ protocol sub {
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
-          "maybe_request_has_padding": false,
+          "maybe_request_has_padding": true,
           "has_response": true,
           "maybe_response": [
             {
@@ -1314,7 +1314,7 @@ protocol Example {
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
-          "maybe_request_has_padding": false,
+          "maybe_request_has_padding": true,
           "has_response": true,
           "maybe_response": [
             {

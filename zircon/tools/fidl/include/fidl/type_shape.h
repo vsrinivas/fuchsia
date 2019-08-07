@@ -7,35 +7,62 @@
 
 #include <cstdint>
 
+// TODO(FIDL-710): We should revisit this namespace choice as part of improving code organization.
+namespace fidl {
+
+class TypeShape;
+
+struct TypeShapeBuilder {
+  uint32_t inline_size = 0;
+  uint32_t alignment = 1;
+
+  // These properties are calculated incorporating both the current TypeShape, and recursively over
+  // all child fields. For example, |has_padding| is true if either the current TypeShape has
+  // padding, or any child fields themselves have padding.
+  struct Recursive {
+    uint32_t depth = 0;
+    uint32_t max_handles = 0;
+    uint32_t max_out_of_line = 0;
+    bool has_padding = false;
+
+    Recursive& AddStructLike(TypeShape typeshape);
+    Recursive& AddUnionLike(TypeShape typeshape);
+  } recursive = {};
+
+  TypeShapeBuilder& operator+=(TypeShapeBuilder builder);
+};
+
+// |TypeShape| describes the wire-format information of a type.
 class TypeShape {
  public:
-  constexpr TypeShape(uint32_t size, uint32_t alignment, uint32_t depth = 0u,
-                      uint32_t max_handles = 0u, uint32_t max_out_of_line = 0u,
-                      bool has_padding = false)
-      : size_(size),
-        alignment_(alignment),
-        depth_(depth),
-        max_handles_(max_handles),
-        max_out_of_line_(max_out_of_line),
-        has_padding_(has_padding) {}
+  explicit constexpr TypeShape(TypeShapeBuilder builder)
+      : inline_size_(builder.inline_size),
+        alignment_(builder.alignment),
+        depth_(builder.recursive.depth),
+        max_handles_(builder.recursive.max_handles),
+        max_out_of_line_(builder.recursive.max_out_of_line),
+        has_padding_(builder.recursive.has_padding) {}
 
-  constexpr TypeShape() : TypeShape(0u, 0u, 0u, 0u, 0u, false) {}
+  TypeShape() : TypeShape(TypeShapeBuilder{}) {}
 
   TypeShape(const TypeShape&) = default;
   TypeShape& operator=(const TypeShape&) = default;
 
-  uint32_t Size() const { return size_; }
+  // These properties describe this type only.
+
+  uint32_t InlineSize() const { return inline_size_; }
   uint32_t Alignment() const { return alignment_; }
+
+  // These properties are calculated incorporating both the current TypeShape, and recursively over
+  // all child fields.
+
   uint32_t Depth() const { return depth_; }
-
-  // These properties are accounted for recursively.
-
   uint32_t MaxHandles() const { return max_handles_; }
   uint32_t MaxOutOfLine() const { return max_out_of_line_; }
   bool HasPadding() const { return has_padding_; }
 
  private:
-  uint32_t size_;
+  uint32_t inline_size_;
   uint32_t alignment_;
   uint32_t depth_;
   uint32_t max_handles_;
@@ -56,7 +83,7 @@ class FieldShape {
   TypeShape& Typeshape() { return typeshape_; }
   const TypeShape& Typeshape() const { return typeshape_; }
 
-  uint32_t Size() const { return typeshape_.Size(); }
+  uint32_t InlineSize() const { return typeshape_.InlineSize(); }
   uint32_t Alignment() const { return typeshape_.Alignment(); }
   uint32_t Depth() const { return typeshape_.Depth(); }
   uint32_t Offset() const { return offset_; }
@@ -75,5 +102,17 @@ class FieldShape {
   uint32_t offset_;
   uint32_t padding_;
 };
+
+constexpr uint32_t kMessageAlign = 8u;
+
+uint32_t AlignTo(uint64_t size, uint64_t alignment);
+
+// Multiply |a| and |b| with saturated arithmetic, clamped at UINT32_MAX.
+uint32_t ClampedMultiply(uint32_t a, uint32_t b);
+
+// Add |a| and |b| with saturated arithmetic, clamped at UINT32_MAX.
+uint32_t ClampedAdd(uint32_t a, uint32_t b);
+
+}  // namespace fidl
 
 #endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_TYPE_SHAPE_H_

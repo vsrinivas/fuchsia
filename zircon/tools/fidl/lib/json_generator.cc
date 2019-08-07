@@ -328,7 +328,7 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
 
 void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {
   GenerateObjectMember(prefix, value.members);
-  GenerateObjectMember(prefix + "_size", value.typeshape.Size());
+  GenerateObjectMember(prefix + "_size", value.typeshape.InlineSize());
   GenerateObjectMember(prefix + "_alignment", value.typeshape.Alignment());
   GenerateObjectMember(prefix + "_has_padding", value.typeshape.HasPadding());
 }
@@ -361,7 +361,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape.Size());
+    GenerateObjectMember("size", value.typeshape.InlineSize());
     GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
     GenerateObjectMember("alignment", value.typeshape.Alignment());
     GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
@@ -378,7 +378,7 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.maybe_default_value)
       GenerateObjectMember("maybe_default_value", value.maybe_default_value);
-    GenerateObjectMember("size", value.fieldshape.Size());
+    GenerateObjectMember("size", value.fieldshape.InlineSize());
     GenerateObjectMember("max_out_of_line", value.fieldshape.MaxOutOfLine());
     GenerateObjectMember("alignment", value.fieldshape.Alignment());
     GenerateObjectMember("offset", value.fieldshape.Offset());
@@ -393,7 +393,7 @@ void JSONGenerator::Generate(const flat::Table& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape.Size());
+    GenerateObjectMember("size", value.typeshape.InlineSize());
     GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
     GenerateObjectMember("alignment", value.typeshape.Alignment());
     GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
@@ -412,7 +412,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
       if (value.maybe_used->attributes)
         GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
       // TODO(FIDL-609): Support defaults on tables.
-      GenerateObjectMember("size", value.maybe_used->typeshape.Size());
+      GenerateObjectMember("size", value.maybe_used->typeshape.InlineSize());
       GenerateObjectMember("max_out_of_line", value.maybe_used->typeshape.MaxOutOfLine());
       GenerateObjectMember("alignment", value.maybe_used->typeshape.Alignment());
       GenerateObjectMember("max_handles", value.maybe_used->typeshape.MaxHandles());
@@ -431,7 +431,7 @@ void JSONGenerator::Generate(const flat::Union& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape.Size());
+    GenerateObjectMember("size", value.typeshape.InlineSize());
     GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
     GenerateObjectMember("alignment", value.typeshape.Alignment());
     GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
@@ -445,7 +445,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("size", value.fieldshape.Size());
+    GenerateObjectMember("size", value.fieldshape.InlineSize());
     GenerateObjectMember("max_out_of_line", value.fieldshape.MaxOutOfLine());
     GenerateObjectMember("alignment", value.fieldshape.Alignment());
     GenerateObjectMember("offset", value.fieldshape.Offset());
@@ -459,7 +459,7 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape.Size());
+    GenerateObjectMember("size", value.typeshape.InlineSize());
     GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
     GenerateObjectMember("alignment", value.typeshape.Alignment());
     GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
@@ -475,7 +475,7 @@ void JSONGenerator::Generate(const flat::XUnion::Member& value) {
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("size", value.fieldshape.Size());
+    GenerateObjectMember("size", value.fieldshape.InlineSize());
     GenerateObjectMember("max_out_of_line", value.fieldshape.MaxOutOfLine());
     GenerateObjectMember("alignment", value.fieldshape.Alignment());
     GenerateObjectMember("offset", value.fieldshape.Offset());

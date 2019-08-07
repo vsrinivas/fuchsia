@@ -202,13 +202,13 @@ bits BitsImplicit {
 
   auto bits16 = library.LookupBits("Bits16");
   EXPECT_NONNULL(bits16);
-  EXPECT_EQ(bits16->typeshape.Size(), 2);
+  EXPECT_EQ(bits16->typeshape.InlineSize(), 2);
   EXPECT_EQ(bits16->typeshape.Alignment(), 2);
   EXPECT_EQ(bits16->typeshape.MaxOutOfLine(), 0);
 
   auto bits_implicit = library.LookupBits("BitsImplicit");
   EXPECT_NONNULL(bits_implicit);
-  EXPECT_EQ(bits_implicit->typeshape.Size(), 4);
+  EXPECT_EQ(bits_implicit->typeshape.InlineSize(), 4);
   EXPECT_EQ(bits_implicit->typeshape.Alignment(), 4);
   EXPECT_EQ(bits_implicit->typeshape.MaxOutOfLine(), 0);
 
