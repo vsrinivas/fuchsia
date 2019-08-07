@@ -2494,6 +2494,46 @@
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
+            "sessionsUrls": {
+              "SimpleFormalParameterImpl": {
+                "session": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "session",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                },
+                "url": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "url",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "sessionsUrls",
+              "returnType": "Iterable<String>",
+              "type": "MethodDeclarationImpl"
+            },
             "tearDown": {
               "isAbstract": false,
               "isGetter": false,

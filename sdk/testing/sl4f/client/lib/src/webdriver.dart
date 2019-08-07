@@ -75,6 +75,11 @@ class WebDriverConnector {
     _webDriverSessions = {};
   }
 
+  /// Get all nonEmpty Urls obtained from current _webDriverSessions.
+  Iterable<String> get sessionsUrls => _webDriverSessions.values
+      .map((session) => session.webDriver.currentUrl)
+      .where((url) => url.isNotEmpty);
+
   /// Searches for Chrome contexts based on the host of the currently displayed
   /// page, and returns `WebDriver` connections to the found contexts.
   Future<List<WebDriver>> webDriversForHost(String host) async {
