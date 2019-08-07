@@ -96,7 +96,7 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
     // The resolver will give us a new VMO and loader to use.
     if (!resolver)
       services_->Connect(resolver.NewRequest());
-    resolver->Resolve(fidl::StringPtr(name.data(), name.size()), &status, &executable_vmo,
+    resolver->Resolve(std::string(name.data(), name.size()), &status, &executable_vmo,
                       &loader_iface);
     if (status != ZX_OK)
       return status;
@@ -131,7 +131,7 @@ void ProcessBuilder::AddArgs(const std::vector<std::string>& argv) {
     return;
   if (launch_info_.name.empty())
     launch_info_.name = argv[0];
-  fidl::VectorPtr<std::vector<uint8_t>> args;
+  std::vector<std::vector<uint8_t>> args;
   for (const auto& arg : argv)
     args.push_back(std::vector<uint8_t>(arg.data(), arg.data() + arg.size()));
   launcher_->AddArgs(std::move(args));
@@ -191,7 +191,7 @@ void ProcessBuilder::CloneStdio() {
 }
 
 void ProcessBuilder::CloneEnvironment() {
-  auto env = fidl::VectorPtr<std::vector<uint8_t>>::New(0);
+  std::vector<std::vector<uint8_t>> env;
   for (size_t i = 0; environ[i]; ++i) {
     const char* var = environ[i];
     env.push_back(std::vector<uint8_t>(var, var + strlen(var)));
