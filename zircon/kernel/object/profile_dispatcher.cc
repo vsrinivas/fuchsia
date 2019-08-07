@@ -27,10 +27,10 @@ static zx_status_t parse_cpu_mask(const zx_cpu_set_t& set, cpu_mask_t* result) {
 
   // Ensure that the user is not setting more CPUs than are available.
   uint32_t num_cpus = arch_max_num_cpus();
-  cpu_mask_t mask = set.mask[0];
-  if ((mask & ~BIT_MASK(num_cpus)) != 0) {
+  if ((set.mask[0] & ~BIT_MASK(num_cpus)) != 0) {
     return ZX_ERR_INVALID_ARGS;
   }
+  auto mask = static_cast<cpu_mask_t>(set.mask[0]);
 
   // Ensure at least one CPU is active in the mask.
   if ((mask & BIT_MASK(num_cpus)) == 0) {

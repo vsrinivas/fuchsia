@@ -410,14 +410,16 @@ typedef struct zx_channel_call_args {
 //
 // We currently are limited to systems with 512 CPUs or less.
 #define ZX_CPU_SET_MAX_CPUS 512
+#define ZX_CPU_SET_BITS_PER_WORD 64
 
 typedef struct zx_cpu_set {
     // The |N|'th CPU is considered in the CPU set if the bit:
     //
-    //   cpu_mask[N / 32] & (1 << (N % 32))
+    //   cpu_mask[N / ZX_CPU_SET_BITS_PER_WORD]
+    //       & (1 << (N % ZX_CPU_SET_BITS_PER_WORD))
     //
     // is set.
-    uint32_t mask[ZX_CPU_SET_MAX_CPUS / 32];
+    uint64_t mask[ZX_CPU_SET_MAX_CPUS / ZX_CPU_SET_BITS_PER_WORD];
 } zx_cpu_set_t;
 
 #ifdef __cplusplus

@@ -223,8 +223,8 @@ static bool CpuMaskBitSet(const zx_cpu_set_t& set, uint32_t i) {
   if (i >= ZX_CPU_SET_MAX_CPUS) {
     return false;
   }
-  uint32_t word = i / 32;
-  uint32_t bit = i % 32;
+  uint32_t word = i / ZX_CPU_SET_BITS_PER_WORD;
+  uint32_t bit = i % ZX_CPU_SET_BITS_PER_WORD;
   return ((set.mask[word] >> bit) & 1u) != 0;
 }
 

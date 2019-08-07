@@ -31,7 +31,7 @@ zx_profile_info_t MakeSchedulerProfileInfo(int32_t priority) {
   return info;
 }
 
-zx_profile_info_t MakeCpuMaskProfile(uint32_t mask) {
+zx_profile_info_t MakeCpuMaskProfile(uint64_t mask) {
   zx_profile_info_t info = {};
   info.flags = ZX_PROFILE_INFO_FLAG_CPU_MASK;
   info.cpu_affinity_mask.mask[0] = mask;
@@ -46,7 +46,7 @@ size_t GetCpuCount() {
   return available;
 }
 
-uint32_t GetAffinityMask(const zx::thread& thread) {
+uint64_t GetAffinityMask(const zx::thread& thread) {
   zx_info_thread_t info;
   zx_status_t status = thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
   ZX_ASSERT(status == ZX_OK);
@@ -229,9 +229,9 @@ TEST(CpuMaskProfile, EmptyMask) {
 }
 
 TEST(CpuMaskProfile, HighCpuMaskWordSet) {
-  // Set a valid CPU (0) and also a bit beyond the first word (CPU 480)
+  // Set a valid CPU (0) and also a bit beyond the first word (CPU number 448)
   zx_profile_info_t profile_info = MakeCpuMaskProfile(1);
-  profile_info.cpu_affinity_mask.mask[(ZX_CPU_SET_MAX_CPUS / sizeof(uint32_t) / CHAR_BIT) - 1] = 1;
+  profile_info.cpu_affinity_mask.mask[(ZX_CPU_SET_MAX_CPUS / ZX_CPU_SET_BITS_PER_WORD) - 1] = 1;
 
   // Ensure we get an error.
   zx::profile profile;
@@ -239,8 +239,8 @@ TEST(CpuMaskProfile, HighCpuMaskWordSet) {
 }
 
 TEST(CpuMaskProfile, HighCpuSet) {
-  ASSERT_LT(GetCpuCount(), sizeof(uint32_t) * 8,
-            "Test assumes system running with less than 32 cores.");
+  ASSERT_LT(GetCpuCount(), ZX_CPU_SET_BITS_PER_WORD,
+            "Test assumes system running with less than %d cores.", ZX_CPU_SET_BITS_PER_WORD);
   zx_profile_info_t profile_info = MakeCpuMaskProfile(1u << (GetCpuCount() + 1));
   zx::profile profile;
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*GetRootJob(), 0u, &profile_info, &profile));
@@ -262,7 +262,8 @@ zx_status_t RunThreadWithProfile(const zx::profile& profile,
 
 TEST(CpuMaskProfile, ApplyProfile) {
   const size_t num_cpus = GetCpuCount();
-  ASSERT_LT(num_cpus, sizeof(uint32_t) * 8, "Test assumes system running with less than 32 cores.");
+  ASSERT_LT(num_cpus, ZX_CPU_SET_BITS_PER_WORD,
+            "Test assumes system running with less than %d cores.", ZX_CPU_SET_BITS_PER_WORD);
   for (size_t i = 0; i < num_cpus; i++) {
     zx_profile_info_t profile_info = MakeCpuMaskProfile(1 << i);
     zx::profile profile;
