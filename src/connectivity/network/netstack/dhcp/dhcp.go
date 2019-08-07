@@ -21,6 +21,8 @@ type Config struct {
 	Gateway       tcpip.Address     // client default gateway
 	DNS           []tcpip.Address   // client DNS server addresses
 	LeaseLength   time.Duration     // length of the address lease
+	RenewalTime   time.Duration     // time until client enters RENEWING state
+	RebindingTime time.Duration     // time until client enters REBINDING state
 }
 
 func (cfg *Config) decode(opts []option) error {
@@ -34,6 +36,12 @@ func (cfg *Config) decode(opts []option) error {
 		case optLeaseTime:
 			t := binary.BigEndian.Uint32(b)
 			cfg.LeaseLength = time.Duration(t) * time.Second
+		case optRenewalTime:
+			t := binary.BigEndian.Uint32(b)
+			cfg.RenewalTime = time.Duration(t) * time.Second
+		case optRebindingTime:
+			t := binary.BigEndian.Uint32(b)
+			cfg.RebindingTime = time.Duration(t) * time.Second
 		case optSubnetMask:
 			cfg.SubnetMask = tcpip.AddressMask(b)
 		case optDHCPServer:
@@ -70,14 +78,21 @@ func (cfg Config) encode() (opts []option) {
 		opts = append(opts, option{optDomainNameServer, dns})
 	}
 	if l := cfg.LeaseLength / time.Second; l != 0 {
-		v := make([]byte, 4)
-		v[0] = byte(l >> 24)
-		v[1] = byte(l >> 16)
-		v[2] = byte(l >> 8)
-		v[3] = byte(l >> 0)
-		opts = append(opts, option{optLeaseTime, v})
+		opts = append(opts, serializeLeaseOption(l, optLeaseTime))
+	}
+	if r := cfg.RebindingTime / time.Second; r != 0 {
+		opts = append(opts, serializeLeaseOption(r, optRebindingTime))
+	}
+	if r := cfg.RenewalTime / time.Second; r != 0 {
+		opts = append(opts, serializeLeaseOption(r, optRenewalTime))
 	}
 	return opts
+}
+
+func serializeLeaseOption(d time.Duration, o optionCode) option {
+	v := make([]byte, 4)
+	binary.BigEndian.PutUint32(v, uint32(d))
+	return option{o, v}
 }
 
 const (
@@ -192,13 +207,16 @@ const (
 	optDHCPServer       optionCode = 54
 	optParamReq         optionCode = 55
 	optMessage          optionCode = 56
+	optRenewalTime      optionCode = 58
+	optRebindingTime    optionCode = 59
 	optClientID         optionCode = 61
 )
 
 func (code optionCode) lenValid(l int) bool {
 	switch code {
 	case optSubnetMask, optDefaultGateway,
-		optReqIPAddr, optLeaseTime, optDHCPServer:
+		optReqIPAddr, optLeaseTime, optDHCPServer,
+		optRenewalTime, optRebindingTime:
 		return l == 4
 	case optDHCPMsgType:
 		return l == 1

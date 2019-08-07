@@ -360,7 +360,9 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, oldSubnet, newS
 
 	name := ifs.ns.nameLocked(ifs.nicid)
 
-	if oldAddr != newAddr || oldSubnet != newSubnet {
+	if oldAddr == newAddr && oldSubnet == newSubnet {
+		syslog.Infof("NIC %s: DHCP renewed address %s/%d for %s", name, newAddr, newSubnet.Prefix(), config.LeaseLength)
+	} else {
 		if len(oldAddr) != 0 {
 			if err := ifs.ns.mu.stack.RemoveAddress(ifs.nicid, oldAddr); err != nil {
 				syslog.Infof("NIC %s: failed to remove expired DHCP address %s: %s", name, oldAddr, err)
@@ -378,7 +380,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, oldSubnet, newS
 			}, stack.FirstPrimaryEndpoint); err != nil {
 				syslog.Infof("NIC %s: failed to add DHCP acquired address %s: %s", name, newAddr, err)
 			} else {
-				syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, newAddr, config.LeaseLength)
+				syslog.Infof("NIC %s: DHCP acquired address %s/%d for %s", name, newAddr, newSubnet.Prefix(), config.LeaseLength)
 			}
 		} else {
 			syslog.Errorf("NIC %s: DHCP could not acquire address", name)

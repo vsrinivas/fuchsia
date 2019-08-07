@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
+	tcpipHeader "github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/udp"
@@ -298,7 +299,10 @@ func (s *Server) handleDiscover(hreq header, opts options) {
 	s.mu.Unlock()
 
 	// DHCPOFFER
-	opts = options{{optDHCPMsgType, []byte{byte(dhcpOFFER)}}}
+	opts = options{
+		{optDHCPMsgType, []byte{byte(dhcpOFFER)}},
+		{optDHCPServer, []byte(s.cfg.ServerAddress)},
+	}
 	opts = append(opts, s.cfgopts...)
 	h := make(header, headerBaseSize+opts.len()+1)
 	h.init()
@@ -339,7 +343,7 @@ func (s *Server) handleRequest(hreq header, opts options) {
 		s.nack(hreq)
 		return
 	}
-	if reqcfg.ServerAddress != s.cfg.ServerAddress {
+	if reqcfg.ServerAddress != s.cfg.ServerAddress && tcpip.Address(hreq.ciaddr()) == tcpipHeader.IPv4Any {
 		// This request is for a different DHCP server. Ignore it.
 		return
 	}
@@ -364,7 +368,10 @@ func (s *Server) handleRequest(hreq header, opts options) {
 	}
 
 	// DHCPACK
-	opts = []option{{optDHCPMsgType, []byte{byte(dhcpACK)}}}
+	opts = []option{
+		{optDHCPMsgType, []byte{byte(dhcpACK)}},
+		{optDHCPServer, []byte(s.cfg.ServerAddress)},
+	}
 	opts = append(opts, s.cfgopts...)
 	h := make(header, headerBaseSize+opts.len()+1)
 	h.init()
