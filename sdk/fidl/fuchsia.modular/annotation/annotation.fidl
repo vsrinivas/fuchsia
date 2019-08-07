@@ -1,0 +1,45 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+using fuchsia.mem;
+
+/// A user-defined annotation for a story or module.
+struct Annotation {
+    /// An identfier for this annotation.
+    AnnotationKey key;
+
+    /// The contents of this annotation.
+    AnnotationValue? value;
+};
+
+/// Maximum length of [`fuchsia.modular/AnnotationKey`].
+const uint32 MAX_ANNOTATION_KEY_LENGTH = 256;
+
+/// Maximum length of [`fuchsia.modular/AnnotationValue`] fields:
+/// `text` and `bytes`.
+const uint32 MAX_ANNOTATION_VALUE_LENGTH = 1024;
+
+/// Maximum length of the [`fuchsia.modular/AnnotationValue.buffer`] field, in
+/// bytes.
+///
+/// Does not apply to other fields; see [`MAX_ANNOTATION_VALUE_LENGTH`].
+const uint32 MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES = 102400;
+
+/// An identifier for an [`fuchsia.modular/Annotation`].
+using AnnotationKey = string:MAX_ANNOTATION_KEY_LENGTH;
+
+/// The value of a [`fuchsia.modular/Annotation`].
+///
+/// The actual field used depends on the type of annotation, which is
+/// user-defined, and not enforced by the framework.
+///
+/// The size of `buffer` is limited to
+/// `MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES` bytes.
+xunion AnnotationValue {
+    string:MAX_ANNOTATION_VALUE_LENGTH text;
+    vector<uint8>:MAX_ANNOTATION_VALUE_LENGTH bytes;
+    fuchsia.mem.Buffer buffer;
+};
