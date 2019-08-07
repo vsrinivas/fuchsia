@@ -40,7 +40,7 @@ class ScenicTest : public ::gtest::TestLoopFixture, public EventReporter {
   void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
   void EnqueueEvent(fuchsia::ui::scenic::Command event) override;
 
-  static std::unique_ptr<sys::ComponentContext> app_context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<Scenic> scenic_;
   std::vector<fuchsia::ui::scenic::Event> events_;
 };
