@@ -133,7 +133,7 @@ void Service::PublishService(gatt::ServerPtr* gatt_server) {
   hrcp.permissions = gatt::AttributePermissions::New();
   hrcp.permissions->write = gatt::SecurityRequirements::New();
 
-  fidl::VectorPtr<gatt::Characteristic> characteristics;
+  std::vector<gatt::Characteristic> characteristics;
   characteristics.push_back(std::move(hrm));
   characteristics.push_back(std::move(bsl));
   characteristics.push_back(std::move(hrcp));
@@ -161,7 +161,7 @@ void Service::NotifyMeasurement() {
                                               &measurement.energy_expended, nullptr);
 
   for (const auto& peer_id : measurement_peers_) {
-    service_->NotifyValue(0, peer_id, fidl::VectorPtr<uint8_t>(std::move(payload)), false);
+    service_->NotifyValue(0, peer_id, std::move(payload), false);
   }
 }
 
@@ -220,7 +220,7 @@ void Service::OnReadValue(uint64_t id, int32_t offset, OnReadValueCallback callb
   }
 
   // Body Sensor Location payload
-  fidl::VectorPtr<uint8_t> value;
+  std::vector<uint8_t> value;
   value.push_back(static_cast<uint8_t>(BodySensorLocation::kOther));
   callback(std::move(value), gatt::ErrorCode::NO_ERROR);
 }
