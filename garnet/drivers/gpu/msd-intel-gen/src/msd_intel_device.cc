@@ -271,9 +271,13 @@ void MsdIntelDevice::StartDeviceThread() {
       InterruptCallback, this, registers::MasterInterruptControl::kRenderInterruptsPendingBitMask);
 }
 
-void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_control) {
+void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_control,
+                                       uint64_t interrupt_timestamp) {
   DASSERT(data);
   auto device = reinterpret_cast<MsdIntelDevice*>(data);
+
+  device->last_interrupt_callback_timestamp_ = magma::get_monotonic_ns();
+  device->last_interrupt_timestamp_ = interrupt_timestamp;
 
   magma::RegisterIo* register_io = device->register_io_for_interrupt();
   uint64_t now = get_current_time_ns();
@@ -475,14 +479,20 @@ void MsdIntelDevice::HangCheckTimeout() {
       registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
     magma::log(magma::LOG_WARNING,
                "Hang check timeout while pending render interrupt; slow interrupt handler?\n"
-               "last submitted sequence number 0x%x master_interrupt_control 0x%08x\n%s",
-               progress_->last_submitted_sequence_number(), master_interrupt_control, s.c_str());
+               "last submitted sequence number 0x%x master_interrupt_control 0x%08x "
+               "last_interrupt_callback_timestamp %lu last_interrupt_timestamp %lu\n%s",
+               progress_->last_submitted_sequence_number(), master_interrupt_control,
+               last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load(),
+               s.c_str());
     return;
   }
   magma::log(magma::LOG_WARNING,
              "Suspected GPU hang: last submitted sequence number "
-             "0x%x master_interrupt_control 0x%08x\n%s",
-             progress_->last_submitted_sequence_number(), master_interrupt_control, s.c_str());
+             "0x%x master_interrupt_control 0x%08x last_interrupt_callback_timestamp %lu "
+             "last_interrupt_timestamp %lu\n%s",
+             progress_->last_submitted_sequence_number(), master_interrupt_control,
+             last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load(),
+             s.c_str());
   suspected_gpu_hang_count_ += 1;
   RenderEngineReset();
 }

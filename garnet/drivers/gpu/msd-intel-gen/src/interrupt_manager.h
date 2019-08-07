@@ -21,7 +21,8 @@ class InterruptManager {
 
   virtual ~InterruptManager() {}
 
-  using InterruptCallback = std::add_pointer_t<void(void* data, uint32_t master_interrupt_control)>;
+  using InterruptCallback =
+      std::add_pointer_t<void(void* data, uint32_t master_interrupt_control, uint64_t timestamp)>;
 
   virtual bool RegisterCallback(InterruptCallback callback, void* data,
                                 uint32_t interrupt_mask) = 0;

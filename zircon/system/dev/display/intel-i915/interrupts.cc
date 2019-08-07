@@ -30,6 +30,19 @@ void Interrupts::Destroy() {
 }
 
 int Interrupts::IrqLoop() {
+  zx_handle_t handle;
+  zx_status_t status =
+      device_get_profile(controller_->zxdev(), ZX_PRIORITY_HIGH, "i915-interrupt", &handle);
+  if (status != ZX_OK) {
+    LOG_ERROR("i915: device_get_profile failed: %d\n", status);
+    return -1;
+  }
+  status = zx_object_set_profile(zx_thread_self(), handle, 0u);
+  if (status != ZX_OK) {
+    LOG_ERROR("i915: zx_object_set_profile failed: %d\n", status);
+    return -1;
+  }
+
   for (;;) {
     zx_time_t timestamp;
     if (zx_interrupt_wait(irq_.get(), &timestamp) != ZX_OK) {
@@ -76,7 +89,7 @@ int Interrupts::IrqLoop() {
     {
       fbl::AutoLock lock(&lock_);
       if (interrupt_ctrl.reg_value() & interrupt_mask_) {
-        interrupt_cb_.callback(interrupt_cb_.ctx, interrupt_ctrl.reg_value());
+        interrupt_cb_.callback(interrupt_cb_.ctx, interrupt_ctrl.reg_value(), timestamp);
       }
     }
 

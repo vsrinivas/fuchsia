@@ -9,6 +9,7 @@
 #include <limits.h>  // PAGE_SIZE
 #include <stdarg.h>
 #include <stdio.h>
+#include <time.h>
 #include <unistd.h>
 
 // Files #including macros.h may assume that it #includes inttypes.h.
@@ -188,6 +189,15 @@ static inline int64_t ms_to_signed_ns(uint64_t ms) {
   if (ms > INT64_MAX / 1000000)
     return INT64_MAX;
   return static_cast<int64_t>(ms) * 1000000;
+}
+
+static inline uint64_t get_monotonic_ns() {
+  timespec time;
+  if (clock_gettime(CLOCK_MONOTONIC, &time) != 0) {
+    DASSERT(false);
+    return 0;
+  }
+  return static_cast<uint64_t>(time.tv_sec) * 1000000000ull + time.tv_nsec;
 }
 
 #define MAGMA_THREAD_ANNOTATION(x) __attribute__((x))

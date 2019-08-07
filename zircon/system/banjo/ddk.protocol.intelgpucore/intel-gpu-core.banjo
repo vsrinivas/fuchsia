@@ -12,7 +12,7 @@ const uint32 IMAGE_TYPE_YF_TILED = 3;
 
 [Layout="ddk-callback"]
 protocol ZxIntelGpuCoreInterrupt {
-    Callback(uint32 master_interrupt_control) -> ();
+    Callback(uint32 master_interrupt_control, uint64_t timestamp) -> ();
 };
 
 [Layout="ddk-protocol"]

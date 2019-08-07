@@ -348,9 +348,9 @@ class TestMsdIntelDevice {
     bool duplicate_handle(uint32_t* handle_out) override { return false; }
 
     void Signal() override {
-      signal_count_ += 1;
+      signal_sem_->Signal();
       if (pass_thru_) {
-        sem1_->Signal();
+        sem_->Signal();
       }
     }
 
@@ -359,16 +359,16 @@ class TestMsdIntelDevice {
     magma::Status WaitNoReset(uint64_t timeout_ms) override { return MAGMA_STATUS_UNIMPLEMENTED; }
 
     magma::Status Wait(uint64_t timeout_ms) override {
-      sem0_->Signal();
-      sem1_->Wait();
+      wait_sem_->Signal();
+      sem_->Wait();
       return wait_return_.load();
     }
 
     bool WaitAsync(magma::PlatformPort* platform_port) override { return false; }
 
-    std::unique_ptr<magma::PlatformSemaphore> sem0_ = magma::PlatformSemaphore::Create();
-    std::unique_ptr<magma::PlatformSemaphore> sem1_ = magma::PlatformSemaphore::Create();
-    std::atomic<uint64_t> signal_count_ = 0;
+    std::unique_ptr<magma::PlatformSemaphore> sem_ = magma::PlatformSemaphore::Create();
+    std::unique_ptr<magma::PlatformSemaphore> signal_sem_ = magma::PlatformSemaphore::Create();
+    std::unique_ptr<magma::PlatformSemaphore> wait_sem_ = magma::PlatformSemaphore::Create();
     std::atomic<uint64_t> wait_return_ = MAGMA_STATUS_OK;
     bool pass_thru_ = false;
   };
@@ -392,14 +392,12 @@ class TestMsdIntelDevice {
 
     // Wait for device thread to idle
     while (true) {
-      uint64_t signal_count = semaphore->signal_count_;
-      EXPECT_EQ(MAGMA_STATUS_OK, semaphore->sem0_->Wait(2000).get());
-      if (semaphore->signal_count_ == signal_count)
+      EXPECT_EQ(MAGMA_STATUS_OK, semaphore->wait_sem_->Wait(2000).get());
+      magma::Status status = semaphore->signal_sem_->Wait(2000);
+      if (status.get() == MAGMA_STATUS_TIMED_OUT)
         break;
-      semaphore->sem1_->Signal();
+      semaphore->sem_->Signal();
     }
-
-    printf("%s:%d\n", __FILE__, __LINE__);
 
     if (spurious) {
       // If work is enqueued then we should not hangcheck
@@ -407,23 +405,13 @@ class TestMsdIntelDevice {
     }
 
     semaphore->wait_return_ = MAGMA_STATUS_TIMED_OUT;
-    semaphore->sem1_->Signal();
-
-    // Wait for device thread to idle
-    while (true) {
-      uint64_t signal_count = semaphore->signal_count_;
-      EXPECT_EQ(MAGMA_STATUS_OK, semaphore->sem0_->Wait(2000).get());
-      if (semaphore->signal_count_ == signal_count)
-        break;
-      semaphore->sem1_->Signal();
-    }
-
+    semaphore->sem_->Signal();
+    EXPECT_EQ(MAGMA_STATUS_OK, semaphore->wait_sem_->Wait(2000).get());
     EXPECT_EQ(device->suspected_gpu_hang_count_.load(), spurious ? 0u : 1u);
 
-    // For device thread cleanup
-    semaphore->wait_return_ = MAGMA_STATUS_OK;
     semaphore->pass_thru_ = true;
-    device.reset();
+    semaphore->wait_return_ = MAGMA_STATUS_OK;
+    semaphore->sem_->Signal();
   }
 };
 

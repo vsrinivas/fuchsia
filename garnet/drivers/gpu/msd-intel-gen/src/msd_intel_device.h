@@ -161,7 +161,7 @@ class MsdIntelDevice : public msd_device_t,
 
   int DeviceThreadLoop();
   void FrequencyMonitorDeviceThreadLoop();
-  static void InterruptCallback(void* data, uint32_t master_interrupt_control);
+  static void InterruptCallback(void* data, uint32_t master_interrupt_control, uint64_t timestamp);
 
   void QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out);
 
@@ -186,6 +186,8 @@ class MsdIntelDevice : public msd_device_t,
   std::atomic_bool device_thread_quit_flag_{false};
   std::unique_ptr<GpuProgress> progress_;
   std::atomic_uint64_t suspected_gpu_hang_count_;
+  std::atomic_uint64_t last_interrupt_callback_timestamp_;
+  std::atomic_uint64_t last_interrupt_timestamp_;
 
   std::unique_ptr<MsdIntelPciDevice> platform_device_;
   std::unique_ptr<magma::RegisterIo> register_io_;
