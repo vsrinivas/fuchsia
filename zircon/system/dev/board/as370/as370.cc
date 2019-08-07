@@ -83,6 +83,9 @@ int As370::Thread() {
     if (LightInit() != ZX_OK) {
     }
   }
+  if (NandInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: NandInit() failed\n", __func__);
+  }
 
   return 0;
 }

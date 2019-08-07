@@ -327,6 +327,20 @@ TEST_F(DeviceEnumerationTest, As370Test) {
       "dwc2-usb",
       "audio-max98373",
       "as370-audio-out",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/cache/ftl/block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normal/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normalB/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/bl_normal/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/bl_normalB/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/boot/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/rootfs/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/recovery/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/fts/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/factory_store/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/key_1st/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/key_2nd/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_1st/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_2nd/skip-block",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

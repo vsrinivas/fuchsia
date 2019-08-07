@@ -9,6 +9,7 @@ driver("as370") {
     "as370-gpio.cc",
     "as370-i2c.cc",
     "as370-light.cc",
+    "as370-nand.cc",
     "as370-usb.cc",
     "as370.cc",
   ]

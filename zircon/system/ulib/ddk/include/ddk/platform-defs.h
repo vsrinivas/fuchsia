@@ -46,6 +46,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_USB_XHCI_COMPOSITE 31  // XHCI USB Controller, as a composite device
 #define PDEV_DID_SSD1306            32  // Oled Display
 #define PDEV_DID_CAMERA_CONTROLLER  33  // Camera Controller
+#define PDEV_DID_CADENCE_HPNFC      34  // Cadence NAND Flash controller
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1

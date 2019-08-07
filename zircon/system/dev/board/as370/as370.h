@@ -18,6 +18,7 @@ enum {
   BTI_BOARD,
   BTI_USB,
   BTI_AUDIO_OUT,
+  BTI_NAND,
 };
 
 class As370 : public ddk::Device<As370> {
@@ -40,6 +41,7 @@ class As370 : public ddk::Device<As370> {
   zx_status_t AudioInit();
   zx_status_t ClockInit();
   zx_status_t LightInit();
+  zx_status_t NandInit();
 
   const ddk::PBusProtocolClient pbus_;
   const pdev_board_info_t board_info_;

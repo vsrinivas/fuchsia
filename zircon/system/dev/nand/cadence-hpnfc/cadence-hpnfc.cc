@@ -1,0 +1,460 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "cadence-hpnfc.h"
+
+#include <endian.h>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/platform-defs.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <fbl/unique_ptr.h>
+#include <lib/device-protocol/pdev.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/time.h>
+
+#include "cadence-hpnfc-reg.h"
+
+namespace {
+
+// Row address bits 5 and below are the page address, 6 and above are the block address.
+constexpr uint32_t kBlockAddressIndex = 6;
+constexpr uint32_t kPagesPerBlock = 1 << kBlockAddressIndex;
+// Selects BCH correction strength 48 from BCH config registers.
+constexpr uint32_t kEccCorrectionStrength = 5;
+
+constexpr uint32_t kOobSize = 32;
+
+constexpr uint32_t kParameterPageSize = 256;
+static_assert(kParameterPageSize % sizeof(uint32_t) == 0);
+
+// These values were taken from the bootloader NAND driver.
+constexpr zx::duration kWaitDelay = zx::usec(50);
+constexpr uint32_t kTimeoutCount = 8000;
+
+inline uint32_t ReadParameterPage32(const uint8_t* buffer, uint32_t offset) {
+  const uint32_t* buffer32 = reinterpret_cast<const uint32_t*>(buffer);
+  ZX_DEBUG_ASSERT(offset % sizeof(uint32_t) == 0);
+  return letoh32(buffer32[offset / sizeof(uint32_t)]);
+}
+
+void PopulateNandInfo(const uint8_t* buffer, nand_info_t* nand_info) {
+  constexpr uint32_t kPageSizeOffset = 80;
+  constexpr uint32_t kPagesPerBlockOffset = 92;
+  constexpr uint32_t kBlocksPerLunOffset = 96;
+  constexpr uint32_t kLunsOffset = 100;
+  constexpr uint32_t kEccBitsCorrectabilityOffset = 112;
+
+  // TODO(bradenkell): Read the Extended ECC Information if this is 0xff.
+  ZX_DEBUG_ASSERT(buffer[kEccBitsCorrectabilityOffset] != 0xff);
+
+  nand_info->page_size = ReadParameterPage32(buffer, kPageSizeOffset);
+  nand_info->pages_per_block = ReadParameterPage32(buffer, kPagesPerBlockOffset);
+  nand_info->num_blocks = ReadParameterPage32(buffer, kBlocksPerLunOffset) * buffer[kLunsOffset];
+  nand_info->ecc_bits = buffer[kEccBitsCorrectabilityOffset];
+  nand_info->oob_size = kOobSize;
+  nand_info->nand_class = fuchsia_hardware_nand_Class_PARTMAP;
+  memset(nand_info->partition_guid, 0, sizeof(nand_info->partition_guid));
+
+  ZX_DEBUG_ASSERT(nand_info->page_size % sizeof(uint32_t) == 0);
+  ZX_DEBUG_ASSERT(nand_info->oob_size % sizeof(uint32_t) == 0);
+}
+
+}  // namespace
+
+namespace rawnand {
+
+// TODO(bradenkell): Use interrupts.
+// TODO(bradenkell): Use DMA.
+
+zx_status_t CadenceHpnfc::Create(void* ctx, zx_device_t* parent) {
+  ddk::PDev pdev(parent);
+  if (!pdev.is_valid()) {
+    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PLATFORM_DEVICE\n", __FILE__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  std::optional<ddk::MmioBuffer> mmio;
+  zx_status_t status = pdev.MapMmio(0, &mmio);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to map MMIO: %d\n", __FILE__, status);
+    return status;
+  }
+
+  std::optional<ddk::MmioBuffer> fifo_mmio;
+  if ((status = pdev.MapMmio(1, &fifo_mmio)) != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to map FIFO MMIO: %d\n", __FILE__, status);
+    return status;
+  }
+
+  zx::bti bti;
+  if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get BTI: %d\n", __FILE__, status);
+    return status;
+  }
+
+  fbl::AllocChecker ac;
+  auto device = fbl::make_unique_checked<CadenceHpnfc>(&ac, parent, *std::move(mmio),
+                                                       *std::move(fifo_mmio), std::move(bti));
+  if (!ac.check()) {
+    zxlogf(ERROR, "%s: Failed to allocate device memory\n", __FILE__);
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  if ((status = device->Init()) != ZX_OK) {
+    return status;
+  }
+
+  if ((status = device->DdkAdd("cadence-hpnfc")) != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __FILE__, status);
+    return status;
+  }
+
+  __UNUSED auto* dummy = device.release();
+  return ZX_OK;
+}
+
+bool CadenceHpnfc::WaitForRBn() {
+  auto rbn = RbnSettings::Get().ReadFrom(&mmio_);
+  for (uint32_t i = 0; !rbn.rbn() && i < kTimeoutCount; i++) {
+    zx::nanosleep(zx::deadline_after(kWaitDelay));
+    rbn.ReadFrom(&mmio_);
+  }
+  return rbn.rbn();
+}
+
+bool CadenceHpnfc::WaitForThread() {
+  auto reg = TrdStatus::Get().ReadFrom(&mmio_);
+  for (uint32_t i = 0; reg.thread_busy(0) && i < kTimeoutCount; i++) {
+    zx::nanosleep(zx::deadline_after(kWaitDelay));
+    reg.ReadFrom(&mmio_);
+  }
+  return !reg.thread_busy(0);
+}
+
+bool CadenceHpnfc::WaitForSdmaTrigger() {
+  auto intr_status = IntrStatus::Get().ReadFrom(&mmio_);
+  for (uint32_t i = 0; !intr_status.sdma_trigger() && i < kTimeoutCount; i++) {
+    zx::nanosleep(zx::deadline_after(kWaitDelay));
+    intr_status.ReadFrom(&mmio_);
+  }
+
+  intr_status.WriteTo(&mmio_);
+  return intr_status.sdma_trigger();
+}
+
+bool CadenceHpnfc::WaitForCommandComplete() {
+  auto cmd_status = CmdStatus::Get().ReadFrom(&mmio_);
+  for (uint32_t i = 0; !cmd_status.complete() && i < kTimeoutCount; i++) {
+    zx::nanosleep(zx::deadline_after(kWaitDelay));
+    cmd_status.ReadFrom(&mmio_);
+  }
+  return cmd_status.complete();
+}
+
+zx_status_t CadenceHpnfc::Init() {
+  CmdStatusPtr::Get().ReadFrom(&mmio_).set_thread_status_select(0).WriteTo(&mmio_);
+
+  IntrStatus::Get().ReadFrom(&mmio_).clear().WriteTo(&mmio_);
+
+  if (!WaitForThread())
+    return ZX_ERR_TIMED_OUT;
+
+  CmdReg1::Get().FromValue(0).WriteTo(&mmio_);
+  CmdReg0::Get()
+      .FromValue(0)
+      .set_command_type(CmdReg0::kCommandTypePio)
+      .set_thread_number(0)
+      .set_interrupt_enable(0)
+      .set_volume_id(0)
+      .set_command_code(CmdReg0::kCommandCodeReset)
+      .WriteTo(&mmio_);
+
+  if (!WaitForThread())
+    return ZX_ERR_TIMED_OUT;
+  if (!WaitForRBn())
+    return ZX_ERR_TIMED_OUT;
+
+  zx_status_t status = ReadDeviceParams();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // TODO(bradenkell): Check the NAND info we got against the corresponding values in the
+  //                   partition map metadata.
+
+  const uint64_t capacity = static_cast<uint64_t>(nand_info_.page_size) *
+                            nand_info_.pages_per_block * nand_info_.num_blocks;
+
+  zxlogf(INFO, "CadenceHpnfc: Found NAND device with capacity %ld bytes\n", capacity);
+
+  // TODO(bradenkell): Calculate the following values instead of hard coding them.
+
+  NfDevLayout::Get()
+      .FromValue(0)
+      .set_block_addr_idx(kBlockAddressIndex)
+      .set_lun_count(1)
+      .set_pages_per_block(kPagesPerBlock)
+      .WriteTo(&mmio_);
+
+  const uint32_t sector_size = nand_info_.page_size / 2;
+  TransferCfg0::Get().FromValue(0).set_sector_count(2).WriteTo(&mmio_);
+  TransferCfg1::Get()
+      .FromValue(0)
+      .set_last_sector_size(sector_size + nand_info_.oob_size)
+      .set_sector_size(sector_size)
+      .WriteTo(&mmio_);
+
+  EccConfig0::Get()
+      .FromValue(0)
+      .set_correction_strength(kEccCorrectionStrength)
+      .set_scrambler_enable(0)
+      .set_erase_detection_enable(1)
+      .set_ecc_enable(1)
+      .WriteTo(&mmio_);
+  EccConfig1::Get().FromValue(0).WriteTo(&mmio_);
+
+  return ZX_OK;
+}
+
+size_t CadenceHpnfc::CopyFromFifo(void* buffer, size_t size) {
+  const size_t word_count = size / sizeof(uint32_t);
+
+  if (buffer == nullptr) {
+    for (uint32_t i = 0; i < word_count; i++) {
+      fifo_mmio_.Read32(0);
+    }
+
+    return 0;
+  }
+
+  uint32_t* const word_buffer = reinterpret_cast<uint32_t*>(buffer);
+  for (uint32_t i = 0; i < word_count; i++) {
+    word_buffer[i] = fifo_mmio_.Read32(0);
+  }
+
+  return word_count;
+}
+
+void CadenceHpnfc::CopyToFifo(const void* buffer, size_t size) {
+  const size_t word_count = size / sizeof(uint32_t);
+
+  if (buffer == nullptr) {
+    for (uint32_t i = 0; i < word_count; i++) {
+      fifo_mmio_.Write32(0xffff'ffff, 0);
+    }
+  } else {
+    const uint32_t* const word_buffer = reinterpret_cast<const uint32_t*>(buffer);
+    for (uint32_t i = 0; i < word_count; i++) {
+      fifo_mmio_.Write32(word_buffer[i], 0);
+    }
+  }
+}
+
+zx_status_t CadenceHpnfc::ReadDeviceParams() {
+  if (!WaitForThread())
+    return ZX_ERR_TIMED_OUT;
+
+  IntrStatus::Get().ReadFrom(&mmio_).clear().WriteTo(&mmio_);
+
+  CmdReg1::Get().FromValue(0).WriteTo(&mmio_);
+  CmdReg2Command::Get()
+      .FromValue(0)
+      .set_instruction_type(kInstructionTypeReadParameterPage)
+      .WriteTo(&mmio_);
+  CmdReg3::Get().FromValue(0).WriteTo(&mmio_);
+  CmdReg0::Get().FromValue(0).set_command_type(CmdReg0::kCommandTypeGeneric).WriteTo(&mmio_);
+
+  if (!WaitForRBn())
+    return ZX_ERR_TIMED_OUT;
+
+  CmdReg1::Get().FromValue(0).WriteTo(&mmio_);
+  CmdReg2Data::Get().FromValue(0).set_instruction_type(kInstructionTypeData).WriteTo(&mmio_);
+  CmdReg3::Get()
+      .FromValue(0)
+      .set_last_sector_size(kParameterPageSize)
+      .set_sector_count(1)
+      .WriteTo(&mmio_);
+  CmdReg0::Get().FromValue(0).set_command_type(CmdReg0::kCommandTypeGeneric).WriteTo(&mmio_);
+
+  if (!WaitForSdmaTrigger())
+    return ZX_ERR_TIMED_OUT;
+
+  uint8_t parameter_page[kParameterPageSize];
+  CopyFromFifo(parameter_page, sizeof(parameter_page));
+
+  if (!WaitForThread())
+    return ZX_ERR_TIMED_OUT;
+  if (!WaitForRBn())
+    return ZX_ERR_TIMED_OUT;
+
+  PopulateNandInfo(parameter_page, &nand_info_);
+
+  return ZX_OK;
+}
+
+zx_status_t CadenceHpnfc::RawNandReadPageHwecc(uint32_t nandpage, void* out_data_buffer,
+                                               size_t data_size, size_t* out_data_actual,
+                                               void* out_oob_buffer, size_t oob_size,
+                                               size_t* out_oob_actual, uint32_t* out_ecc_correct) {
+  if (data_size < nand_info_.page_size || oob_size < nand_info_.oob_size) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!WaitForThread())
+    return ZX_ERR_TIMED_OUT;
+
+  IntrStatus::Get().ReadFrom(&mmio_).clear().WriteTo(&mmio_);
+
+  CmdReg1::Get().FromValue(0).set_address(nandpage).WriteTo(&mmio_);
+  CmdReg2Dma::Get().FromValue(0).WriteTo(&mmio_);
+  CmdReg3::Get().FromValue(0).WriteTo(&mmio_);
+  CmdReg0::Get()
+      .FromValue(0)
+      .set_command_type(CmdReg0::kCommandTypePio)
+      .set_dma_sel(0)
+      .set_command_code(CmdReg0::kCommandCodeReadPage)
+      .WriteTo(&mmio_);
+
+  if (!WaitForSdmaTrigger())
+    return ZX_ERR_TIMED_OUT;
+
+  const uint32_t sdma_size = SdmaSize::Get().ReadFrom(&mmio_).reg_value();
+  if (sdma_size != nand_info_.page_size + nand_info_.oob_size) {
+    zxlogf(ERROR, "%s: Expected %u bytes in FIFO, got %u\n", __FILE__,
+           nand_info_.page_size + nand_info_.oob_size, sdma_size);
+    return ZX_ERR_IO;
+  }
+
+  data_size = CopyFromFifo(out_data_buffer, nand_info_.page_size);
+  oob_size = CopyFromFifo(out_oob_buffer, nand_info_.oob_size);
+
+  auto cmd_status = CmdStatus::Get().ReadFrom(&mmio_);
+
+  if (out_data_actual != nullptr) {
+    *out_data_actual = data_size;
+  }
+  if (out_oob_actual != nullptr) {
+    *out_oob_actual = oob_size;
+  }
+  if (out_ecc_correct != nullptr) {
+    *out_ecc_correct = cmd_status.max_errors();
+  }
+
+  if (cmd_status.ecc_error()) {
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  } else if (cmd_status.bus_error() || cmd_status.fail() || cmd_status.dev_error() ||
+             cmd_status.cmd_error()) {
+    return ZX_ERR_IO;
+  }
+
+  if (!WaitForThread())
+    return ZX_ERR_TIMED_OUT;
+  if (!WaitForRBn())
+    return ZX_ERR_TIMED_OUT;
+
+  return ZX_OK;
+}
+
+zx_status_t CadenceHpnfc::RawNandWritePageHwecc(const void* data_buffer, size_t data_size,
+                                                const void* oob_buffer, size_t oob_size,
+                                                uint32_t nandpage) {
+  if (data_size < nand_info_.page_size || oob_size < nand_info_.oob_size) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!WaitForThread())
+    return ZX_ERR_TIMED_OUT;
+
+  IntrStatus::Get().ReadFrom(&mmio_).clear().WriteTo(&mmio_);
+
+  CmdReg1::Get().FromValue(0).set_address(nandpage).WriteTo(&mmio_);
+  CmdReg2Dma::Get().FromValue(0).WriteTo(&mmio_);
+  CmdReg3::Get().FromValue(0).WriteTo(&mmio_);
+  CmdReg0::Get()
+      .FromValue(0)
+      .set_command_type(CmdReg0::kCommandTypePio)
+      .set_dma_sel(0)
+      .set_command_code(CmdReg0::kCommandCodeProgramPage)
+      .WriteTo(&mmio_);
+
+  if (!WaitForSdmaTrigger())
+    return ZX_ERR_TIMED_OUT;
+
+  const uint32_t sdma_size = SdmaSize::Get().ReadFrom(&mmio_).reg_value();
+  if (SdmaSize::Get().ReadFrom(&mmio_).reg_value() != nand_info_.page_size + nand_info_.oob_size) {
+    zxlogf(ERROR, "%s: Expected %u bytes in FIFO, got %u\n", __FILE__,
+           nand_info_.page_size + nand_info_.oob_size, sdma_size);
+    return ZX_ERR_IO;
+  }
+
+  CopyToFifo(data_buffer, nand_info_.page_size);
+  CopyToFifo(oob_buffer, nand_info_.oob_size);
+
+  auto cmd_status = CmdStatus::Get().ReadFrom(&mmio_);
+  if (cmd_status.bus_error() || cmd_status.fail() || cmd_status.dev_error() ||
+      cmd_status.ecc_error() || cmd_status.cmd_error()) {
+    return ZX_ERR_IO;
+  }
+
+  if (!WaitForThread())
+    return ZX_ERR_TIMED_OUT;
+  if (!WaitForRBn())
+    return ZX_ERR_TIMED_OUT;
+
+  return ZX_OK;
+}
+
+zx_status_t CadenceHpnfc::RawNandEraseBlock(uint32_t nandpage) {
+  if (!WaitForThread())
+    return ZX_ERR_TIMED_OUT;
+
+  IntrStatus::Get().ReadFrom(&mmio_).clear().WriteTo(&mmio_);
+
+  CmdReg1::Get().FromValue(0).set_address(nandpage).WriteTo(&mmio_);
+  CmdReg2Dma::Get().FromValue(0).WriteTo(&mmio_);
+  CmdReg3::Get().FromValue(0).WriteTo(&mmio_);
+  CmdReg0::Get()
+      .FromValue(0)
+      .set_command_type(CmdReg0::kCommandTypePio)
+      .set_command_code(CmdReg0::kCommandCodeEraseBlock)
+      .WriteTo(&mmio_);
+
+  if (!WaitForCommandComplete())
+    return ZX_ERR_TIMED_OUT;
+  if (!WaitForThread())
+    return ZX_ERR_TIMED_OUT;
+  if (!WaitForRBn())
+    return ZX_ERR_TIMED_OUT;
+
+  auto cmd_status = CmdStatus::Get().ReadFrom(&mmio_);
+  if (cmd_status.bus_error() || cmd_status.fail() || cmd_status.dev_error() ||
+      cmd_status.max_errors() || cmd_status.ecc_error() || cmd_status.cmd_error()) {
+    return ZX_ERR_IO;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t CadenceHpnfc::RawNandGetNandInfo(nand_info_t* out_info) {
+  memcpy(out_info, &nand_info_, sizeof(nand_info_));
+  return ZX_OK;
+}
+
+}  // namespace rawnand
+
+static zx_driver_ops_t cadence_hpnfc_driver_ops = []() -> zx_driver_ops_t {
+  zx_driver_ops_t ops;
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = rawnand::CadenceHpnfc::Create;
+  return ops;
+}();
+
+ZIRCON_DRIVER_BEGIN(cadence_hpnfc, cadence_hpnfc_driver_ops, "zircon", "0.1", 2)
+  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_CADENCE_HPNFC),
+ZIRCON_DRIVER_END(cadence_hpnfc)
