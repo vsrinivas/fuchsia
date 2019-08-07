@@ -14,7 +14,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <fbl/unique_fd.h>
 #include <src/lib/fxl/macros.h>
 
 #include "garnet/lib/magma/include/magma_abi/magma.h"
@@ -69,7 +68,6 @@ class VirtioMagma : public VirtioMagmaGeneric,
       const virtio_magma_execute_command_buffer_with_resources_ctrl_t* request,
       virtio_magma_execute_command_buffer_with_resources_resp_t* response) override;
 
-  fbl::unique_fd device_fd_;
   zx::vmar vmar_;
   VirtioQueue out_queue_;
   fuchsia::virtualization::hardware::VirtioWaylandImporterSyncPtr wayland_importer_;

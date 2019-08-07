@@ -41,6 +41,8 @@ void VirtioMagma::Start(
   device_fd_ = fbl::unique_fd(open(kDevicePath, O_RDONLY));
   if (!device_fd_.is_valid()) {
     FXL_LOG(ERROR) << "Failed to open device at " << kDevicePath << ": " << strerror(errno);
+    deferred.cancel();
+    callback(ZX_ERR_NOT_FOUND);
     return;
   }
   deferred.cancel();

@@ -286,6 +286,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
           {"virtio-balloon", set_flag(&cfg_->virtio_balloon_, true)},
           {"virtio-console", set_flag(&cfg_->virtio_console_, true)},
           {"virtio-gpu", set_flag(&cfg_->virtio_gpu_, true)},
+          {"virtio-magma", set_flag(&cfg_->virtio_magma_, true)},
           {"virtio-net", set_flag(&cfg_->virtio_net_, true)},
           {"virtio-rng", set_flag(&cfg_->virtio_rng_, true)},
           {"virtio-vsock", set_flag(&cfg_->virtio_vsock_, true)},

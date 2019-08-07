@@ -40,6 +40,7 @@ def guards(begin):
 # Includes lists.
 def includes():
   ret = ''
+  ret += '#include <fbl/unique_fd.h>\n'
   ret += '#include <src/lib/fxl/macros.h>\n'
   ret += '#include <trace/event.h>\n'
   ret += '#include <zircon/status.h>\n'
@@ -109,6 +110,12 @@ def generate_handle_command(magma):
       FXL_LOG(ERROR) << "MAGMA command (" << command_type << ") response descriptor not writable";
       return ZX_ERR_INVALID_ARGS;
     }
+    if (!device_fd_.is_valid()) {
+      auto response_header = reinterpret_cast<virtio_magma_ctrl_hdr_t*>(response_desc.addr);
+      response_header->type = VIRTIO_MAGMA_RESP_ERR_HOST_DISCONNECTED;
+      chain.Return();
+      return ZX_OK;
+    }
     switch (command_type) {
 '''
   for export in magma['exports']:
@@ -175,6 +182,8 @@ def main():
       for export in magma['exports']:
         header += generate_generic_method(export) + '\n'
       header += generate_handle_command(magma) + '\n'
+      header += ' protected:\n'
+      header += '  fbl::unique_fd device_fd_;\n'
       header += '};\n'
       header += guards(False) + '\n'
       dest.write(header)

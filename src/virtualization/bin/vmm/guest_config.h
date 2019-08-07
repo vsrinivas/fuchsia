@@ -61,6 +61,7 @@ class GuestConfig {
   bool virtio_balloon() const { return virtio_balloon_; }
   bool virtio_console() const { return virtio_console_; }
   bool virtio_gpu() const { return virtio_gpu_; }
+  bool virtio_magma() const { return virtio_magma_; }
   bool virtio_net() const { return virtio_net_; }
   bool virtio_rng() const { return virtio_rng_; }
   bool virtio_vsock() const { return virtio_vsock_; }
@@ -79,6 +80,7 @@ class GuestConfig {
   bool virtio_balloon_ = true;
   bool virtio_console_ = true;
   bool virtio_gpu_ = true;
+  bool virtio_magma_ = true;
   bool virtio_net_ = true;
   bool virtio_rng_ = true;
   bool virtio_vsock_ = true;

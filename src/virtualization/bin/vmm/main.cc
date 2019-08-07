@@ -374,8 +374,12 @@ int main(int argc, char** argv) {
 
   // Setup magma device.
   VirtioMagma magma(guest.phys_mem());
-  if (launch_info.magma_device) {
-    size_t magma_dev_mem_size = launch_info.magma_device->memory;
+  if (launch_info.magma_device || cfg.virtio_magma()) {
+    // TODO(MAC-259): simplify vmm launch configs
+    size_t magma_dev_mem_size = 16 * 1024 * 1024 * 1024ull;
+    if (launch_info.magma_device) {
+      magma_dev_mem_size = launch_info.magma_device->memory;
+    }
     zx_gpaddr_t magma_dev_mem_offset = alloc_device_addr(magma_dev_mem_size);
     if (!dev_mem.AddRange(magma_dev_mem_offset, magma_dev_mem_size)) {
       FXL_PLOG(INFO, status) << "Could not reserve device memory range for magma device";
@@ -403,7 +407,9 @@ int main(int argc, char** argv) {
     }
     status = magma.Start(guest.object(), std::move(magma_vmar), std::move(wayland_importer_handle),
                          launcher.get(), device_loop.dispatcher());
-    if (status != ZX_OK) {
+    if (status == ZX_ERR_NOT_FOUND) {
+      FXL_LOG(INFO) << "Magma device not supported by host";
+    } else if (status != ZX_OK) {
       FXL_PLOG(INFO, status) << "Could not start magma device";
       return status;
     }
