@@ -26,8 +26,8 @@
 
 #include "lib/component/cpp/connect.h"
 #include "lib/ui/scenic/cpp/commands.h"
-#include "lib/ui/scenic/cpp/host_memory.h"
-#include "lib/ui/scenic/cpp/util/mesh_utils.h"
+#include "src/lib/ui/scenic/cpp/host_memory.h"
+#include "src/lib/ui/scenic/cpp/mesh_utils.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
@@ -142,7 +142,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
 
   std::vector<float> vertices(std::begin(kVertexBufferData), std::end(kVertexBufferData));
   std::vector<uint32_t> indices(std::begin(kIndexBufferData), std::end(kIndexBufferData));
-  auto cube_shape = mesh_utils::NewMeshWithVertices(session, vertices, indices);
+  auto cube_shape = scenic_util::NewMeshWithVertices(session, vertices, indices);
 
   cube_node_->SetShape(*cube_shape);
   // Raw vertex data has an edge length of 2, so we must scale by half of

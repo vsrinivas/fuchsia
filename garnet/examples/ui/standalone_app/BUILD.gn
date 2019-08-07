@@ -18,6 +18,7 @@ executable("standalone_app") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/lib/ui/scenic/cpp",
     "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",
   ]

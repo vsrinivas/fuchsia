@@ -14,7 +14,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/ui/scenic/cpp/commands.h>
-#include <lib/ui/scenic/cpp/host_memory.h>
+#include <src/lib/ui/scenic/cpp/host_memory.h>
 #include <lib/zx/time.h>
 #include <src/lib/fxl/logging.h>
 #include <string>
@@ -78,7 +78,7 @@ void App::InitCheckerboardMaterial(Material* uninitialized_material) {
   auto checkerboard_pixels = escher::image_utils::NewGradientPixels(
       checkerboard_width, checkerboard_height, &checkerboard_pixels_size);
 
-  HostMemory checkerboard_memory(session_.get(), checkerboard_pixels_size);
+  scenic_util::HostMemory checkerboard_memory(session_.get(), checkerboard_pixels_size);
   memcpy(checkerboard_memory.data_ptr(), checkerboard_pixels.get(), checkerboard_pixels_size);
 
   // Create an Image to wrap the checkerboard.
@@ -91,7 +91,8 @@ void App::InitCheckerboardMaterial(Material* uninitialized_material) {
   checkerboard_image_info.color_space = fuchsia::images::ColorSpace::SRGB;
   checkerboard_image_info.tiling = fuchsia::images::Tiling::LINEAR;
 
-  HostImage checkerboard_image(checkerboard_memory, 0, std::move(checkerboard_image_info));
+  scenic_util::HostImage checkerboard_image(checkerboard_memory, 0,
+                                            std::move(checkerboard_image_info));
 
   uninitialized_material->SetTexture(checkerboard_image.id());
 }

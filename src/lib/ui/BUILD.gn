@@ -4,7 +4,8 @@
 
 group("ui") {
   deps = [
-    "input-synthesis"
+    "input-synthesis",
+    "scenic/cpp",
   ]
 }
 

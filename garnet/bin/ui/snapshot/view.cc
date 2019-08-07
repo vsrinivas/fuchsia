@@ -6,7 +6,7 @@
 
 #include "garnet/lib/ui/gfx/resources/snapshot/version.h"
 #include "lib/fsl/vmo/vector.h"
-#include "lib/ui/scenic/cpp/host_memory.h"
+#include "src/lib/ui/scenic/cpp/host_memory.h"
 
 namespace snapshot {
 
@@ -128,7 +128,7 @@ void View::LoadMaterial(scenic::ShapeNode& shape_node, const snapshot::Node* fla
   } else if (flat_node->material_type() == snapshot::Material_Image) {
     auto image = static_cast<const snapshot::Image*>(flat_node->material());
 
-    scenic::HostMemory memory(session(), image->data()->Length());
+    scenic_util::HostMemory memory(session(), image->data()->Length());
     memcpy(memory.data_ptr(), image->data()->Data(), image->data()->Length());
 
     // Create an ImageInfo to wrap the memory.
@@ -140,7 +140,7 @@ void View::LoadMaterial(scenic::ShapeNode& shape_node, const snapshot::Node* fla
     image_info.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
     image_info.color_space = fuchsia::images::ColorSpace::SRGB;
     image_info.tiling = fuchsia::images::Tiling::LINEAR;
-    scenic::HostImage host_image(memory, 0, std::move(image_info));
+    scenic_util::HostImage host_image(memory, 0, std::move(image_info));
 
     scenic::Material material(session());
     material.SetTexture(host_image.id());
