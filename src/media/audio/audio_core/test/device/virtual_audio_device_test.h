@@ -36,20 +36,14 @@ class AtomicDeviceId {
 // This set of tests verifies asynchronous usage of AudioDeviceEnumerator.
 class VirtualAudioDeviceTest : public AudioDeviceTest {
  public:
-  // Per-test-suite set-up. Called before first test in this suite.
-  static void SetUpTestSuite() { VirtualAudioDeviceTest::ResetVirtualDevices(); }
-
-  // Per-test-suite tear-down. Called after last test in this suite.
-  static void TearDownTestSuite() { VirtualAudioDeviceTest::DisableVirtualDevices(); }
-
-  // Set up once when binary loaded; this is used at start/end of each suite.
-  static void SetControl(fuchsia::virtualaudio::ControlSyncPtr control_sync);
-  static void DisableVirtualDevices();
+  void EnableVirtualDevices();
+  void DisableVirtualDevices();
 
  protected:
-  static void ResetVirtualDevices();
-
   static void PopulateUniqueIdArr(bool is_input, uint8_t* unique_id_arr);
+
+  static void SetUpTestSuite();
+  static void TearDownTestSuite();
 
   void SetUp() override;
   void TearDown() override;

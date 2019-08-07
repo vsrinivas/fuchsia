@@ -104,7 +104,6 @@ executable("audio_device_tests_bin") {
   output_name = "audio_device_tests"
 
   sources = [
-    "device/audio_device_main.cc",
     "device/audio_device_test.cc",
     "device/audio_device_test.h",
     "device/virtual_audio_device_test.cc",
@@ -115,7 +114,7 @@ executable("audio_device_tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.virtualaudio",
-    "//src/lib/fxl/test:test_settings",
+    "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/test",
   ]
 }

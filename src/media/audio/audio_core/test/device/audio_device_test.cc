@@ -15,11 +15,6 @@
 
 namespace media::audio::test {
 
-//
-// AudioDeviceTest static variables
-//
-std::unique_ptr<sys::ComponentContext> AudioDeviceTest::startup_context_;
-
 uint16_t AudioDeviceTest::initial_input_device_count_ = kInvalidDeviceCount;
 uint16_t AudioDeviceTest::initial_output_device_count_ = kInvalidDeviceCount;
 uint64_t AudioDeviceTest::initial_input_default_ = ZX_KOID_INVALID;
@@ -34,11 +29,6 @@ uint32_t AudioDeviceTest::initial_output_gain_flags_ = 0;
 //
 
 // static
-void AudioDeviceTest::SetStartupContext(std::unique_ptr<sys::ComponentContext> startup_context) {
-  startup_context_ = std::move(startup_context);
-}
-
-// static
 // Convert 16-byte arr to equivalent 32-char str (as returned by get_devices).
 std::string AudioDeviceTest::PopulateUniqueIdStr(const std::array<uint8_t, 16>& unique_id) {
   char unique_id_chars[33];
@@ -51,9 +41,9 @@ std::string AudioDeviceTest::PopulateUniqueIdStr(const std::array<uint8_t, 16>& 
 }
 
 void AudioDeviceTest::SetUp() {
-  AudioTestBase::SetUp();
+  HermeticAudioTest::SetUp();
 
-  startup_context_->svc()->Connect(audio_dev_enum_.NewRequest());
+  environment()->ConnectToService(audio_dev_enum_.NewRequest());
   audio_dev_enum_.set_error_handler(ErrorHandler());
 }
 
@@ -61,7 +51,7 @@ void AudioDeviceTest::TearDown() {
   EXPECT_TRUE(audio_dev_enum_.is_bound());
   audio_dev_enum_.Unbind();
 
-  AudioTestBase::TearDown();
+  HermeticAudioTest::TearDown();
 }
 
 void AudioDeviceTest::ExpectCallback() {
@@ -71,7 +61,7 @@ void AudioDeviceTest::ExpectCallback() {
   received_gain_token_ = kInvalidDeviceToken;
   received_gain_info_ = kInvalidGainInfo;
 
-  AudioTestBase::ExpectCallback();
+  HermeticAudioTest::ExpectCallback();
 
   EXPECT_TRUE(audio_dev_enum_.is_bound());
 }
@@ -306,11 +296,6 @@ TEST_F(AudioDeviceTest, ReceivesGetDevicesCallback) {
 }
 
 TEST_F(AudioDeviceTest, GetDevicesHandlesLackOfDevices) {
-  if (HasPreExistingDevices()) {
-    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
-    return;
-  }
-
   uint16_t num_devs = kInvalidDeviceCount;
   audio_dev_enum_->GetDevices(
       CompletionCallback([&num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
@@ -322,19 +307,11 @@ TEST_F(AudioDeviceTest, GetDevicesHandlesLackOfDevices) {
 }
 
 TEST_F(AudioDeviceTest, GetDefaultInputDeviceHandlesLackOfDevices) {
-  if (HasPreExistingDevices()) {
-    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
-    return;
-  }
   RetrieveTokenUsingGetDefault(true);
   EXPECT_EQ(received_default_token_, ZX_KOID_INVALID);
 }
 
 TEST_F(AudioDeviceTest, GetDefaultOutputDeviceHandlesLackOfDevices) {
-  if (HasPreExistingDevices()) {
-    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
-    return;
-  }
   RetrieveTokenUsingGetDefault(false);
   EXPECT_EQ(received_default_token_, ZX_KOID_INVALID);
 }

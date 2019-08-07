@@ -21,28 +21,6 @@ namespace media::audio::test {
 fuchsia::virtualaudio::ControlSyncPtr VirtualAudioDeviceTest::control_sync_;
 AtomicDeviceId VirtualAudioDeviceTest::sequential_devices_;
 
-// VirtualAudioDeviceTest static methods
-//
-// static
-void VirtualAudioDeviceTest::SetControl(fuchsia::virtualaudio::ControlSyncPtr control_sync) {
-  VirtualAudioDeviceTest::control_sync_ = std::move(control_sync);
-}
-
-// static
-void VirtualAudioDeviceTest::ResetVirtualDevices() {
-  uint32_t num_inputs = 1, num_outputs = 1;
-  ASSERT_EQ(control_sync_->GetNumDevices(&num_inputs, &num_outputs), ZX_OK);
-
-  if (num_inputs > 0 || num_outputs > 0) {
-    VirtualAudioDeviceTest::DisableVirtualDevices();
-  }
-
-  ASSERT_EQ(control_sync_->Enable(), ZX_OK);
-}
-
-// static
-void VirtualAudioDeviceTest::DisableVirtualDevices() { ASSERT_EQ(control_sync_->Disable(), ZX_OK); }
-
 // static
 // Generate a unique id array for each virtual device created during the
 // lifetime of this binary. In the MSB (byte [0]), place F0 for output device or
@@ -64,24 +42,37 @@ void VirtualAudioDeviceTest::PopulateUniqueIdArr(bool is_input, uint8_t* unique_
   unique_id_arr[15] = sequential_value & 0x0FF;
 }
 
+void VirtualAudioDeviceTest::SetUpTestSuite() {
+  AudioDeviceTest::SetUpTestSuite();
+  environment()->ConnectToService(control_sync_.NewRequest());
+  control_sync_->Enable();
+}
+
+void VirtualAudioDeviceTest::TearDownTestSuite() {
+  ASSERT_TRUE(control_sync_.is_bound());
+  control_sync_->Disable();
+  AudioDeviceTest::TearDownTestSuite();
+}
+
 //
 // VirtualAudioDeviceTest implementation
 //
-// TODO(mpuryear): delete preexisting device-settings files, in SetUp?
 void VirtualAudioDeviceTest::SetUp() {
   AudioDeviceTest::SetUp();
 
-  startup_context_->svc()->Connect(input_.NewRequest());
+  environment()->ConnectToService(input_.NewRequest());
   input_.set_error_handler(ErrorHandler());
-  startup_context_->svc()->Connect(input_2_.NewRequest());
+  environment()->ConnectToService(input_2_.NewRequest());
   input_2_.set_error_handler(ErrorHandler());
 
-  startup_context_->svc()->Connect(output_.NewRequest());
+  environment()->ConnectToService(output_.NewRequest());
   output_.set_error_handler(ErrorHandler());
-  startup_context_->svc()->Connect(output_2_.NewRequest());
+  environment()->ConnectToService(output_2_.NewRequest());
   output_2_.set_error_handler(ErrorHandler());
 
-  RetrievePreExistingDevices();
+  // Enable virtual devices and assert there are none that already exist. Any virtual devices that
+  // may exist here would indicate a failure to cleanup from a previous test case.
+  ASSERT_FALSE(HasPreExistingDevices());
 }
 
 void VirtualAudioDeviceTest::TearDown() {
@@ -96,7 +87,6 @@ void VirtualAudioDeviceTest::TearDown() {
   output_2_.Unbind();
 
   WaitForVirtualDeviceDepartures();
-
   AudioDeviceTest::TearDown();
 }
 
@@ -418,11 +408,6 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceUsingAddGetDevices(bool is_inpu
 //
 // From no-devices, GetDefault should recognize an added device as new default.
 void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterAdd(bool is_input) {
-  if (HasPreExistingDevices()) {
-    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
-    return;
-  }
-
   SetOnDefaultDeviceChangedEvent();
   std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
@@ -445,11 +430,6 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterAdd(bool is_input) {
 // From no-devices, adding an unplugged device should not make it the new
 // default.
 void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnpluggedAdd(bool is_input) {
-  if (HasPreExistingDevices()) {
-    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
-    return;
-  }
-
   SetOnDeviceAddedEvent();
   std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
@@ -927,11 +907,6 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterUnplug(bool is_input) {
 // Conditions: first Add, last Remove, subsequent Add, important Remove,
 // unimportant Remove, Add(unplugged), plug change
 void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterAdd(bool is_input) {
-  if (HasPreExistingDevices()) {
-    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
-    return;
-  }
-
   SetOnDeviceAddedEvent();
   SetOnDefaultDeviceChangedEvent();
 

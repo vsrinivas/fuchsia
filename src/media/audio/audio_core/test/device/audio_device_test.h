@@ -10,7 +10,7 @@
 
 #include <cmath>
 
-#include "src/media/audio/lib/test/audio_test_base.h"
+#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
 
@@ -34,10 +34,7 @@ const fuchsia::media::AudioDeviceInfo kInvalidDeviceInfo = {
     .gain_info = kInvalidGainInfo,
     .is_default = true};
 
-class AudioDeviceTest : public AudioTestBase {
- public:
-  static void SetStartupContext(std::unique_ptr<sys::ComponentContext> startup_context);
-
+class AudioDeviceTest : public HermeticAudioTest {
  protected:
   static std::string PopulateUniqueIdStr(const std::array<uint8_t, 16>& unique_id);
 
@@ -78,8 +75,6 @@ class AudioDeviceTest : public AudioTestBase {
   static float initial_output_gain_db_;
   static uint32_t initial_input_gain_flags_;
   static uint32_t initial_output_gain_flags_;
-
-  static std::unique_ptr<sys::ComponentContext> startup_context_;
 
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
 

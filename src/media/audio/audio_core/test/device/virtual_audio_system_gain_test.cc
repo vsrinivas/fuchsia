@@ -19,9 +19,6 @@ namespace media::audio::test {
 //
 // These tests verifies async usage of AudioDeviceEnumerator w/SystemGain.
 class VirtualAudioSystemGainTest : public VirtualAudioDeviceTest {
- public:
-  static void TearDownTestSuite() { VirtualAudioDeviceTest::DisableVirtualDevices(); }
-
  protected:
   void SetUp() override;
   void TearDown() override;
@@ -50,7 +47,7 @@ class VirtualAudioSystemGainTest : public VirtualAudioDeviceTest {
 void VirtualAudioSystemGainTest::SetUp() {
   VirtualAudioDeviceTest::SetUp();
 
-  startup_context_->svc()->Connect(audio_core_.NewRequest());
+  environment()->ConnectToService(audio_core_.NewRequest());
   audio_core_.set_error_handler(ErrorHandler());
 
   audio_core_.events().SystemGainMuteChanged =
