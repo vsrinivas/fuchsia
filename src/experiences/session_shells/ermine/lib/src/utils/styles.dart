@@ -15,6 +15,21 @@ class ErmineStyle {
     textTheme: TextTheme(),
   );
 
+  /// Background color.
+  static Color kBackgroundColor = Colors.black;
+
+  /// Story title color.
+  static Color kStoryTitleColor = Colors.white;
+
+  /// Story title background color.
+  static Color kStoryTitleBackgroundColor = kBackgroundColor;
+
+  /// Story title height.
+  static double kStoryTitleHeight = 24;
+
+  /// Story border width.
+  static double kBorderWidth = 0;
+
   /// Screen animation duration in milliseconds. Applies to story fullscreen
   /// transitions, topbar and overview.
   static Duration kScreenAnimationDuration = Duration(milliseconds: 550);

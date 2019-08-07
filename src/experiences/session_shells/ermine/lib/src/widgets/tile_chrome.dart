@@ -5,11 +5,10 @@
 import 'package:flutter/material.dart';
 
 import '../utils/elevations.dart';
+import '../utils/styles.dart';
 
 /// Defines a widget that builds the tile chrome for a story.
 class TileChrome extends StatelessWidget {
-  static const _kBorderSize = 20.0;
-
   final bool focused;
   final bool editing;
   final bool showTitle;
@@ -61,9 +60,14 @@ class TileChrome extends StatelessWidget {
           Positioned.fill(
             child: Container(
               padding: showTitle && !fullscreen
-                  ? EdgeInsets.all(_kBorderSize)
+                  ? EdgeInsets.only(
+                      top: ErmineStyle.kStoryTitleHeight,
+                      left: ErmineStyle.kBorderWidth,
+                      right: ErmineStyle.kBorderWidth,
+                      bottom: ErmineStyle.kBorderWidth,
+                    )
                   : null,
-              color: focused ? Colors.white : Colors.grey,
+              color: ErmineStyle.kStoryTitleBackgroundColor,
               child: ClipRect(
                 child: child ?? Container(color: Colors.transparent),
               ),
@@ -75,12 +79,12 @@ class TileChrome extends StatelessWidget {
             left: 0,
             top: 0,
             right: 0,
-            height: _kBorderSize,
+            height: ErmineStyle.kStoryTitleHeight,
             child: showTitle
                 ? fullscreen // Display title bar on top of story.
                     ? Material(
                         elevation: elevations.systemOverlayElevation,
-                        color: focused ? Colors.white : Colors.grey,
+                        color: ErmineStyle.kStoryTitleBackgroundColor,
                         child: _buildTitlebar(context),
                       )
                     : _buildTitlebar(context)
@@ -108,9 +112,15 @@ class TileChrome extends StatelessWidget {
   Widget _buildTitlebar(BuildContext context) => Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          Padding(
-            padding: EdgeInsets.only(left: 8),
-          ),
+          if (editing)
+            Padding(
+              padding: EdgeInsets.only(left: 8),
+            ),
+
+          // Minimize button.
+          if (!editing && focused)
+            _buildIconButton(
+                context, false, fullscreen ? onMinimize : onDelete),
 
           // Cancel edit button.
           if (editing)
@@ -124,27 +134,9 @@ class TileChrome extends StatelessWidget {
             child: _buildTitleBarTextButton(context, name ?? '<>', onEdit),
           ),
 
-          // Minimize button.
-          if (!editing)
-            _buildIconButton(context, Icons.remove, onMinimize),
-
-          if (!editing)
-            Padding(
-              padding: EdgeInsets.only(left: 8),
-            ),
-
           // Maximize button.
-          if (!editing)
-            _buildIconButton(context, Icons.add, onFullscreen),
-
-          if (!editing)
-            Padding(
-              padding: EdgeInsets.only(left: 8),
-            ),
-
-          // Close button.
-          if (!editing)
-            _buildIconButton(context, Icons.clear, onDelete),
+          if (!editing && focused)
+            _buildIconButton(context, true, onFullscreen),
 
           // Done edit button.
           if (editing)
@@ -153,9 +145,10 @@ class TileChrome extends StatelessWidget {
               onConfirmEdit?.call();
             }),
 
-          Padding(
-            padding: EdgeInsets.only(left: 8),
-          ),
+          if (editing)
+            Padding(
+              padding: EdgeInsets.only(left: 8),
+            ),
         ],
       );
 
@@ -173,21 +166,24 @@ class TileChrome extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .caption
-                .copyWith(color: focused ? Colors.black : Colors.white),
+                .copyWith(color: ErmineStyle.kStoryTitleColor),
           ),
         ),
       );
 
   Widget _buildIconButton(
     BuildContext context,
-    IconData icon,
+    bool maximize,
     VoidCallback onTap,
   ) =>
       GestureDetector(
-        child: Icon(
-          icon,
-          size: _kBorderSize,
-          color: focused ? Colors.black : Colors.white,
+        child: Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: ErmineStyle.kStoryTitleColor,
+            shape: maximize ? BoxShape.rectangle : BoxShape.circle,
+          ),
         ),
         onTap: onTap?.call,
       );

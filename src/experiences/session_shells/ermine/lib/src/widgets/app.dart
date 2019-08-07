@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 
 import '../models/app_model.dart';
+import '../utils/styles.dart';
 
 import 'ask/ask_container.dart';
 import 'clusters.dart';
@@ -22,20 +23,11 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          textTheme: Theme.of(context).primaryTextTheme.copyWith(
-                body1: TextStyle(
-                  fontFamily: 'RobotoMono',
-                  fontWeight: FontWeight.w400,
-                  fontSize: 24.0,
-                  color: Colors.white,
-                ),
-              ),
-        ),
+        theme: ErmineStyle.kErmineTheme,
         home: Builder(
           builder: (BuildContext context) {
             return Material(
-              color: model.backgroundColor,
+              color: ErmineStyle.kBackgroundColor,
               child: Stack(
                 fit: StackFit.expand,
                 overflow: Overflow.visible,
