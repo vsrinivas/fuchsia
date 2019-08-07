@@ -209,7 +209,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   std::unique_ptr<InspectManager> inspect_manager_;
 };
 
-TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
+TEST_F(CrashpadAgentTest, Succeed_OnNativeException) {
   zx::job job;
   zx::port exception_port;
   zx::process process;
@@ -263,7 +263,7 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
   job.kill();
 }
 
-TEST_F(CrashpadAgentTest, OnManagedRuntimeException_Dart_Basic) {
+TEST_F(CrashpadAgentTest, Succeed_OnDartException) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   GenericException exception = {};
   const std::string type = "FileSystemException";
@@ -286,7 +286,7 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_Dart_Basic) {
   CheckAttachments({"DartError"});
 }
 
-TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
+TEST_F(CrashpadAgentTest, Succeed_OnUnknownManagedRuntimeLanguageException) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   UnknownException exception;
   ASSERT_TRUE(fsl::VmoFromString("#0", &exception.data));
@@ -305,7 +305,7 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
   CheckAttachments({"data"});
 }
 
-TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
+TEST_F(CrashpadAgentTest, Succeed_OnKernelPanicCrashLog) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   fuchsia::mem::Buffer crash_log;
   ASSERT_TRUE(fsl::VmoFromString("ZIRCON KERNEL PANIC", &crash_log));
@@ -321,7 +321,7 @@ TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
-TEST_F(CrashpadAgentTest, PruneDatabase_ZeroSize) {
+TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   // We reset the agent with a max database size of 0, meaning reports will get cleaned up before
   // the end of the |agent_| call.
@@ -353,7 +353,7 @@ std::string GenerateString(const uint64_t string_size_in_kb) {
   return str;
 }
 
-TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
+TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSizeForOnlyOneReport) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   // We reset the agent with a max database size equivalent to the expected size of a report plus
   // the value of an especially large attachment.
@@ -393,7 +393,7 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
               testing::Not(testing::UnorderedElementsAreArray(attachment_subdirs)));
 }
 
-TEST_F(CrashpadAgentTest, AnalysisFailOnFailedUpload) {
+TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   ResetAgent(
       Config{/*crashpad_database=*/
@@ -413,7 +413,7 @@ TEST_F(CrashpadAgentTest, AnalysisFailOnFailedUpload) {
   EXPECT_TRUE(RunOneCrashAnalysis().is_err());
 }
 
-TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoUpload) {
+TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   ResetAgent(Config{/*crashpad_database=*/
                     {
@@ -431,7 +431,7 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoUpload) {
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
 }
 
-TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackAttachments) {
+TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAttachments) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
   // The only attachment should be the one from the crash analysis as no feedback data attachments
@@ -439,12 +439,12 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackAttachments) {
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
-TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackAnnotations) {
+TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAnnotations) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAnnotation>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
 }
 
-TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackData) {
+TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackData) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
   // The only attachment should be the one from the crash analysis as no feedback data will be
@@ -452,7 +452,7 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackData) {
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
-TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackDataProvider) {
+TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
   ResetFeedbackDataProvider(nullptr);
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
@@ -461,7 +461,7 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackDataProvider) {
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
-TEST_F(CrashpadAgentTest, AnalysisSucceedOnFeedbackDataProviderTakingTooLong) {
+TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
   // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
   // set it arbitrary long.
@@ -489,20 +489,17 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnFeedbackDataProviderTakingTooLong) {
   CheckAttachments({"kernel_panic_crash_log"});
 }
 
-TEST_F(CrashpadAgentTest, OneFeedbackDataProviderConnectionPerAnalysis) {
+TEST_F(CrashpadAgentTest, Check_OneFeedbackDataProviderConnectionPerAnalysis) {
   // We use a stub that returns no data as we are not interested in the payload, just the number of
   // different connections to the stub.
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
 
   const size_t num_calls = 5u;
-  std::vector<Analyzer_OnKernelPanicCrashLog_Result> out_results;
   for (size_t i = 0; i < num_calls; i++) {
     fuchsia::mem::Buffer crash_log;
     FXL_CHECK(fsl::VmoFromString("irrelevant, just not empty", &crash_log));
     agent_->OnKernelPanicCrashLog(std::move(crash_log),
-                                  [&out_results](Analyzer_OnKernelPanicCrashLog_Result result) {
-                                    out_results.push_back(std::move(result));
-                                  });
+                                  [](Analyzer_OnKernelPanicCrashLog_Result result) {});
   }
   ASSERT_TRUE(RunLoopUntilIdle());
 
@@ -510,8 +507,8 @@ TEST_F(CrashpadAgentTest, OneFeedbackDataProviderConnectionPerAnalysis) {
   EXPECT_EQ(current_num_feedback_data_provider_bindings(), 0u);
 }
 
-TEST_F(CrashpadAgentTest, ReportIsReflectedInInspect) {
-  RunOneCrashAnalysis();
+TEST_F(CrashpadAgentTest, Check_InspectStateAfterSuccessfulUpload) {
+  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
 
   EXPECT_THAT(*inspect_node_.children(), testing::ElementsAre("kernel"));
 
@@ -533,6 +530,8 @@ TEST_F(CrashpadAgentTest, ReportIsReflectedInInspect) {
   EXPECT_EQ(1u, props->size());
   EXPECT_EQ("creation_time", props->front().key);
 
+  // Upload is enabled so we expect crash server-related properties.
+  //
   // Report node contains a child "crash_server" node with "id" and "creation_time" properties.
   EXPECT_THAT(*report->GetChildren(), testing::ElementsAre("crash_server"));
   std::shared_ptr<component::Object> crash_server = report->GetChild("crash_server");
