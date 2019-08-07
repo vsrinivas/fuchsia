@@ -58,14 +58,14 @@ static const pbus_bti_t thermal_btis[] = {
     },
 };
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(uint32_t temp_c,
+constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
                                                                     int32_t cpu_opp,
                                                                     int32_t gpu_opp) {
-  constexpr uint32_t kHysteresis = 2;
+  constexpr float kHysteresis = 2.0f;
 
   return {
-      .up_temp = temp_c + kHysteresis,
-      .down_temp = temp_c - kHysteresis,
+      .up_temp_celsius = temp_c + kHysteresis,
+      .down_temp_celsius = temp_c - kHysteresis,
       .fan_level = 0,
       .big_cluster_dvfs_opp = cpu_opp,
       .little_cluster_dvfs_opp = 0,
@@ -106,14 +106,14 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo aml_sherlock_config = {
     .gpu_throttling                     = true,
     .num_trip_points                    = 7,
     .big_little                         = false,
-    .critical_temp                      = 102,
+    .critical_temp_celsius              = 102.0f,
     .trip_point_info                    = {
-        TripPoint(55, 10, 4),
-        TripPoint(75, 9, 4),
-        TripPoint(80, 7, 3),
-        TripPoint(90, 6, 3),
-        TripPoint(95, 5, 3),
-        TripPoint(100, 4, 2),
+        TripPoint(55.0f, 10, 4),
+        TripPoint(75.0f, 9, 4),
+        TripPoint(80.0f, 7, 3),
+        TripPoint(90.0f, 6, 3),
+        TripPoint(95.0f, 5, 3),
+        TripPoint(100.0f, 4, 2),
     },
     .opps = {},
 };

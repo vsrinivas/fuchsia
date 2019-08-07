@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 
+#include <cmath>
+
 #include <fbl/unique_fd.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/fdio/fdio.h>
@@ -20,9 +22,11 @@ namespace cobalt {
 
 TemperatureFetcherImpl::TemperatureFetcherImpl() { GetDeviceHandle(); }
 
-TemperatureFetchStatus TemperatureFetcherImpl::FetchTemperature(uint32_t *temperature) {
+TemperatureFetchStatus TemperatureFetcherImpl::FetchTemperature(int32_t *temperature) {
+  float temperature_float;
   zx_status_t status, status2;
-  status = fuchsia_hardware_thermal_DeviceGetTemperature(channel_.get(), &status2, temperature);
+  status = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(channel_.get(), &status2,
+                                                                &temperature_float);
   if (status == ZX_ERR_NOT_SUPPORTED || status2 == ZX_ERR_NOT_SUPPORTED ||
       status == ZX_ERR_BAD_HANDLE || status2 == ZX_ERR_BAD_HANDLE) {
     FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Temperature fetching not supported: "
@@ -33,6 +37,8 @@ TemperatureFetchStatus TemperatureFetcherImpl::FetchTemperature(uint32_t *temper
                    << zx_status_get_string(status) << " " << zx_status_get_string(status2);
     return TemperatureFetchStatus::FAIL;
   }
+  // Round to the nearest degree.
+  *temperature = static_cast<int32_t>(std::round(temperature_float));
   TRACE_COUNTER("system_metrics", "temperature", 0, "temperature", *temperature);
   return TemperatureFetchStatus::SUCCEED;
 }

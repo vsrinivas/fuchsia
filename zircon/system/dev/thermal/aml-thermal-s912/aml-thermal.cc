@@ -131,8 +131,8 @@ zx_status_t AmlThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_d
   return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, status, &opps);
 }
 
-zx_status_t AmlThermal::GetTemperature(fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetTemperature_reply(txn, ZX_OK, temperature_);
+zx_status_t AmlThermal::GetTemperatureCelsius(fidl_txn_t* txn) {
+  return fuchsia_hardware_thermal_DeviceGetTemperatureCelsius_reply(txn, ZX_OK, temperature_);
 }
 
 zx_status_t AmlThermal::GetStateChangeEvent(fidl_txn_t* txn) {
@@ -146,8 +146,8 @@ zx_status_t AmlThermal::GetStateChangePort(fidl_txn_t* txn) {
   return fuchsia_hardware_thermal_DeviceGetStateChangePort_reply(txn, status, dup.release());
 }
 
-zx_status_t AmlThermal::SetTrip(uint32_t id, uint32_t temp, fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, ZX_ERR_NOT_SUPPORTED);
+zx_status_t AmlThermal::SetTripCelsius(uint32_t id, float temp, fidl_txn_t* txn) {
+  return fuchsia_hardware_thermal_DeviceSetTripCelsius_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t AmlThermal::GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
@@ -325,23 +325,27 @@ int AmlThermal::Worker() {
   }
 
   do {
-    status = scpi_.GetSensorValue(sensor_id_, &temperature_);
+    uint32_t temp_integer = 0;
+    status = scpi_.GetSensorValue(sensor_id_, &temp_integer);
     if (status != ZX_OK) {
       THERMAL_ERROR("could not read temperature: %d\n", status);
       return status;
     }
 
+    temperature_ = static_cast<float>(temp_integer);
+
     signal = true;
-    if (trip_pt != trip_limit && temperature_ >= info_.trip_point_info[trip_pt + 1].up_temp) {
+    if (trip_pt != trip_limit &&
+        temperature_ >= info_.trip_point_info[trip_pt + 1].up_temp_celsius) {
       trip_pt++;  // Triggered next trip point.
-    } else if (trip_pt && temperature_ < info_.trip_point_info[trip_pt].down_temp) {
+    } else if (trip_pt && temperature_ < info_.trip_point_info[trip_pt].down_temp_celsius) {
       if (trip_pt == trip_limit) {
         // A prev trip point triggered, so the temperature is falling
         // down below the critical temperature.  Make a note of that.
         crit = false;
       }
       trip_pt--;  // Triggered prev trip point.
-    } else if (trip_pt == trip_limit && temperature_ >= info_.critical_temp && !crit) {
+    } else if (trip_pt == trip_limit && temperature_ >= info_.critical_temp_celsius && !crit) {
       // The device temperature is crossing the critical temperature, set
       // the CPU freq to the lowest possible setting to ensure the
       // temperature doesn't rise any further.

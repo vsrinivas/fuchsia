@@ -22,7 +22,7 @@ class AmlTSensor {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlTSensor);
   AmlTSensor() {}
-  uint32_t ReadTemperature();
+  float ReadTemperatureCelsius();
   zx_status_t InitSensor(zx_device_t* parent,
                          fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config);
   zx_status_t GetStateChangePort(zx_handle_t* port);
@@ -31,9 +31,9 @@ class AmlTSensor {
  private:
   int TripPointIrqHandler();
   zx_status_t InitPdev(zx_device_t* parent);
-  uint32_t TempToCode(uint32_t temp, bool trend);
-  uint32_t CodeToTemp(uint32_t temp_code);
-  void SetRebootTemperature(uint32_t temp);
+  uint32_t TempCelsiusToCode(float temp_c, bool trend);
+  float CodeToTempCelsius(uint32_t temp_code);
+  void SetRebootTemperatureCelsius(uint32_t temp_c);
   zx_status_t InitTripPoints();
   zx_status_t NotifyThermalDaemon();
   void UpdateFallThresholdIrq(uint32_t irq);

@@ -191,9 +191,9 @@ zx_status_t AmlThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_d
   return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 
-zx_status_t AmlThermal::GetTemperature(fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetTemperature_reply(txn, ZX_OK,
-                                                             tsensor_->ReadTemperature());
+zx_status_t AmlThermal::GetTemperatureCelsius(fidl_txn_t* txn) {
+  return fuchsia_hardware_thermal_DeviceGetTemperatureCelsius_reply(
+      txn, ZX_OK, tsensor_->ReadTemperatureCelsius());
 }
 
 zx_status_t AmlThermal::GetStateChangeEvent(fidl_txn_t* txn) {
@@ -207,8 +207,8 @@ zx_status_t AmlThermal::GetStateChangePort(fidl_txn_t* txn) {
   return fuchsia_hardware_thermal_DeviceGetStateChangePort_reply(txn, status, handle);
 }
 
-zx_status_t AmlThermal::SetTrip(uint32_t id, uint32_t temp, fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, ZX_ERR_NOT_SUPPORTED);
+zx_status_t AmlThermal::SetTripCelsius(uint32_t id, float temp, fidl_txn_t* txn) {
+  return fuchsia_hardware_thermal_DeviceSetTripCelsius_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t AmlThermal::GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
