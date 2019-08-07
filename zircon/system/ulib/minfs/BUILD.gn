@@ -10,7 +10,6 @@ library("minfs") {
     "allocator/allocator-promise.cc",
     "allocator/metadata.cc",
     "allocator/storage-common.cc",
-    "bcache.cc",
     "directory.cc",
     "file.cc",
     "fsck.cc",
@@ -27,6 +26,7 @@ library("minfs") {
       "allocator/allocator-host.cc",
       "allocator/inode-manager-host.cc",
       "allocator/storage-host.cc",
+      "bcache-host.cc",
       "host.cc",
     ]
   }
@@ -82,6 +82,7 @@ library("minfs") {
       "allocator/allocator.cc",
       "allocator/inode-manager.cc",
       "allocator/storage.cc",
+      "bcache.cc",
       "vnode-allocation.cc",
       "work-queue.cc",
       "writeback-async.cc",
