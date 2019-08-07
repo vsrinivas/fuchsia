@@ -117,7 +117,7 @@ void CameraManagerImpl::OnDeviceStartupComplete(uint64_t camera_id, zx_status_t 
 }
 
 void CameraManagerImpl::GetDevices(GetDevicesCallback callback) {
-  fidl::VectorPtr<fuchsia::camera::DeviceInfo> device_descriptions;
+  std::vector<fuchsia::camera::DeviceInfo> device_descriptions;
   for (auto& device : active_devices_) {
     device_descriptions.push_back(device->GetDeviceInfo());
   }

@@ -80,7 +80,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_P
 
  public:
   // Interface with the FIDL Camera Driver
-  zx_status_t GetFormats(fidl::VectorPtr<fuchsia::camera::VideoFormat>& formats);
+  zx_status_t GetFormats(std::vector<fuchsia::camera::VideoFormat>& formats);
 
   // Get the vendor and product information for this device.
   const UsbDeviceInfo& GetDeviceInfo() { return device_info_; }

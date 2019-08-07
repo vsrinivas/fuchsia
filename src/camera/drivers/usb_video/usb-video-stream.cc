@@ -290,7 +290,7 @@ zx_status_t UsbVideoStream::GetChannel(zx_handle_t handle) {
   return ZX_OK;
 }
 
-zx_status_t UsbVideoStream::GetFormats(fidl::VectorPtr<fuchsia::camera::VideoFormat>& formats) {
+zx_status_t UsbVideoStream::GetFormats(std::vector<fuchsia::camera::VideoFormat>& formats) {
   fbl::AutoLock lock(&lock_);
   format_list_.FillFormats(formats);
   return ZX_OK;

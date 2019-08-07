@@ -24,21 +24,21 @@ ControlImpl::ControlImpl(video::usb::UsbVideoStream* usb_video_stream,
 }
 
 void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
-  if (formats_->size() == 0) {
+  if (formats_.size() == 0) {
     zx_status_t status = usb_video_stream_->GetFormats(formats_);
     if (status != ZX_OK) {
-      callback(std::move(formats_), formats_->size(), status);
+      callback(std::move(formats_), formats_.size(), status);
       return;
     }
   }
 
-  size_t min_index = std::max((size_t)0, std::min((size_t)index, formats_->size() - 1));
+  size_t min_index = std::max((size_t)0, std::min((size_t)index, formats_.size() - 1));
   size_t max_index =
-      std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1, formats_->size() - 1);
+      std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1, formats_.size() - 1);
 
-  callback(std::vector<fuchsia::camera::VideoFormat>(&(*formats_)[min_index],
-                                                     &(*formats_)[max_index + 1]),
-           formats_->size(), ZX_OK);
+  callback(std::vector<fuchsia::camera::VideoFormat>(&(formats_)[min_index],
+                                                     &(formats_)[max_index + 1]),
+           formats_.size(), ZX_OK);
 }
 
 void ControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {

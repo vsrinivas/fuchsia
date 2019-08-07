@@ -99,7 +99,7 @@ void VirtualCameraControlImpl::ProduceFrame() {
 }
 
 void VirtualCameraControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
-  fidl::VectorPtr<fuchsia::camera::VideoFormat> formats;
+  std::vector<fuchsia::camera::VideoFormat> formats;
 
   fuchsia::camera::VideoFormat format = {
       .format =

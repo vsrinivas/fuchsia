@@ -83,7 +83,7 @@ class UvcFormatList {
     return false;
   }
 
-  void FillFormats(fidl::VectorPtr<fuchsia::camera::VideoFormat> &formats) const {
+  void FillFormats(std::vector<fuchsia::camera::VideoFormat> &formats) const {
     for (auto &format : formats_) {
       formats.push_back(ToFidl(format));
     }

@@ -77,7 +77,7 @@ class ControlImpl : public fuchsia::camera::Control {
 
   fbl::unique_ptr<StreamImpl> stream_;
 
-  fidl::VectorPtr<fuchsia::camera::VideoFormat> formats_;
+  std::vector<fuchsia::camera::VideoFormat> formats_;
 
   ControlImpl(const ControlImpl&) = delete;
   ControlImpl& operator=(const ControlImpl&) = delete;
