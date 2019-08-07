@@ -62,6 +62,6 @@ if (board_name == "pc") {
     qemu_env,
     nuc_env,
   ]
-} else if (board_name == "qemu-arm64") {
+} else if (board_name == "qemu-arm64" || board_name == "qemu-x64") {
   basic_envs += [ qemu_env ]
 }
