@@ -99,10 +99,7 @@ void DisplayManager::DisplaysChanged(::std::vector<fuchsia::hardware::display::I
       return;
     }
 
-    std::vector<uint64_t> layers;
-    layers.push_back(layer_id_);
-    ::fidl::VectorPtr<uint64_t> fidl_layers(std::move(layers));
-    status = display_controller_->SetDisplayLayers(display.id, std::move(fidl_layers));
+    status = display_controller_->SetDisplayLayers(display.id, {layer_id_});
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to configure display layers";
       return;

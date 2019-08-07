@@ -51,8 +51,7 @@ int main(int argc, const char** argv) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = positional_args[0];
-  for (size_t i = 1; i < positional_args.size(); ++i)
-    launch_info.arguments.push_back(positional_args[i]);
+  launch_info.arguments = std::vector(++positional_args.begin(), positional_args.end());
   launch_info.directory_request = services.NewRequest();
   fuchsia::sys::ComponentControllerPtr controller;
   startup_context_->launcher()->CreateComponent(std::move(launch_info), controller.NewRequest());

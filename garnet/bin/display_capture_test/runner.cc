@@ -353,7 +353,7 @@ void Runner::SendFrameConfig(uint32_t frame_idx) {
     layer.first->SendState(layer.second);
   }
   display_controller_->SetDisplayLayers(display_id_,
-                                        fidl::VectorPtr<uint64_t>(std::move(layer_ids)));
+                                        std::move(layer_ids));
 }
 
 void Runner::CheckFrameConfig(uint32_t frame_idx) {
