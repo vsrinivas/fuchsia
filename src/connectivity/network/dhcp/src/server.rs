@@ -489,29 +489,51 @@ mod tests {
     use super::*;
     use crate::configuration::SubnetMask;
     use crate::protocol::{ConfigOption, Message, MessageType, OpCode, OptionCode};
+    use rand::Rng;
     use std::convert::TryFrom;
     use std::net::Ipv4Addr;
 
-    fn new_test_server<F>(time_provider: F) -> Server<F>
+    fn random_ipv4_generator() -> Ipv4Addr {
+        let octet1: u8 = rand::thread_rng().gen();
+        let octet2: u8 = rand::thread_rng().gen();
+        let octet3: u8 = rand::thread_rng().gen();
+        let octet4: u8 = rand::thread_rng().gen();
+        Ipv4Addr::new(octet1, octet2, octet3, octet4)
+    }
+
+    fn random_mac_generator() -> MacAddr {
+        let octet1: u8 = rand::thread_rng().gen();
+        let octet2: u8 = rand::thread_rng().gen();
+        let octet3: u8 = rand::thread_rng().gen();
+        let octet4: u8 = rand::thread_rng().gen();
+        let octet5: u8 = rand::thread_rng().gen();
+        let octet6: u8 = rand::thread_rng().gen();
+        MacAddr { octets: [octet1, octet2, octet3, octet4, octet5, octet6] }
+    }
+
+    fn server_time_provider() -> i64 {
+        42
+    }
+
+    fn new_test_minimal_server<F>(time_provider: F) -> Server<F>
     where
         F: Fn() -> i64,
     {
         let mut server = Server::new(time_provider);
-        server.config.server_ip = Ipv4Addr::new(192, 168, 1, 1);
+        server.config.server_ip = random_ipv4_generator();
         server.config.default_lease_time = 100;
-        server.config.routers.push(Ipv4Addr::new(192, 168, 1, 1));
+        server.config.routers.push(random_ipv4_generator());
         server
             .config
             .name_servers
             .extend_from_slice(&vec![Ipv4Addr::new(8, 8, 8, 8), Ipv4Addr::new(8, 8, 4, 4)]);
-        server.pool.available_addrs.insert(Ipv4Addr::from([192, 168, 1, 2]));
         server
     }
 
     fn new_test_discover() -> Message {
         let mut disc = Message::new();
-        disc.xid = 42;
-        disc.chaddr = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
+        disc.xid = rand::thread_rng().gen();
+        disc.chaddr = random_mac_generator();
         disc.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPDISCOVER.into()],
@@ -519,12 +541,16 @@ mod tests {
         disc
     }
 
-    fn new_test_offer() -> Message {
+    // Creating a new offer needs a reference to `discover` and `server`
+    // so it can copy over the essential randomly generated options.
+    fn new_test_offer<F>(disc: &Message, server: &Server<F>) -> Message
+    where
+        F: Fn() -> i64,
+    {
         let mut offer = Message::new();
         offer.op = OpCode::BOOTREPLY;
-        offer.xid = 42;
-        offer.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
-        offer.chaddr = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
+        offer.xid = disc.xid;
+        offer.chaddr = disc.chaddr;
         offer
             .options
             .push(ConfigOption { code: OptionCode::IpAddrLeaseTime, value: vec![0, 0, 0, 100] });
@@ -536,10 +562,14 @@ mod tests {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPOFFER.into()],
         });
-        offer
-            .options
-            .push(ConfigOption { code: OptionCode::ServerId, value: vec![192, 168, 1, 1] });
-        offer.options.push(ConfigOption { code: OptionCode::Router, value: vec![192, 168, 1, 1] });
+        offer.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: server.config.server_ip.octets().to_vec(),
+        });
+        offer.options.push(ConfigOption {
+            code: OptionCode::Router,
+            value: server.config.routers.first().unwrap().octets().to_vec(),
+        });
         offer.options.push(ConfigOption {
             code: OptionCode::NameServer,
             value: vec![8, 8, 8, 8, 8, 8, 4, 4],
@@ -555,24 +585,35 @@ mod tests {
 
     fn new_test_request() -> Message {
         let mut req = Message::new();
-        req.xid = 42;
-        req.chaddr = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
-        req.options
-            .push(ConfigOption { code: OptionCode::RequestedIpAddr, value: vec![192, 168, 1, 2] });
+        req.xid = rand::thread_rng().gen();
+        req.chaddr = random_mac_generator();
         req.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPREQUEST.into()],
         });
-        req.options.push(ConfigOption { code: OptionCode::ServerId, value: vec![192, 168, 1, 1] });
         req
     }
 
-    fn new_test_ack() -> Message {
+    fn new_test_request_selecting_state<F>(server: &Server<F>) -> Message
+    where
+        F: Fn() -> i64,
+    {
+        let mut req = new_test_request();
+        req.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: server.config.server_ip.octets().to_vec(),
+        });
+        req
+    }
+
+    fn new_test_ack<F>(req: &Message, server: &Server<F>) -> Message
+    where
+        F: Fn() -> i64,
+    {
         let mut ack = Message::new();
         ack.op = OpCode::BOOTREPLY;
-        ack.xid = 42;
-        ack.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
-        ack.chaddr = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
+        ack.xid = req.xid;
+        ack.chaddr = req.chaddr;
         ack.options
             .push(ConfigOption { code: OptionCode::IpAddrLeaseTime, value: vec![0, 0, 0, 100] });
         ack.options.push(ConfigOption {
@@ -583,8 +624,14 @@ mod tests {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPACK.into()],
         });
-        ack.options.push(ConfigOption { code: OptionCode::ServerId, value: vec![192, 168, 1, 1] });
-        ack.options.push(ConfigOption { code: OptionCode::Router, value: vec![192, 168, 1, 1] });
+        ack.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: server.config.server_ip.octets().to_vec(),
+        });
+        ack.options.push(ConfigOption {
+            code: OptionCode::Router,
+            value: server.config.routers.first().unwrap().octets().to_vec(),
+        });
         ack.options.push(ConfigOption {
             code: OptionCode::NameServer,
             value: vec![8, 8, 8, 8, 8, 8, 4, 4],
@@ -595,24 +642,29 @@ mod tests {
         ack
     }
 
-    fn new_test_nak() -> Message {
+    fn new_test_nak<F>(req: &Message, server: &Server<F>) -> Message
+    where
+        F: Fn() -> i64,
+    {
         let mut nak = Message::new();
         nak.op = OpCode::BOOTREPLY;
-        nak.xid = 42;
-        nak.chaddr = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
+        nak.xid = req.xid;
+        nak.chaddr = req.chaddr;
         nak.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPNAK.into()],
         });
-        nak.options.push(ConfigOption { code: OptionCode::ServerId, value: vec![192, 168, 1, 1] });
+        nak.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: server.config.server_ip.octets().to_vec(),
+        });
         nak
     }
 
     fn new_test_release() -> Message {
         let mut release = Message::new();
-        release.xid = 42;
-        release.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
-        release.chaddr = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
+        release.xid = rand::thread_rng().gen();
+        release.chaddr = random_mac_generator();
         release.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPRELEASE.into()],
@@ -622,9 +674,8 @@ mod tests {
 
     fn new_test_inform() -> Message {
         let mut inform = Message::new();
-        inform.xid = 42;
-        inform.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
-        inform.chaddr = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
+        inform.xid = rand::thread_rng().gen();
+        inform.chaddr = random_mac_generator();
         inform.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPINFORM.into()],
@@ -632,18 +683,26 @@ mod tests {
         inform
     }
 
-    fn new_test_inform_ack() -> Message {
+    fn new_test_inform_ack<F>(req: &Message, server: &Server<F>) -> Message
+    where
+        F: Fn() -> i64,
+    {
         let mut ack = Message::new();
         ack.op = OpCode::BOOTREPLY;
-        ack.xid = 42;
-        ack.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
-        ack.chaddr = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
+        ack.xid = req.xid;
+        ack.chaddr = req.chaddr;
         ack.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPINFORM.into()],
         });
-        ack.options.push(ConfigOption { code: OptionCode::ServerId, value: vec![192, 168, 1, 1] });
-        ack.options.push(ConfigOption { code: OptionCode::Router, value: vec![192, 168, 1, 1] });
+        ack.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: server.config.server_ip.octets().to_vec(),
+        });
+        ack.options.push(ConfigOption {
+            code: OptionCode::Router,
+            value: server.config.routers.first().unwrap().octets().to_vec(),
+        });
         ack.options.push(ConfigOption {
             code: OptionCode::NameServer,
             value: vec![8, 8, 8, 8, 8, 8, 4, 4],
@@ -651,411 +710,467 @@ mod tests {
         ack
     }
 
-    fn new_test_decline() -> Message {
+    fn new_test_decline<F>(server: &Server<F>) -> Message
+    where
+        F: Fn() -> i64,
+    {
         let mut decline = Message::new();
-        decline.xid = 42;
-        decline.chaddr = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
+        decline.xid = rand::thread_rng().gen();
+        decline.chaddr = random_mac_generator();
         decline.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPDECLINE.into()],
         });
-        decline
-            .options
-            .push(ConfigOption { code: OptionCode::RequestedIpAddr, value: vec![192, 168, 1, 2] });
-        decline
-            .options
-            .push(ConfigOption { code: OptionCode::ServerId, value: vec![192, 168, 1, 1] });
+        decline.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: server.config.server_ip.octets().to_vec(),
+        });
         decline
     }
 
     #[test]
-    fn test_dispatch_with_discover_returns_correct_response() {
+    fn test_dispatch_with_discover_returns_correct_offer() {
+        let mut server = new_test_minimal_server(server_time_provider);
         let disc = new_test_discover();
 
-        let mut server = new_test_server(|| 42);
-        let got = server.dispatch(disc).unwrap();
+        let offer_ip = random_ipv4_generator();
 
-        let want = new_test_offer();
+        server.pool.available_addrs.insert(offer_ip);
 
-        assert_eq!(got, want);
+        let mut expected_offer = new_test_offer(&disc, &server);
+        expected_offer.yiaddr = offer_ip;
+
+        assert_eq!(server.dispatch(disc), Some(expected_offer));
     }
 
     #[test]
     fn test_dispatch_with_discover_updates_server_state() {
+        let mut server = new_test_minimal_server(server_time_provider);
         let disc = new_test_discover();
-        let mac_addr = disc.chaddr;
-        let mut server = new_test_server(|| 42);
-        let _ = server.dispatch(disc).unwrap();
+
+        let offer_ip = random_ipv4_generator();
+        let client_mac = disc.chaddr;
+
+        server.pool.available_addrs.insert(offer_ip);
+
+        let expected_client_config = CachedConfig {
+            client_addr: offer_ip,
+            options: vec![],
+            expiration: server_time_provider() + server.config.default_lease_time as i64,
+        };
+
+        let _response = server.dispatch(disc);
 
         assert_eq!(server.pool.available_addrs.len(), 0);
         assert_eq!(server.pool.allocated_addrs.len(), 1);
         assert_eq!(server.cache.len(), 1);
-        let want_config = server.cache.get(&mac_addr).unwrap();
-        assert_eq!(want_config.client_addr, Ipv4Addr::new(192, 168, 1, 2));
+        assert_eq!(server.cache.get(&client_mac), Some(&expected_client_config));
     }
 
     #[test]
     fn test_dispatch_with_discover_client_binding_returns_bound_addr() {
+        let mut server = new_test_minimal_server(server_time_provider);
         let disc = new_test_discover();
-        let mut server = new_test_server(|| 42);
-        let mut client_config = CachedConfig::default();
-        let client_addr = Ipv4Addr::new(192, 168, 1, 42);
-        client_config.client_addr = client_addr;
-        server.pool.allocated_addrs.insert(client_addr);
-        server.cache.insert(disc.chaddr, client_config);
 
-        let got = server.dispatch(disc).unwrap();
+        let bound_client_ip = random_ipv4_generator();
 
-        let mut want = new_test_offer();
-        want.yiaddr = Ipv4Addr::new(192, 168, 1, 42);
+        server.pool.allocated_addrs.insert(bound_client_ip);
 
-        assert_eq!(got, want);
+        server.cache.insert(
+            disc.chaddr,
+            CachedConfig {
+                client_addr: bound_client_ip,
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
+
+        let response = server.dispatch(disc).unwrap();
+
+        assert_eq!(response.yiaddr, bound_client_ip);
     }
 
     #[test]
     fn test_dispatch_with_discover_expired_client_binding_returns_available_old_addr() {
+        let mut server = new_test_minimal_server(server_time_provider);
         let disc = new_test_discover();
-        let mut server = new_test_server(|| 42);
-        let mut client_config = CachedConfig::default();
-        client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
-        client_config.expiration = 0;
-        server.cache.insert(disc.chaddr, client_config);
-        server.pool.available_addrs.insert(Ipv4Addr::new(192, 168, 1, 42));
 
-        let got = server.dispatch(disc).unwrap();
+        let bound_client_ip = random_ipv4_generator();
 
-        let mut want = new_test_offer();
-        want.yiaddr = Ipv4Addr::new(192, 168, 1, 42);
+        server.pool.available_addrs.insert(bound_client_ip);
 
-        assert_eq!(got, want);
+        server.cache.insert(
+            disc.chaddr,
+            CachedConfig { client_addr: bound_client_ip, options: vec![], expiration: 0 },
+        );
+
+        let response = server.dispatch(disc).unwrap();
+
+        assert_eq!(response.yiaddr, bound_client_ip);
     }
 
     #[test]
-    fn test_dispatch_with_discover_unavailable_expired_client_binding_returns_new_addr() {
+    fn test_dispatch_with_discover_expired_client_binding_unavailable_addr_returns_next_free_addr()
+    {
+        let mut server = new_test_minimal_server(server_time_provider);
         let disc = new_test_discover();
-        let mut server = new_test_server(|| 42);
-        let mut client_config = CachedConfig::default();
-        client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
-        client_config.expiration = 0;
-        server.cache.insert(disc.chaddr, client_config);
-        server.pool.available_addrs.insert(Ipv4Addr::new(192, 168, 1, 2));
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 42));
 
-        let got = server.dispatch(disc).unwrap();
+        let bound_client_ip = random_ipv4_generator();
+        let free_ip = random_ipv4_generator();
 
-        let mut want = new_test_offer();
-        want.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
+        server.pool.allocated_addrs.insert(bound_client_ip);
+        server.pool.available_addrs.insert(free_ip);
 
-        assert_eq!(got, want);
+        server.cache.insert(
+            disc.chaddr,
+            CachedConfig { client_addr: bound_client_ip, options: vec![], expiration: 0 },
+        );
+
+        let response = server.dispatch(disc).unwrap();
+
+        assert_eq!(response.yiaddr, free_ip);
     }
 
     #[test]
     fn test_dispatch_with_discover_available_requested_addr_returns_requested_addr() {
+        let mut server = new_test_minimal_server(server_time_provider);
         let mut disc = new_test_discover();
-        disc.options
-            .push(ConfigOption { code: OptionCode::RequestedIpAddr, value: vec![192, 168, 1, 3] });
 
-        let mut server = new_test_server(|| 42);
-        server.pool.available_addrs.insert(Ipv4Addr::new(192, 168, 1, 2));
-        server.pool.available_addrs.insert(Ipv4Addr::new(192, 168, 1, 3));
-        let got = server.dispatch(disc).unwrap();
+        let requested_ip = random_ipv4_generator();
+        let free_ip_1 = random_ipv4_generator();
+        let free_ip_2 = random_ipv4_generator();
 
-        let mut want = new_test_offer();
-        want.yiaddr = Ipv4Addr::new(192, 168, 1, 3);
-        assert_eq!(got, want);
+        server.pool.available_addrs.insert(free_ip_1);
+        server.pool.available_addrs.insert(requested_ip);
+        server.pool.available_addrs.insert(free_ip_2);
+
+        // Update discover message to request for a specific ip
+        // which is available in server pool.
+        disc.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: requested_ip.octets().to_vec(),
+        });
+
+        let response = server.dispatch(disc).unwrap();
+
+        assert_eq!(response.yiaddr, requested_ip);
     }
 
     #[test]
-    fn test_dispatch_with_discover_unavailable_requested_addr_returns_next_addr() {
+    fn test_dispatch_with_discover_unavailable_requested_addr_returns_next_free_addr() {
+        let mut server = new_test_minimal_server(server_time_provider);
         let mut disc = new_test_discover();
-        disc.options
-            .push(ConfigOption { code: OptionCode::RequestedIpAddr, value: vec![192, 168, 1, 42] });
 
-        let mut server = new_test_server(|| 42);
-        server.pool.available_addrs.insert(Ipv4Addr::new(192, 168, 1, 2));
-        server.pool.available_addrs.insert(Ipv4Addr::new(192, 168, 1, 3));
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 42));
-        let got = server.dispatch(disc).unwrap();
+        let requested_ip = Ipv4Addr::new(192, 1, 1, 5);
+        let free_ip_1 = Ipv4Addr::new(192, 168, 10, 24);
+        let free_ip_2 = Ipv4Addr::new(192, 168, 20, 72);
 
-        let mut want = new_test_offer();
-        want.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
-        assert_eq!(got, want);
+        server.pool.allocated_addrs.insert(requested_ip);
+        server.pool.available_addrs.insert(free_ip_1);
+        server.pool.available_addrs.insert(free_ip_2);
+
+        // Update discover message to request for a specific ip
+        // which is not available in server pool.
+        disc.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: requested_ip.octets().to_vec(),
+        });
+
+        let response = server.dispatch(disc).unwrap();
+
+        assert_eq!(response.yiaddr, free_ip_1);
     }
 
     #[test]
-    fn test_dispatch_with_selecting_request_valid_selecting_request_returns_ack() {
-        let mut req = new_test_request();
-        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
-        req.ciaddr = requested_ip_addr;
-        req.options.remove(0);
+    fn test_dispatch_with_selecting_request_returns_correct_ack() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut req = new_test_request_selecting_state(&server);
 
-        let mut server = new_test_server(|| 42);
+        let offered_ip = random_ipv4_generator();
+
+        server.pool.allocated_addrs.insert(offered_ip);
+
+        // Update message to request for ip previously offered by server.
+        req.ciaddr = offered_ip;
+
         server.cache.insert(
             req.chaddr,
-            CachedConfig {
-                client_addr: requested_ip_addr,
-                options: vec![],
-                expiration: std::i64::MAX,
-            },
+            CachedConfig { client_addr: offered_ip, options: vec![], expiration: std::i64::MAX },
         );
-        server.pool.allocate_addr(requested_ip_addr);
-        let got = server.dispatch(req).unwrap();
 
-        let mut want = new_test_ack();
-        want.ciaddr = requested_ip_addr;
-        assert_eq!(got, want);
+        let mut expected_ack = new_test_ack(&req, &server);
+        expected_ack.ciaddr = offered_ip;
+        expected_ack.yiaddr = offered_ip;
+
+        assert_eq!(server.dispatch(req), Some(expected_ack));
     }
 
     #[test]
     fn test_dispatch_with_selecting_request_no_address_allocation_to_client_returns_none() {
-        let mut req = new_test_request();
-        req.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
-        req.options.remove(0);
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut req = new_test_request_selecting_state(&server);
 
-        let mut server = new_test_server(|| 42);
-        let got = server.dispatch(req);
+        // Update message to request for ip which is unknown by server.
+        req.ciaddr = random_ipv4_generator();
 
-        assert!(got.is_none());
+        assert_eq!(server.dispatch(req), None);
     }
 
     #[test]
-    fn test_dispatch_with_selecting_request_wrong_server_id_returns_none() {
-        let mut req = new_test_request();
-        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
-        req.ciaddr = requested_ip_addr;
-        req.options.remove(0);
+    fn test_dispatch_with_selecting_request_wrong_server_ip_returns_none() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut req = new_test_request_selecting_state(&server);
 
-        let mut server = new_test_server(|| 42);
-        server.cache.insert(
-            req.chaddr,
-            CachedConfig {
-                client_addr: requested_ip_addr,
-                options: vec![],
-                expiration: std::i64::MAX,
-            },
-        );
-        server.pool.allocate_addr(requested_ip_addr);
-        server.config.server_ip = Ipv4Addr::new(1, 2, 3, 4);
-        let got = server.dispatch(req);
+        // Update message to request for any ip.
+        req.ciaddr = random_ipv4_generator();
 
-        assert!(got.is_none());
-    }
-
-    #[test]
-    fn test_dispatch_with_selecting_request_valid_selecting_request_maintains_server_invariants() {
-        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
-        let mut req = new_test_request();
-        req.ciaddr = requested_ip_addr;
-        req.options.remove(0);
-
-        let mut server = new_test_server(|| 42);
-        server.cache.insert(
-            req.chaddr,
-            CachedConfig {
-                client_addr: requested_ip_addr,
-                options: vec![],
-                expiration: std::i64::MAX,
-            },
-        );
-        server.pool.allocate_addr(requested_ip_addr);
-        let _ = server.dispatch(req.clone()).unwrap();
-
-        assert!(server.cache.contains_key(&req.chaddr));
-        assert!(server.pool.addr_is_allocated(requested_ip_addr));
-    }
-
-    #[test]
-    fn test_dispatch_with_selecting_request_no_address_allocation_maintains_server_invariants() {
-        let requested_ip_addr = Ipv4Addr::new(192, 168, 1, 2);
-        let mut req = new_test_request();
-        req.ciaddr = requested_ip_addr;
-        req.options.remove(0);
-
-        let mut server = new_test_server(|| 42);
-        let _ = server.dispatch(req.clone());
-
-        assert!(!server.cache.contains_key(&req.chaddr));
-        assert!(!server.pool.addr_is_allocated(Ipv4Addr::new(192, 168, 1, 2)));
-    }
-
-    #[test]
-    fn test_dispatch_with_init_boot_request_correct_address_returns_ack() {
-        let mut req = new_test_request();
-        req.options.remove(2);
-        let requested_ip_addr = get_requested_ip_addr(&req).unwrap();
-
-        let mut server = new_test_server(|| 42);
-        server.cache.insert(
-            req.chaddr,
-            CachedConfig {
-                client_addr: requested_ip_addr,
-                options: vec![],
-                expiration: std::i64::MAX,
-            },
-        );
-        server.pool.allocate_addr(requested_ip_addr);
-        let got = server.dispatch(req).unwrap();
-
-        let want = new_test_ack();
-        assert_eq!(got, want);
-    }
-
-    #[test]
-    fn test_dispatch_with_init_boot_request_incorrect_address_returns_nak() {
-        let mut req = new_test_request();
-        req.options.remove(0);
+        // Update request to have a server ip different from actual server ip.
         req.options.remove(1);
-        req.options
-            .push(ConfigOption { code: OptionCode::RequestedIpAddr, value: vec![192, 168, 1, 42] });
+        req.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: random_ipv4_generator().octets().to_vec(),
+        });
 
-        let mut server = new_test_server(|| 42);
-        let assigned_ip = Ipv4Addr::new(192, 168, 1, 2);
-        server.cache.insert(
-            req.chaddr,
-            CachedConfig { client_addr: assigned_ip, options: vec![], expiration: std::i64::MAX },
-        );
-        server.pool.allocate_addr(assigned_ip);
-        let got = server.dispatch(req).unwrap();
-
-        let want = new_test_nak();
-        assert_eq!(got, want);
+        assert_eq!(server.dispatch(req), None);
     }
 
     #[test]
-    fn test_dispatch_with_init_boot_request_unknown_client_returns_none() {
+    fn test_dispatch_with_selecting_request_maintains_server_invariants() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut req = new_test_request_selecting_state(&server);
+
+        let offered_ip = random_ipv4_generator();
+        let client_mac = req.chaddr;
+
+        server.pool.allocated_addrs.insert(offered_ip);
+
+        req.ciaddr = offered_ip;
+
+        server.cache.insert(
+            client_mac,
+            CachedConfig { client_addr: offered_ip, options: vec![], expiration: std::i64::MAX },
+        );
+
+        let _ack: Message = server.dispatch(req).unwrap();
+
+        assert!(server.cache.contains_key(&client_mac));
+        assert!(server.pool.addr_is_allocated(offered_ip));
+    }
+
+    #[test]
+    fn test_dispatch_with_selecting_request_no_client_cache_maintains_server_invariants() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut req = new_test_request_selecting_state(&server);
+
+        let offered_ip = random_ipv4_generator();
+        let client_mac = req.chaddr;
+
+        req.ciaddr = offered_ip;
+
+        assert_eq!(server.dispatch(req), None);
+        assert!(!server.cache.contains_key(&client_mac));
+        assert!(!server.pool.addr_is_allocated(offered_ip));
+    }
+
+    #[test]
+    fn test_dispatch_with_init_boot_request_returns_correct_ack() {
+        let mut server = new_test_minimal_server(server_time_provider);
         let mut req = new_test_request();
-        req.options.remove(2);
 
-        let mut server = new_test_server(|| 42);
-        let got = server.dispatch(req);
+        // For init-reboot, server and requested ip must be on the same subnet.
+        // Hard-coding ip values here to achieve that.
+        let init_reboot_client_ip = Ipv4Addr::new(192, 168, 1, 60);
+        server.config.server_ip = Ipv4Addr::new(192, 168, 1, 1);
 
-        assert!(got.is_none());
+        server.pool.allocated_addrs.insert(init_reboot_client_ip);
+
+        // Update request to have the test requested ip.
+        req.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: init_reboot_client_ip.octets().to_vec(),
+        });
+
+        server.cache.insert(
+            req.chaddr,
+            CachedConfig {
+                client_addr: init_reboot_client_ip,
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
+
+        let mut expected_ack = new_test_ack(&req, &server);
+        expected_ack.yiaddr = init_reboot_client_ip;
+
+        assert_eq!(server.dispatch(req), Some(expected_ack));
     }
 
     #[test]
     fn test_dispatch_with_init_boot_request_client_on_wrong_subnet_returns_nak() {
+        let mut server = new_test_minimal_server(server_time_provider);
         let mut req = new_test_request();
-        req.options.remove(0);
-        req.options.remove(1);
-        req.options
-            .push(ConfigOption { code: OptionCode::RequestedIpAddr, value: vec![10, 0, 0, 1] });
 
-        let mut server = new_test_server(|| 42);
-        let got = server.dispatch(req).unwrap();
+        // Update request to have requested ip not on same subnet as server.
+        req.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: random_ipv4_generator().octets().to_vec(),
+        });
 
-        let want = new_test_nak();
-        assert_eq!(got, want);
+        // The returned nak should be from this recipient server.
+        let expected_nak = new_test_nak(&req, &server);
+
+        assert_eq!(server.dispatch(req), Some(expected_nak));
     }
 
     #[test]
-    fn test_dispatch_with_renewing_request_valid_request_returns_ack() {
+    fn test_dispatch_with_init_boot_request_unknown_client_mac_returns_none() {
+        let mut server = new_test_minimal_server(server_time_provider);
         let mut req = new_test_request();
-        req.options.remove(0);
-        req.options.remove(1);
-        let client_ip = Ipv4Addr::new(192, 168, 1, 2);
-        req.ciaddr = client_ip;
 
-        let mut server = new_test_server(|| 42);
+        // Update requested ip and server ip to be on the same subnet.
+        req.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: Ipv4Addr::new(192, 165, 30, 45).octets().to_vec(),
+        });
+        server.config.server_ip = Ipv4Addr::new(192, 165, 30, 1);
+
+        assert_eq!(server.dispatch(req), None);
+    }
+
+    #[test]
+    fn test_dispatch_with_init_boot_request_invalid_client_binding_returns_nak() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut req = new_test_request();
+
+        // Update requested ip and server ip to be on the same subnet.
+        let init_reboot_client_ip = Ipv4Addr::new(192, 165, 25, 4);
+        req.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: init_reboot_client_ip.octets().to_vec(),
+        });
+        server.config.server_ip = Ipv4Addr::new(192, 165, 25, 1);
+
+        server.pool.allocated_addrs.insert(init_reboot_client_ip);
+
+        // Expire client binding to make it invalid.
         server.cache.insert(
             req.chaddr,
-            CachedConfig { client_addr: client_ip, options: vec![], expiration: std::i64::MAX },
+            CachedConfig { client_addr: init_reboot_client_ip, options: vec![], expiration: 0 },
         );
-        server.pool.allocate_addr(client_ip);
-        let got = server.dispatch(req).unwrap();
 
-        let mut want = new_test_ack();
-        want.ciaddr = client_ip;
-        assert_eq!(got, want);
+        let expected_nak = new_test_nak(&req, &server);
+
+        assert_eq!(server.dispatch(req), Some(expected_nak));
+    }
+
+    #[test]
+    fn test_dispatch_with_renewing_request_returns_correct_ack() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut req = new_test_request();
+
+        let bound_client_ip = random_ipv4_generator();
+
+        server.pool.allocated_addrs.insert(bound_client_ip);
+        req.ciaddr = bound_client_ip;
+
+        server.cache.insert(
+            req.chaddr,
+            CachedConfig {
+                client_addr: bound_client_ip,
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
+
+        let mut expected_ack = new_test_ack(&req, &server);
+        expected_ack.yiaddr = bound_client_ip;
+        expected_ack.ciaddr = bound_client_ip;
+
+        assert_eq!(server.dispatch(req), Some(expected_ack));
     }
 
     #[test]
     fn test_dispatch_with_renewing_request_unknown_client_returns_none() {
+        let mut server = new_test_minimal_server(server_time_provider);
         let mut req = new_test_request();
-        req.options.remove(0);
-        req.options.remove(1);
-        let client_ip = Ipv4Addr::new(192, 168, 1, 2);
-        req.ciaddr = client_ip;
 
-        let mut server = new_test_server(|| 42);
-        let got = server.dispatch(req);
+        req.ciaddr = random_ipv4_generator();
 
-        assert!(got.is_none());
+        assert_eq!(server.dispatch(req), None);
     }
 
     #[test]
     fn test_get_client_state_with_selecting_returns_selecting() {
-        let mut msg = new_test_request();
-        msg.ciaddr = Ipv4Addr::new(192, 168, 1, 2);
-        msg.options.remove(0);
+        let mut req = new_test_request();
 
-        let got = get_client_state(&msg);
+        // Selecting state request must have server id and ciaddr populated.
+        req.ciaddr = random_ipv4_generator();
+        req.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: random_ipv4_generator().octets().to_vec(),
+        });
 
-        assert_eq!(got, ClientState::Selecting);
+        assert_eq!(get_client_state(&req), ClientState::Selecting);
     }
 
     #[test]
     fn test_get_client_state_with_initreboot_returns_initreboot() {
-        let mut msg = new_test_request();
-        msg.options.remove(2);
+        let mut req = new_test_request();
 
-        let got = get_client_state(&msg);
+        // Init reboot state request must have requested ip populated.
+        req.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: random_ipv4_generator().octets().to_vec(),
+        });
 
-        assert_eq!(got, ClientState::InitReboot);
+        assert_eq!(get_client_state(&req), ClientState::InitReboot);
     }
 
     #[test]
     fn test_get_client_state_with_renewing_returns_renewing() {
-        let mut msg = new_test_request();
-        msg.options.remove(0);
-        msg.options.remove(1);
-        msg.ciaddr = Ipv4Addr::new(1, 2, 3, 4);
+        let mut req = new_test_request();
 
-        let got = get_client_state(&msg);
+        // Renewing state request must have ciaddr populated.
+        req.ciaddr = random_ipv4_generator();
 
-        assert_eq!(got, ClientState::Renewing);
+        assert_eq!(get_client_state(&req), ClientState::Renewing);
     }
 
     #[test]
     fn test_get_client_state_with_unknown_returns_unknown() {
-        let mut msg = new_test_request();
-        msg.options.clear();
+        let msg = new_test_request();
 
-        let got = get_client_state(&msg);
-
-        assert_eq!(got, ClientState::Unknown);
+        assert_eq!(get_client_state(&msg), ClientState::Unknown);
     }
 
     #[test]
     fn test_release_expired_leases_with_none_expired_releases_none() {
-        let mut server = new_test_server(|| 42);
+        let mut server = new_test_minimal_server(server_time_provider);
         server.pool.available_addrs.clear();
+
+        // Insert client 1 bindings.
+        let client_1_ip = random_ipv4_generator();
         server.cache.insert(
-            MacAddr { octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA] },
-            CachedConfig {
-                client_addr: Ipv4Addr::new(192, 168, 1, 2),
-                options: vec![],
-                expiration: std::i64::MAX,
-            },
+            random_mac_generator(),
+            CachedConfig { client_addr: client_1_ip, options: vec![], expiration: std::i64::MAX },
         );
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 2));
+        server.pool.allocated_addrs.insert(client_1_ip);
+
+        // Insert client 2 bindings.
+        let client_2_ip = random_ipv4_generator();
         server.cache.insert(
-            MacAddr { octets: [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB] },
-            CachedConfig {
-                client_addr: Ipv4Addr::new(192, 168, 1, 3),
-                options: vec![],
-                expiration: std::i64::MAX,
-            },
+            random_mac_generator(),
+            CachedConfig { client_addr: client_2_ip, options: vec![], expiration: std::i64::MAX },
         );
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 3));
+        server.pool.allocated_addrs.insert(client_2_ip);
+
+        // Insert client 3 bindings.
+        let client_3_ip = random_ipv4_generator();
         server.cache.insert(
-            MacAddr { octets: [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC] },
-            CachedConfig {
-                client_addr: Ipv4Addr::new(192, 168, 1, 4),
-                options: vec![],
-                expiration: std::i64::MAX,
-            },
+            random_mac_generator(),
+            CachedConfig { client_addr: client_3_ip, options: vec![], expiration: std::i64::MAX },
         );
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 4));
+        server.pool.allocated_addrs.insert(client_3_ip);
 
         server.release_expired_leases();
 
@@ -1066,35 +1181,32 @@ mod tests {
 
     #[test]
     fn test_release_expired_leases_with_all_expired_releases_all() {
-        let mut server = new_test_server(|| 42);
+        let mut server = new_test_minimal_server(server_time_provider);
         server.pool.available_addrs.clear();
+
+        // Insert client 1 bindings.
+        let client_1_ip = random_ipv4_generator();
         server.cache.insert(
-            MacAddr { octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA] },
-            CachedConfig {
-                client_addr: Ipv4Addr::new(192, 168, 1, 2),
-                options: vec![],
-                expiration: 0,
-            },
+            random_mac_generator(),
+            CachedConfig { client_addr: client_1_ip, options: vec![], expiration: 0 },
         );
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 2));
+        server.pool.allocated_addrs.insert(client_1_ip);
+
+        // Insert client 2 bindings.
+        let client_2_ip = random_ipv4_generator();
         server.cache.insert(
-            MacAddr { octets: [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB] },
-            CachedConfig {
-                client_addr: Ipv4Addr::new(192, 168, 1, 3),
-                options: vec![],
-                expiration: 0,
-            },
+            random_mac_generator(),
+            CachedConfig { client_addr: client_2_ip, options: vec![], expiration: 0 },
         );
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 3));
+        server.pool.allocated_addrs.insert(client_2_ip);
+
+        // Insert client 3 bindings.
+        let client_3_ip = random_ipv4_generator();
         server.cache.insert(
-            MacAddr { octets: [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC] },
-            CachedConfig {
-                client_addr: Ipv4Addr::new(192, 168, 1, 4),
-                options: vec![],
-                expiration: 0,
-            },
+            random_mac_generator(),
+            CachedConfig { client_addr: client_3_ip, options: vec![], expiration: 0 },
         );
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 4));
+        server.pool.allocated_addrs.insert(client_3_ip);
 
         server.release_expired_leases();
 
@@ -1105,174 +1217,345 @@ mod tests {
 
     #[test]
     fn test_release_expired_leases_with_some_expired_releases_expired() {
-        let mut server = new_test_server(|| 42);
+        let mut server = new_test_minimal_server(server_time_provider);
         server.pool.available_addrs.clear();
+
+        // Insert client 1 bindings.
+        let client_1_ip = random_ipv4_generator();
         server.cache.insert(
-            MacAddr { octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA] },
-            CachedConfig {
-                client_addr: Ipv4Addr::new(192, 168, 1, 2),
-                options: vec![],
-                expiration: std::i64::MAX,
-            },
+            random_mac_generator(),
+            CachedConfig { client_addr: client_1_ip, options: vec![], expiration: std::i64::MAX },
         );
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 2));
+        server.pool.allocated_addrs.insert(client_1_ip);
+
+        // Insert client 2 bindings.
+        let client_2_mac = random_mac_generator();
+        let client_2_ip = random_ipv4_generator();
         server.cache.insert(
-            MacAddr { octets: [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB] },
-            CachedConfig {
-                client_addr: Ipv4Addr::new(192, 168, 1, 3),
-                options: vec![],
-                expiration: 0,
-            },
+            client_2_mac,
+            CachedConfig { client_addr: client_2_ip, options: vec![], expiration: 0 },
         );
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 3));
+        server.pool.allocated_addrs.insert(client_2_ip);
+
+        // Insert client 3 bindings.
+        let client_3_ip = random_ipv4_generator();
         server.cache.insert(
-            MacAddr { octets: [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC] },
-            CachedConfig {
-                client_addr: Ipv4Addr::new(192, 168, 1, 4),
-                options: vec![],
-                expiration: std::i64::MAX,
-            },
+            random_mac_generator(),
+            CachedConfig { client_addr: client_3_ip, options: vec![], expiration: std::i64::MAX },
         );
-        server.pool.allocated_addrs.insert(Ipv4Addr::new(192, 168, 1, 4));
+        server.pool.allocated_addrs.insert(client_3_ip);
 
         server.release_expired_leases();
 
         assert_eq!(server.cache.len(), 2);
-        assert!(!server
-            .cache
-            .contains_key(&MacAddr { octets: [0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB] }));
+        assert!(!server.cache.contains_key(&client_2_mac));
         assert_eq!(server.pool.available_addrs.len(), 1);
         assert_eq!(server.pool.allocated_addrs.len(), 2);
     }
 
     #[test]
-    fn test_dispatch_with_known_release() {
-        let release = new_test_release();
-        let mut server = new_test_server(|| 42);
-        let client_ip = Ipv4Addr::new(192, 168, 1, 2);
-        server.pool.allocate_addr(client_ip);
-        let client_mac = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
-        let client_config =
-            CachedConfig { client_addr: client_ip, options: vec![], expiration: std::i64::MAX };
-        server.cache.insert(client_mac, client_config.clone());
+    fn test_dispatch_with_known_release_updates_address_pool_retains_client_config() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut release = new_test_release();
 
-        let got = server.dispatch(release);
+        let release_ip = random_ipv4_generator();
+        let client_mac = release.chaddr;
 
-        assert!(got.is_none(), "server returned a Message value");
-        assert!(!server.pool.addr_is_allocated(client_ip), "server did not free client address");
-        assert!(server.pool.addr_is_available(client_ip), "server did not free client address");
-        assert!(
-            server.cache.contains_key(&client_mac),
-            "server did not retain cached client settings"
-        );
+        server.pool.allocated_addrs.insert(release_ip);
+        release.ciaddr = release_ip;
+
+        let test_client_config =
+            CachedConfig { client_addr: release_ip, options: vec![], expiration: std::i64::MAX };
+
+        server.cache.insert(client_mac, test_client_config.clone());
+
+        // Server must not send response for `DHCPRELEASE` messages.
+        assert_eq!(server.dispatch(release), None);
+
+        assert!(!server.pool.addr_is_allocated(release_ip), "addr marked allocated");
+        assert!(server.pool.addr_is_available(release_ip), "addr not marked available");
+        assert!(server.cache.contains_key(&client_mac), "client config not retained");
         assert_eq!(
             server.cache.get(&client_mac).unwrap(),
-            &client_config,
-            "server did not retain cached client settings"
+            &test_client_config,
+            "retained client config changed"
         );
     }
 
     #[test]
-    fn test_dispatch_with_unknown_release() {
-        let release = new_test_release();
-        let mut server = new_test_server(|| 42);
-        let client_ip = Ipv4Addr::new(192, 168, 1, 2);
-        server.pool.allocate_addr(client_ip);
-        let cached_mac = MacAddr { octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA] };
-        let client_config =
-            CachedConfig { client_addr: client_ip, options: vec![], expiration: std::i64::MAX };
-        server.cache.insert(cached_mac, client_config.clone());
+    fn test_dispatch_with_unknown_release_maintains_server_state() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut release = new_test_release();
 
-        let got = server.dispatch(release);
+        let release_ip = random_ipv4_generator();
 
-        assert!(got.is_none(), "server returned a Message value");
-        assert!(server.pool.addr_is_allocated(client_ip), "server did not free client address");
-        assert!(!server.pool.addr_is_available(client_ip), "server did not free client address");
-        assert!(
-            server.cache.contains_key(&cached_mac),
-            "server did not retain cached client settings"
-        );
-        assert_eq!(
-            server.cache.get(&cached_mac).unwrap(),
-            &client_config,
-            "server did not retain cached client settings"
-        );
+        server.pool.allocated_addrs.insert(release_ip);
+        release.ciaddr = release_ip;
+
+        // Server must not send response for `DHCPRELEASE` messages.
+        assert_eq!(server.dispatch(release), None);
+
+        assert!(server.pool.addr_is_allocated(release_ip), "addr not marked allocated");
+        assert!(!server.pool.addr_is_available(release_ip), "addr still marked available");
     }
 
     #[test]
-    fn test_dispatch_with_inform_returns_ack() {
-        let inform = new_test_inform();
-        let mut server = new_test_server(|| 42);
+    fn test_dispatch_with_inform_returns_correct_ack() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut inform = new_test_inform();
 
-        let got = server.dispatch(inform).unwrap();
+        let inform_client_ip = random_ipv4_generator();
 
-        let want = new_test_inform_ack();
+        inform.ciaddr = inform_client_ip;
 
-        assert_eq!(got, want, "expected: {:?}\ngot: {:?}", want, got);
+        let mut expected_ack = new_test_inform_ack(&inform, &server);
+        expected_ack.ciaddr = inform_client_ip;
+
+        assert_eq!(server.dispatch(inform), Some(expected_ack));
     }
 
     #[test]
-    fn test_dispatch_with_decline_marks_addr_allocated() {
-        let decline = new_test_decline();
-        let mut server = new_test_server(|| 42);
-        let already_used_ip = Ipv4Addr::new(192, 168, 1, 2);
-        server.config.managed_addrs.push(already_used_ip);
-        let client_config = CachedConfig {
-            client_addr: already_used_ip,
-            options: vec![],
-            expiration: std::i64::MAX,
-        };
-        server.cache.insert(decline.chaddr, client_config);
+    fn test_dispatch_with_decline_for_valid_client_binding_updates_cache() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut decline = new_test_decline(&server);
 
-        let got = server.dispatch(decline);
+        let declined_ip = random_ipv4_generator();
+        let client_mac = decline.chaddr;
 
-        assert!(got.is_none(), "server returned a Message value");
-        assert!(!server.pool.addr_is_available(already_used_ip), "addr still marked available");
-        assert!(server.pool.addr_is_allocated(already_used_ip), "addr not marked allocated");
-        assert!(
-            !server.cache.contains_key(&MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] }),
-            "client config retained"
+        decline.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: declined_ip.octets().to_vec(),
+        });
+
+        server.pool.allocated_addrs.insert(declined_ip);
+
+        server.cache.insert(
+            client_mac,
+            CachedConfig { client_addr: declined_ip, options: vec![], expiration: std::i64::MAX },
         );
+
+        // Server must not send response for `DHCPDECLINE` messages.
+        assert_eq!(server.dispatch(decline), None);
+
+        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
+        assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
+    }
+
+    #[test]
+    fn test_dispatch_with_decline_for_invalid_client_binding_updates_pool_and_cache() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut decline = new_test_decline(&server);
+
+        let declined_ip = random_ipv4_generator();
+        let client_mac = decline.chaddr;
+
+        decline.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: declined_ip.octets().to_vec(),
+        });
+
+        // Even though declined client ip does not match client binding,
+        // the server must update its address pool and mark declined ip as
+        // allocated, and delete client bindings from its cache.
+        let client_ip_according_to_server = random_ipv4_generator();
+
+        server.pool.allocated_addrs.insert(client_ip_according_to_server);
+        server.pool.available_addrs.insert(declined_ip);
+
+        // Server contains client bindings which reflect a different address
+        // than the one being declined.
+        server.cache.insert(
+            client_mac,
+            CachedConfig {
+                client_addr: client_ip_according_to_server,
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
+
+        // Server must not send response for `DHCPDECLINE` messages.
+        assert_eq!(server.dispatch(decline), None);
+
+        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
+        assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
+    }
+
+    #[test]
+    fn test_dispatch_with_decline_for_expired_client_binding_updates_pool_and_cache() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut decline = new_test_decline(&server);
+
+        let declined_ip = random_ipv4_generator();
+        let client_mac = decline.chaddr;
+
+        decline.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: declined_ip.octets().to_vec(),
+        });
+
+        server.pool.available_addrs.insert(declined_ip);
+
+        server.cache.insert(
+            client_mac,
+            CachedConfig { client_addr: declined_ip, options: vec![], expiration: 0 },
+        );
+
+        // Server must not send response for `DHCPDECLINE` messages.
+        assert_eq!(server.dispatch(decline), None);
+
+        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
+        assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
+    }
+
+    #[test]
+    #[should_panic]
+    //TODO(NET_2445) Revisit when decline behavior is verified.
+    // Currently if a decline is sent by a known client for an address which is
+    // not available in server pool, the code panics.
+    fn test_dispatch_with_decline_known_client_for_address_not_in_server_pool_panics() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut decline = new_test_decline(&server);
+
+        let declined_ip = random_ipv4_generator();
+        let client_mac = decline.chaddr;
+
+        decline.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: declined_ip.octets().to_vec(),
+        });
+
+        // Server contains client bindings which reflect a different address
+        // than the one being declined.
+        server.cache.insert(
+            client_mac,
+            CachedConfig {
+                client_addr: random_ipv4_generator(),
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
+
+        server.dispatch(decline);
+    }
+
+    #[test]
+    fn test_dispatch_with_decline_for_unknown_client_updates_pool() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        let mut decline = new_test_decline(&server);
+
+        let declined_ip = random_ipv4_generator();
+
+        decline.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: declined_ip.octets().to_vec(),
+        });
+
+        server.pool.available_addrs.insert(declined_ip);
+
+        // Server must not send a response for `DHCPDECLINE` messages.
+        assert_eq!(server.dispatch(decline), None);
+
+        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
+    }
+
+    #[test]
+    //TODO(NET_2445) Revisit when decline behavior is verified.
+    fn test_dispatch_with_decline_for_incorrect_server_recepient_deletes_client_binding() {
+        let mut server = new_test_minimal_server(server_time_provider);
+        server.config.server_ip = Ipv4Addr::new(192, 168, 1, 1);
+
+        let mut decline = new_test_decline(&server);
+
+        // Updating decline request to have wrong server ip.
+        decline.options.remove(1);
+        decline.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: Ipv4Addr::new(1, 2, 3, 4).octets().to_vec(),
+        });
+
+        let declined_ip = random_ipv4_generator();
+        let client_mac = decline.chaddr;
+
+        decline.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: declined_ip.octets().to_vec(),
+        });
+
+        server.pool.allocated_addrs.insert(declined_ip);
+        server.cache.insert(
+            client_mac,
+            CachedConfig { client_addr: declined_ip, options: vec![], expiration: std::i64::MAX },
+        );
+
+        // Server must not send a response for `DHCPDECLINE` messages.
+        assert_eq!(server.dispatch(decline), None);
+
+        assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
+        assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
+        assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
     }
 
     #[test]
     fn test_client_requested_lease_time() {
         let mut disc = new_test_discover();
-        disc.options
-            .push(ConfigOption { code: OptionCode::IpAddrLeaseTime, value: vec![0, 0, 0, 20] });
+        let client_mac = disc.chaddr;
 
-        let mut server = new_test_server(|| 42);
-        let result = server.dispatch(disc).unwrap();
+        let client_requested_time: u8 = 20;
+
+        disc.options.push(ConfigOption {
+            code: OptionCode::IpAddrLeaseTime,
+            value: vec![0, 0, 0, client_requested_time],
+        });
+
+        let mut server = new_test_minimal_server(server_time_provider);
+        server.pool.available_addrs.insert(random_ipv4_generator());
+
+        let response = server.dispatch(disc).unwrap();
         assert_eq!(
             BigEndian::read_u32(
-                &result.get_config_option(OptionCode::IpAddrLeaseTime).unwrap().value
+                &response.get_config_option(OptionCode::IpAddrLeaseTime).unwrap().value
             ),
-            20
+            client_requested_time as u32
         );
 
-        let cached_config =
-            server.cache.get(&MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] }).unwrap();
-        assert_eq!(cached_config.expiration, 42 + 20);
+        assert_eq!(
+            server.cache.get(&client_mac).unwrap().expiration,
+            server_time_provider() + client_requested_time as i64
+        );
     }
 
     #[test]
     fn test_client_requested_lease_time_greater_than_max() {
         let mut disc = new_test_discover();
-        disc.options
-            .push(ConfigOption { code: OptionCode::IpAddrLeaseTime, value: vec![0, 0, 0, 20] });
+        let client_mac = disc.chaddr;
 
-        let mut server = new_test_server(|| 42);
-        server.config.max_lease_time_s = 10;
-        let result = server.dispatch(disc).unwrap();
+        let client_requested_time: u8 = 20;
+        let server_max_lease_time: u32 = 10;
+
+        disc.options.push(ConfigOption {
+            code: OptionCode::IpAddrLeaseTime,
+            value: vec![0, 0, 0, client_requested_time],
+        });
+
+        let mut server = new_test_minimal_server(server_time_provider);
+        server.pool.available_addrs.insert(Ipv4Addr::new(195, 168, 1, 45));
+        server.config.max_lease_time_s = server_max_lease_time;
+
+        let response = server.dispatch(disc).unwrap();
         assert_eq!(
             BigEndian::read_u32(
-                &result.get_config_option(OptionCode::IpAddrLeaseTime).unwrap().value
+                &response.get_config_option(OptionCode::IpAddrLeaseTime).unwrap().value
             ),
-            10
+            server_max_lease_time
         );
 
-        let cached_config =
-            server.cache.get(&MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] }).unwrap();
-        assert_eq!(cached_config.expiration, 42 + 10);
+        assert_eq!(
+            server.cache.get(&client_mac).unwrap().expiration,
+            server_time_provider() + server_max_lease_time as i64
+        );
     }
 }
