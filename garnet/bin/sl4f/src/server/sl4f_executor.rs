@@ -71,7 +71,7 @@ async fn handle_request(
                     let _ = tx.send(async_response);
                 }
                 Err(e) => {
-                    println!("Error returned from calling method_to_fidl {}", e);
+                    fx_log_err!("Error returned from calling method_to_fidl {}", e);
                     let async_response = AsyncResponse::new(Err(e));
 
                     // Ignore any tx sending errors since there is not a recovery path.  The
