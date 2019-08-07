@@ -12,6 +12,7 @@ table EntryStorage {
   key: [ubyte];
   object_id: ObjectIdentifierStorage;
   priority: KeyPriorityStorage;
+  entry_id: [ubyte];
 }
 
 table ChildStorage {

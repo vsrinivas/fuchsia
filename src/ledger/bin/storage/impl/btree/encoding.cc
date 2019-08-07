@@ -45,6 +45,7 @@ KeyPriorityStorage ToKeyPriorityStorage(KeyPriority priority) {
 }
 
 bool IsTreeNodeEntryValid(const EntryStorage* entry) {
+  // TODO(LE-823): For compatibility, we accept entries without entry_id.
   return entry && entry->key() && IsObjectIdentifierStorageValid(entry->object_id()) &&
          IsKeyPriorityStorageValid(entry->priority());
 }
@@ -65,23 +66,30 @@ std::string SafeConcatenation(std::initializer_list<fxl::StringView> string_view
   return result;
 }
 
-// Computes and returns the EntryId for this entry.
-// TODO(nellyv): EntryIds should be stored in the tree nodes instead of being computed.
-EntryId ComputeEntryId(Entry entry) {
-  ObjectIdentifier& object_id = entry.object_identifier;
+// Computes and sets the entry_id of the given entry, if it is not already present.
+void SetEntryIdIfMissing(Entry* entry) {
+  if (!entry->entry_id.empty()) {
+    // The EntryId was already read from the node.
+    return;
+  }
+  // We just read a tree node without |entry_id|s. For compatibility, we accept such entries.
+  // Compute and add the entry here.
+  // TODO(LE-823): Remove compatibility.
+  const ObjectIdentifier& object_id = entry->object_identifier;
 
-  return encryption::SHA256WithLengthHash(SafeConcatenation(
-      {entry.key, fxl::NumberToString(object_id.key_index()),
+  entry->entry_id = encryption::SHA256WithLengthHash(SafeConcatenation(
+      {entry->key, fxl::NumberToString(object_id.key_index()),
        fxl::NumberToString(object_id.deletion_scope_id()), object_id.object_digest().Serialize(),
-       entry.priority == KeyPriority::EAGER ? "E" : "L"}));
+       entry->priority == KeyPriority::EAGER ? "E" : "L"}));
 }
 
 Entry ToEntry(const EntryStorage* entry_storage, ObjectIdentifierFactory* factory) {
   FXL_DCHECK(IsTreeNodeEntryValid(entry_storage));
+  EntryId entry_id = entry_storage->entry_id() ? convert::ToString(entry_storage->entry_id()) : "";
   Entry entry{convert::ToString(entry_storage->key()),
               ToObjectIdentifier(entry_storage->object_id(), factory),
-              ToKeyPriority(entry_storage->priority()), EntryId()};
-  entry.entry_id = ComputeEntryId(entry);
+              ToKeyPriority(entry_storage->priority()), entry_id};
+  SetEntryIdIfMissing(&entry);
   return entry;
 }
 }  // namespace
