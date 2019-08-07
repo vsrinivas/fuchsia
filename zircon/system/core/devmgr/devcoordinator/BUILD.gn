@@ -82,6 +82,7 @@ source_set("common") {
     "$zx/system/ulib/loader-service",
     "$zx/system/ulib/memfs",
     "$zx/system/ulib/svc",
+    "$zx/system/ulib/task-utils",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",

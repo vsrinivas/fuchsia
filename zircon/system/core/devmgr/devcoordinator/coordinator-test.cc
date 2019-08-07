@@ -63,6 +63,7 @@ devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
   config.require_system = false;
   config.asan_drivers = false;
   config.boot_args = boot_args;
+  config.suspend_fallback = true;
   zx::event::create(0, &config.fshost_event);
   return config;
 }
@@ -1621,7 +1622,6 @@ void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
                                                   fbl::count_of(device_indexes),
                                                   component_device_indexes, &composite_remote));
 }
-
 TEST_F(CompositeAddOrderTestCase, DefineBeforeDevices) {
   ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::BEFORE));
 }
@@ -2120,6 +2120,47 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
   ASSERT_TRUE(callback_executed);
   ASSERT_FALSE(suspend_task_pbus.is_pending());
   ASSERT_FALSE(suspend_task_sys.is_pending());
+}
+
+TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
+  ASSERT_OK(loop()->StartThread("DevCoordTestLoop"));
+
+  async::Wait suspend_task_pbus(
+      platform_bus_remote().get(), ZX_CHANNEL_READABLE,
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+        CheckSuspendReceived(platform_bus_remote(), DEVICE_SUSPEND_FLAG_MEXEC);
+      });
+  ASSERT_OK(suspend_task_pbus.Begin(loop()->dispatcher()));
+
+  async::Wait suspend_task_sys(
+      sys_proxy_remote_.get(), ZX_CHANNEL_READABLE,
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+        CheckSuspendReceived(sys_proxy_remote_, DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
+      });
+  ASSERT_OK(suspend_task_sys.Begin(loop()->dispatcher()));
+
+  zx::channel services, services_remote;
+  ASSERT_OK(zx::channel::create(0, &services, &services_remote));
+
+  ASSERT_OK(coordinator()->BindOutgoingServices(std::move(services_remote)));
+
+  zx::channel channel, channel_remote;
+  ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
+
+  const char* service = "svc/" fuchsia_device_manager_Administrator_Name;
+  ASSERT_OK(fdio_service_connect_at(services.get(), service, channel_remote.release()));
+
+  bool callback_executed = false;
+  DoSuspend(DEVICE_SUSPEND_FLAG_MEXEC, [&](uint32_t flags) {
+    zx_status_t call_status = ZX_OK;
+    ASSERT_OK(fuchsia_device_manager_AdministratorSuspend(channel.get(), flags, &call_status));
+    ASSERT_EQ(call_status, ZX_ERR_TIMED_OUT);
+    callback_executed = true;
+  });
+
+  ASSERT_TRUE(callback_executed);
+  ASSERT_FALSE(suspend_task_pbus.is_pending());
+  ASSERT_TRUE(suspend_task_sys.is_pending());
 }
 
 }  // namespace
