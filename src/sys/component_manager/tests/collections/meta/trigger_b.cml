@@ -7,12 +7,12 @@
     },
     "use": [
         {
-            "service": "/svc/fidl.examples.routing.echo.Echo",
+            "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
         },
     ],
     "expose": [
         {
-            "service": "/svc/fidl.test.components.Trigger",
+            "legacy_service": "/svc/fidl.test.components.Trigger",
             "from": "self",
         },
     ],

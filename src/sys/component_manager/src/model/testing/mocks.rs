@@ -42,7 +42,7 @@ pub fn proxy_expose_routing_factory() -> impl Fn(AbsoluteMoniker, ExposeDecl) ->
 }
 
 enum CapabilityType {
-    Service,
+    LegacyService,
     Directory,
     Storage,
 }
@@ -50,7 +50,7 @@ enum CapabilityType {
 impl From<UseDecl> for CapabilityType {
     fn from(use_: UseDecl) -> Self {
         match use_ {
-            UseDecl::Service(_) => CapabilityType::Service,
+            UseDecl::LegacyService(_) => CapabilityType::LegacyService,
             UseDecl::Directory(_) => CapabilityType::Directory,
             UseDecl::Storage(_) => CapabilityType::Storage,
         }
@@ -60,7 +60,7 @@ impl From<UseDecl> for CapabilityType {
 impl From<ExposeDecl> for CapabilityType {
     fn from(expose: ExposeDecl) -> Self {
         match expose {
-            ExposeDecl::Service(_) => CapabilityType::Service,
+            ExposeDecl::LegacyService(_) => CapabilityType::LegacyService,
             ExposeDecl::Directory(_) => CapabilityType::Directory,
         }
     }
@@ -70,7 +70,7 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             match ty {
-                CapabilityType::Service => {
+                CapabilityType::LegacyService => {
                     fasync::spawn(async move {
                         let server_end: ServerEnd<EchoMarker> =
                             ServerEnd::new(server_end.into_channel());

@@ -68,7 +68,7 @@ impl HubTestHook {
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
         match (capability, capability_decl) {
-            (None, FrameworkCapabilityDecl::Service(source_path))
+            (None, FrameworkCapabilityDecl::LegacyService(source_path))
                 if *source_path == *HUB_REPORT_SERVICE =>
             {
                 return Ok(Some(Box::new(HubTestCapability::new(self.observers.clone()))

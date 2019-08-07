@@ -54,7 +54,7 @@ pub struct Url(String);
 
 /// A component instance's startup mode.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum StartupMode {
     /// Start the component instance only if another component instance binds to
     /// it.
@@ -65,7 +65,7 @@ pub enum StartupMode {
 
 /// The duration of child components in a collection.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum Durability {
     /// The instance exists until it is explicitly destroyed.
     Persistent,
@@ -107,21 +107,21 @@ pub struct Storage {
 ///
 /// [`UseDecl`]: ../../fidl_fuchsia_sys2/enum.UseDecl.html
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum Use {
     /// Used service capability.
-    Service(UseService),
+    LegacyService(UseLegacyService),
     /// Used directory capability.
     Directory(UseDirectory),
     /// Used storage capability.
     Storage(UseStorage),
 }
 
-/// Used service capability. See [`UseServiceDecl`].
+/// Used service capability. See [`UseLegacyServiceDecl`].
 ///
-/// [`UseServiceDecl`]: ../../fidl_fuchsia_sys2/struct.UseServiceDecl.html
+/// [`UseLegacyServiceDecl`]: ../../fidl_fuchsia_sys2/struct.UseLegacyServiceDecl.html
 #[derive(Serialize, Deserialize, Debug)]
-pub struct UseService {
+pub struct UseLegacyService {
     /// Used service source.
     pub source: Ref,
     /// Used service source path.
@@ -160,17 +160,17 @@ pub struct UseStorage {
 ///
 /// [`ExposeDecl`]: ../../fidl_fuchsia_sys2/enum.ExposeDecl.html
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum Expose {
-    Service(ExposeService),
+    LegacyService(ExposeLegacyService),
     Directory(ExposeDirectory),
 }
 
-/// Exposed service capability. See [`ExposeServiceDecl`].
+/// Exposed service capability. See [`ExposeLegacyServiceDecl`].
 ///
-/// [`ExposeServiceDecl`]: ../../fidl_fuchsia_sys2/struct.ExposeServiceDecl.html
+/// [`ExposeLegacyServiceDecl`]: ../../fidl_fuchsia_sys2/struct.ExposeLegacyServiceDecl.html
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ExposeService {
+pub struct ExposeLegacyService {
     pub source: Ref,
     pub source_path: Path,
     pub target_path: Path,
@@ -190,18 +190,18 @@ pub struct ExposeDirectory {
 ///
 /// [`OfferDecl`]: ../../fidl_fuchsia_sys2/enum.OfferDecl.html
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum Offer {
-    Service(OfferService),
+    LegacyService(OfferLegacyService),
     Directory(OfferDirectory),
     Storage(OfferStorage),
 }
 
-/// Offered service capability. See [`OfferServiceDecl`].
+/// Offered service capability. See [`OfferLegacyServiceDecl`].
 ///
-/// [`OfferServiceDecl`]: ../../fidl_fuchsia_sys2/struct.OfferServiceDecl.html
+/// [`OfferLegacyServiceDecl`]: ../../fidl_fuchsia_sys2/struct.OfferLegacyServiceDecl.html
 #[derive(Serialize, Deserialize, Debug)]
-pub struct OfferService {
+pub struct OfferLegacyService {
     /// Offered capability source component.
     pub source: Ref,
     /// Offered capability source path.
@@ -242,7 +242,7 @@ pub struct OfferStorage {
 ///
 /// [`StorageType`]: ../../fidl_fuchsia_sys2/enum.StorageType.html
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum StorageType {
     /// Mutable storage the component may store its state in.
     Data,
@@ -256,7 +256,7 @@ pub enum StorageType {
 ///
 /// [`Ref`]: ../../fidl_fuchsia_sys2/enum.Ref.html
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum Ref {
     /// Component's containing realm (parent component).
     Realm(RealmRef),

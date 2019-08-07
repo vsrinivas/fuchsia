@@ -87,7 +87,7 @@ impl IncomingNamespace {
                         abs_moniker.clone(),
                     )?;
                 }
-                cm_rust::UseDecl::Service(_) => {
+                cm_rust::UseDecl::LegacyService(_) => {
                     Self::add_service_use(&mut svc_dirs, use_, model.clone(), abs_moniker.clone())?;
                 }
                 cm_rust::UseDecl::Storage(_) => {
@@ -238,7 +238,7 @@ impl IncomingNamespace {
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let use_service = match use_ {
-            UseDecl::Service(s) => s,
+            UseDecl::LegacyService(s) => s,
             _ => {
                 panic!("not a service capability");
             }

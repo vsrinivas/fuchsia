@@ -5,7 +5,7 @@
     },
     "use": [
       {
-        "service": "/svc/fuchsia.process.Launcher",
+        "legacy_service": "/svc/fuchsia.process.Launcher",
         "as": "/svc/fuchsia.process.Launcher",
       },
     ]

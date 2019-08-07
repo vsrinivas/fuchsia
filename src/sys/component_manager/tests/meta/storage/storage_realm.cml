@@ -3,8 +3,8 @@
         "binary": "bin/storage_realm",
     },
     "use": [
-        { "service": "/svc/fuchsia.logger.LogSink" },
-        { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+        { "legacy_service": "/svc/fuchsia.logger.LogSink" },
+        { "legacy_service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
     ],
     "storage": [
         {
@@ -22,7 +22,7 @@
             ],
         },
         {
-            "service": "/svc/fuchsia.logger.LogSink",
+            "legacy_service": "/svc/fuchsia.logger.LogSink",
             "from": "realm",
             "to": [
                 { "dest": "#storage_user" },

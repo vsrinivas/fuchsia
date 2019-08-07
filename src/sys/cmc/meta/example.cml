@@ -5,7 +5,7 @@
   },
   "use": [
     {
-      "service": "/fonts/CoolFonts",
+      "legacy_service": "/fonts/CoolFonts",
       "as": "/svc/fuchsia.fonts.Provider",
     },
   ],
@@ -17,7 +17,7 @@
   ],
   "offer": [
     {
-      "service": "/svc/fuchsia.logger.Log",
+      "legacy_service": "/svc/fuchsia.logger.Log",
       "from": "#logger",
       "to": [
         {

@@ -104,7 +104,7 @@ impl FrameworkServicesHook {
         // If some other capability has already been installed, then there's nothing to
         // do here.
         let capability_path = match (&capability, capability_decl) {
-            (None, FrameworkCapabilityDecl::Service(source_path)) => source_path.clone(),
+            (None, FrameworkCapabilityDecl::LegacyService(source_path)) => source_path.clone(),
             _ => return Ok(capability),
         };
 
@@ -368,7 +368,7 @@ mod tests {
         crate::model::testing::test_hook::*,
         cm_rust::{
             self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-            ExposeServiceDecl, ExposeSource, NativeIntoFidl,
+            ExposeLegacyServiceDecl, ExposeSource, NativeIntoFidl,
         },
         fidl::endpoints,
         fidl_fidl_examples_echo as echo,
@@ -708,7 +708,7 @@ mod tests {
         mock_resolver.add_component(
             "system",
             ComponentDecl {
-                exposes: vec![ExposeDecl::Service(ExposeServiceDecl {
+                exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -773,7 +773,7 @@ mod tests {
         mock_resolver.add_component(
             "system",
             ComponentDecl {
-                exposes: vec![ExposeDecl::Service(ExposeServiceDecl {
+                exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),

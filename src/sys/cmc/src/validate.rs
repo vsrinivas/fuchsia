@@ -345,7 +345,7 @@ impl<'a> ValidationContext<'a> {
         U: cml::DestClause + cml::AsClause,
     {
         // Get the source capability's path.
-        let source_path = if let Some(p) = source_obj.service().as_ref() {
+        let source_path = if let Some(p) = source_obj.legacy_service().as_ref() {
             p
         } else if let Some(p) = source_obj.directory().as_ref() {
             p
@@ -564,7 +564,7 @@ mod tests {
             input = json!({
                 "uses": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "realm": {},
                             },
@@ -573,7 +573,7 @@ mod tests {
                         }
                     },
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "framework": {},
                             },
@@ -623,7 +623,7 @@ mod tests {
             input = json!({
                 "exposes": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
                                 "self": {}
@@ -665,7 +665,7 @@ mod tests {
             input = json!({
                 "exposes": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {},
                             "target_path": "/svc/fuchsia.ui.Scenic"
@@ -673,13 +673,13 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/service/source")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/legacy_service/source")),
         },
         test_cm_exposes_source_multiple_variants => {
             input = json!({
                 "exposes": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
                                 "self": {},
@@ -692,13 +692,13 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/service/source")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/legacy_service/source")),
         },
         test_cm_exposes_source_bad_child_name => {
             input = json!({
                 "exposes": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
                                 "child": {
@@ -710,7 +710,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /exposes/0/service/source/child/name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /exposes/0/legacy_service/source/child/name")),
         },
 
         // offers
@@ -718,7 +718,7 @@ mod tests {
             input = json!({
                 "offers": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "realm": {}
                             },
@@ -732,7 +732,7 @@ mod tests {
                         }
                     },
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "self": {}
                             },
@@ -746,7 +746,7 @@ mod tests {
                         }
                     },
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "self": {}
                             },
@@ -839,7 +839,7 @@ mod tests {
             input = json!({
                 "offers": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source_path": "/svc/fuchsia.logger.LogSink",
                             "source": {
                                 "child": {
@@ -883,7 +883,7 @@ mod tests {
             input = json!({
                 "offers": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {},
                             "target": {
@@ -907,13 +907,13 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/service/source, OneOf conditions are not met at /offers/1/storage/source")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/legacy_service/source, OneOf conditions are not met at /offers/1/storage/source")),
         },
         test_cm_offers_source_multiple_variants => {
             input = json!({
                 "offers": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
                                 "self": {},
@@ -947,13 +947,13 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/service/source, OneOf conditions are not met at /offers/1/storage/source")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/legacy_service/source, OneOf conditions are not met at /offers/1/storage/source")),
         },
         test_cm_offers_source_bad_child_name => {
             input = json!({
                 "offers": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
                                 "child": {
@@ -985,13 +985,13 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/source/child/name, Pattern condition is not met at /offers/1/storage/source/child/name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/legacy_service/source/child/name, Pattern condition is not met at /offers/1/storage/source/child/name")),
         },
         test_cm_offers_target_missing_variant => {
             input = json!({
                 "offers": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
                                 "child": {
@@ -1004,13 +1004,13 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/service/target")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/legacy_service/target")),
         },
         test_cm_offers_target_bad_child_name => {
             input = json!({
                 "offers": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
                                 "self": {}
@@ -1038,7 +1038,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/target/child/name, Pattern condition is not met at /offers/1/storage/target/child/name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/legacy_service/target/child/name, Pattern condition is not met at /offers/1/storage/target/child/name")),
         },
 
         // storage
@@ -1353,7 +1353,7 @@ mod tests {
         let input = r##"{
             "expose": [
                 // Here are some services to expose.
-                { "service": "/loggers/fuchsia.logger.Log", "from": "#logger", },
+                { "legacy_service": "/loggers/fuchsia.logger.Log", "from": "#logger", },
                 { "directory": "/volumes/blobfs", "from": "self", },
             ],
             "children": [
@@ -1385,8 +1385,8 @@ mod tests {
         test_cml_use => {
             input = json!({
                 "use": [
-                  { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                  { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                  { "legacy_service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                  { "legacy_service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
                   { "directory": "/data/assets" },
                   { "directory": "/data/config", "from": "realm" },
                   { "storage": "data", "as": "/example" },
@@ -1417,7 +1417,7 @@ mod tests {
         test_cml_use_invalid_from => {
             input = json!({
                 "use": [
-                  { "service": "/fonts/CoolFonts", "from": "self" }
+                  { "legacy_service": "/fonts/CoolFonts", "from": "self" }
                 ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/from")),
@@ -1428,7 +1428,7 @@ mod tests {
             input = json!({
                 "expose": [
                     {
-                        "service": "/loggers/fuchsia.logger.Log",
+                        "legacy_service": "/loggers/fuchsia.logger.Log",
                         "from": "#logger",
                         "as": "/svc/logger"
                     },
@@ -1447,7 +1447,7 @@ mod tests {
         test_cml_expose_all_valid_chars => {
             input = json!({
                 "expose": [
-                    { "service": "/loggers/fuchsia.logger.Log", "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-." }
+                    { "legacy_service": "/loggers/fuchsia.logger.Log", "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-." }
                 ],
                 "children": [
                     {
@@ -1467,7 +1467,7 @@ mod tests {
         test_cml_expose_missing_from => {
             input = json!({
                 "expose": [
-                    { "service": "/loggers/fuchsia.logger.Log", "from": "#missing" }
+                    { "legacy_service": "/loggers/fuchsia.logger.Log", "from": "#missing" }
                 ]
             }),
             result = Err(Error::validate("\"#missing\" is an \"expose\" source but it does not appear in \"children\"")),
@@ -1475,8 +1475,8 @@ mod tests {
         test_cml_expose_duplicate_target_paths => {
             input = json!({
                 "expose": [
-                    { "service": "/fonts/CoolFonts", "from": "self" },
-                    { "service": "/svc/logger", "from": "#logger", "as": "/thing" },
+                    { "legacy_service": "/fonts/CoolFonts", "from": "self" },
+                    { "legacy_service": "/svc/logger", "from": "#logger", "as": "/thing" },
                     { "directory": "/thing", "from": "self" }
                 ],
                 "children": [
@@ -1491,7 +1491,7 @@ mod tests {
         test_cml_expose_bad_from => {
             input = json!({
                 "expose": [ {
-                    "service": "/loggers/fuchsia.logger.Log", "from": "realm"
+                    "legacy_service": "/loggers/fuchsia.logger.Log", "from": "realm"
                 } ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /expose/0/from")),
@@ -1502,7 +1502,7 @@ mod tests {
             input = json!({
                 "offer": [
                     {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "legacy_service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
                         "to": [
                             { "dest": "#echo_server" },
@@ -1510,7 +1510,7 @@ mod tests {
                         ]
                     },
                     {
-                        "service": "/svc/fuchsia.fonts.Provider",
+                        "legacy_service": "/svc/fuchsia.fonts.Provider",
                         "from": "realm",
                         "to": [
                             { "dest": "#echo_server" },
@@ -1576,7 +1576,7 @@ mod tests {
             input = json!({
                 "offer": [
                     {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "legacy_service": "/svc/fuchsia.logger.Log",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
                         "to": [
                             {
@@ -1623,7 +1623,7 @@ mod tests {
         test_cml_offer_missing_from => {
             input = json!({
                     "offer": [ {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "legacy_service": "/svc/fuchsia.logger.Log",
                         "from": "#missing",
                         "to": [
                             { "dest": "#echo_server" },
@@ -1647,7 +1647,7 @@ mod tests {
         test_cml_offer_bad_from => {
             input = json!({
                     "offer": [ {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "legacy_service": "/svc/fuchsia.logger.Log",
                         "from": "#invalid@",
                         "to": [
                             { "dest": "#echo_server" },
@@ -1675,7 +1675,7 @@ mod tests {
         test_cml_offer_empty_targets => {
             input = json!({
                 "offer": [ {
-                    "service": "/svc/fuchsia.logger.Log",
+                    "legacy_service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
                     "to": []
                 } ]
@@ -1685,7 +1685,7 @@ mod tests {
         test_cml_offer_target_missing_props => {
             input = json!({
                 "offer": [ {
-                    "service": "/svc/fuchsia.logger.Log",
+                    "legacy_service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
                     "to": [
                         { "as": "/svc/fuchsia.logger.SysLog" }
@@ -1697,7 +1697,7 @@ mod tests {
         test_cml_offer_target_missing_to => {
             input = json!({
                 "offer": [ {
-                    "service": "/snvc/fuchsia.logger.Log",
+                    "legacy_service": "/snvc/fuchsia.logger.Log",
                     "from": "#logger",
                     "to": [
                         { "dest": "#missing" }
@@ -1713,7 +1713,7 @@ mod tests {
         test_cml_offer_target_bad_to => {
             input = json!({
                 "offer": [ {
-                    "service": "/svc/fuchsia.logger.Log",
+                    "legacy_service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
                     "to": [
                         { "dest": "self", "as": "/svc/fuchsia.logger.SysLog" }
@@ -1725,7 +1725,7 @@ mod tests {
         test_cml_offer_target_equals_from => {
             input = json!({
                 "offer": [ {
-                    "service": "/svc/fuchsia.logger.Log",
+                    "legacy_service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
                     "to": [
                         { "dest": "#logger", "as": "/svc/fuchsia.logger.SysLog", },
@@ -1762,7 +1762,7 @@ mod tests {
             input = json!({
                 "offer": [
                     {
-                        "service": "/svc/logger",
+                        "legacy_service": "/svc/logger",
                         "from": "self",
                         "to": [
                             { "dest": "#echo_server", "as": "/thing" },
@@ -2022,48 +2022,48 @@ mod tests {
         test_cml_path_invalid_empty => {
             input = json!({
                 "use": [
-                  { "service": "" },
+                  { "legacy_service": "" },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MinLength condition is not met at /use/0/service, Pattern condition is not met at /use/0/service")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MinLength condition is not met at /use/0/legacy_service, Pattern condition is not met at /use/0/legacy_service")),
         },
         test_cml_path_invalid_root => {
             input = json!({
                 "use": [
-                  { "service": "/" },
+                  { "legacy_service": "/" },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/service")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/legacy_service")),
         },
         test_cml_path_invalid_relative => {
             input = json!({
                 "use": [
-                  { "service": "foo/bar" },
+                  { "legacy_service": "foo/bar" },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/service")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/legacy_service")),
         },
         test_cml_path_invalid_trailing => {
             input = json!({
                 "use": [
-                  { "service": "/foo/bar/" },
+                  { "legacy_service": "/foo/bar/" },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/service")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/legacy_service")),
         },
         test_cml_path_too_long => {
             input = json!({
                 "use": [
-                  { "service": format!("/{}", "a".repeat(1024)) },
+                  { "legacy_service": format!("/{}", "a".repeat(1024)) },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /use/0/service")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /use/0/legacy_service")),
         },
         test_cml_relative_ref_too_long => {
             input = json!({
                 "expose": [
                     {
-                        "service": "/loggers/fuchsia.logger.Log",
+                        "legacy_service": "/loggers/fuchsia.logger.Log",
                         "from": &format!("#{}", "a".repeat(101)),
                     },
                 ],

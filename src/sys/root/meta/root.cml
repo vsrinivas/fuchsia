@@ -15,32 +15,32 @@
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/svc/fuchsia.boot.RootJob",
+      "legacy_service": "/svc/fuchsia.boot.RootJob",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/svc/fuchsia.boot.RootResource",
+      "legacy_service": "/svc/fuchsia.boot.RootResource",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/svc/fuchsia.boot.Arguments",
+      "legacy_service": "/svc/fuchsia.boot.Arguments",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/svc/fuchsia.boot.FactoryItems",
+      "legacy_service": "/svc/fuchsia.boot.FactoryItems",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/svc/fuchsia.boot.Items",
+      "legacy_service": "/svc/fuchsia.boot.Items",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/svc/fuchsia.boot.Log",
+      "legacy_service": "/svc/fuchsia.boot.Log",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
@@ -48,7 +48,7 @@
     // TODO: Implement routing from /builtin (this doesn't actually work yet), and consider making
     // the distinction from bootsvc services clearer.
     {
-      "service": "/builtin/fuchsia.process.Launcher",
+      "legacy_service": "/builtin/fuchsia.process.Launcher",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },

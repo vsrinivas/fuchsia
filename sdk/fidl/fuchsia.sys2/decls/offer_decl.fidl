@@ -4,24 +4,27 @@
 
 library fuchsia.sys2;
 
-/// Declares a capability offered by a component to one of its children, which may
-/// have been offered by the component's containing realm, the component itself,
-/// or one of its other children.
+/// Declares a capability offered by a component to one of its children, which
+/// may have been offered by the component's containing realm, the component
+/// itself, or one of its other children.
 xunion OfferDecl {
-    OfferServiceDecl service;
+    OfferLegacyServiceDecl legacy_service;
     OfferDirectoryDecl directory;
     OfferStorageDecl storage;
 };
 
-/// Declares a service offered by a component to one of its children, which may
-/// have been offered by the component's containing realm, the component itself,
-/// or one of its other children.
-table OfferServiceDecl {
+/// Declares a legacy service offered by a component to one of its children,
+/// which may have been offered by the component's containing realm, the
+/// component itself, or one of its other children.
+///
+/// A legacy service is a service with a single instance, provided by a single
+/// FIDL protocol.
+table OfferLegacyServiceDecl {
     /// The provider of the capability relative to the component itself. Must be
     /// `realm`, `self`, or `child`.
     1: Ref source;
 
-    /// Path identifying the service being offered.
+    /// Path identifying the legacy service being offered.
     2: string:MAX_PATH_LENGTH source_path;
 
     /// Reference to the target. Must be `child` or `collection`.
@@ -33,9 +36,9 @@ table OfferServiceDecl {
     4: string:MAX_PATH_LENGTH target_path;
 };
 
-/// Declares a directory offered by a component to one of its children, which may
-/// have been offered by the component's containing realm, the component itself,
-/// or one of its other children.
+/// Declares a directory offered by a component to one of its children, which
+/// may have been offered by the component's containing realm, the component
+/// itself, or one of its other children.
 table OfferDirectoryDecl {
     /// The provider of the capability relative to the component itself. Must be
     /// `realm`, `self`, or `child`.

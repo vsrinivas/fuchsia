@@ -66,7 +66,7 @@ impl Document {
 
 #[derive(Deserialize, Debug)]
 pub struct Use {
-    pub service: Option<String>,
+    pub legacy_service: Option<String>,
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub r#as: Option<String>,
@@ -75,7 +75,7 @@ pub struct Use {
 
 #[derive(Deserialize, Debug)]
 pub struct Expose {
-    pub service: Option<String>,
+    pub legacy_service: Option<String>,
     pub directory: Option<String>,
     pub from: String,
     pub r#as: Option<String>,
@@ -83,7 +83,7 @@ pub struct Expose {
 
 #[derive(Deserialize, Debug)]
 pub struct Offer {
-    pub service: Option<String>,
+    pub legacy_service: Option<String>,
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub from: String,
@@ -121,7 +121,7 @@ pub trait FromClause {
 }
 
 pub trait CapabilityClause {
-    fn service(&self) -> &Option<String>;
+    fn legacy_service(&self) -> &Option<String>;
     fn directory(&self) -> &Option<String>;
     fn storage(&self) -> &Option<String>;
 }
@@ -134,8 +134,8 @@ pub trait DestClause {
 }
 
 impl CapabilityClause for Use {
-    fn service(&self) -> &Option<String> {
-        &self.service
+    fn legacy_service(&self) -> &Option<String> {
+        &self.legacy_service
     }
     fn directory(&self) -> &Option<String> {
         &self.directory
@@ -158,8 +158,8 @@ impl FromClause for Expose {
 }
 
 impl CapabilityClause for Expose {
-    fn service(&self) -> &Option<String> {
-        &self.service
+    fn legacy_service(&self) -> &Option<String> {
+        &self.legacy_service
     }
     fn directory(&self) -> &Option<String> {
         &self.directory
@@ -188,8 +188,8 @@ impl FromClause for Offer {
 }
 
 impl CapabilityClause for Offer {
-    fn service(&self) -> &Option<String> {
-        &self.service
+    fn legacy_service(&self) -> &Option<String> {
+        &self.legacy_service
     }
     fn directory(&self) -> &Option<String> {
         &self.directory

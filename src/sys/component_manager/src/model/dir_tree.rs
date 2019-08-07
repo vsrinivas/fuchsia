@@ -74,7 +74,7 @@ impl DirTree {
         use_: &UseDecl,
     ) -> Result<(), ModelError> {
         let path = match use_ {
-            cm_rust::UseDecl::Service(d) => &d.target_path,
+            cm_rust::UseDecl::LegacyService(d) => &d.target_path,
             cm_rust::UseDecl::Directory(d) => &d.target_path,
             cm_rust::UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
             cm_rust::UseDecl::Storage(UseStorageDecl::Cache(p)) => &p,
@@ -96,7 +96,7 @@ impl DirTree {
         expose: &ExposeDecl,
     ) {
         let path = match expose {
-            cm_rust::ExposeDecl::Service(d) => &d.target_path,
+            cm_rust::ExposeDecl::LegacyService(d) => &d.target_path,
             cm_rust::ExposeDecl::Directory(d) => &d.target_path,
         };
         let tree = self.to_directory_node(path);
@@ -124,8 +124,8 @@ mod tests {
         super::*,
         crate::model::testing::{mocks, routing_test_helpers::default_component_decl, test_utils},
         cm_rust::{
-            CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource,
-            UseDecl, UseDirectoryDecl, UseServiceDecl, UseSource, UseStorageDecl,
+            CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource,
+            UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -148,7 +148,7 @@ mod tests {
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                 }),
-                UseDecl::Service(UseServiceDecl {
+                UseDecl::LegacyService(UseLegacyServiceDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
@@ -213,7 +213,7 @@ mod tests {
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                 }),
-                ExposeDecl::Service(ExposeServiceDecl {
+                ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),

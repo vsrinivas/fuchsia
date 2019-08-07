@@ -5,20 +5,23 @@
 library fuchsia.sys2;
 
 /// Declares a capability exposed to a component's containing realm, such as a
-/// service exposed by the component or one of its children at runtime.
+/// legacy service exposed by the component or one of its children at runtime.
 xunion ExposeDecl {
-    ExposeServiceDecl service;
+    ExposeLegacyServiceDecl legacy_service;
     ExposeDirectoryDecl directory;
 };
 
-/// Declares a service exposed to a component's containing realm, such as a
-/// service exposed by the component or one of its children at runtime.
-table ExposeServiceDecl {
+/// Declares a legacy service exposed to a component's containing realm, such as
+/// a legacy service exposed by the component or one of its children at runtime.
+///
+/// A legacy service is a service with a single instance, provided by a single
+/// FIDL protocol.
+table ExposeLegacyServiceDecl {
     /// The provider of the capability relative to the component itself. Must
     /// be `self` or `child`.
     1: Ref source;
 
-    /// Path identifying the service, by which it was presented to this
+    /// Path identifying the legacy service, by which it was presented to this
     /// component.
     2: string:MAX_PATH_LENGTH source_path;
 

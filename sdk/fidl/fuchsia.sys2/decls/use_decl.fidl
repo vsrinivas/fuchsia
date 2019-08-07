@@ -7,19 +7,22 @@ library fuchsia.sys2;
 /// Declares a capability used by a component, which was offered to the
 /// component's environment.
 xunion UseDecl {
-    UseServiceDecl service;
+    UseLegacyServiceDecl legacy_service;
     UseDirectoryDecl directory;
     UseStorageDecl storage;
 };
 
-/// Declares a service used by a component, which was offered to the component's
-/// environment.
-table UseServiceDecl {
-    /// The provider of the service relative to the component itself. Must
-    /// be |realm| or |framework|.
+/// Declares a legacy service used by a component, which was offered to the
+/// component's environment.
+///
+/// A legacy service is a service with a single instance, provided by a single
+/// FIDL protocol.
+table UseLegacyServiceDecl {
+    /// The provider of the legacy service relative to the component itself.
+    /// Must be |realm| or |framework|.
     1: Ref source;
 
-    /// Path identifying the service, by which it was presented to this
+    /// Path identifying the legacy service, by which it was presented to this
     /// component.
     2: string:MAX_PATH_LENGTH source_path;
 
@@ -30,8 +33,8 @@ table UseServiceDecl {
     3: string:MAX_PATH_LENGTH target_path;
 };
 
-/// Declares a directory used by a component, which was offered to the component's
-/// environment.
+/// Declares a directory used by a component, which was offered to the
+/// component's environment.
 table UseDirectoryDecl {
     /// The provider of the directory relative to the component itself. Must
     /// be |realm| or |framework|.

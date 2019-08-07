@@ -3,14 +3,14 @@
     // Expose Trigger service from child.
     "expose": [
         {
-            "service": "/svc/fidl.test.components.Trigger",
+            "legacy_service": "/svc/fidl.test.components.Trigger",
             "from": "#trigger",
         },
     ],
     // Route Echo service to child.
     "offer": [
         {
-            "service": "/svc/fuchsia.logger.LogSink",
+            "legacy_service": "/svc/fuchsia.logger.LogSink",
             "from": "realm",
             "to": [
                 {
@@ -19,7 +19,7 @@
             ],
         },
         {
-            "service": "/svc/fidl.examples.routing.echo.Echo",
+            "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
             "from": "realm",
             "to": [
                 {

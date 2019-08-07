@@ -4,7 +4,7 @@
     },
     "use": [
         { "storage": "data" },
-        { "service": "/svc/fuchsia.logger.LogSink" },
+        { "legacy_service": "/svc/fuchsia.logger.LogSink" },
     ],
     "expose": [
         {

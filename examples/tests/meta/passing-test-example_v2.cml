@@ -4,7 +4,7 @@
     },
     "expose": [
         {
-            "service": "/svc/fuchsia.test.Suite",
+            "legacy_service": "/svc/fuchsia.test.Suite",
             "from": "self",
         },
     ],

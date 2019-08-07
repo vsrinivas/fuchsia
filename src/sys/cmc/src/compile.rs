@@ -98,10 +98,10 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
         let target_path = extract_target_path(use_, use_);
-        let out = if let Some(p) = use_.service() {
+        let out = if let Some(p) = use_.legacy_service() {
             let source = extract_use_source(use_)?;
             let target_path = target_path.ok_or(Error::internal(format!("no capability")))?;
-            Ok(cm::Use::Service(cm::UseService {
+            Ok(cm::Use::LegacyService(cm::UseLegacyService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_path)?,
@@ -133,8 +133,8 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
         let source = extract_expose_source(expose)?;
         let target_path =
             extract_target_path(expose, expose).ok_or(Error::internal(format!("no capability")))?;
-        let out = if let Some(p) = expose.service() {
-            Ok(cm::Expose::Service(cm::ExposeService {
+        let out = if let Some(p) = expose.legacy_service() {
+            Ok(cm::Expose::LegacyService(cm::ExposeLegacyService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_path)?,
@@ -160,11 +160,11 @@ fn translate_offer(
 ) -> Result<Vec<cm::Offer>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
-        if let Some(p) = offer.service() {
+        if let Some(p) = offer.legacy_service() {
             let source = extract_offer_source(offer)?;
             let targets = extract_targets(offer, all_children, all_collections)?;
             for (target, target_path) in targets {
-                out_offers.push(cm::Offer::Service(cm::OfferService {
+                out_offers.push(cm::Offer::LegacyService(cm::OfferLegacyService {
                     source_path: cm::Path::new(p.clone())?,
                     source: source.clone(),
                     target,
@@ -386,7 +386,7 @@ where
     if let Some(as_) = to_obj.r#as() {
         Some(as_.clone())
     } else {
-        if let Some(p) = in_obj.service() {
+        if let Some(p) = in_obj.legacy_service() {
             Some(p.clone())
         } else if let Some(p) = in_obj.directory() {
             Some(p.clone())
@@ -476,8 +476,8 @@ mod tests {
         test_compile_use => {
             input = json!({
                 "use": [
-                    { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                    { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                    { "legacy_service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                    { "legacy_service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
                     { "directory": "/data/assets" },
                     { "directory": "/data/config", "from": "realm" },
                     { "storage": "meta" },
@@ -487,7 +487,7 @@ mod tests {
             output = r#"{
     "uses": [
         {
-            "service": {
+            "legacy_service": {
                 "source": {
                     "realm": {}
                 },
@@ -496,7 +496,7 @@ mod tests {
             }
         },
         {
-            "service": {
+            "legacy_service": {
                 "source": {
                     "framework": {}
                 },
@@ -541,7 +541,7 @@ mod tests {
             input = json!({
                 "expose": [
                     {
-                      "service": "/loggers/fuchsia.logger.Log",
+                      "legacy_service": "/loggers/fuchsia.logger.Log",
                       "from": "#logger",
                       "as": "/svc/fuchsia.logger.Log"
                     },
@@ -558,7 +558,7 @@ mod tests {
             output = r#"{
     "exposes": [
         {
-            "service": {
+            "legacy_service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -601,7 +601,7 @@ mod tests {
             input = json!({
                 "offer": [
                     {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "legacy_service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
                         "to": [
                             { "dest": "#netstack" },
@@ -659,7 +659,7 @@ mod tests {
             output = r#"{
     "offers": [
         {
-            "service": {
+            "legacy_service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -675,7 +675,7 @@ mod tests {
             }
         },
         {
-            "service": {
+            "legacy_service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -930,14 +930,14 @@ mod tests {
                     "binary": "bin/app",
                 },
                 "use": [
-                    { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                    { "legacy_service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                 ],
                 "expose": [
                     { "directory": "/volumes/blobfs", "from": "self" },
                 ],
                 "offer": [
                     {
-                        "service": "/svc/fuchsia.logger.Log",
+                        "legacy_service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
                         "to": [
                             { "dest": "#netstack" },
@@ -972,7 +972,7 @@ mod tests {
     },
     "uses": [
         {
-            "service": {
+            "legacy_service": {
                 "source": {
                     "realm": {}
                 },
@@ -994,7 +994,7 @@ mod tests {
     ],
     "offers": [
         {
-            "service": {
+            "legacy_service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -1010,7 +1010,7 @@ mod tests {
             }
         },
         {
-            "service": {
+            "legacy_service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -1056,11 +1056,11 @@ mod tests {
     fn test_compile_compact() {
         let input = json!({
             "use": [
-                { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                { "legacy_service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                 { "directory": "/data/assets" }
             ]
         });
-        let output = r#"{"uses":[{"service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets"}}]}"#;
+        let output = r#"{"uses":[{"legacy_service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets"}}]}"#;
         compile_test(input, &output, false);
     }
 

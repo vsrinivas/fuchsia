@@ -96,7 +96,7 @@
         "type": "object",
         "oneOf": [
           {
-            "required": [ "service" ]
+            "required": [ "legacy_service" ]
           },
           {
             "required": [ "directory" ]
@@ -106,9 +106,9 @@
           }
         ],
         "properties": {
-          "service": {
-            "title": "Used service source path",
-            "description": "The path under which a service is offered to this component",
+          "legacy_service": {
+            "title": "Used legacy service source path",
+            "description": "The path under which a legacy service is offered to this component",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/svc/fuchsia.logger.Log"
@@ -162,16 +162,16 @@
         ],
         "oneOf": [
           {
-            "required": [ "service" ]
+            "required": [ "legacy_service" ]
           },
           {
             "required": [ "directory" ]
           }
         ],
         "properties": {
-          "service": {
-            "title": "Exposed service source path",
-            "description": "The path to the service being exposed. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the service was exposed by the child (if from \"#$CHILD\").",
+          "legacy_service": {
+            "title": "Exposed legacy service source path",
+            "description": "The path to the legacy service being exposed. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the legacy service was exposed by the child (if from \"#$CHILD\").",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/svc/fuchsia.ui.Scenic"
@@ -219,7 +219,7 @@
         ],
         "oneOf": [
           {
-            "required": [ "service" ]
+            "required": [ "legacy_service" ]
           },
           {
             "required": [ "directory" ]
@@ -229,9 +229,9 @@
           }
         ],
         "properties": {
-          "service": {
-            "title": "Offered service source path",
-            "description": "The path to the service being offered. This is either a path in this component's namespace (if from \"self\"), or the path by which the service was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
+          "legacy_service": {
+            "title": "Offered legacy service source path",
+            "description": "The path to the legacy service being offered. This is either a path in this component's namespace (if from \"self\"), or the path by which the legacy service was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/svc/fuchsia.ui.Scenic"

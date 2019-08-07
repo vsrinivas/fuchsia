@@ -61,7 +61,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
 impl CmInto<fsys::UseDecl> for cm::Use {
     fn cm_into(self) -> Result<fsys::UseDecl, Error> {
         Ok(match self {
-            cm::Use::Service(s) => fsys::UseDecl::Service(s.cm_into()?),
+            cm::Use::LegacyService(s) => fsys::UseDecl::LegacyService(s.cm_into()?),
             cm::Use::Directory(d) => fsys::UseDecl::Directory(d.cm_into()?),
             cm::Use::Storage(s) => fsys::UseDecl::Storage(s.cm_into()?),
         })
@@ -71,7 +71,7 @@ impl CmInto<fsys::UseDecl> for cm::Use {
 impl CmInto<fsys::ExposeDecl> for cm::Expose {
     fn cm_into(self) -> Result<fsys::ExposeDecl, Error> {
         Ok(match self {
-            cm::Expose::Service(s) => fsys::ExposeDecl::Service(s.cm_into()?),
+            cm::Expose::LegacyService(s) => fsys::ExposeDecl::LegacyService(s.cm_into()?),
             cm::Expose::Directory(d) => fsys::ExposeDecl::Directory(d.cm_into()?),
         })
     }
@@ -80,16 +80,16 @@ impl CmInto<fsys::ExposeDecl> for cm::Expose {
 impl CmInto<fsys::OfferDecl> for cm::Offer {
     fn cm_into(self) -> Result<fsys::OfferDecl, Error> {
         Ok(match self {
-            cm::Offer::Service(s) => fsys::OfferDecl::Service(s.cm_into()?),
+            cm::Offer::LegacyService(s) => fsys::OfferDecl::LegacyService(s.cm_into()?),
             cm::Offer::Directory(d) => fsys::OfferDecl::Directory(d.cm_into()?),
             cm::Offer::Storage(s) => fsys::OfferDecl::Storage(s.cm_into()?),
         })
     }
 }
 
-impl CmInto<fsys::UseServiceDecl> for cm::UseService {
-    fn cm_into(self) -> Result<fsys::UseServiceDecl, Error> {
-        Ok(fsys::UseServiceDecl {
+impl CmInto<fsys::UseLegacyServiceDecl> for cm::UseLegacyService {
+    fn cm_into(self) -> Result<fsys::UseLegacyServiceDecl, Error> {
+        Ok(fsys::UseLegacyServiceDecl {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
@@ -116,9 +116,9 @@ impl CmInto<fsys::UseStorageDecl> for cm::UseStorage {
     }
 }
 
-impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
-    fn cm_into(self) -> Result<fsys::ExposeServiceDecl, Error> {
-        Ok(fsys::ExposeServiceDecl {
+impl CmInto<fsys::ExposeLegacyServiceDecl> for cm::ExposeLegacyService {
+    fn cm_into(self) -> Result<fsys::ExposeLegacyServiceDecl, Error> {
+        Ok(fsys::ExposeLegacyServiceDecl {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
@@ -136,9 +136,9 @@ impl CmInto<fsys::ExposeDirectoryDecl> for cm::ExposeDirectory {
     }
 }
 
-impl CmInto<fsys::OfferServiceDecl> for cm::OfferService {
-    fn cm_into(self) -> Result<fsys::OfferServiceDecl, Error> {
-        Ok(fsys::OfferServiceDecl {
+impl CmInto<fsys::OfferLegacyServiceDecl> for cm::OfferLegacyService {
+    fn cm_into(self) -> Result<fsys::OfferLegacyServiceDecl, Error> {
+        Ok(fsys::OfferLegacyServiceDecl {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
             target: Some(self.target.cm_into()?),
@@ -489,7 +489,7 @@ mod tests {
             input = json!({
                 "uses": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "realm": {}
                             },
@@ -498,7 +498,7 @@ mod tests {
                         }
                     },
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "framework": {}
                             },
@@ -534,12 +534,12 @@ mod tests {
             }),
             output = {
                 let uses = vec![
-                    fsys::UseDecl::Service(fsys::UseServiceDecl {
+                    fsys::UseDecl::LegacyService(fsys::UseLegacyServiceDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                     }),
-                    fsys::UseDecl::Service(fsys::UseServiceDecl {
+                    fsys::UseDecl::LegacyService(fsys::UseLegacyServiceDecl {
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
                         target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
@@ -568,7 +568,7 @@ mod tests {
             input = json!({
                 "exposes": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "child": {
                                     "name": "logger"
@@ -598,7 +598,7 @@ mod tests {
             }),
             output = {
                 let exposes = vec![
-                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
+                    fsys::ExposeDecl::LegacyService(fsys::ExposeLegacyServiceDecl {
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
@@ -657,7 +657,7 @@ mod tests {
                         }
                     },
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "self": {}
                             },
@@ -671,7 +671,7 @@ mod tests {
                         }
                     },
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "child": {
                                     "name": "logger"
@@ -794,7 +794,7 @@ mod tests {
                         )),
                         target_path: Some("/data/config".to_string()),
                     }),
-                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                    fsys::OfferDecl::LegacyService(fsys::OfferLegacyServiceDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
                         target: Some(fsys::Ref::Child(
@@ -805,7 +805,7 @@ mod tests {
                         )),
                         target_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
                     }),
-                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                    fsys::OfferDecl::LegacyService(fsys::OfferLegacyServiceDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
                             collection: None,
@@ -1014,7 +1014,7 @@ mod tests {
                 },
                 "uses": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "realm": {}
                             },
@@ -1036,7 +1036,7 @@ mod tests {
                 ],
                 "offers": [
                     {
-                        "service": {
+                        "legacy_service": {
                             "source": {
                                 "child": {
                                     "name": "logger"
@@ -1092,7 +1092,7 @@ mod tests {
                     },
                 ]};
                 let uses = vec![
-                    fsys::UseDecl::Service(fsys::UseServiceDecl {
+                    fsys::UseDecl::LegacyService(fsys::UseLegacyServiceDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
@@ -1106,7 +1106,7 @@ mod tests {
                     }),
                 ];
                 let offers = vec![
-                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                    fsys::OfferDecl::LegacyService(fsys::OfferLegacyServiceDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
                             collection: None,
