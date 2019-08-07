@@ -65,6 +65,10 @@ func (code optionCode) String() string {
 		return "option(message)"
 	case optClientID:
 		return "option(client-id)"
+	case optRenewalTime:
+		return "option(renewal-time)"
+	case optRebindingTime:
+		return "option(rebinding-time)"
 	default:
 		return fmt.Sprintf("option(%d)", code)
 	}
@@ -102,4 +106,17 @@ func (t dhcpMsgType) String() string {
 
 func (v xid) String() string {
 	return fmt.Sprintf("xid:%x", uint32(v))
+}
+
+func (s dhcpClientState) String() string {
+	switch s {
+	case initSelecting:
+		return "INIT-SELECTING"
+	case rebinding:
+		return "REBINDING"
+	case renewing:
+		return "RENEWING"
+	default:
+		return fmt.Sprintf("UNKNOWN(%d)", s)
+	}
 }
