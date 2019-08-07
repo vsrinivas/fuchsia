@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdio.h>
+
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
 #include <soc/hi3660/hi3660-hw.h>
-#include <stdio.h>
-#include "hikey960.h"
+
 #include "hikey960-hw.h"
+#include "hikey960.h"
 
 // #define GPIO_TEST 1
 // #define I2C_TEST 1
@@ -104,7 +106,7 @@ static pbus_dev_t dsi_dev = {
     .child_count = countof(hi_display_dev),
 };
 
-#endif // ENABLE_DISPLAY
+#endif  // ENABLE_DISPLAY
 
 static const pbus_mmio_t ufs_mmios[] = {
     {
@@ -242,43 +244,42 @@ static const pbus_dev_t i2c_test_dev = {
 #endif
 
 zx_status_t hikey960_add_devices(hikey960_t* hikey) {
-    zx_status_t status;
+  zx_status_t status;
 
-    if ((status = pbus_device_add(&hikey->pbus, &hikey960_clk_dev))
-            != ZX_OK) {
-        zxlogf(ERROR, "hikey960_add_devices could not add clk_dev: %d\n", status);
-    }
-    if ((status = hikey960_usb_init(hikey)) != ZX_OK) {
-        zxlogf(ERROR, "hikey960_usb_init failed: %d\n", status);
-    }
+  if ((status = pbus_device_add(&hikey->pbus, &hikey960_clk_dev)) != ZX_OK) {
+    zxlogf(ERROR, "hikey960_add_devices could not add clk_dev: %d\n", status);
+  }
+  if ((status = hikey960_usb_init(hikey)) != ZX_OK) {
+    zxlogf(ERROR, "hikey960_usb_init failed: %d\n", status);
+  }
 
-    if ((status = pbus_device_add(&hikey->pbus, &ufs_dev)) != ZX_OK) {
-        zxlogf(ERROR, "hikey960_add_devices could not add ufs_dev: %d\n", status);
-        return status;
-    }
+  if ((status = pbus_device_add(&hikey->pbus, &ufs_dev)) != ZX_OK) {
+    zxlogf(ERROR, "hikey960_add_devices could not add ufs_dev: %d\n", status);
+    return status;
+  }
 
-    if ((status = pbus_device_add(&hikey->pbus, &mali_dev)) != ZX_OK) {
-        zxlogf(ERROR, "hikey960_add_devices could not add mali_dev: %d\n", status);
-        return status;
-    }
+  if ((status = pbus_device_add(&hikey->pbus, &mali_dev)) != ZX_OK) {
+    zxlogf(ERROR, "hikey960_add_devices could not add mali_dev: %d\n", status);
+    return status;
+  }
 
 #if GPIO_TEST
-    if ((status = pbus_device_add(&hikey->pbus, &gpio_test_dev)) != ZX_OK) {
-        zxlogf(ERROR, "hikey960_add_devices could not add gpio_test_dev: %d\n", status);
-    }
+  if ((status = pbus_device_add(&hikey->pbus, &gpio_test_dev)) != ZX_OK) {
+    zxlogf(ERROR, "hikey960_add_devices could not add gpio_test_dev: %d\n", status);
+  }
 #endif
 
 #if I2C_TEST
-    if ((status = pbus_device_add(&hikey->pbus, &i2c_test_dev)) != ZX_OK) {
-        zxlogf(ERROR, "hikey960_add_devices could not add i2c_test_dev: %d\n", status);
-    }
+  if ((status = pbus_device_add(&hikey->pbus, &i2c_test_dev)) != ZX_OK) {
+    zxlogf(ERROR, "hikey960_add_devices could not add i2c_test_dev: %d\n", status);
+  }
 #endif
 
 #if ENABLE_DISPLAY
-    if ((status = pbus_device_add(&hikey->pbus, &dsi_dev)) != ZX_OK) {
-        zxlogf(ERROR, "hikey960_add_devices could not add hi_display_dev: %d\n", status);
-    }
+  if ((status = pbus_device_add(&hikey->pbus, &dsi_dev)) != ZX_OK) {
+    zxlogf(ERROR, "hikey960_add_devices could not add hi_display_dev: %d\n", status);
+  }
 #endif
 
-    return ZX_OK;
+  return ZX_OK;
 }

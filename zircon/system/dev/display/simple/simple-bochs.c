@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/device-protocol/pci.h>
+#include <zircon/pixelformat.h>
+#include <zircon/process.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -9,9 +13,6 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
-#include <lib/device-protocol/pci.h>
-#include <zircon/pixelformat.h>
-#include <zircon/process.h>
 
 #include "simple-display.h"
 

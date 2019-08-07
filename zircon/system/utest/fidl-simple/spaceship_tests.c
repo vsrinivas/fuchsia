@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/spaceship/c/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fidl-async/bind.h>
 #include <string.h>
-#include <unittest/unittest.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
+
+#include <fidl/test/spaceship/c/fidl.h>
+#include <unittest/unittest.h>
 
 static zx_status_t SpaceShip_AdjustHeading(void* ctx, const uint32_t* stars_data,
                                            size_t stars_count, fidl_txn_t* txn) {

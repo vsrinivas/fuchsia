@@ -6,6 +6,8 @@
 #define DDK_METADATA_H_
 
 #include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <zircon/boot/image.h>
 
 // This file contains metadata types for device_get_metadata()

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <soc/aml-a113/a113-hw.h>
-
-#include <limits.h>
 
 #include "gauss.h"
 
@@ -73,11 +73,11 @@ static const pbus_dev_t gpio_dev = {
 };
 
 zx_status_t gauss_gpio_init(gauss_bus_t* bus) {
-    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "gauss_gpio_init: pbus_protocol_device_add failed: %d\n", status);
-        return status;
-    }
+  zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "gauss_gpio_init: pbus_protocol_device_add failed: %d\n", status);
+    return status;
+  }
 
-    return device_get_protocol(bus->parent, ZX_PROTOCOL_GPIO_IMPL, &bus->gpio);
+  return device_get_protocol(bus->parent, ZX_PROTOCOL_GPIO_IMPL, &bus->gpio);
 }

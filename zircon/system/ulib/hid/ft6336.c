@@ -158,6 +158,6 @@ static const uint8_t ft6336_touch_report_desc[] = {
 };
 
 size_t get_ft6336_report_desc(const uint8_t** buf) {
-    *buf = ft6336_touch_report_desc;
-    return sizeof(ft6336_touch_report_desc);
+  *buf = ft6336_touch_report_desc;
+  return sizeof(ft6336_touch_report_desc);
 }

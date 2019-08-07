@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ldsvc/c/fidl.h>
-#include <ldmsg/ldmsg.h>
 #include <lib/fidl/coding.h>
 #include <string.h>
 #include <threads.h>
-#include <unittest/unittest.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
+
+#include <ldmsg/ldmsg.h>
+#include <unittest/unittest.h>
 
 static bool g_server_done = false;
 

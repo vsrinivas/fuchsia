@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -12,10 +14,8 @@
 #include <soc/hi3660/hi3660-pinmux.h>
 #include <soc/hi3660/hi3660-regs.h>
 
-#include <limits.h>
-
-#include "hikey960.h"
 #include "hikey960-hw.h"
+#include "hikey960.h"
 
 static const pbus_mmio_t gpio_mmios[] = {
     {
@@ -158,18 +158,16 @@ static const pbus_irq_t gpio_irqs[] = {
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
     // For USB.
-    { GPIO_HUB_VDD33_EN },
-    { GPIO_VBUS_TYPEC },
-    { GPIO_USBSW_SW_SEL },
+    {GPIO_HUB_VDD33_EN},
+    {GPIO_VBUS_TYPEC},
+    {GPIO_USBSW_SW_SEL},
 };
 
-static const pbus_metadata_t gpio_metadata[] = {
-    {
-        .type = DEVICE_METADATA_GPIO_PINS,
-        .data_buffer = &gpio_pins,
-        .data_size = sizeof(gpio_pins),
-    }
-};
+static const pbus_metadata_t gpio_metadata[] = {{
+    .type = DEVICE_METADATA_GPIO_PINS,
+    .data_buffer = &gpio_pins,
+    .data_size = sizeof(gpio_pins),
+}};
 
 static const pbus_dev_t hikey960_gpio_dev = {
     .name = "hi3660-gpio",
@@ -184,11 +182,11 @@ static const pbus_dev_t hikey960_gpio_dev = {
 };
 
 zx_status_t hikey960_gpio_init(hikey960_t* hikey) {
-zxlogf(INFO, "pbus_protocol_device_add\n");
-    zx_status_t status = pbus_protocol_device_add(&hikey->pbus, ZX_PROTOCOL_GPIO_IMPL,
-                                                  &hikey960_gpio_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "hikey960_gpio_init: pbus_protocol_device_add failed: %d\n", status);
-    }
-    return status;
+  zxlogf(INFO, "pbus_protocol_device_add\n");
+  zx_status_t status =
+      pbus_protocol_device_add(&hikey->pbus, ZX_PROTOCOL_GPIO_IMPL, &hikey960_gpio_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "hikey960_gpio_init: pbus_protocol_device_add failed: %d\n", status);
+  }
+  return status;
 }

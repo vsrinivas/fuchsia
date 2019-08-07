@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits.h>
+#include <zircon/assert.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -9,8 +12,6 @@
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-a113/aml-tdm.h>
-#include <zircon/assert.h>
-#include <limits.h>
 
 #include "gauss.h"
 
@@ -20,10 +21,12 @@
 
 static const pbus_mmio_t audio_in_mmios[] = {
     {
-        .base = EE_AUDIO_MMIO_BASE, .length = PAGE_SIZE,
+        .base = EE_AUDIO_MMIO_BASE,
+        .length = PAGE_SIZE,
     },
     {
-        .base = PDM_MMIO_BASE, .length = PAGE_SIZE,
+        .base = PDM_MMIO_BASE,
+        .length = PAGE_SIZE,
     },
 };
 
@@ -55,10 +58,7 @@ static const pbus_dev_t gauss_audio_in_dev = {
 };
 
 static const pbus_mmio_t tdm_audio_mmios[] = {
-    {
-        .base = A113_TDM_PHYS_BASE,
-        .length = 4096
-    },
+    {.base = A113_TDM_PHYS_BASE, .length = 4096},
 };
 
 static const pbus_irq_t tdm_irqs[] = {
@@ -97,29 +97,28 @@ const zx_bind_inst_t i2c_match[] = {
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x4C),
 };
 const device_component_part_t i2c_component[] = {
-    { countof(root_match), root_match },
-    { countof(i2c_match), i2c_match },
+    {countof(root_match), root_match},
+    {countof(i2c_match), i2c_match},
 };
 const device_component_t components[] = {
-    { countof(i2c_component), i2c_component },
+    {countof(i2c_component), i2c_component},
 };
 
 zx_status_t gauss_audio_init(gauss_bus_t* bus) {
+  ZX_DEBUG_ASSERT(bus);
+  zx_status_t status;
 
-    ZX_DEBUG_ASSERT(bus);
-    zx_status_t status;
+  // Add audio in and out devices.
+  if ((status = pbus_device_add(&bus->pbus, &gauss_audio_in_dev)) != ZX_OK) {
+    zxlogf(ERROR, "a113_audio_init could not add gauss_audio_in_dev: %d\n", status);
+    return status;
+  }
 
-    // Add audio in and out devices.
-    if ((status = pbus_device_add(&bus->pbus, &gauss_audio_in_dev)) != ZX_OK) {
-        zxlogf(ERROR, "a113_audio_init could not add gauss_audio_in_dev: %d\n", status);
-        return status;
-    }
+  printf("Adding the tdm device\n");
+  if ((status = pbus_composite_device_add(&bus->pbus, &gauss_tdm_audio_dev, components,
+                                          countof(components), UINT32_MAX)) != ZX_OK) {
+    zxlogf(ERROR, "a113_audio_init could not add gauss_tdm_audio_dev: %d\n", status);
+  }
 
-    printf("Adding the tdm device\n");
-    if ((status = pbus_composite_device_add(&bus->pbus, &gauss_tdm_audio_dev, components,
-                                            countof(components), UINT32_MAX)) != ZX_OK) {
-        zxlogf(ERROR, "a113_audio_init could not add gauss_tdm_audio_dev: %d\n", status);
-    }
-
-    return ZX_OK;
+  return ZX_OK;
 }

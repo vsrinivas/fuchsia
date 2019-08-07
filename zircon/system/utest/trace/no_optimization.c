@@ -16,4 +16,3 @@
 
 #define NO_OPTIM
 #include "event_tests_common.h"
-

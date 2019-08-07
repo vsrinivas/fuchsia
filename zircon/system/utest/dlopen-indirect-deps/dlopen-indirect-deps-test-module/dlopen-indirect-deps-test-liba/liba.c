@@ -3,6 +3,4 @@
 // found in the LICENSE file.
 
 void libb_symbol(void);
-void liba_symbol(void) {
-    libb_symbol();
-}
+void liba_symbol(void) { libb_symbol(); }

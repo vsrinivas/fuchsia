@@ -5,6 +5,7 @@
 #pragma once
 
 #include <acpica/acpi.h>
+#include <ddk/driver.h>
 
 // Look for NHLT blob in the device pointed to by object and publish
 // it as metadata on the PCI device.

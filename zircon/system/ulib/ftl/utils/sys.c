@@ -6,5 +6,5 @@
 
 // Outputs error message when assertion fails.
 void AssertError(int line, const char* file) {
-    ZX_DEBUG_ASSERT_MSG(0, "AssertError at line %d, file %s\n", line, file);
+  ZX_DEBUG_ASSERT_MSG(0, "AssertError at line %d, file %s\n", line, file);
 }

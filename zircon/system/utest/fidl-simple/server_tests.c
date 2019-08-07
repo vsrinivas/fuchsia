@@ -4,9 +4,10 @@
 
 #include <fuchsia/crash/c/fidl.h>
 #include <string.h>
-#include <unittest/unittest.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
+
+#include <unittest/unittest.h>
 
 static int kContext = 42;
 static size_t g_handle_exception_call_count = 0u;

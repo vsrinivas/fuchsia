@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/device/sysmem.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+
 #include "gauss.h"
-#include <zircon/device/sysmem.h>
 
 static const pbus_bti_t sysmem_btis[] = {
     {
@@ -21,12 +23,11 @@ static const sysmem_metadata_t sysmem_metadata = {
     .protected_memory_size = 0,
 };
 
-static const pbus_metadata_t sysmem_metadata_list[] = {
-    {
-        .type = SYSMEM_METADATA,
-        .data_buffer = &sysmem_metadata,
-        .data_size = sizeof(sysmem_metadata),
-    }};
+static const pbus_metadata_t sysmem_metadata_list[] = {{
+    .type = SYSMEM_METADATA,
+    .data_buffer = &sysmem_metadata,
+    .data_size = sizeof(sysmem_metadata),
+}};
 
 static const pbus_dev_t sysmem_dev = {
     .name = "sysmem",
@@ -40,12 +41,12 @@ static const pbus_dev_t sysmem_dev = {
 };
 
 zx_status_t gauss_sysmem_init(gauss_bus_t* bus) {
-    zx_status_t status;
+  zx_status_t status;
 
-    if ((status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_SYSMEM, &sysmem_dev)) != ZX_OK) {
-        zxlogf(ERROR, "gauss_sysmem_init: pbus_protocol_device_add() failed for sysmem: %d\n", status);
-        return status;
-    }
+  if ((status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_SYSMEM, &sysmem_dev)) != ZX_OK) {
+    zxlogf(ERROR, "gauss_sysmem_init: pbus_protocol_device_add() failed for sysmem: %d\n", status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }

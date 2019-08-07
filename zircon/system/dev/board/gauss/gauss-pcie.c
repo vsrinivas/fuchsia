@@ -4,12 +4,10 @@
 
 #include <zircon/assert.h>
 
-#include <hw/reg.h>
-
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-
 #include <dev/pci/designware/atu-cfg.h>
+#include <hw/reg.h>
 #include <soc/aml-a113/a113-gpio.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-meson/axg-clk.h>
@@ -24,19 +22,23 @@
 // Note: These are all constants for the PCIe A controller
 //       PCIe B is not currently supported.
 static const pbus_mmio_t dw_pcie_mmios[] = {
-    {   // elbi
+    {
+        // elbi
         .base = 0xf9800000,
-        .length = 0x400000,   // 4MiB
+        .length = 0x400000,  // 4MiB
     },
-    {   // cfg
+    {
+        // cfg
         .base = 0xff646000,
-        .length = 0x2000,     // 8KiB
+        .length = 0x2000,  // 8KiB
     },
-    {   // reset
+    {
+        // reset
         .base = 0xffd01080,
-        .length = 0x10,       // 16B
+        .length = 0x10,  // 16B
     },
-    {   // clock/plls
+    {
+        // clock/plls
         .base = 0xff63c000,
         .length = ZX_PAGE_SIZE,
     },
@@ -55,7 +57,7 @@ static const pbus_irq_t dw_pcie_irqs[] = {
 
 static const pbus_gpio_t dw_pcie_gpios[] = {
     {
-        .gpio = A113_GPIOX(19),     // Reset
+        .gpio = A113_GPIOX(19),  // Reset
     },
 };
 
@@ -71,12 +73,12 @@ static const pbus_clk_t pcie_clk_gates[] = {
     },
 };
 
-#define CFG_CPU_ADDR_BASE  (0xf9c00000)
-#define CFG_CPU_ADDR_LEN   (0x10000)      // 64KiB of CFG Space
-#define IO_CPU_ADDR_BASE   (0xf9d00000)
-#define IO_CPU_ADDR_LEN    (0x10000)      // 64KiB of IO Space
-#define MEM_CPU_ADDR_BASE  (IO_CPU_ADDR_BASE + IO_CPU_ADDR_LEN)
-#define MEM_CPU_ADDR_LEN   (0x300000)     // 3MiB of memory space.
+#define CFG_CPU_ADDR_BASE (0xf9c00000)
+#define CFG_CPU_ADDR_LEN (0x10000)  // 64KiB of CFG Space
+#define IO_CPU_ADDR_BASE (0xf9d00000)
+#define IO_CPU_ADDR_LEN (0x10000)  // 64KiB of IO Space
+#define MEM_CPU_ADDR_BASE (IO_CPU_ADDR_BASE + IO_CPU_ADDR_LEN)
+#define MEM_CPU_ADDR_LEN (0x300000)  // 3MiB of memory space.
 
 static const iatu_translation_entry_t cfg_entry = {
     .cpu_addr = CFG_CPU_ADDR_BASE,
@@ -127,11 +129,9 @@ static const pbus_bti_t pci_btis[] = {
 };
 
 static const pbus_dev_t pcie_dev_children[] = {
-    {
-        // Resources for child-1
-        .bti_list = pci_btis,
-        .bti_count = countof(pci_btis)
-    },
+    {// Resources for child-1
+     .bti_list = pci_btis,
+     .bti_count = countof(pci_btis)},
 };
 
 static const pbus_dev_t pcie_dev = {
@@ -156,16 +156,16 @@ static const pbus_dev_t pcie_dev = {
     .child_list = pcie_dev_children,
     .child_count = countof(pcie_dev_children),
 };
-#endif // ENABLE_PCIE
+#endif  // ENABLE_PCIE
 
 zx_status_t gauss_pcie_init(gauss_bus_t* bus) {
 #if ENABLE_PCIE
-    zx_status_t st = pbus_device_add(&bus->pbus, &pcie_dev);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "gauss_clk_init: pbus_device_add failed, st = %d\n", st);
-        return st;
-    }
+  zx_status_t st = pbus_device_add(&bus->pbus, &pcie_dev);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "gauss_clk_init: pbus_device_add failed, st = %d\n", st);
+    return st;
+  }
 #endif
 
-    return ZX_OK;
+  return ZX_OK;
 }

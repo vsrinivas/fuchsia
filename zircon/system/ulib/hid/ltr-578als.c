@@ -5,7 +5,7 @@
 #include <hid/descriptor.h>
 #include <hid/ltr-578als.h>
 
-#define HID_USAGE_AMBIENT_LIGHT         HID_USAGE16(0x04d1)
+#define HID_USAGE_AMBIENT_LIGHT HID_USAGE16(0x04d1)
 #define HID_USAGE_HUMAN_PROXIMITY_RANGE HID_USAGE16(0x04b2)
 
 static const uint8_t ltr_578als_report_desc[] = {
@@ -48,6 +48,6 @@ static const uint8_t ltr_578als_report_desc[] = {
 };
 
 size_t get_ltr_578als_report_desc(const uint8_t** buf) {
-    *buf = ltr_578als_report_desc;
-    return sizeof(ltr_578als_report_desc);
+  *buf = ltr_578als_report_desc;
+  return sizeof(ltr_578als_report_desc);
 }

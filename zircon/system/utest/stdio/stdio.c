@@ -7,220 +7,206 @@
 // normally used.
 
 #include <errno.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-#include <elfload/elfload.h>
-
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
-
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-
+#include <elfload/elfload.h>
+#include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
 #include <unittest/unittest.h>
 
 #include "threads_impl.h"
 #include "util.h"
 
-static bool stdio_pipe_test(void)
-{
-    BEGIN_TEST;
+static bool stdio_pipe_test(void) {
+  BEGIN_TEST;
 
-    int fds[2];
-    ASSERT_EQ(pipe(fds), 0, "pipe creation failed");
+  int fds[2];
+  ASSERT_EQ(pipe(fds), 0, "pipe creation failed");
 
-    ASSERT_GT(write(fds[1], "hello", 5), 0, "pipe write failed");
+  ASSERT_GT(write(fds[1], "hello", 5), 0, "pipe write failed");
 
-    char buffer[5];
-    ASSERT_GT(read(fds[0], buffer, 5), 0, "pipe read failed");
+  char buffer[5];
+  ASSERT_GT(read(fds[0], buffer, 5), 0, "pipe read failed");
 
-    ASSERT_EQ(strncmp(buffer, "hello", 5), 0, "Incorrect buffer read from pipe");
+  ASSERT_EQ(strncmp(buffer, "hello", 5), 0, "Incorrect buffer read from pipe");
 
-    ASSERT_EQ(lseek(fds[0], 0, SEEK_SET), -1, "lseek should have failed");
-    ASSERT_EQ(errno, ESPIPE, "lseek error should have been pipe-related");
+  ASSERT_EQ(lseek(fds[0], 0, SEEK_SET), -1, "lseek should have failed");
+  ASSERT_EQ(errno, ESPIPE, "lseek error should have been pipe-related");
 
-    ASSERT_EQ(close(fds[0]), 0, "");
-    ASSERT_EQ(close(fds[1]), 0, "");
+  ASSERT_EQ(close(fds[0]), 0, "");
+  ASSERT_EQ(close(fds[1]), 0, "");
 
-    END_TEST;
+  END_TEST;
 }
 
 static zx_status_t transfer_fd(launchpad_t* lp, int fd, int target_fd) {
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    zx_status_t status = fdio_fd_transfer(fd, &handle);
-    if (status != ZX_OK)
-        return status;
-    return launchpad_add_handle(lp, handle, PA_HND(PA_FD, target_fd));
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  zx_status_t status = fdio_fd_transfer(fd, &handle);
+  if (status != ZX_OK)
+    return status;
+  return launchpad_add_handle(lp, handle, PA_HND(PA_FD, target_fd));
 }
 
-static bool stdio_launchpad_pipe_test(void)
-{
-    BEGIN_TEST;
+static bool stdio_launchpad_pipe_test(void) {
+  BEGIN_TEST;
 
-    // TODO(kulakowski): Consider another helper process
-    const char* file = "/boot/bin/lsusb";
-    launchpad_t* lp = NULL;
+  // TODO(kulakowski): Consider another helper process
+  const char* file = "/boot/bin/lsusb";
+  launchpad_t* lp = NULL;
 
-    zx_handle_t fdio_job = zx_job_default();
-    ASSERT_NE(fdio_job, ZX_HANDLE_INVALID, "no fdio job object");
+  zx_handle_t fdio_job = zx_job_default();
+  ASSERT_NE(fdio_job, ZX_HANDLE_INVALID, "no fdio job object");
 
-    zx_handle_t job_copy = ZX_HANDLE_INVALID;
-    ASSERT_EQ(zx_handle_duplicate(fdio_job, ZX_RIGHT_SAME_RIGHTS, &job_copy),
-              ZX_OK, "zx_handle_duplicate failed");
+  zx_handle_t job_copy = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_handle_duplicate(fdio_job, ZX_RIGHT_SAME_RIGHTS, &job_copy), ZX_OK,
+            "zx_handle_duplicate failed");
 
-    ASSERT_EQ(launchpad_create(job_copy,
-                               "launchpad_pipe_stdio_test", &lp),
-              ZX_OK, "launchpad_create failed");
-    ASSERT_EQ(launchpad_set_args(lp, 1, &file),
-              ZX_OK, "launchpad_arguments failed");
-    ASSERT_EQ(launchpad_add_vdso_vmo(lp), ZX_OK,
-              "launchpad_add_vdso_vmo failed");
-    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE),
-              ZX_OK, "launchpad_clone failed");
+  ASSERT_EQ(launchpad_create(job_copy, "launchpad_pipe_stdio_test", &lp), ZX_OK,
+            "launchpad_create failed");
+  ASSERT_EQ(launchpad_set_args(lp, 1, &file), ZX_OK, "launchpad_arguments failed");
+  ASSERT_EQ(launchpad_add_vdso_vmo(lp), ZX_OK, "launchpad_add_vdso_vmo failed");
+  ASSERT_EQ(launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE), ZX_OK, "launchpad_clone failed");
 
-    zx_handle_t vmo;
-    ASSERT_EQ(launchpad_vmo_from_file(file, &vmo), ZX_OK, "");
-    ASSERT_EQ(launchpad_elf_load(lp, vmo),
-              ZX_OK, "launchpad_elf_load failed");
+  zx_handle_t vmo;
+  ASSERT_EQ(launchpad_vmo_from_file(file, &vmo), ZX_OK, "");
+  ASSERT_EQ(launchpad_elf_load(lp, vmo), ZX_OK, "launchpad_elf_load failed");
 
-    ASSERT_EQ(launchpad_load_vdso(lp, ZX_HANDLE_INVALID),
-              ZX_OK, "launchpad_load_vdso failed");
+  ASSERT_EQ(launchpad_load_vdso(lp, ZX_HANDLE_INVALID), ZX_OK, "launchpad_load_vdso failed");
 
-    // stdio pipe fds [ours, theirs]
-    int stdin_fds[2];
-    int stdout_fds[2];
-    int stderr_fds[2];
+  // stdio pipe fds [ours, theirs]
+  int stdin_fds[2];
+  int stdout_fds[2];
+  int stderr_fds[2];
 
-    ASSERT_EQ(stdio_pipe(stdin_fds, true), 0, "stdin pipe creation failed");
-    ASSERT_EQ(stdio_pipe(stdout_fds, false), 0, "stdout pipe creation failed");
-    ASSERT_EQ(stdio_pipe(stderr_fds, false), 0, "stderr pipe creation failed");
+  ASSERT_EQ(stdio_pipe(stdin_fds, true), 0, "stdin pipe creation failed");
+  ASSERT_EQ(stdio_pipe(stdout_fds, false), 0, "stdout pipe creation failed");
+  ASSERT_EQ(stdio_pipe(stderr_fds, false), 0, "stderr pipe creation failed");
 
-    // Transfer the child's stdio pipes
-    ASSERT_EQ(transfer_fd(lp, stdin_fds[1], 0), ZX_OK,
-              "failed to transfer stdin pipe to child process");
-    ASSERT_EQ(transfer_fd(lp, stdout_fds[1], 1), ZX_OK,
-              "failed to transfer stdout pipe to child process");
-    ASSERT_EQ(transfer_fd(lp, stderr_fds[1], 2), ZX_OK,
-              "failed to transfer stderr pipe to child process");
+  // Transfer the child's stdio pipes
+  ASSERT_EQ(transfer_fd(lp, stdin_fds[1], 0), ZX_OK,
+            "failed to transfer stdin pipe to child process");
+  ASSERT_EQ(transfer_fd(lp, stdout_fds[1], 1), ZX_OK,
+            "failed to transfer stdout pipe to child process");
+  ASSERT_EQ(transfer_fd(lp, stderr_fds[1], 2), ZX_OK,
+            "failed to transfer stderr pipe to child process");
 
-    // Start the process
-    zx_handle_t p = ZX_HANDLE_INVALID;
-    zx_status_t status = launchpad_go(lp, &p, NULL);
-    ASSERT_EQ(status, ZX_OK, "");
-    ASSERT_NE(p, ZX_HANDLE_INVALID, "process handle != 0");
+  // Start the process
+  zx_handle_t p = ZX_HANDLE_INVALID;
+  zx_status_t status = launchpad_go(lp, &p, NULL);
+  ASSERT_EQ(status, ZX_OK, "");
+  ASSERT_NE(p, ZX_HANDLE_INVALID, "process handle != 0");
 
-    // Read the stdio
-    uint8_t* out = NULL;
-    size_t out_size = 0;
-    uint8_t* err = NULL;
-    size_t err_size = 0;
+  // Read the stdio
+  uint8_t* out = NULL;
+  size_t out_size = 0;
+  uint8_t* err = NULL;
+  size_t err_size = 0;
 
-    ASSERT_GE(read_to_end(stdout_fds[0], &out, &out_size), 0, "reading stdout failed");
-    ASSERT_GE(read_to_end(stderr_fds[0], &err, &err_size), 0, "reading stderr failed");
+  ASSERT_GE(read_to_end(stdout_fds[0], &out, &out_size), 0, "reading stdout failed");
+  ASSERT_GE(read_to_end(stderr_fds[0], &err, &err_size), 0, "reading stderr failed");
 
-    ASSERT_EQ(strncmp((char*)out, "ID   ", 5), 0, "Got wrong stdout");
-    ASSERT_EQ(err_size, (size_t)0, "Got wrong stderr");
+  ASSERT_EQ(strncmp((char*)out, "ID   ", 5), 0, "Got wrong stdout");
+  ASSERT_EQ(err_size, (size_t)0, "Got wrong stderr");
 
-    free(out);
-    free(err);
+  free(out);
+  free(err);
 
-    close(stdin_fds[0]);
-    close(stdout_fds[0]);
-    close(stderr_fds[0]);
+  close(stdin_fds[0]);
+  close(stdout_fds[0]);
+  close(stderr_fds[0]);
 
-    // Wait for the process to finish
-    zx_status_t r;
+  // Wait for the process to finish
+  zx_status_t r;
 
-    r = zx_object_wait_one(p, ZX_PROCESS_TERMINATED,
-                           ZX_TIME_INFINITE, NULL);
-    ASSERT_EQ(r, ZX_OK, "zx_object_wait_one failed");
+  r = zx_object_wait_one(p, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
+  ASSERT_EQ(r, ZX_OK, "zx_object_wait_one failed");
 
-    // read the return code
-    zx_info_process_t proc_info;
-    size_t actual = 0;
-    zx_object_get_info(p, ZX_INFO_PROCESS, &proc_info,
-                       sizeof(proc_info), &actual, NULL);
-    ASSERT_EQ(actual, (size_t)1, "Must get one and only one process info");
-    ASSERT_EQ(proc_info.return_code, 0, "lsusb must return 0");
+  // read the return code
+  zx_info_process_t proc_info;
+  size_t actual = 0;
+  zx_object_get_info(p, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), &actual, NULL);
+  ASSERT_EQ(actual, (size_t)1, "Must get one and only one process info");
+  ASSERT_EQ(proc_info.return_code, 0, "lsusb must return 0");
 
-    zx_handle_close(p);
+  zx_handle_close(p);
 
-    END_TEST;
+  END_TEST;
 }
 
 static bool stdio_handle_to_tid_mapping(void) {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    // Basic expectations.
-    ASSERT_EQ(__thread_handle_to_filelock_tid(0b0011), 0, "");
-    ASSERT_EQ(__thread_handle_to_filelock_tid(0b0111), 1, "");
-    ASSERT_EQ(__thread_handle_to_filelock_tid(0x123f), 0x48f, "");
-    ASSERT_EQ(__thread_handle_to_filelock_tid(0x80000000), 0x20000000, "");
-    ASSERT_EQ(__thread_handle_to_filelock_tid(0xffffffff), 0x3fffffff, "");
-    ASSERT_EQ(__thread_handle_to_filelock_tid(0xffffffff), 0x3fffffff, "");
+  // Basic expectations.
+  ASSERT_EQ(__thread_handle_to_filelock_tid(0b0011), 0, "");
+  ASSERT_EQ(__thread_handle_to_filelock_tid(0b0111), 1, "");
+  ASSERT_EQ(__thread_handle_to_filelock_tid(0x123f), 0x48f, "");
+  ASSERT_EQ(__thread_handle_to_filelock_tid(0x80000000), 0x20000000, "");
+  ASSERT_EQ(__thread_handle_to_filelock_tid(0xffffffff), 0x3fffffff, "");
+  ASSERT_EQ(__thread_handle_to_filelock_tid(0xffffffff), 0x3fffffff, "");
 
-    zx_handle_t last_h0 = 0;
-    for (zx_handle_t h0 = ZX_HANDLE_FIXED_BITS_MASK; h0 > last_h0;
-         last_h0 = h0, h0 += ZX_HANDLE_FIXED_BITS_MASK + 1) {
-        // Ensure no handles are ever mapped to negative.
-        ASSERT_GE(__thread_handle_to_filelock_tid(h0), 0, "pid_t must be >= 0");
-    }
+  zx_handle_t last_h0 = 0;
+  for (zx_handle_t h0 = ZX_HANDLE_FIXED_BITS_MASK; h0 > last_h0;
+       last_h0 = h0, h0 += ZX_HANDLE_FIXED_BITS_MASK + 1) {
+    // Ensure no handles are ever mapped to negative.
+    ASSERT_GE(__thread_handle_to_filelock_tid(h0), 0, "pid_t must be >= 0");
+  }
 
-    END_TEST;
+  END_TEST;
 }
 
 typedef struct ThreadData {
-    FILE* f;
-    size_t index;
+  FILE* f;
+  size_t index;
 } ThreadData;
 
 static void* thread_func_do_some_printing(void* arg) {
-    ThreadData* data = (ThreadData*)arg;
-    for (int i = 0; i < 100; ++i) {
-        fprintf(data->f, "this is message %d from thread %zu\n", i, data->index);
-    }
-    return NULL;
+  ThreadData* data = (ThreadData*)arg;
+  for (int i = 0; i < 100; ++i) {
+    fprintf(data->f, "this is message %d from thread %zu\n", i, data->index);
+  }
+  return NULL;
 }
 
 // This is a crash regression test, multithreaded access to FILE* was racy and
 // could crash. If this test is "flaky", this has regressed. See ZX-4278.
 static bool stdio_race_on_file_access(void) {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    zx_time_t start_time = zx_clock_get_monotonic();
-    while (zx_clock_get_monotonic() - start_time < ZX_SEC(5)) {
-        FILE* f = tmpfile();
-        ASSERT_NONNULL(f, "tmpfile failed");
+  zx_time_t start_time = zx_clock_get_monotonic();
+  while (zx_clock_get_monotonic() - start_time < ZX_SEC(5)) {
+    FILE* f = tmpfile();
+    ASSERT_NONNULL(f, "tmpfile failed");
 
-        pthread_t threads[100];
-        ThreadData thread_data[countof(threads)];
+    pthread_t threads[100];
+    ThreadData thread_data[countof(threads)];
 
-        for (size_t i = 0; i < countof(threads); ++i) {
-            ThreadData* data = &thread_data[i];
-            data->f = f;
-            data->index = i;
+    for (size_t i = 0; i < countof(threads); ++i) {
+      ThreadData* data = &thread_data[i];
+      data->f = f;
+      data->index = i;
 
-            int err = pthread_create(&threads[i], NULL, thread_func_do_some_printing, data);
-            ASSERT_EQ(err, 0, "pthread_create");
-        }
-
-        for (size_t i = 0; i < countof(threads); ++i) {
-            int err = pthread_join(threads[i], NULL);
-            ASSERT_EQ(err, 0, "pthread_join");
-        }
-
-        fclose(f);
+      int err = pthread_create(&threads[i], NULL, thread_func_do_some_printing, data);
+      ASSERT_EQ(err, 0, "pthread_create");
     }
 
-    END_TEST;
+    for (size_t i = 0; i < countof(threads); ++i) {
+      int err = pthread_join(threads[i], NULL);
+      ASSERT_EQ(err, 0, "pthread_join");
+    }
+
+    fclose(f);
+  }
+
+  END_TEST;
 }
 
 BEGIN_TEST_CASE(stdio_tests)

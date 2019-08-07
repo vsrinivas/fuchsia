@@ -16,29 +16,27 @@
 // For now, test that 'fsync' and 'fdatasync' don't throw errors for file and
 // directories.
 bool test_sync(void) {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    int fd = open("::alpha", O_RDWR | O_CREAT | O_EXCL, 0644);
-    ASSERT_GT(fd, 0, "");
-    ASSERT_STREAM_ALL(write, fd, "Hello, World!\n", 14);
-    ASSERT_EQ(fsync(fd), 0, "");
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_STREAM_ALL(write, fd, "Adios, World!\n", 14);
-    ASSERT_EQ(fdatasync(fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink("::alpha"), 0, "");
+  int fd = open("::alpha", O_RDWR | O_CREAT | O_EXCL, 0644);
+  ASSERT_GT(fd, 0, "");
+  ASSERT_STREAM_ALL(write, fd, "Hello, World!\n", 14);
+  ASSERT_EQ(fsync(fd), 0, "");
+  ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+  ASSERT_STREAM_ALL(write, fd, "Adios, World!\n", 14);
+  ASSERT_EQ(fdatasync(fd), 0, "");
+  ASSERT_EQ(close(fd), 0, "");
+  ASSERT_EQ(unlink("::alpha"), 0, "");
 
-    ASSERT_EQ(mkdir("::dirname", 0755), 0, "");
-    fd = open("::dirname", O_RDONLY | O_DIRECTORY, 0644);
-    ASSERT_GT(fd, 0, "");
-    ASSERT_EQ(fsync(fd), 0, "");
-    ASSERT_EQ(fdatasync(fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink("::dirname"), 0, "");
+  ASSERT_EQ(mkdir("::dirname", 0755), 0, "");
+  fd = open("::dirname", O_RDONLY | O_DIRECTORY, 0644);
+  ASSERT_GT(fd, 0, "");
+  ASSERT_EQ(fsync(fd), 0, "");
+  ASSERT_EQ(fdatasync(fd), 0, "");
+  ASSERT_EQ(close(fd), 0, "");
+  ASSERT_EQ(unlink("::dirname"), 0, "");
 
-    END_TEST;
+  END_TEST;
 }
 
-RUN_FOR_ALL_FILESYSTEMS(sync_tests,
-    RUN_TEST_MEDIUM(test_sync)
-)
+RUN_FOR_ALL_FILESYSTEMS(sync_tests, RUN_TEST_MEDIUM(test_sync))

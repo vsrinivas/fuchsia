@@ -52,10 +52,9 @@ ASAN_SET_SHADOW_XX(f8)
 // This is the same macro used in compiler-rt/lib/asan/asan_rtl.cc,
 // where it makes use of the is_write argument.  The list of invocations
 // of this macro below is taken verbatim from that file.
-#define ASAN_REPORT_ERROR(type, is_write, size)                          \
-  TRAP_STUB(void __asan_report_##type##size(uintptr_t addr))             \
-  TRAP_STUB(                                                             \
-      void __asan_report_exp_##type##size(uintptr_t addr, uint32_t exp)) \
+#define ASAN_REPORT_ERROR(type, is_write, size)                                \
+  TRAP_STUB(void __asan_report_##type##size(uintptr_t addr))                   \
+  TRAP_STUB(void __asan_report_exp_##type##size(uintptr_t addr, uint32_t exp)) \
   TRAP_STUB(void __asan_report_##type##size##_noabort(uintptr_t addr))
 
 ASAN_REPORT_ERROR(load, false, 1)
@@ -71,13 +70,11 @@ ASAN_REPORT_ERROR(store, true, 16)
 
 TRAP_STUB(void __asan_report_load_n(uintptr_t addr, size_t size))
 TRAP_STUB(void __asan_report_load_n_noabort(uintptr_t addr, size_t size))
-TRAP_STUB(void __asan_report_exp_load_n(uintptr_t addr, size_t size,
-                                        uint32_t exp))
+TRAP_STUB(void __asan_report_exp_load_n(uintptr_t addr, size_t size, uint32_t exp))
 
 TRAP_STUB(void __asan_report_store_n(uintptr_t addr, size_t size))
 TRAP_STUB(void __asan_report_store_n_noabort(uintptr_t addr, size_t size))
-TRAP_STUB(void __asan_report_exp_store_n(uintptr_t addr, size_t size,
-                                         uint32_t exp))
+TRAP_STUB(void __asan_report_exp_store_n(uintptr_t addr, size_t size, uint32_t exp))
 
 // These are sometimes called in normal operation.  But they're never
 // called by any of the code on the startup path, so we can get away
@@ -116,9 +113,7 @@ TRAP_STUB(void __asan_version_mismatch_check_v8(void))
 
 TRAP_STUB(void __asan_register_globals(uintptr_t globals, size_t n))
 TRAP_STUB(void __asan_unregister_globals(uintptr_t globals, size_t n))
-TRAP_STUB(void __asan_register_elf_globals(uintptr_t flag, uintptr_t start,
-                                           uintptr_t stop))
-TRAP_STUB(void __asan_unregister_elf_globals(uintptr_t flag, uintptr_t start,
-                                             uintptr_t stop))
+TRAP_STUB(void __asan_register_elf_globals(uintptr_t flag, uintptr_t start, uintptr_t stop))
+TRAP_STUB(void __asan_unregister_elf_globals(uintptr_t flag, uintptr_t start, uintptr_t stop))
 
 #endif  // __has_feature(address_sanitizer)

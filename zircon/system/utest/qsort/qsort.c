@@ -5,17 +5,18 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
+
 #include <unittest/unittest.h>
 
 static int uint32_t_cmp(const void* void_left, const void* void_right) {
-    uint32_t left = *(const uint32_t*)void_left;
-    uint32_t right = *(const uint32_t*)void_right;
-    if (left < right)
-        return -23;
-    else if (left > right)
-        return 42;
-    else
-        return 0;
+  uint32_t left = *(const uint32_t*)void_left;
+  uint32_t right = *(const uint32_t*)void_right;
+  if (left < right)
+    return -23;
+  else if (left > right)
+    return 42;
+  else
+    return 0;
 }
 
 static uint32_t test_data[] = {
@@ -38,20 +39,20 @@ static uint32_t test_data[] = {
 };
 
 static bool qsort_test(void) {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    size_t length = sizeof(test_data) / sizeof(*test_data);
+  size_t length = sizeof(test_data) / sizeof(*test_data);
 
-    qsort(test_data, length, sizeof(*test_data), uint32_t_cmp);
+  qsort(test_data, length, sizeof(*test_data), uint32_t_cmp);
 
-    for (size_t idx = 1; idx < length; idx++) {
-        uint32_t* left = test_data + idx - 1;
-        uint32_t* right = test_data + idx;
-        int c = uint32_t_cmp(left, right);
-        EXPECT_LT(c, 0, "array not sorted!");
-    }
+  for (size_t idx = 1; idx < length; idx++) {
+    uint32_t* left = test_data + idx - 1;
+    uint32_t* right = test_data + idx;
+    int c = uint32_t_cmp(left, right);
+    EXPECT_LT(c, 0, "array not sorted!");
+  }
 
-    END_TEST;
+  END_TEST;
 }
 
 BEGIN_TEST_CASE(qsort_tests)

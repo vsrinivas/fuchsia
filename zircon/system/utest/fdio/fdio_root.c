@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <errno.h>
+#include <lib/fdio/private.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <lib/fdio/private.h>
 
 #include <zxtest/zxtest.h>
 
@@ -20,21 +20,21 @@
 // to utest/fs.
 
 TEST(RootTest, Stat) {
-    struct stat buf;
-    ASSERT_EQ(stat("/", &buf), 0, "");
-    ASSERT_EQ(stat("//", &buf), 0, "");
-    ASSERT_EQ(stat("///", &buf), 0, "");
-    ASSERT_EQ(stat("/tmp", &buf), 0, "");
-    ASSERT_EQ(stat("//tmp", &buf), 0, "");
-    ASSERT_EQ(stat("./", &buf), 0, "");
-    ASSERT_EQ(stat("./", &buf), 0, "");
-    ASSERT_EQ(stat(".", &buf), 0, "");
+  struct stat buf;
+  ASSERT_EQ(stat("/", &buf), 0, "");
+  ASSERT_EQ(stat("//", &buf), 0, "");
+  ASSERT_EQ(stat("///", &buf), 0, "");
+  ASSERT_EQ(stat("/tmp", &buf), 0, "");
+  ASSERT_EQ(stat("//tmp", &buf), 0, "");
+  ASSERT_EQ(stat("./", &buf), 0, "");
+  ASSERT_EQ(stat("./", &buf), 0, "");
+  ASSERT_EQ(stat(".", &buf), 0, "");
 }
 
 TEST(RootTest, Remove) {
-    ASSERT_EQ(remove("/"), -1, "");
-    ASSERT_EQ(errno, EBUSY, "");
+  ASSERT_EQ(remove("/"), -1, "");
+  ASSERT_EQ(errno, EBUSY, "");
 
-    ASSERT_EQ(rmdir("/"), -1, "");
-    ASSERT_EQ(errno, EBUSY, "");
+  ASSERT_EQ(rmdir("/"), -1, "");
+  ASSERT_EQ(errno, EBUSY, "");
 }

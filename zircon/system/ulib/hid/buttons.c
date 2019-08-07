@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <ddk/metadata/buttons.h>
-
 #include <hid/buttons.h>
 #include <hid/descriptor.h>
 
@@ -44,30 +43,29 @@ static const uint8_t buttons_report_desc[] = {
 // clang-format on
 
 size_t get_buttons_report_desc(const uint8_t** buf) {
-    *buf = buttons_report_desc;
-    return sizeof(buttons_report_desc);
+  *buf = buttons_report_desc;
+  return sizeof(buttons_report_desc);
 }
 
 void fill_button_in_report(uint8_t id, bool value, buttons_input_rpt_t* rpt) {
-    switch (id) {
+  switch (id) {
     case BUTTONS_ID_VOLUME_UP:
-        if (value) {
-            rpt->volume_up = 1;
-        }
-        break;
+      if (value) {
+        rpt->volume_up = 1;
+      }
+      break;
     case BUTTONS_ID_VOLUME_DOWN:
-        if (value) {
-            rpt->volume_down = 1;
-        }
-        break;
+      if (value) {
+        rpt->volume_down = 1;
+      }
+      break;
     case BUTTONS_ID_FDR:
-        if (value) {
-            rpt->reset = 1;
-        }
-        break;
+      if (value) {
+        rpt->reset = 1;
+      }
+      break;
     case BUTTONS_ID_MIC_MUTE:
-        rpt->mute = value;
-        break;
-    }
+      rpt->mute = value;
+      break;
+  }
 }
-

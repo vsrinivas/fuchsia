@@ -5,13 +5,6 @@
 #include "aml-canvas.h"
 
 #include <assert.h>
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/platform/device.h>
 #include <lib/device-protocol/platform-device.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -20,6 +13,14 @@
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/pixelformat.h>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/amlogiccanvas.h>
+#include <ddk/protocol/platform/device.h>
 
 static void aml_canvas_release(void* ctx) {
   aml_canvas_t* canvas = ctx;
@@ -193,13 +194,13 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
   mtx_init(&canvas->lock, mtx_plain);
 
   device_add_args_t args = {
-    .version = DEVICE_ADD_ARGS_VERSION,
-    .name = "aml-canvas",
-    .ctx = canvas,
-    .ops = &aml_canvas_device_protocol,
-    .proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS,
-    .proto_ops = &canvas_ops,
-    .flags = DEVICE_ADD_ALLOW_MULTI_COMPOSITE,
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "aml-canvas",
+      .ctx = canvas,
+      .ops = &aml_canvas_device_protocol,
+      .proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS,
+      .proto_ops = &canvas_ops,
+      .flags = DEVICE_ADD_ALLOW_MULTI_COMPOSITE,
   };
 
   status = device_add(parent, &args, &canvas->zxdev);

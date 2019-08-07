@@ -19,4 +19,4 @@ ZIRCON_DRIVER_BEGIN(fallback_rtc, fallback_rtc_ops, "fallback_rtc", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_RTC_FALLBACK),
 ZIRCON_DRIVER_END(fallback_rtc)
-// clang-format on
+    // clang-format on

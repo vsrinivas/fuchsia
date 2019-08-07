@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unistd.h>
+#include <zircon/hw/gpt.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
@@ -12,24 +15,24 @@
 #include <ddk/protocol/platform/bus.h>
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
-#include <unistd.h>
-#include <zircon/hw/gpt.h>
 
-#include "gauss.h"
 #include "gauss-hw.h"
+#include "gauss.h"
 
 static const pbus_mmio_t raw_nand_mmios[] = {
-    {   /* nandreg : Registers for NAND controller */
+    {
+        /* nandreg : Registers for NAND controller */
         .base = GAUSS_RAW_NAND_REG,
         .length = 0x2000,
     },
-    {   /* clockreg : Clock Register for NAND controller */
+    {
+        /* clockreg : Clock Register for NAND controller */
         /*
          * From the Linux devicetree. This is the base SD_EMMC_CLOCK
          * register (for port C)
          */
         .base = GAUSS_RAW_NAND_CLKREG,
-        .length = 0x4,  /* Just 4 bytes */
+        .length = 0x4, /* Just 4 bytes */
     },
 };
 
@@ -47,20 +50,23 @@ static const pbus_bti_t raw_nand_btis[] = {
 };
 
 static const nand_config_t config = {
-    .bad_block_config = {
-        .type = kAmlogicUboot,
-        .aml_uboot = {
-            .table_start_block = 20,
-            .table_end_block = 23,
-        },
-    },
-    .extra_partition_config_count = 1,
-    .extra_partition_config = {
+    .bad_block_config =
         {
-            .type_guid = GUID_BOOTLOADER_VALUE,
-            .copy_count = 4,
+            .type = kAmlogicUboot,
+            .aml_uboot =
+                {
+                    .table_start_block = 20,
+                    .table_end_block = 23,
+                },
         },
-    },
+    .extra_partition_config_count = 1,
+    .extra_partition_config =
+        {
+            {
+                .type_guid = GUID_BOOTLOADER_VALUE,
+                .copy_count = 4,
+            },
+        },
 };
 
 static const pbus_metadata_t raw_nand_metadata[] = {
@@ -96,34 +102,33 @@ static const pbus_dev_t raw_nand_dev = {
 };
 
 zx_status_t gauss_raw_nand_init(gauss_bus_t* bus) {
-    zx_status_t status;
+  zx_status_t status;
 
-    // set alternate functions to enable raw_nand
-    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(8), 2);
-    if (status != ZX_OK)
-        return status;
-    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(9), 2);
-    if (status != ZX_OK)
-        return status;
-    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(10), 2);
-    if (status != ZX_OK)
-        return status;
-    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(11), 2);
-    if (status != ZX_OK)
-        return status;
-    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(12), 2);
-    if (status != ZX_OK)
-        return status;
-    status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(13), 2);
-    if (status != ZX_OK)
-        return status;
+  // set alternate functions to enable raw_nand
+  status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(8), 2);
+  if (status != ZX_OK)
+    return status;
+  status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(9), 2);
+  if (status != ZX_OK)
+    return status;
+  status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(10), 2);
+  if (status != ZX_OK)
+    return status;
+  status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(11), 2);
+  if (status != ZX_OK)
+    return status;
+  status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(12), 2);
+  if (status != ZX_OK)
+    return status;
+  status = gpio_impl_set_alt_function(&bus->gpio, A113_GPIOBOOT(13), 2);
+  if (status != ZX_OK)
+    return status;
 
-    status = pbus_device_add(&bus->pbus, &raw_nand_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "gauss_raw_nand_init: pbus_device_add raw_nand failed: %d\n",
-               status);
-        return status;
-    }
+  status = pbus_device_add(&bus->pbus, &raw_nand_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "gauss_raw_nand_init: pbus_device_add raw_nand failed: %d\n", status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }

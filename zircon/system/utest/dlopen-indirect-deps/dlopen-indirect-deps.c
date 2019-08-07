@@ -7,23 +7,20 @@
 #include <unittest/unittest.h>
 
 bool dlopen_indirect_deps_test(void) {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
-    void* h = dlopen("libdlopen-indirect-deps-test-module.so", RTLD_LOCAL);
-    ASSERT_NONNULL(h, dlerror());
+  void* h = dlopen("libdlopen-indirect-deps-test-module.so", RTLD_LOCAL);
+  ASSERT_NONNULL(h, dlerror());
 
-    EXPECT_NONNULL(dlsym(h, "module_symbol"),
-                   "symbol not found in dlopen'd lib");
+  EXPECT_NONNULL(dlsym(h, "module_symbol"), "symbol not found in dlopen'd lib");
 
-    EXPECT_NONNULL(dlsym(h, "liba_symbol"),
-                   "symbol not found in dlopen'd lib's direct dependency");
+  EXPECT_NONNULL(dlsym(h, "liba_symbol"), "symbol not found in dlopen'd lib's direct dependency");
 
-    EXPECT_NONNULL(dlsym(h, "libb_symbol"),
-                   "symbol not found in dlopen'd lib's indirect dependency");
+  EXPECT_NONNULL(dlsym(h, "libb_symbol"), "symbol not found in dlopen'd lib's indirect dependency");
 
-    EXPECT_EQ(dlclose(h), 0, "dlclose failed");
+  EXPECT_EQ(dlclose(h), 0, "dlclose failed");
 
-    END_TEST;
+  END_TEST;
 }
 
 BEGIN_TEST_CASE(dlopen_indirect_deps_tests)

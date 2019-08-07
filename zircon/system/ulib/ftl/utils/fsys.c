@@ -7,6 +7,6 @@
 
 // Lookup for number of bits in half byte.
 const ui8 NumberOnes[] = {
-    //0 1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+    // 0 1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
 };

@@ -14,12 +14,10 @@
 #define DRIVER_NAME "test-child-1"
 
 typedef struct {
-    zx_device_t* zxdev;
+  zx_device_t* zxdev;
 } test_t;
 
-static void test_release(void* ctx) {
-    free(ctx);
-}
+static void test_release(void* ctx) { free(ctx); }
 
 static zx_protocol_device_t test_device_protocol = {
     .version = DEVICE_OPS_VERSION,
@@ -27,65 +25,65 @@ static zx_protocol_device_t test_device_protocol = {
 };
 
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
-    zx_status_t status;
+  zx_status_t status;
 
-    zxlogf(INFO, "test_bind: %s \n", DRIVER_NAME);
+  zxlogf(INFO, "test_bind: %s \n", DRIVER_NAME);
 
-    test_t* child_2 = calloc(1, sizeof(test_t));
-    if (!child_2) {
-        return ZX_ERR_NO_MEMORY;
-    }
+  test_t* child_2 = calloc(1, sizeof(test_t));
+  if (!child_2) {
+    return ZX_ERR_NO_MEMORY;
+  }
 
-    zx_device_prop_t child_2_props[] = {
-        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST},
-        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST},
-        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_CHILD_2 },
-    };
+  zx_device_prop_t child_2_props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_CHILD_2},
+  };
 
-    device_add_args_t child_2_args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "child-2",
-        .ctx = child_2,
-        .ops = &test_device_protocol,
-        .props = child_2_props,
-        .prop_count = countof(child_2_props),
-    };
+  device_add_args_t child_2_args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "child-2",
+      .ctx = child_2,
+      .ops = &test_device_protocol,
+      .props = child_2_props,
+      .prop_count = countof(child_2_props),
+  };
 
-    status = device_add(parent, &child_2_args, &child_2->zxdev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_device_add failed: %d\n", DRIVER_NAME, status);
-        free(child_2);
-        return status;
-    }
+  status = device_add(parent, &child_2_args, &child_2->zxdev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: pdev_device_add failed: %d\n", DRIVER_NAME, status);
+    free(child_2);
+    return status;
+  }
 
-    test_t* child_3 = calloc(1, sizeof(test_t));
-    if (!child_3) {
-        return ZX_ERR_NO_MEMORY;
-    }
+  test_t* child_3 = calloc(1, sizeof(test_t));
+  if (!child_3) {
+    return ZX_ERR_NO_MEMORY;
+  }
 
-    zx_device_prop_t child_3_props[] = {
-        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST },
-        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST },
-        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_CHILD_3 },
-    };
+  zx_device_prop_t child_3_props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_CHILD_3},
+  };
 
-    device_add_args_t child_3_args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "child-3-top",
-        .ctx = child_3,
-        .ops = &test_device_protocol,
-        .props = child_3_props,
-        .prop_count = countof(child_3_props),
-    };
+  device_add_args_t child_3_args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "child-3-top",
+      .ctx = child_3,
+      .ops = &test_device_protocol,
+      .props = child_3_props,
+      .prop_count = countof(child_3_props),
+  };
 
-    status = device_add(parent, &child_3_args, &child_3->zxdev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_device_add failed: %d\n", DRIVER_NAME, status);
-        free(child_3);
-        return status;
-    }
+  status = device_add(parent, &child_3_args, &child_3->zxdev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: pdev_device_add failed: %d\n", DRIVER_NAME, status);
+    free(child_3);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 static zx_driver_ops_t test_driver_ops = {
@@ -94,7 +92,6 @@ static zx_driver_ops_t test_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
+BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_1),
-ZIRCON_DRIVER_END(test_bus)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_1), ZIRCON_DRIVER_END(test_bus)

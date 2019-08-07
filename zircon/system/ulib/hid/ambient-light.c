@@ -146,6 +146,6 @@ static const uint8_t ambient_light_report_desc[] = {
 // clang-format on
 
 size_t get_ambient_light_report_desc(const uint8_t** buf) {
-    *buf = ambient_light_report_desc;
-    return sizeof(ambient_light_report_desc);
+  *buf = ambient_light_report_desc;
+  return sizeof(ambient_light_report_desc);
 }

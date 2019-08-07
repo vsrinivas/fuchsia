@@ -5,30 +5,33 @@
 #ifndef SYSROOT_ZIRCON_HW_USB_HID_H_
 #define SYSROOT_ZIRCON_HW_USB_HID_H_
 
-// clang-format off
+#include <stdint.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
 /* HID Request Values */
+// clang-format off
 #define USB_HID_GET_REPORT                  0x01
 #define USB_HID_GET_IDLE                    0x02
 #define USB_HID_GET_PROTOCOL                0x03
 #define USB_HID_SET_REPORT                  0x09
 #define USB_HID_SET_IDLE                    0x0A
 #define USB_HID_SET_PROTOCOL                0x0B
+// clang-format on
 
 typedef struct {
-    uint8_t bDescriptorType;
-    uint16_t wDescriptorLength;
+  uint8_t bDescriptorType;
+  uint16_t wDescriptorLength;
 } __attribute__((packed)) usb_hid_descriptor_entry_t;
 
 typedef struct {
-    uint8_t bLength;
-    uint8_t bDescriptorType;
-    uint16_t bcdHID;
-    uint8_t bCountryCode;
-    uint8_t bNumDescriptors;
-    usb_hid_descriptor_entry_t descriptors[];
+  uint8_t bLength;
+  uint8_t bDescriptorType;
+  uint16_t bcdHID;
+  uint8_t bCountryCode;
+  uint8_t bNumDescriptors;
+  usb_hid_descriptor_entry_t descriptors[];
 } __attribute__((packed)) usb_hid_descriptor_t;
 
 __END_CDECLS

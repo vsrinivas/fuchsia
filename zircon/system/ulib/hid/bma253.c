@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hid/descriptor.h>
 #include <hid/bma253.h>
+#include <hid/descriptor.h>
 
 #define HID_USAGE_ACCELERATION_AXIS_X HID_USAGE16(0x0453)
 #define HID_USAGE_ACCELERATION_AXIS_Y HID_USAGE16(0x0454)
 #define HID_USAGE_ACCELERATION_AXIS_Z HID_USAGE16(0x0455)
-#define HID_USAGE_TEMPERATURE         HID_USAGE16(0x0434)
+#define HID_USAGE_TEMPERATURE HID_USAGE16(0x0434)
 
 static const uint8_t bma253_report_desc[] = {
     HID_USAGE_PAGE(0x20),
@@ -70,6 +70,6 @@ static const uint8_t bma253_report_desc[] = {
 };
 
 size_t get_bma253_report_desc(const uint8_t** buf) {
-    *buf = bma253_report_desc;
-    return sizeof(bma253_report_desc);
+  *buf = bma253_report_desc;
+  return sizeof(bma253_report_desc);
 }

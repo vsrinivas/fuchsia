@@ -2,18 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <soc/aml-s905d2/s905d2-hiu.h>
 #include <zircon/types.h>
+
+#include <soc/aml-s905d2/s905d2-hiu.h>
 
 // PLL Rate tables
 #define HHI_PLL_RATE(_rate, _n, _m, _frac, _od) \
-    {                                           \
-        .rate = _rate,                          \
-        .n = _n,                                \
-        .m = _m,                                \
-        .frac = _frac,                          \
-        .od = _od,                              \
-    }
+  { .rate = _rate, .n = _n, .m = _m, .frac = _frac, .od = _od, }
 
 /* These settings work for hifi, sys, pcie, and gp0 plls
    While it would be possible to dynamically calculate the four components
@@ -24,7 +19,7 @@
    fout = 24MHz*m/(n*(1 << od))
 */
 static const hhi_pll_rate_t s905d2_hiu_pll_rates[] = {
-    HHI_PLL_RATE( 846000000, 1, 141, 0, 2), /*DCO=3384M*/
+    HHI_PLL_RATE(846000000, 1, 141, 0, 2),  /*DCO=3384M*/
     HHI_PLL_RATE(1200000000, 1, 200, 0, 2), /*DCO=4800M*/
     HHI_PLL_RATE(1296000000, 1, 216, 0, 2), /*DCO=5184M*/
     HHI_PLL_RATE(1398000000, 1, 233, 0, 2), /*DCO=5592M*/
@@ -44,34 +39,34 @@ static const hhi_pll_rate_t s905d2_hiu_pll_rates[] = {
 */
 zx_status_t s905d2_pll_fetch_rate(aml_pll_dev_t* pll_dev, uint64_t freq,
                                   const hhi_pll_rate_t** pll_rate) {
-    for (uint32_t i = 0; i < pll_dev->rate_count; i++) {
-        if (freq == pll_dev->rate_table[i].rate) {
-            *pll_rate = &pll_dev->rate_table[i];
-            return ZX_OK;
-        }
+  for (uint32_t i = 0; i < pll_dev->rate_count; i++) {
+    if (freq == pll_dev->rate_table[i].rate) {
+      *pll_rate = &pll_dev->rate_table[i];
+      return ZX_OK;
     }
-    *pll_rate = NULL;
-    return ZX_ERR_NOT_SUPPORTED;
+  }
+  *pll_rate = NULL;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 const hhi_pll_rate_t* s905d2_pll_get_rate_table(hhi_plls_t pll_num) {
-    switch (pll_num) {
+  switch (pll_num) {
     case GP0_PLL:
     case PCIE_PLL:
     case HIFI_PLL:
     case SYS_PLL:
-        return s905d2_hiu_pll_rates;
-    }
-    return NULL;
+      return s905d2_hiu_pll_rates;
+  }
+  return NULL;
 }
 
 size_t s905d2_get_rate_table_count(hhi_plls_t pll_num) {
-    switch (pll_num) {
+  switch (pll_num) {
     case GP0_PLL:
     case PCIE_PLL:
     case HIFI_PLL:
     case SYS_PLL:
-        return countof(s905d2_hiu_pll_rates);
-    }
-    return 0;
+      return countof(s905d2_hiu_pll_rates);
+  }
+  return 0;
 }

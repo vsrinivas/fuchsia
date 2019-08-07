@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <limits.h>
+
 #include <ddk/device.h>
 #include <unittest/unittest.h>
 
@@ -17,7 +18,7 @@ static bool test_add_metadata(void) {
 
   BEGIN_TEST;
 
-  status = device_get_metadata(ddk_test_dev, 1, buffer,sizeof(buffer), &actual);
+  status = device_get_metadata(ddk_test_dev, 1, buffer, sizeof(buffer), &actual);
   ASSERT_EQ(status, ZX_ERR_NOT_FOUND, "device_get_metadata did not return ZX_ERR_NOT_FOUND");
 
   status = device_get_metadata_size(ddk_test_dev, 1, &actual);
@@ -27,7 +28,7 @@ static bool test_add_metadata(void) {
   ASSERT_EQ(status, ZX_OK, "device_add_metadata failed");
 
   status = device_get_metadata_size(ddk_test_dev, 1, &actual);
-  ASSERT_EQ(strlen(TEST_STRING)+1, actual, "Incorrect output length was returned.");
+  ASSERT_EQ(strlen(TEST_STRING) + 1, actual, "Incorrect output length was returned.");
   status = device_get_metadata(ddk_test_dev, 1, buffer, sizeof(buffer), &actual);
   ASSERT_EQ(status, ZX_OK, "device_get_metadata failed");
   ASSERT_EQ(actual, strlen(TEST_STRING) + 1, "");
@@ -84,8 +85,8 @@ static bool test_publish_metadata_large_input(void) {
   size_t large_len = 1024u * 16;
   char* large = malloc(large_len);
   ASSERT_NE(large, NULL, "allocation failure");
-  zx_status_t status = device_publish_metadata(ddk_test_dev, "/dev/test/test/ddk-test/child",
-                                               2, large, large_len);
+  zx_status_t status =
+      device_publish_metadata(ddk_test_dev, "/dev/test/test/ddk-test/child", 2, large, large_len);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "device_add_metadata shoud return ZX_ERR_INVALID_ARGS");
   free(large);
 

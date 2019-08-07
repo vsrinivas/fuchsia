@@ -23,15 +23,13 @@ static void shave_front(void) {
 }
 
 static void shave_back(void) {
-  while (startup_handles_num > 0 &&
-         startup_handles[startup_handles_num - 1] == ZX_HANDLE_INVALID)
+  while (startup_handles_num > 0 && startup_handles[startup_handles_num - 1] == ZX_HANDLE_INVALID)
     --startup_handles_num;
 }
 
 // This is called only once at startup, so it doesn't need locking.
 ATTR_LIBC_VISIBILITY
-void __libc_startup_handles_init(uint32_t nhandles, zx_handle_t handles[],
-                                 uint32_t handle_info[]) {
+void __libc_startup_handles_init(uint32_t nhandles, zx_handle_t handles[], uint32_t handle_info[]) {
   startup_handles_num = nhandles;
   startup_handles = handles;
   startup_handles_info = handle_info;

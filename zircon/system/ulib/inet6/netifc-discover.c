@@ -3,19 +3,19 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <stdio.h>
-#include <string.h>
-
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
-#include <inet6/netifc-discover.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/watcher.h>
+#include <stdio.h>
+#include <string.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
+
+#include <inet6/netifc-discover.h>
 
 typedef struct netifc_cb_ctx {
   const char* dirname;

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "helper.h"
-
 #include <zircon/assert.h>
 #include <zircon/types.h>
+
 #include <zxtest/zxtest.h>
+
+#include "helper.h"
 
 // Sanity check that looks for bugs in C macro implementation of ASSERT_*/EXPECT_*. This forces
 // the text replacement and allows the compiler to find errors. Otherwise is left to the user
@@ -531,9 +532,7 @@ TEST(ZxTestCAssertionTest, AssertBytesSingleCall) {
   ZX_ASSERT_MSG(getter_called == 1, "ASSERT_* evaluating multiple times.");
 }
 
-static void HelperFnFatal(bool fail) {
-  ASSERT_FALSE(fail, "Expected to fail.");
-}
+static void HelperFnFatal(bool fail) { ASSERT_FALSE(fail, "Expected to fail."); }
 
 TEST(ZxTestCAssertionTest, AssertNoFatalFailureWithFatalFailure) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
@@ -550,9 +549,7 @@ TEST(ZxTestCAssertionTest, AssertNoFatalFailureWithoutFailure) {
   TEST_CHECKPOINT();
 }
 
-static void HelperFn(bool fail) {
-  EXPECT_FALSE(fail, "Expected to fail.");
-}
+static void HelperFn(bool fail) { EXPECT_FALSE(fail, "Expected to fail."); }
 
 TEST(ZxTestCAssertionTest, AssertNoFatalFailureWithFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Aborted test execution on helper failure.");
@@ -588,9 +585,7 @@ TEST(ZxTestCAssertionTest, AssertFalseCoerceTypeToBoolFailure) {
   TEST_CHECKPOINT();
 }
 
-static int SomeFn(void) {
-  return 0;
-}
+static int SomeFn(void) { return 0; }
 
 TEST(ZxTestCAssertionTest, FunctionPointerNotNull) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
@@ -697,46 +692,42 @@ TEST(ZxTestCAssertionTest, AddFatalFailure) {
 }
 
 static void AssertFail(void) {
-    ASSERT_TRUE(false);
-    return;
+  ASSERT_TRUE(false);
+  return;
 }
 
 TEST(ZxTestCAssertionTest, CurrentTestHasFailuresDetectsNonFatalFailures) {
-    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
-    EXPECT_TRUE(false);
-    ASSERT_TRUE(CURRENT_TEST_HAS_FAILURES());
-    TEST_CHECKPOINT();
+  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+  EXPECT_TRUE(false);
+  ASSERT_TRUE(CURRENT_TEST_HAS_FAILURES());
+  TEST_CHECKPOINT();
 }
 
 TEST(ZxTestCAssertionTest, CurrentTestHasFailuresDetectsFatalFailures) {
-    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
-    AssertFail();
-    ASSERT_TRUE(CURRENT_TEST_HAS_FAILURES());
-    TEST_CHECKPOINT();
+  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+  AssertFail();
+  ASSERT_TRUE(CURRENT_TEST_HAS_FAILURES());
+  TEST_CHECKPOINT();
 }
 
 TEST(ZxTestCAssertionTest, CurrentTestHasFatalFailuresIgnoresNonFatalFailures) {
-    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
-    EXPECT_TRUE(false);
-    ASSERT_FALSE(CURRENT_TEST_HAS_FATAL_FAILURES());
-    TEST_CHECKPOINT();
+  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+  EXPECT_TRUE(false);
+  ASSERT_FALSE(CURRENT_TEST_HAS_FATAL_FAILURES());
+  TEST_CHECKPOINT();
 }
 
 TEST(ZxTestCAssertionTest, CurrentTestHasFatalFailuresDetectsFatalFailures) {
-    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
-    AssertFail();
-    ASSERT_TRUE(CURRENT_TEST_HAS_FATAL_FAILURES());
-    TEST_CHECKPOINT();
+  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to detect failure");
+  AssertFail();
+  ASSERT_TRUE(CURRENT_TEST_HAS_FATAL_FAILURES());
+  TEST_CHECKPOINT();
 }
 
 #ifdef __Fuchsia__
-static void Crash(void) {
-  ZX_ASSERT(false);
-}
+static void Crash(void) { ZX_ASSERT(false); }
 
-static void Success(void) {
-  ZX_ASSERT(true);
-}
+static void Success(void) { ZX_ASSERT(true); }
 
 TEST(ZxTestCAssertionTest, AssertDeathWithCrashingStatement) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to detect crash");

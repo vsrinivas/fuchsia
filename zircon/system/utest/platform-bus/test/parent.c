@@ -15,12 +15,10 @@
 #define DRIVER_NAME "test-parent"
 
 typedef struct {
-    zx_device_t* zxdev;
+  zx_device_t* zxdev;
 } test_t;
 
-static void test_release(void* ctx) {
-    free(ctx);
-}
+static void test_release(void* ctx) { free(ctx); }
 
 static zx_protocol_device_t test_device_protocol = {
     .version = DEVICE_OPS_VERSION,
@@ -28,45 +26,45 @@ static zx_protocol_device_t test_device_protocol = {
 };
 
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
-    pdev_protocol_t pdev;
-    zx_status_t status;
+  pdev_protocol_t pdev;
+  zx_status_t status;
 
-    zxlogf(ERROR, "test_bind: %s \n", DRIVER_NAME);
+  zxlogf(ERROR, "test_bind: %s \n", DRIVER_NAME);
 
-    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV\n", DRIVER_NAME);
-        return status;
-    }
+  status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV\n", DRIVER_NAME);
+    return status;
+  }
 
-    test_t* test = calloc(1, sizeof(test_t));
-    if (!test) {
-        return ZX_ERR_NO_MEMORY;
-    }
+  test_t* test = calloc(1, sizeof(test_t));
+  if (!test) {
+    return ZX_ERR_NO_MEMORY;
+  }
 
-    zx_device_prop_t child_props[] = {
-        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST},
-        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST},
-        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_CHILD_1 },
-    };
+  zx_device_prop_t child_props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_CHILD_1},
+  };
 
-    device_add_args_t child_args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "child-1",
-        .ctx = test,
-        .ops = &test_device_protocol,
-        .props = child_props,
-        .prop_count = countof(child_props),
-    };
+  device_add_args_t child_args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "child-1",
+      .ctx = test,
+      .ops = &test_device_protocol,
+      .props = child_props,
+      .prop_count = countof(child_props),
+  };
 
-    status = device_add(parent, &child_args, &test->zxdev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: device_add failed: %d\n", DRIVER_NAME, status);
-        free(test);
-        return status;
-    }
+  status = device_add(parent, &child_args, &test->zxdev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: device_add failed: %d\n", DRIVER_NAME, status);
+    free(test);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 static zx_driver_ops_t test_driver_ops = {
@@ -75,8 +73,7 @@ static zx_driver_ops_t test_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_PARENT),
-ZIRCON_DRIVER_END(test_bus)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_PARENT), ZIRCON_DRIVER_END(test_bus)

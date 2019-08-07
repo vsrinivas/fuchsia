@@ -10,36 +10,30 @@
 
 // Wrapper for malloc()
 void* FsMalloc(size_t size) {
-    void* mem = malloc(size);
+  void* mem = malloc(size);
 
-    return mem;
+  return mem;
 }
 
 // Wrapper for calloc()
 void* FsCalloc(size_t nitems, size_t size) {
-    void* mem = calloc(nitems, size);
+  void* mem = calloc(nitems, size);
 
-    return mem;
+  return mem;
 }
 
 // Wrapper for aalloc()
 void* FsAalloc(size_t size) {
-    void* mem = aalloc(size);
+  void* mem = aalloc(size);
 
-    return mem;
+  return mem;
 }
 
 // Wrapper for free()
-void FsFree(void* ptr) {
-    free(ptr);
-}
+void FsFree(void* ptr) { free(ptr); }
 
 // Wrapper for free_clear()
-void FsFreeClear(void* ptr) {
-    free_clear(ptr);
-}
+void FsFreeClear(void* ptr) { free_clear(ptr); }
 
 // Wrapper for afree_clear()
-void FsAfreeClear(void* ptr) {
-    afree_clear(ptr);
-}
+void FsAfreeClear(void* ptr) { afree_clear(ptr); }

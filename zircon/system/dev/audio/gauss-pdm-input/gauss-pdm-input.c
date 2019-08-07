@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
-
-#include <ddk/platform-defs.h>
-
+#include "gauss-pdm-input.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "gauss-pdm-input.h"
+#include <ddk/binding.h>
+#include <ddk/platform-defs.h>
 
 extern zx_status_t gauss_pdm_input_bind(void* ctx, zx_device_t* parent);
 extern void gauss_pdm_input_release(void*);
@@ -27,4 +25,4 @@ ZIRCON_DRIVER_BEGIN(gauss_pdm_input, gauss_pdm_input_driver_ops, "gauss-pdm-inpu
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GAUSS),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GAUSS_AUDIO_IN),
 ZIRCON_DRIVER_END(gauss_pdm_input)
-// clang-format on
+    // clang-format on

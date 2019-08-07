@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/input/c/fidl.h>
-#include <hid/acer12.h>
 #include <lib/fdio/unsafe.h>
 #include <string.h>
 #include <zircon/errors.h>
+
+#include <hid/acer12.h>
 
 // Eyoyo 10 Inch IPS EDP 1920 x 1200 Touch Screen
 static const uint8_t eyoyo_touch_report_desc[] = {
@@ -316,9 +317,9 @@ static const uint8_t eyoyo_touch_report_desc[] = {
     0x05, 0x0D,        //   Usage Page (Digitizer)
     0x15, 0x00,        //   Logical Minimum (0)
     0x27, 0xFF, 0xFF, 0x00, 0x00,  //   Logical Maximum (65534)
-    0x75, 0x10,        //   Report Size (16)
-    0x95, 0x01,        //   Report Count (1)
-    0x09, 0x56,        //   Usage (0x56)
+    0x75, 0x10,                    //   Report Size (16)
+    0x95, 0x01,                    //   Report Count (1)
+    0x09, 0x56,                    //   Usage (0x56)
     0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     0x25, 0x0A,        //   Logical Maximum (10)
     0x75, 0x08,        //   Report Size (8)
@@ -327,43 +328,54 @@ static const uint8_t eyoyo_touch_report_desc[] = {
     0x85, 0x42,        //   Report ID (66)
     0x09, 0x55,        //   Usage (0x55)
     0x25, 0x0A,        //   Logical Maximum (10)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0x85, 0x44,        //   Report ID (68)
     0x06, 0x00, 0xFF,  //   Usage Page (Vendor Defined 0xFF00)
     0x09, 0xC5,        //   Usage (0xC5)
     0x26, 0xFF, 0x00,  //   Logical Maximum (255)
     0x96, 0x00, 0x01,  //   Report Count (256)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0x85, 0xF2,        //   Report ID (-14)
     0x09, 0x03,        //   Usage (0x03)
     0x75, 0x08,        //   Report Size (8)
     0x95, 0x04,        //   Report Count (4)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0x09, 0x04,        //   Usage (0x04)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0x09, 0x05,        //   Usage (0x05)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0x95, 0x01,        //   Report Count (1)
     0x09, 0x06,        //   Usage (0x06)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0x09, 0x07,        //   Usage (0x07)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0x85, 0x06,        //   Report ID (6)
     0x09, 0x01,        //   Usage (0x01)
     0x95, 0x07,        //   Report Count (7)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0x85, 0x08,        //   Report ID (8)
     0x09, 0x01,        //   Usage (0x01)
     0x95, 0x3F,        //   Report Count (63)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0x85, 0x07,        //   Report ID (7)
     0x09, 0x01,        //   Usage (0x01)
     0x95, 0x3F,        //   Report Count (63)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0x85, 0xF4,        //   Report ID (-12)
     0x09, 0x01,        //   Usage (0x01)
     0x95, 0x2F,        //   Report Count (47)
-    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
     0xC0,              // End Collection
     0x05, 0x0D,        // Usage Page (Digitizer)
     0x09, 0x0E,        // Usage (0x0E)
@@ -377,7 +389,8 @@ static const uint8_t eyoyo_touch_report_desc[] = {
     0x25, 0x0A,        //     Logical Maximum (10)
     0x75, 0x08,        //     Report Size (8)
     0x95, 0x02,        //     Report Count (2)
-    0xB1, 0x02,        //     Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xB1, 0x02,        //     Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //     Position,Non-volatile)
     0xC0,              //   End Collection
     0xC0,              // End Collection
     0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
@@ -411,37 +424,37 @@ static const uint8_t eyoyo_touch_report_desc[] = {
 };
 
 bool is_eyoyo_touch_report_desc(const uint8_t* data, size_t len) {
-    if (!data)
-        return false;
+  if (!data)
+    return false;
 
-    if (len != sizeof(eyoyo_touch_report_desc))
-        return false;
+  if (len != sizeof(eyoyo_touch_report_desc))
+    return false;
 
-    return (memcmp(data, eyoyo_touch_report_desc, len) == 0);
+  return (memcmp(data, eyoyo_touch_report_desc, len) == 0);
 }
 
 zx_status_t setup_eyoyo_touch(int fd) {
-    if (fd < 0)
-        return ZX_ERR_INVALID_ARGS;
+  if (fd < 0)
+    return ZX_ERR_INVALID_ARGS;
 
-    const uint8_t report_id = 67;
-    const uint8_t enable_multitouch[3] = { 67, 2, 0 };
+  const uint8_t report_id = 67;
+  const uint8_t enable_multitouch[3] = {67, 2, 0};
 
-    fdio_t* io = fdio_unsafe_fd_to_io(fd);
-    if (io == NULL) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+  fdio_t* io = fdio_unsafe_fd_to_io(fd);
+  if (io == NULL) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    zx_handle_t svc = fdio_unsafe_borrow_channel(io);
-    zx_status_t call_status;
-    zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
-        svc, fuchsia_hardware_input_ReportType_FEATURE, report_id, enable_multitouch,
-        sizeof(enable_multitouch), &call_status);
-    fdio_unsafe_release(io);
-    if (status != ZX_OK) {
-        return status;
-    } else if (call_status != ZX_OK) {
-        return call_status;
-    }
-    return ZX_OK;
+  zx_handle_t svc = fdio_unsafe_borrow_channel(io);
+  zx_status_t call_status;
+  zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
+      svc, fuchsia_hardware_input_ReportType_FEATURE, report_id, enable_multitouch,
+      sizeof(enable_multitouch), &call_status);
+  fdio_unsafe_release(io);
+  if (status != ZX_OK) {
+    return status;
+  } else if (call_status != ZX_OK) {
+    return call_status;
+  }
+  return ZX_OK;
 }

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hid/ft3x27.h>
-#include <zircon/errors.h>
 #include <string.h>
+#include <zircon/errors.h>
+
+#include <hid/ft3x27.h>
 
 static const uint8_t ft3x27_touch_report_desc[] = {
     0x05, 0x0D,        // Usage Page (Digitizer)
@@ -160,23 +161,23 @@ static const uint8_t ft3x27_touch_report_desc[] = {
 };
 
 bool is_ft3x27_touch_report_desc(const uint8_t* data, size_t len) {
-    if (!data)
-        return false;
+  if (!data)
+    return false;
 
-    if (len != sizeof(ft3x27_touch_report_desc))
-        return false;
+  if (len != sizeof(ft3x27_touch_report_desc))
+    return false;
 
-    return (memcmp(data, ft3x27_touch_report_desc, len) == 0);
+  return (memcmp(data, ft3x27_touch_report_desc, len) == 0);
 }
 
 zx_status_t setup_ft3x27_touch(int fd) {
-    if (fd < 0)
-        return ZX_ERR_INVALID_ARGS;
+  if (fd < 0)
+    return ZX_ERR_INVALID_ARGS;
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 size_t get_ft3x27_report_desc(const uint8_t** buf) {
-    *buf = ft3x27_touch_report_desc;
-    return sizeof(ft3x27_touch_report_desc);
+  *buf = ft3x27_touch_report_desc;
+  return sizeof(ft3x27_touch_report_desc);
 }

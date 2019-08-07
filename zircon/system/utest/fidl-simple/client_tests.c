@@ -5,9 +5,10 @@
 #include <fuchsia/crash/c/fidl.h>
 #include <string.h>
 #include <threads.h>
-#include <unittest/unittest.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
+
+#include <unittest/unittest.h>
 
 static int crash_server(void* ctx) {
   zx_handle_t server = *(zx_handle_t*)ctx;

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include <stdlib.h>
 #include <string.h>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -24,4 +25,4 @@ ZIRCON_DRIVER_BEGIN(gauss_tdm, gauss_tdm_driver_ops, "gauss-tdm", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GAUSS),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GAUSS_AUDIO_OUT),
 ZIRCON_DRIVER_END(gauss_tdm)
-// clang-format on
+    // clang-format on
