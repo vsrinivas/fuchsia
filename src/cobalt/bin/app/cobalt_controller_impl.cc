@@ -8,8 +8,6 @@
 #include <mutex>
 #include <vector>
 
-#include "third_party/cobalt/logger/local_aggregation.pb.h"
-
 namespace cobalt {
 
 using encoder::ShippingManager;
