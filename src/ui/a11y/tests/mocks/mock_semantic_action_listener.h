@@ -18,18 +18,10 @@ namespace accessibility_test {
 class MockSemanticActionListener
     : public fuchsia::accessibility::semantics::SemanticActionListener {
  public:
-  // On initialization, MockSemanticActionListener tries to connect to
-  // |fuchsia::accessibility::SemanticsManager| service in |context_| and
-  // registers with it's view_ref, binding and interface request.
-  explicit MockSemanticActionListener(sys::ComponentContext* context,
-                                      fuchsia::ui::views::ViewRef view_ref);
+  MockSemanticActionListener() = default;
+
   ~MockSemanticActionListener() override = default;
 
-  void UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes);
-  void DeleteSemanticNodes(std::vector<uint32_t> node_ids);
-  void Commit();
-
- private:
   // |fuchsia::accessibility::semantics::SemanticActionListener|
   void OnAccessibilityActionRequested(
       uint32_t node_id, fuchsia::accessibility::semantics::Action action,
@@ -37,13 +29,20 @@ class MockSemanticActionListener
           OnAccessibilityActionRequestedCallback callback) override {}
 
   // |fuchsia::accessibility::semantics::SemanticActionListener|
-  void HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) override {}
+  void HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) override;
 
-  sys::ComponentContext* context_;
-  fuchsia::accessibility::semantics::SemanticsManagerPtr manager_;
-  fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
+  // Sets hit_test_node_id_ with given node_id, which will then be returned when
+  // HitTest() is called.
+  void SetHitTestResult(int node_id);
+
+  void Bind(
+      fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> *listener);
+
+ private:
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticActionListener> bindings_;
-  fuchsia::ui::views::ViewRef view_ref_;
+
+  // Node id which will be returned when HitTest() is called.
+  uint32_t hit_test_node_id_ = 1;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSemanticActionListener);
 };

@@ -8,26 +8,19 @@
 
 namespace accessibility_test {
 
-MockSemanticActionListener::MockSemanticActionListener(sys::ComponentContext* context,
-                                                       fuchsia::ui::views::ViewRef view_ref)
-    : context_(context), view_ref_(std::move(view_ref)) {
-  context_->svc()->Connect(manager_.NewRequest());
-  manager_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Cannot connect to SemanticsManager with status:" << status;
-  });
-  fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> listener_handle;
-  bindings_.AddBinding(this, listener_handle.NewRequest());
-  manager_->RegisterView(std::move(view_ref_), std::move(listener_handle), tree_ptr_.NewRequest());
+void MockSemanticActionListener::Bind(
+    fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> *listener) {
+  bindings_.AddBinding(this, listener->NewRequest());
 }
 
-void MockSemanticActionListener::UpdateSemanticNodes(
-    std::vector<fuchsia::accessibility::semantics::Node> nodes) {
-  tree_ptr_->UpdateSemanticNodes(std::move(nodes));
+void MockSemanticActionListener::SetHitTestResult(int node_id) { hit_test_node_id_ = node_id; }
+
+void MockSemanticActionListener::HitTest(::fuchsia::math::PointF local_point,
+                                         HitTestCallback callback) {
+  fuchsia::accessibility::semantics::Hit hit;
+  hit.set_node_id(hit_test_node_id_);
+  hit.mutable_path_from_root()->push_back(hit_test_node_id_);
+  callback(std::move(hit));
 }
 
-void MockSemanticActionListener::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
-  tree_ptr_->DeleteSemanticNodes(std::move(node_ids));
-}
-
-void MockSemanticActionListener::Commit() { tree_ptr_->Commit(); }
 }  // namespace accessibility_test

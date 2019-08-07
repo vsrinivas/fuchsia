@@ -62,4 +62,17 @@ void SemanticsManagerImpl::SetSemanticsManagerEnabled(bool enabled) {
   }
   enabled_ = enabled;
 }
+
+void SemanticsManagerImpl::PerformHitTesting(
+    zx_koid_t koid, ::fuchsia::math::PointF local_point,
+    fuchsia::accessibility::semantics::SemanticActionListener::HitTestCallback callback) {
+  for (auto& binding : semantic_tree_bindings_.bindings()) {
+    if (binding->impl()->IsSameKoid(koid)) {
+      return binding->impl()->PerformHitTesting(local_point, std::move(callback));
+    }
+  }
+
+  FX_LOGS(INFO) << "Given KOID(" << koid << ") doesn't match any existing ViewRef's koid.";
+}
+
 }  // namespace a11y_manager

@@ -4,6 +4,7 @@
 
 #ifndef SRC_UI_A11Y_BIN_A11Y_MANAGER_SEMANTICS_SEMANTICS_MANAGER_IMPL_H_
 #define SRC_UI_A11Y_BIN_A11Y_MANAGER_SEMANTICS_SEMANTICS_MANAGER_IMPL_H_
+
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -33,6 +34,13 @@ class SemanticsManagerImpl : public fuchsia::accessibility::semantics::Semantics
   // When Semantics Manager is disabled, all the semantic tree bindings are
   // closed, which deletes all the semantic tree data.
   void SetSemanticsManagerEnabled(bool enabled);
+
+  // Matches ViewRef with given koid, and calls HitTesting() on the matched
+  // view.
+  // If no view matches given koid, then this function doesn't use callback.
+  void PerformHitTesting(
+      zx_koid_t koid, ::fuchsia::math::PointF local_point,
+      fuchsia::accessibility::semantics::SemanticActionListener::HitTestCallback callback);
 
  private:
   // |fuchsia::accessibility::semantics::SemanticsManager|:

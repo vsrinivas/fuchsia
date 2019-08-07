@@ -6,7 +6,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fd.h>
-#include <lib/gtest/test_loop_fixture.h>
+#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
@@ -19,7 +19,7 @@
 #include "src/ui/a11y/bin/a11y_manager/semantics/semantics_manager_impl.h"
 #include "src/ui/a11y/bin/a11y_manager/util.h"
 #include "src/ui/a11y/tests/integration/semantic_tree_parser.h"
-#include "src/ui/a11y/tests/mocks/mock_semantic_action_listener.h"
+#include "src/ui/a11y/tests/mocks/mock_semantic_provider.h"
 
 namespace accessibility_test {
 using fuchsia::accessibility::semantics::Attributes;
@@ -57,10 +57,11 @@ const std::string kDeletedSemanticSubtreePath = "/pkg/data/deleted_subtree_even_
 
 // Unit tests for src/ui/a11y/bin/a11y_manager/semantics_manager_impl.h and
 // semantic_tree_impl.h
-class SemanticsManagerTest : public gtest::TestLoopFixture {
+class SemanticsManagerTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
-    TestLoopFixture::SetUp();
+    RealLoopFixture::SetUp();
+    syslog::InitLogger();
 
     zx::eventpair a, b;
     zx::eventpair::create(0u, &a, &b);
@@ -79,7 +80,7 @@ class SemanticsManagerTest : public gtest::TestLoopFixture {
 
   Node CreateTestNode(uint32_t node_id, std::string label);
   void InitializeActionListener(std::string file_path,
-                                accessibility_test::MockSemanticActionListener *listener);
+                                accessibility_test::MockSemanticProvider *provider);
   int OpenAsFD(vfs::internal::Node *node, async_dispatcher_t *dispatcher);
   char *ReadFile(vfs::internal::Node *node, int length, char *buffer);
 
@@ -105,17 +106,17 @@ Node SemanticsManagerTest::CreateTestNode(uint32_t node_id, std::string label) {
 }
 
 void SemanticsManagerTest::InitializeActionListener(
-    std::string file_path, accessibility_test::MockSemanticActionListener *listener) {
-  // Create Node List for the current action listener.
+    std::string file_path, accessibility_test::MockSemanticProvider *provider) {
+  // Create Node List for the current semantic provider.
   std::vector<Node> nodes;
   ASSERT_TRUE(semantic_tree_parser_.ParseSemanticTree(file_path, &nodes));
 
   // Add nodes list to the current semantic providers list.
-  listener->UpdateSemanticNodes(std::move(nodes));
+  provider->UpdateSemanticNodes(std::move(nodes));
   RunLoopUntilIdle();
 
   // Commit the nodes.
-  listener->Commit();
+  provider->Commit();
   RunLoopUntilIdle();
 }
 
@@ -150,8 +151,8 @@ TEST_F(SemanticsManagerTest, NodeUpdateWithoutCommit) {
   fidl::Clone(view_ref_, &view_ref_connection_copy);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -164,7 +165,7 @@ TEST_F(SemanticsManagerTest, NodeUpdateWithoutCommit) {
   update_nodes.push_back(std::move(clone_node));
 
   // Update the node created above.
-  action_listener.UpdateSemanticNodes(std::move(update_nodes));
+  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
   RunLoopUntilIdle();
 
   // Check that the node is not present in the tree.
@@ -180,8 +181,8 @@ TEST_F(SemanticsManagerTest, NodeUpdateWithCommit) {
   fidl::Clone(view_ref_, &view_ref_connection_copy);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -194,11 +195,11 @@ TEST_F(SemanticsManagerTest, NodeUpdateWithCommit) {
   update_nodes.push_back(std::move(clone_node));
 
   // Update the node created above.
-  action_listener.UpdateSemanticNodes(std::move(update_nodes));
+  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
   RunLoopUntilIdle();
 
   // Commit nodes.
-  action_listener.Commit();
+  semantic_provider.Commit();
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
@@ -217,8 +218,8 @@ TEST_F(SemanticsManagerTest, NodeDeleteWithoutCommit) {
   fidl::Clone(view_ref_, &view_ref_connection_copy);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -231,17 +232,17 @@ TEST_F(SemanticsManagerTest, NodeDeleteWithoutCommit) {
   update_nodes.push_back(std::move(clone_node));
 
   // Update the node created above.
-  action_listener.UpdateSemanticNodes(std::move(update_nodes));
+  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
   RunLoopUntilIdle();
 
   // Commit nodes.
-  action_listener.Commit();
+  semantic_provider.Commit();
   RunLoopUntilIdle();
 
   // Call Delete Node.
   std::vector<uint32_t> delete_nodes;
   delete_nodes.push_back(node.node_id());
-  action_listener.DeleteSemanticNodes(std::move(delete_nodes));
+  semantic_provider.DeleteSemanticNodes(std::move(delete_nodes));
   RunLoopUntilIdle();
 
   // Node should still be present.
@@ -260,8 +261,8 @@ TEST_F(SemanticsManagerTest, NodeDeleteWithCommit) {
   fidl::Clone(view_ref_, &view_ref_connection_copy);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -274,18 +275,18 @@ TEST_F(SemanticsManagerTest, NodeDeleteWithCommit) {
   update_nodes.push_back(std::move(clone_node));
 
   // Update the node created above.
-  action_listener.UpdateSemanticNodes(std::move(update_nodes));
+  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
   RunLoopUntilIdle();
 
   // Commit nodes.
-  action_listener.Commit();
+  semantic_provider.Commit();
   RunLoopUntilIdle();
 
   // Call Delete Node with commit.
   std::vector<uint32_t> delete_nodes;
   delete_nodes.push_back(node.node_id());
-  action_listener.DeleteSemanticNodes(std::move(delete_nodes));
-  action_listener.Commit();
+  semantic_provider.DeleteSemanticNodes(std::move(delete_nodes));
+  semantic_provider.Commit();
   RunLoopUntilIdle();
 
   // Check that the node is not present in the tree.
@@ -302,8 +303,8 @@ TEST_F(SemanticsManagerTest, DetectCycleInCommit) {
   fidl::Clone(view_ref_, &view_ref_connection_copy);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -317,11 +318,11 @@ TEST_F(SemanticsManagerTest, DetectCycleInCommit) {
 
   // Call update on the newly created semantic tree with cycle.
   // Update the node created above.
-  action_listener.UpdateSemanticNodes(std::move(nodes_list));
+  semantic_provider.UpdateSemanticNodes(std::move(nodes_list));
   RunLoopUntilIdle();
 
   // Commit nodes.
-  action_listener.Commit();
+  semantic_provider.Commit();
   RunLoopUntilIdle();
 
   // Check that nodes are not present in the semantic tree.
@@ -342,8 +343,8 @@ TEST_F(SemanticsManagerTest, DetectDanglingSubtrees) {
   fidl::Clone(view_ref_, &view_ref_connection_copy);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -354,17 +355,17 @@ TEST_F(SemanticsManagerTest, DetectDanglingSubtrees) {
 
   // Call update on the newly created semantic tree with cycle.
   // Update the node created above.
-  action_listener.UpdateSemanticNodes(std::move(nodes_list));
+  semantic_provider.UpdateSemanticNodes(std::move(nodes_list));
   RunLoopUntilIdle();
 
   // Delete a node.
   std::vector<uint32_t> delete_nodes;
   delete_nodes.push_back(kDeleteNodeId);
-  action_listener.DeleteSemanticNodes(std::move(delete_nodes));
+  semantic_provider.DeleteSemanticNodes(std::move(delete_nodes));
   RunLoopUntilIdle();
 
   // Commit nodes.
-  action_listener.Commit();
+  semantic_provider.Commit();
   RunLoopUntilIdle();
 
   // Check root node is present.
@@ -394,8 +395,8 @@ TEST_F(SemanticsManagerTest, InOrderUpdatesAndDelete) {
   fidl::Clone(view_ref_, &view_ref_connection_copy);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -406,13 +407,13 @@ TEST_F(SemanticsManagerTest, InOrderUpdatesAndDelete) {
   Node clone_node;
   node.Clone(&clone_node);
   update_nodes.push_back(std::move(clone_node));
-  action_listener.UpdateSemanticNodes(std::move(update_nodes));
+  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
 
   // Delete Node 0.
   std::vector<uint32_t> delete_nodes;
   int delete_node_id = 0;
   delete_nodes.push_back(delete_node_id);
-  action_listener.DeleteSemanticNodes(std::move(delete_nodes));
+  semantic_provider.DeleteSemanticNodes(std::move(delete_nodes));
 
   // Update Node 0 to Label-B
   std::vector<Node> update_nodes2;
@@ -420,10 +421,10 @@ TEST_F(SemanticsManagerTest, InOrderUpdatesAndDelete) {
   Node clone_node2;
   node2.Clone(&clone_node2);
   update_nodes2.push_back(std::move(clone_node2));
-  action_listener.UpdateSemanticNodes(std::move(update_nodes2));
+  semantic_provider.UpdateSemanticNodes(std::move(update_nodes2));
 
   // Commit nodes.
-  action_listener.Commit();
+  semantic_provider.Commit();
   RunLoopUntilIdle();
 
   // Check Node 0 is present and has Label-B.
@@ -442,13 +443,13 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_OddNumberOfNodes) {
   fidl::Clone(view_ref_, &view_ref_connection_copy);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
 
-  InitializeActionListener(kSemanticTreeOddNodesPath, &action_listener);
+  InitializeActionListener(kSemanticTreeOddNodesPath, &semantic_provider);
   vfs::PseudoDir *debug_dir = context_provider_.context()->outgoing()->debug_dir();
   vfs::internal::Node *node;
   EXPECT_EQ(ZX_OK, debug_dir->Lookup(
@@ -468,13 +469,13 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_EvenNumberOfNodes) {
   fidl::Clone(view_ref_, &view_ref_connection_copy);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
 
-  InitializeActionListener(kSemanticTreeEvenNodesPath, &action_listener);
+  InitializeActionListener(kSemanticTreeEvenNodesPath, &semantic_provider);
   vfs::PseudoDir *debug_dir = context_provider_.context()->outgoing()->debug_dir();
   vfs::internal::Node *node;
   EXPECT_EQ(ZX_OK, debug_dir->Lookup(
@@ -494,13 +495,13 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_SingleNode) {
   fidl::Clone(view_ref_, &view_ref_connection_copy);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
 
-  InitializeActionListener(kSemanticTreeSingleNodePath, &action_listener);
+  InitializeActionListener(kSemanticTreeSingleNodePath, &semantic_provider);
   vfs::PseudoDir *debug_dir = context_provider_.context()->outgoing()->debug_dir();
   vfs::internal::Node *node;
   EXPECT_EQ(ZX_OK, debug_dir->Lookup(
@@ -524,8 +525,8 @@ TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
   semantics_manager_impl_.SetSemanticsManagerEnabled(true);
 
   // Create ActionListener.
-  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
-                                                                 std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -538,11 +539,11 @@ TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
   update_nodes.push_back(std::move(clone_node));
 
   // Update the node created above.
-  action_listener.UpdateSemanticNodes(std::move(update_nodes));
+  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
   RunLoopUntilIdle();
 
   // Commit nodes.
-  action_listener.Commit();
+  semantic_provider.Commit();
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
@@ -558,6 +559,39 @@ TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
   // Check that previously committed node is not present in the semantic tree.
   returned_node = semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0);
   EXPECT_EQ(returned_node, nullptr);
+}
+
+// Test for PerformHitTesting() to make sure correct node_id is passed from the
+// semantic provider to semantics manager.
+TEST_F(SemanticsManagerTest, PerformHitTesting_Pass) {
+  // Create ViewRef.
+  fuchsia::ui::views::ViewRef view_ref_connection;
+  fidl::Clone(view_ref_, &view_ref_connection);
+
+  // Create ActionListener.
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
+  // We make sure the Semantic Action Listener has finished connecting to the
+  // root.
+  RunLoopUntilIdle();
+
+  InitializeActionListener(kSemanticTreeOddNodesPath, &semantic_provider);
+
+  // Set HitTest result in action listener.
+  uint32_t expected_result = 5;
+  semantic_provider.SetHitTestResult(expected_result);
+
+  zx_koid_t koid = a11y_manager::GetKoid(view_ref_);
+  ::fuchsia::math::PointF local_point;
+  bool done = false;
+  semantics_manager_impl_.PerformHitTesting(
+      koid, local_point, [expected_result, &done](::fuchsia::accessibility::semantics::Hit hit) {
+        EXPECT_EQ(expected_result, hit.node_id());
+        EXPECT_EQ(1ul, hit.path_from_root().size());
+        EXPECT_EQ(expected_result, hit.path_from_root()[0]);
+        done = true;
+      });
+  RunLoopUntil([&done] { return done; });
 }
 
 }  // namespace accessibility_test

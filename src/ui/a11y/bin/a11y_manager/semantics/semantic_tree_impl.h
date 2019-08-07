@@ -10,10 +10,11 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_file.h>
-#include <src/lib/fxl/macros.h>
 
 #include <unordered_map>
 #include <unordered_set>
+
+#include <src/lib/fxl/macros.h>
 
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "src/ui/a11y/bin/a11y_manager/util.h"
@@ -47,6 +48,15 @@ class SemanticTreeImpl : public fuchsia::accessibility::semantics::SemanticTree 
 
   // Compares a view with the current view of the semantic tree, based on KOID.
   bool IsSameView(const fuchsia::ui::views::ViewRef& view_ref);
+
+  // Compares given koid with the koid of the current view's viewref.
+  bool IsSameKoid(const zx_koid_t koid);
+
+  // Calls HitTest() function for the current semantic tree with given local
+  // point.
+  void PerformHitTesting(
+      ::fuchsia::math::PointF local_point,
+      fuchsia::accessibility::semantics::SemanticActionListener::HitTestCallback callback);
 
  private:
   // Representation of single semantic tree update/delete transaction.

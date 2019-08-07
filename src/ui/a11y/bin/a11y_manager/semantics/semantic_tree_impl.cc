@@ -46,6 +46,8 @@ bool SemanticTreeImpl::IsSameView(const fuchsia::ui::views::ViewRef& view_ref) {
   return GetKoid(view_ref) == GetKoid(view_ref_);
 }
 
+bool SemanticTreeImpl::IsSameKoid(const zx_koid_t koid) { return koid == GetKoid(view_ref_); }
+
 void SemanticTreeImpl::Commit() {
   // TODO(MI4-2038): Commit should ensure that there is only 1 tree rooted at
   // node_id 0.
@@ -225,6 +227,12 @@ void SemanticTreeImpl::InitializeDebugEntry(vfs::PseudoDir* debug_dir) {
               return ZX_OK;
             }));
   }
+}
+
+void SemanticTreeImpl::PerformHitTesting(
+    ::fuchsia::math::PointF local_point,
+    fuchsia::accessibility::semantics::SemanticActionListener::HitTestCallback callback) {
+  client_action_listener_->HitTest(local_point, std::move(callback));
 }
 
 }  // namespace a11y_manager
