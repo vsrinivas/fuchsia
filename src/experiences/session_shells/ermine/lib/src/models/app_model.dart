@@ -7,44 +7,27 @@ import 'dart:convert' show json;
 import 'dart:io';
 
 import 'package:fidl_fuchsia_app_discover/fidl_async.dart'
-    show Suggestions, SuggestionsBinding, SuggestionsProxy;
-import 'package:fidl_fuchsia_shell_ermine/fidl_async.dart' show AskBarProxy;
-import 'package:fidl_fuchsia_sys/fidl_async.dart'
-    show
-        ComponentControllerProxy,
-        LauncherProxy,
-        LaunchInfo,
-        ServiceList,
-        ServiceProviderBinding;
-import 'package:fidl_fuchsia_ui_app/fidl_async.dart' show ViewProviderProxy;
+    show SuggestionsProxy;
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
-import 'package:fidl_fuchsia_ui_views/fidl_async.dart'
-    show ViewToken, ViewHolderToken;
+
 import 'package:flutter/material.dart';
 import 'package:fuchsia_modular_flutter/session_shell.dart' show SessionShell;
 import 'package:fuchsia_modular_flutter/story_shell.dart' show StoryShell;
-import 'package:fuchsia_scenic_flutter/child_view_connection.dart'
-    show ChildViewConnection;
-import 'package:fuchsia_services/services.dart' show Incoming, StartupContext;
-import 'package:lib.widgets/utils.dart' show PointerEventsListener;
-import 'package:zircon/zircon.dart';
 
-import '../utils/elevations.dart';
+import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:lib.widgets/utils.dart' show PointerEventsListener;
+
 import '../utils/key_chord_listener.dart'
     show KeyChordListener, KeyChordBinding;
+import '../utils/suggestions.dart';
+import 'ask_model.dart';
 import 'cluster_model.dart';
-import 'ermine_service_provider.dart' show ErmineServiceProvider;
 import 'status_model.dart';
-
-const _kErmineAskModuleUrl =
-    'fuchsia-pkg://fuchsia.com/ermine_ask_module#meta/ermine_ask_module.cmx';
 
 /// Model that manages all the application state of this session shell.
 class AppModel {
   final _pointerEventsListener = PointerEventsListener();
-  final _componentControllerProxy = ComponentControllerProxy();
   final _suggestionsService = SuggestionsProxy();
-  final _ask = AskBarProxy();
   final _cancelActionBinding =
       KeyChordBinding(action: 'cancel', hidUsage: 0x29);
 
@@ -58,12 +41,12 @@ class AppModel {
   final ValueNotifier<DateTime> currentTime =
       ValueNotifier<DateTime>(DateTime.now());
   ValueNotifier<bool> askVisibility = ValueNotifier(false);
-  ValueNotifier<ChildViewConnection> askChildViewConnection =
-      ValueNotifier<ChildViewConnection>(null);
+
   ValueNotifier<bool> statusVisibility = ValueNotifier(false);
   ValueNotifier<bool> helpVisibility = ValueNotifier(false);
   KeyChordListener _keyboardListener;
   StatusModel status;
+  AskModel askModel;
   String keyboardShortcuts = 'Help Me!';
 
   AppModel() {
@@ -87,8 +70,13 @@ class AppModel {
 
     status = StatusModel.fromStartupContext(_startupContext);
 
-    // Load the ask bar.
-    _loadAskBar();
+    final suggestions = SuggestionsProxy();
+    StartupContext.fromStartupInfo().incoming.connectToService(suggestions);
+
+    askModel = AskModel(
+      visibility: askVisibility,
+      suggestionService: SuggestionService(suggestions),
+    );
   }
 
   /// Called after runApp which initializes flutter's gesture system.
@@ -139,54 +127,6 @@ class AppModel {
     ]).addListener(onCancel);
   }
 
-  void _loadAskBar() {
-    final incoming = Incoming();
-    final launcherProxy = LauncherProxy();
-    _startupContext.incoming.connectToService(launcherProxy);
-
-    launcherProxy.createComponent(
-      LaunchInfo(
-        url: _kErmineAskModuleUrl,
-        directoryRequest: incoming.request().passChannel(),
-        additionalServices: ServiceList(
-          names: <String>[Suggestions.$serviceName],
-          provider: ServiceProviderBinding().wrap(
-            ErmineServiceProvider()
-              ..advertise<Suggestions>(
-                name: Suggestions.$serviceName,
-                service: _suggestionsService,
-                binding: SuggestionsBinding(),
-              ),
-          ),
-        ),
-      ),
-      _componentControllerProxy.ctrl.request(),
-    );
-
-    final viewProvider = ViewProviderProxy();
-    incoming
-      ..connectToService(viewProvider)
-      ..connectToService(_ask)
-      ..close();
-
-    // Create a token pair for the newly-created View.
-    final tokenPair = EventPairPair();
-    assert(tokenPair.status == ZX.OK);
-    final viewHolderToken = ViewHolderToken(value: tokenPair.first);
-    final viewToken = ViewToken(value: tokenPair.second);
-
-    viewProvider.createView(viewToken.value, null, null);
-    viewProvider.ctrl.close();
-
-    // Load the Ask mod at elevation.
-    _ask
-      ..onHidden.forEach((_) => askVisibility.value = false)
-      ..onVisible.forEach((_) => askVisibility.value = true)
-      ..load(elevations.systemOverlayElevation);
-
-    askChildViewConnection.value = ChildViewConnection(viewHolderToken);
-  }
-
   void onFullscreen() {
     if (clustersModel.fullscreenStory != null) {
       clustersModel.fullscreenStory.restore();
@@ -202,7 +142,7 @@ class AppModel {
     if (askVisibility.value == false) {
       // Close other system overlays.
       onCancel();
-      _ask.show();
+      askVisibility.value = true;
       _keyboardListener.add(_cancelActionBinding);
     }
   }
@@ -220,7 +160,7 @@ class AppModel {
   /// Called when tapped behind Ask bar, quick settings, notifications or the
   /// Escape key was pressed.
   void onCancel() {
-    _ask.hide();
+    askVisibility.value = false;
     statusVisibility.value = false;
     helpVisibility.value = false;
     _keyboardListener.release(_cancelActionBinding);
@@ -244,12 +184,10 @@ class AppModel {
   /// Called when the user initiates logout (using keyboard or UI).
   void onLogout() {
     onCancel();
-    askChildViewConnection.value = null;
     _pointerEventsListener.stop();
 
-    _componentControllerProxy.ctrl.close();
     _suggestionsService.ctrl.close();
-    _ask.ctrl.close();
+    askModel.dispose();
     status.dispose();
     _keyboardListener.close();
     sessionShell
@@ -257,28 +195,24 @@ class AppModel {
       ..stop();
   }
 
-  void injectTap(Rect bounds) {
-    final offset = bounds.topLeft;
-
-    sessionShell.presentation.injectPointerEventHack(_createPointerEvent(
-      phase: input.PointerEventPhase.add,
-      offset: offset,
-    ));
-
-    sessionShell.presentation.injectPointerEventHack(_createPointerEvent(
-      phase: input.PointerEventPhase.down,
-      offset: offset,
-    ));
-
-    sessionShell.presentation.injectPointerEventHack(_createPointerEvent(
-      phase: input.PointerEventPhase.up,
-      offset: offset,
-    ));
-
-    sessionShell.presentation.injectPointerEventHack(_createPointerEvent(
-      phase: input.PointerEventPhase.remove,
-      offset: offset,
-    ));
+  void injectTap(Offset offset) {
+    sessionShell.presentation
+      ..injectPointerEventHack(_createPointerEvent(
+        phase: input.PointerEventPhase.add,
+        offset: offset,
+      ))
+      ..injectPointerEventHack(_createPointerEvent(
+        phase: input.PointerEventPhase.down,
+        offset: offset,
+      ))
+      ..injectPointerEventHack(_createPointerEvent(
+        phase: input.PointerEventPhase.up,
+        offset: offset,
+      ))
+      ..injectPointerEventHack(_createPointerEvent(
+        phase: input.PointerEventPhase.remove,
+        offset: offset,
+      ));
   }
 
   input.PointerEvent _createPointerEvent({

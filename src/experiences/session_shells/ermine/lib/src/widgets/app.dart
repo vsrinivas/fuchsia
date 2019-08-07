@@ -4,14 +4,14 @@
 
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
 
 import '../models/app_model.dart';
-import '../widgets/status.dart';
 
+import 'ask/ask_container.dart';
 import 'clusters.dart';
 import 'fullscreen_story.dart';
 import 'get_bounds.dart';
+import 'status.dart';
 
 /// Builds the main display of this session shell.
 class App extends StatelessWidget {
@@ -120,24 +120,7 @@ class App extends StatelessWidget {
                   ),
 
                   // Ask.
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    bottom: 40,
-                    width: 500,
-                    child: AnimatedBuilder(
-                      animation: Listenable.merge([
-                        model.askVisibility,
-                        model.askChildViewConnection,
-                      ]),
-                      builder: (context, child) => !model.askVisibility.value ||
-                              model.askChildViewConnection.value == null
-                          ? Offstage()
-                          : ChildView(
-                              connection: model.askChildViewConnection.value,
-                            ),
-                    ),
-                  ),
+                  AskContainer(model: model),
 
                   // Status.
                   Positioned(

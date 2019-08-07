@@ -37,6 +37,11 @@
       "modifier": 64,
       "chord": "Right Alt + Space bar",
       "description": "Launch Ask"
+    },
+    {
+      "hidUsage": 58,
+      "chord": "F1",
+      "description": "Launch Ask"
     }
   ],
   "fullscreen": [

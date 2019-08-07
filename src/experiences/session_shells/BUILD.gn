@@ -16,7 +16,6 @@ group("ermine") {
   public_deps = [
     ":ermine_config",
     "ermine:ermine",
-    "ermine:ermine_ask_module",
     "//src/experiences/settings",
     "//src/ui/bin/shortcut",
     "//topaz/packages/prod:chromium",
@@ -49,6 +48,5 @@ group("dart_unittests") {
 
   deps = [
     "ermine:ermine_unittests($host_toolchain)",
-    "ermine:visualizers_unittests($host_toolchain)",
   ]
 }

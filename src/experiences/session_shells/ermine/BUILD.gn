@@ -45,18 +45,20 @@ dart_library("ermine_library") {
   sources = [
     "main.dart",
     "src/models/app_model.dart",
+    "src/models/ask_model.dart",
     "src/models/cluster_model.dart",
-    "src/models/ermine_service_provider.dart",
     "src/models/ermine_story.dart",
     "src/models/status_model.dart",
-    "src/modules/ask_model.dart",
-    "src/modules/ask_module.dart",
-    "src/modules/ask_sheet.dart",
-    "src/modules/ask_suggestion_list.dart",
-    "src/modules/ask_text_field.dart",
     "src/utils/elevations.dart",
     "src/utils/key_chord_listener.dart",
+    "src/utils/styles.dart",
+    "src/utils/suggestions.dart",
+    "src/widgets/animation_driver.dart",
     "src/widgets/app.dart",
+    "src/widgets/ask/ask.dart",
+    "src/widgets/ask/ask_container.dart",
+    "src/widgets/ask/ask_suggestion_list.dart",
+    "src/widgets/ask/ask_text_field.dart",
     "src/widgets/cluster.dart",
     "src/widgets/clusters.dart",
     "src/widgets/fullscreen_story.dart",
@@ -73,7 +75,6 @@ dart_library("ermine_library") {
   ]
 
   deps = [
-    ":shell.ermine",
     "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.modular",
@@ -92,38 +93,6 @@ dart_library("ermine_library") {
     "//topaz/public/dart/fuchsia_services",
     "//topaz/public/dart/story_shell_labs:story_shell_labs_lib",
     "//topaz/public/dart/widgets:lib.widgets",
-  ]
-}
-
-flutter_app("ermine_ask_module") {
-  main_dart = "lib/src/modules/ask_module.dart"
-
-  package_name = "ermine_ask_module"
-
-  meta = [
-    {
-      path = rebase_path("meta/ermine_ask_module.cmx")
-      dest = "ermine_ask_module.cmx"
-    },
-  ]
-
-  manifest = "ermine_ask_module_pubspec.yaml"
-
-  deps = [
-    ":shell.ermine",
-    "//sdk/fidl/fuchsia.app.discover",
-    "//sdk/fidl/fuchsia.modular",
-    "//third_party/dart-pkg/git/flutter/packages/flutter",
-    "//topaz/public/dart/widgets:lib.widgets",
-    "//topaz/public/lib/widgets/dart",
-  ]
-}
-
-fidl("shell.ermine") {
-  name = "fuchsia.shell.ermine"
-
-  sources = [
-    "lib/src/modules/ask.fidl",
   ]
 }
 
@@ -153,17 +122,9 @@ config_data("ermine_fonts") {
 
 flutter_test("ermine_unittests") {
   sources = [
+    "ask_model_test.dart",
+    "ask_widget_test.dart",
     "ermine_test.dart",
-  ]
-
-  deps = [
-    ":ermine_library",
-    "//third_party/dart-pkg/pub/test",
-  ]
-}
-
-flutter_test("visualizers_unittests") {
-  sources = [
     "status_graph_visualizer_model_test.dart",
     "status_graph_visualizer_test.dart",
     "status_progress_bar_visualizer_model_test.dart",
@@ -174,6 +135,8 @@ flutter_test("visualizers_unittests") {
 
   deps = [
     ":ermine_library",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+    "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
   ]
 }
