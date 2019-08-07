@@ -737,7 +737,7 @@ static std::string JoinArgsForLogging(const std::vector<std::string>& args) {
 
 void RecordCommand::LaunchComponentApp() {
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = fidl::StringPtr(options_.app);
+  launch_info.url = options_.app;
   launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(options_.args);
 
   // Include the arguments here for when invoked by traceutil: It's useful to

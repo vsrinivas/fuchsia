@@ -106,7 +106,7 @@ bool Tracee::Start(fidl::VectorPtr<std::string> categories, size_t buffer_size,
   provider_config.buffering_mode = buffering_mode;
   provider_config.buffer = std::move(buffer_vmo_for_provider);
   provider_config.fifo = std::move(fifo_for_provider);
-  provider_config.categories = std::move(categories);
+  provider_config.categories = std::move(categories.value_or({}));
   bundle_->provider->Initialize(std::move(provider_config));
 
   provider::StartOptions start_options;

@@ -134,7 +134,7 @@ void TraceManager::StopTracing() {
 }
 
 void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
-  fidl::VectorPtr<controller::KnownCategory> known_categories;
+  std::vector<controller::KnownCategory> known_categories;
   for (const auto& it : config_.known_categories()) {
     known_categories.push_back(controller::KnownCategory{it.first, it.second});
   }
@@ -143,9 +143,9 @@ void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
 
 void TraceManager::RegisterProviderWorker(fidl::InterfaceHandle<provider::Provider> provider,
                                           uint64_t pid, fidl::StringPtr name) {
-  FXL_VLOG(2) << "Registering provider {" << pid << ":" << name.get() << "}";
+  FXL_VLOG(2) << "Registering provider {" << pid << ":" << name.value_or("") << "}";
   auto it =
-      providers_.emplace(providers_.end(), provider.Bind(), next_provider_id_++, pid, name.get());
+      providers_.emplace(providers_.end(), provider.Bind(), next_provider_id_++, pid, name.value_or(""));
 
   it->provider.set_error_handler([this, it](zx_status_t status) {
     if (session_)
