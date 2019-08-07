@@ -70,12 +70,16 @@ function fx-update-path {
 ### fx-prompt-info: prints the current configuration for display in a prompt
 
 function fx-prompt-info {
-  # Run fx-config-read in a subshell to avoid polluting this shell's environment
-  # with data from the config file, which can change without updating this
-  # shell's environment.
+  # Run in a subshell to avoid polluting this shell's environment with data
+  # from the config file, which can change without updating this shell's
+  # environment.
   (
-    fx-config-read
-    echo "${FUCHSIA_BUILD_DIR##*/}"
+    source "${FUCHSIA_DIR}/tools/devshell/lib/vars.sh"
+    if fx-build-dir-if-present; then
+      echo "${FUCHSIA_BUILD_DIR##*/}"
+    else
+      echo "???"
+    fi
   )
 }
 
