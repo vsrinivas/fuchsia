@@ -100,7 +100,7 @@ class NetworkWrapperImplTest : public gtest::TestLoopFixture {
     http::HttpHeader header;
     header.name = "Location";
     header.value = kRedirectUrl;
-    server_response.headers.push_back(std::move(header));
+    server_response.headers.emplace({std::move(header)});
     if (fake_network_service_) {
       fake_network_service_->SetResponse(std::move(server_response));
     } else {
