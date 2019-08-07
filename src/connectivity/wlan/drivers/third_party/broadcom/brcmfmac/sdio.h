@@ -18,8 +18,8 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_H_
 
 #include <ddk/device.h>
-#include <ddk/protocol/sdio.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/sdio.h>
 
 #include "defs.h"
 #include "device.h"
@@ -200,7 +200,7 @@ struct brcmf_sdio_dev {
   bool has_debug_gpio;
   zx_handle_t irq_handle;
   thrd_t isr_thread;
-  struct brcmf_device dev;
+  struct brcmf_device* dev;
   uint32_t sbwad;             /* Save backplane window address */
   struct brcmf_core* cc_core; /* chipcommon core info struct */
   struct brcmf_sdio* bus;

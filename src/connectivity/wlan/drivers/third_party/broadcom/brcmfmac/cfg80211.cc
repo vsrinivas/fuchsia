@@ -31,7 +31,6 @@
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "btcoex.h"
-#include "bus.h"
 #include "common.h"
 #include "core.h"
 #include "debug.h"
@@ -3592,7 +3591,7 @@ void brcmf_hook_start_capture_frames(void* ctx, wlanif_start_capture_frames_req_
 
 void brcmf_hook_stop_capture_frames(void* ctx) { BRCMF_ERR("stop_capture_frames not supported\n"); }
 
-static wlanif_impl_protocol_ops_t if_impl_proto_ops = {
+wlanif_impl_protocol_ops_t if_impl_proto_ops = {
     .start = brcmf_if_start,
     .stop = brcmf_if_stop,
     .start_scan = brcmf_hook_start_scan,
@@ -3616,62 +3615,6 @@ static wlanif_impl_protocol_ops_t if_impl_proto_ops = {
     .start_capture_frames = brcmf_hook_start_capture_frames,
     .stop_capture_frames = brcmf_hook_stop_capture_frames,
 };
-
-static void brcmf_release_zx_if_device(void* ctx) {
-  // TODO(cphoenix): Implement unbind/release
-  // Unbind - remove device from tree
-  // Release - dealloc resources
-  BRCMF_ERR("* * Need to unload and release all driver structs");
-}
-
-static zx_protocol_device_t if_impl_device_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .release = brcmf_release_zx_if_device,
-};
-
-zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
-                                   uint16_t* out_iface_id) {
-  struct brcmf_if* ifp = static_cast<decltype(ifp)>(ctx);
-  struct net_device* ndev = ifp->ndev;
-  struct wireless_dev* wdev = ndev_to_wdev(ndev);
-  zx_status_t result;
-
-  BRCMF_DBG(TEMP, "brcmf_phy_create_iface called!\n");
-
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "broadcom-wlanif",  // TODO(cphoenix): Uniquify this?
-      .ctx = ndev,
-      .ops = &if_impl_device_ops,
-      .proto_id = ZX_PROTOCOL_WLANIF_IMPL,
-      .proto_ops = &if_impl_proto_ops,
-  };
-
-  struct brcmf_device* device = ifp->drvr->bus_if->dev;
-  struct brcmf_bus* bus = device->bus;
-
-  BRCMF_DBG(TEMP, "About to add if_dev\n");
-  result = brcmf_bus_device_add(bus, device->phy_zxdev, &args, &device->if_zxdev);
-  if (result != ZX_OK) {
-    BRCMF_ERR("Failed to device_add: %s", zx_status_get_string(result));
-    return result;
-  }
-  BRCMF_DBG(TEMP, "device_add() succeeded. Added iface hooks.\n");
-
-  *out_iface_id = 42;
-
-  wdev->iftype = req->role;
-
-  /* set appropriate operations */
-  ndev->initialized_for_ap = true;
-
-  /* set the mac address & netns */
-  memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
-  ndev->priv_destructor = &brcmf_free_net_device_vif;
-  BRCMF_DBG(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
-
-  return ZX_OK;
-}
 
 zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
                             struct brcmf_cfg80211_vif** vif_out) {

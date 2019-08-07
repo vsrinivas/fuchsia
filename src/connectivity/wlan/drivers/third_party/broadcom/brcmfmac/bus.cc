@@ -18,11 +18,11 @@
 // Note that this file does not include any headers that define the bus-specific functions it calls,
 // since it cannot depend on them.  Hence we just declare them directly before use.
 
-zx_status_t brcmf_bus_register(zx_device_t* zxdev) {
+zx_status_t brcmf_bus_register(struct brcmf_device* device) {
 #if CONFIG_BRCMFMAC_SDIO
   {
-    extern zx_status_t brcmf_sdio_register(zx_device_t * zxdev);
-    const zx_status_t result = brcmf_sdio_register(zxdev);
+    extern zx_status_t brcmf_sdio_register(struct brcmf_device * device);
+    const zx_status_t result = brcmf_sdio_register(device);
     if (result != ZX_OK) {
       BRCMF_DBG(INFO, "SDIO registration failed: %d\n", result);
     } else {
@@ -33,8 +33,8 @@ zx_status_t brcmf_bus_register(zx_device_t* zxdev) {
 
 #if CONFIG_BRCMFMAC_SIM
   {
-    extern zx_status_t brcmf_sim_register(zx_device_t * zxdev);
-    const zx_status_t result = brcmf_sim_register(zxdev);
+    extern zx_status_t brcmf_sim_register(struct brcmf_device * device);
+    const zx_status_t result = brcmf_sim_register(device);
     if (result != ZX_OK) {
       BRCMF_DBG(INFO, "SIM registration failed: %d\n", result);
     } else {
@@ -46,14 +46,14 @@ zx_status_t brcmf_bus_register(zx_device_t* zxdev) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void brcmf_bus_exit(void) {
+void brcmf_bus_exit(struct brcmf_device* device) {
 #if CONFIG_BRCMFMAC_SDIO
-  extern void brcmf_sdio_exit(void);
-  brcmf_sdio_exit();
+  extern void brcmf_sdio_exit(struct brcmf_device * device);
+  brcmf_sdio_exit(device);
 #endif
 
 #if CONFIG_BRCMFMAC_SIM
-  extern void brcmf_sim_exit(void);
-  brcmf_sim_exit();
+  extern void brcmf_sim_exit(struct brcmf_device * device);
+  brcmf_sim_exit(device);
 #endif
 }

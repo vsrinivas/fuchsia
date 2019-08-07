@@ -86,6 +86,7 @@ void brcmf_release_module_param(struct brcmf_mp_device* module_param);
 /* Sets dongle media info (drv_version, mac address). */
 zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp);
 
-zx_status_t brcmfmac_module_init(zx_device_t* device);
+zx_status_t brcmfmac_module_init();
+void brcmfmac_module_exit();
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_COMMON_H_

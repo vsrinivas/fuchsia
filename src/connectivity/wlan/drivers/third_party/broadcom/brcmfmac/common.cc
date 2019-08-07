@@ -19,13 +19,11 @@
 #include <stdarg.h>
 #include <string.h>
 #include <sys/random.h>
-
 #include <zircon/status.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
-#include "core.h"
 #include "debug.h"
 #include "device.h"
 #include "fwil.h"
@@ -418,8 +416,8 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
 
 void brcmf_release_module_param(struct brcmf_mp_device* module_param) { free(module_param); }
 
-zx_status_t brcmfmac_module_init(zx_device_t* device) {
-  zx_status_t err;
+zx_status_t brcmfmac_module_init(void) {
+  zx_status_t err = ZX_OK;
 
   async_loop_t* async_loop;
   async_loop_config_t async_config;
@@ -440,17 +438,10 @@ zx_status_t brcmfmac_module_init(zx_device_t* device) {
   /* Initialize global module paramaters */
   brcmf_mp_attach();
 
-  /* Continue the initialization by registering the different busses */
-  err = brcmf_core_init(device);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Returning err %d %s", err, zx_status_get_string(err));
-  }
-
-  return err;
+  return ZX_OK;
 }
 
-[[maybe_unused]] static void brcmfmac_module_exit(void) {
-  brcmf_core_exit();
+void brcmfmac_module_exit(void) {
   if (default_dispatcher != NULL) {
     async_loop_destroy(async_loop_from_dispatcher(default_dispatcher));
   }
