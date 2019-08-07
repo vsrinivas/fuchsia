@@ -2,15 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
+lz4_lib = "$zx/../third_party/lz4/lib"
+
 library("lz4") {
   host = true
   sources = [
-    "lz4.c",
-    "lz4frame.c",
-    "lz4hc.c",
-    "xxhash.c",
+    "$lz4_lib/lz4.c",
+    "$lz4_lib/lz4frame.c",
+    "$lz4_lib/lz4hc.c",
+    "$lz4_lib/xxhash.c",
   ]
-  include_dirs = [ "include/lz4" ]
-  defines = [ "XXH_NAMESPACE=LZ4_" ]
-  cflags = [ "-Wno-implicit-fallthrough" ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  defines = [
+    "XXH_NAMESPACE=LZ4_",
+
+    # Preempt the default that will break symbols out of hidden visibility.
+    "LZ4LIB_VISIBILITY=",
+
+    # lz4frame.h doesn't let you just predefine LZ4FLIB_API like you can
+    # LZ4LIB_VISIBILITY, so this kludge works with how its macros are
+    # defined so the //third_party/lz4 sources don't need to be touched.
+    "LZ4_DLL_IMPORT=1",
+    "__declspec(x)=",
+  ]
 }

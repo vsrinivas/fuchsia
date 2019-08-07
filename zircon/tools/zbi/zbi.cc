@@ -563,7 +563,7 @@ class Compressor final {
     // 16 is not worth the extra time needed during compression.
     static constexpr int DefaultLevel() { return 4; }
 
-    static constexpr int MaxLevel() { return 16; }
+    static int MaxLevel() { return LZ4F_compressionLevel_max(); }
 
     ~Lz4f() { Lz4fCall(LZ4F_freeCompressionContext, ctx_); }
 

@@ -50,20 +50,23 @@ zx_status_t CompressionContext::Compress(const void* data, size_t length) {
 }
 
 zx_status_t CompressionContext::Finish() {
+  zx_status_t result = ZX_OK;
+
   size_t r = LZ4F_compressEnd(cctx_, GetBuffer(), GetRemaining(), NULL);
   if (LZ4F_isError(r)) {
     fprintf(stderr, "Could not finish compression: %s\n", LZ4F_getErrorName(r));
-    return ZX_ERR_INTERNAL;
+    result = ZX_ERR_INTERNAL;
+  } else {
+    IncreaseOffset(r);
   }
 
-  IncreaseOffset(r);
   LZ4F_errorCode_t errc = LZ4F_freeCompressionContext(cctx_);
   if (LZ4F_isError(errc)) {
     fprintf(stderr, "Could not free compression context: %s\n", LZ4F_getErrorName(errc));
-    return ZX_ERR_INTERNAL;
+    result = ZX_ERR_INTERNAL;
   }
 
-  return ZX_OK;
+  return result;
 }
 
 zx_status_t SparseContainer::CreateNew(const char* path, size_t slice_size, uint32_t flags,

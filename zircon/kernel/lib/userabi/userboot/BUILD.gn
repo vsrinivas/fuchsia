@@ -56,10 +56,7 @@ if (current_toolchain == default_toolchain) {
       "-include",
       rebase_path("$zx/kernel/include/hidden.h", root_build_dir),
     ]
-    defines = [
-      "HIDDEN",
-      "WITH_LZ4_NOALLOC",
-    ]
+    defines = [ "HIDDEN" ]
   }
 
   # This is the output of target ":gen-vdso-syms-ld", below.

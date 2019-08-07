@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 #include <functional>
+#include <utility>
 
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fvm-host/container.h>
+#include <fvm/sparse-reader.h>
 #include <minfs/host.h>
 #include <unittest/unittest.h>
-
-#include <fvm/sparse-reader.h>
-
-#include <utility>
 
 #define DEFAULT_SLICE_SIZE (8lu * (1 << 20))  // 8 mb
 #define PARTITION_SIZE (1lu * (1 << 28))      // 128 mb
@@ -706,7 +704,10 @@ bool TestCompressorBufferTooSmall() {
   }
 
   ASSERT_EQ(status, ZX_ERR_INTERNAL);
-  ASSERT_EQ(compression.Finish(), ZX_OK);
+
+  // Clean up if possible but don't expect that this can necessarily
+  // succeed after a failed Compress call.
+  compression.Finish();
 
   END_TEST;
 }
