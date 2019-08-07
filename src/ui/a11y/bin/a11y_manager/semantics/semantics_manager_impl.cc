@@ -9,6 +9,8 @@
 
 namespace a11y_manager {
 
+SemanticsManagerImpl::SemanticsManagerImpl() { enabled_ = false; }
+
 void SemanticsManagerImpl::SetDebugDirectory(vfs::PseudoDir* debug_dir) { debug_dir_ = debug_dir; }
 
 void SemanticsManagerImpl::AddBinding(
@@ -20,6 +22,14 @@ void SemanticsManagerImpl::RegisterView(
     fuchsia::ui::views::ViewRef view_ref,
     fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> handle,
     fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
+  // During View Registration, Semantics manager will ignore enabled flag, to
+  // avoid race condition with Semantic Provider(flutter/chrome, etc) since both
+  // semantic provider and semantics manager will be notified together about a
+  // change in settings.
+  // Semantics Manager clears out old bindings when Screen Reader is
+  // disabled, and will rely on clients to make sure they only try to register
+  // views when screen reader is enabled.
+
   fuchsia::accessibility::semantics::SemanticActionListenerPtr action_listener = handle.Bind();
   // TODO(MI4-1736): Log View information in below error handler, once ViewRef
   // support is added.
@@ -44,4 +54,12 @@ fuchsia::accessibility::semantics::NodePtr SemanticsManagerImpl::GetAccessibilit
   return nullptr;
 }
 
+void SemanticsManagerImpl::SetSemanticsManagerEnabled(bool enabled) {
+  if ((enabled_ != enabled) && !enabled) {
+    FX_LOGS(INFO) << "Resetting SemanticsTree since SemanticsManager is disabled.";
+    bindings_.CloseAll();
+    semantic_tree_bindings_.CloseAll();
+  }
+  enabled_ = enabled;
+}
 }  // namespace a11y_manager

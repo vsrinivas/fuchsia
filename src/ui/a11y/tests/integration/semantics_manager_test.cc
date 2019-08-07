@@ -4,7 +4,6 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fd.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -14,6 +13,8 @@
 #include <lib/zx/event.h>
 
 #include <vector>
+
+#include <gtest/gtest.h>
 
 #include "src/ui/a11y/bin/a11y_manager/semantics/semantics_manager_impl.h"
 #include "src/ui/a11y/bin/a11y_manager/util.h"
@@ -508,6 +509,55 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_SingleNode) {
   char buffer[kMaxLogBufferSize];
   ReadFile(node, kSemanticTreeSingle.size(), buffer);
   EXPECT_EQ(kSemanticTreeSingle, buffer);
+}
+
+// Basic test to check that Semantic Tree is deleted when Semantics Manager is
+// disabled.
+TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
+  // Create ViewRef.
+  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
+  fidl::Clone(view_ref_, &view_ref_connection);
+  fidl::Clone(view_ref_, &view_ref_connection_copy);
+
+  // Enable Semantics Manager.
+  // Note: Enable has no effect on the behavior of semantics manager.
+  semantics_manager_impl_.SetSemanticsManagerEnabled(true);
+
+  // Create ActionListener.
+  accessibility_test::MockSemanticActionListener action_listener(context_provider_.context(),
+                                                                 std::move(view_ref_connection));
+  // We make sure the Semantic Action Listener has finished connecting to the
+  // root.
+  RunLoopUntilIdle();
+
+  // Creating test node to update.
+  std::vector<Node> update_nodes;
+  Node node = CreateTestNode(0, "Label A");
+  Node clone_node;
+  node.Clone(&clone_node);
+  update_nodes.push_back(std::move(clone_node));
+
+  // Update the node created above.
+  action_listener.UpdateSemanticNodes(std::move(update_nodes));
+  RunLoopUntilIdle();
+
+  // Commit nodes.
+  action_listener.Commit();
+  RunLoopUntilIdle();
+
+  // Check that the committed node is present in the semantic tree.
+  NodePtr returned_node = semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  EXPECT_NE(returned_node, nullptr);
+  EXPECT_EQ(node.node_id(), returned_node->node_id());
+  EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
+
+  // Disable Semantics Manager.
+  // This should delete all the registered semantic tree so far.
+  semantics_manager_impl_.SetSemanticsManagerEnabled(false);
+
+  // Check that previously committed node is not present in the semantic tree.
+  returned_node = semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  EXPECT_EQ(returned_node, nullptr);
 }
 
 }  // namespace accessibility_test

@@ -53,6 +53,10 @@ void App::SetSettings(fuchsia::accessibility::Settings provided_settings) {
 }
 
 void App::OnScreenReaderEnabled(bool enabled) {
+  // Reset SemanticsTree and registered views in SemanticsManagerImpl.
+  semantics_manager_impl_->SetSemanticsManagerEnabled(enabled);
+
+  // Reset ScreenReader.
   if (enabled) {
     screen_reader_ = std::make_unique<a11y::ScreenReader>();
   } else {

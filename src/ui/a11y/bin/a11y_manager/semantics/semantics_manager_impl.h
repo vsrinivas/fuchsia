@@ -15,7 +15,7 @@
 namespace a11y_manager {
 class SemanticsManagerImpl : public fuchsia::accessibility::semantics::SemanticsManager {
  public:
-  explicit SemanticsManagerImpl() = default;
+  SemanticsManagerImpl();
   ~SemanticsManagerImpl() = default;
 
   void AddBinding(
@@ -28,6 +28,11 @@ class SemanticsManagerImpl : public fuchsia::accessibility::semantics::Semantics
   // a copy of the queried node. It may return a nullptr if no node is found.
   fuchsia::accessibility::semantics::NodePtr GetAccessibilityNode(
       const fuchsia::ui::views::ViewRef& view_ref, const int32_t node_id);
+
+  // Function to Enable/Disable Semantics Manager.
+  // When Semantics Manager is disabled, all the semantic tree bindings are
+  // closed, which deletes all the semantic tree data.
+  void SetSemanticsManagerEnabled(bool enabled);
 
  private:
   // |fuchsia::accessibility::semantics::SemanticsManager|:
@@ -42,6 +47,8 @@ class SemanticsManagerImpl : public fuchsia::accessibility::semantics::Semantics
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree,
                    std::unique_ptr<SemanticTreeImpl>>
       semantic_tree_bindings_;
+
+  bool enabled_;
 
   vfs::PseudoDir* debug_dir_ = nullptr;
 };
