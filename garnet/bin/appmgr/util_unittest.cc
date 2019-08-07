@@ -27,7 +27,7 @@ TEST(UtilTests, GetArgsString) {
   ::fidl::VectorPtr<::std::string> empty_vec(3);
   EXPECT_EQ(Util::GetArgsString(empty_vec), "  ");
 
-  ::fidl::VectorPtr<::std::string> vec;
+  std::vector<::std::string> vec;
   vec.push_back("foo");
   EXPECT_EQ(Util::GetArgsString(vec), "foo");
   vec.push_back("bar");

@@ -87,7 +87,7 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
     value_ = -1;
     zx::channel h1, h2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-    service_provider->ConnectToService(fidl::StringPtr(service_name.c_str()), std::move(h2));
+    service_provider->ConnectToService(std::string(service_name.data(), service_name.size()), std::move(h2));
     EXPECT_EQ(expected_value, value_) << service_name.c_str();
   }
 
@@ -105,7 +105,7 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
     value_ = -1;
     zx::channel h1, h2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-    service_provider->ConnectToService(fidl::StringPtr(service_name.c_str()), std::move(h2));
+    service_provider->ConnectToService(std::string(service_name.data(), service_name.size()), std::move(h2));
     // Never connected to service.
     EXPECT_EQ(value_, -1) << service_name.c_str();
   }

@@ -36,9 +36,7 @@ class ComponentsBinaryTest : public sys::testing::TestWithEnvironment {
                                             const std::vector<std::string>& args = {}) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
-    for (const auto& a : args) {
-      launch_info.arguments.push_back(a);
-    }
+    launch_info.arguments = args;
     launch_info.out = sys::CloneFileDescriptor(outf_);
     launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
     return launch_info;

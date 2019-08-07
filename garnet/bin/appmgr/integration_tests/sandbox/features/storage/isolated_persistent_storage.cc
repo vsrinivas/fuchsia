@@ -62,8 +62,8 @@ class IsolatedPersistentStorageTest : virtual public sys::testing::TestWithEnvir
     // Can't use ASSERT_TRUE/ASSERT_EQ macros here since this isn't the test
     // body, and ASSERT_* macros just 'return;' to exit the test.
     EXPECT_EQ(WriteFileSync(util1, kTestFileName, test_file_content_), ZX_OK);
-    EXPECT_EQ(ReadFileSync(util1, kTestFileName).get(), test_file_content_);
-    EXPECT_NE(ReadFileSync(util2, kTestFileName).get(), test_file_content_);
+    EXPECT_EQ(ReadFileSync(util1, kTestFileName).value(), test_file_content_);
+    EXPECT_NE(ReadFileSync(util2, kTestFileName).value(), test_file_content_);
   }
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> env1_;
@@ -139,7 +139,7 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentSameEnvironment) {
   services->Connect(util.NewRequest());
 
   EXPECT_EQ(WriteFileSync(util, kTestFileName, test_file_content_), ZX_OK);
-  EXPECT_EQ(ReadFileSync(util, kTestFileName).get(), test_file_content_);
+  EXPECT_EQ(ReadFileSync(util, kTestFileName).value(), test_file_content_);
 
   // Kill the component and then recreate it in the same environment.
   services = sys::ServiceDirectory::CreateWithRequest(&request);
@@ -150,7 +150,7 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentSameEnvironment) {
   services->Connect(util.NewRequest());
 
   // File should still exist.
-  EXPECT_EQ(ReadFileSync(util, kTestFileName).get(), test_file_content_);
+  EXPECT_EQ(ReadFileSync(util, kTestFileName).value(), test_file_content_);
 }
 
 }  // namespace

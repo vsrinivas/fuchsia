@@ -54,7 +54,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     sysmgr_backoff_.Start();
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = sysmgr_url_;
-    launch_info.arguments.reset(sysmgr_args_);
+    launch_info.arguments = fidl::Clone(sysmgr_args_);
     sysmgr_.events().OnTerminated = [this](zx_status_t status,
                                            TerminationReason termination_reason) {
       if (termination_reason != TerminationReason::EXITED) {

@@ -40,9 +40,7 @@ class HubTest : public sys::testing::TestWithEnvironment {
     int out_fd = fileno(outf);
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = component_url;
-    for (auto arg : args) {
-      launch_info.arguments.push_back(arg);
-    }
+    launch_info.arguments = args;
 
     launch_info.out = sys::CloneFileDescriptor(out_fd);
 

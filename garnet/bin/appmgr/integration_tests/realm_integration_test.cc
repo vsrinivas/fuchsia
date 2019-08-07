@@ -76,9 +76,7 @@ class RealmTest : virtual public TestWithEnvironment {
                                             const std::vector<std::string>& args = {}) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
-    for (const auto& a : args) {
-      launch_info.arguments.push_back(a);
-    }
+    launch_info.arguments = args;
     if (directory_request.is_valid()) {
       launch_info.directory_request = std::move(directory_request);
     }
@@ -109,8 +107,8 @@ TEST_F(RealmTest, Resolve) {
   auto resolver = enclosing_environment->ConnectToService<fuchsia::process::Resolver>();
 
   bool wait = false;
-  resolver->Resolve(fidl::StringPtr("fuchsia-pkg://fuchsia.com/appmgr_integration_tests#test/"
-                                    "appmgr_realm_integration_tests"),
+  resolver->Resolve("fuchsia-pkg://fuchsia.com/appmgr_integration_tests#test/"
+                                    "appmgr_realm_integration_tests",
                     [&wait](zx_status_t status, zx::vmo binary,
                             fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader) {
                       wait = true;
@@ -185,9 +183,9 @@ TEST_F(RealmTest, CreateTwoKillOne) {
   fidl::examples::echo::EchoPtr echo;
   enclosing_environment->ConnectToService(echo.NewRequest());
   const std::string message = "CreateTwoKillOne";
-  fidl::StringPtr ret_msg = "";
+  fidl::StringPtr ret_msg;
   echo->EchoString(message, [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  RunLoopUntil([&] { return std::string(ret_msg) == message; });
+  RunLoopUntil([&] { return ret_msg.has_value(); });
 
   // Kill one of the two components, make sure it's exited via Wait
   bool wait = false;
@@ -197,9 +195,9 @@ TEST_F(RealmTest, CreateTwoKillOne) {
   RunLoopUntil([&wait] { return wait; });
 
   // Make sure the second component is still running.
-  ret_msg = "";
+  ret_msg.reset();
   echo->EchoString(message, [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  RunLoopUntil([&] { return std::string(ret_msg) == message; });
+  RunLoopUntil([&] { return ret_msg.has_value(); });
 }
 
 TEST_F(RealmTest, KillRealmKillsComponent) {
@@ -215,9 +213,9 @@ TEST_F(RealmTest, KillRealmKillsComponent) {
   fidl::examples::echo::EchoPtr echo;
   enclosing_environment->ConnectToService(echo.NewRequest());
   const std::string message = "CreateTwoKillOne";
-  fidl::StringPtr ret_msg = "";
+  fidl::StringPtr ret_msg;
   echo->EchoString(message, [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  RunLoopUntil([&] { return std::string(ret_msg) == message; });
+  RunLoopUntil([&] { return ret_msg.has_value(); });
 
   bool killed = false;
   echo.set_error_handler([&](zx_status_t status) { killed = true; });
@@ -301,9 +299,9 @@ TEST_F(RealmTest, RealmDiesWhenItsJobDies) {
   fidl::examples::echo::EchoPtr echo;
   enclosing_environment->ConnectToService(echo.NewRequest());
   const std::string message = "some_msg";
-  fidl::StringPtr ret_msg = "";
+  fidl::StringPtr ret_msg;
   echo->EchoString(message, [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  RunLoopUntil([&] { return std::string(ret_msg) == message; });
+  RunLoopUntil([&] { return ret_msg.has_value(); });
 
   fuchsia::sys::JobProviderSyncPtr ptr;
   files::Glob glob(std::string("/hub/r/") + kRealm + "/*/job");
@@ -378,7 +376,7 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
   // Write some arbitrary file content into the test util's "/data" dir, and
   // verify that we can read it back.
   ASSERT_EQ(WriteFileSync(util, kTestFileName, kTestFileContent), ZX_OK);
-  ASSERT_EQ(ReadFileSync(util, kTestFileName).get(), kTestFileContent);
+  ASSERT_EQ(ReadFileSync(util, kTestFileName).value_or(""), kTestFileContent);
 
   // Kill the environment, which should automatically delete any persistent
   // storage it owns.
@@ -395,7 +393,7 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
   services->Connect(util.NewRequest());
 
   // Verify that the file no longer exists.
-  EXPECT_TRUE(ReadFileSync(util, kTestFileName).is_null());
+  EXPECT_FALSE(ReadFileSync(util, kTestFileName).has_value());
 }
 
 using LabelAndValidity = std::tuple<std::string, bool>;

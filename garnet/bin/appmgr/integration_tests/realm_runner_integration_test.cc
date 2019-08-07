@@ -253,9 +253,9 @@ TEST_F(RealmRunnerServiceTest, ComponentCanConnectToEnvService) {
   component_ptr->ConnectToService(fidl::examples::echo::Echo::Name_,
                                   echo.NewRequest().TakeChannel());
   const std::string message = "ConnectToEnvService";
-  fidl::StringPtr ret_msg = "";
-  echo->EchoString(message, [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  RunLoopUntil([&] { return ret_msg.get() == message; });
+  std::string ret_msg;
+  echo->EchoString(message, [&](::fidl::StringPtr retval) { ret_msg = retval.value_or(""); });
+  RunLoopUntil([&] { return ret_msg == message; });
 }
 
 TEST_F(RealmRunnerTest, ComponentCanPublishServices) {

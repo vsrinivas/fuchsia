@@ -447,7 +447,7 @@ void Realm::CreateNestedEnvironment(
 }
 
 void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCallback callback) {
-  TRACE_DURATION("appmgr", "Realm::ResolveLoader", "name", name.get());
+  TRACE_DURATION("appmgr", "Realm::ResolveLoader", "name", name.value_or(""));
 
   zx::vmo binary;
   fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader;
@@ -460,7 +460,7 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
 
   // XXX(raggi): canonicalize url doesn't clean out invalid url chars or fail on
   // them (e.g. \n)
-  const std::string canon_url = CanonicalizeURL(name);
+  const std::string canon_url = CanonicalizeURL(name.value_or(""));
   if (canon_url.empty()) {
     FXL_LOG(ERROR) << "Cannot resolve " << name << " because the url could not be canonicalized";
     callback(ZX_ERR_INVALID_ARGS, std::move(binary), std::move(loader));
@@ -541,7 +541,7 @@ void Realm::CreateComponent(fuchsia::sys::LaunchInfo launch_info,
     // launch_info is moved before LoadUrl() gets at its first argument.
     auto lu_trace_id = TRACE_NONCE();
     TRACE_ASYNC_BEGIN("appmgr", "Realm::CreateComponent::LoadUrl", lu_trace_id, "url", canon_url);
-    fidl::StringPtr url = launch_info.url;
+    std::string url = launch_info.url;
     loader_->LoadUrl(
         url, [this, lu_trace_id, launch_info = std::move(launch_info),
               component_request = std::move(component_request),
@@ -766,11 +766,10 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
         program.IsDataNull() ? kDataPathPrefix + fp.package_name() : program.data();
     // Pass a {"data", "data/<component-name>"} pair through StartupInfo, so
     // components can identify their directory under /pkg/data.
-    program_metadata = fidl::VectorPtr<fuchsia::sys::ProgramMetadata>::New(1);
     fuchsia::sys::ProgramMetadata pg;
     pg.key = kDataKey;
     pg.value = data_path;
-    program_metadata->at(0) = pg;
+    program_metadata.emplace({pg});
   }
 
   // TODO(abarth): We shouldn't need to clone the channel here. Instead, we
