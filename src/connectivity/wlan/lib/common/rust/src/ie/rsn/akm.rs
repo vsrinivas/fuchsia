@@ -41,7 +41,7 @@ pub struct Akm {
 impl Akm {
     /// Creates a new AKM instance for 802.11 specified AKMs.
     /// See IEEE Std 802.11-2016, 9.4.2.25.3, Table 9-133.
-    pub fn new_dot11(suite_type: u8) -> Self {
+    pub const fn new_dot11(suite_type: u8) -> Self {
         Akm { oui: OUI, suite_type }
     }
 

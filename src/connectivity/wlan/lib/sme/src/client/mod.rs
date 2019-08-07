@@ -387,7 +387,11 @@ pub fn get_protection(
         wlan_common::bss::Protection::Wpa1 => {
             get_legacy_wpa_association(device_info, credential, bss)
         }
-        wlan_common::bss::Protection::Rsna => get_rsna(device_info, credential, bss),
+        wlan_common::bss::Protection::Wpa1Wpa2Personal
+        | wlan_common::bss::Protection::Wpa2Personal
+        | wlan_common::bss::Protection::Wpa2Wpa3Personal => get_rsna(device_info, credential, bss),
+        wlan_common::bss::Protection::Unknown => bail!("unable to deduce protection type of BSS"),
+        other => bail!("unsupported BSS protection type {:?}", other),
     }
 }
 

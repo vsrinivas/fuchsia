@@ -6,6 +6,7 @@ pub mod akm;
 pub mod cipher;
 mod pmkid;
 pub mod rsne;
+pub mod suite_filter;
 pub mod suite_selector;
 
 pub use suite_selector::OUI;

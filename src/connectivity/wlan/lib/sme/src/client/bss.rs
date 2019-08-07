@@ -50,15 +50,16 @@ impl ClientConfig {
             Protection::Open => true,
             Protection::Wep => self.0.wep_supported,
             Protection::Wpa1 => self.0.wpa1_supported,
-            // If the BSS is an RSN, require the privacy bit to be set and verify the RSNE's
-            // compatiblity.
-            Protection::Rsna => match bss.rsn.as_ref() {
+            Protection::Wpa1Wpa2Personal
+            | Protection::Wpa2Personal
+            | Protection::Wpa2Wpa3Personal => match bss.rsn.as_ref() {
                 Some(rsn) if bss.cap.privacy => match rsne::from_bytes(&rsn[..]) {
                     Ok((_, a_rsne)) => is_rsn_compatible(&a_rsne),
                     _ => false,
                 },
                 _ => false,
             },
+            _ => false,
         }
     }
 
@@ -381,56 +382,52 @@ mod tests {
 
     fn fake_wpa2_legacy_rsne() -> Vec<u8> {
         vec![
-            // Element header
-            48, 18, // Version
-            1, 0, // Group Cipher: TKIP
-            0x00, 0x0F, 0xAC, 2, // 1 Pairwise Cipher: TKIP
+            48, 18, // Element header
+            1, 0, // Version
+            0x00, 0x0F, 0xAC, 2, // Group Cipher: TKIP
+            1, 0, 0x00, 0x0F, 0xAC, 2, // 1 Pairwise Cipher: TKIP
             1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
-            1, 0, 0x00, 0x0F, 0xAC, 2,
         ]
     }
 
     fn fake_wpa2_rsne() -> Vec<u8> {
         vec![
-            // Element header
-            48, 18, // Version
-            1, 0, // Group Cipher: CCMP-128
-            0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
-            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 AKM: PSK
-            1, 0, 0x00, 0x0F, 0xAC, 2,
+            48, 18, // Element header
+            1, 0, // Version
+            0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
         ]
     }
 
     fn fake_wpa3_rsne() -> Vec<u8> {
         vec![
-            // Element header
-            48, 18, // Version
-            1, 0, // Group Cipher: CCMP-128
-            0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
-            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 AKM:  SAE
-            1, 0, 0x00, 0x0F, 0xAC, 8,
+            48, 18, // Element header
+            1, 0, // Version
+            0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 8, // 1 AKM: SAE
         ]
     }
 
     fn fake_wpa2_wpa3_mixed_mode_rsne() -> Vec<u8> {
         vec![
-            // Element header
-            48, 18, // Version
-            1, 0, // Group Cipher: CCMP-128
-            0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
-            1, 0, 0x00, 0x0F, 0xAC, 4, // 2 AKM:  SAE, PSK
-            2, 0, 0x00, 0x0F, 0xAC, 8, 0x00, 0x0F, 0xAC, 2,
+            48, 18, // Element header
+            1, 0, // Version
+            0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+            2, 0, 0x00, 0x0F, 0xAC, 8, 0x00, 0x0F, 0xAC, 2, // 2 AKM:  SAE, PSK
+            0x8C, 0x00, // RSN capabilities: MFP capable, 16 PTKSA replay counters
         ]
     }
 
     fn fake_eap_rsne() -> Vec<u8> {
         vec![
-            // Element header
-            48, 18, // Version
-            1, 0, // Group Cipher: CCMP-128
-            0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
-            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 AKM:  802.1X
-            1, 0, 0x00, 0x0F, 0xAC, 1,
+            48, 18, // Element header
+            1, 0, // Version
+            0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 1, // 1 AKM:  802.1X
         ]
     }
 
