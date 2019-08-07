@@ -315,6 +315,13 @@ group("go_far_tests") {
   ]
 }
 
+group("sched_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/sched:tests",
+  ]
+}
+
 group("all") {
   testonly = true
   public_deps = [
@@ -412,6 +419,7 @@ group("all") {
     ":rust_crates",
     ":scenic",
     ":scenic_cpp",
+    ":sched_tests",
     ":scpi",
     ":setui_client",
     ":setui_service",

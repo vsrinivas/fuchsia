@@ -43,6 +43,7 @@ group("bin") {
     "run",
     "run_test_component",
     "runmany",
+    "sched",
     "scpi",
     "setui",
     "setui_client",
