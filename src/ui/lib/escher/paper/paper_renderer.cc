@@ -27,6 +27,9 @@
 
 namespace escher {
 
+// Used to calculate the area of the debug graph that bars will be drawn in.
+constexpr int32_t kWidthPadding = 150;
+
 PaperRendererPtr PaperRenderer::New(EscherWeakPtr escher, const PaperRendererConfig& config) {
   return fxl::AdoptRef(new PaperRenderer(std::move(escher), config));
 }
@@ -262,12 +265,13 @@ void PaperRenderer::EndFrame() {
     debug_font_.reset();
   }
 
-  if (!frame_data_->lines.empty()) {
-    if (!debug_lines) {
-      debug_lines = DebugRects::New(frame_data_->gpu_uploader.get(), escher()->image_cache());
+  // TODO(ES-247): Move graphing out of escher.
+  if (!frame_data_->lines.empty() || !debug_times_.empty()) {
+    if (!debug_lines_) {
+      debug_lines_ = DebugRects::New(frame_data_->gpu_uploader.get(), escher()->image_cache());
     }
   } else {
-    debug_lines.reset();
+    debug_lines_.reset();
   }
 
   // TODO(ES-206): obtain a semaphore here that will be signalled by the
@@ -302,11 +306,15 @@ void PaperRenderer::EndFrame() {
 
 void PaperRenderer::DrawDebugText(std::string text, vk::Offset2D offset, int32_t scale) {
   FXL_DCHECK(frame_data_);
+  // TODO(ES-245): Add error checking to make sure math will not cause negative
+  // values or the bars to go off screen.
   frame_data_->texts.push_back({text, offset, scale});
 }
 
 void PaperRenderer::DrawVLine(escher::DebugRects::Color kColor, uint32_t x_coord, int32_t y_start,
                               uint32_t y_end, uint32_t thickness) {
+  // TODO(ES-245): Add error checking to make sure math will not cause negative
+  // values or the bars to go off screen.
   vk::Rect2D rect;
   vk::Offset2D offset = {static_cast<int32_t>(x_coord), y_start};
   vk::Extent2D extent = {static_cast<uint32_t>(x_coord + thickness), y_end};
@@ -319,6 +327,8 @@ void PaperRenderer::DrawVLine(escher::DebugRects::Color kColor, uint32_t x_coord
 
 void PaperRenderer::DrawHLine(escher::DebugRects::Color kColor, int32_t y_coord, int32_t x_start,
                               uint32_t x_end, int32_t thickness) {
+  // TODO(ES-245): Add error checking to make sure math will not cause negative
+  // values or the bars to go off screen.
   vk::Rect2D rect;
   vk::Offset2D offset = {x_start, static_cast<int32_t>(y_coord)};
   vk::Extent2D extent = {x_end, static_cast<uint32_t>(y_coord + thickness)};
@@ -331,17 +341,24 @@ void PaperRenderer::DrawHLine(escher::DebugRects::Color kColor, int32_t y_coord,
 
 void PaperRenderer::DrawDebugGraph(std::string x_label, std::string y_label,
                                    DebugRects::Color lineColor) {
-  int32_t width = frame_data_->output_image->width();
-  int32_t height = frame_data_->output_image->height();
-  int32_t height_padding = 100;
-  int32_t width_padding = 150;
+  const int32_t frame_width = frame_data_->output_image->width();
+  const int32_t frame_height = frame_data_->output_image->height();
 
-  DrawVLine(lineColor, width_padding, height_padding, height - height_padding, 10);
-  DrawHLine(lineColor, height - height_padding, width_padding, width - width_padding, 10);
+  const uint16_t x_axis = frame_width - kWidthPadding;
+  const uint16_t y_axis = frame_height - kHeightPadding;
+  const uint16_t h_interval = (y_axis - kHeightPadding) / 35;
 
-  DrawDebugText(x_label, {5, height / 2}, 5);
-  DrawDebugText(y_label, {width / 2, height - (height_padding - 25)}, 5);
+  DrawVLine(lineColor, kWidthPadding, kHeightPadding, y_axis, 10);  // Vertical Line (x-axis).
+  DrawHLine(lineColor, y_axis, kWidthPadding, x_axis, 10);          // Horizontal line (y_axis).
+
+  DrawDebugText(x_label, {5, frame_height / 2}, 5);
+  DrawDebugText(y_label, {frame_width / 2, frame_height - (kHeightPadding - 25)}, 5);
+
+  // Colored bar used to show acceptable vs concerning values (acceptable below bar).
+  DrawHLine(escher::DebugRects::kGreen, y_axis - (h_interval * 16), kWidthPadding + 10, x_axis, 5);
 }
+
+void PaperRenderer::AddDebugTimeStamp(TimeStamp ts) { debug_times_.push_back(ts); }
 
 void PaperRenderer::BindSceneAndCameraUniforms(uint32_t camera_index) {
   auto* cmd_buf = frame_data_->frame->cmds();
@@ -679,6 +696,40 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   frame->AddTimestamp("finished shadow_volume render pass");
 }
 
+void PaperRenderer::GraphDebugData() {
+  const int16_t x_start = kWidthPadding + 10;
+  const int16_t y_axis = frame_data_->output_image->height() - kHeightPadding;
+  const int16_t x_axis = frame_data_->output_image->width() - kWidthPadding;
+  const int16_t h_interval = (y_axis - kHeightPadding) / 35;
+  const int16_t w_interval = frame_data_->output_image->width() / 100;
+
+  const int16_t middle_bar = y_axis - (h_interval * 16) + 2;
+
+  for (std::size_t i = 0; i < debug_times_.size(); i++) {
+    auto t = debug_times_[i];
+
+    int16_t render_time = t.render_done - t.render_start;
+    int16_t presentation_time = t.actual_present - t.target_present;
+
+    if (static_cast<int16_t>(x_start + (i * w_interval)) <= x_axis) {
+      if (render_time != 0)
+        DrawVLine(escher::DebugRects::kRed, x_start + (i * w_interval), y_axis,
+                  y_axis - (h_interval * render_time), w_interval);
+      if (t.latch_point != 0)
+        DrawVLine(escher::DebugRects::kYellow, x_start + (i * w_interval), y_axis,
+                  y_axis - (h_interval * t.latch_point), w_interval);
+      if (t.update_done != 0)
+        DrawVLine(escher::DebugRects::kBlue, x_start + (i * w_interval), y_axis,
+                  y_axis - (h_interval * t.update_done), w_interval);
+      // if (presentation_time != 0)
+      //   DrawVLine(escher::DebugRects::kPurple, x_start + (i * w_interval), middle_bar,
+      //             middle_bar - (h_interval * presentation_time), w_interval);
+    } else {
+      // TODO(ES-246): Delete and replace values in array
+    }
+  }
+}
+
 void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
   TRACE_DURATION("gfx", "PaperRenderer::GenerateDebugCommands");
 
@@ -699,6 +750,8 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
       vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite,
       vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite);
 
+  GraphDebugData();
+
   for (std::size_t i = 0; i < frame_data_->texts.size(); i++) {
     const TextData& td = frame_data_->texts[i];
     debug_font_->Blit(cmd_buf, td.text, output_image, td.offset, td.scale);
@@ -706,7 +759,7 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
 
   for (std::size_t i = 0; i < frame_data_->lines.size(); i++) {
     const LineData& ld = frame_data_->lines[i];
-    debug_lines->Blit(cmd_buf, ld.kColor, output_image, ld.rect);
+    debug_lines_->Blit(cmd_buf, ld.kColor, output_image, ld.rect);
   }
 
   cmd_buf->ImageBarrier(

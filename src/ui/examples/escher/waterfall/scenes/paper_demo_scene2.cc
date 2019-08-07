@@ -19,26 +19,16 @@ void PaperDemoScene2::Update(const escher::Stopwatch& stopwatch, uint64_t frame_
   // Draws graph outline
   renderer->DrawDebugGraph("TIME", "FRAMES", escher::DebugRects::kWhite);
 
-  // Testing Graph Data Drawing
-  const float width = scene->bounding_box.width();
-  const float height = scene->bounding_box.height();
+  int min = 5;
+  int max = 20;
 
-  int x = 160;
-  int y = height - 100;
-  int bar_height = height - 110;
-  int bar_width = 50;  // related to the number of frames that event occurs
+  escher::PaperRenderer::TimeStamp ts;
+  ts.latch_point = rand() % 15 + 1;
+  ts.update_done = rand() % 15 + 1;
+  ts.render_start = rand() % 10 + 5;
+  ts.render_done = ts.render_start + min + rand() % (max - min);
+  ts.target_present = rand() % 15 + 1;
+  ts.actual_present = (rand() % 15 + 1) + (rand() % -2 + 2);
 
-  for (int i = 0; i < 79; i++) {
-    renderer->DrawVLine(escher::DebugRects::kPurple, x, y, bar_height, bar_width);
-
-    if (x <= width - 200)
-      x += 20;
-    else
-      x = 160;
-    if (bar_height >= 100)
-      bar_height -= 10;
-    else
-      bar_height = height - 100;
-  }
-  renderer->DrawHLine(escher::DebugRects::kGreen, 475, 160, width - 150, 5);
+  renderer->AddDebugTimeStamp(ts);
 }
