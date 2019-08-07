@@ -153,6 +153,27 @@ bool x86_intel_cpu_has_mds(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   return microarch_config->has_mds;
 }
 
+bool x86_intel_cpu_has_swapgs_bug(const cpu_id::CpuId* cpuid) {
+  auto info = cpuid->ReadProcessorId();
+  if (info.family() == 6) {
+    switch (info.model()) {
+      case 0x1c:  // Bonnell
+      case 0x26:  // Bonnell
+      case 0x27:  // Saltwell
+      case 0x35:  // Saltwell
+      case 0x36:  // Saltwell
+      case 0x4c:  // Silvermont
+      case 0x4d:  // Silvermont
+      case 0x5c:  // Goldmont (Apollo Lake)
+      case 0x7a:  // Goldmont Plus (Gemini Lake)
+      case 0x86:  // Tremont
+        return false;
+    }
+  }
+
+  return true;
+}
+
 void x86_intel_init_percpu(void) {
   // Some intel cpus support auto-entering C1E state when all cores are at C1. In
   // C1E state the voltage is reduced on all cores as well as clock gated. There is

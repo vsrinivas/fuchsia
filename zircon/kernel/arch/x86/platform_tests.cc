@@ -316,6 +316,42 @@ namespace {
     END_TEST;
   }
 
+  static bool test_x64_swapgs_bug_enumeration() {
+    BEGIN_TEST;
+
+    {
+      // Test an Intel Xeon E5-2690 V4
+      cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
+      cpu_id::FakeCpuId cpu(data);
+      EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
+    }
+
+    {
+      // Intel(R) Xeon(R) Gold 6xxx has SWAPGS bug
+      cpu_id::TestDataSet data = {};
+      data.leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data.leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
+      data.leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
+      data.leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
+
+      cpu_id::FakeCpuId cpu(data);
+      EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
+    }
+
+    {
+      // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have SWAPGS bug
+      cpu_id::TestDataSet data = {};
+      data.leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data.leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
+      data.leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
+      data.leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
+      cpu_id::FakeCpuId cpu(data);
+      EXPECT_FALSE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
+    }
+
+    END_TEST;
+  }
+
   static uint32_t intel_make_microcode_checksum(uint32_t * patch, size_t bytes) {
     size_t dwords = bytes / sizeof(uint32_t);
     uint32_t sum = 0;
@@ -455,6 +491,7 @@ UNITTEST("test uarch_config is correctly selected", test_x64_cpu_uarch_config_se
 UNITTEST("test enumeration of x64 Meltdown vulnerability", test_x64_meltdown_enumeration)
 UNITTEST("test enumeration of x64 L1TF vulnerability", test_x64_l1tf_enumeration)
 UNITTEST("test enumeration of x64 MDS vulnerability", test_x64_mds_enumeration)
+UNITTEST("test enumeration of x64 SWAPGS vulnerability", test_x64_swapgs_bug_enumeration)
 UNITTEST("test Intel x86 microcode patch loader match and load logic", test_x64_intel_ucode_loader)
 UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode_patch_loader)
 UNITTEST("test pkg power limit change", test_x64_power_limits)

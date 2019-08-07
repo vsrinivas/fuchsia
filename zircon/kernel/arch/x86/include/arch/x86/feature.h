@@ -345,6 +345,7 @@ void x86_intel_init_percpu(void);
 bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_mds(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+bool x86_intel_cpu_has_swapgs_bug(const cpu_id::CpuId* cpuid);
 #endif
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);
