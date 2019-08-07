@@ -85,11 +85,11 @@ struct arm64_context_switch_frame {
   uint64_t lr;
 };
 
-struct thread;
+struct thread_t;
 
 void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp);
 void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack) __NO_RETURN;
-arm64_context_switch_frame* arm64_get_context_switch_frame(struct thread* thread);
+arm64_context_switch_frame* arm64_get_context_switch_frame(thread_t* thread);
 
 extern void arm64_el1_exception_base(void);
 void arm64_el3_to_el1(void);
@@ -108,7 +108,7 @@ void arm64_local_clean_cache_all();
 
 /* fpu routines */
 void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags);
-void arm64_fpu_context_switch(struct thread* oldthread, struct thread* newthread);
+void arm64_fpu_context_switch(thread_t* oldthread, thread_t* newthread);
 
 uint64_t arm64_get_boot_el(void);
 

@@ -26,7 +26,7 @@ static constexpr uint64_t kMdscrSSMask = 1;
 // Single Step for PSTATE, see ARMv8 Manual C5.2.18, enable Single step for Process
 static constexpr uint64_t kSSMaskSPSR = (1 << 21);
 
-zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general_regs_t* out) {
+zx_status_t arch_get_general_regs(thread_t* thread, zx_thread_state_general_regs_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -50,7 +50,7 @@ zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general
   return ZX_OK;
 }
 
-zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_general_regs_t* in) {
+zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_general_regs_t* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -74,7 +74,7 @@ zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_g
   return ZX_OK;
 }
 
-zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
+zx_status_t arch_get_single_step(thread_t* thread, bool* single_step) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -90,7 +90,7 @@ zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
   return ZX_OK;
 }
 
-zx_status_t arch_set_single_step(struct thread* thread, bool single_step) {
+zx_status_t arch_set_single_step(thread_t* thread, bool single_step) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -108,19 +108,19 @@ zx_status_t arch_set_single_step(struct thread* thread, bool single_step) {
   return ZX_OK;
 }
 
-zx_status_t arch_get_fp_regs(struct thread* thread, zx_thread_state_fp_regs* out) {
+zx_status_t arch_get_fp_regs(thread_t* thread, zx_thread_state_fp_regs* out) {
   // There are no ARM fp regs.
   (void)out;
   return ZX_OK;
 }
 
-zx_status_t arch_set_fp_regs(struct thread* thread, const zx_thread_state_fp_regs* in) {
+zx_status_t arch_set_fp_regs(thread_t* thread, const zx_thread_state_fp_regs* in) {
   // There are no ARM fp regs.
   (void)in;
   return ZX_OK;
 }
 
-zx_status_t arch_get_vector_regs(struct thread* thread, zx_thread_state_vector_regs* out) {
+zx_status_t arch_get_vector_regs(thread_t* thread, zx_thread_state_vector_regs* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   const fpstate* in = &thread->arch.fpstate;
@@ -134,7 +134,7 @@ zx_status_t arch_get_vector_regs(struct thread* thread, zx_thread_state_vector_r
   return ZX_OK;
 }
 
-zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_vector_regs* in) {
+zx_status_t arch_set_vector_regs(thread_t* thread, const zx_thread_state_vector_regs* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   fpstate* out = &thread->arch.fpstate;
@@ -148,7 +148,7 @@ zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_ve
   return ZX_OK;
 }
 
-zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_regs* out) {
+zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* out) {
   *out = {};
   out->hw_bps_count = arm64_hw_breakpoint_count();
   out->hw_wps_count = arm64_hw_watchpoint_count();
@@ -165,7 +165,7 @@ zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_reg
   return ZX_OK;
 }
 
-zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_debug_regs* in) {
+zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_regs* in) {
   arm64_debug_state_t state = {};
 
   // We copy over the state from the input.
@@ -204,25 +204,25 @@ zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_deb
   return ZX_OK;
 }
 
-zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {
+zx_status_t arch_get_x86_register_fs(thread_t thread, uint64_t* out) {
   // There are no FS register on ARM.
   (void)out;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t arch_set_x86_register_fs(struct thread* thread, const uint64_t* in) {
+zx_status_t arch_set_x86_register_fs(thread_t* thread, const uint64_t* in) {
   // There are no FS register on ARM.
   (void)in;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t arch_get_x86_register_gs(struct thread* thread, uint64_t* out) {
+zx_status_t arch_get_x86_register_gs(thread_t* thread, uint64_t* out) {
   // There are no GS register on ARM.
   (void)out;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t arch_set_x86_register_gs(struct thread* thread, const uint64_t* in) {
+zx_status_t arch_set_x86_register_gs(thread_t* thread, const uint64_t* in) {
   // There are no GS register on ARM.
   (void)in;
   return ZX_ERR_NOT_SUPPORTED;

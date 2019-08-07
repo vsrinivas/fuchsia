@@ -10,7 +10,7 @@
 __BEGIN_CDECLS
 
 /* use the cpu local thread context pointer to store current_thread */
-static inline struct thread* get_current_thread(void) {
+static inline thread_t* get_current_thread(void) {
 #ifdef __clang__
   // Clang with --target=aarch64-fuchsia -mcmodel=kernel reads
   // TPIDR_EL1 for __builtin_thread_pointer (instead of the usual
@@ -21,11 +21,11 @@ static inline struct thread* get_current_thread(void) {
 #else
   char* tp = (char*)__arm_rsr64("tpidr_el1");
 #endif
-  tp -= offsetof(struct thread, arch.thread_pointer_location);
-  return (struct thread*)tp;
+  tp -= offsetof(thread_t, arch.thread_pointer_location);
+  return (thread_t*)tp;
 }
 
-static inline void set_current_thread(struct thread* t) {
+static inline void set_current_thread(thread_t* t) {
   __arm_wsr64("tpidr_el1", (uint64_t)&t->arch.thread_pointer_location);
   __isb(ARM_MB_SY);
 }

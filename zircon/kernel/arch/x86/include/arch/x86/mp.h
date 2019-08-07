@@ -39,14 +39,18 @@
 
 __BEGIN_CDECLS
 
-struct thread;
+struct thread_t;
 
 struct x86_percpu {
   /* a direct pointer to ourselves */
   struct x86_percpu *direct;
 
   /* the current thread */
-  struct thread *current_thread;
+#ifdef __cplusplus
+  thread_t* current_thread;
+#else
+  struct thread_t* current_thread;
+#endif
 
   // The offsets of these two slots are published in
   // system/public/zircon/tls.h and known to the compiler.
@@ -126,7 +130,11 @@ static uint arch_max_num_cpus(void) { return x86_num_cpus; }
   x86_write_gs_offset32(offsetof(struct x86_percpu, field), (value))
 
 void x86_ipi_halt_handler(void *) __NO_RETURN;
+
+#ifdef __cplusplus
 void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread);
+#endif
+
 void x86_force_halt_all_but_local_and_bsp(void);
 
 __END_CDECLS

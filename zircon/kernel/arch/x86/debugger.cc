@@ -89,7 +89,7 @@ enum class RegAccess { kGet, kSet };
 
 // Backend for arch_get_vector_regs and arch_set_vector_regs. This does a read or write of the
 // thread to or from the regs structure.
-zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vector_regs* regs,
+zx_status_t x86_get_set_vector_regs(thread_t* thread, zx_thread_state_vector_regs* regs,
                                     RegAccess access) {
   // Function to copy memory in the correct direction. Write the code using this function as if it
   // was "memcpy" in "get" mode, and it will be reversed in "set" mode.
@@ -179,7 +179,7 @@ zx_status_t x86_get_set_vector_regs(struct thread* thread, zx_thread_state_vecto
 
 }  // namespace
 
-zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general_regs_t* out) {
+zx_status_t arch_get_general_regs(thread_t* thread, zx_thread_state_general_regs_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -206,7 +206,7 @@ zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general
   return ZX_OK;
 }
 
-zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_general_regs_t* in) {
+zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_general_regs_t* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -250,7 +250,7 @@ zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_g
   return ZX_OK;
 }
 
-zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
+zx_status_t arch_get_single_step(thread_t* thread, bool* single_step) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -275,7 +275,7 @@ zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
   return ZX_OK;
 }
 
-zx_status_t arch_set_single_step(struct thread* thread, bool single_step) {
+zx_status_t arch_set_single_step(thread_t* thread, bool single_step) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -304,7 +304,7 @@ zx_status_t arch_set_single_step(struct thread* thread, bool single_step) {
   return ZX_OK;
 }
 
-zx_status_t arch_get_fp_regs(struct thread* thread, zx_thread_state_fp_regs* out) {
+zx_status_t arch_get_fp_regs(thread_t* thread, zx_thread_state_fp_regs* out) {
   // Don't leak any reserved fields.
   memset(out, 0, sizeof(zx_thread_state_fp_regs));
 
@@ -327,7 +327,7 @@ zx_status_t arch_get_fp_regs(struct thread* thread, zx_thread_state_fp_regs* out
   return ZX_OK;
 }
 
-zx_status_t arch_set_fp_regs(struct thread* thread, const zx_thread_state_fp_regs* in) {
+zx_status_t arch_set_fp_regs(thread_t* thread, const zx_thread_state_fp_regs* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   uint32_t comp_size = 0;
@@ -347,11 +347,11 @@ zx_status_t arch_set_fp_regs(struct thread* thread, const zx_thread_state_fp_reg
   return ZX_OK;
 }
 
-zx_status_t arch_get_vector_regs(struct thread* thread, zx_thread_state_vector_regs* out) {
+zx_status_t arch_get_vector_regs(thread_t* thread, zx_thread_state_vector_regs* out) {
   return x86_get_set_vector_regs(thread, out, RegAccess::kGet);
 }
 
-zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_vector_regs* in) {
+zx_status_t arch_set_vector_regs(thread_t* thread, const zx_thread_state_vector_regs* in) {
   // The get_set function won't write in "kSet" mode so the const_cast is safe.
   return x86_get_set_vector_regs(thread, const_cast<zx_thread_state_vector_regs*>(in),
                                  RegAccess::kSet);
@@ -363,7 +363,7 @@ static void print_debug_state(const x86_debug_state_t* debug_state) {
          debug_state->dr7);
 }
 
-zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_regs* out) {
+zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // The kernel updates this per-thread data everytime a hw debug event occurs, meaning that
@@ -379,7 +379,7 @@ zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_reg
   return ZX_OK;
 }
 
-zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_debug_regs* in) {
+zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_regs* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Replace the state of the thread with the given one. We now need to keep track of the debug
@@ -419,28 +419,28 @@ zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_deb
   return ZX_OK;
 }
 
-zx_status_t arch_get_x86_register_fs(struct thread* thread, uint64_t* out) {
+zx_status_t arch_get_x86_register_fs(thread_t* thread, uint64_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   *out = thread->arch.fs_base;
   return ZX_OK;
 }
 
-zx_status_t arch_set_x86_register_fs(struct thread* thread, const uint64_t* in) {
+zx_status_t arch_set_x86_register_fs(thread_t* thread, const uint64_t* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   thread->arch.fs_base = *in;
   return ZX_OK;
 }
 
-zx_status_t arch_get_x86_register_gs(struct thread* thread, uint64_t* out) {
+zx_status_t arch_get_x86_register_gs(thread_t* thread, uint64_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   *out = thread->arch.gs_base;
   return ZX_OK;
 }
 
-zx_status_t arch_set_x86_register_gs(struct thread* thread, const uint64_t* in) {
+zx_status_t arch_set_x86_register_gs(thread_t* thread, const uint64_t* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   thread->arch.gs_base = *in;

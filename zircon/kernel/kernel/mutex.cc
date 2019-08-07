@@ -238,7 +238,7 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
   using Action = OwnedWaitQueue::Hook::Action;
   thread_t* woken;
   auto cbk = [](thread_t* woken, void* ctx) -> Action {
-    *(reinterpret_cast<thread**>(ctx)) = woken;
+    *(reinterpret_cast<thread_t**>(ctx)) = woken;
     return Action::SelectAndAssignOwner;
   };
 

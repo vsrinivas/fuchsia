@@ -7,13 +7,12 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_ARCH_EXCEPTION_H_
 #define ZIRCON_KERNEL_INCLUDE_ARCH_EXCEPTION_H_
 
+#include <fbl/ref_ptr.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <fbl/ref_ptr.h>
-
-struct thread;
+struct thread_t;
 class ExceptionPort;
 typedef struct arch_exception_context arch_exception_context_t;
 typedef struct zx_exception_report zx_exception_report_t;
@@ -49,9 +48,9 @@ void arch_fill_in_exception_context(const arch_exception_context_t* context,
 // This is called prior to the thread stopping in an exception, and must be
 // matched with a corresponding call to |arch_remove_context_regs()| prior to
 // the thread resuming execution.
-void arch_install_context_regs(struct thread* thread, const arch_exception_context_t* context);
+void arch_install_context_regs(thread_t* thread, const arch_exception_context_t* context);
 
 // Undo a previous call to |arch_install_context_regs()|.
-void arch_remove_context_regs(struct thread* thread);
+void arch_remove_context_regs(thread_t* thread);
 
 #endif  // ZIRCON_KERNEL_INCLUDE_ARCH_EXCEPTION_H_

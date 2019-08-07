@@ -9,7 +9,7 @@
 #include <kernel/thread.h>
 #include <vm/vm.h>
 
-void arm64_set_debug_state_for_thread(thread* thread, bool active) {
+void arm64_set_debug_state_for_thread(thread_t* thread, bool active) {
   arm64_iframe_t* iframe = thread->arch.suspended_general_regs;
   DEBUG_ASSERT(iframe);
   if (active) {

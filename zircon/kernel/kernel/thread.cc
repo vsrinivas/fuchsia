@@ -105,8 +105,8 @@ static void init_thread_lock_state(thread_t* t) {
 }
 
 // Default constructor/destructor.
-thread::thread() {}
-thread::~thread() {
+thread_t::thread_t() {}
+thread_t::~thread_t() {
   DEBUG_ASSERT(blocking_wait_queue == nullptr);
   // owned_wait_queues is a fbl:: list of unmanaged pointers.  It will debug
   // assert if it is not empty when it destructs; we do not need to do so
@@ -122,7 +122,7 @@ void init_thread_struct(thread_t* t, const char* name) {
   // TODO(johngro): now that we have converted thread_t over to C++, consider
   // switching to using C++ constructors/destructors and new/delete to handle
   // all of this instead of using init_thread_struct and free_thread_resources
-  new (t) thread();
+  new (t) thread_t();
 
   t->magic = THREAD_MAGIC;
   strlcpy(t->name, name, sizeof(t->name));
@@ -267,7 +267,7 @@ static void free_thread_resources(thread_t* t) {
   // get triggered.
   bool thread_needs_free = (t->flags & THREAD_FLAG_FREE_STRUCT) != 0;
   t->magic = 0;
-  t->~thread();
+  t->~thread_t();
   if (thread_needs_free) {
     free(t);
   }

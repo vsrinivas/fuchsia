@@ -23,7 +23,7 @@
 
 static inline bool is_fpu_enabled(uint32_t cpacr) { return !!(BITS(cpacr, 21, 20) != 0); }
 
-static void arm64_fpu_load_state(struct thread* t) {
+static void arm64_fpu_load_state(thread_t* t) {
   struct fpstate* fpstate = &t->arch.fpstate;
 
   LTRACEF("cpu %u, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
@@ -51,7 +51,7 @@ static void arm64_fpu_load_state(struct thread* t) {
       "r"((uint64_t)fpstate->fpcr), "r"((uint64_t)fpstate->fpsr));
 }
 
-__NO_SAFESTACK static void arm64_fpu_save_state(struct thread* t) {
+__NO_SAFESTACK static void arm64_fpu_save_state(thread_t* t) {
   struct fpstate* fpstate = &t->arch.fpstate;
 
   LTRACEF("cpu %u, thread %s, save fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
@@ -86,7 +86,7 @@ __NO_SAFESTACK static void arm64_fpu_save_state(struct thread* t) {
 }
 
 /* save fpu state if the thread had dirtied it and disable the fpu */
-__NO_SAFESTACK void arm64_fpu_context_switch(struct thread* oldthread, struct thread* newthread) {
+__NO_SAFESTACK void arm64_fpu_context_switch(thread_t* oldthread, thread_t* newthread) {
   uint64_t cpacr = __arm_rsr64("cpacr_el1");
   if (is_fpu_enabled((uint32_t)cpacr)) {
     LTRACEF("saving state on thread %s\n", oldthread->name);

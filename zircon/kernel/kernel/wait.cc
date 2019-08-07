@@ -516,7 +516,7 @@ zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error)
   return ZX_OK;
 }
 
-bool wait_queue_priority_changed(struct thread* t, int old_prio, PropagatePI propagate) {
+bool wait_queue_priority_changed(thread_t* t, int old_prio, PropagatePI propagate) {
   DEBUG_ASSERT(t->magic == THREAD_MAGIC);
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(spin_lock_held(&thread_lock));

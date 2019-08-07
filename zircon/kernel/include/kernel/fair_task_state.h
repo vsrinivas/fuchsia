@@ -16,7 +16,7 @@
 #include <ffl/fixed.h>
 
 // Forward declaration.
-typedef struct thread thread_t;
+struct thread_t;
 
 // Fixed-point task weight.
 //

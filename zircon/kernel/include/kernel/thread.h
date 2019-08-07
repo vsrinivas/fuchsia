@@ -57,7 +57,7 @@ extern spin_lock_t thread_lock;
 typedef int (*thread_start_routine)(void* arg);
 typedef void (*thread_trampoline_routine)(void) __NO_RETURN;
 typedef void (*thread_user_callback_t)(enum thread_user_state_change new_state,
-                                       struct thread* thread_context);
+                                       thread_t* thread_context);
 typedef void (*thread_tls_callback_t)(void* tls_value);
 
 // clang-format off
@@ -95,12 +95,12 @@ typedef struct lockdep_state {
   uint8_t last_result;
 } lockdep_state_t;
 
-typedef struct thread {
+struct thread_t {
   // Default constructor/destructor declared to be not-inline in order to
   // avoid circular include dependencies involving thread, wait_queue, and
   // OwnedWaitQueue.
-  thread();
-  ~thread();
+  thread_t();
+  ~thread_t();
 
   int magic;
   struct list_node thread_list_node;
@@ -236,7 +236,7 @@ typedef struct thread {
   size_t linebuffer_pos;
   char linebuffer[THREAD_LINEBUFFER_LENGTH];
 #endif
-} thread_t;
+};
 
 // thread priority
 #define NUM_PRIORITIES (32)

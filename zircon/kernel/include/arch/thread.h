@@ -15,12 +15,12 @@
 
 __BEGIN_CDECLS
 
-struct thread;
+struct thread_t;
 
-void arch_thread_initialize(struct thread *, vaddr_t entry_point);
-void arch_context_switch(struct thread *oldthread, struct thread *newthread);
-void arch_thread_construct_first(struct thread *);
-void *arch_thread_get_blocked_fp(struct thread *);
+void arch_thread_initialize(thread_t*, vaddr_t entry_point);
+void arch_context_switch(thread_t* oldthread, thread_t* newthread);
+void arch_thread_construct_first(thread_t*);
+void *arch_thread_get_blocked_fp(thread_t*);
 
 __END_CDECLS
 

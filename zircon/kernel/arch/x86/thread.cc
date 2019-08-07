@@ -82,7 +82,7 @@ void arch_dump_thread(thread_t* t) {
   }
 }
 
-void* arch_thread_get_blocked_fp(struct thread* t) {
+void* arch_thread_get_blocked_fp(thread_t* t) {
   if (!WITH_FRAME_POINTERS)
     return nullptr;
 

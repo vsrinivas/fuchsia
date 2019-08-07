@@ -100,7 +100,7 @@ void arch_dump_thread(thread_t* t) {
   }
 }
 
-void* arch_thread_get_blocked_fp(struct thread* t) {
+void* arch_thread_get_blocked_fp(thread_t* t) {
   if (!WITH_FRAME_POINTERS)
     return nullptr;
 
@@ -108,7 +108,7 @@ void* arch_thread_get_blocked_fp(struct thread* t) {
   return (void*)frame->r29;
 }
 
-void arm64_debug_state_context_switch(thread* old_thread, thread* new_thread) {
+void arm64_debug_state_context_switch(thread_t* old_thread, thread_t* new_thread) {
   // If the new thread has debug state, then install it, replacing the current contents.
   if (unlikely(new_thread->arch.track_debug_state)) {
     arm64_write_hw_debug_regs(&new_thread->arch.debug_state);
@@ -124,6 +124,6 @@ void arm64_debug_state_context_switch(thread* old_thread, thread* new_thread) {
   }
 }
 
-arm64_context_switch_frame* arm64_get_context_switch_frame(struct thread* thread) {
+arm64_context_switch_frame* arm64_get_context_switch_frame(thread_t* thread) {
   return reinterpret_cast<struct arm64_context_switch_frame*>(thread->arch.sp);
 }
