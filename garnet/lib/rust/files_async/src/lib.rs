@@ -59,13 +59,13 @@ impl fmt::Debug for DirEntry {
     }
 }
 
-pub async fn readdir_recursive(dir: DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
+pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     let mut directories: VecDeque<DirEntry> = VecDeque::new();
     let mut entries: Vec<DirEntry> = Vec::new();
 
     // Prime directory queue with immediate descendants.
     {
-        for entry in await!(readdir(&dir))?.into_iter() {
+        for entry in await!(readdir(dir))?.into_iter() {
             if entry.is_dir() {
                 directories.push_back(entry)
             } else {

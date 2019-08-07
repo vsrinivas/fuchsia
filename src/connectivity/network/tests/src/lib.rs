@@ -159,7 +159,7 @@ async fn get_aggregate_stats() -> Result {
         .context("failed to create node proxy")?;
     let () = netstack_proxy.get_aggregate_stats(server).context("failed to get aggregate stats")?;
     let dir_entries =
-        await!(files_async::readdir_recursive(client)).context("failed to readdir")?;
+        await!(files_async::readdir_recursive(&client)).context("failed to readdir")?;
     let path_segments: std::collections::hash_set::HashSet<usize> = dir_entries
         .iter()
         .map(|dir_entry| 1 + dir_entry.name.matches(std::path::MAIN_SEPARATOR).count())

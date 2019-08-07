@@ -32,7 +32,7 @@ pub async fn list_directory<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
 pub async fn list_directory_recursive<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
     let dir = io_util::clone_directory(&root_proxy, CLONE_FLAG_SAME_RIGHTS)
         .expect("Failed to clone DirectoryProxy");
-    let entries = await!(files_async::readdir_recursive(dir)).expect("readdir failed");
+    let entries = await!(files_async::readdir_recursive(&dir)).expect("readdir failed");
     let mut items = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
     items.sort();
     items
