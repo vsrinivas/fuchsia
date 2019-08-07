@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/inspect_deprecated/deprecated/expose.h>
 #include <lib/inspect_deprecated/deprecated/object_dir.h>
+
 #include <trace/event.h>
 
 #include "peridot/lib/base64url/base64url.h"
@@ -32,7 +33,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environmen
                                            std::unique_ptr<SyncWatcherSet> watchers,
                                            std::unique_ptr<sync_coordinator::UserSync> user_sync,
                                            std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
-                                           PageUsageListener* page_usage_listener,
+                                           std::vector<PageUsageListener*> page_usage_listeners,
                                            inspect_deprecated::Node inspect_node)
     : content_path_(std::move(content_path)),
       environment_(environment),
@@ -40,7 +41,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environmen
       encryption_service_factory_(environment),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)),
-      page_usage_listener_(page_usage_listener),
+      page_usage_listeners_(std::move(page_usage_listeners)),
       disk_cleanup_manager_(std::move(disk_cleanup_manager)),
       inspect_node_(std::move(inspect_node)),
       requests_metric_(
@@ -197,7 +198,7 @@ Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger
       std::forward_as_tuple(environment_, name_as_string,
                             ledgers_inspect_node_.CreateChild(name_as_string),
                             std::move(encryption_service), std::move(ledger_storage),
-                            std::move(ledger_sync), page_usage_listener_));
+                            std::move(ledger_sync), page_usage_listeners_));
   FXL_DCHECK(result.second);
   *ledger_manager = &(result.first->second);
   return Status::OK;

@@ -20,12 +20,12 @@ namespace ledger {
 //
 // Given information about when internal and external page connections open and
 // close, |PageConnectionNotifier| calls the corresponding methods from
-// |PageUsageListener|. The |PageUsageListener| given in the constructor should
+// |PageUsageListener|. All |PageUsageListener| given in the constructor should
 // outlive this object.
 class PageConnectionNotifier {
  public:
   PageConnectionNotifier(std::string ledger_name, storage::PageId page_id,
-                         PageUsageListener* page_usage_listener);
+                         std::vector<PageUsageListener*> page_usage_listeners);
   ~PageConnectionNotifier();
 
   // Registers a new external page request.
@@ -54,7 +54,7 @@ class PageConnectionNotifier {
 
   const std::string ledger_name_;
   const storage::PageId page_id_;
-  PageUsageListener* page_usage_listener_;
+  std::vector<PageUsageListener*> page_usage_listeners_;
 
   // Stores whether the page is currently opened by an external request.
   bool has_external_requests_ = false;

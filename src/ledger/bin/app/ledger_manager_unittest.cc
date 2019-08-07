@@ -245,7 +245,7 @@ class LedgerManagerTest : public TestWithEnvironment {
         &environment_, kLedgerName.ToString(),
         top_level_node_.CreateChild(kInspectPathComponent.ToString()),
         std::make_unique<encryption::FakeEncryptionService>(dispatcher()), std::move(storage),
-        std::move(sync), disk_cleanup_manager_.get());
+        std::move(sync), std::vector<PageUsageListener*>{disk_cleanup_manager_.get()});
     ResetLedgerPtr();
   }
 
@@ -606,7 +606,7 @@ TEST_F(LedgerManagerTest, GetPageDisconnect) {
       &environment_, kLedgerName.ToString(),
       top_level_node_.CreateChild(kInspectPathComponent.ToString()),
       std::make_unique<encryption::FakeEncryptionService>(dispatcher()), std::move(storage),
-      std::move(sync), disk_cleanup_manager_.get());
+      std::move(sync), std::vector<PageUsageListener*>{disk_cleanup_manager_.get()});
 
   LedgerPtr ledger;
   ledger_manager->BindLedger(ledger.NewRequest());
@@ -682,7 +682,7 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
         &environment_, kLedgerName.ToString(),
         attachment_node_.CreateChild(kInspectPathComponent.ToString()),
         std::move(encryption_service), std::move(ledger_storage), std::move(sync),
-        disk_cleanup_manager_.get());
+        std::vector<PageUsageListener*>{disk_cleanup_manager_.get()});
   }
 
  protected:

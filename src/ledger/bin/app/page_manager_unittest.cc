@@ -210,8 +210,9 @@ class PageManagerTest : public TestWithEnvironment {
     sync_ = std::make_unique<sync_coordinator::FakeLedgerSync>();
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     page_manager_ = std::make_unique<PageManager>(
-        &environment_, kLedgerName, convert::ToString(page_id_.id), disk_cleanup_manager_.get(),
-        storage_.get(), sync_.get(), ledger_merge_manager_.get(), inspect_deprecated::Node());
+        &environment_, kLedgerName, convert::ToString(page_id_.id),
+        std::vector<PageUsageListener*>{disk_cleanup_manager_.get()}, storage_.get(), sync_.get(),
+        ledger_merge_manager_.get(), inspect_deprecated::Node());
   }
 
   PageId RandomId() {

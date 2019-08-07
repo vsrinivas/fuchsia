@@ -29,8 +29,8 @@ TEST_F(ActivePageManagerContainerTest, OneEarlyBindingNoPageManager) {
   Status status;
   bool on_empty_called;
 
-  ActivePageManagerContainer active_page_manager_container(kLedgerName, page_id,
-                                                           &page_usage_listener);
+  ActivePageManagerContainer active_page_manager_container(
+      kLedgerName, page_id, std::vector<PageUsageListener*>{&page_usage_listener});
   active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   active_page_manager_container.BindPage(
       page.NewRequest(), callback::Capture(callback::SetWhenCalled(&callback_called), &status));
@@ -67,8 +67,8 @@ TEST_F(ActivePageManagerContainerTest, BindBeforePageManager) {
   Status status;
   bool on_empty_called;
 
-  ActivePageManagerContainer active_page_manager_container(kLedgerName, page_id,
-                                                           &page_usage_listener);
+  ActivePageManagerContainer active_page_manager_container(
+      kLedgerName, page_id, std::vector<PageUsageListener*>{&page_usage_listener});
   active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   active_page_manager_container.BindPage(
       page.NewRequest(), callback::Capture(callback::SetWhenCalled(&callback_called), &status));

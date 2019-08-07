@@ -39,9 +39,9 @@ namespace ledger {
 class PageManager {
  public:
   PageManager(Environment* environment, std::string ledger_name, storage::PageId page_id,
-              PageUsageListener* page_usage_listener, storage::LedgerStorage* ledger_storage,
-              sync_coordinator::LedgerSync* ledger_sync, LedgerMergeManager* ledger_merge_manager,
-              inspect_deprecated::Node inspect_node);
+              std::vector<PageUsageListener*> page_usage_listeners,
+              storage::LedgerStorage* ledger_storage, sync_coordinator::LedgerSync* ledger_sync,
+              LedgerMergeManager* ledger_merge_manager, inspect_deprecated::Node inspect_node);
   ~PageManager();
 
   // Checks whether the given page is closed and synced. The result returned in
@@ -124,7 +124,7 @@ class PageManager {
   Environment* const environment_;
   const std::string ledger_name_;
   const storage::PageId page_id_;
-  PageUsageListener* page_usage_listener_;
+  std::vector<PageUsageListener*> page_usage_listeners_;
   storage::LedgerStorage* ledger_storage_;
   sync_coordinator::LedgerSync* ledger_sync_;
   LedgerMergeManager* ledger_merge_manager_;

@@ -13,10 +13,10 @@
 namespace ledger {
 
 PageConnectionNotifier::PageConnectionNotifier(std::string ledger_name, storage::PageId page_id,
-                                               PageUsageListener* page_usage_listener)
+                                               std::vector<PageUsageListener*> page_usage_listeners)
     : ledger_name_(std::move(ledger_name)),
       page_id_(std::move(page_id)),
-      page_usage_listener_(page_usage_listener),
+      page_usage_listeners_(std::move(page_usage_listeners)),
       weak_factory_(this) {}
 
 PageConnectionNotifier::~PageConnectionNotifier() {}
@@ -26,14 +26,18 @@ void PageConnectionNotifier::RegisterExternalRequest() {
     return;
   }
   has_external_requests_ = true;
-  page_usage_listener_->OnExternallyUsed(ledger_name_, page_id_);
+  for (const auto& page_usage_listener : page_usage_listeners_) {
+    page_usage_listener->OnExternallyUsed(ledger_name_, page_id_);
+  }
 }
 
 void PageConnectionNotifier::UnregisterExternalRequests() {
   if (has_external_requests_) {
     auto weak_this = weak_factory_.GetWeakPtr();
     // This might delete the PageConnectionNotifier object.
-    page_usage_listener_->OnExternallyUnused(ledger_name_, page_id_);
+    for (const auto& page_usage_listener : page_usage_listeners_) {
+      page_usage_listener->OnExternallyUnused(ledger_name_, page_id_);
+    }
     if (!weak_this) {
       return;
     }
@@ -44,7 +48,9 @@ void PageConnectionNotifier::UnregisterExternalRequests() {
 
 ExpiringToken PageConnectionNotifier::NewInternalRequestToken() {
   if (internal_request_count_ == 0) {
-    page_usage_listener_->OnInternallyUsed(ledger_name_, page_id_);
+    for (const auto& page_usage_listener : page_usage_listeners_) {
+      page_usage_listener->OnInternallyUsed(ledger_name_, page_id_);
+    }
   }
   ++internal_request_count_;
   return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
@@ -53,7 +59,9 @@ ExpiringToken PageConnectionNotifier::NewInternalRequestToken() {
     if (internal_request_count_ == 0) {
       auto weak_this = weak_factory_.GetWeakPtr();
       // This might delete the PageConnectionNotifier object.
-      page_usage_listener_->OnInternallyUnused(ledger_name_, page_id_);
+      for (const auto& page_usage_listener : page_usage_listeners_) {
+        page_usage_listener->OnInternallyUnused(ledger_name_, page_id_);
+      }
       if (weak_this) {
         CheckEmpty();
       }

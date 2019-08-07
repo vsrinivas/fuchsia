@@ -11,11 +11,12 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
-#include <trace/event.h>
 
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <trace/event.h>
 
 #include "src/ledger/bin/app/active_page_manager_container.h"
 #include "src/ledger/bin/app/constants.h"
@@ -34,7 +35,7 @@
 namespace ledger {
 
 PageManager::PageManager(Environment* environment, std::string ledger_name, storage::PageId page_id,
-                         PageUsageListener* page_usage_listener,
+                         std::vector<PageUsageListener*> page_usage_listeners,
                          storage::LedgerStorage* ledger_storage,
                          sync_coordinator::LedgerSync* ledger_sync,
                          LedgerMergeManager* ledger_merge_manager,
@@ -42,7 +43,7 @@ PageManager::PageManager(Environment* environment, std::string ledger_name, stor
     : environment_(environment),
       ledger_name_(std::move(ledger_name)),
       page_id_(std::move(page_id)),
-      page_usage_listener_(page_usage_listener),
+      page_usage_listeners_(std::move(page_usage_listeners)),
       ledger_storage_(ledger_storage),
       ledger_sync_(ledger_sync),
       ledger_merge_manager_(ledger_merge_manager),
@@ -192,7 +193,7 @@ void PageManager::CreatePageStorage(LedgerImpl::Delegate::PageState page_state,
 ActivePageManagerContainer* PageManager::CreateActivePageManagerContainer() {
   FXL_DCHECK(!active_page_manager_container_);
   auto& active_page_manager_container =
-      active_page_manager_container_.emplace(ledger_name_, page_id_, page_usage_listener_);
+      active_page_manager_container_.emplace(ledger_name_, page_id_, page_usage_listeners_);
   active_page_manager_container_->set_on_empty([this]() {
     active_page_manager_container_.reset();
     CheckEmpty();

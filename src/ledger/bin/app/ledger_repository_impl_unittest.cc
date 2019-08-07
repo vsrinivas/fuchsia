@@ -4,8 +4,6 @@
 
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
-#include <vector>
-
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async_promise/executor.h>
 #include <lib/callback/capture.h>
@@ -17,6 +15,8 @@
 #include <lib/inspect_deprecated/hierarchy.h>
 #include <lib/inspect_deprecated/inspect.h>
 #include <lib/inspect_deprecated/testing/inspect.h>
+
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
@@ -79,7 +79,8 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     repository_ = std::make_unique<LedgerRepositoryImpl>(
         DetachedPath(tmpfs_.root_fd()), &environment_,
         std::make_unique<storage::fake::FakeDbFactory>(dispatcher()), nullptr, nullptr,
-        std::move(fake_page_eviction_manager), disk_cleanup_manager_,
+        std::move(fake_page_eviction_manager),
+        std::vector<PageUsageListener*>{disk_cleanup_manager_},
         attachment_node_.CreateChild(kInspectPathComponent));
   }
 

@@ -25,7 +25,7 @@ namespace ledger {
 class ActivePageManagerContainer {
  public:
   ActivePageManagerContainer(std::string ledger_name, storage::PageId page_id,
-                             PageUsageListener* page_usage_listener);
+                             std::vector<PageUsageListener*> page_usage_listeners);
   ~ActivePageManagerContainer();
 
   void set_on_empty(fit::closure on_empty_callback);

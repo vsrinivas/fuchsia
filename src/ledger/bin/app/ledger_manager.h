@@ -5,16 +5,16 @@
 #ifndef SRC_LEDGER_BIN_APP_LEDGER_MANAGER_H_
 #define SRC_LEDGER_BIN_APP_LEDGER_MANAGER_H_
 
-#include <functional>
-#include <map>
-#include <memory>
-#include <type_traits>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
+
+#include <functional>
+#include <map>
+#include <memory>
+#include <type_traits>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/ledger_impl.h"
@@ -48,7 +48,7 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
                 std::unique_ptr<encryption::EncryptionService> encryption_service,
                 std::unique_ptr<storage::LedgerStorage> storage,
                 std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
-                PageUsageListener* page_usage_listener);
+                std::vector<PageUsageListener*> page_usage_listeners);
   ~LedgerManager() override;
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
@@ -132,7 +132,7 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
   // Mapping from each page id to the manager of that page.
   callback::AutoCleanableMap<storage::PageId, PageManager, convert::StringViewComparator>
       page_managers_;
-  PageUsageListener* page_usage_listener_;
+  std::vector<PageUsageListener*> page_usage_listeners_;
   fit::closure on_empty_callback_;
 
   // The static Inspect object maintaining in Inspect a representation of this

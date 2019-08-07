@@ -43,7 +43,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
                        std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<sync_coordinator::UserSync> user_sync,
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
-                       PageUsageListener* page_usage_listener,
+                       std::vector<PageUsageListener*> page_usage_listeners,
                        inspect_deprecated::Node inspect_node);
   ~LedgerRepositoryImpl() override;
 
@@ -94,7 +94,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<sync_coordinator::UserSync> user_sync_;
-  PageUsageListener* page_usage_listener_;
+  std::vector<PageUsageListener*> page_usage_listeners_;
   callback::AutoCleanableMap<std::string, LedgerManager, convert::StringViewComparator>
       ledger_managers_;
   // The DiskCleanupManager relies on the |ledger_managers_| being still alive.

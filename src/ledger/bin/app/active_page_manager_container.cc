@@ -17,11 +17,12 @@
 
 namespace ledger {
 
-ActivePageManagerContainer::ActivePageManagerContainer(std::string ledger_name,
-                                                       storage::PageId page_id,
-                                                       PageUsageListener* page_usage_listener)
+ActivePageManagerContainer::ActivePageManagerContainer(
+    std::string ledger_name, storage::PageId page_id,
+    std::vector<PageUsageListener*> page_usage_listeners)
     : page_id_(page_id),
-      connection_notifier_(std::move(ledger_name), std::move(page_id), page_usage_listener) {
+      connection_notifier_(std::move(ledger_name), std::move(page_id),
+                           std::move(page_usage_listeners)) {
   connection_notifier_.set_on_empty([this] { CheckEmpty(); });
 }
 

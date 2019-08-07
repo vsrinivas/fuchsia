@@ -23,7 +23,7 @@ class PageConnectionNotifierTest : public TestWithEnvironment {
  public:
   PageConnectionNotifierTest()
       : page_connection_notifier_(kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
-                                  &fake_disk_cleanup_manager_){};
+                                  std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_}){};
   ~PageConnectionNotifierTest() override = default;
 
  protected:
@@ -167,7 +167,8 @@ TEST_F(PageConnectionNotifierTest, PageConnectionNotifierDestroyedWhileRequestsO
   bool on_empty_called;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'), &fake_disk_cleanup_manager);
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
+      std::vector<PageUsageListener*>{&fake_disk_cleanup_manager});
   page_connection_notifier->set_on_empty(callback::SetWhenCalled(&on_empty_called));
   page_connection_notifier->RegisterExternalRequest();
   page_connection_notifier->RegisterExternalRequest();
@@ -182,7 +183,8 @@ TEST_F(PageConnectionNotifierTest, PageConnectionNotifierDestroyedWhileTokensOut
   bool on_empty_called;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'), &fake_disk_cleanup_manager);
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
+      std::vector<PageUsageListener*>{&fake_disk_cleanup_manager});
   page_connection_notifier->set_on_empty(callback::SetWhenCalled(&on_empty_called));
   auto first_expiring_token = page_connection_notifier->NewInternalRequestToken();
   auto second_expiring_token = page_connection_notifier->NewInternalRequestToken();
@@ -197,7 +199,8 @@ TEST_F(PageConnectionNotifierTest,
   bool on_empty_called;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'), &fake_disk_cleanup_manager);
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
+      std::vector<PageUsageListener*>{&fake_disk_cleanup_manager});
   page_connection_notifier->set_on_empty(callback::SetWhenCalled(&on_empty_called));
   page_connection_notifier->RegisterExternalRequest();
   page_connection_notifier->RegisterExternalRequest();
@@ -221,7 +224,8 @@ TEST_F(PageConnectionNotifierTest, PageConnectionNotifierDestroyedWhileCallingPa
   std::vector<std::unique_ptr<ExpiringToken>> tokens;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'), &fake_disk_cleanup_manager);
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
+      std::vector<PageUsageListener*>{&fake_disk_cleanup_manager});
   page_connection_notifier->set_on_empty(callback::SetWhenCalled(&on_empty_called));
   fake_disk_cleanup_manager.set_on_OnExternallyUnused(
       [&on_OnExternallyUnused_called, &on_OnInternallyUnused_called,
@@ -286,6 +290,25 @@ TEST_F(PageConnectionNotifierTest, PageConnectionNotifierDestroyedWhileCallingPa
     page_connection_notifier->UnregisterExternalRequests();
   }
   EXPECT_FALSE(on_empty_called);
+}
+
+TEST_F(PageConnectionNotifierTest, MultiplePageUsageListeners) {
+  std::vector<FakeDiskCleanupManager> page_usage_listeners(3);
+  std::vector<PageUsageListener*> page_usage_listeners_ptr;
+  for (auto& page_usage_listener : page_usage_listeners) {
+    page_usage_listeners_ptr.push_back(&page_usage_listener);
+  }
+
+  auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'), page_usage_listeners_ptr);
+  page_connection_notifier->RegisterExternalRequest();
+  page_connection_notifier->UnregisterExternalRequests();
+
+  for (const auto& page_usage_listener : page_usage_listeners) {
+    EXPECT_EQ(page_usage_listener.externally_used_count, 1);
+    EXPECT_EQ(page_usage_listener.externally_unused_count, 1);
+  }
+  EXPECT_TRUE(page_connection_notifier_.IsEmpty());
 }
 
 }  // namespace

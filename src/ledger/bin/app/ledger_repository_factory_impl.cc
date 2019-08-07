@@ -16,10 +16,11 @@
 #include <lib/inspect_deprecated/deprecated/object_dir.h>
 #include <lib/inspect_deprecated/inspect.h>
 #include <stdio.h>
-#include <trace/event.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include <trace/event.h>
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
@@ -307,7 +308,8 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.ledgers_path, environment_, std::move(db_factory), std::move(watchers),
-      std::move(user_sync), std::move(disk_cleanup_manager), disk_cleanup_manager_ptr,
+      std::move(user_sync), std::move(disk_cleanup_manager),
+      std::vector<PageUsageListener*>{disk_cleanup_manager_ptr},
       inspect_node_.CreateChild(convert::ToHex(repository_information.name)));
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
