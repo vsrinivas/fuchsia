@@ -144,7 +144,7 @@ void GetEntryBenchmark::Populate() {
 
 void GetEntryBenchmark::GetSnapshot() {
   TRACE_ASYNC_BEGIN("benchmark", "get_snapshot", 0);
-  page_->GetSnapshot(snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_->GetSnapshot(snapshot_.NewRequest(), {}, nullptr);
   page_->Sync([this] {
     TRACE_ASYNC_END("benchmark", "get_snapshot", 0);
     TRACE_ASYNC_BEGIN("benchmark", "get_keys", 0);
@@ -153,7 +153,7 @@ void GetEntryBenchmark::GetSnapshot() {
 }
 
 void GetEntryBenchmark::GetKeys(std::unique_ptr<Token> token) {
-  snapshot_->GetKeys(fidl::VectorPtr<uint8_t>::New(0), std::move(token),
+  snapshot_->GetKeys({}, std::move(token),
                      [this](auto keys, auto next_token) {
                        if (!next_token) {
                          TRACE_ASYNC_END("benchmark", "get_keys", 0);

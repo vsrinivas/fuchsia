@@ -33,7 +33,7 @@ int main(int argc, char const *argv[]) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kLedgerBinaryPath;
   launch_info.directory_request = services.NewRequest();
-  launch_info.arguments.push_back("--disable_reporting");
+  launch_info.arguments.emplace({"--disable_reporting"});
   fuchsia::sys::ComponentControllerPtr controller;
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());

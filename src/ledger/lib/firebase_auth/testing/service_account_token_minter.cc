@@ -116,21 +116,21 @@ void ServiceAccountTokenMinter::GetFirebaseToken(fidl::StringPtr firebase_api_ke
                                                  GetFirebaseTokenCallback callback) {
   // A request is in progress to get a token. Registers the callback that will
   // be called when the request ends.
-  if (!in_progress_callbacks_[firebase_api_key].empty()) {
-    in_progress_callbacks_[firebase_api_key].push_back(std::move(callback));
+  if (!in_progress_callbacks_[firebase_api_key.value_or("")].empty()) {
+    in_progress_callbacks_[firebase_api_key.value_or("")].push_back(std::move(callback));
     return;
   }
 
   // Check if a token is currently cached.
-  if (cached_tokens_[firebase_api_key]) {
-    auto& cached_token = cached_tokens_[firebase_api_key];
+  if (cached_tokens_[firebase_api_key.value_or("")]) {
+    auto& cached_token = cached_tokens_[firebase_api_key.value_or("")];
     if (time(nullptr) < cached_token->expiration_time) {
       callback(GetSuccessResponse(cached_token->id_token));
       return;
     }
 
     // The token expired. Falls back to fetch a new one.
-    cached_tokens_.erase(firebase_api_key);
+    cached_tokens_.erase(firebase_api_key.value_or(""));
   }
 
   // Build the custom token to exchange for an id token.
@@ -141,13 +141,13 @@ void ServiceAccountTokenMinter::GetFirebaseToken(fidl::StringPtr firebase_api_ke
     return;
   }
 
-  in_progress_callbacks_[firebase_api_key].push_back(std::move(callback));
+  in_progress_callbacks_[firebase_api_key.value_or("")].push_back(std::move(callback));
 
   in_progress_requests_.emplace(network_wrapper_->Request(
-      [this, firebase_api_key = firebase_api_key.get(), custom_token = std::move(custom_token)] {
+      [this, firebase_api_key = firebase_api_key.value_or(""), custom_token = std::move(custom_token)] {
         return GetIdentityRequest(firebase_api_key, custom_token);
       },
-      [this, firebase_api_key = firebase_api_key.get()](http::URLResponse response) {
+      [this, firebase_api_key = firebase_api_key.value_or("")](http::URLResponse response) {
         HandleIdentityResponse(firebase_api_key, std::move(response));
       }));
 }
@@ -230,18 +230,19 @@ http::URLRequest ServiceAccountTokenMinter::GetIdentityRequest(const std::string
   request.method = "POST";
   request.auto_follow_redirects = true;
   request.response_body_mode = http::ResponseBodyMode::BUFFER;
+  request.headers.emplace();
 
   // content-type header.
   http::HttpHeader content_type_header;
   content_type_header.name = "content-type";
   content_type_header.value = "application/json";
-  request.headers.push_back(std::move(content_type_header));
+  request.headers->push_back(std::move(content_type_header));
 
   // set accept header
   http::HttpHeader accept_header;
   accept_header.name = "accept";
   accept_header.value = "application/json";
-  request.headers.push_back(std::move(accept_header));
+  request.headers->push_back(std::move(accept_header));
 
   fsl::SizedVmo data;
   bool result = fsl::VmoFromString(GetIdentityRequestBody(custom_token), &data);
@@ -273,7 +274,7 @@ std::string ServiceAccountTokenMinter::GetIdentityRequestBody(const std::string&
 void ServiceAccountTokenMinter::HandleIdentityResponse(const std::string& api_key,
                                                        http::URLResponse response) {
   if (response.error) {
-    ResolveCallbacks(api_key, GetErrorResponse(Status::NETWORK_ERROR, response.error->description));
+    ResolveCallbacks(api_key, GetErrorResponse(Status::NETWORK_ERROR, response.error->description.value_or("")));
     return;
   }
 

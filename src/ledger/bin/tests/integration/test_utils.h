@@ -32,7 +32,7 @@ std::vector<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo);
 // |GetEntries|. If any call fails, this function will fail the current test.
 std::vector<Entry> SnapshotGetEntries(
     LoopController* loop_controller, PageSnapshotPtr* snapshot,
-    fidl::VectorPtr<uint8_t> start = fidl::VectorPtr<uint8_t>::New(0), int* num_queries = nullptr);
+    std::vector<uint8_t> start = {}, int* num_queries = nullptr);
 
 }  // namespace ledger
 

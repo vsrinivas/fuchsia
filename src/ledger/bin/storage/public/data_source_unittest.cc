@@ -54,9 +54,8 @@ TEST_F(DataSourceTest, String) {
 TEST_F(DataSourceTest, Array) {
   std::string value = "Hello World";
 
-  fidl::VectorPtr<uint8_t> array;
-  array.resize(value.size());
-  memcpy(&array->at(0), value.data(), value.size());
+  std::vector<uint8_t> array(value.size());
+  memcpy(&array.at(0), value.data(), value.size());
 
   EXPECT_TRUE(TestDataSource(value, DataSource::Create(std::move(array))));
 }

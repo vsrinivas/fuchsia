@@ -407,7 +407,7 @@ TEST_P(MergingIntegrationTest, Merging) {
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher1_waiter->GetCallback());
 
   PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot1.NewRequest(), {},
                      std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
@@ -415,7 +415,7 @@ TEST_P(MergingIntegrationTest, Merging) {
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher2_waiter->GetCallback());
 
   PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page2->GetSnapshot(snapshot2.NewRequest(), {},
                      std::move(watcher2_ptr));
 
   page1->StartTransaction();
@@ -502,14 +502,14 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   auto watcher1_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher1_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot1.NewRequest(), {},
                      std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   auto watcher2_waiter = NewWaiter();
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher2_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page2->GetSnapshot(snapshot2.NewRequest(), {},
                      std::move(watcher2_ptr));
 
   page1->StartTransaction();
@@ -677,7 +677,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot2.NewRequest(), {},
                      std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
@@ -770,7 +770,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot2.NewRequest(), {},
                      std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
@@ -1063,7 +1063,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot.NewRequest(), {},
                      std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values), MergeType::MULTIPART));
@@ -1097,7 +1097,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot2.NewRequest(), {},
                      std::move(watcher_ptr));
 
   page1->StartTransaction();
@@ -1218,7 +1218,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot2.NewRequest(), {},
                      std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
@@ -1297,7 +1297,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot.NewRequest(), {},
                      std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values), MergeType::MULTIPART));
@@ -1334,7 +1334,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot1.NewRequest(), {},
                      std::move(watcher_ptr));
 
   page1->StartTransaction();
@@ -1513,7 +1513,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot2.NewRequest(), {},
                      std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
@@ -1637,13 +1637,13 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableMergingContin
   auto watcher_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page_conn1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page_conn1->GetSnapshot(snapshot1.NewRequest(), {},
                           std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page_conn2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page_conn2->GetSnapshot(snapshot2.NewRequest(), {},
                           std::move(watcher2_ptr));
 
   page_conn1->StartTransaction();
@@ -1679,7 +1679,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableMergingContin
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   PageSnapshotPtr snapshot3;
-  page_conn1->GetSnapshot(snapshot3.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_conn1->GetSnapshot(snapshot3.NewRequest(), {}, nullptr);
 
   waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result1;
@@ -1688,7 +1688,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableMergingContin
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot4;
-  page_conn1->GetSnapshot(snapshot4.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_conn1->GetSnapshot(snapshot4.NewRequest(), {}, nullptr);
 
   fuchsia::ledger::PageSnapshot_GetInline_Result result2;
   waiter = NewWaiter();
@@ -1732,13 +1732,13 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMerge
   auto watcher_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page_conn1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page_conn1->GetSnapshot(snapshot1.NewRequest(), {},
                           std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page_conn2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page_conn2->GetSnapshot(snapshot2.NewRequest(), {},
                           std::move(watcher2_ptr));
 
   page_conn1->StartTransaction();
@@ -1785,7 +1785,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMerge
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot3;
-  page_conn1->GetSnapshot(snapshot3.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_conn1->GetSnapshot(snapshot3.NewRequest(), {}, nullptr);
 
   waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result1;
@@ -1794,7 +1794,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMerge
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot4;
-  page_conn1->GetSnapshot(snapshot4.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_conn1->GetSnapshot(snapshot4.NewRequest(), {}, nullptr);
 
   fuchsia::ledger::PageSnapshot_GetInline_Result result2;
   waiter = NewWaiter();

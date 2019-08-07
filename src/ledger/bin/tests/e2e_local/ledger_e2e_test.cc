@@ -69,10 +69,10 @@ bool Equals(const fidl::VectorPtr<uint8_t>& a1, const A& a2) {
   return memcmp(a1->data(), a2.data(), a1->size()) == 0;
 }
 
-fidl::VectorPtr<uint8_t> TestArray() {
+std::vector<uint8_t> TestArray() {
   std::string value = "value";
-  fidl::VectorPtr<uint8_t> result(value.size());
-  memcpy(&result->at(0), &value[0], value.size());
+  std::vector<uint8_t> result(value.size());
+  memcpy(&result.at(0), &value[0], value.size());
   return result;
 }
 
@@ -89,9 +89,9 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
     launch_info.directory_request = child_services.NewRequest();
-    launch_info.arguments.push_back("--disable_reporting");
+    launch_info.arguments.emplace({"--disable_reporting"});
     for (auto& additional_arg : additional_args) {
-      launch_info.arguments.push_back(additional_arg);
+      launch_info.arguments->push_back(additional_arg);
     }
     launcher_->CreateComponent(std::move(launch_info), ledger_controller_.NewRequest());
 
@@ -142,7 +142,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   ledger_->GetRootPage(page.NewRequest());
   page->Put(TestArray(), TestArray());
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
   fuchsia::ledger::PageSnapshot_Get_Result result;
   EXPECT_EQ(snapshot->Get(TestArray(), &result), ZX_OK);
   EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
@@ -353,7 +353,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   ledger_->GetPage(nullptr, page.NewRequest());
   page->Put(TestArray(), TestArray());
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
   fuchsia::mem::BufferPtr value;
   fuchsia::ledger::PageSnapshot_Get_Result result;
   EXPECT_EQ(snapshot->Get(TestArray(), &result), ZX_OK);
@@ -395,7 +395,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   // Read the data back.
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   status = ledger::Status::INTERNAL_ERROR;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
   fuchsia::mem::BufferPtr value;
   fuchsia::ledger::PageSnapshot_Get_Result result;
   EXPECT_EQ(snapshot->Get(TestArray(), &result), ZX_OK);

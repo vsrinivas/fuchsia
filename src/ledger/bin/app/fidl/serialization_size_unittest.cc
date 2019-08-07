@@ -187,7 +187,7 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   auto client_callback = [](std::vector<InlinedEntry> /*entries*/,
                             std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetEntriesInline(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+  snapshot_proxy->GetEntriesInline({}, nullptr,
                                    std::move(client_callback));
   RunLoopUntilIdle();
 
@@ -245,7 +245,7 @@ TEST_F(SerializationSizeTest, GetEntries) {
   auto client_callback = [](std::vector<Entry> /*entries*/, std::unique_ptr<Token> /*next_token*/) {
   };
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr, std::move(client_callback));
+  snapshot_proxy->GetEntries({}, nullptr, std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();

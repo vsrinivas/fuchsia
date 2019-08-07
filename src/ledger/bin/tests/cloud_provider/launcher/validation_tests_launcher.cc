@@ -63,9 +63,7 @@ void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
   service_list.host_directory =
       service_directory_provider_.service_directory()->CloneChannel().TakeChannel();
   launch_info.additional_services = fidl::MakeOptional(std::move(service_list));
-  for (const auto& argument : arguments) {
-    launch_info.arguments.push_back(argument);
-  }
+  launch_info.arguments = arguments;
   fuchsia::sys::LauncherPtr launcher;
   component_context_->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), validation_tests_controller_.NewRequest());

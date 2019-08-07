@@ -30,7 +30,7 @@ class PageMutationTest : public IntegrationTest {
 
   std::vector<Entry> GetEntries() {
     PageSnapshotPtr snapshot;
-    page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    page_->GetSnapshot(snapshot.NewRequest(), std::vector<uint8_t>(), nullptr);
     return SnapshotGetEntries(this, &snapshot);
   }
 

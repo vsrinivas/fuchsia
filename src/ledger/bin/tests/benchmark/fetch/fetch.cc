@@ -226,7 +226,7 @@ void FetchBenchmark::WaitForReaderDownload() {
     if (download == SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       PageSnapshotPtr snapshot;
-      reader_page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+      reader_page_->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
       FetchValues(std::move(snapshot), 0);
       return;
     }

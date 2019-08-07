@@ -207,7 +207,7 @@ TEST_F(ActivePageManagerTest, OnEmptyCallbackWithWatcher) {
   PageWatcherPtr watcher;
   fidl::InterfaceRequest<PageWatcher> watcher_request = watcher.NewRequest();
   PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), std::move(watcher));
+  page1->GetSnapshot(snapshot.NewRequest(), {}, std::move(watcher));
 
   page1.Unbind();
   page2.Unbind();

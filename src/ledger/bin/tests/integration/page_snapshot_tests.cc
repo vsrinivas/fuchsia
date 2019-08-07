@@ -36,7 +36,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
 
   // Returns a snapshot of |page|, checking success.
   PageSnapshotPtr PageGetSnapshot(
-      PagePtr* page, fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0)) {
+      PagePtr* page, std::vector<uint8_t> prefix = {}) {
     PageSnapshotPtr snapshot;
     (*page)->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr);
     return snapshot;
@@ -45,7 +45,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
   // Returns all keys from |snapshot|, starting at |start|. If |num_queries| is
   // not null, stores the number of calls to GetKeys.
   std::vector<std::vector<uint8_t>> SnapshotGetKeys(
-      PageSnapshotPtr* snapshot, std::vector<uint8_t> start = std::vector<uint8_t>(),
+      PageSnapshotPtr* snapshot, std::vector<uint8_t> start = {},
       int* num_queries = nullptr) {
     std::vector<std::vector<uint8_t>> result;
     std::unique_ptr<Token> token;
@@ -207,7 +207,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   }
 
   // Get keys matching the prefix "0".
-  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
+  snapshot = PageGetSnapshot(&page, {0});
   result = SnapshotGetKeys(&snapshot);
   EXPECT_EQ(result.size(), N);
   for (size_t i = 0; i < N; ++i) {
@@ -215,7 +215,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   }
 
   // Get keys matching the prefix "00".
-  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 0}));
+  snapshot = PageGetSnapshot(&page, {0, 0});
   result = SnapshotGetKeys(&snapshot);
   ASSERT_EQ(result.size(), 2u);
   for (size_t i = 0; i < 2u; ++i) {
@@ -223,19 +223,19 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   }
 
   // Get keys matching the prefix "010".
-  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
+  snapshot = PageGetSnapshot(&page, {0, 1, 0});
   result = SnapshotGetKeys(&snapshot);
   ASSERT_EQ(result.size(), 1u);
   EXPECT_EQ(result.at(0), keys[2]);
 
   // Get keys matching the prefix "5".
-  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{5}));
+  snapshot = PageGetSnapshot(&page, {5});
   result = SnapshotGetKeys(&snapshot);
   EXPECT_EQ(result.size(), 0u);
 
   // Get keys matching the prefix "0" and starting with the key "010".
-  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
-  result = SnapshotGetKeys(&snapshot, std::vector<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
+  snapshot = PageGetSnapshot(&page, {0});
+  result = SnapshotGetKeys(&snapshot, {0, 1, 0});
   EXPECT_EQ(result.size(), 2u);
 }
 
@@ -248,7 +248,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
   std::vector<std::vector<uint8_t>> result =
-      SnapshotGetKeys(&snapshot, std::vector<uint8_t>(), &num_queries);
+      SnapshotGetKeys(&snapshot, {}, &num_queries);
   EXPECT_EQ(result.size(), 0u);
   EXPECT_EQ(num_queries, 1);
 
@@ -271,7 +271,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all keys.
-  result = SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
+  result = SnapshotGetKeys(&snapshot, {}, &num_queries);
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(result.size(), N);
   for (size_t i = 0; i < N; ++i) {
@@ -317,7 +317,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   }
 
   // Get entries matching the prefix "0".
-  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
+  snapshot = PageGetSnapshot(&page, {0});
   entries = SnapshotGetEntries(this, &snapshot);
   EXPECT_EQ(entries.size(), N);
   for (size_t i = 0; i < N; ++i) {
@@ -326,7 +326,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   }
 
   // Get entries matching the prefix "00".
-  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 0}));
+  snapshot = PageGetSnapshot(&page, {0, 0});
   entries = SnapshotGetEntries(this, &snapshot);
   ASSERT_EQ(entries.size(), 2u);
   for (size_t i = 0; i < 2; ++i) {
@@ -335,14 +335,14 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   }
 
   // Get keys matching the prefix "010".
-  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
+  snapshot = PageGetSnapshot(&page, {0, 1, 0});
   entries = SnapshotGetEntries(this, &snapshot);
   ASSERT_EQ(entries.size(), 1u);
   EXPECT_EQ(entries.at(0).key, keys[2]);
   EXPECT_EQ(ToArray(entries.at(0).value), values[2]);
 
   // Get keys matching the prefix "5".
-  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{5}));
+  snapshot = PageGetSnapshot(&page, {5});
 
   entries = SnapshotGetEntries(this, &snapshot);
   EXPECT_EQ(entries.size(), 0u);
@@ -357,7 +357,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
   auto entries =
-      SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
+      SnapshotGetEntries(this, &snapshot, {}, &num_queries);
   EXPECT_EQ(entries.size(), 0u);
   EXPECT_EQ(num_queries, 1);
 
@@ -383,7 +383,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
+  entries = SnapshotGetEntries(this, &snapshot, {}, &num_queries);
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(entries.size(), N);
   for (size_t i = 0; i < N; ++i) {
@@ -401,7 +401,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
   auto entries =
-      SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
+      SnapshotGetEntries(this, &snapshot, {}, &num_queries);
   EXPECT_EQ(entries.size(), 0u);
   EXPECT_EQ(num_queries, 1);
 
@@ -423,7 +423,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
+  entries = SnapshotGetEntries(this, &snapshot, {}, &num_queries);
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(entries.size(), N);
   for (size_t i = 0; i < N; ++i) {

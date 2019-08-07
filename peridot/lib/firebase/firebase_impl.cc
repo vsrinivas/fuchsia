@@ -52,7 +52,7 @@ fit::function<http::URLRequest()> MakeRequest(const std::string& url, const std:
       http::HttpHeader accept_header;
       accept_header.name = "Accept";
       accept_header.value = "text/event-stream";
-      request.headers.push_back(std::move(accept_header));
+      request.headers.emplace({std::move(accept_header)});
     }
     return request;
   };
@@ -188,8 +188,8 @@ void FirebaseImpl::OnResponse(fit::function<void(Status status, std::string resp
   }
 
   if (response.status_code != 200 && response.status_code != 204) {
-    const std::string& url = response.url;
-    const std::string& status_line = response.status_line;
+    const std::string& url = response.url.value_or("");
+    const std::string& status_line = response.status_line.value_or("");
     FXL_DCHECK(response.body->is_stream());
     auto& drainer = drainers_.emplace();
     drainer.Start(std::move(response.body->stream()),
@@ -218,8 +218,8 @@ void FirebaseImpl::OnStream(WatchClient* watch_client, http::URLResponse respons
   FXL_DCHECK(response.body->is_stream());
 
   if (response.status_code != 200 && response.status_code != 204) {
-    const std::string& url = response.url;
-    const std::string& status_line = response.status_line;
+    const std::string& url = response.url.value_or("");
+    const std::string& status_line = response.status_line.value_or("");
     watch_data_[watch_client]->drainer = std::make_unique<socket::SocketDrainerClient>();
     watch_data_[watch_client]->drainer->Start(
         std::move(response.body->stream()),

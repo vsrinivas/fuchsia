@@ -37,9 +37,9 @@ std::string ToString(const fuchsia::mem::Buffer& vmo) {
   return ret;
 }
 
-fidl::VectorPtr<uint8_t> ToArray(const std::string& val) {
-  auto ret = fidl::VectorPtr<uint8_t>::New(val.size());
-  memcpy(ret->data(), val.data(), val.size());
+std::vector<uint8_t> ToArray(const std::string& val) {
+  std::vector<uint8_t> ret(val.size());
+  memcpy(ret.data(), val.data(), val.size());
   return ret;
 }
 
@@ -62,7 +62,7 @@ void GetEntries(
     fit::function<void(std::vector<fuchsia::ledger::Entry>)> callback) {
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
-      fidl::VectorPtr<uint8_t>::New(0), std::move(token),
+      std::vector<uint8_t>(), std::move(token),
       [snapshot = std::move(snapshot), entries = std::move(entries),
        callback = std::move(callback)](auto new_entries,
                                        auto next_token) mutable {
@@ -102,7 +102,7 @@ TodoApp::TodoApp(async::Loop* loop)
   ledger_->GetRootPage(page_.NewRequest());
 
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page_->GetSnapshot(snapshot.NewRequest(), std::vector<uint8_t>(),
                      page_watcher_binding_.NewBinding());
   List(std::move(snapshot));
 

@@ -93,7 +93,7 @@ fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseUserId(
   auto cancellable = callback::CancellableImpl::Create([] {});
   GetToken(max_retries_,
            [callback = cancellable->WrapCallback(std::move(callback))](auto status, auto token) {
-             callback(status, token ? token->local_id : "");
+             callback(status, token ? token->local_id.value_or("") : "");
            });
   return cancellable;
 }

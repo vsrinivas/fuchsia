@@ -57,7 +57,7 @@ Status GetLedger(sys::ComponentContext* context,
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
   launch_info.directory_request = child_services.NewRequest();
-  launch_info.arguments.push_back("--disable_reporting");
+  launch_info.arguments.emplace({"--disable_reporting"});
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), std::move(controller_request));

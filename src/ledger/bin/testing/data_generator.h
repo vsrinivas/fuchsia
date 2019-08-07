@@ -30,7 +30,7 @@ class DataGenerator {
   PageId MakePageId();
 
   // Builds a random value of the given length.
-  fidl::VectorPtr<uint8_t> MakeValue(size_t size);
+  std::vector<uint8_t> MakeValue(size_t size);
 
   // Builds a vector of length |key_count| containing keys of size |key_size|,
   // |unique_key_count| of which are unique.

@@ -41,9 +41,9 @@ PageId DataGenerator::MakePageId() {
   return value;
 }
 
-fidl::VectorPtr<uint8_t> DataGenerator::MakeValue(size_t size) {
-  auto data = fidl::VectorPtr<uint8_t>::New(size);
-  std::generate(data->begin(), data->end(), std::ref(generator_));
+std::vector<uint8_t> DataGenerator::MakeValue(size_t size) {
+  std::vector<uint8_t> data(size);
+  std::generate(data.begin(), data.end(), std::ref(generator_));
   return data;
 }
 

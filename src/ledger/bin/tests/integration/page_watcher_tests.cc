@@ -48,7 +48,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSimple) {
   TestPageWatcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page->GetSnapshot(snapshot.NewRequest(), {},
                     std::move(watcher_ptr));
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
 
@@ -71,7 +71,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherAggregatedNotifications) {
   // Call Put and don't let the OnChange callback be called, yet.
   watcher.DelayCallback(true);
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page->GetSnapshot(snapshot.NewRequest(), {},
                     std::move(watcher_ptr));
   page->Put(convert::ToArray("key"), convert::ToArray("value1"));
 
@@ -113,7 +113,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
       std::make_unique<TestPageWatcher>(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page->GetSnapshot(snapshot.NewRequest(), {},
                     std::move(watcher_ptr));
   // Make a change on the page and verify that it was received.
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
@@ -138,7 +138,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
   {
     PagePtr page = instance->GetTestPage();
     PageSnapshotPtr snapshot;
-    page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+    page->GetSnapshot(snapshot.NewRequest(), {},
                       std::move(watcher_ptr));
 
     // Queue many put operations on the page.
@@ -162,7 +162,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDelete) {
   TestPageWatcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page->GetSnapshot(snapshot.NewRequest(), {},
                     std::move(watcher_ptr));
 
   page->Delete(convert::ToArray("foo"));
@@ -198,7 +198,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   TestPageWatcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page->GetSnapshot(snapshot.NewRequest(), {},
                     std::move(watcher_ptr));
   page->StartTransaction();
   for (size_t i = 0; i < entry_count; ++i) {
@@ -245,7 +245,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   TestPageWatcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page->GetSnapshot(snapshot.NewRequest(), {},
                     std::move(watcher_ptr));
   page->StartTransaction();
   for (size_t i = 0; i < entry_count; ++i) {
@@ -292,7 +292,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSnapshot) {
   TestPageWatcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page->GetSnapshot(snapshot.NewRequest(), {},
                     std::move(watcher_ptr));
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
 
@@ -314,7 +314,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherTransaction) {
   TestPageWatcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page->GetSnapshot(snapshot.NewRequest(), {},
                     std::move(watcher_ptr));
   page->StartTransaction();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
@@ -347,14 +347,14 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   auto watcher_waiter1 = NewWaiter();
   TestPageWatcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter1->GetCallback());
   PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot1.NewRequest(), {},
                      std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   auto watcher_waiter2 = NewWaiter();
   TestPageWatcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter2->GetCallback());
   PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page2->GetSnapshot(snapshot2.NewRequest(), {},
                      std::move(watcher2_ptr));
   page1->StartTransaction();
   page1->Put(convert::ToArray("name"), convert::ToArray("Alice"));
@@ -408,7 +408,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
   TestPageWatcher watcher(watcher_ptr.NewRequest());
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page->GetSnapshot(snapshot.NewRequest(), {},
                     std::move(watcher_ptr));
   page->StartTransaction();
   page->Commit();
@@ -431,14 +431,14 @@ TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   auto watcher1_waiter = NewWaiter();
   TestPageWatcher watcher1(watcher1_ptr.NewRequest(), watcher1_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot1.NewRequest(), {},
                      std::move(watcher1_ptr));
 
   auto watcher2_waiter = NewWaiter();
   PageWatcherPtr watcher2_ptr;
   TestPageWatcher watcher2(watcher2_ptr.NewRequest(), watcher2_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page2->GetSnapshot(snapshot2.NewRequest(), {},
                      std::move(watcher2_ptr));
 
   page1->Put(convert::ToArray("name"), convert::ToArray("Alice"));
@@ -498,7 +498,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   WaitingWatcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page->GetSnapshot(snapshot.NewRequest(), {},
                     std::move(watcher_ptr));
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
 
@@ -595,7 +595,7 @@ TEST_P(PageWatcherIntegrationTest, NoChangeTransactionForwardState) {
   auto watcher_waiter = NewWaiter();
   TestPageWatcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot.NewRequest(), {},
                      std::move(watcher_ptr));
   waiter = NewWaiter();
   page1->Sync(waiter->GetCallback());
@@ -635,7 +635,7 @@ TEST_P(PageWatcherIntegrationTest, RollbackTransactionForwardState) {
   auto watcher_waiter = NewWaiter();
   TestPageWatcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page1->GetSnapshot(snapshot.NewRequest(), {},
                      std::move(watcher_ptr));
   waiter = NewWaiter();
   page1->Sync(waiter->GetCallback());

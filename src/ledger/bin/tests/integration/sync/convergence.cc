@@ -25,9 +25,9 @@
 namespace ledger {
 namespace {
 
-fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
-  fidl::VectorPtr<uint8_t> array = fidl::VectorPtr<uint8_t>::New(sizeof(double));
-  std::memcpy(array->data(), &dbl, sizeof(double));
+std::vector<uint8_t> DoubleToArray(double dbl) {
+  std::vector<uint8_t> array(sizeof(double));
+  std::memcpy(array.data(), &dbl, sizeof(double));
   return array;
 }
 
@@ -238,7 +238,7 @@ class ConvergenceTest : public BaseIntegrationTest,
     fidl::InterfaceRequest<PageSnapshot> page_snapshot_request = (**page_snapshot).NewRequest();
     std::unique_ptr<PageWatcherImpl> watcher =
         std::make_unique<PageWatcherImpl>(page_watcher.NewRequest(), std::move(page_snapshot));
-    (*page)->GetSnapshot(std::move(page_snapshot_request), fidl::VectorPtr<uint8_t>::New(0),
+    (*page)->GetSnapshot(std::move(page_snapshot_request), {},
                          std::move(page_watcher));
     return watcher;
   }

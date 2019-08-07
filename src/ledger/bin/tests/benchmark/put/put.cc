@@ -231,7 +231,7 @@ void PutBenchmark::InitializeKeys(fit::function<void(std::vector<std::vector<uin
 
 void PutBenchmark::BindWatcher(std::vector<std::vector<uint8_t>> keys) {
   PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page_->GetSnapshot(snapshot.NewRequest(), {},
                      page_watcher_binding_.NewBinding());
   page_->Sync([this, keys = std::move(keys)]() mutable { RunSingle(0, std::move(keys)); });
 }
@@ -246,7 +246,7 @@ void PutBenchmark::RunSingle(int i, std::vector<std::vector<uint8_t>> keys) {
     return;
   }
 
-  fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
+  std::vector<uint8_t> value = generator_.MakeValue(value_size_);
   size_t key_number = generator_.GetKeyId(keys[i]);
   if (transaction_size_ == 0) {
     TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);

@@ -58,7 +58,7 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
   PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page2->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
 
   waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result;

@@ -112,7 +112,7 @@ void CloudProviderFactory::Init() {
   component::Services child_services;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kAppUrl;
-  launch_info.arguments.push_back(kNoCobaltReporting.ToString());
+  launch_info.arguments.emplace({kNoCobaltReporting.ToString()});
   launch_info.directory_request = child_services.NewRequest();
   fuchsia::sys::LauncherPtr launcher;
   component_context_->svc()->Connect(launcher.NewRequest());

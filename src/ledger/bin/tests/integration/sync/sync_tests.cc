@@ -66,7 +66,7 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
   PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page2->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
 
   loop_waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result;
@@ -117,7 +117,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   }));
 
   PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page2->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
 
   loop_waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result;
@@ -153,13 +153,13 @@ TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
   PageSnapshotPtr snapshot;
   PageWatcherPtr watcher_ptr;
   TestPageWatcher page2_watcher(watcher_ptr.NewRequest(), []() {});
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page2->GetSnapshot(snapshot.NewRequest(), {},
                      std::move(watcher_ptr));
 
   DataGenerator generator = DataGenerator(GetRandom());
 
   std::vector<uint8_t> key = convert::ToArray("Hello");
-  std::vector<uint8_t> big_value = generator.MakeValue(2 * 65536 + 1).take();
+  std::vector<uint8_t> big_value = generator.MakeValue(2 * 65536 + 1);
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromVector(big_value, &vmo));
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result create_result;
@@ -233,7 +233,7 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
   PageSnapshotPtr snapshot;
   PageWatcherPtr watcher_ptr;
   TestPageWatcher watcher(watcher_ptr.NewRequest(), loop_waiter->GetCallback());
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+  page2->GetSnapshot(snapshot.NewRequest(), {},
                      std::move(watcher_ptr));
   auto sync_waiter = NewWaiter();
   page2->Sync(sync_waiter->GetCallback());

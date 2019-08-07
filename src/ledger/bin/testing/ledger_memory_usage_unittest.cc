@@ -24,10 +24,9 @@ int64_t LaunchTestBenchmark(async::Loop* loop) {
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
-  launch_info.arguments.push_back("record");
-  launch_info.arguments.push_back(
+  launch_info.arguments.emplace({"record",
       "--spec-file="
-      "/pkgfs/packages/ledger_tests/0/data/memory_usage_test_benchmark.tspec");
+      "/pkgfs/packages/ledger_tests/0/data/memory_usage_test_benchmark.tspec"});
 
   fuchsia::sys::LauncherPtr launcher;
   component_context->svc()->Connect(launcher.NewRequest());
