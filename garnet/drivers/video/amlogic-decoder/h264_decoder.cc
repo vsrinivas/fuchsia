@@ -371,9 +371,11 @@ void H264Decoder::SetErrorHandler(fit::closure error_handler) {
   error_handler_ = std::move(error_handler);
 }
 
-void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
+void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames,
+                                    uint32_t coded_width, uint32_t coded_height,
                                     uint32_t stride) {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForNewFrames);
+  ZX_DEBUG_ASSERT(coded_width == stride);
   uint32_t frame_count = frames.size();
   for (uint32_t i = 0; i < frame_count; ++i) {
     auto frame = std::make_shared<VideoFrame>();
@@ -398,10 +400,12 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t wid
 
     BarrierAfterFlush();
 
-    frame->uv_plane_offset = width * height;
-    frame->stride = width;
-    frame->width = width;
-    frame->height = height;
+    frame->hw_width = coded_width;
+    frame->hw_height = coded_height;
+    frame->coded_width = coded_width;
+    frame->coded_height = coded_height;
+    frame->stride = stride;
+    frame->uv_plane_offset = stride * coded_height;
     frame->display_width = display_width_;
     frame->display_height = display_height_;
     frame->index = i;
@@ -414,9 +418,11 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t wid
 
     // The ConfigureCanvas() calls validate that the VMO is physically
     // contiguous, regardless of how the VMO was created.
-    auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride, frame->height, 0, 0);
-    auto uv_canvas = owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset, frame->stride,
-                                             frame->height / 2, 0, 0);
+    auto y_canvas = owner_->ConfigureCanvas(&frame->buffer, 0, frame->stride,
+                                            frame->coded_height, 0, 0);
+    auto uv_canvas =
+        owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset,
+                                frame->stride, frame->coded_height / 2, 0, 0);
     if (!y_canvas || !uv_canvas) {
       OnFatalError();
       return;
@@ -431,13 +437,19 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t wid
   state_ = DecoderState::kRunning;
 }
 
-zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width, uint32_t height,
-                                          uint32_t display_width, uint32_t display_height,
-                                          bool has_sar, uint32_t sar_width, uint32_t sar_height) {
+zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count,
+                                          uint32_t coded_width,
+                                          uint32_t coded_height,
+                                          uint32_t display_width,
+                                          uint32_t display_height,
+                                          bool has_sar,
+                                          uint32_t sar_width,
+                                          uint32_t sar_height) {
   video_frames_.clear();
   returned_frames_.clear();
 
-  uint64_t frame_vmo_bytes = width * height * 3 / 2;
+  uint32_t stride = coded_width;
+  uint64_t frame_vmo_bytes = stride * coded_height * 3 / 2;
   display_width_ = display_width;
   display_height_ = display_height;
 
@@ -454,9 +466,9 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width, 
       DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
       return dup_result;
     }
-    zx_status_t initialize_result =
-        initialize_frames_handler_(std::move(duplicated_bti), frame_count, width, height, width,
-                                   display_width, display_height, has_sar, sar_width, sar_height);
+    zx_status_t initialize_result = initialize_frames_handler_(
+        std::move(duplicated_bti), frame_count, coded_width, coded_height,
+        stride, display_width, display_height, has_sar, sar_width, sar_height);
     if (initialize_result != ZX_OK) {
       if (initialize_result != ZX_ERR_STOP) {
         DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
@@ -491,7 +503,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width, 
       });
     }
     next_non_codec_buffer_lifetime_ordinal_++;
-    InitializedFrames(std::move(frames), width, height, width);
+    InitializedFrames(std::move(frames), coded_width, coded_height, stride);
   }
 
   return ZX_OK;
@@ -590,8 +602,8 @@ zx_status_t H264Decoder::InitializeStream() {
   uint32_t display_height = mb_height * 16 - crop_info.bottom();
 
   // Canvas width must be a multiple of 32 bytes.
-  uint32_t frame_width = fbl::round_up(mb_width * 16, 32u);
-  uint32_t frame_height = mb_height * 16;
+  uint32_t coded_width = fbl::round_up(mb_width * 16, 32u);
+  uint32_t coded_height = mb_height * 16;
 
   // Sample aspect ratio - normalize as sar_width : sar_height.
   //
@@ -641,8 +653,9 @@ zx_status_t H264Decoder::InitializeStream() {
   // decode to proceed without tending to leave the decoder idle for long if the
   // client immediately releases each frame (just barely enough to decode as
   // long as the client never camps on even one frame).
-  status = InitializeFrames(kActualDPBSize, frame_width, frame_height, display_width,
-                            display_height, has_sar, sar_width, sar_height);
+  status =
+      InitializeFrames(kActualDPBSize, coded_width, coded_height, display_width,
+                       display_height, has_sar, sar_width, sar_height);
   if (status != ZX_OK) {
     if (status != ZX_ERR_STOP) {
       DECODE_ERROR("InitializeFrames() failed: status: %d\n", status);

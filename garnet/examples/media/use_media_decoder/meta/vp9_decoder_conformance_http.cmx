@@ -1,0 +1,19 @@
+{
+    "program": {
+        "binary": "bin/vp9_decoder_conformance_http"
+    },
+    "sandbox": {
+        "dev": [
+            "class/media-codec",
+            "class/sysmem"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}

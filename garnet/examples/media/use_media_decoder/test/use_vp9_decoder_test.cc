@@ -27,12 +27,11 @@ namespace {
 constexpr char kInputFilePath[] = "/pkg/data/bear-vp9.ivf";
 constexpr int kInputFileFrameCount = 82;
 
-const std::map<uint32_t, const char*> GoldenSha256s = {
-    {make_fourcc('N', 'V', '1', '2'),
-     "c63aeea743c1e20a7a62120a2343083370940ce4d6bca30068a686a6b7146410"}};
+const char* kGoldenSha256 = "8317a8c078a0c27b7a524a25bf9964ee653063237698411361b415a449b23014";
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_vp9_decoder,
-                                GoldenSha256s);
+  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount,
+                                use_vp9_decoder, kGoldenSha256);
 }

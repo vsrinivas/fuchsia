@@ -71,8 +71,10 @@ constexpr uint32_t kEndOfStreamHeight = 52;
 // acceptable when running higher bit-rates.
 //
 // TODO(MTWN-249): Set this to ~8k or so.  For now, we boost the
-// per-packet buffer size to avoid sysmem picking the min buffer size.
-constexpr uint32_t kInputPerPacketBufferBytesMin = 512 * 1024;
+// per-packet buffer size to avoid sysmem picking the min buffer size.  The VP9
+// conformance streams have AUs that are > 512KiB, so boosting this to 4MiB
+// until the decoder handles split AUs on input.
+constexpr uint32_t kInputPerPacketBufferBytesMin = 4 * 1024 * 1024;
 // This is an arbitrary cap for now.
 constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
 
@@ -188,7 +190,7 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
   } else {
     ZX_DEBUG_ASSERT(port == kOutputPort);
     // NV12, based on min stride.
-    per_packet_buffer_bytes_min = stride_ * height_ * 3 / 2;
+    per_packet_buffer_bytes_min = stride_ * coded_height_ * 3 / 2;
     // At least for now, don't cap the per-packet buffer size for output.  The
     // HW only cares about the portion we set up for output anyway, and the
     // client has no way to force output to occur into portions of the output
@@ -218,31 +220,47 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
     // output frames at various dimensions as coded in the stream.  Aside from
     // the current stream being somewhere in these bounds, these have nothing to
     // do with the current stream in particular.
-    image_constraints.min_coded_width = 16;
-    image_constraints.max_coded_width = 3840;
-    image_constraints.min_coded_height = 16;
-    // This intentionally isn't the height of a 4k frame.  See
-    // max_coded_width_times_coded_height.  We intentionally constrain the max
-    // dimension in width or height to the width of a 4k frame.  While the HW
-    // might be able to go bigger than that as long as the other dimension is
+    image_constraints.min_coded_width = 2;
+    image_constraints.max_coded_width = 4096;
+    image_constraints.min_coded_height = 2;
+    // This intentionally isn't the _height_ of a 4k frame, it's intentionally
+    // the _width_ of a 4k frame assigned to max_coded_height.
+    //
+    // See max_coded_width_times_coded_height.  We intentionally constrain the
+    // max dimension in width or height to the width of a 4k frame.  While the
+    // HW might be able to go bigger than that as long as the other dimension is
     // smaller to compensate, we don't really need to enable any larger than
     // 4k's width in either dimension, so we don't.
-    image_constraints.max_coded_height = 3840;
-    image_constraints.min_bytes_per_row = 16;
+    image_constraints.max_coded_height = 4096;
+    image_constraints.min_bytes_per_row = 2;
     // no hard-coded max stride, at least for now
     image_constraints.max_bytes_per_row = 0xFFFFFFFF;
-    image_constraints.max_coded_width_times_coded_height = 3840 * 2160;
+    image_constraints.max_coded_width_times_coded_height = 4096 * 2176;
     image_constraints.layers = 1;
-    image_constraints.coded_width_divisor = 16;
-    image_constraints.coded_height_divisor = 16;
-    image_constraints.bytes_per_row_divisor = 16;
+    // VP9 decoder writes NV12 frames separately from reference frames, so the
+    // coded_width and coded_height aren't constrained to be block aligned.
+    //
+    // The vp9_decoder code will round up the coded_width to use more of the
+    // also-rounded-up stride, so that coded_width can be even even if the
+    // HW reported an odd width.
+    image_constraints.coded_width_divisor = 2;
+    // Unclear how we'd deal with odd coded_height, even if we wanted to.
+    image_constraints.coded_height_divisor = 2;
+    image_constraints.bytes_per_row_divisor = 32;
     // TODO(dustingreen): Since this is a producer that will always produce at
     // offset 0 of a physical page, we don't really care if this field is
     // consistent with any constraints re. what the HW can do.
     image_constraints.start_offset_divisor = 1;
-    // Odd display dimensions are permitted, but these don't imply odd NV12
-    // dimensions - those are constrainted by coded_width_divisor and
-    // coded_height_divisor which are both 16.
+    // Odd display dimensions are permitted, but these don't necessarily imply
+    // odd NV12 coded_width or coded_height dimensions - those are constrainted
+    // above.
+    //
+    // FWIW, the webm VP9 conformance streams seem to think that an odd width
+    // implies that there _is_ a chroma sample for the right-most Y samples,
+    // since that's how we get the MD5 to match for
+    // Profile_0_8bit/frm_resize/crowd_run_1280X768_fr30_bd8_frm_resize_l31.
+    // FWIW, the HW VP9 decoder can decode and match the conformance MD5 for
+    // that stream, despite it's odd width.
     image_constraints.display_width_divisor = 1;
     image_constraints.display_height_divisor = 1;
 
@@ -257,10 +275,15 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
     // larger range of dimensions that includes the required range indicated
     // here (via a-priori knowledge of the potential stream dimensions), an
     // initiator is free to do so.
-    image_constraints.required_min_coded_width = width_;
-    image_constraints.required_max_coded_width = width_;
-    image_constraints.required_min_coded_height = height_;
-    image_constraints.required_max_coded_height = height_;
+    //
+    // AFAICT so far, this decoder has no way to output a stride other than
+    // fbl::round_up(width_, 32u), so we have to care about stride also.
+    image_constraints.required_min_coded_width = coded_width_;
+    image_constraints.required_max_coded_width = coded_width_;
+    image_constraints.required_min_coded_height = coded_height_;
+    image_constraints.required_max_coded_height = coded_height_;
+    image_constraints.required_min_bytes_per_row = stride_;
+    image_constraints.required_max_bytes_per_row = stride_;
   } else {
     ZX_DEBUG_ASSERT(result.image_format_constraints_count == 0);
   }
@@ -283,6 +306,7 @@ void CodecAdapterVp9::CoreCodecSetBufferCollectionInfo(
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
                     fuchsia::sysmem::PixelFormatType::NV12);
+    output_buffer_collection_info_ = fidl::Clone(buffer_collection_info);
   }
 }
 
@@ -301,6 +325,10 @@ void CodecAdapterVp9::CoreCodecStartStream() {
 
   auto decoder = std::make_unique<Vp9Decoder>(video_, Vp9Decoder::InputType::kMultiFrameBased);
   decoder->SetFrameDataProvider(this);
+  decoder->SetIsCurrentOutputBufferCollectionUsable(
+      fit::bind_member(this, &CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable));
+  decoder->SetInitializeFramesHandler(
+      fit::bind_member(this, &CodecAdapterVp9::InitializeFramesHandler));
   decoder->SetFrameReadyNotifier([this](std::shared_ptr<VideoFrame> frame) {
     // The Codec interface requires that emitted frames are cache clean
     // at least for now.  We invalidate without skipping over stride-width
@@ -315,12 +343,15 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     // invalidate call here instead of two with no downsides.
     //
     // TODO(dustingreen): Skip this when the buffer isn't map-able.
-    io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->height);
+    io_buffer_cache_flush_invalidate(&frame->buffer, 0,
+                                     frame->stride * frame->coded_height);
     io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
-                                     frame->stride * frame->height / 2);
+                                     frame->stride * frame->coded_height / 2);
 
+    uint64_t total_size_bytes = frame->stride * frame->coded_height * 3 / 2;
     const CodecBuffer* buffer = frame->codec_buffer;
     ZX_DEBUG_ASSERT(buffer);
+    ZX_DEBUG_ASSERT(total_size_bytes <= buffer->buffer_size());
 
     CodecPacket* packet = GetFreePacket();
     // We know there will be a free packet thanks to SetCheckOutputReady().
@@ -328,7 +359,6 @@ void CodecAdapterVp9::CoreCodecStartStream() {
 
     packet->SetBuffer(buffer);
     packet->SetStartOffset(0);
-    uint64_t total_size_bytes = frame->stride * frame->height * 3 / 2;
     packet->SetValidLengthBytes(total_size_bytes);
 
     if (frame->has_pts) {
@@ -337,10 +367,22 @@ void CodecAdapterVp9::CoreCodecStartStream() {
       packet->ClearTimestampIsh();
     }
 
+    if (frame->coded_width != coded_width_ ||
+        frame->coded_height != coded_height_ ||
+        frame->stride != stride_ ||
+        frame->display_width != display_width_ ||
+        frame->display_height != display_height_) {
+      coded_width_ = frame->coded_width;
+      coded_height_ = frame->coded_height;
+      stride_ = frame->stride;
+      display_width_ = frame->display_width;
+      display_height_ = frame->display_height;
+      events_->onCoreCodecOutputFormatChange();
+    }
+
     events_->onCoreCodecOutputPacket(packet, false, false);
   });
-  decoder->SetInitializeFramesHandler(
-      fit::bind_member(this, &CodecAdapterVp9::InitializeFramesHandler));
+  decoder->SetEosHandler([this]{OnCoreCodecEos();});
   decoder->SetErrorHandler([this] { OnCoreCodecFailStream(); });
   decoder->SetCheckOutputReady([this] {
     std::lock_guard<std::mutex> lock(lock_);
@@ -455,6 +497,9 @@ void CodecAdapterVp9::CoreCodecStopStream() {
 }
 
 void CodecAdapterVp9::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
+  if (port != kOutputPort) {
+    return;
+  }
   all_output_buffers_.push_back(buffer);
 }
 
@@ -532,6 +577,7 @@ void CodecAdapterVp9::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
     all_output_buffers_.clear();
     all_output_packets_.clear();
     free_output_packets_.clear();
+    output_buffer_collection_info_.reset();
   }
 }
 
@@ -563,7 +609,7 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
   // to camp on more frames than this.
   constexpr uint32_t kDefaultPacketCountForClient = kPacketCountForClientForced;
 
-  uint32_t per_packet_buffer_bytes = stride_ * height_ * 3 / 2;
+  uint32_t per_packet_buffer_bytes = stride_ * coded_height_ * 3 / 2;
 
   auto config = std::make_unique<fuchsia::media::StreamOutputConstraints>();
 
@@ -636,10 +682,10 @@ fuchsia::media::StreamOutputFormat CodecAdapterVp9::CoreCodecGetOutputFormat(
   // For the moment, we'll memcpy to NV12 without any extra padding.
   fuchsia::media::VideoUncompressedFormat video_uncompressed;
   video_uncompressed.fourcc = make_fourcc('N', 'V', '1', '2');
-  video_uncompressed.primary_width_pixels = width_;
-  video_uncompressed.primary_height_pixels = height_;
-  video_uncompressed.secondary_width_pixels = width_ / 2;
-  video_uncompressed.secondary_height_pixels = height_ / 2;
+  video_uncompressed.primary_width_pixels = coded_width_;
+  video_uncompressed.primary_height_pixels = coded_height_;
+  video_uncompressed.secondary_width_pixels = coded_width_ / 2;
+  video_uncompressed.secondary_height_pixels = coded_height_ / 2;
   // TODO(dustingreen): remove this field from the VideoUncompressedFormat or
   // specify separately for primary / secondary.
   video_uncompressed.planar = true;
@@ -647,8 +693,8 @@ fuchsia::media::StreamOutputFormat CodecAdapterVp9::CoreCodecGetOutputFormat(
   video_uncompressed.primary_line_stride_bytes = stride_;
   video_uncompressed.secondary_line_stride_bytes = stride_;
   video_uncompressed.primary_start_offset = 0;
-  video_uncompressed.secondary_start_offset = stride_ * height_;
-  video_uncompressed.tertiary_start_offset = stride_ * height_ + 1;
+  video_uncompressed.secondary_start_offset = stride_ * coded_height_;
+  video_uncompressed.tertiary_start_offset = stride_ * coded_height_ + 1;
   video_uncompressed.primary_pixel_stride = 1;
   video_uncompressed.secondary_pixel_stride = 2;
   video_uncompressed.primary_display_width_pixels = display_width_;
@@ -677,8 +723,8 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
   // back to the core codec via return of InitializedFrames
 
   std::vector<CodecFrame> frames;
-  uint32_t width;
-  uint32_t height;
+  uint32_t coded_width;
+  uint32_t coded_height;
   uint32_t stride;
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
@@ -691,13 +737,14 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
           .codec_buffer_ptr = all_output_buffers_[i],
       });
     }
-    width = width_;
-    height = height_;
+    coded_width = coded_width_;
+    coded_height = coded_height_;
     stride = stride_;
   }  // ~lock
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
-    video_->video_decoder()->InitializedFrames(std::move(frames), width, height, stride);
+    video_->video_decoder()->InitializedFrames(std::move(frames), coded_width,
+                                               coded_height, stride);
   }  // ~lock
 }
 
@@ -857,11 +904,10 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     // Always flush through padding before calling UpdateDecodeSize or else the
     // decoder may not see the data because it's stuck in a fifo somewhere and
     // we can get hangs.
-    {
-      if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
-        OnCoreCodecFailStream();
-        return;
-      }
+    if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes,
+                                              sizeof(kFlushThroughZeroes))) {
+      OnCoreCodecFailStream();
+      return;
     }
     queued_frame_sizes_ = std::move(new_queued_frame_sizes);
 
@@ -885,14 +931,84 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
   }
 }
 
-zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t frame_count,
-                                                     uint32_t width, uint32_t height,
-                                                     uint32_t stride, uint32_t display_width,
-                                                     uint32_t display_height, bool has_sar,
-                                                     uint32_t sar_width, uint32_t sar_height) {
+bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
+    uint32_t frame_count, uint32_t coded_width, uint32_t coded_height, uint32_t stride,
+    uint32_t display_width, uint32_t display_height) {
+  // We don't ask codec_impl about this, because as far as codec_impl is
+  // concerned, the output buffer collection might not be used for video
+  // frames.  We could have common code for video decoders but for now we just
+  // check here.
+  //
+  // TODO(dustingreen): Some potential divisor check failures could be avoided
+  // if the corresponding value were rounded up according to the divisor before
+  // we get here.
+  if (!output_buffer_collection_info_) {
+    return false;
+  }
+  fuchsia::sysmem::BufferCollectionInfo_2& info = output_buffer_collection_info_.value();
+  ZX_DEBUG_ASSERT(info.settings.has_image_format_constraints);
+  if (frame_count > info.buffer_count) {
+    return false;
+  }
+  if (stride * coded_height * 3 / 2 > info.settings.buffer_settings.size_bytes) {
+    return false;
+  }
+  if (coded_width < info.settings.image_format_constraints.min_coded_width) {
+    return false;
+  }
+  if (coded_width > info.settings.image_format_constraints.max_coded_width) {
+    return false;
+  }
+  if (coded_width % info.settings.image_format_constraints.coded_width_divisor != 0) {
+    // Let it probably fail later when trying to re-negotiate buffers.
+    return false;
+  }
+  if (coded_height < info.settings.image_format_constraints.min_coded_height) {
+    return false;
+  }
+  if (coded_height > info.settings.image_format_constraints.max_coded_height) {
+    return false;
+  }
+  if (coded_height % info.settings.image_format_constraints.coded_height_divisor != 0) {
+    // Let it probably fail later when trying to re-negotiate buffers.
+    return false;
+  }
+  if (stride < info.settings.image_format_constraints.min_bytes_per_row) {
+    return false;
+  }
+  if (stride > info.settings.image_format_constraints.max_bytes_per_row) {
+    return false;
+  }
+  if (stride % info.settings.image_format_constraints.bytes_per_row_divisor != 0) {
+    // Let it probably fail later when trying to re-negotiate buffers.
+    return false;
+  }
+  if (display_width % info.settings.image_format_constraints.display_width_divisor != 0) {
+    // Let it probably fail later when trying to re-negotiate buffers.
+    return false;
+  }
+  if (display_height % info.settings.image_format_constraints.display_height_divisor != 0) {
+    // Let it probably fail later when trying to re-negotiate buffers.
+    return false;
+  }
+  if (coded_width * coded_height > info.settings.image_format_constraints.max_coded_width_times_coded_height) {
+    // Let it probably fail later when trying to re-negotiate buffers.
+    return false;
+  }
+  return true;
+}
+
+zx_status_t CodecAdapterVp9::InitializeFramesHandler(
+    ::zx::bti bti, uint32_t frame_count, uint32_t coded_width,
+    uint32_t coded_height, uint32_t stride, uint32_t display_width,
+    uint32_t display_height, bool has_sar, uint32_t sar_width,
+    uint32_t sar_height) {
   // First handle the special case of EndOfStream marker showing up at the
-  // output.
-  if (display_width == kEndOfStreamWidth && display_height == kEndOfStreamHeight) {
+  // output.  We want to notice if up to this point we've been decoding into
+  // buffers smaller than this.  By noticing here, we avoid requiring the client
+  // to re-allocate buffers just before EOS.
+  if (display_width == kEndOfStreamWidth &&
+      display_height == kEndOfStreamHeight) {
     bool is_output_end_of_stream = false;
     {  // scope lock
       std::lock_guard<std::mutex> lock(lock_);
@@ -901,9 +1017,7 @@ zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t fra
       }
     }  // ~lock
     if (is_output_end_of_stream) {
-      decoder_->SetPausedAtEndOfStream();
-      video_->TryToRescheduleAssumeVideoDecoderLocked();
-      events_->onCoreCodecOutputEndOfStream(false);
+      OnCoreCodecEos();
       return ZX_ERR_STOP;
     }
   }
@@ -945,8 +1059,8 @@ zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t fra
     //
     // TODO(dustingreen): plumb actual frame counts.
     packet_count_total_ = frame_count;
-    width_ = width;
-    height_ = height;
+    coded_width_ = coded_width;
+    coded_height_ = coded_height;
     stride_ = stride;
     display_width_ = display_width;
     display_height_ = display_height;
@@ -962,6 +1076,16 @@ zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t fra
   events_->onCoreCodecMidStreamOutputConstraintsChange(true);
 
   return ZX_OK;
+}
+
+void CodecAdapterVp9::OnCoreCodecEos() {
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    ZX_DEBUG_ASSERT(is_input_end_of_stream_queued_);
+  }  // ~lock
+  decoder_->SetPausedAtEndOfStream();
+  video_->TryToRescheduleAssumeVideoDecoderLocked();
+  events_->onCoreCodecOutputEndOfStream(false);
 }
 
 void CodecAdapterVp9::OnCoreCodecFailStream() {

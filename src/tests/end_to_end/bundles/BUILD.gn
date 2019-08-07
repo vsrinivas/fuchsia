@@ -39,3 +39,15 @@ group("end_to_end_deps") {
     "//garnet/packages/prod:iquery",
   ]
 }
+
+# These are too large to include for (at least) astro e2e.
+#
+# TODO(IN-1097): Support a package server on bots so these can be moved to end_to_end_deps and
+# end_to_end deps can be added to universe like the tests.
+group("end_to_end_deps_too_big_for_astro_e2e") {
+  testonly = true
+  public_deps = [
+    # Needed for VP9 decode conformance testing.
+    "//garnet/examples/media:vp9_decoder_conformance_http",
+  ]
+}

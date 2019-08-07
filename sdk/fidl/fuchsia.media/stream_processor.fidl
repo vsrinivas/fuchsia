@@ -1313,8 +1313,8 @@ protocol StreamProcessor {
     //
     // These are not permitted until after the first OnOutputConstraints().
     //
-    // Roughly speaking, these messages are sent in response to OnOutputConstraints()
-    // with buffer_constraints_action_required true.
+    // Roughly speaking, these messages are sent in response to
+    // OnOutputConstraints() with buffer_constraints_action_required true.
     //
     // Configuring output buffers consists of calling SetOutputBufferSettings()
     // followed by a number of calls to AddOutputBuffer() equal to the number
@@ -1327,6 +1327,11 @@ protocol StreamProcessor {
     // stream_lifetime_ordinal equal to the client's current
     // stream_lifetime_ordinal (even if there is an active stream), and is
     // _permitted_ any time there is no current stream.
+    //
+    // Closing the current stream occurs on the StreamControl ordering domain,
+    // so after a CloseCurrentStream() or FlushEndOfStreamAndCloseStream(), a
+    // subsequent Sync() completion must be received by the client before the
+    // client knows that there's no longer a current stream.
     //
     // For more on SetOutputBufferSettings() and AddOutputBuffer(), see
     // stream_processor.md.
@@ -1346,7 +1351,18 @@ protocol StreamProcessor {
     // allocated buffers directly by sysmem via their BufferCollection channel
     // (not via the StreamProcessor channel).
     //
-    // See also ClientReadyForOutput().
+    // Configuring output buffers is _required_ after OnOutputConstraints() is
+    // received by the client with buffer_constraints_action_required true and
+    // stream_lifetime_ordinal equal to the client's current
+    // stream_lifetime_ordinal (even if there is an active stream), and is
+    // _permitted_ any time there is no current stream.
+    //
+    // Closing the current stream occurs on the StreamControl ordering domain,
+    // so after a CloseCurrentStream() or FlushEndOfStreamAndCloseStream(), a
+    // subsequent Sync() completion must be received by the client before the
+    // client knows that there's no longer a current stream.
+    //
+    // See also CompleteOutputBufferPartialSettings().
     SetOutputBufferPartialSettings(StreamBufferPartialSettings output_settings);
 
     // After SetOutputBufferPartialSettings(), the server won't send
@@ -1404,8 +1420,8 @@ protocol StreamProcessor {
     //
     // Because the old stream is not done processing yet and the old stream's
     // data is not being discarded, the client must be prepared to continue to
-    // process OnOutputConstraints() messages until the stream_lifetime_ordinal is
-    // done.  The client will know the stream_lifetime_ordinal is done when
+    // process OnOutputConstraints() messages until the stream_lifetime_ordinal
+    // is done. The client will know the stream_lifetime_ordinal is done when
     // OnOutputEndOfStream(), OnStreamFailed(), or the StreamProcessor channel
     // closes.
     //

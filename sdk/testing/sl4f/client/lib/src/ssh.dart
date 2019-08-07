@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:logging/logging.dart';
@@ -42,21 +43,58 @@ class Ssh {
 
   /// Runs the command given by [cmd] on the target using ssh.
   ///
-  /// It can optionally send input via [stdin]. If the exit code is nonzero,
-  /// diagnostic warnings are logged.
-  Future<ProcessResult> run(String cmd, {String stdin}) async {
+  /// It can optionally send input via [stdin], and can optionally incrementally emit output
+  /// via [stdoutConsumer] and [stderrConsumer].
+  ///
+  /// If the exit code is nonzero, diagnostic warnings are logged.
+  Future<ProcessResult> runWithOutput(
+      String cmd, {String stdin, StreamConsumer<String> stdoutConsumer, StreamConsumer<String> stderrConsumer}) async {
     final process = await start(cmd);
+
     if (stdin != null) {
       process.stdin.write(stdin);
-      await process.stdin.flush();
     }
-    await process.stdin.close();
+
+    final localStdoutAll = StringBuffer();
+    final localStderrAll = StringBuffer();
+
+    final localStdoutStream = process.stdout.transform(systemEncoding.decoder).map(
+      (String data) {
+        localStdoutAll.write(data);
+        return data;
+      }
+    );
+    final localStderrStream = process.stderr.transform(systemEncoding.decoder).map(
+      (String data) {
+        localStderrAll.write(data);
+        return data;
+      }
+    );
+
+    final Future<void> stdoutFuture = (stdoutConsumer != null) ? localStdoutStream.pipe(stdoutConsumer) : localStdoutStream.drain();
+    final Future<void> stderrFuture = (stderrConsumer != null) ? localStderrStream.pipe(stderrConsumer) : localStderrStream.drain();
+
+    Future<void> flushAndCloseStdin() async {
+        // These two need to be sequenced in order.
+        await process.stdin.flush();
+        await process.stdin.close();
+    }
+
+    // This waits for stdin, stdout, stderr to all be done.  It's important that
+    // we concurrently wait for stdin and stdout/stderr, to avoid potential
+    // deadlock (especially if all three have lots of data).
+    await Future.wait([
+      flushAndCloseStdin(),
+      stdoutFuture,
+      stderrFuture,
+    ]);
 
     final result = ProcessResult(
-        process.pid,
-        await process.exitCode,
-        await systemEncoding.decodeStream(process.stdout),
-        await systemEncoding.decodeStream(process.stderr));
+      process.pid,
+      await process.exitCode,
+      localStdoutAll.toString(),
+      localStderrAll.toString(),
+    );
 
     if (result.exitCode != 0) {
       _log
@@ -66,6 +104,14 @@ class Ssh {
     }
 
     return result;
+  }
+
+  /// Runs the command given by [cmd] on the target using ssh.
+  ///
+  /// It can optionally send input via [stdin]. If the exit code is nonzero, diagnostic warnings
+  /// are logged.
+  Future<ProcessResult> run(String cmd, {String stdin}) async {
+    return runWithOutput(cmd, stdin: stdin);
   }
 
   @visibleForTesting

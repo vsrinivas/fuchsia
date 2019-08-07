@@ -35,6 +35,11 @@ kernel_cmdline_args += [
 # universe like the tests.
 cache_package_labels += [ "//src/tests/end_to_end/bundles:end_to_end_deps" ]
 
+# TODO(IN-1097): Support a package server on bots so this is no longer needed (see the TODO on
+# end_to_end_deps_too_big_for_astro_e2e).  For now we include this for workstation, to make sure
+# these deps continue to build in the meantime.
+cache_package_labels += [ "//src/tests/end_to_end/bundles:end_to_end_deps_too_big_for_astro_e2e"]
+
 # E2E Product Tests. They don't produce fuchsia packages, but host executables,
 # and must just be included somewhere in the build configuration of the product.
 universe_package_labels += [

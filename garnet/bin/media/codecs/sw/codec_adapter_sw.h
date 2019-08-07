@@ -274,8 +274,12 @@ class CodecAdapterSW : public CodecAdapter {
                                                 {
                                                   std::lock_guard<std::mutex> lock(lock_);
                                                   stream_stopped = true;
+                                                  // Under lock since
+                                                  // WaitForInputProcessingLoopToEnd()
+                                                  // may otherwise return too soon deleting
+                                                  // stream_stopped_condition too soon.
+                                                  stream_stopped_condition.notify_all();
                                                 }
-                                                stream_stopped_condition.notify_all();
                                               });
     ZX_ASSERT_MSG(post_result == ZX_OK,
                   "async::PostTask() failed to post input processing loop - result: %d\n",

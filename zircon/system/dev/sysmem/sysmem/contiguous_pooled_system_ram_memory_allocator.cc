@@ -104,6 +104,8 @@ void ContiguousPooledSystemRamMemoryAllocator::DumpPoolStats() {
         return true;
       });
 
-  DRIVER_ERROR("Contiguous pool unused total: %ld bytes, max free size %ld bytes\n", unused_size,
-               max_free_size);
+  DRIVER_ERROR("Contiguous pool unused total: %ld bytes, max free size %ld bytes "
+               "AllocatedRegionCount(): %zu AvailableRegionCount(): %zu\n",
+               unused_size, max_free_size,
+               region_allocator_.AllocatedRegionCount(), region_allocator_.AvailableRegionCount());
 }
