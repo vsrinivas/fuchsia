@@ -20,33 +20,13 @@ KCOUNTER(dispatcher_profile_create_count, "dispatcher.profile.create")
 KCOUNTER(dispatcher_profile_destroy_count, "dispatcher.profile.destroy")
 
 static zx_status_t parse_cpu_mask(const zx_cpu_set_t& set, cpu_mask_t* result) {
-  // Only support reading up to 1 word in the mask for the moment.
-  static_assert(SMP_MAX_CPUS <= sizeof(set.mask[0]) * CHAR_BIT,
-                "Zircon only supports reading from a single word in the cpu mask.");
+  // The code below only supports reading up to 1 word in the mask.
+  static_assert(SMP_MAX_CPUS <= sizeof(set.mask[0]) * CHAR_BIT);
+  static_assert(SMP_MAX_CPUS <= sizeof(cpu_mask_t) * CHAR_BIT);
   static_assert(SMP_MAX_CPUS <= ZX_CPU_SET_MAX_CPUS);
 
-  // Ensure that the user is not setting more CPUs than are available.
-  uint32_t num_cpus = arch_max_num_cpus();
-  if ((set.mask[0] & ~BIT_MASK(num_cpus)) != 0) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  auto mask = static_cast<cpu_mask_t>(set.mask[0]);
-
-  // Ensure at least one CPU is active in the mask.
-  if ((mask & BIT_MASK(num_cpus)) == 0) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Ensure other words in the mask are 0.
-  constexpr int num_bitmap_words = sizeof(set.mask) / sizeof(set.mask[0]);
-  static_assert(num_bitmap_words * sizeof(set.mask[0]) * CHAR_BIT == ZX_CPU_SET_MAX_CPUS);
-  for (size_t i = 1; i < num_bitmap_words; i++) {
-    if (set.mask[i] != 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-  }
-
-  *result = mask;
+  // We throw away any bits beyond SMP_MAX_CPUs.
+  *result = static_cast<cpu_mask_t>(set.mask[0] & BIT_MASK(SMP_MAX_CPUS));
   return ZX_OK;
 }
 

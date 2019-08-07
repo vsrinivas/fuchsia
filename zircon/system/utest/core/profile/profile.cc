@@ -222,30 +222,6 @@ TEST(ProfileTest, CreateProfileWithNullProfileIsInvalidArgs) {
 #pragma GCC diagnostic pop
 }
 
-TEST(CpuMaskProfile, EmptyMask) {
-  zx_profile_info_t profile_info = MakeCpuMaskProfile(0);
-  zx::profile profile;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*GetRootJob(), 0u, &profile_info, &profile));
-}
-
-TEST(CpuMaskProfile, HighCpuMaskWordSet) {
-  // Set a valid CPU (0) and also a bit beyond the first word (CPU number 448)
-  zx_profile_info_t profile_info = MakeCpuMaskProfile(1);
-  profile_info.cpu_affinity_mask.mask[(ZX_CPU_SET_MAX_CPUS / ZX_CPU_SET_BITS_PER_WORD) - 1] = 1;
-
-  // Ensure we get an error.
-  zx::profile profile;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*GetRootJob(), 0u, &profile_info, &profile));
-}
-
-TEST(CpuMaskProfile, HighCpuSet) {
-  ASSERT_LT(GetCpuCount(), ZX_CPU_SET_BITS_PER_WORD,
-            "Test assumes system running with less than %d cores.", ZX_CPU_SET_BITS_PER_WORD);
-  zx_profile_info_t profile_info = MakeCpuMaskProfile(1u << (GetCpuCount() + 1));
-  zx::profile profile;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*GetRootJob(), 0u, &profile_info, &profile));
-}
-
 zx_status_t RunThreadWithProfile(const zx::profile& profile,
                                  const std::function<zx_status_t()>& body) {
   zx_status_t result;
@@ -258,6 +234,21 @@ zx_status_t RunThreadWithProfile(const zx::profile& profile,
   });
   worker.join();
   return result;
+}
+
+TEST(CpuMaskProfile, EmptyMaskIsValid) {
+  zx::profile profile;
+  zx_profile_info_t profile_info = MakeCpuMaskProfile(0);
+  ASSERT_OK(zx::profile::create(*GetRootJob(), 0u, &profile_info, &profile));
+
+  // Ensure that the thread can still run, despite the affinity mask
+  // having no valid CPUs in it. (The kernel will just fall back to
+  // its own choice of CPUs if this mask can't be respected.)
+  ASSERT_OK(RunThreadWithProfile(profile, []() {
+    EXPECT_EQ(GetAffinityMask(*zx::thread::self()), 0);
+    EXPECT_NE(GetLastScheduledCpu(*zx::thread::self()), ZX_INFO_INVALID_CPU);
+    return ZX_OK;
+  }));
 }
 
 TEST(CpuMaskProfile, ApplyProfile) {

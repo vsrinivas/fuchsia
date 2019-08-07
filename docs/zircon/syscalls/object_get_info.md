@@ -196,7 +196,12 @@ typedef struct zx_info_thread {
     // The value is one of ZX_EXCEPTION_CHANNEL_TYPE_*.
     uint32_t wait_exception_channel_type;
 
-    // CPUs this thread may be scheduled on.
+    // CPUs this thread may be scheduled on, as specified by
+    // a profile object applied to this thread.
+    //
+    // The kernel may not internally store invalid CPUs in the mask, so
+    // this may not exactly match the mask applied to the thread for
+    // CPUs beyond what the system is able to use.
     zx_cpu_set_t cpu_affinity_mask;
 } zx_info_thread_t;
 ```
