@@ -9,5 +9,6 @@
     "rules": [],
     "nat_rules": [],
     "rdr_rules": []
-  }
+  },
+  "filter_enabled_interface_types": []
 }

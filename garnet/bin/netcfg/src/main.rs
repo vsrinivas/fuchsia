@@ -5,6 +5,7 @@
 #![feature(async_await, await_macro)]
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 use std::os::unix::io::AsRawFd;
 use std::path;
@@ -37,12 +38,20 @@ pub struct FilterConfig {
     pub rdr_rules: Vec<String>,
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+enum InterfaceType {
+    UNKNOWN(String),
+    ETHERNET,
+    WLAN,
+}
+
 #[derive(Debug, Deserialize)]
 struct Config {
     pub dns_config: DnsConfig,
     #[serde(deserialize_with = "matchers::InterfaceSpec::parse_as_tuples")]
     pub rules: Vec<matchers::InterfaceSpec>,
     pub filter_config: FilterConfig,
+    pub filter_enabled_interface_types: Vec<String>,
 }
 
 impl Config {
@@ -83,7 +92,7 @@ macro_rules! cas_filter_rules {
                     if retry < FILTER_CAS_RETRY_MAX - 1 =>
                 {
                     await!(fuchsia_async::Timer::new(
-                        FILTER_CAS_RETRY_INTERVAL_MILLIS.millis().after_now()
+                        FILTER_CAS_RETRY_INTERVAL_MILLIS.millis().after_now(),
                     ));
                 }
                 _ => {
@@ -98,12 +107,52 @@ macro_rules! cas_filter_rules {
     };
 }
 
+impl From<String> for InterfaceType {
+    fn from(s: String) -> InterfaceType {
+        match s.as_ref() {
+            "ethernet" => InterfaceType::ETHERNET,
+            "wlan" => InterfaceType::WLAN,
+            _ => InterfaceType::UNKNOWN(s),
+        }
+    }
+}
+
+fn should_enable_filter(
+    filter_enabled_interface_types: &HashSet<InterfaceType>,
+    features: &fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures,
+) -> bool {
+    if features.contains(fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::LOOPBACK) {
+        false
+    } else if features.contains(fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::WLAN) {
+        filter_enabled_interface_types.contains(&InterfaceType::WLAN)
+    } else {
+        filter_enabled_interface_types.contains(&InterfaceType::ETHERNET)
+    }
+}
+
 fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::init_with_tags(&["netcfg"])?;
     fx_log_info!("Started");
 
-    let Config { dns_config: DnsConfig { servers }, rules: default_config_rules, filter_config } =
-        Config::load("/pkg/data/default.json")?;
+    let Config {
+        dns_config: DnsConfig { servers },
+        rules: default_config_rules,
+        filter_config,
+        filter_enabled_interface_types,
+    } = Config::load("/pkg/data/default.json")?;
+
+    let parse_result: HashSet<InterfaceType> =
+        filter_enabled_interface_types.into_iter().map(Into::into).collect();
+    if parse_result.iter().any(|interface_type| match interface_type {
+        &InterfaceType::UNKNOWN(_) => true,
+        _ => false,
+    }) {
+        return Err(failure::format_err!(
+            "failed to parse filter_enabled_interface_types: {:?}",
+            parse_result
+        ));
+    };
+    let filter_enabled_interface_types = parse_result;
 
     let mut persisted_interface_config =
         interface::FileBackedConfig::load(&"/data/net_interfaces.cfg.json")?;
@@ -248,12 +297,35 @@ fn main() -> Result<(), failure::Error> {
                                     fidl_fuchsia_hardware_ethernet::DeviceMarker,
                                 >::new(client),
                             ))
-                            .with_context(|_| {
-                                format!(
-                                    "fidl_netstack::Netstack::add_ethernet_device({})",
-                                    filepath.display()
-                                )
-                            })?;
+                                .with_context(|_| {
+                                    format!(
+                                        "fidl_netstack::Netstack::add_ethernet_device({})",
+                                        filepath.display()
+                                    )
+                                })?;
+
+                            if should_enable_filter(
+                                &filter_enabled_interface_types,
+                                &device_info.features,
+                            ) {
+                                fx_log_info!("enable filter for nic {}", nic_id);
+                                let result = stack
+                                    .enable_packet_filter(nic_id as u64)
+                                    .await
+                                    .context("couldn't call enable_packet_filter")?;
+                                let () = result.map_err(|e| {
+                                    failure::format_err!("failed to enable packet filter: {:?}", e)
+                                })?;
+                            } else {
+                                fx_log_info!("disable filter for nic {}", nic_id);
+                                let result = stack
+                                    .disable_packet_filter(nic_id as u64)
+                                    .await
+                                    .context("couldn't call disable_packet_filter")?;
+                                let () = result.map_err(|e| {
+                                    failure::format_err!("failed to disable packet filter: {:?}", e)
+                                })?;
+                            };
 
                             await!(match derived_interface_config.ip_address_config {
                                 fidl_fuchsia_netstack::IpAddressConfig::Dhcp(_) => {
@@ -264,7 +336,7 @@ fn main() -> Result<(), failure::Error> {
                                 ) => netstack.set_interface_address(
                                     nic_id as u32,
                                     &mut address,
-                                    prefix_len
+                                    prefix_len,
                                 ),
                             })?;
                             let () = netstack.set_interface_status(nic_id as u32, true)?;
@@ -294,7 +366,7 @@ fn main() -> Result<(), failure::Error> {
         .add_fidl_service(move |stream| {
             dns_policy_service::spawn_net_dns_fidl_server(resolver_admin.clone(), stream);
         })
-        .add_fidl_service(move |stream| {
+        .add_fidl_service(|stream| {
             fasync::spawn(
                 observer_service::serve_fidl_requests(stack.clone(), stream, interface_ids.clone())
                     .unwrap_or_else(|e| fx_log_err!("failed to serve_fidl_requests:{}", e)),
@@ -308,4 +380,101 @@ fn main() -> Result<(), failure::Error> {
         fs.collect().map(Ok),
     ))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use matchers::{ConfigOption, InterfaceMatcher, InterfaceSpec};
+
+    impl Config {
+        pub fn load_str(s: &str) -> Result<Self, failure::Error> {
+            let config = serde_json::from_str(s)
+                .with_context(|_| format!("could not deserialize the config data {}", s))?;
+            Ok(config)
+        }
+    }
+
+    #[test]
+    fn test_config() {
+        let config_str = r#"
+{
+  "dns_config": {
+    "servers": ["8.8.8.8"]
+  },
+  "rules": [
+    [ ["all", "all"], ["ip_address", "dhcp"] ]
+  ],
+  "filter_config": {
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  },
+  "filter_enabled_interface_types": ["wlan"]
+}
+"#;
+
+        let Config {
+            dns_config: DnsConfig { servers },
+            rules: default_config_rules,
+            filter_config,
+            filter_enabled_interface_types,
+        } = Config::load_str(config_str).unwrap();
+
+        assert_eq!(vec!["8.8.8.8".parse::<std::net::IpAddr>().unwrap()], servers);
+        assert_eq!(
+            vec![InterfaceSpec {
+                matcher: InterfaceMatcher::All,
+                config: ConfigOption::IpConfig(fidl_fuchsia_netstack_ext::IpAddressConfig::Dhcp),
+            }],
+            default_config_rules
+        );
+        let FilterConfig { rules, nat_rules, rdr_rules } = filter_config;
+        assert_eq!(Vec::<String>::new(), rules);
+        assert_eq!(Vec::<String>::new(), nat_rules);
+        assert_eq!(Vec::<String>::new(), rdr_rules);
+
+        assert_eq!(vec!["wlan"], filter_enabled_interface_types);
+    }
+
+    #[test]
+    fn test_to_interface_type() {
+        assert_eq!(InterfaceType::ETHERNET, "ethernet".to_string().into());
+        assert_eq!(InterfaceType::WLAN, "wlan".to_string().into());
+        assert_eq!(InterfaceType::UNKNOWN("bluetooth".to_string()), "bluetooth".to_string().into());
+        assert_eq!(InterfaceType::UNKNOWN("Ethernet".to_string()), "Ethernet".to_string().into());
+        assert_eq!(InterfaceType::UNKNOWN("Wlan".to_string()), "Wlan".to_string().into());
+    }
+
+    #[test]
+    fn test_should_enable_filter() {
+        let types_empty: HashSet<InterfaceType> = [].iter().cloned().collect();
+        let types_ethernet: HashSet<InterfaceType> =
+            [InterfaceType::ETHERNET].iter().cloned().collect();
+        let types_wlan: HashSet<InterfaceType> = [InterfaceType::WLAN].iter().cloned().collect();
+        let types_ethernet_wlan: HashSet<InterfaceType> =
+            [InterfaceType::ETHERNET, InterfaceType::WLAN].iter().cloned().collect();
+
+        let features_wlan = fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::WLAN;
+        let features_loopback = fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::LOOPBACK;
+        let features_synthetic = fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::SYNTHETIC;
+        let features_empty = fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::empty();
+
+        assert_eq!(should_enable_filter(&types_empty, &features_empty), false);
+        assert_eq!(should_enable_filter(&types_empty, &features_wlan), false);
+        assert_eq!(should_enable_filter(&types_empty, &features_synthetic), false);
+        assert_eq!(should_enable_filter(&types_empty, &features_loopback), false);
+        assert_eq!(should_enable_filter(&types_ethernet, &features_empty), true);
+        assert_eq!(should_enable_filter(&types_ethernet, &features_wlan), false);
+        assert_eq!(should_enable_filter(&types_ethernet, &features_synthetic), true);
+        assert_eq!(should_enable_filter(&types_ethernet, &features_loopback), false);
+        assert_eq!(should_enable_filter(&types_wlan, &features_empty), false);
+        assert_eq!(should_enable_filter(&types_wlan, &features_wlan), true);
+        assert_eq!(should_enable_filter(&types_wlan, &features_synthetic), false);
+        assert_eq!(should_enable_filter(&types_wlan, &features_loopback), false);
+        assert_eq!(should_enable_filter(&types_ethernet_wlan, &features_empty), true);
+        assert_eq!(should_enable_filter(&types_ethernet_wlan, &features_wlan), true);
+        assert_eq!(should_enable_filter(&types_ethernet_wlan, &features_synthetic), true);
+        assert_eq!(should_enable_filter(&types_ethernet_wlan, &features_loopback), false);
+    }
 }
