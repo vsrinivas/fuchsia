@@ -7,7 +7,7 @@ library("task-utils") {
   sdk_headers = [
     "task-utils/get.h",
     "task-utils/walker.h",
-    "task-utils/ps-utils.h",
+    "task-utils/dump-threads.h",
   ]
   sources = [
     "get.c",

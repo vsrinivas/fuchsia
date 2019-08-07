@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TASK_UTILS_PS_UTILS_H_
-#define TASK_UTILS_PS_UTILS_H_
+#ifndef TASK_UTILS_DUMP_THREADS_H_
+#define TASK_UTILS_DUMP_THREADS_H_
 
 #include <zircon/compiler.h>
 #include <zircon/syscalls/object.h>
@@ -17,4 +17,4 @@
  */
 void dump_all_threads(uint64_t pid, zx_handle_t process, uint8_t verbosity_level);
 
-#endif  // TASK_UTILS_PS_UTILS_H_
+#endif  // TASK_UTILS_DUMP_THREADS_H_
