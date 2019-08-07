@@ -6,18 +6,18 @@
 #define SRC_VIRTUALIZATION_PACKAGES_BISCOTTI_GUEST_LINUX_RUNNER_GUEST_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <grpc++/grpc++.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/virtualization/scenic_wayland_dispatcher.h>
-#include <trace/event.h>
 #include <zircon/types.h>
 
 #include <deque>
 #include <memory>
+
+#include <trace/event.h>
 
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/linux_component.h"
@@ -26,6 +26,8 @@
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/container_host.grpc.pb.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/tremplin.grpc.pb.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
+
+#include <grpc++/grpc++.h>
 
 namespace linux_runner {
 

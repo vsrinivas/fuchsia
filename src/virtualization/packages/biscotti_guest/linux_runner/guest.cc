@@ -6,8 +6,6 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include <grpc++/grpc++.h>
-#include <grpc++/server_posix.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -15,7 +13,6 @@
 #include <lib/fidl/cpp/vector.h>
 #include <lib/fzl/fdio.h>
 #include <netinet/in.h>
-#include <src/lib/fxl/logging.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 
@@ -25,6 +22,9 @@
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/ports.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
+
+#include <grpc++/grpc++.h>
+#include <grpc++/server_posix.h>
 
 namespace linux_runner {
 
