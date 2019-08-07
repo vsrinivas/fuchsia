@@ -67,11 +67,15 @@ class PrettyType {
   // execute it with a callback, which is how most nodes want to run.)
   virtual EvalFunction GetGetter(const std::string& getter_name) const;
 
-  // Returns a function which can be evaluated to execute a "->" operator on an object of the given
-  // type. This can be used to implement "operator->" for smart-pointer-like classes without forcing
-  // the user to look into the guts of a smart pointer. Returns an empty function if there is no
-  // member access operator.
-  virtual EvalFunction GetMemberAccess() const { return EvalFunction(); }
+  // Returns a function which can be evaluated to execute a unary "*" dereference operator on an
+  // object of the given type.
+  //
+  // This will also be used for "operator->" which is implemented as a dereference followed by
+  // a ".".
+  //
+  // This is used for smart-pointer-like classes without forcing the user to look into the guts of a
+  // smart pointer. Returns an empty function if there is no member access operator.
+  virtual EvalFunction GetDereferencer() const { return EvalFunction(); }
 
   // Returns a function which can be executed to perform an array access. This allows the pretty
   // printer to implement "operator[]" on a type. This is important for implementing wrappers around
@@ -133,6 +137,24 @@ class PrettyHeapString : public PrettyType {
  private:
   const std::string ptr_expr_;
   const std::string size_expr_;
+};
+
+// For pretty-printing smart pointers.
+//
+// This has an expression that evaluates to a single pointer. This pointer is the result of the
+// operation and the object will be formatted like a bare pointer using that value.
+class PrettyPointer : public PrettyType {
+ public:
+  PrettyPointer(const std::string& expr,
+                std::initializer_list<std::pair<std::string, std::string>> getters = {})
+      : PrettyType(std::move(getters)), expr_(expr) {}
+
+  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
+              fit::deferred_callback cb) override;
+  EvalFunction GetDereferencer() const override;
+
+ private:
+  const std::string expr_;
 };
 
 }  // namespace zxdb

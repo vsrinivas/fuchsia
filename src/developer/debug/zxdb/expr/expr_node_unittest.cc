@@ -46,6 +46,22 @@ class MockGetterPrettyType : public PrettyType {
 const char MockGetterPrettyType::kGetterName[] = "get5";
 const int MockGetterPrettyType::kGetterValue = 5;
 
+// A PrettyType with a dereference function that returns a constant value.
+class MockDerefPrettyType : public PrettyType {
+ public:
+  MockDerefPrettyType(ExprValue val) : PrettyType(), val_(std::move(val)) {}
+
+  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
+              fit::deferred_callback cb) override {}
+  EvalFunction GetDereferencer() const override {
+    return [val = val_](fxl::RefPtr<EvalContext>, ExprValue,
+                        fit::callback<void(const Err&, ExprValue)> cb) { cb(Err(), val); };
+  }
+
+ private:
+  ExprValue val_;
+};
+
 }  // namespace
 
 TEST_F(ExprNodeTest, EvalIdentifier) {
@@ -332,6 +348,55 @@ TEST_F(ExprNodeTest, MemberAccess) {
   EXPECT_EQ(0x55667788, out_value.GetAs<int32_t>());
 }
 
+// Tests dereferencing via "*" and "->" with a type that has a pretty type.
+TEST_F(ExprNodeTest, PrettyDereference) {
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
+
+  // Make a struct to return, it has one 32-bit value.
+  auto int32_type = MakeInt32Type();
+  auto struct_type =
+      MakeCollectionType(DwarfTag::kStructureType, "StructType", {{"a", int32_type}});
+  constexpr uint8_t kAValue = 42;
+  ExprValue struct_value(struct_type, {kAValue, 0, 0, 0});  // ReturnType.a = kAValue.
+
+  // Register the PrettyType that provides a getter. It always returns struct_value.
+  const char kTypeName[] = "MyType";
+  TypeGlob glob;
+  ASSERT_FALSE(glob.Init(kTypeName).has_error());
+  context->pretty_type_manager().Add(ExprLanguage::kC, glob,
+                                     std::make_unique<MockDerefPrettyType>(struct_value));
+
+  // Value of MyType to pass to the evaluator. The contents of this don't matter, only the type
+  // name will be matched.
+  auto my_type = MakeCollectionType(DwarfTag::kStructureType, kTypeName, {});
+  ExprValue my_value(my_type, {});
+  auto my_node = fxl::MakeRefCounted<MockExprNode>(true, my_value);
+
+  // Dereferencing MyType should yield the pretty type result |struct_type| above.
+  auto deref_node = fxl::MakeRefCounted<DereferenceExprNode>(my_node);
+  bool called = false;
+  deref_node->Eval(context, [&called, struct_value](const Err& err, ExprValue value) {
+    called = true;
+    EXPECT_TRUE(err.ok()) << err.msg();
+    // Should have returned the constant struct.
+    EXPECT_EQ(struct_value, value);
+  });
+  EXPECT_TRUE(called);
+
+  // Accessing "MyType->a" should use the PrettyType to dereference to the |struct_type| and then
+  // resolve the member "a" on it, giving kAValue as the result.
+  auto member_node = fxl::MakeRefCounted<MemberAccessExprNode>(
+      my_node, ExprToken(ExprTokenType::kArrow, "->", 0), ParsedIdentifier("a"));
+  called = false;
+  member_node->Eval(context, [&called, struct_value, kAValue](const Err& err, ExprValue value) {
+    called = true;
+    EXPECT_TRUE(err.ok()) << err.msg();
+    // Should have returned the constant struct.
+    EXPECT_EQ(kAValue, struct_value.GetAs<int32_t>());
+  });
+  EXPECT_TRUE(called);
+}
+
 // The casting tests cover most casting-related functionality. This acts as a smoketest that it's
 // hooked up, and specifically tests the tricky special-casing of casting references to references
 // (which shouldn't expand the reference value).
@@ -466,6 +531,34 @@ TEST_F(ExprNodeTest, PrettyTypeGetter) {
     debug_ipc::MessageLoop::Current()->QuitNow();
   });
   EXPECT_TRUE(called);  // This error is synchronous.
+
+  // Combine a custom dereferencer with a custom getter. So "needs_deref->getter()" where
+  // needs_deref's type provides a pretty dereference operator.
+  const char kDerefTypeName[] = "NeedsDeref";
+  TypeGlob deref_glob;
+  ASSERT_FALSE(deref_glob.Init(kDerefTypeName).has_error());
+  context->pretty_type_manager().Add(ExprLanguage::kC, deref_glob,
+                                     std::make_unique<MockDerefPrettyType>(value));
+
+  // This is the node that returns the NeedsDeref type. Its value is unimportant.
+  auto needs_deref_type = MakeCollectionType(DwarfTag::kStructureType, kDerefTypeName, {});
+  ExprValue needs_deref_value(needs_deref_type, {});
+  auto needs_deref_node = fxl::MakeRefCounted<MockExprNode>(true, needs_deref_value);
+
+  // Nodes that represent the call "needs_deref->get5()";
+  auto pretty_arrow_access = fxl::MakeRefCounted<MemberAccessExprNode>(
+      needs_deref_node, ExprToken(ExprTokenType::kArrow, "->", 0),
+      ParsedIdentifier(MockGetterPrettyType::kGetterName));
+  auto pretty_arrow_call = fxl::MakeRefCounted<FunctionCallExprNode>(pretty_arrow_access);
+
+  // This is synchronous since no pointers are actually dereferenced.
+  called = false;
+  pretty_arrow_call->Eval(context, [&called](const Err& err, ExprValue value) {
+    called = true;
+    EXPECT_FALSE(err.has_error()) << err.msg();
+    EXPECT_EQ(MockGetterPrettyType::kGetterValue, value.GetAs<int>());
+  });
+  EXPECT_TRUE(called);
 }
 
 TEST_F(ExprNodeTest, Sizeof) {

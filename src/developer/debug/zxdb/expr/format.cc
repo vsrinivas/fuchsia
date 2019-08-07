@@ -415,39 +415,6 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
   node->set_description_kind(FormatNode::kCollection);
 }
 
-void FormatPointer(FormatNode* node, const FormatOptions& options,
-                   fxl::RefPtr<EvalContext> eval_context) {
-  node->set_description_kind(FormatNode::kPointer);
-
-  // Note: don't make assumptions about the type of value.type() since it isn't necessarily a
-  // ModifiedType representing a pointer, but could be other things like a pointer to a member.
-
-  Err err = node->value().EnsureSizeIs(kTargetPointerSize);
-  if (err.has_error()) {
-    node->set_err(err);
-    return;
-  }
-
-  // The address goes in the description.
-  TargetPointer pointer_value = node->value().GetAs<TargetPointer>();
-  node->set_description(fxl::StringPrintf("0x%" PRIx64, pointer_value));
-
-  // Make a child node that's the dereferenced pointer value. If/when we support GUIs, we should
-  // probably remove the intermediate node and put the dereferenced struct members directly as
-  // children on this node. Otherwise it's an annoying extra step to expand to things.
-  if (pointer_value != 0) {
-    // Use our name but with a "*" to show it dereferenced.
-    auto deref_node = std::make_unique<FormatNode>(
-        "*" + node->name(),
-        [ptr_value = node->value()](fxl::RefPtr<EvalContext> context,
-                                    fit::callback<void(const Err& err, ExprValue value)> cb) {
-          ResolvePointer(context, ptr_value, std::move(cb));
-        });
-    deref_node->set_child_kind(FormatNode::kPointerExpansion);
-    node->children().push_back(std::move(deref_node));
-  }
-}
-
 // For now a reference is formatted like a pointer where the outer node is the address, and the
 // inner node is the "dereferenced" value. This is nice because it keeps the formatting code
 // synchronous, while only the value resolution (in the child node) needs to be asynchronous.
@@ -687,7 +654,7 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
         if (IsPointerToFunction(modified_type))
           FormatFunctionPointer(node, options, context);
         else
-          FormatPointer(node, options, context);
+          FormatPointerNode(node, node->value(), options);
         break;
       case DwarfTag::kReferenceType:
       case DwarfTag::kRvalueReferenceType:
@@ -893,8 +860,8 @@ void FormatArrayNode(FormatNode* node, const ExprValue& value, int elt_count,
                      fit::deferred_callback cb) {
   node->set_description_kind(FormatNode::kArray);
 
-  // Arrays should have known non-zero sizes.
-  FXL_DCHECK(elt_count >= 0);
+  if (elt_count < 0)
+    return node->SetDescribedError(Err("Invalid array size of %d.", elt_count));
   int print_count = std::min(static_cast<int>(options.max_array_size), elt_count);
 
   ResolveArray(eval_context, value, 0, print_count,
@@ -922,6 +889,38 @@ void FormatArrayNode(FormatNode* node, const ExprValue& value, int elt_count,
                    node->children().push_back(std::make_unique<FormatNode>("..."));
                  }
                });
+}
+
+void FormatPointerNode(FormatNode* node, const ExprValue& value, const FormatOptions& options) {
+  node->set_description_kind(FormatNode::kPointer);
+
+  // Note: don't make assumptions about the type of value.type() since it isn't necessarily a
+  // ModifiedType representing a pointer, but could be other things like a pointer to a member.
+
+  Err err = value.EnsureSizeIs(kTargetPointerSize);
+  if (err.has_error()) {
+    node->set_err(err);
+    return;
+  }
+
+  // The address goes in the description.
+  TargetPointer pointer_value = value.GetAs<TargetPointer>();
+  node->set_description(fxl::StringPrintf("0x%" PRIx64, pointer_value));
+
+  // Make a child node that's the dereferenced pointer value. If/when we support GUIs, we should
+  // probably remove the intermediate node and put the dereferenced struct members directly as
+  // children on this node. Otherwise it's an annoying extra step to expand to things.
+  if (pointer_value != 0) {
+    // Use our name but with a "*" to show it dereferenced.
+    auto deref_node = std::make_unique<FormatNode>(
+        "*" + node->name(),
+        [ptr_value = value](fxl::RefPtr<EvalContext> context,
+                            fit::callback<void(const Err& err, ExprValue value)> cb) {
+          ResolvePointer(context, ptr_value, std::move(cb));
+        });
+    deref_node->set_child_kind(FormatNode::kPointerExpansion);
+    node->children().push_back(std::move(deref_node));
+  }
 }
 
 }  // namespace zxdb

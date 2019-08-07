@@ -180,6 +180,15 @@ void CastExprNode::Print(std::ostream& out, int indent) const {
 void DereferenceExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   expr_->EvalFollowReferences(
       context, [context, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
+        // First check for pretty-printers for this type.
+        if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(value.type())) {
+          if (auto derefer = pretty->GetDereferencer()) {
+            // The pretty type supplies dereference function.
+            return derefer(context, value, std::move(cb));
+          }
+        }
+
+        // Normal dereferencing operation.
         ResolvePointer(context, value, std::move(cb));
       });
 }
@@ -264,13 +273,30 @@ void FunctionCallExprNode::EvalMemberCall(fxl::RefPtr<EvalContext> context, cons
 void FunctionCallExprNode::EvalMemberPtrCall(fxl::RefPtr<EvalContext> context,
                                              const ExprValue& object_ptr,
                                              const std::string& fn_name, EvalCallback cb) {
-  ResolvePointer(context, object_ptr,
-                 [context, fn_name, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
-                   if (err.has_error())
-                     cb(err, ExprValue());
-                   else
-                     EvalMemberCall(std::move(context), value, fn_name, std::move(cb));
-                 });
+  // Callback executed on the object once the pointer has been dereferenced.
+  auto on_pointer_resolved = [context, fn_name, cb = std::move(cb)](const Err& err,
+                                                                    ExprValue value) mutable {
+    if (err.has_error())
+      cb(err, ExprValue());
+    else
+      EvalMemberCall(std::move(context), value, fn_name, std::move(cb));
+  };
+
+  // The base object could itself have a dereference operator. For example, if you have a:
+  //   std::unique_ptr<std::vector<int>> foo;
+  // and do:
+  //   foo->size()
+  // It needs to use the pretty dereferencer on foo before trying to access the size() function
+  // on the resulting object.
+  if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(object_ptr.type())) {
+    if (auto derefer = pretty->GetDereferencer()) {
+      // The pretty type supplies dereference function.
+      return derefer(context, object_ptr, std::move(on_pointer_resolved));
+    }
+  }
+
+  // Regular, assume the base is a pointer.
+  ResolvePointer(context, object_ptr, std::move(on_pointer_resolved));
 }
 
 void IdentifierExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
@@ -322,6 +348,20 @@ void MemberAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback c
     }
 
     // Everything else should be a -> operator.
+
+    if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(base.type())) {
+      if (auto derefer = pretty->GetDereferencer()) {
+        // The pretty type supplies dereference function. This turns foo->bar into deref(foo).bar.
+        return derefer(
+            context, base,
+            [context, member, cb = std::move(cb)](const Err& err, ExprValue non_ptr_base) mutable {
+              ErrOrValue result = ResolveMember(context, non_ptr_base, member);
+              cb(result.err_or_empty(), std::move(result.take_value_or_empty()));
+            });
+      }
+    }
+
+    // Normal collection resolution.
     ResolveMemberByPointer(context, base, member,
                            [cb = std::move(cb)](ErrOrValue result, fxl::RefPtr<Symbol>) mutable {
                              // Discard resolved symbol, we only need the value.

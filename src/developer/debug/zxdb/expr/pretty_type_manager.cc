@@ -117,6 +117,14 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
   cpp_.emplace_back(InternalGlob("std::__2::vector<bool, *>"),
                     std::make_unique<PrettyArray>("vector_bool_printer_not_implemented_yet",
                                                   "vector_bool_printer_not_implemented_yet"));
+
+  // Smart pointers.
+  cpp_.emplace_back(InternalGlob("std::__2::unique_ptr<*>"),
+                    std::make_unique<PrettyPointer>("__ptr_.__value_"));
+  cpp_.emplace_back(InternalGlob("std::__2::shared_ptr<*>"),
+                    std::make_unique<PrettyPointer>("__ptr_"));
+  cpp_.emplace_back(InternalGlob("std::__2::weak_ptr<*>"),
+                    std::make_unique<PrettyPointer>("__ptr_"));
 }
 
 void PrettyTypeManager::AddDefaultRustPrettyTypes() {
@@ -150,6 +158,18 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
                                                    GetterList{{"len", "data.len"},
                                                               {"capacity", "data.buf.cap"},
                                                               {"is_empty", "data.len == 0"}}));
+
+  // Smart pointers.
+  rust_.emplace_back(
+      InternalGlob("alloc::sync::Arc<*>"),
+      std::make_unique<PrettyPointer>("ptr.pointer",
+                                      GetterList{{"weak_count", "ptr.pointer->weak.v.value"},
+                                                 {"strong_count", "ptr.pointer->strong.v.value"}}));
+  rust_.emplace_back(
+      InternalGlob("core::ptr::non_null::NonNull<*>"),
+      std::make_unique<PrettyPointer>("pointer", GetterList{{"as_ptr", "ptr.pointer"},
+                                                            {"as_ref", "*ptr.pointer"},
+                                                            {"as_mut", "*ptr.pointer"}}));
 }
 
 }  // namespace zxdb

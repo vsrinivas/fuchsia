@@ -214,4 +214,29 @@ PrettyHeapString::EvalArrayFunction PrettyHeapString::GetArrayAccess() const {
   };
 }
 
+void PrettyPointer::Format(FormatNode* node, const FormatOptions& options,
+                           fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+  auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node->value());
+
+  EvalExpression(expr_, pretty_context, true,
+                 [cb = std::move(cb), weak_node = node->GetWeakPtr(), options](
+                     const Err& err, ExprValue value) mutable {
+                   if (!weak_node)
+                     return;
+
+                   if (err.has_error())
+                     weak_node->SetDescribedError(err);
+                   else
+                     FormatPointerNode(weak_node.get(), value, options);
+                 });
+}
+
+PrettyPointer::EvalFunction PrettyPointer::GetDereferencer() const {
+  return [expr = expr_](fxl::RefPtr<EvalContext> context, const ExprValue& object_value,
+                        fit::callback<void(const Err&, ExprValue)> cb) {
+    // The value is from dereferencing the pointer value expression.
+    EvalExpressionOn(context, object_value, "*(" + expr + ")", std::move(cb));
+  };
+}
+
 }  // namespace zxdb

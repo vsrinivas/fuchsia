@@ -68,6 +68,11 @@ void FormatArrayNode(FormatNode* node, const ExprValue& value, int elt_count,
                      const FormatOptions& options, fxl::RefPtr<EvalContext> eval_context,
                      fit::deferred_callback cb);
 
+// Formats a node for a pointer. This function is synchronous.
+//
+// The value is given rather than taken from the node to support pretty-printing uses.
+void FormatPointerNode(FormatNode* node, const ExprValue& value, const FormatOptions& options);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FORMAT_H_
