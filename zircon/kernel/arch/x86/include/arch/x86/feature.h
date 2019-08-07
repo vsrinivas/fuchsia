@@ -311,11 +311,15 @@ typedef uint64_t (*x86_get_timer_freq_func_t)(void);
 /* attempt to reboot the system; may fail and simply return */
 typedef void (*x86_reboot_system_func_t)(void);
 
+/* attempt to set a reason flag and reboot the system; may fail and simply return */
+typedef void (*x86_reboot_reason_func_t)(uint64_t reason);
+
 /* Structure for supporting per-microarchitecture kernel configuration */
 typedef struct {
   x86_get_timer_freq_func_t get_apic_freq;
   x86_get_timer_freq_func_t get_tsc_freq;
   x86_reboot_system_func_t reboot_system;
+  x86_reboot_reason_func_t reboot_reason;
 
   bool disable_c1e;
 

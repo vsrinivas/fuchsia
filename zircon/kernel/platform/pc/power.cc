@@ -31,9 +31,26 @@ static_assert(kQEMUExitCode != 0 && kQEMUExitCode % 2 != 0,
               "QEMU exit code must be non-zero and odd.");
 
 static void reboot(void) {
+  // select the default reboot reason
+  x86_reboot_reason_func_t reboot_reason = x86_get_microarch_config()->reboot_reason;
+  if (reboot_reason)
+    reboot_reason(0u);
+  // We fell through. Try normal reboot.
   x86_get_microarch_config()->reboot_system();
   // We fell through. Try rebooting via keyboard controller.
   pc_keyboard_reboot();
+}
+
+static void reboot_recovery() {
+  x86_reboot_reason_func_t reboot_reason = x86_get_microarch_config()->reboot_reason;
+  if (reboot_reason)
+    reboot_reason(2u);
+}
+
+static void reboot_bootloader() {
+  x86_reboot_reason_func_t reboot_reason = x86_get_microarch_config()->reboot_reason;
+  if (reboot_reason)
+    reboot_reason(4u);
 }
 
 static ktl::atomic<cpu_mask_t> halted_cpus(0);
@@ -104,7 +121,15 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
       halt_other_cpus();
       break;
     case HALT_ACTION_REBOOT_BOOTLOADER:
+      printf("Rebooting ... To Boot Loader\n");
+      reboot_bootloader();
+      // We fell through.
+      printf("platform_halt: Unsupported halt reason %d\n", suggested_action);
+      break;
     case HALT_ACTION_REBOOT_RECOVERY:
+      printf("Rebooting ... To Recovery\n");
+      reboot_recovery();
+      // We fell through.
       printf("platform_halt: Unsupported halt reason %d\n", suggested_action);
       break;
   }

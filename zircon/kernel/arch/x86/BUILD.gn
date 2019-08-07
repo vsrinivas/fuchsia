@@ -128,6 +128,7 @@ library("x86") {
     "$zx/kernel/lib/topology",
     "$zx/kernel/object",
     "$zx/system/ulib/bitmap",
+    "$zx/kernel/platform/pc",
     "cpuid",
   ]
   public_deps = [

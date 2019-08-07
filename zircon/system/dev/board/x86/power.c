@@ -16,7 +16,29 @@ void poweroff(void) {
   }
 }
 
-void reboot(void) { AcpiReset(); }
+void reboot(void) {
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  zx_status_t status = zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT, NULL);
+  if (status != ZX_OK)
+    zxlogf(ERROR, "acpi: Failed to enter reboot: %d\n", status);
+  AcpiReset();
+}
+
+void reboot_bootloader(void) {
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  zx_status_t status = zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, NULL);
+  if (status != ZX_OK)
+    zxlogf(ERROR, "acpi: Failed to enter bootloader reboot: %d\n", status);
+  AcpiReset();
+}
+
+void reboot_recovery(void) {
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  zx_status_t status = zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, NULL);
+  if (status != ZX_OK)
+    zxlogf(ERROR, "acpi: Failed to enter recovery reboot: %d\n", status);
+  AcpiReset();
+}
 
 zx_status_t suspend_to_ram(void) {
   zx_status_t status = ZX_OK;

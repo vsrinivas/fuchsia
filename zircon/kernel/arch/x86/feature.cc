@@ -14,6 +14,7 @@
 #include <arch/ops.h>
 #include <arch/x86/cpuid.h>
 #include <arch/x86/platform_access.h>
+#include <platform/pc/bootbyte.h>
 #include <fbl/algorithm.h>
 
 #define LOCAL_TRACE 0
@@ -518,9 +519,23 @@ static uint64_t zen_tsc_freq() {
 
 static void unknown_reboot_system(void) { return; }
 
+static void unknown_reboot_reason(uint64_t) { return; }
+
 static void hsw_reboot_system(void) {
   // 100-Series Chipset Reset Control Register: CPU + SYS Reset
   outp(0xcf9, 0x06);
+}
+
+static void hsw_reboot_reason(uint64_t reason) {
+  bootbyte_set_reason(reason);
+
+  // 100-Series Chipset Reset Control Register: CPU + SYS Reset
+  // clear PCI reset sequence
+  outp(0xcf9, 0x02);
+  // discarded reads acting as a small delay on the bus
+  (void)inp(0xcf9);
+  (void)inp(0xcf9);
+  outp(0xcf9, 0x04);
 }
 
 // Intel microarches
@@ -528,6 +543,7 @@ static const x86_microarch_config_t kbl_config{
     .get_apic_freq = kbl_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
+    .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
     .idle_states =
         {
@@ -548,6 +564,7 @@ static const x86_microarch_config_t skl_config{
     .get_apic_freq = kbl_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
+    .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
     .idle_states =
         {
@@ -558,6 +575,7 @@ static const x86_microarch_config_t bdw_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
+    .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
     .idle_states =
         {
@@ -568,6 +586,7 @@ static const x86_microarch_config_t hsw_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
+    .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
     .idle_states =
         {
@@ -578,6 +597,7 @@ static const x86_microarch_config_t ivb_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
     .idle_states =
         {
@@ -588,6 +608,7 @@ static const x86_microarch_config_t snb_config{
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
     .idle_states =
         {
@@ -598,6 +619,7 @@ static const x86_microarch_config_t westmere_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
     .idle_states =
         {
@@ -608,6 +630,7 @@ static const x86_microarch_config_t nehalem_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
     .idle_states =
         {
@@ -618,6 +641,7 @@ static const x86_microarch_config_t smt_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
     .idle_states =
         {
@@ -628,6 +652,7 @@ static const x86_microarch_config_t intel_default_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
     .idle_states =
         {
@@ -640,6 +665,7 @@ static const x86_microarch_config_t zen_config{
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = zen_tsc_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
     .idle_states =
         {
@@ -650,6 +676,7 @@ static const x86_microarch_config_t jaguar_config{
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = unknown_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
     .idle_states =
         {
@@ -660,6 +687,7 @@ static const x86_microarch_config_t bulldozer_config{
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = unknown_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
     .idle_states =
         {
@@ -670,6 +698,7 @@ static const x86_microarch_config_t amd_default_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = unknown_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
     .idle_states =
         {
@@ -682,6 +711,7 @@ static const x86_microarch_config_t unknown_vendor_config{
     .get_apic_freq = unknown_freq,
     .get_tsc_freq = unknown_freq,
     .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
     .idle_states =
         {

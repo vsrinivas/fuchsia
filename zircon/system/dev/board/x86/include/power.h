@@ -67,6 +67,8 @@ typedef struct {
 
 void poweroff(void);
 void reboot(void);
+void reboot_recovery(void);
+void reboot_bootloader(void);
 zx_status_t suspend_to_ram(void);
 
 #endif  // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_POWER_H_

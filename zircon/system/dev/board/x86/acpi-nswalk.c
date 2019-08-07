@@ -661,7 +661,13 @@ zx_status_t acpi_suspend(uint32_t flags) {
       return ZX_OK;
     }
     case DEVICE_SUSPEND_FLAG_REBOOT:
-      reboot();
+      if (flags == DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER) {
+        reboot_bootloader();
+      } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY) {
+        reboot_recovery();
+      } else {
+        reboot();
+      }
       // Kill this driver so that the IPC channel gets closed; devmgr will
       // perform a fallback that should shutdown or reboot the machine.
       exit(0);
