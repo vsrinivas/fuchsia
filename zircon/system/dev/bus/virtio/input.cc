@@ -6,16 +6,16 @@
 
 #include <limits.h>
 #include <string.h>
-
-#include <ddk/debug.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 
 #include <utility>
+
+#include <ddk/debug.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 
 #include "trace.h"
 
@@ -53,12 +53,18 @@ static zx_status_t virtio_input_SetWindowSize(void* ctx,
   return fuchsia_hardware_pty_DeviceSetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
-static fuchsia_hardware_pty_Device_ops_t fidl_ops = {.OpenClient = virtio_input_OpenClient,
-                                                     .ClrSetFeature = virtio_input_ClrSetFeature,
-                                                     .GetWindowSize = virtio_input_GetWindowSize,
-                                                     .MakeActive = virtio_input_MakeActive,
-                                                     .ReadEvents = virtio_input_ReadEvents,
-                                                     .SetWindowSize = virtio_input_SetWindowSize};
+static constexpr fuchsia_hardware_pty_Device_ops_t fidl_ops = []() {
+  // TODO: Why does this implement fuchsia.hardware.pty/Device?  This device
+  // does not provide read/write methods, so shouldn't be usable as a terminal.
+  fuchsia_hardware_pty_Device_ops_t ops = {};
+  ops.OpenClient = virtio_input_OpenClient;
+  ops.ClrSetFeature = virtio_input_ClrSetFeature;
+  ops.GetWindowSize = virtio_input_GetWindowSize;
+  ops.MakeActive = virtio_input_MakeActive;
+  ops.ReadEvents = virtio_input_ReadEvents;
+  ops.SetWindowSize = virtio_input_SetWindowSize;
+  return ops;
+}();
 
 static bool IsQemuTouchscreen(const virtio_input_config_t& config) {
   if (config.u.ids.bustype == 0x06 && config.u.ids.vendor == 0x00 && config.u.ids.product == 0x00) {

@@ -4,15 +4,16 @@
 
 #include "console.h"
 
+#include <fuchsia/hardware/pty/c/fidl.h>
+#include <lib/zx/vmar.h>
+#include <string.h>
+
+#include <utility>
+
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
-#include <string.h>
 #include <virtio/virtio.h>
-#include <lib/zx/vmar.h>
-
-#include <utility>
 
 #define LOCAL_TRACE 0
 
@@ -358,12 +359,16 @@ static zx_status_t virtio_console_SetWindowSize(void* ctx,
   return fuchsia_hardware_pty_DeviceSetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
-static fuchsia_hardware_pty_Device_ops_t fidl_ops = {.OpenClient = virtio_console_OpenClient,
-                                                     .ClrSetFeature = virtio_console_ClrSetFeature,
-                                                     .GetWindowSize = virtio_console_GetWindowSize,
-                                                     .MakeActive = virtio_console_MakeActive,
-                                                     .ReadEvents = virtio_console_ReadEvents,
-                                                     .SetWindowSize = virtio_console_SetWindowSize};
+static constexpr fuchsia_hardware_pty_Device_ops_t fidl_ops = []() {
+  fuchsia_hardware_pty_Device_ops_t ops = {};
+  ops.OpenClient = virtio_console_OpenClient;
+  ops.ClrSetFeature = virtio_console_ClrSetFeature;
+  ops.GetWindowSize = virtio_console_GetWindowSize;
+  ops.MakeActive = virtio_console_MakeActive;
+  ops.ReadEvents = virtio_console_ReadEvents;
+  ops.SetWindowSize = virtio_console_SetWindowSize;
+  return ops;
+}();
 
 zx_status_t ConsoleDevice::virtio_console_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);

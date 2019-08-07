@@ -5,6 +5,10 @@
 import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-pty") {
+  public_deps = [
+    "$zx/system/fidl/fuchsia-io",
+    "$zx/system/fidl/fuchsia-mem",
+  ]
   sources = [
     "pty.fidl",
   ]

@@ -13,6 +13,7 @@
 /// Controlling PTY.
 library fuchsia.hardware.pty;
 
+using fuchsia.io;
 using zx;
 
 /// When Feature Raw is enabled, OOB Events like ^c, ^z, etc are not generated.
@@ -25,19 +26,23 @@ struct WindowSize {
 };
 
 /// The terminal has no active client.
-const uint32 EVENT_HANGUP    = 1;
+const uint32 EVENT_HANGUP = 1;
 /// The terminal received a ^C control character.
 const uint32 EVENT_INTERRUPT = 2;
 /// The terminal received a ^Z control character.
-const uint32 EVENT_SUSPEND   = 4;
+const uint32 EVENT_SUSPEND = 4;
 /// All events
-const uint32 EVENT_MASK      = 7;
+const uint32 EVENT_MASK = 7;
 
 /// When an event is pending, this signal is asserted on the Controlling PTY.
 const uint32 SIGNAL_EVENT = 0x02000000; // DEVICE_SIGNAL_OOB
 
 [Layout = "Simple"]
 protocol Device {
+    // Compose from fuchsia.io.File so we can support Read/Write and export
+    // a "Tty" type node info
+    compose fuchsia.io.File;
+
     /// Open a client PTY device with a unique `id`. `client` should be a handle
     /// to one endpoint of a channel that (on success) will become an open
     /// connection to the newly created device. On failure, the channel will be

@@ -2,21 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "pty-core.h"
+
+#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/pty/c/fidl.h>
+#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/errors.h>
+
 #include <utility>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/auto_lock.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
-#include <lib/zx/channel.h>
-#include <zircon/errors.h>
 
-#include "pty-core.h"
 #include "pty-fifo.h"
 
 #define CTRL_(n) ((n) - 'A' + 1)
@@ -347,12 +349,16 @@ zx_status_t pty_client_SetWindowSize(void* ctx, const fuchsia_hardware_pty_Windo
   }
 }
 
-static fuchsia_hardware_pty_Device_ops_t fidl_ops = {.OpenClient = pty_client_fidl_OpenClient,
-                                                     .ClrSetFeature = pty_client_ClrSetFeature,
-                                                     .GetWindowSize = pty_client_GetWindowSize,
-                                                     .MakeActive = pty_client_MakeActive,
-                                                     .ReadEvents = pty_client_ReadEvents,
-                                                     .SetWindowSize = pty_client_SetWindowSize};
+static constexpr fuchsia_hardware_pty_Device_ops_t fidl_ops = []() {
+  fuchsia_hardware_pty_Device_ops_t ops = {};
+  ops.OpenClient = pty_client_fidl_OpenClient;
+  ops.ClrSetFeature = pty_client_ClrSetFeature;
+  ops.GetWindowSize = pty_client_GetWindowSize;
+  ops.MakeActive = pty_client_MakeActive;
+  ops.ReadEvents = pty_client_ReadEvents;
+  ops.SetWindowSize = pty_client_SetWindowSize;
+  return ops;
+}();
 
 zx_status_t pty_client_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);
