@@ -102,6 +102,7 @@ void InterceptingTargetObserver::DidCreateProcess(zxdb::Target* target, zxdb::Pr
 
 void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* target, zxdb::Process* process,
                                                     DestroyReason reason, int exit_code) {
+  workflow_->configured_processes().erase(process->GetKoid());
   std::string action;
   switch (reason) {
     case zxdb::TargetObserver::DestroyReason::kExit:
@@ -349,6 +350,10 @@ void InterceptionWorkflow::Launch(const std::vector<std::string>& command, KoidF
 }
 
 void InterceptionWorkflow::SetBreakpoints(zxdb::Target* target) {
+  if (configured_processes_.find(target->GetProcess()->GetKoid()) != configured_processes_.end()) {
+    return;
+  }
+  configured_processes_.emplace(target->GetProcess()->GetKoid());
   for (auto& syscall : syscall_decoder_dispatcher()->syscalls()) {
     bool put_breakpoint = true;
     if (!syscall_decoder_dispatcher()->decode_options().syscall_filters.empty()) {
