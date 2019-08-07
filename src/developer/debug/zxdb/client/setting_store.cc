@@ -70,8 +70,6 @@ Setting SettingStore::GetSetting(const std::string& key) const {
   // Check if it already exists. If so, return it.
   auto it = values_.find(key);
   if (it != values_.end()) {
-    DEBUG_LOG(Setting) << "Store " << name_ << ": stored value for " << key << ": "
-                       << it->second.ToDebugString();
     return {std::move(default_setting.setting.info), it->second};
   }
 
@@ -84,8 +82,6 @@ Setting SettingStore::GetSetting(const std::string& key) const {
   }
 
   // No fallback has the schema, we return the default.
-  DEBUG_LOG(Setting) << "Store: " << name_ << ": schema default for " << key << ": "
-                     << default_setting.setting.value.ToDebugString();
   return default_setting.setting;
 }
 
@@ -115,7 +111,6 @@ Err SettingStore::SetSetting(const std::string& key, T t) {
 
   // We can safely insert or override and notify observers.
   auto new_setting = SettingValue(std::move(t));
-  DEBUG_LOG(Setting) << "Store " << name_ << " set " << key << ": " << new_setting.ToDebugString();
   values_[key] = std::move(new_setting);
   NotifySettingChanged(key);
 

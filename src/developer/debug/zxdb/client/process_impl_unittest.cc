@@ -28,9 +28,19 @@ class ProcessSink : public RemoteAPI {
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err(), debug_ipc::ResumeReply()); });
   }
 
+  // No-op.
+  void Threads(const debug_ipc::ThreadsRequest& request,
+               fit::callback<void(const Err&, debug_ipc::ThreadsReply)> cb) override {
+    thread_request_made_ = true;
+  }
+
+  bool thread_request_made() const { return thread_request_made_; }
+
  private:
   debug_ipc::ResumeRequest resume_request_;
   int resume_count_ = 0;
+
+  bool thread_request_made_ = false;
 };
 
 class ProcessImplTest : public RemoteAPITest {
@@ -59,6 +69,8 @@ TEST_F(ProcessImplTest, OnModules) {
   Process* process = InjectProcess(kProcessKoid);
   ASSERT_TRUE(process);
 
+  EXPECT_FALSE(sink()->thread_request_made());
+
   debug_ipc::NotifyModules notify;
   notify.process_koid = kProcessKoid;
   notify.modules.resize(1);
@@ -71,6 +83,8 @@ TEST_F(ProcessImplTest, OnModules) {
   notify.stopped_thread_koids.push_back(kThread2Koid);
 
   session().DispatchNotifyModules(notify);
+
+  EXPECT_TRUE(sink()->thread_request_made());
 
   // Should have resumed both of those threads.
   ASSERT_EQ(1, sink()->resume_count());

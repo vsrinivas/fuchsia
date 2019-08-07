@@ -88,9 +88,9 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   virtual DebuggedThread* GetThread(zx_koid_t thread_koid) const;
   virtual std::vector<DebuggedThread*> GetThreads() const;
 
-  // Populates the thread map with the current threads for this process, and
-  // sends the list to the client. Used after an attach where we will not get
-  // new thread notifications.
+  // Populates the thread map with the current threads for this process.
+  // This function does not notify the client of thread start, but rather updates the internal
+  // thread state according to the underlying zircon truth.
   void PopulateCurrentThreads();
 
   // Appends the information for all current threads. This writes minimal

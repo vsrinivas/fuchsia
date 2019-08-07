@@ -71,6 +71,13 @@ class MockRemoteAPI : public RemoteAPI {
   void WriteRegisters(const debug_ipc::WriteRegistersRequest& request,
                       fit::callback<void(const Err&, debug_ipc::WriteRegistersReply)> cb) override;
 
+  // No-op for now.
+  // TODO(donosoc): The client will detect underlying exceptions by analyzing the threads it
+  //                receives upon process attaching, so this will be filled then.
+  //                Currently we need this to not assert existing tests.
+  void Threads(const debug_ipc::ThreadsRequest& request,
+               fit::callback<void(const Err&, debug_ipc::ThreadsReply)> cb) override {}
+
  private:
   debug_ipc::ThreadStatusReply thread_status_reply_;
 

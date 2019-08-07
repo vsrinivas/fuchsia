@@ -42,8 +42,16 @@ class BreakpointSink : public RemoteAPI {
     });
   }
 
+  // No-op.
+  void Threads(const debug_ipc::ThreadsRequest& request,
+               fit::callback<void(const Err&, debug_ipc::ThreadsReply)> cb) override {
+    thread_request_made = true;
+  }
+
   std::vector<debug_ipc::AddOrChangeBreakpointRequest> adds;
   std::vector<debug_ipc::RemoveBreakpointRequest> removes;
+
+  bool thread_request_made = false;
 };
 
 class BreakpointImplTest : public RemoteAPITest {
@@ -127,6 +135,9 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   fxl::RefPtr<SystemSymbols::ModuleRef> module2_ref =
       session().system().GetSymbols()->InjectModuleForTesting(kBuildID2, std::move(module2));
 
+  // Before modules no thread request should be made.
+  EXPECT_FALSE(sink().thread_request_made);
+
   // Cause the process to load module 1.
   std::vector<debug_ipc::Module> modules;
   debug_ipc::Module load1;
@@ -135,6 +146,9 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   load1.build_id = kBuildID1;
   modules.push_back(load1);
   target->process()->OnModules(modules, std::vector<uint64_t>());
+
+  // After adding modules, the client should have asked for threads.
+  EXPECT_TRUE(sink().thread_request_made);
 
   // That should have notified the breakpoint which should have added the two
   // addresses to the backend.

@@ -257,14 +257,15 @@ std::vector<DebuggedThread*> DebuggedProcess::GetThreads() const {
 
 void DebuggedProcess::PopulateCurrentThreads() {
   for (zx_koid_t koid : GetChildKoids(process_.get(), ZX_INFO_PROCESS_THREADS)) {
-    FXL_DCHECK(threads_.find(koid) == threads_.end());
+    // We should never populate the same thread twice.
+    if (threads_.find(koid) != threads_.end())
+      continue;
 
     zx_handle_t handle;
     if (zx_object_get_child(process_.get(), koid, ZX_RIGHT_SAME_RIGHTS, &handle) == ZX_OK) {
-      auto added = threads_.emplace(
+      threads_.emplace(
           koid, std::make_unique<DebuggedThread>(this, zx::thread(handle), koid, zx::exception(),
                                                  ThreadCreationOption::kRunningKeepRunning));
-      added.first->second->SendThreadNotification();
     }
   }
 }

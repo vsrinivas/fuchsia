@@ -520,8 +520,11 @@ void DebugAgent::AttachToProcess(uint32_t transaction_id, zx_koid_t process_koid
   debug_ipc::WriteReply(reply, transaction_id, &writer);
   stream()->Write(writer.MessageComplete());
 
-  // For valid attaches, follow up with the current module and thread lists.
+  // For valid attaches, the client will as for the thread list, but we need to populate our list
+  // of threads and send the modules over.
   if (new_process) {
+    DEBUG_LOG(Agent) << "Attached to process " << process_koid;
+
     new_process->PopulateCurrentThreads();
     new_process->SuspendAndSendModulesIfKnown();
   }

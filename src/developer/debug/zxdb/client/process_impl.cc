@@ -253,6 +253,9 @@ void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
   // The threads loading the library will be stopped so we have time to load
   // symbols and enable any pending breakpoints. Now that the notification is
   // complete, the thread(s) can continue.
+  //
+  // Note that this is a "blind" resume, as the |this| does not yet know about any threads that are
+  // currently running. It will issue a sync call shortly.
   if (!stopped_thread_koids.empty()) {
     debug_ipc::ResumeRequest request;
     request.process_koid = koid_;
@@ -260,6 +263,9 @@ void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
     request.thread_koids = stopped_thread_koids;
     session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
   }
+
+  // We get the list of threads for the process we are attaching.
+  SyncThreads({});
 }
 
 bool ProcessImpl::HandleIO(const debug_ipc::NotifyIO& io) {
