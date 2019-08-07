@@ -96,8 +96,8 @@ func TestRecord(t *testing.T) {
 	}
 }
 
-func TestIPToSend(t *testing.T) {
-	m := MDNS{}
+func TestSetAddress(t *testing.T) {
+	m := NewMDNS()
 	got := m.ipToSend()
 	// Should send to the default address.
 	want := net.ParseIP("224.0.0.251")
@@ -105,7 +105,7 @@ func TestIPToSend(t *testing.T) {
 		t.Errorf("ipToSend (default): mismatch (-want +got)\n%s", d)
 	}
 
-	m = MDNS{Address: "11.22.33.44"}
+	m.SetAddress("11.22.33.44")
 	got = m.ipToSend()
 	// Should send to the given custom address.
 	want = net.ParseIP("11.22.33.44")

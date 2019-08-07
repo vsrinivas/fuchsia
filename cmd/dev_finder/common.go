@@ -124,7 +124,9 @@ func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
 	if cmd.newMDNSFunc != nil {
 		return cmd.newMDNSFunc(address)
 	}
-	return &mdns.MDNS{Address: address}
+	m := mdns.NewMDNS()
+	m.SetAddress(address)
+	return m
 }
 
 func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet) ([]*fuchsiaDevice, error) {

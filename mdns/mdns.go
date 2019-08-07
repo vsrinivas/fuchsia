@@ -388,44 +388,98 @@ const (
 	IN = 1
 )
 
-// MDNS is the central type though which requests are sent and received.
+// MDNS is the central interface through which requests are sent and received.
 // This implementation is agnostic to use case and asynchronous.
 // To handle various responses add Handlers. To send a packet you may use
 // either SendTo (generally used for unicast) or Send (generally used for
 // multicast).
-type MDNS struct {
+type MDNS interface {
+	// SetAddress sets a non-default listen address.
+	SetAddress(address string) error
+
+	// ipToSend returns the IP corresponding to the current address.
+	ipToSend() net.IP
+
+	// AddHandler calls f on every Packet received.
+	AddHandler(f func(net.Interface, net.Addr, Packet))
+
+	// AddWarningHandler calls f on every non-fatal error.
+	AddWarningHandler(f func(net.Addr, error))
+
+	// AddErrorHandler calls f on every fatal error. After
+	// all active handlers are called, m will stop listening and
+	// close it's connection so this function will not be called twice.
+	AddErrorHandler(f func(error))
+
+	// Start causes m to start listening for mDNS packets on all interfaces on
+	// the specified port. Listening will stop if ctx is done.
+	Start(ctx context.Context, port int) error
+
+	// Send serializes and sends packet out as a multicast to all interfaces
+	// using the port that m is listening on. Note that Start must be
+	// called prior to making this call.
+	Send(packet Packet) error
+
+	// SendTo serializes and sends packet to dst. If dst is a multicast
+	// address then packet is multicast to the corresponding group on
+	// all interfaces. Note that start must be called prior to making this
+	// call.
+	SendTo(packet Packet, dst *net.UDPAddr) error
+
+	// Close closes all connections.
+	Close()
+}
+
+type mDNS struct {
 	conn      *ipv4.PacketConn
 	senders   []net.PacketConn
-	Address   string
+	address   string
 	port      int
 	pHandlers []func(net.Interface, net.Addr, Packet)
 	wHandlers []func(net.Addr, error)
 	eHandlers []func(error)
 }
 
+func NewMDNS() MDNS {
+	m := mDNS{}
+	return &m
+}
+
 var defaultMDNSMulticastIPv4 = net.ParseIP("224.0.0.251")
 
-func (m *MDNS) ipToSend() net.IP {
-	if m.Address == "" {
+func (m *mDNS) Close() {
+	if m.conn != nil {
+		m.conn.Close()
+		m.conn = nil
+	}
+}
+
+func (m *mDNS) SetAddress(address string) error {
+	m.address = address
+	return nil
+}
+
+func (m *mDNS) ipToSend() net.IP {
+	if m.address == "" {
 		return defaultMDNSMulticastIPv4
 	}
-	return net.ParseIP(m.Address)
+	return net.ParseIP(m.address)
 }
 
 // AddHandler calls f on every Packet received.
-func (m *MDNS) AddHandler(f func(net.Interface, net.Addr, Packet)) {
+func (m *mDNS) AddHandler(f func(net.Interface, net.Addr, Packet)) {
 	m.pHandlers = append(m.pHandlers, f)
 }
 
 // AddWarningHandler calls f on every non-fatal error.
-func (m *MDNS) AddWarningHandler(f func(net.Addr, error)) {
+func (m *mDNS) AddWarningHandler(f func(net.Addr, error)) {
 	m.wHandlers = append(m.wHandlers, f)
 }
 
 // AddErrorHandler calls f on every fatal error. After
 // all active handlers are called, m will stop listening and
 // close it's connection so this function will not be called twice.
-func (m *MDNS) AddErrorHandler(f func(error)) {
+func (m *mDNS) AddErrorHandler(f func(error)) {
 	m.eHandlers = append(m.eHandlers, f)
 }
 
@@ -433,7 +487,7 @@ func (m *MDNS) AddErrorHandler(f func(error)) {
 // address then packet is multicast to the corresponding group on
 // all interfaces. Note that start must be called prior to making this
 // call.
-func (m *MDNS) SendTo(packet Packet, dst *net.UDPAddr) error {
+func (m *mDNS) SendTo(packet Packet, dst *net.UDPAddr) error {
 	var buf bytes.Buffer
 	// TODO(jakehehrlich): Add checking that the packet is well formed.
 	if err := packet.serialize(&buf); err != nil {
@@ -450,7 +504,7 @@ func (m *MDNS) SendTo(packet Packet, dst *net.UDPAddr) error {
 // Send serializes and sends packet out as a multicast to all interfaces
 // using the port that m is listening on. Note that Start must be
 // called prior to making this call.
-func (m *MDNS) Send(packet Packet) error {
+func (m *mDNS) Send(packet Packet) error {
 	dst := net.UDPAddr{IP: m.ipToSend(), Port: m.port}
 	return m.SendTo(packet, &dst)
 }
@@ -489,7 +543,7 @@ func makeUnixIpv4Socket(port int, ip net.IP) (net.PacketConn, error) {
 
 // Start causes m to start listening for MDNS packets on all interfaces on
 // the specified port. Listening will stop if ctx is done.
-func (m *MDNS) Start(ctx context.Context, port int) error {
+func (m *mDNS) Start(ctx context.Context, port int) error {
 	dst := &net.UDPAddr{IP: m.ipToSend(), Port: port}
 	conn, err := net.ListenUDP("udp4", dst)
 	if err != nil {

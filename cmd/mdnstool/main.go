@@ -22,7 +22,7 @@ import (
 // Will stop waiting for a response if ctx is done. The default port for mDNS is
 // 5353 but you're allowed to specify via port.
 func mDNSResolve(ctx context.Context, domain string, port int, dur time.Duration) (net.IP, error) {
-	var m mdns.MDNS
+	m := mdns.NewMDNS()
 	out := make(chan net.IP)
 	// Add all of our handlers
 	m.AddHandler(func(iface net.Interface, addr net.Addr, packet mdns.Packet) {
@@ -66,7 +66,7 @@ func mDNSResolve(ctx context.Context, domain string, port int, dur time.Duration
 // ctx. Even though mDNS is generally on 5353 you can specify any port via port.
 func mDNSPublish(ctx context.Context, domain string, port int, ip net.IP) error {
 	// Now create and mDNS server
-	var m mdns.MDNS
+	m := mdns.NewMDNS()
 	m.AddHandler(func(iface net.Interface, addr net.Addr, packet mdns.Packet) {
 		log.Printf("from %v packet %v", addr, packet)
 		for _, q := range packet.Questions {
