@@ -41,6 +41,7 @@ source_set("unittests") {
 
   sources = [
     "encoding_unittest.cc",
+    "firestore_service_impl_unittest.cc",
     "listen_call_unittest.cc",
   ]
 

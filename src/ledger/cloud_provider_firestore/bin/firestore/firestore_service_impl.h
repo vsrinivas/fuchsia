@@ -57,6 +57,11 @@ using RunQueryCall = ReadStreamDrainer<
     grpc::ClientAsyncReaderInterface<google::firestore::v1beta1::RunQueryResponse>,
     google::firestore::v1beta1::RunQueryResponse>;
 
+// Polls results of gRPC calls from a source that resembles gRPC completion
+// queue Next() method. Extracted into a separate free function for testability.
+void PollEvents(const std::function<bool(void** tag, bool* ok)>& get_next_tag,
+                async_dispatcher_t* dispatcher);
+
 // Implementation of the FirestoreService interface.
 //
 // This class is implemented as a wrapper over the Firestore connection. We use

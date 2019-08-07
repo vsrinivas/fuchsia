@@ -57,6 +57,21 @@ void MakeCall(SingleResponseCall<ResponseType>* call,
 
 }  // namespace
 
+void PollEvents(const std::function<bool(void** tag, bool* ok)>& get_next_tag,
+                async_dispatcher_t* dispatcher) {
+  void* tag = nullptr;
+  bool ok = false;
+  while (get_next_tag(&tag, &ok)) {
+    if (tag == nullptr) {
+      FXL_LOG(ERROR) << "Failed to retrieve a tag from the completion queue (channel is dead?)";
+      continue;
+    }
+    auto callable = reinterpret_cast<fit::function<void(bool)>*>(tag);
+    async::PostTask(dispatcher, [callable, ok] { (*callable)(ok); });
+    tag = nullptr;
+  }
+}
+
 FirestoreServiceImpl::FirestoreServiceImpl(std::string server_id, async_dispatcher_t* dispatcher,
                                            std::shared_ptr<grpc::Channel> channel)
     : server_id_(std::move(server_id)),
@@ -177,13 +192,10 @@ void FirestoreServiceImpl::SetUpContext(grpc::ClientContext* context,
 }
 
 void FirestoreServiceImpl::Poll() {
-  void* tag;
-  bool ok = false;
-  while (cq_.Next(&tag, &ok)) {
-    FXL_DCHECK(tag);
-    auto callable = reinterpret_cast<fit::function<void(bool)>*>(tag);
-    async::PostTask(dispatcher_, [callable, ok] { (*callable)(ok); });
-  }
+  std::function<bool(void** tag, bool* ok)> get_next_tag = [this](void** tag, bool* ok) {
+    return cq_.Next(tag, ok);
+  };
+  PollEvents(get_next_tag, dispatcher_);
 }
 
 }  // namespace cloud_provider_firestore
