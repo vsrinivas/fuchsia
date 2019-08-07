@@ -144,7 +144,7 @@ class VmObjectPaged final : public VmObject {
   uint32_t GetMappingCachePolicy() const override;
   zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
 
-  void RemoveChild(VmObjectPaged* child, Guard<Mutex>&& guard) override
+  void RemoveChild(VmObject* child, Guard<Mutex>&& guard) override
       // Analysis doesn't know that the guard passed to this function is the vmo's lock.
       TA_NO_THREAD_SAFETY_ANALYSIS;
   bool OnChildAddedLocked() override TA_REQ(lock_);
@@ -333,26 +333,31 @@ class VmObjectPaged final : public VmObject {
 
   // Outside of initialization/destruction, hidden vmos always have two children. For
   // clarity, whichever child is first in the list is the 'left' child, and whichever
-  // child is second is the 'right' child.
+  // child is second is the 'right' child. Children of a paged vmo will always be paged
+  // vmos themselves.
   VmObjectPaged& left_child_locked() TA_REQ(lock_) {
     DEBUG_ASSERT(is_hidden());
     DEBUG_ASSERT(children_list_len_ == 2);
-    return children_list_.front();
+    DEBUG_ASSERT(children_list_.front().is_paged());
+    return static_cast<VmObjectPaged&>(children_list_.front());
   }
   VmObjectPaged& right_child_locked() TA_REQ(lock_) {
     DEBUG_ASSERT(is_hidden());
     DEBUG_ASSERT(children_list_len_ == 2);
-    return children_list_.back();
+    DEBUG_ASSERT(children_list_.back().is_paged());
+    return static_cast<VmObjectPaged&>(children_list_.back());
   }
   const VmObjectPaged& left_child_locked() const TA_REQ(lock_) {
     DEBUG_ASSERT(is_hidden());
     DEBUG_ASSERT(children_list_len_ == 2);
-    return children_list_.front();
+    DEBUG_ASSERT(children_list_.front().is_paged());
+    return static_cast<const VmObjectPaged&>(children_list_.front());
   }
   const VmObjectPaged& right_child_locked() const TA_REQ(lock_) {
     DEBUG_ASSERT(is_hidden());
     DEBUG_ASSERT(children_list_len_ == 2);
-    return children_list_.back();
+    DEBUG_ASSERT(children_list_.back().is_paged());
+    return static_cast<const VmObjectPaged&>(children_list_.back());
   }
 
   // members

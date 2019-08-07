@@ -60,8 +60,7 @@ enum class CloneType {
 //
 // Can be created without mapping and used as a container of data, or mappable
 // into an address space via VmAddressRegion::CreateVmMapping
-class VmObject : public fbl::RefCounted<VmObject>,
-                 public fbl::DoublyLinkedListable<VmObjectPaged*> {
+class VmObject : public fbl::RefCounted<VmObject>, public fbl::DoublyLinkedListable<VmObject*> {
  public:
   // public API
   virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
@@ -240,7 +239,7 @@ class VmObject : public fbl::RefCounted<VmObject>,
 
   // Adds a child to this vmo and returns true if the dispatcher which matches
   // user_id should be notified about the first child being added.
-  bool AddChildLocked(VmObjectPaged* r) TA_REQ(lock_);
+  bool AddChildLocked(VmObject* r) TA_REQ(lock_);
 
   // Notifies the child observer that there is one child.
   void NotifyOneChild() TA_EXCL(lock_);
@@ -251,12 +250,12 @@ class VmObject : public fbl::RefCounted<VmObject>,
   // and ::OnUserChildRemoved are called where appropraite.
   //
   // |guard| must be this vmo's lock.
-  virtual void RemoveChild(VmObjectPaged* child, Guard<Mutex>&& guard) TA_REQ(lock_);
+  virtual void RemoveChild(VmObject* child, Guard<Mutex>&& guard) TA_REQ(lock_);
 
   // Drops |c| from the child list without going through the full removal
   // process. ::RemoveChild is probably what you want here.
-  void DropChildLocked(VmObjectPaged* c) TA_REQ(lock_);
-  void ReplaceChildLocked(VmObjectPaged* old, VmObjectPaged* new_child) TA_REQ(lock_);
+  void DropChildLocked(VmObject* c) TA_REQ(lock_);
+  void ReplaceChildLocked(VmObject* old, VmObject* new_child) TA_REQ(lock_);
   uint32_t num_user_children() const;
   uint32_t num_children() const;
 
@@ -336,7 +335,7 @@ class VmObject : public fbl::RefCounted<VmObject>,
   fbl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
 
   // list of every child
-  fbl::DoublyLinkedList<VmObjectPaged*> children_list_ TA_GUARDED(lock_);
+  fbl::DoublyLinkedList<VmObject*> children_list_ TA_GUARDED(lock_);
 
   // lengths of corresponding lists
   uint32_t mapping_list_len_ TA_GUARDED(lock_) = 0;

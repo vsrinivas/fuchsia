@@ -618,9 +618,11 @@ bool VmObjectPaged::OnChildAddedLocked() {
 
   // Reaching into the children confuses analysis
   for (auto& c : children_list_) {
-    AssertHeld(c.lock_);
-    if (c.user_id_ == user_id_) {
-      return c.OnChildAddedLocked();
+    DEBUG_ASSERT(c.is_paged());
+    VmObjectPaged& child = static_cast<VmObjectPaged&>(c);
+    AssertHeld(child.lock_);
+    if (child.user_id_ == user_id_) {
+      return child.OnChildAddedLocked();
     }
   }
 
@@ -628,7 +630,7 @@ bool VmObjectPaged::OnChildAddedLocked() {
   panic("no child with matching user_id: %" PRIx64 "\n", user_id_);
 }
 
-void VmObjectPaged::RemoveChild(VmObjectPaged* removed, Guard<fbl::Mutex>&& adopt) {
+void VmObjectPaged::RemoveChild(VmObject* removed, Guard<fbl::Mutex>&& adopt) {
   if (!is_hidden()) {
     VmObject::RemoveChild(removed, adopt.take());
     return;
@@ -644,10 +646,12 @@ void VmObjectPaged::RemoveChild(VmObjectPaged* removed, Guard<fbl::Mutex>&& adop
   bool removed_left = &left_child_locked() == removed;
 
   DropChildLocked(removed);
-  auto& child = children_list_.front();
+  DEBUG_ASSERT(children_list_.front().is_paged());
+  VmObjectPaged& child = static_cast<VmObjectPaged&>(children_list_.front());
 
   // Merge this vmo's content into the remaining child.
-  MergeContentWithChildLocked(removed, removed_left);
+  DEBUG_ASSERT(removed->is_paged());
+  MergeContentWithChildLocked(static_cast<VmObjectPaged*>(removed), removed_left);
 
   // The child which removed itself and led to the invocation should have a reference
   // to us, in addition to child.parent_ which we are about to clear.
@@ -713,7 +717,8 @@ void VmObjectPaged::RemoveChild(VmObjectPaged* removed, Guard<fbl::Mutex>&& adop
 
 void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool removed_left) {
   DEBUG_ASSERT(children_list_len_ == 1);
-  auto& child = children_list_.front();
+  DEBUG_ASSERT(children_list_.front().is_paged());
+  VmObjectPaged& child = static_cast<VmObjectPaged&>(children_list_.front());
 
   list_node freed_pages;
   list_initialize(&freed_pages);
@@ -2101,7 +2106,9 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
 void VmObjectPaged::UpdateChildParentLimitsLocked(uint64_t new_size) {
   // Note that a child's parent_limit_ will limit that child's descendants' views into
   // this vmo, so this method only needs to touch the direct children.
-  for (auto& child : children_list_) {
+  for (auto& c : children_list_) {
+    DEBUG_ASSERT(c.is_paged());
+    VmObjectPaged& child = static_cast<VmObjectPaged&>(c);
     if (new_size < child.parent_offset_) {
       child.parent_limit_ = 0;
     } else {

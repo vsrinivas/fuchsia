@@ -163,7 +163,7 @@ void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {
   child_observer_ = child_observer;
 }
 
-bool VmObject::AddChildLocked(VmObjectPaged* o) {
+bool VmObject::AddChildLocked(VmObject* o) {
   canary_.Assert();
   DEBUG_ASSERT(lock_.lock().IsHeld());
   children_list_.push_front(o);
@@ -192,19 +192,19 @@ void VmObject::NotifyOneChild() {
   }
 }
 
-void VmObject::ReplaceChildLocked(VmObjectPaged* old, VmObjectPaged* new_child) {
+void VmObject::ReplaceChildLocked(VmObject* old, VmObject* new_child) {
   canary_.Assert();
   children_list_.replace(*old, new_child);
 }
 
-void VmObject::DropChildLocked(VmObjectPaged* c) {
+void VmObject::DropChildLocked(VmObject* c) {
   canary_.Assert();
   DEBUG_ASSERT(children_list_len_ > 0);
   children_list_.erase(*c);
   --children_list_len_;
 }
 
-void VmObject::RemoveChild(VmObjectPaged* o, Guard<Mutex>&& adopt) {
+void VmObject::RemoveChild(VmObject* o, Guard<Mutex>&& adopt) {
   canary_.Assert();
   DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
   Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
@@ -264,7 +264,11 @@ void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list) {
     }
 
     // inform all our children this as well, so they can inform their mappings
-    for (auto& child : object->children_list_) {
+    for (auto& c : object->children_list_) {
+      // range updates only happen if we are a paged vmo, in which case we know all of our children
+      // will be paged.
+      DEBUG_ASSERT(c.is_paged());
+      VmObjectPaged& child = static_cast<VmObjectPaged&>(c);
       child.RangeChangeUpdateFromParentLocked(object->range_change_offset_,
                                               object->range_change_len_, list);
     }
