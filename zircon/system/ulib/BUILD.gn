@@ -32,7 +32,6 @@ group("ulib") {
     "blktest",
     "blobfs",
     "block-client",
-    "bootdata",
     "bootfs",
     "c",
     "c:crt1",
@@ -147,11 +146,11 @@ group("ulib") {
     "zircon",
     "zircon-internal",
     "zx",
+    "zx-panic-libc",
     "zxcrypt:zxcrypt-dev",
     "zxcrypt:zxcrypt-fdio",
     "zxio",
     "zxs",
     "zxtest",
-    "zx-panic-libc",
   ]
 }
