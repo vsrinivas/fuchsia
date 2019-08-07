@@ -9,10 +9,14 @@
 #include <algorithm>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node_generated.h"
+#include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace storage {
 namespace btree {
@@ -45,11 +49,40 @@ bool IsTreeNodeEntryValid(const EntryStorage* entry) {
          IsKeyPriorityStorageValid(entry->priority());
 }
 
+// Similar to fxl::Concatenate, but additionally inserts the length as a prefix to each of the
+// StringViews. Prevents accidental collisions.
+std::string SafeConcatenation(std::initializer_list<fxl::StringView> string_views) {
+  std::string result;
+  size_t result_size = string_views.size() * sizeof(size_t);
+  for (const fxl::StringView& string_view : string_views) {
+    result_size += string_view.size();
+  }
+  result.reserve(result_size);
+  for (const fxl::StringView& string_view : string_views) {
+    result.append(storage::SerializeData(string_view.size()).data(), sizeof(size_t));
+    result.append(string_view.data(), string_view.size());
+  }
+  return result;
+}
+
+// Computes and returns the EntryId for this entry.
+// TODO(nellyv): EntryIds should be stored in the tree nodes instead of being computed.
+EntryId ComputeEntryId(Entry entry) {
+  ObjectIdentifier& object_id = entry.object_identifier;
+
+  return encryption::SHA256WithLengthHash(SafeConcatenation(
+      {entry.key, fxl::NumberToString(object_id.key_index()),
+       fxl::NumberToString(object_id.deletion_scope_id()), object_id.object_digest().Serialize(),
+       entry.priority == KeyPriority::EAGER ? "E" : "L"}));
+}
+
 Entry ToEntry(const EntryStorage* entry_storage, ObjectIdentifierFactory* factory) {
   FXL_DCHECK(IsTreeNodeEntryValid(entry_storage));
-  return Entry{convert::ToString(entry_storage->key()),
-               ToObjectIdentifier(entry_storage->object_id(), factory),
-               ToKeyPriority(entry_storage->priority()), EntryId()};
+  Entry entry{convert::ToString(entry_storage->key()),
+              ToObjectIdentifier(entry_storage->object_id(), factory),
+              ToKeyPriority(entry_storage->priority()), EntryId()};
+  entry.entry_id = ComputeEntryId(entry);
+  return entry;
 }
 }  // namespace
 

@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/callback/scoped_callback.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
@@ -108,7 +109,8 @@ PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
       commit_pruner_(environment_, this, &commit_factory_, policy),
       db_(std::move(page_db)),
       page_sync_(nullptr),
-      coroutine_manager_(environment->coroutine_service()) {}
+      coroutine_manager_(environment->coroutine_service()),
+      weak_factory_(this) {}
 
 PageStorageImpl::~PageStorageImpl() {}
 
@@ -647,9 +649,56 @@ void PageStorageImpl::GetEntryFromCommit(const Commit& commit, std::string key,
 }
 
 void PageStorageImpl::GetDiffForCloud(
-    const Commit& /*target_commit*/,
+    const Commit& target_commit,
     fit::function<void(Status, CommitIdView, std::vector<EntryChange>)> callback) {
-  callback(Status::NOT_IMPLEMENTED, "", {});
+  // Use the first parent as the base commit.
+  const CommitId base_id = target_commit.GetParentIds()[0].ToString();
+  GetCommit(base_id,
+            callback::MakeScoped(
+                weak_factory_.GetWeakPtr(),
+                [this, target_commit = target_commit.Clone(), callback = std::move(callback)](
+                    Status status, std::unique_ptr<const Commit> base_commit) mutable {
+                  // TODO(nellyv): Here we assume that the parent commit is available: when we start
+                  // prunning synced commits it might not be the case and another commit should be
+                  // used instead.
+                  FXL_DCHECK(status != Status::INTERNAL_NOT_FOUND);
+                  if (status != Status::OK) {
+                    callback(status, "", {});
+                    return;
+                  }
+                  auto changes = std::make_unique<std::vector<EntryChange>>();
+                  auto on_next_diff = [weak_this = weak_factory_.GetWeakPtr(),
+                                       changes = changes.get()](TwoWayChange change) {
+                    if (!weak_this) {
+                      return false;
+                    }
+                    if (change.base) {
+                      FXL_DCHECK(!change.base->entry_id.empty());
+                      // This change is either an update or a deletion. In either case we send to
+                      // the cloud a deletion of the previous entry.
+                      changes->push_back({std::move(*change.base), /*deleted*/ true});
+                    }
+                    if (change.target) {
+                      FXL_DCHECK(!change.target->entry_id.empty());
+                      // This change is either an update or an insertion. In either case we send to
+                      // the cloud an insertion of the updated entry.
+                      changes->push_back({std::move(*change.target), /*deleted*/ false});
+                    }
+                    return true;
+                  };
+                  auto on_done = [base_id = base_commit->GetId(), changes = std::move(changes),
+                                  callback = std::move(callback)](Status status) {
+                    if (status != Status::OK) {
+                      callback(status, "", {});
+                    }
+                    callback(status, base_id, std::move(*changes));
+                  };
+
+                  btree::ForEachTwoWayDiff(environment_->coroutine_service(), this,
+                                           base_commit->GetRootIdentifier(),
+                                           target_commit->GetRootIdentifier(), "",
+                                           std::move(on_next_diff), std::move(on_done));
+                }));
 }
 
 void PageStorageImpl::GetCommitContentsDiff(const Commit& base_commit, const Commit& other_commit,

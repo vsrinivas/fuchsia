@@ -68,6 +68,7 @@ using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::Not;
+using ::testing::SizeIs;
 using ::testing::UnorderedElementsAreArray;
 
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(const Commit& commit) {
@@ -2318,6 +2319,173 @@ TEST_F(PageStorageTest, GetEntryFromCommit) {
     ASSERT_EQ(status, Status::OK);
     EXPECT_EQ(entry.key, expected_key);
   }
+}
+
+TEST_F(PageStorageTest, GetDiffForCloudInsertion) {
+  // Create an initial commit with 10 keys and then another one having commit1 as a parent,
+  // inserting a new key.
+  std::unique_ptr<const Commit> commit1 = TryCommitFromLocal(10);
+  ASSERT_TRUE(commit1);
+
+  const std::string new_key = "new_key";
+  const ObjectIdentifier new_identifier = RandomObjectIdentifier();
+  const KeyPriority new_priority = KeyPriority::LAZY;
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put(new_key, new_identifier, new_priority);
+  std::unique_ptr<const Commit> commit2 = TryCommitJournal(std::move(journal), Status::OK);
+
+  bool called = false;
+  storage_->GetDiffForCloud(
+      *commit2, [&](Status status, CommitIdView base_id, std::vector<EntryChange> changes) {
+        called = true;
+        ASSERT_EQ(status, Status::OK);
+        EXPECT_EQ(base_id, commit1->GetId());
+
+        EXPECT_THAT(changes, SizeIs(1));
+        EXPECT_EQ(changes[0].entry.key, new_key);
+        EXPECT_EQ(changes[0].entry.object_identifier, new_identifier);
+        EXPECT_EQ(changes[0].entry.priority, new_priority);
+        EXPECT_THAT(changes[0].entry.entry_id, Not(IsEmpty()));
+        EXPECT_EQ(changes[0].deleted, false);
+      });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+}
+
+TEST_F(PageStorageTest, GetDiffForCloudDeletion) {
+  // Create an initial commit with 3 keys and then another one having commit1 as a parent,
+  // deleting a key.
+  const std::string deleted_key = "deleted_key";
+  const ObjectIdentifier deleted_identifier = RandomObjectIdentifier();
+  const KeyPriority deleted_priority = KeyPriority::EAGER;
+
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("a key", RandomObjectIdentifier(), KeyPriority::LAZY);
+  journal->Put(deleted_key, deleted_identifier, deleted_priority);
+  journal->Put("last key", RandomObjectIdentifier(), KeyPriority::LAZY);
+  std::unique_ptr<const Commit> commit1 = TryCommitJournal(std::move(journal), Status::OK);
+  ASSERT_TRUE(commit1);
+
+  journal = storage_->StartCommit(GetFirstHead());
+  journal->Delete(deleted_key);
+  std::unique_ptr<const Commit> commit2 = TryCommitJournal(std::move(journal), Status::OK);
+
+  bool called = false;
+  storage_->GetDiffForCloud(
+      *commit2, [&](Status status, CommitIdView base_id, std::vector<EntryChange> changes) {
+        called = true;
+        ASSERT_EQ(status, Status::OK);
+        EXPECT_EQ(base_id, commit1->GetId());
+
+        EXPECT_THAT(changes, SizeIs(1));
+        EXPECT_EQ(changes[0].entry.key, deleted_key);
+        EXPECT_EQ(changes[0].entry.object_identifier, deleted_identifier);
+        EXPECT_EQ(changes[0].entry.priority, deleted_priority);
+        EXPECT_THAT(changes[0].entry.entry_id, Not(IsEmpty()));
+        EXPECT_EQ(changes[0].deleted, true);
+      });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+}
+
+TEST_F(PageStorageTest, GetDiffForCloudUpdate) {
+  // Create an initial commit with 3 keys and then another one having commit1 as a parent,
+  // updating a key.
+  const std::string updated_key = "updated_key";
+  const ObjectIdentifier old_identifier = RandomObjectIdentifier();
+  const KeyPriority old_priority = KeyPriority::LAZY;
+  const ObjectIdentifier new_identifier = RandomObjectIdentifier();
+  const KeyPriority new_priority = KeyPriority::EAGER;
+
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("a key", RandomObjectIdentifier(), KeyPriority::LAZY);
+  journal->Put(updated_key, old_identifier, old_priority);
+  journal->Put("last key", RandomObjectIdentifier(), KeyPriority::LAZY);
+  std::unique_ptr<const Commit> commit1 = TryCommitJournal(std::move(journal), Status::OK);
+  ASSERT_TRUE(commit1);
+
+  journal = storage_->StartCommit(GetFirstHead());
+  journal->Put(updated_key, new_identifier, new_priority);
+  std::unique_ptr<const Commit> commit2 = TryCommitJournal(std::move(journal), Status::OK);
+
+  bool called = false;
+  storage_->GetDiffForCloud(
+      *commit2, [&](Status status, CommitIdView base_id, std::vector<EntryChange> changes) {
+        called = true;
+        ASSERT_EQ(status, Status::OK);
+        EXPECT_EQ(base_id, commit1->GetId());
+
+        EXPECT_THAT(changes, SizeIs(2));
+        EXPECT_EQ(changes[0].entry.key, updated_key);
+        EXPECT_EQ(changes[0].entry.object_identifier, old_identifier);
+        EXPECT_EQ(changes[0].entry.priority, old_priority);
+        EXPECT_EQ(changes[0].deleted, true);
+
+        EXPECT_EQ(changes[1].entry.key, updated_key);
+        EXPECT_EQ(changes[1].entry.object_identifier, new_identifier);
+        EXPECT_EQ(changes[1].entry.priority, new_priority);
+        EXPECT_EQ(changes[1].deleted, false);
+      });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+}
+
+TEST_F(PageStorageTest, GetDiffForCloudEntryIdCorrectness) {
+  // Create an initial commit with 10 keys, then one having commit1 as a parent adding a key and
+  // then one having commit2 as a parent deleting the same key.
+  std::unique_ptr<const Commit> commit1 = TryCommitFromLocal(10);
+  ASSERT_TRUE(commit1);
+
+  const std::string new_key = "new_key";
+  const ObjectIdentifier new_identifier = RandomObjectIdentifier();
+  const KeyPriority new_priority = KeyPriority::LAZY;
+
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put(new_key, new_identifier, new_priority);
+  std::unique_ptr<const Commit> commit2 = TryCommitJournal(std::move(journal), Status::OK);
+
+  journal = storage_->StartCommit(GetFirstHead());
+  journal->Delete(new_key);
+  std::unique_ptr<const Commit> commit3 = TryCommitJournal(std::move(journal), Status::OK);
+
+  // The entry_id of the inserted entry should be the same as the entry_id of the deleted one.
+  EntryId expected_entry_id;
+  bool called = false;
+  storage_->GetDiffForCloud(
+      *commit2, [&](Status status, CommitIdView base_id, std::vector<EntryChange> changes) {
+        called = true;
+        ASSERT_EQ(status, Status::OK);
+        EXPECT_EQ(base_id, commit1->GetId());
+
+        EXPECT_THAT(changes, SizeIs(1));
+        EXPECT_EQ(changes[0].entry.key, new_key);
+        EXPECT_EQ(changes[0].entry.object_identifier, new_identifier);
+        EXPECT_EQ(changes[0].entry.priority, new_priority);
+        EXPECT_THAT(changes[0].entry.entry_id, Not(IsEmpty()));
+        EXPECT_EQ(changes[0].deleted, false);
+        expected_entry_id = changes[0].entry.entry_id;
+      });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+
+  called = false;
+  storage_->GetDiffForCloud(
+      *commit3, [&](Status status, CommitIdView base_id, std::vector<EntryChange> changes) {
+        called = true;
+        ASSERT_EQ(status, Status::OK);
+        EXPECT_EQ(base_id, commit2->GetId());
+
+        EXPECT_THAT(changes, SizeIs(1));
+        EXPECT_EQ(changes[0].entry.key, new_key);
+        EXPECT_EQ(changes[0].entry.object_identifier, new_identifier);
+        EXPECT_EQ(changes[0].entry.priority, new_priority);
+        EXPECT_THAT(changes[0].entry.entry_id, Not(IsEmpty()));
+        EXPECT_EQ(changes[0].deleted, true);
+
+        EXPECT_EQ(expected_entry_id, changes[0].entry.entry_id);
+      });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
 }
 
 TEST_F(PageStorageTest, WatcherForReEntrantCommits) {

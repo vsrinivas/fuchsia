@@ -259,6 +259,9 @@ class PageStorageImpl : public PageStorage {
   callback::OperationSerializer commit_serializer_;
   coroutine::CoroutineManager coroutine_manager_;
 
+  // This must be the last member of the class.
+  fxl::WeakPtrFactory<PageStorageImpl> weak_factory_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(PageStorageImpl);
 };
 

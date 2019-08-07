@@ -67,13 +67,22 @@ source_set("object_identifier_lib") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
+source_set("data_serialization") {
+  sources = [
+    "data_serialization.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+  ]
+}
+
 source_set("lib") {
   sources = [
     "commit_factory.cc",
     "commit_factory.h",
     "commit_pruner.cc",
     "commit_pruner.h",
-    "data_serialization.h",
     "db_serialization.cc",
     "db_serialization.h",
     "file_index.cc",
@@ -123,6 +132,7 @@ source_set("lib") {
 
   public_deps = [
     ":object_identifier_lib",
+    ":data_serialization",
     "//peridot/lib/convert",
     "//src/ledger/lib/coroutine",
     "//src/ledger/third_party/bup",
