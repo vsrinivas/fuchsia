@@ -3,6 +3,9 @@
         "binary": "test/log_listener_ptr_unittest"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"

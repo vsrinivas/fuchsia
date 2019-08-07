@@ -11,6 +11,9 @@
         "binary": "test/exception_broker_integration_test"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.exception.Handler",
             "fuchsia.logger.LogSink",

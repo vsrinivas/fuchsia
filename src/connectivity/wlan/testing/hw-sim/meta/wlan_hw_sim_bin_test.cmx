@@ -19,6 +19,9 @@
         "binary": "test/wlan_hw_sim_bin_test"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
             "fuchsia.wlan.service.Wlan",

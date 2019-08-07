@@ -7,7 +7,8 @@
             "misc/ptmx"
         ],
         "features": [
-            "shell-commands"
+            "shell-commands",
+            "deprecated-ambient-replace-as-executable"
         ],
         "boot": [ "bin" ],
         "services": [

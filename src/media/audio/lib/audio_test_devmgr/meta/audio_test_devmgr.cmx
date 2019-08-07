@@ -13,6 +13,9 @@
             "bin",
             "lib"
         ],
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.scheduler.ProfileProvider",

@@ -3,6 +3,9 @@
         "binary": "bin/component_manager_for_test_bin"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.pkg.PackageResolver",
             "fuchsia.process.Launcher",

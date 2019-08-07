@@ -17,6 +17,9 @@
         "binary": "test/audio_device_tests"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.media.AudioCore",
             "fuchsia.media.AudioDeviceEnumerator",
