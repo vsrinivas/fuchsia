@@ -67,7 +67,7 @@ struct ProcessStartData {
 
     /// The vmar object that was created when the process was created.
     ///
-    /// See <https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/process_create.md>.
+    /// See <https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/process_create.md>.
     handle<vmar> root_vmar;
 
     /// The initial thread for the process.

@@ -35,7 +35,7 @@ extern void inspector_set_verbosity(int level);
 // Print a backtrace of |thread| to |f|.
 // |thread| must currently be stopped: either suspended or in an exception.
 // The format of the output is verify specific: It outputs the format
-// documented at zircon/docs/symbolizer_markup.md
+// documented at docs/zircon/symbolizer_markup.md
 extern void inspector_print_backtrace_markup(FILE* f, zx_handle_t process, zx_handle_t thread,
                                              inspector_dsoinfo_t* dso_list, uintptr_t pc,
                                              uintptr_t sp, uintptr_t fp, bool use_libunwind);

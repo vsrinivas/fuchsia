@@ -3,7 +3,7 @@
 ## All builds
 
 ### asan_default_options
-Default [AddressSanitizer](https://llvm.org/docs/AddressSanitizer.html)
+Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
 options (before the `ASAN_OPTIONS` environment variable is read at
 runtime).  This can be set as a build argument to affect most "asan"
 variants in $variants (which see), or overridden in $toolchain_args in

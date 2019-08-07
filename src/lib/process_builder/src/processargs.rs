@@ -122,10 +122,10 @@ pub struct MessageContents {
 
 /// A bootstrap message following the processargs protocol.
 ///
-/// See [//zircon/docs/program_loading.md#The-processargs-protocol][program_loading.md] or
+/// See [//docs/zircon/program_loading.md#The-processargs-protocol][program_loading.md] or
 /// [//zircon/system/public/zircon/processargs.h][processargs] for more details.
 ///
-/// [program_loading.md]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/program_loading.md#The-processargs-protocol
+/// [program_loading.md]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/program_loading.md#The-processargs-protocol
 /// [processargs]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/public/zircon/processargs.h
 pub struct Message {
     bytes: Vec<u8>,

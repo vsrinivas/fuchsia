@@ -82,7 +82,7 @@ struct Opt {
     backend: BackendName,
 
     /// Banjo IDL files to process. These are expected to be in the format described by
-    /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/docs/ddk/banjo-tutorial.md#reference
+    /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/zircon/ddk/banjo-tutorial.md#reference
     #[structopt(short = "f", long = "files", parse(from_os_str))]
     input: Vec<PathBuf>,
 

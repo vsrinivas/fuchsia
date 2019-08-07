@@ -9,7 +9,7 @@ use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Peered, Status};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
-/// [event pair](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/concepts.md#Other-IPC_Events_Event-Pairs_and-User-Signals).
+/// [event pair](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/concepts.md#Other-IPC_Events_Event-Pairs_and-User-Signals).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -20,7 +20,7 @@ impl Peered for EventPair {}
 
 impl EventPair {
     /// Create an event pair, a pair of objects which can signal each other. Wraps the
-    /// [zx_eventpair_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/eventpair_create.md)
+    /// [zx_eventpair_create](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/eventpair_create.md)
     /// syscall.
     pub fn create() -> Result<(EventPair, EventPair), Status> {
         let mut out0 = 0;

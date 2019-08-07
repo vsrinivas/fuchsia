@@ -8,7 +8,7 @@
 // appear in the documentation.  Please be aware that changes in these blocks will affect the
 // documentation on fuchsia.dev.
 // You can find the usages in the documenation by running:
-//  find docs zircon/docs -name "*.md" | xargs \
+//  find docs -name "*.md" | xargs \
 //  grep "\{% includecode .*gerrit_path=\"examples/hello_world/rust/src/main.rs\""
 
 

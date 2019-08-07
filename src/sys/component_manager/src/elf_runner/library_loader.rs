@@ -106,7 +106,7 @@ pub async fn load_vmo<'a>(
 }
 
 /// parses a config string from the `fuchsia.ldsvc.Loader` service. See
-/// `//zircon/docs/program_loading.md` for a description of the format. Returns the set of
+/// `//docs/zircon/program_loading.md` for a description of the format. Returns the set of
 /// directories which should be searched for objects.
 fn parse_config_string(
     dir_proxy: &DirectoryProxy,

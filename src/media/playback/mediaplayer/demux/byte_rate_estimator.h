@@ -19,7 +19,7 @@ class ByteRateEstimator {
  public:
   // Describes an instance of the measured operation (e.g. a read of one chunk
   // from file). Times should come from |zx_clock_get|. See
-  // //zircon/docs/time.md.
+  // //docs/zircon/time.md.
   struct ByteRateSample {
     zx::time start_time;
     zx::time stop_time;

@@ -98,7 +98,7 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
   } while (r == -1 && errno == EINTR);
 
   // clock_get returns ns since start of clock. See
-  // zircon/docs/syscalls/clock_get.md.
+  // docs/zircon/syscalls/clock_get.md.
   const zx::time start{zx_clock_get_monotonic()};
 
   if (r < 0 || static_cast<size_t>(r) != request.size()) {
