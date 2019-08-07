@@ -123,7 +123,7 @@ zx_status_t ProfileDispatcher::ApplyProfile(fbl::RefPtr<ThreadDispatcher> thread
     if (result != ZX_OK) {
       return result;
     }
-    return thread->SetAffinity(mask);
+    return thread->SetSoftAffinity(mask);
   }
 
   return ZX_OK;

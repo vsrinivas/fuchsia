@@ -50,7 +50,7 @@ thread_t* pin_thread(uint16_t vpid) {
 
 bool check_pinned_cpu_invariant(uint16_t vpid, const thread_t* thread) {
   cpu_num_t cpu = cpu_of(vpid);
-  return thread == get_current_thread() && thread->cpu_affinity & cpu_num_to_mask(cpu) &&
+  return thread == get_current_thread() && thread->hard_affinity & cpu_num_to_mask(cpu) &&
          arch_curr_cpu_num() == cpu;
 }
 

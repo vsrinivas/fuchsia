@@ -232,7 +232,7 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
 }
 
 AutoPin::AutoPin(uint16_t vpid)
-    : prev_cpu_mask_(get_current_thread()->cpu_affinity), thread_(hypervisor::pin_thread(vpid)) {}
+    : prev_cpu_mask_(get_current_thread()->hard_affinity), thread_(hypervisor::pin_thread(vpid)) {}
 
 AutoPin::~AutoPin() { thread_set_cpu_affinity(thread_, prev_cpu_mask_); }
 

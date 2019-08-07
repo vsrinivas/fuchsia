@@ -128,6 +128,8 @@ void init_thread_struct(thread_t* t, const char* name) {
   strlcpy(t->name, name, sizeof(t->name));
   wait_queue_init(&t->retcode_wait_queue);
   init_thread_lock_state(t);
+  t->hard_affinity = CPU_MASK_ALL;
+  t->soft_affinity = CPU_MASK_ALL;
 }
 
 static void initial_thread_func(void) TA_REQ(thread_lock) __NO_RETURN;
@@ -207,7 +209,6 @@ thread_t* thread_create_etc(thread_t* t, const char* name, thread_start_routine 
   t->interruptable = false;
   t->curr_cpu = INVALID_CPU;
   t->last_cpu = INVALID_CPU;
-  t->cpu_affinity = CPU_MASK_ALL;
 
   t->retcode = 0;
   wait_queue_init(&t->retcode_wait_queue);
@@ -676,27 +677,43 @@ void thread_kill(thread_t* t) {
   }
 }
 
-cpu_mask_t thread_get_cpu_affinity(thread_t* t) {
+cpu_mask_t thread_get_cpu_affinity(const thread_t* t) {
   DEBUG_ASSERT(t->magic == THREAD_MAGIC);
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  return t->cpu_affinity;
+  return t->hard_affinity;
 }
 
-// Sets the cpu affinity mask of a thread to the passed in mask and migrate
-// the thread if active.
 void thread_set_cpu_affinity(thread_t* t, cpu_mask_t affinity) {
   DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+  DEBUG_ASSERT_MSG(
+      (affinity & mp_get_active_mask()) != 0,
+      "Attempted to set affinity mask to %#x, which has no overlap of active CPUs %#x.", affinity,
+      mp_get_active_mask());
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-  // make sure the passed in mask is valid and at least one cpu can run the thread
-  if (affinity & mp_get_active_mask()) {
-    // set the affinity mask
-    t->cpu_affinity = affinity;
+  // set the affinity mask
+  t->hard_affinity = affinity;
 
-    // let the scheduler deal with it
-    sched_migrate(t);
-  }
+  // let the scheduler deal with it
+  sched_migrate(t);
+}
+
+void thread_set_soft_cpu_affinity(thread_t* t, cpu_mask_t affinity) {
+  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+
+  // set the affinity mask
+  t->soft_affinity = affinity;
+
+  // let the scheduler deal with it
+  sched_migrate(t);
+}
+
+cpu_mask_t thread_get_soft_cpu_affinity(const thread_t* t) {
+  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  return t->soft_affinity;
 }
 
 void thread_migrate_to_cpu(const cpu_num_t target_cpu) {
@@ -1037,7 +1054,7 @@ void thread_construct_first(thread_t* t, const char* name) {
   t->signals = 0;
   t->curr_cpu = cpu;
   t->last_cpu = cpu;
-  t->cpu_affinity = cpu_num_to_mask(cpu);
+  t->hard_affinity = cpu_num_to_mask(cpu);
   sched_init_thread(t, HIGHEST_PRIORITY);
 
   arch_thread_construct_first(t);
@@ -1125,7 +1142,7 @@ void thread_become_idle(void) {
   // Pin the thread on the current cpu and mark it as already running
   t->last_cpu = curr_cpu;
   t->curr_cpu = curr_cpu;
-  t->cpu_affinity = cpu_num_to_mask(curr_cpu);
+  t->hard_affinity = cpu_num_to_mask(curr_cpu);
 
   // Cpu is active now
   mp_set_curr_cpu_active(true);
@@ -1203,7 +1220,7 @@ thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
     return t;
   }
   t->flags |= THREAD_FLAG_IDLE | THREAD_FLAG_DETACHED;
-  t->cpu_affinity = cpu_num_to_mask(cpu_num);
+  t->hard_affinity = cpu_num_to_mask(cpu_num);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
   sched_unblock_idle(t);
@@ -1266,11 +1283,11 @@ void dump_thread_locked(thread_t* t, bool full_dump) {
   if (full_dump) {
     dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name);
     dprintf(INFO,
-            "\tstate %s, curr/last cpu %d/%d, cpu_affinity %#x, priority %d [%d:%d,%d], "
-            "remaining time slice %" PRIi64 "\n",
-            thread_state_to_str(t->state), (int)t->curr_cpu, (int)t->last_cpu, t->cpu_affinity,
-            t->effec_priority, t->base_priority, t->priority_boost, t->inherited_priority,
-            t->remaining_time_slice);
+            "\tstate %s, curr/last cpu %d/%d, hard_affinity %#x, soft_cpu_affinty %#x, "
+            "priority %d [%d:%d,%d], remaining time slice %" PRIi64 "\n",
+            thread_state_to_str(t->state), (int)t->curr_cpu, (int)t->last_cpu, t->hard_affinity,
+            t->soft_affinity, t->effec_priority, t->base_priority, t->priority_boost,
+            t->inherited_priority, t->remaining_time_slice);
     dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n", runtime,
             runtime / 1000000000);
     dprintf(INFO, "\tstack.base 0x%lx, stack.vmar %p, stack.size %zu\n", t->stack.base,

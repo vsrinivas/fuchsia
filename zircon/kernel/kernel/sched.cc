@@ -188,6 +188,23 @@ static cpu_mask_t rand_cpu(cpu_mask_t mask) {
   }
 }
 
+// return the mask of CPUs this thread may be scheduled on
+static cpu_mask_t get_allowed_cpus_mask(cpu_mask_t active_mask, const thread_t* thread) {
+  // the thread may run on any active CPU allowed by both its hard and
+  // soft CPU affinity
+  const cpu_mask_t soft_affinity = thread->soft_affinity;
+  const cpu_mask_t hard_affinity = thread->hard_affinity;
+  const cpu_mask_t available_mask = active_mask & soft_affinity & hard_affinity;
+  if (likely(available_mask != 0)) {
+    return available_mask;
+  }
+
+  // there is no CPU allowed by the intersection of active CPUs, the
+  // hard affinity mask, and the soft affinity mask. ignore the soft
+  // affinity.
+  return active_mask & hard_affinity;
+}
+
 // find a cpu to wake up
 static cpu_mask_t find_cpu_mask(thread_t* t) TA_REQ(thread_lock) {
   // get the last cpu the thread ran on
@@ -196,16 +213,24 @@ static cpu_mask_t find_cpu_mask(thread_t* t) TA_REQ(thread_lock) {
   // the current cpu
   cpu_mask_t curr_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
 
-  // the thread's affinity mask
-  cpu_mask_t cpu_affinity = t->cpu_affinity;
+  // determine CPUs the thread can be scheduled on
+  //
+  // threads may be created and resumed before the thread init level. work around
+  // an empty active mask by assuming the current cpu is scheduleable.
+  const cpu_mask_t active_cpu_mask = mp_get_active_mask();
+  cpu_mask_t allowed_cpus_mask =
+      active_cpu_mask == 0 ? curr_cpu_mask : get_allowed_cpus_mask(active_cpu_mask, t);
+  DEBUG_ASSERT_MSG(allowed_cpus_mask != 0,
+                   "Thread not able to be scheduled on any CPU: active_mask: %#x, "
+                   "kernel affinity: %#x, userspace affinity: %#x",
+                   active_cpu_mask, t->hard_affinity, t->soft_affinity);
 
-  LTRACEF_LEVEL(2, "last %#x curr %#x aff %#x name %s\n", last_ran_cpu_mask, curr_cpu_mask,
-                cpu_affinity, t->name);
+  LTRACEF_LEVEL(2, "last %#x curr %#x kernel affinity %#x userspace affinity %#x name %s\n",
+                last_ran_cpu_mask, curr_cpu_mask, t->hard_affinity, t->soft_affinity, t->name);
 
   // get a list of idle cpus and mask off the ones that aren't in our affinity mask
   cpu_mask_t candidate_cpu_mask = mp_get_idle_mask();
-  cpu_mask_t active_cpu_mask = mp_get_active_mask();
-  candidate_cpu_mask &= cpu_affinity & active_cpu_mask;
+  candidate_cpu_mask &= allowed_cpus_mask;
   if (candidate_cpu_mask != 0) {
     if (candidate_cpu_mask & curr_cpu_mask) {
       // the current cpu is idle and within our affinity mask, so run it here
@@ -224,7 +249,7 @@ static cpu_mask_t find_cpu_mask(thread_t* t) TA_REQ(thread_lock) {
   // no idle cpus in our affinity mask
 
   // if the last cpu it ran on is in the affinity mask and not the current cpu, pick that
-  if ((last_ran_cpu_mask & cpu_affinity & active_cpu_mask) && last_ran_cpu_mask != curr_cpu_mask) {
+  if ((last_ran_cpu_mask & allowed_cpus_mask) && last_ran_cpu_mask != curr_cpu_mask) {
     return last_ran_cpu_mask;
   }
 
@@ -232,17 +257,13 @@ static cpu_mask_t find_cpu_mask(thread_t* t) TA_REQ(thread_lock) {
   // than the local cpu.
   // the affinity mask hard pins the thread to the cpus in the mask, so it's not possible
   // to pick a cpu outside of that list.
-  cpu_mask_t mask = cpu_affinity & ~(curr_cpu_mask);
+  cpu_mask_t mask = allowed_cpus_mask & ~(curr_cpu_mask);
   if (mask == 0) {
-    return curr_cpu_mask;  // local cpu is the only choice
+    // the code above verified that at least 1 CPU must be schedulable: if it
+    // is not any other CPU, it must be the local CPU.
+    return curr_cpu_mask;
   }
-
-  mask = rand_cpu(mask);
-  if (mask == 0) {
-    return curr_cpu_mask;  // local cpu is the only choice
-  }
-  DEBUG_ASSERT((mask & mp_get_active_mask()) == mask);
-  return mask;
+  return rand_cpu(mask);
 }
 
 // run queue manipulation
@@ -297,9 +318,9 @@ static thread_t* sched_get_top_thread(cpu_num_t cpu) TA_REQ(thread_lock) {
     thread_t* newthread = list_remove_head_type(&c->run_queue[highest_queue], thread_t, queue_node);
 
     DEBUG_ASSERT(newthread);
-    DEBUG_ASSERT_MSG(newthread->cpu_affinity & cpu_num_to_mask(cpu),
+    DEBUG_ASSERT_MSG(newthread->hard_affinity & cpu_num_to_mask(cpu),
                      "thread %p name %s, aff %#x cpu %u\n", newthread, newthread->name,
-                     newthread->cpu_affinity, cpu);
+                     newthread->hard_affinity, cpu);
     DEBUG_ASSERT(newthread->curr_cpu == cpu);
 
     if (list_is_empty(&c->run_queue[highest_queue])) {
@@ -421,12 +442,12 @@ void sched_unblock_idle(thread_t* t) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
   DEBUG_ASSERT(thread_is_idle(t));
-  DEBUG_ASSERT(t->cpu_affinity && (t->cpu_affinity & (t->cpu_affinity - 1)) == 0);
+  DEBUG_ASSERT(t->hard_affinity && (t->hard_affinity & (t->hard_affinity - 1)) == 0);
 
   // idle thread is special case, just jam it into the cpu's run queue in the thread's
   // affinity mask and mark it ready.
   t->state = THREAD_READY;
-  cpu_num_t cpu = lowest_cpu_set(t->cpu_affinity);
+  cpu_num_t cpu = lowest_cpu_set(t->hard_affinity);
   t->curr_cpu = cpu;
   insert_in_run_queue_head(cpu, t);
 }
@@ -559,7 +580,7 @@ void sched_transition_off_cpu(cpu_num_t old_cpu) {
   while (!thread_is_idle(t = sched_get_top_thread(old_cpu))) {
     // Threads pinned to old_cpu can't run anywhere else, so put them
     // into a temporary list and deal with them later.
-    if (t->cpu_affinity != pinned_mask) {
+    if (t->hard_affinity != pinned_mask) {
       find_cpu_and_insert(t, &local_resched, &accum_cpu_mask);
       DEBUG_ASSERT(!local_resched);
     } else {
@@ -585,7 +606,8 @@ static bool local_migrate_if_needed(thread_t* curr_thread) TA_REQ(thread_lock) {
   DEBUG_ASSERT(curr_thread->state == THREAD_READY);
 
   // if the affinity mask does not include the current cpu, migrate us right now
-  if (unlikely((curr_thread->cpu_affinity & cpu_num_to_mask(curr_thread->curr_cpu)) == 0)) {
+  if (unlikely(get_allowed_cpus_mask(mp_get_active_mask(), curr_thread) &
+               cpu_num_to_mask(curr_thread->curr_cpu)) == 0) {
     migrate_current_thread(curr_thread);
     return true;
   }
@@ -599,10 +621,11 @@ void sched_migrate(thread_t* t) {
 
   bool local_resched = false;
   cpu_mask_t accum_cpu_mask = 0;
+  const cpu_mask_t active_mask = mp_get_active_mask();
   switch (t->state) {
     case THREAD_RUNNING:
       // see if we need to migrate
-      if (t->cpu_affinity & cpu_num_to_mask(t->curr_cpu)) {
+      if (get_allowed_cpus_mask(active_mask, t) & cpu_num_to_mask(t->curr_cpu)) {
         // it's running and the new mask contains the core it's already running on, nothing to do.
         // TRACEF("t %p nomigrate\n", t);
         return;
@@ -619,7 +642,7 @@ void sched_migrate(thread_t* t) {
       }
       break;
     case THREAD_READY:
-      if (t->cpu_affinity & cpu_num_to_mask(t->curr_cpu)) {
+      if (get_allowed_cpus_mask(active_mask, t) & cpu_num_to_mask(t->curr_cpu)) {
         // it's ready and the new mask contains the core it's already waiting on, nothing to do.
         // TRACEF("t %p nomigrate\n", t);
         return;

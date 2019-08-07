@@ -890,8 +890,7 @@ static uint32_t ExceptionPortTypeToUserspaceVal(ExceptionPort::Type type) {
     case ExceptionPort::Type::JOB:
       return ZX_EXCEPTION_PORT_TYPE_JOB;
     default:
-      DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d",
-                       static_cast<int>(type));
+      DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d", static_cast<int>(type));
       return ZX_EXCEPTION_PORT_TYPE_NONE;
   }
 }
@@ -928,7 +927,7 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
   // We assume that we can fit the entire mask in the first word of
   // cpu_affinity_mask.
   static_assert(SMP_MAX_CPUS <= sizeof(info->cpu_affinity_mask.mask[0]) * 8);
-  info->cpu_affinity_mask.mask[0] = thread_get_cpu_affinity(&thread_);
+  info->cpu_affinity_mask.mask[0] = thread_get_soft_cpu_affinity(&thread_);
 
   return ZX_OK;
 }
@@ -1185,7 +1184,7 @@ zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
   return ZX_OK;
 }
 
-zx_status_t ThreadDispatcher::SetAffinity(cpu_mask_t mask) {
+zx_status_t ThreadDispatcher::SetSoftAffinity(cpu_mask_t mask) {
   Guard<fbl::Mutex> guard{get_lock()};
   if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DYING) ||
@@ -1193,7 +1192,7 @@ zx_status_t ThreadDispatcher::SetAffinity(cpu_mask_t mask) {
     return ZX_ERR_BAD_STATE;
   }
   // The mask was already validated by the Profile dispatcher.
-  thread_set_cpu_affinity(&thread_, mask);
+  thread_set_soft_cpu_affinity(&thread_, mask);
   return ZX_OK;
 }
 

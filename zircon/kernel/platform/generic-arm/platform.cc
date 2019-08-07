@@ -146,7 +146,7 @@ void platform_halt_cpu(void) {
 
 void platform_halt_secondary_cpus(void) {
   // Ensure the current thread is pinned to the boot CPU.
-  DEBUG_ASSERT(get_current_thread()->cpu_affinity == cpu_num_to_mask(BOOT_CPU_ID));
+  DEBUG_ASSERT(get_current_thread()->hard_affinity == cpu_num_to_mask(BOOT_CPU_ID));
 
   // "Unplug" online secondary CPUs before halting them.
   cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);

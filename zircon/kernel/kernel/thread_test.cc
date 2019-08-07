@@ -35,6 +35,53 @@ void wait_for_cond(F cond) {
   }
 }
 
+// Create and manage a spinning thread.
+class WorkerThread {
+ public:
+  explicit WorkerThread(const char* name) {
+    thread_ = thread_create(name, &WorkerThread::WorkerBody, this, LOW_PRIORITY);
+    ASSERT(thread_ != nullptr);
+  }
+
+  ~WorkerThread() { Join(); }
+
+  void Start() { thread_resume(thread_); }
+
+  void Join() {
+    if (thread_ != nullptr) {
+      atomic_store(&worker_should_stop_, 1);
+      int unused_retcode;
+      zx_status_t result = thread_join(thread_, &unused_retcode, ZX_TIME_INFINITE);
+      ASSERT(result == ZX_OK);
+      thread_ = nullptr;
+    }
+  }
+
+  void WaitForWorkerProgress() {
+    int start_iterations = worker_iterations();
+    wait_for_cond([start_iterations, this]() { return start_iterations != worker_iterations(); });
+  }
+
+  thread_t* thread() const { return thread_; }
+
+  int worker_iterations() { return atomic_load(&worker_iterations_); }
+
+  DISALLOW_COPY_ASSIGN_AND_MOVE(WorkerThread);
+
+ private:
+  static int WorkerBody(void* arg) {
+    auto* self = reinterpret_cast<WorkerThread*>(arg);
+    while (atomic_load(&self->worker_should_stop_) == 0) {
+      atomic_add(&self->worker_iterations_, 1);
+    }
+    return 0;
+  }
+
+  volatile int worker_iterations_ = 0;
+  volatile int worker_should_stop_ = 0;
+  thread_t* thread_;
+};
+
 struct YieldData {
   volatile int* done;
   volatile int* started;
@@ -215,17 +262,14 @@ bool thread_last_cpu_new_thread() {
   BEGIN_TEST;
 
   // Create a worker, but don't start it.
-  thread_t* worker = thread_create(
-      "unstarted_thread", [](void * /*unused*/) -> int { return 0; }, nullptr, LOW_PRIORITY);
+  WorkerThread worker("last_cpu_new_thread");
 
   // Ensure we get INVALID_CPU as last cpu.
-  ASSERT_EQ(thread_last_cpu(worker), INVALID_CPU, "Last CPU on unstarted thread invalid.");
+  ASSERT_EQ(thread_last_cpu(worker.thread()), INVALID_CPU, "Last CPU on unstarted thread invalid.");
 
   // Clean up the thread.
-  thread_resume(worker);
-  int unused_retcode;
-  ASSERT_EQ(thread_join(worker, &unused_retcode, ZX_TIME_INFINITE), ZX_OK,
-            "Failed to join thread.");
+  worker.Start();
+  worker.Join();
 
   END_TEST;
 }
@@ -233,20 +277,8 @@ bool thread_last_cpu_new_thread() {
 bool thread_last_cpu_running_thread() {
   BEGIN_TEST;
 
-  struct WorkerState {
-    volatile int should_stop = 0;
-  } state;
-
-  // Start a worker, which just spins.
-  auto worker_body = [](void* arg) -> int {
-    WorkerState& state = *reinterpret_cast<WorkerState*>(arg);
-    while (atomic_load(&state.should_stop) == 0) {
-      // Spin.
-    }
-    return 0;
-  };
-  thread_t* worker = thread_create("last_cpu_thread", worker_body, &state, LOW_PRIORITY);
-  thread_resume(worker);
+  WorkerThread worker("last_cpu_running_thread");
+  worker.Start();
 
   // Migrate the worker task across different CPUs.
   const cpu_mask_t online_cpus = mp_get_online_mask();
@@ -258,17 +290,61 @@ bool thread_last_cpu_running_thread() {
     }
 
     // Set affinity to the given core.
-    thread_set_cpu_affinity(worker, cpu_num_to_mask(c));
+    thread_set_cpu_affinity(worker.thread(), cpu_num_to_mask(c));
 
     // Ensure it is reported at the correct CPU.
-    wait_for_cond([c, worker]() { return thread_last_cpu(worker) == c; });
+    wait_for_cond([c, &worker]() { return thread_last_cpu(worker.thread()) == c; });
   }
 
-  // Clean up the thread.
-  atomic_store(&state.should_stop, 1);
-  int unused_retcode;
-  ASSERT_EQ(thread_join(worker, &unused_retcode, ZX_TIME_INFINITE), ZX_OK,
-            "Failed to join thread.");
+  END_TEST;
+}
+
+bool thread_empty_soft_affinity_mask() {
+  BEGIN_TEST;
+
+  WorkerThread worker("empty_soft_affinity_mask");
+  worker.Start();
+
+  // Wait for the thread to start running.
+  worker.WaitForWorkerProgress();
+
+  // Set affinity to an invalid (empty) mask.
+  thread_set_soft_cpu_affinity(worker.thread(), 0);
+
+  // Ensure that the thread is still running.
+  worker.WaitForWorkerProgress();
+
+  END_TEST;
+}
+
+bool thread_conflicting_soft_and_hard_affinity() {
+  BEGIN_TEST;
+
+  // Find two different CPUs to run our tests on.
+  cpu_mask_t online = mp_get_online_mask();
+  ASSERT_TRUE(online != 0, "No CPUs online.");
+  cpu_num_t a = highest_cpu_set(online);
+  cpu_num_t b = lowest_cpu_set(online);
+  if (a == b) {
+    // Skip test on single CPU machines.
+    unittest_printf("Only 1 CPU active in this machine. Skipping test.\n");
+    return true;
+  }
+
+  WorkerThread worker("conflicting_soft_and_hard_affinity");
+  worker.Start();
+
+  // Set soft affinity to CPU A, wait for the thread to start running there.
+  thread_set_soft_cpu_affinity(worker.thread(), cpu_num_to_mask(a));
+  wait_for_cond([&worker, a]() { return thread_last_cpu(worker.thread()) == a; });
+
+  // Set hard affinity to CPU B, ensure the thread migrates there.
+  thread_set_cpu_affinity(worker.thread(), cpu_num_to_mask(b));
+  wait_for_cond([&worker, b]() { return thread_last_cpu(worker.thread()) == b; });
+
+  // Remove the hard affinity. Make sure the thread migrates back to CPU A.
+  thread_set_cpu_affinity(worker.thread(), CPU_MASK_ALL);
+  wait_for_cond([&worker, a]() { return thread_last_cpu(worker.thread()) == a; });
 
   END_TEST;
 }
@@ -281,4 +357,6 @@ UNITTEST("set_affinity_self_test", set_affinity_self_test)
 UNITTEST("set_affinity_other_test", set_affinity_other_test)
 UNITTEST("thread_last_cpu_new_thread", thread_last_cpu_new_thread)
 UNITTEST("thread_last_cpu_running_thread", thread_last_cpu_running_thread)
+UNITTEST("thread_empty_soft_affinity_mask", thread_empty_soft_affinity_mask)
+UNITTEST("thread_conflicting_soft_and_hard_affinity", thread_conflicting_soft_and_hard_affinity)
 UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests");

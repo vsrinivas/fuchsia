@@ -141,8 +141,9 @@ struct thread_t {
 
   // current cpu the thread is either running on or in the ready queue, undefined otherwise
   cpu_num_t curr_cpu;
-  cpu_num_t last_cpu;       // last cpu the thread ran on, INVALID_CPU if it's never run
-  cpu_mask_t cpu_affinity;  // mask of cpus that this thread can run on
+  cpu_num_t last_cpu;        // last cpu the thread ran on, INVALID_CPU if it's never run
+  cpu_mask_t hard_affinity;  // mask of CPUs this thread _must_ run on
+  cpu_mask_t soft_affinity;  // mask of CPUs this thread should run on if possible
 
   // if blocked, a pointer to the wait queue
   struct wait_queue* blocking_wait_queue TA_GUARDED(thread_lock) = nullptr;
@@ -293,10 +294,24 @@ void thread_signal_policy_exception(void);
 void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t*);
 
-// Get/set the mask of valid CPus that thread may run on. If a new mask
+// Get/set the mask of valid CPUs that thread may run on. If a new mask
 // is set, the thread will be migrated to satisfy the new constraint.
-void thread_set_cpu_affinity(thread_t* t, cpu_mask_t mask) TA_EXCL(thread_lock);
-cpu_mask_t thread_get_cpu_affinity(thread_t* t) TA_EXCL(thread_lock);
+//
+// Affinity comes in two flavours:
+//
+//   * "hard affinity", which will always be respected by the scheduler.
+//     The scheduler will panic if it can't satisfy this affinity.
+//
+//   * "soft affinity" indicating where the thread should ideally be scheduled.
+//     The scheduler will respect the mask unless there are no other
+//     options (e.g., the soft affinity and hard affinity don't contain
+//     any common CPUs).
+//
+// If the two masks conflict, the hard affinity wins.
+void thread_set_cpu_affinity(thread_t* t, cpu_mask_t affinity) TA_EXCL(thread_lock);
+cpu_mask_t thread_get_cpu_affinity(const thread_t* t) TA_EXCL(thread_lock);
+void thread_set_soft_cpu_affinity(thread_t* t, cpu_mask_t affinity) TA_EXCL(thread_lock);
+cpu_mask_t thread_get_soft_cpu_affinity(const thread_t* t) TA_EXCL(thread_lock);
 
 // migrates the current thread to the CPU identified by target_cpu
 void thread_migrate_to_cpu(cpu_num_t target_cpuid);

@@ -134,6 +134,24 @@ inline uint64_t FlowIdFromThreadGeneration(const thread_t* thread) {
   return rotated_tid ^ thread->fair_task_state.generation();
 }
 
+// Calculate a mask of CPUs a thread is allowed to run on, based on the thread's
+// affinity mask and what CPUs are online.
+cpu_mask_t GetAllowedCpusMask(cpu_mask_t active_mask, const thread_t* thread) {
+  // The thread may run on any active CPU allowed by both its hard and
+  // soft CPU affinity.
+  const cpu_mask_t soft_affinity = thread->soft_affinity;
+  const cpu_mask_t hard_affinity = thread->hard_affinity;
+  const cpu_mask_t available_mask = active_mask & soft_affinity & hard_affinity;
+  if (likely(available_mask != 0)) {
+    return available_mask;
+  }
+
+  // There is no CPU allowed by the intersection of active CPUs, the
+  // hard affinity mask, and the soft affinity mask. Ignore the soft
+  // affinity.
+  return active_mask & hard_affinity;
+}
+
 }  // anonymous namespace
 
 void FairScheduler::Dump() {
@@ -197,10 +215,13 @@ thread_t* FairScheduler::EvaluateNextThread(SchedTime now, thread_t* current_thr
                                             bool timeslice_expired) {
   const bool is_idle = thread_is_idle(current_thread);
   const bool is_active = current_thread->state == THREAD_READY;
-  const bool should_migrate =
-      !(current_thread->cpu_affinity & cpu_num_to_mask(arch_curr_cpu_num()));
+  const cpu_num_t current_cpu = arch_curr_cpu_num();
+  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
+  const cpu_mask_t active_mask = mp_get_active_mask();
+  const bool needs_migration =
+      (GetAllowedCpusMask(active_mask, current_thread) & current_cpu_mask) == 0;
 
-  if (is_active && unlikely(should_migrate)) {
+  if (is_active && unlikely(needs_migration)) {
     // The current CPU is not in the thread's affinity mask, find a new CPU
     // and move it to that queue.
     current_thread->state = THREAD_READY;
@@ -241,17 +262,19 @@ cpu_num_t FairScheduler::FindTargetCpu(thread_t* thread) {
 
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
   const cpu_mask_t last_cpu_mask = cpu_num_to_mask(thread->last_cpu);
-  const cpu_mask_t affinity_mask = thread->cpu_affinity;
   const cpu_mask_t active_mask = mp_get_active_mask();
-  const cpu_mask_t idle_mask = mp_get_idle_mask();
 
+  // Determine the set of CPUs the thread is allowed to run on.
+  //
   // Threads may be created and resumed before the thread init level. Work around
   // an empty active mask by assuming the current cpu is scheduleable.
   const cpu_mask_t available_mask =
-      active_mask != 0 ? affinity_mask & active_mask : current_cpu_mask;
+      active_mask != 0 ? GetAllowedCpusMask(active_mask, thread) : current_cpu_mask;
   DEBUG_ASSERT_MSG(available_mask != 0,
-                   "thread=%s affinity=%#x active=%#x idle=%#x arch_ints_disabled=%d", thread->name,
-                   affinity_mask, active_mask, idle_mask, arch_ints_disabled());
+                   "thread=%s affinity=%#x soft_affinity=%#x active=%#x "
+                   "idle=%#x arch_ints_disabled=%d",
+                   thread->name, thread->hard_affinity, thread->soft_affinity, active_mask,
+                   mp_get_idle_mask(), arch_ints_disabled());
 
   LOCAL_KTRACE("target_mask: online,active", mp_get_online_mask(), active_mask);
 
@@ -721,12 +744,12 @@ void FairScheduler::UnblockIdle(thread_t* thread) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
   DEBUG_ASSERT(thread_is_idle(thread));
-  DEBUG_ASSERT(thread->cpu_affinity && (thread->cpu_affinity & (thread->cpu_affinity - 1)) == 0);
+  DEBUG_ASSERT(thread->hard_affinity && (thread->hard_affinity & (thread->hard_affinity - 1)) == 0);
 
   SCHED_LTRACEF("thread=%s now=%ld\n", thread->name, current_time());
 
   thread->state = THREAD_READY;
-  thread->curr_cpu = lowest_cpu_set(thread->cpu_affinity);
+  thread->curr_cpu = lowest_cpu_set(thread->hard_affinity);
 }
 
 void FairScheduler::Yield() {
@@ -808,14 +831,14 @@ void FairScheduler::Migrate(thread_t* thread) {
 
   if (thread->state == THREAD_RUNNING) {
     const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(thread->curr_cpu);
-    if (!(thread->cpu_affinity & thread_cpu_mask)) {
+    if (!(GetAllowedCpusMask(mp_get_active_mask(), thread) & thread_cpu_mask)) {
       // Mark the CPU the thread is running on for reschedule. The
       // scheduler on that CPU will take care of the actual migration.
       cpus_to_reschedule_mask |= thread_cpu_mask;
     }
   } else if (thread->state == THREAD_READY) {
     const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(thread->curr_cpu);
-    if (!(thread->cpu_affinity & thread_cpu_mask)) {
+    if (!(GetAllowedCpusMask(mp_get_active_mask(), thread) & thread_cpu_mask)) {
       FairScheduler* current = Get(thread->curr_cpu);
 
       DEBUG_ASSERT(thread->fair_task_state.InQueue());
@@ -859,7 +882,7 @@ void FairScheduler::MigrateUnpinnedThreads(cpu_num_t current_cpu) {
   while (!current->run_queue_.is_empty()) {
     thread_t* const thread = current->DequeueThread();
 
-    if (thread->cpu_affinity == current_cpu_mask) {
+    if (thread->hard_affinity == current_cpu_mask) {
       // Keep track of threads pinned to this CPU.
       pinned_threads.insert(thread);
     } else {
