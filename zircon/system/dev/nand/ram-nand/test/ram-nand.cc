@@ -86,7 +86,19 @@ TEST(RamNandTest, ExportNandConfig) {
   config.partition_map.partitions[2].copy_count = 23;
   config.partition_map.partitions[2].copy_byte_offset = 24;
 
-  nand_config_t expected = {{0, {66, 77}}, 2, {}};
+  nand_config_t expected = {
+      .bad_block_config =
+          {
+              .type = 0,
+              .aml_uboot =
+                  {
+                      .table_start_block = 66,
+                      .table_end_block = 77,
+                  },
+          },
+      .extra_partition_config_count = 2,
+      .extra_partition_config = {},
+  };
   memset(expected.extra_partition_config[0].type_guid, 11, ZBI_PARTITION_GUID_LEN);
   expected.extra_partition_config[0].copy_count = 12;
   expected.extra_partition_config[0].copy_byte_offset = 13;

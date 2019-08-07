@@ -53,8 +53,8 @@ void ExtractNandConfig(const fuchsia_hardware_nand_RamNandInfo& info, nand_confi
   for (uint32_t i = 0; i < GetNumPartitions(info); i++) {
     const auto& partition = info.partition_map.partitions[i];
     if (partition.hidden && partition.bbt) {
-      config->bad_block_config.aml.table_start_block = partition.first_block;
-      config->bad_block_config.aml.table_end_block = partition.last_block;
+      config->bad_block_config.aml_uboot.table_start_block = partition.first_block;
+      config->bad_block_config.aml_uboot.table_end_block = partition.last_block;
     } else if (!partition.hidden) {
       if (partition.copy_count > 1) {
         nand_partition_config_t* extra = &config->extra_partition_config[extra_count];

@@ -240,9 +240,9 @@ zx_status_t AmlBadBlock::FindBadBlockTable() {
   }
 
   zxlogf(TRACE, "nandpart: Starting in block %u. Ending in block %u.\n",
-         config_.aml.table_start_block, config_.aml.table_end_block);
+         config_.aml_uboot.table_start_block, config_.aml_uboot.table_end_block);
 
-  const uint32_t blocks = config_.aml.table_end_block - config_.aml.table_start_block;
+  const uint32_t blocks = config_.aml_uboot.table_end_block - config_.aml_uboot.table_start_block;
   if (blocks == 0 || blocks > kBlockListMax) {
     // Driver assumption that no more than |kBlockListMax| blocks will be dedicated for BBT use.
     zxlogf(ERROR, "Unsupported number of blocks used for BBT.\n");
@@ -255,8 +255,8 @@ zx_status_t AmlBadBlock::FindBadBlockTable() {
 
   int8_t valid_blocks = 0;
   block_entry_ = NULL;
-  uint32_t block = config_.aml.table_start_block;
-  for (; block <= config_.aml.table_end_block; block++) {
+  uint32_t block = config_.aml_uboot.table_start_block;
+  for (; block <= config_.aml_uboot.table_end_block; block++) {
     //  Attempt to read up to 6 entries to see if block is valid.
     uint32_t nand_page = block * nand_info_.pages_per_block;
     zx_status_t status = ZX_ERR_INTERNAL;

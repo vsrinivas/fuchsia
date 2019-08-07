@@ -8,6 +8,7 @@ driver("nandpart") {
     "bad-block.cc",
     "nandpart-utils.cc",
     "nandpart.cc",
+    "synaptics-bad-block.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.badblock",
@@ -30,8 +31,10 @@ test("nandpart-test") {
     "aml-bad-block.cc",
     "bad-block.cc",
     "nandpart-utils.cc",
+    "synaptics-bad-block.cc",
     "test/aml-bad-block-test.cc",
     "test/nandpart-utils-test.cc",
+    "test/synaptics-bad-block-test.cc",
   ]
   include_dirs = [ "." ]
   deps = [
@@ -42,6 +45,7 @@ test("nandpart-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",

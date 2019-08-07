@@ -51,7 +51,7 @@ static const nand_config_t config = {
     .bad_block_config =
         {
             .type = kAmlogicUboot,
-            .aml =
+            .aml_uboot =
                 {
                     .table_start_block = 20,
                     .table_end_block = 23,

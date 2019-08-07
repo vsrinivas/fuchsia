@@ -196,7 +196,7 @@ BadBlock::Config MakeBadBlockConfig(Context* ctx) {
       .bad_block_config =
           {
               .type = kAmlogicUboot,
-              .aml =
+              .aml_uboot =
                   {
                       .table_start_block = 0,
                       .table_end_block = 3,

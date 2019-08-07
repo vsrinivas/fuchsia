@@ -5,7 +5,7 @@
   "pkg/ddk/include/ddk/driver.h": "19464e515f1c6373b5a5e0ab3687b3b0",
   "pkg/ddk/include/ddk/io-buffer.h": "f437e5d02e615b6366248c0363b69e8d",
   "pkg/ddk/include/ddk/metadata.h": "e5125b4367e0c8a16f56386842f95d4b",
-  "pkg/ddk/include/ddk/metadata/bad-block.h": "9a285ac948045d7ebb9072b569db04f8",
+  "pkg/ddk/include/ddk/metadata/bad-block.h": "b149d916398535681783481380bfbea0",
   "pkg/ddk/include/ddk/metadata/buttons.h": "31bd525b0ca27196d967020a597d17cf",
   "pkg/ddk/include/ddk/metadata/camera.h": "82c0437107fee2d4e9d9ab592018998c",
   "pkg/ddk/include/ddk/metadata/gpt.h": "62bb4caa9782e3d941cc9b561223859f",
