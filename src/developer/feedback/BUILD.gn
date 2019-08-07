@@ -6,11 +6,11 @@ group("feedback") {
 
   public_deps = [
     ":tests",
+    "boot_log_checker",
     "bugreport",
     "bugreport:host_tool",
     "crashpad_agent",
     "feedback_agent",
-    "kernel_crash_checker",
   ]
 }
 

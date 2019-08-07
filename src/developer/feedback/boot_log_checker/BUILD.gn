@@ -5,27 +5,27 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//build/package/component.gni")
 
-package("kernel_crash_checker") {
+package("boot_log_checker") {
   deps = [
     ":main",
   ]
 
   binaries = [
     {
-      name = "kernel_crash_checker"
+      name = "boot_log_checker"
     },
   ]
 
   meta = [
     {
-      path = "meta/kernel_crash_checker.cmx"
-      dest = "kernel_crash_checker.cmx"
+      path = "meta/boot_log_checker.cmx"
+      dest = "boot_log_checker.cmx"
     },
   ]
 }
 
 executable("main") {
-  output_name = "kernel_crash_checker"
+  output_name = "boot_log_checker"
 
   sources = [
     "main.cc",
@@ -50,6 +50,6 @@ config_data("config") {
     "config/config.json",
   ]
   outputs = [
-    "kernel_crash_checker.config",
+    "boot_log_checker.config",
   ]
 }

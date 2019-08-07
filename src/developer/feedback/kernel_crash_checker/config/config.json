@@ -1,3 +1,0 @@
-{
-  "apps": [ "fuchsia-pkg://fuchsia.com/kernel_crash_checker#meta/kernel_crash_checker.cmx" ]
-}

@@ -39,8 +39,6 @@ base_package_labels += [
   "//src/connectivity/wlan:service",
   "//src/connectivity/wlan:tests",
   "//src/connectivity/wlan:tools",
-  "//src/developer/feedback/kernel_crash_checker",
-  "//src/developer/feedback/kernel_crash_checker:config",
   "//third_party/boringssl:boringssl_tool",
 ]
 
