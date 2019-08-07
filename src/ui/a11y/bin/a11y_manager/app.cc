@@ -9,6 +9,8 @@
 
 namespace a11y_manager {
 
+const float kDefaultMagnificationZoomFactor = 1.0;
+
 App::App()
     : startup_context_(sys::ComponentContext::Create()),
       settings_manager_impl_(std::make_unique<SettingsManagerImpl>()),
@@ -40,13 +42,27 @@ App::App()
 }
 
 void App::SetSettings(fuchsia::accessibility::Settings provided_settings) {
-  settings_.set_magnification_enabled(provided_settings.magnification_enabled());
+  settings_.set_magnification_enabled(provided_settings.has_magnification_enabled() &&
+                                      provided_settings.magnification_enabled());
+
   if (provided_settings.has_magnification_zoom_factor()) {
     settings_.set_magnification_zoom_factor(provided_settings.magnification_zoom_factor());
+  } else {
+    settings_.set_magnification_zoom_factor(kDefaultMagnificationZoomFactor);
   }
-  settings_.set_screen_reader_enabled(provided_settings.screen_reader_enabled());
-  settings_.set_color_inversion_enabled(provided_settings.color_inversion_enabled());
-  settings_.set_color_correction(provided_settings.color_correction());
+
+  settings_.set_screen_reader_enabled(provided_settings.has_screen_reader_enabled() &&
+                                      provided_settings.screen_reader_enabled());
+
+  settings_.set_color_inversion_enabled(provided_settings.has_color_inversion_enabled() &&
+                                        provided_settings.color_inversion_enabled());
+
+  if (provided_settings.has_color_correction()) {
+    settings_.set_color_correction(provided_settings.color_correction());
+  } else {
+    settings_.set_color_correction(fuchsia::accessibility::ColorCorrection::DISABLED);
+  }
+
   if (provided_settings.has_color_adjustment_matrix()) {
     settings_.set_color_adjustment_matrix(provided_settings.color_adjustment_matrix());
   }
@@ -66,7 +82,9 @@ void App::OnScreenReaderEnabled(bool enabled) {
 
 void App::OnSettingsChange(fuchsia::accessibility::Settings provided_settings) {
   // Check if screen reader settings have changed.
-  if (settings_.screen_reader_enabled() != provided_settings.screen_reader_enabled()) {
+  if ((settings_.has_screen_reader_enabled() && settings_.screen_reader_enabled()) !=
+      (provided_settings.has_screen_reader_enabled() &&
+       provided_settings.screen_reader_enabled())) {
     OnScreenReaderEnabled(provided_settings.screen_reader_enabled());
   }
 

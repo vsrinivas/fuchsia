@@ -6,12 +6,15 @@
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/logger.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
 #include <cmath>
 
+#include <src/lib/fxl/logging.h>
+
 namespace accessibility_test {
+
+const float kDefaultMagnificationZoomFactor = 1.0;
 
 MockSettingsWatcher::MockSettingsWatcher(sys::testing::ComponentContextProvider* context)
     : context_provider_(context) {
@@ -30,13 +33,27 @@ void MockSettingsWatcher::OnSettingsChange(fuchsia::accessibility::Settings new_
 }
 
 void MockSettingsWatcher::SaveSettings(fuchsia::accessibility::Settings provided_settings) {
-  settings_.set_magnification_enabled(provided_settings.magnification_enabled());
+  settings_.set_magnification_enabled(provided_settings.has_magnification_enabled() &&
+                                      provided_settings.magnification_enabled());
+
   if (provided_settings.has_magnification_zoom_factor()) {
     settings_.set_magnification_zoom_factor(provided_settings.magnification_zoom_factor());
+  } else {
+    settings_.set_magnification_zoom_factor(kDefaultMagnificationZoomFactor);
   }
-  settings_.set_screen_reader_enabled(provided_settings.screen_reader_enabled());
-  settings_.set_color_inversion_enabled(provided_settings.color_inversion_enabled());
-  settings_.set_color_correction(provided_settings.color_correction());
+
+  settings_.set_screen_reader_enabled(provided_settings.has_screen_reader_enabled() &&
+                                      provided_settings.screen_reader_enabled());
+
+  settings_.set_color_inversion_enabled(provided_settings.has_color_inversion_enabled() &&
+                                        provided_settings.color_inversion_enabled());
+
+  if (provided_settings.has_color_correction()) {
+    settings_.set_color_correction(provided_settings.color_correction());
+  } else {
+    settings_.set_color_correction(fuchsia::accessibility::ColorCorrection::DISABLED);
+  }
+
   if (provided_settings.has_color_adjustment_matrix()) {
     settings_.set_color_adjustment_matrix(provided_settings.color_adjustment_matrix());
   }
