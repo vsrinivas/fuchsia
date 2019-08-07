@@ -93,7 +93,6 @@ executable("fshost") {
     ":block-watcher",
     ":fshost-registry",
     ":metrics",
-    "$zx/system/ulib/bootdata",
     "$zx/system/ulib/cobalt-client",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/hermetic-decompressor",

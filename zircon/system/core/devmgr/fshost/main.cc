@@ -19,7 +19,6 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include <bootdata/decompress.h>
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/unique_fd.h>
 #include <loader-service/loader-service.h>
