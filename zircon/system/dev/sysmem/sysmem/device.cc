@@ -22,17 +22,9 @@ namespace {
 
 class SystemRamMemoryAllocator : public MemoryAllocator {
  public:
-  zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override {
-    return zx::vmo::create(size, 0, parent_vmo);
+  zx_status_t Allocate(uint64_t size, zx::vmo* vmo) override {
+    return zx::vmo::create(size, 0, vmo);
   }
-  zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override {
-    // nothing to do here
-    return ZX_OK;
-  }
-  virtual void Delete(zx::vmo parent_vmo) override {
-    // ~parent_vmo
-  }
-
   bool CoherencyDomainIsInaccessible() override { return false; }
 };
 
@@ -41,13 +33,12 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
   explicit ContiguousSystemRamMemoryAllocator(Owner* parent_device)
       : parent_device_(parent_device) {}
 
-  zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override {
-    zx::vmo result_parent_vmo;
+  zx_status_t Allocate(uint64_t size, zx::vmo* vmo) override {
     // This code is unlikely to work after running for a while and physical
     // memory is more fragmented than early during boot. The
     // ContiguousPooledSystemRamMemoryAllocator handles that case by keeping
     // a separate pool of contiguous memory.
-    zx_status_t status = zx::vmo::create_contiguous(parent_device_->bti(), size, 0, &result_parent_vmo);
+    zx_status_t status = zx::vmo::create_contiguous(parent_device_->bti(), size, 0, vmo);
     if (status != ZX_OK) {
       DRIVER_ERROR(
           "zx::vmo::create_contiguous() failed - size_bytes: %lu "
@@ -67,17 +58,8 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
       status = ZX_ERR_NO_MEMORY;
       return status;
     }
-    *parent_vmo = std::move(result_parent_vmo);
     return ZX_OK;
   }
-  virtual zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override {
-    // nothing to do here
-    return ZX_OK;
-  }
-  void Delete(zx::vmo parent_vmo) override {
-    // ~vmo
-  }
-
   bool CoherencyDomainIsInaccessible() override { return false; }
 
  private:
@@ -89,11 +71,11 @@ class ExternalMemoryAllocator : public MemoryAllocator {
   ExternalMemoryAllocator(zx::channel connection, fbl::unique_ptr<async::Wait> wait_for_close)
       : connection_(std::move(connection)), wait_for_close_(std::move(wait_for_close)) {}
 
-  zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override {
-    zx::vmo result_vmo;
+  zx_status_t Allocate(uint64_t size, zx::vmo* vmo) override {
+    zx::vmo parent_vmo;
     zx_status_t status2 = ZX_OK;
     zx_status_t status = fuchsia_sysmem_HeapAllocateVmo(connection_.get(), size, &status2,
-                                                        result_vmo.reset_and_get_address());
+                                                        parent_vmo.reset_and_get_address());
     if (status != ZX_OK || status2 != ZX_OK) {
       DRIVER_ERROR("HeapAllocate() failed - status: %d status2: %d", status, status2);
       // sanitize to ZX_ERR_NO_MEMORY regardless of why.
@@ -101,13 +83,24 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       return status;
     }
 
-    *parent_vmo = std::move(result_vmo);
-    return ZX_OK;
-  }
+    // Create child VMO. This makes it possible to detect when all
+    // references to the VMO are gone by waiting for VMO_ZERO_CHILDREN
+    // signal on parent VMO.
+    //
+    // Note: Always a 1:1 relationship between parent and child VMOs.
+    //
+    // TODO(reveman): Don't assume that copy-on-write VMO is OK.
+    zx::vmo child_vmo;
+    status = parent_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &child_vmo);
+    if (status != ZX_OK) {
+      DRIVER_ERROR("zx::vmo::create_child() failed - status: %d\n", status);
+      // sanitize to ZX_ERR_NO_MEMORY regardless of why.
+      status = ZX_ERR_NO_MEMORY;
+      return status;
+    }
 
-  zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override {
-    zx::vmo child_vmo_copy;
-    zx_status_t status = child_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &child_vmo_copy);
+    zx::vmo vmo_copy;
+    status = child_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy);
     if (status != ZX_OK) {
       DRIVER_ERROR("duplicate() failed - status: %d", status);
       // sanitize to ZX_ERR_NO_MEMORY regardless of why.
@@ -115,10 +108,9 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       return status;
     }
 
-    zx_status_t status2;
     uint64_t id;
     status =
-        fuchsia_sysmem_HeapCreateResource(connection_.get(), child_vmo_copy.release(), &status2, &id);
+        fuchsia_sysmem_HeapCreateResource(connection_.get(), vmo_copy.release(), &status2, &id);
     if (status != ZX_OK || status2 != ZX_OK) {
       DRIVER_ERROR("HeapCreateResource() failed - status: %d status2: %d", status, status2);
       // sanitize to ZX_ERR_NO_MEMORY regardless of why.
@@ -126,27 +118,35 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       return status;
     }
 
-    allocations_[parent_vmo.get()] = id;
+    auto vmo_handle = parent_vmo.get();
+
+    // Free resource when parent VMO has zero references.
+    auto wait = std::make_unique<async::Wait>(
+        vmo_handle, ZX_VMO_ZERO_CHILDREN,
+        async::Wait::Handler([this, id, vmo = std::move(parent_vmo)](
+                                 async_dispatcher_t* dispatcher, async::Wait* wait,
+                                 zx_status_t status, const zx_packet_signal_t* signal) mutable {
+          auto it = allocations_.find(vmo.get());
+          if (it == allocations_.end()) {
+            DRIVER_ERROR("Invalid allocation - vmo_handle: %d", vmo.get());
+            return;
+          }
+          status = fuchsia_sysmem_HeapDestroyResource(connection_.get(), id);
+          if (status != ZX_OK) {
+            DRIVER_ERROR("HeapDestroyResource() failed - status: %d", status);
+            // fall-through - this can only fail because resource has
+            // already been destroyed.
+          }
+          allocations_.erase(it);
+        }));
+    // It is safe to call Begin() here before adding entry to the map as
+    // handler will run on current thread.
+    wait->Begin(async_get_default_dispatcher());
+
+    allocations_[vmo_handle] = std::move(wait);
+    *vmo = std::move(child_vmo);
     return ZX_OK;
   }
-
-  void Delete(zx::vmo parent_vmo) override {
-    auto it = allocations_.find(parent_vmo.get());
-    if (it == allocations_.end()) {
-      DRIVER_ERROR("Invalid allocation - vmo_handle: %d", parent_vmo.get());
-      return;
-    }
-    auto id = it->second;
-    zx_status_t status = fuchsia_sysmem_HeapDestroyResource(connection_.get(), id);
-    if (status != ZX_OK) {
-      DRIVER_ERROR("HeapDestroyResource() failed - status: %d", status);
-      // fall-through - this can only fail because resource has
-      // already been destroyed.
-    }
-    allocations_.erase(it);
-    // ~parent_vmo
-  }
-
   bool CoherencyDomainIsInaccessible() override {
     // TODO(reveman): Add support for CPU/RAM domains to external heaps.
     return true;
@@ -155,8 +155,7 @@ class ExternalMemoryAllocator : public MemoryAllocator {
  private:
   zx::channel connection_;
   fbl::unique_ptr<async::Wait> wait_for_close_;
-  // From parent vmo handle to ID.
-  std::map<zx_handle_t, uint64_t> allocations_;
+  std::map<zx_handle_t, std::unique_ptr<async::Wait>> allocations_;
 };
 
 fuchsia_sysmem_DriverConnector_ops_t driver_connector_ops = {
@@ -287,7 +286,7 @@ zx_status_t Device::Bind() {
   // support for the fuchsia.sysmem.DriverConnector protocol.  The .message
   // callback used is sysmem_device_ops.message, not
   // sysmem_protocol_ops.message.
-  device_add_args.proto_id = ZX_PROTOCOL_SYSMEM;
+      device_add_args.proto_id = ZX_PROTOCOL_SYSMEM;
   device_add_args.proto_ops = &in_proc_sysmem_protocol_ops;
   device_add_args.flags = DEVICE_ADD_ALLOW_MULTI_COMPOSITE;
 
@@ -368,7 +367,6 @@ zx_status_t Device::GetProtectedMemoryInfo(fidl_txn* txn) {
 
 const zx::bti& Device::bti() { return bti_; }
 
-// TODO(ZX-4809): This shouldn't exist, but will be needed for VDEC unless we resolve ZX-4809.
 zx_status_t Device::CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) {
   zx::vmo result_vmo;
   zx_status_t status =

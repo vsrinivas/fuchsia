@@ -18,11 +18,8 @@ class ContiguousPooledSystemRamMemoryAllocator : public MemoryAllocator {
   // Default to page alignment.
   zx_status_t Init(uint32_t alignment_log2 = 12);
 
-  zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override;
-  zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override;
-  void Delete(zx::vmo parent_vmo) override;
-
-  bool CoherencyDomainIsInaccessible() override { return !is_cpu_accessible_; }
+  zx_status_t Allocate(uint64_t size, zx::vmo* vmo) override;
+  bool CoherencyDomainIsInaccessible() override { return false; }
 
   zx_status_t GetPhysicalMemoryInfo(uint64_t* base, uint64_t* size) override {
     *base = start_;
@@ -37,9 +34,12 @@ class ContiguousPooledSystemRamMemoryAllocator : public MemoryAllocator {
   Owner* const parent_device_{};
   const char* const allocation_name_{};
   zx::vmo contiguous_vmo_;
+  struct Region {
+    RegionAllocator::Region::UPtr region;
+    zx::vmo vmo;
+  };
   RegionAllocator region_allocator_;
-  // From parent_vmo handle to std::unique_ptr<>
-  std::map<zx_handle_t, RegionAllocator::Region::UPtr> regions_;
+  fbl::Vector<fbl::unique_ptr<Region>> regions_;
   uint64_t start_{};
   uint64_t size_{};
   bool is_cpu_accessible_{};

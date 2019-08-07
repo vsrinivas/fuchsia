@@ -408,8 +408,6 @@ BufferCollection::BufferCollectionInfo BufferCollection::BufferCollectionInfoClo
 
   if (!constraints_) {
     // No VMO handles should be copied in this case.
-    //
-    // TODO(dustingreen): Usage "none" should also do this.
     return clone;
   }
 
