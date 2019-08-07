@@ -297,26 +297,38 @@ TEST_P(TimeoutSockoptsTest, Timeout) {
   // We're done with the listener.
   EXPECT_EQ(close(acptfd), 0) << strerror(errno);
 
-  // Filling the sending buffer so that write timeout condition could be
-  // triggered for testing.
   if (optname == SO_SNDTIMEO) {
-    // Use a very small timeout while we're filling the buffer. Using a value smaller than this
-    // produces flakiness on Linux.
+    // We're about to fill the send buffer; shrink it and the other side's receive buffer to the
+    // minimum allowed.
+    int opt = 1;
+    socklen_t optlen = sizeof(opt);
+
+    EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &opt, optlen), 0) << strerror(errno);
+    EXPECT_EQ(setsockopt(server_fd, SOL_SOCKET, SO_RCVBUF, &opt, optlen), 0) << strerror(errno);
+
+    EXPECT_EQ(getsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &opt, &optlen), 0) << strerror(errno);
+    EXPECT_EQ(optlen, sizeof(opt));
+
+    // Now that the buffers involved are minimal, we can temporarily make the socket non-blocking on
+    // Linux without introducing flakiness. We can't do that on Fuchsia because of the asynchronous
+    // copy from the zircon socket to the "real" send buffer, which takes a bit of time, so we use
+    // a small timeout which was empirically tested to ensure no flakiness is introduced.
+#if defined(__linux__)
+    int flags;
+    EXPECT_GE(flags = fcntl(client_fd, F_GETFL), 0) << strerror(errno);
+    EXPECT_EQ(fcntl(client_fd, F_SETFL, flags | O_NONBLOCK), 0) << strerror(errno);
+#else
     const struct timeval tv = {
         .tv_sec = 0,
-        .tv_usec = 200000,
+        .tv_usec = 1 << 16,  // ~65ms
     };
     EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0) << strerror(errno);
-
-    int sndbuf;
-    socklen_t optlen = sizeof(sndbuf);
-    EXPECT_EQ(getsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, &optlen), 0) << strerror(errno);
-    EXPECT_EQ(optlen, sizeof(sndbuf));
+#endif
 
     // buf size should be neither too small in which case too many writes operation is required
     // to fill out the sending buffer nor too big in which case a big stack is needed for the buf
     // array.
-    char buf[sndbuf >> 4];
+    char buf[opt];
     int size = 0;
     int cnt = 0;
     while ((size = write(client_fd, buf, sizeof(buf))) > 0) {
@@ -324,6 +336,10 @@ TEST_P(TimeoutSockoptsTest, Timeout) {
     }
     EXPECT_GT(cnt, 0);
     ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
+
+#if defined(__linux__)
+    EXPECT_EQ(fcntl(client_fd, F_SETFL, flags), 0) << strerror(errno);
+#endif
   }
 
   // We want this to be a small number so the test is fast, but at least 1
@@ -938,8 +954,8 @@ static ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, i
       // shutdown(), but that returns ENOTCONN (unconnected) but still causing recv() to return.
       // shutdown() becomes unreliable for unconnected UDP sockets because, irrespective of the
       // effect of calling this call, it returns error.
-      // TODO(NET-2558): dgram send should accept 0 length payload, once that is fixed, fix this revert
-      // code
+      // TODO(NET-2558): dgram send should accept 0 length payload, once that is fixed, fix this
+      // revert code
       char shut[] = "shutdown";
       EXPECT_EQ(
           sendto(sendfd, shut, sizeof(shut), 0, reinterpret_cast<struct sockaddr*>(addr), *addrlen),
