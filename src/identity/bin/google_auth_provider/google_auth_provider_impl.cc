@@ -180,7 +180,7 @@ void GoogleAuthProviderImpl::GetAppAccessToken(std::string credential,
 
   auto request = OAuthRequestBuilder(kGoogleOAuthTokenEndpoint, "POST")
                      .SetUrlEncodedBody("refresh_token=" + credential +
-                                        "&client_id=" + GetClientId(app_client_id.get()) +
+                                        "&client_id=" + GetClientId(app_client_id.value_or("")) +
                                         "&grant_type=refresh_token");
 
   auto request_factory = [request = std::move(request)] { return request.Build(); };
@@ -233,7 +233,7 @@ void GoogleAuthProviderImpl::GetAppIdToken(std::string credential, fidl::StringP
 
   auto request = OAuthRequestBuilder(kGoogleOAuthTokenEndpoint, "POST")
                      .SetUrlEncodedBody("refresh_token=" + credential + "&client_id=" +
-                                        GetClientId(audience.get()) + "&grant_type=refresh_token");
+                                        GetClientId(audience.value_or("")) + "&grant_type=refresh_token");
 
   auto request_factory = [request = std::move(request)] { return request.Build(); };
   Request(std::move(request_factory), [callback = std::move(callback)](http::URLResponse response) {
@@ -490,11 +490,13 @@ void GoogleAuthProviderImpl::ExchangeAuthCode(std::string auth_code) {
 
 void GoogleAuthProviderImpl::GetUserProfile(fidl::StringPtr credential,
                                             fidl::StringPtr access_token) {
-  FXL_DCHECK(credential.get().size() > 0);
-  FXL_DCHECK(access_token.get().size() > 0);
+  FXL_DCHECK(credential.has_value());
+  FXL_DCHECK(credential->size() > 0);
+  FXL_DCHECK(access_token.has_value());
+  FXL_DCHECK(access_token->size() > 0);
 
   auto request = OAuthRequestBuilder(kGoogleUserInfoEndpoint, "GET")
-                     .SetAuthorizationHeader(access_token.get());
+                     .SetAuthorizationHeader(access_token.value());
 
   auto request_factory = [request = std::move(request)] { return request.Build(); };
 

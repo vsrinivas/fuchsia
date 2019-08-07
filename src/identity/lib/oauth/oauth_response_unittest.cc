@@ -39,7 +39,7 @@ http::URLResponse FakeSuccess(int32_t code, const std::string& body) {
   http::HttpHeader content_length_header;
   content_length_header.name = "content-length";
   content_length_header.value = fxl::NumberToString(body.size());
-  response.headers.push_back(std::move(content_length_header));
+  response.headers.emplace({std::move(content_length_header)});
 
   return response;
 }

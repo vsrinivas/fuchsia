@@ -106,9 +106,9 @@ class DevTokenManagerAppTest : public sys::testing::TestWithEnvironment,
     // We attempt to clean up the tokens after each test. The Auth Provider
     // uses a different user_profile_id for each test and so any problems with
     // deletion should not impact test accuracy.
-    if (token_mgr_.is_bound() && !user_profile_id_.is_null()) {
+    if (token_mgr_.is_bound() && user_profile_id_.has_value()) {
       bool call_complete = false;
-      token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_, kForce,
+      token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_.value(), kForce,
                                   [&](Status status) { call_complete = true; });
       RunLoopUntil([&] { return call_complete; });
     }
@@ -134,7 +134,7 @@ class DevTokenManagerAppTest : public sys::testing::TestWithEnvironment,
   fidl::StringPtr user_profile_id_;
 
   void RegisterUser(fuchsia::auth::AppConfig app_config) {
-    auto scopes = fidl::VectorPtr<std::string>::New(0);
+    std::vector<std::string> scopes;
     scopes.push_back("test_scope");
 
     bool call_complete = false;
@@ -154,7 +154,7 @@ class DevTokenManagerAppTest : public sys::testing::TestWithEnvironment,
 };
 
 TEST_P(DevTokenManagerAppTest, Authorize) {
-  auto scopes = fidl::VectorPtr<std::string>::New(0);
+  std::vector<std::string> scopes;
   scopes.push_back("test_scope");
   bool call_complete = false;
   token_mgr_->Authorize(dev_app_config_, nullptr, /* optional AuthenticationUiContext */
@@ -164,9 +164,12 @@ TEST_P(DevTokenManagerAppTest, Authorize) {
                           EXPECT_EQ(Status::OK, status);
                           EXPECT_NE(nullptr, user_info);
                           EXPECT_FALSE(user_info->id.empty());
-                          EXPECT_FALSE(user_info->display_name.get().empty());
-                          EXPECT_FALSE(user_info->url.get().empty());
-                          EXPECT_FALSE(user_info->image_url.get().empty());
+                          ASSERT_TRUE(user_info->display_name.has_value());
+                          EXPECT_FALSE(user_info->display_name->empty());
+                          ASSERT_TRUE(user_info->url.has_value());
+                          EXPECT_FALSE(user_info->url->empty());
+                          ASSERT_TRUE(user_info->image_url.has_value());
+                          EXPECT_FALSE(user_info->image_url->empty());
                           call_complete = true;
                         });
 
@@ -175,12 +178,14 @@ TEST_P(DevTokenManagerAppTest, Authorize) {
 
 TEST_P(DevTokenManagerAppTest, GetAccessToken) {
   RegisterUser(dev_app_config_);
-  auto scopes = fidl::VectorPtr<std::string>::New(0);
+  std::vector<std::string> scopes;
   bool call_complete = false;
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_, std::move(scopes),
+  ASSERT_TRUE(user_profile_id_.has_value());
+  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_.value(), std::move(scopes),
                              [&](Status status, fidl::StringPtr access_token) {
                                EXPECT_EQ(Status::OK, status);
-                               EXPECT_NE(std::string::npos, access_token.get().find(":at_"));
+                               ASSERT_TRUE(access_token.has_value());
+                               EXPECT_NE(std::string::npos, access_token->find(":at_"));
                                call_complete = true;
                              });
   RunLoopUntil([&] { return call_complete; });
@@ -189,14 +194,16 @@ TEST_P(DevTokenManagerAppTest, GetAccessToken) {
 TEST_P(DevTokenManagerAppTest, GetIdToken) {
   RegisterUser(dev_app_config_);
   bool call_complete = false;
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "",
+  ASSERT_TRUE(user_profile_id_.has_value());
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
                          [&](Status status, fidl::StringPtr id_token) {
                            if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
                              // TODO(ukode): Not yet supported for IotID
                              EXPECT_EQ(Status::INVALID_REQUEST, status);
                            } else {
                              EXPECT_EQ(Status::OK, status);
-                             EXPECT_NE(std::string::npos, id_token.get().find(":idt_"));
+                             ASSERT_TRUE(id_token.has_value());
+                             EXPECT_NE(std::string::npos, id_token->find(":idt_"));
                            }
                            call_complete = true;
                          });
@@ -206,8 +213,9 @@ TEST_P(DevTokenManagerAppTest, GetIdToken) {
 TEST_P(DevTokenManagerAppTest, GetFirebaseToken) {
   RegisterUser(dev_app_config_);
   bool call_complete = false;
+  ASSERT_TRUE(user_profile_id_.has_value());
   token_mgr_->GetFirebaseToken(
-      dev_app_config_, user_profile_id_, "firebase_test_api_key", "",
+      dev_app_config_, user_profile_id_.value(), "firebase_test_api_key", "",
       [&](Status status, FirebaseTokenPtr firebase_token) {
         if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
           // TODO(ukode): Not yet supported for IotID
@@ -215,8 +223,10 @@ TEST_P(DevTokenManagerAppTest, GetFirebaseToken) {
         } else {
           EXPECT_EQ(Status::OK, status);
           EXPECT_NE(std::string::npos, firebase_token->id_token.find(":fbt_"));
-          EXPECT_NE(std::string::npos, firebase_token->email.get().find("@firebase.example.com"));
-          EXPECT_NE(std::string::npos, firebase_token->local_id.get().find("local_id_"));
+          ASSERT_TRUE(firebase_token->email.has_value());
+          EXPECT_NE(std::string::npos, firebase_token->email->find("@firebase.example.com"));
+          ASSERT_TRUE(firebase_token->local_id.has_value());
+          EXPECT_NE(std::string::npos, firebase_token->local_id->find("local_id_"));
         }
         call_complete = true;
       });
@@ -236,17 +246,18 @@ TEST_P(DevTokenManagerAppTest, GetFirebaseTokenFromCache) {
   RegisterUser(dev_app_config_);
 
   bool last_call_complete = false;
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_, "", "key1",
+  ASSERT_TRUE(user_profile_id_.has_value());
+  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_.value(), "", "key1",
                                [&](Status status, FirebaseTokenPtr token) {
                                  EXPECT_EQ(Status::OK, status);
                                  firebase_token = std::move(token);
                                });
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_, "", "key2",
+  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_.value(), "", "key2",
                                [&](Status status, FirebaseTokenPtr token) {
                                  EXPECT_EQ(Status::OK, status);
                                  other_firebase_token = std::move(token);
                                });
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_, "", "key1",
+  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_.value(), "", "key1",
                                [&](Status status, FirebaseTokenPtr token) {
                                  EXPECT_EQ(Status::OK, status);
                                  cached_firebase_token = std::move(token);
@@ -269,39 +280,40 @@ TEST_P(DevTokenManagerAppTest, EraseAllTokens) {
   RegisterUser(dev_app_config_);
   bool last_call_complete = false;
 
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "",
+  ASSERT_TRUE(user_profile_id_.has_value());
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
                          [&](Status status, fidl::StringPtr id_token) {
                            EXPECT_EQ(Status::OK, status);
                            EXPECT_NE(nullptr, id_token);
                          });
 
-  auto scopes = fidl::VectorPtr<std::string>::New(0);
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_, std::move(scopes),
+  std::vector<std::string> scopes;
+  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_.value(), std::move(scopes),
                              [&](Status status, fidl::StringPtr access_token) {
                                EXPECT_EQ(Status::OK, status);
-                               EXPECT_NE(nullptr, access_token);
+                               EXPECT_TRUE(access_token.has_value());
                              });
 
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_, "", "",
+  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_.value(), "", "",
                                [&](Status status, FirebaseTokenPtr firebase_token) {
                                  EXPECT_EQ(Status::OK, status);
                                  EXPECT_NE(nullptr, firebase_token);
                                });
 
-  token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_, kForce,
+  token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_.value(), kForce,
                               [&](Status status) { EXPECT_EQ(Status::OK, status); });
 
   token_mgr_->GetIdToken(
-      dev_app_config_, user_profile_id_, "",
+      dev_app_config_, user_profile_id_.value(), "",
       [&](Status status, fidl::StringPtr id_token) { EXPECT_EQ(Status::USER_NOT_FOUND, status); });
 
-  scopes = fidl::VectorPtr<std::string>::New(0);
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_, std::move(scopes),
+  scopes.clear();
+  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_.value(), std::move(scopes),
                              [&](Status status, fidl::StringPtr access_token) {
                                EXPECT_EQ(Status::USER_NOT_FOUND, status);
                              });
 
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_, "", "",
+  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_.value(), "", "",
                                [&](Status status, FirebaseTokenPtr firebase_token) {
                                  EXPECT_EQ(Status::USER_NOT_FOUND, status);
                                  last_call_complete = true;
@@ -322,16 +334,19 @@ TEST_P(DevTokenManagerAppTest, GetIdTokenFromCache) {
   RegisterUser(dev_app_config_);
 
   bool last_call_complete = false;
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "",
+  ASSERT_TRUE(user_profile_id_.has_value());
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
                          [&](Status status, fidl::StringPtr token) {
                            EXPECT_EQ(Status::OK, status);
                            id_token = std::move(token);
                          });
 
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "",
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
                          [&](Status status, fidl::StringPtr token) {
                            EXPECT_EQ(Status::OK, status);
-                           EXPECT_EQ(id_token.get(), token.get());
+                           ASSERT_TRUE(id_token.has_value());
+                           ASSERT_TRUE(token.has_value());
+                           EXPECT_EQ(id_token.value(), token.value());
                          });
 
   // Verify ID tokens are different for different user to prevent a
@@ -339,10 +354,12 @@ TEST_P(DevTokenManagerAppTest, GetIdTokenFromCache) {
   fidl::StringPtr original_user_profile_id = user_profile_id_;
   RegisterUser(dev_app_config_);
   EXPECT_NE(user_profile_id_, original_user_profile_id);
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "",
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
                          [&](Status status, fidl::StringPtr token) {
                            EXPECT_EQ(Status::OK, status);
-                           EXPECT_NE(id_token.get(), token.get());
+                           ASSERT_TRUE(id_token.has_value());
+                           ASSERT_TRUE(token.has_value());
+                           EXPECT_NE(id_token.value(), token.value());
                            last_call_complete = true;
                          });
 
@@ -355,19 +372,22 @@ TEST_P(DevTokenManagerAppTest, GetAccessTokenFromCache) {
   RegisterUser(dev_app_config_);
 
   bool last_call_complete = false;
-  auto scopes = fidl::VectorPtr<std::string>::New(0);
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_, std::move(scopes),
+  std::vector<std::string> scopes;
+  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_.value(), std::move(scopes),
                              [&](Status status, fidl::StringPtr token) {
                                EXPECT_EQ(Status::OK, status);
-                               EXPECT_NE(std::string::npos, token.get().find(":at_"));
+                               ASSERT_TRUE(token.has_value());
+                               EXPECT_NE(std::string::npos, token->find(":at_"));
                                access_token = std::move(token);
                              });
 
-  scopes = fidl::VectorPtr<std::string>::New(0);
-  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_, std::move(scopes),
+  scopes.clear();
+  token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_.value(), std::move(scopes),
                              [&](Status status, fidl::StringPtr token) {
                                EXPECT_EQ(Status::OK, status);
-                               EXPECT_EQ(access_token.get(), token.get());
+                               ASSERT_TRUE(access_token.has_value());
+                               ASSERT_TRUE(token.has_value());
+                               EXPECT_EQ(access_token.value(), token.value());
                                last_call_complete = true;
                              });
 
@@ -378,12 +398,12 @@ TEST_P(DevTokenManagerAppTest, GetAccessTokenFromCache) {
 // and verifies that short lived credentials are based on the most recent long
 // lived credentials.
 TEST_P(DevTokenManagerAppTest, Reauthorize) {
-  fidl::StringPtr user_profile_id;
+  std::string user_profile_id;
   std::string credential;
   bool authorize_complete = false;
   bool last_call_complete = false;
 
-  auto scopes = fidl::VectorPtr<std::string>::New(0);
+  std::vector<std::string> scopes;
   token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes), "", "",
                         [&](Status status, UserProfileInfoPtr user_info) {
                           EXPECT_EQ(Status::OK, status);
@@ -392,7 +412,7 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
                         });
   RunLoopUntil([&] { return authorize_complete; });
 
-  scopes = fidl::VectorPtr<std::string>::New(0);
+  scopes.clear();
   token_mgr_->GetAccessToken(dev_app_config_, user_profile_id, std::move(scopes),
                              [&](Status status, fidl::StringPtr access_token) {
                                EXPECT_EQ(Status::OK, status);
@@ -404,7 +424,7 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
                               [&](Status status) { EXPECT_EQ(Status::OK, status); });
 
   // Verify that the credential and cache should now be cleared
-  scopes = fidl::VectorPtr<std::string>::New(0);
+  scopes.clear();
   token_mgr_->GetAccessToken(dev_app_config_, user_profile_id, std::move(scopes),
                              [&](Status status, fidl::StringPtr access_token) {
                                EXPECT_EQ(Status::USER_NOT_FOUND, status);
@@ -412,7 +432,7 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
                              });
 
   // Re-authorize the same |user_profile_id|
-  scopes = fidl::VectorPtr<std::string>::New(0);
+  scopes.clear();
   token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes), user_profile_id, "",
                         [&](Status status, UserProfileInfoPtr user_info) {
                           EXPECT_EQ(Status::OK, status);
@@ -420,12 +440,13 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
                         });
 
   // Verify that new access token is not based on the original credential
-  scopes = fidl::VectorPtr<std::string>::New(0);
+  scopes.clear();
   token_mgr_->GetAccessToken(dev_app_config_, user_profile_id, std::move(scopes),
                              [&](Status status, fidl::StringPtr access_token) {
                                EXPECT_EQ(Status::OK, status);
                                EXPECT_NE(nullptr, access_token);
-                               EXPECT_EQ(std::string::npos, access_token.get().find(credential));
+                               ASSERT_TRUE(access_token.has_value());
+                               EXPECT_EQ(std::string::npos, access_token->find(credential));
                                last_call_complete = true;
                              });
 

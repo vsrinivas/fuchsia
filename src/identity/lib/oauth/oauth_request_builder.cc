@@ -97,7 +97,7 @@ http::URLRequest OAuthRequestBuilder::Build() const {
     http::HttpHeader hdr;
     hdr.name = http_header.first;
     hdr.value = http_header.second;
-    request.headers.push_back(std::move(hdr));
+    request.headers.emplace({std::move(hdr)});
   }
 
   return request;
