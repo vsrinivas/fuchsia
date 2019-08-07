@@ -446,6 +446,8 @@ group("all") {
     ":uuid",
     ":vfs_cpp",
     ":virtual_audio",
+    ":virtual_audio_service",
+    ":virtual_audio_util",
     ":vulkan",
     ":wayland",
     ":webpki_roots_fuchsia",
@@ -1133,6 +1135,20 @@ group("terminal") {
   ]
 }
 
+group("virtual_audio_service") {
+  testonly = true
+  public_deps = [
+    "//src/media/audio/virtual_audio_service",
+  ]
+}
+
+group("virtual_audio_util") {
+  testonly = true
+  public_deps = [
+    "//src/media/audio/tools/virtual_audio_util",
+  ]
+}
+
 group("run_test_component") {
   testonly = true
   public_deps = [
@@ -1220,9 +1236,9 @@ group("wayland") {
 group("virtual_audio") {
   testonly = true
   public_deps = [
+    ":virtual_audio_service",
+    ":virtual_audio_util",
     "//garnet/packages/config:virtual_audio",
-    "//src/media/audio/tools/virtual_audio_util",
-    "//src/media/audio/virtual_audio_service",
   ]
 }
 
