@@ -35,6 +35,13 @@ VmObjectPhysical::~VmObjectPhysical() {
   canary_.Assert();
   LTRACEF("%p\n", this);
 
+  {
+    Guard<fbl::Mutex> guard{&lock_};
+    if (parent_) {
+      parent_->RemoveChild(this, guard.take());
+    }
+  }
+
   RemoveFromGlobalList();
 }
 
@@ -64,6 +71,68 @@ zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<Vm
   vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED);
 
   *obj = ktl::move(vmo);
+
+  return ZX_OK;
+}
+
+zx_status_t VmObjectPhysical::CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,
+                                               fbl::RefPtr<VmObject>* child_vmo) {
+  canary_.Assert();
+
+  if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(size) || size == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Forbid creating children of resizable VMOs. This restriction may be lifted in the future.
+  if (is_resizable()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Slice must be wholly contained.
+  uint64_t our_size;
+  {
+    // size_ is not an atomic variable and although it should not be changing, as we are not
+    // allowing this operation on resizable vmo's, we should still be holding the lock to
+    // correctly read size_. Unfortunately we must also drop then drop the lock in order to
+    // perform the allocation.
+    Guard<fbl::Mutex> guard{&lock_};
+    our_size = size_;
+  }
+  if (!InRange(offset, size, our_size)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // To mimic a slice we can just create a physical vmo with the correct region. This works since
+  // nothing is resizable and the slice must be wholly contained.
+  fbl::AllocChecker ac;
+  auto vmo =
+      fbl::AdoptRef<VmObjectPhysical>(new (&ac) VmObjectPhysical(lock_ptr_, base_ + offset, size));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  bool notify_one_child;
+  {
+    Guard<fbl::Mutex> guard{&lock_};
+
+    // Inherit the current cache policy
+    vmo->mapping_cache_flags_ = mapping_cache_flags_;
+    // Initialize parent
+    vmo->parent_ = fbl::WrapRefPtr(this);
+
+    // add the new vmo as a child.
+    notify_one_child = AddChildLocked(vmo.get());
+
+    if (copy_name) {
+      vmo->name_ = name_;
+    }
+  }
+
+  if (notify_one_child) {
+    NotifyOneChild();
+  }
+
+  *child_vmo = ktl::move(vmo);
 
   return ZX_OK;
 }
@@ -152,8 +221,10 @@ zx_status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy)
   }
 
   // If this VMO is mapped already it is not safe to allow its caching policy to change
-  if (mapping_list_len_ != 0) {
-    LTRACEF("Warning: trying to change cache policy while this vmo is mapped!\n");
+  if (mapping_list_len_ != 0 || children_list_len_ != 0 || parent_) {
+    LTRACEF(
+        "Warning: trying to change cache policy while this vmo has mappings, children or a "
+        "parent!\n");
     return ZX_ERR_BAD_STATE;
   }
 

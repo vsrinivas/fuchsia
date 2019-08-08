@@ -29,6 +29,11 @@ class VmObjectPhysical final : public VmObject {
  public:
   static zx_status_t Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
+  zx_status_t CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,
+                               fbl::RefPtr<VmObject>* child_vmo) override
+      // This function reaches into the created child, which confuses analysis.
+      TA_NO_THREAD_SAFETY_ANALYSIS;
+
   ChildType child_type() const override { return ChildType::kNotChild; }
   bool is_contiguous() const override { return true; }
   uint64_t parent_user_id() const override { return 0u; }
@@ -61,6 +66,9 @@ class VmObjectPhysical final : public VmObject {
   const uint64_t size_ = 0;
   const paddr_t base_ = 0;
   uint32_t mapping_cache_flags_ TA_GUARDED(lock_) = 0;
+
+  // parent pointer (may be null)
+  fbl::RefPtr<VmObjectPhysical> parent_ TA_GUARDED(lock_) = nullptr;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_OBJECT_PHYSICAL_H_

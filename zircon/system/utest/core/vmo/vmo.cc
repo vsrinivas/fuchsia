@@ -2,9 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
 #include <ctype.h>
 #include <inttypes.h>
+#include <lib/fit/defer.h>
+#include <lib/fzl/memory-probe.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/iommu.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,18 +17,15 @@
 #include <sys/types.h>
 #include <threads.h>
 #include <unistd.h>
-
-#include <fbl/algorithm.h>
-#include <fbl/function.h>
-#include <lib/fit/defer.h>
-#include <lib/fzl/memory-probe.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/iommu.h>
-#include <lib/zx/vmo.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/object.h>
+
+#include <atomic>
+
+#include <fbl/algorithm.h>
+#include <fbl/function.h>
 #include <zxtest/zxtest.h>
 
 extern "C" __WEAK zx_handle_t get_root_resource(void);
@@ -900,6 +902,79 @@ TEST(VmoTestCase, Cache) {
   EXPECT_OK(zx_vmo_write(vmo, &c, 0, sizeof(c)));
 
   EXPECT_OK(zx_handle_close(vmo), "close handle");
+}
+
+TEST(VmoTestCase, PhysicalSlice) {
+  if (!get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+  const size_t size = PAGE_SIZE * 2;
+
+  // To get physical pages in physmap for the physical_vmo, we create a
+  // contiguous vmo.  This needs to last until after we're done testing
+  // with the physical_vmo.
+  zx::vmo contig_vmo;
+  zx::pmt pmt;
+  auto unpin_pmt = fit::defer([&pmt] {
+    if (pmt) {
+      EXPECT_OK(pmt.unpin());
+    }
+  });
+
+  zx::unowned_resource root_res(get_root_resource());
+
+  zx::iommu iommu;
+  zx::bti bti;
+
+  zx_iommu_desc_dummy_t desc;
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+
+  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+
+  EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &contig_vmo));
+
+  zx_paddr_t phys_addr;
+  EXPECT_OK(
+      bti.pin(ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS, contig_vmo, 0, size, &phys_addr, 1, &pmt));
+
+  zx::vmo physical_vmo;
+  EXPECT_OK(zx::vmo::create_physical(*root_res, phys_addr, size, &physical_vmo));
+
+  // Switch to a cached policy as we are operating on real memory and do not need to be uncached.
+  EXPECT_OK(physical_vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
+
+  // Create a slice of the second page.
+  zx::vmo slice_vmo;
+  EXPECT_OK(physical_vmo.create_child(ZX_VMO_CHILD_SLICE, size / 2, size / 2, &slice_vmo));
+
+  // Map both VMOs in so we can access them.
+  uintptr_t parent_vaddr;
+  EXPECT_OK(zx::vmar::root_self()->map(0, physical_vmo, 0, size,
+                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &parent_vaddr));
+  uintptr_t slice_vaddr;
+  EXPECT_OK(zx::vmar::root_self()->map(0, slice_vmo, 0, size / 2,
+                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &slice_vaddr));
+
+  // Just do some tests using the first byte of each page
+  char *parent_private_test = (char *)parent_vaddr;
+  char *parent_shared_test = (char *)(parent_vaddr + size / 2);
+  char *slice_test = (char *)slice_vaddr;
+
+  // We expect parent_shared_test and slice_test to be accessing the same physical pages, but we
+  // should have gotten different mappings for them.
+  EXPECT_NE(parent_shared_test, slice_test);
+
+  *parent_private_test = 0;
+  *parent_shared_test = 1;
+
+  // This should have set the child.
+  EXPECT_EQ(*slice_test, 1);
+
+  // Write to the child now and validate parent changed correctly.
+  *slice_test = 42;
+  EXPECT_EQ(*parent_shared_test, 42);
+  EXPECT_EQ(*parent_private_test, 0);
 }
 
 TEST(VmoTestCase, CacheOp) {
