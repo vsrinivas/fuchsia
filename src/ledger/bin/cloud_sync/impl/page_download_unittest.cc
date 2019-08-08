@@ -344,8 +344,9 @@ TEST_F(PageDownloadTest, GetObject) {
   RunLoopUntilIdle();
   states_.clear();
   storage_.page_sync_delegate_->GetObject(
-      object_identifier, callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                           &is_object_synced, &data_chunk));
+      object_identifier, storage::ObjectType::BLOB,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source, &is_object_synced,
+                        &data_chunk));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
@@ -378,8 +379,9 @@ TEST_F(PageDownloadTest, RetryGetObject) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
   storage_.page_sync_delegate_->GetObject(
-      object_identifier, callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                           &is_object_synced, &data_chunk));
+      object_identifier, storage::ObjectType::BLOB,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source, &is_object_synced,
+                        &data_chunk));
 
   // Allow the operation to succeed after looping through five attempts.
   RunLoopFor(kTestBackoffInterval * 4);
@@ -466,8 +468,9 @@ TYPED_TEST(FailingPageDownloadTest, Fail) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
   this->storage_.page_sync_delegate_->GetObject(
-      object_identifier, callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                           &is_object_synced, &data_chunk));
+      object_identifier, storage::ObjectType::BLOB,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source, &is_object_synced,
+                        &data_chunk));
   this->RunLoopUntilIdle();
 
   ASSERT_TRUE(called);

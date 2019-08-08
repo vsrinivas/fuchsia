@@ -47,11 +47,14 @@ class PageSyncImpl : public PageSync, public storage::PageSyncDelegate {
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
 
   // PageSyncDelegate:
-  void GetObject(storage::ObjectIdentifier object_identifier,
-                 fit::function<void(ledger::Status status, storage::ChangeSource change_source,
-                                    storage::IsObjectSynced is_object_synced,
+  void GetObject(storage::ObjectIdentifier object_identifier, storage::ObjectType object_type,
+                 fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                                     std::unique_ptr<storage::DataSource::DataChunk>)>
                      callback) override;
+  void GetDiff(
+      storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
+      fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+          callback) override;
 
  private:
   class CloudSyncHolder;

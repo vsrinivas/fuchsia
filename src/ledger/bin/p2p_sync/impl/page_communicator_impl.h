@@ -5,11 +5,12 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_PAGE_COMMUNICATOR_IMPL_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_PAGE_COMMUNICATOR_IMPL_H_
 
-#include <flatbuffers/flatbuffers.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/callback/cancellable.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
+
+#include <flatbuffers/flatbuffers.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
@@ -55,10 +56,14 @@ class PageCommunicatorImpl : public PageCommunicator,
   void Start() override;
 
   // storage::PageSyncDelegate:
-  void GetObject(storage::ObjectIdentifier object_identifier,
+  void GetObject(storage::ObjectIdentifier object_identifier, storage::ObjectType object_type,
                  fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                                     std::unique_ptr<storage::DataSource::DataChunk>)>
                      callback) override;
+  void GetDiff(
+      storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
+      fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+          callback) override;
 
   // storage::CommitWatcher:
   void OnNewCommits(const std::vector<std::unique_ptr<const storage::Commit>>& commits,

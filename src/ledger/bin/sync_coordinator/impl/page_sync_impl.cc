@@ -23,11 +23,15 @@ class SyncProviderHolderBase : public storage::PageSyncClient, public storage::P
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override;
 
   // PageSyncDelegate:
-  void GetObject(storage::ObjectIdentifier object_identifier,
+  void GetObject(storage::ObjectIdentifier object_identifier, storage::ObjectType object_type,
                  fit::function<void(ledger::Status status, storage::ChangeSource change_source,
                                     storage::IsObjectSynced is_object_synced,
                                     std::unique_ptr<storage::DataSource::DataChunk>)>
                      callback) override;
+  void GetDiff(storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
+               fit::function<void(ledger::Status status, storage::CommitId base_commit,
+                                  std::vector<storage::EntryChange> diff_entries)>
+                   callback) override;
 
  private:
   storage::PageSyncDelegate* page_sync_delegate_;
@@ -42,12 +46,19 @@ void SyncProviderHolderBase::SetSyncDelegate(storage::PageSyncDelegate* page_syn
 }
 
 void SyncProviderHolderBase::GetObject(
-    storage::ObjectIdentifier object_identifier,
-    fit::function<void(ledger::Status status, storage::ChangeSource change_source,
-                       storage::IsObjectSynced is_object_synced,
+    storage::ObjectIdentifier object_identifier, storage::ObjectType object_type,
+    fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
-  page_sync_delegate_->GetObject(std::move(object_identifier), std::move(callback));
+  page_sync_delegate_->GetObject(std::move(object_identifier), object_type, std::move(callback));
+}
+
+void SyncProviderHolderBase::GetDiff(
+    storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
+    fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+        callback) {
+  page_sync_delegate_->GetDiff(std::move(commit_id), std::move(possible_bases),
+                               std::move(callback));
 }
 }  // namespace
 
@@ -184,6 +195,7 @@ void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
 }
 
 void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
+                             storage::ObjectType object_type,
                              fit::function<void(ledger::Status, storage::ChangeSource,
                                                 storage::IsObjectSynced is_object_synced,
                                                 std::unique_ptr<storage::DataSource::DataChunk>)>
@@ -200,7 +212,7 @@ void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
                  std::unique_ptr<storage::DataSource::DataChunk>>());
   if (cloud_sync_) {
     cloud_sync_->GetObject(
-        object_identifier,
+        object_identifier, object_type,
         [callback = waiter->NewCallback()](ledger::Status status, storage::ChangeSource source,
                                            storage::IsObjectSynced is_object_synced,
                                            std::unique_ptr<storage::DataSource::DataChunk> data) {
@@ -209,7 +221,7 @@ void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
   }
   if (p2p_sync_) {
     p2p_sync_->GetObject(
-        std::move(object_identifier),
+        std::move(object_identifier), object_type,
         [callback = waiter->NewCallback()](ledger::Status status, storage::ChangeSource source,
                                            storage::IsObjectSynced is_object_synced,
                                            std::unique_ptr<storage::DataSource::DataChunk> data) {
@@ -223,6 +235,15 @@ void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
                                            data) {
         callback(status, std::get<0>(data), std::get<1>(data), std::move(std::get<2>(data)));
       });
+}
+
+void PageSyncImpl::GetDiff(storage::CommitId /*commit_id*/,
+                           std::vector<storage::CommitId> /*possible_bases*/,
+                           fit::function<void(ledger::Status status, storage::CommitId base_commit,
+                                              std::vector<storage::EntryChange> diff_entries)>
+                               callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(ledger::Status::NOT_IMPLEMENTED, {}, {});
 }
 
 }  // namespace sync_coordinator

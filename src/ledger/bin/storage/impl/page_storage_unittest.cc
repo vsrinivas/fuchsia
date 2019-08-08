@@ -118,7 +118,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
     digest_to_value_[std::move(object_identifier)] = value;
   }
 
-  void GetObject(ObjectIdentifier object_identifier,
+  void GetObject(ObjectIdentifier object_identifier, ObjectType object_type,
                  fit::function<void(Status, ChangeSource, IsObjectSynced,
                                     std::unique_ptr<DataSource::DataChunk>)>
                      callback) override {
@@ -133,6 +133,14 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
       callback(Status::OK, ChangeSource::CLOUD, IsObjectSynced::YES,
                DataSource::DataChunk::Create(value));
     });
+  }
+
+  void GetDiff(CommitId commit_id, std::vector<CommitId> possible_bases,
+               fit::function<void(Status status, CommitId base_commit,
+                                  std::vector<EntryChange> diff_entries)>
+                   callback) {
+    FXL_NOTIMPLEMENTED();
+    callback(ledger::Status::NOT_IMPLEMENTED, {}, {});
   }
 
   size_t GetNumberOfObjectsStored() { return digest_to_value_.size(); }

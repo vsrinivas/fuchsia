@@ -1017,7 +1017,8 @@ void PageStorageImpl::GetOrDownloadPiece(
                    object_identifier](fit::function<void(Status, ChangeSource, IsObjectSynced,
                                                          std::unique_ptr<DataSource::DataChunk>)>
                                           callback) mutable {
-                    page_sync_->GetObject(std::move(object_identifier), std::move(callback));
+                    page_sync_->GetObject(std::move(object_identifier), ObjectType::BLOB,
+                                          std::move(callback));
                   },
                   &status, &source, &is_object_synced,
                   &chunk) == coroutine::ContinuationStatus::INTERRUPTED) {

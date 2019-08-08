@@ -323,7 +323,7 @@ void PageCommunicatorImpl::OnNewResponse(const p2p_provider::P2PClientId& source
 }
 
 void PageCommunicatorImpl::GetObject(
-    storage::ObjectIdentifier object_identifier,
+    storage::ObjectIdentifier object_identifier, storage::ObjectType /*object_type*/,
     fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
@@ -347,6 +347,14 @@ void PageCommunicatorImpl::GetObject(
 
     SendToInterestedDevices(buffer);
   }
+}
+
+void PageCommunicatorImpl::GetDiff(
+    storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
+    fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+        callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(ledger::Status::NOT_IMPLEMENTED, {}, {});
 }
 
 void PageCommunicatorImpl::OnNewCommits(

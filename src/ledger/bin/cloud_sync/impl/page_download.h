@@ -71,10 +71,20 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
                      fit::closure on_done);
 
   // storage::PageSyncDelegate:
-  void GetObject(storage::ObjectIdentifier object_identifier,
+  void GetObject(storage::ObjectIdentifier object_identifier, storage::ObjectType object_type,
                  fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                                     std::unique_ptr<storage::DataSource::DataChunk>)>
                      callback) override;
+  void GetDiff(
+      storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
+      fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+          callback) override;
+
+  // Actual implementation of |GetObject|: |object_type| is ignored at this level.
+  void GetObject(storage::ObjectIdentifier object_identifier,
+                 fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
+                                    std::unique_ptr<storage::DataSource::DataChunk>)>
+                     callback);
 
   void DecryptObject(
       storage::ObjectIdentifier object_identifier, std::unique_ptr<storage::DataSource> content,
