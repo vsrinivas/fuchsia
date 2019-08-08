@@ -26,16 +26,16 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # scripts
     os.path.dirname(             # git
     os.path.abspath(__file__))))
-BUILDTOOLS_ROOT = os.path.join(FUCHSIA_ROOT, "buildtools")
+PREBUILT_ROOT = os.path.join(FUCHSIA_ROOT, "prebuilt/third_party")
 
-clang_os = "linux"
+local_os = "linux"
 if platform.platform().startswith("Darwin"):
-    clang_os = "mac"
-CLANG_TIDY_TOOL = os.path.join(BUILDTOOLS_ROOT,
-                               "%s-x64" % clang_os, "clang", "bin",
+    local_os = "mac"
+CLANG_TIDY_TOOL = os.path.join(PREBUILT_ROOT, "clang",
+                               "%s-x64" % local_os, "bin",
                                "clang-tidy")
-NINJA_TOOL = os.path.join(BUILDTOOLS_ROOT, "ninja")
-
+NINJA_TOOL = os.path.join(PREBUILT_ROOT, "ninja",
+                               "%s-x64" % local_os, "ninja")
 
 def find_ancestor_with(filepath, relpath):
     """Returns the lowest ancestor of |filepath| that contains |relpath|."""
