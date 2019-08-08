@@ -54,6 +54,15 @@ fuchsia::accessibility::semantics::NodePtr SemanticsManagerImpl::GetAccessibilit
   return nullptr;
 }
 
+fuchsia::accessibility::semantics::NodePtr SemanticsManagerImpl::GetAccessibilityNodeByKoid(
+    const zx_koid_t koid, const int32_t node_id) {
+  for (auto& binding : semantic_tree_bindings_.bindings()) {
+    if (binding->impl()->IsSameKoid(koid))
+      return binding->impl()->GetAccessibilityNode(node_id);
+  }
+  return nullptr;
+}
+
 void SemanticsManagerImpl::SetSemanticsManagerEnabled(bool enabled) {
   if ((enabled_ != enabled) && !enabled) {
     FX_LOGS(INFO) << "Resetting SemanticsTree since SemanticsManager is disabled.";

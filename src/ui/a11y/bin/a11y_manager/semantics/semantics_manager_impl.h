@@ -30,6 +30,13 @@ class SemanticsManagerImpl : public fuchsia::accessibility::semantics::Semantics
   fuchsia::accessibility::semantics::NodePtr GetAccessibilityNode(
       const fuchsia::ui::views::ViewRef& view_ref, const int32_t node_id);
 
+  // Provides the manager a way to query a node in the semantic tree based on
+  // koid(of the ViewRef associated with the semantic tree) and node id.
+  // If node is found, this method returns a copy of the queried node, otherwise nullptr is
+  // returned.
+  fuchsia::accessibility::semantics::NodePtr GetAccessibilityNodeByKoid(const zx_koid_t koid,
+                                                                        const int32_t node_id);
+
   // Function to Enable/Disable Semantics Manager.
   // When Semantics Manager is disabled, all the semantic tree bindings are
   // closed, which deletes all the semantic tree data.

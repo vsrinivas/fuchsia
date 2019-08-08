@@ -594,4 +594,41 @@ TEST_F(SemanticsManagerTest, PerformHitTesting_Pass) {
   RunLoopUntil([&done] { return done; });
 }
 
+// Basic test to make sure nodes can be searched using node id and Koid of
+// ViewRef of that semantic tree.
+TEST_F(SemanticsManagerTest, GetAccessibilityNodeByKoid) {
+  // Create ViewRef.
+  fuchsia::ui::views::ViewRef view_ref_connection;
+  fidl::Clone(view_ref_, &view_ref_connection);
+
+  // Create ActionListener.
+  accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
+                                                             std::move(view_ref_connection));
+  // We make sure the Semantic Action Listener has finished connecting to the
+  // root.
+  RunLoopUntilIdle();
+
+  // Creating test node to update.
+  std::vector<Node> update_nodes;
+  Node node = CreateTestNode(0, "Label A");
+  Node clone_node;
+  node.Clone(&clone_node);
+  update_nodes.push_back(std::move(clone_node));
+
+  // Update the node created above.
+  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
+  RunLoopUntilIdle();
+
+  // Commit nodes.
+  semantic_provider.Commit();
+  RunLoopUntilIdle();
+
+  // Check that the committed node is present in the semantic tree.
+  zx_koid_t koid = a11y_manager::GetKoid(view_ref_);
+  NodePtr returned_node = semantics_manager_impl_.GetAccessibilityNodeByKoid(koid, 0);
+  EXPECT_NE(returned_node, nullptr);
+  EXPECT_EQ(node.node_id(), returned_node->node_id());
+  EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
+}
+
 }  // namespace accessibility_test
