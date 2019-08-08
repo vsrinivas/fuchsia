@@ -629,12 +629,19 @@ async fn test_list_interfaces() {
         let ep_name = test_ep_name(i);
         let ep = await!(t.get_endpoint(&ep_name)).unwrap().into_proxy().unwrap();
         let ep_info = await!(ep.get_info()).unwrap();
+        let mut if_ip = AddrSubnetEither::new(Ipv4Addr::from([192, 168, 0, i as u8]).into(), 24)
+            .unwrap()
+            .try_into_fidl()
+            .unwrap();
 
         let ep = await!(t.get_endpoint(&ep_name)).unwrap();
         let if_id = await!(t.get(0).run_future(stack.add_ethernet_interface("fake_topo_path", ep)))
             .squash_result()
             .expect("Add interface succeeds");
-        if_props.insert(if_id, ep_info);
+        let () = await!(t.get(0).run_future(stack.add_interface_address(if_id, &mut if_ip)))
+            .squash_result()
+            .expect("Add interface address succeeds");
+        if_props.insert(if_id, (ep_info, vec![if_ip]));
     }
 
     let mut test_stack = t.get(0);
@@ -642,20 +649,23 @@ async fn test_list_interfaces() {
     assert_eq!(ifs.len(), 3);
     // check that what we served over FIDL is correct:
     for ifc in ifs.iter() {
-        let props = if_props.remove(&ifc.id).unwrap();
+        let (ep_info, if_ip) = if_props.remove(&ifc.id).unwrap();
         assert_eq!(&ifc.properties.topopath, "fake_topo_path");
-        assert_eq!(ifc.properties.mac.as_ref().unwrap().as_ref(), &props.mac);
-        assert_eq!(ifc.properties.mtu, props.mtu);
-        // TODO(brunodalbo) also test addresses and interface status once
-        //  it's implemented.
+        assert_eq!(ifc.properties.mac.as_ref().unwrap().as_ref(), &ep_info.mac);
+        assert_eq!(ifc.properties.mtu, ep_info.mtu);
+
+        assert_eq!(ifc.properties.addresses, if_ip);
+        assert_eq!(ifc.properties.administrative_status, AdministrativeStatus::Enabled);
+        assert_eq!(ifc.properties.physical_status, PhysicalStatus::Up);
     }
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_interface_info() {
+    let ip = AddrSubnetEither::new(Ipv4Addr::from([192, 168, 0, 1]).into(), 24).unwrap();
     let mut t = TestSetupBuilder::new()
         .add_endpoint()
-        .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
+        .add_stack(StackSetupBuilder::new().add_endpoint(1, Some(ip.clone())))
         .build()
         .await
         .unwrap();
@@ -677,8 +687,10 @@ async fn test_get_interface_info() {
     assert_eq!(&if_info.properties.topopath, "fake_topo_path");
     assert_eq!(if_info.properties.mac.as_ref().unwrap().as_ref(), &ep_info.mac);
     assert_eq!(if_info.properties.mtu, ep_info.mtu);
-    // TODO(brunodalbo) also test addresses and interface status once
-    //  it's implemented.
+
+    assert_eq!(if_info.properties.addresses, vec![ip.try_into_fidl().unwrap()]);
+    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
+    assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // check that we get the correct error for a non-existing interface id:
     let err = test_stack

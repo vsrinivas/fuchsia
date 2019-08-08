@@ -127,7 +127,7 @@ use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 
 use netstack3_core::icmp::{IcmpConnId, IcmpEventDispatcher};
 use netstack3_core::{
-    add_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout,
+    add_route, del_device_route, get_all_ip_addr_subnet, get_all_routes, handle_timeout,
     initialize_device, receive_frame, set_ip_addr_subnet, Context, DeviceId,
     DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpLayerEventDispatcher,
     NetstackError, StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
@@ -545,6 +545,17 @@ impl EventLoop {
             let info = await!(device.client().info());
             let status = await!(device.client().get_status());
             let is_active = device.is_active();
+            let mut addresses = vec![];
+            if let Some(core_id) = device.core_id() {
+                for addr in get_all_ip_addr_subnet(&self.ctx, core_id) {
+                    match addr.try_into_fidl() {
+                        Ok(addr) => addresses.push(addr),
+                        Err(e) => {
+                            error!("failed to map interface address/subnet into FIDL: {:?}", e)
+                        }
+                    }
+                }
+            };
             devices.push(InterfaceInfo {
                 id: device.id(),
                 properties: InterfaceProperties {
@@ -569,7 +580,7 @@ impl EventLoop {
                         }
                         Err(_) => PhysicalStatus::Down,
                     },
-                    addresses: vec![], //TODO(wesleyac): this
+                    addresses, // TODO(gongt) Handle tentative IPv6 addresses
                 },
             });
         }
@@ -587,6 +598,15 @@ impl EventLoop {
         let status =
             await!(device.client().get_status()).map_err(|_| stack_fidl_error!(Internal))?;
         let is_active = device.is_active();
+        let mut addresses = vec![];
+        if let Some(core_id) = device.core_id() {
+            for addr in get_all_ip_addr_subnet(&self.ctx, core_id) {
+                match addr.try_into_fidl() {
+                    Ok(addr) => addresses.push(addr),
+                    Err(e) => error!("failed to map interface address/subnet into FIDL: {:?}", e),
+                }
+            }
+        };
         return Ok(InterfaceInfo {
             id: device.id(),
             properties: InterfaceProperties {
@@ -606,7 +626,7 @@ impl EventLoop {
                 } else {
                     PhysicalStatus::Down
                 },
-                addresses: vec![], //TODO(wesleyac): this
+                addresses, // TODO(gongt) Handle tentative IPv6 addresses
             },
         });
     }

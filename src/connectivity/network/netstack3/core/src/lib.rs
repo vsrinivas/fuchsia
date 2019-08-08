@@ -430,6 +430,21 @@ pub trait EventDispatcher:
     fn rng(&mut self) -> &mut Self::Rng;
 }
 
+/// Get all IPv4 and IPv6 address/subnet configured on a device
+pub fn get_all_ip_addr_subnet<D: EventDispatcher>(
+    ctx: &Context<D>,
+    device: DeviceId,
+) -> Vec<AddrSubnetEither> {
+    let mut addresses = vec![];
+    if let Some(addr_v4) = get_ip_addr_subnet::<_, Ipv4Addr>(ctx, device) {
+        addresses.push(AddrSubnetEither::V4(addr_v4));
+    }
+    if let Some(addr_v6) = get_ip_addr_subnet::<_, Ipv6Addr>(ctx, device) {
+        addresses.push(AddrSubnetEither::V6(addr_v6));
+    }
+    addresses
+}
+
 /// Set the IP address and subnet for a device.
 pub fn set_ip_addr_subnet<D: EventDispatcher>(
     ctx: &mut Context<D>,
