@@ -17,60 +17,163 @@ import (
 	gidlmixer "gidl/mixer"
 )
 
-var tmpls = template.Must(template.New("tmpls").Parse(`
-{{- define "Header"}}
+var tmpl = template.Must(template.New("tmpls").Parse(`
 package fidl_test
 
 import (
 	"testing"
+	"reflect"
 
 	"syscall/zx/fidl/conformance"
+	"syscall/zx/fidl"
 )
-{{end -}}
 
-{{- define "SuccessCase"}}
+func TestAllSuccessCases(t *testing.T) {
+{{ range .SuccessCases }}
 {
-{{ .value_build }}
+{{ .ValueBuild }}
 successCase{
-	name: {{ .name }},
-	input: &{{ .value_var }},
-	bytes: {{ .bytes }},
+	name: {{ .Name }},
+	input: &{{ .Value }},
+	bytes: {{ .Bytes }},
 }.check(t)
 }
-{{end -}}
+{{ end }}
+}
+
+func TestAllEncodingFailureCases(t *testing.T) {
+{{ range .EncodeFailureCases }}
+{
+{{ .ValueBuild }}
+encodeFailureCase{
+	name: {{ .Name }},
+	input: &{{ .Value }},
+	code: {{ .ErrorCode }},
+}.check(t)
+}
+{{ end }}
+}
+
+func TestAllDecodingFailureCases(t *testing.T) {
+{{ range .DecodeFailureCases }}
+{
+decodeFailureCase{
+	name: {{ .Name }},
+	valTyp: reflect.TypeOf((*{{ .ValueType }})(nil)),
+	bytes: {{ .Bytes }},
+	code: {{ .ErrorCode }},
+}.check(t)
+}
+{{ end }}
+}
 `))
+
+type tmplInput struct {
+	SuccessCases       []successCase
+	EncodeFailureCases []encodeFailureCase
+	DecodeFailureCases []decodeFailureCase
+}
+
+type successCase struct {
+	Name, ValueBuild, Value, Bytes string
+}
+
+type encodeFailureCase struct {
+	Name, ValueBuild, Value, ErrorCode string
+}
+
+type decodeFailureCase struct {
+	Name, ValueType, Bytes, ErrorCode string
+}
 
 // Generate generates Go tests.
 func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
-	if err := tmpls.ExecuteTemplate(wr, "Header", nil); err != nil {
+	successCases, err := successCases(gidl.Success, fidl)
+	if err != nil {
 		return err
 	}
-	if _, err := wr.Write([]byte("func TestAllSuccessCases(t *testing.T) {")); err != nil {
+	encodeFailureCases, err := encodeFailureCases(gidl.FailsToEncode, fidl)
+	if err != nil {
 		return err
 	}
-	for _, success := range gidl.Success {
+	decodeFailureCases, err := decodeFailureCases(gidl.FailsToDecode, fidl)
+	if err != nil {
+		return err
+	}
+	return tmpl.Execute(wr, tmplInput{
+		SuccessCases:       successCases,
+		EncodeFailureCases: encodeFailureCases,
+		DecodeFailureCases: decodeFailureCases,
+	})
+}
+
+func successCases(gidlSuccesses []gidlir.Success, fidl fidlir.Root) ([]successCase, error) {
+	var successCases []successCase
+	for _, success := range gidlSuccesses {
 		decl, err := gidlmixer.ExtractDeclaration(success.Value, fidl)
 		if err != nil {
-			return fmt.Errorf("success %s: %s", success.Name, err)
+			return nil, fmt.Errorf("success %s: %s", success.Name, err)
 		}
 
 		var valueBuilder goValueBuilder
 		gidlmixer.Visit(&valueBuilder, success.Value, decl)
 
-		if err := tmpls.ExecuteTemplate(wr, "SuccessCase", map[string]interface{}{
-			"name":        strconv.Quote(success.Name),
-			"value_build": valueBuilder.String(),
-			"value_var":   valueBuilder.lastVar,
-			"bytes":       bytesBuilder(success.Bytes),
-		}); err != nil {
-			return err
-		}
+		successCases = append(successCases, successCase{
+			Name:       strconv.Quote(success.Name),
+			ValueBuild: valueBuilder.String(),
+			Value:      valueBuilder.lastVar,
+			Bytes:      bytesBuilder(success.Bytes),
+		})
 	}
-	if _, err := wr.Write([]byte("}")); err != nil {
-		return err
-	}
+	return successCases, nil
+}
 
-	return nil
+func encodeFailureCases(gidlEncodeFailures []gidlir.FailsToEncode, fidl fidlir.Root) ([]encodeFailureCase, error) {
+	var encodeFailureCases []encodeFailureCase
+	for _, encodeFailure := range gidlEncodeFailures {
+		decl, err := gidlmixer.ExtractDeclarationUnsafe(encodeFailure.Value, fidl)
+		if err != nil {
+			return nil, fmt.Errorf("encodeFailure %s: %s", encodeFailure.Name, err)
+		}
+
+		var valueBuilder goValueBuilder
+		gidlmixer.Visit(&valueBuilder, encodeFailure.Value, decl)
+
+		code, err := goErrorCode(encodeFailure.Err)
+		if err != nil {
+			return nil, err
+		}
+
+		encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
+			Name:       strconv.Quote(encodeFailure.Name),
+			ValueBuild: valueBuilder.String(),
+			Value:      valueBuilder.lastVar,
+			ErrorCode:  code,
+		})
+	}
+	return encodeFailureCases, nil
+}
+
+func decodeFailureCases(gidlDecodeFailures []gidlir.FailsToDecode, fidl fidlir.Root) ([]decodeFailureCase, error) {
+	var decodeFailureCases []decodeFailureCase
+	for _, decodeFailure := range gidlDecodeFailures {
+		code, err := goErrorCode(decodeFailure.Err)
+		if err != nil {
+			return nil, err
+		}
+
+		decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
+			Name:      strconv.Quote(decodeFailure.Name),
+			ValueType: goType(decodeFailure.Type),
+			Bytes:     bytesBuilder(decodeFailure.Bytes),
+			ErrorCode: code,
+		})
+	}
+	return decodeFailureCases, nil
+}
+
+func goType(irType string) string {
+	return "conformance." + irType
 }
 
 func bytesBuilder(bytes []byte) string {
@@ -165,4 +268,16 @@ func (b *goValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnionDec
 
 func (b *goValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
 	b.onObject(value, decl)
+}
+
+var goErrorCodeNames = map[gidlir.ErrorCode]string{
+	gidlir.StringTooLong:               "ErrStringTooLong",
+	gidlir.NullEmptyStringWithNullBody: "ErrUnexpectedNullRef",
+}
+
+func goErrorCode(code gidlir.ErrorCode) (string, error) {
+	if str, ok := goErrorCodeNames[code]; ok {
+		return fmt.Sprintf("fidl.%s", str), nil
+	}
+	return "", fmt.Errorf("no go error string defined for error code %s", code)
 }
