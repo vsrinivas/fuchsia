@@ -1,5 +1,4 @@
 {
-  "pkg/async-cpp/include/lib/async/cpp/exception.h": "ccd1b389335c5861ac4c9cd7c07c26fd",
   "pkg/async-cpp/include/lib/async/cpp/receiver.h": "64f479124391fedc60bc2e0b903badee",
   "pkg/async-cpp/include/lib/async/cpp/task.h": "7f57d171fc9c0d1ccca4c04a3d7dc004",
   "pkg/async-cpp/include/lib/async/cpp/time.h": "fe9d8389dd1fd4df69016634c9e89ecc",

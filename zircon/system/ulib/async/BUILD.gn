@@ -9,7 +9,6 @@ library("async") {
   sdk_publishable = true
   sdk_headers = [
     "lib/async/dispatcher.h",
-    "lib/async/exception.h",
     "lib/async/receiver.h",
     "lib/async/task.h",
     "lib/async/time.h",
@@ -34,7 +33,6 @@ library("async-cpp") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [
-    "lib/async/cpp/exception.h",
     "lib/async/cpp/receiver.h",
     "lib/async/cpp/task.h",
     "lib/async/cpp/time.h",
@@ -49,7 +47,6 @@ library("async-cpp") {
     "$zx/system/ulib/fit:headers",
   ]
   sources = [
-    "exception.cc",
     "receiver.cc",
     "task.cc",
     "trap.cc",

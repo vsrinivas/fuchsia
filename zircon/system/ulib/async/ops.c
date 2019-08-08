@@ -35,35 +35,3 @@ zx_status_t async_set_guest_bell_trap(async_dispatcher_t* dispatcher, async_gues
                                       zx_handle_t guest, zx_vaddr_t addr, size_t length) {
   return dispatcher->ops->v1.set_guest_bell_trap(dispatcher, trap, guest, addr, length);
 }
-
-zx_status_t async_bind_exception_port(async_dispatcher_t* dispatcher,
-                                      async_exception_t* exception) {
-  if (dispatcher->ops->version < ASYNC_OPS_V2)
-    return ZX_ERR_NOT_SUPPORTED;
-  return dispatcher->ops->v2.bind_exception_port(dispatcher, exception);
-}
-
-zx_status_t async_unbind_exception_port(async_dispatcher_t* dispatcher,
-                                        async_exception_t* exception) {
-  if (dispatcher->ops->version < ASYNC_OPS_V2)
-    return ZX_ERR_NOT_SUPPORTED;
-  return dispatcher->ops->v2.unbind_exception_port(dispatcher, exception);
-}
-
-zx_status_t async_resume_from_exception(async_dispatcher_t* dispatcher,
-                                        async_exception_t* exception, zx_handle_t task,
-                                        uint32_t options) {
-  if (dispatcher->ops->version < ASYNC_OPS_V2)
-    return ZX_ERR_NOT_SUPPORTED;
-  return dispatcher->ops->v2.resume_from_exception(dispatcher, exception, task, options);
-}
-
-zx_status_t async_begin_wait_with_options(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                                          uint32_t options) {
-  if (options == 0u) {
-    return dispatcher->ops->v1.begin_wait(dispatcher, wait);
-  }
-  if (dispatcher->ops->version < ASYNC_OPS_V3)
-    return ZX_ERR_NOT_SUPPORTED;
-  return dispatcher->ops->v3.begin_wait_with_options(dispatcher, wait, options);
-}

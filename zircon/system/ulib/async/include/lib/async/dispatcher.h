@@ -20,7 +20,6 @@ typedef struct async_guest_bell_trap async_guest_bell_trap_t;
 typedef struct async_wait async_wait_t;
 typedef struct async_task async_task_t;
 typedef struct async_receiver async_receiver_t;
-typedef struct async_exception async_exception_t;
 
 // Private state owned by the asynchronous dispatcher.
 // This allows the dispatcher to associate a small amount of state with pending
@@ -50,7 +49,6 @@ typedef struct {
 // - Posting tasks: |post_task|, |cancel_task|
 // - Queuing packets: |queue_packet|
 // - Virtual machine operations: |set_guest_bell_trap|
-// - Exception handling: |bind_exception_port|, |unbind_exception_port|
 //
 // To preserve binary compatibility, each successive version of this interface
 // is guaranteed to be backwards-compatible with clients of earlier versions.
@@ -71,11 +69,9 @@ typedef struct {
 typedef uint32_t async_ops_version_t;
 
 #define ASYNC_OPS_V1 ((async_ops_version_t)1)
-#define ASYNC_OPS_V2 ((async_ops_version_t)2)
-#define ASYNC_OPS_V3 ((async_ops_version_t)3)
 
 typedef struct async_ops {
-  // The interface version number, e.g. |ASYNC_OPS_V3|.
+  // The interface version number, e.g. |ASYNC_OPS_V1|.
   async_ops_version_t version;
 
   // Reserved for future expansion, set to zero.
@@ -101,27 +97,6 @@ typedef struct async_ops {
                                        async_guest_bell_trap_t* trap, zx_handle_t guest,
                                        zx_vaddr_t addr, size_t length);
   } v1;
-
-  // Operations supported by |ASYNC_OPS_V2|, in addition to those in V1.
-  struct v2 {
-    // See |async_bind_exception_port()| for details.
-    zx_status_t (*bind_exception_port)(async_dispatcher_t* dispatcher,
-                                       async_exception_t* exception);
-    // See |async_unbind_exception_port()| for details.
-    zx_status_t (*unbind_exception_port)(async_dispatcher_t* dispatcher,
-                                         async_exception_t* exception);
-    // See |async_resume_from_exception()| for details.
-    zx_status_t (*resume_from_exception)(async_dispatcher_t* dispatcher,
-                                         async_exception_t* exception, zx_handle_t task,
-                                         uint32_t options);
-  } v2;
-
-  // Operations supported by |ASYNC_OPS_V3|, in addition to those in V1 and V2.
-  struct v3 {
-    // See |async_begin_wait_with_options()| for details.
-    zx_status_t (*begin_wait_with_options)(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                                           uint32_t options);
-  } v3;
 } async_ops_t;
 
 struct async_dispatcher {

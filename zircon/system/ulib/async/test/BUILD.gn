@@ -12,7 +12,6 @@ group("test") {
 test("async") {
   sources = [
     "default_tests.cc",
-    "exception_tests.cc",
     "receiver_tests.cc",
     "task_tests.cc",
     "time_tests.cc",

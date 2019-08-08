@@ -24,7 +24,7 @@ class MockDispatcher : public async::DispatcherStub {
     CANCEL_WAIT,
   };
 
-  zx_status_t BeginWait(async_wait_t* wait, uint32_t options) override {
+  zx_status_t BeginWait(async_wait_t* wait) override {
     last_op = Op::BEGIN_WAIT;
     last_wait = wait;
     return next_status;
