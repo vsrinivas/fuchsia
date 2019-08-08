@@ -18,6 +18,8 @@ namespace crash {
 //
 // |feedback_data| may contain attachments that are shared with other feedback reports, e.g., user
 // feedback reports.
+//
+// TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
 void AddManagedRuntimeExceptionAttachments(crashpad::CrashReportDatabase::NewReport* report,
                                            const fuchsia::feedback::Data& feedback_data,
                                            ManagedRuntimeException* exception);
@@ -26,9 +28,21 @@ void AddManagedRuntimeExceptionAttachments(crashpad::CrashReportDatabase::NewRep
 //
 // |feedback_data| may contain attachments that are shared with other feedback reports, e.g., user
 // feedback reports.
+//
+// TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
 void AddKernelPanicAttachments(crashpad::CrashReportDatabase::NewReport* report,
                                const fuchsia::feedback::Data& feedback_data,
                                fuchsia::mem::Buffer crash_log);
+
+// Builds the final set of attachments to attach to the crash report and writes them to
+// |crashpad_report|.
+//
+// * Most attachments are shared across all crash reports, e.g., |feedback_data|.attachments().
+// * Some attachments are report-specific, e.g., Dart exception stack trace.
+// * Adds any attachments in the GenericCrashReport from |report|.
+void BuildAttachments(const fuchsia::feedback::CrashReport& report,
+                      const fuchsia::feedback::Data& feedback_data,
+                      crashpad::CrashReportDatabase::NewReport* crashpad_report);
 
 }  // namespace crash
 }  // namespace fuchsia

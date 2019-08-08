@@ -16,6 +16,7 @@
 
 #include <string>
 
+#include "src/developer/feedback/crashpad_agent/crash_report_util.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 
@@ -80,6 +81,20 @@ std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
           std::string(reinterpret_cast<const char*>(exception->dart().message.data()));
       break;
   }
+  return annotations;
+}
+
+std::map<std::string, std::string> BuildAnnotations(const fuchsia::feedback::CrashReport& report,
+                                                    const fuchsia::feedback::Data& feedback_data) {
+  const std::string program_name = ExtractProgramName(report);
+
+  // Default annotations common to all crash reports.
+  std::map<std::string, std::string> annotations =
+      MakeDefaultAnnotations(feedback_data, program_name);
+
+  // Optional annotations filled by the client.
+  ExtractAnnotations(report, &annotations);
+
   return annotations;
 }
 

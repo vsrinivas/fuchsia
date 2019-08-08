@@ -5,6 +5,7 @@
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_AGENT_H_
 
 #include <fuchsia/crash/cpp/fidl.h>
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/async_promise/executor.h>
@@ -28,7 +29,7 @@
 namespace fuchsia {
 namespace crash {
 
-class CrashpadAgent : public Analyzer {
+class CrashpadAgent : public Analyzer, fuchsia::feedback::CrashReporter {
  public:
   // Static factory methods.
   //
@@ -47,12 +48,17 @@ class CrashpadAgent : public Analyzer {
                                                   InspectManager* inspect_manager);
 
   // |fuchsia::crash::Analyzer|
+  //
+  // TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
   void OnNativeException(zx::process process, zx::thread thread,
                          OnNativeExceptionCallback callback) override;
   void OnManagedRuntimeException(std::string component_url, ManagedRuntimeException exception,
                                  OnManagedRuntimeExceptionCallback callback) override;
   void OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log,
                              OnKernelPanicCrashLogCallback callback) override;
+
+  // |fuchsia::feedback::CrashReporter|
+  void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 
  private:
   CrashpadAgent(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
@@ -63,6 +69,7 @@ class CrashpadAgent : public Analyzer {
   fit::promise<void> OnManagedRuntimeException(std::string component_url,
                                                ManagedRuntimeException exception);
   fit::promise<void> OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log);
+  fit::promise<void> File(fuchsia::feedback::CrashReport report);
 
   // Uploads local crash report of ID |local_report_id|, attaching either the passed |annotations|
   // or reading the annotations from its minidump.

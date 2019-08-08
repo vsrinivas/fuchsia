@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "src/developer/feedback/crashpad_agent/config.h"
+#include "src/developer/feedback/crashpad_agent/crash_report_util.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/feedback_data_provider_ptr.h"
 #include "src/developer/feedback/crashpad_agent/report_annotations.h"
@@ -51,6 +52,9 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
+using crashpad::CrashReportDatabase;
+using fuchsia::feedback::CrashReport;
+using fuchsia::feedback::CrashReporter_File_Result;
 using fuchsia::feedback::Data;
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
@@ -223,6 +227,37 @@ void CrashpadAgent::OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log,
   executor_.schedule_task(std::move(promise));
 }
 
+void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
+  if (!IsValid(report)) {
+    FX_LOGS(ERROR) << "Invalid crash report. Won't file.";
+    CrashReporter_File_Result result;
+    result.set_err(ZX_ERR_INVALID_ARGS);
+    callback(std::move(result));
+    return;
+  }
+
+  auto promise =
+      File(std::move(report))
+          .and_then([] {
+            CrashReporter_File_Result result;
+            fuchsia::feedback::CrashReporter_File_Response response;
+            result.set_response(response);
+            return fit::ok(std::move(result));
+          })
+          .or_else([] {
+            FX_LOGS(ERROR) << "Failed to file crash report. Won't retry.";
+            CrashReporter_File_Result result;
+            result.set_err(ZX_ERR_INTERNAL);
+            return fit::ok(std::move(result));
+          })
+          .and_then([callback = std::move(callback), this](CrashReporter_File_Result& result) {
+            callback(std::move(result));
+            PruneDatabase();
+          });
+
+  executor_.schedule_task(std::move(promise));
+}
+
 namespace {
 
 std::map<std::string, fuchsia::mem::Buffer> MakeAttachments(Data* feedback_data) {
@@ -369,6 +404,50 @@ fit::promise<void> CrashpadAgent::OnKernelPanicCrashLog(fuchsia::mem::Buffer cra
       });
 }
 
+fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
+  const std::string program_name = ExtractProgramName(report);
+  FX_LOGS(INFO) << "generating crash report for " << program_name;
+
+  // Create local Crashpad report.
+  std::unique_ptr<crashpad::CrashReportDatabase::NewReport> crashpad_report;
+  if (CrashReportDatabase::OperationStatus status =
+          database_->PrepareNewCrashReport(&crashpad_report);
+      status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "error creating local Crashpad report (" << status << ")";
+    return fit::make_error_promise();
+  }
+
+  return GetFeedbackData(dispatcher_, services_,
+                         zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
+      .then([this, report = std::move(report), program_name = std::move(program_name),
+             crashpad_report = std::move(crashpad_report)](
+                fit::result<Data>& result) mutable -> fit::result<void> {
+        Data feedback_data;
+        if (result.is_ok()) {
+          feedback_data = result.take_value();
+        }
+
+        const std::map<std::string, std::string> annotations =
+            BuildAnnotations(report, feedback_data);
+        BuildAttachments(report, feedback_data, crashpad_report.get());
+
+        // Finish new local crash report.
+        crashpad::UUID local_report_id;
+        if (CrashReportDatabase::OperationStatus status =
+                database_->FinishedWritingCrashReport(std::move(crashpad_report), &local_report_id);
+            status != crashpad::CrashReportDatabase::kNoError) {
+          FX_LOGS(ERROR) << "error writing local Crashpad report (" << status << ")";
+          return fit::error();
+        }
+
+        if (!UploadReport(local_report_id, program_name, &annotations,
+                          /*read_annotations_from_minidump=*/false)) {
+          return fit::error();
+        }
+        return fit::ok();
+      });
+}
+
 bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
                                  const std::string& program_name,
                                  const std::map<std::string, std::string>* annotations,
@@ -397,6 +476,8 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
   }
 
   // Set annotations, either from argument or from minidump.
+  //
+  // TODO(DX-1785): remove minidump annotation support here once BuildAnnotations() supports it.
   FXL_CHECK((annotations != nullptr) ^ read_annotations_from_minidump);
   const std::map<std::string, std::string>* final_annotations = annotations;
   std::map<std::string, std::string> minidump_annotations;

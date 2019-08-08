@@ -20,6 +20,7 @@
 #include <zircon/time.h>
 
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -40,6 +41,14 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
+using fuchsia::feedback::Annotation;
+using fuchsia::feedback::Attachment;
+using fuchsia::feedback::CrashReport;
+using fuchsia::feedback::CrashReporter_File_Result;
+using fuchsia::feedback::GenericCrashReport;
+using fuchsia::feedback::NativeCrashReport;
+using fuchsia::feedback::RuntimeCrashReport;
+
 // We keep the local Crashpad database size under a certain value. As we want to check the produced
 // attachments in the database, we should set the size to be at least the total size for a single
 // report so that it does not get cleaned up before we are able to inspect its attachments. For now,
@@ -51,6 +60,21 @@ constexpr uint64_t kFeedbackDataCollectionTimeoutInMillisecondsKey = 1000u;
 
 constexpr bool alwaysReturnSuccess = true;
 constexpr bool alwaysReturnFailure = false;
+
+Annotation BuildAnnotation(const std::string& key) {
+  Annotation annotation;
+  annotation.key = key;
+  // We don't have a way to check the annotations so no need to control the value.
+  annotation.value = "unused";
+  return annotation;
+}
+
+Attachment BuildAttachment(const std::string& key, const std::string& value) {
+  Attachment attachment;
+  attachment.key = key;
+  FXL_CHECK(fsl::VmoFromString(value, &attachment.value));
+  return attachment;
+}
 
 // Unit-tests the implementation of the fuchsia.crash.Analyzer FIDL interface.
 //
@@ -160,6 +184,8 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   // |attachment| allows to control the lower bound of the size of the report.
   //
   // Today we use the kernel panic flow because it requires fewer arguments to set up.
+  //
+  // TODO(DX-1866): delete once transitioned to fuchsia.feedback.CrashReporter.
   Analyzer_OnKernelPanicCrashLog_Result RunOneCrashAnalysis(const std::string& attachment) {
     fuchsia::mem::Buffer crash_log;
     FXL_CHECK(fsl::VmoFromString(attachment, &crash_log));
@@ -176,8 +202,81 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   // Runs one crash analysis. Useful to test shared logic among all crash analysis flows.
   //
   // Today we use the kernel panic flow because it requires fewer arguments to set up.
+  //
+  // TODO(DX-1866): delete once transitioned to fuchsia.feedback.CrashReporter.
   Analyzer_OnKernelPanicCrashLog_Result RunOneCrashAnalysis() {
     return RunOneCrashAnalysis("irrelevant, just not empty");
+  }
+
+  // Files one crash report.
+  CrashReporter_File_Result FileOneCrashReport(CrashReport report) {
+    CrashReporter_File_Result out_result;
+    agent_->File(std::move(report), [&out_result](CrashReporter_File_Result result) {
+      out_result = std::move(result);
+    });
+    FXL_CHECK(RunLoopUntilIdle());
+    return out_result;
+  }
+
+  // Files one generic crash report.
+  //
+  // Useful to test shared logic among all crash reporting flows.
+  //
+  // |attachments|, in addition to testing the attachment logic, is also useful to control the lower
+  // bound of the size of the report by controlling the size of some of the attachment(s). This
+  // comes in handy when testing the database size limit enforcement logic for instance.
+  CrashReporter_File_Result FileOneGenericCrashReport(
+      const std::vector<Annotation>& annotations = {}, std::vector<Attachment> attachments = {}) {
+    GenericCrashReport generic_report;
+    generic_report.set_program_name("crashing_program_generic");
+    if (!annotations.empty()) {
+      generic_report.set_annotations(annotations);
+    }
+    if (!attachments.empty()) {
+      generic_report.set_attachments(std::move(attachments));
+    }
+    CrashReport report;
+    report.set_generic(std::move(generic_report));
+
+    return FileOneCrashReport(std::move(report));
+  }
+
+  // Files one native crash report.
+  CrashReporter_File_Result FileOneNativeCrashReport(std::optional<fuchsia::mem::Buffer> minidump) {
+    GenericCrashReport base_report;
+    base_report.set_program_name("crashing_program_native");
+    NativeCrashReport native_report;
+    native_report.set_base_report(std::move(base_report));
+    if (minidump.has_value()) {
+      native_report.set_minidump(std::move(minidump.value()));
+    }
+    CrashReport report;
+    report.set_native(std::move(native_report));
+
+    return FileOneCrashReport(std::move(report));
+  }
+
+  // Files one Dart crash report.
+  CrashReporter_File_Result FileOneDartCrashReport(
+      const std::optional<std::string>& type, const std::optional<std::string>& message,
+      std::optional<fuchsia::mem::Buffer> stack_trace) {
+    GenericCrashReport base_report;
+    base_report.set_program_name("crashing_program_dart");
+    RuntimeCrashReport dart_report;
+    dart_report.set_base_report(std::move(base_report));
+    if (type.has_value()) {
+      dart_report.set_type(type.value());
+    }
+    if (message.has_value()) {
+      dart_report.set_message(message.value());
+    }
+    if (stack_trace.has_value()) {
+      dart_report.set_stack_trace(std::move(stack_trace.value()));
+    }
+    CrashReport report;
+    report.set_dart(std::move(dart_report));
+
+    return FileOneCrashReport(std::move(report));
   }
 
   uint64_t total_num_feedback_data_provider_bindings() {
@@ -549,6 +648,65 @@ TEST_F(CrashpadAgentTest, Check_InspectStateAfterSuccessfulUpload) {
   EXPECT_EQ("creation_time", (*props)[0].key);
   EXPECT_EQ("id", (*props)[1].key);
   EXPECT_EQ(kStubServerReportId, (*props)[1].value.str());
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  ASSERT_TRUE(FileOneGenericCrashReport().is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithAdditionalData) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  std::vector<Attachment> attachments;
+  attachments.emplace_back(BuildAttachment("attachment.key", "attachment.value"));
+  ASSERT_TRUE(FileOneGenericCrashReport(
+                  /*annotations=*/
+                  {
+                      BuildAnnotation("annotation.key"),
+                  },
+                  /*attachments=*/std::move(attachments))
+                  .is_response());
+  CheckAttachments({"attachment.key"});
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  fuchsia::mem::Buffer minidump;
+  fsl::VmoFromString("minidump", &minidump);
+  ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump)).is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  fuchsia::mem::Buffer stack_trace;
+  fsl::VmoFromString("#0", &stack_trace);
+  ASSERT_TRUE(
+      FileOneDartCrashReport("FileSystemException", "cannot open file", std::move(stack_trace))
+          .is_response());
+  CheckAttachments({"DartError"});
+}
+
+TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_response());
+  CheckAttachments();
+}
+
+TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
+  CrashReport report;
+
+  CrashReporter_File_Result out_result;
+  agent_->File(std::move(report),
+               [&out_result](CrashReporter_File_Result result) { out_result = std::move(result); });
+  ASSERT_TRUE(out_result.is_err());
 }
 
 }  // namespace

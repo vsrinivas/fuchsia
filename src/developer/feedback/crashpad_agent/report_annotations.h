@@ -21,6 +21,8 @@ namespace crash {
 // Most annotations are shared between userspace and kernel crashes. Add additional arguments to
 // this function for values that differ between the two, e.g., the program name can be extracted
 // from the crashing process in userspace, but it's just "kernel" in kernel space.
+//
+// TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
 std::map<std::string, std::string> MakeDefaultAnnotations(
     const fuchsia::feedback::Data& feedback_data, const std::string& program_name);
 
@@ -28,9 +30,19 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
 //
 // May augment the default annotation map from MakeDefaultAnnotations() or simply return the
 // default.
+//
+// TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
 std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
     const fuchsia::feedback::Data& feedback_data, const std::string& component_url,
     ManagedRuntimeException* exception);
+
+// Builds the final set of annotations to attach to the crash report.
+//
+// * Most annotations are shared across all crash reports, e.g., |feedback_data|.annotations().
+// * Some annotations are report-specific, e.g., Dart exception type.
+// * Adds any annotations in the GenericCrashReport from |report|.
+std::map<std::string, std::string> BuildAnnotations(const fuchsia::feedback::CrashReport& report,
+                                                    const fuchsia::feedback::Data& feedback_data);
 
 }  // namespace crash
 }  // namespace fuchsia
