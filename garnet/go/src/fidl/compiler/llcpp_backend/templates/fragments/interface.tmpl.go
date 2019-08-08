@@ -159,6 +159,8 @@ class {{ .Name }} final {
       {{- if .HasResponse }}
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
       {{- end }}
     };
     {{- end }}
@@ -196,6 +198,8 @@ class {{ .Name }} final {
       {{- if .HasResponse }}
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
       {{- end }}
     };
     {{- end }}

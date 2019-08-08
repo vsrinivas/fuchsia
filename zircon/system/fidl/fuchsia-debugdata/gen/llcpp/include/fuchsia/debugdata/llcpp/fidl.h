@@ -95,6 +95,8 @@ class DebugData final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -131,6 +133,8 @@ class DebugData final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

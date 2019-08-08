@@ -99,6 +99,8 @@ class Bus final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Disable_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -113,6 +115,8 @@ class Bus final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Connect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -127,6 +131,8 @@ class Bus final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Disconnect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -141,6 +147,8 @@ class Bus final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -168,6 +176,8 @@ class Bus final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Disable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -182,6 +192,8 @@ class Bus final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Connect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -196,6 +208,8 @@ class Bus final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Disconnect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -210,6 +224,8 @@ class Bus final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

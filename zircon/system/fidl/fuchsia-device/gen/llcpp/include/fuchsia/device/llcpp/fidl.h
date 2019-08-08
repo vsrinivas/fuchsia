@@ -227,6 +227,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class ScheduleUnbind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -241,6 +243,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetDriverName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -255,6 +259,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetDeviceName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -269,6 +275,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetTopologicalPath_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -283,6 +291,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetEventHandle_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -297,6 +307,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetDriverLogFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -311,6 +323,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetDriverLogFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -325,6 +339,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class DebugSuspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -339,6 +355,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class DebugResume_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -353,6 +371,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class RunCompatibilityTests_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -367,6 +387,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -401,6 +423,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class ScheduleUnbind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -415,6 +439,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetDriverName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -429,6 +455,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetDeviceName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -443,6 +471,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetTopologicalPath_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -457,6 +487,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetEventHandle_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -471,6 +503,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetDriverLogFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -485,6 +519,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetDriverLogFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -499,6 +535,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class DebugSuspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -513,6 +551,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class DebugResume_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -527,6 +567,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class RunCompatibilityTests_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -541,6 +583,8 @@ class Controller final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -1331,6 +1375,8 @@ class NameProvider final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -1355,6 +1401,8 @@ class NameProvider final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

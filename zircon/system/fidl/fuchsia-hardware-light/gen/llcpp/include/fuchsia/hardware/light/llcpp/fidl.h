@@ -233,6 +233,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetCount_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -247,6 +249,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class HasCapability_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -261,6 +265,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetSimpleValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -275,6 +281,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetSimpleValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -289,6 +297,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetRgbValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -303,6 +313,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetRgbValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -317,6 +329,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -347,6 +361,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetCount_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -361,6 +377,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class HasCapability_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -375,6 +393,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetSimpleValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -389,6 +409,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetSimpleValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -403,6 +425,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetRgbValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -417,6 +441,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetRgbValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -431,6 +457,8 @@ class Light final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

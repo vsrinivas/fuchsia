@@ -204,6 +204,8 @@ class BufferCollectionToken final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     class Close_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -252,6 +254,8 @@ class BufferCollectionToken final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     class Close_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1096,6 +1100,8 @@ class Heap final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class CreateResource_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1110,6 +1116,8 @@ class Heap final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class DestroyResource_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1124,6 +1132,8 @@ class Heap final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -1150,6 +1160,8 @@ class Heap final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class CreateResource_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1164,6 +1176,8 @@ class Heap final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class DestroyResource_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1178,6 +1192,8 @@ class Heap final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -1757,6 +1773,8 @@ class DriverConnector final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -1793,6 +1811,8 @@ class DriverConnector final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -4305,6 +4325,8 @@ class BufferCollection final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     class SetConstraints_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4330,6 +4352,8 @@ class BufferCollection final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class CheckBuffersAllocated_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4344,6 +4368,8 @@ class BufferCollection final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     class CloseSingleBuffer_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4380,6 +4406,8 @@ class BufferCollection final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     class CheckSingleBufferAllocated_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4446,6 +4474,8 @@ class BufferCollection final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     class SetConstraints_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4471,6 +4501,8 @@ class BufferCollection final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class CheckBuffersAllocated_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4485,6 +4517,8 @@ class BufferCollection final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     class CloseSingleBuffer_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4521,6 +4555,8 @@ class BufferCollection final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     class CheckSingleBufferAllocated_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;

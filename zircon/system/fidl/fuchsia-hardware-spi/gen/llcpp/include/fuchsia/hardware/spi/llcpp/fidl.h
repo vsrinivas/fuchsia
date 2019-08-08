@@ -119,6 +119,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Receive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -133,6 +135,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Exchange_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -147,6 +151,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -173,6 +179,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Receive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -187,6 +195,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Exchange_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -201,6 +211,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

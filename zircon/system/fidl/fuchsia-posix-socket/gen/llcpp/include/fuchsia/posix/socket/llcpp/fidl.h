@@ -78,6 +78,8 @@ class Provider final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -102,6 +104,8 @@ class Provider final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -612,6 +616,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -626,6 +632,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -640,6 +648,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -654,6 +664,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -668,6 +680,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -682,6 +696,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Bind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -696,6 +712,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Connect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -710,6 +728,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Listen_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -724,6 +744,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Accept_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -738,6 +760,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetSockName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -752,6 +776,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetPeerName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -766,6 +792,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetSockOpt_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -780,6 +808,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetSockOpt_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -794,6 +824,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class IoctlPOSIX_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -808,6 +840,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -858,6 +892,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Describe_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -872,6 +908,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Sync_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -886,6 +924,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -900,6 +940,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -914,6 +956,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -928,6 +972,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Bind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -942,6 +988,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Connect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -956,6 +1004,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Listen_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -970,6 +1020,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Accept_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -984,6 +1036,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetSockName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -998,6 +1052,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetPeerName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1012,6 +1068,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetSockOpt_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1026,6 +1084,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetSockOpt_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1040,6 +1100,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class IoctlPOSIX_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1054,6 +1116,8 @@ class Control final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

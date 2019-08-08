@@ -197,6 +197,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetStats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -211,6 +213,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -225,6 +229,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class AttachVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -239,6 +245,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class CloseFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -253,6 +261,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class RebindDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -267,6 +277,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetTypeGuid_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -281,6 +293,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetInstanceGuid_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -295,6 +309,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -309,6 +325,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -341,6 +359,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetStats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -355,6 +375,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -369,6 +391,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class AttachVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -383,6 +407,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class CloseFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -397,6 +423,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class RebindDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -411,6 +439,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetTypeGuid_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -425,6 +455,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetInstanceGuid_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -439,6 +471,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -453,6 +487,8 @@ class Partition final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

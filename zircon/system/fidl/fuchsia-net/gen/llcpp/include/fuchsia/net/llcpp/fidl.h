@@ -682,6 +682,8 @@ class NameLookup final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class LookupHostname_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -696,6 +698,8 @@ class NameLookup final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -721,6 +725,8 @@ class NameLookup final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class LookupHostname_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -735,6 +741,8 @@ class NameLookup final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -1014,6 +1022,8 @@ class SocketProvider final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -1038,6 +1048,8 @@ class SocketProvider final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

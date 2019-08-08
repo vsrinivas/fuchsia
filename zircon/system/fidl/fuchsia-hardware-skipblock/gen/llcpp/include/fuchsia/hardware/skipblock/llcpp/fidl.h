@@ -152,6 +152,8 @@ class SkipBlock final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -166,6 +168,8 @@ class SkipBlock final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Write_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -180,6 +184,8 @@ class SkipBlock final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -206,6 +212,8 @@ class SkipBlock final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Read_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -220,6 +228,8 @@ class SkipBlock final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Write_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -234,6 +244,8 @@ class SkipBlock final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

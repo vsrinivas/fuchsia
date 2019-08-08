@@ -337,6 +337,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetStats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -351,6 +353,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -365,6 +369,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class AttachVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -379,6 +385,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class CloseFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -393,6 +401,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class RebindDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -407,6 +417,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetTypeGuid_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -421,6 +433,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetInstanceGuid_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -435,6 +449,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -449,6 +465,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Query_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -463,6 +481,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class QuerySlices_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -477,6 +497,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Extend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -491,6 +513,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Shrink_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -505,6 +529,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Destroy_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -519,6 +545,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -556,6 +584,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetStats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -570,6 +600,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -584,6 +616,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class AttachVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -598,6 +632,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class CloseFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -612,6 +648,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class RebindDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -626,6 +664,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetTypeGuid_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -640,6 +680,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetInstanceGuid_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -654,6 +696,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -668,6 +712,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Query_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -682,6 +728,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class QuerySlices_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -696,6 +744,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Extend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -710,6 +760,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Shrink_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -724,6 +776,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Destroy_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -738,6 +792,8 @@ class Volume final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -1452,6 +1508,8 @@ class VolumeManager final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Query_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1466,6 +1524,8 @@ class VolumeManager final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Activate_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1480,6 +1540,8 @@ class VolumeManager final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -1506,6 +1568,8 @@ class VolumeManager final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Query_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1520,6 +1584,8 @@ class VolumeManager final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Activate_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1534,6 +1600,8 @@ class VolumeManager final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

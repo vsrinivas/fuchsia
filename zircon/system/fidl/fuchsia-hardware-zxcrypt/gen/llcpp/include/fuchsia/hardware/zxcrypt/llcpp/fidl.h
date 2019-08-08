@@ -89,6 +89,8 @@ class DeviceManager final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Seal_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -103,6 +105,8 @@ class DeviceManager final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -128,6 +132,8 @@ class DeviceManager final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Seal_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -142,6 +148,8 @@ class DeviceManager final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

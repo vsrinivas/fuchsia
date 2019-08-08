@@ -153,6 +153,23 @@ class SyncCallBase : private StatusAndError {
     ZX_ASSERT(message_.message() != nullptr);
     return *message_.message();
   }
+  const ResponseType& value() const {
+    ZX_ASSERT(status_ == ZX_OK);
+    ZX_ASSERT(message_.message() != nullptr);
+    return *message_.message();
+  }
+
+  // Convenience accessor for the FIDL response message pointer.
+  // Asserts that the object was not moved.
+  // Asserts that the call was successful.
+  ResponseType* operator->() { return &value(); }
+  const ResponseType* operator->() const { return &value(); }
+
+  // Convenience accessor for the FIDL response message pointer.
+  // Asserts that the object was not moved.
+  // Asserts that the call was successful.
+  ResponseType& operator*() { return value(); }
+  const ResponseType& operator*() const { return value(); }
 
  protected:
   SyncCallBase() = default;
@@ -216,6 +233,8 @@ class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
   using Super::status;
   using Super::Unwrap;
   using Super::value;
+  using Super::operator->;
+  using Super::operator*;
 
  protected:
   OwnedSyncCallBase() = default;

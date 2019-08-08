@@ -51,6 +51,8 @@ class Events final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -75,6 +77,8 @@ class Events final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -389,6 +393,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class AllocStringDesc_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -403,6 +409,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class AddFunction_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -417,6 +425,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class BindFunctions_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -431,6 +441,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class ClearFunctions_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -445,6 +457,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetMode_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -459,6 +473,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetMode_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -473,6 +489,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     class SetStateChangeListener_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -515,6 +533,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class AllocStringDesc_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -529,6 +549,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class AddFunction_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -543,6 +565,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class BindFunctions_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -557,6 +581,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class ClearFunctions_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -571,6 +597,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class GetMode_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -585,6 +613,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class SetMode_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -599,6 +629,8 @@ class Device final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     class SetStateChangeListener_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
