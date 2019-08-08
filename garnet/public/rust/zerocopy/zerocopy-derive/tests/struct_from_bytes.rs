@@ -9,6 +9,17 @@ use std::option::IntoIter;
 
 use zerocopy::FromBytes;
 
+struct IsFromBytes<T: FromBytes>(T);
+
+// Fail compilation if `$ty: !FromBytes`.
+macro_rules! is_from_bytes {
+    ($ty:ty) => {
+        const _: () = {
+            let _: IsFromBytes<$ty>;
+        };
+    };
+}
+
 // A struct is FromBytes if:
 // - repr(C) or repr(transparent)
 // - all fields are FromBytes
@@ -17,11 +28,15 @@ use zerocopy::FromBytes;
 #[repr(C)]
 struct CZst;
 
+is_from_bytes!(CZst);
+
 #[derive(FromBytes)]
 #[repr(C)]
 struct C {
     a: u8,
 }
+
+is_from_bytes!(C);
 
 #[derive(FromBytes)]
 #[repr(transparent)]
@@ -30,15 +45,21 @@ struct Transparent {
     b: CZst,
 }
 
+is_from_bytes!(Transparent);
+
 #[derive(FromBytes)]
 #[repr(C, packed)]
 struct CZstPacked;
+
+is_from_bytes!(CZstPacked);
 
 #[derive(FromBytes)]
 #[repr(C, packed)]
 struct CPacked {
     a: u8,
 }
+
+is_from_bytes!(CPacked);
 
 #[derive(FromBytes)]
 #[repr(C)]
@@ -51,8 +72,4 @@ struct TypeParams<'a, T, I: Iterator> {
     g: PhantomData<String>,
 }
 
-const _FOO: () = {
-    let _: IsFromBytes<TypeParams<'static, (), IntoIter<()>>>;
-};
-
-struct IsFromBytes<T: FromBytes>(PhantomData<T>);
+is_from_bytes!(TypeParams<'static, (), IntoIter<()>>);

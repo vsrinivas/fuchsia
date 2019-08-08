@@ -227,7 +227,7 @@ fn derive_as_bytes_enum(s: &Structure, enm: &DataEnum) -> proc_macro2::TokenStre
     // We don't care what the repr is; we only care that it is one of the
     // allowed ones.
     try_or_print!(ENUM_AS_BYTES_CFG.validate_reprs(s.ast()));
-    impl_block(s.ast(), enm, "Unaligned", false, false)
+    impl_block(s.ast(), enm, "AsBytes", false, false)
 }
 
 #[rustfmt::skip]
