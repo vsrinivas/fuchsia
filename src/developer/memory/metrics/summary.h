@@ -7,6 +7,7 @@
 
 #include <zircon/types.h>
 
+#include <regex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -28,18 +29,16 @@ struct Sizes {
 class ProcessSummary {
  public:
   static const zx_koid_t kKernelKoid;
+  ProcessSummary(zx_koid_t koid, const std::string& name) : koid_(koid), name_(name) {}
+  ProcessSummary(const zx_info_kmem_stats_t& kmem, uint64_t vmo_bytes);
 
   zx_koid_t koid() const { return koid_; }
-  std::string name() const { return name_; }
-  Sizes sizes() const { return sizes_; }
+  const std::string& name() const { return name_; }
+  const Sizes& sizes() const { return sizes_; }
   const std::unordered_map<std::string, Sizes>& name_to_sizes() const { return name_to_sizes_; }
   const Sizes& GetSizes(std::string name) const;
 
  private:
-  ProcessSummary(zx_koid_t koid, std::string name) : koid_(koid), name_(name) {}
-  ProcessSummary(const zx_info_kmem_stats_t& kmem,
-                 const std::unordered_map<zx_koid_t, const zx_info_vmo_t>& koid_to_vmo);
-
   zx_koid_t koid_;
   std::string name_;
   Sizes sizes_;
@@ -49,15 +48,32 @@ class ProcessSummary {
   friend class Summary;
 };
 
-typedef struct {
+struct NameMatch {
   const std::string regex;
   const std::string name;
-} NameMatch;
+};
+
+class Namer {
+ public:
+  explicit Namer(const std::vector<const NameMatch>& name_matches);
+
+  const std::string& NameForName(const std::string& name);
+
+ private:
+  struct RegexMatch {
+    std::regex regex;
+    std::string name;
+  };
+
+  std::vector<RegexMatch> regex_matches_;
+  std::unordered_map<std::string, std::string> name_to_name_;
+};
 
 class Summary {
  public:
-  Summary(const Capture& capture,
-          const std::vector<const NameMatch>& name_matches = std::vector<const NameMatch>());
+  Summary(const Capture& capture, Namer* namer);
+  explicit Summary(const Capture& capture, const std::vector<const NameMatch>& name_matches =
+                                               std::vector<const NameMatch>());
   static const std::vector<const NameMatch> kNameMatches;
 
   void SortProcessSummaries();
@@ -66,6 +82,7 @@ class Summary {
   const std::vector<ProcessSummary>& process_summaries() const { return process_summaries_; }
 
  private:
+  void Init(const Capture& capture, Namer* namer);
   zx_time_t time_;
   zx_info_kmem_stats_t kstats_;
   std::vector<ProcessSummary> process_summaries_;

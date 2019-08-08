@@ -7,20 +7,31 @@
 
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/macros.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <unordered_map>
 #include <vector>
 
+#include <src/lib/fxl/macros.h>
+
 namespace memory {
 
 struct Process {
   zx_koid_t koid;
   char name[ZX_MAX_NAME_LEN];
-  zx_info_task_stats_t stats;
   std::vector<zx_koid_t> vmos;
+};
+
+struct Vmo {
+  explicit Vmo(const zx_info_vmo_t& v)
+      : koid(v.koid), parent_koid(v.parent_koid), committed_bytes(v.committed_bytes) {
+    memcpy(name, v.name, sizeof(name));
+  }
+  zx_koid_t koid;
+  zx_koid_t parent_koid;
+  uint64_t committed_bytes;
+  char name[ZX_MAX_NAME_LEN];
 };
 
 typedef enum { KMEM, PROCESS, VMO } CaptureLevel;
@@ -57,13 +68,11 @@ class Capture {
     return koid_to_process_;
   }
 
-  const std::unordered_map<zx_koid_t, const zx_info_vmo_t>& koid_to_vmo() const {
-    return koid_to_vmo_;
-  }
+  const std::unordered_map<zx_koid_t, const Vmo>& koid_to_vmo() const { return koid_to_vmo_; }
 
   const Process& process_for_koid(zx_koid_t koid) const { return koid_to_process_.at(koid); }
 
-  const zx_info_vmo_t& vmo_for_koid(zx_koid_t koid) const { return koid_to_vmo_.at(koid); }
+  const Vmo& vmo_for_koid(zx_koid_t koid) const { return koid_to_vmo_.at(koid); }
 
  private:
   static zx_status_t GetCaptureState(CaptureState& state, OS& os);
@@ -72,7 +81,7 @@ class Capture {
   zx_time_t time_;
   zx_info_kmem_stats_t kmem_;
   std::unordered_map<zx_koid_t, const Process> koid_to_process_;
-  std::unordered_map<zx_koid_t, const zx_info_vmo_t> koid_to_vmo_;
+  std::unordered_map<zx_koid_t, const Vmo> koid_to_vmo_;
 
   class ProcessGetter;
   friend class TestUtils;

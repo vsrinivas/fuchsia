@@ -23,7 +23,8 @@ HighWater::HighWater(const std::string& dir, zx::duration poll_frequency,
                      fit::function<zx_status_t(Capture&, CaptureLevel)> capture_cb)
     : dir_(dir),
       watcher_(poll_frequency, high_water_threshold, dispatcher, std::move(capture_cb),
-               [this](const Capture& c) { RecordHighWater(c); }) {
+               [this](const Capture& c) { RecordHighWater(c); }),
+      namer_(Summary::kNameMatches) {
   // Ok to ignore result. last might not exist.
   remove((dir_ + "/previous.txt").c_str());
   // Ok to ignore this too. Latest might not exist.
@@ -31,7 +32,7 @@ HighWater::HighWater(const std::string& dir, zx::duration poll_frequency,
 }
 
 void HighWater::RecordHighWater(const Capture& capture) {
-  Summary s(capture, Summary::kNameMatches);
+  Summary s(capture, &namer_);
   std::ofstream out;
   out.open(dir_ + "/latest.txt");
   Printer p(out);

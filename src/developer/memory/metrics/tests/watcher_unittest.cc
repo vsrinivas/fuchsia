@@ -37,7 +37,7 @@ TEST_F(WatcherUnitTest, Initial) {
       [&high_waters](const Capture& c) { high_waters.push_back(c); });
   RunLoopUntil([&cs] { return cs.empty(); }, zx::duration::infinite());
   ASSERT_EQ(1U, high_waters.size());
-  auto const& c = high_waters.at(0);
+  const auto& c = high_waters.at(0);
   EXPECT_EQ(1U, c.time());
   EXPECT_EQ(100U, c.kmem().free_bytes);
   EXPECT_EQ(1U, c.koid_to_process().size());

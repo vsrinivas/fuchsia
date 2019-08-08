@@ -39,7 +39,7 @@ using namespace memory;
 const char Monitor::kTraceName[] = "memory_monitor";
 
 namespace {
-const zx::duration kPollFrequency = zx::sec(10);
+const zx::duration kPollFrequency = zx::sec(1);
 const uint64_t kThreshold = 256 * 1024;
 }  // namespace
 
@@ -118,7 +118,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
       exit(EXIT_FAILURE);
     }
-    auto const& kmem = capture.kmem();
+    const auto& kmem = capture.kmem();
     FXL_LOG(INFO) << "Total: " << kmem.total_bytes << " Wired: " << kmem.wired_bytes
                   << " Total Heap: " << kmem.total_heap_bytes;
   }
@@ -180,7 +180,7 @@ zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
   Summary s(c, Summary::kNameMatches);
   std::ostringstream oss;
   Printer p(oss);
-  p.PrintSummary(c, VMO, SORTED);
+  p.PrintSummary(s, VMO, SORTED);
 
   auto current_string = oss.str();
   auto high_water_string = high_water_.GetHighWater();
@@ -212,7 +212,7 @@ void Monitor::SampleAndPost() {
       FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
       return;
     }
-    auto const& kmem = capture.kmem();
+    const auto& kmem = capture.kmem();
     if (logging_) {
       FXL_LOG(INFO) << "Free: " << kmem.free_bytes << " Free Heap: " << kmem.free_heap_bytes
                     << " VMO: " << kmem.vmo_bytes << " MMU: " << kmem.mmu_overhead_bytes
@@ -241,7 +241,7 @@ void Monitor::UpdateState() {
           FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
           return;
         }
-        auto const& kmem = capture.kmem();
+        const auto& kmem = capture.kmem();
         TRACE_COUNTER(kTraceName, "fixed", 0, "total", kmem.total_bytes, "wired", kmem.wired_bytes,
                       "total_heap", kmem.total_heap_bytes);
         tracing_ = true;

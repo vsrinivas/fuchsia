@@ -4,15 +4,17 @@
 
 #include "src/developer/memory/metrics/printer.h"
 
+#include <algorithm>
+#include <cstdint>
+
 #include <trace/event.h>
 
 namespace memory {
 
-std::string FormatSize(uint64_t bytes) {
-  const char max_string[] = "1023.5T";
-  const int max_string_size = sizeof(max_string);
+const size_t kMaxFormattedStringSize = sizeof("1023.5T");
+
+const char* FormatSize(uint64_t bytes, char* buf) {
   const char units[] = "BKMGTPE";
-  char buf[max_string_size];
   uint16_t r = 0;
   int ui = 0;
   while (bytes > 1023) {
@@ -27,16 +29,16 @@ std::string FormatSize(uint64_t bytes) {
     r = 0;
   }
   if (r == 0) {
-    snprintf(buf, max_string_size, "%zu%c", bytes, units[ui]);
+    snprintf(buf, kMaxFormattedStringSize, "%zu%c", bytes, units[ui]);
   } else {
-    snprintf(buf, max_string_size, "%zu.%1u%c", bytes, r, units[ui]);
+    snprintf(buf, kMaxFormattedStringSize, "%zu.%1u%c", bytes, r, units[ui]);
   }
-  return std::string(buf);
+  return buf;
 }
 
 void Printer::PrintCapture(const Capture& capture, CaptureLevel level, Sorted sorted) {
   TRACE_DURATION("memory_metrics", "Printer::PrintCapture");
-  auto const& kmem = capture.kmem();
+  const auto& kmem = capture.kmem();
   os_ << "K," << capture.time() << "," << kmem.total_bytes << "," << kmem.free_bytes << ","
       << kmem.wired_bytes << "," << kmem.total_heap_bytes << "," << kmem.free_heap_bytes << ","
       << kmem.vmo_bytes << "," << kmem.mmu_overhead_bytes << "," << kmem.ipc_bytes << ","
@@ -45,108 +47,108 @@ void Printer::PrintCapture(const Capture& capture, CaptureLevel level, Sorted so
     return;
   }
 
-  auto const& koid_to_process = capture.koid_to_process();
+  const auto& koid_to_process = capture.koid_to_process();
   std::vector<zx_koid_t> process_koids;
-  for (auto const& pair : koid_to_process) {
+  for (const auto& pair : koid_to_process) {
     process_koids.push_back(pair.first);
   }
-  if (sorted == SORTED) {
-    sort(process_koids.begin(), process_koids.end(), [&koid_to_process](zx_koid_t a, zx_koid_t b) {
-      auto const& sa = koid_to_process.at(a).stats;
-      auto const& sb = koid_to_process.at(b).stats;
-      return sa.mem_private_bytes == sb.mem_private_bytes
-                 ? sa.mem_scaled_shared_bytes > sb.mem_scaled_shared_bytes
-                 : sa.mem_private_bytes > sb.mem_private_bytes;
-    });
-  }
-  for (auto const& koid : process_koids) {
-    auto const& p = koid_to_process.at(koid);
-    os_ << "P," << p.koid << "," << p.name << "," << p.stats.mem_mapped_bytes << ","
-        << p.stats.mem_private_bytes << "," << p.stats.mem_shared_bytes << ","
-        << p.stats.mem_scaled_shared_bytes;
-    for (auto const& v : p.vmos) {
+  for (const auto& koid : process_koids) {
+    const auto& p = koid_to_process.at(koid);
+    os_ << "P," << p.koid << "," << p.name;
+    for (const auto& v : p.vmos) {
       os_ << "," << v;
     }
     os_ << "\n";
   }
-  if (level == PROCESS) {
-    return;
-  }
 
-  auto const& koid_to_vmo = capture.koid_to_vmo();
+  const auto& koid_to_vmo = capture.koid_to_vmo();
   std::vector<zx_koid_t> vmo_koids;
-  for (auto const& pair : koid_to_vmo) {
+  for (const auto& pair : koid_to_vmo) {
     vmo_koids.push_back(pair.first);
   }
   if (sorted == SORTED) {
-    sort(vmo_koids.begin(), vmo_koids.end(), [&koid_to_vmo](zx_koid_t a, zx_koid_t b) {
-      auto const& sa = koid_to_vmo.at(a);
-      auto const& sb = koid_to_vmo.at(b);
+    std::sort(vmo_koids.begin(), vmo_koids.end(), [&koid_to_vmo](zx_koid_t a, zx_koid_t b) {
+      const auto& sa = koid_to_vmo.at(a);
+      const auto& sb = koid_to_vmo.at(b);
       return sa.committed_bytes > sb.committed_bytes;
     });
   }
-  for (auto const& koid : vmo_koids) {
-    auto const& v = koid_to_vmo.at(koid);
-    os_ << "V," << v.koid << "," << v.name << "," << v.size_bytes << "," << v.parent_koid << ","
-        << v.committed_bytes << "\n";
+  for (const auto& koid : vmo_koids) {
+    const auto& v = koid_to_vmo.at(koid);
+    os_ << "V," << v.koid << "," << v.name << "," << v.parent_koid << "," << v.committed_bytes
+        << "\n";
   }
   os_ << std::flush;
 }
 
+void Printer::OutputSizes(const Sizes& sizes) {
+  if (sizes.total_bytes == sizes.private_bytes) {
+    char private_buf[kMaxFormattedStringSize];
+    os_ << FormatSize(sizes.private_bytes, private_buf) << "\n";
+    return;
+  }
+  char private_buf[kMaxFormattedStringSize], scaled_buf[kMaxFormattedStringSize],
+      total_buf[kMaxFormattedStringSize];
+  os_ << FormatSize(sizes.private_bytes, private_buf) << " "
+      << FormatSize(sizes.scaled_bytes, scaled_buf) << " "
+      << FormatSize(sizes.total_bytes, total_buf) << "\n";
+}
+
 void Printer::PrintSummary(const Summary& summary, CaptureLevel level, Sorted sorted) {
   TRACE_DURATION("memory_metrics", "Printer::PrintSummary");
-  auto& kstats = summary.kstats();
-  os_ << "Time: " << summary.time() << " VMO: " << FormatSize(kstats.vmo_bytes)
-      << " Free: " << FormatSize(kstats.free_bytes) << "\n";
+  char vmo_buf[kMaxFormattedStringSize], free_buf[kMaxFormattedStringSize];
+  const auto& kstats = summary.kstats();
+  os_ << "Time: " << summary.time() << " VMO: " << FormatSize(kstats.vmo_bytes, vmo_buf)
+      << " Free: " << FormatSize(kstats.free_bytes, free_buf) << "\n";
 
   if (level == KMEM) {
     return;
   }
 
-  auto const& summaries = summary.process_summaries();
-  std::vector<ProcessSummary> sorted_summaries;
+  const auto& summaries = summary.process_summaries();
+  std::vector<uint32_t> summary_order;
+  summary_order.reserve(summaries.size());
+  for (uint32_t i = 0; i < summaries.size(); i++) {
+    summary_order.push_back(i);
+  }
+
   if (sorted == SORTED) {
-    sorted_summaries = summaries;
-    sort(sorted_summaries.begin(), sorted_summaries.end(), [](ProcessSummary a, ProcessSummary b) {
+    std::sort(summary_order.begin(), summary_order.end(), [&summaries](uint32_t ai, uint32_t bi) {
+      const auto& a = summaries[ai];
+      const auto& b = summaries[bi];
       return a.sizes().private_bytes > b.sizes().private_bytes;
     });
   }
-  for (auto const& s : sorted == SORTED ? sorted_summaries : summaries) {
-    os_ << s.name() << "<" << s.koid() << "> " << FormatSize(s.sizes().private_bytes);
-    if (s.sizes().total_bytes == s.sizes().private_bytes) {
-      os_ << "\n";
-    } else {
-      os_ << " " << FormatSize(s.sizes().scaled_bytes) << " " << FormatSize(s.sizes().total_bytes)
-          << "\n";
-    }
+  for (auto i : summary_order) {
+    const auto& s = summaries[i];
+    os_ << s.name() << "<" << s.koid() << "> ";
+    OutputSizes(s.sizes());
     if (level == PROCESS) {
       continue;
     }
-    auto const& name_to_sizes = s.name_to_sizes();
+
+    const auto& name_to_sizes = s.name_to_sizes();
     std::vector<std::string> names;
-    for (auto const& pair : name_to_sizes) {
+    names.reserve(name_to_sizes.size());
+    for (const auto& pair : name_to_sizes) {
       names.push_back(pair.first);
     }
     if (sorted == SORTED) {
-      sort(names.begin(), names.end(), [&name_to_sizes](std::string a, std::string b) {
-        auto const& sa = name_to_sizes.at(a);
-        auto const& sb = name_to_sizes.at(b);
-        return sa.private_bytes == sb.private_bytes ? sa.scaled_bytes > sb.scaled_bytes
-                                                    : sa.private_bytes > sb.private_bytes;
-      });
+      std::sort(names.begin(), names.end(),
+                [&name_to_sizes](const std::string& a, const std::string& b) {
+                  const auto& sa = name_to_sizes.at(a);
+                  const auto& sb = name_to_sizes.at(b);
+                  return sa.private_bytes == sb.private_bytes ? sa.scaled_bytes > sb.scaled_bytes
+                                                              : sa.private_bytes > sb.private_bytes;
+                });
     }
-    for (auto const& name : names) {
-      auto const& sizes = name_to_sizes.at(name);
-      if (sizes.total_bytes == 0) {
+    for (const auto& name : names) {
+      const auto& n_sizes = name_to_sizes.at(name);
+      if (n_sizes.total_bytes == 0) {
         continue;
       }
-      os_ << " " << name << " " << FormatSize(sizes.private_bytes);
-      if (sizes.total_bytes == sizes.private_bytes) {
-        os_ << "\n";
-      } else {
-        os_ << " " << FormatSize(sizes.scaled_bytes) << " " << FormatSize(sizes.total_bytes)
-            << "\n";
-      }
+      os_ << " " << name << " ";
+      OutputSizes(n_sizes);
     }
   }
   os_ << std::flush;
@@ -154,35 +156,36 @@ void Printer::PrintSummary(const Summary& summary, CaptureLevel level, Sorted so
 
 void Printer::OutputSummary(const Summary& summary, Sorted sorted, zx_koid_t pid) {
   TRACE_DURATION("memory_metrics", "Printer::OutputSummary");
-  auto const& summaries = summary.process_summaries();
+  const auto& summaries = summary.process_summaries();
   std::vector<ProcessSummary> sorted_summaries;
   if (sorted == SORTED) {
     sorted_summaries = summaries;
-    sort(sorted_summaries.begin(), sorted_summaries.end(), [](ProcessSummary a, ProcessSummary b) {
-      return a.sizes().private_bytes > b.sizes().private_bytes;
-    });
+    std::sort(sorted_summaries.begin(), sorted_summaries.end(),
+              [](ProcessSummary a, ProcessSummary b) {
+                return a.sizes().private_bytes > b.sizes().private_bytes;
+              });
   }
-  auto const time = summary.time() / 1000000000;
-  for (auto const& s : sorted == SORTED ? sorted_summaries : summaries) {
+  const auto time = summary.time() / 1000000000;
+  for (const auto& s : sorted == SORTED ? sorted_summaries : summaries) {
     if (pid != ZX_KOID_INVALID) {
       if (s.koid() != pid) {
         continue;
       }
-      auto const& name_to_sizes = s.name_to_sizes();
+      const auto& name_to_sizes = s.name_to_sizes();
       std::vector<std::string> names;
-      for (auto const& pair : name_to_sizes) {
+      for (const auto& pair : name_to_sizes) {
         names.push_back(pair.first);
       }
       if (sorted == SORTED) {
-        sort(names.begin(), names.end(), [&name_to_sizes](std::string a, std::string b) {
-          auto const& sa = name_to_sizes.at(a);
-          auto const& sb = name_to_sizes.at(b);
+        std::sort(names.begin(), names.end(), [&name_to_sizes](std::string a, std::string b) {
+          const auto& sa = name_to_sizes.at(a);
+          const auto& sb = name_to_sizes.at(b);
           return sa.private_bytes == sb.private_bytes ? sa.scaled_bytes > sb.scaled_bytes
                                                       : sa.private_bytes > sb.private_bytes;
         });
       }
-      for (auto const& name : names) {
-        auto const& sizes = name_to_sizes.at(name);
+      for (const auto& name : names) {
+        const auto& sizes = name_to_sizes.at(name);
         if (sizes.total_bytes == 0) {
           continue;
         }

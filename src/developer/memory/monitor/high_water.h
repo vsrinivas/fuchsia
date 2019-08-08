@@ -9,9 +9,11 @@
 
 #include <string>
 
+#include <src/lib/fxl/macros.h>
+
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/summary.h"
 #include "src/developer/memory/metrics/watcher.h"
-#include "src/lib/fxl/macros.h"
 
 namespace monitor {
 
@@ -29,6 +31,7 @@ class HighWater {
  private:
   const std::string dir_;
   memory::Watcher watcher_;
+  memory::Namer namer_;
   FXL_DISALLOW_COPY_AND_ASSIGN(HighWater);
 };
 
