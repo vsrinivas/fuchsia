@@ -2,28 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "tcs3400.h"
+
+#include <lib/device-protocol/i2c.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/i2c.h>
 #include <ddk/protocol/composite.h>
-
-#include <hid/descriptor.h>
-
+#include <ddktl/metadata/light-sensor.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/port.h>
+#include <hid/descriptor.h>
 
 #include "tcs3400-regs.h"
-#include "tcs3400.h"
 
 namespace {
 constexpr zx_duration_t INTERRUPTS_HYSTERESIS = ZX_MSEC(100);
@@ -41,6 +41,7 @@ constexpr uint8_t SAMPLES_TO_TRIGGER = 0x01;
 // clang-format on
 
 enum {
+  COMPONENT_PDEV,
   COMPONENT_I2C,
   COMPONENT_GPIO,
   COMPONENT_COUNT,
@@ -80,7 +81,12 @@ zx_status_t Tcs3400Device::FillInputRpt() {
       input_rpt_.state = HID_USAGE_SENSOR_STATE_ERROR_VAL;
       return status;
     }
-    *i.out = static_cast<uint16_t>(((buf_h & 0xFF) << 8) | (buf_l & 0xFF));
+    auto linear_part = static_cast<uint16_t>(
+        lux_linear_coefficient_ * static_cast<float>(((buf_h & 0xFF) << 8) | (buf_l & 0xFF)));
+    *i.out = static_cast<uint16_t>(lux_constant_coefficient_ + linear_part);
+    zxlogf(TRACE, "Lux (a + b x raw): %u  raw: 0x%04X  a: %u  b: %f\n", *i.out,
+           (((buf_h & 0xFF) << 8) | (buf_l & 0xFF)), lux_constant_coefficient_,
+           lux_linear_coefficient_);
   }
   input_rpt_.state = HID_USAGE_SENSOR_STATE_READY_VAL;
   return ZX_OK;
@@ -335,6 +341,30 @@ zx_status_t Tcs3400Device::Bind() {
   if (status != ZX_OK) {
     zxlogf(ERROR, "Tcs3400Device::Bind: port_create failed: %d\n", status);
     return status;
+  }
+  metadata::LightSensorParams parameters;
+  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &parameters,
+                               sizeof(metadata::LightSensorParams), &actual);
+  if (status != ZX_OK || sizeof(metadata::LightSensorParams) != actual) {
+    zxlogf(ERROR, "%s Getting metadata failed %d\n", __FILE__, status);
+    return status;
+  }
+
+  lux_constant_coefficient_ = parameters.lux_constant_coefficient;
+  lux_linear_coefficient_ = parameters.lux_linear_coefficient;
+
+  // ATIME = 256 - Integration Time / 2.4 ms.
+  if (parameters.integration_time_ms <= 615) {
+    const uint8_t atime = static_cast<uint8_t>(256 - (parameters.integration_time_ms * 10 / 24));
+    zxlogf(TRACE, "atime (%u)\n", atime);
+    const uint8_t command[2] = {TCS_I2C_ATIME, atime};
+    status = i2c_write_sync(&i2c_, &command, countof(command));
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s Setting integration time failed %d\n", __FILE__, status);
+      return status;
+    }
+  } else {
+    zxlogf(WARN, "%s Invalid integration time (%u)\n", __FILE__, parameters.integration_time_ms);
   }
 
   status = zx_interrupt_bind(irq_.get(), port_handle_, TCS_INTERRUPT, 0);

@@ -5,13 +5,14 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-
+#include <ddktl/metadata/light-sensor.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 
-#include "astro.h"
 #include "astro-gpios.h"
+#include "astro.h"
 
 namespace astro {
 
@@ -47,14 +48,27 @@ static const device_component_t components[] = {
 };
 
 zx_status_t Astro::LightInit() {
-  const zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMS},
-      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMS_TCS3400},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMS_LIGHT},
+  metadata::LightSensorParams params = {};
+  // TODO(kpt): Insert the right parameters here.
+  params.lux_constant_coefficient = 0;
+  params.lux_linear_coefficient = .29f;
+  params.integration_time_ms = 615;
+  pbus_metadata_t metadata[] = {
+      {
+          .type = DEVICE_METADATA_PRIVATE,
+          .data_buffer = &params,
+          .data_size = sizeof(params),
+      },
   };
 
-  zx_status_t status = DdkAddComposite("tcs3400-light", props, countof(props), components,
-                                       countof(components), UINT32_MAX);
+  pbus_dev_t dev = {};
+  dev.name = "tcs3400-light";
+  dev.vid = PDEV_VID_AMS;
+  dev.pid = PDEV_PID_AMS_TCS3400;
+  dev.did = PDEV_DID_AMS_LIGHT;
+  dev.metadata_list = metadata;
+  dev.metadata_count = countof(metadata);
+  zx_status_t status = pbus_.CompositeDeviceAdd(&dev, components, countof(components), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s(tcs-3400): DdkAddComposite failed: %d\n", __func__, status);
     return status;

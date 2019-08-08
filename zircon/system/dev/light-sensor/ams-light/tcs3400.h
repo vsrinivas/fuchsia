@@ -2,21 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIGHT_SENSOR_AMS_LIGHT_TCS3400_H_
+#define ZIRCON_SYSTEM_DEV_LIGHT_SENSOR_AMS_LIGHT_TCS3400_H_
+
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/interrupt.h>
 
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
-
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
-
 #include <fbl/mutex.h>
-
 #include <hid/ambient-light.h>
-
-#include <lib/zx/interrupt.h>
-
-#include <lib/zircon-internal/thread_annotations.h>
 
 namespace tcs {
 
@@ -64,8 +61,13 @@ class Tcs3400Device : public DeviceType,
   ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_input_lock_);
   ambient_light_input_rpt_t input_rpt_ TA_GUARDED(client_input_lock_);
   ambient_light_feature_rpt_t feature_rpt_ TA_GUARDED(feature_lock_);
+  uint16_t lux_constant_coefficient_;
+  float lux_linear_coefficient_;
+
   zx_status_t FillInputRpt() TA_REQ(client_input_lock_);
   int Thread();
   void ShutDown() TA_EXCL(client_input_lock_);
 };
 }  // namespace tcs
+
+#endif  // ZIRCON_SYSTEM_DEV_LIGHT_SENSOR_AMS_LIGHT_TCS3400_H_
