@@ -14,7 +14,7 @@ mod wpa;
 #[cfg(test)]
 pub mod test_utils;
 
-use failure::{bail, format_err};
+use failure::{bail, format_err, Fail};
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent, ScanRequest};
 use fidl_fuchsia_wlan_sme as fidl_sme;
@@ -96,16 +96,35 @@ pub enum ConnectResult {
     Failed(ConnectFailure),
 }
 
+impl<T: Into<ConnectFailure>> From<T> for ConnectResult {
+    fn from(failure: T) -> Self {
+        ConnectResult::Failed(failure.into())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum ConnectFailure {
-    NoMatchingBssFound,
-    SelectNetwork,
+    SelectNetwork(SelectNetworkFailure),
     ScanFailure(fidl_mlme::ScanResultCodes),
     JoinFailure(fidl_mlme::JoinResultCodes),
     AuthenticationFailure(fidl_mlme::AuthenticateResultCodes),
     AssociationFailure(fidl_mlme::AssociateResultCodes),
     RsnaTimeout,
     EstablishRsna,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum SelectNetworkFailure {
+    NoScanResultWithSsid,
+    NoCompatibleNetwork,
+    InvalidPasswordArg,
+    InternalError,
+}
+
+impl From<SelectNetworkFailure> for ConnectFailure {
+    fn from(failure: SelectNetworkFailure) -> Self {
+        ConnectFailure::SelectNetwork(failure)
+    }
 }
 
 pub type EssDiscoveryResult = Result<Vec<EssInfo>, fidl_mlme::ScanResultCodes>;
@@ -270,10 +289,14 @@ impl super::Station for ClientSme {
                                             best_bss.bssid.to_mac_str(),
                                             err
                                         );
+                                        let f = match err.downcast::<InvalidPasswordArgError>() {
+                                            Ok(_) => SelectNetworkFailure::InvalidPasswordArg,
+                                            Err(_) => SelectNetworkFailure::InternalError,
+                                        };
                                         report_connect_finished(
                                             Some(token.responder),
                                             &mut self.context,
-                                            ConnectResult::Failed(ConnectFailure::SelectNetwork),
+                                            f.into(),
                                         );
                                     }
                                 }
@@ -286,7 +309,7 @@ impl super::Station for ClientSme {
                                 report_connect_finished(
                                     Some(token.responder),
                                     &mut self.context,
-                                    ConnectResult::Failed(ConnectFailure::NoMatchingBssFound),
+                                    SelectNetworkFailure::NoCompatibleNetwork.into(),
                                 );
                             }
                             // No matching BSS found
@@ -296,7 +319,7 @@ impl super::Station for ClientSme {
                                 report_connect_finished(
                                     Some(token.responder),
                                     &mut self.context,
-                                    ConnectResult::Failed(ConnectFailure::NoMatchingBssFound),
+                                    SelectNetworkFailure::NoScanResultWithSsid.into(),
                                 );
                             }
                         };
@@ -368,6 +391,10 @@ fn report_connect_finished(
     }
 }
 
+#[derive(Fail, Debug)]
+#[fail(display = "{}", _0)]
+pub(crate) struct InvalidPasswordArgError(&'static str);
+
 pub fn get_protection(
     device_info: &DeviceInfo,
     credential: &fidl_sme::Credential,
@@ -376,13 +403,16 @@ pub fn get_protection(
     match bss.get_protection() {
         wlan_common::bss::Protection::Open => match credential {
             fidl_sme::Credential::None(_) => Ok(Protection::Open),
-            _ => bail!("password provided for open network, but none expected"),
+            _ => Err(InvalidPasswordArgError(
+                "password provided for open network, but none expected",
+            )
+            .into()),
         },
         wlan_common::bss::Protection::Wep => match credential {
             fidl_sme::Credential::Password(pwd) => wep_deprecated::derive_key(&pwd[..])
                 .map(Protection::Wep)
                 .map_err(|e| format_err!("error deriving WEP key from input: {}", e)),
-            _ => bail!("unsupported credential type"),
+            _ => Err(InvalidPasswordArgError("unsupported credential type").into()),
         },
         wlan_common::bss::Protection::Wpa1 => {
             get_legacy_wpa_association(device_info, credential, bss)
@@ -691,7 +721,9 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        assert_connect_result_failed(&mut connect_fut);
+        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
+            assert_eq!(failure, SelectNetworkFailure::InvalidPasswordArg.into());
+        });
     }
 
     #[test]
@@ -732,7 +764,9 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        assert_connect_result_failed(&mut connect_fut);
+        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
+            assert_eq!(failure, SelectNetworkFailure::InvalidPasswordArg.into());
+        });
     }
 
     #[test]
@@ -771,7 +805,38 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        assert_connect_result_failed(&mut connect_fut);
+        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
+            assert_eq!(failure, SelectNetworkFailure::InvalidPasswordArg.into());
+        });
+    }
+
+    #[test]
+    fn connecting_no_scan_result_with_ssid() {
+        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let mut connect_fut = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        let bss_desc = fake_unprotected_bss_description(b"bar".to_vec());
+        report_fake_scan_result(&mut sme, bss_desc);
+
+        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
+            assert_eq!(failure, SelectNetworkFailure::NoScanResultWithSsid.into());
+        });
+    }
+
+    #[test]
+    fn connecting_no_compatible_network_found() {
+        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
+
+        let credential = fidl_sme::Credential::Password(b"password".to_vec());
+        let mut connect_fut = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        let mut bss_desc = fake_protected_bss_description(b"foo".to_vec());
+        bss_desc.cap.privacy = false; // this makes our check flag this BSS as incompatible
+        report_fake_scan_result(&mut sme, bss_desc);
+
+        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
+            assert_eq!(failure, SelectNetworkFailure::NoCompatibleNetwork.into());
+        });
     }
 
     #[test]

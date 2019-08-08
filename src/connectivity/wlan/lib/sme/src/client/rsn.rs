@@ -1,3 +1,7 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use eapol;
 use failure::{bail, ensure, format_err};
 use fidl_fuchsia_wlan_mlme::BssDescription;
@@ -12,7 +16,10 @@ use wlan_rsn::{
     self, nonce::NonceReader, psk, rsna::UpdateSink, NegotiatedProtection, ProtectionInfo,
 };
 
-use crate::{client::state::Protection, DeviceInfo};
+use crate::{
+    client::{state::Protection, InvalidPasswordArgError},
+    DeviceInfo,
+};
 
 #[derive(Debug)]
 pub struct Rsna {
@@ -124,7 +131,13 @@ pub fn compute_psk(
             ensure!(psk.len() == 32, "PSK must be 32 octets but was {}", psk.len());
             Ok(psk.clone().into_boxed_slice())
         }
-        _ => bail!("unsupported credentials configuration for computing PSK"),
+        fidl_sme::Credential::None(..) => {
+            Err(InvalidPasswordArgError("expected credentials but none is provided").into())
+        }
+        _ => {
+            let msg = "unsupported credentials configuration for computing PSK";
+            Err(InvalidPasswordArgError(msg).into())
+        }
     }
 }
 

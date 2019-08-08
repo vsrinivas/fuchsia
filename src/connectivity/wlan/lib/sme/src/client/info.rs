@@ -657,13 +657,15 @@ impl PendingConnectStats {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::client::test_utils::{
-        fake_bss_with_rates, fake_protected_bss_description, fake_scan_request,
+    use {
+        super::*,
+        crate::client::{
+            test_utils::{fake_bss_with_rates, fake_protected_bss_description, fake_scan_request},
+            SelectNetworkFailure,
+        },
+        maplit::hashmap,
+        wlan_common::assert_variant,
     };
-
-    use maplit::hashmap;
-    use wlan_common::assert_variant;
 
     #[test]
     fn test_discovery_scan_stats_lifecycle() {
@@ -761,11 +763,11 @@ mod tests {
         let mut stats_collector = StatsCollector::default();
 
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
-        let stats = stats_collector
-            .report_connect_finished(ConnectResult::Failed(ConnectFailure::NoMatchingBssFound));
+        let failure1: ConnectFailure = SelectNetworkFailure::NoScanResultWithSsid.into();
+        let stats = stats_collector.report_connect_finished(failure1.clone().into());
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 1);
-            assert_eq!(stats.last_ten_failures, &[ConnectFailure::NoMatchingBssFound])
+            assert_eq!(stats.last_ten_failures, &[failure1.clone()])
         });
 
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
@@ -773,14 +775,14 @@ mod tests {
             .report_connect_finished(ConnectResult::Failed(ConnectFailure::EstablishRsna));
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 2);
-            assert_eq!(stats.last_ten_failures, &[ConnectFailure::NoMatchingBssFound, ConnectFailure::EstablishRsna]);
+            assert_eq!(stats.last_ten_failures, &[failure1.clone(), ConnectFailure::EstablishRsna]);
         });
 
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
         let stats = stats_collector.report_connect_finished(ConnectResult::Success);
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 3);
-            assert_eq!(stats.last_ten_failures, &[ConnectFailure::NoMatchingBssFound, ConnectFailure::EstablishRsna]);
+            assert_eq!(stats.last_ten_failures, &[failure1.clone(), ConnectFailure::EstablishRsna]);
         });
 
         // After a successful connection, new connect attempts tracking is reset
@@ -797,8 +799,8 @@ mod tests {
         let mut stats_collector = StatsCollector::default();
 
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
-        let _stats = stats_collector
-            .report_connect_finished(ConnectResult::Failed(ConnectFailure::NoMatchingBssFound));
+        let failure1: ConnectFailure = SelectNetworkFailure::NoScanResultWithSsid.into();
+        let _stats = stats_collector.report_connect_finished(failure1.clone().into());
 
         assert!(stats_collector.report_connect_started(b"bar".to_vec()).is_none());
         let stats = stats_collector
@@ -815,7 +817,7 @@ mod tests {
         for i in 1..=20 {
             assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
             let stats = stats_collector
-                .report_connect_finished(ConnectResult::Failed(ConnectFailure::NoMatchingBssFound));
+                .report_connect_finished(SelectNetworkFailure::NoScanResultWithSsid.into());
             assert_variant!(stats, Ok(stats) => {
                 assert_eq!(stats.attempts, i);
                 assert_eq!(stats.last_ten_failures.len(), std::cmp::min(i as usize, 10));

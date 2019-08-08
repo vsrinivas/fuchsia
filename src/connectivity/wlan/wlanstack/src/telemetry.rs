@@ -23,7 +23,7 @@ use std::ops::Sub;
 use std::sync::Arc;
 use wlan_common::bss::Standard;
 use wlan_metrics_registry as metrics;
-use wlan_sme::client::{ConnectFailure, ConnectResult};
+use wlan_sme::client::{ConnectFailure, ConnectResult, SelectNetworkFailure};
 
 use crate::device::IfaceMap;
 use fuchsia_cobalt::CobaltSender;
@@ -339,7 +339,11 @@ fn convert_connect_failure(
     use wlan_metrics_registry::ConnectionDelayMetricDimensionConnectionResult::*;
 
     let result = match result {
-        ConnectFailure::NoMatchingBssFound => NoMatchingBssFound,
+        ConnectFailure::SelectNetwork(failure) => match failure {
+            SelectNetworkFailure::NoScanResultWithSsid
+            | SelectNetworkFailure::NoCompatibleNetwork => NoMatchingBssFound,
+            _ => Fail,
+        },
         ConnectFailure::ScanFailure(scan_failure) => match scan_failure {
             ScanResultCodes::Success => return None,
             ScanResultCodes::NotSupported => ScanNotSupported,
@@ -378,7 +382,7 @@ fn convert_connect_failure(
             AssociateResultCodes::RefusedTemporarily => AssociationRefusedTemporarily,
         },
         ConnectFailure::RsnaTimeout => RsnaTimeout,
-        ConnectFailure::SelectNetwork | ConnectFailure::EstablishRsna => Fail,
+        ConnectFailure::EstablishRsna => Fail,
     };
 
     Some(result)
