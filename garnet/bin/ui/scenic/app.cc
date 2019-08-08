@@ -4,6 +4,10 @@
 
 #include "garnet/bin/ui/scenic/app.h"
 
+#include <lib/fit/bridge.h>
+#include <lib/fit/function.h>
+#include <lib/fit/single_threaded_executor.h>
+
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
 #include "garnet/lib/ui/gfx/gfx_system.h"
 #endif
@@ -11,6 +15,9 @@
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
 #include "garnet/lib/ui/input/input_system.h"
 #endif
+
+#include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
+#include "garnet/lib/ui/gfx/engine/frame_predictor.h"
 
 namespace {
 
@@ -42,39 +49,74 @@ namespace scenic_impl {
 
 App::App(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_node,
          fit::closure quit_callback)
-    : scenic_(std::make_unique<Scenic>(app_context, std::move(inspect_node),
-                                       std::move(quit_callback))) {
+    : executor_(async_get_default_dispatcher()),
+      scenic_(app_context, std::move(inspect_node), std::move(quit_callback)) {
   FXL_DCHECK(!device_watcher_);
 
-  std::unique_ptr<System> dependency = std::make_unique<Dependency>(
-      SystemContext(scenic_->app_context(), inspect_deprecated::Node(), /*quit_callback*/ nullptr),
-      false);
-  scenic_->RegisterDependency(dependency.get());
+  fit::bridge<escher::EscherUniquePtr> escher_bridge;
+  fit::bridge<scenic_impl::gfx::Display*> display_bridge;
 
   device_watcher_ = fsl::DeviceWatcher::Create(
-      kDependencyDir, [this, dependency = std::move(dependency)](int dir_fd, std::string filename) {
-        escher_ = gfx::GfxSystem::CreateEscher(scenic_->app_context());
+      kDependencyDir, [this, completer = std::move(escher_bridge.completer)](
+                          int dir_fd, std::string filename) mutable {
+        completer.complete_ok(gfx::GfxSystem::CreateEscher(scenic_.app_context()));
+        device_watcher_.reset();
+      });
+
+  display_manager_.WaitForDefaultDisplayController(
+      [this, completer = std::move(display_bridge.completer)]() mutable {
+        completer.complete_ok(display_manager_.default_display());
+      });
+
+  auto p = fit::join_promises(escher_bridge.consumer.promise(), display_bridge.consumer.promise())
+               .and_then([this](std::tuple<fit::result<escher::EscherUniquePtr>,
+                                           fit::result<scenic_impl::gfx::Display*>>& results) {
+                 InitializeServices(std::move(std::get<0>(results).value()),
+                                    std::move(std::get<1>(results).value()));
+               });
+
+  executor_.schedule_task(std::move(p));
+}
+
+void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* display) {
+  if (!display) {
+    FXL_LOG(ERROR) << "No default display, Graphics system exiting";
+    scenic_.Quit();
+    return;
+  }
+
+  if (!escher || !escher->device()) {
+    FXL_LOG(ERROR) << "No Vulkan on device, Graphics system exiting.";
+    scenic_.Quit();
+    return;
+  }
+
+  escher_ = std::move(escher);
+
+  frame_scheduler_ = std::make_shared<gfx::DefaultFrameScheduler>(
+      display,
+      std::make_unique<gfx::FramePredictor>(gfx::DefaultFrameScheduler::kInitialRenderDuration,
+                                            gfx::DefaultFrameScheduler::kInitialUpdateDuration),
+      scenic_.inspect_node()->CreateChild("FrameScheduler"));
+
+  engine_.emplace(frame_scheduler_, &display_manager_, escher_->GetWeakPtr(),
+                  scenic_.inspect_node()->CreateChild("Engine"));
+  frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-        auto gfx = scenic_->RegisterSystem<gfx::GfxSystem>(std::make_unique<gfx::DisplayManager>(),
-                                                           escher_->GetWeakPtr());
-        scenic_->SetDelegate(gfx);
-        FXL_DCHECK(gfx);
+  auto gfx =
+      scenic_.RegisterSystem<gfx::GfxSystem>(display, &engine_.value(), escher_->GetWeakPtr());
+  frame_scheduler_->AddSessionUpdater(gfx->GetWeakPtr());
+  scenic_.SetDelegate(gfx);
+  FXL_DCHECK(gfx);
 #endif
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
-#ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-        auto input = scenic_->RegisterSystem<input::InputSystem>(gfx);
-        FXL_DCHECK(input);
-#else
-#error InputSystem requires gfx::GfxSystem.
-#endif
+  auto input = scenic_.RegisterSystem<input::InputSystem>(&engine_.value());
+  FXL_DCHECK(input);
 #endif
 
-        dependency->SetToInitialized();
-        // Reset the device watcher so we don't get a second callback.
-        device_watcher_.reset();
-      });
+  scenic_.SetInitialized();
 }
 
 }  // namespace scenic_impl

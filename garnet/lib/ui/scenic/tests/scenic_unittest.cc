@@ -9,22 +9,6 @@
 #include "gtest/gtest.h"
 
 namespace {
-class Dependency : public scenic_impl::System {
- public:
-  using System::System;
-  scenic_impl::CommandDispatcherUniquePtr CreateCommandDispatcher(
-      scenic_impl::CommandDispatcherContext context) override {
-    ++num_dispatchers_;
-    // We don't actually expect anyone to call this, but for logging purposes, we will record it.
-    return nullptr;
-  };
-
-  uint32_t GetNumDispatchers() { return num_dispatchers_; }
-
- private:
-  uint32_t num_dispatchers_ = 0;
-};
-
 class Delegate : public scenic_impl::TempScenicDelegate {
   void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override {
     auto info = ::fuchsia::ui::gfx::DisplayInfo();
@@ -46,9 +30,21 @@ class Delegate : public scenic_impl::TempScenicDelegate {
 namespace scenic_impl {
 namespace test {
 
-TEST_F(ScenicTest, SessionCreatedAfterAllSystemsInitialized) {
-  auto mock_system = scenic()->RegisterSystem<DummySystem>(false);
+TEST_F(ScenicTest, CreateAndDestroySession) {
+  auto mock_system = scenic()->RegisterSystem<DummySystem>();
+  scenic()->SetInitialized();
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
 
+  auto session = CreateSession();
+  EXPECT_EQ(scenic()->num_sessions(), 1U);
+  EXPECT_EQ(mock_system->GetNumDispatchers(), 1U);
+  EXPECT_TRUE(mock_system->GetLastSession());
+
+  scenic()->CloseSession(mock_system->GetLastSession());
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+}
+
+TEST_F(ScenicTest, SessionCreatedAfterInitialization) {
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 
   // Request session creation, which doesn't occur yet because system isn't
@@ -56,59 +52,13 @@ TEST_F(ScenicTest, SessionCreatedAfterAllSystemsInitialized) {
   auto session = CreateSession();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 
-  // Initializing the system allows the session to be created.
-  mock_system->SetToInitialized();
+  // Initializing Scenic allows the session to be created.
+  scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 1U);
 }
 
-TEST_F(ScenicTest, DependenciesBlockSessionCreation) {
-  auto mock_system = scenic()->RegisterSystem<DummySystem>(false);
-  EXPECT_EQ(scenic()->num_sessions(), 0U);
-  auto dependency = std::make_unique<Dependency>(
-      SystemContext(scenic_->app_context(), inspect_deprecated::Node(), /*quit_callback*/ nullptr),
-      false);
-  scenic()->RegisterDependency(dependency.get());
-
-  auto session = CreateSession();
-  EXPECT_EQ(scenic()->num_sessions(), 0U);
-
-  // This should not create the session, as the dependency is still uninitialized.
-  mock_system->SetToInitialized();
-  EXPECT_EQ(scenic()->num_sessions(), 0U);
-  EXPECT_EQ(mock_system->GetNumDispatchers(), 0U);
-  EXPECT_EQ(dependency->GetNumDispatchers(), 0U);
-
-  // At this point, all systems are initialized, but we don't dispatch to dependencies.
-  dependency->SetToInitialized();
-  EXPECT_EQ(scenic()->num_sessions(), 1U);
-  EXPECT_EQ(mock_system->GetNumDispatchers(), 1U);
-  EXPECT_EQ(dependency->GetNumDispatchers(), 0U);
-}
-
-TEST_F(ScenicTest, DependenciesBlockSessionCreationReverseOrder) {
-  auto mock_system = scenic()->RegisterSystem<DummySystem>(false);
-  EXPECT_EQ(scenic()->num_sessions(), 0U);
-  auto dependency = std::make_unique<Dependency>(
-      SystemContext(scenic_->app_context(), inspect_deprecated::Node(), /*quit_callback*/ nullptr),
-      false);
-  scenic()->RegisterDependency(dependency.get());
-
-  auto session = CreateSession();
-  EXPECT_EQ(scenic()->num_sessions(), 0U);
-
-  // This test is identical to DependenciesBlockSessionCreation, but it initializes the dependency
-  // first.
-  dependency->SetToInitialized();
-  EXPECT_EQ(scenic()->num_sessions(), 0U);
-  EXPECT_EQ(mock_system->GetNumDispatchers(), 0U);
-  EXPECT_EQ(dependency->GetNumDispatchers(), 0U);
-
-  mock_system->SetToInitialized();
-  EXPECT_EQ(scenic()->num_sessions(), 1U);
-  EXPECT_EQ(mock_system->GetNumDispatchers(), 1U);
-  EXPECT_EQ(dependency->GetNumDispatchers(), 0U);
-}
-
+// TODO(SCN-421)): This test requires a GfxSystem because GfxSystem is currently the source of
+// TempSessionDelegates. Once this bug has been fixed, this test should revert back to a ScenicTest.
 TEST_F(ScenicGfxTest, InvalidPresentCall_ShouldDestroySession) {
   EXPECT_EQ(scenic()->num_sessions(), 0U);
   auto session = CreateSession();
@@ -127,7 +77,7 @@ TEST_F(ScenicGfxTest, InvalidPresentCall_ShouldDestroySession) {
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 }
 
-TEST_F(ScenicGfxTest, ScenicApiRaceBeforeSystemRegistration) {
+TEST_F(ScenicTest, ScenicApiRaceBeforeSystemRegistration) {
   Delegate delegate;
 
   bool display_info = false;
@@ -149,21 +99,21 @@ TEST_F(ScenicGfxTest, ScenicApiRaceBeforeSystemRegistration) {
   EXPECT_FALSE(screenshot);
   EXPECT_FALSE(display_ownership);
 
-  auto mock_system = scenic()->RegisterSystem<DummySystem>(false);
+  auto mock_system = scenic()->RegisterSystem<DummySystem>();
   scenic()->SetDelegate(&delegate);
 
   EXPECT_FALSE(display_info);
   EXPECT_FALSE(screenshot);
   EXPECT_FALSE(display_ownership);
 
-  mock_system->SetToInitialized();
+  scenic()->SetInitialized();
 
   EXPECT_TRUE(display_info);
   EXPECT_TRUE(screenshot);
   EXPECT_TRUE(display_ownership);
 }
 
-TEST_F(ScenicGfxTest, ScenicApiRaceAfterSystemRegistration) {
+TEST_F(ScenicTest, ScenicApiRaceAfterSystemRegistration) {
   Delegate delegate;
 
   bool display_info = false;
@@ -177,7 +127,7 @@ TEST_F(ScenicGfxTest, ScenicApiRaceAfterSystemRegistration) {
   bool display_ownership = false;
   auto display_ownership_callback = [&](zx::event event) { display_ownership = true; };
 
-  auto mock_system = scenic()->RegisterSystem<DummySystem>(false);
+  auto mock_system = scenic()->RegisterSystem<DummySystem>();
 
   scenic()->GetDisplayInfo(display_info_callback);
   scenic()->TakeScreenshot(screenshot_callback);
@@ -193,14 +143,14 @@ TEST_F(ScenicGfxTest, ScenicApiRaceAfterSystemRegistration) {
   EXPECT_FALSE(screenshot);
   EXPECT_FALSE(display_ownership);
 
-  mock_system->SetToInitialized();
+  scenic()->SetInitialized();
 
   EXPECT_TRUE(display_info);
   EXPECT_TRUE(screenshot);
   EXPECT_TRUE(display_ownership);
 }
 
-TEST_F(ScenicGfxTest, ScenicApiAfterDelegate) {
+TEST_F(ScenicTest, ScenicApiAfterDelegate) {
   Delegate delegate;
 
   bool display_info = false;
@@ -214,18 +164,22 @@ TEST_F(ScenicGfxTest, ScenicApiAfterDelegate) {
   bool display_ownership = false;
   auto display_ownership_callback = [&](zx::event event) { display_ownership = true; };
 
-  auto mock_system = scenic()->RegisterSystem<DummySystem>(false);
+  auto mock_system = scenic()->RegisterSystem<DummySystem>();
   scenic()->SetDelegate(&delegate);
 
   scenic()->GetDisplayInfo(display_info_callback);
   scenic()->TakeScreenshot(screenshot_callback);
   scenic()->GetDisplayOwnershipEvent(display_ownership_callback);
 
+  EXPECT_FALSE(display_info);
+  EXPECT_FALSE(screenshot);
+  EXPECT_FALSE(display_ownership);
+
+  scenic()->SetInitialized();
+
   EXPECT_TRUE(display_info);
   EXPECT_TRUE(screenshot);
   EXPECT_TRUE(display_ownership);
-
-  mock_system->SetToInitialized();
 }
 
 }  // namespace test

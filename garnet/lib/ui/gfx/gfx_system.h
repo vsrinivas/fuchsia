@@ -19,14 +19,17 @@ namespace scenic_impl {
 namespace gfx {
 
 class Compositor;
+class GfxSystem;
+using GfxSystemWeakPtr = fxl::WeakPtr<GfxSystem>;
 
 class GfxSystem : public System, public TempScenicDelegate, public SessionUpdater {
  public:
   static constexpr TypeId kTypeId = kGfx;
   static const char* kName;
 
-  GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> display_manager,
-            escher::EscherWeakPtr escher);
+  GfxSystem(SystemContext context, Display* display, Engine* engine, escher::EscherWeakPtr escher);
+
+  GfxSystemWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
 
@@ -43,39 +46,12 @@ class GfxSystem : public System, public TempScenicDelegate, public SessionUpdate
   // |SessionUpdater|
   virtual void PrepareFrame(zx::time presentation_time, uint64_t trace_id) override;
 
-  // TODO(SCN-906): Break out Engine, instead of coupling it to GfxSystem.
-  CompositorWeakPtr GetCompositor(GlobalId compositor_id) const;
-  gfx::Session* GetSession(SessionId session_id) const;
-
-  // TODO(SCN-906): Remove this in favor of unified initialization.
-  void AddInitClosure(fit::closure closure);
-
   // For tests.
-  SessionManager* session_manager() { return session_manager_.get(); }
+  SessionManager* session_manager() { return &session_manager_; }
 
   static escher::EscherUniquePtr CreateEscher(sys::ComponentContext* app_context);
 
- protected:
-  // Protected so test classes can expose.
-  //
-  // TODO(SCN-1491): Replace with dependency injection.
-  virtual std::unique_ptr<SessionManager> InitializeSessionManager();
-  virtual std::unique_ptr<Engine> InitializeEngine();
-
-  std::shared_ptr<FrameScheduler> frame_scheduler_;
-  std::unique_ptr<SessionManager> session_manager_;
-  std::unique_ptr<Engine> engine_;
-  std::unique_ptr<DisplayManager> display_manager_;
-
  private:
-  fit::closure DelayedInitClosure();
-  void Initialize();
-
-  // TODO(SCN-452): Remove this when we externalize Displays.
-  void GetDisplayInfoImmediately(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback);
-  void GetDisplayOwnershipEventImmediately(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback);
-
   static VkBool32 HandleDebugReport(VkDebugReportFlagsEXT flags,
                                     VkDebugReportObjectTypeEXT objectType, uint64_t object,
                                     size_t location, int32_t messageCode, const char* pLayerPrefix,
@@ -85,10 +61,9 @@ class GfxSystem : public System, public TempScenicDelegate, public SessionUpdate
                                std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources);
 
   escher::EscherWeakPtr escher_;
-
-  // TODO(SCN-452): Remove this when we externalize Displays.
-  bool initialized_ = false;
-  std::vector<fit::closure> run_after_initialized_;
+  Display* const display_;
+  Engine* const engine_;
+  SessionManager session_manager_;
 
   std::optional<CommandContext> command_context_;
 

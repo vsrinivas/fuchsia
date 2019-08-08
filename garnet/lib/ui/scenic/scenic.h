@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_SCENIC_SCENIC_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/async/default.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
 
@@ -58,13 +59,6 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   template <typename SystemT, typename... Args>
   SystemT* RegisterSystem(Args&&... args);
 
-  // Scenic will wait on this system before fully initializing, without adding this system to the
-  // list of registered systems (e.g., for command dispatch purposes). It does not take ownership of
-  // the system; it must outlive the Scenic instance.
-  //
-  // TODO(SCN-1506): Find a better way to represent this other than creating an entire dummy system.
-  void RegisterDependency(System* system);
-
   // Called by Session when it needs to close itself.
   void CloseSession(Session* session);
 
@@ -74,6 +68,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
       ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
 
   sys::ComponentContext* app_context() const { return app_context_; }
+  inspect_deprecated::Node* inspect_node() { return &inspect_node_; }
+  void Quit() { quit_callback_(); }
 
   size_t num_sessions() {
     int num_sessions = 0;
@@ -85,6 +81,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
     return num_sessions;
   }
 
+  void SetInitialized();
+
  private:
   void CreateSessionImmediately(
       ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
@@ -94,6 +92,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // it is ready.
   void OnSystemInitialized(System* system);
 
+  void RunAfterInitialized(fit::closure closure);
+
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
   inspect_deprecated::Node inspect_node_;
@@ -102,12 +102,9 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // indicating the System is not available or supported.
   std::array<std::unique_ptr<System>, System::TypeId::kMaxSystems> systems_;
 
-  // List of systems that are waiting to be initialized; we can't create
-  // sessions until this is empty.
-  std::set<System*> uninitialized_systems_;
-
+  bool initialized_ = false;
   // Closures that will be run when all systems are initialized.
-  std::vector<fit::closure> run_after_all_systems_initialized_;
+  std::vector<fit::closure> run_after_initialized_;
 
   // Session bindings rely on setup of systems_; order matters.
   fidl::BindingSet<fuchsia::ui::scenic::Session, std::unique_ptr<Session>> session_bindings_;
@@ -130,11 +127,6 @@ SystemT* Scenic::RegisterSystem(Args&&... args) {
                                 quit_callback_.share()),
                   std::forward<Args>(args)...);
   systems_[SystemT::kTypeId] = std::unique_ptr<System>(system);
-
-  // Listen for System to be initialized if it isn't already.
-  if (!system->initialized()) {
-    RegisterDependency(system);
-  }
   return system;
 }
 

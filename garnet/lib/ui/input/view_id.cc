@@ -10,7 +10,7 @@ namespace input {
 using escher::operator<<;
 
 std::ostream& operator<<(std::ostream& os, const ViewStack::Entry& value) {
-  return os << "Entry: [" << value.view_id << ", GlobalTransform=\n"
+  return os << "Entry: [" << value.session_id << ", GlobalTransform=\n"
             << value.global_transform << "\n]";
 }
 

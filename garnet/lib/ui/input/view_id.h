@@ -9,27 +9,33 @@
 #include <vector>
 
 #include "garnet/lib/ui/gfx/id.h"
+#include "garnet/lib/ui/scenic/event_reporter.h"
 #include "src/ui/lib/escher/geometry/types.h"
 
 namespace scenic_impl {
 namespace input {
 
-// The top-level View is index 0, and grows downward.
+// A ViewStack represents a stack of API endpoints that can receive focus, attachment, and input
+// events. The top level endpoint is index 0, and grows downward.
 struct ViewStack {
   struct Entry {
-    // We store the View's resource ID to distinguish between Views vended by a
-    // single Session. However, a View's RefPtr may not actually be in the
-    // Session's ResourceMap, so the resource ID is *not* useful for recall.
-    GlobalId view_id;
-    glm::mat4 global_transform;  // The model-to-global transform for each View.
+    // The session ID associated with this endpoint.
+    SessionId session_id = 0;
+    // The generic interface to send events to this endpoint. If the endpoint dies (either due to
+    // the client closing it or due to the server responding to an error) this pointer should go out
+    // of scope.
+    EventReporterWeakPtr reporter;
+    // The model-to-global transform for the UX element associated with this endpoint.
+    glm::mat4 global_transform;
   };
   std::vector<Entry> stack;
 
-  // Whether the top-level View is focusable or not.
+  // Whether the top-level endpoint is focusable or not.
   // We write this field in an ADD event and read it in a DOWN event.
   bool focus_change = true;
 };
 
+std::ostream& operator<<(std::ostream& os, const ViewStack::Entry& value);
 std::ostream& operator<<(std::ostream& os, const ViewStack& value);
 
 }  // namespace input

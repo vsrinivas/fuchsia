@@ -122,7 +122,10 @@ bool Session::ScheduleUpdate(zx::time requested_presentation_time,
 
   auto acquire_fence_set = std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
   acquire_fence_set->WaitReadyAsync([weak = GetWeakPtr(), requested_presentation_time] {
+    // This weak pointer will go out of scope if the channel is killed between a call to Present()
+    // and the completion of the acquire fences.
     if (weak) {
+      FXL_DCHECK(weak->session_context_.frame_scheduler);
       weak->session_context_.frame_scheduler->ScheduleUpdateForSession(requested_presentation_time,
                                                                        weak->id());
     }

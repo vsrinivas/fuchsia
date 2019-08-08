@@ -50,7 +50,6 @@ using fuchsia::ui::scenic::SessionListener;
 using scenic_impl::Scenic;
 using scenic_impl::gfx::Display;
 using scenic_impl::gfx::DisplayManager;
-using scenic_impl::gfx::test::GfxSystemForTest;
 using scenic_impl::input::InputSystem;
 using scenic_impl::test::ScenicTest;
 

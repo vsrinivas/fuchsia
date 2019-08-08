@@ -53,8 +53,6 @@ class Display {
   // changes. This event backs Scenic's GetDisplayOwnershipEvent API.
   const zx::event& ownership_event() { return ownership_event_; };
 
-  virtual bool is_test_display() const { return false; }
-
   void set_color_transform(const ColorTransform& transform) { color_transform_ = transform; }
 
   const ColorTransform& color_transform() const { return color_transform_; }

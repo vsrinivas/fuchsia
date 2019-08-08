@@ -15,15 +15,19 @@ class DummySystem : public System {
   static constexpr TypeId kTypeId = kDummySystem;
   static const char* kName;
 
-  explicit DummySystem(SystemContext context, bool initialized_after_construction = true);
+  explicit DummySystem(SystemContext context);
+
   ~DummySystem() override;
 
   CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
 
   uint32_t GetNumDispatchers() { return num_dispatchers_; }
 
+  Session* GetLastSession() { return last_session_; }
+
  private:
   uint32_t num_dispatchers_ = 0;
+  Session* last_session_ = nullptr;
 };
 
 class DummyCommandDispatcher : public CommandDispatcher {

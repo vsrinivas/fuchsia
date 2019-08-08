@@ -6,26 +6,42 @@
 
 #include <lib/async-testing/test_loop.h>
 
-#include "garnet/lib/ui/gfx/displays/display.h"
-#include "garnet/lib/ui/gfx/displays/display_manager.h"
+#include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 
 namespace scenic_impl {
 namespace test {
 
 void ScenicGfxTest::InitializeScenic(Scenic* scenic) {
-  auto display_manager = std::make_unique<gfx::DisplayManager>();
-  display_manager->SetDefaultDisplayForTests(std::make_unique<gfx::test::TestDisplay>(
-      /*id*/ 0, /* width */ 0, /* height */ 0));
   command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
-  scenic_->RegisterSystem<gfx::test::GfxSystemForTest>(std::move(display_manager),
-                                                       command_buffer_sequencer_.get());
+  auto signaller =
+      std::make_unique<gfx::test::ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
+  display_ = std::make_unique<gfx::Display>(
+      /*id*/ 0, /* width */ 0, /* height */ 0);
+
+  // TODO(SCN-421)): This frame scheduler is only needed for a single test in scenic_unittests.cc.
+  // When this bug is fixed, that test will no longer depend on a GfxSystem, at which point, this
+  // frame scheduler can be removed.
+  frame_scheduler_ = std::make_shared<gfx::DefaultFrameScheduler>(
+      display_.get(),
+      std::make_unique<gfx::FramePredictor>(gfx::DefaultFrameScheduler::kInitialRenderDuration,
+                                            gfx::DefaultFrameScheduler::kInitialUpdateDuration),
+      scenic_->inspect_node()->CreateChild("FrameScheduler"));
+
+  engine_ = std::make_unique<gfx::Engine>(frame_scheduler_,
+                                          /*display_manager*/ nullptr, std::move(signaller),
+                                          escher::EscherWeakPtr());
+  auto system = scenic->RegisterSystem<gfx::GfxSystem>(display_.get(), engine_.get(),
+                                                       escher::EscherWeakPtr());
+  scenic->SetInitialized();
 
   RunLoopUntilIdle();  // Finish initialization
 }
 
 void ScenicGfxTest::TearDown() {
   ScenicTest::TearDown();
+  display_.reset();
+  engine_.reset();
   command_buffer_sequencer_.reset();
 }
 

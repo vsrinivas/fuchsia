@@ -34,23 +34,6 @@ std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
                                           error_reporter_ ? error_reporter_ : error_reporter);
 }
 
-GfxSystemForTest::GfxSystemForTest(SystemContext context,
-                                   std::unique_ptr<DisplayManager> display_manager,
-                                   escher::impl::CommandBufferSequencer* command_buffer_sequencer)
-    : GfxSystem(std::move(context), std::move(display_manager), escher::EscherWeakPtr()),
-      command_buffer_sequencer_(command_buffer_sequencer) {}
-
-std::unique_ptr<SessionManager> GfxSystemForTest::InitializeSessionManager() {
-  return std::make_unique<SessionManagerForTest>();
-}
-
-std::unique_ptr<gfx::Engine> GfxSystemForTest::InitializeEngine() {
-  return std::make_unique<Engine>(
-      frame_scheduler_, display_manager_.get(),
-      std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_),
-      escher::EscherWeakPtr());
-}
-
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl

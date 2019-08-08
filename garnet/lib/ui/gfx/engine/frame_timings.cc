@@ -36,7 +36,9 @@ void FrameTimings::OnFrameUpdated(zx::time time) {
       << "Error, update time already recorded.";
   updates_finished_time_ = time;
 
-  FXL_DCHECK(updates_finished_time_ >= latch_point_time_) << "Error, updates took negative time";
+  FXL_DCHECK(updates_finished_time_ >= latch_point_time_)
+      << "Error, updates took negative time: latch_point_time_ = " << latch_point_time_
+      << ", updates_finished_time_ = " << updates_finished_time_;
 }
 
 void FrameTimings::OnFrameRendered(size_t swapchain_index, zx::time time) {

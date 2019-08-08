@@ -52,33 +52,6 @@ class SessionManagerForTest : public SessionManager {
   std::shared_ptr<ErrorReporter> error_reporter_;
 };
 
-class GfxSystemForTest : public GfxSystem {
- public:
-  static constexpr TypeId kTypeId = GfxSystem::kTypeId;
-
-  explicit GfxSystemForTest(SystemContext context, std::unique_ptr<DisplayManager> display_manager,
-                            escher::impl::CommandBufferSequencer* command_buffer_sequencer);
-
-  Engine* engine() { return engine_.get(); }
-
- private:
-  std::unique_ptr<SessionManager> InitializeSessionManager() override;
-
-  std::unique_ptr<gfx::Engine> InitializeEngine() override;
-
-  escher::impl::CommandBufferSequencer* command_buffer_sequencer_;
-};
-
-// Device-independent "display"; for testing only. Needed to ensure GfxSystem
-// doesn't wait for a device-driven "display ready" signal.
-class TestDisplay : public Display {
- public:
-  TestDisplay(uint64_t id, uint32_t width_px, uint32_t height_px)
-      : Display(id, width_px, height_px) {}
-  ~TestDisplay() = default;
-  bool is_test_display() const override { return true; }
-};
-
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl

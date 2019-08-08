@@ -16,8 +16,7 @@ namespace {
 // Session::event_reporter_ is never null.
 class DefaultEventReporter : public EventReporter {
  public:
-  constexpr DefaultEventReporter() = default;
-  ~DefaultEventReporter() override = default;  // Trivially destructible.
+  DefaultEventReporter() : weak_factory_(this) {}
 
   void EnqueueEvent(fuchsia::ui::gfx::Event event) override {
     FXL_LOG(WARNING) << "EventReporter not set up, dropped event: " << event;
@@ -30,6 +29,10 @@ class DefaultEventReporter : public EventReporter {
   void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override {
     FXL_LOG(WARNING) << "EventReporter not set up, dropped event: " << unhandled;
   }
+
+  EventReporterWeakPtr GetWeakPtr() override { return weak_factory_.GetWeakPtr(); }
+
+  fxl::WeakPtrFactory<DefaultEventReporter> weak_factory_;  // must be last
 };
 
 }  // namespace

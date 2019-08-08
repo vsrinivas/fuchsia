@@ -18,32 +18,19 @@ namespace test {
 class GfxSystemTest : public scenic_impl::test::ScenicTest {
  public:
   // ::testing::Test virtual method.
-  void SetUp() override {
-    command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
-    ScenicTest::SetUp();
-  }
+  void TearDown() override;
 
-  // ::testing::Test virtual method.
-  void TearDown() override {
-    ScenicTest::TearDown();
-    command_buffer_sequencer_.reset();
-  }
-
-  GfxSystemForTest* gfx_system() { return gfx_system_; }
+  GfxSystem* gfx_system() { return gfx_system_.get(); }
 
  private:
+  void InitializeScenic(Scenic* scenic) override;
+
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
+  std::unique_ptr<Display> display_;
+  std::shared_ptr<FrameScheduler> frame_scheduler_;
+  std::unique_ptr<Engine> engine_;
 
-  GfxSystemForTest* gfx_system_ = nullptr;
-
-  void InitializeScenic(Scenic* scenic) override {
-    auto display_manager = std::make_unique<gfx::DisplayManager>();
-    display_manager->SetDefaultDisplayForTests(std::make_unique<TestDisplay>(
-        /*id*/ 0, /* width */ 0, /* height */ 0));
-    command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
-    gfx_system_ = scenic->RegisterSystem<GfxSystemForTest>(std::move(display_manager),
-                                                           command_buffer_sequencer_.get());
-  }
+  GfxSystemWeakPtr gfx_system_;
 };
 
 }  // namespace test

@@ -46,7 +46,6 @@ Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
       frame_scheduler_(frame_scheduler),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
-  FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
 
   InitializeInspectObjects();
@@ -61,8 +60,6 @@ Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
       release_fence_signaller_(std::move(release_fence_signaller)),
       frame_scheduler_(frame_scheduler),
       weak_factory_(this) {
-  FXL_DCHECK(display_manager_);
-
   InitializeInspectObjects();
 }
 

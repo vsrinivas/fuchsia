@@ -64,34 +64,14 @@ class System {
     kInvalid = kMaxSystems,
   };
 
-  using OnInitializedCallback = fit::function<void(System* system)>;
-
-  // If |initialized_after_construction| is false, the System must call
-  // SetToInitialized() after initialization is complete.
-  explicit System(SystemContext context, bool initialized_after_construction = true);
+  explicit System(SystemContext context);
   virtual ~System();
 
   virtual CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) = 0;
 
   SystemContext* context() { return &context_; }
 
-  bool initialized() { return initialized_; };
-
-  void set_on_initialized_callback(OnInitializedCallback callback) {
-    FXL_DCHECK(!on_initialized_callback_);
-    on_initialized_callback_ = std::move(callback);
-  }
-
-  // Marks this system as initialized and invokes callback if it's set.
-  void SetToInitialized();
-
- protected:
-  // TODO(SCN-906): Remove/refactor this under-used deferred-init logic.
-  bool initialized_ = true;
-
  private:
-  OnInitializedCallback on_initialized_callback_;
-
   SystemContext context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(System);

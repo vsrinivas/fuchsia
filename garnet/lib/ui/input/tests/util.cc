@@ -4,11 +4,12 @@
 
 #include "garnet/lib/ui/input/tests/util.h"
 
-#include <hid/hid.h>
-
 #include <unordered_set>
 
+#include <hid/hid.h>
+
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
+#include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/id.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/gtest/test_loop_fixture.h"
@@ -35,8 +36,12 @@ using fuchsia::ui::scenic::SessionListener;
 using scenic_impl::GlobalId;
 using scenic_impl::ResourceId;
 using scenic_impl::Scenic;
-using scenic_impl::gfx::DisplayManager;
-using scenic_impl::gfx::test::GfxSystemForTest;
+using scenic_impl::gfx::DefaultFrameScheduler;
+using scenic_impl::gfx::Display;
+using scenic_impl::gfx::Engine;
+using scenic_impl::gfx::FramePredictor;
+using scenic_impl::gfx::GfxSystem;
+using scenic_impl::gfx::test::ReleaseFenceSignallerForTest;
 using scenic_impl::input::InputSystem;
 using scenic_impl::test::ScenicTest;
 
@@ -54,7 +59,7 @@ void InputSystemTest::RequestToPresent(scenic::Session* session) {
 std::string InputSystemTest::DumpScenes() {
   std::ostringstream output;
   std::unordered_set<GlobalId, GlobalId::Hash> visited_resources;
-  gfx_->engine()->DumpScenes(output, &visited_resources);
+  engine_->DumpScenes(output, &visited_resources);
   return output.str();
 }
 
@@ -65,19 +70,31 @@ void InputSystemTest::TearDown() {
   RunLoopUntilIdle();
   // 2. Destroy Scenic before destroying the command buffer sequencer (CBS).
   //    This ensures no CBS listeners are active by the time CBS is destroyed.
-  //    Scenic is destroyed by the superclass TearDown (now), CBS is destroyed
-  //    by the implicit class destructor (later).
   ScenicTest::TearDown();
+  engine_.reset();
+  display_.reset();
+  command_buffer_sequencer_.reset();
 }
 
 void InputSystemTest::InitializeScenic(Scenic* scenic) {
-  auto display_manager = std::make_unique<DisplayManager>();
-  display_manager->SetDefaultDisplayForTests(std::make_unique<TestDisplay>(
-      /*id*/ 0, test_display_width_px(), test_display_height_px()));
   command_buffer_sequencer_ = std::make_unique<CommandBufferSequencer>();
-  gfx_ = scenic->RegisterSystem<GfxSystemForTest>(std::move(display_manager),
-                                                  command_buffer_sequencer_.get());
-  input_ = scenic->RegisterSystem<InputSystem>(gfx_);
+  auto signaller = std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
+  display_ = std::make_unique<Display>(
+      /*id*/ 0, test_display_width_px(), test_display_height_px());
+  auto frame_scheduler = std::make_shared<DefaultFrameScheduler>(
+      display_.get(),
+      std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
+                                       DefaultFrameScheduler::kInitialUpdateDuration));
+
+  engine_ = std::make_unique<Engine>(frame_scheduler,
+                                     /*display_manager*/ nullptr, std::move(signaller),
+                                     escher::EscherWeakPtr());
+  frame_scheduler->SetFrameRenderer(engine_->GetWeakPtr());
+  auto gfx =
+      scenic->RegisterSystem<GfxSystem>(display_.get(), engine_.get(), escher::EscherWeakPtr());
+  frame_scheduler->AddSessionUpdater(gfx->GetWeakPtr());
+  input_ = scenic->RegisterSystem<InputSystem>(engine_.get());
+  scenic->SetInitialized();
 }
 
 SessionWrapper::SessionWrapper(Scenic* scenic) {

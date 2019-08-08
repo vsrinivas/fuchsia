@@ -9,7 +9,12 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
+
 namespace scenic_impl {
+
+class EventReporter;
+using EventReporterWeakPtr = fxl::WeakPtr<EventReporter>;
 
 // Interface for a class that submits events to the SessionListener.
 class EventReporter {
@@ -24,6 +29,9 @@ class EventReporter {
 
   // Add an unhandled command event to our queue; schedule a flush.
   virtual void EnqueueEvent(fuchsia::ui::scenic::Command event) = 0;
+
+  // Return a weak pointer to this object.
+  virtual EventReporterWeakPtr GetWeakPtr() = 0;
 
   // Decode the event type and enqueue appropriately.
   void EnqueueEvent(fuchsia::ui::scenic::Event event);

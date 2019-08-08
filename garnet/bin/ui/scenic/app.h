@@ -10,7 +10,10 @@
 
 #include <memory>
 
+#include "garnet/lib/ui/gfx/engine/engine.h"
+#include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/scenic/scenic.h"
+#include "garnet/public/lib/async_promise/executor.h"
 #include "src/ui/lib/escher/escher.h"
 
 namespace scenic_impl {
@@ -21,8 +24,14 @@ class App {
                fit::closure quit_callback);
 
  private:
+  void InitializeServices(escher::EscherUniquePtr escher, gfx::Display* display);
+
+  async::Executor executor_;
+  gfx::DisplayManager display_manager_;
   escher::EscherUniquePtr escher_;
-  std::unique_ptr<Scenic> scenic_;
+  std::shared_ptr<gfx::FrameScheduler> frame_scheduler_;
+  std::optional<gfx::Engine> engine_;
+  Scenic scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
 };
 

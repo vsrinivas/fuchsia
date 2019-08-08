@@ -9,13 +9,13 @@ namespace test {
 
 const char* DummySystem::kName = "DummySystem";
 
-DummySystem::DummySystem(SystemContext context, bool initialized_after_construction)
-    : System(std::move(context), initialized_after_construction) {}
+DummySystem::DummySystem(SystemContext context) : System(std::move(context)) {}
 
 DummySystem::~DummySystem() = default;
 
 CommandDispatcherUniquePtr DummySystem::CreateCommandDispatcher(CommandDispatcherContext context) {
   ++num_dispatchers_;
+  last_session_ = context.session();
   return CommandDispatcherUniquePtr(new DummyCommandDispatcher(std::move(context)),
                                     // Custom deleter.
                                     [](CommandDispatcher* cd) { delete cd; });

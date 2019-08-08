@@ -26,16 +26,6 @@ namespace lib_ui_input_tests {
 // Convenience function to reduce clutter.
 void CreateTokenPair(zx::eventpair* t1, zx::eventpair* t2);
 
-// Device-independent "display"; for testing only. Needed to ensure GfxSystem
-// doesn't wait for a device-driven "display ready" signal.
-class TestDisplay : public scenic_impl::gfx::Display {
- public:
-  TestDisplay(uint64_t id, uint32_t width_px, uint32_t height_px)
-      : Display(id, width_px, height_px) {}
-  ~TestDisplay() = default;
-  bool is_test_display() const override { return true; }
-};
-
 // Test fixture for exercising the input subsystem.
 class InputSystemTest : public scenic_impl::test::ScenicTest {
  public:
@@ -73,7 +63,9 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
 
  private:
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
-  scenic_impl::gfx::test::GfxSystemForTest* gfx_ = nullptr;
+  std::unique_ptr<scenic_impl::gfx::Engine> engine_;
+  std::unique_ptr<scenic_impl::gfx::Display> display_;
+
   scenic_impl::input::InputSystem* input_ = nullptr;
 };
 

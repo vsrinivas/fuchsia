@@ -80,6 +80,9 @@ class Session final : public fuchsia::ui::scenic::Session {
     // Enqueues the input event and immediately calls FlushEvents().
     void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
 
+    // |EventReporter|
+    EventReporterWeakPtr GetWeakPtr() override { return weak_factory_.GetWeakPtr(); }
+
     // |ErrorReporter|
     // Customize behavior of ErrorReporter::ReportError().
     void ReportError(fxl::LogSeverity severity, std::string error_string) override;
@@ -110,6 +113,8 @@ class Session final : public fuchsia::ui::scenic::Session {
 
     // Holds events from EnqueueEvent() until they are flushed by FlushEvents().
     std::vector<fuchsia::ui::scenic::Event> buffered_events_;
+
+    fxl::WeakPtrFactory<EventAndErrorReporter> weak_factory_;
   };
 
   // Flush any/all events that were enqueued via EnqueueEvent(), sending them

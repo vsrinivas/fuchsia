@@ -87,6 +87,7 @@ TEST_F(GfxSystemTest, ReleaseFences) {
   session->Present(0u, std::vector<zx::event>(), std::vector<zx::event>(),
                    [](fuchsia::images::PresentationInfo info) {});
   RunLoopFor(zx::sec(1));
+  EXPECT_TRUE(IsFenceSignalled(release_fence1));
   EXPECT_TRUE(IsFenceSignalled(release_fence2));
 }
 

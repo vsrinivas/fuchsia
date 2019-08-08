@@ -32,7 +32,7 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
   static constexpr TypeId kTypeId = kInput;
   static const char* kName;
 
-  explicit InputSystem(SystemContext context, gfx::GfxSystem* scenic);
+  explicit InputSystem(SystemContext context, gfx::Engine* engine);
   virtual ~InputSystem() = default;
 
   virtual CommandDispatcherUniquePtr CreateCommandDispatcher(
@@ -50,7 +50,9 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
            accessibility_pointer_event_listener_.is_bound();
   }
 
-  std::unordered_set<SessionId>& hard_keyboard_requested() { return hard_keyboard_requested_; }
+  std::unordered_map<SessionId, EventReporterWeakPtr>& hard_keyboard_requested() {
+    return hard_keyboard_requested_;
+  }
 
   // |fuchsia.ui.policy.accessibility.PointerEventRegistry|
   void Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
@@ -58,7 +60,7 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
                 RegisterCallback callback) override;
 
  private:
-  gfx::GfxSystem* const gfx_system_;
+  gfx::Engine* const engine_;
 
   // Send hard keyboard events to Text Sync for dispatch via IME; this is the
   // intended flow for clients to receive *mediated* keyboard events.
@@ -69,7 +71,7 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
   // Clients may request these events via the SetHardKeyboardDeliveryCmd;
   // this set remembers which sessions have opted in.  We need this map because
   // each InputCommandDispatcher works independently.
-  std::unordered_set<SessionId> hard_keyboard_requested_;
+  std::unordered_map<SessionId, EventReporterWeakPtr> hard_keyboard_requested_;
 
   fidl::BindingSet<fuchsia::ui::policy::accessibility::PointerEventRegistry>
       accessibility_pointer_event_registry_;
@@ -81,7 +83,7 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
 // Per-session treatment of input commands.
 class InputCommandDispatcher : public CommandDispatcher {
  public:
-  InputCommandDispatcher(CommandDispatcherContext context, gfx::GfxSystem* gfx_system,
+  InputCommandDispatcher(CommandDispatcherContext context, gfx::Engine* engine,
                          InputSystem* input_system);
   ~InputCommandDispatcher() override = default;
 
@@ -200,18 +202,20 @@ class InputCommandDispatcher : public CommandDispatcher {
   void DispatchTouchCommand(const fuchsia::ui::input::SendPointerInputCmd command);
   void DispatchMouseCommand(const fuchsia::ui::input::SendPointerInputCmd command);
 
-  // Enqueue the focus event into the view's SessionListener.
-  void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::FocusEvent focus);
+  // Enqueue the focus event into an EventReporter.
+  static void ReportFocusEvent(EventReporter* reporter, fuchsia::ui::input::FocusEvent focus);
 
-  // Enqueue the pointer event into the view's SessionListener.
-  void EnqueueEventToView(const ViewStack::Entry& view_info,
-                          fuchsia::ui::input::PointerEvent pointer);
+  // Enqueue the pointer event into the entry in a ViewStack.
+  static void ReportPointerEvent(const ViewStack::Entry& view_info,
+                                 fuchsia::ui::input::PointerEvent pointer);
 
-  // Enqueue the keyboard event into the view's SessionListener.
-  void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::KeyboardEvent keyboard);
+  // Enqueue the keyboard event into an EventReporter.
+  static void ReportKeyboardEvent(EventReporter* reporter,
+                                  fuchsia::ui::input::KeyboardEvent keyboard);
 
   // Enqueue the keyboard event to the Text Sync service.
-  void EnqueueEventToTextSync(GlobalId view_id, fuchsia::ui::input::KeyboardEvent keyboard);
+  static void SyncText(const fuchsia::ui::input::ImeServicePtr& text_sync,
+                       fuchsia::ui::input::KeyboardEvent keyboard);
 
   // Maybe fires a focus event to a view.
   //
@@ -234,11 +238,11 @@ class InputCommandDispatcher : public CommandDispatcher {
 
   // FIELDS
 
-  gfx::GfxSystem* const gfx_system_ = nullptr;
+  gfx::Engine* const engine_ = nullptr;
   InputSystem* const input_system_ = nullptr;
 
   // Tracks which View has focus.
-  GlobalId focus_;
+  ViewStack::Entry focus_;
 
   // Tracks the set of Views each touch event is delivered to; a map from
   // pointer ID to a stack of GlobalIds. This is used to ensure consistent

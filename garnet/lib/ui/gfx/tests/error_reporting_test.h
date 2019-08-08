@@ -35,7 +35,12 @@ class TestErrorReporter : public ErrorReporter {
 
 class TestEventReporter : public EventReporter {
  public:
+  TestEventReporter() : weak_factory_(this){};
+
   const std::vector<fuchsia::ui::scenic::Event>& events() const { return events_; }
+
+  // |EventReporter|
+  EventReporterWeakPtr GetWeakPtr() override { return weak_factory_.GetWeakPtr(); }
 
  private:
   // |EventReporter|
@@ -44,6 +49,8 @@ class TestEventReporter : public EventReporter {
   void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override;
 
   std::vector<fuchsia::ui::scenic::Event> events_;
+
+  fxl::WeakPtrFactory<TestEventReporter> weak_factory_;  // must be last
 };
 
 class ErrorReportingTest : public ::gtest::TestLoopFixture {

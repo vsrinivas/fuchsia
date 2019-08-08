@@ -10,13 +10,14 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/geometry/cpp/formatting.h>
 #include <lib/ui/input/cpp/formatting.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/time/time_point.h>
-#include <trace/event.h>
 
 #include <algorithm>
 #include <memory>
 #include <vector>
+
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/time/time_point.h>
+#include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/hit.h"
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
@@ -55,6 +56,7 @@ using fuchsia::ui::input::SetHardKeyboardDeliveryCmd;
 using fuchsia::ui::input::SetParallelDispatchCmd;
 
 namespace {
+
 // Helper for Dispatch[Touch|Mouse]Command.
 int64_t NowInNs() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }
 
@@ -122,14 +124,14 @@ glm::mat4 FindGlobalTransform(gfx::ViewPtr view) {
 // This invariant means this dispatcher context's session, handling an input
 // command, also originally created the compositor.
 //
-std::vector<gfx::Hit> PerformGlobalHitTest(gfx::GfxSystem* gfx_system, GlobalId compositor_id,
-                                           float x, float y) {
-  FXL_DCHECK(gfx_system);
+std::vector<gfx::Hit> PerformGlobalHitTest(gfx::Engine* engine, GlobalId compositor_id, float x,
+                                           float y) {
+  FXL_DCHECK(engine);
 
   escher::ray4 ray = CreateScreenPerpendicularRay(x, y);
   FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
 
-  gfx::CompositorWeakPtr compositor = gfx_system->GetCompositor(compositor_id);
+  gfx::CompositorWeakPtr compositor = engine->scene_graph()->GetCompositor(compositor_id);
   FXL_DCHECK(compositor) << "No compositor, violated invariant.";
 
   gfx::LayerStackPtr layer_stack = compositor->layer_stack();
@@ -218,29 +220,23 @@ AccessibilityPointerEvent BuildAccessibilityPointerEvent(const PointerEvent& glo
 }
 }  // namespace
 
-InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
-    : System(std::move(context), /*initialized_after_construction*/ false),
-      gfx_system_(gfx_system) {
-  FXL_CHECK(gfx_system_);
-  gfx_system_->AddInitClosure([this]() {
-    SetToInitialized();
+InputSystem::InputSystem(SystemContext context, gfx::Engine* engine)
+    : System(std::move(context)), engine_(engine) {
+  FXL_CHECK(engine_);
+  text_sync_service_ = this->context()->app_context()->svc()->Connect<ImeService>();
+  text_sync_service_.set_error_handler(
+      [](zx_status_t status) { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
 
-    text_sync_service_ = this->context()->app_context()->svc()->Connect<ImeService>();
-    text_sync_service_.set_error_handler(
-        [](zx_status_t status) { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
+  this->context()->app_context()->outgoing()->AddPublicService(
+      accessibility_pointer_event_registry_.GetHandler(this));
 
-    this->context()->app_context()->outgoing()->AddPublicService(
-        accessibility_pointer_event_registry_.GetHandler(this));
-
-    FXL_LOG(INFO) << "Scenic input system initialized.";
-  });
+  FXL_LOG(INFO) << "Scenic input system initialized.";
 }
 
 CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(CommandDispatcherContext context) {
-  return CommandDispatcherUniquePtr(
-      new InputCommandDispatcher(std::move(context), gfx_system_, this),
-      // Custom deleter.
-      [](CommandDispatcher* cd) { delete cd; });
+  return CommandDispatcherUniquePtr(new InputCommandDispatcher(std::move(context), engine_, this),
+                                    // Custom deleter.
+                                    [](CommandDispatcher* cd) { delete cd; });
 }
 
 void InputSystem::Register(
@@ -257,12 +253,11 @@ void InputSystem::Register(
 }
 
 InputCommandDispatcher::InputCommandDispatcher(CommandDispatcherContext command_dispatcher_context,
-                                               gfx::GfxSystem* gfx_system,
-                                               InputSystem* input_system)
+                                               gfx::Engine* engine, InputSystem* input_system)
     : CommandDispatcher(std::move(command_dispatcher_context)),
-      gfx_system_(gfx_system),
+      engine_(engine),
       input_system_(input_system) {
-  FXL_CHECK(gfx_system_);
+  FXL_CHECK(engine_);
   FXL_CHECK(input_system_);
 }
 
@@ -277,7 +272,7 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
     // Compositor and layer stack required for dispatch.
     GlobalId compositor_id(command_dispatcher_context()->session_id(),
                            input.send_pointer_input().compositor_id);
-    gfx::CompositorWeakPtr compositor = gfx_system_->GetCompositor(compositor_id);
+    gfx::CompositorWeakPtr compositor = engine_->scene_graph()->GetCompositor(compositor_id);
     if (!compositor)
       return;  // It's legal to race against GFX's compositor setup.
 
@@ -334,7 +329,7 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
   if (pointer_phase == Phase::ADD) {
     GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
     const std::vector<gfx::Hit> hits =
-        PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
+        PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y);
 
     // Find input targets.  Honor the "input masking" view property.
     ViewStack hit_views;
@@ -352,7 +347,8 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
       // Find the global transform for each hit, fill out hit_views.
       for (size_t i = 0; i < hits.size(); ++i) {
         if (gfx::ViewPtr view = views[i]) {
-          hit_views.stack.push_back({view->global_id(), FindGlobalTransform(view)});
+          hit_views.stack.push_back({view->session_id(), view->event_reporter()->GetWeakPtr(),
+                                     FindGlobalTransform(view)});
           if (/*TODO(SCN-919): view_id may mask input */ false) {
             break;
           }
@@ -396,7 +392,7 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
     if (a11y_enabled) {
       deferred_events.emplace_back(entry, std::move(clone));
     } else {
-      EnqueueEventToView(entry, std::move(clone));
+      ReportPointerEvent(entry, std::move(clone));
     }
     if (!parallel_dispatch_) {
       break;  // TODO(SCN-1047): Remove when gesture disambiguation is ready.
@@ -450,7 +446,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
   if (pointer_phase == Phase::DOWN) {
     GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
     const std::vector<gfx::Hit> hits =
-        PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
+        PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y);
 
     // Find top-hit target and associated properties.
     // NOTE: We may hit various mouse cursors (owned by root presenter), so keep
@@ -459,7 +455,8 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
     for (gfx::Hit hit : hits) {
       FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
       if (gfx::ViewPtr view = hit.node->FindOwningView()) {
-        hit_view.stack.push_back({view->global_id(), FindGlobalTransform(view)});
+        hit_view.stack.push_back(
+            {view->session_id(), view->event_reporter()->GetWeakPtr(), FindGlobalTransform(view)});
         hit_view.focus_change = IsFocusChange(view);
         break;  // Just need the first one.
       }
@@ -481,7 +478,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
     const auto& entry = mouse_targets_[device_id].stack[0];
     PointerEvent clone;
     fidl::Clone(command.pointer_event, &clone);
-    EnqueueEventToView(entry, std::move(clone));
+    ReportPointerEvent(entry, std::move(clone));
   }
 
   if (pointer_phase == Phase::UP || pointer_phase == Phase::CANCEL) {
@@ -492,7 +489,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
   if (pointer_phase == Phase::MOVE && mouse_targets_.count(device_id) == 0) {
     GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
     const std::vector<gfx::Hit> hits =
-        PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
+        PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y);
     // Find top-hit target and send it this move event.
     // NOTE: We may hit various mouse cursors (owned by root presenter), so keep
     // going until we find a hit with a valid owning View.
@@ -501,11 +498,11 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
       FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
       if (gfx::ViewPtr view = hit.node->FindOwningView()) {
         ViewStack::Entry view_info;
-        view_info.view_id = view->global_id();
+        view_info.reporter = view->event_reporter()->GetWeakPtr();
         view_info.global_transform = FindGlobalTransform(view);
         PointerEvent clone;
         fidl::Clone(command.pointer_event, &clone);
-        EnqueueEventToView(view_info, std::move(clone));
+        ReportPointerEvent(view_info, std::move(clone));
         break;  // Just need the first one.
       }
     }
@@ -516,12 +513,11 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
 
 void InputCommandDispatcher::DispatchCommand(const SendKeyboardInputCmd command) {
   // Send keyboard events to the active focus via Text Sync.
-  EnqueueEventToTextSync(focus_, command.keyboard_event);
+  SyncText(input_system_->text_sync_service(), command.keyboard_event);
 
   // Clients may request direct delivery.
-  if (focus_.session_id > 0 &&
-      input_system_->hard_keyboard_requested().count(focus_.session_id) > 0) {
-    EnqueueEventToView(focus_, command.keyboard_event);
+  if (focus_.reporter && input_system_->hard_keyboard_requested().count(focus_.session_id) > 0) {
+    ReportKeyboardEvent(focus_.reporter.get(), command.keyboard_event);
   }
 }
 
@@ -530,15 +526,23 @@ void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd co
   FXL_VLOG(2) << "Hard keyboard events, session_id=" << session_id
               << ", delivery_request=" << (command.delivery_request ? "on" : "off");
 
+  auto event_reporter = command_dispatcher_context()->session()->event_reporter().get();
+  FXL_DCHECK(event_reporter);
+
   if (command.delivery_request) {
     // Take this opportunity to remove dead sessions.
-    for (SessionId id : input_system_->hard_keyboard_requested()) {
-      if (gfx_system_->GetSession(id) == nullptr) {
-        input_system_->hard_keyboard_requested().erase(id);
+    //
+    // TODO(SCN-1545): Add a test for removal, since commenting out this code resulted in all
+    // code passing.
+    for (auto& reporter : input_system_->hard_keyboard_requested()) {
+      if (!reporter.second) {
+        input_system_->hard_keyboard_requested().erase(reporter.first);
       }
     }
 
-    input_system_->hard_keyboard_requested().insert(session_id);
+    // This code assumes one event reporter per session id.
+    FXL_DCHECK(input_system_->hard_keyboard_requested().count(session_id) == 0);
+    input_system_->hard_keyboard_requested().insert({session_id, event_reporter->GetWeakPtr()});
   } else {
     input_system_->hard_keyboard_requested().erase(session_id);
   }
@@ -550,41 +554,32 @@ void InputCommandDispatcher::DispatchCommand(const SetParallelDispatchCmd comman
   parallel_dispatch_ = command.parallel_dispatch;
 }
 
-void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id, FocusEvent focus) {
-  if (gfx::Session* session = gfx_system_->GetSession(view_id.session_id)) {
-    InputEvent event;
-    event.set_focus(std::move(focus));
-
-    session->EnqueueEvent(std::move(event));
-  }
+void InputCommandDispatcher::ReportFocusEvent(EventReporter* reporter, FocusEvent focus) {
+  InputEvent event;
+  event.set_focus(std::move(focus));
+  reporter->EnqueueEvent(std::move(event));
 }
 
-void InputCommandDispatcher::EnqueueEventToView(const ViewStack::Entry& view_info,
+void InputCommandDispatcher::ReportPointerEvent(const ViewStack::Entry& view_info,
                                                 PointerEvent pointer) {
   TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
-  if (gfx::Session* session = gfx_system_->GetSession(view_info.view_id.session_id)) {
-    trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
-    TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
+  trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
+  TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
 
-    auto local_pointer_event = BuildLocalPointerEvent(pointer, view_info);
-    InputEvent event;
-    event.set_pointer(std::move(local_pointer_event));
+  auto local_pointer_event = BuildLocalPointerEvent(pointer, view_info);
+  InputEvent event;
+  event.set_pointer(std::move(local_pointer_event));
 
-    session->EnqueueEvent(std::move(event));
-  }
+  view_info.reporter->EnqueueEvent(std::move(event));
 }
 
-void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id, KeyboardEvent keyboard) {
-  if (gfx::Session* session = gfx_system_->GetSession(view_id.session_id)) {
-    InputEvent event;
-    event.set_keyboard(std::move(keyboard));
-
-    session->EnqueueEvent(std::move(event));
-  }
+void InputCommandDispatcher::ReportKeyboardEvent(EventReporter* reporter, KeyboardEvent keyboard) {
+  InputEvent event;
+  event.set_keyboard(std::move(keyboard));
+  reporter->EnqueueEvent(std::move(event));
 }
 
-void InputCommandDispatcher::EnqueueEventToTextSync(GlobalId view_id, KeyboardEvent keyboard) {
-  ImeServicePtr& text_sync = input_system_->text_sync_service();
+void InputCommandDispatcher::SyncText(const ImeServicePtr& text_sync, KeyboardEvent keyboard) {
   if (text_sync && text_sync.is_bound()) {
     InputEvent event;
     event.set_keyboard(std::move(keyboard));
@@ -619,29 +614,29 @@ bool InputCommandDispatcher::ShouldForwardAccessibilityPointerEvents() {
 
 void InputCommandDispatcher::MaybeChangeFocus(bool focus_change,
                                               const ViewStack::Entry& view_info) {
-  GlobalId new_focus;
+  ViewStack::Entry new_focus;
   if (focus_change) {
-    new_focus = view_info.view_id;
+    new_focus = view_info;
   } else {
     new_focus = focus_;  // No focus change.
   }
   FXL_VLOG(1) << "Focus, old and new: " << focus_ << " vs " << new_focus;
 
   // Deliver focus events.
-  if (focus_ != new_focus) {
+  if (focus_.session_id != new_focus.session_id) {
     const int64_t focus_time = NowInNs();
-    if (focus_) {
+    if (focus_.reporter) {
       FocusEvent event;
       event.event_time = focus_time;
       event.focused = false;
-      EnqueueEventToView(focus_, event);
+      ReportFocusEvent(focus_.reporter.get(), event);
       FXL_VLOG(1) << "Input focus lost by " << focus_;
     }
-    if (new_focus) {
+    if (new_focus.reporter) {
       FocusEvent event;
       event.event_time = focus_time;
       event.focused = true;
-      EnqueueEventToView(new_focus, event);
+      ReportFocusEvent(new_focus.reporter.get(), event);
       FXL_VLOG(1) << "Input focus gained by " << new_focus;
     }
     focus_ = new_focus;
@@ -759,7 +754,7 @@ void InputCommandDispatcher::PointerEventBuffer::AddStream(uint32_t pointer_id, 
 void InputCommandDispatcher::PointerEventBuffer::DispatchEvents(
     DeferredPerViewPointerEvents views_and_events) {
   for (auto& view_and_event : views_and_events) {
-    dispatcher_->EnqueueEventToView(view_and_event.first, std::move(view_and_event.second));
+    dispatcher_->ReportPointerEvent(view_and_event.first, std::move(view_and_event.second));
   }
 }
 

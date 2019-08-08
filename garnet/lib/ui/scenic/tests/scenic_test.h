@@ -20,6 +20,8 @@ namespace test {
 // required for a set of tests.
 class ScenicTest : public ::gtest::TestLoopFixture, public EventReporter {
  public:
+  ScenicTest() : weak_factory_(this){};
+
   std::unique_ptr<::scenic::Session> CreateSession();
 
  protected:
@@ -39,10 +41,14 @@ class ScenicTest : public ::gtest::TestLoopFixture, public EventReporter {
   void EnqueueEvent(fuchsia::ui::gfx::Event event) override;
   void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
   void EnqueueEvent(fuchsia::ui::scenic::Command event) override;
+  EventReporterWeakPtr GetWeakPtr() override { return weak_factory_.GetWeakPtr(); }
 
   std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<Scenic> scenic_;
   std::vector<fuchsia::ui::scenic::Event> events_;
+
+ private:
+  fxl::WeakPtrFactory<ScenicTest> weak_factory_;
 };
 
 }  // namespace test

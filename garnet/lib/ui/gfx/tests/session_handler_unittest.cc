@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/gfx/tests/session_handler_test.h"
+#include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "gtest/gtest.h"
 
 namespace scenic_impl {

@@ -32,7 +32,7 @@ class SessionHandler : public TempSessionDelegate {
                  std::shared_ptr<ErrorReporter> error_reporter,
                  inspect_deprecated::Node inspect_node = inspect_deprecated::Node());
   // TODO(SCN-1485): along with ~Session(), this ensures that the contents are
-  // properly removed from the scene-graph.  However, it doens't trigger another
+  // properly removed from the scene-graph.  However, it doesn't trigger another
   // frame to show the updated scene-graph.
   ~SessionHandler() = default;
 

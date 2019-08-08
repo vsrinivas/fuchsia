@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+
 #include <trace/event.h>
 
 namespace scenic_impl {
@@ -75,7 +76,8 @@ void Session::SetDebugName(std::string debug_name) {
   delegate->SetDebugName(debug_name);
 }
 
-Session::EventAndErrorReporter::EventAndErrorReporter(Session* session) : session_(session) {
+Session::EventAndErrorReporter::EventAndErrorReporter(Session* session)
+    : session_(session), weak_factory_(this) {
   FXL_DCHECK(session_);
 }
 

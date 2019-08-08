@@ -42,6 +42,10 @@ class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
     return static_cast<SessionHandler*>(command_dispatcher_.get());
   }
 
+  Scenic* scenic() { return scenic_.get(); }
+
+  Engine* engine() { return engine_.get(); }
+
   Session* session() { return session_handler()->session(); }
 
   // |SessionUpdater|
@@ -58,7 +62,7 @@ class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
   std::unique_ptr<DisplayManager> display_manager_;
   std::unique_ptr<scenic_impl::Session> scenic_session_;
   CommandDispatcherUniquePtr command_dispatcher_;
-  std::unique_ptr<SessionManagerForTest> session_manager_;
+  std::unique_ptr<SessionManager> session_manager_;
 
   fxl::WeakPtrFactory<SessionHandlerTest> weak_factory_;  // must be last
 };

@@ -1482,6 +1482,7 @@ ResourcePtr GfxCommandApplier::CreateCompositor(Session* session, ResourceId id,
 
 ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
     Session* session, ResourceId id, fuchsia::ui::gfx::DisplayCompositorArgs args) {
+  FXL_DCHECK(session->session_context().display_manager);
   Display* display = session->session_context().display_manager->default_display();
   if (!display) {
     session->error_reporter()->ERROR() << "There is no default display available.";
