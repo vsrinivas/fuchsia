@@ -24,7 +24,18 @@ x64)
   exit 1;;
 esac
 
-${CIPD} auth-login
+if [[ -z "$(which cargo)" ]]; then
+  if [[ -f "$HOME/.cargo/env" ]]; then
+    source "$HOME/.cargo/env"
+  else
+    echo "you must have rust installed on your host - see https://www.rust-lang.org/tools/install"
+    exit 2
+  fi
+fi
+
+if [[ "$(${CIPD} acl-check fuchsia_internal/ -writer)" == *"doesn't"* ]]; then
+  ${CIPD} auth-login
+fi
 
 # Clean the existing source checkout.
 rm -rf "${SOURCE_DIR}"
