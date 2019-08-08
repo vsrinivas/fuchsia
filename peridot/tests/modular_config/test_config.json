@@ -45,6 +45,14 @@
       {
         "service_name": "fuchsia.modular.Clipboard",
         "agent_url": "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx"
+      },
+      {
+        "service_name": "google.service.name",
+        "agent_url": "fuchsia-pkg://fuchsia.com/google_service#meta/google_service.cmx"
+      },
+      {
+        "service_name": "fake.Service.Name",
+        "agent_url": "fuchsia-pkg://fuchsia.com/fake_service#meta/fake_service.cmx"
       }
     ]
   }

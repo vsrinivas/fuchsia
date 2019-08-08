@@ -124,7 +124,7 @@
       "properties": {
         "service_name": {
           "type": "string",
-          "pattern": "^(fuchsia|chromium)[.][^.]+([.][^.]+)*$"
+          "pattern": "^[^.]+[.][^.]+([.][^.]+)*$"
         },
         "agent_url": {
           "type": "string",
