@@ -4,6 +4,7 @@
 
 use failure::{format_err, Error, ResultExt};
 use fidl::encoding::Decodable;
+use fidl_fuchsia_io as fidl_io;
 use fidl_fuchsia_netemul_network as net;
 use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
@@ -86,6 +87,18 @@ impl TestStack {
             self.event_sender.clone().sink_map_err(|e| panic!("event sender error: {}", e));
         fasync::spawn_local(
             rs.map_ok(Event::FidlStackEvent).map_err(|_| ()).forward(events).map(|_| ()),
+        );
+        Ok(stack)
+    }
+
+    fn connect_socket_provider(&self) -> Result<fidl_fuchsia_posix_socket::ProviderProxy, Error> {
+        let (stack, rs) = fidl::endpoints::create_proxy_and_stream::<
+            fidl_fuchsia_posix_socket::ProviderMarker,
+        >()?;
+        let events =
+            self.event_sender.clone().sink_map_err(|e| panic!("event sender error: {}", e));
+        fasync::spawn_local(
+            rs.map_ok(Event::FidlSocketProviderEvent).map_err(|_| ()).forward(events).map(|_| ()),
         );
         Ok(stack)
     }
@@ -947,6 +960,43 @@ async fn test_add_remote_routes() {
     );
 }
 
+#[fasync::run_singlethreaded(test)]
+async fn test_get_socket() {
+    let mut t = await!(TestSetupBuilder::new().add_endpoint().add_empty_stack().build()).unwrap();
+    let test_stack = t.get(0);
+    let socket_provider = test_stack.connect_socket_provider().unwrap();
+    let socket_response = await!(test_stack.run_future(socket_provider.socket(
+        libc::AF_INET as i16,
+        libc::SOCK_DGRAM as i16,
+        0,
+    )))
+        .expect("Socket call succeeds");
+    assert_eq!(socket_response.0, 0);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_socket_describe() {
+    let mut t = await!(TestSetupBuilder::new().add_endpoint().add_empty_stack().build()).unwrap();
+    let test_stack = t.get(0);
+    let socket_provider = test_stack.connect_socket_provider().unwrap();
+    let socket_response = await!(test_stack.run_future(socket_provider.socket(
+        libc::AF_INET as i16,
+        libc::SOCK_DGRAM as i16,
+        0,
+    )))
+        .expect("Socket call succeeds");
+    assert_eq!(socket_response.0, 0);
+    let info = await!(test_stack.run_future(
+        socket_response.1.expect("Socket returns a channel").into_proxy().unwrap().describe(),
+    ))
+        .expect("Describe call succeeds");
+    match info {
+        fidl_io::NodeInfo::Socket(_) => (),
+        _ => panic!("Socket Describe call did not return Node of type Socket"),
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_main_loop() {
     let (event_sender, evt_rcv) = futures::channel::mpsc::unbounded();
     let mut event_loop = EventLoop::new_with_channels(event_sender.clone(), evt_rcv);

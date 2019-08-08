@@ -75,6 +75,7 @@
 
 #[cfg(test)]
 mod integration_tests;
+mod socket;
 mod timers;
 mod util;
 
@@ -85,12 +86,14 @@ use fuchsia_zircon as zx;
 use std::convert::TryFrom;
 use std::fs::File;
 use std::marker::PhantomData;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use failure::{bail, format_err, Error};
-use fidl::endpoints::{RequestStream, ServiceMarker};
+use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
+use fidl_fuchsia_io;
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
@@ -102,6 +105,7 @@ use fidl_fuchsia_net_stack::{
     StackGetForwardingTableResponder, StackGetInterfaceInfoResponder, StackListInterfacesResponder,
     StackMarker, StackRequest, StackRequestStream,
 };
+use fidl_fuchsia_posix_socket as psocket;
 use fidl_fuchsia_posix_socket::ProviderRequest;
 use futures::channel::mpsc;
 use futures::future::{AbortHandle, Abortable};
@@ -111,7 +115,7 @@ use futures::{select, TryFutureExt, TryStreamExt};
 use integration_tests::TestEvent;
 use log::{debug, error, info, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, AddrSubnetEither, Subnet, SubnetEither};
+use net_types::ip::{AddrSubnet, AddrSubnetEither, IpAddr, IpVersion, Subnet, SubnetEither};
 use packet::{Buf, BufferMut, Serializer};
 use rand::{rngs::OsRng, Rng};
 use std::convert::TryInto;
@@ -229,7 +233,9 @@ pub enum Event {
     /// A request from the fuchsia.net.stack.Stack FIDL interface.
     FidlStackEvent(StackRequest),
     /// A request from the fuchsia.posix.socket.Provider FIDL interface.
-    FidlSocketProviderEvent(ProviderRequest),
+    FidlSocketProviderEvent(psocket::ProviderRequest),
+    /// A request from the fuchsia.posix.socket.Control FIDL interface.
+    FidlSocketControlEvent((Arc<Mutex<socket::SocketControlWorkerInner>>, psocket::ControlRequest)),
     /// An event from an ethernet interface. Either a status change or a frame.
     EthEvent((BindingId, eth::Event)),
     /// An indication that an ethernet device is ready to be used.
@@ -317,6 +323,9 @@ impl EventLoop {
             Some(Event::FidlSocketProviderEvent(req)) => {
                 await!(self.handle_fidl_socket_provider_request(req));
             }
+            Some(Event::FidlSocketControlEvent((sock, req))) => {
+                sock.lock().unwrap().handle_request(self, req);
+            }
             Some(Event::EthEvent((id, eth::Event::StatusChanged))) => {
                 info!("device {:?} status changed signal", id);
                 // We need to call get_status even if we don't use the output, since calling it
@@ -379,8 +388,49 @@ impl EventLoop {
         Ok(())
     }
 
-    async fn handle_fidl_socket_provider_request(&mut self, req: ProviderRequest) {
-        // TODO(wesleyac)
+    async fn handle_fidl_socket_provider_request(&mut self, req: psocket::ProviderRequest) {
+        match req {
+            psocket::ProviderRequest::Socket { domain, type_, protocol, responder } => {
+                let domain = i32::from(domain);
+                let nonblock = i32::from(type_) & libc::SOCK_NONBLOCK != 0;
+                let type_ = i32::from(type_) & !(libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC);
+                let net_proto = match domain {
+                    libc::AF_INET => IpVersion::V4,
+                    libc::AF_INET6 => IpVersion::V6,
+                    _ => {
+                        responder.send(libc::EAFNOSUPPORT as i16, None);
+                        return;
+                    }
+                };
+                let trans_proto = match i32::from(type_) {
+                    libc::SOCK_DGRAM => socket::TransProto::UDP,
+                    libc::SOCK_STREAM => socket::TransProto::TCP,
+                    _ => {
+                        responder.send(libc::EAFNOSUPPORT as i16, None);
+                        return;
+                    }
+                };
+
+                if let Ok((c0, c1)) = zx::Channel::create() {
+                    let worker = socket::SocketControlWorker::new(
+                        psocket::ControlRequestStream::from_channel(
+                            fasync::Channel::from_channel(c0).unwrap(),
+                        ),
+                        net_proto,
+                        trans_proto,
+                        nonblock,
+                    );
+                    if let Ok(worker) = worker {
+                        worker.spawn(self.ctx.dispatcher().event_send.clone());
+                        responder.send(0, Some(ClientEnd::new(c1)));
+                    } else {
+                        responder.send(libc::ENOBUFS as i16, None);
+                    }
+                } else {
+                    responder.send(libc::ENOBUFS as i16, None);
+                }
+            }
+        }
     }
 
     async fn handle_fidl_stack_request(&mut self, req: StackRequest) {
