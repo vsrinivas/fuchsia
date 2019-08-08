@@ -5,11 +5,6 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
 
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-timer.h>
-#include <dispatcher-pool/dispatcher-wakeup-event.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/slab_allocator.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -17,6 +12,12 @@
 #include <lib/media/cpp/timeline_rate.h>
 
 #include <memory>
+
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <dispatcher-pool/dispatcher-timer.h>
+#include <dispatcher-pool/dispatcher-wakeup-event.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/slab_allocator.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_link.h"

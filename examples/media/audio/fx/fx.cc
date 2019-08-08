@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <audio-utils/audio-input.h>
-#include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <inttypes.h>
@@ -30,6 +27,10 @@
 
 #include <limits>
 #include <utility>
+
+#include <audio-utils/audio-input.h>
+#include <fbl/algorithm.h>
+#include <fbl/unique_ptr.h>
 
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 

@@ -163,8 +163,8 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
                   id[13], id[14], id[15]);
     FXL_LOG(WARNING) << "Warning: Device ID (" << device->token()
                      << ") shares a persistent unique ID (" << id_buf
-                     << ") with another device in the system.  Initial Settings "
-                        "will be cloned from this device, and not persisted";
+                     << ") with another device in the system.  Initial Settings will be cloned "
+                        "from this device, and not persisted";
     settings->InitFromClone(*collision);
   }
 
@@ -234,6 +234,7 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
 
   REP(RemovingDevice(*device));
 
+  // TODO(mpuryear): Considering eliminating this; it may not be needed.
   device->PreventNewLinks();
   device->Unlink();
 

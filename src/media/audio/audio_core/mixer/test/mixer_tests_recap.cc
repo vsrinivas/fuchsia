@@ -329,7 +329,6 @@ TEST(Recap, SINAD) {
       } else {
         printf("                    ");
       }
-
       if (AudioResult::kPrevSinadLinearUp3[freq] != -std::numeric_limits<double>::infinity()) {
         printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearUp3[freq],
                AudioResult::kPrevSinadLinearUp3[freq]);
@@ -424,15 +423,15 @@ TEST(Recap, Rejection) {
   }
 
   printf("\n\n");
-}
+}  // namespace media::audio::test
 
 //
 // Display our baseline noise floor measurements, in decibels below full-scale
 //
-// 'Source' noise floor is the demonstrated best-case background noise when
-// accepting audio (from an AudioRenderer or audio Input device, for example).
-// 'Output' noise floor is the demonstrated best-case background noise when
-// emitting audio (to an audio Output device or AudioCapturer, for example).
+// 'Source' noise floor is the demonstrated best-case background noise when accepting audio (from an
+// AudioRenderer or audio Input device, for example). 'Output' noise floor is the demonstrated
+// best-case background noise when emitting audio (to an audio Output device or AudioCapturer, for
+// example).
 TEST(Recap, NoiseFloor) {
   printf("\n Best-case noise-floor");
   printf("\n   (in dB, with prior results)");

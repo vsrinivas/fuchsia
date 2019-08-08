@@ -5,10 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_LINK_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_LINK_H_
 
+#include <memory>
+
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
-
-#include <memory>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
@@ -21,9 +21,8 @@ class AudioObject;
 struct AudioLinkSourceTag {};
 struct AudioLinkDestTag {};
 
-// AudioLink is the base class of two different versions of AudioLinks which
-// join sources of audio (AudioRenderers, inputs, outputs-being-looped-back) to
-// destinations (outputs and AudioCapturers).
+// AudioLink is the base class of two different versions of AudioLinks which join sources of audio
+// (AudioRenderers, inputs, outputs-being-looped-back) to destinations (outputs and AudioCapturers).
 //
 // TODO(mpuryear): Finish docs.
 //

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+
 #include <trace-provider/provider.h>
 
 #include "examples/media/audio/vu_meter/vu_meter_view.h"

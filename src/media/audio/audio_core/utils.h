@@ -5,7 +5,6 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_UTILS_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_UTILS_H_
 
-#include <fbl/ref_counted.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/profile.h>
@@ -15,6 +14,8 @@
 
 #include <atomic>
 #include <vector>
+
+#include <fbl/ref_counted.h>
 
 #include "src/media/audio/audio_core/mixer/constants.h"
 

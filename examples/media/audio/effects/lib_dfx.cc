@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
 #include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 
 #include <cmath>
+
+#include <fbl/algorithm.h>
 
 #include "examples/media/audio/effects/dfx_base.h"
 #include "examples/media/audio/effects/dfx_delay.h"

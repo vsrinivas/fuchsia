@@ -1,15 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
 
-#include <ddk/device.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/virtualaudio/c/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+
+#include <ddk/device.h>
+#include <fbl/unique_ptr.h>
 
 namespace virtual_audio {
 
@@ -21,8 +21,8 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
     ZX_ASSERT(dev_host_dispatcher_ != nullptr);
   }
 
-  // Always called after DdkRelease unless object is prematurely freed. This
-  // would be a reference error: DevHost holds a reference until DdkRelease.
+  // Always called after DdkRelease unless object is prematurely freed. This would be a reference
+  // error: DevHost holds a reference until DdkRelease.
   ~VirtualAudioControlImpl() = default;
 
   // TODO(mpuryear): Move the three static methods and table over to DDKTL.

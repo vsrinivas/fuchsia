@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fbl/algorithm.h>
 
@@ -108,10 +107,9 @@ TEST(AnalysisHelpers, CompareBuffToVal_Float) {
   EXPECT_TRUE(CompareBufferToVal(source, 3.1415926f, 1));
 }
 
-// GenerateCosine writes a cosine wave into given buffer & length, at given
-// frequency, magnitude (default 1.0), and phase offset (default false).
-// The 'accumulate' flag specifies whether to add into previous contents.
-// OverwriteCosine/AccumulateCosine variants eliminate this flag.
+// GenerateCosine writes a cosine wave into given buffer & length, at given frequency, magnitude
+// (default 1.0), and phase offset (default false). The 'accumulate' flag specifies whether to add
+// into previous contents. OverwriteCosine/AccumulateCosine variants eliminate this flag.
 //
 // The uint8_t variant also provides the 0x80 offset to generated values.
 TEST(AnalysisHelpers, GenerateCosine_8) {
@@ -144,9 +142,8 @@ TEST(AnalysisHelpers, GenerateCosine_32) {
   // true: add generated signal into existing source[] values
   GenerateCosine(source, fbl::count_of(source), 1.0, true, 12345.6, M_PI);
 
-  // PI phase leads to effective magnitude of -12345.6.
-  // At frequency 1.0, the change to the buffer is [-12345.6, 0, +12345.6, 0],
-  // with +.6 values being rounded away from zero.
+  // PI phase leads to effective magnitude of -12345.6. At frequency 1.0, the change to the buffer
+  // is [-12345.6, 0, +12345.6, 0], with +.6 values being rounded away from zero.
   int32_t expect[] = {-16346, 0, 16346, 8000};
   EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source)));
 }
@@ -171,9 +168,8 @@ TEST(AnalysisHelpers, GenerateCosine_Double) {
   AccumulateCosine(source, fbl::count_of(source), 1.0, 12345.5,
                    M_PI);  // add to existing
 
-  // PI phase leads to effective magnitude of -12345.5.
-  // At frequency 1.0, the change to the buffer is [-12345.5, 0, +12345.5, 0],
-  // with no rounding because input is double.
+  // PI phase leads to effective magnitude of -12345.5. At frequency 1.0, the change to the buffer
+  // is [-12345.5, 0, +12345.5, 0], with no rounding because input is double.
   double expect[] = {-16345.5, -83000.0, 16345.5, 78000.0};
   EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source)));
 }
@@ -425,8 +421,7 @@ TEST(AnalysisHelpers, FFT) {
   EXPECT_LE(imags[buf_sz_2], epsilon);
   EXPECT_GE(imags[buf_sz_2], -epsilon);
 
-  // A cosine that fits exactly into the buffer len should produce zero values
-  // in all frequency bins except for bin 1.
+  // Cosines that fit exactly into buf_sie should produce zero in all frequency bins except bin 1.
   test_val = 20202020.0;
   OverwriteCosine(reals, buf_size, 1.0, test_val);
   OverwriteCosine(imags, buf_size, 0.0, 0.0);
@@ -441,8 +436,7 @@ TEST(AnalysisHelpers, FFT) {
     EXPECT_GE(imags[idx], -epsilon) << idx;
   }
 
-  // That same cosine, shifted by PI/2, should have identical results, but
-  // flipped between real and imaginary domains.
+  // That cosine shifted by PI/2 should have identical results, flipped between real and imaginary.
   OverwriteCosine(reals, buf_size, 1.0, test_val, -M_PI / 2.0);
   OverwriteCosine(imags, buf_size, 0.0, 0.0, 0.0);
   FFT(reals, imags, buf_size);
@@ -532,10 +526,9 @@ TEST(AnalysisHelpers, IFFT) {
   }
 }
 
-// MeasureAudioFreq function accepts buffer of audio data, length and the
-// frequency at which to analyze audio. It returns magnitude of signal at that
-// frequency, and combined (root-sum-square) magnitude of all OTHER frequencies.
-// For inputs of magnitude 3 and 4, their combination equals 5.
+// MeasureAudioFreq function accepts buffer of audio data, length and the frequency at which to
+// analyze audio. It returns magnitude of signal at that frequency, and combined (root-sum-square)
+// magnitude of all OTHER frequencies. For inputs of magnitude 3 and 4, their combination equals 5.
 TEST(AnalysisHelpers, MeasureAudioFreq_32) {
   int32_t reals[] = {5, -3, 13, -3};  // cos freq 0,1,2; mag 3,4,6; phase 0,pi,0
   double magn_signal = -54.32;        // will be overwritten
@@ -553,7 +546,7 @@ TEST(AnalysisHelpers, MeasureAudioFreq_32) {
 }
 
 // Test float-based MeasureAudioFreq (only needed to validate OutputProducer).
-// reals[] consists of cosines with freq 0,1,2; magnitude 3,4,6; phase 0,pi,pi.
+// Reals[] consists of cosines with freq 0,1,2; magnitude 3,4,6; phase 0,pi,pi.
 TEST(AnalysisHelpers, MeasureAudioFreq_Float) {
   float reals[] = {-7.0f, 9.0f, 1.0f, 9.0f};
   double magn_signal = -54.32;

@@ -16,8 +16,7 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(fuchsia::media::AudioStreamType
   // Start with the ratio between frames and nanoseconds.
   frames_per_ns_ = TimelineRate(format_.frames_per_second, ZX_SEC(1));
 
-  // Figure out the rate we need to scale by in order to produce our fixed
-  // point timestamps.
+  // Figure out the rate we need to scale by in order to produce our fixed point timestamps.
   frame_to_media_ratio_ = TimelineRate(1 << kPtsFractionalBits, 1);
 
   // Figure out the total number of bytes in a packed frame.
@@ -36,9 +35,8 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(fuchsia::media::AudioStreamType
       break;
 
     default:
-      // Format filtering was supposed to happen during
-      // AudioRendererImpl::SetStreamType.  It should never be attempting to
-      // create a FormatInfo structure with a sample format that we do not
+      // Format filtering was supposed to happen during AudioRendererImpl::SetStreamType.  It should
+      // never be attempting to create a FormatInfo structure with a sample format that we do not
       // understand.
       FXL_CHECK(false) << "unrecognized sample format";
       bytes_per_frame_ = 2;

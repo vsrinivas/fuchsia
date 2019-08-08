@@ -1,11 +1,10 @@
 # Command Line Volume Control Tool (vol)
 
-This tool queries and changes the gain/mute/AGC settings for audio devices.
-It also displays the token and UID identifiers for current devices and
-notes which devices are 'default'. Changes made with the 'vol' tool persist
-after the tool is closed. Note: Device gain/mute are not the same as System
-gain/mute -- although today we treat any explicit change in System gain/mute as
-a Device gain/mute change applied to all devices.
+This tool queries and changes the gain/mute/AGC settings for audio devices. It also displays the
+token and UID identifiers for current devices and notes which devices are 'default'. Changes made
+with the 'vol' tool persist after the tool is closed. Note: Device gain/mute are not the same as
+System gain/mute -- although today we treat any explicit change in System gain/mute as a Device
+gain/mute change applied to all devices.
 
 ```
     vol <args>

@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
@@ -296,8 +295,8 @@ void AudioLoopbackTest::SetUpCapturer(int16_t data) {
   capture_frames_ = format.frames_per_second * kSampleSeconds;
   capture_size_ = capture_frames_ * format.channels * capture_sample_size_;
 
-  // ZX_VM_PERM_WRITE taken here as we pre-fill the buffer to catch cases where
-  // we get back a packet without anything having been done with it.
+  // ZX_VM_PERM_WRITE taken here as we pre-fill the buffer to catch cases where we get back a packet
+  // without anything having been done with it.
   zx_status_t status = capture_buffer_.CreateAndMap(
       capture_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &capture_vmo,
       ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
@@ -328,11 +327,10 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
     SetUpRenderer(renderer_num, kPlaybackData[renderer_num]);
     expected_val += kPlaybackData[renderer_num];
 
-    // Get the minimum duration after submitting a packet to when we can start
-    // capturing what we sent on the loopback interface.  This assumes that the
-    // latency will be the same for both playback streams.  This happens to be
-    // true for this test as we create the renderers with the same parameters,
-    // but is not a safe assumption for the general users of this API to make.
+    // Get the minimum duration after submitting a packet to when we can start capturing what we
+    // sent on the loopback interface.  This assumes that the latency will be the same for both
+    // playback streams.  This happens to be true for this test as we create the renderers with the
+    // same parameters, but is not a safe assumption for the general users of this API to make.
     audio_renderer_[renderer_num]->GetMinLeadTime(CompletionCallback(
         [&sleep_duration](zx_duration_t t) { sleep_duration = std::max(sleep_duration, t); }));
     ExpectCallback();
@@ -348,9 +346,9 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
-  // Start playing right now, so that after we've delayed at least 1 leadtime,
-  // we should have mixed audio available for capture.  Our playback is sized
-  // to be much much larger than our capture to prevent test flakes.
+  // Start playing right now, so that after we've delayed at least 1 leadtime, we should have mixed
+  // audio available for capture.  Our playback is sized to be much much larger than our capture to
+  // prevent test flakes.
   auto play_at = zx::clock::get_monotonic().get();
 
   // Only get the callback for one renderer -- arbitrarily, renderer 0.
@@ -362,8 +360,7 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
                            }));
   ExpectCallback();
 
-  // We expect that media_time 0 played back at some point after the 'zero'
-  // time on the system.
+  // We expect that media_time 0 played back at some point after the 'zero' time on the system.
   EXPECT_EQ(media_time_received, 0);
   EXPECT_GT(ref_time_received, 0);
 
@@ -410,8 +407,7 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
 
 // SingleStream
 //
-// Creates a single output stream and a loopback capture and verifies it gets
-// back what it puts in.
+// Creates a single output stream and a loopback capture and verifies it gets back what it puts in.
 TEST_F(AudioLoopbackTest, SingleStream) { TestLoopback(1); }
 
 // ManyStreams

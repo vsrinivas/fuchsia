@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/media/audio/audio_core/mixer/test/audio_performance.h"
 
@@ -65,8 +64,8 @@ void AudioPerformance::ProfileSampler(Resampler sampler_type) {
   ProfileSamplerIn(4, sampler_type);
 }
 
-// Based on our lack of support for arbitrary channelization, only profile the
-// following channel configurations: 1-1, 1-2, 2-1, 2-2, 3-3, 4-4
+// Based on our lack of support for arbitrary channelization, only profile the following channel
+// configurations: 1-1, 1-2, 2-1, 2-2, 3-3, 4-4
 void AudioPerformance::ProfileSamplerIn(uint32_t num_input_chans, Resampler sampler_type) {
   if (num_input_chans > 2) {
     ProfileSamplerChans(num_input_chans, num_input_chans, sampler_type);
@@ -218,8 +217,8 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
     info.gain.SetSourceMute(source_mute);
 
     if (gain_type == GainType::Ramped) {
-      // Ramp within the "greater than Mute but less than Unity" range.
-      // Ramp duration assumes a mix duration of less than two secs.
+      // Ramp within the "greater than Mute but less than Unity" range. Ramp duration assumes a mix
+      // duration of less than two secs.
       info.gain.SetSourceGainWithRamp(Gain::kMinGainDb + 1.0f, ZX_SEC(2));
     }
 
@@ -413,4 +412,5 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
   printf("%s-%c%u:\t%9.3lf\t%9.3lf\t%9.3lf\t%9.3lf\n", format.c_str(), range, num_chans,
          mean / 1000.0, first / 1000.0, best / 1000.0, worst / 1000.0);
 }
+
 }  // namespace media::audio::test

@@ -4,10 +4,11 @@
 
 #include "examples/media/audio/effects/dfx_delay.h"
 
-#include <fbl/algorithm.h>
 #include <lib/media/audio_dfx/cpp/audio_device_fx.h>
 
 #include <cmath>
+
+#include <fbl/algorithm.h>
 
 #include "src/lib/fxl/logging.h"
 

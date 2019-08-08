@@ -19,9 +19,7 @@ std::string AudioDeviceUniqueIdToString(const audio_stream_unique_id_t& id) {
   char buf[(sizeof(id.data) * 2) + 1];
 
   const auto& d = id.data;
-  snprintf(buf, sizeof(buf),
-           "%02x%02x%02x%02x%02x%02x%02x%02x"
-           "%02x%02x%02x%02x%02x%02x%02x%02x",
+  snprintf(buf, sizeof(buf), "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
            d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13],
            d[14], d[15]);
   return std::string(buf, sizeof(buf) - 1);
@@ -145,6 +143,7 @@ void AudioDevice::ShutdownSelf() {
   // If we are not already in the process of shutting down, send a message to
   // the main message loop telling it to complete the shutdown process.
   if (!is_shutting_down()) {
+    // TODO(mpuryear): Considering eliminating this; it may not be needed.
     PreventNewLinks();
 
     FXL_DCHECK(mix_domain_);

@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio.h"
 
@@ -764,8 +763,8 @@ struct GainSpec {
   float gain_step_db;
 };
 
-// The utility defines two preset groups of gain options. Although arbitrarily
-// chosen, they exercise the available range through SetGainProperties:
+// The utility defines two preset groups of gain options. Although arbitrarily chosen, they exercise
+// the available range through SetGainProperties:
 // 0.Can and is mute.    Cannot AGC.       Gain -2, range [-60, 0] in 2.0dB.
 // 1.Can but isn't mute. Can AGC, enabled. Gain -7.5,range [-30,+2] in 0.5db.
 // 2 and above represent invalid combinations.

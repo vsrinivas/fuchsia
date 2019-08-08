@@ -5,8 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_THROTTLE_OUTPUT_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_THROTTLE_OUTPUT_H_
 
-#include <fbl/ref_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
+
+#include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"

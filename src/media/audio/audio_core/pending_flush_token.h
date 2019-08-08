@@ -5,12 +5,13 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_PENDING_FLUSH_TOKEN_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_PENDING_FLUSH_TOKEN_H_
 
-#include <fbl/intrusive_double_list.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 
 #include <memory>
+
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 
 namespace media::audio {
 

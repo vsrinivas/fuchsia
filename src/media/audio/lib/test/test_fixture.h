@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_MEDIA_AUDIO_LIB_TEST_TEST_FIXTURE_H_
 #define SRC_MEDIA_AUDIO_LIB_TEST_TEST_FIXTURE_H_
@@ -14,17 +13,15 @@
 
 namespace media::audio::test {
 
-// For operations expected to generate a response, wait __1 minute__. We do
-// this to avoid flaky results when testing on high-load (high-latency)
-// environments. For reference, in mid-2018 when observing highly-loaded local
-// QEMU instances running code that correctly generated completion responses, we
-// observed timeouts if waiting 20 ms, but not when waiting 50 ms. This value
-// will be 3000x that (!), and is WELL beyond the limit of human acceptability.
-// Thus, intermittent failures (rather than being a "potentially flaky test")
-// mean that the system is, intermittently, UNACCEPTABLE.
+// For operations expected to generate a response, wait __1 minute__. We do this to avoid flaky
+// results when testing on high-load (high-latency) environments. For reference, in mid-2018 when
+// observing highly-loaded local QEMU instances running code that generated correct completion
+// responses, we observed timeouts if waiting 20 ms, but not if waiting 50 ms. This value is 3000x
+// that (!) -- WELL beyond the limit of human acceptability. Thus, intermittent failures (rather
+// than being a "potentially flaky test") mean that the system is, intermittently, UNACCEPTABLE.
 //
-// Also, when expecting a response we can save time by checking more frequently.
-// Restated, kDurationResponseExpected should ALWAYS use kDurationGranularity.
+// Also, when expecting a response we can save time by checking more frequently. Restated,
+// kDurationResponseExpected should ALWAYS use kDurationGranularity.
 //
 // These two values codify the following ordered priorities:
 //   1) False-positive test failures are expensive and must be eliminated.
@@ -101,8 +98,8 @@ class TestFixture : public ::gtest::RealLoopFixture {
  private:
   bool callback_received_ = false;
 
-  // Run our asynchronous loop, until the provided condition is satisfied
-  // (returns TRUE) or until a timeout occurs (returns FALSE).
+  // Run our asynchronous loop, until the provided condition is satisfied (returns TRUE) or until a
+  // timeout occurs (returns FALSE).
   bool RunUntilComplete(fit::function<bool()> condition);
 };
 

@@ -5,14 +5,15 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CORE_IMPL_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CORE_IMPL_H_
 
-#include <fbl/intrusive_double_list.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <mutex>
+
+#include <fbl/intrusive_double_list.h>
+#include <fbl/unique_ptr.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"

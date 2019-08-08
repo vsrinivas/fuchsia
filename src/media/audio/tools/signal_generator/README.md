@@ -1,8 +1,7 @@
 # Signal Generator tool
 
-This directory contains a developer tool that generates and outputs audio
-signals, via the Audio, AudioRenderer, GainControl and AudioOutputRoutingPolicy FIDL
-protocols.
+This directory contains a developer tool that generates and outputs audio signals, via the Audio,
+AudioRenderer, GainControl and AudioOutputRoutingPolicy FIDL protocols.
 
 ### USAGE
 
@@ -83,10 +82,9 @@ These optional parameters are interpreted as follows:
 
 ### IMPORTANT NOTE
 
-Developers can use this tool to manipulate a few important systemwide audio
-settings: system ("master") gain/mute, audio output routing, and systemwide
-creation/update of settings files for audio input and output devices. Changes to
-these settings affect all audio on the system and continue to have effect even
-after the signal_generator tool exits. Only use the '--sgain', '--smute',
-'--last', '--all' or '--settings' flags when you intend to change the system
-state in a persistent, "sticky" way.
+Developers can use this tool to manipulate a few important systemwide audio settings: system
+("master") gain/mute, audio output routing, and systemwide creation/update of settings files for
+audio input and output devices. Changes to these settings affect all audio on the system and
+continue to have effect even after the signal_generator tool exits. Only use the '--sgain',
+'--smute', '--last', '--all' or '--settings' flags when you intend to change the system state in a
+persistent, "sticky" way.

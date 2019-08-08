@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/media/audio/audio_core/test/pipeline/audio_pipeline_test.h"
 
@@ -275,9 +274,8 @@ void AudioPipelineTest::ResetAudioRendererEvents() {
   audio_renderer_.events().OnMinLeadTimeChanged = nullptr;
 }
 
-// Retrieve the ring buffer from the virtual audio output); create our shared
-// buffer with the audio renderer and map it; create a snapshot buffer for
-// copying the contents of the driver ring buffer.
+// Retrieve the ring buffer from the virtual audio output); create our shared buffer with the audio
+// renderer and map it; create a snapshot buffer for copying the contents of the driver ring buffer.
 void AudioPipelineTest::SetUpBuffers() {
   ExpectCondition([this]() { return received_ring_buffer_; });
 
@@ -303,8 +301,8 @@ void AudioPipelineTest::SetUpBuffers() {
   memset(compare_buff_.get(), 0, kRingBytes);
 }
 
-// Copy the ring buffer contents into our snapshot buffer. We must do this
-// because the ring buffer is constantly updated by the device/driver.
+// Copy the ring buffer contents into our snapshot buffer. We must do this because the ring buffer
+// is constantly updated by the device/driver.
 void AudioPipelineTest::CreateSnapshotOfRingBuffer() {
   for (auto section_num = 0u; section_num < kNumRingSections; ++section_num) {
     auto compare_section = compare_buff_.get() + (section_num * kSectionBytes);
@@ -444,9 +442,9 @@ void AudioPipelineTest::WaitForPacket(uint32_t packet_num) {
   ASSERT_FALSE(error_occurred_);
 }
 
-// After waiting for an entire ring buffer to go by, compute when the start of
-// the following ring buffer will be, and send a timestamped Play command that
-// synchronizes PTS 0 with the start of the ring buffer.
+// After waiting for an entire ring buffer to go by, compute when the start of the following ring
+// buffer will be, and send a timestamped Play command that synchronizes PTS 0 with the start of the
+// ring buffer.
 void AudioPipelineTest::SynchronizedPlay() {
   // Allow an entire ring buffer to go by
   ExpectCondition([this]() { return (running_ring_pos_ >= kRingBytes); });

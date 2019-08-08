@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_MEDIA_AUDIO_TOOLS_SIGNAL_GENERATOR_SIGNAL_GENERATOR_H_
 #define SRC_MEDIA_AUDIO_TOOLS_SIGNAL_GENERATOR_SIGNAL_GENERATOR_H_
@@ -20,8 +19,8 @@ typedef enum {
   kOutputTypeSquare,
   kOutputTypeSawtooth,
 } OutputSignalType;
-// TODO(mpuryear): refactor the signal-generation section to make it easier for
-// new generators to be added.
+// TODO(mpuryear): refactor the signal-generation section to make it easier for new generators to be
+// added.
 
 class MediaApp {
  public:

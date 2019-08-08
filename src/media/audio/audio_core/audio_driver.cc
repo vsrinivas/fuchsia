@@ -522,8 +522,8 @@ zx_status_t AudioDriver::ProcessStreamChannelMessage() {
         if ((msg.pd_resp.flags & AUDIO_PDNF_CAN_NOTIFY) == 0) {
           // TODO(MTWN-389): If we encounter hardware which must be polled for plug detection, set
           // a timer to periodically check this; don't just assume that output is always plugged in.
-          FXL_LOG(WARNING) << "Stream is incapable of async plug detection notifications.  "
-                              "Assuming that the stream is always plugged in for now.";
+          FXL_LOG(WARNING) << "Stream is incapable of async plug detection notifications. Assuming "
+                              "that the stream is always plugged in for now.";
           plug_state = true;
         }
       }
@@ -622,7 +622,7 @@ zx_status_t AudioDriver::ProcessGetStringResponse(audio_stream_cmd_get_string_re
 
   if (resp.result != ZX_OK) {
     FXL_LOG(WARNING) << "Error ( " << resp.result << ") attempting to fetch string id " << resp.id
-                     << ".  Replacing with <unknown>.";
+                     << ". Replacing with <unknown>.";
     resp.strlen = static_cast<uint32_t>(
         snprintf(reinterpret_cast<char*>(resp.str), sizeof(resp.str), "<unknown>"));
   }

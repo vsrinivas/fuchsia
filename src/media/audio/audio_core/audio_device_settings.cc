@@ -4,20 +4,22 @@
 
 #include "src/media/audio/audio_core/audio_device_settings.h"
 
-#include <fbl/auto_lock.h>
 #include <fcntl.h>
 #include <lib/zx/clock.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include <fbl/auto_lock.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #include "src/lib/files/directory.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+
 #include "src/media/audio/audio_core/schema/audio_device_settings_schema.inl"
 
 namespace media::audio {
@@ -95,8 +97,8 @@ AudioDeviceSettings::AudioDeviceSettings(const AudioDriver& drv, bool is_input)
 void AudioDeviceSettings::Initialize() {
   FXL_DCHECK(!initialized_);
   if (!writes_enabled_) {
-    FXL_LOG(WARNING) << "Device settings persistence is disabled; so device "
-                        "settings files will be neither created nor updated.";
+    FXL_LOG(WARNING) << "Device settings persistence is disabled; so device settings files will be "
+                        "neither created nor updated.";
   }
 
   if (!files::CreateDirectory(kSettingsPath)) {
@@ -459,9 +461,7 @@ void AudioDeviceSettings::CreateSettingsPath(const std::string& prefix, char* ou
                                              size_t out_path_len) {
   const uint8_t* x = uid_.data;
   snprintf(out_path, out_path_len,
-           "%s/"
-           "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x-%s."
-           "json",
+           "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x-%s.json",
            prefix.c_str(), x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[10], x[11],
            x[12], x[13], x[14], x[15], is_input_ ? "input" : "output");
 }

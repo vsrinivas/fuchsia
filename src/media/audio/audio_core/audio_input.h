@@ -5,9 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_INPUT_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_INPUT_H_
 
-#include <fbl/ref_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/zx/channel.h>
+
+#include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_device.h"

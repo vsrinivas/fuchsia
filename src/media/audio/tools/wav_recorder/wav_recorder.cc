@@ -1,6 +1,5 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/media/audio/tools/wav_recorder/wav_recorder.h"
 
@@ -94,8 +93,8 @@ void WavRecorder::Usage() {
          kLoopbackOption.c_str());
 
   printf(
-      "\n   By default, use device-preferred channel count and frame rate, in "
-      "16-bit integer samples\n");
+      "\n   By default, use device-preferred channel count and frame rate, in 16-bit integer "
+      "samples\n");
   printf(" --%s=<NUM_CHANS>\tSpecify the number of channels (in [%u, %u])\n",
          kChannelsOption.c_str(), fuchsia::media::MIN_PCM_CHANNEL_COUNT,
          fuchsia::media::MAX_PCM_CHANNEL_COUNT);
@@ -108,18 +107,13 @@ void WavRecorder::Usage() {
   printf(" --%s\t\tRecord as 24-in-32 'padded-24'; save as 'packed-24'\n",
          kPacked24FormatOption.c_str());
 
+  printf("\n   By default, don't set AudioCapturer gain and mute (unity 0 dB, unmuted)\n");
   printf(
-      "\n   By default, don't set AudioCapturer gain and mute (unity 0 dB, "
-      "unmuted)\n");
-  printf(
-      " --%s[=<GAIN_DB>]\tSet stream gain (dB in [%.1f, +%.1f]; 0.0 if only "
-      "'--%s' is provided)\n",
+      " --%s[=<GAIN_DB>]\tSet stream gain (dB in [%.1f, +%.1f]; 0.0 if only '--%s' is provided)\n",
       kGainOption.c_str(), fuchsia::media::audio::MUTED_GAIN_DB, fuchsia::media::audio::MAX_GAIN_DB,
       kGainOption.c_str());
-  printf(
-      " --%s[=<0|1>]\t\tSet stream mute (0=Unmute or 1=Mute; Mute if only "
-      "'--%s' is provided)\n",
-      kMuteOption.c_str(), kMuteOption.c_str());
+  printf(" --%s[=<0|1>]\t\tSet stream mute (0=Unmute or 1=Mute; Mute if only '--%s' is provided)\n",
+         kMuteOption.c_str(), kMuteOption.c_str());
 
   printf("\n   By default, use packet-by-packet ('synchronous') mode\n");
   printf(" --%s\t\tCapture using sequential-buffer ('asynchronous') mode\n",

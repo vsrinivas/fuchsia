@@ -230,9 +230,9 @@ TEST(NoiseFloor, Output_Float) {
       << std::setprecision(10) << AudioResult::FloorOutputFloat;
 }
 
-// Ideal frequency response measurement is 0.00 dB across the audible spectrum
-// Ideal SINAD is at least 6 dB per signal-bit (>96 dB, if 16-bit resolution).
-// If UseFullFrequencySet is false, we test at only three summary frequencies.
+// Ideal frequency response measurement is 0.00 dB across the audible spectrum. Ideal SINAD is at
+// least 6 dB per signal-bit (>96 dB, if 16-bit resolution). If UseFullFrequencySet is false, we
+// test at only three summary frequencies.
 void MeasureFreqRespSinad(Mixer* mixer, uint32_t src_buf_size, double* level_db, double* sinad_db) {
   if (!std::isnan(level_db[0])) {
     // This run already has frequency response and SINAD test results for this sampler and
@@ -816,13 +816,13 @@ TEST(Sinad, Linear_MicroSRC) {
                        AudioResult::kPrevSinadLinearMicro.data());
 }
 
-// For each summary frequency, populate a sinusoid into a mono buffer, and copy-
-// interleave mono[] into one of the channels of the N-channel source.
+// For each summary frequency, populate a sinusoid into a mono buffer, and copy-interleave mono[]
+// into one of the channels of the N-channel source.
 void PopulateNxNSourceBuffer(float* source, uint32_t num_frames, uint32_t num_chans) {
   auto mono = std::make_unique<float[]>(num_frames);
 
-  // For each summary frequency, populate a sinusoid into mono, and copy-
-  // interleave mono into one of the channels of the N-channel source.
+  // For each summary frequency, populate a sinusoid into mono, and copy-interleave mono into one of
+  // the channels of the N-channel source.
   for (uint32_t idx = 0; idx < num_chans; ++idx) {
     uint32_t freq_idx = FrequencySet::kSummaryIdxs[idx];
 
@@ -843,20 +843,20 @@ void PopulateNxNSourceBuffer(float* source, uint32_t num_frames, uint32_t num_ch
 
 // For the given resampler, test NxN fidelity equivalence with mono/stereo.
 //
-// Populate a multi-channel buffer with sinusoids at the summary frequencies
-// (one in each channel); mix the multi-channel buffer (at micro-SRC); split the
-// multi-channel result and analyze each, comparing to existing mono results.
+// Populate a multi-channel buffer with sinusoids at the summary frequencies (one in each channel);
+// mix the multi-channel buffer (at micro-SRC); split the multi-channel result and analyze each,
+// comparing to existing mono results.
 void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_db) {
   static_assert(FrequencySet::kNumSummaryIdxs <= fuchsia::media::MAX_PCM_CHANNEL_COUNT,
                 "Cannot allocate every summary frequency--rework this test.");
 
   if (!std::isnan(level_db[0])) {
-    // This run already has NxN frequency response and SINAD results for this
-    // sampler and resampling ratio; don't waste time and cycles rerunning it.
+    // This run already has NxN frequency response and SINAD results for this sampler and resampling
+    // ratio; don't waste time and cycles rerunning it.
     return;
   }
-  // Set this to a valid (worst-case) value, so that (for any outcome) another
-  // test does not later rerun this combination of sampler and resample ratio.
+  // Set this to a valid (worst-case) value, so that (for any outcome) another test does not later
+  // rerun this combination of sampler and resample ratio.
   level_db[0] = -INFINITY;
 
   uint32_t source_rate = 47999;
@@ -866,9 +866,9 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   uint32_t num_source_frames = kFreqTestBufSize - 1;
   uint32_t num_dest_frames = kFreqTestBufSize;
 
-  // Populate different frequencies into each channel of N-channel source[].
-  // source[] has an additional element because depending on resampling ratio,
-  // some resamplers need it in order to produce the final dest value.
+  // Populate different frequencies into each channel of N-channel source[]. source[] has an
+  // additional element because depending on resampling ratio, some resamplers need it in order to
+  // produce the final dest value.
   auto source = std::make_unique<float[]>(num_chans * num_source_frames);
   PopulateNxNSourceBuffer(source.get(), num_source_frames, num_chans);
 
@@ -883,8 +883,8 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   info.rate_modulo = (Mixer::FRAC_ONE * num_source_frames) - (info.step_size * num_dest_frames);
   info.denominator = num_dest_frames;
 
-  // Resample the source into the accumulation buffer, in pieces. (Why in
-  // pieces? See description of kResamplerTestNumPackets in frequency_set.h.)
+  // Resample the source into the accumulation buffer, in pieces. (Why in pieces? See description of
+  // kResamplerTestNumPackets in frequency_set.h.)
   auto accum = std::make_unique<float[]>(num_chans * num_dest_frames);
 
   for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {

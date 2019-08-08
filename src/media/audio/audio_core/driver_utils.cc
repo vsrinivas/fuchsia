@@ -4,9 +4,9 @@
 
 #include "src/media/audio/audio_core/driver_utils.h"
 
-#include <audio-proto-utils/format-utils.h>
-
 #include <map>
+
+#include <audio-proto-utils/format-utils.h>
 
 #include "src/lib/fxl/logging.h"
 

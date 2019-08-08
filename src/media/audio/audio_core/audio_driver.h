@@ -5,10 +5,6 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_DRIVER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_DRIVER_H_
 
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-timer.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
@@ -16,6 +12,11 @@
 
 #include <mutex>
 #include <string>
+
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <dispatcher-pool/dispatcher-timer.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
@@ -51,8 +52,8 @@ class AudioDriver {
   };
 
   struct HwGainState {
-    // TODO(johngro): when driver interfaces move to FIDL, just change this to
-    // match the fidl structure returned from a GetGain request by the driver.
+    // TODO(johngro): when driver interfaces move to FIDL, just change this to match the fidl
+    // structure returned from a GetGain request by the driver.
     bool cur_mute;
     bool cur_agc;
     float cur_gain;
@@ -82,10 +83,9 @@ class AudioDriver {
     return plug_time_;
   }
 
-  // Methods which need to be called from the owner's execution domain.  If
-  // there was a good way to use the static lock analysis to ensure this, I
-  // would do so, but unfortunately the compiler is unable to figure out that
-  // the owner calling these methods is always the same as owner_.
+  // Methods which need to be called from the owner's execution domain.  If there was a good way to
+  // use the static lock analysis to ensure this, I would do so, but unfortunately the compiler is
+  // unable to figure out that the owner calling these methods is always the same as owner_.
   const std::vector<audio_stream_format_range_t>& format_ranges() const { return format_ranges_; }
 
   State state() const { return state_; }
@@ -99,9 +99,9 @@ class AudioDriver {
   zx_koid_t stream_channel_koid() const { return stream_channel_koid_; }
   const HwGainState& hw_gain_state() const { return hw_gain_state_; }
 
-  // The following properties are only safe to access after the driver is beyond
-  // the MissingDriverInfo state.  After that state, these members must be
-  // treated as immutable, and the driver class may no longer change them.
+  // The following properties are only safe to access after the driver is beyond the
+  // MissingDriverInfo state.  After that state, these members must be treated as immutable, and the
+  // driver class may no longer change them.
   const audio_stream_unique_id_t& persistent_unique_id() const { return persistent_unique_id_; }
   const std::string& manufacturer_name() const { return manufacturer_name_; }
   const std::string& product_name() const { return product_name_; }
@@ -170,12 +170,10 @@ class AudioDriver {
   void ShutdownSelf(const char* debug_reason = nullptr, zx_status_t debug_status = ZX_OK)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
 
-  // Evaluate each of our currently pending timeouts and program the command
-  // timeout timer appropriately.
+  // Evaluate each currently pending timeout. Program the command timeout timer appropriately.
   void SetupCommandTimeout() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
 
-  // Update internal plug state bookkeeping and report up to our owner (if
-  // enabled)
+  // Update internal plug state bookkeeping and report up to our owner (if enabled).
   void ReportPlugStateChange(bool plugged, zx_time_t plug_time)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
 
@@ -192,22 +190,18 @@ class AudioDriver {
     return (fetch_driver_info_timeout_ != ZX_TIME_INFINITE);
   }
 
-  // Accessors for the ring buffer pointer and the current output clock
-  // transformation.
+  // Accessors for the ring buffer pointer and the current output clock transformation.
   //
-  // Note: Only the AudioDriver writes to these, and only when in our owner's
-  // mixing execution domain.  It is safe for our owner to read these objects,
-  // but only when operating in the mixing domain.  Unfortunately, it is not
-  // practical to use the static thread safety annotation to prove that we are
-  // accessing these variable from the mixing domain.  Instead, we...
+  // Note: Only the AudioDriver writes to these, and only when in our owner's mixing execution
+  // domain.  It is safe for our owner to read these objects, but only when operating in the mixing
+  // domain.  Unfortunately, it is not practical to use the static thread safety annotation to prove
+  // that we are accessing these variable from the mixing domain.  Instead, we...
   //
   // 1) Make these methods private.
   // 2) Make the AudioDevice class (our owner) a friend.
-  // 3) Expose protected accessors in the AudioDevice class which demand that we
-  //    be executing in the mix domain.
+  // 3) Expose protected accessors in AudioDevice which demand that we execute in the mix domain.
   //
-  // This should be a strong enough guarantee to warrant disabling the thread
-  // safety analysis here.
+  // This should be a strong enough guarantee to warrant disabling the thread safety analysis here.
   const fbl::RefPtr<DriverRingBuffer>& ring_buffer() const FXL_NO_THREAD_SAFETY_ANALYSIS {
     return ring_buffer_;
   };
@@ -245,14 +239,13 @@ class AudioDriver {
   uint32_t fifo_depth_frames_;
   zx_time_t configuration_timeout_ = ZX_TIME_INFINITE;
 
-  // A stashed copy of current format, queryable by destinations (outputs or
-  // AudioCapturers) when determining which mixer to use.
+  // A stashed copy of current format, queryable by destinations (outputs or AudioCapturers) when
+  // determining which mixer to use.
   mutable std::mutex configured_format_lock_;
   fuchsia::media::AudioStreamTypePtr configured_format_ FXL_GUARDED_BY(configured_format_lock_);
 
-  // Ring buffer state. Note: ring-buffer state details are lock-protected and
-  // changes are tracked with generation counter. This allows AudioCapturer
-  // clients to snapshot ring-buffer state during mix/resample operations.
+  // Ring buffer state. Details are lock-protected and changes tracked with generation counter,
+  // allowing AudioCapturer clients to snapshot ring-buffer state during mix/resample operations.
   mutable std::mutex ring_buffer_state_lock_;
   fbl::RefPtr<DriverRingBuffer> ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
   TimelineFunction clock_mono_to_ring_pos_bytes_ FXL_GUARDED_BY(ring_buffer_state_lock_);

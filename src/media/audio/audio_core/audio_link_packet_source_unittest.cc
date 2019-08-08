@@ -22,10 +22,9 @@ class AudioLinkPacketSourceTest : public gtest::TestLoopFixture {
   fbl::RefPtr<AudioLinkPacketSource> CreateAudioLinkPacketSource() {
     auto input = fbl::AdoptRef(new FakeAudioObject(AudioObject::Type::AudioRenderer));
     auto output = fbl::AdoptRef(new FakeAudioObject(AudioObject::Type::Output));
-    // The values chosen here are not important. The AudioLinkPacketSource
-    // doesn't actualy use this internally so anything will do here for the
-    // purposes of these tests. It just has to be sane enough to pass the
-    // validation done in |AudioRendererFormatInfo|.
+    // The values chosen here are not important. The AudioLinkPacketSource doesn't actualy use this
+    // internally so anything will do here for the purposes of these tests. It just has to be sane
+    // enough to pass the validation done in |AudioRendererFormatInfo|.
     auto stream_type = fuchsia::media::AudioStreamType{
         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
         .channels = 2,
@@ -86,8 +85,7 @@ TEST_F(AudioLinkPacketSourceTest, FlushPendingQueue) {
   ASSERT_FALSE(link->pending_queue_empty());
   ASSERT_EQ(0u, ReleasedPackets().size());
 
-  // Flush queue (discard all packets). Expect to see one packet released back
-  // to us.
+  // Flush queue (discard all packets). Expect to see one packet released back to us.
   link->FlushPendingQueue(nullptr);
   ASSERT_TRUE(link->pending_queue_empty());
   ASSERT_EQ(1u, ReleasedPackets().size());
@@ -107,7 +105,7 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
 
   // Now pop off the packets in FIFO order.
   //
-  // Packet #1:
+  // Packet #0:
   bool was_flushed = false;
   auto packet = link->LockPendingQueueFront(&was_flushed);
   ASSERT_TRUE(was_flushed);
@@ -120,7 +118,7 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
   ASSERT_FALSE(link->pending_queue_empty());
   ASSERT_EQ(1u, ReleasedPackets().size());
 
-  // Packet #2
+  // Packet #1
   packet = link->LockPendingQueueFront(&was_flushed);
   ASSERT_FALSE(was_flushed);
   ASSERT_NE(nullptr, packet);
@@ -130,7 +128,7 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
   ASSERT_FALSE(link->pending_queue_empty());
   ASSERT_EQ(2u, ReleasedPackets().size());
 
-  // ...and #3
+  // ...and #2
   packet = link->LockPendingQueueFront(&was_flushed);
   ASSERT_FALSE(was_flushed);
   ASSERT_NE(nullptr, packet);

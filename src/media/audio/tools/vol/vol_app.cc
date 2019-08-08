@@ -1,6 +1,5 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -503,8 +502,7 @@ class VolApp {
       InteractiveUsage();
       std::cout << "\n" << kHideCursor;
 
-      // Install our event hooks so we can keep up with any changes to our
-      // device state.
+      // Install our event hooks so we can keep up with any changes to our device state.
       audio_.events().OnDeviceAdded = [this](AudioDeviceInfo dev) {
         OnDeviceAdded(std::move(dev));
       };

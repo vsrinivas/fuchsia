@@ -3,8 +3,9 @@
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 
-#include <ddk/debug.h>
 #include <lib/zx/clock.h>
+
+#include <ddk/debug.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream.h"
 
@@ -265,9 +266,8 @@ void VirtualAudioDeviceImpl::Remove() {
   }
 
   // If stream_ exists, null our copy and call SimpleAudioStream::DdkUnbind (which eventually calls
-  // ShutdownHook and re-nulls). This is necessary because stream terminations can come either from
-  // "device" (direct DdkUnbind call), or from "parent" (Control::Disable, Device::Remove,
-  // ~DeviceImpl).
+  // ShutdownHook and re-nulls). We need this because stream terminations come either from "device"
+  // (direct DdkUnbind call), or from "parent" (Control::Disable, Device::Remove, ~DeviceImpl).
   RemoveStream();
 }
 
@@ -285,12 +285,10 @@ void VirtualAudioDeviceImpl::GetFormat(
 void VirtualAudioDeviceImpl::NotifySetFormat(uint32_t frames_per_second, uint32_t sample_format,
                                              uint32_t num_channels, zx_duration_t external_delay) {
   PostToDispatcher([this, frames_per_second, sample_format, num_channels, external_delay]() {
-    if (is_input_) {
-      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
+    if (input_binding_ && input_binding_->is_bound()) {
       input_binding_->events().OnSetFormat(frames_per_second, sample_format, num_channels,
                                            external_delay);
-    } else {
-      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
+    } else if (output_binding_ && output_binding_->is_bound()) {
       output_binding_->events().OnSetFormat(frames_per_second, sample_format, num_channels,
                                             external_delay);
     }
@@ -310,11 +308,9 @@ void VirtualAudioDeviceImpl::GetGain(fuchsia::virtualaudio::Device::GetGainCallb
 void VirtualAudioDeviceImpl::NotifySetGain(bool current_mute, bool current_agc,
                                            float current_gain_db) {
   PostToDispatcher([this, current_mute, current_agc, current_gain_db]() {
-    if (is_input_) {
-      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
+    if (input_binding_ && input_binding_->is_bound()) {
       input_binding_->events().OnSetGain(current_mute, current_agc, current_gain_db);
-    } else {
-      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
+    } else if (output_binding_ && output_binding_->is_bound()) {
       output_binding_->events().OnSetGain(current_mute, current_agc, current_gain_db);
     }
   });
@@ -336,12 +332,10 @@ void VirtualAudioDeviceImpl::NotifyBufferCreated(zx::vmo ring_buffer_vmo,
                                                  uint32_t notifications_per_ring) {
   PostToDispatcher([this, ring_buffer_vmo = std::move(ring_buffer_vmo), num_ring_buffer_frames,
                     notifications_per_ring]() mutable {
-    if (is_input_) {
-      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
+    if (input_binding_ && input_binding_->is_bound()) {
       input_binding_->events().OnBufferCreated(std::move(ring_buffer_vmo), num_ring_buffer_frames,
                                                notifications_per_ring);
-    } else {
-      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
+    } else if (output_binding_ && output_binding_->is_bound()) {
       output_binding_->events().OnBufferCreated(std::move(ring_buffer_vmo), num_ring_buffer_frames,
                                                 notifications_per_ring);
     }
@@ -400,11 +394,9 @@ void VirtualAudioDeviceImpl::GetPosition(
 void VirtualAudioDeviceImpl::NotifyPosition(uint32_t ring_buffer_position,
                                             zx_time_t time_for_position) {
   PostToDispatcher([this, ring_buffer_position, time_for_position]() {
-    if (is_input_) {
-      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
+    if (input_binding_ && input_binding_->is_bound()) {
       input_binding_->events().OnPositionNotify(ring_buffer_position, time_for_position);
-    } else {
-      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
+    } else if (output_binding_ && output_binding_->is_bound()) {
       output_binding_->events().OnPositionNotify(ring_buffer_position, time_for_position);
     }
   });

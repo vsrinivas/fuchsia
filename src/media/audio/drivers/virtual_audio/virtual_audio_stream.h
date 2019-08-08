@@ -1,19 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_STREAM_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_STREAM_H_
 
-#include <audio-proto/audio-proto.h>
-#include <dispatcher-pool/dispatcher-timer.h>
-#include <dispatcher-pool/dispatcher-wakeup-event.h>
-#include <fbl/ref_ptr.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 
 #include <deque>
+
+#include <audio-proto/audio-proto.h>
+#include <dispatcher-pool/dispatcher-timer.h>
+#include <dispatcher-pool/dispatcher-wakeup-event.h>
+#include <fbl/ref_ptr.h>
 
 namespace virtual_audio {
 

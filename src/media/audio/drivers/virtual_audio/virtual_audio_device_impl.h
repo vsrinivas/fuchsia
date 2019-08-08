@@ -4,11 +4,12 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_DEVICE_IMPL_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_DEVICE_IMPL_H_
 
+#include <fuchsia/virtualaudio/cpp/fidl.h>
+
 #include <memory>
 
 #include <audio-proto/audio-proto.h>
 #include <fbl/ref_ptr.h>
-#include <fuchsia/virtualaudio/cpp/fidl.h>
 
 #include "garnet/lib/media/codec_impl/include/lib/media/codec_impl/closure_queue.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_control_impl.h"
@@ -63,8 +64,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   static fbl::unique_ptr<VirtualAudioDeviceImpl> Create(VirtualAudioControlImpl* owner,
                                                         bool is_input);
 
-  // Execute the given task on the FIDL channel's main dispatcher thread.
-  // Used to deliver callbacks or events, from the driver execution domain.
+  // Execute the given task on the FIDL channel's main dispatcher thread. Used to deliver callbacks
+  // or events, from the driver execution domain.
   void PostToDispatcher(fit::closure task_to_post);
 
   void SetBinding(fidl::Binding<fuchsia::virtualaudio::Input,

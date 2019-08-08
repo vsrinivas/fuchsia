@@ -4,9 +4,9 @@
 
 #include "examples/media/audio/effects/dfx_base.h"
 
-#include <fbl/algorithm.h>
-
 #include <cmath>
+
+#include <fbl/algorithm.h>
 
 #include "examples/media/audio/effects/dfx_delay.h"
 #include "examples/media/audio/effects/dfx_rechannel.h"

@@ -5,10 +5,11 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_DRIVER_RING_BUFFER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_DRIVER_RING_BUFFER_H_
 
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
+
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 
 namespace media::audio {
 

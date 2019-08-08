@@ -5,13 +5,14 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_PACKET_REF_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_PACKET_REF_H_
 
-#include <fbl/intrusive_double_list.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 
 #include <memory>
+
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/utils.h"

@@ -90,6 +90,7 @@ void AudioCapturerImpl::Shutdown() {
   auto self_ref = fbl::WrapRefPtr(this);
 
   // Disconnect from everything we were connected to.
+  // TODO(mpuryear): Considering eliminating this; it may not be needed.
   PreventNewLinks();
   Unlink();
 
@@ -489,8 +490,7 @@ void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
   }
 
   if (!queues_empty) {
-    FXL_LOG(ERROR) << "Attempted to enter async capture mode with capture "
-                      "buffers still in flight.";
+    FXL_LOG(ERROR) << "Attempted to enter async capture mode with capture buffers still in flight.";
     return;
   }
 
@@ -507,11 +507,10 @@ void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
 
   FXL_DCHECK(payload_buf_frames_ > 0);
   if (frames_per_packet > (payload_buf_frames_ / 2)) {
-    FXL_LOG(ERROR) << "There must be enough room in the shared payload buffer ("
-                   << payload_buf_frames_
-                   << " frames) to fit at least two packets of the requested "
-                      "number of frames per packet ("
-                   << frames_per_packet << " frames).";
+    FXL_LOG(ERROR)
+        << "There must be enough room in the shared payload buffer (" << payload_buf_frames_
+        << " frames) to fit at least two packets of the requested number of frames per packet ("
+        << frames_per_packet << " frames).";
     return;
   }
 
@@ -914,8 +913,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // warning, signal error and shut down. Once this is resolved, come back and remove this.
     const auto& driver = device.driver();
     if (driver == nullptr) {
-      FXL_LOG(ERROR) << "AudioCapturer appears to be linked to throttle output!  "
-                        "Shutting down";
+      FXL_LOG(ERROR) << "AudioCapturer appears to be linked to throttle output! Shutting down";
       return false;
     }
 
@@ -1237,8 +1235,7 @@ bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
   auto pending_capture_buffer =
       PcbAllocator::New(async_next_frame_offset_, async_frames_per_packet_, nullptr);
   if (pending_capture_buffer == nullptr) {
-    FXL_LOG(ERROR) << "Failed to allocate pending capture buffer during async "
-                      "capture mode!";
+    FXL_LOG(ERROR) << "Failed to allocate pending capture buffer during async capture mode!";
     ShutdownFromMixDomain();
     return false;
   }

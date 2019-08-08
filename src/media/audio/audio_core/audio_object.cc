@@ -52,8 +52,8 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
     return nullptr;
   }
 
-  // Now lock both objects, make sure both are still allowing new links,
-  // then add the link to the proper sets in both source and destination.
+  // Now lock both objects, make sure both are still allowing new links, then add the link to the
+  // proper sets in both source and destination.
   {
     fbl::AutoLock slock(&source->links_lock_);
     fbl::AutoLock dlock(&dest->links_lock_);
@@ -65,8 +65,8 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
     }
   }
 
-  // TODO(johngro): if we must poke the destination, in case it needs to wake
-  // and do specific work because of this new source, this where to do it.
+  // TODO(johngro): if we must poke the destination, in case it needs to wake and do specific work
+  // because of this new source, this where to do it.
 
   return link;
 }
@@ -98,8 +98,8 @@ void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
   }
 }
 
-// Call the provided function for each source link (passing the link as param).
-// This distributes calls such as SetGain to every AudioCapturer path.
+// Call the provided function for each source link (passing the link as param). This distributes
+// calls such as SetGain to every AudioCapturer path.
 void AudioObject::ForEachSourceLink(const LinkFunction& source_task) {
   fbl::AutoLock links_lock(&links_lock_);
 
@@ -111,8 +111,8 @@ void AudioObject::ForEachSourceLink(const LinkFunction& source_task) {
   }
 }
 
-// Call the provided function for each dest link (passing the link as a param).
-// This distributes calls such as SetGain to every AudioRenderer output path.
+// Call the provided function for each dest link (passing the link as a param). This distributes
+// calls such as SetGain to every AudioRenderer output path.
 void AudioObject::ForEachDestLink(const LinkFunction& dest_task) {
   fbl::AutoLock links_lock(&links_lock_);
 
@@ -165,10 +165,9 @@ template <typename TagType>
 void AudioObject::UnlinkCleanup(typename AudioLink::Set<TagType>* links) {
   FXL_DCHECK(links != nullptr);
 
-  // Note: we could just range-based for-loop over this set and call RemoveLink
-  // on each member. Instead, we remove each element from our local set before
-  // calling RemoveLinks. This will make a future transition to using intrusive
-  // containers a bit easier. Explanations available on request.
+  // Note: we could just range-based for-loop over this set and call RemoveLink on each member.
+  // Instead, we remove each element from our local set before calling RemoveLinks. This will make a
+  // future transition to intrusive containers a bit easier. Explanations available on request.
   while (!links->is_empty()) {
     auto link = links->pop_front();
     RemoveLink(link);

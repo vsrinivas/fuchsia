@@ -1,13 +1,13 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/media/audio/audio_core/utils.h"
 
-#include <audio-proto-utils/format-utils.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
+
+#include <audio-proto-utils/format-utils.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/driver_utils.h"
@@ -44,8 +44,8 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
   constexpr uint32_t S24_FMT = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
   constexpr uint32_t F32_FMT = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
 
-  // Users should only ask for unsigned-8, signed-16, signed-24in32 or float-32.
-  // If they ask for anything else, change their preference to signed-16.
+  // Users should only ask for unsigned-8, signed-16, signed-24in32 or float-32. If they ask for
+  // anything else, change their preference to signed-16.
   //
   // TODO(johngro) : clean this up as part of fixing MTWN-54
   if ((pref_sample_format & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) ||
@@ -56,11 +56,10 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
   }
 
   for (const auto& range : fmts) {
-    // Start by scoring our sample format.  Right now, the audio core supports
-    // 8-bit unsigned, 16-bit signed, 24-bit-in-32 signed and 32-bit float. If
-    // this sample format range does not support any of these, just skip it for
-    // now. Otherwise, 5 points if you match the requested format, 4 for
-    // signed-24, 3 for signed-16, 2 for float-32, or 1 for unsigned-8.
+    // Start by scoring our sample format. Right now, the audio core supports 8-bit unsigned, 16-bit
+    // signed, 24-bit-in-32 signed and 32-bit float. If this sample format range does not support
+    // any of these, just skip it for now. Otherwise, 5 points if you match the requested format, 4
+    // for signed-24, 3 for signed-16, 2 for float-32, or 1 for unsigned-8.
     audio_sample_format_t this_sample_format;
     int sample_format_score;
 
@@ -92,10 +91,9 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
       sample_format_score = 1;
     }
 
-    // Next consider the supported channel counts.  3 points for matching the
-    // requested channel count.  Otherwise, default to stereo (if supported) and
-    // score 2 points.  Failing that, just pick the top end of the supported
-    // channel range and score 1 point.
+    // Next consider the supported channel counts. 3 points for matching the requested channel
+    // count. Otherwise, default to stereo (if supported) and score 2 points. Failing that, just
+    // pick the top end of the supported channel range and score 1 point.
     uint32_t this_channels;
     int channel_count_score;
     if ((pref_channels >= range.min_channels) && (pref_channels <= range.max_channels)) {
@@ -109,9 +107,8 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
       channel_count_score = 1;
     }
 
-    // Next score based on supported frame rates.  Score 3 points for a match, 2
-    // points if we have to scale up to the nearest supported rate, or 1 point
-    // if we have to scale down.
+    // Next score based on supported frame rates. Score 3 points for a match, 2 points if we have to
+    // scale up to the nearest supported rate, or 1 point if we have to scale down.
     //
     if (range.min_frames_per_second > range.max_frames_per_second) {
       // Skip this frame rate range entirely if it is empty.
@@ -125,9 +122,8 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
     uint32_t frame_rate_delta = std::numeric_limits<uint32_t>::max();
     int frame_rate_score = 0;
     if (range.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS) {
-      // This is a continuous sample rate range.  If we are within the range,
-      // thats a match.  Otherwise move up/down as needed to match the min/max
-      // of the range as appropriate.
+      // This is a continuous sample rate range. If we are within the range, thats a match.
+      // Otherwise move up/down as needed to match the min/max of the range as appropriate.
       if ((pref_frame_rate >= range.min_frames_per_second) &&
           (pref_frame_rate <= range.max_frames_per_second)) {
         this_frame_rate = pref_frame_rate;
@@ -144,11 +140,11 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
         frame_rate_delta = pref_frame_rate - range.max_frames_per_second;
       }
     } else {
-      // This is a discrete sample rate range.  Use the frame rate enumerator
-      // utility class to evaluate each of the possible frame rates.
+      // This is a discrete sample rate range. Use the frame rate enumerator utility class to
+      // evaluate each of the possible frame rates.
       for (const uint32_t rate : ::audio::utils::FrameRateEnumerator(range)) {
         if (pref_frame_rate == rate) {
-          // We matched our preference.  No need to keep searching.
+          // We matched our preference. No need to keep searching.
           this_frame_rate = rate;
           frame_rate_score = 3;
           frame_rate_delta = 0;
@@ -156,10 +152,9 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
         }
 
         if (pref_frame_rate < rate) {
-          // Scaling up; 2 points.  If this better than what we were doing
-          // before, just choose it.  If we were already going to scale up,
-          // pick the frame rate which is closer to our preference.
-          // Otherwise, do nothing.
+          // Scaling up; 2 points.  If this better than what we were doing before, just choose it.
+          // If we were already going to scale up, pick the frame rate which is closer to our
+          // preference. Otherwise, do nothing.
           if ((frame_rate_score < 2) || ((frame_rate_score == 2) && (rate < this_frame_rate))) {
             this_frame_rate = rate;
             frame_rate_score = 2;
@@ -168,10 +163,9 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
         } else {
           FXL_DCHECK(pref_frame_rate > rate);
 
-          // Scaling down; 1 point.  If this better than what we were doing
-          // before, just choose it.  If we were already going to scale down,
-          // pick the frame rate which is closer to our preference.
-          // Otherwise, do nothing.
+          // Scaling down; 1 point.  If this better than what we were doing before, just choose it.
+          // If we were already going to scale down, pick the frame rate which is closer to our
+          // preference. Otherwise, do nothing.
           if ((frame_rate_score < 1) || ((frame_rate_score == 1) && (rate > this_frame_rate))) {
             this_frame_rate = rate;
             frame_rate_score = 1;
@@ -181,10 +175,9 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
       }
     }
 
-    // If our frame rate score is still zero, it means that we were given a
-    // discrete frame range by a driver which was completely empty (even
-    // though min was <= max as it should be)  Debug log a warning, then skip
-    // the range entirely.
+    // If our frame rate score is still zero, it means that we were given a discrete frame range by
+    // a driver which was completely empty (even though min was <= max as it should be)  Debug log a
+    // warning, then skip the range entirely.
     if (frame_rate_score == 0) {
       FXL_LOG(INFO) << "Skipping empty discrete frame rate range [" << range.min_frames_per_second
                     << ", " << range.max_frames_per_second << "] (flags " << range.flags
@@ -192,9 +185,8 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
       continue;
     }
 
-    // OK, we have computed the best option supported by this frame rate range.
-    // Weight the score, and it if it better then any of our previous best
-    // score, replace our previous best with this.
+    // OK, we have computed the best option supported by this frame rate range. Weight the score,
+    // and it if it better then any of our previous best score, replace our previous best with this.
     uint32_t score;
     score = (sample_format_score * 100)   // format is the most important.
             + (channel_count_score * 10)  // channel count comes second.
@@ -204,9 +196,8 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
     FXL_DCHECK(::audio::utils::FormatIsCompatible(this_frame_rate, this_channels,
                                                   this_sample_format, range));
 
-    // If this score is better than the current best score, or this score ties
-    // the current best score but the frame rate distance is less, then this is
-    // the new best format.
+    // If this score is better than the current best score, or this score ties the current best
+    // score but the frame rate distance is less, then this is the new best format.
     if ((score > best_score) ||
         ((score == best_score) && (frame_rate_delta < best_frame_rate_delta))) {
       best_frame_rate = this_frame_rate;
@@ -217,8 +208,8 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
     }
   }
 
-  // If our score is still zero, then there must have be absolutely no supported
-  // formats in the set provided by the driver.
+  // If our score is still zero, then there must have be absolutely no supported formats in the set
+  // provided by the driver.
   if (!best_score) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -234,9 +225,9 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
 }
 
 zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
-  // Use threadsafe static initialization to get our one-and-only copy of this
-  // profile object. Each subsequent call will return a duplicate of that
-  // profile handle to ensure sharing of thread pools.
+  // Use threadsafe static initialization to get our one-and-only copy of this profile object. Each
+  // subsequent call will return a duplicate of that profile handle to ensure sharing of thread
+  // pools.
   static zx::profile high_priority_profile;
   static zx_status_t initial_status = [](zx::profile* profile) {
     zx::channel ch0, ch1;

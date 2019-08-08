@@ -1,30 +1,30 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+#include <lib/async/default.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <fbl/unique_ptr.h>
-#include <lib/async/default.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_control_impl.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 
 namespace virtual_audio {
 
-// The VirtualAudioBus driver uses ZX_PROTOCOL_TEST_PARENT, which causes the
-// /dev/test device to call its Bind() at startup time. In response, the bus
-// driver creates a VirtualAudioControlImpl, then registers and publishes it at
-// /dev/test/virtualaudio -- transferring ownership to the device manager.
+// The VirtualAudioBus driver uses ZX_PROTOCOL_TEST_PARENT, which causes the /dev/test device to
+// call its Bind() at startup time. In response, the bus driver creates a VirtualAudioControlImpl,
+// then registers and publishes it at /dev/test/virtualaudio -- transferring ownership to the device
+// manager.
 class VirtualAudioBus {
  public:
   // VirtualAudioBus is static-only and never actually instantiated.
   VirtualAudioBus() = delete;
   ~VirtualAudioBus() = delete;
 
-  // The parent /dev/test node auto-triggers this Bind call. The Bus driver's
-  // job is to create the virtual audio control driver, and publish its devnode.
+  // The parent /dev/test node auto-triggers this Bind call. The Bus driver's job is to create the
+  // virtual audio control driver, and publish its devnode.
   static zx_status_t DdkBind(void* ctx, zx_device_t* parent_test_bus) {
     auto control = std::make_unique<VirtualAudioControlImpl>(async_get_default_dispatcher());
 
@@ -50,8 +50,8 @@ class VirtualAudioBus {
       return status;
     }
 
-    // On successful Add, Devmgr takes ownership (relinquished on DdkRelease),
-    // so transfer our ownership to a local var, and let it go out of scope.
+    // On successful Add, Devmgr takes ownership (relinquished on DdkRelease), so transfer our
+    // ownership to a local var, and let it go out of scope.
     auto __UNUSED temp_ref = control.release();
 
     return ZX_OK;
@@ -71,8 +71,7 @@ static constexpr zx_driver_ops_t virtual_audio_bus_driver_ops = []() {
 __BEGIN_CDECLS
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(virtual_audio, virtual_audio_bus_driver_ops,
-                    "fuchsia", "0.1", 1)
+ZIRCON_DRIVER_BEGIN(virtual_audio, virtual_audio_bus_driver_ops, "fuchsia", "0.1", 1)
   BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT)
 ZIRCON_DRIVER_END(virtual_audio)
 // clang-format on

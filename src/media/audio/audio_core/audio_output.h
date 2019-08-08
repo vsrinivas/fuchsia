@@ -5,8 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_OUTPUT_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_OUTPUT_H_
 
-#include <dispatcher-pool/dispatcher-timer.h>
 #include <lib/media/cpp/timeline_function.h>
+
+#include <dispatcher-pool/dispatcher-timer.h>
 
 #include "src/lib/fxl/time/time_point.h"
 #include "src/media/audio/audio_core/audio_device.h"

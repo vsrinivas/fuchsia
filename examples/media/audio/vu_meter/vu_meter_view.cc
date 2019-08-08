@@ -4,9 +4,9 @@
 
 #include "examples/media/audio/vu_meter/vu_meter_view.h"
 
-#include <hid/usages.h>
-
 #include <iomanip>
+
+#include <hid/usages.h>
 
 #include "lib/component/cpp/connect.h"
 #include "lib/media/audio/cpp/types.h"

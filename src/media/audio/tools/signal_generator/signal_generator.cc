@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/media/audio/tools/signal_generator/signal_generator.h"
 
@@ -36,8 +35,8 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
     return;
   }
 
-  // 24-bit buffers use 32-bit samples (lowest byte zero), and when this
-  // particular utility saves to .wav file, we save the entire 32 bits.
+  // 24-bit buffers use 32-bit samples (lowest byte zero), and when this particular utility saves to
+  // .wav file, we save the entire 32 bits.
   if (save_to_file_) {
     if (!wav_writer_.Initialize(file_name_.c_str(),
                                 use_int24_
@@ -125,13 +124,13 @@ bool MediaApp::ParameterRangeChecks() {
   return ret_val;
 }
 
-// Based on the user-specified values for signal frequency and milliseconds per
-// payload, calculate the other related coefficients needed for our mapped
-// memory section, and for our series of payloads that reference that section.
+// Based on the user-specified values for signal frequency and milliseconds per payload, calculate
+// the other related coefficients needed for our mapped memory section, and for our series of
+// payloads that reference that section.
 //
-// We share a memory section with our AudioRenderer, divided into equally-sized
-// payloads (size specified by the user). For now, we trim the end of the memory
-// section, rather than handle the occasional irregularly-sized packet.
+// We share a memory section with our AudioRenderer, divided into equally-sized payloads (size
+// specified by the user). For now, we trim the end of the memory section, rather than handle the
+// occasional irregularly-sized packet.
 // TODO(mpuryear): handle end-of-buffer wraparound; make it a true ring buffer.
 void MediaApp::SetupPayloadCoefficients() {
   total_frames_to_send_ = duration_secs_ * frame_rate_;
@@ -156,15 +155,13 @@ void MediaApp::SetupPayloadCoefficients() {
 
   payload_size_ = frames_per_payload_ * frame_size_;
 
-  // First, assume one second of audio, then determine how many payloads will
-  // fit, then trim the mapping down to an amount that will actually be used.
-  // This mapping size will be split across |num_payload_buffers_| buffers.
-  // For example, with 2 buffers each will be large enough hold 500ms of data.
+  // First, assume one second of audio, determine how many payloads will fit, then trim the mapping
+  // to the amount that will be used. This mapping size will be split across |num_payload_buffers_|
+  // buffers. For example, with 2 buffers each will be large enough hold 500ms of data.
   auto total_mapping_size = frame_rate_ * frame_size_;
   total_num_mapped_payloads_ = total_mapping_size / payload_size_;
 
-  // Shard out the payloads across multiple buffers, ensuring we can hold at
-  // least 1 buffer.
+  // Shard out the payloads across multiple buffers, ensuring we can hold at least 1 buffer.
   payloads_per_mapping_ = std::max(1u, total_num_mapped_payloads_ / num_payload_buffers_);
   payload_mapping_size_ = payloads_per_mapping_ * payload_size_;
 }
@@ -188,11 +185,9 @@ void MediaApp::DisplayConfigurationSettings() {
 
   printf(", amplitude %f", amplitude_);
   if (ramp_stream_gain_) {
-    printf(
-        ",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds "
-        "(%ld nanoseconds)",
-        stream_gain_db_, ramp_target_gain_db_,
-        static_cast<double>(ramp_duration_nsec_) / 1000000000, ramp_duration_nsec_);
+    printf(",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds (%ld nanoseconds)",
+           stream_gain_db_, ramp_target_gain_db_,
+           static_cast<double>(ramp_duration_nsec_) / 1000000000, ramp_duration_nsec_);
   } else if (set_stream_gain_) {
     printf(", at stream gain %.3f dB", stream_gain_db_);
   }
@@ -221,12 +216,12 @@ void MediaApp::DisplayConfigurationSettings() {
   printf(".\n\n");
 }
 
-// Use StartupContext to acquire AudioPtr; use that to acquire AudioRendererPtr
-// in turn. Set AudioRenderer error handler, in case of channel closure.
+// Use StartupContext to acquire AudioPtr; use that to acquire AudioRendererPtr in turn. Set
+// AudioRenderer error handler, in case of channel closure.
 void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
   if (set_device_settings_) {
-    // The AudioCore interface is used to enable or disable the creation and
-    // update of device settings files.
+    // The AudioCore interface is used to enable or disable the creation and update of device
+    // settings files.
     fuchsia::media::AudioCorePtr audio_core;
     app_context->svc()->Connect(audio_core.NewRequest());
     audio_core->EnableDeviceSettings(settings_enabled_);
@@ -297,8 +292,8 @@ void MediaApp::SetStreamType() {
   }
 }
 
-// Create VMOs Object and map enough memory for 1 second of audio between them.
-// Reduce rights and send handle to AudioRenderer: this is our shared buffer.
+// Create a VMO and map memory for 1 sec of audio between them. Reduce rights and send handle to
+// AudioRenderer: this is our shared buffer.
 zx_status_t MediaApp::CreateMemoryMapping() {
   for (size_t i = 0; i < num_payload_buffers_; ++i) {
     auto& payload_buffer = payload_buffers_.emplace_back();
@@ -318,13 +313,12 @@ zx_status_t MediaApp::CreateMemoryMapping() {
   return ZX_OK;
 }
 
-// We have a set of buffers each backed by its own VMO, with each buffer sub-
-// divided into uniformly-sized zones, called payloads.
+// We have a set of buffers each backed by its own VMO, with each buffer sub-divided into
+// uniformly-sized zones, called payloads.
 //
-// We round robin packets across each buffer, wrapping around to the start of
-// each buffer once the end is encountered. For example, with 2 buffers that
-// can each hold 2 payloads each, we would send audio packets in the following
-// order:
+// We round robin packets across each buffer, wrapping around to the start of each buffer once the
+// end is encountered. For example, with 2 buffers that can each hold 2 payloads each, we would send
+// audio packets in the following order:
 //
 //  ------------------------
 // | buffer_id | payload_id |
@@ -365,12 +359,10 @@ void MediaApp::GenerateAudioForPacket(const AudioPacket& audio_packet, uint64_t 
   const auto& packet = audio_packet.stream_packet;
   auto audio_buff = reinterpret_cast<uint8_t*>(audio_packet.vmo->start()) + packet.payload_offset;
 
-  // Recompute payload_frames each time, since the final packet may be
-  // 'short'.
+  // Recompute payload_frames each time, since the final packet may be 'short'.
   //
-  // TODO(mpuryear): don't recompute this every time; use payload_frames_ (and
-  // pre-compute this) except for last packet, which we either check for here
-  // or pass in as a boolean parameter.
+  // TODO(mpuryear): don't recompute this every time; use payload_frames_ (and pre-compute this)
+  // except for last packet, which we either check for here or pass in as a boolean parameter.
   uint32_t payload_frames = packet.payload_size / frame_size_;
 
   if (use_int24_) {
@@ -411,8 +403,8 @@ void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frame
         raw_val = (fmod(frames_since_start / frames_per_period, 1.0) * 2.0) - 1.0;
         break;
       case kOutputTypeNoise:
-        // TODO(mpuryear): consider making the white noise generator even more
-        // truly random, with multiple rand() calls at different frequencies.
+        // TODO(mpuryear): consider making the white noise generator even more truly random, with
+        // multiple rand() calls at different frequencies.
         raw_val = static_cast<double>(rand()) / RAND_MAX * 2.0 - 1.0;
         break;
     }

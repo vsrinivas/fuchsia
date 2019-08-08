@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -76,10 +75,8 @@ void usage(const char* prog_name) {
          kNumChannelsDefault, kFrameRateDefaultHz);
   printf("\t--%s=<NUM_CHANS>\tSpecify number of channels\n", kNumChannelsSwitch);
   printf("\t--%s\t\t\tUse 16-bit integer samples\n", kInt16FormatSwitch);
-  printf(
-      "\t--%s\t\t\tUse 24-in-32-bit integer samples (left-justified "
-      "'padded-24')\n",
-      kInt24FormatSwitch);
+  printf("\t--%s\t\t\tUse 24-in-32-bit integer samples (left-justified 'padded-24')\n",
+         kInt24FormatSwitch);
   printf("\t--%s=<FRAME_RATE>\tSet frame rate in Hz\n", kFrameRateSwitch);
 
   printf("\n\t  By default, signal is a %s Hz sine wave\n", kFrequencyDefaultHz);
@@ -95,57 +92,41 @@ void usage(const char* prog_name) {
   printf("\t--%s=<DURATION_SECS>\tSet playback length in seconds\n", kDurationSwitch);
   printf("\t--%s=<AMPL>\t\tSet amplitude (full-scale=1.0, silence=0.0)\n", kAmplitudeSwitch);
 
-  printf(
-      "\n\t--%s[=<FILEPATH>]\tSave to .wav file ('%s' if only '--%s' is "
-      "provided)\n",
-      kSaveToFileSwitch, kSaveToFileDefaultName, kSaveToFileSwitch);
+  printf("\n\t--%s[=<FILEPATH>]\tSave to .wav file ('%s' if only '--%s' is provided)\n",
+         kSaveToFileSwitch, kSaveToFileDefaultName, kSaveToFileSwitch);
   printf("\t  Subsequent settings (e.g. gain) do not affect .wav file contents\n");
 
-  printf(
-      "\n\t  By default, submit data in non-timestamped buffers of %s frames "
-      "and %s VMOs.\n",
-      kFramesPerPayloadDefault, kNumPayloadBuffersDefault);
+  printf("\n\t  By default, submit data in non-timestamped buffers of %s frames and %s VMOs.\n",
+         kFramesPerPayloadDefault, kNumPayloadBuffersDefault);
   printf("\t--%s=<FRAMES>\tSet data buffer size in frames \n", kFramesPerPayloadSwitch);
   printf("\t--%s=<NUM_BUFFERS>\tSet the number of payload buffers to use \n",
          kNumPayloadBuffersSwitch);
   printf("\t--%s\t\t\tApply presentation timestamps (units: frames)\n", kUsePtsSwitch);
-  printf(
-      "\t--%s[=<SECS>]\tSet PTS discontinuity threshold, in seconds (%s, if "
-      "unspecified)\n",
-      kPtsContinuityThresholdSwitch, kPtsContinuityThresholdDefaultSecs);
+  printf("\t--%s[=<SECS>]\tSet PTS discontinuity threshold, in seconds (%s, if unspecified)\n",
+         kPtsContinuityThresholdSwitch, kPtsContinuityThresholdDefaultSecs);
 
   printf(
-      "\n\t  By default, AudioRenderer gain and mute are not set (unity 0 dB "
-      "unmuted, no ramping)\n");
+      "\n\t  By default, AudioRenderer gain and mute are not set (unity 0 dB unmuted, no "
+      "ramping)\n");
   printf(
-      "\t--%s[=<GAIN_DB>]\tSet stream gain (dB in [%.1f, %.1f]; %s if only "
-      "'--%s' is provided)\n",
+      "\t--%s[=<GAIN_DB>]\tSet stream gain (dB in [%.1f, %.1f]; %s if only '--%s' is provided)\n",
       kStreamGainSwitch, fuchsia::media::audio::MUTED_GAIN_DB, fuchsia::media::audio::MAX_GAIN_DB,
       kStreamGainDefaultDb, kStreamGainSwitch);
   printf(
-      "\t--%s[=<0|1>]\t\tSet stream mute (0=Unmute or 1=Mute; Mute if only "
-      "'--%s' is provided)\n",
+      "\t--%s[=<0|1>]\t\tSet stream mute (0=Unmute or 1=Mute; Mute if only '--%s' is provided)\n",
       kStreamMuteSwitch, kStreamMuteSwitch);
-  printf(
-      "\t--%s\t\t\tSmoothly ramp gain from initial value to a target %s dB "
-      "by end-of-signal\n",
-      kStreamRampSwitch, kStreamRampTargetGainDefaultDb);
+  printf("\t--%s\t\t\tSmoothly ramp gain from initial value to a target %s dB by end-of-signal\n",
+         kStreamRampSwitch, kStreamRampTargetGainDefaultDb);
   printf("\t\t\t\tIf '--%s' is not provided, ramping starts at unity gain\n", kStreamGainSwitch);
-  printf(
-      "\t--%s=<GAIN_DB>\tSet a different ramp target gain (dB). Implies "
-      "'--%s'\n",
-      kStreamRampTargetGainSwitch, kStreamRampSwitch);
-  printf(
-      "\t--%s=<DURATION_MS>\tSet a specific ramp duration in milliseconds. "
-      "Implies '--%s'\n",
-      kStreamRampDurationSwitch, kStreamRampSwitch);
+  printf("\t--%s=<GAIN_DB>\tSet a different ramp target gain (dB). Implies '--%s'\n",
+         kStreamRampTargetGainSwitch, kStreamRampSwitch);
+  printf("\t--%s=<DURATION_MS>\tSet a specific ramp duration in milliseconds. Implies '--%s'\n",
+         kStreamRampDurationSwitch, kStreamRampSwitch);
 
   printf("\n\t  By default, System Gain and Mute are unchanged\n");
-  printf(
-      "\t--%s[=<GAIN_DB>]\tSet System Gain (dB in [%.1f, 0.0]; %s if only "
-      "'--%s' is provided)\n",
-      kSystemGainSwitch, fuchsia::media::audio::MUTED_GAIN_DB, kSystemGainDefaultDb,
-      kSystemGainSwitch);
+  printf("\t--%s[=<GAIN_DB>]\tSet System Gain (dB in [%.1f, 0.0]; %s if only '--%s' is provided)\n",
+         kSystemGainSwitch, fuchsia::media::audio::MUTED_GAIN_DB, kSystemGainDefaultDb,
+         kSystemGainSwitch);
   printf(
       "\t--%s[=<0|1>]\t\tSet System Mute (0=Unmute or 1=Mute; Mute if only "
       "'--%s' is provided)\n",
@@ -160,10 +141,8 @@ void usage(const char* prog_name) {
   printf("\n\t  By default, changes to audio device settings are persisted\n");
   printf("\t--%s[=<0|1>]\tEnable/disable creation/update of device settings\n",
          kDeviceSettingsSwitch);
-  printf(
-      "\t\t\t\t(0=Disable, 1=Enable; %s is default if only '--%s' is "
-      "provided)\n",
-      kDeviceSettingsDefault, kDeviceSettingsSwitch);
+  printf("\t\t\t\t(0=Disable, 1=Enable; %s is default if only '--%s' is provided)\n",
+         kDeviceSettingsDefault, kDeviceSettingsSwitch);
 
   printf("\n\t--%s, --?\t\tShow this message\n\n", kHelpSwitch);
 }

@@ -5,11 +5,12 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_OBJECT_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_OBJECT_H_
 
+#include <lib/fit/function.h>
+
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <lib/fit/function.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_link.h"
@@ -17,11 +18,9 @@
 
 namespace media::audio {
 
-// An audio object is the simple base class for 4 major types of audio objects
-// in the mixer; Outputs, Inputs, AudioRenderers and AudioCapturers.  It ensures
-// that each of these objects is intrusively ref-counted, and remembers its type
-// so that it may be safely downcast from a generic audio object to something
-// more specific.
+// The simple base class for 4 major types of audio objects in the mixer: Outputs, Inputs,
+// AudioRenderers and AudioCapturers. It ensures that each is intrusively ref-counted, and remembers
+// its type so that it may be safely downcast from generic object to something more specific.
 class AudioObject : public fbl::RefCounted<AudioObject> {
  public:
   enum class Type {
@@ -44,13 +43,10 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
 
   // PreventNewLinks
   //
-  // Clears the new_links_allowed flag from within the context of the
-  // links_lock.  This ensures that no new links may be added to this object
-  // anymore.  Calling PreventNewLinks is one of the first steps in the process
-  // of shutting down an AudioObject.
+  // Clears 'new_links_allowed' from within the links_lock, ensuring no further links are added to
+  // this object. This call is one of the first steps in the shutdown process of an AudioObject.
   //
-  // TODO(johngro) : Consider eliminating this; given the way that links are
-  // created and destroyed, it is not clear if it is needed anymore.
+  // TODO(johngro): Consider eliminating. Given how links are created/destroyed, we may not need it.
   void PreventNewLinks() {
     fbl::AutoLock lock(&links_lock_);
     new_links_allowed_ = false;
@@ -70,7 +66,7 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // Initialize(Source|Dest)Link
   //
   // Called on the AudioCore's main message loop any time a source and a
-  // destination are being linked via AudioObject::LinkObjects.  By default,
+  // destination are being linked via AudioObject::LinkObjects. By default,
   // these hooks do nothing, but AudioObject subclasses may use them to set the
   // properties of a link (or reject the link) before the link gets added to the
   // source and destination link sets.
@@ -88,15 +84,15 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   fbl::Mutex links_lock_;
 
   // The set of links which this audio device is acting as a source for (eg; the
-  // destinations that this object is sending to).  The target of each of these
+  // destinations that this object is sending to). The target of each of these
   // links must be a either an Output or a AudioCapturer.
   typename AudioLink::Set<AudioLink::Dest> dest_links_ FXL_GUARDED_BY(links_lock_);
 
   // The set of links which this audio device is acting as a destination for
-  // (eg; the sources that that the object is receiving from).  The target of
+  // (eg; the sources that that the object is receiving from). The target of
   // each of these links must be a either an Output or a AudioCapturer.
   //
-  // TODO(johngro): Order this by priority.  Use a fbl::WAVLTree (or some other
+  // TODO(johngro): Order this by priority. Use a fbl::WAVLTree (or some other
   // form of ordered intrusive container) so that we can easily remove and
   // re-insert a link if/when priority changes.
   //

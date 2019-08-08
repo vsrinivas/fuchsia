@@ -97,8 +97,7 @@ std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqResp
 // - 47999:48000, representing small adjustment for multi-device sync (Micro)
 //
 // For Frequency Response, values closer to 0 (flatter response) are desired. Below you see that for
-// 1:1 and 2:1, our response is near-ideal. For all other rates, our response drops off at higher
-// frequencies.
+// 1:1 and 2:1, response is near-ideal. For other rates, response drops off at higher frequencies.
 //
 // clang-format off
 const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
@@ -291,10 +290,9 @@ std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearNxN
 // - 1:2, which equates to 24k -> 48k, or 48k -> 96k (Up2)
 // - 47999:48000, representing small adjustment for multi-device sync (Micro)
 //
-// For SINAD, higher values (lower noise/artifacts vs. signal) are desired. Below you see that for
-// 1:1 and 2:1, our SINAD is near-ideal. For all other rates, our performance drops off (lower
-// values) at higher frequencies.
-
+// For SINAD, higher values (lower noise/artifacts vs. signal) are desired. For 1:1 and 2:1, SINAD
+// is near-ideal. For other rates, performance drops off (lower values) at higher frequencies.
+//
 // clang-format off
 const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointUnity = {
          160.00000,  153.71437,  153.74509,  153.74509,  153.71437,  153.74509,
@@ -558,8 +556,8 @@ constexpr double AudioResult::kPrevFloorOutput24;
 constexpr double AudioResult::kPrevFloorOutputFloat;
 
 //
-// The subsequent methods are used when updating the kPrev threshold arrays.
-// They display the current run's results in an easily-imported format.
+// The subsequent methods are used when updating the kPrev threshold arrays. They display the
+// current run's results in an easily-imported format.
 //
 void AudioResult::DumpThresholdValues() {
   DumpFreqRespValues();

@@ -1,13 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream.h"
 
-#include <ddk/debug.h>
 #include <lib/zx/clock.h>
 
 #include <cmath>
+
+#include <ddk/debug.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream_in.h"
@@ -451,12 +451,12 @@ void VirtualAudioStream::HandleSetNotifications() {
   }
 }
 
-// Upon success, drivers should return a valid VMO with appropriate
-// permissions (READ | MAP | TRANSFER for inputs, WRITE as well for outputs)
-// as well as reporting the total number of usable frames in the ring.
+// Upon success, drivers should return a valid VMO with appropriate permissions (READ | MAP |
+// TRANSFER for inputs, WRITE as well for outputs) as well as reporting the total number of usable
+// frames in the ring.
 //
-// Format must already be set: a ring buffer channel (over which this command
-// arrived) is provided as the return value from a successful SetFormat call.
+// Format must already be set: a ring buffer channel (over which this command arrived) is provided
+// as the return value from a successful SetFormat call.
 zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBufferReq& req,
                                           uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
   if (req.notifications_per_ring > req.min_ring_buffer_frames) {
@@ -564,8 +564,8 @@ zx_status_t VirtualAudioStream::SetGain(const audio::audio_proto::SetGainReq& re
   return ZX_OK;
 }
 
-// Drivers *must* report the time at which the first frame will be clocked out
-// on the CLOCK_MONOTONIC timeline, not including any external delay.
+// Drivers *must* report the time at which the first frame will be clocked out on the
+// CLOCK_MONOTONIC timeline, not including any external delay.
 zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
   // Incorporate delay caused by fifo_depth_
   start_time_ =
@@ -587,9 +587,9 @@ zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
   return ZX_OK;
 }
 
-// Timer handler for sending out position notifications: to AudioCore, to VAD
-// clients that do not override the notification frequency, and to VAD clients
-// that set it to the same value that AudioCore has selected.
+// Timer handler for sending out position notifications: to AudioCore, to VAD clients that do not
+// override the notification frequency, and to VAD clients that set it to the same value that
+// AudioCore has selected.
 zx_status_t VirtualAudioStream::ProcessRingNotification() {
   ZX_DEBUG_ASSERT(target_notification_time_.get() > 0);
   ZX_DEBUG_ASSERT(notification_period_.get() > 0);
@@ -615,9 +615,8 @@ zx_status_t VirtualAudioStream::ProcessRingNotification() {
   return status;
 }
 
-// Handler for sending alternate position notifications: those going to VAD
-// clients that specified a different notification frequency.
-// These are not sent to AudioCore.
+// Handler for sending alternate position notifications: those going to VAD clients that specified a
+// different notification frequency. These are not sent to AudioCore.
 zx_status_t VirtualAudioStream::ProcessAltRingNotification() {
   ZX_DEBUG_ASSERT(using_alt_notifications_);
   ZX_DEBUG_ASSERT(target_alt_notification_time_.get() > 0);
@@ -654,10 +653,9 @@ zx_status_t VirtualAudioStream::Stop() {
   return ZX_OK;
 }
 
-// Called by parent SimpleAudioStream::Shutdown, during DdkUnbind.
-// If our parent is not shutting down, then someone else called our DdkUnbind
-// (perhaps the DevHost is removing our driver), and we should let our parent
-// know so that it does not later try to Unbind us. Knowing who started the
+// Called by parent SimpleAudioStream::Shutdown, during DdkUnbind. If our parent is not shutting
+// down, then someone else called our DdkUnbind (perhaps the DevHost is removing our driver), and we
+// should let our parent know so that it does not later try to Unbind us. Knowing who started the
 // unwinding allows this to proceed in an orderly way, in all cases.
 void VirtualAudioStream::ShutdownHook() {
   if (!shutdown_by_parent_) {
