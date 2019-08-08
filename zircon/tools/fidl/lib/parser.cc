@@ -45,10 +45,9 @@ enum {
   Done,
 };
 
-static const std::regex pattern("^[a-z][a-z0-9]*$");
-
 bool IsValidLibraryComponentName(const std::string& component) {
-  return std::regex_match(component, pattern);
+  static const std::regex kPattern("^[a-z][a-z0-9]*$");
+  return std::regex_match(component, kPattern);
 }
 
 }  // namespace
