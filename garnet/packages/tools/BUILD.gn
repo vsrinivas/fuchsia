@@ -22,6 +22,7 @@ group("audio") {
   testonly = true
   public_deps = [
     "//src/media/audio/tools/signal_generator",
+    "//src/media/audio/tools/virtual_audio_util",
     "//src/media/audio/tools/vol",
     "//src/media/audio/tools/wav_recorder",
   ]
