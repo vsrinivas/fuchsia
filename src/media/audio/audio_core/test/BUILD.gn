@@ -149,7 +149,6 @@ executable("audio_fidl_tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/fxl/test:test_settings",
     "//src/media/audio/lib/test",
   ]
 }
@@ -180,7 +179,6 @@ executable("audio_pipeline_tests_bin") {
 
   sources = [
     "//src/media/audio/audio_core/logging.h",
-    "pipeline/audio_pipeline_main.cc",
     "pipeline/audio_pipeline_test.cc",
     "pipeline/audio_pipeline_test.h",
   ]
@@ -189,7 +187,7 @@ executable("audio_pipeline_tests_bin") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/media/cpp:no_converters",
-    "//src/lib/fxl/test:test_settings",
+    "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/test",
     "//zircon/public/lib/fzl",
   ]

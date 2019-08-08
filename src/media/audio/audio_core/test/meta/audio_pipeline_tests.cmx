@@ -2,11 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.media.AudioCore": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx",
-                "fuchsia.media.AudioDeviceEnumerator": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx",
-                "fuchsia.virtualaudio.Control": "fuchsia-pkg://fuchsia.com/virtual_audio_service#meta/virtual_audio_service.cmx",
-                "fuchsia.virtualaudio.Input": "fuchsia-pkg://fuchsia.com/virtual_audio_service#meta/virtual_audio_service.cmx",
-                "fuchsia.virtualaudio.Output": "fuchsia-pkg://fuchsia.com/virtual_audio_service#meta/virtual_audio_service.cmx"
+                "fuchsia.media.AudioTestDevmgr": "fuchsia-pkg://fuchsia.com/audio_test_devmgr#meta/audio_test_devmgr.cmx"
             },
             "system-services": [
                 "fuchsia.scheduler.ProfileProvider"
@@ -18,11 +14,10 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.media.AudioCore",
-            "fuchsia.media.AudioDeviceEnumerator",
-            "fuchsia.virtualaudio.Control",
-            "fuchsia.virtualaudio.Input",
-            "fuchsia.virtualaudio.Output"
+            "fuchsia.media.AudioTestDevmgr",
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
         ]
     }
 }

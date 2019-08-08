@@ -43,9 +43,10 @@ constexpr uint32_t kSectionBytes = kDefaultFrameSize * kSectionFrames;
 constexpr uint32_t kRingFrames = kNumRingSections * kSectionFrames;
 constexpr uint32_t kRingBytes = kDefaultFrameSize * kRingFrames;
 
-// AudioPipelineTest definition
-class AudioPipelineTest : public AudioCoreTestBase {
+class AudioPipelineTest : public HermeticAudioCoreTest {
  protected:
+  static void SetUpTestSuite();
+  static void TearDownTestSuite();
   void SetUp() override;
   void TearDown() override;
 
@@ -93,6 +94,7 @@ class AudioPipelineTest : public AudioCoreTestBase {
 
   //
   // virtualaudio-related members
+  static fuchsia::virtualaudio::ControlSyncPtr control_sync_;
   fuchsia::virtualaudio::OutputPtr output_;
   fuchsia::virtualaudio::InputPtr input_;
   std::unordered_set<uint64_t> virtual_device_tokens_;

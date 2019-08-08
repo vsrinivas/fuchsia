@@ -21,12 +21,28 @@ constexpr bool kDisplaySnapshotBuffer = false;
 //
 // AudioPipelineTest implementation
 //
+fuchsia::virtualaudio::ControlSyncPtr AudioPipelineTest::control_sync_;
+
+void AudioPipelineTest::SetUpTestSuite() {
+  HermeticAudioCoreTest::SetUpTestSuite();
+  Logging::Init();
+  environment()->ConnectToService(control_sync_.NewRequest());
+  control_sync_->Enable();
+}
+
+void AudioPipelineTest::TearDownTestSuite() {
+  ASSERT_TRUE(control_sync_.is_bound());
+  control_sync_->Disable();
+  HermeticAudioCoreTest::TearDownTestSuite();
+}
 
 // Before each test case, set up the needed ingredients
 void AudioPipelineTest::SetUp() {
-  AudioCoreTestBase::SetUp();
+  HermeticAudioCoreTest::SetUp();
 
-  startup_context_->svc()->Connect(audio_dev_enum_.NewRequest());
+  audio_core_->SetSystemGain(kUnityGainDb);
+
+  environment()->ConnectToService(audio_dev_enum_.NewRequest());
   audio_dev_enum_.set_error_handler(ErrorHandler());
 
   AddVirtualOutput();
@@ -54,7 +70,7 @@ void AudioPipelineTest::TearDown() {
   EXPECT_TRUE(audio_dev_enum_.is_bound());
   audio_dev_enum_.Unbind();
 
-  AudioCoreTestBase::TearDown();
+  HermeticAudioCoreTest::TearDown();
 }
 
 // This method assumes that AudioDeviceEvents have been reset, and waits for OnDeviceRemoved for any
@@ -70,7 +86,7 @@ void AudioPipelineTest::WaitForVirtualDeviceDepartures() {
 
 // Create a virtual audio output, with the needed characteristics
 void AudioPipelineTest::AddVirtualOutput() {
-  startup_context_->svc()->Connect(output_.NewRequest());
+  environment()->ConnectToService(output_.NewRequest());
   output_.set_error_handler(ErrorHandler());
   SetVirtualAudioEvents();
 
