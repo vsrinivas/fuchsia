@@ -197,13 +197,6 @@ protocol Control {
     OpenRepository(fuchsia.pkg.RepositoryConfig config, request<OpenedRepository> repo) -> (zx.status result);
 };
 
-[Discoverable]
-protocol Events {
-    /// Event that is triggered when an update failed because blobfs is out of
-    /// storage.
-    -> OnOutOfSpace();
-};
-
 protocol OpenedRepository {
     /// Get an update for the package identified by 'name' which has the
     /// provided variant. The package data is sent to PackageFS which then

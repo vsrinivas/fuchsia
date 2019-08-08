@@ -26,10 +26,6 @@ type ControlServer struct {
 
 var _ = amber.Control((*ControlServer)(nil))
 
-type EventsImpl struct{}
-
-var _ = amber.Events(EventsImpl{})
-
 func logFailure(msg string) error {
 	log.Printf(msg)
 	// Return nil to FIDL clients so the channel is not closed.  All moved/obsolete APIs are essentially no-ops.

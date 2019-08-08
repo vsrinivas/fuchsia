@@ -51,7 +51,6 @@ func Main() {
 	flag.Parse()
 
 	var ctlSvc amber.ControlService
-	var evtSvc amber.EventsService
 	d, err := daemon.NewDaemon(source.PkgfsDir{"/pkgfs"})
 	if err != nil {
 		log.Fatalf("failed to start daemon: %s", err)
@@ -60,10 +59,6 @@ func Main() {
 	ctlSvr := control_server.NewControlServer(d)
 	ctx.OutgoingService.AddService(amber.ControlName, func(c zx.Channel) error {
 		_, err := ctlSvc.Add(ctlSvr, c, nil)
-		return err
-	})
-	ctx.OutgoingService.AddService(amber.EventsName, func(c zx.Channel) error {
-		_, err := evtSvc.Add(control_server.EventsImpl{}, c, nil)
 		return err
 	})
 
