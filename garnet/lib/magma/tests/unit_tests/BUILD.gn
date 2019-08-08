@@ -89,6 +89,7 @@ source_set("magma_platform_tests") {
     "test_platform_semaphore.cc",
     "test_platform_sysmem_connection.cc",
     "test_platform_thread.cc",
+    "test_platform_trace.cc",
   ]
   deps = [
     "$magma_build_root/src/magma_util/platform:client_connection",
@@ -101,6 +102,7 @@ source_set("magma_platform_tests") {
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/magma_util/platform:sysmem_connection",
     "$magma_build_root/src/magma_util/platform:thread",
+    "$magma_build_root/src/magma_util/platform:trace",
     "$magma_build_root/tests/mock:mmio",
     "//third_party/googletest:gtest",
   ]

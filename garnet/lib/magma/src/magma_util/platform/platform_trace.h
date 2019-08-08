@@ -50,6 +50,8 @@ class PlatformTrace {
 
   // Returns null if tracing is not enabled.
   static PlatformTrace* Get();
+
+  static std::unique_ptr<PlatformTrace> CreateForTesting();
 };
 
 class PlatformTraceObserver {
