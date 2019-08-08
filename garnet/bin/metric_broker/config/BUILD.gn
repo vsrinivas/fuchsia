@@ -7,3 +7,22 @@ source_set("registry") {
     "config-registry.h",
   ]
 }
+
+source_set("json_reader") {
+  sources = [
+    "json_reader.cc",
+    "json_reader.h",
+  ]
+  deps = [
+    "//third_party/rapidjson",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    "//garnet/bin/metric_broker/config/cobalt/test",
+    "//garnet/bin/metric_broker/config/inspect/test",
+    "//garnet/bin/metric_broker/config/test",
+  ]
+}

@@ -13,6 +13,7 @@ executable("bin") {
 
   deps = [
     "config/cobalt",
+    "config/inspect",
     "//zircon/public/fidl/fuchsia-metricbroker",
   ]
 }
@@ -40,6 +41,6 @@ package("metric_broker") {
 group("test") {
   testonly = true
   deps = [
-    "config/cobalt/test",
+    "config:test",
   ]
 }

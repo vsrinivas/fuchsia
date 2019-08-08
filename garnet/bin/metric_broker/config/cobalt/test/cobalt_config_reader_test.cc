@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/metric_broker/config/cobalt/config_reader.h"
+#include "garnet/bin/metric_broker/config/cobalt/cobalt_config_reader.h"
 
 #include <array>
 #include <cstdint>
@@ -16,7 +16,6 @@
 #include "garnet/bin/metric_broker/config/cobalt/metric_config.h"
 #include "garnet/bin/metric_broker/config/cobalt/project_config.h"
 #include "garnet/bin/metric_broker/config/cobalt/types.h"
-#include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "rapidjson/document.h"
@@ -108,9 +107,9 @@ constexpr uint64_t kThirdMappingMetricId = 2;
 constexpr std::array<EventCodes::CodeType, kMaxDimensionsPerEvent> kThirdMappingEvents = {
     std::nullopt, 3, std::nullopt, std::nullopt, std::nullopt};
 
-class JsonReaderTest : public ::testing::Test {
+class CobaltConfigReaderTest : public ::testing::Test {
  public:
-  static void SetUpTestCase() {
+  static void SetUpTestSuite() {
     std::ifstream config_stream(kSchemaPath.data());
     ASSERT_TRUE(config_stream.good()) << strerror(errno);
     rapidjson::IStreamWrapper config_wrapper(config_stream);
@@ -124,7 +123,7 @@ class JsonReaderTest : public ::testing::Test {
     ASSERT_TRUE(config.Accept(validator)) << GetError(validator);
   }
 
-  static void TearDownTestCase() { schema_.reset(); }
+  static void TearDownTestSuite() { schema_.reset(); }
 
   [[nodiscard]] static rapidjson::Document GetProjectConfig() {
     rapidjson::Document config;
@@ -151,10 +150,10 @@ class JsonReaderTest : public ::testing::Test {
   }
 };
 
-std::unique_ptr<rapidjson::SchemaDocument> JsonReaderTest::schema_ = nullptr;
+std::unique_ptr<rapidjson::SchemaDocument> CobaltConfigReaderTest::schema_ = nullptr;
 
-TEST_F(JsonReaderTest, ReadProjectIsOk) {
-  JsonReader reader(GetProjectConfig(), schema_.get());
+TEST_F(CobaltConfigReaderTest, ReadProjectIsOk) {
+  CobaltConfigReader reader(GetProjectConfig(), schema_.get());
   ASSERT_TRUE(reader.IsOk());
 
   auto project_config_opt = reader.ReadProject();
@@ -169,8 +168,8 @@ TEST_F(JsonReaderTest, ReadProjectIsOk) {
   EXPECT_EQ(project_config->begin(), project_config->end());
 }
 
-TEST_F(JsonReaderTest, ReadMetricsIsOk) {
-  JsonReader reader(GetProjectConfig(), schema_.get());
+TEST_F(CobaltConfigReaderTest, ReadMetricsIsOk) {
+  CobaltConfigReader reader(GetProjectConfig(), schema_.get());
   ASSERT_TRUE(reader.IsOk());
 
   // Initialize the project.
@@ -223,8 +222,8 @@ TEST_F(JsonReaderTest, ReadMetricsIsOk) {
             std::distance(project_config_opt.value()->begin(), project_config_opt.value()->end()));
 }
 
-TEST_F(JsonReaderTest, ReadMetricMappingIsOk) {
-  JsonReader reader(GetProjectConfig(), schema_.get());
+TEST_F(CobaltConfigReaderTest, ReadMetricMappingIsOk) {
+  CobaltConfigReader reader(GetProjectConfig(), schema_.get());
   ASSERT_TRUE(reader.IsOk());
   auto project_config = reader.ReadProject();
   ASSERT_TRUE(project_config.has_value());
@@ -272,32 +271,32 @@ TEST_F(JsonReaderTest, ReadMetricMappingIsOk) {
   }
 }
 
-TEST_F(JsonReaderTest, ReadProjectReturnsNullOptWhenNotOk) {
-  JsonReader reader(GetBadProjectConfig(), schema_.get());
+TEST_F(CobaltConfigReaderTest, ReadProjectReturnsNullOptWhenNotOk) {
+  CobaltConfigReader reader(GetBadProjectConfig(), schema_.get());
   ASSERT_FALSE(reader.Validate());
   ASSERT_FALSE(reader.IsOk());
 
   ASSERT_EQ(std::nullopt, reader.ReadProject());
 }
 
-TEST_F(JsonReaderTest, ReadMetricReturnsNullOptWhenNotOk) {
-  JsonReader reader(GetBadProjectConfig(), schema_.get());
+TEST_F(CobaltConfigReaderTest, ReadMetricReturnsNullOptWhenNotOk) {
+  CobaltConfigReader reader(GetBadProjectConfig(), schema_.get());
   ASSERT_FALSE(reader.Validate());
   ASSERT_FALSE(reader.IsOk());
 
   ASSERT_EQ(std::nullopt, reader.ReadNextMetric());
 }
 
-TEST_F(JsonReaderTest, ReadMetricMappingReturnsNullOptWhenNotOk) {
-  JsonReader reader(GetBadProjectConfig(), schema_.get());
+TEST_F(CobaltConfigReaderTest, ReadMetricMappingReturnsNullOptWhenNotOk) {
+  CobaltConfigReader reader(GetBadProjectConfig(), schema_.get());
   ASSERT_FALSE(reader.Validate());
   ASSERT_FALSE(reader.IsOk());
 
   ASSERT_EQ(std::nullopt, reader.ReadNextMapping());
 }
 
-TEST_F(JsonReaderTest, MakeProjectAndTakeIsOk) {
-  JsonReader reader(GetProjectConfig(), schema_.get());
+TEST_F(CobaltConfigReaderTest, MakeProjectAndTakeIsOk) {
+  CobaltConfigReader reader(GetProjectConfig(), schema_.get());
   ASSERT_TRUE(reader.IsOk());
 
   std::unique_ptr<ProjectConfig> project_config = reader.MakeProjectAndReset().value();
@@ -353,8 +352,8 @@ TEST_F(JsonReaderTest, MakeProjectAndTakeIsOk) {
   }
 }
 
-TEST_F(JsonReaderTest, ResetClearsAllState) {
-  JsonReader reader(GetProjectConfig(), schema_.get());
+TEST_F(CobaltConfigReaderTest, ResetClearsAllState) {
+  CobaltConfigReader reader(GetProjectConfig(), schema_.get());
   ASSERT_TRUE(reader.IsOk());
 
   // Just all metrics and mappings.

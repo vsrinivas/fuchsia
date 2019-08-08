@@ -9,7 +9,7 @@ import("//build/testing/environments.gni")
 group("test") {
   testonly = true
   deps = [
-    ":metric_broker_cobalt_tests",
+    ":metric_broker_config_cobalt_tests",
   ]
 }
 
@@ -70,14 +70,14 @@ executable("project_config_test") {
   ]
 }
 
-executable("config_reader_test") {
+executable("cobalt_config_reader_test") {
   testonly = true
-  output_name = "config_reader_test"
+  output_name = "cobalt_config_reader_test"
   sources = [
-    "config_reader_test.cc",
+    "cobalt_config_reader_test.cc",
   ]
   deps = [
-    "//garnet/bin/metric_broker/config/cobalt:config_reader",
+    "//garnet/bin/metric_broker/config/cobalt:cobalt_config_reader",
     "//garnet/bin/metric_broker/config/cobalt:event_codes",
     "//garnet/bin/metric_broker/config/cobalt:metric_config",
     "//garnet/bin/metric_broker/config/cobalt:project_config",
@@ -88,7 +88,7 @@ executable("config_reader_test") {
   ]
 }
 
-unittest_package("metric_broker_cobalt_tests") {
+unittest_package("metric_broker_config_cobalt_tests") {
   tests = [
     {
       name = "schema_verification_test"
@@ -107,16 +107,16 @@ unittest_package("metric_broker_cobalt_tests") {
       environments = basic_envs
     },
     {
-      name = "config_reader_test"
+      name = "cobalt_config_reader_test"
       environments = basic_envs
     },
   ]
 
   deps = [
+    ":cobalt_config_reader_test",
     ":event_codes_test",
     ":metric_config_test",
     ":project_config_test",
-    ":config_reader_test",
     ":schema_verification_test",
   ]
 

@@ -46,10 +46,10 @@ source_set("project_config") {
   ]
 }
 
-source_set("config_reader") {
+source_set("cobalt_config_reader") {
   sources = [
-    "config_reader.cc",
-    "config_reader.h",
+    "cobalt_config_reader.cc",
+    "cobalt_config_reader.h",
   ]
 
   deps = [
@@ -57,13 +57,14 @@ source_set("config_reader") {
     ":metric_config",
     ":project_config",
     ":types",
+    "//garnet/bin/metric_broker/config:json_reader",
     "//third_party/rapidjson",
   ]
 }
 
 group("cobalt") {
   public_deps = [
-    ":config_reader",
+    ":cobalt_config_reader",
     ":event_codes",
     ":metric_config",
     ":project_config",

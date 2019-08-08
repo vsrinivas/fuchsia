@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "config_reader.h"
+#include "cobalt_config_reader.h"
 
 #include <limits>
 #include <memory>
@@ -18,7 +18,6 @@
 #include "garnet/bin/metric_broker/config/cobalt/types.h"
 #include "rapidjson/document.h"
 #include "rapidjson/schema.h"
-#include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
 namespace broker_service::cobalt {
@@ -46,29 +45,11 @@ constexpr std::string_view kFieldEventCodeValue = "value";
 
 }  // namespace
 
-JsonReader::JsonReader(rapidjson::Document document, rapidjson::SchemaDocument* schema)
-    : document_(std::move(document)), validator_(*schema) {}
+CobaltConfigReader::CobaltConfigReader(rapidjson::Document document,
+                                       rapidjson::SchemaDocument* schema)
+    : broker_service::JsonReader(std::move(document), schema) {}
 
-bool JsonReader::Validate() {
-  if (!document_.Accept(validator_)) {
-    rapidjson::StringBuffer buffer;
-
-    // Check if there is an invalid schema.
-    validator_.GetInvalidSchemaPointer().StringifyUriFragment(buffer);
-    rapidjson::StringBuffer doc;
-    validator_.GetInvalidDocumentPointer().StringifyUriFragment(doc);
-    std::string schema_error = "Invalid schema: " + std::string(buffer.GetString()) +
-                               "\n   keyword: " + validator_.GetInvalidSchemaKeyword() +
-                               "\n   document: " + doc.GetString();
-    error_messages_.emplace_back(schema_error);
-
-    return false;
-  }
-
-  return true;
-}
-
-std::optional<const ProjectConfig*> JsonReader::ReadProject() {
+std::optional<const ProjectConfig*> CobaltConfigReader::ReadProject() {
   if (!IsOk()) {
     return std::nullopt;
   }
@@ -89,7 +70,7 @@ std::optional<const ProjectConfig*> JsonReader::ReadProject() {
   return project_config_.get();
 }
 
-std::optional<const MetricConfig*> JsonReader::ReadNextMetric() {
+std::optional<const MetricConfig*> CobaltConfigReader::ReadNextMetric() {
   if (!IsOk()) {
     return std::nullopt;
   }
@@ -138,7 +119,7 @@ std::optional<const MetricConfig*> JsonReader::ReadNextMetric() {
   return metric_config;
 }
 
-std::optional<JsonMapping> JsonReader::ReadNextMapping() {
+std::optional<JsonMapping> CobaltConfigReader::ReadNextMapping() {
   if (!IsOk()) {
     return std::nullopt;
   }
@@ -205,7 +186,7 @@ std::optional<JsonMapping> JsonReader::ReadNextMapping() {
   return mapping;
 }
 
-void JsonReader::Reset() {
+void CobaltConfigReader::Reset() {
   // Clear all state.
   validator_.Reset();
   project_config_.reset();
@@ -216,7 +197,7 @@ void JsonReader::Reset() {
   current_mapping_.reset();
 }
 
-std::optional<std::unique_ptr<ProjectConfig>> JsonReader::MakeProjectAndReset() {
+std::optional<std::unique_ptr<ProjectConfig>> CobaltConfigReader::MakeProjectAndReset() {
   if (!ReadProject().has_value()) {
     return std::nullopt;
   }
@@ -233,7 +214,9 @@ std::optional<std::unique_ptr<ProjectConfig>> JsonReader::MakeProjectAndReset() 
     return std::nullopt;
   }
 
-  return std::move(project_config_);
+  auto project = std::move(project_config_);
+  Reset();
+  return std::move(project);
 }
 
 }  // namespace broker_service::cobalt
