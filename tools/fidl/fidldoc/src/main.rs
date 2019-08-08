@@ -11,6 +11,8 @@ use std::process;
 
 use clap::arg_enum;
 
+use rayon::prelude::*;
+
 use serde_json::{json, Value};
 
 use structopt::StructOpt;
@@ -132,37 +134,67 @@ fn run(opt: Opt) -> Result<(), Error> {
     // Create main page
     template.render_main_page(&main_fidl_doc).expect("Unable to render main page");
 
-    for (package, package_fidl_json) in fidl_json_map {
-        // Modifications to the fidldoc object
-        let fidl_doc = json!({
-            "version": package_fidl_json.version,
-            "name": package_fidl_json.name,
-            "library_dependencies": package_fidl_json.library_dependencies,
-            "bits_declarations": package_fidl_json.bits_declarations,
-            "const_declarations": package_fidl_json.const_declarations,
-            "enum_declarations": package_fidl_json.enum_declarations,
-            "interface_declarations": package_fidl_json.interface_declarations,
-            "table_declarations": package_fidl_json.table_declarations,
-            "struct_declarations": package_fidl_json.struct_declarations,
-            "union_declarations": package_fidl_json.union_declarations,
-            "xunion_declarations": package_fidl_json.xunion_declarations,
-            "declaration_order": package_fidl_json.declaration_order,
-            "declarations": package_fidl_json.declarations,
-            "table_of_contents": table_of_contents,
-            "fidldoc_version": FIDLDOC_VERSION,
-            "config": fidl_config,
-            "tag": &opt.tag,
-            "search": declarations,
-            "url_path": url_path,
-        });
+    let tag = &opt.tag;
+    let output_path_string = &output_path.display();
+    fidl_json_map.par_iter().try_for_each(|(package, package_fidl_json)| {
+        render_fidl_interface(
+            package,
+            package_fidl_json,
+            &table_of_contents,
+            &fidl_config,
+            &tag,
+            &declarations,
+            &url_path,
+            &template_type,
+            &output_path,
+        )
+    }).expect("Unable to write FIDL reference files");
 
-        match template.render_interface(&package, &fidl_doc) {
-            Err(why) => error!("Unable to render interface {}: {:?}", &package, why),
-            Ok(()) => info!("Generated interface documentation for {}", &package),
-        }
+    println!("Generated documentation at {}", &output_path_string);
+    Ok(())
+}
+
+fn render_fidl_interface(
+    package: &String,
+    package_fidl_json: &FidlJson,
+    table_of_contents: &Vec<TableOfContentsItem>,
+    fidl_config: &Value,
+    tag: &String,
+    declarations: &Vec<String>,
+    url_path: &String,
+    template_type: &TemplateType,
+    output_path: &PathBuf,
+) -> Result<(), Error> {
+    // Modifications to the fidldoc object
+    let fidl_doc = json!({
+        "version": package_fidl_json.version,
+        "name": package_fidl_json.name,
+        "library_dependencies": package_fidl_json.library_dependencies,
+        "bits_declarations": package_fidl_json.bits_declarations,
+        "const_declarations": package_fidl_json.const_declarations,
+        "enum_declarations": package_fidl_json.enum_declarations,
+        "interface_declarations": package_fidl_json.interface_declarations,
+        "table_declarations": package_fidl_json.table_declarations,
+        "struct_declarations": package_fidl_json.struct_declarations,
+        "union_declarations": package_fidl_json.union_declarations,
+        "xunion_declarations": package_fidl_json.xunion_declarations,
+        "declaration_order": package_fidl_json.declaration_order,
+        "declarations": package_fidl_json.declarations,
+        "table_of_contents": table_of_contents,
+        "fidldoc_version": FIDLDOC_VERSION,
+        "config": fidl_config,
+        "tag": tag,
+        "search": declarations,
+        "url_path": url_path,
+    });
+
+    let template = select_template(&template_type, &output_path)
+        .with_context(|e| format!("Unable to instantiate template {}: {}", template_type, e));
+    match template?.render_interface(&package, &fidl_doc) {
+        Err(why) => error!("Unable to render interface {}: {:?}", &package, why),
+        Ok(()) => info!("Generated interface documentation for {}", &package),
     }
 
-    println!("Generated documentation at {}", output_path.display());
     Ok(())
 }
 
@@ -261,7 +293,7 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> Result<FidlJsonPackageD
 fn create_toc(package_set: HashSet<String>) -> Vec<TableOfContentsItem> {
     // The table of contents lists all packages in alphabetical order.
     let mut table_of_contents: Vec<_> = package_set
-        .iter()
+        .par_iter()
         .map(|package_name| TableOfContentsItem {
             name: package_name.clone(),
             link: format!("{name}/index", name = package_name),
