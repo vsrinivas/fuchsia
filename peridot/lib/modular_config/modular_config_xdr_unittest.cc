@@ -123,4 +123,21 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   EXPECT_EQ(0u, read_config.session_agents().size());
 }
 
+// Tests that the cloud provider field is read and written correctly when it's not set to the
+// default field.
+TEST(ModularConfigXdr, CloudProvider) {
+  std::string config_str = R"({"cloud_provider":"NONE"})";
+
+  fuchsia::modular::session::SessionmgrConfig read_config;
+  EXPECT_TRUE(XdrRead(config_str, &read_config, XdrSessionmgrConfig));
+  EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, read_config.cloud_provider());
+
+  std::string write_json;
+  XdrWrite(&write_json, &read_config, XdrSessionmgrConfig);
+
+  fuchsia::modular::session::SessionmgrConfig read_config_again;
+  EXPECT_TRUE(XdrRead(write_json, &read_config_again, XdrSessionmgrConfig));
+  EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, read_config_again.cloud_provider());
+}
+
 }  // namespace modular

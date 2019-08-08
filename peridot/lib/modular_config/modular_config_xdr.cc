@@ -234,7 +234,7 @@ void XdrSessionmgrConfig_v1(XdrContext* const xdr,
   // value of |cloud_provider|. If reading, this will read the value of
   // "cloud_provider" into |cloud_provider|.
   std::string cloud_provider;
-  xdr->FieldWithDefault(modular_config::kCloudProvider, &cloud_provider, has_cloud_provider,
+  xdr->FieldWithDefault(modular_config::kCloudProvider, &cloud_provider, /* use_data= */ false,
                         cloud_provider_str);
 
   // This is only used when reading. We want to set the value read into

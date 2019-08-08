@@ -114,6 +114,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
           }
         },
         "sessionmgr": {
+          "cloud_provider": "NONE",
           "use_memfs_for_ledger": true,
           "startup_agents": [
             "$1"
@@ -157,4 +158,5 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
   EXPECT_EQ(agent_service_name, sessionmgr_config.agent_service_index().at(0).service_name());
   EXPECT_EQ(agent_url, sessionmgr_config.agent_service_index().at(0).agent_url());
   EXPECT_TRUE(sessionmgr_config.use_memfs_for_ledger());
+  EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, sessionmgr_config.cloud_provider());
 }
