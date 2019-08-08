@@ -27,7 +27,10 @@ pub struct CurrentChannelNotifier<S = ServiceConnector> {
 impl<S: ServiceConnect> CurrentChannelNotifier<S> {
     pub fn new(service_connector: S, dir: impl AsRef<Path>) -> Self {
         let current_channel = read_current_channel(dir.as_ref()).unwrap_or_else(|err| {
-            fx_log_err!("error reading current_channel: {}, to \"\"", err);
+            fx_log_err!(
+                "Error reading current_channel, defaulting to the empty string. This is expected before the first OTA. {}",
+                err
+            );
             String::new()
         });
 
@@ -147,6 +150,9 @@ fn write_channel(path: impl AsRef<Path>, channel: impl Into<String>) -> Result<(
     temp_path.push(".new");
     let temp_path = PathBuf::from(temp_path);
     {
+        if let Some(dir) = temp_path.parent() {
+            fs::create_dir_all(dir)?;
+        }
         let f = fs::File::create(&temp_path)?;
         serde_json::to_writer(f, &channel)?;
     };
@@ -236,6 +242,26 @@ mod tests {
     fn test_write_channel() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("channel.json");
+
+        assert_matches!(write_channel(&path, "test"), Ok(()));
+
+        let f = fs::File::open(path).expect("file to exist");
+        let value: Value = serde_json::from_reader(f).expect("valid json");
+        assert_eq!(
+            value,
+            json!({
+                "version": "1",
+                "content": {
+                    "legacy_amber_source_name": "test",
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn test_write_channel_create_subdir() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("subdir").join("channel.json");
 
         assert_matches!(write_channel(&path, "test"), Ok(()));
 
