@@ -469,20 +469,20 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     return ZX_ERR_NO_MEMORY;
   }
 
-  // TODO: Use zx::channel here.
-  zx_handle_t hrpc, dh_hrpc;
-  zx_status_t status = zx_channel_create(0, &hrpc, &dh_hrpc);
+  zx::channel hrpc, dh_hrpc;
+  zx_status_t status = zx::channel::create(0, &hrpc, &dh_hrpc);
   if (status != ZX_OK) {
     return status;
   }
-  dh->set_hrpc(dh_hrpc);
+  dh->set_hrpc(dh_hrpc.release());
 
   fbl::Vector<const char*> env;
   boot_args().Collect("driver.", &env);
   env.push_back(nullptr);
   status =
       dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(config_.asan_drivers), name,
-                        env.get(), hrpc, root_resource(), zx::unowned_job(config_.devhost_job));
+                        env.get(), hrpc.release(), root_resource(),
+                        zx::unowned_job(config_.devhost_job));
   if (status != ZX_OK) {
     zx_handle_close(dh->hrpc());
     return status;
