@@ -11,8 +11,11 @@ library("zbi-bootfs") {
   sources = [
     "zbi-bootfs.cc",
   ]
-  deps = [
+  public_deps = [
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",
+    "$zx/system/ulib/zx",
+  ]
+  deps = [
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/bootfs",
     "$zx/system/ulib/fdio",

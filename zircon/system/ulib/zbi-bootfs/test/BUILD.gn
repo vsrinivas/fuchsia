@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
 import("$zx/public/gn/resource.gni")
 import("$zx/public/gn/zbi.gni")
 
@@ -21,6 +22,7 @@ resource("test-zbi") {
 group("test") {
   testonly = true
   deps = [
+    ":zbi-bootfs-fuzzer",
     ":zbi-bootfs-test",
   ]
 }
@@ -57,5 +59,14 @@ zbi("test-image") {
   cpu = ""
   deps = [
     "$zx/system/ulib/zbi-bootfs/test:create-zbi-image",
+  ]
+}
+
+fuzzer("zbi-bootfs-fuzzer") {
+  sources = [
+    "zbi-bootfs-fuzzer.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/zbi-bootfs",
   ]
 }
