@@ -283,7 +283,9 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
   }
 
 #ifdef __Fuchsia__
-  (void)zx_handle_close_many(decoder.unknown_handles(), decoder.unknown_handle_idx());
+  if (decoder.unknown_handle_idx() > 0) {
+    (void)zx_handle_close_many(decoder.unknown_handles(), decoder.unknown_handle_idx());
+  }
 #endif
   return ZX_OK;
 }

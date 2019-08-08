@@ -20,7 +20,9 @@ Message::Message(BytePart bytes, HandlePart handles)
 
 Message::~Message() {
 #ifdef __Fuchsia__
-  zx_handle_close_many(handles_.data(), handles_.actual());
+  if (handles_.actual() > 0) {
+    zx_handle_close_many(handles_.data(), handles_.actual());
+  }
 #endif
   ClearHandlesUnsafe();
 }
