@@ -2,27 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <string>
+#include "utils.h"
 
 #include <errno.h>
 #include <fcntl.h>
-
-#include <fs-management/fvm.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/cpp/vector_view.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
-#include <zxtest/zxtest.h>
 
-#include "utils.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+
+#include <fs-management/fvm.h>
+#include <zxtest/zxtest.h>
 
 namespace fuchsia = ::llcpp::fuchsia;
 
@@ -136,39 +137,21 @@ zx_status_t RamdiskRef::Grow(uint64_t target_size) {
 }
 
 void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offset) {
-  uint64_t written_bytes;
-  uint64_t request_size = FIDL_ALIGN(sizeof(fuchsia::io::File::WriteAtRequest) + data.size());
-  uint64_t response_size = FIDL_ALIGN(sizeof(fuchsia::io::File::WriteAtResponse) + data.size());
-  fbl::Array<uint8_t> request(new uint8_t[request_size], request_size);
-  fbl::Array<uint8_t> response(new uint8_t[response_size], response_size);
+  fuchsia::io::File::ResultOf::WriteAt result =
+      fuchsia::io::File::Call::WriteAt(device()->channel(), ToFidlVector(data), offset);
 
-  zx_status_t status;
-  fidl::DecodeResult<fuchsia::io::File::WriteAtResponse> result =
-      fuchsia::io::File::Call::WriteAt_Deprecated(device()->channel(), ToBytePart(&request),
-                                                  ToFidlVector(data), offset, ToBytePart(&response),
-                                                  &status, &written_bytes);
-
-  ASSERT_OK(result.status, "Failed to communicate with block device.");
-  ASSERT_OK(status, "Failed to write to block device.");
-  ASSERT_EQ(data.size(), written_bytes);
+  ASSERT_OK(result.status(), "Failed to communicate with block device.");
+  ASSERT_OK(result->s);
+  ASSERT_EQ(data.size(), result->actual);
 }
 
 void BlockDeviceAdapter::ReadAt(uint64_t offset, fbl::Array<uint8_t>* out_data) {
-  int64_t request_size = FIDL_ALIGN(sizeof(fuchsia::io::File::ReadAtRequest) + out_data->size());
-  uint64_t response_size = FIDL_ALIGN(sizeof(fuchsia::io::File::ReadAtResponse) + out_data->size());
-  fbl::Array<uint8_t> request(new uint8_t[request_size], request_size);
-  fbl::Array<uint8_t> response(new uint8_t[response_size], response_size);
-  fidl::VectorView<uint8_t> data;
-  zx_status_t status;
+  fuchsia::io::File::ResultOf::ReadAt result =
+      fuchsia::io::File::Call::ReadAt(device()->channel(), out_data->size(), offset);
 
-  fidl::DecodeResult<fuchsia::io::File::ReadAtResponse> result =
-      fuchsia::io::File::Call::ReadAt_Deprecated(device()->channel(), ToBytePart(&request),
-                                                 out_data->size(), offset, ToBytePart(&response),
-                                                 &status, &data);
-
-  ASSERT_OK(result.status, "Failed to communicate with block device.");
-  ASSERT_OK(status, "Failed to read from block device.");
-  memcpy(out_data->get(), data.data(), data.count());
+  ASSERT_OK(result.status(), "Failed to communicate with block device.");
+  ASSERT_OK(result->s);
+  memcpy(out_data->get(), result->data.data(), result->data.count());
 }
 
 void BlockDeviceAdapter::CheckContentsAt(const fbl::Array<uint8_t>& data, uint64_t offset) {
