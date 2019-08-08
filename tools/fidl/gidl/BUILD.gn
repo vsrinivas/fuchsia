@@ -40,10 +40,3 @@ go_test("gidl_parser_test") {
   ]
 }
 
-go_test("gidl_dart_test") {
-  gopackages = ["gidl/dart"]
-
-  deps = [
-    ":lib",
-  ]
-}

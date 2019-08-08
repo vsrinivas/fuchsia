@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
@@ -110,7 +111,7 @@ func successCases(gidlSuccesses []gidlir.Success, fidl fidlir.Root) ([]successCa
 		}
 		valueStr := visit(success.Value, decl)
 		successCases = append(successCases, successCase{
-			Name:      singleQuote(success.Name),
+			Name:      fidlcommon.SingleQuote(success.Name),
 			Value:     valueStr,
 			ValueType: typeName(decl.(*gidlmixer.StructDecl)),
 			Bytes:     bytesBuilder(success.Bytes),
@@ -132,7 +133,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.FailsToEncode, fidl fidlir.R
 			return nil, err
 		}
 		encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-			Name:      singleQuote(encodeFailure.Name),
+			Name:      fidlcommon.SingleQuote(encodeFailure.Name),
 			Value:     valueStr,
 			ValueType: typeName(decl.(*gidlmixer.StructDecl)),
 			ErrorCode: errorCode,
@@ -149,7 +150,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.FailsToDecode) ([]decodeFail
 			return nil, err
 		}
 		decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
-			Name:      singleQuote(decodeFailure.Name),
+			Name:      fidlcommon.SingleQuote(decodeFailure.Name),
 			ValueType: dartTypeName(decodeFailure.Type),
 			Bytes:     bytesBuilder(decodeFailure.Bytes),
 			ErrorCode: errorCode,
@@ -193,7 +194,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 	case uint64:
 		return fmt.Sprintf("0x%x", value)
 	case string:
-		return singleQuote(value)
+		return fidlcommon.SingleQuote(value)
 	case gidlir.Object:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
@@ -214,7 +215,7 @@ func onObject(value gidlir.Object, decl gidlmixer.Declaration) string {
 	for _, field := range value.Fields {
 		fieldDecl, _ := decl.ForKey(field.Name)
 		val := visit(field.Value, fieldDecl)
-		args = append(args, fmt.Sprintf("%s: %s", snakeCaseToLowerCamelCase(field.Name), val))
+		args = append(args, fmt.Sprintf("%s: %s", fidlcommon.ToLowerCamelCase(field.Name), val))
 	}
 	return fmt.Sprintf("%s(%s)", value.Name, strings.Join(args, ", "))
 }
@@ -226,28 +227,6 @@ func onUnion(value gidlir.Object, decl gidlmixer.Declaration) string {
 		return fmt.Sprintf("%s.with%s(%s)", value.Name, strings.Title(field.Name), val)
 	}
 	panic("unions must have a value set")
-}
-
-func snakeCaseToLowerCamelCase(snakeString string) string {
-	parts := strings.Split(snakeString, "_")
-	parts[0] = strings.ToLower(parts[0])
-	for i := 1; i < len(parts); i++ {
-		parts[i] = upperFirstRune(strings.ToLower(parts[i]))
-	}
-	return strings.Join(parts, "")
-}
-
-func upperFirstRune(s string) string {
-	for _, r := range s {
-		return strings.ToUpper(string(r)) + s[len(string(r)):]
-	}
-	return ""
-}
-
-func singleQuote(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, `'`, `\'`)
-	return fmt.Sprintf("'%s'", s)
 }
 
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{
