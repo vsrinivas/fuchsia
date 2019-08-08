@@ -11,10 +11,14 @@ namespace a11y_manager {
 
 const float kDefaultMagnificationZoomFactor = 1.0;
 
-App::App()
-    : startup_context_(sys::ComponentContext::Create()),
+App::App(std::unique_ptr<sys::ComponentContext> context)
+    : startup_context_(std::move(context)),
       settings_manager_impl_(std::make_unique<SettingsManagerImpl>()),
       semantics_manager_impl_(std::make_unique<SemanticsManagerImpl>()) {
+  Initialize();
+}
+
+void App::Initialize() {
   // Add Settings Manager service.
   startup_context_->outgoing()->AddPublicService<fuchsia::accessibility::SettingsManager>(
       [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request) {
@@ -33,12 +37,18 @@ App::App()
   // Connect to Settings manager service and register a watcher.
   settings_manager_impl_->AddBinding(settings_manager_.NewRequest());
   settings_manager_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Cannot connect to SettingsManager with status:"
+    FXL_LOG(ERROR) << "Cannot connect to SettingsManager with status:"
                    << zx_status_get_string(status);
   });
   fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher_handle;
   settings_watcher_bindings_.AddBinding(this, watcher_handle.NewRequest());
   settings_manager_->Watch(std::move(watcher_handle));
+}
+
+fuchsia::accessibility::SettingsPtr App::GetSettings() {
+  auto settings_ptr = fuchsia::accessibility::Settings::New();
+  settings_.Clone(settings_ptr.get());
+  return settings_ptr;
 }
 
 void App::SetSettings(fuchsia::accessibility::Settings provided_settings) {

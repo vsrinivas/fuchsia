@@ -8,8 +8,12 @@ source_set("mocks") {
   sources = [
     "mock_semantic_action_listener.cc",
     "mock_semantic_action_listener.h",
+    "mock_semantic_listener.cc",
+    "mock_semantic_listener.h",
     "mock_semantic_provider.cc",
     "mock_semantic_provider.h",
+    "mock_settings_provider.cc",
+    "mock_settings_provider.h",
     "mock_settings_service.cc",
     "mock_settings_service.h",
     "mock_settings_watcher.cc",

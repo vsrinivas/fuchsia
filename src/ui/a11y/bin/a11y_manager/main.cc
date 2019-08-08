@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+
 #include <trace-provider/provider.h>
 
 #include "lib/syslog/cpp/logger.h"
@@ -12,7 +13,8 @@ int main(int argc, const char** argv) {
   syslog::InitLogger();
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  a11y_manager::App app;
+  auto context = sys::ComponentContext::Create();
+  a11y_manager::App app(std::move(context));
   loop.Run();
   return 0;
 }

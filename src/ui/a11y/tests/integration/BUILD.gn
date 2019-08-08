@@ -15,6 +15,7 @@ executable("a11y_manager_apptests") {
   testonly = true
 
   sources = [
+    "app_unittest.cc",
     "semantic_tree_parser.cc",
     "semantic_tree_parser.h",
     "semantic_tree_parser_test.cc",
@@ -35,6 +36,7 @@ executable("a11y_manager_apptests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/bin/a11y_manager:lib",
     "//src/ui/a11y/tests/mocks",
+    "//src/ui/a11y/tests/util",
     "//third_party/rapidjson",
   ]
 

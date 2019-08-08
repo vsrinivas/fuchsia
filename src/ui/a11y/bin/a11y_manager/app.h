@@ -23,13 +23,19 @@ namespace a11y_manager {
 // A11y manager application entry point.
 class App : public fuchsia::accessibility::SettingsWatcher {
  public:
-  App();
+  explicit App(std::unique_ptr<sys::ComponentContext> context);
   ~App() = default;
 
   // |fuchsia::accessibility::SettingsWatcher|
   void OnSettingsChange(fuchsia::accessibility::Settings provided_settings) override;
 
+  // Returns copy of current set of settings owned by A11y Manager.
+  fuchsia::accessibility::SettingsPtr GetSettings();
+
  private:
+  // Initialize function for the App.
+  void Initialize();
+
   // Helper function to copy given settings to member variable.
   void SetSettings(fuchsia::accessibility::Settings provided_settings);
 
@@ -45,8 +51,10 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   std::unique_ptr<SemanticsManagerImpl> semantics_manager_impl_;
 
   fidl::BindingSet<fuchsia::accessibility::SettingsWatcher> settings_watcher_bindings_;
+
   // Private variable for storing A11y Settings.
   fuchsia::accessibility::Settings settings_;
+
   // Pointer to SettingsManager service, which will be used for connecting App
   // to settings manager as a Watcher.
   fuchsia::accessibility::SettingsManagerPtr settings_manager_;
