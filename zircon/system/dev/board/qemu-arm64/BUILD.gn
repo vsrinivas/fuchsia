@@ -4,15 +4,20 @@
 
 driver("qemu-arm64") {
   sources = [
-    "qemu-bus.c",
-    "qemu-sysmem.c",
+    "qemu-bus.cc",
+    "qemu-pci.cc",
+    "qemu-rtc.cc",
+    "qemu-sysmem.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
   ]
   if (current_cpu == "arm64") {
     data_deps = [
