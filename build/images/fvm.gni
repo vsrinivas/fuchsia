@@ -28,6 +28,9 @@ declare_args() {
   blobfs_minimum_inodes = ""
   minfs_minimum_inodes = ""
 
+  # For build/images:fvm.blob.sparse.blk, use this argument.
+  blob_blobfs_minimum_inodes = ""
+
   # Number of bytes to reserve for data in the fs. This is in addition
   # to what is reserved, if any, for the inodes. Data bytes constitutes
   # "usable" space of the fs.
@@ -35,6 +38,9 @@ declare_args() {
   # required for the filesystem.
   blobfs_minimum_data_bytes = ""
   minfs_minimum_data_bytes = ""
+
+  # For build/images:fvm.blob.sparse.blk, use this argument.
+  blob_blobfs_minimum_data_bytes = ""
 
   # In addition to reserving space for inodes and data, fs needs additional
   # space for maintaining some internal data structures. So the
@@ -46,6 +52,9 @@ declare_args() {
   # reserve few blocks required for its operations.
   blobfs_maximum_bytes = ""
   minfs_maximum_bytes = ""
+
+  # For build/images:fvm.blob.sparse.blk, use this argument.
+  blob_blobfs_maximum_bytes = ""
 }
 
 # Build an FVM partition

@@ -1105,9 +1105,9 @@ if (!bootfs_only) {
       {
         type = "blob"
         dep = ":blob.blk"
-        minimum_inodes = blobfs_minimum_inodes
-        minimum_data_bytes = blobfs_minimum_data_bytes
-        maximum_bytes = blobfs_maximum_bytes
+        minimum_inodes = blob_blobfs_minimum_inodes
+        minimum_data_bytes = blob_blobfs_minimum_data_bytes
+        maximum_bytes = blob_blobfs_maximum_bytes
       },
     ]
   }
