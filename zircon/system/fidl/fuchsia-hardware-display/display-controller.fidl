@@ -471,4 +471,24 @@ protocol Controller {
     // If the system only supports single-buffered mode with a single framebuffer, then this returns
     // that buffer and its stride. Otherwise it can return ZX_ERR_NOT_SUPPORTED.
     GetSingleBufferFramebuffer() -> (zx.status res, handle<vmo>? vmo, uint32 stride);
+
+    /// Imports a buffer collection backed VMO into the display controller. The VMO
+    /// will be used by display controller to capture the image being displayed.
+    /// Returns ZX_OK along with an image_id.
+    /// image_id must be used by the client to start capture and/or release
+    /// resources allocated for capture.
+    /// Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
+    ImportImageForCapture(ImageConfig image_config, uint64 collection_id,
+                          uint32 index) -> (uint64 image_id) error zx.status;
+
+    /// Starts capture. Client must provide a valid signal_event_id and
+    /// image_id. signal_event_id must have been imported into the driver
+    /// using ImportEvent FIDL API. Image_id is the id from ImportImageForCapture.
+    /// The client will get notified once capture is complete via signal_event_id.
+    /// Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
+    StartCapture(uint64 signal_event_id, uint64 image_id) -> () error zx.status;
+
+    /// Releases resources allocated for capture.
+    /// Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
+    ReleaseCapture(uint64 image_id) -> () error zx.status;
 };
