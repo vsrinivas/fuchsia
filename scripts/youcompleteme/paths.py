@@ -17,15 +17,22 @@ SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 FUCHSIA_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, os.pardir, os.pardir))
 GN_PATH = os.path.join(FUCHSIA_ROOT, 'buildtools', 'gn')
 MKBOOTFS_PATH = os.path.join(FUCHSIA_ROOT, 'out', 'build-zircon', 'tools', 'mkbootfs')
-BUILDTOOLS_PATH = os.path.join(FUCHSIA_ROOT, 'buildtools', '%s-%s' % (
-    platform.system().lower().replace('darwin', 'mac'),
-    {
-        'x86_64': 'x64',
-        'aarch64': 'arm64',
-    }[platform.machine()],
-))
 DEBUG_OUT_DIR = os.path.join(FUCHSIA_ROOT, 'out', 'debug-x64')
 RELEASE_OUT_DIR = os.path.join(FUCHSIA_ROOT, 'out', 'release-x64')
+PREBUILT_PATH = os.path.join(FUCHSIA_ROOT, 'prebuilt')
+
+def get_os():
+    return platform.system().lower().replace('darwin', 'mac')
+
+def get_arch():
+    return {
+        'x86_64': 'x64',
+        'aarch64': 'arm64',
+    }[platform.machine()]
+
+# Returns a string with format "<OS>-<ARCH>" (eg. linux-x64).
+def get_platform():
+    return '%s-%s' % (get_os(), get_arch())
 
 def recursive_search(root, pattern):
   """Looks for a particular directory pattern within a directory tree.
@@ -55,6 +62,8 @@ def recursive_search(root, pattern):
       search_queue.append(full_path)
   return None
 
+# Returns the base clang path. Note that this is not the clang/lib/clang but rather the base
+# directory in out prebuilt directories.
 def search_clang_path(root):
   """clang can change location, so we search where it landed.
 
@@ -69,37 +78,15 @@ def search_clang_path(root):
   """
 
   # This is the root where we should search for the clang installation.
-  clang_lib_path = recursive_search(root, 'clang/lib/clang')
-  if not clang_lib_path:
+  clang_path = recursive_search(root, 'clang/%s' % get_platform())
+  if not clang_path:
     print('Could not find clang installation')
     return None
-  # Now that we have the clang lib location, we need to find where the
-  # actual include files are.
-  installation_path = recursive_search(clang_lib_path, 'include')
-  # recursive_search returns the include path, so we need to remove it.
-  return os.path.dirname(installation_path)
+
+  return clang_path
 
 # We start seaching from the correct buildtools.
-CLANG_PATH = search_clang_path(BUILDTOOLS_PATH)
-
-_BUILD_TOOLS = {}
-
-def build_tool(package, tool):
-  """Return the full path of TOOL binary in PACKAGE.
-
-  This function memoizes its results, so there's not much need to
-  cache its results in calling code.
-
-  Raises:
-    AssertionError: if the binary doesn't exist.
-  """
-
-  path = _BUILD_TOOLS.get((package, tool))
-  if path is None:
-    path = os.path.join(BUILDTOOLS_PATH, package, 'bin', tool)
-    assert os.path.exists(path), 'No "%s" tool in "%s"' % (tool, package)
-    _BUILD_TOOLS[package, tool] = path
-  return path
+CLANG_PATH = search_clang_path(PREBUILT_PATH)
 
 def main():
   variable_re = re.compile('^[A-Z][A-Z_]*$')
