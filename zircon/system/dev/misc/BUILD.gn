@@ -5,7 +5,6 @@
 group("misc") {
   deps = [
     "builtin",
-    "console",
     "cpu-trace",
     "goldfish",
     "goldfish-address-space",

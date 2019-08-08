@@ -19,6 +19,7 @@ if (current_cpu != "") {
     deps = [
       ":host",  # TODO(mcgrathr): reach this differently?
       "$zx/system/core/bootsvc:tests",
+      "$zx/system/core/console:console-test",
       "$zx/system/core/devmgr/devcoordinator:devcoordinator-test",
       "$zx/system/core/devmgr/devhost:devhost-test",
       "$zx/system/core/devmgr/fshost:block-watcher-test",

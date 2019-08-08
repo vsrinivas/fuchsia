@@ -5,6 +5,10 @@
       "url": "fuchsia-boot:///#meta/devcoordinator.cm",
       "startup": "eager",
     },
+    {
+      "name": "console",
+      "url": "fuchsia-boot:///#meta/console.cm",
+    },
   ],
   "offer": [
     // These services and directories routed from "realm" at the root are provided by bootsvc
@@ -22,7 +26,7 @@
     {
       "legacy_service": "/svc/fuchsia.boot.RootResource",
       "from": "realm",
-      "to": [ { "dest": "#devcoordinator" } ],
+      "to": [ { "dest": "#devcoordinator" }, { "dest": "#console" } ],
     },
     {
       "legacy_service": "/svc/fuchsia.boot.Arguments",
@@ -50,6 +54,12 @@
     {
       "legacy_service": "/builtin/fuchsia.process.Launcher",
       "from": "realm",
+      "to": [ { "dest": "#devcoordinator" } ],
+    },
+    // Offer the kernel serial console to the devcoordinator
+    {
+      "legacy_service": "/svc/fuchsia.hardware.pty.Device",
+      "from": "#console",
       "to": [ { "dest": "#devcoordinator" } ],
     },
   ],

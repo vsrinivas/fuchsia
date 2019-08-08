@@ -9,6 +9,7 @@
     { "legacy_service": "/svc/fuchsia.boot.FactoryItems",  "as": "/bootsvc/fuchsia.boot.FactoryItems" },
     { "legacy_service": "/svc/fuchsia.boot.Items",         "as": "/bootsvc/fuchsia.boot.Items" },
     { "legacy_service": "/svc/fuchsia.boot.Log",           "as": "/bootsvc/fuchsia.boot.Log" },
+    { "legacy_service": "/svc/fuchsia.hardware.pty.Device", "as": "/bootsvc/fuchsia.hardware.pty.Device" },
     { "legacy_service": "/builtin/fuchsia.process.Launcher" },
   ],
 }

@@ -1,0 +1,61 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/package.gni")
+
+executable("console") {
+  sources = [
+    "main.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/svc",
+  ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
+  sources = [
+    "connection.h",
+    "console.h",
+    "fifo.h",
+    "connection.cc",
+    "console.cc",
+    "fifo.cc",
+  ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-hardware-pty:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+  ]
+
+  deps = [
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+test("console-test") {
+  test_group = "sys"
+
+  sources = [
+    "console-test.cc",
+    "fifo-test.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zxtest",
+  ]
+}

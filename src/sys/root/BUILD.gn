@@ -16,18 +16,24 @@ cm_compile("root.cm") {
 cm_compile("devcoordinator.cm") {
   data = rebase_path("meta/devcoordinator.cml")
 }
+cm_compile("console.cm") {
+  data = rebase_path("meta/console.cml")
+}
 
 # TODO(BLD-448): Should become a package just containing the root manifests.
 generate_manifest("root_manifests.bootfs") {
   deps = [
+    ":console.cm",
     ":devcoordinator.cm",
     ":root.cm",
   ]
 
   root_cm_out = get_target_outputs(":root.cm")
   devc_cm_out = get_target_outputs(":devcoordinator.cm")
+  console_cm_out = get_target_outputs(":console.cm")
   args = [
     "--entry=meta/root.cm=" + rebase_path(root_cm_out[0]),
     "--entry=meta/devcoordinator.cm=" + rebase_path(devc_cm_out[0]),
+    "--entry=meta/console.cm=" + rebase_path(console_cm_out[0]),
   ]
 }

@@ -8,5 +8,8 @@ group("core") {
   # other binaries it launches.
   deps = [
     "bootsvc",
+
+    # TODO(teisenbe): Find a better place to hook this into the dependency graph
+    "console",
   ]
 }

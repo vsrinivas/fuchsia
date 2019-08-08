@@ -283,7 +283,7 @@ int console_starter(void* arg) {
 
   const char* device = boot_args.Get("console.path");
   if (device == nullptr) {
-    device = "/dev/misc/console";
+    device = "/bootsvc/fuchsia.hardware.pty.Device";
   }
 
   const char* envp[] = {
