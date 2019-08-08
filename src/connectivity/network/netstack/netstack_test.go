@@ -336,7 +336,7 @@ func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcp
 		t.Fatalf("couldn't find NICID=%d in %+v", nicid, interfaces)
 	}
 
-	addrs := []tcpip.AddressWithPrefix{}
+	addrs := make([]tcpip.AddressWithPrefix, 0, len(info.Properties.Addresses))
 	for _, a := range info.Properties.Addresses {
 		addrs = append(addrs, tcpip.AddressWithPrefix{
 			Address:   fidlconv.ToTCPIPAddress(a.IpAddress),
@@ -352,6 +352,36 @@ func compareInterfaceAddresses(t *testing.T, got, want []tcpip.AddressWithPrefix
 	sort.Slice(want, func(i, j int) bool { return want[i].Address < want[j].Address })
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("Interface addresses mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestNetstackImpl_GetInterfaces2(t *testing.T) {
+	ns := newNetstack(t)
+	ni := &netstackImpl{ns: ns}
+
+	d := deviceForAddEth(ethernet.Info{}, t)
+	if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d); err != nil {
+		t.Fatal(err)
+	}
+
+	interfaces, err := ni.GetInterfaces2()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if l := len(interfaces); l == 0 {
+		t.Fatalf("got len(GetInterfaces2()) = %d, want != %d", l, l)
+	}
+
+	var expectedAddr net.IpAddress
+	expectedAddr.SetIpv4(net.Ipv4Address{})
+	for _, iface := range interfaces {
+		if iface.Addr != expectedAddr {
+			t.Errorf("got interface %+v, want Addr = %+v", iface, expectedAddr)
+		}
+		if iface.Netmask != expectedAddr {
+			t.Errorf("got interface %+v, want NetMask = %+v", iface, expectedAddr)
+		}
 	}
 }
 

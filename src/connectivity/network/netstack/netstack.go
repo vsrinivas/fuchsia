@@ -48,10 +48,6 @@ const (
 
 	ipv4Loopback tcpip.Address = "\x7f\x00\x00\x01"
 	ipv6Loopback tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
-
-	// Values used to indicate no IP is assigned to an interface.
-	zeroIpAddr tcpip.Address     = header.IPv4Any
-	zeroIpMask tcpip.AddressMask = "\xff\xff\xff\xff"
 )
 
 var ipv4LoopbackBytes = func() [4]byte {
