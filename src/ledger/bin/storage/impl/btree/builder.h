@@ -10,6 +10,7 @@
 #include <memory>
 #include <set>
 
+#include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -34,7 +35,7 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 // Existing elements inside |new_identifiers| will be deleted.
 Status ApplyChanges(
     coroutine::CoroutineHandler* coroutine_handler, PageStorage* page_storage,
-    ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
+    LocatedObjectIdentifier root_identifier, std::vector<EntryChange> changes,
     ObjectIdentifier* new_root_identifier, std::set<ObjectIdentifier>* new_identifiers,
     const NodeLevelCalculator* node_level_calculator = GetDefaultNodeLevelCalculator());
 

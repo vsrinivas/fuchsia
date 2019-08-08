@@ -4,10 +4,6 @@
 
 #include "src/ledger/bin/app/page_impl.h"
 
-#include <algorithm>
-#include <map>
-#include <memory>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/capture.h>
@@ -18,6 +14,10 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/errors.h>
+
+#include <algorithm>
+#include <map>
+#include <memory>
 
 #include "fuchsia/ledger/cpp/fidl.h"
 #include "gmock/gmock.h"
@@ -119,7 +119,7 @@ class PageImplTest : public TestWithEnvironment {
     bool called;
     Status status;
     std::unique_ptr<const storage::Object> object;
-    fake_storage_->GetObject(object_identifier, storage::PageStorage::Location::LOCAL,
+    fake_storage_->GetObject(object_identifier, storage::PageStorage::Location::Local(),
                              callback::Capture(callback::SetWhenCalled(&called), &status, &object));
     DrainLoop();
     EXPECT_TRUE(called);

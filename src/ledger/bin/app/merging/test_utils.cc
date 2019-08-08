@@ -49,7 +49,7 @@ fit::function<void(storage::Journal*)> TestWithPageStorage::DeleteKeyFromJournal
   Status status;
   std::unique_ptr<const storage::Object> object;
   bool called;
-  page_storage()->GetObject(std::move(object_identifier), storage::PageStorage::Location::LOCAL,
+  page_storage()->GetObject(std::move(object_identifier), storage::PageStorage::Location::Local(),
                             callback::Capture(callback::SetWhenCalled(&called), &status, &object));
   RunLoopUntilIdle();
   if (!called) {

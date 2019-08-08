@@ -75,8 +75,11 @@ Status JournalImpl::Commit(coroutine::CoroutineHandler* handler,
     // recorded on the journal need to be executed over the content of
     // the first parent.
     ObjectIdentifier root_identifier = parents[0]->GetRootIdentifier();
-    return CreateCommitFromChanges(handler, std::move(parents), std::move(root_identifier),
-                                   std::move(changes), commit, objects_to_sync);
+    std::string parent_id = parents[0]->GetId();
+    return CreateCommitFromChanges(
+        handler, std::move(parents),
+        {std::move(root_identifier), PageStorage::Location::TreeNodeFromNetwork(parent_id)},
+        std::move(changes), commit, objects_to_sync);
   }
 
   // The journal contains the clear operation. The changes recorded on the
@@ -94,7 +97,8 @@ Status JournalImpl::Commit(coroutine::CoroutineHandler* handler,
   if (status != Status::OK) {
     return status;
   }
-  return CreateCommitFromChanges(handler, std::move(parents), std::move(root_identifier),
+  return CreateCommitFromChanges(handler, std::move(parents),
+                                 {std::move(root_identifier), PageStorage::Location::Local()},
                                  std::move(changes), commit, objects_to_sync);
 }
 
@@ -123,8 +127,9 @@ void JournalImpl::Clear() {
 
 Status JournalImpl::CreateCommitFromChanges(
     coroutine::CoroutineHandler* handler,
-    std::vector<std::unique_ptr<const storage::Commit>> parents, ObjectIdentifier root_identifier,
-    std::vector<EntryChange> changes, std::unique_ptr<const storage::Commit>* commit,
+    std::vector<std::unique_ptr<const storage::Commit>> parents,
+    btree::LocatedObjectIdentifier root_identifier, std::vector<EntryChange> changes,
+    std::unique_ptr<const storage::Commit>* commit,
     std::vector<ObjectIdentifier>* objects_to_sync) {
   ObjectIdentifier object_identifier;
   std::set<ObjectIdentifier> new_nodes;

@@ -25,10 +25,10 @@ class IteratorPair {
       : on_next_(std::move(on_next)), left_(storage), right_(storage) {}
 
   // Initialize the pair with the ids of both roots.
-  Status Init(ObjectIdentifier left_node_identifier, ObjectIdentifier right_node_identifier,
-              fxl::StringView min_key) {
-    RETURN_ON_ERROR(left_.Init(left_node_identifier));
-    RETURN_ON_ERROR(right_.Init(right_node_identifier));
+  Status Init(LocatedObjectIdentifier left_node_identifier,
+              LocatedObjectIdentifier right_node_identifier, fxl::StringView min_key) {
+    RETURN_ON_ERROR(left_.Init(std::move(left_node_identifier)));
+    RETURN_ON_ERROR(right_.Init(std::move(right_node_identifier)));
     if (!min_key.empty()) {
       RETURN_ON_ERROR(SkipIteratorsTo(min_key));
     }
@@ -329,12 +329,13 @@ class ThreeWayIterator {
         });
   }
 
-  Status Init(ObjectIdentifier base_node_identifier, ObjectIdentifier left_node_identifier,
-              ObjectIdentifier right_node_identifier, fxl::StringView min_key) {
+  Status Init(LocatedObjectIdentifier base_node_identifier,
+              LocatedObjectIdentifier left_node_identifier,
+              LocatedObjectIdentifier right_node_identifier, fxl::StringView min_key) {
     RETURN_ON_ERROR(
-        base_left_iterators_->Init(base_node_identifier, left_node_identifier, min_key));
-    RETURN_ON_ERROR(
-        base_right_iterators_->Init(base_node_identifier, right_node_identifier, min_key));
+        base_left_iterators_->Init(base_node_identifier, std::move(left_node_identifier), min_key));
+    RETURN_ON_ERROR(base_right_iterators_->Init(std::move(base_node_identifier),
+                                                std::move(right_node_identifier), min_key));
     if (!Finished()) {
       RETURN_ON_ERROR(AdvanceLeft());
       RETURN_ON_ERROR(AdvanceRight());
@@ -472,13 +473,14 @@ class ThreeWayIterator {
   std::unique_ptr<IteratorPair> base_right_iterators_;
 };
 
-Status ForEachDiffInternal(SynchronousStorage* storage, ObjectIdentifier left_node_identifier,
-                           ObjectIdentifier right_node_identifier, std::string min_key,
+Status ForEachDiffInternal(SynchronousStorage* storage,
+                           LocatedObjectIdentifier left_node_identifier,
+                           LocatedObjectIdentifier right_node_identifier, std::string min_key,
                            fit::function<bool(TwoWayChange)> on_next) {
-  FXL_DCHECK(storage::IsDigestValid(left_node_identifier.object_digest()));
-  FXL_DCHECK(storage::IsDigestValid(right_node_identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(left_node_identifier.identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(right_node_identifier.identifier.object_digest()));
 
-  if (left_node_identifier == right_node_identifier) {
+  if (left_node_identifier.identifier == right_node_identifier.identifier) {
     return Status::OK;
   }
 
@@ -488,7 +490,8 @@ Status ForEachDiffInternal(SynchronousStorage* storage, ObjectIdentifier left_no
   };
 
   IteratorPair iterators(storage, std::move(wrapped_next));
-  RETURN_ON_ERROR(iterators.Init(left_node_identifier, right_node_identifier, min_key));
+  RETURN_ON_ERROR(
+      iterators.Init(std::move(left_node_identifier), std::move(right_node_identifier), min_key));
 
   while (!iterators.Finished()) {
     if (!iterators.SendDiff()) {
@@ -501,21 +504,23 @@ Status ForEachDiffInternal(SynchronousStorage* storage, ObjectIdentifier left_no
 }  // namespace
 
 Status ForEachThreeWayDiffInternal(SynchronousStorage* storage,
-                                   ObjectIdentifier base_node_identifier,
-                                   ObjectIdentifier left_node_identifier,
-                                   ObjectIdentifier right_node_identifier, std::string min_key,
+                                   LocatedObjectIdentifier base_node_identifier,
+                                   LocatedObjectIdentifier left_node_identifier,
+                                   LocatedObjectIdentifier right_node_identifier,
+                                   std::string min_key,
                                    fit::function<bool(ThreeWayChange)> on_next) {
-  FXL_DCHECK(IsDigestValid(base_node_identifier.object_digest()));
-  FXL_DCHECK(IsDigestValid(left_node_identifier.object_digest()));
-  FXL_DCHECK(IsDigestValid(right_node_identifier.object_digest()));
+  FXL_DCHECK(IsDigestValid(base_node_identifier.identifier.object_digest()));
+  FXL_DCHECK(IsDigestValid(left_node_identifier.identifier.object_digest()));
+  FXL_DCHECK(IsDigestValid(right_node_identifier.identifier.object_digest()));
 
-  if (left_node_identifier == right_node_identifier) {
+  if (base_node_identifier.identifier == left_node_identifier.identifier &&
+      base_node_identifier.identifier == right_node_identifier.identifier) {
     return Status::OK;
   }
 
   ThreeWayIterator iterator(storage);
-  RETURN_ON_ERROR(
-      iterator.Init(base_node_identifier, left_node_identifier, right_node_identifier, min_key));
+  RETURN_ON_ERROR(iterator.Init(std::move(base_node_identifier), std::move(left_node_identifier),
+                                std::move(right_node_identifier), min_key));
 
   while (!iterator.Finished()) {
     if (!on_next(iterator.GetCurrentDiff())) {
@@ -530,9 +535,9 @@ Status ForEachThreeWayDiffInternal(SynchronousStorage* storage,
 }  // namespace
 
 void ForEachDiff(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-                 ObjectIdentifier base_root_identifier, ObjectIdentifier other_root_identifier,
-                 std::string min_key, fit::function<bool(EntryChange)> on_next,
-                 fit::function<void(Status)> on_done) {
+                 LocatedObjectIdentifier base_root_identifier,
+                 LocatedObjectIdentifier other_root_identifier, std::string min_key,
+                 fit::function<bool(EntryChange)> on_next, fit::function<void(Status)> on_done) {
   auto wrapped_next = [on_next = std::move(on_next)](TwoWayChange change) {
     if (change.target) {
       return on_next({std::move(*change.target), false});
@@ -540,17 +545,17 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service, PageStorage* pa
     return on_next({std::move(*change.base), true});
   };
   ForEachTwoWayDiff(coroutine_service, page_storage, std::move(base_root_identifier),
-              std::move(other_root_identifier), std::move(min_key), std::move(wrapped_next),
-              std::move(on_done));
+                    std::move(other_root_identifier), std::move(min_key), std::move(wrapped_next),
+                    std::move(on_done));
 }
 
 void ForEachTwoWayDiff(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-                       ObjectIdentifier base_root_identifier,
-                       ObjectIdentifier other_root_identifier, std::string min_key,
+                       LocatedObjectIdentifier base_root_identifier,
+                       LocatedObjectIdentifier other_root_identifier, std::string min_key,
                        fit::function<bool(TwoWayChange)> on_next,
                        fit::function<void(Status)> on_done) {
-  FXL_DCHECK(storage::IsDigestValid(base_root_identifier.object_digest()));
-  FXL_DCHECK(storage::IsDigestValid(other_root_identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(base_root_identifier.identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(other_root_identifier.identifier.object_digest()));
   coroutine_service->StartCoroutine(
       [page_storage, base_root_identifier = std::move(base_root_identifier),
        other_root_identifier = std::move(other_root_identifier), on_next = std::move(on_next),
@@ -558,20 +563,21 @@ void ForEachTwoWayDiff(coroutine::CoroutineService* coroutine_service, PageStora
        on_done = std::move(on_done)](coroutine::CoroutineHandler* handler) mutable {
         SynchronousStorage storage(page_storage, handler);
 
-        on_done(ForEachDiffInternal(&storage, base_root_identifier, other_root_identifier,
-                                    std::move(min_key), std::move(on_next)));
+        on_done(ForEachDiffInternal(&storage, std::move(base_root_identifier),
+                                    std::move(other_root_identifier), std::move(min_key),
+                                    std::move(on_next)));
       });
 }
 
 void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-                         ObjectIdentifier base_root_identifier,
-                         ObjectIdentifier left_root_identifier,
-                         ObjectIdentifier right_root_identifier, std::string min_key,
+                         LocatedObjectIdentifier base_root_identifier,
+                         LocatedObjectIdentifier left_root_identifier,
+                         LocatedObjectIdentifier right_root_identifier, std::string min_key,
                          fit::function<bool(ThreeWayChange)> on_next,
                          fit::function<void(Status)> on_done) {
-  FXL_DCHECK(storage::IsDigestValid(base_root_identifier.object_digest()));
-  FXL_DCHECK(storage::IsDigestValid(left_root_identifier.object_digest()));
-  FXL_DCHECK(storage::IsDigestValid(right_root_identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(base_root_identifier.identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(left_root_identifier.identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(right_root_identifier.identifier.object_digest()));
   coroutine_service->StartCoroutine(
       [page_storage, base_root_identifier = std::move(base_root_identifier),
        left_root_identifier = std::move(left_root_identifier),
@@ -580,9 +586,9 @@ void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service, PageSto
        on_done = std::move(on_done)](coroutine::CoroutineHandler* handler) mutable {
         SynchronousStorage storage(page_storage, handler);
 
-        on_done(ForEachThreeWayDiffInternal(&storage, base_root_identifier, left_root_identifier,
-                                            right_root_identifier, std::move(min_key),
-                                            std::move(on_next)));
+        on_done(ForEachThreeWayDiffInternal(
+            &storage, std::move(base_root_identifier), std::move(left_root_identifier),
+            std::move(right_root_identifier), std::move(min_key), std::move(on_next)));
       });
 }
 

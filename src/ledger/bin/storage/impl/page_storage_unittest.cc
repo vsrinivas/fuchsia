@@ -570,12 +570,13 @@ class PageStorageTest : public ledger::TestWithEnvironment {
   }
 
   ::testing::AssertionResult CreateNodeFromIdentifier(
-      ObjectIdentifier identifier, std::unique_ptr<const btree::TreeNode>* node) {
+      ObjectIdentifier identifier, PageStorage::Location location,
+      std::unique_ptr<const btree::TreeNode>* node) {
     bool called;
     Status status;
     std::unique_ptr<const btree::TreeNode> result;
     btree::TreeNode::FromIdentifier(
-        GetStorage(), std::move(identifier),
+        GetStorage(), {std::move(identifier), std::move(location)},
         callback::Capture(callback::SetWhenCalled(&called), &status, &result));
     RunLoopUntilIdle();
 
@@ -606,7 +607,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     if (status != Status::OK) {
       return ::testing::AssertionFailure() << "TreeNode::FromEntries failed with status " << status;
     }
-    return CreateNodeFromIdentifier(identifier, node);
+    return CreateNodeFromIdentifier(identifier, PageStorage::Location::Local(), node);
   }
 
   ::testing::AssertionResult GetEmptyNodeIdentifier(ObjectIdentifier* empty_node_identifier) {
@@ -860,7 +861,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
       // Ensure root_object is not kept, as the storage it depends on will be
       // deleted.
       std::unique_ptr<const Object> root_object =
-          TryGetObject(root_identifier, PageStorage::Location::NETWORK);
+          TryGetObject(root_identifier, PageStorage::Location::Local());
 
       fxl::StringView root_data;
       ASSERT_EQ(root_object->GetData(&root_data), Status::OK);
@@ -1289,7 +1290,7 @@ TEST_F(PageStorageTest, GetObject) {
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     std::unique_ptr<const Object> object =
-        TryGetObject(data.object_identifier, PageStorage::Location::LOCAL);
+        TryGetObject(data.object_identifier, PageStorage::Location::Local());
     EXPECT_EQ(object->GetIdentifier(), data.object_identifier);
     fxl::StringView object_data;
     ASSERT_EQ(object->GetData(&object_data), Status::OK);
@@ -1303,7 +1304,7 @@ TEST_F(PageStorageTest, GetObjectPart) {
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part =
-        TryGetObjectPart(data.object_identifier, 1, data.size - 2, PageStorage::Location::LOCAL);
+        TryGetObjectPart(data.object_identifier, 1, data.size - 2, PageStorage::Location::Local());
     std::string object_part_data;
     ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
     EXPECT_EQ(convert::ToString(object_part_data), data.value.substr(1, data.size - 2));
@@ -1316,7 +1317,7 @@ TEST_F(PageStorageTest, GetObjectPartLargeOffset) {
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part = TryGetObjectPart(data.object_identifier, data.size * 2, data.size,
-                                                 PageStorage::Location::LOCAL);
+                                                 PageStorage::Location::Local());
     std::string object_part_data;
     ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
     EXPECT_EQ(convert::ToString(object_part_data), "");
@@ -1329,7 +1330,7 @@ TEST_F(PageStorageTest, GetObjectPartLargeMaxSize) {
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part =
-        TryGetObjectPart(data.object_identifier, 0, data.size * 2, PageStorage::Location::LOCAL);
+        TryGetObjectPart(data.object_identifier, 0, data.size * 2, PageStorage::Location::Local());
     std::string object_part_data;
     ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
     EXPECT_EQ(convert::ToString(object_part_data), data.value);
@@ -1341,8 +1342,8 @@ TEST_F(PageStorageTest, GetObjectPartNegativeArgs) {
     ObjectData data = MakeObject("_Some data_");
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
-    fsl::SizedVmo object_part =
-        TryGetObjectPart(data.object_identifier, -data.size + 1, -1, PageStorage::Location::LOCAL);
+    fsl::SizedVmo object_part = TryGetObjectPart(data.object_identifier, -data.size + 1, -1,
+                                                 PageStorage::Location::Local());
     std::string object_part_data;
     ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
     EXPECT_EQ(convert::ToString(object_part_data), data.value.substr(1, data.size - 1));
@@ -1372,7 +1373,7 @@ TEST_F(PageStorageTest, GetLargeObjectPart) {
   EXPECT_EQ(object_identifier, data.object_identifier);
 
   fsl::SizedVmo object_part =
-      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::LOCAL);
+      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::Local());
   std::string object_part_data;
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   std::string result_str = convert::ToString(object_part_data);
@@ -1386,8 +1387,8 @@ TEST_F(PageStorageTest, GetObjectPartFromSync) {
   sync.AddObject(data.object_identifier, data.value);
   storage_->SetSyncDelegate(&sync);
 
-  fsl::SizedVmo object_part =
-      TryGetObjectPart(data.object_identifier, 1, data.size - 2, PageStorage::Location::NETWORK);
+  fsl::SizedVmo object_part = TryGetObjectPart(data.object_identifier, 1, data.size - 2,
+                                               PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data.value.substr(1, data.size - 2));
@@ -1395,9 +1396,9 @@ TEST_F(PageStorageTest, GetObjectPartFromSync) {
   storage_->SetSyncDelegate(nullptr);
   ObjectData other_data = MakeObject("_Some other data_", InlineBehavior::PREVENT);
   TryGetObjectPart(other_data.object_identifier, 1, other_data.size - 2,
-                   PageStorage::Location::LOCAL, Status::INTERNAL_NOT_FOUND);
+                   PageStorage::Location::Local(), Status::INTERNAL_NOT_FOUND);
   TryGetObjectPart(other_data.object_identifier, 1, other_data.size - 2,
-                   PageStorage::Location::NETWORK, Status::NETWORK_ERROR);
+                   PageStorage::Location::ValueFromNetwork(), Status::NETWORK_ERROR);
 }
 
 TEST_F(PageStorageTest, GetObjectPartFromSyncEndOfChunk) {
@@ -1436,7 +1437,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncEndOfChunk) {
   uint64_t offset = chunk_lengths[0] - size;
 
   fsl::SizedVmo object_part =
-      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::NETWORK);
+      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
@@ -1480,7 +1481,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncStartOfChunk) {
   uint64_t offset = chunk_lengths[0];
 
   fsl::SizedVmo object_part =
-      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::NETWORK);
+      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
@@ -1511,7 +1512,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytes) {
   // Read zero bytes inside a chunk. This succeeds and only reads the root
   // piece.
   fsl::SizedVmo object_part =
-      TryGetObjectPart(object_identifier, 12, 0, PageStorage::Location::NETWORK);
+      TryGetObjectPart(object_identifier, 12, 0, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), "");
@@ -1524,7 +1525,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytesNotFound) {
 
   // Reading zero bytes from non-existing objects returns an error.
   ObjectData other_data = MakeObject("_Some other data_", InlineBehavior::PREVENT);
-  TryGetObjectPart(other_data.object_identifier, 1, 0, PageStorage::Location::NETWORK,
+  TryGetObjectPart(other_data.object_identifier, 1, 0, PageStorage::Location::ValueFromNetwork(),
                    Status::INTERNAL_NOT_FOUND);
 }
 
@@ -1549,7 +1550,7 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   storage_->SetSyncDelegate(&sync);
 
   fsl::SizedVmo object_part =
-      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::NETWORK);
+      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
@@ -1601,7 +1602,7 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
   storage_->SetSyncDelegate(&sync);
 
   fsl::SizedVmo object_part =
-      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::NETWORK);
+      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(data_str.size() + offset, size));
@@ -1617,7 +1618,7 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
   storage_->SetSyncDelegate(&sync);
 
   std::unique_ptr<const Object> object =
-      TryGetObject(data.object_identifier, PageStorage::Location::NETWORK);
+      TryGetObject(data.object_identifier, PageStorage::Location::ValueFromNetwork());
   EXPECT_EQ(object->GetIdentifier(), data.object_identifier);
   fxl::StringView object_data;
   ASSERT_EQ(object->GetData(&object_data), Status::OK);
@@ -1628,9 +1629,10 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
 
   storage_->SetSyncDelegate(nullptr);
   ObjectData other_data = MakeObject("Some other data", InlineBehavior::PREVENT);
-  TryGetObject(other_data.object_identifier, PageStorage::Location::LOCAL,
+  TryGetObject(other_data.object_identifier, PageStorage::Location::Local(),
                Status::INTERNAL_NOT_FOUND);
-  TryGetObject(other_data.object_identifier, PageStorage::Location::NETWORK, Status::NETWORK_ERROR);
+  TryGetObject(other_data.object_identifier, PageStorage::Location::ValueFromNetwork(),
+               Status::NETWORK_ERROR);
 }
 
 TEST_F(PageStorageTest, FullDownloadAfterPartial) {
@@ -1652,24 +1654,24 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
   storage_->SetSyncDelegate(&sync);
 
   fsl::SizedVmo object_part =
-      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::NETWORK);
+      TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
-  TryGetObject(object_identifier, PageStorage::LOCAL, Status::INTERNAL_NOT_FOUND);
+  TryGetObject(object_identifier, PageStorage::Location::Local(), Status::INTERNAL_NOT_FOUND);
   // Check that all requested pieces have been stored locally.
   for (const auto& piece_identifier : sync.object_requests) {
     TryGetPiece(piece_identifier);
   }
 
   std::unique_ptr<const Object> object =
-      TryGetObject(object_identifier, PageStorage::Location::NETWORK);
+      TryGetObject(object_identifier, PageStorage::Location::ValueFromNetwork());
   fxl::StringView object_data;
   ASSERT_EQ(object->GetData(&object_data), Status::OK);
   EXPECT_EQ(convert::ToString(object_data), data_str);
   EXPECT_EQ(sync.GetNumberOfObjectsStored(), sync.object_requests.size());
-  TryGetObject(object_identifier, PageStorage::LOCAL, Status::OK);
+  TryGetObject(object_identifier, PageStorage::Location::Local(), Status::OK);
   // Check that all pieces have been stored locally.
   for (const auto& piece_identifier : sync.object_requests) {
     TryGetPiece(piece_identifier);
@@ -1683,7 +1685,7 @@ TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
   sync.AddObject(data.object_identifier, data2.value);
   storage_->SetSyncDelegate(&sync);
 
-  TryGetObject(data.object_identifier, PageStorage::Location::NETWORK,
+  TryGetObject(data.object_identifier, PageStorage::Location::ValueFromNetwork(),
                Status::DATA_INTEGRITY_ERROR);
 }
 
@@ -1715,7 +1717,7 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
   EXPECT_EQ(object_identifier, data.object_identifier);
 
   std::unique_ptr<const Object> object =
-      TryGetObject(object_identifier, PageStorage::Location::LOCAL);
+      TryGetObject(object_identifier, PageStorage::Location::Local());
   fxl::StringView content;
   ASSERT_EQ(object->GetData(&content), Status::OK);
   EXPECT_EQ(content, data.value);
@@ -1805,8 +1807,10 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
   }
 
   // Get the object from network and check that it is correct.
+  // TODO(LE-823): when removing compatibility, we need to disable diffs for this test so we
+  // actually get the objects (getting the objects this way will still be needed for P2P).
   std::unique_ptr<const Object> object =
-      TryGetObject(object_identifier, PageStorage::Location::NETWORK);
+      TryGetObject(object_identifier, PageStorage::Location::ValueFromNetwork());
   fxl::StringView content;
   ASSERT_EQ(object->GetData(&content), Status::OK);
   EXPECT_EQ(content, data_str);
@@ -1827,7 +1831,7 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
 
   // Now that the object has been retrieved from network, we should be able to
   // retrieve it again locally.
-  auto local_object = TryGetObject(object_identifier, PageStorage::LOCAL, Status::OK);
+  auto local_object = TryGetObject(object_identifier, PageStorage::Location::Local(), Status::OK);
   ASSERT_EQ(object->GetData(&content), Status::OK);
   EXPECT_EQ(content, data_str);
 }
@@ -2227,7 +2231,7 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
       object_identifiers[i] = node->GetIdentifier();
       sync.AddObject(value.object_identifier, value.value);
       std::unique_ptr<const Object> root_object =
-          TryGetObject(object_identifiers[i], PageStorage::Location::NETWORK);
+          TryGetObject(object_identifiers[i], PageStorage::Location::Local());
       fxl::StringView root_data;
       ASSERT_EQ(root_object->GetData(&root_data), Status::OK);
       sync.AddObject(object_identifiers[i], root_data.ToString());

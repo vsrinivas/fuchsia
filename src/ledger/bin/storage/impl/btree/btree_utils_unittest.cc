@@ -51,11 +51,11 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
 
   void GetObject(ObjectIdentifier object_identifier, Location location,
                  fit::function<void(Status, std::unique_ptr<const Object>)> callback) override {
-    object_requests.insert(object_identifier);
+    object_requests.emplace(object_identifier, location);
     fake::FakePageStorage::GetObject(std::move(object_identifier), location, std::move(callback));
   }
 
-  std::set<ObjectIdentifier> object_requests;
+  std::set<std::pair<ObjectIdentifier, Location>> object_requests;
 
  protected:
   ObjectDigest FakeDigest(fxl::StringView content) const override {
@@ -82,6 +82,20 @@ class BTreeUtilsTest : public StorageTest {
     return new_root_identifier;
   }
 
+  std::set<ObjectIdentifier> GetTreeNodesList(ObjectIdentifier root_identifier) {
+    std::set<ObjectIdentifier> identifiers;
+    EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+      SynchronousStorage storage(&fake_storage_, handler);
+      BTreeIterator it(&storage);
+      ASSERT_EQ(it.Init({root_identifier, PageStorage::Location::Local()}), Status::OK);
+      while (!it.Finished()) {
+        identifiers.insert(it.GetIdentifier());
+        ASSERT_EQ(it.Advance(), Status::OK);
+      }
+    }));
+    return identifiers;
+  }
+
   std::vector<Entry> GetEntriesList(ObjectIdentifier root_identifier) {
     std::vector<Entry> entries;
     auto on_next = [&entries](EntryAndNodeIdentifier entry) {
@@ -92,8 +106,9 @@ class BTreeUtilsTest : public StorageTest {
       EXPECT_EQ(status, Status::OK);
       QuitLoop();
     };
-    ForEachEntry(environment_.coroutine_service(), &fake_storage_, root_identifier, "",
-                 std::move(on_next), std::move(on_done));
+    ForEachEntry(environment_.coroutine_service(), &fake_storage_,
+                 {root_identifier, PageStorage::Location::Local()}, "", std::move(on_next),
+                 std::move(on_done));
     RunLoopFor(kSufficientDelay);
     return entries;
   }
@@ -134,8 +149,9 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
   // [00, 01, 02]
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, changes,
-                              &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+        status =
+            ApplyChanges(handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+                         changes, &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
@@ -163,7 +179,8 @@ TEST_F(BTreeUtilsTest, ApplyChangeSingleLevel1Entry) {
 
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, golden_entries,
+        status = ApplyChanges(handler, &fake_storage_,
+                              {root_identifier, PageStorage::Location::Local()}, golden_entries,
                               &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
@@ -193,7 +210,8 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10]
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, golden_entries,
+        status = ApplyChanges(handler, &fake_storage_,
+                              {root_identifier, PageStorage::Location::Local()}, golden_entries,
 
                               &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
@@ -222,8 +240,9 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, new_root_identifier, std::move(new_change),
-                              &new_root_identifier2, &new_nodes, &kTestNodeLevelCalculator);
+        status = ApplyChanges(
+            handler, &fake_storage_, {new_root_identifier, PageStorage::Location::Local()},
+            std::move(new_change), &new_root_identifier2, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
@@ -252,8 +271,9 @@ TEST_F(BTreeUtilsTest, ApplyChangesBackToEmpty) {
   // [00, 01, 02]
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, changes,
-                              &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+        status =
+            ApplyChanges(handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+                         changes, &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
@@ -269,8 +289,10 @@ TEST_F(BTreeUtilsTest, ApplyChangesBackToEmpty) {
   std::set<ObjectIdentifier> deleted_nodes;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, new_root_identifier, std::move(changes),
-                              &deleted_root_identifier, &deleted_nodes, &kTestNodeLevelCalculator);
+        status =
+            ApplyChanges(handler, &fake_storage_,
+                         {new_root_identifier, PageStorage::Location::Local()}, std::move(changes),
+                         &deleted_root_identifier, &deleted_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
@@ -304,8 +326,9 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
   std::set<ObjectIdentifier> new_nodes;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, std::move(update_changes),
-                              &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+        status = ApplyChanges(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(update_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
@@ -354,8 +377,9 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   std::set<ObjectIdentifier> new_nodes;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, std::move(update_changes),
-                              &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+        status = ApplyChanges(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(update_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
@@ -404,7 +428,8 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
   std::set<ObjectIdentifier> new_nodes;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, update_changes,
+        status = ApplyChanges(handler, &fake_storage_,
+                              {root_identifier, PageStorage::Location::Local()}, update_changes,
                               &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
@@ -444,8 +469,9 @@ TEST_F(BTreeUtilsTest, NoOpUpdateChange) {
   std::set<ObjectIdentifier> new_nodes;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, std::move(golden_entries),
-                              &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+        status = ApplyChanges(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(golden_entries), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
@@ -476,7 +502,8 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   std::set<ObjectIdentifier> new_nodes;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, delete_changes,
+        status = ApplyChanges(handler, &fake_storage_,
+                              {root_identifier, PageStorage::Location::Local()}, delete_changes,
                               &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
@@ -523,7 +550,8 @@ TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
   std::set<ObjectIdentifier> new_nodes;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, delete_changes,
+        status = ApplyChanges(handler, &fake_storage_,
+                              {root_identifier, PageStorage::Location::Local()}, delete_changes,
                               &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
@@ -567,8 +595,9 @@ TEST_F(BTreeUtilsTest, NoOpDeleteChange) {
   std::set<ObjectIdentifier> new_nodes;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, std::move(delete_changes),
-                              &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+        status = ApplyChanges(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(delete_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
@@ -605,7 +634,8 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   std::set<ObjectIdentifier> new_nodes;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, update_changes,
+        status = ApplyChanges(handler, &fake_storage_,
+                              {root_identifier, PageStorage::Location::Local()}, update_changes,
                               &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
@@ -636,9 +666,10 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   ObjectIdentifier final_node_identifier;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status =
-            ApplyChanges(handler, &fake_storage_, new_root_identifier, std::move(delete_changes),
-                         &final_node_identifier, &new_nodes, &kTestNodeLevelCalculator);
+        status = ApplyChanges(handler, &fake_storage_,
+                              {new_root_identifier, PageStorage::Location::Local()},
+                              std::move(delete_changes), &final_node_identifier, &new_nodes,
+                              &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
@@ -661,8 +692,9 @@ TEST_F(BTreeUtilsTest, DeleteAll) {
   std::set<ObjectIdentifier> new_nodes;
   ASSERT_TRUE(RunInCoroutine(
       [&](coroutine::CoroutineHandler* handler) {
-        status = ApplyChanges(handler, &fake_storage_, root_identifier, std::move(delete_changes),
-                              &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+        status = ApplyChanges(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(delete_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
       },
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
@@ -680,7 +712,8 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersFromEmpty) {
   Status status;
   std::set<ObjectIdentifier> object_identifiers;
   GetObjectIdentifiers(
-      environment_.coroutine_service(), &fake_storage_, root_identifier,
+      environment_.coroutine_service(), &fake_storage_,
+      {root_identifier, PageStorage::Location::Local()},
       callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
@@ -698,7 +731,8 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   Status status;
   std::set<ObjectIdentifier> object_identifiers;
   GetObjectIdentifiers(
-      environment_.coroutine_service(), &fake_storage_, root_identifier,
+      environment_.coroutine_service(), &fake_storage_,
+      {root_identifier, PageStorage::Location::Local()},
       callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
@@ -719,7 +753,8 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersBigTree) {
   Status status;
   std::set<ObjectIdentifier> object_identifiers;
   GetObjectIdentifiers(
-      environment_.coroutine_service(), &fake_storage_, root_identifier,
+      environment_.coroutine_service(), &fake_storage_,
+      {root_identifier, PageStorage::Location::Local()},
       callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
@@ -732,10 +767,18 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersBigTree) {
 }
 
 TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
+  CommitId commit_id = "commit0";
   std::vector<EntryChange> entries;
   ASSERT_TRUE(CreateEntryChanges(5, &entries));
   entries[3].entry.priority = KeyPriority::LAZY;
   ObjectIdentifier root_identifier = CreateTree(entries);
+
+  // List the identifiers of the values.
+  std::set<ObjectIdentifier> values;
+  for (auto& entry : entries) {
+    values.insert(entry.entry.object_identifier);
+  }
+  EXPECT_EQ(values.size(), 5u);
 
   fake_storage_.object_requests.clear();
   bool called;
@@ -744,13 +787,14 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   //          [03]
   //       /        \
   // [00, 01, 02]  [04]
-  GetObjectsFromSync(environment_.coroutine_service(), &fake_storage_, root_identifier,
+  GetObjectsFromSync(environment_.coroutine_service(), &fake_storage_,
+                     {root_identifier, PageStorage::Location::TreeNodeFromNetwork(commit_id)},
                      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
 
-  std::vector<ObjectIdentifier> object_requests;
+  std::vector<std::pair<ObjectIdentifier, PageStorage::Location>> object_requests;
   std::copy(fake_storage_.object_requests.begin(), fake_storage_.object_requests.end(),
             std::back_inserter(object_requests));
   // There are 8 objects: 3 nodes and 4 eager values and 1 lazy. Except from
@@ -759,17 +803,23 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
 
   std::set<ObjectIdentifier> object_identifiers;
   GetObjectIdentifiers(
-      environment_.coroutine_service(), &fake_storage_, root_identifier,
+      environment_.coroutine_service(), &fake_storage_,
+      {root_identifier, PageStorage::Location::Local()},
       callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
   ASSERT_EQ(object_identifiers.size(), 3 + 5u);
-  for (ObjectIdentifier& identifier : object_requests) {
+  for (auto& [identifier, location] : object_requests) {
     // entries[3] contains the lazy value.
-    if (identifier != entries[3].entry.object_identifier) {
-      EXPECT_TRUE(object_identifiers.find(identifier) != object_identifiers.end());
+    EXPECT_TRUE(identifier != entries[3].entry.object_identifier);
+    if (values.find(identifier) != values.end()) {
+      EXPECT_TRUE(location.is_value_from_network());
+    } else {
+      ASSERT_TRUE(location.is_tree_node_from_network());
+      EXPECT_EQ(location.in_commit(), commit_id);
     }
+    EXPECT_TRUE(object_identifiers.find(identifier) != object_identifiers.end());
   }
 }
 
@@ -785,8 +835,9 @@ TEST_F(BTreeUtilsTest, ForEachEmptyTree) {
     EXPECT_EQ(status, Status::OK);
     QuitLoop();
   };
-  ForEachEntry(environment_.coroutine_service(), &fake_storage_, root_identifier, "",
-               std::move(on_next), std::move(on_done));
+  ForEachEntry(environment_.coroutine_service(), &fake_storage_,
+               {root_identifier, PageStorage::Location::Local()}, "", std::move(on_next),
+               std::move(on_done));
   RunLoopFor(kSufficientDelay);
 }
 
@@ -806,8 +857,8 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
     EXPECT_EQ(status, Status::OK);
     QuitLoop();
   };
-  ForEachEntry(environment_.coroutine_service(), &fake_storage_, root_identifier, "", on_next,
-               on_done);
+  ForEachEntry(environment_.coroutine_service(), &fake_storage_,
+               {root_identifier, PageStorage::Location::Local()}, "", on_next, on_done);
   RunLoopFor(kSufficientDelay);
 }
 
@@ -832,8 +883,8 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
     EXPECT_EQ(current_key, 40);
     QuitLoop();
   };
-  ForEachEntry(environment_.coroutine_service(), &fake_storage_, root_identifier, prefix, on_next,
-               on_done);
+  ForEachEntry(environment_.coroutine_service(), &fake_storage_,
+               {root_identifier, PageStorage::Location::Local()}, prefix, on_next, on_done);
   RunLoopFor(kSufficientDelay);
 }
 

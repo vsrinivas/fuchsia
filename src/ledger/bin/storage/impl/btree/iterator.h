@@ -38,7 +38,7 @@ class BTreeIterator {
   BTreeIterator& operator=(BTreeIterator&& other) noexcept;
 
   // Initializes the iterator with the root node of the tree.
-  Status Init(ObjectIdentifier node_identifier);
+  Status Init(LocatedObjectIdentifier node_identifier);
 
   // Skips the iteration until the first key that is greater than or equal to
   // |min_key|.
@@ -87,6 +87,8 @@ class BTreeIterator {
   Status Descend(const ObjectIdentifier& node_identifier);
 
   SynchronousStorage* storage_;
+  // The location the nodes may be read from.
+  PageStorage::Location location_ = PageStorage::Location::Local();
   // Stack representing the current iteration state. Each level represents the
   // current node in the B-Tree, and the index currently looked at. If
   // |descending_| is |true|, the index is the child index, otherwise it is the
@@ -101,14 +103,15 @@ class BTreeIterator {
 // entries in the tree. After a successfull call, |callback| will be called
 // with the set of results.
 void GetObjectIdentifiers(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-                          ObjectIdentifier root_identifier,
+                          LocatedObjectIdentifier root_identifier,
                           fit::function<void(Status, std::set<ObjectIdentifier>)> callback);
 
 // Tries to download all tree nodes and values with |EAGER| priority that are
 // not locally available from sync. To do this |PageStorage::GetObject| is
 // called for all corresponding objects.
 void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-                        ObjectIdentifier root_identifier, fit::function<void(Status)> callback);
+                        LocatedObjectIdentifier root_identifier,
+                        fit::function<void(Status)> callback);
 
 // Iterates through the nodes of the tree with the given root and calls
 // |on_next| on found entries with a key equal to or greater than |min_key|. The
@@ -117,7 +120,7 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service, PageStor
 // made. |on_done| is called once, upon successfull completion, i.e. when there
 // are no more elements or iteration was interrupted, or if an error occurs.
 void ForEachEntry(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-                  ObjectIdentifier root_identifier, std::string min_key,
+                  LocatedObjectIdentifier root_identifier, std::string min_key,
                   fit::function<bool(EntryAndNodeIdentifier)> on_next,
                   fit::function<void(Status)> on_done);
 

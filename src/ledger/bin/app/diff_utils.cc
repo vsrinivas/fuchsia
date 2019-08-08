@@ -55,7 +55,7 @@ ValuePtr GetValueFromEntry(storage::PageStorage* const storage,
   }
   PageUtils::ResolveObjectIdentifierAsBuffer(
       storage, entry->object_identifier, 0u, std::numeric_limits<int64_t>::max(),
-      storage::PageStorage::Location::LOCAL, std::move(callback));
+      storage::PageStorage::Location::Local(), std::move(callback));
   return value;
 }
 
@@ -67,7 +67,7 @@ void GetOptionalValueFromReference(
     fit::function<void(Status, std::unique_ptr<fuchsia::mem::Buffer>)> callback) {
   PageUtils::ResolveObjectIdentifierAsBuffer(
       storage, object_identifier, 0u, std::numeric_limits<int64_t>::max(),
-      storage::PageStorage::Location::LOCAL,
+      storage::PageStorage::Location::Local(),
       [priority, callback = std::move(callback)](Status status, fsl::SizedVmo vmo) {
         if ((status == Status::INTERNAL_NOT_FOUND) && (priority == Priority::LAZY)) {
           callback(Status::OK, nullptr);

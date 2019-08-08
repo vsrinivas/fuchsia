@@ -18,6 +18,12 @@
 namespace storage {
 namespace btree {
 
+// The identifier for a node of the B-tree, with a location where it can be searched.
+struct LocatedObjectIdentifier {
+  ObjectIdentifier identifier;
+  PageStorage::Location location;
+};
+
 // A node of the B-Tree holding the commit contents.
 class TreeNode {
  public:
@@ -25,7 +31,7 @@ class TreeNode {
 
   // Creates a |TreeNode| object in |page_storage| for an existing node and
   // calls the given |callback| with the returned status and node.
-  static void FromIdentifier(PageStorage* page_storage, ObjectIdentifier identifier,
+  static void FromIdentifier(PageStorage* page_storage, LocatedObjectIdentifier identifier,
                              fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
 
   // Creates a |TreeNode| object in |page_storage| with the given entries and

@@ -165,7 +165,7 @@ StorageTest::~StorageTest() {}
   }
 
   std::unique_ptr<const Object> result;
-  GetStorage()->GetObject(object_identifier, PageStorage::Location::LOCAL,
+  GetStorage()->GetObject(object_identifier, PageStorage::Location::Local(),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   RunLoopFor(kSufficientDelay);
   if (!called) {
@@ -242,12 +242,13 @@ StorageTest::~StorageTest() {}
 }
 
 ::testing::AssertionResult StorageTest::CreateNodeFromIdentifier(
-    ObjectIdentifier identifier, std::unique_ptr<const btree::TreeNode>* node) {
+    ObjectIdentifier identifier, PageStorage::Location location,
+    std::unique_ptr<const btree::TreeNode>* node) {
   bool called;
   Status status;
   std::unique_ptr<const btree::TreeNode> result;
   btree::TreeNode::FromIdentifier(
-      GetStorage(), identifier,
+      GetStorage(), {std::move(identifier), std::move(location)},
       callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   RunLoopFor(kSufficientDelay);
   if (!called) {
@@ -278,7 +279,7 @@ StorageTest::~StorageTest() {}
   if (status != Status::OK) {
     return ::testing::AssertionFailure() << "TreeNode::FromEntries failed with status " << status;
   }
-  return CreateNodeFromIdentifier(std::move(identifier), node);
+  return CreateNodeFromIdentifier(std::move(identifier), PageStorage::Location::Local(), node);
 }
 
 ::testing::AssertionResult StorageTest::CreateTreeFromChanges(
@@ -290,7 +291,8 @@ StorageTest::~StorageTest() {}
   coroutine::CoroutineManager coroutine_manager(environment_.coroutine_service());
 
   coroutine_manager.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
-    status = btree::ApplyChanges(handler, GetStorage(), base_node_identifier, entries,
+    status = btree::ApplyChanges(handler, GetStorage(),
+                                 {base_node_identifier, PageStorage::Location::Local()}, entries,
                                  new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
     called = true;
   });

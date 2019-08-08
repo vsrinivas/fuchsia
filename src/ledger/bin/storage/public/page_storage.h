@@ -41,7 +41,45 @@ class PageStorage : public PageSyncClient {
   };
 
   // Location where to search an object. See |GetObject| call for usage.
-  enum Location { LOCAL, NETWORK };
+  class Location {
+   public:
+    Location();
+
+    // Object should only be searched locally.
+    static Location Local();
+    // Object is from a value and should be searched both locally and from the network.
+    //
+    // Compatibility: during the transition to diffs, using |ValueFromNetwork| as a location for a
+    // tree node is valid, and indicates that this object is expected to be present in the cloud and
+    // should be fetched using |GetObject|.
+    // TODO(LE-823): remove once transition to diffs is complete.
+    static Location ValueFromNetwork();
+    // Object is from a tree node and should be searched both locally and from the
+    // network. |in_commit| is the identifier of a commit that has the object as part of a tree
+    // node.
+    static Location TreeNodeFromNetwork(CommitId in_commit);
+
+    bool is_local() const;
+    bool is_value_from_network() const;
+    bool is_tree_node_from_network() const;
+    bool is_network() const;
+    const CommitId& in_commit() const;
+
+   private:
+    enum class Tag {
+      LOCAL,
+      NETWORK_VALUE,
+      NETWORK_TREE_NODE,
+    };
+
+    Location(Tag flag, CommitId in_commit);
+    friend bool operator==(const Location& lhs, const Location& rhs);
+    friend bool operator<(const Location& lhs, const Location& rhs);
+
+    Tag tag_;
+    // Only valid if |tag_| is |NETWORK_TREE_NODE|.
+    CommitId in_commit_;
+  };
 
   PageStorage() {}
   ~PageStorage() override {}
@@ -251,6 +289,10 @@ class PageStorage : public PageSyncClient {
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageStorage);
 };
+
+bool operator==(const PageStorage::Location& lhs, const PageStorage::Location& rhs);
+bool operator!=(const PageStorage::Location& lhs, const PageStorage::Location& rhs);
+bool operator<(const PageStorage::Location& lhs, const PageStorage::Location& rhs);
 
 }  // namespace storage
 

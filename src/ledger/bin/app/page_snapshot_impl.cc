@@ -143,7 +143,7 @@ void FillEntries(
     }
     context->entries.push_back(CreateEntry<EntryType>(entry));
     page_storage->GetObject(
-        entry.object_identifier, storage::PageStorage::Location::LOCAL,
+        entry.object_identifier, storage::PageStorage::Location::Local(),
         [priority = entry.priority, waiter_callback = waiter->NewCallback()](
             Status status, std::unique_ptr<const storage::Object> object) {
           if (status == Status::INTERNAL_NOT_FOUND && priority == storage::KeyPriority::LAZY) {
@@ -324,7 +324,7 @@ void PageSnapshotImpl::Get(
         }
         PageUtils::ResolveObjectIdentifierAsBuffer(
             page_storage_, entry.object_identifier, 0u, std::numeric_limits<int64_t>::max(),
-            storage::PageStorage::Location::LOCAL,
+            storage::PageStorage::Location::Local(),
             [callback = std::move(callback)](Status status, fsl::SizedVmo data) {
               if (status == Status::INTERNAL_NOT_FOUND) {
                 callback(Status::OK, ToErrorResult<fuchsia::ledger::PageSnapshot_Get_Result>(
@@ -360,7 +360,7 @@ void PageSnapshotImpl::GetInline(
           return;
         }
         PageUtils::ResolveObjectIdentifierAsStringView(
-            page_storage_, entry.object_identifier, storage::PageStorage::Location::LOCAL,
+            page_storage_, entry.object_identifier, storage::PageStorage::Location::Local(),
             [callback = std::move(callback)](Status status, fxl::StringView data_view) {
               if (status == Status::INTERNAL_NOT_FOUND) {
                 callback(Status::OK, ToErrorResult<fuchsia::ledger::PageSnapshot_GetInline_Result>(
@@ -425,7 +425,7 @@ void PageSnapshotImpl::FetchPartial(
 
         PageUtils::ResolveObjectIdentifierAsBuffer(
             page_storage_, entry.object_identifier, offset, max_size,
-            storage::PageStorage::Location::NETWORK,
+            storage::PageStorage::Location::ValueFromNetwork(),
             [callback = std::move(callback)](Status status, fsl::SizedVmo data) {
               if (status == Status::NETWORK_ERROR) {
                 callback(Status::OK,

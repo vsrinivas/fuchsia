@@ -49,7 +49,7 @@ class TreeNodeTest : public StorageTest {
     ObjectIdentifier root_identifier;
     EXPECT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
     std::unique_ptr<const TreeNode> node;
-    EXPECT_TRUE(CreateNodeFromIdentifier(root_identifier, &node));
+    EXPECT_TRUE(CreateNodeFromIdentifier(root_identifier, PageStorage::Location::Local(), &node));
     return node;
   }
 
@@ -80,7 +80,7 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   Status status;
   std::unique_ptr<const TreeNode> found_node;
   TreeNode::FromIdentifier(
-      &fake_storage_, node->GetIdentifier(),
+      &fake_storage_, {node->GetIdentifier(), PageStorage::Location::Local()},
       callback::Capture(callback::SetWhenCalled(&called), &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
@@ -89,7 +89,8 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
 
   TreeNode::FromIdentifier(
       &fake_storage_,
-      RandomObjectIdentifier(environment_.random(), fake_storage_.GetObjectIdentifierFactory()),
+      {RandomObjectIdentifier(environment_.random(), fake_storage_.GetObjectIdentifierFactory()),
+       PageStorage::Location::Local()},
       callback::Capture(callback::SetWhenCalled(&called), &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
@@ -149,14 +150,15 @@ TEST_F(TreeNodeTest, Serialization) {
   bool called;
   Status status;
   std::unique_ptr<const Object> object;
-  fake_storage_.GetObject(node->GetIdentifier(), PageStorage::Location::LOCAL,
+  fake_storage_.GetObject(node->GetIdentifier(), PageStorage::Location::Local(),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &object));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
   std::unique_ptr<const TreeNode> retrieved_node;
   EXPECT_EQ(object->GetIdentifier(), node->GetIdentifier());
-  ASSERT_TRUE(CreateNodeFromIdentifier(node->GetIdentifier(), &retrieved_node));
+  ASSERT_TRUE(CreateNodeFromIdentifier(node->GetIdentifier(), PageStorage::Location::Local(),
+                                       &retrieved_node));
 
   fxl::StringView data;
   EXPECT_EQ(object->GetData(&data), Status::OK);

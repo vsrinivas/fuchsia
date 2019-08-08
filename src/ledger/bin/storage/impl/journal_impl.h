@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 
+#include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/journal.h"
@@ -76,7 +77,8 @@ class JournalImpl : public Journal {
   // - a null commit if the operation is a no-op.
   Status CreateCommitFromChanges(coroutine::CoroutineHandler* handler,
                                  std::vector<std::unique_ptr<const storage::Commit>> parents,
-                                 ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
+                                 btree::LocatedObjectIdentifier root_identifier,
+                                 std::vector<EntryChange> changes,
                                  std::unique_ptr<const storage::Commit>* commit,
                                  std::vector<ObjectIdentifier>* objects_to_sync);
 

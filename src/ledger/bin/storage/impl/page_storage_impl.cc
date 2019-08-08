@@ -615,7 +615,9 @@ void PageStorageImpl::GetCommitContents(const Commit& commit, std::string min_ke
                                         fit::function<bool(Entry)> on_next,
                                         fit::function<void(Status)> on_done) {
   btree::ForEachEntry(
-      environment_->coroutine_service(), this, commit.GetRootIdentifier(), min_key,
+      environment_->coroutine_service(), this,
+      {commit.GetRootIdentifier(), PageStorage::Location::TreeNodeFromNetwork(commit.GetId())},
+      min_key,
       [on_next = std::move(on_next)](btree::EntryAndNodeIdentifier next) {
         return on_next(next.entry);
       },
@@ -644,8 +646,10 @@ void PageStorageImpl::GetEntryFromCommit(const Commit& commit, std::string key,
     }
     callback(s, Entry());
   };
-  btree::ForEachEntry(environment_->coroutine_service(), this, commit.GetRootIdentifier(),
-                      std::move(key), std::move(on_next), std::move(on_done));
+  btree::ForEachEntry(
+      environment_->coroutine_service(), this,
+      {commit.GetRootIdentifier(), PageStorage::Location::TreeNodeFromNetwork(commit.GetId())},
+      std::move(key), std::move(on_next), std::move(on_done));
 }
 
 void PageStorageImpl::GetDiffForCloud(
@@ -694,10 +698,12 @@ void PageStorageImpl::GetDiffForCloud(
                     callback(status, base_id, std::move(*changes));
                   };
 
-                  btree::ForEachTwoWayDiff(environment_->coroutine_service(), this,
-                                           base_commit->GetRootIdentifier(),
-                                           target_commit->GetRootIdentifier(), "",
-                                           std::move(on_next_diff), std::move(on_done));
+                  // We expect both commits to be present locally.
+                  btree::ForEachTwoWayDiff(
+                      environment_->coroutine_service(), this,
+                      {base_commit->GetRootIdentifier(), PageStorage::Location::Local()},
+                      {target_commit->GetRootIdentifier(), PageStorage::Location::Local()}, "",
+                      std::move(on_next_diff), std::move(on_done));
                 }));
 }
 
@@ -705,9 +711,12 @@ void PageStorageImpl::GetCommitContentsDiff(const Commit& base_commit, const Com
                                             std::string min_key,
                                             fit::function<bool(EntryChange)> on_next_diff,
                                             fit::function<void(Status)> on_done) {
-  btree::ForEachDiff(environment_->coroutine_service(), this, base_commit.GetRootIdentifier(),
-                     other_commit.GetRootIdentifier(), std::move(min_key), std::move(on_next_diff),
-                     std::move(on_done));
+  btree::ForEachDiff(environment_->coroutine_service(), this,
+                     {base_commit.GetRootIdentifier(),
+                      PageStorage::Location::TreeNodeFromNetwork(base_commit.GetId())},
+                     {other_commit.GetRootIdentifier(),
+                      PageStorage::Location::TreeNodeFromNetwork(other_commit.GetId())},
+                     std::move(min_key), std::move(on_next_diff), std::move(on_done));
 }
 
 void PageStorageImpl::GetThreeWayContentsDiff(const Commit& base_commit, const Commit& left_commit,
@@ -715,9 +724,13 @@ void PageStorageImpl::GetThreeWayContentsDiff(const Commit& base_commit, const C
                                               fit::function<bool(ThreeWayChange)> on_next_diff,
                                               fit::function<void(Status)> on_done) {
   btree::ForEachThreeWayDiff(environment_->coroutine_service(), this,
-                             base_commit.GetRootIdentifier(), left_commit.GetRootIdentifier(),
-                             right_commit.GetRootIdentifier(), std::move(min_key),
-                             std::move(on_next_diff), std::move(on_done));
+                             {base_commit.GetRootIdentifier(),
+                              PageStorage::Location::TreeNodeFromNetwork(base_commit.GetId())},
+                             {left_commit.GetRootIdentifier(),
+                              PageStorage::Location::TreeNodeFromNetwork(left_commit.GetId())},
+                             {right_commit.GetRootIdentifier(),
+                              PageStorage::Location::TreeNodeFromNetwork(right_commit.GetId())},
+                             std::move(min_key), std::move(on_next_diff), std::move(on_done));
 }
 
 void PageStorageImpl::NotifyWatchersOfNewCommits(
@@ -976,12 +989,12 @@ void PageStorageImpl::GetOrDownloadPiece(
     }
     FXL_DCHECK(piece == nullptr);
     // An unexpected error occured.
-    if (status != Status::INTERNAL_NOT_FOUND || location == Location::LOCAL) {
+    if (status != Status::INTERNAL_NOT_FOUND || location.is_local()) {
       callback(status, nullptr, {});
       return;
     }
     // Object not found locally, attempt to download it.
-    FXL_DCHECK(location == Location::NETWORK);
+    FXL_DCHECK(location.is_network());
     if (!page_sync_) {
       callback(Status::NETWORK_ERROR, nullptr, {});
       return;
@@ -1237,7 +1250,9 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
     btree::GetObjectsFromSync(environment_->coroutine_service(), this,
-                              leaf.second->GetRootIdentifier(), waiter->NewCallback());
+                              {leaf.second->GetRootIdentifier(),
+                               PageStorage::Location::TreeNodeFromNetwork(leaf.second->GetId())},
+                              waiter->NewCallback());
   }
 
   Status waiter_status;

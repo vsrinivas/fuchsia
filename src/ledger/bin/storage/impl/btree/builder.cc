@@ -9,6 +9,7 @@
 
 #include "src/ledger/bin/storage/impl/btree/internal_helper.h"
 #include "src/ledger/bin/storage/impl/btree/synchronous_storage.h"
+#include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -57,7 +58,8 @@ constexpr NodeLevelCalculator kDefaultNodeLevelCalculator = {&GetNodeLevel};
 class NodeBuilder {
  public:
   // Creates a NodeBuilder from the id of a tree node.
-  static Status FromIdentifier(SynchronousStorage* page_storage, ObjectIdentifier object_identifier,
+  static Status FromIdentifier(SynchronousStorage* page_storage,
+                               LocatedObjectIdentifier object_identifier,
                                NodeBuilder* node_builder);
 
   // Creates a null builder.
@@ -86,7 +88,8 @@ class NodeBuilder {
     NULL_NODE,
   };
 
-  static NodeBuilder CreateExistingBuilder(uint8_t level, ObjectIdentifier object_identifier) {
+  static NodeBuilder CreateExistingBuilder(uint8_t level,
+                                           LocatedObjectIdentifier object_identifier) {
     return NodeBuilder(BuilderType::EXISTING_NODE, level, std::move(object_identifier), {}, {});
   }
 
@@ -98,11 +101,12 @@ class NodeBuilder {
     return NodeBuilder(BuilderType::NEW_NODE, level, {}, std::move(entries), std::move(children));
   }
 
-  NodeBuilder(BuilderType type, uint8_t level, ObjectIdentifier object_identifier,
+  NodeBuilder(BuilderType type, uint8_t level, LocatedObjectIdentifier object_identifier,
               std::vector<Entry> entries, std::vector<NodeBuilder> children)
       : type_(type),
         level_(level),
-        object_identifier_(std::move(object_identifier)),
+        object_identifier_(std::move(object_identifier.identifier)),
+        location_(std::move(object_identifier.location)),
         entries_(std::move(entries)),
         children_(std::move(children)) {
     FXL_DCHECK(Validate());
@@ -133,7 +137,7 @@ class NodeBuilder {
 
   // Extract the entries and children from a TreeNode.
   static void ExtractContent(const TreeNode& node, std::vector<Entry>* entries,
-                             std::vector<NodeBuilder>* children);
+                             std::vector<NodeBuilder>* children, PageStorage::Location location);
 
   // Validate that the content of this builder follows the expected constraints.
   bool Validate() {
@@ -190,6 +194,8 @@ class NodeBuilder {
   BuilderType type_ = BuilderType::NULL_NODE;
   uint8_t level_;
   ObjectIdentifier object_identifier_;
+  // The location from which child nodes will be searched.
+  PageStorage::Location location_;
   std::vector<Entry> entries_;
   std::vector<NodeBuilder> children_;
 
@@ -197,14 +203,15 @@ class NodeBuilder {
 };
 
 Status NodeBuilder::FromIdentifier(SynchronousStorage* page_storage,
-                                   ObjectIdentifier object_identifier, NodeBuilder* node_builder) {
+                                   LocatedObjectIdentifier object_identifier,
+                                   NodeBuilder* node_builder) {
   std::unique_ptr<const TreeNode> node;
   RETURN_ON_ERROR(page_storage->TreeNodeFromIdentifier(object_identifier, &node));
   FXL_DCHECK(node);
 
   std::vector<Entry> entries;
   std::vector<NodeBuilder> children;
-  ExtractContent(*node, &entries, &children);
+  ExtractContent(*node, &entries, &children, object_identifier.location);
   *node_builder =
       NodeBuilder(BuilderType::EXISTING_NODE, node->level(), std::move(object_identifier),
                   std::move(entries), std::move(children));
@@ -291,16 +298,18 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage, ObjectIdentifier* ob
           children[index] = sub_child.object_identifier_;
         }
       }
-      TreeNode::FromEntries(page_storage->page_storage(), child->level_, child->entries_, children,
-                            [new_identifiers, child, callback = waiter->NewCallback()](
-                                Status status, ObjectIdentifier object_identifier) {
-                              if (status == Status::OK) {
-                                child->type_ = BuilderType::EXISTING_NODE;
-                                child->object_identifier_ = object_identifier;
-                                new_identifiers->insert(child->object_identifier_);
-                              }
-                              callback(status);
-                            });
+      TreeNode::FromEntries(
+          page_storage->page_storage(), child->level_, child->entries_, children,
+          [new_identifiers, child, location = location_, callback = waiter->NewCallback()](
+              Status status, ObjectIdentifier object_identifier) {
+            if (status == Status::OK) {
+              child->type_ = BuilderType::EXISTING_NODE;
+              child->object_identifier_ = object_identifier;
+              child->location_ = location;
+              new_identifiers->insert(child->object_identifier_);
+            }
+            callback(status);
+          });
     }
     Status status;
 
@@ -330,10 +339,10 @@ Status NodeBuilder::ComputeContent(SynchronousStorage* page_storage) {
   FXL_DCHECK(type_ == BuilderType::EXISTING_NODE);
 
   std::unique_ptr<const TreeNode> node;
-  RETURN_ON_ERROR(page_storage->TreeNodeFromIdentifier(object_identifier_, &node));
+  RETURN_ON_ERROR(page_storage->TreeNodeFromIdentifier({object_identifier_, location_}, &node));
   FXL_DCHECK(node);
 
-  ExtractContent(*node, &entries_, &children_);
+  ExtractContent(*node, &entries_, &children_, location_);
   return Status::OK;
 }
 
@@ -528,7 +537,8 @@ Status NodeBuilder::Merge(SynchronousStorage* page_storage, NodeBuilder other) {
 }
 
 void NodeBuilder::ExtractContent(const TreeNode& node, std::vector<Entry>* entries,
-                                 std::vector<NodeBuilder>* children) {
+                                 std::vector<NodeBuilder>* children,
+                                 PageStorage::Location location) {
   FXL_DCHECK(entries);
   FXL_DCHECK(children);
   *entries = std::vector<Entry>(node.entries().begin(), node.entries().end());
@@ -538,7 +548,8 @@ void NodeBuilder::ExtractContent(const TreeNode& node, std::vector<Entry>* entri
     for (; next_index < child.first; ++next_index) {
       children->push_back(NodeBuilder());
     }
-    children->push_back(NodeBuilder::CreateExistingBuilder(node.level() - 1, child.second));
+    children->push_back(
+        NodeBuilder::CreateExistingBuilder(node.level() - 1, {child.second, location}));
     ++next_index;
   }
   for (; next_index <= entries->size(); ++next_index) {
@@ -568,11 +579,11 @@ Status ApplyChangesOnRoot(const NodeLevelCalculator* node_level_calculator,
 const NodeLevelCalculator* GetDefaultNodeLevelCalculator() { return &kDefaultNodeLevelCalculator; }
 
 Status ApplyChanges(coroutine::CoroutineHandler* handler, PageStorage* page_storage,
-                    ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
+                    LocatedObjectIdentifier root_identifier, std::vector<EntryChange> changes,
                     ObjectIdentifier* new_root_identifier,
                     std::set<ObjectIdentifier>* new_identifiers,
                     const NodeLevelCalculator* node_level_calculator) {
-  FXL_DCHECK(storage::IsDigestValid(root_identifier.object_digest()));
+  FXL_DCHECK(storage::IsDigestValid(root_identifier.identifier.object_digest()));
   SynchronousStorage storage(page_storage, handler);
   new_identifiers->clear();
   NodeBuilder root;

@@ -21,16 +21,16 @@ namespace btree {
 // immediately stop the iteration. |on_done| is called once, upon successfull completion, i.e. when
 // there are no more differences or iteration was interrupted, or if an error occurs.
 void ForEachDiff(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-                 ObjectIdentifier base_root_identifier, ObjectIdentifier other_root_identifier,
-                 std::string min_key, fit::function<bool(EntryChange)> on_next,
-                 fit::function<void(Status)> on_done);
+                 LocatedObjectIdentifier base_root_identifier,
+                 LocatedObjectIdentifier other_root_identifier, std::string min_key,
+                 fit::function<bool(EntryChange)> on_next, fit::function<void(Status)> on_done);
 
 // Similarly to |ForEachDiff|, iterates through the differences between two trees given their root
 // ids and calls |on_next| on found differences. For each difference found, returns the TwoWayChange
 // entry, allowing to identify both the previous and updated states.
 void ForEachTwoWayDiff(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-                       ObjectIdentifier base_root_identifier,
-                       ObjectIdentifier other_root_identifier, std::string min_key,
+                       LocatedObjectIdentifier base_root_identifier,
+                       LocatedObjectIdentifier other_root_identifier, std::string min_key,
                        fit::function<bool(TwoWayChange)> on_next,
                        fit::function<void(Status)> on_done);
 
@@ -39,9 +39,9 @@ void ForEachTwoWayDiff(coroutine::CoroutineService* coroutine_service, PageStora
 // the iteration. |on_done| is called once, upon successful completion, i.e. when there are no more
 // differences or iteration was interrupted, or if an error occurs.
 void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-                         ObjectIdentifier base_root_identifier,
-                         ObjectIdentifier left_root_identifier,
-                         ObjectIdentifier right_root_identifier, std::string min_key,
+                         LocatedObjectIdentifier base_root_identifier,
+                         LocatedObjectIdentifier left_root_identifier,
+                         LocatedObjectIdentifier right_root_identifier, std::string min_key,
                          fit::function<bool(ThreeWayChange)> on_next,
                          fit::function<void(Status)> on_done);
 

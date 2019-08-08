@@ -133,6 +133,7 @@ class StorageTest : public ledger::TestWithEnvironment {
 
   // Returns the tree node corresponding to the given id.
   ::testing::AssertionResult CreateNodeFromIdentifier(ObjectIdentifier identifier,
+                                                      PageStorage::Location location,
                                                       std::unique_ptr<const btree::TreeNode>* node);
 
   // Creates a new tree node from the given entries and children and updates

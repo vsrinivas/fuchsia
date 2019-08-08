@@ -60,10 +60,10 @@ TreeNode::TreeNode(ObjectIdentifier identifier, uint8_t level, std::vector<Entry
 TreeNode::~TreeNode() {}
 
 void TreeNode::FromIdentifier(
-    PageStorage* page_storage, ObjectIdentifier identifier,
+    PageStorage* page_storage, LocatedObjectIdentifier identifier,
     fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
-  page_storage->GetObject(identifier, PageStorage::Location::NETWORK,
-                          [identifier, callback = std::move(callback)](
+  page_storage->GetObject(std::move(identifier.identifier), std::move(identifier.location),
+                          [callback = std::move(callback)](
                               Status status, std::unique_ptr<const Object> object) mutable {
                             if (status != Status::OK) {
                               callback(status, nullptr);

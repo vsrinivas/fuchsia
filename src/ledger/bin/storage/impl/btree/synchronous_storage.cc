@@ -16,7 +16,7 @@ SynchronousStorage::SynchronousStorage(PageStorage* page_storage,
                                        coroutine::CoroutineHandler* handler)
     : page_storage_(page_storage), handler_(handler) {}
 
-Status SynchronousStorage::TreeNodeFromIdentifier(ObjectIdentifier object_identifier,
+Status SynchronousStorage::TreeNodeFromIdentifier(LocatedObjectIdentifier object_identifier,
                                                   std::unique_ptr<const TreeNode>* result) {
   Status status;
   if (coroutine::SyncCall(
@@ -26,22 +26,6 @@ Status SynchronousStorage::TreeNodeFromIdentifier(ObjectIdentifier object_identi
             TreeNode::FromIdentifier(page_storage_, object_identifier, std::move(callback));
           },
           &status, result) == coroutine::ContinuationStatus::INTERRUPTED) {
-    return Status::INTERRUPTED;
-  }
-  return status;
-}
-
-Status SynchronousStorage::TreeNodesFromIdentifiers(
-    std::vector<ObjectIdentifier> object_identifiers,
-    std::vector<std::unique_ptr<const TreeNode>>* result) {
-  auto waiter =
-      fxl::MakeRefCounted<callback::Waiter<Status, std::unique_ptr<const TreeNode>>>(Status::OK);
-  for (const auto& object_identifier : object_identifiers) {
-    TreeNode::FromIdentifier(page_storage_, object_identifier, waiter->NewCallback());
-  }
-  Status status;
-  if (coroutine::Wait(handler_, std::move(waiter), &status, result) ==
-      coroutine::ContinuationStatus::INTERRUPTED) {
     return Status::INTERRUPTED;
   }
   return status;
