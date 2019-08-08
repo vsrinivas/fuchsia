@@ -25,11 +25,14 @@ import (
 	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
+
+const zeroIpAddr = header.IPv4Any
 
 type netstackImpl struct {
 	ns    *Netstack
@@ -61,12 +64,12 @@ func (ns *Netstack) getNetInterfaces2Locked() []netstack.NetInterface2 {
 	interfaces := make([]netstack.NetInterface2, 0, len(ifStates))
 	for _, ifs := range ifStates {
 		ifs.mu.Lock()
-		netinterface, err := ifs.toNetInterface2Locked()
+		netInterface, err := ifs.toNetInterface2Locked()
 		ifs.mu.Unlock()
 		if err != nil {
 			syslog.Warnf("failed to call ifs.toNetInterfaceLocked: %v", err)
 		}
-		interfaces = append(interfaces, netinterface)
+		interfaces = append(interfaces, netInterface)
 	}
 	return interfaces
 }
@@ -76,8 +79,7 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 	// Upstream reuses ErrNoLinkAddress to indicate no address can be found for the requested NIC and
 	// network protocol.
 	if err == tcpip.ErrNoLinkAddress {
-		prefixLen := ipv4.NewProtocol().DefaultPrefixLen()
-		addrWithPrefix = tcpip.AddressWithPrefix{zeroIpAddr, prefixLen}
+		addrWithPrefix = tcpip.AddressWithPrefix{Address: zeroIpAddr, PrefixLen: 0}
 	} else if err == tcpip.ErrUnknownNICID {
 		panic(fmt.Sprintf("stack.GetMainNICAddress(%d, ...): %s", ifs.nicid, err))
 	} else if err != nil {
