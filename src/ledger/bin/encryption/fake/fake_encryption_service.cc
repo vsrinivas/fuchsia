@@ -8,6 +8,8 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 
+#include <string>
+
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
@@ -19,6 +21,10 @@ std::string Encode(fxl::StringView content) { return "_" + content.ToString() + 
 std::string Decode(fxl::StringView encrypted_content) {
   return encrypted_content.substr(1, encrypted_content.size() - 2).ToString();
 }
+
+// Entry id size in bytes.
+constexpr size_t kEntryIdSize = 32u;
+
 }  // namespace
 
 storage::ObjectIdentifier MakeDefaultObjectIdentifier(storage::ObjectIdentifierFactory* factory,
@@ -89,6 +95,20 @@ void FakeEncryptionService::GetChunkingPermutation(
     fit::function<void(Status, fit::function<uint64_t(uint64_t)>)> callback) {
   auto chunking_permutation = [](uint64_t chunk_window_hash) { return chunk_window_hash + 1; };
   callback(Status::OK, std::move(chunking_permutation));
+}
+
+void FakeEncryptionService::GetEntryId(fit::function<void(Status, std::string)> callback) {
+  std::string entry_id(kEntryIdSize, '0');
+  callback(Status::OK, entry_id);
+}
+
+void FakeEncryptionService::GetEntryIdForMerge(fxl::StringView entry_name,
+                                               storage::CommitId left_parent_id,
+                                               storage::CommitId right_parent_id,
+                                               fxl::StringView operation_list,
+                                               fit::function<void(Status, std::string)> callback) {
+  std::string entry_id(kEntryIdSize, '0');
+  callback(Status::OK, entry_id);
 }
 
 std::string FakeEncryptionService::EncryptCommitSynchronous(

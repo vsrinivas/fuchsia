@@ -9,7 +9,9 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace encryption {
 namespace {
@@ -75,6 +77,25 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     *result = permutation(chunk_window_hash);
+  }
+
+  void GetEntryId(Status* status, std::string* result) {
+    bool called;
+    encryption_service_.GetEntryId(
+        callback::Capture(callback::SetWhenCalled(&called), status, result));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+  }
+
+  void GetEntryIdForMerge(fxl::StringView entry_name, storage::CommitId left_parent_id,
+                          storage::CommitId right_parent_id, fxl::StringView operation_list,
+                          Status* status, std::string* result) {
+    bool called;
+    encryption_service_.GetEntryIdForMerge(
+        entry_name, left_parent_id, right_parent_id, operation_list,
+        callback::Capture(callback::SetWhenCalled(&called), status, result));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
   }
 
   EncryptionServiceImpl encryption_service_;
@@ -144,6 +165,47 @@ TEST_F(EncryptionServiceTest, GetApplyChunkingPermutation) {
   ApplyChunkingPermutation(result, &status, &result);
   EXPECT_EQ(status, Status::OK);
   EXPECT_EQ(result, chunk_window_hash);
+}
+
+TEST_F(EncryptionServiceTest, GetEntryIdMergeCommit) {
+  storage::CommitId parent_id1 = "commit1";
+  storage::CommitId parent_id2 = "commit2";
+  std::string entry_name = "Name";
+  std::string operation_list = "AADD";
+
+  Status status;
+  std::string entry_id;
+  GetEntryIdForMerge(entry_name, parent_id1, parent_id2, operation_list, &status, &entry_id);
+  // For merge commits, calling this method with the same parameters must result in the same entry
+  // id.
+  std::string entry_id0;
+  GetEntryIdForMerge(entry_name, parent_id1, parent_id2, operation_list, &status, &entry_id0);
+  EXPECT_EQ(entry_id, entry_id0);
+
+  // Changing any of the parameters must result in different entry id.
+  std::string operation_list1 = "AD";
+  std::string entry_id1;
+  GetEntryIdForMerge(entry_name, parent_id1, parent_id2, operation_list1, &status, &entry_id1);
+  EXPECT_NE(entry_id, entry_id1);
+
+  std::string parent_id3 = "commit3";
+  std::string entry_id2;
+  GetEntryIdForMerge(entry_name, parent_id1, parent_id3, operation_list, &status, &entry_id2);
+  EXPECT_NE(entry_id, entry_id2);
+
+  std::string entry_name1 = "Surname";
+  std::string entry_id3;
+  GetEntryIdForMerge(entry_name1, parent_id1, parent_id2, operation_list, &status, &entry_id3);
+  EXPECT_NE(entry_id, entry_id3);
+}
+
+TEST_F(EncryptionServiceTest, GetEntryIdNonMergeCommit) {
+  Status status;
+  std::string entry_id1;
+  GetEntryId(&status, &entry_id1);
+  std::string entry_id2;
+  GetEntryId(&status, &entry_id2);
+  EXPECT_NE(entry_id1, entry_id2);
 }
 
 }  // namespace

@@ -9,10 +9,13 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 
+#include <algorithm>
+
 #include <flatbuffers/flatbuffers.h>
 
 #include "src/ledger/bin/encryption/impl/encrypted_commit_generated.h"
 #include "src/ledger/bin/encryption/primitives/encrypt.h"
+#include "src/ledger/bin/encryption/primitives/hmac.h"
 #include "src/ledger/bin/encryption/primitives/kdf.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -40,6 +43,9 @@ constexpr uint32_t kPerObjectDeletionScopedId = std::numeric_limits<uint32_t>::m
 constexpr size_t kRandomlyGeneratedKeySize = 16u;
 // Size of the derived keys.
 constexpr size_t kDerivedKeySize = 32u;
+
+// Entry id size in bytes.
+constexpr size_t kEntryIdSize = 32u;
 
 // Cache size values.
 constexpr size_t kKeyIndexCacheSize = 10u;
@@ -283,6 +289,36 @@ void EncryptionServiceImpl::GetChunkingPermutation(
       return chunk_window_hash ^ chunking_permutation_key;
     };
     callback(Status::OK, std::move(chunking_permutation));
+  });
+}
+
+void EncryptionServiceImpl::GetEntryId(fit::function<void(Status, std::string)> callback) {
+  std::string entry_id;
+  entry_id.resize(kEntryIdSize);
+  (environment_->random())->Draw(&entry_id[0], kEntryIdSize);
+  callback(Status::OK, entry_id);
+}
+
+void EncryptionServiceImpl::GetEntryIdForMerge(fxl::StringView entry_name,
+                                               storage::CommitId left_parent_id,
+                                               storage::CommitId right_parent_id,
+                                               fxl::StringView operation_list,
+                                               fit::function<void(Status, std::string)> callback) {
+  FXL_DCHECK(left_parent_id <= right_parent_id);
+  // TODO(LE-827): Concatenation is ineffective; consider doing it once per commit.
+  std::string input =
+      fxl::Concatenate({entry_name, left_parent_id, right_parent_id, operation_list});
+  master_keys_.Get(kDefaultKeyIndex, [this, input, callback = std::move(callback)](
+                                         Status status, const std::string& master_key) {
+    if (status != Status::OK) {
+      callback(status, "");
+      return;
+    }
+    std::string derived_key =
+        HMAC256KDF(fxl::Concatenate({master_key, namespace_id_}), kDerivedKeySize);
+    std::string hash = SHA256HMAC(derived_key, input);
+    hash.resize(kEntryIdSize);
+    callback(Status::OK, hash);
   });
 }
 

@@ -49,6 +49,12 @@ class FakeEncryptionService : public EncryptionService {
   void GetChunkingPermutation(
       fit::function<void(Status, fit::function<uint64_t(uint64_t)>)> callback) override;
 
+  void GetEntryId(fit::function<void(Status, std::string)> callback) override;
+
+  void GetEntryIdForMerge(fxl::StringView entry_name, storage::CommitId left_parent_id,
+                          storage::CommitId right_parent_id, fxl::StringView operation_list,
+                          fit::function<void(Status, std::string)> callback) override;
+
   // Synchronously encrypts the given commit.
   std::string EncryptCommitSynchronous(convert::ExtendedStringView commit_storage);
 
