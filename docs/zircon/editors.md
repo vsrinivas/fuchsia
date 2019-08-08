@@ -2,7 +2,7 @@
 
 ## YouCompleteMe
 
-[YouCompleteMe](https://valloric.github.io/YouCompleteMe/) is a semantic
+[YouCompleteMe](http://ycm-core.github.io/YouCompleteMe/) is a semantic
 code-completion engine. YouCompleteMe works natively with Vim but it can also be
 integrated with other editors through [ycmd](https://github.com/Valloric/ycmd).
 

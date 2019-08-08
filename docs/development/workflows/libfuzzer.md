@@ -440,7 +440,7 @@ become available.
 [gn fuzzer]: #the-fuzzer-gn-template
 [gn fuzzers package]: #the-fuzzers_package-gn-template
 [source-based code coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
-[clusterfuzz]: https://github.com/google/oss-fuzz/blob/master/docs/clusterfuzz.md
+[clusterfuzz]: https://github.com/google/oss-fuzz/blob/master/docs/furthur-reading/clusterfuzz.md
 [rust-fuzzing]: https://github.com/rust-fuzz/libFuzzer-sys
 [go-fuzzing]: https://github.com/dvyukov/go-fuzz
 [ubsan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html

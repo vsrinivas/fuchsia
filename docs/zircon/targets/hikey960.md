@@ -46,7 +46,7 @@ persistent instance of `fx log` to capture console output).
 + [HiKey960 Development Board User Manual](https://www.96boards.org/documentation/ConsumerEdition/HiKey960/HardwareDocs/HardwareUserManual.md.html)
 + [96boards-hikey github page](https://github.com/96boards-hikey)
 + [96boards Getting Started page](https://www.96boards.org/documentation/ConsumerEdition/HiKey960/GettingStarted/)
-+ [SoC Reference](https://github.com/96boards/documentation/raw/master/ConsumerEdition/HiKey960/HardwareDocs/HiKey960_SoC_Reference_Manual.pdf)
++ [SoC Reference](https://github.com/96boards/documentation/raw/master/consumer/hikey/hikey960/hardware-docs/HiKey960_SoC_Reference_Manual.pdf)
 + [AOSP HiKey960 Information](https://source.android.com/source/devices#hikey960)
 + [HiKey960 Schematic](http://www.lemaker.org/product-hikeysecond-download-62.html)
 
@@ -85,7 +85,7 @@ Additional tips:
 If using a __FTDI-style serial adapter cable__:
 
   + The signals are available on the 40 pin LS connector
-([reference](https://raw.githubusercontent.com/96boards/documentation/master/ConsumerEdition/HiKey960/AdditionalDocs/Images/Images_HWUserManual/HiKey960_Numbered_Front2.png))
+([reference](https://github.com/96boards/documentation/blob/master/consumer/hikey/hikey960/additional-docs/images/images-hw-user-manual/HiKey960_Numbered_Front2.png?raw=true))
     + Pin 1  - GND
     + Pin 11 - UART TX (HiKey960 --> Host)
     + PIN 13 - UART RX (HiKey960 <-- Host)
