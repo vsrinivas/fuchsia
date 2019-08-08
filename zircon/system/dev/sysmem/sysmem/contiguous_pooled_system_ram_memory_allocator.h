@@ -7,6 +7,7 @@
 #include <fbl/vector.h>
 #include <lib/zx/bti.h>
 #include <region-alloc/region-alloc.h>
+#include <zircon/limits.h>
 
 #include "allocator.h"
 
@@ -16,7 +17,12 @@ class ContiguousPooledSystemRamMemoryAllocator : public MemoryAllocator {
                                            uint64_t size, bool is_cpu_accessible);
 
   // Default to page alignment.
-  zx_status_t Init(uint32_t alignment_log2 = 12);
+  zx_status_t Init(uint32_t alignment_log2 = ZX_PAGE_SHIFT);
+
+  // TODO(MTWN-329): Use this for VDEC.
+  //
+  // This uses a physical VMO as the parent VMO.
+  zx_status_t InitPhysical(zx_paddr_t paddr);
 
   zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override;
   zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override;
@@ -33,6 +39,7 @@ class ContiguousPooledSystemRamMemoryAllocator : public MemoryAllocator {
   const zx::vmo& GetPoolVmoForTest() { return contiguous_vmo_; }
 
  private:
+  zx_status_t InitCommon(zx::vmo local_contiguous_vmo);
   void DumpPoolStats();
   Owner* const parent_device_{};
   const char* const allocation_name_{};

@@ -44,7 +44,7 @@ class Device final : public MemoryAllocator::Owner {
 
   // MemoryAllocator::Owner implementation.
   const zx::bti& bti() override;
-  // TODO(ZX-4809): This shouldn't exist, but will be needed for VDEC unless we resolve ZX-4809.
+
   zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) override;
 
   uint32_t pdev_device_info_vid();

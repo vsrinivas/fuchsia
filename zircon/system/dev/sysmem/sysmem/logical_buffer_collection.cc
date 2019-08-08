@@ -1508,29 +1508,6 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
     }
   }
 
-  if (ZX_INFO_VMO_TYPE(info.flags) == ZX_INFO_VMO_TYPE_PHYSICAL) {
-    // TODO(ZX-4809): This case shouldn't need to exist.
-    //
-    // The allocator may have created a physical VMO, which isn't compatible with
-    // ZX_VMO_CHILD_SLICE.  In that case, the allocator is responsible for its own space reclamation
-    // mechanism.  The only allocator that currently does this is
-    // ContiguousPooledSpecialRamMemoryAllocator, which is only used for VDEC, which is in turn only
-    // handed out to the coordinator+decryptor+decoder participants (still not great).
-    //
-    // This isn't really a child_vmo, but this path shouldn't exist in the first place, so tolerate
-    // the incorrect name for now.  See TODO above.
-    //
-    // The allocator will notice eventually later after this handle has gone away.  Unlike the
-    // normal path, in this case the LogicalBufferCollection will never call
-    // allocator->SetupChildVmo() or allocator->Delete().
-    //
-    // This way of allocating only sorta works, in the sense that recycling the space isn't
-    // rigorous.  Complain to the log (for VDEC only) so the issue will remain visible until fixed.
-    LogError("ZX-4809 - sending raw_parent_vmo physical VMO to sysmem clients");
-    *child_vmo = std::move(raw_parent_vmo);
-    return ZX_OK;
-  }
-
   // We immediately create the ParentVmo instance so it can take care of calling allocator->Delete()
   // if this method returns early.  We intentionally don't emplace into parent_vmos_ until
   // StartWait() has succeeded.  In turn, StartWait() requires a child VMO to have been created

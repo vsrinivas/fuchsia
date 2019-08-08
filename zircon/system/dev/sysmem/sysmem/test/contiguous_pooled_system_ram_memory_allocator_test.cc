@@ -11,6 +11,8 @@
 
 #include "contiguous_pooled_system_ram_memory_allocator.h"
 
+namespace {
+
 class FakeOwner : public MemoryAllocator::Owner {
  public:
   FakeOwner() { EXPECT_OK(fake_bti_create(bti_.reset_and_get_address())); }
@@ -26,41 +28,56 @@ class FakeOwner : public MemoryAllocator::Owner {
   zx::bti bti_;
 };
 
-namespace {
+class ContiguousPooledSystem : public zxtest::Test {
+ public:
+  ContiguousPooledSystem()
+    : allocator_(&fake_owner_, kVmoName, kVmoSize * kVmoCount, true) {
+    // nothing else to do here
+  }
 
-TEST(ContiguousPooledSystem, Full) {
-  FakeOwner owner;
-  constexpr uint32_t kVmoSize = 4096;
-  constexpr uint32_t kVmoCount = 1024;
-  const char* kVmoName = "test-pool";
-  ContiguousPooledSystemRamMemoryAllocator allocator(&owner, kVmoName, kVmoSize * kVmoCount, true);
+ protected:
+   static constexpr uint32_t kVmoSize = 4096;
+   static constexpr uint32_t kVmoCount = 1024;
+   static constexpr char kVmoName[] = "test-pool";
 
-  EXPECT_OK(allocator.Init());
+   FakeOwner fake_owner_;
+   ContiguousPooledSystemRamMemoryAllocator allocator_;
+};
+
+TEST_F(ContiguousPooledSystem, VmoNamesAreSet) {
+  EXPECT_OK(allocator_.Init());
 
   char name[ZX_MAX_NAME_LEN] = {};
-  EXPECT_OK(allocator.GetPoolVmoForTest().get_property(ZX_PROP_NAME, name, sizeof(name)));
+  EXPECT_OK(allocator_.GetPoolVmoForTest().get_property(ZX_PROP_NAME, name, sizeof(name)));
   EXPECT_EQ(0u, strcmp(kVmoName, name));
+
+  zx::vmo vmo;
+  EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));
+  EXPECT_OK(vmo.get_property(ZX_PROP_NAME, name, sizeof(name)));
+  EXPECT_EQ(0u, strcmp("sysmem-contig", name));
+}
+
+TEST_F(ContiguousPooledSystem, Full) {
+  EXPECT_OK(allocator_.Init());
 
   std::vector<zx::vmo> vmos;
   for (uint32_t i = 0; i < kVmoCount; ++i) {
     zx::vmo vmo;
-    EXPECT_OK(allocator.Allocate(kVmoSize, &vmo));
-    EXPECT_OK(vmo.get_property(ZX_PROP_NAME, name, sizeof(name)));
-    EXPECT_EQ(0u, strcmp("sysmem-contig", name));
+    EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));
     vmos.push_back(std::move(vmo));
   }
 
   zx::vmo vmo;
-  EXPECT_NOT_OK(allocator.Allocate(kVmoSize, &vmo));
+  EXPECT_NOT_OK(allocator_.Allocate(kVmoSize, &vmo));
 
-  allocator.Delete(std::move(vmos[0]));
+  allocator_.Delete(std::move(vmos[0]));
 
-  EXPECT_OK(allocator.Allocate(kVmoSize, &vmos[0]));
+  EXPECT_OK(allocator_.Allocate(kVmoSize, &vmos[0]));
 
   // Destroy half of all vmos.
   for (uint32_t i = 0; i < kVmoCount; i += 2) {
     ZX_DEBUG_ASSERT(vmos[i]);
-    allocator.Delete(std::move(vmos[i]));
+    allocator_.Delete(std::move(vmos[i]));
   }
 
   // There shouldn't be enough contiguous address space for even 1 extra byte.
@@ -68,7 +85,31 @@ TEST(ContiguousPooledSystem, Full) {
   // being laid out sequentially, so isn't a fundamental check - if the
   // allocator's layout strategy changes this check might start to fail
   // without there necessarily being a real problem.
-  EXPECT_NOT_OK(allocator.Allocate(kVmoSize + 1, &vmo));
+  EXPECT_NOT_OK(allocator_.Allocate(kVmoSize + 1, &vmo));
+}
+
+TEST_F(ContiguousPooledSystem, GetPhysicalMemoryInfo) {
+  EXPECT_OK(allocator_.Init());
+
+  zx_paddr_t base;
+  size_t size;
+  ASSERT_OK(allocator_.GetPhysicalMemoryInfo(&base, &size));
+  EXPECT_EQ(base, FAKE_BTI_PHYS_ADDR);
+  EXPECT_EQ(size, kVmoSize * kVmoCount);
+}
+
+TEST_F(ContiguousPooledSystem, InitPhysical) {
+  // Using fake-bti and the FakeOwner above, it won't be a real physical VMO anyway.
+  EXPECT_OK(allocator_.InitPhysical(FAKE_BTI_PHYS_ADDR));
+
+  zx_paddr_t base;
+  size_t size;
+  ASSERT_OK(allocator_.GetPhysicalMemoryInfo(&base, &size));
+  EXPECT_EQ(base, FAKE_BTI_PHYS_ADDR);
+  EXPECT_EQ(size, kVmoSize * kVmoCount);
+
+  zx::vmo vmo;
+  EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));
 }
 
 }  // namespace

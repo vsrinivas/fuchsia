@@ -17,7 +17,6 @@ class MemoryAllocator {
   class Owner {
   public:
     virtual const zx::bti& bti() = 0;
-    // TODO(ZX-4809): This shouldn't exist, but will be needed for VDEC unless we resolve ZX-4809.
     virtual zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) = 0;
   };
 

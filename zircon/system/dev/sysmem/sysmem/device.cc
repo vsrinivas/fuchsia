@@ -368,11 +368,13 @@ zx_status_t Device::GetProtectedMemoryInfo(fidl_txn* txn) {
 
 const zx::bti& Device::bti() { return bti_; }
 
-// TODO(ZX-4809): This shouldn't exist, but will be needed for VDEC unless we resolve ZX-4809.
+// Only use this in cases where we really can't use zx::vmo::create_contiguous() because we must
+// specify a specific physical range.
 zx_status_t Device::CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) {
   zx::vmo result_vmo;
-  zx_status_t status =
-      zx_vmo_create_physical(get_root_resource(), base, size, result_vmo.reset_and_get_address());
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  zx::resource root_resource(get_root_resource());
+  zx_status_t status = zx::vmo::create_physical(root_resource, base, size, &result_vmo);
   if (status != ZX_OK) {
     return status;
   }
