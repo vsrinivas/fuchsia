@@ -10,43 +10,45 @@ import 'ssh.dart';
 
 final _log = Logger('inspect');
 
-Future<dynamic> _defaultSleep(Duration delay) => Future.delayed(delay);
-
 class Inspect {
   final Ssh ssh;
-  final Future<dynamic> Function(Duration) sleep;
 
   /// Construct an [Inspect] object.
-  Inspect(this.ssh, {this.sleep = _defaultSleep});
+  Inspect(this.ssh);
 
   /// Obtains the root inspect object for a component whose path includes
   /// [componentName].
-  Future<dynamic> inspectComponentRoot(String componentName) async {
-    var hubEntries = StringBuffer();
-    for (final entry in (await retrieveHubEntries(filter: componentName))) {
-      hubEntries.write('$entry ');
-    }
-    if (hubEntries.isEmpty) {
-      _log.severe('No components with name $componentName!');
+  ///
+  /// This is equivalent to calling retrieveHubEntries and inspectRecursively in
+  /// series.
+  /// Returns null when there are no entries matching.
+  Future<dynamic> inspectComponentRoot(Pattern componentName) async {
+    final entries = await retrieveHubEntries(filter: componentName);
+    if (entries.isEmpty) {
       return null;
     }
 
-    final jsonResult = await inspectRecursively(hubEntries.toString());
+    final jsonResult = await inspectRecursively(entries);
     if (jsonResult == null) {
-      _log.severe('Failed to inspect $componentName!');
       return null;
     }
 
     return jsonResult.single['contents']['root'];
   }
 
-  /// Retrieves the inpect node(s) of [hubEntries], recursively, as a json object.
-  Future<dynamic> inspectRecursively(String hubEntries) async {
+  /// Retrieves the inpect node(s) of [hubEntries], recursively, as a json
+  /// object.
+  ///
+  /// Returns null if there's no inspect information matching for those entries.
+  /// Otherwise a parsed JSON as formated by
+  /// //garnet/public/lib/inspect_deprecated/query/json_formatter.cc is
+  /// returned.
+  Future<dynamic> inspectRecursively(List<String> entries) async {
+    final hubEntries = entries.join(' ');
     final stringInspectResult = await _stdOutForSshCommand(
         'iquery --format=json --recursive $hubEntries');
 
     if (stringInspectResult == null) {
-      _log.severe('Failed to recursively inspect $hubEntries!');
       return null;
     }
 
@@ -56,30 +58,17 @@ class Inspect {
   /// Retrieves a list of hub entries.
   ///
   /// If [filter] is set, only those entries containing [filter] are returned.
-  Future<List<String>> retrieveHubEntries({String filter}) async {
+  /// If there are no matches, an empty list is returned.
+  Future<List<String>> retrieveHubEntries({Pattern filter}) async {
     final stringFindResult = await _stdOutForSshCommand('iquery --find /hub');
-
     if (stringFindResult == null) {
-      _log.severe('Failed to find hub!');
-      return null;
+      return [];
     }
 
-    final hubEntries = stringFindResult.split('\n').where((line) {
-      if (filter == null) {
-        return true;
-      }
-      return line.contains(filter);
-    }).toList();
-
-    if (hubEntries.isEmpty) {
-      if (filter != null) {
-        _log.severe('No hub entries with $filter in their path!');
-      } else {
-        _log.severe('No hub entries found!');
-      }
-      return null;
-    }
-    return hubEntries;
+    return stringFindResult
+        .split('\n')
+        .where((line) => filter == null || line.contains(filter))
+        .toList();
   }
 
   /// Runs [command] in an ssh process to completion.
@@ -104,7 +93,7 @@ class Inspect {
     for (var i = 0; i < retries; i++) {
       _log.info('Command failed on attempt ${i + 1} of ${retries + 1}.'
           '  Waiting ${delay.inMilliseconds}ms before trying again...');
-      await sleep(delay);
+      await Future.delayed(delay);
       final result = await attempt();
       if (result != null) {
         return result;

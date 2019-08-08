@@ -16,7 +16,6 @@ import 'package:pedantic/pedantic.dart';
 
 import 'dump.dart';
 import 'exceptions.dart';
-import 'inspect.dart';
 import 'ssh.dart';
 
 final _log = Logger('sl4f_client');
@@ -45,11 +44,7 @@ class Sl4f {
   final String target;
   final Ssh ssh;
 
-  /// This lives here for a soft API transition and should be removed in the future.
-  Inspect _inspect;
-
   Sl4f(this.target, this.ssh) : assert(target != null && target.isNotEmpty) {
-    _inspect = Inspect(ssh);
     _log.info('Target device: $target');
   }
 
@@ -172,24 +167,6 @@ class Sl4f {
     if ((await ssh.run('killall $_sl4fComponentName')).exitCode != 0) {
       _log.warning('Could not stop sl4f. Continuing.');
     }
-  }
-
-  /// Obtains the root inspect object for a component whose path includes
-  /// [componentName].
-  Future<dynamic> inspectComponentRoot(String componentName) async {
-    return await _inspect.inspectComponentRoot(componentName);
-  }
-
-  /// Retrieves the inpect node(s) of [hubEntries], recursively, as a json object.
-  Future<dynamic> inspectRecursively(String hubEntries) async {
-    return await _inspect.inspectRecursively(hubEntries);
-  }
-
-  /// Retrieves a list of hub entries.
-  ///
-  /// If [filter] is set, only those entries containing [filter] are returned.
-  Future<List<String>> retrieveHubEntries({String filter}) async {
-    return await _inspect.retrieveHubEntries(filter: filter);
   }
 
   /// Restarts the device under test.

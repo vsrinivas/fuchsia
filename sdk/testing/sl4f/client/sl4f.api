@@ -774,10 +774,6 @@
           "ConstructorDeclarationImpl": {
             "Inspect": {
               "FieldFormalParameterImpl": {
-                "this.sleep": {
-                  "name": "this.sleep",
-                  "type": "FieldFormalParameterImpl"
-                },
                 "this.ssh": {
                   "name": "this.ssh",
                   "type": "FieldFormalParameterImpl"
@@ -802,7 +798,7 @@
                   "isRequiredPositional": true,
                   "name": "componentName",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
+                  "varType": "Pattern"
                 }
               },
               "isAbstract": false,
@@ -816,7 +812,7 @@
             },
             "inspectRecursively": {
               "SimpleFormalParameterImpl": {
-                "hubEntries": {
+                "entries": {
                   "isConst": false,
                   "isFinal": false,
                   "isOptional": false,
@@ -826,9 +822,9 @@
                   "isRequired": true,
                   "isRequiredNamed": false,
                   "isRequiredPositional": true,
-                  "name": "hubEntries",
+                  "name": "entries",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
+                  "varType": "List<String>"
                 }
               },
               "isAbstract": false,
@@ -854,7 +850,7 @@
                   "isRequiredPositional": false,
                   "name": "filter",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
+                  "varType": "Pattern"
                 },
                 "line": {
                   "isConst": false,
@@ -882,14 +878,6 @@
             }
           },
           "VariableDeclarationImpl": {
-            "sleep": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "sleep",
-              "type": "VariableDeclarationImpl",
-              "varType": "Future<dynamic> Function(Duration)"
-            },
             "ssh": {
               "isConst": false,
               "isFinal": true,
@@ -1618,58 +1606,6 @@
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
-            "inspectComponentRoot": {
-              "SimpleFormalParameterImpl": {
-                "componentName": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "componentName",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "inspectComponentRoot",
-              "returnType": "Future<dynamic>",
-              "type": "MethodDeclarationImpl"
-            },
-            "inspectRecursively": {
-              "SimpleFormalParameterImpl": {
-                "hubEntries": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "hubEntries",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "inspectRecursively",
-              "returnType": "Future<dynamic>",
-              "type": "MethodDeclarationImpl"
-            },
             "reboot": {
               "isAbstract": false,
               "isGetter": false,
@@ -1718,32 +1654,6 @@
               "isStatic": false,
               "name": "request",
               "returnType": "Future<dynamic>",
-              "type": "MethodDeclarationImpl"
-            },
-            "retrieveHubEntries": {
-              "SimpleFormalParameterImpl": {
-                "filter": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": true,
-                  "isOptionalNamed": true,
-                  "isOptionalPositional": false,
-                  "isPositional": false,
-                  "isRequired": false,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": false,
-                  "name": "filter",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "retrieveHubEntries",
-              "returnType": "Future<List<String>>",
               "type": "MethodDeclarationImpl"
             },
             "startServer": {

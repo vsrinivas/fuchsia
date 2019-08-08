@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:quiver/testing/async.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
@@ -115,63 +116,36 @@ void _testRetry(
     const componentName = 'foo';
     const contentsRoot = {'faz': 'bear'};
 
-    // Pass in a fake sleep generator, that records the sleep durations.
-    final sleepDurations = <Duration>[];
-    Future<dynamic> autoCompleteSleep(Duration delay) {
-      sleepDurations.add(delay);
-      return Future.value();
-    }
+    final fakeSsh = FakeSsh(
+        findCommandStdOut: 'one\n$componentName\n',
+        inspectCommandContentsRoot: [
+          {
+            'contents': {'root': contentsRoot}
+          }
+        ],
+        expectedInspectSuffix: '$componentName',
+        findCommandExitCode: findCommandExitCode,
+        inspectCommandExitCode: inspectCommandExitCode);
 
-    final inspect = Inspect(
-      FakeSsh(
-          findCommandStdOut: 'one\n$componentName\n',
-          inspectCommandContentsRoot: [
-            {
-              'contents': {'root': contentsRoot}
-            }
-          ],
-          expectedInspectSuffix: '$componentName',
-          findCommandExitCode: findCommandExitCode,
-          inspectCommandExitCode: inspectCommandExitCode),
-      sleep: autoCompleteSleep,
-    );
+    final inspect = Inspect(fakeSsh);
 
-    // Failing due to find causes an exception.
-    if (shouldFailDueToFind) {
-      try {
-        await inspect.inspectComponentRoot(componentName);
+    FakeAsync().run((fakeAsync) {
+      final result = inspect.inspectComponentRoot(componentName);
+      fakeAsync.flushTimers();
 
-        fail('inspectComponentRoot didn\'t throw exception as was expected');
-        // ignore: avoid_catching_errors
-      } on Error {
-        // Pass through for expected exception.
-      }
-    } else {
-      final result = await inspect.inspectComponentRoot(componentName);
-
-      // Failing due to inspect returns null.
-      if (shouldFailDueToInspect) {
-        expect(result, isNull);
+      if (shouldFailDueToFind || shouldFailDueToInspect) {
+        expect(result, completion(isNull));
       } else {
-        expect(result, equals(contentsRoot));
+        expect(result, completion(equals(contentsRoot)));
       }
-    }
 
-    // Verify all sleep durations are multiples of two of each other.
-    // Find sleeps happen before inspect sleeps.
+      // Needed so that 'completion' above evaluates.
+      fakeAsync.flushMicrotasks();
+    });
+
+    expect(fakeSsh.findCommandCount, equals(findCommandExitCode.length));
     expect(
-        sleepDurations.length,
-        equals(findCommandExitCode.length -
-            1 +
-            inspectCommandExitCode.length -
-            1));
-    for (int i = 0; i < findCommandExitCode.length - 2; i++) {
-      expect(sleepDurations[i + 1], equals(sleepDurations[i] * 2));
-    }
-    sleepDurations.removeRange(0, findCommandExitCode.length - 1);
-    for (int i = 0; i < inspectCommandExitCode.length - 2; i++) {
-      expect(sleepDurations[i + 1], equals(sleepDurations[i] * 2));
-    }
+        fakeSsh.inspectCommandCount, anyOf(0, inspectCommandExitCode.length));
   });
 }
 
