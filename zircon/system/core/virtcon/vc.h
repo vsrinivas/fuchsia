@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_VIRTCON_VC_H_
+#define ZIRCON_SYSTEM_CORE_VIRTCON_VC_H_
 
 #include <assert.h>
+#include <lib/fdio/vfs.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <stdbool.h>
+#include <threads.h>
+#include <zircon/listnode.h>
 
 #include <gfx/gfx.h>
 #include <hid/hid.h>
-#include <lib/fdio/vfs.h>
-#include <zircon/listnode.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <port/port.h>
-#include <stdbool.h>
-#include <threads.h>
 
 #include "textcon.h"
 #include "vc-colors.h"
@@ -166,8 +167,14 @@ ssize_t vc_write(vc_t* vc, const void* buf, size_t count, zx_off_t off);
 zx_status_t vc_set_active(int num, vc_t* vc);
 void vc_show_active();
 
+void set_log_listener_active(bool active);
+int log_start(void);
+zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
+
 bool vc_display_init(void);
 
 void set_log_listener_active(bool active);
 zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,
                                     zx_status_t (*event_handler)(unsigned event, const char* msg));
+
+#endif  // ZIRCON_SYSTEM_CORE_VIRTCON_VC_H_

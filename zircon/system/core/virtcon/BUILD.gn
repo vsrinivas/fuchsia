@@ -48,6 +48,7 @@ executable("virtual-console") {
   sources = common_sources + [
               "main.cc",
               "vc-display.cc",
+              "vc-log.cc",
             ]
   deps = [
     ":common",

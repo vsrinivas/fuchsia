@@ -4,17 +4,6 @@
 
 #include <assert.h>
 #include <fcntl.h>
-#include <poll.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <memory>
-
-#include <fbl/algorithm.h>
-#include <fbl/string_piece.h>
-#include <fbl/unique_fd.h>
-#include <fs/handler.h>
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/virtualconsole/c/fidl.h>
@@ -26,7 +15,11 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
-#include <port/port.h>
+#include <poll.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <zircon/device/vfs.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
@@ -36,55 +29,22 @@
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
 
+#include <memory>
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <fbl/string_piece.h>
+#include <fbl/unique_fd.h>
+#include <fs/handler.h>
+#include <port/port.h>
 
 #include "vc.h"
 
 port_t port;
-static port_handler_t log_ph;
 static port_handler_t new_vc_ph;
 static port_handler_t input_ph;
 
 static int input_dir_fd;
-
-static vc_t* log_vc;
-static zx_koid_t proc_koid;
-
-static zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-  char buf[ZX_LOG_RECORD_MAX];
-  zx_log_record_t* rec = (zx_log_record_t*)buf;
-  zx_status_t status;
-  for (;;) {
-    if ((status = zx_debuglog_read(ph->handle, 0, rec, ZX_LOG_RECORD_MAX)) < 0) {
-      if (status == ZX_ERR_SHOULD_WAIT) {
-        return ZX_OK;
-      }
-      break;
-    }
-    // don't print log messages from ourself
-    if (rec->pid == proc_koid) {
-      continue;
-    }
-    char tmp[64];
-    snprintf(tmp, 64,
-             "\033[32m%05d.%03d\033[39m] \033[31m%05" PRIu64 ".\033[36m%05" PRIu64 "\033[39m> ",
-             (int)(rec->timestamp / 1000000000ULL), (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-             rec->pid, rec->tid);
-    vc_write(log_vc, tmp, strlen(tmp), 0);
-    vc_write(log_vc, rec->data, rec->datalen, 0);
-    if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
-      vc_write(log_vc, "\n", 1, 0);
-    }
-  }
-
-  const char* oops = "<<LOG ERROR>>\n";
-  vc_write(log_vc, oops, strlen(oops), 0);
-
-  // Error reading the log, no point in continuing to try to read
-  // log messages.
-  port_cancel(&port, &log_ph);
-  return status;
-}
 
 static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
   const char* argv[] = {"/boot/bin/sh", nullptr, nullptr, nullptr};
@@ -421,14 +381,6 @@ static zx_status_t input_cb(port_handler_t* ph, zx_signals_t signals, uint32_t e
   return handle_device_dir_event(ph, signals, input_dir_event);
 }
 
-void set_log_listener_active(bool active) {
-  if (active) {
-    port_wait(&port, &log_ph);
-  } else {
-    port_cancel(&port, &log_ph);
-  }
-}
-
 int main(int argc, char** argv) {
   // NOTE: devmgr has getenv_bool. when more options are added, consider
   // sharing that.
@@ -474,28 +426,9 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  // create initial console for debug log
-  if (vc_create(&log_vc, color_scheme) != ZX_OK) {
+  if (log_start() < 0) {
     return -1;
   }
-  snprintf(log_vc->title, sizeof(log_vc->title), "debuglog");
-
-  // Get our process koid so the log reader can
-  // filter out our own debug messages from the log
-  zx_info_handle_basic_t info;
-  if (zx_object_get_info(zx_process_self(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL,
-                         NULL) == ZX_OK) {
-    proc_koid = info.koid;
-  }
-
-  log_ph.handle = zx_take_startup_handle(PA_HND(PA_USER0, 1));
-  if (log_ph.handle == ZX_HANDLE_INVALID) {
-    printf("vc log listener: did not receive log startup handle\n");
-    return -1;
-  }
-
-  log_ph.func = log_reader_cb;
-  log_ph.waitfor = ZX_LOG_READABLE;
 
   if ((new_vc_ph.handle = zx_take_startup_handle(PA_HND(PA_USER0, 0))) != ZX_HANDLE_INVALID) {
     new_vc_ph.func = fidl_connection_cb;
