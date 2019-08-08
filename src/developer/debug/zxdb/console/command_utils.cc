@@ -84,8 +84,11 @@ Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context, const Command& 
   if (err.has_error())
     return err;
 
-  // Stopped threads should always have a frame.
-  FXL_DCHECK(cmd.frame());
+  if (!cmd.frame()) {
+    return Err("\"%s\" requires a stack frame but none is available.\n"
+               "You may need to \"pause\" the thread or sync the frames with \"frame\".",
+               command_name);
+  }
 
   return cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
 }
