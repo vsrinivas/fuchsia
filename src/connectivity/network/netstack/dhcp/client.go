@@ -294,7 +294,7 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 			true,  /* broadcast */
 			false, /* ciaddr */
 		); err != nil {
-			return Config{}, fmt.Errorf("discover: %s", err)
+			return Config{}, fmt.Errorf("%s: %s", dhcpDISCOVER, err)
 		}
 
 		// Receive a DHCPOFFER message from a responding DHCP server.
@@ -302,7 +302,7 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 		for {
 			srcAddr, addr, opts, typ, err := recv(ctx, ep, ch, xid[:])
 			if err != nil {
-				return Config{}, fmt.Errorf("recv: %s", err)
+				return Config{}, fmt.Errorf("recv %s: %s", dhcpOFFER, err)
 			}
 
 			if typ != dhcpOFFER {
@@ -329,7 +329,7 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 
 			prefixLen := util.PrefixLength(cfg.SubnetMask)
 
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "got OFFER from %s: Address=%s/%d, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", srcAddr.Addr, requestedAddr, prefixLen, c.server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
+			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s/%d, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, prefixLen, c.server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
 
 			break
 		}
@@ -355,35 +355,35 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 		clientState != renewing,      /* broadcast */
 		clientState != initSelecting, /* ciaddr */
 	); err != nil {
-		return Config{}, fmt.Errorf("request: %s", err)
+		return Config{}, fmt.Errorf("%s: %s", dhcpREQUEST, err)
 	}
 
 	// Receive a DHCPACK/DHCPNAK from the server.
 	for {
 		fromAddr, addr, opts, typ, err := recv(ctx, ep, ch, xid[:])
 		if err != nil {
-			return Config{}, fmt.Errorf("ack: %s", err)
+			return Config{}, fmt.Errorf("recv %s: %s", dhcpACK, err)
 		}
 
 		switch typ {
 		case dhcpACK:
 			var cfg Config
 			if err := cfg.decode(opts); err != nil {
-				return Config{}, fmt.Errorf("ack decode: %s", err)
+				return Config{}, fmt.Errorf("%s decode: %s", typ, err)
 			}
 			if addr != requestedAddr {
-				return Config{}, fmt.Errorf("got ACK with unexpected address=%s expected=%s", addr, requestedAddr)
+				return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", typ, addr, requestedAddr)
 			}
 			// Now that we've successfully acquired the address, update the client state.
 			c.addr = requestedAddr
 
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "got ACK from %s", fromAddr.Addr)
+			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s", typ, fromAddr.Addr)
 			return cfg, nil
 		case dhcpNAK:
 			if msg := opts.message(); len(msg) != 0 {
-				return Config{}, fmt.Errorf("NAK %q", msg)
+				return Config{}, fmt.Errorf("%s: %x", typ, msg)
 			}
-			return Config{}, fmt.Errorf("NAK with no message")
+			return Config{}, fmt.Errorf("empty %s", typ)
 		default:
 			syslog.VLogTf(syslog.DebugVerbosity, tag, "got DHCP type = %s from %s, want = %s or %s", typ, fromAddr.Addr, dhcpACK, dhcpNAK)
 			continue
