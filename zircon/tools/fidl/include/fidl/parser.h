@@ -172,9 +172,11 @@ class Parser {
 
   decltype(nullptr) Fail();
   decltype(nullptr) Fail(std::string_view message);
+  decltype(nullptr) Fail(Token token, std::string_view message);
 
   std::unique_ptr<raw::Identifier> ParseIdentifier(bool is_discarded = false);
   std::unique_ptr<raw::CompoundIdentifier> ParseCompoundIdentifier();
+  std::unique_ptr<raw::CompoundIdentifier> ParseLibraryName();
 
   std::unique_ptr<raw::StringLiteral> ParseStringLiteral();
   std::unique_ptr<raw::NumericLiteral> ParseNumericLiteral();

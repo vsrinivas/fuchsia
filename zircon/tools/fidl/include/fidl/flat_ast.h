@@ -1236,8 +1236,6 @@ class Library {
 
   bool SortDeclarations();
 
-  bool CompileLibraryName();
-
   bool CompileBits(Bits* bits_declaration);
   bool CompileConst(Const* const_declaration);
   bool CompileEnum(Enum* enum_declaration);

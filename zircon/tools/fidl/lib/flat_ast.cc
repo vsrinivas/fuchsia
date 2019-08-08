@@ -8,7 +8,6 @@
 #include <stdio.h>
 
 #include <algorithm>
-#include <regex>
 #include <sstream>
 
 #include "fidl/attributes.h"
@@ -3347,25 +3346,9 @@ bool Library::CompileTypeAlias(TypeAlias* decl) {
   return true;
 }
 
-bool Library::CompileLibraryName() {
-  const std::regex pattern("^[a-z][a-z0-9]*$");
-  for (const auto& part_view : library_name_) {
-    std::string part(part_view);
-    if (!std::regex_match(part, pattern)) {
-      return Fail("Invalid library name part " + part);
-    }
-  }
-  return true;
-}
-
 bool Library::Compile() {
   for (const auto& dep_library : dependencies_.dependencies()) {
     constants_.insert(dep_library->constants_.begin(), dep_library->constants_.end());
-  }
-
-  // Verify that the library's name is valid.
-  if (!CompileLibraryName()) {
-    return false;
   }
 
   if (!SortDeclarations()) {

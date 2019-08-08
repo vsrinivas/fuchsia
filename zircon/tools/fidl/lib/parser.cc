@@ -6,6 +6,8 @@
 
 #include <errno.h>
 
+#include <regex>
+
 #include "fidl/attributes.h"
 
 namespace fidl {
@@ -42,6 +44,13 @@ enum {
   More,
   Done,
 };
+
+static const std::regex pattern("^[a-z][a-z0-9]*$");
+
+bool IsValidLibraryComponentName(const std::string& component) {
+  return std::regex_match(component, pattern);
+}
+
 }  // namespace
 
 Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
@@ -90,8 +99,12 @@ bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
 decltype(nullptr) Parser::Fail() { return Fail("found unexpected token"); }
 
 decltype(nullptr) Parser::Fail(std::string_view message) {
+  return Fail(last_token_, std::move(message));
+}
+
+decltype(nullptr) Parser::Fail(Token token, std::string_view message) {
   if (Ok()) {
-    error_reporter_->ReportError(last_token_, std::move(message));
+    error_reporter_->ReportError(token, std::move(message));
   }
   return nullptr;
 }
@@ -133,6 +146,21 @@ std::unique_ptr<raw::CompoundIdentifier> Parser::ParseCompoundIdentifier() {
   }
 
   return std::make_unique<raw::CompoundIdentifier>(scope.GetSourceElement(), std::move(components));
+}
+
+std::unique_ptr<raw::CompoundIdentifier> Parser::ParseLibraryName() {
+  auto library_name = ParseCompoundIdentifier();
+  if (!Ok())
+    return Fail();
+
+  for (const auto& component : library_name->components) {
+    std::string component_data(component->start_.data());
+    if (!IsValidLibraryComponentName(component_data)) {
+      return Fail(component->start_, "Invalid library name component " + component_data);
+    }
+  }
+
+  return library_name;
 }
 
 std::unique_ptr<raw::StringLiteral> Parser::ParseStringLiteral() {
@@ -1126,7 +1154,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kLibrary));
   if (!Ok())
     return Fail();
-  auto library_name = ParseCompoundIdentifier();
+  auto library_name = ParseLibraryName();
   if (!Ok())
     return Fail();
   ConsumeToken(OfKind(Token::Kind::kSemicolon));

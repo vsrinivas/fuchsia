@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <locale.h>
+
 #include <fidl/attributes.h>
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/raw_ast.h>
 #include <fidl/source_file.h>
-#include <locale.h>
 #include <unittest/unittest.h>
 
 #include "test_library.h"
@@ -29,6 +30,23 @@ library 0fidl.test.badcompoundidentifier;
   auto errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_STR_STR(errors[0].c_str(), "unexpected token");
+
+  END_TEST;
+}
+
+// Test that library name formatting checks are done in the parser
+bool bad_library_name_test() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library a_b;
+)FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  library.Parse(&ast);
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "Invalid library name component a_b");
 
   END_TEST;
 }
@@ -383,6 +401,7 @@ bool multiline_comment_has_correct_source_location() {
 
 BEGIN_TEST_CASE(parsing_tests)
 RUN_TEST(bad_compound_identifier_test)
+RUN_TEST(bad_library_name_test)
 RUN_TEST(parsing_reserved_words_in_struct_test)
 RUN_TEST(parsing_handles_in_struct_test);
 RUN_TEST(parsing_reserved_words_in_union_test)
