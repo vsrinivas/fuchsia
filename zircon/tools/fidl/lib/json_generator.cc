@@ -331,6 +331,7 @@ void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struc
   GenerateObjectMember(prefix + "_size", value.typeshape.InlineSize());
   GenerateObjectMember(prefix + "_alignment", value.typeshape.Alignment());
   GenerateObjectMember(prefix + "_has_padding", value.typeshape.HasPadding());
+  GenerateObjectMember("experimental_" + prefix + "_has_flexible_envelope", value.typeshape.HasFlexibleEnvelope());
 }
 
 void JSONGenerator::Generate(const flat::Service& value) {

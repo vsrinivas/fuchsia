@@ -33,6 +33,7 @@ TypeShapeBuilder& TypeShapeBuilder::operator+=(TypeShapeBuilder builder) {
   recursive.max_handles += builder.recursive.max_handles;
   recursive.max_out_of_line += builder.recursive.max_out_of_line;
   recursive.has_padding |= builder.recursive.has_padding;
+  recursive.has_flexible_envelope |= builder.recursive.has_flexible_envelope;
   return *this;
 }
 
@@ -40,7 +41,8 @@ TypeShapeBuilder::Recursive& TypeShapeBuilder::Recursive::AddStructLike(TypeShap
   depth = std::max(depth, typeshape.Depth());
   max_handles = ClampedAdd(max_handles, typeshape.MaxHandles());
   max_out_of_line = ClampedAdd(max_out_of_line, typeshape.MaxOutOfLine());
-  has_padding = has_padding | typeshape.HasPadding();
+  has_padding |= typeshape.HasPadding();
+  has_flexible_envelope |= typeshape.HasFlexibleEnvelope();
   return *this;
 }
 
@@ -48,7 +50,8 @@ TypeShapeBuilder::Recursive& TypeShapeBuilder::Recursive::AddUnionLike(TypeShape
   depth = std::max(depth, typeshape.Depth());
   max_handles = std::max(max_handles, typeshape.MaxHandles());
   max_out_of_line = std::max(max_out_of_line, typeshape.MaxOutOfLine());
-  has_padding = has_padding | typeshape.HasPadding();
+  has_padding |= typeshape.HasPadding();
+  has_flexible_envelope |= typeshape.HasFlexibleEnvelope();
   return *this;
 }
 

@@ -72,6 +72,7 @@
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": false,
           "is_composed": false
         },
@@ -89,11 +90,13 @@
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [],
           "maybe_response_size": 16,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -110,6 +113,7 @@
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -133,6 +137,7 @@
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -167,6 +172,7 @@
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": false,
           "is_composed": false
         },
@@ -202,11 +208,13 @@
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [],
           "maybe_response_size": 16,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -241,6 +249,7 @@
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -264,6 +273,7 @@
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -281,6 +291,7 @@
           "maybe_response_size": 16,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -316,6 +327,7 @@
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         }
       ]
@@ -342,6 +354,7 @@
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -366,6 +379,7 @@
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -382,6 +396,7 @@
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -406,6 +421,7 @@
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         }
       ]
@@ -473,6 +489,7 @@
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": false,
           "is_composed": false
         },
@@ -526,6 +543,7 @@
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -577,6 +595,7 @@
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -600,6 +619,7 @@
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -635,6 +655,7 @@
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -659,6 +680,7 @@
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         }
       ]
@@ -726,6 +748,7 @@
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": false,
           "is_composed": false
         },
@@ -779,6 +802,7 @@
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -830,6 +854,7 @@
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -853,6 +878,7 @@
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -888,6 +914,7 @@
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -912,6 +939,7 @@
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         }
       ]
@@ -979,6 +1007,7 @@
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": false,
           "is_composed": false
         },
@@ -1032,6 +1061,7 @@
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -1083,6 +1113,7 @@
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -1106,6 +1137,7 @@
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -1141,6 +1173,7 @@
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -1165,6 +1198,7 @@
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         }
       ]

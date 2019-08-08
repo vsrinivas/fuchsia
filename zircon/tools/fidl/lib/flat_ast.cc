@@ -103,6 +103,7 @@ TypeShape AlignTypeshape(TypeShape shape, std::vector<FieldShape*>* fields, uint
           .max_out_of_line = shape.MaxOutOfLine(),
           // If alignment happened, we've got padding
           .has_padding = shape.HasPadding() || (new_size != shape.InlineSize()),
+          .has_flexible_envelope = shape.HasFlexibleEnvelope(),
       }
   });
   // Fix-up padding in the last field according to the new typeshape.
@@ -237,6 +238,7 @@ TypeShape PointerTypeShape(const TypeShape& element, uint32_t max_element_count 
           .max_handles = max_handles,
           .max_out_of_line = max_out_of_line,
           .has_padding = element.HasPadding() || trailing_padding,
+          .has_flexible_envelope = element.HasFlexibleEnvelope(),
       }
   });
 }
@@ -248,7 +250,9 @@ TypeShape CEnvelopeTypeShape(const TypeShape& contained_type) {
   return Struct::Shape(&header);
 }
 
-TypeShape Table::Shape(std::vector<TypeShape*>* fields, uint32_t extra_handles) {
+TypeShape Table::Shape(std::vector<TypeShape*>* fields,
+                       types::Strictness strictness,
+                       uint32_t extra_handles) {
   TypeShapeBuilder builder{.alignment = 8};
   for (auto field : *fields) {
     if (field == nullptr) {
@@ -260,6 +264,7 @@ TypeShape Table::Shape(std::vector<TypeShape*>* fields, uint32_t extra_handles) 
     builder.recursive.AddStructLike(envelope);
   }
   builder.recursive.depth += 1;
+  builder.recursive.has_flexible_envelope |= strictness == types::Strictness::kFlexible;
   auto pointer_element = TypeShape(builder);
   // A table is a vector of envelopes, hence has the same header as a vector.
   auto num_fields = FieldShape(PrimitiveType::Shape(types::PrimitiveSubtype::kUint64));
@@ -269,6 +274,7 @@ TypeShape Table::Shape(std::vector<TypeShape*>* fields, uint32_t extra_handles) 
 }
 
 TypeShape XUnion::Shape(std::vector<FieldShape*>* fields,
+                        types::Strictness strictness,
                         uint32_t extra_handles) {
   TypeShapeBuilder builder{.inline_size = 24, .alignment = 8};
   for (auto& field : *fields) {
@@ -287,6 +293,7 @@ TypeShape XUnion::Shape(std::vector<FieldShape*>* fields,
   }
 
   builder.recursive.max_handles = ClampedAdd(builder.recursive.max_handles, extra_handles);
+  builder.recursive.has_flexible_envelope |= strictness == types::Strictness::kFlexible;
   return TypeShape(builder);
 }
 
@@ -301,6 +308,7 @@ TypeShape ArrayType::Shape(TypeShape element, uint32_t count) {
           .max_handles = ClampedMultiply(element.MaxHandles(), count),
           .max_out_of_line = ClampedMultiply(element.MaxOutOfLine(), count),
           .has_padding = element.HasPadding(),
+          .has_flexible_envelope = element.HasFlexibleEnvelope(),
       }
   });
 }
@@ -3235,7 +3243,9 @@ bool Library::CompileTable(Table* table_declaration) {
     }
   }
 
-  table_declaration->typeshape = Table::Shape(&fields, max_member_handles);
+  table_declaration->typeshape = Table::Shape(&fields,
+                                              table_declaration->strictness,
+                                              max_member_handles);
 
   return true;
 }
@@ -3299,7 +3309,9 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
   for (auto& member : xunion_declaration->members) {
     fields.push_back(&member.fieldshape);
   }
-  xunion_declaration->typeshape = XUnion::Shape(&fields, max_member_handles);
+  xunion_declaration->typeshape = XUnion::Shape(&fields,
+                                                xunion_declaration->strictness,
+                                                max_member_handles);
 
   return true;
 }

@@ -350,6 +350,10 @@
                     "description": "Flag indicating if there could be padding bytes in the request",
                     "type": "boolean"
                 },
+                "experimental_maybe_request_has_flexible_envelopes": {
+                    "description": "Flag indicating if the request contains flexible xunion or table",
+                    "type": "boolean"
+                },
                 "has_response": {
                     "description": "Flag indicating that interface method has a response component",
                     "type": "boolean"
@@ -371,6 +375,10 @@
                 },
                 "maybe_response_has_padding": {
                     "description": "Flag indicating if there could be padding bytes in the response",
+                    "type": "boolean"
+                },
+                "experimental_maybe_response_has_flexible_envelopes": {
+                    "description": "Flag indicating if the response contains flexible xunion or table",
                     "type": "boolean"
                 },
                 "is_composed": {

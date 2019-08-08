@@ -218,6 +218,7 @@ protocol EmptyProtocol {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": false,
           "is_composed": false
         },
@@ -255,6 +256,7 @@ protocol EmptyProtocol {
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         },
         {
@@ -290,6 +292,7 @@ protocol EmptyProtocol {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -314,6 +317,7 @@ protocol EmptyProtocol {
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         }
       ]
@@ -886,6 +890,293 @@ strict xunion StrictFoo {
   END_TEST;
 }
 
+bool json_generator_test_request_flexible_envelope() {
+  BEGIN_TEST;
+
+  for (int i = 0; i < kRepeatTestCount; i++) {
+    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library fidl.test.json;
+
+xunion FlexibleFoo {
+  string s;
+  int32 i;
+};
+
+strict xunion StrictFoo {
+  string s;
+  int32 i;
+};
+
+protocol Protocol {
+  RequestStrictResponseFlexible(StrictFoo s) -> (FlexibleFoo f);
+  RequestFlexibleResponseStrict(FlexibleFoo s) -> (StrictFoo f);
+};
+
+)FIDL",
+                                   R"JSON(
+{
+  "version": "0.0.1",
+  "name": "fidl.test.json",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "fidl.test.json/Protocol",
+      "location": {
+        "filename": "json.fidl",
+        "line": 14,
+        "column": 10
+      },
+      "methods": [
+        {
+          "ordinal": 289661890,
+          "generated_ordinal": 1244088344447549440,
+          "name": "RequestStrictResponseFlexible",
+          "location": {
+            "filename": "json.fidl",
+            "line": 15,
+            "column": 3
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.json/StrictFoo",
+                "nullable": false
+              },
+              "name": "s",
+              "location": {
+                "filename": "json.fidl",
+                "line": 15,
+                "column": 43
+              },
+              "size": 24,
+              "max_out_of_line": 4294967295,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 40,
+          "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.json/FlexibleFoo",
+                "nullable": false
+              },
+              "name": "f",
+              "location": {
+                "filename": "json.fidl",
+                "line": 15,
+                "column": 62
+              },
+              "size": 24,
+              "max_out_of_line": 4294967295,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 40,
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": true,
+          "is_composed": false
+        },
+        {
+          "ordinal": 825667327,
+          "generated_ordinal": 3546214166840737792,
+          "name": "RequestFlexibleResponseStrict",
+          "location": {
+            "filename": "json.fidl",
+            "line": 16,
+            "column": 3
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.json/FlexibleFoo",
+                "nullable": false
+              },
+              "name": "s",
+              "location": {
+                "filename": "json.fidl",
+                "line": 16,
+                "column": 45
+              },
+              "size": 24,
+              "max_out_of_line": 4294967295,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 40,
+          "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": true,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.json/StrictFoo",
+                "nullable": false
+              },
+              "name": "f",
+              "location": {
+                "filename": "json.fidl",
+                "line": 16,
+                "column": 62
+              },
+              "size": 24,
+              "max_out_of_line": 4294967295,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 40,
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
+          "is_composed": false
+        }
+      ]
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [
+    {
+      "name": "fidl.test.json/FlexibleFoo",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 8
+      },
+      "members": [
+        {
+          "ordinal": 1056421836,
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "s",
+          "location": {
+            "filename": "json.fidl",
+            "line": 5,
+            "column": 10
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 0
+        },
+        {
+          "ordinal": 1911600824,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "i",
+          "location": {
+            "filename": "json.fidl",
+            "line": 6,
+            "column": 9
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": false
+    },
+    {
+      "name": "fidl.test.json/StrictFoo",
+      "location": {
+        "filename": "json.fidl",
+        "line": 9,
+        "column": 15
+      },
+      "members": [
+        {
+          "ordinal": 215696753,
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "s",
+          "location": {
+            "filename": "json.fidl",
+            "line": 10,
+            "column": 10
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 0
+        },
+        {
+          "ordinal": 2063855467,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "i",
+          "location": {
+            "filename": "json.fidl",
+            "line": 11,
+            "column": 9
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": true
+    }
+  ],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.json/StrictFoo",
+    "fidl.test.json/FlexibleFoo",
+    "fidl.test.json/Protocol"
+  ],
+  "declarations": {
+    "fidl.test.json/Protocol": "interface",
+    "fidl.test.json/FlexibleFoo": "xunion",
+    "fidl.test.json/StrictFoo": "xunion"
+  }
+}
+)JSON"));
+  }
+
+  END_TEST;
+}
+
 // This test ensures that inherited methods have the same ordinal / signature /
 // etc as the method from which they are inheriting.
 bool json_generator_test_inheritance() {
@@ -959,6 +1250,7 @@ protocol sub {
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -982,6 +1274,7 @@ protocol sub {
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         }
       ]
@@ -1026,6 +1319,7 @@ protocol sub {
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -1049,6 +1343,7 @@ protocol sub {
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": true
         }
       ]
@@ -1147,6 +1442,7 @@ protocol Child {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": false,
           "is_composed": false
         }
@@ -1193,6 +1489,7 @@ protocol Child {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": false,
           "is_composed": true
         },
@@ -1229,6 +1526,7 @@ protocol Child {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": false,
           "is_composed": false
         }
@@ -1315,6 +1613,7 @@ protocol Example {
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -1339,6 +1638,7 @@ protocol Example {
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": false
         }
       ]
@@ -2579,6 +2879,7 @@ protocol Top {
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -2603,6 +2904,7 @@ protocol Top {
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": true
         }
       ]
@@ -2714,6 +3016,7 @@ protocol Top {
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -2738,6 +3041,7 @@ protocol Top {
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
+          "experimental_maybe_response_has_flexible_envelope": false,
           "is_composed": true
         }
       ]
@@ -3014,6 +3318,7 @@ xunion ExampleXUnion {
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
           "has_response": false,
           "is_composed": false
         }
@@ -3512,6 +3817,7 @@ RUN_TEST(json_generator_test_struct)
 RUN_TEST(json_generator_test_table)
 RUN_TEST(json_generator_test_union)
 RUN_TEST(json_generator_test_xunion)
+RUN_TEST(json_generator_test_request_flexible_envelope)
 RUN_TEST(json_generator_test_inheritance)
 RUN_TEST(json_generator_test_inheritance_with_recursive_decl)
 RUN_TEST(json_generator_test_error)

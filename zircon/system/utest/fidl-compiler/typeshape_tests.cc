@@ -24,6 +24,7 @@ struct Expected {
   uint32_t max_handles = 0;
   uint32_t depth = 0;
   bool has_padding = false;
+  bool has_flexible_envelope = false;
 };
 
 bool CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
@@ -34,6 +35,7 @@ bool CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
   EXPECT_EQ(actual.MaxHandles(), expected.max_handles);
   EXPECT_EQ(actual.Depth(), expected.depth);
   EXPECT_EQ(actual.HasPadding(), expected.has_padding);
+  EXPECT_EQ(actual.HasFlexibleEnvelope(), expected.has_flexible_envelope);
   END_HELPER;
 }
 
@@ -336,6 +338,7 @@ table TableWithBoolAndU64 {
                                                 .alignment = 8,
                                                 .depth = 4294967295,  // TODO(FIDL-457): wrong.
                                                 .has_padding = false,
+                                                .has_flexible_envelope = true,
                                             }));
 
   auto one_bool = test_library.LookupTable("TableWithOneBool");
@@ -346,6 +349,7 @@ table TableWithBoolAndU64 {
                                                       .max_out_of_line = 24,
                                                       .depth = 3,  // TODO(FIDL-457): wrong.
                                                       .has_padding = true,
+                                                      .has_flexible_envelope = true,
                                                   }));
 
   auto two_bools = test_library.LookupTable("TableWithTwoBools");
@@ -356,6 +360,7 @@ table TableWithBoolAndU64 {
                                                        .max_out_of_line = 48,
                                                        .depth = 3,  // TODO(FIDL-457): wrong.
                                                        .has_padding = true,
+                                                       .has_flexible_envelope = true,
                                                    }));
 
   auto bool_and_u32 = test_library.LookupTable("TableWithBoolAndU32");
@@ -366,6 +371,7 @@ table TableWithBoolAndU64 {
                                                           .max_out_of_line = 48,
                                                           .depth = 3,  // TODO(FIDL-457): wrong.
                                                           .has_padding = true,
+                                                          .has_flexible_envelope = true,
                                                       }));
 
   auto bool_and_u64 = test_library.LookupTable("TableWithBoolAndU64");
@@ -376,6 +382,7 @@ table TableWithBoolAndU64 {
                                                           .max_out_of_line = 48,
                                                           .depth = 3,  // TODO(FIDL-457): wrong.
                                                           .has_padding = true,
+                                                          .has_flexible_envelope = true,
                                                       }));
 
   END_TEST;
@@ -403,6 +410,7 @@ table TableWithOneHandle {
                                                         .max_handles = 1,
                                                         .depth = 3,
                                                         .has_padding = true,
+                                                        .has_flexible_envelope = true,
                                                     }));
 
   END_TEST;
@@ -584,6 +592,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                       .max_out_of_line = 24,
                                                       .depth = 3,  // TODO(FIDL-457): wrong.
                                                       .has_padding = true,
+                                                      .has_flexible_envelope = true,
                                                   }));
 
   auto table_with_one_bool = test_library.LookupTable("TableWithOptionalTableWithOneBool");
@@ -595,6 +604,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                          .max_out_of_line = 56,
                                                          .depth = 6,  // TODO(FIDL-457): wrong.
                                                          .has_padding = true,
+                                                         .has_flexible_envelope = true,
                                                      }));
 
   auto two_bools = test_library.LookupTable("TableWithOptionalTwoBools");
@@ -605,6 +615,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                        .max_out_of_line = 24,
                                                        .depth = 3,  // TODO(FIDL-457): wrong.
                                                        .has_padding = true,
+                                                       .has_flexible_envelope = true,
                                                    }));
 
   auto table_with_two_bools = test_library.LookupTable("TableWithOptionalTableWithTwoBools");
@@ -616,6 +627,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                           .max_out_of_line = 80,
                                                           .depth = 6,  // TODO(FIDL-457): wrong.
                                                           .has_padding = true,
+                                                          .has_flexible_envelope = true,
                                                       }));
 
   auto bool_and_u32 = test_library.LookupTable("TableWithOptionalBoolAndU32");
@@ -626,6 +638,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                           .max_out_of_line = 24,
                                                           .depth = 3,  // TODO(FIDL-457): wrong.
                                                           .has_padding = true,
+                                                          .has_flexible_envelope = true,
                                                       }));
 
   auto table_with_bool_and_u32 = test_library.LookupTable("TableWithOptionalTableWithBoolAndU32");
@@ -637,6 +650,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                              .max_out_of_line = 80,
                                                              .depth = 6,  // TODO(FIDL-457): wrong.
                                                              .has_padding = true,
+                                                             .has_flexible_envelope = true,
                                                          }));
 
   auto bool_and_u64 = test_library.LookupTable("TableWithOptionalBoolAndU64");
@@ -647,6 +661,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                           .max_out_of_line = 32,
                                                           .depth = 3,  // TODO(FIDL-457): wrong.
                                                           .has_padding = true,
+                                                          .has_flexible_envelope = true,
                                                       }));
 
   auto table_with_bool_and_u64 = test_library.LookupTable("TableWithOptionalTableWithBoolAndU64");
@@ -658,6 +673,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                                              .max_out_of_line = 80,
                                                              .depth = 6,  // TODO(FIDL-457): wrong.
                                                              .has_padding = true,
+                                                             .has_flexible_envelope = true,
                                                          }));
 
   END_TEST;
@@ -729,6 +745,7 @@ table TableWithOptionalUnion {
       .max_out_of_line = 40,
       .depth = 3,
       .has_padding = true,
+      .has_flexible_envelope = true,
   }));
 
   END_TEST;
@@ -902,6 +919,7 @@ table TableWithUnboundedVectors {
                                                               .max_out_of_line = 48,
                                                               .depth = 4,  // TODO(FIDL-457): wrong.
                                                               .has_padding = true,
+                                                              .has_flexible_envelope = true,
                                                           }));
 
   auto table_with_unbounded_vector = test_library.LookupTable("TableWithUnboundedVector");
@@ -913,6 +931,7 @@ table TableWithUnboundedVectors {
                                  .max_out_of_line = std::numeric_limits<uint32_t>::max(),
                                  .depth = 4,  // TODO(FIDL-457): wrong.
                                  .has_padding = true,
+                                 .has_flexible_envelope = true,
                              }));
 
   auto table_with_unbounded_vectors = test_library.LookupTable("TableWithUnboundedVectors");
@@ -924,6 +943,7 @@ table TableWithUnboundedVectors {
                                  .max_out_of_line = std::numeric_limits<uint32_t>::max(),
                                  .depth = 4,  // TODO(FIDL-457): wrong.
                                  .has_padding = true,
+                                 .has_flexible_envelope = true,
                              }));
 
   END_TEST;
@@ -1023,6 +1043,7 @@ table TableWithHandleStructVector {
                                  .max_handles = std::numeric_limits<uint32_t>::max(),
                                  .depth = 4,  // TODO(FIDL-457): wrong.
                                  .has_padding = true,
+                                 .has_flexible_envelope = true,
                              }));
 
   auto handle_struct_vector = test_library.LookupStruct("HandleStructVector");
@@ -1046,6 +1067,7 @@ table TableWithHandleStructVector {
                                                          .max_handles = 8,
                                                          .depth = 4,  // TODO(FIDL-457): wrong.
                                                          .has_padding = true,
+                                                         .has_flexible_envelope = true,
                                                      }));
 
   auto table_with_handle_struct_vector = test_library.LookupTable("TableWithHandleStructVector");
@@ -1058,6 +1080,7 @@ table TableWithHandleStructVector {
                                  .max_handles = 8,
                                  .depth = 4,  // TODO(FIDL-457): wrong.
                                  .has_padding = true,
+                                 .has_flexible_envelope = true,
                              }));
 
   END_TEST;
@@ -1118,6 +1141,7 @@ table TableWithUnboundedString {
                                                              .max_out_of_line = 40,
                                                              .depth = 4,  // TODO(FIDL-457): wrong.
                                                              .has_padding = true,
+                                                             .has_flexible_envelope = true,
                                                          }));
 
   auto table_with_unbounded_string = test_library.LookupTable("TableWithUnboundedString");
@@ -1129,6 +1153,7 @@ table TableWithUnboundedString {
                                  .max_out_of_line = std::numeric_limits<uint32_t>::max(),
                                  .depth = 4,  // TODO(FIDL-457): wrong.
                                  .has_padding = true,
+                                 .has_flexible_envelope = true,
                              }));
 
   END_TEST;
@@ -1175,6 +1200,7 @@ table TableWithAnInt32ArrayNoPadding {
                                                          .max_out_of_line = 56,
                                                          .depth = 3,  // TODO(FIDL-457): wrong.
                                                          .has_padding = false,
+                                                         .has_flexible_envelope = true,
                                                      }));
 
   auto table_with_an_int32_array_with_padding =
@@ -1187,6 +1213,7 @@ table TableWithAnInt32ArrayNoPadding {
           .max_out_of_line = 32,  // 16 table header + ALIGN(4 * 3 array) = 32
           .depth = 3,  // TODO(FIDL-457): wrong.
           .has_padding = true,
+          .has_flexible_envelope = true,
       }));
 
   auto table_with_an_int32_array_no_padding =
@@ -1199,6 +1226,7 @@ table TableWithAnInt32ArrayNoPadding {
           .max_out_of_line = 32,  // 16 table header + ALIGN(4 * 4 array) = 32
           .depth = 3,  // TODO(FIDL-457): wrong.
           .has_padding = false,
+          .has_flexible_envelope = true,
       }));
 
   END_TEST;
@@ -1247,6 +1275,7 @@ table TableWithNullableHandleArray {
                                                              .max_handles = 8,
                                                              .depth = 3,  // TODO(FIDL-457): wrong.
                                                              .has_padding = false,
+                                                             .has_flexible_envelope = true,
                                                          }));
 
   auto nullable_handle_array = test_library.LookupStruct("NullableHandleArray");
@@ -1267,6 +1296,7 @@ table TableWithNullableHandleArray {
                                  .max_handles = 8,
                                  .depth = 3,  // TODO(FIDL-457): wrong.
                                  .has_padding = false,
+                                 .has_flexible_envelope = true,
                              }));
 
   END_TEST;
@@ -1323,6 +1353,7 @@ xunion XUnionWithoutPayloadPadding {
                                                       .max_out_of_line = 8,
                                                       .depth = 1,  // TODO(FIDL-457): wrong.
                                                       .has_padding = true,
+                                                      .has_flexible_envelope = true,
                                                   }));
   ASSERT_EQ(one_bool->members.size(), 1);
   EXPECT_TRUE(CheckFieldShape(one_bool->members[0].fieldshape, ExpectedField{.padding = 7}));
@@ -1335,6 +1366,7 @@ xunion XUnionWithoutPayloadPadding {
                                                           .max_out_of_line = 8,
                                                           .depth = 1,  // TODO(FIDL-457): wrong.
                                                           .has_padding = true,
+                                                          .has_flexible_envelope = true,
                                                       }));
 
   auto xu = test_library.LookupXUnion("XUnionWithBoundedOutOfLineObject");
@@ -1345,6 +1377,7 @@ xunion XUnionWithoutPayloadPadding {
                                                 .max_out_of_line = 256,
                                                 .depth = 3,  // TODO(FIDL-457): wrong.
                                                 .has_padding = true,
+                                                .has_flexible_envelope = true,
                                             }));
 
   auto unbounded = test_library.LookupXUnion("XUnionWithUnboundedOutOfLineObject");
@@ -1356,6 +1389,7 @@ xunion XUnionWithoutPayloadPadding {
                                  .max_out_of_line = std::numeric_limits<uint32_t>::max(),
                                  .depth = 2,  // TODO(FIDL-457): wrong.
                                  .has_padding = true,
+                                 .has_flexible_envelope = true,
                              }));
 
   auto xu_no_payload_padding = test_library.LookupXUnion("XUnionWithoutPayloadPadding");
@@ -1370,6 +1404,145 @@ xunion XUnionWithoutPayloadPadding {
                                  // TODO(FIDL-648): increase the ordinal size to 64 bits, such that
                                  // there is no padding.
                                  .has_padding = true,
+                                 .has_flexible_envelope = true,
+                             }));
+
+  END_TEST;
+}
+
+bool envelope_strictness() {
+  BEGIN_TEST;
+
+  TestLibrary test_library(R"FIDL(
+library example;
+
+strict xunion StrictLeafXUnion {
+    int64 a;
+};
+
+xunion FlexibleLeafXUnion {
+    int64 a;
+};
+
+xunion FlexibleXUnionOfStrictXUnion {
+    StrictLeafXUnion xu;
+};
+
+xunion FlexibleXUnionOfFlexibleXUnion {
+    FlexibleLeafXUnion xu;
+};
+
+strict xunion StrictXUnionOfStrictXUnion {
+    StrictLeafXUnion xu;
+};
+
+strict xunion StrictXUnionOfFlexibleXUnion {
+    FlexibleLeafXUnion xu;
+};
+
+table FlexibleLeafTable {
+};
+
+strict xunion StrictXUnionOfFlexibleTable {
+    FlexibleLeafTable ft;
+};
+
+    )FIDL");
+  ASSERT_TRUE(test_library.Compile());
+
+  auto strict_xunion = test_library.LookupXUnion("StrictLeafXUnion");
+  ASSERT_NONNULL(strict_xunion);
+  EXPECT_TRUE(CheckTypeShape(strict_xunion->typeshape,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 8,
+                                 .depth = 1,  // TODO(FIDL-457): wrong.
+                                 .has_padding = true,
+                             }));
+
+  auto flexible_xunion = test_library.LookupXUnion("FlexibleLeafXUnion");
+  ASSERT_NONNULL(flexible_xunion);
+  EXPECT_TRUE(CheckTypeShape(flexible_xunion->typeshape,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 8,
+                                 .depth = 1,  // TODO(FIDL-457): wrong.
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                             }));
+
+  auto flexible_of_strict = test_library.LookupXUnion("FlexibleXUnionOfStrictXUnion");
+  ASSERT_NONNULL(flexible_of_strict);
+  EXPECT_TRUE(CheckTypeShape(flexible_of_strict->typeshape,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 32,
+                                 .depth = 2,  // TODO(FIDL-457): wrong.
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                             }));
+
+  auto flexible_of_flexible = test_library.LookupXUnion("FlexibleXUnionOfFlexibleXUnion");
+  ASSERT_NONNULL(flexible_of_flexible);
+  EXPECT_TRUE(CheckTypeShape(flexible_of_flexible->typeshape,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 32,
+                                 .depth = 2,  // TODO(FIDL-457): wrong.
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                             }));
+
+  auto strict_of_strict = test_library.LookupXUnion("StrictXUnionOfStrictXUnion");
+  ASSERT_NONNULL(strict_of_strict);
+  EXPECT_TRUE(CheckTypeShape(strict_of_strict->typeshape,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 32,
+                                 .depth = 2,  // TODO(FIDL-457): wrong.
+                                 .has_padding = true,
+                                 .has_flexible_envelope = false,
+                             }));
+
+  auto strict_of_flexible = test_library.LookupXUnion("StrictXUnionOfFlexibleXUnion");
+  ASSERT_NONNULL(strict_of_flexible);
+  EXPECT_TRUE(CheckTypeShape(strict_of_flexible->typeshape,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 32,
+                                 .depth = 2,  // TODO(FIDL-457): wrong.
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                             }));
+
+  auto flexible_table = test_library.LookupTable("FlexibleLeafTable");
+  ASSERT_NONNULL(flexible_table);
+  EXPECT_TRUE(CheckTypeShape(flexible_table->typeshape,
+                             Expected{
+                                 .inline_size = 16,
+                                 .alignment = 8,
+                                 .max_out_of_line = 0,
+                                 .depth = 4294967295,  // TODO(FIDL-457): wrong.
+                                 .has_padding = false,
+                                 .has_flexible_envelope = true,
+                             }));
+
+  auto strict_xunion_of_flexible_table = test_library.LookupXUnion("StrictXUnionOfFlexibleTable");
+  ASSERT_NONNULL(strict_xunion_of_flexible_table);
+  EXPECT_TRUE(CheckTypeShape(strict_xunion_of_flexible_table->typeshape,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 16,
+                                 .depth = 4294967295,  // TODO(FIDL-457): wrong.
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
                              }));
 
   END_TEST;
@@ -2012,6 +2185,7 @@ RUN_TEST(arrays)
 RUN_TEST(arrays_with_handles)
 RUN_TEST(xunions)
 // RUN_TEST(xunions_with_handles) TODO(pascallouis): write it.
+RUN_TEST(envelope_strictness)
 RUN_TEST(protocols_and_request_of_protocols)
 RUN_TEST(external_definitions)
 RUN_TEST(recursive_request)

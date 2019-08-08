@@ -24,6 +24,7 @@ struct TypeShapeBuilder {
     uint32_t max_handles = 0;
     uint32_t max_out_of_line = 0;
     bool has_padding = false;
+    bool has_flexible_envelope = false;
 
     Recursive& AddStructLike(TypeShape typeshape);
     Recursive& AddUnionLike(TypeShape typeshape);
@@ -41,7 +42,8 @@ class TypeShape {
         depth_(builder.recursive.depth),
         max_handles_(builder.recursive.max_handles),
         max_out_of_line_(builder.recursive.max_out_of_line),
-        has_padding_(builder.recursive.has_padding) {}
+        has_padding_(builder.recursive.has_padding),
+        has_flexible_envelope_(builder.recursive.has_flexible_envelope) {}
 
   TypeShape() : TypeShape(TypeShapeBuilder{}) {}
 
@@ -60,6 +62,7 @@ class TypeShape {
   uint32_t MaxHandles() const { return max_handles_; }
   uint32_t MaxOutOfLine() const { return max_out_of_line_; }
   bool HasPadding() const { return has_padding_; }
+  bool HasFlexibleEnvelope() const { return has_flexible_envelope_; }
 
  private:
   uint32_t inline_size_;
@@ -68,6 +71,7 @@ class TypeShape {
   uint32_t max_handles_;
   uint32_t max_out_of_line_;
   bool has_padding_;
+  bool has_flexible_envelope_;
 };
 
 // |FieldShape| describes a |TypeShape| that is embedded in a struct or (x)union as a member field.

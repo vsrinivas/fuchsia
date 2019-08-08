@@ -826,8 +826,11 @@ struct Table final : public TypeDecl {
         members(std::move(members)) {}
 
   std::vector<Member> members;
+  const types::Strictness strictness = types::Strictness::kFlexible;
 
-  static TypeShape Shape(std::vector<TypeShape*>* fields, uint32_t extra_handles = 0u);
+  static TypeShape Shape(std::vector<TypeShape*>* fields,
+                         types::Strictness strictness,
+                         uint32_t extra_handles = 0u);
 };
 
 struct Union final : public TypeDecl {
@@ -879,7 +882,9 @@ struct XUnion final : public TypeDecl {
   std::vector<Member> members;
   const types::Strictness strictness;
 
-  static TypeShape Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u);
+  static TypeShape Shape(std::vector<FieldShape*>* fields,
+                         types::Strictness strictness,
+                         uint32_t extra_handles = 0u);
 };
 
 struct Protocol final : public TypeDecl {
