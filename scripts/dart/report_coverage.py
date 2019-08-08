@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 
 # This program generates a combined coverage report for all host-side dart tests.
 # See example_commands and arg help strings in ParseArgs() for usage.
