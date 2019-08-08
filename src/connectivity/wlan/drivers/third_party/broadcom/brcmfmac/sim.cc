@@ -29,6 +29,7 @@
 
 #define BUS_OP(dev) dev->bus->bus_priv.sim->sim_fw
 static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
+    .get_bus_type = []() { return BRCMF_BUS_TYPE_SIM; },
     .preinit = [](struct brcmf_device* dev) { return BUS_OP(dev)->BusPreinit(); },
     .stop = [](struct brcmf_device* dev) { return BUS_OP(dev)->BusStop(); },
     .txdata = [](struct brcmf_device* dev,
@@ -100,13 +101,11 @@ zx_status_t brcmf_sim_register(struct brcmf_device* device) {
   // Here is where we would likely simulate loading the firmware into the target. For now,
   // we don't try.
 
-#if 0  // FIXME - currently this fails due to a lack of simulated firmware support
-    status = brcmf_bus_started(dev);
-    if (status != ZX_OK) {
-        BRCMF_ERR("Failed to start (simulated) bus\n");
-        return status;
-    }
-#endif
+  status = brcmf_bus_started(device);
+  if (status != ZX_OK) {
+    BRCMF_ERR("Failed to start (simulated) bus\n");
+    return status;
+  }
 
   simdev.release();
   return ZX_OK;

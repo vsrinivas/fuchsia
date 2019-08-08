@@ -23,6 +23,7 @@
 #include <zircon/types.h>
 
 #include "sim_hw.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 
 class SimFirmware {
@@ -62,10 +63,11 @@ class SimFirmware {
 
  private:
   // BCDC interface
-  zx_status_t BcdcRxCtl(void* msg, size_t len, size_t* rxlen_out);
+  zx_status_t BcdcVarOp(brcmf_proto_bcdc_dcmd* msg, uint8_t* data, size_t len, bool is_set);
 
   // Firmware iovars
-  zx_status_t IovarsSet(const char* name, void* value, size_t len);
+  zx_status_t IovarsSet(const char* name, const void* value, size_t value_len);
+  zx_status_t IovarsGet(const char* name, void* value_out, size_t value_len);
 
   // Next message to pass back to a BCDC Rx Ctl request
   BcdcResponse bcdc_response_;

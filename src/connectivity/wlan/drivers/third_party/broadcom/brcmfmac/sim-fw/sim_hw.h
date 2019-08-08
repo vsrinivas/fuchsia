@@ -20,12 +20,15 @@
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
+
 class SimHardware {
  public:
-  zx_status_t setMacAddr(uint8_t* macAddr);
+  zx_status_t SetMacAddr(const uint8_t* mac_addr);
+  void GetRevInfo(brcmf_rev_info_le* rev_info);
 
  private:
-  uint8_t macAddr_[ETH_ALEN];
+  uint8_t mac_addr_[ETH_ALEN];
 };
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_FW_SIM_HW_H_

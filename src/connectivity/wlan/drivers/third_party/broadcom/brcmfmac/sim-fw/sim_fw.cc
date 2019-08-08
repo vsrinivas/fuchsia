@@ -20,6 +20,8 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 
@@ -29,8 +31,8 @@ void SimFirmware::GetChipInfo(uint32_t* chip, uint32_t* chiprev) {
 }
 
 zx_status_t SimFirmware::BusPreinit() {
-  ZX_PANIC("%s unimplemented", __FUNCTION__);
-  return ZX_ERR_NOT_SUPPORTED;
+  // Currently nothing to do
+  return ZX_OK;
 }
 
 void SimFirmware::BusStop() { ZX_PANIC("%s unimplemented", __FUNCTION__); }
@@ -40,50 +42,106 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+// Set or get the value of an iovar. The format of the message is a null-terminated string
+// containing the iovar name, followed by the value to assign to that iovar.
+zx_status_t SimFirmware::BcdcVarOp(brcmf_proto_bcdc_dcmd* dcmd, uint8_t* data, size_t len,
+                                   bool is_set) {
+  zx_status_t status = ZX_OK;
+
+  char* str_begin = reinterpret_cast<char*>(data);
+  uint8_t* str_end = static_cast<uint8_t*>(std::memchr(str_begin, '\0', dcmd->len));
+  if (str_end == nullptr) {
+    BRCMF_ERR("SET_VAR: iovar name not null-terminated\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  size_t str_len = str_end - data;
+
+  // IovarsSet returns the input unchanged
+  // IovarsGet modifies the buffer in-place
+  if (is_set) {
+    void* value_start = str_end + 1;
+    size_t value_len = dcmd->len - (str_len + 1);
+    status = IovarsSet(str_begin, value_start, value_len);
+  } else {
+    status = IovarsGet(str_begin, data, dcmd->len);
+  }
+
+  if (status == ZX_OK) {
+    bcdc_response_.Set(reinterpret_cast<uint8_t*>(dcmd), len);
+  } else {
+    // Return empty message on failure
+    bcdc_response_.Clear();
+  }
+  return status;
+}
+
 // Process a TX CTL message. These have a BCDC header, followed by a payload that is determined
 // by the type of command.
 zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
-  brcmf_proto_bcdc_dcmd* hdr;
-  constexpr size_t hdr_size = sizeof(*hdr);
+  brcmf_proto_bcdc_dcmd* dcmd;
+  constexpr size_t hdr_size = sizeof(struct brcmf_proto_bcdc_dcmd);
   if (len < hdr_size) {
     BRCMF_ERR("Message length (%u) smaller than BCDC header size (%zd)\n", len, hdr_size);
     return ZX_ERR_INVALID_ARGS;
   }
-  hdr = reinterpret_cast<brcmf_proto_bcdc_dcmd*>(msg);
+  dcmd = reinterpret_cast<brcmf_proto_bcdc_dcmd*>(msg);
+  // The variable-length payload immediately follows the header
+  uint8_t* data = reinterpret_cast<uint8_t*>(dcmd) + hdr_size;
 
-  size_t bcdc_data_len = len - hdr_size;
-  if (hdr->len > bcdc_data_len) {
-    BRCMF_ERR("BCDC total message length (%zd) exceeds buffer size (%u)\n", hdr->len + hdr_size,
-              len);
+  if (dcmd->len > (len - hdr_size)) {
+    BRCMF_ERR("BCDC total message length (%zd) exceeds buffer size (%u)\n",
+              dcmd->len + hdr_size, len);
     return ZX_ERR_INVALID_ARGS;
   }
-  uint8_t* bcdc_data = static_cast<uint8_t*>(msg) + hdr_size;
 
-  zx_status_t status;
-  switch (hdr->cmd) {
-    // Set a firmware IOVAR. This message is comprised of a NULL-terminated string
+  zx_status_t status = ZX_OK;
+  switch (dcmd->cmd) {
+    // Get/Set a firmware IOVAR. This message is comprised of a NULL-terminated string
     // for the variable name, followed by the value to assign to it.
-    case BRCMF_C_SET_VAR: {
-      uint8_t* str_end = static_cast<uint8_t*>(std::memchr(bcdc_data, '\0', bcdc_data_len));
-      if (str_end == nullptr) {
-        BRCMF_ERR("iovar name not null-terminated\n");
-        return ZX_ERR_INVALID_ARGS;
+    case BRCMF_C_SET_VAR:
+    case BRCMF_C_GET_VAR:
+      status = BcdcVarOp(dcmd, data, len, dcmd->cmd == BRCMF_C_SET_VAR);
+      break;
+    case BRCMF_C_GET_REVINFO: {
+      struct brcmf_rev_info_le rev_info;
+      hw_.GetRevInfo(&rev_info);
+      if (dcmd->len < sizeof(rev_info)) {
+        BRCMF_ERR(
+            "Insufficient space (%u bytes) in message buffer to save revision "
+            "info (%zu bytes)\n",
+            dcmd->len, sizeof(rev_info));
       }
-      status = IovarsSet(reinterpret_cast<char*>(bcdc_data), static_cast<void*>(str_end + 1),
-                         bcdc_data + bcdc_data_len - (str_end + 1));
-      if (status == ZX_OK) {
-        // Return original message on success
-        bcdc_response_.Set(static_cast<uint8_t*>(msg), len);
-      } else {
-        // Return empty message on failure
-        bcdc_response_.Clear();
+      std::memcpy(data, &rev_info, sizeof(rev_info));
+      bcdc_response_.Set(msg, len);
+      break;
+    }
+    case BRCMF_C_GET_VERSION: {
+      // GET_VERSION is a bit of a misnomer. It's really the 802.11 supported spec
+      // (e.g., n or ac).
+      constexpr uint32_t iotype = BRCMU_D11AC_IOTYPE;
+      if (dcmd->len < sizeof(iotype)) {
+        BRCMF_ERR(
+            "Insufficient space (%u bytes) in message buffer to save iotype "
+            "info (%zu bytes)\n",
+            dcmd->len, sizeof(iotype));
       }
-    } break;
+      std::memcpy(data, &iotype, sizeof(iotype));
+      bcdc_response_.Set(msg, len);
+      break;
+    }
+    case BRCMF_C_SET_SCAN_CHANNEL_TIME:
+    case BRCMF_C_SET_SCAN_UNASSOC_TIME:
+      BRCMF_ERR("Ignoring firmware message %d\n", dcmd->cmd);
+      bcdc_response_.Set(msg, len);
+      status = ZX_OK;
+      break;
     default:
-      BRCMF_ERR("Unimplemented firmware message %d\n", hdr->cmd);
-      return ZX_ERR_NOT_SUPPORTED;
+      BRCMF_ERR("Unimplemented firmware message %d\n", dcmd->cmd);
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
   }
-  return ZX_OK;
+  return status;
 }
 
 // Process an RX CTL message. We simply pass back the results of the previous TX CTL
@@ -123,8 +181,8 @@ zx_status_t SimFirmware::BusGetMemdump(void* data, size_t len) {
 }
 
 zx_status_t SimFirmware::BusGetFwName(uint chip, uint chiprev, unsigned char* fw_name) {
-  ZX_PANIC("%s unimplemented", __FUNCTION__);
-  return ZX_ERR_NOT_SUPPORTED;
+  strlcpy((char*)fw_name, "sim-fake-fw.bin", BRCMF_FW_NAME_LEN);
+  return ZX_OK;
 }
 
 zx_status_t SimFirmware::BusGetBootloaderMacAddr(uint8_t* mac_addr) {
@@ -153,15 +211,33 @@ void SimFirmware::BcdcResponse::Set(uint8_t* data, size_t new_len) {
   memcpy(msg_, data, new_len);
 }
 
-zx_status_t SimFirmware::IovarsSet(const char* name, void* value, size_t len) {
-  if (std::strcmp(name, "cur_etheraddr")) {
-    if (len == ETH_ALEN) {
-      return hw_.setMacAddr(static_cast<uint8_t*>(value));
+zx_status_t SimFirmware::IovarsSet(const char* name, const void* value, size_t value_len) {
+  if (!std::strcmp(name, "cur_etheraddr")) {
+    if (value_len == ETH_ALEN) {
+      return hw_.SetMacAddr(static_cast<const uint8_t*>(value));
     } else {
       return ZX_ERR_INVALID_ARGS;
     }
   }
 
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
+  BRCMF_ERR("Ignoring request to set iovar '%s'\n", name);
+  return ZX_OK;
+}
+
+const char* kFirmwareVer = "wl0: Sep 10 2018 16:37:38 version 7.35.79 (r487924) FWID 01-c76ab99a";
+
+zx_status_t SimFirmware::IovarsGet(const char* name, void* value_out, size_t value_len) {
+  if (!std::strcmp(name, "ver")) {
+    if (value_len >= (strlen(kFirmwareVer) + 1)) {
+      strlcpy(static_cast<char*>(value_out), kFirmwareVer, value_len);
+    } else {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  } else {
+    // FIXME: We should return an error for an unrecognized firmware variable
+    BRCMF_ERR("Ignoring request to read iovar '%s'\n", name);
+    memset(value_out, 0, value_len);
+  }
   return ZX_OK;
 }

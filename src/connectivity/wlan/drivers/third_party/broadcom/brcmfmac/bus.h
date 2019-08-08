@@ -75,6 +75,7 @@ struct brcmf_bus_dcmd {
 #include "device.h"
 
 struct brcmf_bus_ops {
+  enum brcmf_bus_type (*get_bus_type)();
   zx_status_t (*preinit)(struct brcmf_device* dev);
   void (*stop)(struct brcmf_device* dev);
   zx_status_t (*txdata)(struct brcmf_device* dev, struct brcmf_netbuf* netbuf);
