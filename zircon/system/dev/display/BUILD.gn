@@ -9,7 +9,7 @@ group("display") {
     "display",
     "dsi-dw",
     "dsi-mt",
-    "dummy",
+    "fake",
     "goldfish-display",
     "hikey-display",
     "mt8167s-display",

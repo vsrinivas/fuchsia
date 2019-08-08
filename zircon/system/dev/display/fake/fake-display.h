@@ -2,8 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DUMMY_DUMMY_DISPLAY_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_DUMMY_DUMMY_DISPLAY_H_
+#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_FAKE_FAKE_DISPLAY_H_
+#define ZIRCON_SYSTEM_DEV_DISPLAY_FAKE_FAKE_DISPLAY_H_
+
+#include <lib/zircon-internal/thread_annotations.h>
+#include <unistd.h>
+#include <zircon/compiler.h>
+#include <zircon/pixelformat.h>
+
+#include <atomic>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -13,23 +20,17 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <unistd.h>
-#include <zircon/compiler.h>
-#include <zircon/pixelformat.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
-#include <atomic>
+namespace fake_display {
 
-namespace dummy_display {
+class FakeDisplay;
 
-class DummyDisplay;
+using DeviceType = ddk::Device<FakeDisplay, ddk::Unbindable>;
 
-using DeviceType = ddk::Device<DummyDisplay, ddk::Unbindable>;
-
-class DummyDisplay : public DeviceType,
-                     public ddk::DisplayControllerImplProtocol<DummyDisplay, ddk::base_protocol> {
+class FakeDisplay : public DeviceType,
+                    public ddk::DisplayControllerImplProtocol<FakeDisplay, ddk::base_protocol> {
  public:
-  DummyDisplay(zx_device_t* parent) : DeviceType(parent) {}
+  FakeDisplay(zx_device_t* parent) : DeviceType(parent) {}
 
   // This function is called from the c-bind function upon driver matching
   zx_status_t Bind();
@@ -83,6 +84,6 @@ class DummyDisplay : public DeviceType,
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);
 };
 
-}  // namespace dummy_display
+}  // namespace fake_display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_DUMMY_DUMMY_DISPLAY_H_
+#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_FAKE_FAKE_DISPLAY_H_

@@ -34,7 +34,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_HID_BUTTONS        19  // HID Buttons
 #define PDEV_DID_MUSB_PERIPHERAL    20  // MUSB in peripheral role
 #define PDEV_DID_MUSB_HOST          21  // MUSB in host role
-#define PDEV_DID_DUMMY_DISPLAY      22  // Dummy display
+#define PDEV_DID_FAKE_DISPLAY       22  // Dummy display
 #define PDEV_DID_FOCALTOUCH         23  // FocalTech touch device
 #define PDEV_DID_LITE_ON_ALS        24  // Lite-On ambient light sensor
 #define PDEV_DID_BOSCH_BMA253       25  // Bosch BMA253 acceleration sensor

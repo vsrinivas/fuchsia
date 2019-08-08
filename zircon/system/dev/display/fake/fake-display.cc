@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dummy-display.h"
+#include "fake-display.h"
+
+#include <fuchsia/sysmem/c/fidl.h>
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
-#include <fuchsia/sysmem/c/fidl.h>
 
-namespace dummy_display {
+namespace fake_display {
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
 namespace {
@@ -24,7 +25,7 @@ constexpr uint64_t kDisplayId = 1;
 constexpr uint32_t kRefreshRateFps = 60;
 }  // namespace
 
-void DummyDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
+void FakeDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
   args->display_id = kDisplayId;
   args->edid_present = false;
   args->panel.params.height = kHeight;
@@ -36,13 +37,13 @@ void DummyDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-uint32_t DummyDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
-                                                                zx_pixel_format_t format) {
+uint32_t FakeDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
+                                                               zx_pixel_format_t format) {
   return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void DummyDisplay::DisplayControllerImplSetDisplayControllerInterface(
+void FakeDisplay::DisplayControllerImplSetDisplayControllerInterface(
     const display_controller_interface_protocol_t* intf) {
   fbl::AutoLock lock(&display_lock_);
   dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient(intf);
@@ -52,8 +53,8 @@ void DummyDisplay::DisplayControllerImplSetDisplayControllerInterface(
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t DummyDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
-                                                              size_t offset) {
+zx_status_t FakeDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
+                                                             size_t offset) {
   zx_status_t status = ZX_OK;
 
   if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
@@ -68,9 +69,9 @@ zx_status_t DummyDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t DummyDisplay::DisplayControllerImplImportImage(image_t* image,
-                                                           zx_unowned_handle_t handle,
-                                                           uint32_t index) {
+zx_status_t FakeDisplay::DisplayControllerImplImportImage(image_t* image,
+                                                          zx_unowned_handle_t handle,
+                                                          uint32_t index) {
   zx_status_t status = ZX_OK;
 
   if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
@@ -85,12 +86,12 @@ zx_status_t DummyDisplay::DisplayControllerImplImportImage(image_t* image,
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void DummyDisplay::DisplayControllerImplReleaseImage(image_t* image) {
+void FakeDisplay::DisplayControllerImplReleaseImage(image_t* image) {
   free(reinterpret_cast<void*>(image->handle));
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-uint32_t DummyDisplay::DisplayControllerImplCheckConfiguration(
+uint32_t FakeDisplay::DisplayControllerImplCheckConfiguration(
     const display_config_t** display_configs, size_t display_count, uint32_t** layer_cfg_results,
     size_t* layer_cfg_result_count) {
   if (display_count != 1) {
@@ -130,8 +131,8 @@ uint32_t DummyDisplay::DisplayControllerImplCheckConfiguration(
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void DummyDisplay::DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
-                                                           size_t display_count) {
+void FakeDisplay::DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
+                                                          size_t display_count) {
   ZX_DEBUG_ASSERT(display_configs);
 
   fbl::AutoLock lock(&display_lock_);
@@ -148,12 +149,12 @@ void DummyDisplay::DisplayControllerImplApplyConfiguration(const display_config_
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t DummyDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
+zx_status_t FakeDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
   return zx::vmo::create(size, 0, vmo_out);
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t DummyDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
+zx_status_t FakeDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
   zx_status_t status = sysmem_connect(&sysmem_, connection.release());
   if (status != ZX_OK) {
     DISP_ERROR("Could not connect to sysmem\n");
@@ -164,7 +165,7 @@ zx_status_t DummyDisplay::DisplayControllerImplGetSysmemConnection(zx::channel c
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t DummyDisplay::DisplayControllerImplSetBufferCollectionConstraints(
+zx_status_t FakeDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
   fuchsia_sysmem_BufferCollectionConstraints constraints = {};
   constraints.usage.display = fuchsia_sysmem_displayUsageLayer;
@@ -209,15 +210,15 @@ zx_status_t DummyDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   return ZX_OK;
 }
 
-void DummyDisplay::DdkUnbind() { DdkRemove(); }
+void FakeDisplay::DdkUnbind() { DdkRemove(); }
 
-void DummyDisplay::DdkRelease() {
+void FakeDisplay::DdkRelease() {
   vsync_shutdown_flag_.store(true);
   thrd_join(vsync_thread_, NULL);
   delete this;
 }
 
-zx_status_t DummyDisplay::SetupDisplayInterface() {
+zx_status_t FakeDisplay::SetupDisplayInterface() {
   fbl::AutoLock lock(&display_lock_);
 
   current_image_valid_ = false;
@@ -231,7 +232,7 @@ zx_status_t DummyDisplay::SetupDisplayInterface() {
   return ZX_OK;
 }
 
-int DummyDisplay::VSyncThread() {
+int FakeDisplay::VSyncThread() {
   zx_status_t status = ZX_OK;
   while (1) {
     zx::nanosleep(zx::deadline_after(zx::sec(1) / kRefreshRateFps));
@@ -249,7 +250,7 @@ int DummyDisplay::VSyncThread() {
   return status;
 }
 
-zx_status_t DummyDisplay::Bind() {
+zx_status_t FakeDisplay::Bind() {
   zx_status_t status;
 
   status = device_get_protocol(parent_, ZX_PROTOCOL_SYSMEM, &sysmem_);
@@ -261,18 +262,18 @@ zx_status_t DummyDisplay::Bind() {
   // Setup Display Interface
   status = SetupDisplayInterface();
   if (status != ZX_OK) {
-    DISP_ERROR("Dummy display setup failed! %d\n", status);
+    DISP_ERROR("Fake display setup failed! %d\n", status);
     return status;
   }
 
-  auto start_thread = [](void* arg) { return static_cast<DummyDisplay*>(arg)->VSyncThread(); };
+  auto start_thread = [](void* arg) { return static_cast<FakeDisplay*>(arg)->VSyncThread(); };
   status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
   if (status != ZX_OK) {
     DISP_ERROR("Could not create vsync_thread\n");
     return status;
   }
 
-  status = DdkAdd("dummy-display");
+  status = DdkAdd("fake-display");
   if (status != ZX_OK) {
     DISP_ERROR("Could not add device\n");
     return status;
@@ -281,12 +282,12 @@ zx_status_t DummyDisplay::Bind() {
   return ZX_OK;
 }
 
-}  // namespace dummy_display
+}  // namespace fake_display
 
 // main bind function called from dev manager
-extern "C" zx_status_t dummy_display_bind(void* ctx, zx_device_t* parent) {
+extern "C" zx_status_t fake_display_bind(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
-  auto dev = fbl::make_unique_checked<dummy_display::DummyDisplay>(&ac, parent);
+  auto dev = fbl::make_unique_checked<fake_display::FakeDisplay>(&ac, parent);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -299,16 +300,16 @@ extern "C" zx_status_t dummy_display_bind(void* ctx, zx_device_t* parent) {
   return status;
 }
 
-static constexpr zx_driver_ops_t dummy_display_ops = []() {
+static constexpr zx_driver_ops_t fake_display_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = dummy_display_bind;
+  ops.bind = fake_display_bind;
   return ops;
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(dummy_display, dummy_display_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(fake_display, fake_display_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DUMMY_DISPLAY),
-ZIRCON_DRIVER_END(dummy_display)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_FAKE_DISPLAY),
+ZIRCON_DRIVER_END(fake_display)
