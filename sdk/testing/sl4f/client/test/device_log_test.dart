@@ -27,7 +27,7 @@ void main(List<String> args) {
       void handler(HttpRequest req) async {
         expect(req.contentLength, greaterThan(0));
         final body = jsonDecode(await utf8.decodeStream(req));
-        expect(body['method'], 'logging.LogErr');
+        expect(body['method'], 'logging_facade.LogErr');
         expect(body['params'].keys.single, 'message');
         expect(body['params']['message'], 'hi');
         req.response.write(
