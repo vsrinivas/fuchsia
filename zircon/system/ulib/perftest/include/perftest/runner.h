@@ -21,13 +21,15 @@ struct NamedTest {
 typedef fbl::Vector<NamedTest> TestList;
 
 bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
-              const char* regex_string, FILE* log_stream, ResultsSet* results_set);
+              const char* regex_string, FILE* log_stream, ResultsSet* results_set,
+              bool quiet = false);
 
 struct CommandArgs {
   const char* output_filename = nullptr;
   // Note that this default matches any string.
   const char* filter_regex = "";
   uint32_t run_count = 1000;
+  bool quiet = false;
   bool enable_tracing = false;
   double startup_delay_seconds = 0;
 };

@@ -102,7 +102,7 @@ void BenchmarksRunner::AddLibPerfTestBenchmark(const std::string& name,
                                                const std::string& libperftest_binary,
                                                const std::vector<std::string>& extra_args) {
   std::string out_file = JoinPaths({out_dir_, name + ".json"});
-  std::vector<std::string> command = {libperftest_binary, "-p", "--out=" + out_file};
+  std::vector<std::string> command = {libperftest_binary, "-p", "--quiet", "--out=" + out_file};
   std::copy(extra_args.begin(), extra_args.end(), std::back_inserter(command));
   AddCustomBenchmark(name, command, out_file);
 }

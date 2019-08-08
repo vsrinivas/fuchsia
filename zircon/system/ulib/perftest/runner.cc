@@ -288,7 +288,7 @@ bool RunTest(const char* test_suite, const char* test_name,
 namespace internal {
 
 bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
-              const char* regex_string, FILE* log_stream, ResultsSet* results_set) {
+              const char* regex_string, FILE* log_stream, ResultsSet* results_set, bool quiet) {
   // Compile the regular expression.
   regex_t regex;
   int err = regcomp(&regex, regex_string, REG_EXTENDED);
@@ -313,7 +313,9 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
     // Log in a format similar to gtest's output, so that this will
     // look familiar to readers and to allow parsing by tools that can
     // parse gtest's output.
-    fprintf(log_stream, "[ RUN      ] %s\n", test_name);
+    if (!quiet) {
+      fprintf(log_stream, "[ RUN      ] %s\n", test_name);
+    }
 
     fbl::String error_string;
     if (!RunTest(test_suite, test_name, test_case.test_func, run_count, results_set,
@@ -323,7 +325,9 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
       ok = false;
       continue;
     }
-    fprintf(log_stream, "[       OK ] %s\n", test_name);
+    if (!quiet) {
+      fprintf(log_stream, "[       OK ] %s\n", test_name);
+    }
   }
 
   regfree(&regex);
@@ -342,6 +346,7 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
       {"out", required_argument, nullptr, 'o'},
       {"filter", required_argument, nullptr, 'f'},
       {"runs", required_argument, nullptr, 'r'},
+      {"quiet", no_argument, nullptr, 'q'},
       {"enable-tracing", no_argument, nullptr, 't'},
       {"startup-delay", required_argument, nullptr, 'd'},
   };
@@ -371,6 +376,9 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
         dest->run_count = static_cast<uint32_t>(val);
         break;
       }
+      case 'q':
+        dest->quiet = true;
+        break;
       case 't':
         dest->enable_tracing = true;
         break;
@@ -424,11 +432,14 @@ static bool PerfTestMode(const char* test_suite, int argc, char** argv) {
   zx_nanosleep(zx_deadline_after(duration));
 
   ResultsSet results;
-  bool success = RunTests(test_suite, g_tests, args.run_count, args.filter_regex, stdout, &results);
+  bool success = RunTests(test_suite, g_tests, args.run_count, args.filter_regex, stdout, &results,
+                          args.quiet);
 
-  printf("\n");
-  results.PrintSummaryStatistics(stdout);
-  printf("\n");
+  if (!args.quiet) {
+    printf("\n");
+    results.PrintSummaryStatistics(stdout);
+    printf("\n");
+  }
 
   if (args.output_filename) {
     if (!results.WriteJSONFile(args.output_filename)) {
@@ -467,6 +478,13 @@ int PerfTestMain(int argc, char** argv, const char* test_suite) {
         "to run.  By default, all the tests are run.\n"
         "  --runs NUMBER\n"
         "      Number of times to run each test.\n"
+        "  --quiet\n"
+        "      Disable printing the name of each test before and after "
+        "we run it.  That output tends to cause asynchronous background "
+        "activity (e.g. in the network stack, if the output is sent "
+        "across the network) which skews the test results.  See PT-245.  "
+        "This also disables printing the results, so it is only useful "
+        "when used with '--out'.\n"
         "  --enable-tracing\n"
         "      Enable use of Fuchsia tracing: Enable registering as a "
         "TraceProvider.  This is off by default because the "
