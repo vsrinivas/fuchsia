@@ -52,7 +52,7 @@ static zx_status_t acpi_thermal_get_info(acpi_thermal_device_t* dev,
   mtx_lock(&dev->lock);
   zx_status_t st = ZX_OK;
 
-  uint64_t temp;
+  uint64_t temp = 0.0f;
   st = acpi_psv_call(dev->acpi_handle, &temp);
   if (st != ZX_OK) {
     goto out;
@@ -80,27 +80,6 @@ out:
   return st;
 }
 
-static zx_status_t acpi_thermal_read(void* ctx, void* buf, size_t count, zx_off_t off,
-                                     size_t* actual) {
-  acpi_thermal_device_t* dev = ctx;
-  uint64_t v;
-
-  if (count < sizeof(uint32_t)) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-
-  zx_status_t status = acpi_tmp_call(dev->acpi_handle, &v);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi-thermal: acpi error %d in _TMP\n", status);
-    return status;
-  }
-  float temp = decikelvin_to_celsius(v);
-  memcpy(buf, &temp, sizeof(temp));
-  *actual = sizeof(temp);
-
-  return ZX_OK;
-}
-
 static zx_status_t fidl_GetInfo(void* ctx, fidl_txn_t* txn) {
   acpi_thermal_device_t* dev = ctx;
 
@@ -126,7 +105,17 @@ static zx_status_t fidl_GetDvfsInfo(void* ctx, fuchsia_hardware_thermal_PowerDom
 }
 
 static zx_status_t fidl_GetTemperatureCelsius(void* ctx, fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetTemperatureCelsius_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+  acpi_thermal_device_t* dev = ctx;
+  uint64_t v;
+
+  zx_status_t status = acpi_tmp_call(dev->acpi_handle, &v);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "acpi-thermal: acpi error %d in _TMP\n", status);
+    return fuchsia_hardware_thermal_DeviceGetTemperatureCelsius_reply(txn, status, 0);
+  }
+
+  return fuchsia_hardware_thermal_DeviceGetTemperatureCelsius_reply(txn, ZX_OK,
+                                                                    decikelvin_to_celsius(v));
 }
 
 static zx_status_t fidl_GetStateChangeEvent(void* ctx, fidl_txn_t* txn) {
@@ -228,14 +217,13 @@ static void acpi_thermal_release(void* ctx) {
 
 static zx_protocol_device_t acpi_thermal_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .read = acpi_thermal_read,
     .release = acpi_thermal_release,
     .message = acpi_thermal_message,
 };
 
 zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDLE acpi_handle) {
   // only support sensors
-  uint64_t type;
+  uint64_t type = 0;
   ACPI_STATUS acpi_status = acpi_evaluate_integer(acpi_handle, "PTYP", &type);
   if (acpi_status != AE_OK) {
     zxlogf(ERROR, "acpi-thermal: acpi error %d in PTYP\n", acpi_status);

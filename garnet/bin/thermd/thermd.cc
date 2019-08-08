@@ -157,16 +157,18 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  float temp;
-  ssize_t rc = read(fd.get(), &temp, sizeof(temp));
-  if (rc != sizeof(temp)) {
-    return rc;
-  }
-  TRACE_COUNTER("thermal", "temp", 0, "ambient-c", temp);
-
   fzl::FdioCaller caller(std::move(fd));
 
   zx_status_t status2;
+  float temp;
+  st = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
+                                                            &temp);
+  if (st != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get temperature: %d %d\n", st, status2);
+    return -1;
+  }
+  TRACE_COUNTER("thermal", "temp", 0, "ambient-c", temp);
+
   fuchsia_hardware_thermal_ThermalInfo info;
   st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
   if (st != ZX_OK || status2 != ZX_OK) {
@@ -225,20 +227,22 @@ int main(int argc, char** argv) {
       if (info.state) {
         set_pl1(PL1_MIN);  // decrease power limit
 
-        rc = read(caller.fd().get(), &temp, sizeof(temp));
-        if (rc != sizeof(temp)) {
-          fprintf(stderr, "ERROR: Failed to read temperature: %zd\n", rc);
-          return rc;
+        st = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
+                                                                  &temp);
+        if (st != ZX_OK || status2 != ZX_OK) {
+          fprintf(stderr, "ERROR: Failed to get temperature: %d %d\n", st, status2);
+          return -1;
         }
       } else {
         TRACE_COUNTER("thermal", "event", 0, "spurious", temp);
       }
     }
     if (st == ZX_ERR_TIMED_OUT) {
-      rc = read(caller.fd().get(), &temp, sizeof(temp));
-      if (rc != sizeof(temp)) {
-        fprintf(stderr, "ERROR: Failed to read temperature: %zd\n", rc);
-        return rc;
+      st = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
+                                                                &temp);
+      if (st != ZX_OK || status2 != ZX_OK) {
+        fprintf(stderr, "ERROR: Failed to get temperature: %d %d\n", st, status2);
+        return -1;
       }
       TRACE_COUNTER("thermal", "temp", 0, "ambient-c", temp);
 
