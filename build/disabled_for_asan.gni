@@ -4,4 +4,7 @@ disabled_for_asan = [
 
   # BT-2270
   "/pkgfs/packages/bluetooth-tests/0/test/bt-integration-tests",
+
+  # FL-291
+  "/pkgfs/packages/flutter_runner_tests/0/test/flutter_runner_tests",
 ]
