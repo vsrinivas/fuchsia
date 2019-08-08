@@ -1,4 +1,3 @@
-
 Contributing to FIDL
 ====================
 
@@ -61,6 +60,25 @@ SomeClass::SomeClass()
 
 Comments must respect 80 columns line size limit, unlike code which can extend
 to 100 lines size limit.
+
+##### Lambda captures
+
+* If a lambda escapes the current scope, capture all variables explicitly.
+* If the lambda is local (does not escape the current scope), prefer using a default capture by
+  reference ("`[&]`").
+
+Seeing `[&]` is a strong signal that the lambda exists within the current scope only, and can be
+used to distinguish local from non-local lambdas.
+
+```cpp
+// Correct.
+std::set<const flat::Library*, LibraryComparator> dependencies;
+auto add_dependency = [&](const flat::Library* dep_library) {
+  if (!dep_library->HasAttribute("Internal")) {
+    dependencies.insert(dep_library);
+  }
+};
+```
 
 ## General Setup
 
