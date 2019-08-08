@@ -44,13 +44,6 @@ group("netcfg") {
   ]
 }
 
-group("fonts") {
-  testonly = true
-  public_deps = [
-    "//src/fonts",
-  ]
-}
-
 group("tracing") {
   testonly = true
   public_deps = [
