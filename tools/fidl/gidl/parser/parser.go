@@ -118,6 +118,7 @@ const (
 	isValue
 	isBytes
 	isErr
+	isBindingsAllowlist
 )
 
 func (kind bodyElement) String() string {
@@ -130,54 +131,64 @@ func (kind bodyElement) String() string {
 		return "bytes"
 	case isErr:
 		return "err"
+	case isBindingsAllowlist:
+		return "bindings_allowlist"
 	default:
 		panic("unsupported kind")
 	}
 }
 
 type body struct {
-	Type  string
-	Value ir.Value
-	Bytes []byte
-	Err   ir.ErrorCode
+	Type              string
+	Value             ir.Value
+	Bytes             []byte
+	Err               ir.ErrorCode
+	BindingsAllowlist []string
 }
 
 type sectionMetadata struct {
-	kinds  map[bodyElement]bool
-	setter func(name string, body body, all *ir.All)
+	requiredKinds map[bodyElement]bool
+	optionalKinds map[bodyElement]bool
+	setter        func(name string, body body, all *ir.All)
 }
 
 var sections = map[string]sectionMetadata{
 	"success": {
-		kinds: map[bodyElement]bool{isValue: true, isBytes: true},
+		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.Success{
-				Name:  name,
-				Value: body.Value,
-				Bytes: body.Bytes,
+				Name:              name,
+				Value:             body.Value,
+				Bytes:             body.Bytes,
+				BindingsAllowlist: body.BindingsAllowlist,
 			}
 			all.Success = append(all.Success, result)
 		},
 	},
 	"fails_to_encode": {
-		kinds: map[bodyElement]bool{isValue: true, isErr: true},
+		requiredKinds: map[bodyElement]bool{isValue: true, isErr: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.FailsToEncode{
-				Name:  name,
-				Value: body.Value,
-				Err:   body.Err,
+				Name:              name,
+				Value:             body.Value,
+				Err:               body.Err,
+				BindingsAllowlist: body.BindingsAllowlist,
 			}
 			all.FailsToEncode = append(all.FailsToEncode, result)
 		},
 	},
 	"fails_to_decode": {
-		kinds: map[bodyElement]bool{isType: true, isBytes: true, isErr: true},
+		requiredKinds: map[bodyElement]bool{isType: true, isBytes: true, isErr: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.FailsToDecode{
-				Name:  name,
-				Type:  body.Type,
-				Bytes: body.Bytes,
-				Err:   body.Err,
+				Name:              name,
+				Type:              body.Type,
+				Bytes:             body.Bytes,
+				Err:               body.Err,
+				BindingsAllowlist: body.BindingsAllowlist,
 			}
 			all.FailsToDecode = append(all.FailsToDecode, result)
 		},
@@ -189,7 +200,7 @@ func (p *Parser) parseSection(all *ir.All) error {
 	if err != nil {
 		return err
 	}
-	body, err := p.parseBody(section.kinds)
+	body, err := p.parseBody(section.requiredKinds, section.optionalKinds)
 	if err != nil {
 		return err
 	}
@@ -227,7 +238,7 @@ func (p *Parser) parsePreamble() (sectionMetadata, string, error) {
 	return section, name, nil
 }
 
-func (p *Parser) parseBody(requiredKinds map[bodyElement]bool) (body, error) {
+func (p *Parser) parseBody(requiredKinds map[bodyElement]bool, optionalKinds map[bodyElement]bool) (body, error) {
 	var (
 		result      body
 		parsedKinds = make(map[bodyElement]bool)
@@ -248,7 +259,7 @@ func (p *Parser) parseBody(requiredKinds map[bodyElement]bool) (body, error) {
 		}
 	}
 	for parsedKind := range parsedKinds {
-		if !requiredKinds[parsedKind] {
+		if !requiredKinds[parsedKind] && !optionalKinds[parsedKind] {
 			return result, p.newParseError(bodyTok, "parameter '%s' does not apply to element", parsedKind)
 		}
 	}
@@ -296,8 +307,15 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 		}
 		result.Err = errorCode
 		kind = isErr
+	case "bindings_allowlist":
+		languages, err := p.parseTextSlice()
+		if err != nil {
+			return err
+		}
+		result.BindingsAllowlist = languages
+		kind = isBindingsAllowlist
 	default:
-		return p.newParseError(tok, "must be type, value, bytes, or err")
+		return p.newParseError(tok, "must be type, value, bytes, err or language_whitelist")
 	}
 	if all[kind] {
 		return p.newParseError(tok, "duplicate %s found", kind)
@@ -418,6 +436,26 @@ func (p *Parser) parseSlice() ([]interface{}, error) {
 		return nil, p.failExpectedToken(tRsquare, tok)
 	}
 	return result, nil
+}
+
+func (p *Parser) parseTextSlice() ([]string, error) {
+	var result []string
+	if tok, ok := p.consumeToken(tLsquare); !ok {
+		return nil, p.failExpectedToken(tLsquare, tok)
+	}
+	for {
+		tok, ok := p.consumeToken(tRsquare)
+		if ok {
+			return result, nil
+		}
+		if tok.kind != tText {
+			return nil, p.failExpectedToken(tText, tok)
+		}
+		result = append(result, tok.value)
+		if tok, ok := p.consumeToken(tComma); !ok {
+			return nil, p.failExpectedToken(tComma, tok)
+		}
+	}
 }
 
 func (p *Parser) parseBytes() ([]byte, error) {

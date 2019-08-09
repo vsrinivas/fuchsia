@@ -11,23 +11,26 @@ type All struct {
 }
 
 type Success struct {
-	Name  string
-	Value interface{}
-	Bytes []byte
+	Name              string
+	Value             interface{}
+	Bytes             []byte
+	BindingsAllowlist []string
 	// Handles
 }
 
 type FailsToEncode struct {
-	Name  string
-	Value interface{}
-	Err   ErrorCode
+	Name              string
+	Value             interface{}
+	Err               ErrorCode
+	BindingsAllowlist []string
 }
 
 type FailsToDecode struct {
-	Name  string
-	Type  string
-	Bytes []byte
-	Err   ErrorCode
+	Name              string
+	Type              string
+	Bytes             []byte
+	Err               ErrorCode
+	BindingsAllowlist []string
 }
 
 // Value represents any acceptable value used to represent a FIDL value.

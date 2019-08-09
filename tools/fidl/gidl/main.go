@@ -15,8 +15,8 @@ import (
 
 	fidlir "fidl/compiler/backend/types"
 	gidlcpp "gidl/cpp"
-	gidlgolang "gidl/golang"
 	gidldart "gidl/dart"
+	gidlgolang "gidl/golang"
 	gidlir "gidl/ir"
 	gidlparser "gidl/parser"
 )
@@ -71,6 +71,35 @@ func parseFidlJSONIr(filename string) fidlir.Root {
 	return result
 }
 
+func filterByBinding(input gidlir.All, binding string) gidlir.All {
+	var output gidlir.All
+	for _, def := range input.Success {
+		if len(def.BindingsAllowlist) == 0 || contains(binding, def.BindingsAllowlist) {
+			output.Success = append(output.Success, def)
+		}
+	}
+	for _, def := range input.FailsToEncode {
+		if len(def.BindingsAllowlist) == 0 || contains(binding, def.BindingsAllowlist) {
+			output.FailsToEncode = append(output.FailsToEncode, def)
+		}
+	}
+	for _, def := range input.FailsToDecode {
+		if len(def.BindingsAllowlist) == 0 || contains(binding, def.BindingsAllowlist) {
+			output.FailsToDecode = append(output.FailsToDecode, def)
+		}
+	}
+	return output
+}
+
+func contains(search string, list []string) bool {
+	for _, item := range list {
+		if item == search {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
 	flag.Parse()
 
@@ -81,7 +110,7 @@ func main() {
 
 	// Parse GIDL and JSON IR.
 	var (
-		gidl = parseGidlIr(*flags.GIDLPath)
+		gidl = filterByBinding(parseGidlIr(*flags.GIDLPath), *flags.Language)
 		fidl = parseFidlJSONIr(*flags.JSONPath)
 	)
 

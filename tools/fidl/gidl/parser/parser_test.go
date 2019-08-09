@@ -212,6 +212,49 @@ func TestParseFailsToDecodeCase(t *testing.T) {
 	})
 }
 
+func TestParseSucceedsBindingsAllowlist(t *testing.T) {
+	parsingToCheck{
+		t: t,
+		fn: func(p *Parser) (interface{}, error) {
+			var all ir.All
+			if err := p.parseSection(&all); err != nil {
+				return nil, err
+			} else if len(all.Success) != 1 {
+				return nil, fmt.Errorf("did not parse success section")
+			}
+			return all.Success[0], nil
+		},
+	}.checkSuccess(map[string]interface{}{
+		`
+		success("OneStringOfMaxLengthFive-empty") {
+			value = OneStringOfMaxLengthFive {
+				first: "four",
+			}
+			bytes = {
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			}
+			bindings_allowlist = [go, rust,]
+		}`: ir.Success{
+			Name: "OneStringOfMaxLengthFive-empty",
+			Value: ir.Object{
+				Name: "OneStringOfMaxLengthFive",
+				Fields: []ir.Field{
+					{
+						Name:  "first",
+						Value: "four",
+					},
+				},
+			},
+			Bytes: []byte{
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			},
+			BindingsAllowlist: []string{"go", "rust"},
+		},
+	})
+}
+
 func TestParseFailsExtraKind(t *testing.T) {
 	parsingToCheck{
 		t: t,
