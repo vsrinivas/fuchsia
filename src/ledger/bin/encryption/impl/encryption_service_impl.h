@@ -40,11 +40,11 @@ class EncryptionServiceImpl : public EncryptionService {
   void GetChunkingPermutation(
       fit::function<void(Status, fit::function<uint64_t(uint64_t)>)> callback) override;
 
-  void GetEntryId(fit::function<void(Status, std::string)> callback) override;
+  std::string GetEntryId() override;
 
-  void GetEntryIdForMerge(fxl::StringView entry_name, storage::CommitId left_parent_id,
-                          storage::CommitId right_parent_id, fxl::StringView operation_list,
-                          fit::function<void(Status, std::string)> callback) override;
+  std::string GetEntryIdForMerge(fxl::StringView entry_name, storage::CommitId left_parent_id,
+                                 storage::CommitId right_parent_id,
+                                 fxl::StringView operation_list) override;
 
  private:
   class KeyService;

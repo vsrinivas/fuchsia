@@ -75,13 +75,14 @@ class EncryptionService {
   // Returns an entry id that identifies an entry in a diff sent to the cloud.
   //
   // This version is used for non-merge commits.
-  virtual void GetEntryId(fit::function<void(Status, std::string)> callback) = 0;
+  virtual std::string GetEntryId() = 0;
 
   // This version is used for merge commits to ensure different devices end up with the same entry
   // id for the same merge.
-  virtual void GetEntryIdForMerge(fxl::StringView entry_name, storage::CommitId left_parent_id,
-                                  storage::CommitId right_parent_id, fxl::StringView operation_list,
-                                  fit::function<void(Status, std::string)> callback) = 0;
+  virtual std::string GetEntryIdForMerge(fxl::StringView entry_name,
+                                         storage::CommitId left_parent_id,
+                                         storage::CommitId right_parent_id,
+                                         fxl::StringView operation_list) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(EncryptionService);

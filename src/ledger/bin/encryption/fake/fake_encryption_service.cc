@@ -97,18 +97,17 @@ void FakeEncryptionService::GetChunkingPermutation(
   callback(Status::OK, std::move(chunking_permutation));
 }
 
-void FakeEncryptionService::GetEntryId(fit::function<void(Status, std::string)> callback) {
+std::string FakeEncryptionService::GetEntryId() {
   std::string entry_id(kEntryIdSize, '0');
-  callback(Status::OK, entry_id);
+  return entry_id;
 }
 
-void FakeEncryptionService::GetEntryIdForMerge(fxl::StringView entry_name,
-                                               storage::CommitId left_parent_id,
-                                               storage::CommitId right_parent_id,
-                                               fxl::StringView operation_list,
-                                               fit::function<void(Status, std::string)> callback) {
+std::string FakeEncryptionService::GetEntryIdForMerge(fxl::StringView entry_name,
+                                                      storage::CommitId left_parent_id,
+                                                      storage::CommitId right_parent_id,
+                                                      fxl::StringView operation_list) {
   std::string entry_id(kEntryIdSize, '0');
-  callback(Status::OK, entry_id);
+  return entry_id;
 }
 
 std::string FakeEncryptionService::EncryptCommitSynchronous(

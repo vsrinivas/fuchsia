@@ -15,6 +15,7 @@
 
 #include "src/ledger/bin/encryption/impl/encrypted_commit_generated.h"
 #include "src/ledger/bin/encryption/primitives/encrypt.h"
+#include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/encryption/primitives/hmac.h"
 #include "src/ledger/bin/encryption/primitives/kdf.h"
 #include "src/lib/fxl/logging.h"
@@ -292,34 +293,24 @@ void EncryptionServiceImpl::GetChunkingPermutation(
   });
 }
 
-void EncryptionServiceImpl::GetEntryId(fit::function<void(Status, std::string)> callback) {
+std::string EncryptionServiceImpl::GetEntryId() {
   std::string entry_id;
   entry_id.resize(kEntryIdSize);
   (environment_->random())->Draw(&entry_id[0], kEntryIdSize);
-  callback(Status::OK, entry_id);
+  return entry_id;
 }
 
-void EncryptionServiceImpl::GetEntryIdForMerge(fxl::StringView entry_name,
-                                               storage::CommitId left_parent_id,
-                                               storage::CommitId right_parent_id,
-                                               fxl::StringView operation_list,
-                                               fit::function<void(Status, std::string)> callback) {
+std::string EncryptionServiceImpl::GetEntryIdForMerge(fxl::StringView entry_name,
+                                                      storage::CommitId left_parent_id,
+                                                      storage::CommitId right_parent_id,
+                                                      fxl::StringView operation_list) {
   FXL_DCHECK(left_parent_id <= right_parent_id);
   // TODO(LE-827): Concatenation is ineffective; consider doing it once per commit.
   std::string input =
       fxl::Concatenate({entry_name, left_parent_id, right_parent_id, operation_list});
-  master_keys_.Get(kDefaultKeyIndex, [this, input, callback = std::move(callback)](
-                                         Status status, const std::string& master_key) {
-    if (status != Status::OK) {
-      callback(status, "");
-      return;
-    }
-    std::string derived_key =
-        HMAC256KDF(fxl::Concatenate({master_key, namespace_id_}), kDerivedKeySize);
-    std::string hash = SHA256HMAC(derived_key, input);
-    hash.resize(kEntryIdSize);
-    callback(Status::OK, hash);
-  });
+  std::string hash = SHA256WithLengthHash(input);
+  hash.resize(kEntryIdSize);
+  return hash;
 }
 
 }  // namespace encryption
