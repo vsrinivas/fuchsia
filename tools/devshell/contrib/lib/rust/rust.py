@@ -8,6 +8,8 @@ import subprocess
 
 ROOT_PATH = os.environ["FUCHSIA_DIR"]
 FX_PATH = os.path.join(ROOT_PATH, "scripts", "fx")
+FUCHSIA_BUILD_DIR = os.environ["FUCHSIA_BUILD_DIR"]
+BUILDTOOLS_DIR = os.path.join(ROOT_PATH, "buildtools")
 
 def _walk_up_path(path):
     res = set([path])
@@ -89,3 +91,67 @@ class GnTarget:
         else:
             return target_manifest_path
 
+def get_rust_target_from_file(file):
+    """Given a Rust file, return a GN target that references it. Raises ValueError if the file
+    cannot be converted to a target."""
+    if not file.endswith(".rs"):
+        return None, "Not a Rust file."
+    # Query ninja to find the output file.
+    ninja_query_args = [
+        os.path.join(BUILDTOOLS_DIR, "ninja"),
+        "-C",
+        FUCHSIA_BUILD_DIR,
+        "-t",
+        "query",
+        os.path.relpath(file, FUCHSIA_BUILD_DIR),
+    ]
+
+    p = subprocess.Popen(
+        ninja_query_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate()
+    if p.returncode:
+        print err
+        raise None
+
+    # Expected Ninja query output is:
+    # ../../filename.rs:
+    #   outputs:
+    #     rust_crates/binary
+    lines = out.splitlines()
+    if len(lines) < 3:
+        print "Unexpected Ninja output: %s" % out
+        return None
+
+    output_files = [
+        os.path.join(FUCHSIA_BUILD_DIR, l.strip()) for l in lines[2:]
+    ]
+
+    # For each output file in Ninja, check to see if it's produced by a Rust build
+    # target. If so, return the base target name.
+    for output_file in output_files:
+        # Query GN to get the target that produced that output.
+        gn_refs_args = [
+            os.path.join(BUILDTOOLS_DIR, "gn"),
+            "refs",
+            FUCHSIA_BUILD_DIR,
+            output_file,
+        ]
+
+        p = subprocess.Popen(
+            gn_refs_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = p.communicate()
+        if p.returncode:
+            print err
+            raise None
+
+        # Expected GN refs output is:
+        # //path/to/target:bin_build
+        # //path/to/target:bin_copy
+        lines = out.splitlines()
+        for line in lines:
+            line = line.strip()
+            if line.endswith("_build"):
+                return GnTarget(line.rstrip("_build"))
+
+    print "Unable to find Rust build target for %s" % file
+    return None

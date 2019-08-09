@@ -92,6 +92,7 @@ function canonicalize() {
 DRY_RUN=
 VERBOSE=
 FIX_OPTION=
+TARGET=
 
 fx-config-read
 
@@ -115,11 +116,14 @@ while [ $# -gt 0 ]; do
       GN_OUTPUT=(
          $(fx-gn desc "${FUCHSIA_BUILD_DIR}" "${ARG#--target=}" sources)
       ) || status=$?
-      if (( ${status} != 0 )); then
+      # Hacky, but we need to be able to continue when the target is an action,
+      # because Rust and Go targets don't list their files.
+      if [[ ${status} != 0 && "${GN_OUTPUT}" == *"action"* ]]; then
         >&2 echo "${GN_OUTPUT[@]}"
         exit ${status}
       fi
       FILES=$(canonicalize "${FUCHSIA_DIR}" "${GN_OUTPUT[@]}")
+      TARGET="${ARG#--target=}"
       ;;
     --)
       shift
@@ -182,8 +186,11 @@ declare DART_LINT_CMD=() # "${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_
 declare GO_LINT_CMD=() # "${PREBUILT_GO_DIR}/bin/go<cmd?> <options?>"
 # TODO(fxb/TC-543): add command and args for JSON linter
 declare JSON_LINT_CMD=() # "${FUCHSIA_DIR}"/scripts/style/json-<cmd?> <options?>"
-# TODO(fxb/TC-544): add command and args for Rust linter
-declare RUST_LINT_CMD=() # "${PREBUILT_RUST_DIR}/bin/rust<cmd?> <options?>"
+
+declare RUST_LINT_CMD=( "python" "${FUCHSIA_DIR}/tools/devshell/contrib/lib/rust/run-clippy.py" )
+if [[ -n "${VERBOSE}" ]]; then
+  RUST_LINT_CMD+=( "-v" )
+fi
 
 declare CLANG_TIDY_FILES=()
 declare DART_LINT_FILES=()
@@ -306,8 +313,15 @@ call_linters() {
   if (( "${#JSON_LINT_CMD[@]}" > 0 && "${#JSON_LINT_FILES[@]}" > 0 )); then
     execute "${JSON_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" "${JSON_LINT_FILES[@]}" || return $?
   fi
-  if (( "${#RUST_LINT_CMD[@]}" > 0 && "${#RUST_LINT_FILES[@]}" > 0 )); then
-    execute "${RUST_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" "${RUST_LINT_FILES[@]}" || return $?
+  if [[ "${#RUST_LINT_CMD[@]}" > 0 && (( "${#RUST_LINT_FILES[@]}" > 0 || -n "${TARGET}" )) ]]; then
+    local args=()
+    if [[ -n "${TARGET}" ]]; then
+      args+=( "--target=${TARGET}" )
+    fi
+    for file in ${RUST_LINT_FILES}; do
+      args+=( "--file=${file}" )
+    done
+    execute "${RUST_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" "${args}" || return $?
   fi
 }
 

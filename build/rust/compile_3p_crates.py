@@ -156,6 +156,12 @@ def main():
         "--frozen",
     ]
 
+    # Save the cargo arguments so that tooling can properly pick them up. This is so that these
+    # arguments can be changed here without having to go change the tooling scripts as well.
+    # Remove the `cargo build` part of the args, and the message format argument, since tooling
+    # will want to control those itself.
+    cargo_args = call_args[2:]
+
     call_args.append("--message-format=json")
 
     retcode, stdout, stderr = run_command(call_args, env, args.crate_root)
@@ -293,6 +299,7 @@ def main():
             "crates": crates,
             "deps_folders": list(deps_folders),
             "patches": patches,
+            "cargo_args": cargo_args
         }, sort_keys=True, indent=4, separators=(",", ": "))) # for humans
 
 if __name__ == '__main__':
