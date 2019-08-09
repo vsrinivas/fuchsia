@@ -23,6 +23,9 @@ namespace {
 constexpr uint32_t kClk24MAltFunc = 7;
 constexpr uint32_t kClkGpioDriveStrength = 3;
 
+// TODO(CAM-138): This is a temporary hack. Remove when new driver validated.
+constexpr bool kUseArmDriver = false;
+
 constexpr pbus_mmio_t gdc_mmios[] = {
     // HIU for clocks.
     {
@@ -116,6 +119,23 @@ static pbus_dev_t isp_dev = []() {
   dev.name = "isp";
   dev.vid = PDEV_VID_ARM;
   dev.pid = PDEV_PID_ISP;
+  dev.did = PDEV_DID_ARM_MALI_IV009;
+  dev.mmio_list = isp_mmios;
+  dev.mmio_count = countof(isp_mmios);
+  dev.bti_list = isp_btis;
+  dev.bti_count = countof(isp_btis);
+  dev.irq_list = isp_irqs;
+  dev.irq_count = countof(isp_irqs);
+  return dev;
+}();
+
+// TODO(CAM-138): This is a temporary hack. Remove when new driver validated.
+static pbus_dev_t isp_dev_v2 = []() {
+  // ISP using ARM driver.
+  pbus_dev_t dev = {};
+  dev.name = "isp";
+  dev.vid = PDEV_VID_ARM;
+  dev.pid = PDEV_PID_ISP_BARE_METAL;
   dev.did = PDEV_DID_ARM_MALI_IV009;
   dev.mmio_list = isp_mmios;
   dev.mmio_count = countof(isp_mmios);
@@ -313,7 +333,12 @@ zx_status_t Sherlock::CameraInit() {
   }
 
   // Add a composite device for ARM ISP
-  status = pbus_.CompositeDeviceAdd(&isp_dev, isp_components, countof(isp_components), 1);
+  // TODO(CAM-138): This is a temporary hack. Remove when new driver validated.
+  if (kUseArmDriver) {
+    status = pbus_.CompositeDeviceAdd(&isp_dev_v2, isp_components, countof(isp_components), 1);
+  } else {
+    status = pbus_.CompositeDeviceAdd(&isp_dev, isp_components, countof(isp_components), 1);
+  }
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ISP DeviceAdd failed %d\n", __func__, status);
     return status;
