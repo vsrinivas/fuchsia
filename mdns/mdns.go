@@ -11,12 +11,12 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"strings"
 	"syscall"
 	"unicode/utf8"
 
 	"golang.org/x/net/ipv4"
+	"golang.org/x/sys/unix"
 )
 
 // DefaultPort is the mDNS port required of the spec, though this library is port-agnostic.
@@ -438,7 +438,7 @@ type mDNSConn interface {
 	Send(buf bytes.Buffer) error
 	Listen(port int) error
 	JoinGroup(iface net.Interface) error
-	ConnectTo(port int, ip net.IP) error
+	ConnectTo(port int, ip net.IP, iface *net.Interface) error
 	ReadFrom(buf []byte) (size int, iface *net.Interface, src net.Addr, err error)
 }
 
@@ -515,11 +515,12 @@ func (c *mDNSConn4) JoinGroup(iface net.Interface) error {
 	return nil
 }
 
-func (c *mDNSConn4) ConnectTo(port int, ip net.IP) error {
-	if len(ip) != 4 {
+func (c *mDNSConn4) ConnectTo(port int, ip net.IP, iface *net.Interface) error {
+	ip4 := ip.To4()
+	if ip4 == nil {
 		return fmt.Errorf("Not a valid IPv4 address: %v", ip)
 	}
-	conn, err := makeUnixIpv4Socket(port, ip.To4())
+	conn, err := makeUdpSocketWithReusePort(port, ip4, iface)
 	if err != nil {
 		return err
 	}
@@ -608,36 +609,37 @@ func (m *mDNS) Send(packet Packet) error {
 	return m.conn4.Send(buf)
 }
 
-func makeUnixIpv4Socket(port int, ip net.IP) (net.PacketConn, error) {
-	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
-	if err != nil {
-		return nil, fmt.Errorf("creating socket: %v", err)
+func makeUdpSocketWithReusePort(port int, ip net.IP, iface *net.Interface) (net.PacketConn, error) {
+	is_ipv6 := ip.To4() == nil
+	network := "udp4"
+	var zone string
+	if is_ipv6 {
+		network = "udp6"
+		zone = iface.Name
 	}
-	// SO_REUSEADDR and SO_REUSEPORT allows binding to the same port multiple
-	// times which is necessary in the case when there are multiple instances.
-	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, 0x2 /*SO_REUSEADDR*/, 1); err != nil {
-		syscall.Close(fd)
-		return nil, fmt.Errorf("setting reuse addr: %v", err)
+	address := (&net.UDPAddr{IP: ip, Port: port, Zone: zone}).String()
+
+	// A net.ListenConfig control function to set both SO_REUSEADDR and SO_REUSEPORT
+	// on a given socket fd. Only works on Unix-based systems, not Windows. For portability
+	// an alternative might be to use something like the go-reuseport library.
+	control := func(network, address string, c syscall.RawConn) error {
+		var err error
+		c.Control(func(fd uintptr) {
+			err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEADDR, 1)
+			if err != nil {
+				return
+			}
+
+			err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+			if err != nil {
+				return
+			}
+		})
+		return err
 	}
-	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, 0xf /*SO_REUSEPORT*/, 1); err != nil {
-		syscall.Close(fd)
-		return nil, fmt.Errorf("setting reuse port: %v", err)
-	}
-	// Bind the socket to the specified port.
-	var ipArray [4]byte
-	copy(ipArray[:], []byte(ip))
-	if err := syscall.Bind(fd, &syscall.SockaddrInet4{Addr: ipArray, Port: port}); err != nil {
-		syscall.Close(fd)
-		return nil, fmt.Errorf("binding to %v: %v", ip, err)
-	}
-	// Now make a socket.
-	f := os.NewFile(uintptr(fd), "")
-	conn, err := net.FilePacketConn(f)
-	f.Close()
-	if err != nil {
-		return nil, fmt.Errorf("creating packet conn: %v", err)
-	}
-	return conn, nil
+
+	listenConfig := net.ListenConfig{Control: control}
+	return listenConfig.ListenPacket(context.Background(), network, address)
 }
 
 // Start causes m to start listening for MDNS packets on all interfaces on
@@ -677,7 +679,7 @@ func (m *mDNS) Start(ctx context.Context, port int) error {
 			if ip == nil || ip.To4() == nil {
 				continue
 			}
-			err := m.conn4.ConnectTo(port, ip.To4())
+			err := m.conn4.ConnectTo(port, ip.To4(), &iface)
 			if err != nil {
 				return fmt.Errorf("creating socket for %v via %v: %v", iface, ip, err)
 			}
