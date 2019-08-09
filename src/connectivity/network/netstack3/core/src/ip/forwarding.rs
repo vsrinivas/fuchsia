@@ -30,6 +30,7 @@ const MAX_RECURSE_DEPTH: u8 = 16;
 /// not necessarily the destination IP address of the IP packet. In particular,
 /// if the destination is not on the local network, the `next_hop` will be the
 /// IP address of the next IP router on the way to the destination.
+#[derive(PartialEq, Eq)]
 pub(crate) struct Destination<I: Ip> {
     pub(crate) next_hop: I::Addr,
     pub(crate) device: DeviceId,
@@ -56,18 +57,31 @@ pub(crate) struct ForwardingTable<I: Ip> {
 }
 
 impl<I: Ip> ForwardingTable<I> {
+    /// Do we already have the route to a subnet in our forwarding table?
+    ///
+    /// Note, this method will return `true` if we already hold a route
+    /// to the same subnet.
+    fn contains_entry(&self, entry: &Entry<I::Addr>) -> bool {
+        self.entries.iter().any(|e| e.subnet == entry.subnet)
+    }
+
+    /// Adds `entry` to the forwarding table if it does not already exist.
+    fn add_entry(&mut self, entry: Entry<I::Addr>) -> Result<(), ExistsError> {
+        if self.contains_entry(&entry) {
+            Err(ExistsError)
+        } else {
+            self.entries.push(entry);
+            Ok(())
+        }
+    }
+
     pub(crate) fn add_route(
         &mut self,
         subnet: Subnet<I::Addr>,
         next_hop: I::Addr,
     ) -> Result<(), ExistsError> {
         debug!("adding route: {} -> {}", subnet, next_hop);
-        if self.entries.iter().any(|entry| entry.subnet == subnet) {
-            Err(ExistsError)
-        } else {
-            self.entries.push(Entry { subnet, dest: EntryDest::Remote { next_hop } });
-            Ok(())
-        }
+        self.add_entry(Entry { subnet, dest: EntryDest::Remote { next_hop } })
     }
 
     pub(crate) fn add_device_route(
@@ -76,25 +90,23 @@ impl<I: Ip> ForwardingTable<I> {
         device: DeviceId,
     ) -> Result<(), ExistsError> {
         debug!("adding device route: {} -> {}", subnet, device);
-        if self.entries.iter().any(|entry| entry.subnet == subnet) {
-            Err(ExistsError)
-        } else {
-            self.entries.push(Entry { subnet, dest: EntryDest::Local { device } });
-            Ok(())
-        }
+        self.add_entry(Entry { subnet, dest: EntryDest::Local { device } })
     }
 
     /// Delete a route from the forwarding table, returning `Err` if
     /// no route was found to be deleted.
     pub(crate) fn del_route(&mut self, subnet: Subnet<I::Addr>) -> Result<(), NotFoundError> {
         debug!("deleting route: {}", subnet);
-        let pos = self.entries.iter().position(|entry| entry.subnet == subnet);
-        match pos {
-            Some(pos) => {
-                self.entries.remove(pos);
-                Ok(())
-            }
-            None => Err(NotFoundError),
+
+        let old_len = self.entries.len();
+        let pos = self.entries.retain(|entry| entry.subnet != subnet);
+        let new_len = self.entries.len();
+
+        if old_len == new_len {
+            Err(NotFoundError)
+        } else {
+            assert_eq!(old_len - new_len, 1);
+            Ok(())
         }
     }
 
@@ -162,5 +174,89 @@ impl<I: Ip> ForwardingTable<I> {
             }
             None => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::testutil::get_dummy_config;
+
+    fn test_add_del_lookup_simple_ip<I: Ip>() {
+        let mut table = ForwardingTable::<I>::default();
+
+        let config = get_dummy_config::<I::Addr>();
+        let subnet = config.subnet;
+        let device = DeviceId::new_ethernet(0);
+
+        // Should add the route successfully.
+        table.add_device_route(subnet, device).unwrap();
+
+        // Attempting to add the route again should fail.
+        assert_eq!(table.add_device_route(subnet, device).unwrap_err(), ExistsError);
+
+        // Add the route but as a next hop route. Should still fail since we have a destination
+        // to subnet.
+        #[specialize_ip]
+        fn next_hop_addr<I: Ip>() -> I::Addr {
+            #[ipv4]
+            return Ipv4Addr::new([10, 0, 0, 1]);
+
+            #[ipv6]
+            return Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1]);
+        }
+        let next_hop = next_hop_addr::<I>();
+        assert_eq!(table.add_route(subnet, next_hop).unwrap_err(), ExistsError);
+
+        // Delete the device route.
+        table.del_route(subnet).unwrap();
+
+        // Add the next hop route.
+        table.add_route(subnet, next_hop).unwrap();
+
+        // Attempting to add the next hop route again should fail.
+        assert_eq!(table.add_route(subnet, next_hop).unwrap_err(), ExistsError);
+
+        // Add a device route from the `next_hop` to some device.
+        let next_hop_specific_subnet = Subnet::new(next_hop, I::Addr::BYTES * 8).unwrap();
+        table.add_device_route(next_hop_specific_subnet, device).unwrap();
+
+        // Check the current state of the forwarding table.
+        assert_eq!(table.iter_routes().count(), 2);
+        assert!(table
+            .iter_routes()
+            .any(|x| (x.subnet == subnet) && (x.dest == EntryDest::Remote { next_hop })));
+        assert!(table
+            .iter_routes()
+            .any(|x| (x.subnet == next_hop_specific_subnet)
+                && (x.dest == EntryDest::Local { device })));
+
+        // Do lookup for our next hop (should be the device).
+        assert_eq!(table.lookup(next_hop).unwrap(), Destination { next_hop, device });
+
+        // Do lookup for some address within `subnet`.
+        assert_eq!(table.lookup(config.local_ip).unwrap(), Destination { next_hop, device });
+        assert_eq!(table.lookup(config.remote_ip).unwrap(), Destination { next_hop, device });
+
+        // Delete the device route.
+        table.del_route(next_hop_specific_subnet).unwrap();
+
+        // Do lookup for our next hop (should get None since we have no route to a local device).
+        assert!(table.lookup(next_hop).is_none());
+
+        // Do lookup for some address within `subnet` (should get None as well).
+        assert!(table.lookup(config.local_ip).is_none());
+        assert!(table.lookup(config.remote_ip).is_none());
+    }
+
+    #[test]
+    fn test_add_del_lookup_simple_ipv4() {
+        test_add_del_lookup_simple_ip::<Ipv4>();
+    }
+
+    #[test]
+    fn test_add_del_lookup_simple_ipv6() {
+        test_add_del_lookup_simple_ip::<Ipv6>();
     }
 }

@@ -128,6 +128,7 @@ impl<I: Ip> From<ParseError> for IpParseError<I> {
 
 /// Error when something exists unexpectedly, such as trying to add an
 /// element when the element is already present.
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct ExistsError;
 
 impl From<ExistsError> for NetstackError {
@@ -138,6 +139,7 @@ impl From<ExistsError> for NetstackError {
 
 /// Error when something unexpectedly doesn't exist, such as trying to
 /// remove an element when the element is not present.
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct NotFoundError;
 
 impl From<NotFoundError> for NetstackError {
