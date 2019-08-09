@@ -8,6 +8,7 @@ driver("qemu-arm64") {
     "qemu-pci.cc",
     "qemu-rtc.cc",
     "qemu-sysmem.cc",
+    "qemu-display.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",

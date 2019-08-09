@@ -7,9 +7,11 @@ driver("fake") {
     "fake-display.cc",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

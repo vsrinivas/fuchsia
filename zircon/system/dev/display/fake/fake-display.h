@@ -14,6 +14,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/controller.h>
@@ -63,10 +64,18 @@ class FakeDisplay : public DeviceType,
   void DdkRelease();
 
  private:
+  enum {
+    COMPONENT_PDEV,
+    COMPONENT_SYSMEM,
+    COMPONENT_COUNT,
+  };
+  zx_device_t* components_[COMPONENT_COUNT];
+
   zx_status_t SetupDisplayInterface();
   int VSyncThread();
   void PopulateAddedDisplayArgs(added_display_args_t* args);
 
+  pdev_protocol_t pdev_ = {};
   sysmem_protocol_t sysmem_ = {};
 
   std::atomic_bool vsync_shutdown_flag_ = false;

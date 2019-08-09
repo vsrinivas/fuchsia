@@ -33,6 +33,7 @@ class QemuArm64 : public ddk::Device<QemuArm64> {
   zx_status_t PciAdd();
   zx_status_t RtcInit();
   zx_status_t SysmemInit();
+  zx_status_t DisplayInit();
 
   const ddk::PBusProtocolClient pbus_;
   thrd_t thread_;

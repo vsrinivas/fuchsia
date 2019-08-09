@@ -8,6 +8,8 @@
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
 namespace fake_display {
@@ -251,9 +253,25 @@ int FakeDisplay::VSyncThread() {
 }
 
 zx_status_t FakeDisplay::Bind() {
-  zx_status_t status;
+  composite_protocol_t composite;
+  auto status = device_get_protocol(parent_, ZX_PROTOCOL_COMPOSITE, &composite);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not get composite protocol %d\n", status);
+    return status;
+  }
+  size_t actual;
+  composite_get_components(&composite, components_, fbl::count_of(components_), &actual);
+  if (actual != fbl::count_of(components_)) {
+    DISP_ERROR("could not get components\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  status = device_get_protocol(components_[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev_);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not get PDEV protocol\n");
+    return status;
+  }
 
-  status = device_get_protocol(parent_, ZX_PROTOCOL_SYSMEM, &sysmem_);
+  status = device_get_protocol(components_[COMPONENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;
@@ -309,7 +327,7 @@ static constexpr zx_driver_ops_t fake_display_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(fake_display, fake_display_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_FAKE_DISPLAY),
 ZIRCON_DRIVER_END(fake_display)

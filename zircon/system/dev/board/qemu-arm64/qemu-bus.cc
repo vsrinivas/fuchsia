@@ -47,6 +47,11 @@ int QemuArm64::Thread() {
     return thrd_error;
   }
 
+  status = DisplayInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DisplayInit() failed %d\n", __func__, status);
+    return thrd_error;
+  }
   return 0;
 }
 
