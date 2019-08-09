@@ -12,7 +12,7 @@ etc.
 ```
 fx set bringup.x64 -with-base //garnet/packages/tests:zircon  # or bringup.arm64
 fx build
-fx run -c userboot=bin/core-tests
+fx run -z out/default.zircon/core-tests-x64.zbi
 ```
 
 ## Notes
