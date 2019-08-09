@@ -4,9 +4,11 @@
 
 #include "i2c-cr50.h"
 
+#include <lib/device-protocol/i2c.h>
 #include <lib/zx/time.h>
 #include <string.h>
 
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -110,6 +112,13 @@ zx_status_t I2cCr50Interface::WriteDataFifo(Locality loc, const uint8_t* buf, si
 }
 
 zx_status_t I2cCr50Interface::I2cReadLocked(uint8_t* val, size_t len) {
+  if (len > std::numeric_limits<uint32_t>::max()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  i2c_protocol_t proto;
+  i2c_.GetProto(&proto);
+
   zx_status_t status;
   for (size_t attempt = 0; attempt < kNumI2cTries; ++attempt) {
     if (attempt) {
@@ -117,13 +126,8 @@ zx_status_t I2cCr50Interface::I2cReadLocked(uint8_t* val, size_t len) {
       zx::nanosleep(zx::deadline_after(kI2cRetryDelay));
     }
 
-    size_t actual;
-    status = device_read(i2c_, val, len, 0, &actual);
+    status = i2c_read_sync(&proto, val, static_cast<uint32_t>(len));
     if (status == ZX_OK) {
-      if (actual != len) {
-        zxlogf(ERROR, "i2c-tpm: short read: %zu vs %zu\n", actual, len);
-        return ZX_ERR_IO;
-      }
       break;
     }
   }
@@ -131,6 +135,13 @@ zx_status_t I2cCr50Interface::I2cReadLocked(uint8_t* val, size_t len) {
 }
 
 zx_status_t I2cCr50Interface::I2cWriteLocked(const uint8_t* val, size_t len) {
+  if (len > std::numeric_limits<uint32_t>::max()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  i2c_protocol_t proto;
+  i2c_.GetProto(&proto);
+
   zx_status_t status;
   for (size_t attempt = 0; attempt < kNumI2cTries; ++attempt) {
     if (attempt) {
@@ -138,13 +149,8 @@ zx_status_t I2cCr50Interface::I2cWriteLocked(const uint8_t* val, size_t len) {
       zx::nanosleep(zx::deadline_after(kI2cRetryDelay));
     }
 
-    size_t actual;
-    status = device_write(i2c_, val, len, 0, &actual);
+    status = i2c_write_sync(&proto, val, static_cast<uint32_t>(len));
     if (status == ZX_OK) {
-      if (actual != len) {
-        zxlogf(ERROR, "i2c-tpm: short write: %zu vs %zu\n", actual, len);
-        return ZX_ERR_IO;
-      }
       break;
     }
   }

@@ -13,6 +13,7 @@
 #include <memory>
 
 #include <ddk/device.h>
+#include <ddktl/protocol/i2c.h>
 #include <fbl/mutex.h>
 
 #include "tpm.h"
@@ -115,7 +116,7 @@ class I2cCr50Interface : public HardwareInterface {
   fbl::Mutex lock_;
 
   // The upstream i2c device
-  zx_device_t* i2c_ TA_GUARDED(lock_) = nullptr;
+  ddk::I2cProtocolClient i2c_ TA_GUARDED(lock_);
   zx::handle irq_ TA_GUARDED(lock_);
 };
 
