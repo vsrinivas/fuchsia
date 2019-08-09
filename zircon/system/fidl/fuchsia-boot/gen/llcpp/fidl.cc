@@ -11,7 +11,7 @@ namespace boot {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kRootJob_Get_Ordinal = 0x7e473a2400000000lu;
+constexpr uint64_t kRootJob_Get_GenOrdinal = 0x7e473a2400000000lu;
 extern "C" const fidl_type_t fuchsia_boot_RootJobGetResponseTable;
 
 }  // namespace
@@ -63,7 +63,7 @@ zx_status_t RootJob::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx:
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
-  _request._hdr.ordinal = kRootJob_Get_Ordinal;
+  _request._hdr.ordinal = kRootJob_Get_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -95,7 +95,7 @@ zx_status_t RootJob::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx:
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kRootJob_Get_Ordinal;
+  _request._hdr.ordinal = kRootJob_Get_GenOrdinal;
   _request_buffer.set_actual(sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -123,7 +123,7 @@ zx_status_t RootJob::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx:
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kRootJob_Get_Ordinal;
+  params.message()->_hdr.ordinal = kRootJob_Get_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<RootJob::GetResponse>::FromFailure(
@@ -147,7 +147,7 @@ bool RootJob::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kRootJob_Get_Ordinal:
+    case kRootJob_Get_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -178,7 +178,7 @@ void RootJob::Interface::GetCompleterBase::Reply(::zx::job job) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
-  _response._hdr.ordinal = kRootJob_Get_Ordinal;
+  _response._hdr.ordinal = kRootJob_Get_GenOrdinal;
   _response.job = std::move(job);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_response_bytes)));
@@ -190,7 +190,7 @@ void RootJob::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx:
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
-  _response._hdr.ordinal = kRootJob_Get_Ordinal;
+  _response._hdr.ordinal = kRootJob_Get_GenOrdinal;
   _response.job = std::move(job);
   _buffer.set_actual(sizeof(GetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_buffer)));
@@ -198,7 +198,7 @@ void RootJob::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx:
 
 void RootJob::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kRootJob_Get_Ordinal;
+  params.message()->_hdr.ordinal = kRootJob_Get_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -206,7 +206,7 @@ void RootJob::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetRespo
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kLog_Get_Ordinal = 0x404eb33700000000lu;
+constexpr uint64_t kLog_Get_GenOrdinal = 0x404eb33700000000lu;
 extern "C" const fidl_type_t fuchsia_boot_LogGetResponseTable;
 
 }  // namespace
@@ -258,7 +258,7 @@ zx_status_t Log::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx::deb
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
-  _request._hdr.ordinal = kLog_Get_Ordinal;
+  _request._hdr.ordinal = kLog_Get_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -290,7 +290,7 @@ zx_status_t Log::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx::deb
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kLog_Get_Ordinal;
+  _request._hdr.ordinal = kLog_Get_GenOrdinal;
   _request_buffer.set_actual(sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -318,7 +318,7 @@ zx_status_t Log::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx::deb
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLog_Get_Ordinal;
+  params.message()->_hdr.ordinal = kLog_Get_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Log::GetResponse>::FromFailure(
@@ -342,7 +342,7 @@ bool Log::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kLog_Get_Ordinal:
+    case kLog_Get_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -373,7 +373,7 @@ void Log::Interface::GetCompleterBase::Reply(::zx::debuglog log) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLog_Get_Ordinal;
+  _response._hdr.ordinal = kLog_Get_GenOrdinal;
   _response.log = std::move(log);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_response_bytes)));
@@ -385,7 +385,7 @@ void Log::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::deb
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLog_Get_Ordinal;
+  _response._hdr.ordinal = kLog_Get_GenOrdinal;
   _response.log = std::move(log);
   _buffer.set_actual(sizeof(GetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_buffer)));
@@ -393,7 +393,7 @@ void Log::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::deb
 
 void Log::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLog_Get_Ordinal;
+  params.message()->_hdr.ordinal = kLog_Get_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -401,7 +401,7 @@ void Log::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse>
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kItems_Get_Ordinal = 0x6462c85400000000lu;
+constexpr uint64_t kItems_Get_GenOrdinal = 0x6462c85400000000lu;
 extern "C" const fidl_type_t fuchsia_boot_ItemsGetResponseTable;
 
 }  // namespace
@@ -461,7 +461,7 @@ zx_status_t Items::Call::Get_Deprecated(zx::unowned_channel _client_end, uint32_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
-  _request._hdr.ordinal = kItems_Get_Ordinal;
+  _request._hdr.ordinal = kItems_Get_GenOrdinal;
   _request.type = std::move(type);
   _request.extra = std::move(extra);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRequest));
@@ -497,7 +497,7 @@ zx_status_t Items::Call::Get_Deprecated(zx::unowned_channel _client_end, uint32_
     return ::fidl::DecodeResult<GetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<GetRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kItems_Get_Ordinal;
+  _request._hdr.ordinal = kItems_Get_GenOrdinal;
   _request.type = std::move(type);
   _request.extra = std::move(extra);
   _request_buffer.set_actual(sizeof(GetRequest));
@@ -523,7 +523,7 @@ zx_status_t Items::Call::Get_Deprecated(zx::unowned_channel _client_end, uint32_
 
 ::fidl::DecodeResult<Items::GetResponse> Items::InPlace::Get(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kItems_Get_Ordinal;
+  params.message()->_hdr.ordinal = kItems_Get_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Items::GetResponse>::FromFailure(
@@ -547,7 +547,7 @@ bool Items::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kItems_Get_Ordinal:
+    case kItems_Get_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -579,7 +579,7 @@ void Items::Interface::GetCompleterBase::Reply(::zx::vmo payload, uint32_t lengt
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
-  _response._hdr.ordinal = kItems_Get_Ordinal;
+  _response._hdr.ordinal = kItems_Get_GenOrdinal;
   _response.payload = std::move(payload);
   _response.length = std::move(length);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
@@ -592,7 +592,7 @@ void Items::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::v
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
-  _response._hdr.ordinal = kItems_Get_Ordinal;
+  _response._hdr.ordinal = kItems_Get_GenOrdinal;
   _response.payload = std::move(payload);
   _response.length = std::move(length);
   _buffer.set_actual(sizeof(GetResponse));
@@ -601,7 +601,7 @@ void Items::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::v
 
 void Items::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kItems_Get_Ordinal;
+  params.message()->_hdr.ordinal = kItems_Get_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -609,7 +609,7 @@ void Items::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetRespons
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kFactoryItems_Get_Ordinal = 0x18be2c3500000000lu;
+constexpr uint64_t kFactoryItems_Get_GenOrdinal = 0x18be2c3500000000lu;
 extern "C" const fidl_type_t fuchsia_boot_FactoryItemsGetRequestTable;
 extern "C" const fidl_type_t fuchsia_boot_FactoryItemsGetResponseTable;
 
@@ -668,7 +668,7 @@ zx_status_t FactoryItems::Call::Get_Deprecated(zx::unowned_channel _client_end, 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
-  _request._hdr.ordinal = kFactoryItems_Get_Ordinal;
+  _request._hdr.ordinal = kFactoryItems_Get_GenOrdinal;
   _request.extra = std::move(extra);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_bytes));
@@ -703,7 +703,7 @@ zx_status_t FactoryItems::Call::Get_Deprecated(zx::unowned_channel _client_end, 
     return ::fidl::DecodeResult<GetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<GetRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kFactoryItems_Get_Ordinal;
+  _request._hdr.ordinal = kFactoryItems_Get_GenOrdinal;
   _request.extra = std::move(extra);
   _request_buffer.set_actual(sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_buffer));
@@ -728,7 +728,7 @@ zx_status_t FactoryItems::Call::Get_Deprecated(zx::unowned_channel _client_end, 
 
 ::fidl::DecodeResult<FactoryItems::GetResponse> FactoryItems::InPlace::Get(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kFactoryItems_Get_Ordinal;
+  params.message()->_hdr.ordinal = kFactoryItems_Get_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<FactoryItems::GetResponse>::FromFailure(
@@ -752,7 +752,7 @@ bool FactoryItems::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kFactoryItems_Get_Ordinal:
+    case kFactoryItems_Get_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -784,7 +784,7 @@ void FactoryItems::Interface::GetCompleterBase::Reply(::zx::vmo payload, uint32_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
-  _response._hdr.ordinal = kFactoryItems_Get_Ordinal;
+  _response._hdr.ordinal = kFactoryItems_Get_GenOrdinal;
   _response.payload = std::move(payload);
   _response.length = std::move(length);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
@@ -797,7 +797,7 @@ void FactoryItems::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
-  _response._hdr.ordinal = kFactoryItems_Get_Ordinal;
+  _response._hdr.ordinal = kFactoryItems_Get_GenOrdinal;
   _response.payload = std::move(payload);
   _response.length = std::move(length);
   _buffer.set_actual(sizeof(GetResponse));
@@ -806,7 +806,7 @@ void FactoryItems::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void FactoryItems::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kFactoryItems_Get_Ordinal;
+  params.message()->_hdr.ordinal = kFactoryItems_Get_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -814,7 +814,7 @@ void FactoryItems::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<Get
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kRootResource_Get_Ordinal = 0x2e9e3a1400000000lu;
+constexpr uint64_t kRootResource_Get_GenOrdinal = 0x2e9e3a1400000000lu;
 extern "C" const fidl_type_t fuchsia_boot_RootResourceGetResponseTable;
 
 }  // namespace
@@ -866,7 +866,7 @@ zx_status_t RootResource::Call::Get_Deprecated(zx::unowned_channel _client_end, 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
-  _request._hdr.ordinal = kRootResource_Get_Ordinal;
+  _request._hdr.ordinal = kRootResource_Get_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -898,7 +898,7 @@ zx_status_t RootResource::Call::Get_Deprecated(zx::unowned_channel _client_end, 
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kRootResource_Get_Ordinal;
+  _request._hdr.ordinal = kRootResource_Get_GenOrdinal;
   _request_buffer.set_actual(sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -926,7 +926,7 @@ zx_status_t RootResource::Call::Get_Deprecated(zx::unowned_channel _client_end, 
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kRootResource_Get_Ordinal;
+  params.message()->_hdr.ordinal = kRootResource_Get_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<RootResource::GetResponse>::FromFailure(
@@ -950,7 +950,7 @@ bool RootResource::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kRootResource_Get_Ordinal:
+    case kRootResource_Get_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -981,7 +981,7 @@ void RootResource::Interface::GetCompleterBase::Reply(::zx::resource resource) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
-  _response._hdr.ordinal = kRootResource_Get_Ordinal;
+  _response._hdr.ordinal = kRootResource_Get_GenOrdinal;
   _response.resource = std::move(resource);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_response_bytes)));
@@ -993,7 +993,7 @@ void RootResource::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
-  _response._hdr.ordinal = kRootResource_Get_Ordinal;
+  _response._hdr.ordinal = kRootResource_Get_GenOrdinal;
   _response.resource = std::move(resource);
   _buffer.set_actual(sizeof(GetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_buffer)));
@@ -1001,7 +1001,7 @@ void RootResource::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void RootResource::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kRootResource_Get_Ordinal;
+  params.message()->_hdr.ordinal = kRootResource_Get_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1009,7 +1009,7 @@ void RootResource::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<Get
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kArguments_Get_Ordinal = 0x6e7258e600000000lu;
+constexpr uint64_t kArguments_Get_GenOrdinal = 0x6e7258e600000000lu;
 extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetResponseTable;
 
 }  // namespace
@@ -1061,7 +1061,7 @@ zx_status_t Arguments::Call::Get_Deprecated(zx::unowned_channel _client_end, ::z
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
-  _request._hdr.ordinal = kArguments_Get_Ordinal;
+  _request._hdr.ordinal = kArguments_Get_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -1094,7 +1094,7 @@ zx_status_t Arguments::Call::Get_Deprecated(zx::unowned_channel _client_end, ::z
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kArguments_Get_Ordinal;
+  _request._hdr.ordinal = kArguments_Get_GenOrdinal;
   _request_buffer.set_actual(sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -1123,7 +1123,7 @@ zx_status_t Arguments::Call::Get_Deprecated(zx::unowned_channel _client_end, ::z
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kArguments_Get_Ordinal;
+  params.message()->_hdr.ordinal = kArguments_Get_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Arguments::GetResponse>::FromFailure(
@@ -1147,7 +1147,7 @@ bool Arguments::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kArguments_Get_Ordinal:
+    case kArguments_Get_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1178,7 +1178,7 @@ void Arguments::Interface::GetCompleterBase::Reply(::zx::vmo vmo, uint64_t size)
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
-  _response._hdr.ordinal = kArguments_Get_Ordinal;
+  _response._hdr.ordinal = kArguments_Get_GenOrdinal;
   _response.vmo = std::move(vmo);
   _response.size = std::move(size);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
@@ -1191,7 +1191,7 @@ void Arguments::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::z
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
-  _response._hdr.ordinal = kArguments_Get_Ordinal;
+  _response._hdr.ordinal = kArguments_Get_GenOrdinal;
   _response.vmo = std::move(vmo);
   _response.size = std::move(size);
   _buffer.set_actual(sizeof(GetResponse));
@@ -1200,7 +1200,7 @@ void Arguments::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::z
 
 void Arguments::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kArguments_Get_Ordinal;
+  params.message()->_hdr.ordinal = kArguments_Get_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
