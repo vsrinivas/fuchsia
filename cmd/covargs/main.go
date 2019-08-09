@@ -15,14 +15,16 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"go.fuchsia.dev/tools/command"
 	"go.fuchsia.dev/tools/elflib"
+	"go.fuchsia.dev/tools/runtests"
 	"go.fuchsia.dev/tools/symbolize"
 )
 
 var (
-	summaryFile       string
+	summaryFile       command.StringsFlag
 	idsFile           string
-	symbolizeDumpFile string
+	symbolizeDumpFile command.StringsFlag
 	dryRun            bool
 	verbose           bool
 	outputDir         string
@@ -32,9 +34,9 @@ var (
 )
 
 func init() {
-	flag.StringVar(&summaryFile, "summary", "", "path to summary.json file")
+	flag.Var(&summaryFile, "summary", "path to summary.json file")
 	flag.StringVar(&idsFile, "ids", "", "path to ids.txt")
-	flag.StringVar(&symbolizeDumpFile, "symbolize-dump", "", "path to the json emited from the symbolizer")
+	flag.Var(&symbolizeDumpFile, "symbolize-dump", "path to the json emited from the symbolizer")
 	flag.BoolVar(&dryRun, "dry-run", false, "if set the system prints out commands that would be run instead of running them")
 	flag.BoolVar(&verbose, "v", false, "if set the all commands will be printed out before being run")
 	flag.StringVar(&outputDir, "output-dir", "", "the directory to output results to")
@@ -45,69 +47,80 @@ func init() {
 
 const llvmProfileSinkType = "llvm-profile"
 
-type Test struct {
-	Name      string `json:"name"`
-	DataSinks map[string][]struct {
-		Name string `json:"name"`
-		File string `json:"file"`
-	} `json:"data_sinks,omitempty"`
-}
-
-type Summary struct {
-	Tests []Test `json:"tests"`
-}
-
 // Output is indexed by dump name
-func readSummary(summaryFile string) (map[string]Test, error) {
-	file, err := os.Open(summaryFile)
-	if err != nil {
-		return nil, fmt.Errorf("opening file %s: %v", summaryFile, err)
-	}
-	defer file.Close()
-	var summary Summary
-	dec := json.NewDecoder(file)
-	if err := dec.Decode(&summary); err != nil {
-		return nil, err
-	}
-	out := make(map[string]Test)
-	for _, test := range summary.Tests {
-		for _, profileDump := range test.DataSinks[llvmProfileSinkType] {
-			out[profileDump.Name] = test
+func readSummary(summaryFiles []string) (map[string][]runtests.DataSink, error) {
+	sinks := make(map[string][]runtests.DataSink)
+
+	for _, summaryFile := range summaryFiles {
+		// TODO(phosek): process these in parallel using goroutines.
+		file, err := os.Open(summaryFile)
+		if err != nil {
+			return nil, fmt.Errorf("cannot open %q: %v", summaryFile, err)
+		}
+		defer file.Close()
+
+		var summary runtests.TestSummary
+		if err := json.NewDecoder(file).Decode(&summary); err != nil {
+			return nil, fmt.Errorf("cannot decode %q: %v", summaryFile, err)
+		}
+
+		dir := filepath.Dir(summaryFile)
+		for _, detail := range summary.Tests {
+			for name, data := range detail.DataSinks {
+				for _, sink := range data {
+					sinks[name] = append(sinks[name], runtests.DataSink{
+						Name: sink.Name,
+						File: filepath.Join(dir, sink.File),
+					})
+				}
+			}
 		}
 	}
-	return out, nil
+
+	return sinks, nil
 }
 
-type SymbolizerTriggerDump []struct {
-	Mods     []symbolize.Module `json:"modules"`
+type SymbolizerDump struct {
+	Modules  []symbolize.Module `json:"modules"`
 	SinkType string             `json:"type"`
 	DumpName string             `json:"name"`
 }
 
-func readSymbolizerDump(dumpFile string) (SymbolizerTriggerDump, error) {
-	file, err := os.Open(dumpFile)
-	if err != nil {
-		return nil, err
+type SymbolizerOutput []SymbolizerDump
+
+func readSymbolizerOutput(outputFiles []string) (map[string]SymbolizerDump, error) {
+	dumps := make(map[string]SymbolizerDump)
+
+	for _, outputFile := range outputFiles {
+		// TODO(phosek): process these in parallel using goroutines.
+		file, err := os.Open(outputFile)
+		if err != nil {
+			return nil, fmt.Errorf("cannot open %q: %v", outputFile, err)
+		}
+		defer file.Close()
+		var output SymbolizerOutput
+		if err := json.NewDecoder(file).Decode(&output); err != nil {
+			return nil, fmt.Errorf("cannot decode %q: %v", outputFile, err)
+		}
+
+		for _, dump := range output {
+			dumps[dump.DumpName] = dump
+		}
 	}
-	defer file.Close()
-	var symbolizeDump SymbolizerTriggerDump
-	dec := json.NewDecoder(file)
-	if err := dec.Decode(&symbolizeDump); err != nil {
-		return nil, err
-	}
-	return symbolizeDump, nil
+
+	return dumps, nil
 }
 
 // Output is indexed by build id
 func readIDsTxt(idsFile string) (map[string]elflib.BinaryFileRef, error) {
 	file, err := os.Open(idsFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot open %q: %s", idsFile, err)
 	}
 	defer file.Close()
 	refs, err := elflib.ReadIDsFile(file)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot read %q: %v", idsFile, err)
 	}
 	out := make(map[string]elflib.BinaryFileRef)
 	for _, ref := range refs {
@@ -117,75 +130,64 @@ func readIDsTxt(idsFile string) (map[string]elflib.BinaryFileRef, error) {
 }
 
 type indexedInfo struct {
-	symbolizeDump SymbolizerTriggerDump
-	summary       map[string]Test
-	ids           map[string]elflib.BinaryFileRef
+	dumps   map[string]SymbolizerDump
+	summary map[string][]runtests.DataSink
+	ids     map[string]elflib.BinaryFileRef
 }
 
-type CovDataEntry struct {
-	Dump        string
-	Test        string
-	CovDataFile string
+type ProfileEntry struct {
+	ProfileData string
 	ModuleFiles []string
 }
 
-func readInfo(dumpFile, summaryFile, idsFile string) (*indexedInfo, error) {
+func readInfo(dumpFiles, summaryFiles []string, idsFile string) (*indexedInfo, error) {
 	summary, err := readSummary(summaryFile)
 	if err != nil {
-		return nil, fmt.Errorf("parsing %s: %v", summaryFile, err)
+		return nil, err
 	}
-	symbolizeDump, err := readSymbolizerDump(symbolizeDumpFile)
+	dumps, err := readSymbolizerOutput(symbolizeDumpFile)
 	if err != nil {
-		return nil, fmt.Errorf("parsing %s: %v", dumpFile, err)
+		return nil, err
 	}
 	ids, err := readIDsTxt(idsFile)
 	if err != nil {
-		return nil, fmt.Errorf("parsing %s: %v", idsFile, err)
+		return nil, err
 	}
 	return &indexedInfo{
-		symbolizeDump: symbolizeDump,
-		summary:       summary,
-		ids:           ids,
+		dumps:   dumps,
+		summary: summary,
+		ids:     ids,
 	}, nil
 }
 
-func mergeInfo(prefix string, info *indexedInfo) ([]CovDataEntry, error) {
-	out := []CovDataEntry{}
-	for _, dump := range info.symbolizeDump {
-		// If we get a dumpfile result that isn't from llvm-profile, ignore it
-		if dump.SinkType != llvmProfileSinkType {
-			continue
-		}
+func mergeInfo(info *indexedInfo) ([]ProfileEntry, error) {
+	entries := []ProfileEntry{}
 
-		// Get the test data and make sure there are no errors
-		test, ok := info.summary[dump.DumpName]
+	for _, sink := range info.summary[llvmProfileSinkType] {
+		dump, ok := info.dumps[sink.Name]
 		if !ok {
-			fmt.Fprintf(os.Stderr, "WARN: %s not found in summary file\n", dump.DumpName)
+			fmt.Fprintf(os.Stderr, "WARN: %s not found in summary file\n", sink.Name)
 			continue
 		}
-
-		// This is going to go in a covDataEntry as the location of the coverage data
-		covDataFile := filepath.Join(prefix, test.DataSinks[llvmProfileSinkType][0].File)
 
 		// This is going to go in a covDataEntry as the list of paths to the modules for the data
 		moduleFiles := []string{}
-		for _, mod := range dump.Mods {
-			if fileRef, ok := info.ids[mod.Build]; ok {
-				moduleFiles = append(moduleFiles, fileRef.Filepath)
+		for _, mod := range dump.Modules {
+			if ref, ok := info.ids[mod.Build]; ok {
+				moduleFiles = append(moduleFiles, ref.Filepath)
 			} else {
 				return nil, fmt.Errorf("module with build id %s not found in ids.txt file", mod.Build)
 			}
 		}
 
 		// Finally we can add all the data
-		out = append(out, CovDataEntry{
-			Dump:        dump.DumpName,
-			Test:        test.Name,
+		entries = append(entries, ProfileEntry{
 			ModuleFiles: moduleFiles,
-			CovDataFile: covDataFile,
+			ProfileData: sink.File,
 		})
 	}
-	return out, nil
+
+	return entries, nil
 }
 
 type Action struct {
@@ -245,7 +247,7 @@ func process() error {
 	}
 
 	// Merge all the information
-	entries, err := mergeInfo(filepath.Dir(summaryFile), info)
+	entries, err := mergeInfo(info)
 	if err != nil {
 		return fmt.Errorf("merging info: %v", err)
 	}
@@ -261,7 +263,7 @@ func process() error {
 				modSet[mod] = struct{}{}
 			}
 		}
-		covFiles = append(covFiles, entry.CovDataFile)
+		covFiles = append(covFiles, entry.ProfileData)
 	}
 
 	dir, err := ioutil.TempDir("", "covargs")

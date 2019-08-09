@@ -33,6 +33,15 @@ type TestSummary struct {
 	Outputs map[string]string `json:"outputs,omitempty"`
 }
 
+// DataSink is a data sink exported by the test.
+type DataSink struct {
+	// Name is the name of the sink.
+	Name string `json:"name"`
+
+	// File is the file containing the sink data.
+	File string `json:"file"`
+}
+
 // TestDetails contains the details of a test run.
 type TestDetails struct {
 	// Name is the name of the test.
@@ -45,8 +54,5 @@ type TestDetails struct {
 	Result TestResult `json:"result"`
 
 	// DataSinks gives the data sinks attached to a test.
-	DataSinks map[string][]struct {
-		Name string `json:"name"`
-		File string `json:"file"`
-	} `json:"data_sinks,omitempty"`
+	DataSinks map[string][]DataSink `json:"data_sinks,omitempty"`
 }
