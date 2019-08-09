@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zx/clock.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <zircon/status.h>
 
 #include <iostream>
+
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
+#include <trace-provider/fdio_connect.h>
+#include <trace-provider/provider.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/printer.h"
@@ -28,11 +31,21 @@ int main(int argc, const char** argv) {
                  "     S and T are inclusive of P\n\n"
                  " Options:\n"
                  " [default] Human readable representation of process and vmo groups\n"
+                 " --trace   Enable tracing support\n"
                  " --print   Machine readable representation of proccess and vmos\n"
                  " --output  CSV of process memory\n"
                  "           --repeat=N Runs forever, outputing every N seconds\n"
                  "           --pid=N    Output vmo groups of process pid instead\n";
     return EXIT_SUCCESS;
+  }
+
+  std::unique_ptr<async::Loop> loop;
+  std::unique_ptr<trace::TraceProviderWithFdio> provider;
+
+  if (command_line.HasOption("trace")) {
+    loop.reset(new async::Loop(&kAsyncLoopConfigNoAttachToThread));
+    loop->StartThread("provider loop");
+    provider.reset(new trace::TraceProviderWithFdio(loop->dispatcher(), "mem"));
   }
 
   CaptureState capture_state;
