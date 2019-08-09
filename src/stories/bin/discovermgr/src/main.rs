@@ -19,7 +19,9 @@ use {
     },
     failure::{Error, ResultExt},
     fidl_fuchsia_app_discover::{DiscoverRegistryRequestStream, SuggestionsRequestStream},
-    fidl_fuchsia_modular::{EntityResolverMarker, PuppetMasterMarker},
+    fidl_fuchsia_modular::{
+        EntityResolverMarker, LifecycleRequest, LifecycleRequestStream, PuppetMasterMarker,
+    },
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_syslog::{self as syslog, macros::*},
@@ -52,6 +54,18 @@ static SERVICE_DIRECTORY: &str = "svc";
 enum IncomingServices {
     DiscoverRegistry(DiscoverRegistryRequestStream),
     Suggestions(SuggestionsRequestStream),
+    Lifecycle(LifecycleRequestStream),
+}
+
+async fn run_lifecycle_server(mut stream: LifecycleRequestStream) -> Result<(), Error> {
+    while let Some(request) = await!(stream.try_next()).context("Error running lifecycle")? {
+        match request {
+            LifecycleRequest::Terminate { .. } => {
+                std::process::exit(0);
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Handle incoming service requests
@@ -69,6 +83,7 @@ async fn run_fidl_service(
             let mut service = SuggestionsService::new(story_context_store, suggestions_manager);
             await!(service.handle_client(stream))
         }
+        IncomingServices::Lifecycle(stream) => await!(run_lifecycle_server(stream)),
     }
 }
 
@@ -111,7 +126,8 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir(SERVICE_DIRECTORY)
         .add_fidl_service(IncomingServices::DiscoverRegistry)
-        .add_fidl_service(IncomingServices::Suggestions);
+        .add_fidl_service(IncomingServices::Suggestions)
+        .add_fidl_service(IncomingServices::Lifecycle);
 
     fs.take_and_serve_directory_handle()?;
 
