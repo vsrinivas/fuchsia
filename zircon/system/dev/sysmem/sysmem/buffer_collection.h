@@ -5,8 +5,6 @@
 #ifndef ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_BUFFER_COLLECTION_H_
 #define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_BUFFER_COLLECTION_H_
 
-#include "logging.h"
-
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fidl-async-2/fidl_server.h>
 #include <lib/fidl-async-2/fidl_struct.h>
@@ -14,6 +12,8 @@
 #include <lib/fidl/internal.h>
 
 #include <list>
+
+#include "logging.h"
 
 extern const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
 extern const fidl_type_t fuchsia_sysmem_BufferCollectionInfo_2Table;

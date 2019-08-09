@@ -4,13 +4,14 @@
 
 #include "usage_pixel_format_cost.h"
 
-#include <ddk/platform-defs.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/image-format/image_format.h>
 #include <zircon/assert.h>
 
 #include <list>
 #include <map>
+
+#include <ddk/platform-defs.h>
 
 namespace {
 

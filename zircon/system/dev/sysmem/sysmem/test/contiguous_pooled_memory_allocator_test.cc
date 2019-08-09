@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "contiguous_pooled_system_ram_memory_allocator.h"
+#include "contiguous_pooled_memory_allocator.h"
 
 namespace {
 
@@ -41,7 +41,7 @@ class ContiguousPooledSystem : public zxtest::Test {
    static constexpr char kVmoName[] = "test-pool";
 
    FakeOwner fake_owner_;
-   ContiguousPooledSystemRamMemoryAllocator allocator_;
+   ContiguousPooledMemoryAllocator allocator_;
 };
 
 TEST_F(ContiguousPooledSystem, VmoNamesAreSet) {

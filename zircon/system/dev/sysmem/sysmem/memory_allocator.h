@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_MEMORY_ALLOCATOR_H_
+#define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_MEMORY_ALLOCATOR_H_
 
 #include <lib/fit/function.h>
 #include <lib/zx/bti.h>
@@ -15,7 +16,7 @@ class MemoryAllocator {
   // Some sub-classes take this interface as a constructor param, which
   // enables a fake in tests where we don't have a real zx::bti etc.
   class Owner {
-  public:
+   public:
     virtual const zx::bti& bti() = 0;
     virtual zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) = 0;
   };
@@ -58,3 +59,5 @@ class MemoryAllocator {
  public:
   std::map<intptr_t, fit::callback<void()>> destroy_callbacks_;
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_MEMORY_ALLOCATOR_H_

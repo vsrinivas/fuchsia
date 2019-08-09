@@ -5,6 +5,14 @@
 #ifndef ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DEVICE_H_
 #define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DEVICE_H_
 
+#include <fuchsia/sysmem/c/fidl.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/channel.h>
+
+#include <limits>
+#include <map>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -13,14 +21,7 @@
 #include <ddk/protocol/sysmem.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <fuchsia/sysmem/c/fidl.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/channel.h>
 #include <region-alloc/region-alloc.h>
-
-#include <limits>
-#include <map>
 
 #include "memory_allocator.h"
 

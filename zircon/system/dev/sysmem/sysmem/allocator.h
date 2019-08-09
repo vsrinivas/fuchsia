@@ -6,11 +6,10 @@
 #define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_ALLOCATOR_H_
 
 #include "device.h"
-#include "logging.h"
-
 #include "fuchsia/sysmem/c/fidl.h"
 #include "lib/fidl-async-2/fidl_server.h"
 #include "lib/fidl-async-2/simple_binding.h"
+#include "logging.h"
 
 // An instance of this class serves an Allocator connection.  The lifetime of
 // the instance is 1:1 with the Allocator channel.

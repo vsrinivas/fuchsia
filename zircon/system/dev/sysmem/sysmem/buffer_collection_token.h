@@ -5,12 +5,12 @@
 #ifndef ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_BUFFER_COLLECTION_TOKEN_H_
 #define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_BUFFER_COLLECTION_TOKEN_H_
 
-#include "logging.h"
-#include "logical_buffer_collection.h"
-
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fidl-async-2/fidl_server.h>
 #include <lib/fidl-async-2/simple_binding.h>
+
+#include "logging.h"
+#include "logical_buffer_collection.h"
 
 class BufferCollectionToken
     : public FidlServer<

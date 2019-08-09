@@ -4,14 +4,14 @@
 
 #include "allocator.h"
 
-#include "logical_buffer_collection.h"
-
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/internal.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <zircon/fidl.h>
+
+#include "logical_buffer_collection.h"
 
 namespace {
 

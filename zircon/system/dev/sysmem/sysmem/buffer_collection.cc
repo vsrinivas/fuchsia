@@ -4,10 +4,10 @@
 
 #include "buffer_collection.h"
 
-#include "logical_buffer_collection.h"
-
 #include <lib/fidl-utils/bind.h>
 #include <zircon/compiler.h>
+
+#include "logical_buffer_collection.h"
 
 extern const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
 

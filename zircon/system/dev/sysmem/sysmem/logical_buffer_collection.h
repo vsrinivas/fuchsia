@@ -5,10 +5,6 @@
 #ifndef ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
 #define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
 
-#include "device.h"
-
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/zx/channel.h>
@@ -16,6 +12,11 @@
 #include <list>
 #include <map>
 #include <memory>
+
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+
+#include "device.h"
 
 extern const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
 extern const fidl_type_t fuchsia_sysmem_ImageFormatConstraintsTable;
@@ -170,13 +171,12 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // a Delete() call, such as to clean up a slab allocation and/or to inform
   // an external allocator of delete.
   class TrackedParentVmo {
-  public:
+   public:
     using DoDelete = fit::callback<void(TrackedParentVmo* parent)>;
     // The do_delete callback will be invoked upon the sooner of (A) the client
     // code causing ~ParentVmo, or (B) ZX_VMO_ZERO_CHILDREN occurring async
     // after StartWait() is called.
-    TrackedParentVmo(fbl::RefPtr<LogicalBufferCollection> buffer_collection,
-                     zx::vmo vmo,
+    TrackedParentVmo(fbl::RefPtr<LogicalBufferCollection> buffer_collection, zx::vmo vmo,
                      DoDelete do_delete);
     ~TrackedParentVmo();
     // This should only be called after client code has created a child VMO, and
@@ -189,10 +189,9 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     TrackedParentVmo(TrackedParentVmo&&) = delete;
     TrackedParentVmo& operator=(const TrackedParentVmo&) = delete;
     TrackedParentVmo& operator=(TrackedParentVmo&&) = delete;
-  private:
-    void OnZeroChildren(async_dispatcher_t* dispatcher,
-                        async::WaitBase* wait,
-                        zx_status_t status,
+
+   private:
+    void OnZeroChildren(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
     fbl::RefPtr<LogicalBufferCollection> buffer_collection_;
     zx::vmo vmo_;

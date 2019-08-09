@@ -11,9 +11,9 @@
 
 #include "allocator.h"
 
-class ContiguousPooledSystemRamMemoryAllocator : public MemoryAllocator {
+class ContiguousPooledMemoryAllocator : public MemoryAllocator {
  public:
-  ContiguousPooledSystemRamMemoryAllocator(Owner* parent_device, const char* allocation_name,
+  ContiguousPooledMemoryAllocator(Owner* parent_device, const char* allocation_name,
                                            uint64_t size, bool is_cpu_accessible);
 
   // Default to page alignment.

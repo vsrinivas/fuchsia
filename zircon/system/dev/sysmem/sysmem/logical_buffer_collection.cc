@@ -4,15 +4,16 @@
 
 #include "logical_buffer_collection.h"
 
+#include <lib/image-format/image_format.h>
+#include <limits.h>  // PAGE_SIZE
+#include <zircon/assert.h>
+
+#include <limits>  // std::numeric_limits
+
 #include "buffer_collection.h"
 #include "buffer_collection_token.h"
 #include "koid_util.h"
 #include "usage_pixel_format_cost.h"
-
-#include <lib/image-format/image_format.h>
-#include <limits.h>  // PAGE_SIZE
-#include <limits>    // std::numeric_limits
-#include <zircon/assert.h>
 
 namespace {
 
@@ -499,9 +500,10 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
       // such that the failure is silent, without silencing this failure on unclean close or
       // participant close, and without letting participants pretend to be the initiator re.
       // this failure's silence / non-silence.
-      Fail("BufferCollection (view) channel failure or closure causing LogicalBufferCollection "
-           "failure - status: %d",
-           status);
+      Fail(
+          "BufferCollection (view) channel failure or closure causing LogicalBufferCollection "
+          "failure - status: %d",
+          status);
       return;
     }
 
@@ -1525,14 +1527,13 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
   //
   // The fbl::WrapRefPtr(this) is fairly similar (in this usage) to shared_from_this().
   auto tracked_parent_vmo = std::unique_ptr<TrackedParentVmo>(new TrackedParentVmo(
-    fbl::WrapRefPtr(this), std::move(raw_parent_vmo),
-    [this, allocator](TrackedParentVmo* tracked_parent_vmo) mutable {
-      auto node_handle = parent_vmos_.extract(tracked_parent_vmo->vmo().get());
-      ZX_DEBUG_ASSERT(!node_handle || node_handle.mapped().get() == tracked_parent_vmo);
-      allocator->Delete(tracked_parent_vmo->TakeVmo());
-      // ~node_handle may delete "this".
-    }
-  ));
+      fbl::WrapRefPtr(this), std::move(raw_parent_vmo),
+      [this, allocator](TrackedParentVmo* tracked_parent_vmo) mutable {
+        auto node_handle = parent_vmos_.extract(tracked_parent_vmo->vmo().get());
+        ZX_DEBUG_ASSERT(!node_handle || node_handle.mapped().get() == tracked_parent_vmo);
+        allocator->Delete(tracked_parent_vmo->TakeVmo());
+        // ~node_handle may delete "this".
+      }));
 
   zx::vmo cooked_parent_vmo;
   status = tracked_parent_vmo->vmo().duplicate(kSysmemVmoRights, &cooked_parent_vmo);
@@ -1560,8 +1561,7 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
   }
   zx_handle_t raw_parent_vmo_handle = tracked_parent_vmo->vmo().get();
   TrackedParentVmo& parent_vmo_ref = *tracked_parent_vmo;
-  auto emplace_result =
-      parent_vmos_.emplace(raw_parent_vmo_handle, std::move(tracked_parent_vmo));
+  auto emplace_result = parent_vmos_.emplace(raw_parent_vmo_handle, std::move(tracked_parent_vmo));
   ZX_DEBUG_ASSERT(emplace_result.second);
 
   // Now inform the allocator about the child VMO before we return it.
@@ -1647,13 +1647,12 @@ int32_t LogicalBufferCollection::CompareImageFormatConstraintsByIndex(uint32_t i
 }
 
 LogicalBufferCollection::TrackedParentVmo::TrackedParentVmo(
-    fbl::RefPtr<LogicalBufferCollection> buffer_collection,
-    zx::vmo vmo,
+    fbl::RefPtr<LogicalBufferCollection> buffer_collection, zx::vmo vmo,
     LogicalBufferCollection::TrackedParentVmo::DoDelete do_delete)
-  : buffer_collection_(std::move(buffer_collection)),
-    vmo_(std::move(vmo)),
-    do_delete_(std::move(do_delete)),
-    zero_children_wait_(this, vmo_.get(), ZX_VMO_ZERO_CHILDREN) {
+    : buffer_collection_(std::move(buffer_collection)),
+      vmo_(std::move(vmo)),
+      do_delete_(std::move(do_delete)),
+      zero_children_wait_(this, vmo_.get(), ZX_VMO_ZERO_CHILDREN) {
   ZX_DEBUG_ASSERT(buffer_collection_);
   ZX_DEBUG_ASSERT(vmo_);
   ZX_DEBUG_ASSERT(do_delete_);
@@ -1690,11 +1689,10 @@ const zx::vmo& LogicalBufferCollection::TrackedParentVmo::vmo() const {
   return vmo_;
 }
 
-void LogicalBufferCollection::TrackedParentVmo::OnZeroChildren(
-    async_dispatcher_t* dispatcher,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void LogicalBufferCollection::TrackedParentVmo::OnZeroChildren(async_dispatcher_t* dispatcher,
+                                                               async::WaitBase* wait,
+                                                               zx_status_t status,
+                                                               const zx_packet_signal_t* signal) {
   LogInfo("LogicalBufferCollection::TrackedParentVmo::OnZeroChildren()");
   ZX_DEBUG_ASSERT(waiting_);
   waiting_ = false;

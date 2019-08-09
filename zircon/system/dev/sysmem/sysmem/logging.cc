@@ -4,11 +4,12 @@
 
 #include "logging.h"
 
-#include <ddk/debug.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 
 #include <memory>
-#include <stdio.h>
+
+#include <ddk/debug.h>
 
 void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* format,
           va_list args) {

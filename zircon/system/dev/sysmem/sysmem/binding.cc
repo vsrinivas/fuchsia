@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device.h"
-#include "driver.h"
-#include "macros.h"
-
 #include <inttypes.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <string.h>
+
 #include <limits>
 #include <memory>
-#include <string.h>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -21,7 +19,10 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <lib/async-loop/cpp/loop.h>
+
+#include "device.h"
+#include "driver.h"
+#include "macros.h"
 
 zx_status_t sysmem_init(void** out_driver_ctx) {
   DRIVER_INFO("async_get_default_dispatcher(): %p\n", async_get_default_dispatcher());

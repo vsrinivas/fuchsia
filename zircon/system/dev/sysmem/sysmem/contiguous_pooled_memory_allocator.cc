@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "contiguous_pooled_system_ram_memory_allocator.h"
+#include "contiguous_pooled_memory_allocator.h"
 
 #include "macros.h"
 
-ContiguousPooledSystemRamMemoryAllocator::ContiguousPooledSystemRamMemoryAllocator(
+ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
     Owner* parent_device, const char* allocation_name, uint64_t size,
     bool is_cpu_accessible)
     : parent_device_(parent_device),
@@ -15,7 +15,7 @@ ContiguousPooledSystemRamMemoryAllocator::ContiguousPooledSystemRamMemoryAllocat
       size_(size),
       is_cpu_accessible_(is_cpu_accessible) {}
 
-zx_status_t ContiguousPooledSystemRamMemoryAllocator::Init(uint32_t alignment_log2) {
+zx_status_t ContiguousPooledMemoryAllocator::Init(uint32_t alignment_log2) {
   zx::vmo local_contiguous_vmo;
   zx_status_t status = zx::vmo::create_contiguous(
       parent_device_->bti(), size_, alignment_log2, &local_contiguous_vmo);
@@ -28,7 +28,7 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Init(uint32_t alignment_lo
   return InitCommon(std::move(local_contiguous_vmo));
 }
 
-zx_status_t ContiguousPooledSystemRamMemoryAllocator::InitPhysical(zx_paddr_t paddr) {
+zx_status_t ContiguousPooledMemoryAllocator::InitPhysical(zx_paddr_t paddr) {
   zx::vmo local_contiguous_vmo;
   zx_status_t status = parent_device_->CreatePhysicalVmo(paddr, size_, &local_contiguous_vmo);
   if (status != ZX_OK) {
@@ -40,7 +40,7 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::InitPhysical(zx_paddr_t pa
   return InitCommon(std::move(local_contiguous_vmo));
 }
 
-zx_status_t ContiguousPooledSystemRamMemoryAllocator::InitCommon(zx::vmo local_contiguous_vmo) {
+zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous_vmo) {
   zx_status_t status = local_contiguous_vmo.set_property(
       ZX_PROP_NAME, allocation_name_, strlen(allocation_name_));
   if (status != ZX_OK) {
@@ -124,7 +124,7 @@ keepGoing:;
   return ZX_OK;
 }
 
-zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx::vmo* parent_vmo) {
+zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* parent_vmo) {
   RegionAllocator::Region::UPtr region;
   zx::vmo result_parent_vmo;
 
@@ -159,19 +159,19 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx
   return ZX_OK;
 }
 
-zx_status_t ContiguousPooledSystemRamMemoryAllocator::SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) {
+zx_status_t ContiguousPooledMemoryAllocator::SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) {
   // nothing to do here
   return ZX_OK;
 }
 
-void ContiguousPooledSystemRamMemoryAllocator::Delete(zx::vmo parent_vmo) {
+void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   auto it = regions_.find(parent_vmo.get());
   ZX_ASSERT(it != regions_.end());
   regions_.erase(it);
   // ~parent_vmo
 }
 
-void ContiguousPooledSystemRamMemoryAllocator::DumpPoolStats() {
+void ContiguousPooledMemoryAllocator::DumpPoolStats() {
   uint64_t unused_size = 0;
   uint64_t max_free_size = 0;
   region_allocator_.WalkAvailableRegions(

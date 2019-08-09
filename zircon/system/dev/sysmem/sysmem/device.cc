@@ -4,19 +4,20 @@
 
 #include "device.h"
 
-#include "allocator.h"
-#include "buffer_collection_token.h"
-#include "contiguous_pooled_system_ram_memory_allocator.h"
-#include "macros.h"
-
-#include <ddk/device.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
 #include <zircon/device/sysmem.h>
+
+#include <ddk/device.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/bus.h>
+
+#include "allocator.h"
+#include "buffer_collection_token.h"
+#include "contiguous_pooled_memory_allocator.h"
+#include "macros.h"
 
 namespace {
 
@@ -45,9 +46,10 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
     zx::vmo result_parent_vmo;
     // This code is unlikely to work after running for a while and physical
     // memory is more fragmented than early during boot. The
-    // ContiguousPooledSystemRamMemoryAllocator handles that case by keeping
+    // ContiguousPooledMemoryAllocator handles that case by keeping
     // a separate pool of contiguous memory.
-    zx_status_t status = zx::vmo::create_contiguous(parent_device_->bti(), size, 0, &result_parent_vmo);
+    zx_status_t status =
+        zx::vmo::create_contiguous(parent_device_->bti(), size, 0, &result_parent_vmo);
     if (status != ZX_OK) {
       DRIVER_ERROR(
           "zx::vmo::create_contiguous() failed - size_bytes: %lu "
@@ -117,8 +119,8 @@ class ExternalMemoryAllocator : public MemoryAllocator {
 
     zx_status_t status2;
     uint64_t id;
-    status =
-        fuchsia_sysmem_HeapCreateResource(connection_.get(), child_vmo_copy.release(), &status2, &id);
+    status = fuchsia_sysmem_HeapCreateResource(connection_.get(), child_vmo_copy.release(),
+                                               &status2, &id);
     if (status != ZX_OK || status2 != ZX_OK) {
       DRIVER_ERROR("HeapCreateResource() failed - status: %d status2: %d", status, status2);
       // sanitize to ZX_ERR_NO_MEMORY regardless of why.
@@ -242,7 +244,7 @@ zx_status_t Device::Bind() {
   }
 
   if (contiguous_memory_size) {
-    auto pooled_allocator = std::make_unique<ContiguousPooledSystemRamMemoryAllocator>(
+    auto pooled_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
         this, "SysmemContiguousPool", contiguous_memory_size, true);
     if (pooled_allocator->Init() != ZX_OK) {
       DRIVER_ERROR("Contiguous system ram allocator initialization failed");
@@ -255,7 +257,7 @@ zx_status_t Device::Bind() {
 
   // TODO: Separate protected memory allocator into separate driver or library
   if (pdev_device_info_vid_ == PDEV_VID_AMLOGIC && protected_memory_size > 0) {
-    auto amlogic_allocator = std::make_unique<ContiguousPooledSystemRamMemoryAllocator>(
+    auto amlogic_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
         this, "SysmemAmlogicProtectedPool", protected_memory_size, false);
     // Request 64kB alignment because the hardware can only modify protections along 64kB
     // boundaries.
@@ -287,7 +289,7 @@ zx_status_t Device::Bind() {
   // support for the fuchsia.sysmem.DriverConnector protocol.  The .message
   // callback used is sysmem_device_ops.message, not
   // sysmem_protocol_ops.message.
-  device_add_args.proto_id = ZX_PROTOCOL_SYSMEM;
+      device_add_args.proto_id = ZX_PROTOCOL_SYSMEM;
   device_add_args.proto_ops = &in_proc_sysmem_protocol_ops;
   device_add_args.flags = DEVICE_ADD_ALLOW_MULTI_COMPOSITE;
 
