@@ -1,27 +1,24 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/the-book/modular/overview
+  path: /docs/the-book/modular/overview.md
 - title: "Configuring the Modular framework"
-  path: /fuchsia-src/the-book/modular/guide/config
+  path: /docs/the-book/modular/guide/config.md
 - title: "Story"
-  path: /fuchsia-src/the-book/modular/story
+  path: /docs/the-book/modular/story.md
 - title: "Module"
-  path: /fuchsia-src/the-book/modular/module
+  path: /docs/the-book/modular/module.md
 - title: "Module facet"
-  path: /fuchsia-src/the-book/modular/module_facet
+  path: /docs/the-book/modular/module_facet.md
 - title: "Agent"
-  path: /fuchsia-src/the-book/modular/agent
+  path: /docs/the-book/modular/agent.md
 - title: "Intent"
-  path: /fuchsia-src/the-book/modular/intent
+  path: /docs/the-book/modular/intent.md
 - title: "Shell"
-  path: /fuchsia-src/the-book/modular/shell
+  path: /docs/the-book/modular/shell.md
 - title: "Entity"
-  path: /fuchsia-src/the-book/modular/entity
+  path: /docs/the-book/modular/entity.md
 - title: "Entity provider"
-  path: /fuchsia-src/the-book/modular/guide/entity_provider
+  path: /docs/the-book/modular/guide/entity_provider.md

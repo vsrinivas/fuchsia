@@ -1,13 +1,10 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/the-book/components/capabilities
+  path: /docs/the-book/components/capabilities
 - title: "Service capabilities"
-  path: /fuchsia-src/the-book/components/capabilities/service
+  path: /docs/the-book/components/capabilities/service.md
 - title: "Storage capabilities"
-  path: /fuchsia-src/the-book/components/capabilities/storage
+  path: /docs/the-book/components/capabilities/storage.md

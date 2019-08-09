@@ -1,19 +1,16 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/the-book/magma
+  path: /docs/the-book/magma
 - title: "Design"
-  path: /fuchsia-src/the-book/magma/design
+  path: /docs/the-book/magma/design.md
 - title: "Test strategy"
-  path: /fuchsia-src/the-book/magma/test_strategy
+  path: /docs/the-book/magma/test_strategy.md
 - title: "Vulkan"
-  path: /fuchsia-src/the-book/magma/vulkan
+  path: /docs/the-book/magma/vulkan.md
 - title: "Porting"
-  path: /fuchsia-src/the-book/magma/porting
+  path: /docs/the-book/magma/porting.md
 - title: "Contributing"
-  path: /fuchsia-src/the-book/magma/contributing
+  path: /docs/the-book/magma/contributing.md

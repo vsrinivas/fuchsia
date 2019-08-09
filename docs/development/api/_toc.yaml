@@ -1,29 +1,26 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "API development"
-  path: /fuchsia-src/development/api
+  path: /docs/development/api
 - title: "CLI tool help requirements"
-  path: /fuchsia-src/development/api/cli_help
+  path: /docs/development/api/cli_help.md
 - title: "Command-line tools rubric"
-  path: /fuchsia-src/development/api/cli
+  path: /docs/development/api/cli.md
 - title: "C library readability rubric"
-  path: /fuchsia-src/development/api/c
+  path: /docs/development/api/c.md
 - title: "Dart API readability Rubric"
-  path: /fuchsia-src/development/api/dart
+  path: /docs/development/api/dart.md
 - title: "Fuchsia API council charter"
-  path: /fuchsia-src/development/api/council
+  path: /docs/development/api/council.md
 - title: "Fuchsia device interface rubric"
-  path: /fuchsia-src/development/api/device_interfaces
+  path: /docs/development/api/device_interfaces.md
 - title: "API documentation readability rubric"
-  path: /fuchsia-src/development/api/documentation
+  path: /docs/development/api/documentation.md
 - title: "FIDL API readability rubric"
-  path: /fuchsia-src/development/api/fidl
+  path: /docs/development/api/fidl.md
 - title: "Zircon system interface rubric"
-  path: /fuchsia-src/development/api/system
+  path: /docs/development/api/system.md
 - title: "Developer tool guidelines"
-  path: /fuchsia-src/development/api/tools
+  path: /docs/development/api/tools.md

@@ -1,27 +1,24 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/development/languages/dart
+  path: /docs/development/languages/dart
 - title: "Analysis"
-  path: /fuchsia-src/development/languages/dart/analysis
+  path: /docs/development/languages/dart/analysis.md
 - title: "FIDL"
-  path: /fuchsia-src/development/languages/dart/fidl
+  path: /docs/development/languages/dart/fidl.md
 - title: "IDEs"
-  path: /fuchsia-src/development/languages/dart/ides
+  path: /docs/development/languages/dart/ides.md
 - title: "Logging"
-  path: /fuchsia-src/development/languages/dart/logging
+  path: /docs/development/languages/dart/logging.md
 - title: "Mod integration testing with Topaz"
-  path: /fuchsia-src/development/languages/dart/mod_integration_testing
+  path: /docs/development/languages/dart/mod_integration_testing.md
 - title: "Flutter module development"
-  path: /fuchsia-src/development/languages/dart/mods
+  path: /docs/development/languages/dart/mods.md
 - title: "Dart style guide"
-  path: /fuchsia-src/development/languages/dart/style
+  path: /docs/development/languages/dart/style.md
 - title: "Testing"
-  path: /fuchsia-src/development/languages/dart/testing
+  path: /docs/development/languages/dart/testing.md
 - title: "Third-party Dart packages"
-  path: /fuchsia-src/development/languages/dart/third_party
+  path: /docs/development/languages/dart/third_party.md

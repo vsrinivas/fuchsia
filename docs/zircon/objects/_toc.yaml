@@ -1,49 +1,46 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Bus transaction initiator"
-  path: /fuchsia-src/zircon/objects/bus_transaction_initiator
+  path: /docs/zircon/objects/bus_transaction_initiator.md
 - title: "Channel"
-  path: /fuchsia-src/zircon/objects/channel
+  path: /docs/zircon/objects/channel.md
 - title: "Log"
-  path: /fuchsia-src/zircon/objects/debuglog
+  path: /docs/zircon/objects/debuglog.md
 - title: "Event"
-  path: /fuchsia-src/zircon/objects/event
+  path: /docs/zircon/objects/event.md
 - title: "Event pair"
-  path: /fuchsia-src/zircon/objects/eventpair
+  path: /docs/zircon/objects/eventpair.md
 - title: "FIFO"
-  path: /fuchsia-src/zircon/objects/fifo
+  path: /docs/zircon/objects/fifo.md
 - title: "Futex"
-  path: /fuchsia-src/zircon/objects/futex
+  path: /docs/zircon/objects/futex.md
 - title: "Interrupts"
-  path: /fuchsia-src/zircon/objects/interrupts
+  path: /docs/zircon/objects/interrupts.md
 - title: "Job"
-  path: /fuchsia-src/zircon/objects/job
+  path: /docs/zircon/objects/job.md
 - title: "Pager"
-  path: /fuchsia-src/zircon/objects/pager
+  path: /docs/zircon/objects/pager.md
 - title: "Pinned memory token"
-  path: /fuchsia-src/zircon/objects/pinned_memory_token
+  path: /docs/zircon/objects/pinned_memory_token.md
 - title: "Port"
-  path: /fuchsia-src/zircon/objects/port
+  path: /docs/zircon/objects/port.md
 - title: "Process"
-  path: /fuchsia-src/zircon/objects/process
+  path: /docs/zircon/objects/process.md
 - title: "Profile"
-  path: /fuchsia-src/zircon/objects/profile
+  path: /docs/zircon/objects/profile.md
 - title: "Resource"
-  path: /fuchsia-src/zircon/objects/resource
+  path: /docs/zircon/objects/resource.md
 - title: "Socket"
-  path: /fuchsia-src/zircon/objects/socket
+  path: /docs/zircon/objects/socket.md
 - title: "Task"
-  path: /fuchsia-src/zircon/objects/task
+  path: /docs/zircon/objects/task.md
 - title: "Thread"
-  path: /fuchsia-src/zircon/objects/thread
+  path: /docs/zircon/objects/thread.md
 - title: "Timer"
-  path: /fuchsia-src/zircon/objects/timer
+  path: /docs/zircon/objects/timer.md
 - title: "Virtual memory address region"
-  path: /fuchsia-src/zircon/objects/vm_address_region
+  path: /docs/zircon/objects/vm_address_region.md
 - title: "Virtual memory object"
-  path: /fuchsia-src/zircon/objects/vm_object
+  path: /docs/zircon/objects/vm_object.md

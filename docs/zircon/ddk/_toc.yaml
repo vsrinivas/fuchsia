@@ -1,46 +1,43 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Driver Development Kit"
-  path: /fuchsia-src/zircon/ddk/overview
+  path: /docs/zircon/ddk/overview.md
 - title: "Getting started"
-  path: /fuchsia-src/zircon/ddk/getting_started
+  path: /docs/zircon/ddk/getting_started.md
 - title: "Device model"
-  path: /fuchsia-src/zircon/ddk/device-model
+  path: /docs/zircon/ddk/device-model.md
 - title: "Composite devices"
-  path: /fuchsia-src/zircon/ddk/composite
+  path: /docs/zircon/ddk/composite.md
 - title: "Device protocol"
-  path: /fuchsia-src/zircon/ddk/device-ops
+  path: /docs/zircon/ddk/device-ops.md
 - title: "Driver development"
-  path: /fuchsia-src/zircon/ddk/driver-development
+  path: /docs/zircon/ddk/driver-development.md
   section:
   - title: "Hardware interfacing"
-    path: /fuchsia-src/zircon/ddk/hardware
+    path: /docs/zircon/ddk/hardware.md
   - title: "Simple drivers"
-    path: /fuchsia-src/zircon/ddk/simple
+    path: /docs/zircon/ddk/simple.md
   - title: "Ethernet devices"
-    path: /fuchsia-src/zircon/ddk/ethernet
+    path: /docs/zircon/ddk/ethernet.md
   - title: "RAMdisk device"
-    path: /fuchsia-src/zircon/ddk/ramdisk
+    path: /docs/zircon/ddk/ramdisk.md
   - title: "Adding tracing to device drivers"
-    path: /fuchsia-src/zircon/ddk/tracing
+    path: /docs/zircon/ddk/tracing.md
   - title: "Using the C++ DDK template library"
-    path: /fuchsia-src/zircon/ddk/using-ddktl
+    path: /docs/zircon/ddk/using-ddktl.md
 - title: "Platform bus"
-  path: /fuchsia-src/zircon/ddk/platform-bus
+  path: /docs/zircon/ddk/platform-bus.md
 - title: "Device firmware"
-  path: /fuchsia-src/zircon/ddk/firmware
+  path: /docs/zircon/ddk/firmware.md
 - title: Tutorial presentations
   section:
   - title: "The Banjo tutorial"
-    path: /fuchsia-src/zircon/ddk/banjo-tutorial
+    path: /docs/zircon/ddk/banjo-tutorial.md
   - title: "The Driver Development Kit tutorial"
-    path: /fuchsia-src/zircon/ddk/ddk-tutorial
+    path: /docs/zircon/ddk/ddk-tutorial.md
 - title: "Advanced topics and tips"
-  path: /fuchsia-src/zircon/ddk/advanced
+  path: /docs/zircon/ddk/advanced.md
 - title: "Reference"
-  path: /fuchsia-src/zircon/ddk/reference
+  path: /docs/zircon/ddk/reference.md

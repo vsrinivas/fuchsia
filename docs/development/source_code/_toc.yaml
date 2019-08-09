@@ -1,17 +1,14 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Fuchsia source"
-  path: /fuchsia-src/development/source_code
+  path: /docs/development/source_code
 - title: "Fuchsia endian policy and recommendations"
-  path: /fuchsia-src/development/source_code/endian
+  path: /docs/development/source_code/endian.md
 - title: "Source code layout"
-  path: /fuchsia-src/development/source_code/layout
+  path: /docs/development/source_code/layout.md
 - title: "Owners"
-  path: /fuchsia-src/development/source_code/owners
+  path: /docs/development/source_code/owners.md
 - title: "README.fuchsia file syntax"
-  path: /fuchsia-src/development/source_code/third-party-metadata
+  path: /docs/development/source_code/third-party-metadata.md

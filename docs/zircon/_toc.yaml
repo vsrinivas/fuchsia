@@ -1,177 +1,179 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Overview"
+  path: /docs/zircon
+
 - title: "Getting started"
-  path: /fuchsia-src/zircon/getting_started
+  path: /docs/zircon/getting_started.md
 
 - title: "Building zircon"
   section:
-  - include: /fuchsia-src/zircon/gn/_toc.yaml
+  - include: /docs/zircon/gn/_toc.yaml
 
 - title: "Architecture support"
-  path: /fuchsia-src/zircon/architecture_support
+  path: /docs/zircon/architecture_support.md
 
 - title: "Concepts"
-  path: /fuchsia-src/zircon/concepts
+  path: /docs/zircon/concepts.md
 
 - title: "Contributing patches"
-  path: /fuchsia-src/zircon/contributing
+  path: /docs/zircon/contributing.md
 
 - title: "C++"
   section:
   - title: "Overview"
-    path: /fuchsia-src/zircon/cxx
+    path: /docs/zircon/cxx.md
   - title: "Compile time collections"
-    path: /fuchsia-src/zircon/compile_time_object_collections
+    path: /docs/zircon/compile_time_object_collections.md
   - title: "fit::promise<> guide"
-    path: /fuchsia-src/zircon/fit_promise_guide
+    path: /docs/zircon/fit_promise_guide.md
 
 - title: "Editors"
-  path: /fuchsia-src/zircon/editors
+  path: /docs/zircon/editors.md
 
 - title: "libc support"
-  path: /fuchsia-src/zircon/libc
+  path: /docs/zircon/libc.md
 
 - title: Objects
   section:
   - title: "Kernel objects"
-    path: /fuchsia-src/zircon/objects
-  - include: /fuchsia-src/zircon/objects/_toc.yaml
+    path: /docs/zircon/objects.md
+  - include: /docs/zircon/objects/_toc.yaml
   - title: "Timer Slack"
-    path: /fuchsia-src/zircon/timer_slack
+    path: /docs/zircon/timer_slack.md
+  - title: "Time units"
+    path: /docs/zircon/time.md
 
 - title: "Kernel"
   section:
   - title: "Kernel command line options"
-    path: /fuchsia-src/zircon/kernel_cmdline
+    path: /docs/zircon/kernel_cmdline.md
   - title: "Kernel internal errors"
-    path: /fuchsia-src/zircon/kernel_internal_errors
+    path: /docs/zircon/kernel_internal_errors.md
   - title: "Kernel invariants"
-    path: /fuchsia-src/zircon/kernel_invariants
+    path: /docs/zircon/kernel_invariants.md
   - title: "Kernel scheduling"
-    path: /fuchsia-src/zircon/kernel_scheduling
+    path: /docs/zircon/kernel_scheduling.md
   - title: "Fair scheduling"
-    path: /fuchsia-src/zircon/fair_scheduler
+    path: /docs/zircon/fair_scheduler.md
   - title: "Kernel tracing"
-    path: /fuchsia-src/zircon/tracing/ktrace
+    path: /docs/zircon/tracing/ktrace.md
 
 - title: "Errors"
-  path: /fuchsia-src/zircon/errors
+  path: /docs/zircon/errors.md
 
 - title: "Exceptions"
-  path: /fuchsia-src/zircon/exceptions
+  path: /docs/zircon/exceptions.md
 
 - title: "Handles"
-  path: /fuchsia-src/zircon/handles
+  path: /docs/zircon/handles.md
 
 - title: "Rights"
-  path: /fuchsia-src/zircon/rights
+  path: /docs/zircon/rights.md
 
 - title: "Signals"
-  path: /fuchsia-src/zircon/signals
+  path: /docs/zircon/signals.md
 
 - title: "Thread safety annotations"
-  path:  /fuchsia-src/zircon/thread_annotations
+  path:  /docs/zircon/thread_annotations.md
 
 - title: "Thread local storage"
-  path: /fuchsia-src/zircon/tls
+  path: /docs/zircon/tls.md
 
 - title: "Runtime locks"
   section:
   - title: Overview
-    path: /fuchsia-src/zircon/lockdep
+    path: /docs/zircon/lockdep.md
   - title: Design
-    path: /fuchsia-src/zircon/lockdep-design
+    path: /docs/zircon/lockdep-design.md
 
 - title: "System calls"
   section:
-  - include: /fuchsia-src/zircon/syscalls/_toc.yaml
+  - include: /docs/zircon/syscalls/_toc.yaml
 
 - title: "abigen file grammar"
-  path: /fuchsia-src/zircon/abigen/grammar
+  path: /docs/zircon/abigen/grammar.md
 
 - title: "Bootsvc"
-  path: /fuchsia-src/zircon/bootsvc
+  path: /docs/zircon/bootsvc.md
 
 - title: "Userspace bootstrapping"
-  path: /fuchsia-src/zircon/userboot
+  path: /docs/zircon/userboot.md
 
 - title: "Program loading"
-  path: /fuchsia-src/zircon/program_loading
+  path: /docs/zircon/program_loading.md
 
 - title: "Jitterentropy"
   section:
-  - include: /fuchsia-src/zircon/jitterentropy/_toc.yaml
+  - include: /docs/zircon/jitterentropy/_toc.yaml
 - title: "Minfs"
-  path: /fuchsia-src/zircon/minfs
+  path: /docs/zircon/minfs.md
 
 - title: "Zxcrypt"
-  path: /fuchsia-src/zircon/zxcrypt
+  path: /docs/zircon/zxcrypt.md
 
 - title: "Driver interfaces"
   section:
-  - include: /fuchsia-src/zircon/driver_interfaces/_toc.yaml
+  - include: /docs/zircon/driver_interfaces/_toc.yaml
 
 - title: "DDK"
   section:
-  - include: /fuchsia-src/zircon/ddk/_toc.yaml
+  - include: /docs/zircon/ddk/_toc.yaml
 
 - title: "Targets"
   section:
-  - include: /fuchsia-src/zircon/targets/_toc.yaml
+  - include: /docs/zircon/targets/_toc.yaml
 
 - title: "Debugging"
   section:
-  - include: /fuchsia-src/zircon/debugging/_toc.yaml
+  - include: /docs/zircon/debugging/_toc.yaml
 
 - title: "Testing"
   section:
   - title: "Overview"
-    path: /fuchsia-src/zircon/testing
+    path: /docs/zircon/testing.md
   - title: "Block device testing"
-    path: /fuchsia-src/zircon/block_device_testing
+    path: /docs/zircon/block_device_testing.md
   - title: "Entropy quality tests"
-    path:  /fuchsia-src/zircon/entropy_quality_tests
+    path:  /docs/zircon/entropy_quality_tests.md
   - title: "Fuzzing the FIDL host tools"
-    path:  /fuchsia-src/zircon/fuzzing_fidl
+    path:  /docs/zircon/fuzzing_fidl.md
   - title: "NAND testing"
-    path: /fuchsia-src/zircon/nand_testing
+    path: /docs/zircon/nand_testing.md
 
 - title: "Hacking notes"
-  path: /fuchsia-src/zircon/hacking
+  path: /docs/zircon/hacking.md
 
 - title: "Memory usage analysis tools"
-  path: /fuchsia-src/zircon/memory
+  path: /docs/zircon/memory.md
 
 - title: "Out of memory system"
-  path: /fuchsia-src/zircon/oom
+  path: /docs/zircon/oom.md
 
 - title: "Safe stack"
-  path: /fuchsia-src/zircon/safestack
+  path: /docs/zircon/safestack.md
 
 - title: "Symbolizer markup format"
-  path: /fuchsia-src/zircon/symbolizer_markup
+  path: /docs/zircon/symbolizer_markup.md
 
 - title: "Static Analysis"
-  path: /fuchsia-src/zircon/static_analysis
+  path: /docs/zircon/static_analysis.md
 
 - title: "Zircon and LK"
-  path: /fuchsia-src/zircon/zx_and_lk
+  path: /docs/zircon/zx_and_lk.md
 
 - title: "Benchmarks"
   section:
-  - include: /fuchsia-src/zircon/benchmarks/_toc.yaml
+  - include: /docs/zircon/benchmarks/_toc.yaml
 
 - title: "Notes"
   section:
   - title: "Entropy collection TODOs"
-    path: /fuchsia-src/zircon/entropy_collection_todos
+    path: /docs/zircon/entropy_collection_todos.md
   - title: "Avoiding a problem with the SYSRET"
-    path: /fuchsia-src/zircon/sysret_problem
+    path: /docs/zircon/sysret_problem.md
 
 - title: "QEMU"
-  path: /fuchsia-src/zircon/qemu
+  path: /docs/zircon/qemu.md

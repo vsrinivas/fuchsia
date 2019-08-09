@@ -54,14 +54,10 @@ with multiple entries:
 
   Paths must follow these requirements:
 
-  * Paths to files should not include the extension name.
-  * Paths to directories should not include a trailing slash.
-  * Paths to directories in fuchsia.dev are different than paths
-    the Fuchsia source code:
-    * Replace the `/docs/` path with `/fuchsia-src/`.
-  * Paths to `index.md` or `README.md` should point to the
-    directory name without including the filename. For example, to reference
-    `/fuchsia-src/zircon/index.md` you should use `/fuchsia-src/zircon`.
+  * Paths to files should be the full path from the root of the project. For
+    example, `/docs/development/api/cli.md`.
+  * Paths to directories should not include a trailing slash, and the directory
+    must have a file named `README.md`.
 
   For example, to add an entry for the Zircon `concepts.md`
   page in its respective [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/zircon/_toc.yaml),
@@ -69,7 +65,7 @@ with multiple entries:
 
   ```
   - title: "Concepts"
-    path: /fuchsia-src/zircon/concepts
+    path: /docs/zircon/concepts.md
   ```
 
 * Expandable section
@@ -92,11 +88,11 @@ with multiple entries:
   - title: "Zircon kernel"
     section:
     - title: "Concepts"
-      path: /fuchsia-src/zircon/concepts
+      path: /docs/zircon/concepts
     - title: "System calls"
-      path: /fuchsia-src/zircon/syscalls
+      path: /docs/zircon/syscalls.md
     - title: "vDSO (libzircon)"
-      path: /fuchsia-src/zircon/vdso
+      path: /docs/zircon/vdso.md
   ```
 
 Once you have made these changes, you can submit your changes for review.

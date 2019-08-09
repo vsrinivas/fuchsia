@@ -1,29 +1,26 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Build and pave quickstart"
-  path: /fuchsia-src/development/workflows/build_and_pave_quickstart
+  path: /docs/development/workflows/build_and_pave_quickstart.md
 - title: "Cross translation unit static analysis in Zircon"
-  path: /fuchsia-src/development/workflows/ctu_analysis
+  path: /docs/development/workflows/ctu_analysis.md
 - title: "Debugging"
-  path: /fuchsia-src/development/workflows/debugging
+  path: /docs/development/workflows/debugging.md
 - title: "fx workflows"
-  path: /fuchsia-src/development/workflows/fx
+  path: /docs/development/workflows/fx.md
 - title: "LibFuzzer in Fuchsia"
-  path: /fuchsia-src/development/workflows/libfuzzer
+  path: /docs/development/workflows/libfuzzer.md
 - title: "Multi device setup"
-  path: /fuchsia-src/development/workflows/multi_device
+  path: /docs/development/workflows/multi_device.md
 - title: "Working on multiple projects"
-  path: /fuchsia-src/development/workflows/multilayer_changes
+  path: /docs/development/workflows/multilayer_changes.md
 - title: "Developing with Fuchsia packages"
-  path: /fuchsia-src/development/workflows/package_update
+  path: /docs/development/workflows/package_update.md
 - title: "Putting Fuchsia on a device"
-  path: /fuchsia-src/development/workflows/paving
+  path: /docs/development/workflows/paving.md
 - title: "Testing: questions and answers"
-  path: /fuchsia-src/development/workflows/testing_faq
+  path: /docs/development/workflows/testing_faq.md
 - title: "Workflow: tips"
-  path: /fuchsia-src/development/workflows/workflow_tips_and_faq
+  path: /docs/development/workflows/workflow_tips_and_faq.md

@@ -1,21 +1,18 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Documentation Types"
-  path: /fuchsia-src/best-practices/documentation_types
+  path: /docs/best-practices/documentation_types.md
 - title: "Documentation Standards"
-  path: /fuchsia-src/best-practices/documentation_standards
+  path: /docs/best-practices/documentation_standards.md
 - title: "Documentation Comments"
-  path: /fuchsia-src/best-practices/documentation_comments
+  path: /docs/best-practices/documentation_comments.md
 - title: "Website navigation files"
-  path: /fuchsia-src/best-practices/documentation_navigation_toc
+  path: /docs/best-practices/documentation_navigation_toc.md
 - title: "General style guidelines"
-  path: /fuchsia-src/best-practices/documentation_style_guide
+  path: /docs/best-practices/documentation_style_guide.md
 - title: "Fuchsia Flake Policy"
-  path: /fuchsia-src/best-practices/test_flake_policy
+  path: /docs/best-practices/test_flake_policy.md
 - title: "Respectful Code Policy"
-  path: /fuchsia-src/best-practices/respectful_code
+  path: /docs/best-practices/respectful_code.md

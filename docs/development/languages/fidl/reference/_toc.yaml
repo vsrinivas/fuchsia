@@ -1,34 +1,31 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "ABI and source compatibility guide"
-  path: /fuchsia-src/development/languages/fidl/reference/abi-compat
+  path: /docs/development/languages/fidl/reference/abi-compat.md
 - title: "Attributes"
-  path: /fuchsia-src/development/languages/fidl/reference/attributes
+  path: /docs/development/languages/fidl/reference/attributes.md
 - title: "Bindings"
-  path: /fuchsia-src/development/languages/fidl/reference/bindings
+  path: /docs/development/languages/fidl/reference/bindings.md
 - title: "Compiler"
-  path: /fuchsia-src/development/languages/fidl/reference/compiler
+  path: /docs/development/languages/fidl/reference/compiler.md
 - title: "Editors"
-  path: /fuchsia-src/development/languages/fidl/reference/editors
+  path: /docs/development/languages/fidl/reference/editors.md
 - title: "Grammar"
-  path: /fuchsia-src/development/languages/fidl/reference/grammar
+  path: /docs/development/languages/fidl/reference/grammar.md
 - title: "Host side"
-  path: /fuchsia-src/development/languages/fidl/reference/host
+  path: /docs/development/languages/fidl/reference/host.md
 - title: "Internal library: 'zx'"
-  path: /fuchsia-src/development/languages/fidl/reference/library-zx
+  path: /docs/development/languages/fidl/reference/library-zx.md
 - title: "JSON internal representation"
-  path: /fuchsia-src/development/languages/fidl/reference/json-ir
+  path: /docs/development/languages/fidl/reference/json-ir.md
 - title: "Language specification"
-  path: /fuchsia-src/development/languages/fidl/reference/language
+  path: /docs/development/languages/fidl/reference/language.md
 - title: "Linter"
-  path: /fuchsia-src/development/languages/fidl/reference/linter
+  path: /docs/development/languages/fidl/reference/linter.md
 - title: "Wire format"
-  path: /fuchsia-src/development/languages/fidl/reference/wire-format
+  path: /docs/development/languages/fidl/reference/wire-format/README.md
 - title: "Language tuning proposals"
   section:
-  - include: /fuchsia-src/development/languages/fidl/reference/ftp/_toc.yaml
+  - include: /docs/development/languages/fidl/reference/ftp/_toc.yaml

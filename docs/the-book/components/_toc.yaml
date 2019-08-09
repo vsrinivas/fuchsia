@@ -1,18 +1,15 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/the-book/components
+  path: /docs/the-book/components
 - title: "Component manifests"
-  path: /fuchsia-src/the-book/components/component_manifests
+  path: /docs/the-book/components/component_manifests.md
 - title: "Life of a service open"
-  path: /fuchsia-src/the-book/components/life_of_a_service_open
+  path: /docs/the-book/components/life_of_a_service_open.md
 - title: "ELF runner"
-  path: /fuchsia-src/the-book/components/elf_runner
+  path: /docs/the-book/components/elf_runner.md
 - title: "Capabilities"
   section:
-  - include: /fuchsia-src/the-book/components/capabilities/_toc.yaml
+  - include: /docs/the-book/components/capabilities/_toc.yaml

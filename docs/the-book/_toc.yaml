@@ -1,91 +1,88 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/the-book
+  path: /docs/the-book
 - title: "Zircon kernel"
   section:
   - title: "Concepts"
-    path: /fuchsia-src/zircon/concepts
+    path: /docs/zircon/concepts.md
   - title: "System calls"
-    path: /fuchsia-src/zircon/syscalls
+    path: /docs/zircon/syscalls.md
   - title: "vDSO (libzircon)"
-    path: /fuchsia-src/zircon/vdso
+    path: /docs/zircon/vdso.md
 - title: "Zircon core"
   section:
   - title: "Device driver model (DDK)"
-    path: /fuchsia-src/zircon/ddk/overview
+    path: /docs/zircon/ddk/overview.md
   - title: "C library (libc)"
-    path: /fuchsia-src/the-book/libc
+    path: /docs/the-book/libc.md
   - title: "POSIX I/O (libfdio)"
-    path: /fuchsia-src/the-book/life_of_an_open
+    path: /docs/the-book/life_of_an_open.md
   - title: "Process creation"
-    path: /fuchsia-src/the-book/process_creation
+    path: /docs/the-book/process_creation.md
 - title: "Framework"
   section:
   - title: "Core libraries"
-    path: /fuchsia-src/the-book/core_libraries
+    path: /docs/the-book/core_libraries.md
   - title: "Application model"
     section:
     - title: "Interface Definition Language (FIDL)"
-      path: /fuchsia-src/development/languages/fidl
+      path: /docs/development/languages/fidl
   - title: "Boot sequence"
-    path: /fuchsia-src/the-book/boot_sequence
+    path: /docs/the-book/boot_sequence.md
   - title: "Namespaces"
-    path: /fuchsia-src/the-book/namespaces
+    path: /docs/the-book/namespaces.md
   - title: "Sandboxing"
-    path: /fuchsia-src/the-book/sandboxing
+    path: /docs/the-book/sandboxing.md
   - title: "Hub"
-    path: /fuchsia-src/the-book/hub
+    path: /docs/the-book/hub.md
   - title: "Modular"
     section:
-    - include: /fuchsia-src/the-book/modular/_toc.yaml
+    - include: /docs/the-book/modular/_toc.yaml
   - title: "Components"
     section:
-    - include: /fuchsia-src/the-book/components/_toc.yaml
+    - include: /docs/the-book/components/_toc.yaml
 - title: "Storage"
   section:
   - title: "Block devices"
-    path: /fuchsia-src/the-book/block_devices
+    path: /docs/the-book/block_devices.md
   - title: "File systems"
-    path: /fuchsia-src/the-book/filesystems
+    path: /docs/the-book/filesystems.md
   - title: "Ledger"
     path: https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/README.md
   - title: "Archive format"
-    path: /fuchsia-src/the-book/archive_format
+    path: /docs/the-book/archive_format.md
   - title: "Merkle roots"
-    path:  /fuchsia-src/the-book/merkleroot
+    path:  /docs/the-book/merkleroot.md
   - title: "Package metadata"
-    path: /fuchsia-src/the-book/package_metadata
+    path: /docs/the-book/package_metadata.md
   - title: "Package URIs"
-    path: /fuchsia-src/the-book/package_url
+    path: /docs/the-book/package_url.md
   - title: "'Dot dot' considered harmful"
-    path: /fuchsia-src/the-book/dotdot
+    path: /docs/the-book/dotdot.md
 
 - title: "Networking"
   section:
   - title: "Wireless"
-    path: /fuchsia-src/the-book/wireless_networking
+    path: /docs/the-book/wireless_networking.md
   - title: "Bluetooth architecture"
-    path: /fuchsia-src/the-book/bluetooth_architecture
+    path: /docs/the-book/bluetooth_architecture.md
   - title: "Bluetooth source code"
-    path: /fuchsia-src/the-book/bluetooth_source_layout
+    path: /docs/the-book/bluetooth_source_layout.md
   - title: "Telephony"
     path: https://fuchsia.googlesource.com/fuchsia/+/master/src/connectivity/telephony/
 - title: "Graphics"
   section:
   - title: "Magma (Vulkan driver)"
     section:
-    - include: /fuchsia-src/the-book/magma/_toc.yaml
+    - include: /docs/the-book/magma/_toc.yaml
   - title: "Escher (physically-based renderer)"
     path: https://fuchsia.googlesource.com/fuchsia/+/master/src/ui/lib/escher/README.md
   - title: "UI services"
     section:
-    - include: /fuchsia-src/the-book/ui/_toc.yaml
+    - include: /docs/the-book/ui/_toc.yaml
   - title: "Flutter (UI toolkit)"
     path: //flutter.io/
     status: external

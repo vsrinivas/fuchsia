@@ -1,11 +1,8 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/development/debugger
+  path: /docs/development/debugger/README.md
 - title: "Quickstart"
-  path: /fuchsia-src/development/debugger/debugger_usage
+  path: /docs/development/debugger/debugger_usage.md

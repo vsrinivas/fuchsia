@@ -1,15 +1,12 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Catapult user guide (Version 1)"
-  path: /fuchsia-src/development/benchmarking/catapult_user_guide
+  path: /docs/development/benchmarking/catapult_user_guide.md
 - title: "Benchmark results schema"
-  path: /fuchsia-src/development/benchmarking/results_schema
+  path: /docs/development/benchmarking/results_schema.md
 - title: "How to write benchmarks"
-  path: /fuchsia-src/development/benchmarking/running_on_ci
+  path: /docs/development/benchmarking/running_on_ci.md
 - title: "Trace-based benchmarking"
-  path: /fuchsia-src/development/benchmarking/trace_based_benchmarking
+  path: /docs/development/benchmarking/trace_based_benchmarking.md

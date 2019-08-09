@@ -1,35 +1,32 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/development/languages
+  path: /docs/development/languages
 - title: "Linting and formatting"
-  path: /fuchsia-src/development/languages/lint_and_format
+  path: /docs/development/languages/lint_and_format.md
 - title: "Supporting new languages"
   section:
     - title: "Overview"
-      path: /fuchsia-src/development/languages/new
+      path: /docs/development/languages/new/README.md
     - title: "Recommended structure to support Fuchsia"
-      path: /fuchsia-src/development/languages/new/structure
+      path: /docs/development/languages/new/structure.md
 - title: "C/C++"
   section:
-  - include: /fuchsia-src/development/languages/c-cpp/_toc.yaml
+  - include: /docs/development/languages/c-cpp/_toc.yaml
 - title: "Dart"
   section:
-  - include: /fuchsia-src/development/languages/dart/_toc.yaml
+  - include: /docs/development/languages/dart/_toc.yaml
 - title: "FIDL"
   section:
-  - include: /fuchsia-src/development/languages/fidl/_toc.yaml
+  - include: /docs/development/languages/fidl/_toc.yaml
 - title: "Go"
   section:
-  - include: /fuchsia-src/development/languages/go/_toc.yaml
+  - include: /docs/development/languages/go/_toc.yaml
 - title: "Python"
   section:
-  - include: /fuchsia-src/development/languages/python/_toc.yaml
+  - include: /docs/development/languages/python/_toc.yaml
 - title: "Rust"
   section:
-  - include: /fuchsia-src/development/languages/rust/_toc.yaml
+  - include: /docs/development/languages/rust/_toc.yaml

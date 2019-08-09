@@ -1,23 +1,20 @@
-# Warning: the paths in this file represent the content location in
-# https://fuchsia.dev, not the path in the filesystem.
-#
 # Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/development/tracing
+  path: /docs/development/tracing
 - title: "Tracing quick-start guide"
-  path: /fuchsia-src/development/tracing/quick-start
+  path: /docs/development/tracing/quick-start/README.md
 - title: "CPU performance monitor"
-  path: /fuchsia-src/development/tracing/cpuperf-provider
+  path: /docs/development/tracing/cpuperf-provider.md
 - title: "Tracing system design"
-  path: /fuchsia-src/development/tracing/design
+  path: /docs/development/tracing/design.md
 - title: "Trace format"
-  path: /fuchsia-src/development/tracing/trace-format
+  path: /docs/development/tracing/trace-format/README.md
 - title: "Tracing booting Fuchsia"
-  path: /fuchsia-src/development/tracing/tracing-boot
+  path: /docs/development/tracing/tracing-boot.md
 - title: "Tracing tutorial"
-  path: /fuchsia-src/development/tracing/tutorial
+  path: /docs/development/tracing/tutorial.md
 - title: "Tracing usage guide"
-  path: /fuchsia-src/development/tracing/usage-guide
+  path: /docs/development/tracing/usage-guide.md
