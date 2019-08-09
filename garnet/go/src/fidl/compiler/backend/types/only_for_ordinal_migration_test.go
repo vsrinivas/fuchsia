@@ -18,14 +18,31 @@ func TestMethodOrdinalsFormatsToHex(t *testing.T) {
 	}
 }
 
-func TestOrdinalsAtVariousMigrationPoints(t *testing.T) {
-	cases := []struct {
-		input         Ordinals
-		expectedReads []string
-		expectedWrite string
-	}{
+type testCase struct {
+	name          string
+	input         Ordinals
+	expectedReads []string
+	expectedWrite string
+}
+
+func (ex testCase) run(t *testing.T) {
+	t.Run(ex.name, func(t *testing.T) {
+		actualReads := names(ex.input.Reads())
+		actualWrite := ex.input.Write().Name
+		if diff := cmp.Diff(ex.expectedReads, actualReads); diff != "" {
+			t.Errorf("%v) reads: expected != actual (-want +got)\n%s", ex, diff)
+		}
+		if diff := cmp.Diff(ex.expectedWrite, actualWrite); diff != "" {
+			t.Errorf("%v) write: expected != actual (-want +got)\n%s", ex, diff)
+		}
+	})
+}
+
+func TestStartOfMigration(t *testing.T) {
+	cases := []testCase{
 		// Both ordinals are the same, use ord.
 		{
+			name: "ord_and_gen_same",
 			input: NewOrdinals(Method{
 				Ordinal:    0x7676e0ea,
 				GenOrdinal: 0x7676e0ea,
@@ -35,6 +52,7 @@ func TestOrdinalsAtVariousMigrationPoints(t *testing.T) {
 		},
 		// Both ordinals are different, use both on reads, ord on write.
 		{
+			name: "ord_and_gen_different",
 			input: NewOrdinals(Method{
 				Ordinal:    0x7676e0ea,
 				GenOrdinal: 0xae0e6767,
@@ -45,6 +63,7 @@ func TestOrdinalsAtVariousMigrationPoints(t *testing.T) {
 		// Assume gen is already shifted (by fidlc), it results in a 0 ordinal
 		// which should be ignored.
 		{
+			name: "ord_should_be_0_and_ignored",
 			input: NewOrdinals(Method{
 				Ordinal:    0x7676e0ea,
 				GenOrdinal: 0x7676e0ea00000000,
@@ -54,14 +73,47 @@ func TestOrdinalsAtVariousMigrationPoints(t *testing.T) {
 		},
 	}
 	for _, ex := range cases {
-		actualReads := names(ex.input.Reads())
-		actualWrite := ex.input.Write().Name
-		if diff := cmp.Diff(ex.expectedReads, actualReads); diff != "" {
-			t.Errorf("%v) reads: expected != actual (-want +got)\n%s", ex, diff)
-		}
-		if diff := cmp.Diff(ex.expectedWrite, actualWrite); diff != "" {
-			t.Errorf("%v) write: expected != actual (-want +got)\n%s", ex, diff)
-		}
+		ex.run(t)
+	}
+}
+
+func TestStep3(t *testing.T) {
+	// At step 3, fidlc emits 32b, but shifts gen << 32.
+	cases := []testCase{
+		// Both ordinals are the same, use ord (gen is << 32).
+		{
+			name: "ord_and_gen_same",
+			input: NewOrdinalsStep3(Method{
+				Ordinal:    0x7676e0ea,
+				GenOrdinal: 0x7676e0ea00000000,
+			}, "ord", "gen"),
+			expectedReads: []string{"gen"},
+			expectedWrite: "gen",
+		},
+		// Both ordinals are different, use both on reads, ord on write.
+		{
+			name: "ord_and_gen_different",
+			input: NewOrdinalsStep3(Method{
+				Ordinal:    0x7676e0ea,
+				GenOrdinal: 0xae0e676700000000,
+			}, "ord", "gen"),
+			expectedReads: []string{"ord", "gen"},
+			expectedWrite: "gen",
+		},
+		// Assume ord is already shifted (by fidlc), it results in a 0 ordinal
+		// which should be ignored.
+		{
+			name: "ord_should_be_0_and_ignored",
+			input: NewOrdinalsStep3(Method{
+				Ordinal:    0x7676e0ea00000000,
+				GenOrdinal: 0x7676e0ea00000000,
+			}, "ord", "gen"),
+			expectedReads: []string{"gen"},
+			expectedWrite: "gen",
+		},
+	}
+	for _, ex := range cases {
+		ex.run(t)
 	}
 }
 

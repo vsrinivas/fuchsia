@@ -12,7 +12,7 @@ namespace test {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetChannel_Ordinal = 0x3ee7275100000000lu;
+constexpr uint64_t kDevice_GetChannel_GenOrdinal = 0x3ee7275100000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_test_DeviceGetChannelResponseTable;
 
 }  // namespace
@@ -64,7 +64,7 @@ zx_status_t Device::Call::GetChannel_Deprecated(zx::unowned_channel _client_end,
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetChannelRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDevice_GetChannel_Ordinal;
+  _request._hdr.ordinal = kDevice_GetChannel_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChannelRequest));
   ::fidl::DecodedMessage<GetChannelRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -96,7 +96,7 @@ zx_status_t Device::Call::GetChannel_Deprecated(zx::unowned_channel _client_end,
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetChannelRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetChannelRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDevice_GetChannel_Ordinal;
+  _request._hdr.ordinal = kDevice_GetChannel_GenOrdinal;
   _request_buffer.set_actual(sizeof(GetChannelRequest));
   ::fidl::DecodedMessage<GetChannelRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -124,7 +124,7 @@ zx_status_t Device::Call::GetChannel_Deprecated(zx::unowned_channel _client_end,
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetChannelRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetChannel_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_GetChannel_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetChannelResponse>::FromFailure(
@@ -148,7 +148,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_GetChannel_Ordinal:
+    case kDevice_GetChannel_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetChannelRequest>(msg);
       if (result.status != ZX_OK) {
@@ -179,7 +179,7 @@ void Device::Interface::GetChannelCompleterBase::Reply(::zx::channel ch) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetChannelResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_GetChannel_Ordinal;
+  _response._hdr.ordinal = kDevice_GetChannel_GenOrdinal;
   _response.ch = std::move(ch);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChannelResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetChannelResponse>(std::move(_response_bytes)));
@@ -191,7 +191,7 @@ void Device::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<GetChannelResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_GetChannel_Ordinal;
+  _response._hdr.ordinal = kDevice_GetChannel_GenOrdinal;
   _response.ch = std::move(ch);
   _buffer.set_actual(sizeof(GetChannelResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetChannelResponse>(std::move(_buffer)));
@@ -199,7 +199,7 @@ void Device::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Device::Interface::GetChannelCompleterBase::Reply(::fidl::DecodedMessage<GetChannelResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetChannel_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_GetChannel_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

@@ -70,7 +70,7 @@ struct SimpleUnion {
     mutable_field_a() = std::move(v);
   }
 
-  int32_t const& field_a() const { return field_a_; }
+  int32_t const & field_a() const { return field_a_; }
 
   bool is_field_b() const { return tag_ == Tag::kFieldB; }
 
@@ -88,14 +88,15 @@ struct SimpleUnion {
     mutable_field_b() = std::move(v);
   }
 
-  int32_t const& field_b() const { return field_b_; }
+  int32_t const & field_b() const { return field_b_; }
 
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_SimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
 
  private:
   void Destroy();
@@ -114,7 +115,8 @@ struct SimpleStruct {
   static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_SimpleStructTable;
   static constexpr uint32_t MaxNumHandles = 21;
   static constexpr uint32_t PrimarySize = 88;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
 
   int32_t field = {};
 
@@ -123,14 +125,13 @@ struct SimpleStruct {
   ::fidl::Array<::fidl::Array<::zx::eventpair, 4>, 5> arr = {};
 };
 
-extern "C" const fidl_type_t
-    fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
+extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
 
 // Test interface implemented by both C and LLCPP
 class TestInterface final {
   TestInterface() = delete;
-
  public:
+
   struct ConsumeSimpleStructResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -147,8 +148,7 @@ class TestInterface final {
     fidl_message_header_t _hdr;
     SimpleStruct arg;
 
-    static constexpr const fidl_type_t* Type =
-        &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
+    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
     static constexpr uint32_t MaxNumHandles = 21;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -178,38 +178,42 @@ class TestInterface final {
     using ResponseType = ConsumeSimpleUnionResponse;
   };
 
+
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
-
    private:
     template <typename ResponseType>
-    class ConsumeSimpleStruct_Impl final
-        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class ConsumeSimpleStruct_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-
      public:
       ConsumeSimpleStruct_Impl(zx::unowned_channel _client_end, SimpleStruct arg);
       ~ConsumeSimpleStruct_Impl() = default;
       ConsumeSimpleStruct_Impl(ConsumeSimpleStruct_Impl&& other) = default;
       ConsumeSimpleStruct_Impl& operator=(ConsumeSimpleStruct_Impl&& other) = default;
-      using Super::error;
       using Super::status;
+      using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
-    class ConsumeSimpleUnion_Impl final
-        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class ConsumeSimpleUnion_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-
      public:
       ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, SimpleUnion arg);
       ~ConsumeSimpleUnion_Impl() = default;
       ConsumeSimpleUnion_Impl(ConsumeSimpleUnion_Impl&& other) = default;
       ConsumeSimpleUnion_Impl& operator=(ConsumeSimpleUnion_Impl&& other) = default;
-      using Super::error;
       using Super::status;
+      using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -221,37 +225,38 @@ class TestInterface final {
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
-
    private:
     template <typename ResponseType>
-    class ConsumeSimpleStruct_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class ConsumeSimpleStruct_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
      public:
-      ConsumeSimpleStruct_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-                               SimpleStruct arg, ::fidl::BytePart _response_buffer);
+      ConsumeSimpleStruct_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer);
       ~ConsumeSimpleStruct_Impl() = default;
       ConsumeSimpleStruct_Impl(ConsumeSimpleStruct_Impl&& other) = default;
       ConsumeSimpleStruct_Impl& operator=(ConsumeSimpleStruct_Impl&& other) = default;
-      using Super::error;
       using Super::status;
+      using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
-    class ConsumeSimpleUnion_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class ConsumeSimpleUnion_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
      public:
-      ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-                              SimpleUnion arg, ::fidl::BytePart _response_buffer);
+      ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer);
       ~ConsumeSimpleUnion_Impl() = default;
       ConsumeSimpleUnion_Impl(ConsumeSimpleUnion_Impl&& other) = default;
       ConsumeSimpleUnion_Impl& operator=(ConsumeSimpleUnion_Impl&& other) = default;
-      using Super::error;
       using Super::status;
+      using Super::error;
+      using Super::ok;
       using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -271,29 +276,24 @@ class TestInterface final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
     // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(SimpleStruct arg);
 
     // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(::fidl::BytePart _request_buffer,
-                                                             SimpleStruct arg,
-                                                             ::fidl::BytePart _response_buffer);
+    UnownedResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer);
 
     // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
-    zx_status_t ConsumeSimpleStruct_Deprecated(SimpleStruct arg, int32_t* out_status,
-                                               int32_t* out_field);
+    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
+    zx_status_t ConsumeSimpleStruct_Deprecated(SimpleStruct arg, int32_t* out_status, int32_t* out_field);
 
     // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(
-        ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer,
-        int32_t* out_status, int32_t* out_field);
+    ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
 
     // Loops back the field which is set, along with its index.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
@@ -301,20 +301,15 @@ class TestInterface final {
 
     // Loops back the field which is set, along with its index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(::fidl::BytePart _request_buffer,
-                                                           SimpleUnion arg,
-                                                           ::fidl::BytePart _response_buffer);
+    UnownedResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer);
 
     // Loops back the field which is set, along with its index.
-    zx_status_t ConsumeSimpleUnion_Deprecated(SimpleUnion arg, uint32_t* out_index,
-                                              int32_t* out_field);
+    zx_status_t ConsumeSimpleUnion_Deprecated(SimpleUnion arg, uint32_t* out_index, int32_t* out_field);
 
     // Loops back the field which is set, along with its index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion_Deprecated(
-        ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer,
-        uint32_t* out_index, int32_t* out_field);
+    ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion_Deprecated(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
 
    private:
     ::zx::channel channel_;
@@ -323,75 +318,59 @@ class TestInterface final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
     Call() = delete;
-
    public:
+
     // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
     // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(zx::unowned_channel _client_end,
-                                                             SimpleStruct arg);
+    static ResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(zx::unowned_channel _client_end, SimpleStruct arg);
 
     // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(
-        zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg,
-        ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer);
 
     // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
-    static zx_status_t ConsumeSimpleStruct_Deprecated(zx::unowned_channel _client_end,
-                                                      SimpleStruct arg, int32_t* out_status,
-                                                      int32_t* out_field);
+    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
+    static zx_status_t ConsumeSimpleStruct_Deprecated(zx::unowned_channel _client_end, SimpleStruct arg, int32_t* out_status, int32_t* out_field);
 
     // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(
-        zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg,
-        ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
+    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
 
     // Loops back the field which is set, along with its index.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(zx::unowned_channel _client_end,
-                                                           SimpleUnion arg);
+    static ResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(zx::unowned_channel _client_end, SimpleUnion arg);
 
     // Loops back the field which is set, along with its index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(
-        zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg,
-        ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer);
 
     // Loops back the field which is set, along with its index.
-    static zx_status_t ConsumeSimpleUnion_Deprecated(zx::unowned_channel _client_end,
-                                                     SimpleUnion arg, uint32_t* out_index,
-                                                     int32_t* out_field);
+    static zx_status_t ConsumeSimpleUnion_Deprecated(zx::unowned_channel _client_end, SimpleUnion arg, uint32_t* out_index, int32_t* out_field);
 
     // Loops back the field which is set, along with its index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion_Deprecated(
-        zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg,
-        ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
+    static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
     InPlace() = delete;
-
    public:
+
     // Verifies that all the handles are valid channels, then returns
-    // ZX_OK and loops back the field member. Otherwise, returns an error.
-    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(
-        zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleStructRequest> params,
-        ::fidl::BytePart response_buffer);
+    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
+    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
 
     // Loops back the field which is set, along with its index.
-    static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion(
-        zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params,
-        ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer);
+
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -414,8 +393,7 @@ class TestInterface final {
 
     using ConsumeSimpleStructCompleter = ::fidl::Completer<ConsumeSimpleStructCompleterBase>;
 
-    virtual void ConsumeSimpleStruct(SimpleStruct arg,
-                                     ConsumeSimpleStructCompleter::Sync _completer) = 0;
+    virtual void ConsumeSimpleStruct(SimpleStruct arg, ConsumeSimpleStructCompleter::Sync _completer) = 0;
 
     class ConsumeSimpleUnionCompleterBase : public _Base {
      public:
@@ -429,8 +407,8 @@ class TestInterface final {
 
     using ConsumeSimpleUnionCompleter = ::fidl::Completer<ConsumeSimpleUnionCompleterBase>;
 
-    virtual void ConsumeSimpleUnion(SimpleUnion arg,
-                                    ConsumeSimpleUnionCompleter::Sync _completer) = 0;
+    virtual void ConsumeSimpleUnion(SimpleUnion arg, ConsumeSimpleUnionCompleter::Sync _completer) = 0;
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -450,6 +428,7 @@ class TestInterface final {
   static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
+
 };
 
 }  // namespace basictypes
@@ -470,71 +449,40 @@ static_assert(std::is_standard_layout_v<::llcpp::fidl::test::llcpp::basictypes::
 static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct, field) == 0);
 static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct, ep) == 4);
 static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct, arr) == 8);
-static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct) ==
-              ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct::PrimarySize);
+static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct) == ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest>
-    : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest) ==
-    ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest::PrimarySize);
-static_assert(
-    offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest,
-             arg) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest)
+    == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest, arg) == 16);
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse>
-    : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse) ==
-    ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse::
-        PrimarySize);
-static_assert(
-    offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse,
-             status) == 16);
-static_assert(
-    offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse,
-             field) == 20);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse)
+    == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse, status) == 16);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse, field) == 20);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest>
-    : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest) ==
-    ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest::PrimarySize);
-static_assert(
-    offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest,
-             arg) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest)
+    == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest, arg) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse>
-    : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse>
-    : public std::true_type {};
-static_assert(
-    sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse) ==
-    ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse::PrimarySize);
-static_assert(
-    offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse,
-             index) == 16);
-static_assert(
-    offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse,
-             field) == 20);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse)
+    == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse, index) == 16);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse, field) == 20);
 
 }  // namespace fidl

@@ -830,7 +830,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		_, transitional := v.LookupAttribute("Transitional")
 		m := Method{
 			Attributes: v.Attributes,
-			Ordinals: types.NewOrdinals(
+			Ordinals: types.NewOrdinalsStep3(
 				v,
 				fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
 				fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),

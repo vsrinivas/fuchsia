@@ -26,8 +26,9 @@ type NamedOrdinal struct {
 //
 // Read more about migration strategy on FIDL-524.
 type Ordinals struct {
-	ord NamedOrdinal
-	gen NamedOrdinal
+	ord      NamedOrdinal
+	gen      NamedOrdinal
+	writeGen bool
 }
 
 // NewOrdinals creates an Ordinals using the `ordName`, and `genName` provided.
@@ -44,15 +45,44 @@ func NewOrdinals(method Method, ordName, genName string) Ordinals {
 	}
 }
 
+// NewOrdinalsStep3 creates an Ordinals using the `ordName`, and `genName`
+// provided.
+//
+// Step #3 of migration: ord << 32, gen is not shifted (read from fidlc
+// directly)
+func NewOrdinalsStep3(method Method, ordName, genName string) Ordinals {
+	return Ordinals{
+		ord: NamedOrdinal{
+			Name:    ordName,
+			Ordinal: methodOrdinal(method.Ordinal << 32),
+		},
+		gen: NamedOrdinal{
+			Name:    genName,
+			Ordinal: methodOrdinal(method.GenOrdinal),
+		},
+		writeGen: true,
+	}
+}
+
 // Reads returns all distinct ordinals to be used on read, i.e. either
 // ord, gen, or both, depending on the current status of the migration.
 func (ords Ordinals) Reads() []NamedOrdinal {
-	var reads []NamedOrdinal
-	if ords.ord.Ordinal != 0 {
-		reads = append(reads, ords.ord)
-	}
-	if ords.gen.Ordinal != 0 {
-		if ords.gen.Ordinal != ords.ord.Ordinal {
+	var (
+		reads []NamedOrdinal
+		includeOrd = ords.ord.Ordinal != 0
+		includeGen = ords.gen.Ordinal != 0
+	)
+	if includeOrd && includeGen && ords.ord.Ordinal == ords.gen.Ordinal {
+		if ords.writeGen {
+			reads = append(reads, ords.gen)
+		} else {
+			reads = append(reads, ords.ord)
+		}
+	} else {
+		if includeOrd {
+			reads = append(reads, ords.ord)
+		}
+		if includeGen {
 			reads = append(reads, ords.gen)
 		}
 	}
@@ -65,5 +95,9 @@ func (ords Ordinals) Reads() []NamedOrdinal {
 // Write returns the ordinal to be used on write, i.e. either ord or gen,
 // depending on the current status of the migration.
 func (ords Ordinals) Write() NamedOrdinal {
-	return ords.Reads()[0]
+	if ords.writeGen {
+		return ords.gen
+	} else {
+		return ords.ord
+	}
 }

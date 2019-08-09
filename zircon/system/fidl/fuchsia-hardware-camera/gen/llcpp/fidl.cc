@@ -12,7 +12,7 @@ namespace camera {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetChannel_Ordinal = 0x762bbdf400000000lu;
+constexpr uint64_t kDevice_GetChannel_GenOrdinal = 0x762bbdf400000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceGetChannelRequestTable;
 
 }  // namespace
@@ -71,7 +71,7 @@ zx_status_t Device::Call::GetChannel_Deprecated(zx::unowned_channel _client_end,
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetChannelRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDevice_GetChannel_Ordinal;
+  _request._hdr.ordinal = kDevice_GetChannel_GenOrdinal;
   _request.ch = std::move(ch);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChannelRequest));
   ::fidl::DecodedMessage<GetChannelRequest> _decoded_request(std::move(_request_bytes));
@@ -91,7 +91,7 @@ zx_status_t Device::Call::GetChannel_Deprecated(zx::unowned_channel _client_end,
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<GetChannelRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDevice_GetChannel_Ordinal;
+  _request._hdr.ordinal = kDevice_GetChannel_GenOrdinal;
   _request.ch = std::move(ch);
   _request_buffer.set_actual(sizeof(GetChannelRequest));
   ::fidl::DecodedMessage<GetChannelRequest> _decoded_request(std::move(_request_buffer));
@@ -104,7 +104,7 @@ zx_status_t Device::Call::GetChannel_Deprecated(zx::unowned_channel _client_end,
 
 ::fidl::internal::StatusAndError Device::InPlace::GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetChannel_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_GetChannel_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -128,7 +128,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_GetChannel_Ordinal:
+    case kDevice_GetChannel_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetChannelRequest>(msg);
       if (result.status != ZX_OK) {
@@ -159,14 +159,14 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kStream_Start_Ordinal = 0x7be63a0500000000lu;
+constexpr uint64_t kStream_Start_GenOrdinal = 0x7be63a0500000000lu;
 [[maybe_unused]]
-constexpr uint64_t kStream_Stop_Ordinal = 0x6b8b9ce500000000lu;
+constexpr uint64_t kStream_Stop_GenOrdinal = 0x6b8b9ce500000000lu;
 [[maybe_unused]]
-constexpr uint64_t kStream_ReleaseFrame_Ordinal = 0x653632e100000000lu;
+constexpr uint64_t kStream_ReleaseFrame_GenOrdinal = 0x653632e100000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_StreamReleaseFrameRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kStream_OnFrameAvailable_Ordinal = 0x26e2153e00000000lu;
+constexpr uint64_t kStream_OnFrameAvailable_GenOrdinal = 0x26e2153e00000000lu;
 
 }  // namespace
 
@@ -198,7 +198,7 @@ zx_status_t Stream::Call::Start_Deprecated(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<StartRequest*>(_write_bytes);
-  _request._hdr.ordinal = kStream_Start_Ordinal;
+  _request._hdr.ordinal = kStream_Start_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(StartRequest));
   ::fidl::DecodedMessage<StartRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -215,7 +215,7 @@ zx_status_t Stream::Call::Start_Deprecated(zx::unowned_channel _client_end) {
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<StartRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kStream_Start_Ordinal;
+  params.message()->_hdr.ordinal = kStream_Start_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -259,7 +259,7 @@ zx_status_t Stream::Call::Stop_Deprecated(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StopRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<StopRequest*>(_write_bytes);
-  _request._hdr.ordinal = kStream_Stop_Ordinal;
+  _request._hdr.ordinal = kStream_Stop_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(StopRequest));
   ::fidl::DecodedMessage<StopRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -276,7 +276,7 @@ zx_status_t Stream::Call::Stop_Deprecated(zx::unowned_channel _client_end) {
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<StopRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kStream_Stop_Ordinal;
+  params.message()->_hdr.ordinal = kStream_Stop_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -346,7 +346,7 @@ zx_status_t Stream::Call::ReleaseFrame_Deprecated(zx::unowned_channel _client_en
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseFrameRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ReleaseFrameRequest*>(_write_bytes);
-  _request._hdr.ordinal = kStream_ReleaseFrame_Ordinal;
+  _request._hdr.ordinal = kStream_ReleaseFrame_GenOrdinal;
   _request.buffer_id = std::move(buffer_id);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReleaseFrameRequest));
   ::fidl::DecodedMessage<ReleaseFrameRequest> _decoded_request(std::move(_request_bytes));
@@ -366,7 +366,7 @@ zx_status_t Stream::Call::ReleaseFrame_Deprecated(zx::unowned_channel _client_en
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<ReleaseFrameRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kStream_ReleaseFrame_Ordinal;
+  _request._hdr.ordinal = kStream_ReleaseFrame_GenOrdinal;
   _request.buffer_id = std::move(buffer_id);
   _request_buffer.set_actual(sizeof(ReleaseFrameRequest));
   ::fidl::DecodedMessage<ReleaseFrameRequest> _decoded_request(std::move(_request_buffer));
@@ -379,7 +379,7 @@ zx_status_t Stream::Call::ReleaseFrame_Deprecated(zx::unowned_channel _client_en
 
 ::fidl::internal::StatusAndError Stream::InPlace::ReleaseFrame(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseFrameRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kStream_ReleaseFrame_Ordinal;
+  params.message()->_hdr.ordinal = kStream_ReleaseFrame_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -452,7 +452,7 @@ zx_status_t Stream::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kStream_OnFrameAvailable_Ordinal:
+    case kStream_OnFrameAvailable_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnFrameAvailableResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -475,7 +475,7 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kStream_Start_Ordinal:
+    case kStream_Start_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<StartRequest>(msg);
       if (result.status != ZX_OK) {
@@ -486,7 +486,7 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::StartCompleter::Sync(txn));
       return true;
     }
-    case kStream_Stop_Ordinal:
+    case kStream_Stop_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<StopRequest>(msg);
       if (result.status != ZX_OK) {
@@ -497,7 +497,7 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::StopCompleter::Sync(txn));
       return true;
     }
-    case kStream_ReleaseFrame_Ordinal:
+    case kStream_ReleaseFrame_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReleaseFrameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -530,7 +530,7 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, Frame
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnFrameAvailableResponse*>(_write_bytes);
   _response._hdr = {};
-  _response._hdr.ordinal = kStream_OnFrameAvailable_Ordinal;
+  _response._hdr.ordinal = kStream_OnFrameAvailable_GenOrdinal;
   _response.frame = std::move(frame);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnFrameAvailableResponse));
   return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnFrameAvailableResponse>(std::move(_response_bytes)));
@@ -542,7 +542,7 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fid
   }
   auto& _response = *reinterpret_cast<OnFrameAvailableResponse*>(_buffer.data());
   _response._hdr = {};
-  _response._hdr.ordinal = kStream_OnFrameAvailable_Ordinal;
+  _response._hdr.ordinal = kStream_OnFrameAvailable_GenOrdinal;
   _response.frame = std::move(frame);
   _buffer.set_actual(sizeof(OnFrameAvailableResponse));
   return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnFrameAvailableResponse>(std::move(_buffer)));
@@ -550,7 +550,7 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fid
 
 zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnFrameAvailableResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kStream_OnFrameAvailable_Ordinal;
+  params.message()->_hdr.ordinal = kStream_OnFrameAvailable_GenOrdinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
 
@@ -558,14 +558,14 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fid
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kControl_GetFormats_Ordinal = 0x9a9a4d000000000lu;
+constexpr uint64_t kControl_GetFormats_GenOrdinal = 0x9a9a4d000000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetFormatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetFormatsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_CreateStream_Ordinal = 0x6779a82300000000lu;
+constexpr uint64_t kControl_CreateStream_GenOrdinal = 0x6779a82300000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlCreateStreamRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_GetDeviceInfo_Ordinal = 0x47c292bb00000000lu;
+constexpr uint64_t kControl_GetDeviceInfo_GenOrdinal = 0x47c292bb00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetDeviceInfoResponseTable;
 
 }  // namespace
@@ -623,7 +623,7 @@ zx_status_t Control::Call::GetFormats_Deprecated(zx::unowned_channel _client_end
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFormatsRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetFormatsRequest*>(_write_bytes);
-  _request._hdr.ordinal = kControl_GetFormats_Ordinal;
+  _request._hdr.ordinal = kControl_GetFormats_GenOrdinal;
   _request.index = std::move(index);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetFormatsRequest));
   ::fidl::DecodedMessage<GetFormatsRequest> _decoded_request(std::move(_request_bytes));
@@ -661,7 +661,7 @@ zx_status_t Control::Call::GetFormats_Deprecated(zx::unowned_channel _client_end
     return ::fidl::DecodeResult<GetFormatsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<GetFormatsRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_GetFormats_Ordinal;
+  _request._hdr.ordinal = kControl_GetFormats_GenOrdinal;
   _request.index = std::move(index);
   _request_buffer.set_actual(sizeof(GetFormatsRequest));
   ::fidl::DecodedMessage<GetFormatsRequest> _decoded_request(std::move(_request_buffer));
@@ -688,7 +688,7 @@ zx_status_t Control::Call::GetFormats_Deprecated(zx::unowned_channel _client_end
 
 ::fidl::DecodeResult<Control::GetFormatsResponse> Control::InPlace::GetFormats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetFormats_Ordinal;
+  params.message()->_hdr.ordinal = kControl_GetFormats_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::GetFormatsResponse>::FromFailure(
@@ -764,7 +764,7 @@ zx_status_t Control::Call::CreateStream_Deprecated(zx::unowned_channel _client_e
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateStreamRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CreateStreamRequest*>(_write_bytes);
-  _request._hdr.ordinal = kControl_CreateStream_Ordinal;
+  _request._hdr.ordinal = kControl_CreateStream_GenOrdinal;
   _request.buffer_collection = std::move(buffer_collection);
   _request.rate = std::move(rate);
   _request.stream = std::move(stream);
@@ -787,7 +787,7 @@ zx_status_t Control::Call::CreateStream_Deprecated(zx::unowned_channel _client_e
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<CreateStreamRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_CreateStream_Ordinal;
+  _request._hdr.ordinal = kControl_CreateStream_GenOrdinal;
   _request.buffer_collection = std::move(buffer_collection);
   _request.rate = std::move(rate);
   _request.stream = std::move(stream);
@@ -803,7 +803,7 @@ zx_status_t Control::Call::CreateStream_Deprecated(zx::unowned_channel _client_e
 
 ::fidl::internal::StatusAndError Control::InPlace::CreateStream(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateStreamRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_CreateStream_Ordinal;
+  params.message()->_hdr.ordinal = kControl_CreateStream_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -866,7 +866,7 @@ zx_status_t Control::Call::GetDeviceInfo_Deprecated(zx::unowned_channel _client_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceInfoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetDeviceInfoRequest*>(_write_bytes);
-  _request._hdr.ordinal = kControl_GetDeviceInfo_Ordinal;
+  _request._hdr.ordinal = kControl_GetDeviceInfo_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetDeviceInfoRequest));
   ::fidl::DecodedMessage<GetDeviceInfoRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -898,7 +898,7 @@ zx_status_t Control::Call::GetDeviceInfo_Deprecated(zx::unowned_channel _client_
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDeviceInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetDeviceInfoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControl_GetDeviceInfo_Ordinal;
+  _request._hdr.ordinal = kControl_GetDeviceInfo_GenOrdinal;
   _request_buffer.set_actual(sizeof(GetDeviceInfoRequest));
   ::fidl::DecodedMessage<GetDeviceInfoRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -926,7 +926,7 @@ zx_status_t Control::Call::GetDeviceInfo_Deprecated(zx::unowned_channel _client_
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetDeviceInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetDeviceInfo_Ordinal;
+  params.message()->_hdr.ordinal = kControl_GetDeviceInfo_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::GetDeviceInfoResponse>::FromFailure(
@@ -950,7 +950,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kControl_GetFormats_Ordinal:
+    case kControl_GetFormats_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetFormatsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -962,7 +962,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::GetFormatsCompleter::Sync(txn));
       return true;
     }
-    case kControl_CreateStream_Ordinal:
+    case kControl_CreateStream_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CreateStreamRequest>(msg);
       if (result.status != ZX_OK) {
@@ -974,7 +974,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::CreateStreamCompleter::Sync(txn));
       return true;
     }
-    case kControl_GetDeviceInfo_Ordinal:
+    case kControl_GetDeviceInfo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetDeviceInfoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1006,7 +1006,7 @@ void Control::Interface::GetFormatsCompleterBase::Reply(::fidl::Array<VideoForma
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   auto& _response = *reinterpret_cast<GetFormatsResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_GetFormats_Ordinal;
+  _response._hdr.ordinal = kControl_GetFormats_GenOrdinal;
   _response.formats = std::move(formats);
   _response.total_format_count = std::move(total_format_count);
   _response.actual_format_count = std::move(actual_format_count);
@@ -1021,7 +1021,7 @@ void Control::Interface::GetFormatsCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   auto& _response = *reinterpret_cast<GetFormatsResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_GetFormats_Ordinal;
+  _response._hdr.ordinal = kControl_GetFormats_GenOrdinal;
   _response.formats = std::move(formats);
   _response.total_format_count = std::move(total_format_count);
   _response.actual_format_count = std::move(actual_format_count);
@@ -1032,7 +1032,7 @@ void Control::Interface::GetFormatsCompleterBase::Reply(::fidl::BytePart _buffer
 
 void Control::Interface::GetFormatsCompleterBase::Reply(::fidl::DecodedMessage<GetFormatsResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetFormats_Ordinal;
+  params.message()->_hdr.ordinal = kControl_GetFormats_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1041,7 +1041,7 @@ void Control::Interface::GetDeviceInfoCompleterBase::Reply(DeviceInfo device_inf
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceInfoResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetDeviceInfoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_GetDeviceInfo_Ordinal;
+  _response._hdr.ordinal = kControl_GetDeviceInfo_GenOrdinal;
   _response.device_info = std::move(device_info);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetDeviceInfoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetDeviceInfoResponse>(std::move(_response_bytes)));
@@ -1053,7 +1053,7 @@ void Control::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::BytePart _buf
     return;
   }
   auto& _response = *reinterpret_cast<GetDeviceInfoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_GetDeviceInfo_Ordinal;
+  _response._hdr.ordinal = kControl_GetDeviceInfo_GenOrdinal;
   _response.device_info = std::move(device_info);
   _buffer.set_actual(sizeof(GetDeviceInfoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetDeviceInfoResponse>(std::move(_buffer)));
@@ -1061,7 +1061,7 @@ void Control::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::BytePart _buf
 
 void Control::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::DecodedMessage<GetDeviceInfoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetDeviceInfo_Ordinal;
+  params.message()->_hdr.ordinal = kControl_GetDeviceInfo_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1069,14 +1069,14 @@ void Control::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::DecodedMessag
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kControlV2_GetFormats_Ordinal = 0x6d106c5d00000000lu;
+constexpr uint64_t kControlV2_GetFormats_GenOrdinal = 0x6d106c5d00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetFormatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetFormatsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControlV2_CreateStream_Ordinal = 0x5f68265c00000000lu;
+constexpr uint64_t kControlV2_CreateStream_GenOrdinal = 0x5f68265c00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2CreateStreamRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kControlV2_GetDeviceInfo_Ordinal = 0x5bc1df8500000000lu;
+constexpr uint64_t kControlV2_GetDeviceInfo_GenOrdinal = 0x5bc1df8500000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetDeviceInfoResponseTable;
 
 }  // namespace
@@ -1134,7 +1134,7 @@ zx_status_t ControlV2::Call::GetFormats_Deprecated(zx::unowned_channel _client_e
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFormatsRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetFormatsRequest*>(_write_bytes);
-  _request._hdr.ordinal = kControlV2_GetFormats_Ordinal;
+  _request._hdr.ordinal = kControlV2_GetFormats_GenOrdinal;
   _request.index = std::move(index);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetFormatsRequest));
   ::fidl::DecodedMessage<GetFormatsRequest> _decoded_request(std::move(_request_bytes));
@@ -1172,7 +1172,7 @@ zx_status_t ControlV2::Call::GetFormats_Deprecated(zx::unowned_channel _client_e
     return ::fidl::DecodeResult<GetFormatsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<GetFormatsRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControlV2_GetFormats_Ordinal;
+  _request._hdr.ordinal = kControlV2_GetFormats_GenOrdinal;
   _request.index = std::move(index);
   _request_buffer.set_actual(sizeof(GetFormatsRequest));
   ::fidl::DecodedMessage<GetFormatsRequest> _decoded_request(std::move(_request_buffer));
@@ -1199,7 +1199,7 @@ zx_status_t ControlV2::Call::GetFormats_Deprecated(zx::unowned_channel _client_e
 
 ::fidl::DecodeResult<ControlV2::GetFormatsResponse> ControlV2::InPlace::GetFormats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControlV2_GetFormats_Ordinal;
+  params.message()->_hdr.ordinal = kControlV2_GetFormats_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<ControlV2::GetFormatsResponse>::FromFailure(
@@ -1275,7 +1275,7 @@ zx_status_t ControlV2::Call::CreateStream_Deprecated(zx::unowned_channel _client
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateStreamRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CreateStreamRequest*>(_write_bytes);
-  _request._hdr.ordinal = kControlV2_CreateStream_Ordinal;
+  _request._hdr.ordinal = kControlV2_CreateStream_GenOrdinal;
   _request.buffer_collection = std::move(buffer_collection);
   _request.rate = std::move(rate);
   _request.stream = std::move(stream);
@@ -1298,7 +1298,7 @@ zx_status_t ControlV2::Call::CreateStream_Deprecated(zx::unowned_channel _client
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<CreateStreamRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControlV2_CreateStream_Ordinal;
+  _request._hdr.ordinal = kControlV2_CreateStream_GenOrdinal;
   _request.buffer_collection = std::move(buffer_collection);
   _request.rate = std::move(rate);
   _request.stream = std::move(stream);
@@ -1314,7 +1314,7 @@ zx_status_t ControlV2::Call::CreateStream_Deprecated(zx::unowned_channel _client
 
 ::fidl::internal::StatusAndError ControlV2::InPlace::CreateStream(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateStreamRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControlV2_CreateStream_Ordinal;
+  params.message()->_hdr.ordinal = kControlV2_CreateStream_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1377,7 +1377,7 @@ zx_status_t ControlV2::Call::GetDeviceInfo_Deprecated(zx::unowned_channel _clien
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceInfoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetDeviceInfoRequest*>(_write_bytes);
-  _request._hdr.ordinal = kControlV2_GetDeviceInfo_Ordinal;
+  _request._hdr.ordinal = kControlV2_GetDeviceInfo_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetDeviceInfoRequest));
   ::fidl::DecodedMessage<GetDeviceInfoRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -1409,7 +1409,7 @@ zx_status_t ControlV2::Call::GetDeviceInfo_Deprecated(zx::unowned_channel _clien
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDeviceInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetDeviceInfoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kControlV2_GetDeviceInfo_Ordinal;
+  _request._hdr.ordinal = kControlV2_GetDeviceInfo_GenOrdinal;
   _request_buffer.set_actual(sizeof(GetDeviceInfoRequest));
   ::fidl::DecodedMessage<GetDeviceInfoRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -1437,7 +1437,7 @@ zx_status_t ControlV2::Call::GetDeviceInfo_Deprecated(zx::unowned_channel _clien
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetDeviceInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControlV2_GetDeviceInfo_Ordinal;
+  params.message()->_hdr.ordinal = kControlV2_GetDeviceInfo_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<ControlV2::GetDeviceInfoResponse>::FromFailure(
@@ -1461,7 +1461,7 @@ bool ControlV2::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kControlV2_GetFormats_Ordinal:
+    case kControlV2_GetFormats_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetFormatsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1473,7 +1473,7 @@ bool ControlV2::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::GetFormatsCompleter::Sync(txn));
       return true;
     }
-    case kControlV2_CreateStream_Ordinal:
+    case kControlV2_CreateStream_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CreateStreamRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1485,7 +1485,7 @@ bool ControlV2::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::CreateStreamCompleter::Sync(txn));
       return true;
     }
-    case kControlV2_GetDeviceInfo_Ordinal:
+    case kControlV2_GetDeviceInfo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetDeviceInfoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1517,7 +1517,7 @@ void ControlV2::Interface::GetFormatsCompleterBase::Reply(::fidl::Array<::llcpp:
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   auto& _response = *reinterpret_cast<GetFormatsResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControlV2_GetFormats_Ordinal;
+  _response._hdr.ordinal = kControlV2_GetFormats_GenOrdinal;
   _response.formats = std::move(formats);
   _response.total_format_count = std::move(total_format_count);
   _response.actual_format_count = std::move(actual_format_count);
@@ -1532,7 +1532,7 @@ void ControlV2::Interface::GetFormatsCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<GetFormatsResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControlV2_GetFormats_Ordinal;
+  _response._hdr.ordinal = kControlV2_GetFormats_GenOrdinal;
   _response.formats = std::move(formats);
   _response.total_format_count = std::move(total_format_count);
   _response.actual_format_count = std::move(actual_format_count);
@@ -1543,7 +1543,7 @@ void ControlV2::Interface::GetFormatsCompleterBase::Reply(::fidl::BytePart _buff
 
 void ControlV2::Interface::GetFormatsCompleterBase::Reply(::fidl::DecodedMessage<GetFormatsResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControlV2_GetFormats_Ordinal;
+  params.message()->_hdr.ordinal = kControlV2_GetFormats_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1552,7 +1552,7 @@ void ControlV2::Interface::GetDeviceInfoCompleterBase::Reply(DeviceInfo device_i
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceInfoResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetDeviceInfoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControlV2_GetDeviceInfo_Ordinal;
+  _response._hdr.ordinal = kControlV2_GetDeviceInfo_GenOrdinal;
   _response.device_info = std::move(device_info);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetDeviceInfoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetDeviceInfoResponse>(std::move(_response_bytes)));
@@ -1564,7 +1564,7 @@ void ControlV2::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<GetDeviceInfoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControlV2_GetDeviceInfo_Ordinal;
+  _response._hdr.ordinal = kControlV2_GetDeviceInfo_GenOrdinal;
   _response.device_info = std::move(device_info);
   _buffer.set_actual(sizeof(GetDeviceInfoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetDeviceInfoResponse>(std::move(_buffer)));
@@ -1572,7 +1572,7 @@ void ControlV2::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::BytePart _b
 
 void ControlV2::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::DecodedMessage<GetDeviceInfoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControlV2_GetDeviceInfo_Ordinal;
+  params.message()->_hdr.ordinal = kControlV2_GetDeviceInfo_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

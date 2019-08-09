@@ -83,11 +83,11 @@ ReadInfo& ::llcpp::fuchsia::paver::ReadResult::mutable_info() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kPayloadStream_RegisterVmo_Ordinal = 0x1044c8d900000000lu;
+constexpr uint64_t kPayloadStream_RegisterVmo_GenOrdinal = 0x1044c8d900000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPayloadStream_ReadData_Ordinal = 0x2c366e3600000000lu;
+constexpr uint64_t kPayloadStream_ReadData_GenOrdinal = 0x2c366e3600000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
 
 }  // namespace
@@ -145,7 +145,7 @@ zx_status_t PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel _cli
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<RegisterVmoRequest*>(_write_bytes);
-  _request._hdr.ordinal = kPayloadStream_RegisterVmo_Ordinal;
+  _request._hdr.ordinal = kPayloadStream_RegisterVmo_GenOrdinal;
   _request.vmo = std::move(vmo);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(RegisterVmoRequest));
   ::fidl::DecodedMessage<RegisterVmoRequest> _decoded_request(std::move(_request_bytes));
@@ -179,7 +179,7 @@ zx_status_t PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel _cli
     return ::fidl::DecodeResult<RegisterVmoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<RegisterVmoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPayloadStream_RegisterVmo_Ordinal;
+  _request._hdr.ordinal = kPayloadStream_RegisterVmo_GenOrdinal;
   _request.vmo = std::move(vmo);
   _request_buffer.set_actual(sizeof(RegisterVmoRequest));
   ::fidl::DecodedMessage<RegisterVmoRequest> _decoded_request(std::move(_request_buffer));
@@ -203,7 +203,7 @@ zx_status_t PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel _cli
 
 ::fidl::DecodeResult<PayloadStream::RegisterVmoResponse> PayloadStream::InPlace::RegisterVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterVmoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPayloadStream_RegisterVmo_Ordinal;
+  params.message()->_hdr.ordinal = kPayloadStream_RegisterVmo_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<PayloadStream::RegisterVmoResponse>::FromFailure(
@@ -266,7 +266,7 @@ zx_status_t PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel _client
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ReadDataRequest*>(_write_bytes);
-  _request._hdr.ordinal = kPayloadStream_ReadData_Ordinal;
+  _request._hdr.ordinal = kPayloadStream_ReadData_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadDataRequest));
   ::fidl::DecodedMessage<ReadDataRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -298,7 +298,7 @@ zx_status_t PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel _client
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ReadDataRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<ReadDataRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPayloadStream_ReadData_Ordinal;
+  _request._hdr.ordinal = kPayloadStream_ReadData_GenOrdinal;
   _request_buffer.set_actual(sizeof(ReadDataRequest));
   ::fidl::DecodedMessage<ReadDataRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -326,7 +326,7 @@ zx_status_t PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel _client
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ReadDataRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPayloadStream_ReadData_Ordinal;
+  params.message()->_hdr.ordinal = kPayloadStream_ReadData_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<PayloadStream::ReadDataResponse>::FromFailure(
@@ -350,7 +350,7 @@ bool PayloadStream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kPayloadStream_RegisterVmo_Ordinal:
+    case kPayloadStream_RegisterVmo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<RegisterVmoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -362,7 +362,7 @@ bool PayloadStream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::RegisterVmoCompleter::Sync(txn));
       return true;
     }
-    case kPayloadStream_ReadData_Ordinal:
+    case kPayloadStream_ReadData_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReadDataRequest>(msg);
       if (result.status != ZX_OK) {
@@ -393,7 +393,7 @@ void PayloadStream::Interface::RegisterVmoCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RegisterVmoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPayloadStream_RegisterVmo_Ordinal;
+  _response._hdr.ordinal = kPayloadStream_RegisterVmo_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RegisterVmoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RegisterVmoResponse>(std::move(_response_bytes)));
@@ -405,7 +405,7 @@ void PayloadStream::Interface::RegisterVmoCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   auto& _response = *reinterpret_cast<RegisterVmoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPayloadStream_RegisterVmo_Ordinal;
+  _response._hdr.ordinal = kPayloadStream_RegisterVmo_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(RegisterVmoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RegisterVmoResponse>(std::move(_buffer)));
@@ -413,7 +413,7 @@ void PayloadStream::Interface::RegisterVmoCompleterBase::Reply(::fidl::BytePart 
 
 void PayloadStream::Interface::RegisterVmoCompleterBase::Reply(::fidl::DecodedMessage<RegisterVmoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPayloadStream_RegisterVmo_Ordinal;
+  params.message()->_hdr.ordinal = kPayloadStream_RegisterVmo_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -422,7 +422,7 @@ void PayloadStream::Interface::ReadDataCompleterBase::Reply(ReadResult result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ReadDataResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPayloadStream_ReadData_Ordinal;
+  _response._hdr.ordinal = kPayloadStream_ReadData_GenOrdinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadDataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ReadDataResponse>(std::move(_response_bytes)));
@@ -434,7 +434,7 @@ void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<ReadDataResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPayloadStream_ReadData_Ordinal;
+  _response._hdr.ordinal = kPayloadStream_ReadData_GenOrdinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(ReadDataResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ReadDataResponse>(std::move(_buffer)));
@@ -442,7 +442,7 @@ void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::BytePart _bu
 
 void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::DecodedMessage<ReadDataResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPayloadStream_ReadData_Ordinal;
+  params.message()->_hdr.ordinal = kPayloadStream_ReadData_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -509,35 +509,35 @@ int32_t& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kPaver_QueryActiveConfiguration_Ordinal = 0x43a5e49300000000lu;
+constexpr uint64_t kPaver_QueryActiveConfiguration_GenOrdinal = 0x43a5e49300000000lu;
 [[maybe_unused]]
-constexpr uint64_t kPaver_SetActiveConfiguration_Ordinal = 0x2401537e00000000lu;
+constexpr uint64_t kPaver_SetActiveConfiguration_GenOrdinal = 0x2401537e00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_MarkActiveConfigurationSuccessful_Ordinal = 0x268547aa00000000lu;
+constexpr uint64_t kPaver_MarkActiveConfigurationSuccessful_GenOrdinal = 0x268547aa00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverMarkActiveConfigurationSuccessfulResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_ForceRecoveryConfiguration_Ordinal = 0x3936a0e600000000lu;
+constexpr uint64_t kPaver_ForceRecoveryConfiguration_GenOrdinal = 0x3936a0e600000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverForceRecoveryConfigurationResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WriteAsset_Ordinal = 0x6a1ccf9c00000000lu;
+constexpr uint64_t kPaver_WriteAsset_GenOrdinal = 0x6a1ccf9c00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WriteVolumes_Ordinal = 0x71b3cf2600000000lu;
+constexpr uint64_t kPaver_WriteVolumes_GenOrdinal = 0x71b3cf2600000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WriteBootloader_Ordinal = 0x4b6ba17600000000lu;
+constexpr uint64_t kPaver_WriteBootloader_GenOrdinal = 0x4b6ba17600000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WriteDataFile_Ordinal = 0x7b8433de00000000lu;
+constexpr uint64_t kPaver_WriteDataFile_GenOrdinal = 0x7b8433de00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WipeVolumes_Ordinal = 0x6be96a000000000lu;
+constexpr uint64_t kPaver_WipeVolumes_GenOrdinal = 0x6be96a000000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesResponseTable;
 
 }  // namespace
@@ -589,7 +589,7 @@ zx_status_t Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<QueryActiveConfigurationRequest*>(_write_bytes);
-  _request._hdr.ordinal = kPaver_QueryActiveConfiguration_Ordinal;
+  _request._hdr.ordinal = kPaver_QueryActiveConfiguration_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryActiveConfigurationRequest));
   ::fidl::DecodedMessage<QueryActiveConfigurationRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -621,7 +621,7 @@ zx_status_t Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(QueryActiveConfigurationRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<QueryActiveConfigurationRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPaver_QueryActiveConfiguration_Ordinal;
+  _request._hdr.ordinal = kPaver_QueryActiveConfiguration_GenOrdinal;
   _request_buffer.set_actual(sizeof(QueryActiveConfigurationRequest));
   ::fidl::DecodedMessage<QueryActiveConfigurationRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -649,7 +649,7 @@ zx_status_t Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<QueryActiveConfigurationRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_QueryActiveConfiguration_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_QueryActiveConfiguration_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse>::FromFailure(
@@ -718,7 +718,7 @@ zx_status_t Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel _
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SetActiveConfigurationRequest*>(_write_bytes);
-  _request._hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
+  _request._hdr.ordinal = kPaver_SetActiveConfiguration_GenOrdinal;
   _request.configuration = std::move(configuration);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetActiveConfigurationRequest));
   ::fidl::DecodedMessage<SetActiveConfigurationRequest> _decoded_request(std::move(_request_bytes));
@@ -752,7 +752,7 @@ zx_status_t Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel _
     return ::fidl::DecodeResult<SetActiveConfigurationResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<SetActiveConfigurationRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
+  _request._hdr.ordinal = kPaver_SetActiveConfiguration_GenOrdinal;
   _request.configuration = std::move(configuration);
   _request_buffer.set_actual(sizeof(SetActiveConfigurationRequest));
   ::fidl::DecodedMessage<SetActiveConfigurationRequest> _decoded_request(std::move(_request_buffer));
@@ -776,7 +776,7 @@ zx_status_t Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel _
 
 ::fidl::DecodeResult<Paver::SetActiveConfigurationResponse> Paver::InPlace::SetActiveConfiguration(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetActiveConfigurationRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_SetActiveConfiguration_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::SetActiveConfigurationResponse>::FromFailure(
@@ -839,7 +839,7 @@ zx_status_t Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowne
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MarkActiveConfigurationSuccessfulRequest*>(_write_bytes);
-  _request._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_Ordinal;
+  _request._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(MarkActiveConfigurationSuccessfulRequest));
   ::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -871,7 +871,7 @@ zx_status_t Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowne
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(MarkActiveConfigurationSuccessfulRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<MarkActiveConfigurationSuccessfulRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_Ordinal;
+  _request._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_GenOrdinal;
   _request_buffer.set_actual(sizeof(MarkActiveConfigurationSuccessfulRequest));
   ::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -899,7 +899,7 @@ zx_status_t Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowne
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse>::FromFailure(
@@ -962,7 +962,7 @@ zx_status_t Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_chann
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ForceRecoveryConfigurationRequest*>(_write_bytes);
-  _request._hdr.ordinal = kPaver_ForceRecoveryConfiguration_Ordinal;
+  _request._hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ForceRecoveryConfigurationRequest));
   ::fidl::DecodedMessage<ForceRecoveryConfigurationRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -994,7 +994,7 @@ zx_status_t Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_chann
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ForceRecoveryConfigurationRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<ForceRecoveryConfigurationRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPaver_ForceRecoveryConfiguration_Ordinal;
+  _request._hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
   _request_buffer.set_actual(sizeof(ForceRecoveryConfigurationRequest));
   ::fidl::DecodedMessage<ForceRecoveryConfigurationRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -1022,7 +1022,7 @@ zx_status_t Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_chann
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ForceRecoveryConfigurationRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_ForceRecoveryConfiguration_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse>::FromFailure(
@@ -1095,7 +1095,7 @@ zx_status_t Paver::Call::WriteAsset_Deprecated(zx::unowned_channel _client_end, 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteAssetRequest*>(_write_bytes);
-  _request._hdr.ordinal = kPaver_WriteAsset_Ordinal;
+  _request._hdr.ordinal = kPaver_WriteAsset_GenOrdinal;
   _request.configuration = std::move(configuration);
   _request.asset = std::move(asset);
   _request.payload = std::move(payload);
@@ -1131,7 +1131,7 @@ zx_status_t Paver::Call::WriteAsset_Deprecated(zx::unowned_channel _client_end, 
     return ::fidl::DecodeResult<WriteAssetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<WriteAssetRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPaver_WriteAsset_Ordinal;
+  _request._hdr.ordinal = kPaver_WriteAsset_GenOrdinal;
   _request.configuration = std::move(configuration);
   _request.asset = std::move(asset);
   _request.payload = std::move(payload);
@@ -1157,7 +1157,7 @@ zx_status_t Paver::Call::WriteAsset_Deprecated(zx::unowned_channel _client_end, 
 
 ::fidl::DecodeResult<Paver::WriteAssetResponse> Paver::InPlace::WriteAsset(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_WriteAsset_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_WriteAsset_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::WriteAssetResponse>::FromFailure(
@@ -1226,7 +1226,7 @@ zx_status_t Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel _client_end
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteVolumesRequest*>(_write_bytes);
-  _request._hdr.ordinal = kPaver_WriteVolumes_Ordinal;
+  _request._hdr.ordinal = kPaver_WriteVolumes_GenOrdinal;
   _request.payload = std::move(payload);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteVolumesRequest));
   ::fidl::DecodedMessage<WriteVolumesRequest> _decoded_request(std::move(_request_bytes));
@@ -1260,7 +1260,7 @@ zx_status_t Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel _client_end
     return ::fidl::DecodeResult<WriteVolumesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<WriteVolumesRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPaver_WriteVolumes_Ordinal;
+  _request._hdr.ordinal = kPaver_WriteVolumes_GenOrdinal;
   _request.payload = std::move(payload);
   _request_buffer.set_actual(sizeof(WriteVolumesRequest));
   ::fidl::DecodedMessage<WriteVolumesRequest> _decoded_request(std::move(_request_buffer));
@@ -1284,7 +1284,7 @@ zx_status_t Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel _client_end
 
 ::fidl::DecodeResult<Paver::WriteVolumesResponse> Paver::InPlace::WriteVolumes(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_WriteVolumes_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_WriteVolumes_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::WriteVolumesResponse>::FromFailure(
@@ -1353,7 +1353,7 @@ zx_status_t Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel _client_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteBootloaderRequest*>(_write_bytes);
-  _request._hdr.ordinal = kPaver_WriteBootloader_Ordinal;
+  _request._hdr.ordinal = kPaver_WriteBootloader_GenOrdinal;
   _request.payload = std::move(payload);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteBootloaderRequest));
   ::fidl::DecodedMessage<WriteBootloaderRequest> _decoded_request(std::move(_request_bytes));
@@ -1387,7 +1387,7 @@ zx_status_t Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel _client_
     return ::fidl::DecodeResult<WriteBootloaderResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<WriteBootloaderRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPaver_WriteBootloader_Ordinal;
+  _request._hdr.ordinal = kPaver_WriteBootloader_GenOrdinal;
   _request.payload = std::move(payload);
   _request_buffer.set_actual(sizeof(WriteBootloaderRequest));
   ::fidl::DecodedMessage<WriteBootloaderRequest> _decoded_request(std::move(_request_buffer));
@@ -1411,7 +1411,7 @@ zx_status_t Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel _client_
 
 ::fidl::DecodeResult<Paver::WriteBootloaderResponse> Paver::InPlace::WriteBootloader(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_WriteBootloader_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_WriteBootloader_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::WriteBootloaderResponse>::FromFailure(
@@ -1488,7 +1488,7 @@ zx_status_t Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel _client_en
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   WriteDataFileRequest _request = {};
-  _request._hdr.ordinal = kPaver_WriteDataFile_Ordinal;
+  _request._hdr.ordinal = kPaver_WriteDataFile_GenOrdinal;
   _request.filename = std::move(filename);
   _request.payload = std::move(payload);
   auto _linearize_result = ::fidl::Linearize(&_request, ::fidl::BytePart(_write_bytes,
@@ -1527,7 +1527,7 @@ zx_status_t Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel _client_en
     return ::fidl::DecodeResult<WriteDataFileResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   WriteDataFileRequest _request = {};
-  _request._hdr.ordinal = kPaver_WriteDataFile_Ordinal;
+  _request._hdr.ordinal = kPaver_WriteDataFile_GenOrdinal;
   _request.filename = std::move(filename);
   _request.payload = std::move(payload);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
@@ -1555,7 +1555,7 @@ zx_status_t Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel _client_en
 
 ::fidl::DecodeResult<Paver::WriteDataFileResponse> Paver::InPlace::WriteDataFile(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_WriteDataFile_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_WriteDataFile_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::WriteDataFileResponse>::FromFailure(
@@ -1618,7 +1618,7 @@ zx_status_t Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel _client_end,
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WipeVolumesRequest*>(_write_bytes);
-  _request._hdr.ordinal = kPaver_WipeVolumes_Ordinal;
+  _request._hdr.ordinal = kPaver_WipeVolumes_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumesRequest));
   ::fidl::DecodedMessage<WipeVolumesRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -1650,7 +1650,7 @@ zx_status_t Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel _client_end,
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WipeVolumesRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<WipeVolumesRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kPaver_WipeVolumes_Ordinal;
+  _request._hdr.ordinal = kPaver_WipeVolumes_GenOrdinal;
   _request_buffer.set_actual(sizeof(WipeVolumesRequest));
   ::fidl::DecodedMessage<WipeVolumesRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -1678,7 +1678,7 @@ zx_status_t Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel _client_end,
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<WipeVolumesRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_WipeVolumes_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_WipeVolumes_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::WipeVolumesResponse>::FromFailure(
@@ -1702,7 +1702,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kPaver_QueryActiveConfiguration_Ordinal:
+    case kPaver_QueryActiveConfiguration_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<QueryActiveConfigurationRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1713,7 +1713,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::QueryActiveConfigurationCompleter::Sync(txn));
       return true;
     }
-    case kPaver_SetActiveConfiguration_Ordinal:
+    case kPaver_SetActiveConfiguration_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetActiveConfigurationRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1725,7 +1725,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::SetActiveConfigurationCompleter::Sync(txn));
       return true;
     }
-    case kPaver_MarkActiveConfigurationSuccessful_Ordinal:
+    case kPaver_MarkActiveConfigurationSuccessful_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<MarkActiveConfigurationSuccessfulRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1736,7 +1736,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::MarkActiveConfigurationSuccessfulCompleter::Sync(txn));
       return true;
     }
-    case kPaver_ForceRecoveryConfiguration_Ordinal:
+    case kPaver_ForceRecoveryConfiguration_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ForceRecoveryConfigurationRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1747,7 +1747,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::ForceRecoveryConfigurationCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteAsset_Ordinal:
+    case kPaver_WriteAsset_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteAssetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1759,7 +1759,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::WriteAssetCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteVolumes_Ordinal:
+    case kPaver_WriteVolumes_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteVolumesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1771,7 +1771,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::WriteVolumesCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteBootloader_Ordinal:
+    case kPaver_WriteBootloader_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteBootloaderRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1783,7 +1783,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::WriteBootloaderCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteDataFile_Ordinal:
+    case kPaver_WriteDataFile_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteDataFileRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1795,7 +1795,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::WriteDataFileCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WipeVolumes_Ordinal:
+    case kPaver_WipeVolumes_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WipeVolumesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1826,7 +1826,7 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(Paver_QueryA
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<QueryActiveConfigurationResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_QueryActiveConfiguration_Ordinal;
+  _response._hdr.ordinal = kPaver_QueryActiveConfiguration_GenOrdinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryActiveConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_response_bytes)));
@@ -1838,7 +1838,7 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::Byte
     return;
   }
   auto& _response = *reinterpret_cast<QueryActiveConfigurationResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_QueryActiveConfiguration_Ordinal;
+  _response._hdr.ordinal = kPaver_QueryActiveConfiguration_GenOrdinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(QueryActiveConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_buffer)));
@@ -1846,7 +1846,7 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::Byte
 
 void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::DecodedMessage<QueryActiveConfigurationResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_QueryActiveConfiguration_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_QueryActiveConfiguration_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1855,7 +1855,7 @@ void Paver::Interface::SetActiveConfigurationCompleterBase::Reply(int32_t status
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetActiveConfigurationResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
+  _response._hdr.ordinal = kPaver_SetActiveConfiguration_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetActiveConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetActiveConfigurationResponse>(std::move(_response_bytes)));
@@ -1867,7 +1867,7 @@ void Paver::Interface::SetActiveConfigurationCompleterBase::Reply(::fidl::BytePa
     return;
   }
   auto& _response = *reinterpret_cast<SetActiveConfigurationResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
+  _response._hdr.ordinal = kPaver_SetActiveConfiguration_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SetActiveConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetActiveConfigurationResponse>(std::move(_buffer)));
@@ -1875,7 +1875,7 @@ void Paver::Interface::SetActiveConfigurationCompleterBase::Reply(::fidl::BytePa
 
 void Paver::Interface::SetActiveConfigurationCompleterBase::Reply(::fidl::DecodedMessage<SetActiveConfigurationResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_SetActiveConfiguration_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1884,7 +1884,7 @@ void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(int
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MarkActiveConfigurationSuccessfulResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_Ordinal;
+  _response._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MarkActiveConfigurationSuccessfulResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulResponse>(std::move(_response_bytes)));
@@ -1896,7 +1896,7 @@ void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(::f
     return;
   }
   auto& _response = *reinterpret_cast<MarkActiveConfigurationSuccessfulResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_Ordinal;
+  _response._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(MarkActiveConfigurationSuccessfulResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulResponse>(std::move(_buffer)));
@@ -1904,7 +1904,7 @@ void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(::f
 
 void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1913,7 +1913,7 @@ void Paver::Interface::ForceRecoveryConfigurationCompleterBase::Reply(int32_t st
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ForceRecoveryConfigurationResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_ForceRecoveryConfiguration_Ordinal;
+  _response._hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ForceRecoveryConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ForceRecoveryConfigurationResponse>(std::move(_response_bytes)));
@@ -1925,7 +1925,7 @@ void Paver::Interface::ForceRecoveryConfigurationCompleterBase::Reply(::fidl::By
     return;
   }
   auto& _response = *reinterpret_cast<ForceRecoveryConfigurationResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_ForceRecoveryConfiguration_Ordinal;
+  _response._hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(ForceRecoveryConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ForceRecoveryConfigurationResponse>(std::move(_buffer)));
@@ -1933,7 +1933,7 @@ void Paver::Interface::ForceRecoveryConfigurationCompleterBase::Reply(::fidl::By
 
 void Paver::Interface::ForceRecoveryConfigurationCompleterBase::Reply(::fidl::DecodedMessage<ForceRecoveryConfigurationResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_ForceRecoveryConfiguration_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1942,7 +1942,7 @@ void Paver::Interface::WriteAssetCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteAssetResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_WriteAsset_Ordinal;
+  _response._hdr.ordinal = kPaver_WriteAsset_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteAssetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteAssetResponse>(std::move(_response_bytes)));
@@ -1954,7 +1954,7 @@ void Paver::Interface::WriteAssetCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<WriteAssetResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_WriteAsset_Ordinal;
+  _response._hdr.ordinal = kPaver_WriteAsset_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(WriteAssetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteAssetResponse>(std::move(_buffer)));
@@ -1962,7 +1962,7 @@ void Paver::Interface::WriteAssetCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void Paver::Interface::WriteAssetCompleterBase::Reply(::fidl::DecodedMessage<WriteAssetResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_WriteAsset_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_WriteAsset_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1971,7 +1971,7 @@ void Paver::Interface::WriteVolumesCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteVolumesResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_WriteVolumes_Ordinal;
+  _response._hdr.ordinal = kPaver_WriteVolumes_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteVolumesResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteVolumesResponse>(std::move(_response_bytes)));
@@ -1983,7 +1983,7 @@ void Paver::Interface::WriteVolumesCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   auto& _response = *reinterpret_cast<WriteVolumesResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_WriteVolumes_Ordinal;
+  _response._hdr.ordinal = kPaver_WriteVolumes_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(WriteVolumesResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteVolumesResponse>(std::move(_buffer)));
@@ -1991,7 +1991,7 @@ void Paver::Interface::WriteVolumesCompleterBase::Reply(::fidl::BytePart _buffer
 
 void Paver::Interface::WriteVolumesCompleterBase::Reply(::fidl::DecodedMessage<WriteVolumesResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_WriteVolumes_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_WriteVolumes_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2000,7 +2000,7 @@ void Paver::Interface::WriteBootloaderCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteBootloaderResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_WriteBootloader_Ordinal;
+  _response._hdr.ordinal = kPaver_WriteBootloader_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteBootloaderResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteBootloaderResponse>(std::move(_response_bytes)));
@@ -2012,7 +2012,7 @@ void Paver::Interface::WriteBootloaderCompleterBase::Reply(::fidl::BytePart _buf
     return;
   }
   auto& _response = *reinterpret_cast<WriteBootloaderResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_WriteBootloader_Ordinal;
+  _response._hdr.ordinal = kPaver_WriteBootloader_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(WriteBootloaderResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteBootloaderResponse>(std::move(_buffer)));
@@ -2020,7 +2020,7 @@ void Paver::Interface::WriteBootloaderCompleterBase::Reply(::fidl::BytePart _buf
 
 void Paver::Interface::WriteBootloaderCompleterBase::Reply(::fidl::DecodedMessage<WriteBootloaderResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_WriteBootloader_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_WriteBootloader_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2029,7 +2029,7 @@ void Paver::Interface::WriteDataFileCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteDataFileResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_WriteDataFile_Ordinal;
+  _response._hdr.ordinal = kPaver_WriteDataFile_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteDataFileResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteDataFileResponse>(std::move(_response_bytes)));
@@ -2041,7 +2041,7 @@ void Paver::Interface::WriteDataFileCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   auto& _response = *reinterpret_cast<WriteDataFileResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_WriteDataFile_Ordinal;
+  _response._hdr.ordinal = kPaver_WriteDataFile_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(WriteDataFileResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteDataFileResponse>(std::move(_buffer)));
@@ -2049,7 +2049,7 @@ void Paver::Interface::WriteDataFileCompleterBase::Reply(::fidl::BytePart _buffe
 
 void Paver::Interface::WriteDataFileCompleterBase::Reply(::fidl::DecodedMessage<WriteDataFileResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_WriteDataFile_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_WriteDataFile_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2058,7 +2058,7 @@ void Paver::Interface::WipeVolumesCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WipeVolumesResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_WipeVolumes_Ordinal;
+  _response._hdr.ordinal = kPaver_WipeVolumes_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumesResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumesResponse>(std::move(_response_bytes)));
@@ -2070,7 +2070,7 @@ void Paver::Interface::WipeVolumesCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<WipeVolumesResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_WipeVolumes_Ordinal;
+  _response._hdr.ordinal = kPaver_WipeVolumes_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(WipeVolumesResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumesResponse>(std::move(_buffer)));
@@ -2078,7 +2078,7 @@ void Paver::Interface::WipeVolumesCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Paver::Interface::WipeVolumesCompleterBase::Reply(::fidl::DecodedMessage<WipeVolumesResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_WipeVolumes_Ordinal;
+  params.message()->_hdr.ordinal = kPaver_WipeVolumes_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

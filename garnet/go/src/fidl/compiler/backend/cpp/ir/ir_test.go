@@ -91,7 +91,7 @@ func TestCompileInterface(t *testing.T) {
 				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinals(
+						Ordinals: types.NewOrdinalsStep3(
 							types.Method{
 								Ordinal:    1,
 								GenOrdinal: 314159,
@@ -137,7 +137,7 @@ func TestCompileInterface(t *testing.T) {
 						},
 					},
 					{
-						Ordinals: types.NewOrdinals(
+						Ordinals: types.NewOrdinalsStep3(
 							types.Method{
 								Ordinal:    2,
 								GenOrdinal: 271828,
@@ -245,7 +245,7 @@ func TestCompileInterface(t *testing.T) {
 				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinals(
+						Ordinals: types.NewOrdinalsStep3(
 							types.Method{
 								Ordinal:    1,
 								GenOrdinal: 314159,
@@ -347,7 +347,7 @@ func TestCompileInterface(t *testing.T) {
 				StackAllocEventBuffer: false,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinals(
+						Ordinals: types.NewOrdinalsStep3(
 							types.Method{
 								Ordinal:    2,
 								GenOrdinal: 271828,
@@ -496,7 +496,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinals(
+						Ordinals: types.NewOrdinalsStep3(
 							types.Method{
 								Ordinal:    1,
 								GenOrdinal: 314159,
@@ -542,7 +542,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						},
 					},
 					{
-						Ordinals: types.NewOrdinals(
+						Ordinals: types.NewOrdinalsStep3(
 							types.Method{
 								Ordinal:    2,
 								GenOrdinal: 271828,
@@ -650,7 +650,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinals(
+						Ordinals: types.NewOrdinalsStep3(
 							types.Method{
 								Ordinal:    1,
 								GenOrdinal: 314159,
@@ -752,7 +752,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				StackAllocEventBuffer: false,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinals(
+						Ordinals: types.NewOrdinalsStep3(
 							types.Method{
 								Ordinal:    2,
 								GenOrdinal: 271828,

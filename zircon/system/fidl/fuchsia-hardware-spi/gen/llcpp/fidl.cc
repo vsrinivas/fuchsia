@@ -12,15 +12,15 @@ namespace spi {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_Transmit_Ordinal = 0x589d02df00000000lu;
+constexpr uint64_t kDevice_Transmit_GenOrdinal = 0x589d02df00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceTransmitRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceTransmitResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_Receive_Ordinal = 0x58529d900000000lu;
+constexpr uint64_t kDevice_Receive_GenOrdinal = 0x58529d900000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceReceiveRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceReceiveResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_Exchange_Ordinal = 0x13c3394e00000000lu;
+constexpr uint64_t kDevice_Exchange_GenOrdinal = 0x13c3394e00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeResponseTable;
 
@@ -85,7 +85,7 @@ zx_status_t Device::Call::Transmit_Deprecated(zx::unowned_channel _client_end, :
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   TransmitRequest _request = {};
-  _request._hdr.ordinal = kDevice_Transmit_Ordinal;
+  _request._hdr.ordinal = kDevice_Transmit_GenOrdinal;
   _request.data = std::move(data);
   auto _linearize_result = ::fidl::Linearize(&_request, ::fidl::BytePart(_write_bytes,
                                                                          _kWriteAllocSize));
@@ -123,7 +123,7 @@ zx_status_t Device::Call::Transmit_Deprecated(zx::unowned_channel _client_end, :
     return ::fidl::DecodeResult<TransmitResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   TransmitRequest _request = {};
-  _request._hdr.ordinal = kDevice_Transmit_Ordinal;
+  _request._hdr.ordinal = kDevice_Transmit_GenOrdinal;
   _request.data = std::move(data);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -150,7 +150,7 @@ zx_status_t Device::Call::Transmit_Deprecated(zx::unowned_channel _client_end, :
 
 ::fidl::DecodeResult<Device::TransmitResponse> Device::InPlace::Transmit(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TransmitRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_Transmit_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_Transmit_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::TransmitResponse>::FromFailure(
@@ -220,7 +220,7 @@ Device::UnownedResultOf::Receive Device::Call::Receive(zx::unowned_channel _clie
     return ::fidl::DecodeResult<ReceiveResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<ReceiveRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDevice_Receive_Ordinal;
+  _request._hdr.ordinal = kDevice_Receive_GenOrdinal;
   _request.size = std::move(size);
   _request_buffer.set_actual(sizeof(ReceiveRequest));
   ::fidl::DecodedMessage<ReceiveRequest> _decoded_request(std::move(_request_buffer));
@@ -245,7 +245,7 @@ Device::UnownedResultOf::Receive Device::Call::Receive(zx::unowned_channel _clie
 
 ::fidl::DecodeResult<Device::ReceiveResponse> Device::InPlace::Receive(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReceiveRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_Receive_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_Receive_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::ReceiveResponse>::FromFailure(
@@ -320,7 +320,7 @@ Device::UnownedResultOf::Exchange Device::Call::Exchange(zx::unowned_channel _cl
     return ::fidl::DecodeResult<ExchangeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   ExchangeRequest _request = {};
-  _request._hdr.ordinal = kDevice_Exchange_Ordinal;
+  _request._hdr.ordinal = kDevice_Exchange_GenOrdinal;
   _request.txdata = std::move(txdata);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -348,7 +348,7 @@ Device::UnownedResultOf::Exchange Device::Call::Exchange(zx::unowned_channel _cl
 
 ::fidl::DecodeResult<Device::ExchangeResponse> Device::InPlace::Exchange(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ExchangeRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_Exchange_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_Exchange_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::ExchangeResponse>::FromFailure(
@@ -372,7 +372,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_Transmit_Ordinal:
+    case kDevice_Transmit_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<TransmitRequest>(msg);
       if (result.status != ZX_OK) {
@@ -384,7 +384,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::TransmitCompleter::Sync(txn));
       return true;
     }
-    case kDevice_Receive_Ordinal:
+    case kDevice_Receive_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReceiveRequest>(msg);
       if (result.status != ZX_OK) {
@@ -396,7 +396,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::ReceiveCompleter::Sync(txn));
       return true;
     }
-    case kDevice_Exchange_Ordinal:
+    case kDevice_Exchange_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ExchangeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -428,7 +428,7 @@ void Device::Interface::TransmitCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<TransmitResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<TransmitResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_Transmit_Ordinal;
+  _response._hdr.ordinal = kDevice_Transmit_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(TransmitResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<TransmitResponse>(std::move(_response_bytes)));
@@ -440,7 +440,7 @@ void Device::Interface::TransmitCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   auto& _response = *reinterpret_cast<TransmitResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_Transmit_Ordinal;
+  _response._hdr.ordinal = kDevice_Transmit_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(TransmitResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<TransmitResponse>(std::move(_buffer)));
@@ -448,7 +448,7 @@ void Device::Interface::TransmitCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void Device::Interface::TransmitCompleterBase::Reply(::fidl::DecodedMessage<TransmitResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_Transmit_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_Transmit_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -458,7 +458,7 @@ void Device::Interface::ReceiveCompleterBase::Reply(int32_t status, ::fidl::Vect
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   ReceiveResponse _response = {};
-  _response._hdr.ordinal = kDevice_Receive_Ordinal;
+  _response._hdr.ordinal = kDevice_Receive_GenOrdinal;
   _response.status = std::move(status);
   _response.data = std::move(data);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -476,7 +476,7 @@ void Device::Interface::ReceiveCompleterBase::Reply(::fidl::BytePart _buffer, in
     return;
   }
   ReceiveResponse _response = {};
-  _response._hdr.ordinal = kDevice_Receive_Ordinal;
+  _response._hdr.ordinal = kDevice_Receive_GenOrdinal;
   _response.status = std::move(status);
   _response.data = std::move(data);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -489,7 +489,7 @@ void Device::Interface::ReceiveCompleterBase::Reply(::fidl::BytePart _buffer, in
 
 void Device::Interface::ReceiveCompleterBase::Reply(::fidl::DecodedMessage<ReceiveResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_Receive_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_Receive_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -499,7 +499,7 @@ void Device::Interface::ExchangeCompleterBase::Reply(int32_t status, ::fidl::Vec
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   ExchangeResponse _response = {};
-  _response._hdr.ordinal = kDevice_Exchange_Ordinal;
+  _response._hdr.ordinal = kDevice_Exchange_GenOrdinal;
   _response.status = std::move(status);
   _response.rxdata = std::move(rxdata);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -517,7 +517,7 @@ void Device::Interface::ExchangeCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   ExchangeResponse _response = {};
-  _response._hdr.ordinal = kDevice_Exchange_Ordinal;
+  _response._hdr.ordinal = kDevice_Exchange_GenOrdinal;
   _response.status = std::move(status);
   _response.rxdata = std::move(rxdata);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -530,7 +530,7 @@ void Device::Interface::ExchangeCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void Device::Interface::ExchangeCompleterBase::Reply(::fidl::DecodedMessage<ExchangeResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_Exchange_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_Exchange_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

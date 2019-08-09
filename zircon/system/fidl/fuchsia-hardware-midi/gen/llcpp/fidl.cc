@@ -12,7 +12,7 @@ namespace midi {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetInfo_Ordinal = 0x7eddfe3c00000000lu;
+constexpr uint64_t kDevice_GetInfo_GenOrdinal = 0x7eddfe3c00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoResponseTable;
 
 }  // namespace
@@ -64,7 +64,7 @@ zx_status_t Device::Call::GetInfo_Deprecated(zx::unowned_channel _client_end, In
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetInfoRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDevice_GetInfo_Ordinal;
+  _request._hdr.ordinal = kDevice_GetInfo_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetInfoRequest));
   ::fidl::DecodedMessage<GetInfoRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -96,7 +96,7 @@ zx_status_t Device::Call::GetInfo_Deprecated(zx::unowned_channel _client_end, In
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetInfoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDevice_GetInfo_Ordinal;
+  _request._hdr.ordinal = kDevice_GetInfo_GenOrdinal;
   _request_buffer.set_actual(sizeof(GetInfoRequest));
   ::fidl::DecodedMessage<GetInfoRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -124,7 +124,7 @@ zx_status_t Device::Call::GetInfo_Deprecated(zx::unowned_channel _client_end, In
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetInfo_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_GetInfo_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetInfoResponse>::FromFailure(
@@ -148,7 +148,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_GetInfo_Ordinal:
+    case kDevice_GetInfo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetInfoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -179,7 +179,7 @@ void Device::Interface::GetInfoCompleterBase::Reply(Info info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetInfoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_GetInfo_Ordinal;
+  _response._hdr.ordinal = kDevice_GetInfo_GenOrdinal;
   _response.info = std::move(info);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetInfoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetInfoResponse>(std::move(_response_bytes)));
@@ -191,7 +191,7 @@ void Device::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, In
     return;
   }
   auto& _response = *reinterpret_cast<GetInfoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_GetInfo_Ordinal;
+  _response._hdr.ordinal = kDevice_GetInfo_GenOrdinal;
   _response.info = std::move(info);
   _buffer.set_actual(sizeof(GetInfoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetInfoResponse>(std::move(_buffer)));
@@ -199,7 +199,7 @@ void Device::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, In
 
 void Device::Interface::GetInfoCompleterBase::Reply(::fidl::DecodedMessage<GetInfoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetInfo_Ordinal;
+  params.message()->_hdr.ordinal = kDevice_GetInfo_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

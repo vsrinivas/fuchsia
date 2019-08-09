@@ -12,14 +12,14 @@ namespace skipblock {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kSkipBlock_GetPartitionInfo_Ordinal = 0x61812f6e00000000lu;
+constexpr uint64_t kSkipBlock_GetPartitionInfo_GenOrdinal = 0x61812f6e00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSkipBlock_Read_Ordinal = 0x68e3be6200000000lu;
+constexpr uint64_t kSkipBlock_Read_GenOrdinal = 0x68e3be6200000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kSkipBlock_Write_Ordinal = 0x697d770a00000000lu;
+constexpr uint64_t kSkipBlock_Write_GenOrdinal = 0x697d770a00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
 
@@ -72,7 +72,7 @@ zx_status_t SkipBlock::Call::GetPartitionInfo_Deprecated(zx::unowned_channel _cl
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPartitionInfoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetPartitionInfoRequest*>(_write_bytes);
-  _request._hdr.ordinal = kSkipBlock_GetPartitionInfo_Ordinal;
+  _request._hdr.ordinal = kSkipBlock_GetPartitionInfo_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPartitionInfoRequest));
   ::fidl::DecodedMessage<GetPartitionInfoRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -105,7 +105,7 @@ zx_status_t SkipBlock::Call::GetPartitionInfo_Deprecated(zx::unowned_channel _cl
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPartitionInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetPartitionInfoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kSkipBlock_GetPartitionInfo_Ordinal;
+  _request._hdr.ordinal = kSkipBlock_GetPartitionInfo_GenOrdinal;
   _request_buffer.set_actual(sizeof(GetPartitionInfoRequest));
   ::fidl::DecodedMessage<GetPartitionInfoRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -134,7 +134,7 @@ zx_status_t SkipBlock::Call::GetPartitionInfo_Deprecated(zx::unowned_channel _cl
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetPartitionInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSkipBlock_GetPartitionInfo_Ordinal;
+  params.message()->_hdr.ordinal = kSkipBlock_GetPartitionInfo_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse>::FromFailure(
@@ -203,7 +203,7 @@ zx_status_t SkipBlock::Call::Read_Deprecated(zx::unowned_channel _client_end, Re
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ReadRequest*>(_write_bytes);
-  _request._hdr.ordinal = kSkipBlock_Read_Ordinal;
+  _request._hdr.ordinal = kSkipBlock_Read_GenOrdinal;
   _request.op = std::move(op);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadRequest));
   ::fidl::DecodedMessage<ReadRequest> _decoded_request(std::move(_request_bytes));
@@ -237,7 +237,7 @@ zx_status_t SkipBlock::Call::Read_Deprecated(zx::unowned_channel _client_end, Re
     return ::fidl::DecodeResult<ReadResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<ReadRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kSkipBlock_Read_Ordinal;
+  _request._hdr.ordinal = kSkipBlock_Read_GenOrdinal;
   _request.op = std::move(op);
   _request_buffer.set_actual(sizeof(ReadRequest));
   ::fidl::DecodedMessage<ReadRequest> _decoded_request(std::move(_request_buffer));
@@ -261,7 +261,7 @@ zx_status_t SkipBlock::Call::Read_Deprecated(zx::unowned_channel _client_end, Re
 
 ::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::InPlace::Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSkipBlock_Read_Ordinal;
+  params.message()->_hdr.ordinal = kSkipBlock_Read_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<SkipBlock::ReadResponse>::FromFailure(
@@ -330,7 +330,7 @@ zx_status_t SkipBlock::Call::Write_Deprecated(zx::unowned_channel _client_end, R
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteRequest*>(_write_bytes);
-  _request._hdr.ordinal = kSkipBlock_Write_Ordinal;
+  _request._hdr.ordinal = kSkipBlock_Write_GenOrdinal;
   _request.op = std::move(op);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteRequest));
   ::fidl::DecodedMessage<WriteRequest> _decoded_request(std::move(_request_bytes));
@@ -365,7 +365,7 @@ zx_status_t SkipBlock::Call::Write_Deprecated(zx::unowned_channel _client_end, R
     return ::fidl::DecodeResult<WriteResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<WriteRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kSkipBlock_Write_Ordinal;
+  _request._hdr.ordinal = kSkipBlock_Write_GenOrdinal;
   _request.op = std::move(op);
   _request_buffer.set_actual(sizeof(WriteRequest));
   ::fidl::DecodedMessage<WriteRequest> _decoded_request(std::move(_request_buffer));
@@ -390,7 +390,7 @@ zx_status_t SkipBlock::Call::Write_Deprecated(zx::unowned_channel _client_end, R
 
 ::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::InPlace::Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSkipBlock_Write_Ordinal;
+  params.message()->_hdr.ordinal = kSkipBlock_Write_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<SkipBlock::WriteResponse>::FromFailure(
@@ -414,7 +414,7 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kSkipBlock_GetPartitionInfo_Ordinal:
+    case kSkipBlock_GetPartitionInfo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetPartitionInfoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -425,7 +425,7 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::GetPartitionInfoCompleter::Sync(txn));
       return true;
     }
-    case kSkipBlock_Read_Ordinal:
+    case kSkipBlock_Read_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReadRequest>(msg);
       if (result.status != ZX_OK) {
@@ -437,7 +437,7 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::ReadCompleter::Sync(txn));
       return true;
     }
-    case kSkipBlock_Write_Ordinal:
+    case kSkipBlock_Write_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteRequest>(msg);
       if (result.status != ZX_OK) {
@@ -469,7 +469,7 @@ void SkipBlock::Interface::GetPartitionInfoCompleterBase::Reply(int32_t status, 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPartitionInfoResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetPartitionInfoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kSkipBlock_GetPartitionInfo_Ordinal;
+  _response._hdr.ordinal = kSkipBlock_GetPartitionInfo_GenOrdinal;
   _response.status = std::move(status);
   _response.partition_info = std::move(partition_info);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPartitionInfoResponse));
@@ -482,7 +482,7 @@ void SkipBlock::Interface::GetPartitionInfoCompleterBase::Reply(::fidl::BytePart
     return;
   }
   auto& _response = *reinterpret_cast<GetPartitionInfoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kSkipBlock_GetPartitionInfo_Ordinal;
+  _response._hdr.ordinal = kSkipBlock_GetPartitionInfo_GenOrdinal;
   _response.status = std::move(status);
   _response.partition_info = std::move(partition_info);
   _buffer.set_actual(sizeof(GetPartitionInfoResponse));
@@ -491,7 +491,7 @@ void SkipBlock::Interface::GetPartitionInfoCompleterBase::Reply(::fidl::BytePart
 
 void SkipBlock::Interface::GetPartitionInfoCompleterBase::Reply(::fidl::DecodedMessage<GetPartitionInfoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSkipBlock_GetPartitionInfo_Ordinal;
+  params.message()->_hdr.ordinal = kSkipBlock_GetPartitionInfo_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -500,7 +500,7 @@ void SkipBlock::Interface::ReadCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ReadResponse*>(_write_bytes);
-  _response._hdr.ordinal = kSkipBlock_Read_Ordinal;
+  _response._hdr.ordinal = kSkipBlock_Read_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ReadResponse>(std::move(_response_bytes)));
@@ -512,7 +512,7 @@ void SkipBlock::Interface::ReadCompleterBase::Reply(::fidl::BytePart _buffer, in
     return;
   }
   auto& _response = *reinterpret_cast<ReadResponse*>(_buffer.data());
-  _response._hdr.ordinal = kSkipBlock_Read_Ordinal;
+  _response._hdr.ordinal = kSkipBlock_Read_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(ReadResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ReadResponse>(std::move(_buffer)));
@@ -520,7 +520,7 @@ void SkipBlock::Interface::ReadCompleterBase::Reply(::fidl::BytePart _buffer, in
 
 void SkipBlock::Interface::ReadCompleterBase::Reply(::fidl::DecodedMessage<ReadResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSkipBlock_Read_Ordinal;
+  params.message()->_hdr.ordinal = kSkipBlock_Read_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -529,7 +529,7 @@ void SkipBlock::Interface::WriteCompleterBase::Reply(int32_t status, bool bad_bl
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteResponse*>(_write_bytes);
-  _response._hdr.ordinal = kSkipBlock_Write_Ordinal;
+  _response._hdr.ordinal = kSkipBlock_Write_GenOrdinal;
   _response.status = std::move(status);
   _response.bad_block_grown = std::move(bad_block_grown);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteResponse));
@@ -542,7 +542,7 @@ void SkipBlock::Interface::WriteCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   auto& _response = *reinterpret_cast<WriteResponse*>(_buffer.data());
-  _response._hdr.ordinal = kSkipBlock_Write_Ordinal;
+  _response._hdr.ordinal = kSkipBlock_Write_GenOrdinal;
   _response.status = std::move(status);
   _response.bad_block_grown = std::move(bad_block_grown);
   _buffer.set_actual(sizeof(WriteResponse));
@@ -551,7 +551,7 @@ void SkipBlock::Interface::WriteCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void SkipBlock::Interface::WriteCompleterBase::Reply(::fidl::DecodedMessage<WriteResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSkipBlock_Write_Ordinal;
+  params.message()->_hdr.ordinal = kSkipBlock_Write_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

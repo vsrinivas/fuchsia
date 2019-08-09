@@ -11,12 +11,12 @@ namespace sysmem {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionToken_Duplicate_Ordinal = 0x5e37401300000000lu;
+constexpr uint64_t kBufferCollectionToken_Duplicate_GenOrdinal = 0x5e37401300000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenDuplicateRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionToken_Sync_Ordinal = 0x3218cf6000000000lu;
+constexpr uint64_t kBufferCollectionToken_Sync_GenOrdinal = 0x3218cf6000000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionToken_Close_Ordinal = 0x21ba753500000000lu;
+constexpr uint64_t kBufferCollectionToken_Close_GenOrdinal = 0x21ba753500000000lu;
 
 }  // namespace
 
@@ -76,7 +76,7 @@ zx_status_t BufferCollectionToken::Call::Duplicate_Deprecated(zx::unowned_channe
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DuplicateRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DuplicateRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollectionToken_Duplicate_Ordinal;
+  _request._hdr.ordinal = kBufferCollectionToken_Duplicate_GenOrdinal;
   _request.rights_attenuation_mask = std::move(rights_attenuation_mask);
   _request.token_request = std::move(token_request);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DuplicateRequest));
@@ -97,7 +97,7 @@ zx_status_t BufferCollectionToken::Call::Duplicate_Deprecated(zx::unowned_channe
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<DuplicateRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollectionToken_Duplicate_Ordinal;
+  _request._hdr.ordinal = kBufferCollectionToken_Duplicate_GenOrdinal;
   _request.rights_attenuation_mask = std::move(rights_attenuation_mask);
   _request.token_request = std::move(token_request);
   _request_buffer.set_actual(sizeof(DuplicateRequest));
@@ -111,7 +111,7 @@ zx_status_t BufferCollectionToken::Call::Duplicate_Deprecated(zx::unowned_channe
 
 ::fidl::internal::StatusAndError BufferCollectionToken::InPlace::Duplicate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DuplicateRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollectionToken_Duplicate_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollectionToken_Duplicate_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -155,7 +155,7 @@ zx_status_t BufferCollectionToken::Call::Sync_Deprecated(zx::unowned_channel _cl
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SyncRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SyncRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollectionToken_Sync_Ordinal;
+  _request._hdr.ordinal = kBufferCollectionToken_Sync_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SyncRequest));
   ::fidl::DecodedMessage<SyncRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -184,7 +184,7 @@ zx_status_t BufferCollectionToken::Call::Sync_Deprecated(zx::unowned_channel _cl
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<SyncRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollectionToken_Sync_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollectionToken_Sync_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<BufferCollectionToken::SyncResponse>::FromFailure(
@@ -228,7 +228,7 @@ zx_status_t BufferCollectionToken::Call::Close_Deprecated(zx::unowned_channel _c
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CloseRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollectionToken_Close_Ordinal;
+  _request._hdr.ordinal = kBufferCollectionToken_Close_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseRequest));
   ::fidl::DecodedMessage<CloseRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -245,7 +245,7 @@ zx_status_t BufferCollectionToken::Call::Close_Deprecated(zx::unowned_channel _c
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CloseRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollectionToken_Close_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollectionToken_Close_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -269,7 +269,7 @@ bool BufferCollectionToken::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kBufferCollectionToken_Duplicate_Ordinal:
+    case kBufferCollectionToken_Duplicate_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<DuplicateRequest>(msg);
       if (result.status != ZX_OK) {
@@ -281,7 +281,7 @@ bool BufferCollectionToken::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl
         Interface::DuplicateCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollectionToken_Sync_Ordinal:
+    case kBufferCollectionToken_Sync_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
@@ -292,7 +292,7 @@ bool BufferCollectionToken::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl
         Interface::SyncCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollectionToken_Close_Ordinal:
+    case kBufferCollectionToken_Close_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -323,7 +323,7 @@ void BufferCollectionToken::Interface::SyncCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SyncResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SyncResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBufferCollectionToken_Sync_Ordinal;
+  _response._hdr.ordinal = kBufferCollectionToken_Sync_GenOrdinal;
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SyncResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SyncResponse>(std::move(_response_bytes)));
 }
@@ -332,14 +332,14 @@ void BufferCollectionToken::Interface::SyncCompleterBase::Reply() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kHeap_AllocateVmo_Ordinal = 0xbb99f8d00000000lu;
+constexpr uint64_t kHeap_AllocateVmo_GenOrdinal = 0xbb99f8d00000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapAllocateVmoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kHeap_CreateResource_Ordinal = 0x35a990c200000000lu;
+constexpr uint64_t kHeap_CreateResource_GenOrdinal = 0x35a990c200000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceRequestTable;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kHeap_DestroyResource_Ordinal = 0x27df37a100000000lu;
+constexpr uint64_t kHeap_DestroyResource_GenOrdinal = 0x27df37a100000000lu;
 
 }  // namespace
 template <>
@@ -396,7 +396,7 @@ zx_status_t Heap::Call::AllocateVmo_Deprecated(zx::unowned_channel _client_end, 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocateVmoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<AllocateVmoRequest*>(_write_bytes);
-  _request._hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+  _request._hdr.ordinal = kHeap_AllocateVmo_GenOrdinal;
   _request.size = std::move(size);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(AllocateVmoRequest));
   ::fidl::DecodedMessage<AllocateVmoRequest> _decoded_request(std::move(_request_bytes));
@@ -431,7 +431,7 @@ zx_status_t Heap::Call::AllocateVmo_Deprecated(zx::unowned_channel _client_end, 
     return ::fidl::DecodeResult<AllocateVmoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<AllocateVmoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+  _request._hdr.ordinal = kHeap_AllocateVmo_GenOrdinal;
   _request.size = std::move(size);
   _request_buffer.set_actual(sizeof(AllocateVmoRequest));
   ::fidl::DecodedMessage<AllocateVmoRequest> _decoded_request(std::move(_request_buffer));
@@ -456,7 +456,7 @@ zx_status_t Heap::Call::AllocateVmo_Deprecated(zx::unowned_channel _client_end, 
 
 ::fidl::DecodeResult<Heap::AllocateVmoResponse> Heap::InPlace::AllocateVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateVmoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+  params.message()->_hdr.ordinal = kHeap_AllocateVmo_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Heap::AllocateVmoResponse>::FromFailure(
@@ -525,7 +525,7 @@ zx_status_t Heap::Call::CreateResource_Deprecated(zx::unowned_channel _client_en
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateResourceRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CreateResourceRequest*>(_write_bytes);
-  _request._hdr.ordinal = kHeap_CreateResource_Ordinal;
+  _request._hdr.ordinal = kHeap_CreateResource_GenOrdinal;
   _request.vmo = std::move(vmo);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CreateResourceRequest));
   ::fidl::DecodedMessage<CreateResourceRequest> _decoded_request(std::move(_request_bytes));
@@ -560,7 +560,7 @@ zx_status_t Heap::Call::CreateResource_Deprecated(zx::unowned_channel _client_en
     return ::fidl::DecodeResult<CreateResourceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<CreateResourceRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kHeap_CreateResource_Ordinal;
+  _request._hdr.ordinal = kHeap_CreateResource_GenOrdinal;
   _request.vmo = std::move(vmo);
   _request_buffer.set_actual(sizeof(CreateResourceRequest));
   ::fidl::DecodedMessage<CreateResourceRequest> _decoded_request(std::move(_request_buffer));
@@ -585,7 +585,7 @@ zx_status_t Heap::Call::CreateResource_Deprecated(zx::unowned_channel _client_en
 
 ::fidl::DecodeResult<Heap::CreateResourceResponse> Heap::InPlace::CreateResource(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateResourceRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kHeap_CreateResource_Ordinal;
+  params.message()->_hdr.ordinal = kHeap_CreateResource_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Heap::CreateResourceResponse>::FromFailure(
@@ -654,7 +654,7 @@ zx_status_t Heap::Call::DestroyResource_Deprecated(zx::unowned_channel _client_e
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DestroyResourceRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DestroyResourceRequest*>(_write_bytes);
-  _request._hdr.ordinal = kHeap_DestroyResource_Ordinal;
+  _request._hdr.ordinal = kHeap_DestroyResource_GenOrdinal;
   _request.id = std::move(id);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DestroyResourceRequest));
   ::fidl::DecodedMessage<DestroyResourceRequest> _decoded_request(std::move(_request_bytes));
@@ -686,7 +686,7 @@ zx_status_t Heap::Call::DestroyResource_Deprecated(zx::unowned_channel _client_e
     return ::fidl::DecodeResult<DestroyResourceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<DestroyResourceRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kHeap_DestroyResource_Ordinal;
+  _request._hdr.ordinal = kHeap_DestroyResource_GenOrdinal;
   _request.id = std::move(id);
   _request_buffer.set_actual(sizeof(DestroyResourceRequest));
   ::fidl::DecodedMessage<DestroyResourceRequest> _decoded_request(std::move(_request_buffer));
@@ -711,7 +711,7 @@ zx_status_t Heap::Call::DestroyResource_Deprecated(zx::unowned_channel _client_e
 
 ::fidl::DecodeResult<Heap::DestroyResourceResponse> Heap::InPlace::DestroyResource(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DestroyResourceRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kHeap_DestroyResource_Ordinal;
+  params.message()->_hdr.ordinal = kHeap_DestroyResource_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Heap::DestroyResourceResponse>::FromFailure(
@@ -735,7 +735,7 @@ bool Heap::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kHeap_AllocateVmo_Ordinal:
+    case kHeap_AllocateVmo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AllocateVmoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -747,7 +747,7 @@ bool Heap::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::AllocateVmoCompleter::Sync(txn));
       return true;
     }
-    case kHeap_CreateResource_Ordinal:
+    case kHeap_CreateResource_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CreateResourceRequest>(msg);
       if (result.status != ZX_OK) {
@@ -759,7 +759,7 @@ bool Heap::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         Interface::CreateResourceCompleter::Sync(txn));
       return true;
     }
-    case kHeap_DestroyResource_Ordinal:
+    case kHeap_DestroyResource_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<DestroyResourceRequest>(msg);
       if (result.status != ZX_OK) {
@@ -791,7 +791,7 @@ void Heap::Interface::AllocateVmoCompleterBase::Reply(int32_t s, ::zx::vmo vmo) 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocateVmoResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AllocateVmoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+  _response._hdr.ordinal = kHeap_AllocateVmo_GenOrdinal;
   _response.s = std::move(s);
   _response.vmo = std::move(vmo);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AllocateVmoResponse));
@@ -804,7 +804,7 @@ void Heap::Interface::AllocateVmoCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<AllocateVmoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+  _response._hdr.ordinal = kHeap_AllocateVmo_GenOrdinal;
   _response.s = std::move(s);
   _response.vmo = std::move(vmo);
   _buffer.set_actual(sizeof(AllocateVmoResponse));
@@ -813,7 +813,7 @@ void Heap::Interface::AllocateVmoCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void Heap::Interface::AllocateVmoCompleterBase::Reply(::fidl::DecodedMessage<AllocateVmoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kHeap_AllocateVmo_Ordinal;
+  params.message()->_hdr.ordinal = kHeap_AllocateVmo_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -822,7 +822,7 @@ void Heap::Interface::CreateResourceCompleterBase::Reply(int32_t s, uint64_t id)
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateResourceResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CreateResourceResponse*>(_write_bytes);
-  _response._hdr.ordinal = kHeap_CreateResource_Ordinal;
+  _response._hdr.ordinal = kHeap_CreateResource_GenOrdinal;
   _response.s = std::move(s);
   _response.id = std::move(id);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CreateResourceResponse));
@@ -835,7 +835,7 @@ void Heap::Interface::CreateResourceCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   auto& _response = *reinterpret_cast<CreateResourceResponse*>(_buffer.data());
-  _response._hdr.ordinal = kHeap_CreateResource_Ordinal;
+  _response._hdr.ordinal = kHeap_CreateResource_GenOrdinal;
   _response.s = std::move(s);
   _response.id = std::move(id);
   _buffer.set_actual(sizeof(CreateResourceResponse));
@@ -844,7 +844,7 @@ void Heap::Interface::CreateResourceCompleterBase::Reply(::fidl::BytePart _buffe
 
 void Heap::Interface::CreateResourceCompleterBase::Reply(::fidl::DecodedMessage<CreateResourceResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kHeap_CreateResource_Ordinal;
+  params.message()->_hdr.ordinal = kHeap_CreateResource_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -853,7 +853,7 @@ void Heap::Interface::DestroyResourceCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DestroyResourceResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DestroyResourceResponse*>(_write_bytes);
-  _response._hdr.ordinal = kHeap_DestroyResource_Ordinal;
+  _response._hdr.ordinal = kHeap_DestroyResource_GenOrdinal;
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DestroyResourceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DestroyResourceResponse>(std::move(_response_bytes)));
 }
@@ -862,10 +862,10 @@ void Heap::Interface::DestroyResourceCompleterBase::Reply() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDriverConnector_Connect_Ordinal = 0x3082e03400000000lu;
+constexpr uint64_t kDriverConnector_Connect_GenOrdinal = 0x3082e03400000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorConnectRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDriverConnector_GetProtectedMemoryInfo_Ordinal = 0x10d8a27100000000lu;
+constexpr uint64_t kDriverConnector_GetProtectedMemoryInfo_GenOrdinal = 0x10d8a27100000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfoResponseTable;
 
 }  // namespace
@@ -924,7 +924,7 @@ zx_status_t DriverConnector::Call::Connect_Deprecated(zx::unowned_channel _clien
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ConnectRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDriverConnector_Connect_Ordinal;
+  _request._hdr.ordinal = kDriverConnector_Connect_GenOrdinal;
   _request.allocator_request = std::move(allocator_request);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConnectRequest));
   ::fidl::DecodedMessage<ConnectRequest> _decoded_request(std::move(_request_bytes));
@@ -944,7 +944,7 @@ zx_status_t DriverConnector::Call::Connect_Deprecated(zx::unowned_channel _clien
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<ConnectRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDriverConnector_Connect_Ordinal;
+  _request._hdr.ordinal = kDriverConnector_Connect_GenOrdinal;
   _request.allocator_request = std::move(allocator_request);
   _request_buffer.set_actual(sizeof(ConnectRequest));
   ::fidl::DecodedMessage<ConnectRequest> _decoded_request(std::move(_request_buffer));
@@ -957,7 +957,7 @@ zx_status_t DriverConnector::Call::Connect_Deprecated(zx::unowned_channel _clien
 
 ::fidl::internal::StatusAndError DriverConnector::InPlace::Connect(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDriverConnector_Connect_Ordinal;
+  params.message()->_hdr.ordinal = kDriverConnector_Connect_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1020,7 +1020,7 @@ zx_status_t DriverConnector::Call::GetProtectedMemoryInfo_Deprecated(zx::unowned
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetProtectedMemoryInfoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetProtectedMemoryInfoRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_Ordinal;
+  _request._hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetProtectedMemoryInfoRequest));
   ::fidl::DecodedMessage<GetProtectedMemoryInfoRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -1054,7 +1054,7 @@ zx_status_t DriverConnector::Call::GetProtectedMemoryInfo_Deprecated(zx::unowned
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetProtectedMemoryInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetProtectedMemoryInfoRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_Ordinal;
+  _request._hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_GenOrdinal;
   _request_buffer.set_actual(sizeof(GetProtectedMemoryInfoRequest));
   ::fidl::DecodedMessage<GetProtectedMemoryInfoRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -1084,7 +1084,7 @@ zx_status_t DriverConnector::Call::GetProtectedMemoryInfo_Deprecated(zx::unowned
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetProtectedMemoryInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_Ordinal;
+  params.message()->_hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DriverConnector::GetProtectedMemoryInfoResponse>::FromFailure(
@@ -1108,7 +1108,7 @@ bool DriverConnector::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDriverConnector_Connect_Ordinal:
+    case kDriverConnector_Connect_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ConnectRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1120,7 +1120,7 @@ bool DriverConnector::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
         Interface::ConnectCompleter::Sync(txn));
       return true;
     }
-    case kDriverConnector_GetProtectedMemoryInfo_Ordinal:
+    case kDriverConnector_GetProtectedMemoryInfo_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<GetProtectedMemoryInfoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1151,7 +1151,7 @@ void DriverConnector::Interface::GetProtectedMemoryInfoCompleterBase::Reply(int3
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetProtectedMemoryInfoResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetProtectedMemoryInfoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_Ordinal;
+  _response._hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_GenOrdinal;
   _response.status = std::move(status);
   _response.base_address = std::move(base_address);
   _response.size = std::move(size);
@@ -1165,7 +1165,7 @@ void DriverConnector::Interface::GetProtectedMemoryInfoCompleterBase::Reply(::fi
     return;
   }
   auto& _response = *reinterpret_cast<GetProtectedMemoryInfoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_Ordinal;
+  _response._hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_GenOrdinal;
   _response.status = std::move(status);
   _response.base_address = std::move(base_address);
   _response.size = std::move(size);
@@ -1175,7 +1175,7 @@ void DriverConnector::Interface::GetProtectedMemoryInfoCompleterBase::Reply(::fi
 
 void DriverConnector::Interface::GetProtectedMemoryInfoCompleterBase::Reply(::fidl::DecodedMessage<GetProtectedMemoryInfoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_Ordinal;
+  params.message()->_hdr.ordinal = kDriverConnector_GetProtectedMemoryInfo_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1183,13 +1183,13 @@ void DriverConnector::Interface::GetProtectedMemoryInfoCompleterBase::Reply(::fi
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kAllocator_AllocateNonSharedCollection_Ordinal = 0x21b157d700000000lu;
+constexpr uint64_t kAllocator_AllocateNonSharedCollection_GenOrdinal = 0x21b157d700000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateNonSharedCollectionRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kAllocator_AllocateSharedCollection_Ordinal = 0x36a4dbc400000000lu;
+constexpr uint64_t kAllocator_AllocateSharedCollection_GenOrdinal = 0x36a4dbc400000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateSharedCollectionRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kAllocator_BindSharedCollection_Ordinal = 0x1d68697500000000lu;
+constexpr uint64_t kAllocator_BindSharedCollection_GenOrdinal = 0x1d68697500000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_AllocatorBindSharedCollectionRequestTable;
 
 }  // namespace
@@ -1248,7 +1248,7 @@ zx_status_t Allocator::Call::AllocateNonSharedCollection_Deprecated(zx::unowned_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocateNonSharedCollectionRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<AllocateNonSharedCollectionRequest*>(_write_bytes);
-  _request._hdr.ordinal = kAllocator_AllocateNonSharedCollection_Ordinal;
+  _request._hdr.ordinal = kAllocator_AllocateNonSharedCollection_GenOrdinal;
   _request.collection = std::move(collection);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(AllocateNonSharedCollectionRequest));
   ::fidl::DecodedMessage<AllocateNonSharedCollectionRequest> _decoded_request(std::move(_request_bytes));
@@ -1268,7 +1268,7 @@ zx_status_t Allocator::Call::AllocateNonSharedCollection_Deprecated(zx::unowned_
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<AllocateNonSharedCollectionRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kAllocator_AllocateNonSharedCollection_Ordinal;
+  _request._hdr.ordinal = kAllocator_AllocateNonSharedCollection_GenOrdinal;
   _request.collection = std::move(collection);
   _request_buffer.set_actual(sizeof(AllocateNonSharedCollectionRequest));
   ::fidl::DecodedMessage<AllocateNonSharedCollectionRequest> _decoded_request(std::move(_request_buffer));
@@ -1281,7 +1281,7 @@ zx_status_t Allocator::Call::AllocateNonSharedCollection_Deprecated(zx::unowned_
 
 ::fidl::internal::StatusAndError Allocator::InPlace::AllocateNonSharedCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateNonSharedCollectionRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kAllocator_AllocateNonSharedCollection_Ordinal;
+  params.message()->_hdr.ordinal = kAllocator_AllocateNonSharedCollection_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1351,7 +1351,7 @@ zx_status_t Allocator::Call::AllocateSharedCollection_Deprecated(zx::unowned_cha
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocateSharedCollectionRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<AllocateSharedCollectionRequest*>(_write_bytes);
-  _request._hdr.ordinal = kAllocator_AllocateSharedCollection_Ordinal;
+  _request._hdr.ordinal = kAllocator_AllocateSharedCollection_GenOrdinal;
   _request.token_request = std::move(token_request);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(AllocateSharedCollectionRequest));
   ::fidl::DecodedMessage<AllocateSharedCollectionRequest> _decoded_request(std::move(_request_bytes));
@@ -1371,7 +1371,7 @@ zx_status_t Allocator::Call::AllocateSharedCollection_Deprecated(zx::unowned_cha
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<AllocateSharedCollectionRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kAllocator_AllocateSharedCollection_Ordinal;
+  _request._hdr.ordinal = kAllocator_AllocateSharedCollection_GenOrdinal;
   _request.token_request = std::move(token_request);
   _request_buffer.set_actual(sizeof(AllocateSharedCollectionRequest));
   ::fidl::DecodedMessage<AllocateSharedCollectionRequest> _decoded_request(std::move(_request_buffer));
@@ -1384,7 +1384,7 @@ zx_status_t Allocator::Call::AllocateSharedCollection_Deprecated(zx::unowned_cha
 
 ::fidl::internal::StatusAndError Allocator::InPlace::AllocateSharedCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateSharedCollectionRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kAllocator_AllocateSharedCollection_Ordinal;
+  params.message()->_hdr.ordinal = kAllocator_AllocateSharedCollection_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1456,7 +1456,7 @@ zx_status_t Allocator::Call::BindSharedCollection_Deprecated(zx::unowned_channel
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindSharedCollectionRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<BindSharedCollectionRequest*>(_write_bytes);
-  _request._hdr.ordinal = kAllocator_BindSharedCollection_Ordinal;
+  _request._hdr.ordinal = kAllocator_BindSharedCollection_GenOrdinal;
   _request.token = std::move(token);
   _request.buffer_collection_request = std::move(buffer_collection_request);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(BindSharedCollectionRequest));
@@ -1477,7 +1477,7 @@ zx_status_t Allocator::Call::BindSharedCollection_Deprecated(zx::unowned_channel
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<BindSharedCollectionRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kAllocator_BindSharedCollection_Ordinal;
+  _request._hdr.ordinal = kAllocator_BindSharedCollection_GenOrdinal;
   _request.token = std::move(token);
   _request.buffer_collection_request = std::move(buffer_collection_request);
   _request_buffer.set_actual(sizeof(BindSharedCollectionRequest));
@@ -1491,7 +1491,7 @@ zx_status_t Allocator::Call::BindSharedCollection_Deprecated(zx::unowned_channel
 
 ::fidl::internal::StatusAndError Allocator::InPlace::BindSharedCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindSharedCollectionRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kAllocator_BindSharedCollection_Ordinal;
+  params.message()->_hdr.ordinal = kAllocator_BindSharedCollection_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1515,7 +1515,7 @@ bool Allocator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kAllocator_AllocateNonSharedCollection_Ordinal:
+    case kAllocator_AllocateNonSharedCollection_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AllocateNonSharedCollectionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1527,7 +1527,7 @@ bool Allocator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::AllocateNonSharedCollectionCompleter::Sync(txn));
       return true;
     }
-    case kAllocator_AllocateSharedCollection_Ordinal:
+    case kAllocator_AllocateSharedCollection_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AllocateSharedCollectionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1539,7 +1539,7 @@ bool Allocator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::AllocateSharedCollectionCompleter::Sync(txn));
       return true;
     }
-    case kAllocator_BindSharedCollection_Ordinal:
+    case kAllocator_BindSharedCollection_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<BindSharedCollectionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1662,12 +1662,12 @@ ImageFormat& ::llcpp::fuchsia::sysmem::BufferFormat::mutable_image() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal = 0x1f54cf3600000000lu;
+constexpr uint64_t kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_GenOrdinal = 0x1f54cf3600000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionEvents_OnBuffersAllocated_Ordinal = 0x6830ec5f00000000lu;
+constexpr uint64_t kBufferCollectionEvents_OnBuffersAllocated_GenOrdinal = 0x6830ec5f00000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal = 0x6cb2333900000000lu;
+constexpr uint64_t kBufferCollectionEvents_OnAllocateSingleBufferDone_GenOrdinal = 0x6cb2333900000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneRequestTable;
 
 }  // namespace
@@ -1700,7 +1700,7 @@ zx_status_t BufferCollectionEvents::Call::OnDuplicatedTokensKnownByServer_Deprec
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnDuplicatedTokensKnownByServerRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<OnDuplicatedTokensKnownByServerRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal;
+  _request._hdr.ordinal = kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnDuplicatedTokensKnownByServerRequest));
   ::fidl::DecodedMessage<OnDuplicatedTokensKnownByServerRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -1717,7 +1717,7 @@ zx_status_t BufferCollectionEvents::Call::OnDuplicatedTokensKnownByServer_Deprec
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<OnDuplicatedTokensKnownByServerRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1790,7 +1790,7 @@ zx_status_t BufferCollectionEvents::Call::OnBuffersAllocated_Deprecated(zx::unow
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   auto& _request = *reinterpret_cast<OnBuffersAllocatedRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollectionEvents_OnBuffersAllocated_Ordinal;
+  _request._hdr.ordinal = kBufferCollectionEvents_OnBuffersAllocated_GenOrdinal;
   _request.status = std::move(status);
   _request.buffer_collection_info = std::move(buffer_collection_info);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnBuffersAllocatedRequest));
@@ -1811,7 +1811,7 @@ zx_status_t BufferCollectionEvents::Call::OnBuffersAllocated_Deprecated(zx::unow
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<OnBuffersAllocatedRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollectionEvents_OnBuffersAllocated_Ordinal;
+  _request._hdr.ordinal = kBufferCollectionEvents_OnBuffersAllocated_GenOrdinal;
   _request.status = std::move(status);
   _request.buffer_collection_info = std::move(buffer_collection_info);
   _request_buffer.set_actual(sizeof(OnBuffersAllocatedRequest));
@@ -1825,7 +1825,7 @@ zx_status_t BufferCollectionEvents::Call::OnBuffersAllocated_Deprecated(zx::unow
 
 ::fidl::internal::StatusAndError BufferCollectionEvents::InPlace::OnBuffersAllocated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnBuffersAllocatedRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollectionEvents_OnBuffersAllocated_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollectionEvents_OnBuffersAllocated_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1897,7 +1897,7 @@ zx_status_t BufferCollectionEvents::Call::OnAllocateSingleBufferDone_Deprecated(
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnAllocateSingleBufferDoneRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<OnAllocateSingleBufferDoneRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal;
+  _request._hdr.ordinal = kBufferCollectionEvents_OnAllocateSingleBufferDone_GenOrdinal;
   _request.status = std::move(status);
   _request.buffer_info = std::move(buffer_info);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnAllocateSingleBufferDoneRequest));
@@ -1918,7 +1918,7 @@ zx_status_t BufferCollectionEvents::Call::OnAllocateSingleBufferDone_Deprecated(
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<OnAllocateSingleBufferDoneRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal;
+  _request._hdr.ordinal = kBufferCollectionEvents_OnAllocateSingleBufferDone_GenOrdinal;
   _request.status = std::move(status);
   _request.buffer_info = std::move(buffer_info);
   _request_buffer.set_actual(sizeof(OnAllocateSingleBufferDoneRequest));
@@ -1932,7 +1932,7 @@ zx_status_t BufferCollectionEvents::Call::OnAllocateSingleBufferDone_Deprecated(
 
 ::fidl::internal::StatusAndError BufferCollectionEvents::InPlace::OnAllocateSingleBufferDone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnAllocateSingleBufferDoneRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollectionEvents_OnAllocateSingleBufferDone_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -1956,7 +1956,7 @@ bool BufferCollectionEvents::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fid
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal:
+    case kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnDuplicatedTokensKnownByServerRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1967,7 +1967,7 @@ bool BufferCollectionEvents::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fid
         Interface::OnDuplicatedTokensKnownByServerCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollectionEvents_OnBuffersAllocated_Ordinal:
+    case kBufferCollectionEvents_OnBuffersAllocated_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnBuffersAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1979,7 +1979,7 @@ bool BufferCollectionEvents::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fid
         Interface::OnBuffersAllocatedCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal:
+    case kBufferCollectionEvents_OnAllocateSingleBufferDone_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<OnAllocateSingleBufferDoneRequest>(msg);
       if (result.status != ZX_OK) {
@@ -2010,30 +2010,30 @@ bool BufferCollectionEvents::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_SetEventSink_Ordinal = 0x154ba43000000000lu;
+constexpr uint64_t kBufferCollection_SetEventSink_GenOrdinal = 0x154ba43000000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_Sync_Ordinal = 0x15ba322100000000lu;
+constexpr uint64_t kBufferCollection_Sync_GenOrdinal = 0x15ba322100000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_SetConstraints_Ordinal = 0x541b637e00000000lu;
+constexpr uint64_t kBufferCollection_SetConstraints_GenOrdinal = 0x541b637e00000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_WaitForBuffersAllocated_Ordinal = 0x1b36cfa800000000lu;
+constexpr uint64_t kBufferCollection_WaitForBuffersAllocated_GenOrdinal = 0x1b36cfa800000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_CheckBuffersAllocated_Ordinal = 0x95520ce00000000lu;
+constexpr uint64_t kBufferCollection_CheckBuffersAllocated_GenOrdinal = 0x95520ce00000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_CloseSingleBuffer_Ordinal = 0x1802fa4800000000lu;
+constexpr uint64_t kBufferCollection_CloseSingleBuffer_GenOrdinal = 0x1802fa4800000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_AllocateSingleBuffer_Ordinal = 0x1ba0786400000000lu;
+constexpr uint64_t kBufferCollection_AllocateSingleBuffer_GenOrdinal = 0x1ba0786400000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_WaitForSingleBufferAllocated_Ordinal = 0x36e6672300000000lu;
+constexpr uint64_t kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal = 0x36e6672300000000lu;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_CheckSingleBufferAllocated_Ordinal = 0x1301391c00000000lu;
+constexpr uint64_t kBufferCollection_CheckSingleBufferAllocated_GenOrdinal = 0x1301391c00000000lu;
 [[maybe_unused]]
-constexpr uint64_t kBufferCollection_Close_Ordinal = 0x607c571800000000lu;
+constexpr uint64_t kBufferCollection_Close_GenOrdinal = 0x607c571800000000lu;
 
 }  // namespace
 
@@ -2091,7 +2091,7 @@ zx_status_t BufferCollection::Call::SetEventSink_Deprecated(zx::unowned_channel 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetEventSinkRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SetEventSinkRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollection_SetEventSink_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_SetEventSink_GenOrdinal;
   _request.events = std::move(events);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetEventSinkRequest));
   ::fidl::DecodedMessage<SetEventSinkRequest> _decoded_request(std::move(_request_bytes));
@@ -2111,7 +2111,7 @@ zx_status_t BufferCollection::Call::SetEventSink_Deprecated(zx::unowned_channel 
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<SetEventSinkRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollection_SetEventSink_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_SetEventSink_GenOrdinal;
   _request.events = std::move(events);
   _request_buffer.set_actual(sizeof(SetEventSinkRequest));
   ::fidl::DecodedMessage<SetEventSinkRequest> _decoded_request(std::move(_request_buffer));
@@ -2124,7 +2124,7 @@ zx_status_t BufferCollection::Call::SetEventSink_Deprecated(zx::unowned_channel 
 
 ::fidl::internal::StatusAndError BufferCollection::InPlace::SetEventSink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetEventSinkRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_SetEventSink_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_SetEventSink_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2168,7 +2168,7 @@ zx_status_t BufferCollection::Call::Sync_Deprecated(zx::unowned_channel _client_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SyncRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SyncRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollection_Sync_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_Sync_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SyncRequest));
   ::fidl::DecodedMessage<SyncRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -2197,7 +2197,7 @@ zx_status_t BufferCollection::Call::Sync_Deprecated(zx::unowned_channel _client_
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<SyncRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_Sync_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_Sync_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<BufferCollection::SyncResponse>::FromFailure(
@@ -2270,7 +2270,7 @@ zx_status_t BufferCollection::Call::SetConstraints_Deprecated(zx::unowned_channe
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   auto& _request = *reinterpret_cast<SetConstraintsRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollection_SetConstraints_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_SetConstraints_GenOrdinal;
   _request.has_constraints = std::move(has_constraints);
   _request.constraints = std::move(constraints);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConstraintsRequest));
@@ -2291,7 +2291,7 @@ zx_status_t BufferCollection::Call::SetConstraints_Deprecated(zx::unowned_channe
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<SetConstraintsRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollection_SetConstraints_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_SetConstraints_GenOrdinal;
   _request.has_constraints = std::move(has_constraints);
   _request.constraints = std::move(constraints);
   _request_buffer.set_actual(sizeof(SetConstraintsRequest));
@@ -2305,7 +2305,7 @@ zx_status_t BufferCollection::Call::SetConstraints_Deprecated(zx::unowned_channe
 
 ::fidl::internal::StatusAndError BufferCollection::InPlace::SetConstraints(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConstraintsRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_SetConstraints_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_SetConstraints_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2368,7 +2368,7 @@ zx_status_t BufferCollection::Call::WaitForBuffersAllocated_Deprecated(zx::unown
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WaitForBuffersAllocatedRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WaitForBuffersAllocatedRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WaitForBuffersAllocatedRequest));
   ::fidl::DecodedMessage<WaitForBuffersAllocatedRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -2402,7 +2402,7 @@ zx_status_t BufferCollection::Call::WaitForBuffersAllocated_Deprecated(zx::unown
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WaitForBuffersAllocatedRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<WaitForBuffersAllocatedRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_GenOrdinal;
   _request_buffer.set_actual(sizeof(WaitForBuffersAllocatedRequest));
   ::fidl::DecodedMessage<WaitForBuffersAllocatedRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -2431,7 +2431,7 @@ zx_status_t BufferCollection::Call::WaitForBuffersAllocated_Deprecated(zx::unown
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<WaitForBuffersAllocatedRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<BufferCollection::WaitForBuffersAllocatedResponse>::FromFailure(
@@ -2494,7 +2494,7 @@ zx_status_t BufferCollection::Call::CheckBuffersAllocated_Deprecated(zx::unowned
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CheckBuffersAllocatedRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CheckBuffersAllocatedRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_CheckBuffersAllocated_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CheckBuffersAllocatedRequest));
   ::fidl::DecodedMessage<CheckBuffersAllocatedRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -2526,7 +2526,7 @@ zx_status_t BufferCollection::Call::CheckBuffersAllocated_Deprecated(zx::unowned
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CheckBuffersAllocatedRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<CheckBuffersAllocatedRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_CheckBuffersAllocated_GenOrdinal;
   _request_buffer.set_actual(sizeof(CheckBuffersAllocatedRequest));
   ::fidl::DecodedMessage<CheckBuffersAllocatedRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -2554,7 +2554,7 @@ zx_status_t BufferCollection::Call::CheckBuffersAllocated_Deprecated(zx::unowned
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CheckBuffersAllocatedRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_CheckBuffersAllocated_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<BufferCollection::CheckBuffersAllocatedResponse>::FromFailure(
@@ -2624,7 +2624,7 @@ zx_status_t BufferCollection::Call::CloseSingleBuffer_Deprecated(zx::unowned_cha
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseSingleBufferRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CloseSingleBufferRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollection_CloseSingleBuffer_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_CloseSingleBuffer_GenOrdinal;
   _request.buffer_index = std::move(buffer_index);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseSingleBufferRequest));
   ::fidl::DecodedMessage<CloseSingleBufferRequest> _decoded_request(std::move(_request_bytes));
@@ -2644,7 +2644,7 @@ zx_status_t BufferCollection::Call::CloseSingleBuffer_Deprecated(zx::unowned_cha
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<CloseSingleBufferRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollection_CloseSingleBuffer_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_CloseSingleBuffer_GenOrdinal;
   _request.buffer_index = std::move(buffer_index);
   _request_buffer.set_actual(sizeof(CloseSingleBufferRequest));
   ::fidl::DecodedMessage<CloseSingleBufferRequest> _decoded_request(std::move(_request_buffer));
@@ -2657,7 +2657,7 @@ zx_status_t BufferCollection::Call::CloseSingleBuffer_Deprecated(zx::unowned_cha
 
 ::fidl::internal::StatusAndError BufferCollection::InPlace::CloseSingleBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseSingleBufferRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_CloseSingleBuffer_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_CloseSingleBuffer_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2727,7 +2727,7 @@ zx_status_t BufferCollection::Call::AllocateSingleBuffer_Deprecated(zx::unowned_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocateSingleBufferRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<AllocateSingleBufferRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollection_AllocateSingleBuffer_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_AllocateSingleBuffer_GenOrdinal;
   _request.buffer_index = std::move(buffer_index);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(AllocateSingleBufferRequest));
   ::fidl::DecodedMessage<AllocateSingleBufferRequest> _decoded_request(std::move(_request_bytes));
@@ -2747,7 +2747,7 @@ zx_status_t BufferCollection::Call::AllocateSingleBuffer_Deprecated(zx::unowned_
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<AllocateSingleBufferRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollection_AllocateSingleBuffer_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_AllocateSingleBuffer_GenOrdinal;
   _request.buffer_index = std::move(buffer_index);
   _request_buffer.set_actual(sizeof(AllocateSingleBufferRequest));
   ::fidl::DecodedMessage<AllocateSingleBufferRequest> _decoded_request(std::move(_request_buffer));
@@ -2760,7 +2760,7 @@ zx_status_t BufferCollection::Call::AllocateSingleBuffer_Deprecated(zx::unowned_
 
 ::fidl::internal::StatusAndError BufferCollection::InPlace::AllocateSingleBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateSingleBufferRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_AllocateSingleBuffer_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_AllocateSingleBuffer_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -2829,7 +2829,7 @@ zx_status_t BufferCollection::Call::WaitForSingleBufferAllocated_Deprecated(zx::
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WaitForSingleBufferAllocatedRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WaitForSingleBufferAllocatedRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal;
   _request.buffer_index = std::move(buffer_index);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WaitForSingleBufferAllocatedRequest));
   ::fidl::DecodedMessage<WaitForSingleBufferAllocatedRequest> _decoded_request(std::move(_request_bytes));
@@ -2864,7 +2864,7 @@ zx_status_t BufferCollection::Call::WaitForSingleBufferAllocated_Deprecated(zx::
     return ::fidl::DecodeResult<WaitForSingleBufferAllocatedResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   auto& _request = *reinterpret_cast<WaitForSingleBufferAllocatedRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal;
   _request.buffer_index = std::move(buffer_index);
   _request_buffer.set_actual(sizeof(WaitForSingleBufferAllocatedRequest));
   ::fidl::DecodedMessage<WaitForSingleBufferAllocatedRequest> _decoded_request(std::move(_request_buffer));
@@ -2889,7 +2889,7 @@ zx_status_t BufferCollection::Call::WaitForSingleBufferAllocated_Deprecated(zx::
 
 ::fidl::DecodeResult<BufferCollection::WaitForSingleBufferAllocatedResponse> BufferCollection::InPlace::WaitForSingleBufferAllocated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WaitForSingleBufferAllocatedRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<BufferCollection::WaitForSingleBufferAllocatedResponse>::FromFailure(
@@ -2959,7 +2959,7 @@ zx_status_t BufferCollection::Call::CheckSingleBufferAllocated_Deprecated(zx::un
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CheckSingleBufferAllocatedRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CheckSingleBufferAllocatedRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollection_CheckSingleBufferAllocated_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_CheckSingleBufferAllocated_GenOrdinal;
   _request.buffer_index = std::move(buffer_index);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CheckSingleBufferAllocatedRequest));
   ::fidl::DecodedMessage<CheckSingleBufferAllocatedRequest> _decoded_request(std::move(_request_bytes));
@@ -2979,7 +2979,7 @@ zx_status_t BufferCollection::Call::CheckSingleBufferAllocated_Deprecated(zx::un
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto& _request = *reinterpret_cast<CheckSingleBufferAllocatedRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kBufferCollection_CheckSingleBufferAllocated_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_CheckSingleBufferAllocated_GenOrdinal;
   _request.buffer_index = std::move(buffer_index);
   _request_buffer.set_actual(sizeof(CheckSingleBufferAllocatedRequest));
   ::fidl::DecodedMessage<CheckSingleBufferAllocatedRequest> _decoded_request(std::move(_request_buffer));
@@ -2992,7 +2992,7 @@ zx_status_t BufferCollection::Call::CheckSingleBufferAllocated_Deprecated(zx::un
 
 ::fidl::internal::StatusAndError BufferCollection::InPlace::CheckSingleBufferAllocated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CheckSingleBufferAllocatedRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_CheckSingleBufferAllocated_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_CheckSingleBufferAllocated_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -3036,7 +3036,7 @@ zx_status_t BufferCollection::Call::Close_Deprecated(zx::unowned_channel _client
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CloseRequest*>(_write_bytes);
-  _request._hdr.ordinal = kBufferCollection_Close_Ordinal;
+  _request._hdr.ordinal = kBufferCollection_Close_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseRequest));
   ::fidl::DecodedMessage<CloseRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -3053,7 +3053,7 @@ zx_status_t BufferCollection::Call::Close_Deprecated(zx::unowned_channel _client
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CloseRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_Close_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_Close_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -3077,7 +3077,7 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kBufferCollection_SetEventSink_Ordinal:
+    case kBufferCollection_SetEventSink_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetEventSinkRequest>(msg);
       if (result.status != ZX_OK) {
@@ -3089,7 +3089,7 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::SetEventSinkCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_Sync_Ordinal:
+    case kBufferCollection_Sync_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
@@ -3100,7 +3100,7 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::SyncCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_SetConstraints_Ordinal:
+    case kBufferCollection_SetConstraints_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SetConstraintsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -3112,7 +3112,7 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::SetConstraintsCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_WaitForBuffersAllocated_Ordinal:
+    case kBufferCollection_WaitForBuffersAllocated_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WaitForBuffersAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
@@ -3123,7 +3123,7 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::WaitForBuffersAllocatedCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_CheckBuffersAllocated_Ordinal:
+    case kBufferCollection_CheckBuffersAllocated_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CheckBuffersAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
@@ -3134,7 +3134,7 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::CheckBuffersAllocatedCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_CloseSingleBuffer_Ordinal:
+    case kBufferCollection_CloseSingleBuffer_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CloseSingleBufferRequest>(msg);
       if (result.status != ZX_OK) {
@@ -3146,7 +3146,7 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::CloseSingleBufferCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_AllocateSingleBuffer_Ordinal:
+    case kBufferCollection_AllocateSingleBuffer_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<AllocateSingleBufferRequest>(msg);
       if (result.status != ZX_OK) {
@@ -3158,7 +3158,7 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::AllocateSingleBufferCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_WaitForSingleBufferAllocated_Ordinal:
+    case kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WaitForSingleBufferAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
@@ -3170,7 +3170,7 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::WaitForSingleBufferAllocatedCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_CheckSingleBufferAllocated_Ordinal:
+    case kBufferCollection_CheckSingleBufferAllocated_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CheckSingleBufferAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
@@ -3182,7 +3182,7 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
         Interface::CheckSingleBufferAllocatedCompleter::Sync(txn));
       return true;
     }
-    case kBufferCollection_Close_Ordinal:
+    case kBufferCollection_Close_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -3213,7 +3213,7 @@ void BufferCollection::Interface::SyncCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SyncResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SyncResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBufferCollection_Sync_Ordinal;
+  _response._hdr.ordinal = kBufferCollection_Sync_GenOrdinal;
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SyncResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SyncResponse>(std::move(_response_bytes)));
 }
@@ -3224,7 +3224,7 @@ void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(in
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   auto& _response = *reinterpret_cast<WaitForBuffersAllocatedResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+  _response._hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_GenOrdinal;
   _response.status = std::move(status);
   _response.buffer_collection_info = std::move(buffer_collection_info);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WaitForBuffersAllocatedResponse));
@@ -3237,7 +3237,7 @@ void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(::
     return;
   }
   auto& _response = *reinterpret_cast<WaitForBuffersAllocatedResponse*>(_buffer.data());
-  _response._hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+  _response._hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_GenOrdinal;
   _response.status = std::move(status);
   _response.buffer_collection_info = std::move(buffer_collection_info);
   _buffer.set_actual(sizeof(WaitForBuffersAllocatedResponse));
@@ -3246,7 +3246,7 @@ void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(::
 
 void BufferCollection::Interface::WaitForBuffersAllocatedCompleterBase::Reply(::fidl::DecodedMessage<WaitForBuffersAllocatedResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_WaitForBuffersAllocated_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -3255,7 +3255,7 @@ void BufferCollection::Interface::CheckBuffersAllocatedCompleterBase::Reply(int3
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CheckBuffersAllocatedResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CheckBuffersAllocatedResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+  _response._hdr.ordinal = kBufferCollection_CheckBuffersAllocated_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CheckBuffersAllocatedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CheckBuffersAllocatedResponse>(std::move(_response_bytes)));
@@ -3267,7 +3267,7 @@ void BufferCollection::Interface::CheckBuffersAllocatedCompleterBase::Reply(::fi
     return;
   }
   auto& _response = *reinterpret_cast<CheckBuffersAllocatedResponse*>(_buffer.data());
-  _response._hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+  _response._hdr.ordinal = kBufferCollection_CheckBuffersAllocated_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(CheckBuffersAllocatedResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CheckBuffersAllocatedResponse>(std::move(_buffer)));
@@ -3275,7 +3275,7 @@ void BufferCollection::Interface::CheckBuffersAllocatedCompleterBase::Reply(::fi
 
 void BufferCollection::Interface::CheckBuffersAllocatedCompleterBase::Reply(::fidl::DecodedMessage<CheckBuffersAllocatedResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_CheckBuffersAllocated_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_CheckBuffersAllocated_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -3284,7 +3284,7 @@ void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Rep
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WaitForSingleBufferAllocatedResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WaitForSingleBufferAllocatedResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+  _response._hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal;
   _response.status = std::move(status);
   _response.buffer_info = std::move(buffer_info);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WaitForSingleBufferAllocatedResponse));
@@ -3297,7 +3297,7 @@ void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Rep
     return;
   }
   auto& _response = *reinterpret_cast<WaitForSingleBufferAllocatedResponse*>(_buffer.data());
-  _response._hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+  _response._hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal;
   _response.status = std::move(status);
   _response.buffer_info = std::move(buffer_info);
   _buffer.set_actual(sizeof(WaitForSingleBufferAllocatedResponse));
@@ -3306,7 +3306,7 @@ void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Rep
 
 void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Reply(::fidl::DecodedMessage<WaitForSingleBufferAllocatedResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_Ordinal;
+  params.message()->_hdr.ordinal = kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

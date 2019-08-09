@@ -947,7 +947,7 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 	r := Method{
 		Attributes: val.Attributes,
 		Name:       methodName,
-		Ordinals: types.NewOrdinals(
+		Ordinals: types.NewOrdinalsStep3(
 			val,
 			c.compileCompoundIdentifier(ifaceName, true, methodName+"Ordinal"),
 			c.compileCompoundIdentifier(ifaceName, true, methodName+"GenOrdinal"),

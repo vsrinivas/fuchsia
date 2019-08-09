@@ -12,11 +12,11 @@ namespace zxcrypt {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDeviceManager_Unseal_Ordinal = 0x7fb13b1100000000lu;
+constexpr uint64_t kDeviceManager_Unseal_GenOrdinal = 0x7fb13b1100000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDeviceManager_Seal_Ordinal = 0x3ecfec3100000000lu;
+constexpr uint64_t kDeviceManager_Seal_GenOrdinal = 0x3ecfec3100000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealResponseTable;
 
 }  // namespace
@@ -81,7 +81,7 @@ zx_status_t DeviceManager::Call::Unseal_Deprecated(zx::unowned_channel _client_e
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnsealRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   UnsealRequest _request = {};
-  _request._hdr.ordinal = kDeviceManager_Unseal_Ordinal;
+  _request._hdr.ordinal = kDeviceManager_Unseal_GenOrdinal;
   _request.key = std::move(key);
   _request.slot = std::move(slot);
   auto _linearize_result = ::fidl::Linearize(&_request, ::fidl::BytePart(_write_bytes,
@@ -120,7 +120,7 @@ zx_status_t DeviceManager::Call::Unseal_Deprecated(zx::unowned_channel _client_e
     return ::fidl::DecodeResult<UnsealResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   UnsealRequest _request = {};
-  _request._hdr.ordinal = kDeviceManager_Unseal_Ordinal;
+  _request._hdr.ordinal = kDeviceManager_Unseal_GenOrdinal;
   _request.key = std::move(key);
   _request.slot = std::move(slot);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
@@ -148,7 +148,7 @@ zx_status_t DeviceManager::Call::Unseal_Deprecated(zx::unowned_channel _client_e
 
 ::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::InPlace::Unseal(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDeviceManager_Unseal_Ordinal;
+  params.message()->_hdr.ordinal = kDeviceManager_Unseal_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DeviceManager::UnsealResponse>::FromFailure(
@@ -211,7 +211,7 @@ zx_status_t DeviceManager::Call::Seal_Deprecated(zx::unowned_channel _client_end
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SealRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SealRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDeviceManager_Seal_Ordinal;
+  _request._hdr.ordinal = kDeviceManager_Seal_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SealRequest));
   ::fidl::DecodedMessage<SealRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -243,7 +243,7 @@ zx_status_t DeviceManager::Call::Seal_Deprecated(zx::unowned_channel _client_end
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SealRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<SealRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDeviceManager_Seal_Ordinal;
+  _request._hdr.ordinal = kDeviceManager_Seal_GenOrdinal;
   _request_buffer.set_actual(sizeof(SealRequest));
   ::fidl::DecodedMessage<SealRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -271,7 +271,7 @@ zx_status_t DeviceManager::Call::Seal_Deprecated(zx::unowned_channel _client_end
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<SealRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDeviceManager_Seal_Ordinal;
+  params.message()->_hdr.ordinal = kDeviceManager_Seal_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DeviceManager::SealResponse>::FromFailure(
@@ -295,7 +295,7 @@ bool DeviceManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDeviceManager_Unseal_Ordinal:
+    case kDeviceManager_Unseal_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<UnsealRequest>(msg);
       if (result.status != ZX_OK) {
@@ -307,7 +307,7 @@ bool DeviceManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         Interface::UnsealCompleter::Sync(txn));
       return true;
     }
-    case kDeviceManager_Seal_Ordinal:
+    case kDeviceManager_Seal_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<SealRequest>(msg);
       if (result.status != ZX_OK) {
@@ -338,7 +338,7 @@ void DeviceManager::Interface::UnsealCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnsealResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<UnsealResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDeviceManager_Unseal_Ordinal;
+  _response._hdr.ordinal = kDeviceManager_Unseal_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnsealResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<UnsealResponse>(std::move(_response_bytes)));
@@ -350,7 +350,7 @@ void DeviceManager::Interface::UnsealCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<UnsealResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDeviceManager_Unseal_Ordinal;
+  _response._hdr.ordinal = kDeviceManager_Unseal_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(UnsealResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<UnsealResponse>(std::move(_buffer)));
@@ -358,7 +358,7 @@ void DeviceManager::Interface::UnsealCompleterBase::Reply(::fidl::BytePart _buff
 
 void DeviceManager::Interface::UnsealCompleterBase::Reply(::fidl::DecodedMessage<UnsealResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDeviceManager_Unseal_Ordinal;
+  params.message()->_hdr.ordinal = kDeviceManager_Unseal_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -367,7 +367,7 @@ void DeviceManager::Interface::SealCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SealResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SealResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDeviceManager_Seal_Ordinal;
+  _response._hdr.ordinal = kDeviceManager_Seal_GenOrdinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SealResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SealResponse>(std::move(_response_bytes)));
@@ -379,7 +379,7 @@ void DeviceManager::Interface::SealCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   auto& _response = *reinterpret_cast<SealResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDeviceManager_Seal_Ordinal;
+  _response._hdr.ordinal = kDeviceManager_Seal_GenOrdinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SealResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SealResponse>(std::move(_buffer)));
@@ -387,7 +387,7 @@ void DeviceManager::Interface::SealCompleterBase::Reply(::fidl::BytePart _buffer
 
 void DeviceManager::Interface::SealCompleterBase::Reply(::fidl::DecodedMessage<SealResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDeviceManager_Seal_Ordinal;
+  params.message()->_hdr.ordinal = kDeviceManager_Seal_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

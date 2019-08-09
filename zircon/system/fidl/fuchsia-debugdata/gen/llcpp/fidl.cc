@@ -11,10 +11,10 @@ namespace debugdata {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDebugData_Publish_Ordinal = 0x233ab68f00000000lu;
+constexpr uint64_t kDebugData_Publish_GenOrdinal = 0x233ab68f00000000lu;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataPublishRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kDebugData_LoadConfig_Ordinal = 0x934ade500000000lu;
+constexpr uint64_t kDebugData_LoadConfig_GenOrdinal = 0x934ade500000000lu;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigResponseTable;
 
@@ -82,7 +82,7 @@ zx_status_t DebugData::Call::Publish_Deprecated(zx::unowned_channel _client_end,
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   PublishRequest _request = {};
-  _request._hdr.ordinal = kDebugData_Publish_Ordinal;
+  _request._hdr.ordinal = kDebugData_Publish_GenOrdinal;
   _request.data_sink = std::move(data_sink);
   _request.data = std::move(data);
   auto _linearize_result = ::fidl::Linearize(&_request, ::fidl::BytePart(_write_bytes,
@@ -107,7 +107,7 @@ zx_status_t DebugData::Call::Publish_Deprecated(zx::unowned_channel _client_end,
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   PublishRequest _request = {};
-  _request._hdr.ordinal = kDebugData_Publish_Ordinal;
+  _request._hdr.ordinal = kDebugData_Publish_GenOrdinal;
   _request.data_sink = std::move(data_sink);
   _request.data = std::move(data);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
@@ -124,7 +124,7 @@ zx_status_t DebugData::Call::Publish_Deprecated(zx::unowned_channel _client_end,
 
 ::fidl::internal::StatusAndError DebugData::InPlace::Publish(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PublishRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDebugData_Publish_Ordinal;
+  params.message()->_hdr.ordinal = kDebugData_Publish_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -199,7 +199,7 @@ zx_status_t DebugData::Call::LoadConfig_Deprecated(zx::unowned_channel _client_e
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   LoadConfigRequest _request = {};
-  _request._hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  _request._hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;
   _request.config_name = std::move(config_name);
   auto _linearize_result = ::fidl::Linearize(&_request, ::fidl::BytePart(_write_bytes,
                                                                          _kWriteAllocSize));
@@ -237,7 +237,7 @@ zx_status_t DebugData::Call::LoadConfig_Deprecated(zx::unowned_channel _client_e
     return ::fidl::DecodeResult<LoadConfigResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
   LoadConfigRequest _request = {};
-  _request._hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  _request._hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;
   _request.config_name = std::move(config_name);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -264,7 +264,7 @@ zx_status_t DebugData::Call::LoadConfig_Deprecated(zx::unowned_channel _client_e
 
 ::fidl::DecodeResult<DebugData::LoadConfigResponse> DebugData::InPlace::LoadConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadConfigRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  params.message()->_hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<DebugData::LoadConfigResponse>::FromFailure(
@@ -288,7 +288,7 @@ bool DebugData::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDebugData_Publish_Ordinal:
+    case kDebugData_Publish_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<PublishRequest>(msg);
       if (result.status != ZX_OK) {
@@ -300,7 +300,7 @@ bool DebugData::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         Interface::PublishCompleter::Sync(txn));
       return true;
     }
-    case kDebugData_LoadConfig_Ordinal:
+    case kDebugData_LoadConfig_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<LoadConfigRequest>(msg);
       if (result.status != ZX_OK) {
@@ -332,7 +332,7 @@ void DebugData::Interface::LoadConfigCompleterBase::Reply(::zx::vmo config) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LoadConfigResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  _response._hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;
   _response.config = std::move(config);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LoadConfigResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<LoadConfigResponse>(std::move(_response_bytes)));
@@ -344,7 +344,7 @@ void DebugData::Interface::LoadConfigCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<LoadConfigResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  _response._hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;
   _response.config = std::move(config);
   _buffer.set_actual(sizeof(LoadConfigResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<LoadConfigResponse>(std::move(_buffer)));
@@ -352,7 +352,7 @@ void DebugData::Interface::LoadConfigCompleterBase::Reply(::fidl::BytePart _buff
 
 void DebugData::Interface::LoadConfigCompleterBase::Reply(::fidl::DecodedMessage<LoadConfigResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  params.message()->_hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 
