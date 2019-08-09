@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.accessibility.semantics") {
-  sdk_category = "partner"
+  sdk_category = "experimental"
 
   sources = [
     "node.fidl",
