@@ -150,6 +150,7 @@ executable("crashpad_agent_unittest") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/crashpad_agent:src",
@@ -173,6 +174,7 @@ executable("crashpad_agent_integration_test") {
 
   deps = [
     "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

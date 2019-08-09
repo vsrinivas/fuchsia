@@ -4,6 +4,7 @@
 #include "src/developer/feedback/crashpad_agent/crashpad_agent.h"
 
 #include <fuchsia/crash/cpp/fidl.h>
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/vmo/strings.h>

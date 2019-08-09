@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fuchsia/crash/cpp/fidl.h>
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/inspect_deprecated/component.h>
@@ -27,8 +28,13 @@ int main(int argc, const char** argv) {
   if (!agent) {
     return EXIT_FAILURE;
   }
-  fidl::BindingSet<fuchsia::crash::Analyzer> bindings;
-  context->outgoing()->AddPublicService(bindings.GetHandler(agent.get()));
+
+  // TODO(DX-1820): delete once migrated to fuchsia.feedback.CrashReporter.
+  fidl::BindingSet<fuchsia::crash::Analyzer> crash_analyzer_bindings;
+  context->outgoing()->AddPublicService(crash_analyzer_bindings.GetHandler(agent.get()));
+
+  fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_bindings;
+  context->outgoing()->AddPublicService(crash_reporter_bindings.GetHandler(agent.get()));
 
   loop.Run();
 

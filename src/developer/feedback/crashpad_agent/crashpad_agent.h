@@ -29,7 +29,7 @@
 namespace fuchsia {
 namespace crash {
 
-class CrashpadAgent : public Analyzer, fuchsia::feedback::CrashReporter {
+class CrashpadAgent : public Analyzer, public fuchsia::feedback::CrashReporter {
  public:
   // Static factory methods.
   //
