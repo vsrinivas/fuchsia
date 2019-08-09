@@ -38,10 +38,6 @@ struct SystemStatus {
     /// operating point index for small cluster
     uint32 small_cluster_op_index;
 
-    // TODO(ZX-4678): Remove after soft transition.
-    /// current CPU temperature
-    uint32 temperature;
-
     /// current CPU temperature in degrees Celsius
     float32 temperature_celsius;
 
