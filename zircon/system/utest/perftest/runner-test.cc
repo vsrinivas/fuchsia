@@ -170,6 +170,33 @@ static bool TestMultistepTest() {
   END_TEST;
 }
 
+static bool MultistepTestWithDuplicateNames(perftest::RepeatState* state) {
+  // These duplicate names should be caught as an error.
+  state->DeclareStep("step1");
+  state->DeclareStep("step1");
+  while (state->KeepRunning()) {
+    state->NextStep();
+  }
+  return true;
+}
+
+// Test that we report a test as failed if it declares duplicate step names
+// via DeclareStep().
+static bool TestDuplicateStepNamesAreRejected() {
+  BEGIN_TEST;
+
+  perftest::internal::TestList test_list;
+  perftest::internal::NamedTest test{"example_test", MultistepTestWithDuplicateNames};
+  test_list.push_back(std::move(test));
+  const uint32_t kRunCount = 7;
+  perftest::ResultsSet results;
+  DummyOutputStream out;
+  EXPECT_FALSE(
+      perftest::internal::RunTests("test-suite", &test_list, kRunCount, "", out.fp(), &results));
+
+  END_TEST;
+}
+
 // Test that we report a test as failed if it calls NextStep() before
 // KeepRunning(), which is invalid.
 static bool TestNextStepCalledBeforeKeepRunning() {
@@ -329,6 +356,7 @@ RUN_TEST(TestResults)
 RUN_TEST(TestFailingTest)
 RUN_TEST(TestBadKeepRunningCalls)
 RUN_TEST(TestMultistepTest)
+RUN_TEST(TestDuplicateStepNamesAreRejected)
 RUN_TEST(TestNextStepCalledBeforeKeepRunning)
 RUN_TEST(TestBadNextStepCalls)
 RUN_TEST(TestBytesProcessedParameter)

@@ -78,6 +78,7 @@ class RepeatStateImpl : public RepeatState {
         return false;
       }
       // First call to KeepRunning().
+      CheckStepNamesForDuplicates();
       step_count_ = static_cast<uint32_t>(step_names_.size());
       if (step_count_ == 0) {
         step_count_ = 1;
@@ -225,6 +226,25 @@ class RepeatStateImpl : public RepeatState {
       uint64_t time_taken =
           (GetTimestamp(run, end_step_index) - GetTimestamp(run, start_step_index));
       results->AppendValue(static_cast<double>(time_taken) * nanoseconds_per_tick);
+    }
+  }
+
+  void CheckStepNamesForDuplicates() {
+    // Duplicate step names would result in duplicate test name keys in the
+    // output, which would fail to upload to the Catapult Dashboard, so
+    // disallow them.
+    //
+    // This check takes O(n^2) time.  We could fix that by making a sorted
+    // copy of the names, or by using a map or set data structure, but this
+    // is not worth the extra complexity given that the number of steps is
+    // expected to be small.
+    for (uint32_t i = 0; i < step_names_.size(); ++i) {
+      for (uint32_t j = 0; j < i; ++j) {
+        if (step_names_[j] == step_names_[i]) {
+          SetError("Found duplicate step name in multi-step test");
+          return;
+        }
+      }
     }
   }
 
