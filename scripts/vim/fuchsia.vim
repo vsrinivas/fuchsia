@@ -22,7 +22,7 @@ if jiri_manifest != ""
   " database (built with `fx compdb`).
   if filereadable(g:fuchsia_dir . '/compile_commands.json')
     let g:ycm_use_clangd = 1
-    let g:ycm_clangd_binary_path = systemlist(g:fuchsia_dir . "/scripts/youcompleteme/paths.py CLANG_PATH")[0]
+    let g:ycm_clangd_binary_path = systemlist(g:fuchsia_dir . "/scripts/youcompleteme/paths.py CLANG_PATH")[0] . '/bin/clangd'
   else
     let g:ycm_use_clangd = 0
   endif
