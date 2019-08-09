@@ -8,7 +8,7 @@
 
 #include "lib/media/cpp/timeline_function.h"
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/media/audio/audio_core/logging.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::test {
 
@@ -24,7 +24,14 @@ fuchsia::virtualaudio::ControlSyncPtr AudioPipelineTest::control_sync_;
 
 void AudioPipelineTest::SetUpTestSuite() {
   HermeticAudioCoreTest::SetUpTestSuite();
-  Logging::Init();
+
+#ifdef NDEBUG
+  Logging::Init(fxl::LOG_WARNING);
+#else
+  // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
+  Logging::Init(fxl::LOG_INFO);
+#endif
+
   environment()->ConnectToService(control_sync_.NewRequest());
   control_sync_->Enable();
 }

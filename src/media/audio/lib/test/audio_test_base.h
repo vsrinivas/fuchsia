@@ -14,7 +14,9 @@ namespace media::audio::test {
 //
 // AudioTestBase
 //
-// This set of tests verifies asynchronous usage of audio_core protocols.
+// This set of tests verifies asynchronous usage of audio protocols, in non-hermetic fashion.
+// TODO(mpuryear): if we don't anticipate creating non-hermetic tests, eliminate AudioTestBase and
+// AudioCoreTestBase, and combine constants.h into hermetic_audio_test.h.
 class AudioTestBase : public TestFixture {
  public:
   static void SetStartupContext(std::unique_ptr<sys::ComponentContext> startup_context) {

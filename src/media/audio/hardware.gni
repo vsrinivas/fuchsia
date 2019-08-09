@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+
+### Hardware-based test environments ###
+# These should be targeted by tests that MUST run on native audio hardware,
+# and/or CANNOT run on emulated systems that may run slower than real-time.
+
+hardware_envs = [
+  astro_env,
+  sherlock_env,
+  nuc_env,
+  vim2_env,
+]

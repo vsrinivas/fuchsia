@@ -5,7 +5,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/zx/vmo.h>
 
-#include "src/media/audio/lib/test/audio_core_test_base.h"
+#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
 

@@ -2,7 +2,49 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# This source set contains a broad variety of test-related classes.
 source_set("test") {
+  testonly = true
+
+  public_deps = [
+    ":audio_test_base",
+    ":constants",
+    ":hermetic_audio_test",
+    ":message_transceiver",
+    ":test_fixture",
+  ]
+}
+
+# Basic ExpectCondition/ErrorHandler support without pulling in fuchsia.media FIDL
+source_set("test_fixture") {
+  testonly = true
+
+  sources = [
+    "test_fixture.cc",
+    "test_fixture.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/gtest",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+# Constants used by both non-hermetic and hermetic base classes
+source_set("constants") {
+  testonly = true
+
+  sources = [
+    "constants.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.media",
+  ]
+}
+
+# Base class for non-hermetic test cases
+source_set("audio_test_base") {
   testonly = true
 
   sources = [
@@ -10,24 +52,50 @@ source_set("test") {
     "audio_core_test_base.h",
     "audio_test_base.cc",
     "audio_test_base.h",
+  ]
+
+  public_deps = [
+    ":constants",
+    ":test_fixture",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/sys/cpp",
+  ]
+}
+
+# Base class for hermetic test cases
+source_set("hermetic_audio_test") {
+  testonly = true
+
+  sources = [
     "hermetic_audio_environment.cc",
     "hermetic_audio_environment.h",
     "hermetic_audio_test.cc",
     "hermetic_audio_test.h",
-    "test_fixture.cc",
-    "test_fixture.h",
   ]
 
   public_deps = [
-    "//garnet/public/lib/gtest",
+    ":constants",
+    ":test_fixture",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.virtualaudio",
     "//zircon/public/fidl/fuchsia-scheduler",
-    "//zircon/public/lib/fit",
+  ]
+}
+
+# Flexible utility class for channel-based communication (such as to drivers or device services).
+source_set("message_transceiver") {
+  sources = [
+    "message_transceiver.cc",
+    "message_transceiver.h",
+  ]
+
+  deps = [
+    "//zircon/public/lib/async-cpp",
   ]
 }

@@ -11,7 +11,7 @@
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
-#include "src/media/audio/audio_core/logging.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
@@ -36,7 +36,12 @@ AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_cont
 
   AudioDeviceSettings::EnableDeviceSettings(options.enable_device_settings_writeback);
 
-  Logging::Init();
+#ifdef NDEBUG
+  Logging::Init(fxl::LOG_WARNING);
+#else
+  // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
+  Logging::Init(fxl::LOG_INFO);
+#endif
 
   // Stash a pointer to our async object.
   dispatcher_ = async_get_default_dispatcher();

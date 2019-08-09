@@ -35,33 +35,4 @@ void AudioCoreTestBase::ExpectDisconnect() {
   EXPECT_TRUE(audio_core_.is_bound());
 }
 
-//
-// HermeticAudioCoreTest implementation
-//
-void HermeticAudioCoreTest::SetUp() {
-  HermeticAudioTest::SetUp();
-
-  environment()->ConnectToService(audio_core_.NewRequest());
-  audio_core_.set_error_handler(ErrorHandler());
-}
-
-void HermeticAudioCoreTest::TearDown() {
-  ASSERT_TRUE(audio_core_.is_bound());
-  audio_core_.Unbind();
-
-  HermeticAudioTest::TearDown();
-}
-
-void HermeticAudioCoreTest::ExpectCallback() {
-  HermeticAudioTest::ExpectCallback();
-
-  EXPECT_TRUE(audio_core_.is_bound());
-}
-
-void HermeticAudioCoreTest::ExpectDisconnect() {
-  HermeticAudioTest::ExpectDisconnect();
-
-  EXPECT_TRUE(audio_core_.is_bound());
-}
-
 }  // namespace media::audio::test

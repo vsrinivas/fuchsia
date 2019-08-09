@@ -12,9 +12,9 @@
 #include "src/media/audio/audio_core/audio_plug_detector.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/driver_output.h"
-#include "src/media/audio/audio_core/logging.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/throttle_output.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 

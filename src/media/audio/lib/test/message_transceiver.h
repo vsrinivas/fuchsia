@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_SERVICE_MESSAGE_TRANSCEIVER_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_SERVICE_MESSAGE_TRANSCEIVER_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_TEST_MESSAGE_TRANSCEIVER_H_
+#define SRC_MEDIA_AUDIO_LIB_TEST_MESSAGE_TRANSCEIVER_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
@@ -76,4 +76,4 @@ class MessageTransceiver {
 
 }  // namespace media::audio::test
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_SERVICE_MESSAGE_TRANSCEIVER_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_TEST_MESSAGE_TRANSCEIVER_H_

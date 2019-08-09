@@ -3,10 +3,10 @@
 
 #include <iomanip>
 
-#include "src/media/audio/audio_core/logging.h"
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::test {
 

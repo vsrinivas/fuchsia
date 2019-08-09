@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/test/service/message_transceiver.h"
+#include "src/media/audio/lib/test/message_transceiver.h"
 
 #include <lib/async/default.h>
 

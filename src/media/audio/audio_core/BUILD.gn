@@ -59,16 +59,6 @@ package("audio_core") {
   ]
 }
 
-source_set("logging") {
-  sources = [
-    "logging.h",
-  ]
-
-  public_deps = [
-    "//src/lib/fxl:fxl_logging",
-  ]
-}
-
 source_set("audio_core_lib") {
   sources = [
     "audio_capturer_impl.cc",
@@ -137,9 +127,9 @@ source_set("audio_core_lib") {
     "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/sys/cpp:cpp",
     "//src/lib/fxl",
-    "//src/media/audio/audio_core:logging",
     "//src/media/audio/audio_core/mixer:audio_mixer_lib",
     "//src/media/audio/lib/effects_loader",
+    "//src/media/audio/lib/logging",
     "//src/media/audio/lib/wav_writer:wav_writer",
     "//zircon/public/fidl/fuchsia-hardware-audio",
     "//zircon/public/fidl/fuchsia-scheduler",

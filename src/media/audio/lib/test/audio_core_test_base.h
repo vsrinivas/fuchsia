@@ -8,35 +8,17 @@
 #include <fuchsia/media/cpp/fidl.h>
 
 #include "src/media/audio/lib/test/audio_test_base.h"
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
+#include "src/media/audio/lib/test/constants.h"
 
 namespace media::audio::test {
-
-// TODO(mpuryear): move this (and mixer's duplicate) to gain_control.fidl
-constexpr float kUnityGainDb = 0.0f;
-constexpr float kTooLowGainDb = fuchsia::media::audio::MUTED_GAIN_DB - 0.1f;
-constexpr float kTooHighGainDb = fuchsia::media::audio::MAX_GAIN_DB + 0.1f;
 
 //
 // AudioCoreTestBase
 //
-// This set of tests verifies asynchronous usage of audio_core protocols.
+// These tests verify asynchronous usage of audio_core protocols, in a non-hermetic environment.
+// TODO(mpuryear): if we don't anticipate creating non-hermetic tests, eliminate AudioTestBase and
+// AudioCoreTestBase, and combine constants.h into hermetic_audio_test.h.
 class AudioCoreTestBase : public AudioTestBase {
- protected:
-  void SetUp() override;
-  void TearDown() override;
-
-  void ExpectCallback() override;
-  void ExpectDisconnect() override;
-
-  fuchsia::media::AudioCorePtr audio_core_;
-};
-
-//
-// HermeticAudioCoreTestBase
-//
-// This set of tests verifies asynchronous usage of audio_core protocols.
-class HermeticAudioCoreTest : public HermeticAudioTest {
  protected:
   void SetUp() override;
   void TearDown() override;

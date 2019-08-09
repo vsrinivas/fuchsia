@@ -8,8 +8,8 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <zircon/device/audio.h>
 
-#include "src/media/audio/audio_core/test/service/message_transceiver.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
+#include "src/media/audio/lib/test/message_transceiver.h"
 
 namespace media::audio::test {
 

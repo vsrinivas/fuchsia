@@ -31,7 +31,7 @@ source_set("audio_mixer_lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
-    "//src/media/audio/audio_core:logging",
+    "//src/media/audio/lib/logging",
   ]
 
   deps = [

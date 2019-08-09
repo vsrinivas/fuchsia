@@ -12,9 +12,9 @@
 
 #include "src/lib/fxl/time/time_delta.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
-#include "src/media/audio/audio_core/logging.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 

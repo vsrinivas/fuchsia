@@ -12,7 +12,7 @@
 
 #include <unordered_set>
 
-#include "src/media/audio/lib/test/audio_core_test_base.h"
+#include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
 

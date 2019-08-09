@@ -9,9 +9,9 @@
 #include <lib/zx/clock.h>
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
-#include "src/media/audio/audio_core/logging.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/utils.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 // Allow (at most) 256 slabs of pending capture buffers. At 16KB per slab, this
 // means we will deny allocations after 4MB. If we ever need more than 4MB of

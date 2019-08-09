@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_LOGGING_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_LOGGING_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_LOGGING_LOGGING_H_
+#define SRC_MEDIA_AUDIO_LIB_LOGGING_LOGGING_H_
 
 #include <lib/zx/clock.h>
 
@@ -35,15 +35,9 @@ class Logging {
  public:
   Logging() = delete;
 
-  static void Init() {
+  static void Init(fxl::LogSeverity log_level) {
     fxl::LogSettings settings;
-
-    // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
-#ifdef NDEBUG
-    settings.min_log_level = fxl::LOG_WARNING;
-#else
-    settings.min_log_level = fxl::LOG_INFO;
-#endif
+    settings.min_log_level = log_level;
 
     fxl::SetLogSettings(settings);
   }
@@ -51,4 +45,4 @@ class Logging {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_LOGGING_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_LOGGING_LOGGING_H_
