@@ -11,9 +11,9 @@ use {
     futures::io::{AllowStdIo, AsyncReadExt},
 };
 
-pub fn create_url_request(url_string: String) -> http::UrlRequest {
+pub fn create_url_request<S: ToString>(url_string: S) -> http::UrlRequest {
     http::UrlRequest {
-        url: url_string,
+        url: url_string.to_string(),
         method: String::from("GET"),
         headers: None,
         body: None,

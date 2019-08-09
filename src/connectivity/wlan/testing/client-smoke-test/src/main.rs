@@ -12,15 +12,18 @@ mod opts;
 
 use {
     crate::opts::Opt,
-    connectivity_testing::http_service_util::{self, IndividualDownload},
+    connectivity_testing::http_service_util,
+    connectivity_testing::net_stack_util::netstack_did_get_dhcp,
     connectivity_testing::wlan_service_util,
-    failure::{bail, Error, ResultExt},
-    fidl_fuchsia_net_oldhttp::HttpServiceMarker,
-    fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy},
+    failure::{bail, format_err, Error, ResultExt},
+    fidl_fuchsia_net_oldhttp::{HttpServiceMarker, HttpServiceProxy},
+    fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_async::{DurationExt, Executor, TimeoutExt},
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
+    fuchsia_zircon::DurationNum,
     std::collections::HashMap,
     std::process,
     std::{thread, time},
@@ -31,7 +34,8 @@ use {
 type WlanService = DeviceServiceProxy;
 
 // Until we have the URL as an optional parameter for the test, use this.
-static URL_STRING: &'static str = "http://ovh.net/files/1Mb.dat";
+const URL_STRING: &str = &"http://ovh.net/files/1Mb.dat";
+const WLAN_CONNECT_TIMEOUT_SECONDS: i64 = 30;
 
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["wlan-smoke-test"]).expect("should not fail");
@@ -59,7 +63,7 @@ fn main() -> Result<(), Error> {
 
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let mut test_pass = false;
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
+    let mut exec = Executor::new().context("error creating event loop")?;
     let wlan_svc =
         connect_to_service::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
     test_results.connect_to_wlan_service = true;
@@ -111,7 +115,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         }
                     }
                 }
-                _ => println!("scan failed"),
+                _ => fx_log_warn!("scan failed"),
             };
 
             let mut requires_disconnect = false;
@@ -126,12 +130,20 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     opt.target_ssid.as_bytes().to_vec(),
                     opt.target_pwd.as_bytes().to_vec(),
                 )
+                // TODO(WLAN-1268): when this bug is fixed, consider removing this timeout
+                .on_timeout(WLAN_CONNECT_TIMEOUT_SECONDS.seconds().after_now(), || {
+                    Err(format_err!("connect did not complete in time"))
+                })
                 .await;
 
                 match connect_result {
                     Ok(true) => {
                         wlan_iface.connection_success = true;
                         requires_disconnect = true;
+                    }
+                    Err(e) => {
+                        fx_log_warn!("error connecting: {}", e);
+                        continue;
                     }
                     _ => continue,
                 };
@@ -141,17 +153,24 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             }
 
             let mut dhcp_check_attempts = 0;
+            let mac_addr = match wlan_service_util::get_wlan_mac_addr(&wlan_svc, *iface_id).await {
+                Ok(addr) => addr,
+                Err(e) => {
+                    fx_log_warn!("error getting mac address: {}", e);
+                    continue;
+                }
+            };
 
             while dhcp_check_attempts < 3 && !wlan_iface.dhcp_success {
-                // check if there is a non-zero ip addr as a first check for dhcp success
-                let ip_addrs =
-                    match get_ip_addrs_for_wlan_iface(&wlan_svc, &network_svc, *iface_id).await {
-                        Ok(result) => result,
-                        Err(_) => continue,
-                    };
-                if check_dhcp_complete(&ip_addrs) {
-                    wlan_iface.dhcp_success = true;
-                } else {
+                wlan_iface.dhcp_success = match netstack_did_get_dhcp(&network_svc, &mac_addr).await
+                {
+                    Ok(result) => result,
+                    Err(e) => {
+                        fx_log_warn!("error getting iface address from netstack: {}", e);
+                        continue;
+                    }
+                };
+                if !wlan_iface.dhcp_success {
                     // dhcp takes some time...  loop again to give it a chance
                     dhcp_check_attempts += 1;
                     thread::sleep(time::Duration::from_millis(4000));
@@ -161,12 +180,11 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             // if we got an ip addr, go ahead and check a download
             if wlan_iface.dhcp_success {
                 // TODO(NET-1095): add ping check to verify connectivity
-
-                let url_request = http_service_util::create_url_request(URL_STRING.to_string());
-                let download_result =
-                    http_service_util::fetch_and_discard_url(&http_svc, url_request).await;
-
-                wlan_iface.data_transfer = check_data_transfer(download_result);
+                for _ in 0..3 {
+                    wlan_iface.data_transfer =
+                        can_download_data(&http_svc).await || wlan_iface.data_transfer;
+                    thread::sleep(time::Duration::from_secs(1));
+                }
             }
 
             // after testing, check if we need to disconnect
@@ -200,10 +218,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         // operational base connection available.  This should be switched to a conditional
         // check based on the result of a reachability check after the wlan interfaces
         // are tested.
-        let url_request = http_service_util::create_url_request(URL_STRING.to_string());
-        let download_result =
-            http_service_util::fetch_and_discard_url(&http_svc, url_request).await;
-        test_results.base_data_transfer = check_data_transfer(download_result);
+        test_results.base_data_transfer = can_download_data(&http_svc).await;
 
         Ok(())
     };
@@ -248,11 +263,11 @@ struct WlanIface {
 
     connection_success: bool,
 
-    disconnect_success: bool,
-
     dhcp_success: bool,
 
     data_transfer: bool,
+
+    disconnect_success: bool,
 }
 
 impl WlanIface {
@@ -293,11 +308,11 @@ fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(
     }
 }
 
-fn check_data_transfer(result: Result<IndividualDownload, Error>) -> bool {
-    match result.as_ref() {
+fn is_successful_download(result: &Result<http_service_util::IndividualDownload, Error>) -> bool {
+    match result {
         Ok(result) if result.bytes > 0 => {
             fx_log_info!(
-                "Received {:?} bytes in {:?} ns (goodput_mbps = {:?})",
+                "Received {} bytes in {} ns (goodput_mbps = {})",
                 result.bytes,
                 result.nanos,
                 result.goodput_mbps
@@ -309,203 +324,21 @@ fn check_data_transfer(result: Result<IndividualDownload, Error>) -> bool {
             false
         }
         Err(e) => {
-            fx_log_warn!("Error in download check: {:?}", e.to_string());
+            fx_log_warn!("Error in download check: {}", e);
             false
         }
     }
 }
 
-async fn get_ip_addrs_for_wlan_iface<'a>(
-    wlan_svc: &'a DeviceServiceProxy,
-    network_svc: &'a StackProxy,
-    wlan_iface_id: u16,
-) -> Result<Vec<netstack::InterfaceAddress>, Error> {
-    // temporary implementation for getting the ip addrs for a wlan iface.  A more robust
-    // lookup will be designed and implemented in the future (TODO: <bug already filed?>)
-
-    let mut iface_path = String::new();
-
-    //first get info on the wlan iface
-    let response = wlan_svc.list_ifaces().await?;
-    for iface in response.ifaces {
-        if wlan_iface_id == iface.iface_id {
-            // trim off any leading '@'s
-            iface_path = iface.path.trim_start_matches('@').to_string();
-        }
-    }
-
-    //now, if we got a valid path, we can check the netstack iface info
-    if iface_path.is_empty() {
-        // could not find a path...  throw an error
-        bail!("Could not find the path for iface {}", wlan_iface_id);
-    }
-
-    let mut net_iface_response = network_svc.list_interfaces().await?;
-
-    let mut wlan_iface_ip_addrs = Vec::new();
-
-    for net_iface in net_iface_response.iter_mut() {
-        if net_iface.properties.topopath.is_empty() {
-            continue;
-        }
-        // trim off any leading '@'s
-        let net_path = net_iface.properties.topopath.trim_start_matches('@').to_string();
-        if net_path.starts_with(&iface_path) {
-            // now get the ip addrs
-            wlan_iface_ip_addrs.append(&mut net_iface.properties.addresses);
-
-            // Note: Until proper interface mappings between wlanstack and netstack,
-            // we return all ip_addrs that match the device path to handle
-            // multiple interfaces on a single device.
-        }
-    }
-
-    Ok(wlan_iface_ip_addrs)
-}
-
-fn check_dhcp_complete(ip_addrs: &[netstack::InterfaceAddress]) -> bool {
-    for ip_addr in ip_addrs {
-        // for now, assume a valid address if we see anything that isn't a 0
-        fx_log_info!("checking validity of ip address: {:?}", ip_addr.ip_address);
-        match ip_addr.ip_address {
-            fidl_fuchsia_net::IpAddress::Ipv4(address) => {
-                for &a in address.addr.iter() {
-                    if a != 0 as u8 {
-                        return true;
-                    }
-                }
-            }
-            fidl_fuchsia_net::IpAddress::Ipv6(address) => {
-                for &a in address.addr.iter() {
-                    if a != 0 as u8 {
-                        return true;
-                    }
-                }
-            }
-        };
-    }
-    return false;
+async fn can_download_data(http_svc: &HttpServiceProxy) -> bool {
+    let url_request = http_service_util::create_url_request(URL_STRING);
+    let result = http_service_util::fetch_and_discard_url(&http_svc, url_request).await;
+    is_successful_download(&result)
 }
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, fidl_fuchsia_net::IpAddress::Ipv4 as IPv4,
-        fidl_fuchsia_net::IpAddress::Ipv6 as IPv6, fidl_fuchsia_net::Ipv4Address as IPv4_address,
-        fidl_fuchsia_net::Ipv6Address as IPv6_address,
-    };
-
-    // helper values for tests
-    static TEST_IPV4_ADDR: [u8; 4] = [1; 4];
-    static TEST_IPV4_ALL_ZEROS: [u8; 4] = [0; 4];
-    static TEST_IPV6_ADDR: [u8; 16] = [0x1; 16];
-    static TEST_IPV6_ALL_ZEROS: [u8; 16] = [0; 16];
-
-    /// Test to verify a valid ipv4 addr is assigned to an interface.  In the current
-    /// implementation, only empty vectors or all zeros are considered to be invalid or unset.
-    #[test]
-    fn test_single_ipv4_addr_valid() {
-        let ipv4_addr = netstack::InterfaceAddress {
-            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ADDR }),
-            prefix_len: 0,
-        };
-        assert!(check_dhcp_complete(&[ipv4_addr]));
-    }
-
-    /// Test to verify a valid ipv6 addr is assigned to an interface.  In the current
-    /// implementation, only empty vectors or all zeros are considered to be invalid or unset.
-    #[test]
-    fn test_single_ipv6_addr_pass_dhcp_check() {
-        let ipv6_addr = netstack::InterfaceAddress {
-            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ADDR }),
-            prefix_len: 0,
-        };
-        assert!(check_dhcp_complete(&[ipv6_addr]));
-    }
-
-    /// IPv4 addresses that are all zeros are considered invalid and should return false when
-    /// chacked.
-    #[test]
-    fn test_single_ipv4_addr_all_zeros_fail_dhcp_check() {
-        let ipv4_addr = netstack::InterfaceAddress {
-            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ALL_ZEROS }),
-            prefix_len: 0,
-        };
-        assert_eq!(check_dhcp_complete(&[ipv4_addr]), false);
-    }
-
-    /// IPv6 addresses that are all zeros are considered invalid and should return false when
-    /// checked.
-    #[test]
-    fn test_single_ipv6_addr_all_zeros_fail_dhcp_check() {
-        let ipv6_addr = netstack::InterfaceAddress {
-            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ALL_ZEROS }),
-            prefix_len: 0,
-        };
-        assert_eq!(check_dhcp_complete(&[ipv6_addr]), false);
-    }
-
-    /// Verify that having an assigned IPv4 address with an unset IPv6 address still returns true.
-    #[test]
-    fn test_valid_ipv4_with_unset_ipv6_pass_dhcp_check() {
-        let ipv4_addr = netstack::InterfaceAddress {
-            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ADDR }),
-            prefix_len: 0,
-        };
-        let ipv6_addr = netstack::InterfaceAddress {
-            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ALL_ZEROS }),
-            prefix_len: 0,
-        };
-        assert!(check_dhcp_complete(&[ipv4_addr, ipv6_addr]));
-    }
-
-    /// Verify that having an assigned IPv6 address with an unset IPv4 address still returns true.
-    #[test]
-    fn test_valid_ipv6_with_unset_ipv4_pass_dhcp_check() {
-        let ipv4_addr = netstack::InterfaceAddress {
-            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ALL_ZEROS }),
-            prefix_len: 0,
-        };
-        let ipv6_addr = netstack::InterfaceAddress {
-            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ADDR }),
-            prefix_len: 0,
-        };
-        assert!(check_dhcp_complete(&[ipv4_addr, ipv6_addr]));
-    }
-
-    /// Verify that having assigned IPv4 and IPv6 addresses returns true for DHCP check.
-    #[test]
-    fn test_unset_ipv4_with_unset_ipv6_fail_dhcp_check() {
-        let ipv4_addr = netstack::InterfaceAddress {
-            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ALL_ZEROS }),
-            prefix_len: 0,
-        };
-        let ipv6_addr = netstack::InterfaceAddress {
-            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ALL_ZEROS }),
-            prefix_len: 0,
-        };
-        assert_eq!(check_dhcp_complete(&[ipv4_addr, ipv6_addr]), false);
-    }
-
-    /// Verify that having unset IPv4 and IPv6 addresses returns false and fails the DHCP check.
-    #[test]
-    fn test_unset_ipv6_and_unset_ipv4_fail_dhcp_check() {
-        let ipv4_addr = netstack::InterfaceAddress {
-            ip_address: IPv4(IPv4_address { addr: TEST_IPV4_ALL_ZEROS }),
-            prefix_len: 0,
-        };
-        let ipv6_addr = netstack::InterfaceAddress {
-            ip_address: IPv6(IPv6_address { addr: TEST_IPV6_ALL_ZEROS }),
-            prefix_len: 0,
-        };
-        assert_eq!(check_dhcp_complete(&[ipv4_addr, ipv6_addr]), false);
-    }
-
-    /// Verify that the DHCP check fails when the provided interface address vector is empty.
-    #[test]
-    fn test_empty_interface_addresses_fail_dhcp_check() {
-        assert_eq!(check_dhcp_complete(&[]), false);
-    }
+    use {super::*, http_service_util::IndividualDownload};
 
     /// Test to verify a connection will be triggered for an SSID that is not already connected.
     /// This is called with stay connected true and a different target SSID.
@@ -592,7 +425,7 @@ mod tests {
         let individual_download =
             IndividualDownload { goodput_mbps: 1.11, bytes: 125000, nanos: 900641959 };
 
-        assert!(check_data_transfer(Ok(individual_download)));
+        assert!(is_successful_download(&Ok(individual_download)));
     }
 
     /// Test verifying that a populated but zero byte IndividualDownload result fails the
@@ -602,13 +435,14 @@ mod tests {
         let individual_download =
             IndividualDownload { goodput_mbps: 1.11, bytes: 0, nanos: 900641959 };
 
-        assert_eq!(check_data_transfer(Ok(individual_download)), false);
+        assert_eq!(is_successful_download(&Ok(individual_download)), false);
     }
 
     /// Test verifying that an error returned for the download fails the download check.
     #[test]
     fn test_error_download_fails_download_check() {
         let error = Err(failure::format_err!("this is a failure"));
-        assert_eq!(check_data_transfer(error), false);
+        assert_eq!(is_successful_download(&error), false);
     }
+
 }
