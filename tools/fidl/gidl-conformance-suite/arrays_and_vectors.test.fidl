@@ -1,0 +1,30 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This is intended to ensure that the GIDL-generated test code produces the
+// correct syntax for C++ bindings, which needs to distinguish between e.g.
+// using "Foo foo;" vs "std::unique_ptr<Foo> foo;" for optional (nullable)
+// fields, "object.foo()" vs "object->foo()" vs "object.set_foo()", etc.
+
+library conformance;
+
+struct StructWithInt {
+    int32 x;
+};
+
+struct StructWithArrays {
+    array<int32>:0 arr_empty;
+    array<int32>:2 arr_int;
+    array<string>:2 arr_string;
+    array<StructWithInt>:2 arr_struct;
+    array<array<int32>:3>:2 arr_arr_int;
+};
+
+struct StructWithVectors {
+    vector<int32> vec_empty;
+    vector<int32> vec_int;
+    vector<string> vec_string;
+    vector<StructWithInt> vec_struct;
+    vector<vector<int32>> vec_vec_int;
+};

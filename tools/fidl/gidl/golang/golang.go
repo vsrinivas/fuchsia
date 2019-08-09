@@ -234,7 +234,7 @@ func (b *goValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDec
 	b.onObject(value, decl)
 }
 
-func (b *goValueBuilder) onObject(value gidlir.Object, decl gidlmixer.Declaration) {
+func (b *goValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) {
 	containerVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
 		"var %s conformance.%s\n", containerVar, value.Name))
@@ -268,6 +268,63 @@ func (b *goValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnionDec
 
 func (b *goValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
 	b.onObject(value, decl)
+}
+
+func (b *goValueBuilder) onList(value []interface{}, decl gidlmixer.ListDeclaration) {
+	var argStr string
+	elemDecl, _ := decl.Elem()
+	for _, item := range value {
+		gidlmixer.Visit(b, item, elemDecl)
+		argStr += b.lastVar + ", "
+	}
+	sliceVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf("%s := %s{%s}\n", sliceVar, typeName(decl), argStr))
+	b.lastVar = sliceVar
+}
+
+func (b *goValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
+	b.onList(value, decl)
+}
+
+func (b *goValueBuilder) OnVector(value []interface{}, decl *gidlmixer.VectorDecl) {
+	b.onList(value, decl)
+}
+
+func typeName(decl gidlmixer.Declaration) string {
+	switch decl := decl.(type) {
+	case *gidlmixer.BoolDecl:
+		return "bool"
+	case *gidlmixer.NumberDecl:
+		return string(decl.Typ)
+	case *gidlmixer.StringDecl:
+		return "string"
+	case *gidlmixer.StructDecl:
+		return identifierName(decl.Name)
+	case *gidlmixer.TableDecl:
+		return identifierName(decl.Name)
+	case *gidlmixer.UnionDecl:
+		return identifierName(decl.Name)
+	case *gidlmixer.XUnionDecl:
+		return identifierName(decl.Name)
+	case *gidlmixer.ArrayDecl:
+		return fmt.Sprintf("[%d]%s", decl.Size(), elemName(decl))
+	case *gidlmixer.VectorDecl:
+		return fmt.Sprintf("[]%s", elemName(decl))
+	default:
+		panic("unhandled case")
+	}
+}
+
+func identifierName(eci fidlir.EncodedCompoundIdentifier) string {
+	parts := strings.Split(string(eci), "/")
+	return strings.Join(parts, ".")
+}
+
+func elemName(parent gidlmixer.ListDeclaration) string {
+	if elemDecl, ok := parent.Elem(); ok {
+		return typeName(elemDecl)
+	}
+	panic("missing element")
 }
 
 var goErrorCodeNames = map[gidlir.ErrorCode]string{

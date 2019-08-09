@@ -206,11 +206,18 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		case *gidlmixer.XUnionDecl:
 			return onUnion(value, decl)
 		}
+	case []interface{}:
+		switch decl := decl.(type) {
+		case *gidlmixer.ArrayDecl:
+			return onList(value, decl)
+		case *gidlmixer.VectorDecl:
+			return onList(value, decl)
+		}
 	}
 	panic(fmt.Sprintf("unexpected value visited %v (decl %v)", value, decl))
 }
 
-func onObject(value gidlir.Object, decl gidlmixer.Declaration) string {
+func onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 	var args []string
 	for _, field := range value.Fields {
 		fieldDecl, _ := decl.ForKey(field.Name)
@@ -220,13 +227,25 @@ func onObject(value gidlir.Object, decl gidlmixer.Declaration) string {
 	return fmt.Sprintf("%s(%s)", value.Name, strings.Join(args, ", "))
 }
 
-func onUnion(value gidlir.Object, decl gidlmixer.Declaration) string {
+func onUnion(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 	for _, field := range value.Fields {
 		fieldDecl, _ := decl.ForKey(field.Name)
 		val := visit(field.Value, fieldDecl)
 		return fmt.Sprintf("%s.with%s(%s)", value.Name, strings.Title(field.Name), val)
 	}
 	panic("unions must have a value set")
+}
+
+func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
+	var elements []string
+	elemDecl, _ := decl.Elem()
+	for _, item := range value {
+		elements = append(elements, visit(item, elemDecl))
+	}
+	if numberDecl, ok := elemDecl.(*gidlmixer.NumberDecl); ok {
+		return fmt.Sprintf("%sList.fromList([%s])", fidlcommon.ToUpperCamelCase(string(numberDecl.Typ)), strings.Join(elements, ", "))
+	}
+	return fmt.Sprintf("[%s]", strings.Join(elements, ", "))
 }
 
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{

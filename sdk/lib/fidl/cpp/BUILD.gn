@@ -164,6 +164,7 @@ fidl("conformance_fidl") {
   testonly = true
 
   sources = [
+    "//tools/fidl/gidl-conformance-suite/arrays_and_vectors.test.fidl",
     "//tools/fidl/gidl-conformance-suite/mix_and_match.test.fidl",
     "//tools/fidl/gidl-conformance-suite/optionals.test.fidl",
     "//tools/fidl/gidl-conformance-suite/structs.test.fidl",
