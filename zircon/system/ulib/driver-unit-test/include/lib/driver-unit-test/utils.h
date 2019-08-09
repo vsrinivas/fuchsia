@@ -20,6 +20,8 @@ zx_device_t* GetParent();
 // - |name| is an identifier for the test group.
 // - |parent| is the parent device of the driver.
 // - |channel| is where test logger output will be sent to.
+//
+// This function takes ownership of |channel|.
 bool RunZxTests(const char* name, zx_device_t* parent, zx_handle_t channel);
 
 }  // namespace driver_unit_test
