@@ -51,6 +51,7 @@ const std::map<fuchsia_sysmem_PixelFormatType, SamplingInfo> kPixelFormatSamplin
     // pretending to be uncompressed.
     {fuchsia_sysmem_PixelFormatType_MJPEG, {{8}, kColorType_RGB}},
     {fuchsia_sysmem_PixelFormatType_YV12, {{8}, kColorType_YUV}},
+    {fuchsia_sysmem_PixelFormatType_BGR24, {{8}, kColorType_RGB}},
 };
 
 class ImageFormatSet {
@@ -175,6 +176,7 @@ class LinearFormats : public ImageFormatSet {
         return false;
       case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
       case fuchsia_sysmem_PixelFormatType_BGRA32:
+      case fuchsia_sysmem_PixelFormatType_BGR24:
       case fuchsia_sysmem_PixelFormatType_I420:
       case fuchsia_sysmem_PixelFormatType_M420:
       case fuchsia_sysmem_PixelFormatType_NV12:
@@ -192,6 +194,7 @@ class LinearFormats : public ImageFormatSet {
     switch (image_format->pixel_format.type) {
       case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
       case fuchsia_sysmem_PixelFormatType_BGRA32:
+      case fuchsia_sysmem_PixelFormatType_BGR24:
         return coded_height * bytes_per_row;
       case fuchsia_sysmem_PixelFormatType_I420:
         return coded_height * bytes_per_row * 3 / 2;
@@ -285,6 +288,8 @@ uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem_PixelFormat* pixel_format)
       return 4u * 8u;
     case fuchsia_sysmem_PixelFormatType_BGRA32:
       return 4u * 8u;
+    case fuchsia_sysmem_PixelFormatType_BGR24:
+      return 3u * 8u;
     case fuchsia_sysmem_PixelFormatType_I420:
       return 12u;
     case fuchsia_sysmem_PixelFormatType_M420:
@@ -312,6 +317,8 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem_PixelFormat* p
       return 4u;
     case fuchsia_sysmem_PixelFormatType_BGRA32:
       return 4u;
+    case fuchsia_sysmem_PixelFormatType_BGR24:
+      return 3u;
     case fuchsia_sysmem_PixelFormatType_I420:
       return 1u;
     case fuchsia_sysmem_PixelFormatType_M420:
@@ -348,6 +355,8 @@ uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem_PixelFormat* pixel
       return 1u;
     case fuchsia_sysmem_PixelFormatType_BGRA32:
       return 1u;
+    case fuchsia_sysmem_PixelFormatType_BGR24:
+      return 1u;
     case fuchsia_sysmem_PixelFormatType_I420:
       return 2u;
     case fuchsia_sysmem_PixelFormatType_M420:
@@ -374,6 +383,8 @@ uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem_PixelFormat* pixe
     case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
       return 1u;
     case fuchsia_sysmem_PixelFormatType_BGRA32:
+      return 1u;
+    case fuchsia_sysmem_PixelFormatType_BGR24:
       return 1u;
     case fuchsia_sysmem_PixelFormatType_I420:
       return 2u;
@@ -402,6 +413,8 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_form
       return 4u;
     case fuchsia_sysmem_PixelFormatType_BGRA32:
       return 4u;
+    case fuchsia_sysmem_PixelFormatType_BGR24:
+      return 1u;
     case fuchsia_sysmem_PixelFormatType_I420:
       return 2u;
     case fuchsia_sysmem_PixelFormatType_M420:

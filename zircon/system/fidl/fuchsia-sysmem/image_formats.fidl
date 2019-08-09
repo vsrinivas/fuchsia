@@ -53,6 +53,9 @@ enum PixelFormatType {
 
     /// YUV only, 8 bits per Y sample
     YV12 = 107;
+
+    /// 24bpp BGR, 1 plane. RGB only, 8 bits per each of B/G/R sample
+    BGR24 = 108;
 };
 
 /// Describes how the pixels within an image are meant to be presented.

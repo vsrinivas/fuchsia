@@ -20,7 +20,7 @@ typedef uint32_t zx_pixel_format_t;
 #define ZX_PIXEL_FORMAT_MONO_8     ((zx_pixel_format_t)0x00010007)
 #define ZX_PIXEL_FORMAT_GRAY_8     ((zx_pixel_format_t)0x00010007)
 #define ZX_PIXEL_FORMAT_NV12       ((zx_pixel_format_t)0x00010008)
-
+#define ZX_PIXEL_FORMAT_RGB_888    ((zx_pixel_format_t)0x00030009)
 #define ZX_PIXEL_FORMAT_BYTES(pf)  (((pf) >> 16) & 7)
 
 #endif // SYSROOT_ZIRCON_PIXELFORMAT_H_

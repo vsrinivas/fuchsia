@@ -35,6 +35,7 @@ enum class PixelFormatType : uint32_t {
   YUY2 = 105u,
   MJPEG = 106u,
   YV12 = 107u,
+  BGR24 = 108u,
 };
 
 

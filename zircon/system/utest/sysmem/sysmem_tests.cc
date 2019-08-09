@@ -2,22 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
-
-#include <fbl/algorithm.h>
 #include <fcntl.h>
 #include <fuchsia/sysmem/c/fidl.h>
-#include <lib/fdio/unsafe.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
+#include <zircon/errors.h>
+#include <zircon/pixelformat.h>
 
 #include <limits>
-#include <zircon/errors.h>
+
+#include <fbl/algorithm.h>
+#include <unittest/unittest.h>
 
 // We assume one sysmem since boot, for now.
 const char* kSysmemDevicePath = "/dev/class/sysmem/000";
@@ -1620,6 +1621,126 @@ extern "C" bool test_sysmem_none_usage_with_separate_other_usage_succeeds(void) 
   END_TEST;
 }
 
+extern "C" bool test_sysmem_pixel_format_bgr24(void) {
+  BEGIN_TEST;
+  constexpr uint32_t kWidth = 600;
+  constexpr uint32_t kHeight = 1;
+  constexpr uint32_t kStride = kWidth * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888);
+  constexpr uint32_t divisor = 32;
+  constexpr uint32_t kStrideAlign = (kStride + divisor - 1) & ~(divisor - 1);
+  zx_status_t status;
+  zx::channel allocator2_client;
+  status = connect_to_sysmem_driver(&allocator2_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client;
+  zx::channel token_server;
+  status = zx::channel::create(0, &token_client, &token_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client.get(),
+                                                            token_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel collection_client;
+  zx::channel collection_server;
+  status = zx::channel::create(0, &collection_client, &collection_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator2_client.get(), token_client.release(), collection_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+  constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  constraints->min_buffer_count_for_camping = 3;
+  constraints->has_buffer_memory_constraints = true;
+  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+      .min_size_bytes = kStride,
+      .max_size_bytes = kStrideAlign,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = true,
+      .cpu_domain_supported = true,
+      .inaccessible_domain_supported = false,
+      .heap_permitted_count = 1,
+      .heap_permitted = {fuchsia_sysmem_HeapType_SYSTEM_RAM}};
+  constraints->image_format_constraints_count = 1;
+  fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+      constraints->image_format_constraints[0];
+  image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGR24;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] = fuchsia_sysmem_ColorSpace{
+      .type = fuchsia_sysmem_ColorSpaceType_SRGB,
+  };
+  // The min dimensions intentionally imply a min size that's larger than
+  // buffer_memory_constraints.min_size_bytes.
+  image_constraints.min_coded_width = kWidth;
+  image_constraints.max_coded_width = std::numeric_limits<uint32_t>::max();
+  image_constraints.min_coded_height = kHeight;
+  image_constraints.max_coded_height = std::numeric_limits<uint32_t>::max();
+  image_constraints.min_bytes_per_row = kStride;
+  image_constraints.max_bytes_per_row = std::numeric_limits<uint32_t>::max();
+  image_constraints.max_coded_width_times_coded_height = std::numeric_limits<uint32_t>::max();
+  image_constraints.layers = 1;
+  image_constraints.coded_width_divisor = 1;
+  image_constraints.coded_height_divisor = 1;
+  image_constraints.bytes_per_row_divisor = divisor;
+  image_constraints.start_offset_divisor = divisor;
+  image_constraints.display_width_divisor = 1;
+  image_constraints.display_height_divisor = 1;
+
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                         constraints.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx_status_t allocation_status;
+  BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client.get(), &allocation_status, buffer_collection_info.get());
+  // This is the first round-trip to/from sysmem.  A failure here can be due
+  // to any step above failing async.
+  ASSERT_EQ(status, ZX_OK, "");
+  ASSERT_EQ(allocation_status, ZX_OK, "");
+
+  ASSERT_EQ(buffer_collection_info->buffer_count, 3, "");
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kStrideAlign, "");
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
+  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+            fuchsia_sysmem_CoherencyDomain_CPU, "");
+  // We specified image_format_constraints so the result must also have
+  // image_format_constraints.
+  ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
+
+  ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.pixel_format.type,
+            fuchsia_sysmem_PixelFormatType_BGR24, "");
+
+  for (uint32_t i = 0; i < 64; ++i) {
+    if (i < 3) {
+      ASSERT_NE(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+      uint64_t size_bytes = 0;
+      status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo, &size_bytes);
+      ASSERT_EQ(status, ZX_OK, "");
+      // The portion of the VMO the client can use is large enough to hold the min image size,
+      // despite the min buffer size being smaller.
+      ASSERT_GE(buffer_collection_info->settings.buffer_settings.size_bytes, kStrideAlign, "");
+      // The vmo has room for the nominal size of the portion of the VMO the client can use.
+      ASSERT_LE(buffer_collection_info->buffers[i].vmo_usable_start +
+                    buffer_collection_info->settings.buffer_settings.size_bytes,
+                size_bytes, "");
+    } else {
+      ASSERT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+    }
+  }
+
+  zx_status_t close_status = fuchsia_sysmem_BufferCollectionClose(collection_client.get());
+  EXPECT_EQ(close_status, ZX_OK, "");
+
+  END_TEST;
+}
+
 // TODO(dustingreen): Add tests to cover more failure cases.
 
 // clang-format off
@@ -1641,5 +1762,6 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_only_none_usage_fails)
     RUN_TEST(test_sysmem_none_usage_and_other_usage_from_single_participant_fails)
     RUN_TEST(test_sysmem_none_usage_with_separate_other_usage_succeeds)
+    RUN_TEST(test_sysmem_pixel_format_bgr24)
 END_TEST_CASE(sysmem_tests)
 // clang-format on
