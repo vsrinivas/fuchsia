@@ -10,7 +10,7 @@ extern "C" {
 
 struct utsname {
   char sysname[65];
-  char nodename[HOST_NAME_MAX];
+  char nodename[HOST_NAME_MAX + 1];
   char release[65];
   char version[65];
   char machine[65];

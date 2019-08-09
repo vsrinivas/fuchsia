@@ -8,23 +8,9 @@
 #include <limits.h>
 #include <sys/utsname.h>
 
-#include <fuchsia/device/cpp/fidl.h>
-
 #include "gtest/gtest.h"
 
 namespace {
-
-TEST(NoNetworkTest, GetHostNameDefault) {
-  char hostname[HOST_NAME_MAX];
-  ASSERT_EQ(gethostname(hostname, sizeof(hostname)), 0) << strerror(errno);
-  ASSERT_STREQ(hostname, fuchsia::device::DEFAULT_DEVICE_NAME);
-}
-
-TEST(NoNetworkTest, UnameDefault) {
-  utsname uts;
-  ASSERT_EQ(uname(&uts), 0) << strerror(errno);
-  ASSERT_STREQ(uts.nodename, fuchsia::device::DEFAULT_DEVICE_NAME);
-}
 
 TEST(NoNetworkTest, NonBlockingConnectHostV4) {
   int connfd;

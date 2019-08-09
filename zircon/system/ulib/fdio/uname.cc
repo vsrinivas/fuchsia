@@ -2,23 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mutex>
-
 #include <errno.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <string.h>
-#include <vector>
 #include <sys/socket.h>
 #include <sys/utsname.h>
 #include <threads.h>
 #include <unistd.h>
-#include "unistd.h"
-
-#include <fuchsia/device/llcpp/fidl.h>
-
-#include <zircon/types.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
+
+#include <mutex>
+#include <vector>
 
 #include "private.h"
+#include "unistd.h"
 
 static zx_status_t get_name_provider(llcpp::fuchsia::device::NameProvider::SyncClient** out) {
   static llcpp::fuchsia::device::NameProvider::SyncClient* saved;
@@ -66,8 +64,10 @@ extern "C" __EXPORT int uname(utsname* uts) {
     return ERROR(result.err());
   }
 
-  auto nodename = result.response().name;
-  strlcpy(uts->nodename, nodename.data(), nodename.size());
+  const fidl::StringView nodename = result.response().name;
+  const auto size = std::min(nodename.size(), sizeof(uts->nodename) - 1);
+  memcpy(uts->nodename, nodename.data(), size);
+  uts->nodename[size] = '\0';
 
   strcpy(uts->sysname, "Fuchsia");
   strcpy(uts->release, "");

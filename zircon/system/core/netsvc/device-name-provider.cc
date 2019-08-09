@@ -3,29 +3,29 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/device/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/default.h>
+#include <lib/fidl-async/cpp/bind.h>
+#include <lib/svc/outgoing.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <threads.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
 
 #include <cerrno>
 
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <inet6/netifc-discover.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/loop.h>
-#include <lib/async/default.h>
-#include <lib/fidl-async/cpp/bind.h>
-#include <lib/svc/outgoing.h>
-#include <zircon/process.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <zircon/time.h>
 
 #include "args.h"
 #include "eff_short_wordlist_1.h"
@@ -47,14 +47,12 @@ void device_id_get(unsigned char mac[6], char out[HOST_NAME_MAX]) {
 }
 
 class DeviceNameProviderServer final : public llcpp::fuchsia::device::NameProvider::Interface {
-  const char* nodename;
+  llcpp::fuchsia::device::NameProvider_GetDeviceName_Response response;
 
  public:
-  DeviceNameProviderServer(const char* nodename) : nodename(nodename) {}
+  DeviceNameProviderServer(const fidl::StringView device_name) { response.name = device_name; }
   void GetDeviceName(GetDeviceNameCompleter::Sync completer) override {
     llcpp::fuchsia::device::NameProvider_GetDeviceName_Result result;
-    llcpp::fuchsia::device::NameProvider_GetDeviceName_Response response;
-    response.name = fidl::StringView(llcpp::fuchsia::device::MAX_DEVICE_NAME_LEN, nodename);
     result.set_response(response);
     completer.Reply(std::move(result));
   }
@@ -105,7 +103,9 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  DeviceNameProviderServer server(device_name);
+  DeviceNameProviderServer server(
+      fidl::StringView(strnlen(device_name, sizeof(device_name)), device_name));
+
   outgoing.svc_dir()->AddEntry(
       llcpp::fuchsia::device::NameProvider::Name,
       fbl::AdoptRef(new fs::Service([dispatcher, server](zx::channel svc_request) mutable {

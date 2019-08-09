@@ -112,9 +112,20 @@ test("netstack_no_network_test") {
   ]
 
   deps = [
-    ":device_name_provider",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/fidl/fuchsia-device",
+  ]
+}
+
+test("name_provider_no_network_test") {
+  sources = [
+    "name_provider_no_network_test.cc",
+  ]
+
+  deps = [
+    ":device_name_provider",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/fidl/fuchsia-device:fuchsia-device_llcpp",
   ]
 }
 
@@ -136,6 +147,7 @@ group("netemul_empty_binaries") {
 
 test_package("netstack_c_api_tests") {
   deps = [
+    ":name_provider_no_network_test",
     ":name_provider_no_sandbox_access_test",
     ":netemul_empty_binaries",
     ":netstack_bsdsocket_c_api_test",
@@ -160,6 +172,10 @@ test_package("netstack_c_api_tests") {
   tests = [
     {
       name = "name_provider_no_sandbox_access_test"
+      environments = [ qemu_env ]
+    },
+    {
+      name = "name_provider_no_network_test"
       environments = [ qemu_env ]
     },
     {
