@@ -563,6 +563,11 @@
             "package_name": "heck"
         },
         {
+            "crate_name": "indoc",
+            "crate_type": "lib",
+            "package_name": "indoc"
+        },
+        {
             "crate_name": "json5",
             "crate_type": "lib",
             "package_name": "json5"
