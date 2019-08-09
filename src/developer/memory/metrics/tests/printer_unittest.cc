@@ -386,6 +386,81 @@ TEST_F(PrinterUnitTest, OutputSummaryShared) {
                     });
 }
 
+TEST_F(PrinterUnitTest, PrintDigest) {
+  // Test kernel stats.
+  Capture c;
+  TestUtils::CreateCapture(c, {
+                                  .kmem =
+                                      {
+                                          .total_bytes = 1000,
+                                          .wired_bytes = 10,
+                                          .free_bytes = 100,
+                                          .vmo_bytes = 700,
+                                      },
+                                  .vmos =
+                                      {
+                                          {.koid = 1, .name = "a1", .committed_bytes = 100},
+                                          {.koid = 2, .name = "b1", .committed_bytes = 200},
+                                          {.koid = 3, .name = "c1", .committed_bytes = 300},
+                                      },
+                                  .processes =
+                                      {
+                                          {.koid = 1, .name = "p1", .vmos = {1}},
+                                          {.koid = 2, .name = "q1", .vmos = {2}},
+                                      },
+                             });
+  Digest d(c, {{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
+  std::ostringstream oss;
+  Printer p(oss);
+  p.PrintDigest(d);
+  ConfirmLines(oss, {
+      "B: 200B",
+      "A: 100B",
+      "Undigested: 300B",
+      "Orphaned: 100B",
+      "Kernel: 10B",
+      "Free: 100B"
+  });
+}
+
+TEST_F(PrinterUnitTest, OutputDigest) {
+  // Test kernel stats.
+  Capture c;
+  TestUtils::CreateCapture(c, {
+                                  .time = 1234L * 1000000000L,
+                                  .kmem =
+                                      {
+                                          .total_bytes = 1000,
+                                          .wired_bytes = 10,
+                                          .free_bytes = 100,
+                                          .vmo_bytes = 700,
+                                      },
+                                  .vmos =
+                                      {
+                                          {.koid = 1, .name = "a1", .committed_bytes = 100},
+                                          {.koid = 2, .name = "b1", .committed_bytes = 200},
+                                          {.koid = 3, .name = "c1", .committed_bytes = 300},
+                                      },
+                                  .processes =
+                                      {
+                                          {.koid = 1, .name = "p1", .vmos = {1}},
+                                          {.koid = 2, .name = "q1", .vmos = {2}},
+                                      },
+                             });
+  Digest d(c, {{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
+  std::ostringstream oss;
+  Printer p(oss);
+  p.OutputDigest(d);
+  ConfirmLines(oss, {
+      "1234,B,200",
+      "1234,A,100",
+      "1234,Undigested,300",
+      "1234,Orphaned,100",
+      "1234,Kernel,10",
+      "1234,Free,100"
+  });
+}
+
 TEST_F(PrinterUnitTest, FormatSize) {
   struct TestCase {
     uint64_t bytes;

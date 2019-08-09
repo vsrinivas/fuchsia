@@ -9,6 +9,8 @@ source_set("metrics") {
   sources = [
     "capture.cc",
     "capture.h",
+    "digest.cc",
+    "digest.h",
     "printer.cc",
     "printer.h",
     "summary.cc",

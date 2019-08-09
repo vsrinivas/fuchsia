@@ -201,4 +201,21 @@ void Printer::OutputSummary(const Summary& summary, Sorted sorted, zx_koid_t pid
   os_ << std::flush;
 }
 
+void Printer::PrintDigest(const Digest& digest) {
+  TRACE_DURATION("memory_metrics", "Printer::PrintDigest");
+  for (auto const& bucket : digest.buckets()) {
+    char size_buf[kMaxFormattedStringSize];
+    FormatSize(bucket.size(), size_buf);
+    os_ << bucket.name() << ": " << size_buf << "\n";
+  }
+}
+
+void Printer::OutputDigest(const Digest& digest) {
+  TRACE_DURATION("memory_metrics", "Printer::OutputDigest");
+  auto const time = digest.time() / 1000000000;
+  for (auto const& bucket : digest.buckets()) {
+    os_ << time << "," << bucket.name() << "," << bucket.size() << "\n";
+  }
+}
+
 }  // namespace memory

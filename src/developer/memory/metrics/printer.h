@@ -12,6 +12,7 @@
 #include <src/lib/fxl/macros.h>
 
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/summary.h"
 
 namespace memory {
@@ -23,10 +24,12 @@ enum Sorted { UNSORTED, SORTED };
 
 class Printer {
  public:
-  Printer(std::ostream& os) : os_(os) {}
+  explicit Printer(std::ostream& os) : os_(os) {}
   void PrintCapture(const Capture& capture, CaptureLevel level, Sorted sorted);
   void PrintSummary(const Summary& summary, CaptureLevel level, Sorted sorted);
+  void PrintDigest(const Digest& digest);
   void OutputSummary(const Summary& summary, Sorted sorted, zx_koid_t pid);
+  void OutputDigest(const Digest& digest);
 
  private:
   void OutputSizes(const Sizes& sizes);

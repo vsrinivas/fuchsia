@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <iostream>
@@ -70,62 +71,61 @@ int main(int argc, const char** argv) {
 
   if (command_line.HasOption("output")) {
     zx_koid_t pid = 0;
-    if (command_line.HasOption("pid")) {
-      std::string pid_value;
-      command_line.GetOptionValue("pid", &pid_value);
+    std::string pid_value;
+    if (command_line.GetOptionValue("pid", &pid_value)) {
       if (!fxl::StringToNumberWithError(pid_value, &pid)) {
         std::cerr << "Invalid value for --pid: " << pid_value;
         return EXIT_FAILURE;
       }
     }
-    if (!command_line.HasOption("repeat")) {
-      Capture capture;
-      auto s = Capture::GetCapture(capture, capture_state, VMO);
-      if (s != ZX_OK) {
-        std::cerr << "Error getting capture: " << zx_status_get_string(s);
-        return EXIT_FAILURE;
-      }
-      Summary summary(capture, Summary::kNameMatches);
-      printer.OutputSummary(summary, UNSORTED, pid);
-      return EXIT_SUCCESS;
-    }
-    zx::time start = zx::clock::get_monotonic();
     uint64_t repeat = 0;
     std::string repeat_value;
-    command_line.GetOptionValue("repeat", &repeat_value);
-    if (!fxl::StringToNumberWithError(repeat_value, &repeat)) {
-      std::cerr << "Invalid value for --repeat: " << repeat_value;
-      return EXIT_FAILURE;
+    if (command_line.GetOptionValue("repeat", &repeat_value)) {
+      if (!fxl::StringToNumberWithError(repeat_value, &repeat)) {
+        std::cerr << "Invalid value for --repeat: " << repeat_value;
+        return EXIT_FAILURE;
+      }
     }
     zx::duration repeat_secs = zx::sec(repeat);
-    int64_t i = 1;
-    do {
+    zx::time start = zx::clock::get_monotonic();
+    Namer namer(Summary::kNameMatches);
+    for (int64_t i = 1; true; i++) {
       Capture capture;
       auto s = Capture::GetCapture(capture, capture_state, VMO);
       if (s != ZX_OK) {
         std::cerr << "Error getting capture: " << zx_status_get_string(s);
         return EXIT_FAILURE;
       }
-      Summary summary(capture, Summary::kNameMatches);
-      printer.OutputSummary(summary, UNSORTED, pid);
+      if (command_line.HasOption("digest")) {
+        printer.OutputDigest(Digest(capture));
+      } else {
+        printer.OutputSummary(Summary(capture, &namer), UNSORTED, pid);
+      }
+
+      if (repeat == 0) {
+        break;
+      }
+
       zx::time next = start + (repeat_secs * i);
       if (next <= zx::clock::get_monotonic()) {
         next = zx::clock::get_monotonic() + repeat_secs;
       }
       zx::nanosleep(next);
-      i++;
-    } while (true);
+    }
+
     return EXIT_SUCCESS;
   }
 
-  // Default is summarize
   Capture capture;
   s = Capture::GetCapture(capture, capture_state, VMO);
   if (s != ZX_OK) {
     std::cerr << "Error getting capture: " << zx_status_get_string(s);
     return EXIT_FAILURE;
   }
-  Summary summary(capture, Summary::kNameMatches);
-  printer.PrintSummary(summary, VMO, SORTED);
+  if (command_line.HasOption("digest")) {
+    printer.PrintDigest(Digest(capture));
+    return EXIT_SUCCESS;
+  }
+  printer.PrintSummary(Summary(capture, Summary::kNameMatches), VMO, SORTED);
   return EXIT_SUCCESS;
 }
