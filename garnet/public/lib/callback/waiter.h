@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "garnet/public/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
@@ -129,6 +130,19 @@ class CompletionAccumulator {
   bool Result() { return true; }
 };
 
+// Implements operator bool() for a waiter, for use in |callback::MakeScoped|.
+template <typename W>
+class WaiterWitness {
+ public:
+  explicit WaiterWitness(fxl::RefPtr<W> waiter) : waiter_(waiter) {}
+
+  // Returns |true| if the waiter is in state |STARTED|.
+  explicit operator bool() { return waiter_->state_ == W::State::STARTED; }
+
+ private:
+  fxl::RefPtr<W> waiter_;
+};
+
 }  // namespace internal
 
 // Base implementation for all specialized waiters.
@@ -209,6 +223,14 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
     result_callback_ = nullptr;
   }
 
+  // Scopes a callback to this waiter: the callback is only called if the waiter is active.  This
+  // implies that the finalizer is still alive, so callbacks can use objects owned by the finalizer.
+  template <typename Callback>
+  auto MakeScoped(Callback callback) {
+    return callback::MakeScoped(
+        internal::WaiterWitness(fxl::RefPtr<BaseWaiter<A, R, Args...>>(this)), std::move(callback));
+  }
+
  protected:
   explicit BaseWaiter(A&& accumulator) : accumulator_(std::move(accumulator)) {}
   virtual ~BaseWaiter() {}
@@ -219,6 +241,7 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
 
   FRIEND_REF_COUNTED_THREAD_SAFE(BaseWaiter);
   FRIEND_MAKE_REF_COUNTED(BaseWaiter);
+  friend class internal::WaiterWitness<BaseWaiter<A, R, Args...>>;
 
   // Receives the result of a |NewCallback| callback and accumulates it if not
   // already done, cancelled or finished. Then executes the finalization

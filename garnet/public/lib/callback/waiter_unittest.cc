@@ -301,5 +301,74 @@ TEST(AnyWaiter, Default) {
   EXPECT_EQ(-1, result);
 }
 
+TEST(StatusWaiter, ScopedSuccess) {
+  bool scoped1_called;
+  bool scoped2_called;
+  bool finalized;
+  bool status;
+
+  auto waiter = fxl::MakeRefCounted<StatusWaiter<bool>>(true);
+  auto callback = waiter->NewCallback();
+  auto scoped1 = waiter->MakeScoped(SetWhenCalled(&scoped1_called));
+  auto scoped2 = waiter->MakeScoped(SetWhenCalled(&scoped2_called));
+  waiter->Finalize(Capture(SetWhenCalled(&finalized), &status));
+
+  scoped1();
+  EXPECT_TRUE(scoped1_called);
+
+  callback(true);
+  ASSERT_TRUE(finalized);
+  EXPECT_EQ(status, true);
+
+  scoped2();
+  EXPECT_FALSE(scoped2_called);
+}
+
+TEST(StatusWaiter, ScopedFailure) {
+  bool scoped1_called;
+  bool scoped2_called;
+  bool finalized;
+  bool status;
+
+  auto waiter = fxl::MakeRefCounted<StatusWaiter<bool>>(true);
+  auto callback1 = waiter->NewCallback();
+  auto callback2 = waiter->NewCallback();
+  auto scoped1 = waiter->MakeScoped(SetWhenCalled(&scoped1_called));
+  auto scoped2 = waiter->MakeScoped(SetWhenCalled(&scoped2_called));
+  waiter->Finalize(Capture(SetWhenCalled(&finalized), &status));
+
+  scoped1();
+  EXPECT_TRUE(scoped1_called);
+
+  callback1(false);
+  ASSERT_TRUE(finalized);
+  EXPECT_EQ(status, false);
+
+  scoped2();
+  EXPECT_FALSE(scoped2_called);
+}
+
+TEST(StatusWaiter, ScopedCancelled) {
+  bool scoped1_called;
+  bool scoped2_called;
+  bool finalized;
+  bool status;
+
+  auto waiter = fxl::MakeRefCounted<StatusWaiter<bool>>(true);
+  auto callback = waiter->NewCallback();
+  auto scoped1 = waiter->MakeScoped(SetWhenCalled(&scoped1_called));
+  auto scoped2 = waiter->MakeScoped(SetWhenCalled(&scoped2_called));
+  waiter->Finalize(Capture(SetWhenCalled(&finalized), &status));
+
+  scoped1();
+  EXPECT_TRUE(scoped1_called);
+
+  waiter->Cancel();
+  ASSERT_FALSE(finalized);
+
+  scoped2();
+  EXPECT_FALSE(scoped2_called);
+}
+
 }  //  namespace
 }  //  namespace callback
