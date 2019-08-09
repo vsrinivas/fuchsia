@@ -4,6 +4,8 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//src/virtualization/buildtools/linux_paths.gni")
+import("//src/virtualization/buildtools/romfs_image.gni")
 
 extras_image = "$target_out_dir/linux/extras.img"
 
@@ -18,12 +20,9 @@ declare_args() {
   linux_runner_gateway = "10.0.0.1"
   linux_runner_netmask = "255.255.255.0"
 
-  # If `true`, the extras.img will be built and mounted inside the container
-  # at /mnt/chromeos.
-  #
-  # This is useful for including some GN-built binaries into the guest image
-  # without modifying the termina images.
-  linux_runner_extras = false
+  # If `true`, adds additional testonly content to extras.img, which will be
+  # built and mounted inside the container at /mnt/chromeos.
+  linux_runner_extras_tests = false
 
   # If `true`, all block devices that would normally load as READ_WRITE will
   # be loaded as VOLATILE_WRITE. This is useful when working on changes to
@@ -92,39 +91,40 @@ action("icd_manifest") {
   ]
 }
 
-action("extras") {
-  visibility = [ ":*" ]
-  script = "mkextras.sh"
-  testonly = true
-
-  lib_path = "${root_build_dir}/linux_x64-shared"
-  exe_path = "${root_build_dir}/linux_x64"
-  if (is_debug) {
-    lib_path = "${lib_path}/lib.unstripped"
-    exe_path = "${exe_path}/exe.unstripped"
-  }
-
+romfs_image("extras") {
   deps = [
     ":icd_manifest",
-    "//garnet/lib/magma/tests/integration:magma_abi_conformance_tests(//build/toolchain:linux_x64)",
-    "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(//build/toolchain:linux_x64)",
-    "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(//build/toolchain:linux_x64)",
-    "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
+    "//third_party/vulkan_loader_and_validation_layers/loader(${linux_lib_toolchain})",
   ]
 
-  args = [
-    rebase_path(extras_image),
-    rebase_path("${lib_path}/${icd_filename}"),
-    rebase_path("${icd_manifest}"),
-    rebase_path("${lib_path}/libvulkan.so"),  # Vulkan Loader
-    rebase_path("${exe_path}/virtmagma_unit_tests_linux"),
-    rebase_path("${exe_path}/virtmagma_vulkan_unit_tests"),
-    rebase_path("${exe_path}/magma_abi_conformance_tests"),
+  inputs = [
+    "${icd_manifest}",
+    "${linux_lib_path}/libvulkan.so",  # Vulkan Loader
   ]
 
-  outputs = [
-    extras_image,
-  ]
+  if (linux_runner_extras_tests) {
+    testonly = true
+
+    deps += [
+      "//garnet/lib/magma/tests/integration:magma_abi_conformance_tests(${linux_exe_toolchain})",
+      "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(${linux_exe_toolchain})",
+      "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
+    ]
+
+    inputs += [
+      "${linux_exe_path}/virtmagma_unit_tests_linux",
+      "${linux_exe_path}/virtmagma_vulkan_unit_tests",
+      "${linux_exe_path}/magma_abi_conformance_tests",
+    ]
+  }
+
+  if (current_cpu == "x64") {
+    deps += [ "//third_party/mesa/src/intel/vulkan:vulkan_intel(${linux_lib_toolchain})" ]
+
+    inputs += [ "${linux_lib_path}/${icd_filename}" ]
+  }
+
+  output = extras_image
 }
 
 executable("bin") {
@@ -140,8 +140,13 @@ executable("bin") {
 }
 
 package("linux_runner") {
+  if (linux_runner_extras_tests) {
+    testonly = true
+  }
+
   deps = [
     ":bin",
+    ":extras",
   ]
 
   binary = "linux_runner"
@@ -153,16 +158,12 @@ package("linux_runner") {
     },
   ]
 
-  if (linux_runner_extras) {
-    testonly = true
-    deps += [ ":extras" ]
-    resources = [
-      {
-        path = extras_image
-        dest = "extras.img"
-      },
-    ]
-  }
+  resources = [
+    {
+      path = extras_image
+      dest = "extras.img"
+    },
+  ]
 }
 
 executable("linux_runner_unittests") {

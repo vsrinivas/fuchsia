@@ -7,6 +7,13 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
+
+#include <algorithm>
+#include <fstream>
+#include <string>
+
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
 #include <vulkan/vulkan.h>
 
 #include "gtest/gtest.h"
@@ -47,10 +54,24 @@ TEST_F(VirtMagmaTest, MagmaCreateConnection) {
 }
 
 TEST_F(VirtMagmaTest, OpenDriver) {
-  static constexpr const char* kDriverPath = "libvulkan_magma.so";
-  driver_handle_ = dlopen(kDriverPath, RTLD_NOW);
-  ASSERT_NE(driver_handle_, nullptr)
-      << "Failed to open driver " << kDriverPath << " (" << errno << ")";
+  static constexpr const char* kManifestOverrideVar = "VK_ICD_FILENAMES";
+  char* manifest = getenv(kManifestOverrideVar);
+  ASSERT_NE(manifest, nullptr) << "ICD Manifest File must be specified in the "
+                               << kManifestOverrideVar << " environment variable";
+  std::ifstream json(manifest);
+  ASSERT_TRUE(json.is_open()) << "Failed to open manifest file \"" << manifest << "\"";
+  rapidjson::IStreamWrapper isw(json);
+  rapidjson::Document doc;
+  doc.ParseStream(isw);
+  ASSERT_FALSE(doc.HasParseError());
+  ASSERT_TRUE(doc.IsObject());
+  auto& icd = doc["ICD"];
+  ASSERT_TRUE(icd.IsObject());
+  auto& path = icd["library_path"];
+  ASSERT_TRUE(path.IsString());
+  std::string driver(path.GetString());
+  driver_handle_ = dlopen(driver.c_str(), RTLD_NOW);
+  ASSERT_NE(driver_handle_, nullptr) << "Failed to open driver " << driver << " (" << errno << ")";
 }
 
 TEST_F(VirtMagmaTest, GetVkGetInstanceProcAddress) {

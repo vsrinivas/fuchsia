@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Construct "" or "-asan" string
+_variant = ""
+_variants = select_variant + [ "" ]
+if (_variants[0] != "") {
+  _variant = "-" + _variants[0]
+}
+
+linux_lib_toolchain = "//build/toolchain:linux_${current_cpu}-shared"
+linux_exe_toolchain = "//build/toolchain:linux_${current_cpu}${_variant}"
+linux_lib_path = "${root_build_dir}/linux_${current_cpu}-shared"
+linux_exe_path = "${root_build_dir}/linux_${current_cpu}${_variant}"
+
+if (is_debug) {
+  linux_lib_path = "${linux_lib_path}/lib.unstripped"
+  linux_exe_path = "${linux_exe_path}/exe.unstripped"
+}

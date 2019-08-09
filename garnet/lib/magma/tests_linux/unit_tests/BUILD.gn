@@ -33,6 +33,7 @@ executable("virtmagma_unit_tests_linux") {
     "//garnet/lib/magma/src/libmagma_linux",
     "//src/graphics/lib/vulkan:headers",
     "//third_party/googletest:gtest_main",
+    "//third_party/rapidjson",
   ]
 
   sources = [

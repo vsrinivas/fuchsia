@@ -1,0 +1,50 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Generates a flat romfs image from the provided files.
+template("romfs_image") {
+  image_target = "_${target_name}_image"
+  check_target = "_${target_name}_check"
+  compiled_action(image_target) {
+    assert(defined(invoker.output), "output must be defined for $target_name")
+    assert(defined(invoker.inputs), "inputs must be defined for $target_name")
+    forward_variables_from(invoker, "*")
+    tool = "//src/virtualization/buildtools:mkromfs"
+    outputs = [
+      output,
+    ]
+    args = [ rebase_path(output, root_out_dir) ]
+    foreach(input, inputs) {
+      args += [ rebase_path(input, root_out_dir) ]
+    }
+  }
+  action(check_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      ":${image_target}",
+    ]
+    script = "//src/virtualization/buildtools/romfsck.py"
+    inputs = [
+      invoker.output,
+    ]
+    outputs = [
+      "${invoker.output}.verify",
+    ]
+    args = [
+      rebase_path(invoker.output, root_out_dir),
+      rebase_path("${invoker.output}.verify", root_out_dir),
+    ]
+  }
+  group("${target_name}") {
+    forward_variables_from(invoker, [ "testonly" ])
+    public_deps = [
+      ":${image_target}",
+    ]
+    deps = [
+      ":${check_target}",
+    ]
+  }
+}

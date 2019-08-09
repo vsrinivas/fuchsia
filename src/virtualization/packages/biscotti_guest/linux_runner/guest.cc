@@ -220,7 +220,7 @@ void Guest::MountExtrasPartition() {
 
   request.mutable_source()->assign("/dev/vdc");
   request.mutable_target()->assign("/mnt/shared");
-  request.mutable_fstype()->assign("ext2");
+  request.mutable_fstype()->assign("romfs");
   request.mutable_options()->assign("");
   request.set_mountflags(0);
 
