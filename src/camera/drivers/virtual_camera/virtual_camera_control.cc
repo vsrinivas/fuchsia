@@ -140,7 +140,7 @@ void VirtualCameraControlImpl::CreateStream(fuchsia::sysmem::BufferCollectionInf
   // by the destruction of this class, so the "this" pointer will be valid as
   // long as the waiter is around.
   stream_token_waiter_ = std::make_unique<async::Wait>(
-      stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED, std::bind([this]() {
+      stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED, 0, std::bind([this]() {
         stream_->Stop();
         stream_.reset();
         stream_token_.reset();

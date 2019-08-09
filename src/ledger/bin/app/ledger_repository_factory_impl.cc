@@ -123,7 +123,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     // storage is shut down at the same time.
     fd_chan_ = fsl::CloneChannelFromFileDescriptor(root_fd_.get());
     fd_wait_ = std::make_unique<async::Wait>(
-        fd_chan_.get(), ZX_CHANNEL_PEER_CLOSED,
+        fd_chan_.get(), ZX_CHANNEL_PEER_CLOSED, 0,
         [this](async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal* signal) { on_empty(); });
     zx_status_t status = fd_wait_->Begin(async_get_default_dispatcher());

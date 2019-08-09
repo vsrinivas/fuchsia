@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
 
   // The test harness will signal us it's done by closing its side
   // of the eventpair.
-  async::Wait wait{event.get(), ZX_EVENTPAIR_PEER_CLOSED,
+  async::Wait wait{event.get(), ZX_EVENTPAIR_PEER_CLOSED, 0,
                    [&loop](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                            const zx_packet_signal_t* signal) {
                      if (signal->observed & ZX_EVENTPAIR_PEER_CLOSED) {

@@ -88,7 +88,7 @@ zx_status_t bootsvc_main(zx::channel bootsvc_server, GetBootItemFunction get_boo
   async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
 
   // Quit the loop when the channel is closed.
-  async::Wait wait(bootsvc_server.get(), ZX_CHANNEL_PEER_CLOSED, [&loop](...) { loop.Quit(); });
+  async::Wait wait(bootsvc_server.get(), ZX_CHANNEL_PEER_CLOSED, 0, [&loop](...) { loop.Quit(); });
   wait.Begin(loop.dispatcher());
 
   // Setup VFS.

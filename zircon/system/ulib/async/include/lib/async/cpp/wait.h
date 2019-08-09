@@ -105,14 +105,8 @@ class Wait final : public WaitBase {
   using Handler = fit::function<void(async_dispatcher_t* dispatcher, async::Wait* wait,
                                      zx_status_t status, const zx_packet_signal_t* signal)>;
 
-  // Creates a Wait with options == 0.
   explicit Wait(zx_handle_t object = ZX_HANDLE_INVALID, zx_signals_t trigger = ZX_SIGNAL_NONE,
-                Handler handler = nullptr)
-      : Wait(object, trigger, 0, std::move(handler)) {}
-
-  // Creates a Wait with the provided |options|.
-  explicit Wait(zx_handle_t object, zx_signals_t trigger, uint32_t options,
-                Handler handler = nullptr);
+                uint32_t options = 0, Handler handler = nullptr);
 
   ~Wait();
 
@@ -139,13 +133,8 @@ template <class Class, void (Class::*method)(async_dispatcher_t* dispatcher, asy
                                              zx_status_t status, const zx_packet_signal_t* signal)>
 class WaitMethod final : public WaitBase {
  public:
-  // Creates a WaitMethod with options == 0.
   explicit WaitMethod(Class* instance, zx_handle_t object = ZX_HANDLE_INVALID,
-                      zx_signals_t trigger = ZX_SIGNAL_NONE)
-      : WaitMethod(instance, object, trigger, 0) {}
-
-  // Creates a WaitMethod with the provided |options|.
-  explicit WaitMethod(Class* instance, zx_handle_t object, zx_signals_t trigger, uint32_t options)
+                      zx_signals_t trigger = ZX_SIGNAL_NONE, uint32_t options = 0)
       : WaitBase(object, trigger, options, &WaitMethod::CallHandler), instance_(instance) {}
 
   ~WaitMethod() = default;

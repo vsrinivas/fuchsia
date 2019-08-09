@@ -147,7 +147,7 @@ void AnalyzeCrash(async::Loop* loop, const zx::job& parent_job, const zx::job& j
   ASSERT_NO_FATAL_FAILURES(CreateAndCrashProcess(job, &process, &thread));
 
   // Run the loop until the exception filters up to our job handler.
-  async::Wait wait(exception_channel.get(), ZX_CHANNEL_READABLE, [&loop](...) { loop->Quit(); });
+  async::Wait wait(exception_channel.get(), ZX_CHANNEL_READABLE, 0, [&loop](...) { loop->Quit(); });
   ASSERT_OK(wait.Begin(loop->dispatcher()));
   ASSERT_EQ(loop->Run(), ZX_ERR_CANCELED);
   ASSERT_OK(loop->ResetQuit());

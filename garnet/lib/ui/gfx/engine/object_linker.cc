@@ -190,7 +190,7 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
   static_assert(ZX_FIFO_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
   static_assert(ZX_SOCKET_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
   auto waiter = std::make_unique<async::Wait>(
-      endpoint_handle, __ZX_OBJECT_PEER_CLOSED, std::bind([this, endpoint_id, is_import]() {
+      endpoint_handle, __ZX_OBJECT_PEER_CLOSED, 0, std::bind([this, endpoint_id, is_import]() {
         auto& endpoints = is_import ? imports_ : exports_;
         auto endpoint_iter = endpoints.find(endpoint_id);
         FXL_DCHECK(endpoint_iter != endpoints.end());

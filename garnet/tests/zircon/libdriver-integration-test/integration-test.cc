@@ -237,7 +237,7 @@ class AsyncWatcher {
       : path_(std::move(path)),
         watcher_(std::move(watcher)),
         connections_{std::move(node), {}},
-        wait_(watcher_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+        wait_(watcher_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0,
               fit::bind_member(this, &AsyncWatcher::WatcherChanged)) {}
 
   void WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,

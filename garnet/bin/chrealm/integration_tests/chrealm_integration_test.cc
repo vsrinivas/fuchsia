@@ -81,7 +81,7 @@ class ChrealmTest : public sys::testing::TestWithEnvironment,
     zx_handle_t proc = ZX_HANDLE_INVALID;
     RunCommandAsync(argv, outfd, &proc);
     bool proc_terminated = false;
-    async::Wait async_wait(proc, ZX_PROCESS_TERMINATED,
+    async::Wait async_wait(proc, ZX_PROCESS_TERMINATED, 0,
                            [&proc_terminated](async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                               zx_status_t status, const zx_packet_signal* signal) {
                              proc_terminated = true;

@@ -121,7 +121,7 @@ ControlImpl::StreamImpl::StreamImpl(ControlImpl& owner,
       // If not triggered by the token being closed, this waiter will be
       // cancelled by the destruction of this class, so the "this" pointer will
       // be valid as long as the waiter is around.
-      stream_token_waiter_(stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED, std::bind([this]() {
+      stream_token_waiter_(stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED, 0, std::bind([this]() {
                              zxlogf(INFO,
                                     "ControlImpl::StreamImpl::StreamImpl - "
                                     "ZX_EVENTPAIR_PEER_CLOSED received, shutting down stream.\n");

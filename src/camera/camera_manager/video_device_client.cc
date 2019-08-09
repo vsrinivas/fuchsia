@@ -152,7 +152,7 @@ std::unique_ptr<VideoDeviceClient::VideoStream> VideoDeviceClient::VideoStream::
   // dispatcher.  Before returning to the dispatcher, the caller must either
   // delete stream or put stream in the list of active streams.
   stream->stream_token_waiter_ = std::make_unique<async::Wait>(
-      stream->stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED,
+      stream->stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED, 0,
       std::bind([owner, stream_ptr = stream.get()]() {
         FXL_LOG(INFO) << "ZX_EVENTPAIR_PEER_CLOSED received, removing active stream.";
         owner->RemoveActiveStream(stream_ptr);

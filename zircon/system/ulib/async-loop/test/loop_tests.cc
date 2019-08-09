@@ -510,7 +510,7 @@ bool wait_timestamp_integration_test() {
     zx_packet_signal_t last_signal = {};
     EXPECT_EQ(0u, last_signal.timestamp);
     async::Wait wait1(
-        event1.get(), ZX_USER_SIGNAL_1,
+        event1.get(), ZX_USER_SIGNAL_1, 0,
         [&last_signal](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) { last_signal = *signal; });
     EXPECT_EQ(ZX_OK, wait1.Begin(loop.dispatcher()), "wait without options");

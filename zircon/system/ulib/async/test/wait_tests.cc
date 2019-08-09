@@ -10,6 +10,7 @@ namespace {
 
 const zx_handle_t dummy_handle = static_cast<zx_handle_t>(1);
 const zx_signals_t dummy_trigger = ZX_USER_SIGNAL_0;
+const uint32_t dummy_options = 0x55;
 const zx_packet_signal_t dummy_signal{.trigger = dummy_trigger,
                                       .observed = ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
                                       .count = 0u,
@@ -70,8 +71,9 @@ class Harness {
 
 class LambdaHarness : public Harness {
  public:
-  LambdaHarness(zx_handle_t object = ZX_HANDLE_INVALID, zx_signals_t trigger = ZX_SIGNAL_NONE)
-      : wait_{object, trigger,
+  LambdaHarness(zx_handle_t object = ZX_HANDLE_INVALID, zx_signals_t trigger = ZX_SIGNAL_NONE,
+                uint32_t options = 0)
+      : wait_{object, trigger, options,
               [this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                      const zx_packet_signal_t* signal) {
                 Handler(dispatcher, wait, status, signal);
@@ -85,8 +87,9 @@ class LambdaHarness : public Harness {
 
 class MethodHarness : public Harness {
  public:
-  MethodHarness(zx_handle_t object = ZX_HANDLE_INVALID, zx_signals_t trigger = ZX_SIGNAL_NONE)
-      : wait_{this, object, trigger} {}
+  MethodHarness(zx_handle_t object = ZX_HANDLE_INVALID, zx_signals_t trigger = ZX_SIGNAL_NONE,
+                uint32_t options = 0)
+      : wait_{this, object, trigger, options} {}
 
   async::WaitBase& wait() override { return wait_; }
 
@@ -108,7 +111,7 @@ bool wait_set_handler_test() {
   }
 
   {
-    async::Wait wait(ZX_HANDLE_INVALID, ZX_SIGNAL_NONE,
+    async::Wait wait(ZX_HANDLE_INVALID, ZX_SIGNAL_NONE, 0,
                      [](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                         const zx_packet_signal_t* signal) {});
     EXPECT_TRUE(wait.has_handler());
@@ -132,6 +135,10 @@ bool wait_properties_test() {
   harness.wait().set_trigger(dummy_trigger);
   EXPECT_EQ(dummy_trigger, harness.wait().trigger());
 
+  EXPECT_EQ(0, harness.wait().options());
+  harness.wait().set_options(dummy_options);
+  EXPECT_EQ(dummy_options, harness.wait().options());
+
   END_TEST;
 }
 
@@ -142,7 +149,7 @@ bool wait_begin_test() {
   MockDispatcher dispatcher;
 
   {
-    Harness harness(dummy_handle, dummy_trigger);
+    Harness harness(dummy_handle, dummy_trigger, dummy_options);
     EXPECT_FALSE(harness.wait().is_pending());
 
     dispatcher.next_status = ZX_OK;
@@ -151,6 +158,7 @@ bool wait_begin_test() {
     EXPECT_EQ(MockDispatcher::Op::BEGIN_WAIT, dispatcher.last_op);
     EXPECT_EQ(dummy_handle, dispatcher.last_wait->object);
     EXPECT_EQ(dummy_trigger, dispatcher.last_wait->trigger);
+    EXPECT_EQ(dummy_options, dispatcher.last_wait->options);
     EXPECT_FALSE(harness.handler_ran);
 
     harness.Reset();
@@ -162,7 +170,7 @@ bool wait_begin_test() {
   EXPECT_EQ(MockDispatcher::Op::CANCEL_WAIT, dispatcher.last_op);
 
   {
-    Harness harness(dummy_handle, dummy_trigger);
+    Harness harness(dummy_handle, dummy_trigger, dummy_options);
     EXPECT_FALSE(harness.wait().is_pending());
 
     dispatcher.next_status = ZX_ERR_BAD_STATE;
@@ -183,7 +191,7 @@ bool wait_cancel_test() {
   MockDispatcher dispatcher;
 
   {
-    Harness harness(dummy_handle, dummy_trigger);
+    Harness harness(dummy_handle, dummy_trigger, dummy_options);
     EXPECT_FALSE(harness.wait().is_pending());
 
     EXPECT_EQ(ZX_ERR_NOT_FOUND, harness.wait().Cancel());
@@ -215,7 +223,7 @@ bool wait_run_handler_test() {
   MockDispatcher dispatcher;
 
   {
-    Harness harness(dummy_handle, dummy_trigger);
+    Harness harness(dummy_handle, dummy_trigger, dummy_options);
     EXPECT_FALSE(harness.wait().is_pending());
 
     EXPECT_EQ(ZX_OK, harness.wait().Begin(&dispatcher));

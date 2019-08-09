@@ -25,7 +25,7 @@ zx_status_t VirtualCameraStream::Init(
   }
 
   stream_token_waiter_ = std::make_unique<async::Wait>(
-      stream_token_.release(), ZX_EVENTPAIR_PEER_CLOSED, std::bind([this]() {
+      stream_token_.release(), ZX_EVENTPAIR_PEER_CLOSED, 0, std::bind([this]() {
         if (is_streaming_) {
           Stop();
         }

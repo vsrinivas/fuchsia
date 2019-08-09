@@ -122,7 +122,7 @@ class ExternalMemoryAllocator : public MemoryAllocator {
 
     // Free resource when parent VMO has zero references.
     auto wait = std::make_unique<async::Wait>(
-        vmo_handle, ZX_VMO_ZERO_CHILDREN,
+        vmo_handle, ZX_VMO_ZERO_CHILDREN, 0,
         async::Wait::Handler([this, id, vmo = std::move(parent_vmo)](
                                  async_dispatcher_t* dispatcher, async::Wait* wait,
                                  zx_status_t status, const zx_packet_signal_t* signal) mutable {
@@ -337,7 +337,7 @@ zx_status_t Device::RegisterHeap(uint64_t heap, zx_handle_t heap_connection) {
 
   // Clean up heap allocator after peer closed channel.
   auto wait_for_close = std::make_unique<async::Wait>(
-      local_heap_connection.get(), ZX_CHANNEL_PEER_CLOSED,
+      local_heap_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
       async::Wait::Handler(
           [this, heap](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) { allocators_.erase(heap); }));

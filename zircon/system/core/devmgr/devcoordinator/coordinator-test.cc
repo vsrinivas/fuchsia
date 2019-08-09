@@ -2085,14 +2085,14 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
   ASSERT_OK(loop()->StartThread("DevCoordTestLoop"));
 
   async::Wait suspend_task_pbus(
-      platform_bus_remote().get(), ZX_CHANNEL_READABLE,
+      platform_bus_remote().get(), ZX_CHANNEL_READABLE, 0,
       [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         CheckSuspendReceived(platform_bus_remote(), DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
       });
   ASSERT_OK(suspend_task_pbus.Begin(loop()->dispatcher()));
 
   async::Wait suspend_task_sys(
-      sys_proxy_remote_.get(), ZX_CHANNEL_READABLE,
+      sys_proxy_remote_.get(), ZX_CHANNEL_READABLE, 0,
       [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         CheckSuspendReceived(sys_proxy_remote_, DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
       });
@@ -2126,14 +2126,14 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
   ASSERT_OK(loop()->StartThread("DevCoordTestLoop"));
 
   async::Wait suspend_task_pbus(
-      platform_bus_remote().get(), ZX_CHANNEL_READABLE,
+      platform_bus_remote().get(), ZX_CHANNEL_READABLE, 0,
       [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         CheckSuspendReceived(platform_bus_remote(), DEVICE_SUSPEND_FLAG_MEXEC);
       });
   ASSERT_OK(suspend_task_pbus.Begin(loop()->dispatcher()));
 
   async::Wait suspend_task_sys(
-      sys_proxy_remote_.get(), ZX_CHANNEL_READABLE,
+      sys_proxy_remote_.get(), ZX_CHANNEL_READABLE, 0,
       [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         CheckSuspendReceived(sys_proxy_remote_, DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
       });

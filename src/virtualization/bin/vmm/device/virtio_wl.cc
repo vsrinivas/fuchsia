@@ -73,7 +73,8 @@ class Connection : public VirtioWl::Vfd {
  public:
   Connection(zx::channel channel, async::Wait::Handler handler)
       : channel_(std::move(channel)),
-        wait_(channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, std::move(handler)) {}
+        wait_(channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0, std::move(handler)) {
+  }
   ~Connection() override { wait_.Cancel(); }
 
   // |VirtioWl::Vfd|
@@ -112,8 +113,9 @@ class Pipe : public VirtioWl::Vfd {
        async::Wait::Handler tx_handler)
       : socket_(std::move(socket)),
         remote_socket_(std::move(remote_socket)),
-        rx_wait_(socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, std::move(rx_handler)),
-        tx_wait_(socket_.get(), ZX_SOCKET_WRITABLE, std::move(tx_handler)) {}
+        rx_wait_(socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, 0,
+                 std::move(rx_handler)),
+        tx_wait_(socket_.get(), ZX_SOCKET_WRITABLE, 0, std::move(tx_handler)) {}
   ~Pipe() override {
     rx_wait_.Cancel();
     tx_wait_.Cancel();

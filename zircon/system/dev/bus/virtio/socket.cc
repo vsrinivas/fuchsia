@@ -871,7 +871,7 @@ SocketDevice::Connection::Connection(const ConnectionKey& key, zx::socket data,
       buf_alloc_(0),
       fwd_cnt_(0),
       data_(std::move(data)),
-      wait_handler_(data_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+      wait_handler_(data_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, 0,
                     async::Wait::Handler([this, wait_handler = std::move(wait_handler)](
                                              async_dispatcher_t* dispatcher, async::Wait* wait,
                                              zx_status_t status, const zx_packet_signal_t* signal) {
