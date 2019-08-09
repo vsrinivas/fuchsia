@@ -1,113 +1,66 @@
-# Quick Start Recipes
+# Getting started with Zircon
 
 ## Checking out the Zircon source code
 
 Note: The Fuchsia source includes Zircon. See Fuchsia's
-[Getting Started](/docs/getting_started.md)
-doc. Follow this doc to work on only Zircon.
+[Getting Started](/docs/getting_started.md) documentation.
 
-The Zircon Git repository is located
-at: https://fuchsia.googlesource.com/zircon
 
-To clone the repository, assuming you setup the $SRC variable
-in your environment:
+This guide assumes that the Fuchsia project is checked out into $FUCHSIA_DIR,
+and `fx` has been configured.
 
-```shell
-git clone https://fuchsia.googlesource.com/zircon $SRC/zircon
+## Build Zircon with the default toolchain
+
+The `fx` command wraps the various tools used to configure, build and interact with Fuchsia.
+The `fx set` is used to specify the "bringup" product and the board architecture. The "bringup"
+product identifies the Zircon components and excludes all other Fuchsia components from the build.
+For example, to build Zircon for arm64:
+
+```sh
+fx set bringup.arm64
 ```
 
-For the purpose of this document, we will assume that Zircon is checked
-out in $SRC/zircon and that we will build toolchains, QEMU, etc alongside
-that.  Various ninja invocations are presented with a "-j32" option for
-parallelization.  If that's excessive for the machine you're building on,
-try -j16 or -j8.
+Fucshia uses the concept of [products](/docs/development/build/boards_and_products.md#products) to
+create a collection of build targets. The "bringup" product is the smallest product,
+other product configurations can be listed by running:
 
-## Preparing the build environment
-
-### Ubuntu
-
-On Ubuntu this should obtain the necessary pre-reqs:
-
-```
-sudo apt-get install texinfo libglib2.0-dev autoconf libtool bison libsdl-dev build-essential
+```sh
+fx list-products
 ```
 
-### macOS
-Install the Xcode Command Line Tools:
+The defined board architectures are listed by running:
 
-```
-xcode-select --install
-```
-
-Install the other pre-reqs:
-
-* Using Homebrew:
-
-```
-brew install wget pkg-config glib autoconf automake libtool
+```sh
+fx list-boards
 ```
 
-* Using MacPorts:
+To execute the build:
 
-```
-port install autoconf automake libtool libpixman pkgconfig glib2
-```
-
-## Install Toolchains and Prebuilts
-
-If you're developing on Linux or macOS, there are prebuilt toolchain binaries available.
-Just run this script from your Zircon working directory:
-
-```
-./scripts/download-prebuilt
+```sh
+fx build
 ```
 
-If you would like to build the toolchains yourself, follow the instructions later
-in the document.
+The build results are saved in $FUCHSIA_DIR/out/default.zircon.
 
-## Build Zircon
+## Explictly set the target toolchain
 
-Build results will be in $SRC/zircon/build-zircon.
+By default Fuchsia uses the `clang` toolchain.  This can be
+set to `gcc` by using the `variants` argument with `fx set`:
 
-```
-cd $SRC/zircon
-gn gen build-zircon
-
-# for both aarch64 and x64
-ninja -C build-zircon
-
-# for aarch64
-ninja -C build-zircon arm64
-
-# for x64
-ninja -C build-zircon x64
+```sh
+fx set bringup.x64 --variant gcc
 ```
 
-### Using Clang
+You can also enable asan by using the variant flag.
 
-To build Zircon using Clang as the target toolchain, set the
-`variants = [ "clang" ]` build argument when invoking GN.
-
-```
-cd $SRC/zircon
-gn gen build-zircon --args='variants = [ "clang" ]'
-
-# for both aarch64 and x64
-ninja -C build-zircon
-
-# for aarch64
-ninja -C build-zircon arm64
-
-# for x64
-ninja -C build-zircon x64
-```
 
 ## Building Zircon for all targets
 
-```
-# The -r enables release builds as well
-./scripts/buildall -r
-```
+You can build for all targets with `fx multi` and using
+a file that contains all the specifications to build. The output
+for each target is found in $FUCHSIA_DIR/out/<product>.<board>.variant.
+An example of a multi build spec is [bringup-cq](/tools/devshell/lib/multi-specs/bringup-cq)
+which approximates what is built for a CQ test.
 
 Please build for all targets before submitting to ensure builds work
 on all architectures.
@@ -135,7 +88,7 @@ Build one or the other or both, as needed for how you want build Zircon.
 
 ### GCC Toolchain
 
-We use GNU `binutils` 2.30(`*`) and GCC 8.2(`**`), configured with
+We use GNU `binutils` 2.30[^1] and GCC 8.2[^2], configured with
 `--enable-initfini-array --enable-gold`, and with `--target=x86_64-elf
 --enable-targets=x86_64-pep` for x86-64 or `--target=aarch64-elf` for ARM64.
 
@@ -157,15 +110,16 @@ documentation for more details.
 You may need various other `configure` switches or other prerequisites to
 build on your particular host system.  See the GNU documentation.
 
-(`*`) The `binutils` 2.30 release has some harmless `make check` failures in
-the `aarch64-elf` and `x86_64-elf` configurations.  These are fixed on the
-upstream `binutils-2_30-branch` git branch, which is what we actually build.
-But the 2.30 release version works fine for building Zircon; it just has some
-spurious failures in its own test suite.
+[^1]: The `binutils` 2.30 release has some harmless `make check` failures in
+    the `aarch64-elf` and `x86_64-elf` configurations.  These are fixed on the
+    upstream `binutils-2_30-branch` git branch, which is what we actually build.
+    But the 2.30 release version works fine for building Zircon; it just has some
+    spurious failures in its own test suite.
 
-(`**`) As of 2008-6-15, GCC 8.2 has not been released yet.  There is no
-released version of GCC that works for building Zircon without backporting
-some fixes.  What we actually use is the upstream `gcc-8-branch` git branch.
+[^2]: As of 2008-6-15, GCC 8.2 has not been released yet.
+    There is no released version of GCC that works for building
+    Zircon without backporting some fixes.  What we actually use
+    is the upstream `gcc-8-branch` git branch.
 
 ### Clang/LLVM Toolchain
 
@@ -184,10 +138,14 @@ the build will find them automatically.
 
 Set the build argument that points to where you installed the toolchains:
 
-```gn
-# in args.gn or passed to --args
-clang_tool_dir = "<absolute path to>/clang-install/bin/"
-gcc_tool_dir = "<absolute path to>/gcc-install/bin/"
+```sh
+fx set bringup.x64 --variant clang --args clang_tool_dir = "<absolute path to>/clang-install/bin/"
+```
+
+or for GCC:
+
+```sh
+fx set bringup.x64 --variant gcc --args gcc_tool_dir = "<absolute path to>/gcc-install/bin/"
 ```
 
 Note that `*_tool_dir` should have a trailing slash. If the `clang` or
@@ -195,16 +153,9 @@ Note that `*_tool_dir` should have a trailing slash. If the `clang` or
 
 ## Copying files to and from Zircon
 
-With local link IPv6 configured, the host tool ./build-ARCH/tools/netcp
-can be used to copy files.
+With local link IPv6 configured you can use `fx cp` to copy files
+to and from the device.
 
-```
-# Copy the file myprogram to Zircon
-netcp myprogram :/tmp/myprogram
-
-# Copy the file myprogram back to the host
-netcp :/tmp/myprogram myprogram
-```
 
 ## Including Additional Userspace Files
 

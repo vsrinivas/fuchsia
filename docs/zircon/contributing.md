@@ -11,39 +11,22 @@ incomplete and will be expanded over time.
 
 ## Process
 
-*   GitHub pull requests are not accepted. Patches are handled via Gerrit Code
-    Review at: https://fuchsia-review.googlesource.com/#/q/project:zircon
 
-*   The #fuchsia channel on the freenode irc network is a good place to ask
-    questions.
+* Follow the process for Fuchsia patches outlined in [CONTRIBUTING.md](/CONTRIBUTING.md).
 
-*   Include [tags] in the commit subject flagging which module, library, app,
-    etc, is affected by the change. The style here is somewhat informal. Look at
-    past changes to get a feel for how these are used. Gerrit will flag your
-    change with `Needs Label: Commit-Message-has-tags` if these are missing.
+*   Patches are handled via Gerrit Code Review at: https://fuchsia-review.googlesource.com/#/q/project:zircon
 
-*   Include a line like `Test: <how this was tested>` in the commit message, or
-    else Gerrit will flag your change with `Needs Label:
-    Commit-Message-has-TEST-line`.
+*   Additionally, make sure Zircon is buildable for all major targets (x86-64, arm64) at every
+    change. Using `fx multi bringup-cq` can help with this.
+    See [Building Zircon for all targets](/docs/zircon/getting_started.md#building_zircon_for_all_targets)
+    for more information.
 
-    *   The full (Java-style) regex is `(?i:test|tests|tested|testing)[
-        \t]*[=:]`, so lines like `TESTED=asdf` or `Testing : 1234` are also
-        valid, along with lines that only contain `Test:` with the details on
-        the following lines.
-
-*   [Googlers only] Commit messages may reference issue IDs, which will be
-    turned into links in the Gerrit UI. Issues may also be automatically closed
-    using the syntax `BUG-123 #done`. *Note*: Zircon's issue tracker is not open
-    to external contributors at this time.
-
-*   Zircon should be buildable for all major targets (x86-64, arm64) at every
-    change. ./scripts/build-all-zircon can help with this.
-
-*   Avoid breaking the unit tests. Boot Zircon and run "runtests" to verify that
+*   Avoid breaking the unit tests. Boot Zircon and [run the tests](testing.md) to verify that
     they're all passing.
 
 *   Avoid whitespace or style changes. Especially do not mix style changes with
-    patches that do other things as the style changes are a distraction.
+    patches that do other things as the style changes are a distraction. Use `fx format-code`
+    to format the code with the consistent style.
 
 *   Avoid changes that touch multiple modules at once if possible. Most changes
     should be to a single library, driver, app, etc.
@@ -52,11 +35,11 @@ incomplete and will be expanded over time.
 
 * Documentation is one honking great idea &mdash; let's do more of that!
 
-    - Documentation should be in Markdown files.  Our Markdown is rendered in Gitiles in
-      [the main repo browser][googlesource-docs]. Please check how your docs are rendered.
+    - Documentation should be in Markdown files. Zircon documentation is located in [/docs/zircon][googlesource-docs].
+      Please check how your docs are rendered.
 
-    - Some notable docs: there's a list of syscalls in [docs/syscalls.md][syscall-doc] and a list of
-      kernel cmdline options in [docs/kernel_cmdline.md][cmdline-doc].  When editing or adding
+    - Some notable docs: there's a list of syscalls in [/docs/zircon/syscalls.md][syscall-doc] and a list of
+      kernel cmdline options in [/docs/zircon/kernel_cmdline.md][cmdline-doc].  When editing or adding
       syscalls or cmdlines, update the docs!
 
 [googlesource-docs]: /docs/zircon/
