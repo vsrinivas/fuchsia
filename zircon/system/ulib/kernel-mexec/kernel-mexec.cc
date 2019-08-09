@@ -16,6 +16,7 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <libzbi/zbi-cpp.h>
+#include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/limits.h>

@@ -11,6 +11,7 @@
 #include <lib/syslog/wire_format.h>
 
 #include <atomic>
+#include <stdio.h>
 
 #include "fx_logger.h"
 

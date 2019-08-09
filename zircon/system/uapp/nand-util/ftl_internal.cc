@@ -6,6 +6,8 @@
 
 #include <zircon/assert.h>
 
+#include <stdio.h>
+
 namespace internal {
 namespace {
 

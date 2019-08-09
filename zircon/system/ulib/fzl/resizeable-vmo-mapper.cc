@@ -8,6 +8,8 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <string.h>
 
+#include <stdio.h>
+
 #include <utility>
 
 namespace fzl {

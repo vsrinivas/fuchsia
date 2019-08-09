@@ -8,6 +8,8 @@
 
 #include "ftl.h"
 
+#include <stdio.h>
+
 namespace internal {
 
 // NOTE: This file is intended only for enabling unit testing, and does not

@@ -6,6 +6,8 @@
 
 #include "fake-bus.h"
 
+#include <stdio.h>
+
 namespace ahci {
 
 constexpr uint64_t to64(uint64_t upper, uint32_t lower) { return (upper << 32) | lower; }

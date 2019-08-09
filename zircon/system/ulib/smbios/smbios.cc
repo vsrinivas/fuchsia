@@ -12,6 +12,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <stdio.h>
+
 namespace {
 
 uint8_t ComputeChecksum(const uint8_t* data, size_t len) {

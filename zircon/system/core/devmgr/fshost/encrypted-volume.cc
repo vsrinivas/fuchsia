@@ -8,6 +8,8 @@
 #include <zircon/status.h>
 #include <zxcrypt/fdio-volume.h>
 
+#include <stdio.h>
+
 namespace devmgr {
 
 EncryptedVolume::EncryptedVolume(fbl::unique_fd fd, fbl::unique_fd devfs_root)

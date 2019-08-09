@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/device-protocol/platform-device.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>

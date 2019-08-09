@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 

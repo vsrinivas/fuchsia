@@ -4,6 +4,8 @@
 
 #include "driver-test-reporter.h"
 
+#include <stdio.h>
+
 namespace devmgr {
 
 void DriverTestReporter::LogMessage(const char* msg, size_t size) {

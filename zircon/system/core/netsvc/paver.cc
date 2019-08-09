@@ -5,6 +5,7 @@
 #include "paver.h"
 
 #include <algorithm>
+#include <stdio.h>
 
 #include <fbl/auto_call.h>
 #include <lib/async-loop/cpp/loop.h>

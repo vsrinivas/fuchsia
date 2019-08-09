@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <new>
+#include <stdio.h>
 
 #include <fbl/vector.h>
 #include <zircon/assert.h>

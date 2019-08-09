@@ -13,6 +13,8 @@
 #include <lib/fdio/io.h>
 #include <zircon/syscalls.h>
 
+#include <stdio.h>
+
 namespace fs_test_utils {
 
 using digest::Digest;

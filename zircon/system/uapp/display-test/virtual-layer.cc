@@ -4,6 +4,7 @@
 
 #include <fbl/algorithm.h>
 #include <math.h>
+#include <stdio.h>
 #include <zircon/device/display-controller.h>
 
 #include "utils.h"

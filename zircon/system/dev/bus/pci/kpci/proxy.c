@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/driver/binding.h>

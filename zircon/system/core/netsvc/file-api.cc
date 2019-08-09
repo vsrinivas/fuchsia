@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
 
 #include <fbl/unique_fd.h>
 #include <lib/fdio/fdio.h>

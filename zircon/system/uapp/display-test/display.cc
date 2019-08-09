@@ -4,6 +4,7 @@
 
 #include "display.h"
 #include <math.h>
+#include <stdio.h>
 #include <zircon/syscalls.h>
 
 Display::Display(fuchsia_hardware_display_Info* info) {

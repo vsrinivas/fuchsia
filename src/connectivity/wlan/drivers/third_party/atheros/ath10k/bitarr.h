@@ -19,6 +19,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "macros.h"
 
 typedef uint64_t BITARR_TYPE;

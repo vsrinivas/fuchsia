@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <queue>
+#include <stdio.h>
 #include <threads.h>
 
 // The actual sysmem FIDL server is in the sysmem driver.  The code that watches

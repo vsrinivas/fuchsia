@@ -6,6 +6,7 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>

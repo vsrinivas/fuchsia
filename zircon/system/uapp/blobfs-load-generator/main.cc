@@ -6,6 +6,8 @@
 #include <fs-test-utils/blobfs/bloblist.h>
 #include <zircon/assert.h>
 
+#include <stdio.h>
+
 namespace {
 
 constexpr char kUsage[] = R"(

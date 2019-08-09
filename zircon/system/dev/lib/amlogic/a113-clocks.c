@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/assert.h>

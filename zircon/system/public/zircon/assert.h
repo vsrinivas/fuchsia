@@ -23,13 +23,6 @@
 
 #else  // #ifdef _KERNEL
 
-// TODO(ZX-4798): (dustingreen or mcgrathr for context; dustingreen to fix,
-// mcgrathr probably as reviewer) These are no longer locally needed, so can be
-// removed in a separate CL that will need wide OWNERS approval since many files
-// are implicitly depending on these.
-#include <stdio.h>
-#include <stdlib.h>
-
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS

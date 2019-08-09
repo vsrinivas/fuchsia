@@ -4,6 +4,7 @@
 
 #include "fidl.h"
 
+#include <stdio.h>
 #include <utility>
 
 #include <fbl/algorithm.h>

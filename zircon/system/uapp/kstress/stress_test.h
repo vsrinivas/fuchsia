@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdarg.h>
+#include <stdio.h>
 
 #include <fbl/macros.h>
 #include <fbl/vector.h>

@@ -6,6 +6,8 @@
 
 #include <fbl/auto_lock.h>
 
+#include <stdio.h>
+
 namespace ioscheduler {
 
 zx_status_t Scheduler::Init(SchedulerClient* client, uint32_t options) {

@@ -4,6 +4,8 @@
 
 #include "zx-device.h"
 
+#include <stdio.h>
+
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

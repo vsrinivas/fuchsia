@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <lib/syslog/logger.h>
 #include <lib/syslog/wire_format.h>
 #include <zircon/processargs.h>

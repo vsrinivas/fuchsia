@@ -11,6 +11,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 

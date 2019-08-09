@@ -8,6 +8,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/usb-peripheral-config.h>
+#include <stdlib.h>
 #include <string.h>
 #include <usb/dwc2/metadata.h>
 #include <zircon/device/usb-peripheral.h>

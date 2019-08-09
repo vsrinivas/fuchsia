@@ -4,6 +4,7 @@
 
 #include <fs/handler.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fuchsia/io/c/fidl.h>

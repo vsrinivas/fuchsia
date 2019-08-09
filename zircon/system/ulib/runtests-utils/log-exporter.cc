@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <fuchsia/logger/c/fidl.h>
 #include <lib/fdio/fd.h>

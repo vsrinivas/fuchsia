@@ -9,6 +9,8 @@
 
 #include "usb-interface.h"
 
+#include <stdio.h>
+
 namespace usb_composite {
 
 static inline const usb_descriptor_header_t* NextDescriptor(const void* header) {

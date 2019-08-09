@@ -6,6 +6,7 @@
 
 #include <lib/async-testing/test_loop.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include <algorithm>

@@ -4,6 +4,7 @@
 
 #include <lib/device-protocol/platform-device.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
