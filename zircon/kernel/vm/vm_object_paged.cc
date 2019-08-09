@@ -432,6 +432,11 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  uint32_t options = kSlice;
+  if (is_contiguous()) {
+    options |= kContiguous;
+  }
+
   // There are two reasons for declaring/allocating the clones outside of the vmo's lock. First,
   // the dtor might require taking the lock, so we need to ensure that it isn't called until
   // after the lock is released. Second, diagnostics code makes calls into vmos while holding
@@ -439,7 +444,7 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
   // any vmos under any vmo lock.
   fbl::AllocChecker ac;
   auto vmo = fbl::AdoptRef<VmObjectPaged>(
-      new (&ac) VmObjectPaged(kSlice, pmm_alloc_flags_, size, lock_ptr_, nullptr));
+      new (&ac) VmObjectPaged(options, pmm_alloc_flags_, size, lock_ptr_, nullptr));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

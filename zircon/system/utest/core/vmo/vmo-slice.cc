@@ -3,9 +3,14 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/iommu.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
+#include <zircon/syscalls/iommu.h>
 #include <zxtest/zxtest.h>
+
+extern "C" __WEAK zx_handle_t get_root_resource(void);
 
 namespace {
 
@@ -197,6 +202,35 @@ TEST(VmoSliceTestCase, ZeroSized) {
   EXPECT_EQ(slice_vmo2.read(&val, 0, 1), ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(slice_vmo1.write(&val, 0, 1), ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(slice_vmo2.write(&val, 0, 1), ZX_ERR_OUT_OF_RANGE);
+}
+
+TEST(VmoSliceTestCase, ChildSliceOfContiguousParentIsContiguous) {
+  if (!get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+  const size_t size = PAGE_SIZE;
+
+  zx::vmo parent_contig_vmo;
+  zx::unowned_resource root_res(get_root_resource());
+
+  zx::iommu iommu;
+  zx::bti bti;
+
+  zx_iommu_desc_dummy_t desc;
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+
+  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+
+  EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &parent_contig_vmo));
+
+  // Create child slice.
+  zx::vmo child;
+  ASSERT_OK(parent_contig_vmo.create_child(ZX_VMO_CHILD_SLICE, 0, PAGE_SIZE, &child));
+
+  zx_info_vmo_t info;
+  ASSERT_OK(child.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(info.flags & ZX_INFO_VMO_CONTIGUOUS, ZX_INFO_VMO_CONTIGUOUS);
 }
 
 }  // namespace
