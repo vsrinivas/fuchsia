@@ -366,18 +366,6 @@ async fn test_repo_rm() {
     ]);
 }
 
-#[fasync::run_singlethreaded(test)]
-async fn test_repo_remove() {
-    let env = TestEnv::new();
-
-    let output = env.run_pkgctl(vec!["repo", "remove", "--repo-url", "the-url"]).await;
-
-    assert_stdout(&output, "");
-    env.assert_only_repository_manager_called_with(vec![
-        CapturedRepositoryManagerRequest::Remove { repo_url: "the-url".to_string() },
-    ]);
-}
-
 macro_rules! repo_add_tests {
     ($($test_name:ident: $flag:expr,)*) => {
         $(

@@ -260,15 +260,6 @@ where
                 }
                 Some(arg) => unrecognized!(arg),
             },
-            // TODO(PKG-847) delete "remove" in favor of "rm"
-            Some("remove") => match iter.next() {
-                None => Err(Error::MissingArgument("repo-url")),
-                Some("--repo-url") => {
-                    let repo_url = iter.next().ok_or_else(|| Error::MissingArgument("repo-url"))?;
-                    done!(Ok(RepoCommand::Remove { repo_url: repo_url.to_string() }.into()))
-                }
-                Some(arg) => unrecognized!(arg),
-            },
             Some("rm") => match iter.next() {
                 None => Err(Error::MissingArgument("repo-url")),
                 Some(url) => done!(Ok(RepoCommand::Remove { repo_url: url.to_string() }.into())),
@@ -338,8 +329,6 @@ mod tests {
             &["repo", "add"],
             &["repo", "add", "-f", "foo"],
             &["repo", "add", "--file", "foo"],
-            &["repo", "remove"],
-            &["repo", "remove", "--repo-url", REPO_URL],
             &["repo", "rm", REPO_URL],
             &["repo", "-v"],
             &["repo", "--verbose"],
@@ -455,11 +444,6 @@ mod tests {
         check(&["repo", "--verbose"], RepoCommand::ListVerbose);
         check(&["repo", "add", "-f", "foo"], RepoCommand::Add { file: "foo".into() });
         check(&["repo", "add", "--file", "foo"], RepoCommand::Add { file: "foo".into() });
-
-        check(
-            &["repo", "remove", "--repo-url", REPO_URL],
-            RepoCommand::Remove { repo_url: REPO_URL.to_string() },
-        );
         check(&["repo", "rm", REPO_URL], RepoCommand::Remove { repo_url: REPO_URL.to_string() });
     }
 
