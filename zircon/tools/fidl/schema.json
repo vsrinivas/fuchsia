@@ -28,6 +28,10 @@
             "description": "Name of the library",
             "$ref": "#/definitions/library-identifier"
         },
+        "maybe_attributes": {
+            "description": "Optional list of attributes of the library",
+            "$ref": "#/definitions/attributes-list"
+        },
         "bits_declarations": {
             "description": "List of bits declarations",
             "type": "array",

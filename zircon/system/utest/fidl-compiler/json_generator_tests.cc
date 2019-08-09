@@ -3081,7 +3081,7 @@ struct Empty {};
     ASSERT_TRUE(dependency.Compile());
 
     TestLibrary library("example.fidl", R"FIDL(
-[OnLibrary]
+[OnLibrary, OnLibraryWithValue = "AValue"]
 library example;
 
 // TODO: Support placement of an attribute on using.
@@ -3142,6 +3142,16 @@ xunion ExampleXUnion {
                                    R"JSON({
   "version": "0.0.1",
   "name": "example",
+  "maybe_attributes": [
+    {
+      "name": "OnLibrary",
+      "value": ""
+    },
+    {
+      "name": "OnLibraryWithValue",
+      "value": "AValue"
+    }
+  ],
   "library_dependencies": [
     {
       "name": "exampleusing",

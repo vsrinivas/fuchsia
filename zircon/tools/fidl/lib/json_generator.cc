@@ -636,6 +636,10 @@ std::ostringstream JSONGenerator::Produce() {
 
     GenerateObjectMember("name", LibraryName(library_, "."));
 
+    if (auto attributes = library_->attributes(); attributes) {
+      GenerateObjectMember("maybe_attributes", *attributes);
+    }
+
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("library_dependencies");
     GenerateArray(TransitiveDependencies(library_));

@@ -1173,6 +1173,7 @@ class Library {
 
   const std::vector<std::string_view>& name() const { return library_name_; }
   const std::vector<std::string>& errors() const { return error_reporter_->errors(); }
+  const raw::AttributeList* attributes() const { return attributes_.get(); }
 
  private:
   bool Fail(std::string_view message);
