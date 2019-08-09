@@ -92,7 +92,8 @@ mod tests {
     use {
         super::*,
         crate::{
-            models::{AddMod, DisplayInfo, Intent, Suggestion},
+            models::{AddModInfo, DisplayInfo, Intent, Suggestion},
+            story_manager::StoryManager,
             testing::{
                 puppet_master_fake::PuppetMasterFake, suggestion_providers::TestSuggestionsProvider,
             },
@@ -121,7 +122,9 @@ mod tests {
 
         // Set up our test suggestions provider. This will provide two suggestions
         // all the time.
-        let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master_client)));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let mod_manager =
+            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
         let mut suggestions_manager = SuggestionsManager::new(mod_manager);
         suggestions_manager.register_suggestions_provider(Box::new(TestSuggestionsProvider::new()));
 
@@ -173,7 +176,9 @@ mod tests {
         });
 
         puppet_master_fake.spawn(request_stream);
-        let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master_client)));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let mod_manager =
+            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
         let mut suggestions_manager = SuggestionsManager::new(mod_manager);
 
         // Set some fake suggestions.

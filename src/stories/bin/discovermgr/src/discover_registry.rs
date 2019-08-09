@@ -44,6 +44,7 @@ mod tests {
         super::*,
         crate::{
             story_context_store::{ContextEntity, Contributor},
+            story_manager::StoryManager,
             testing::{FakeEntityData, FakeEntityResolver},
         },
         fidl_fuchsia_app_discover::{
@@ -58,7 +59,9 @@ mod tests {
     async fn test_register_module_output() -> Result<(), Error> {
         let (puppet_master_client, _) =
             fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
-        let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master_client)));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let mod_manager =
+            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
 
         // Initialize the fake entity resolver.
         let (entity_resolver, request_stream) =

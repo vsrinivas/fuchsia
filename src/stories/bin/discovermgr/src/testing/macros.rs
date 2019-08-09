@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 /// Constructs a suggestion with common fields.
-/// Remember to `use crate::models::{Suggestion, DisplayInfo, Intent, AddMod};`
+/// Remember to `use crate::models::{Suggestion, DisplayInfo, Intent, AddModInfo};`
 #[macro_export]
 macro_rules! suggestion {
     // Match without icon
@@ -50,7 +50,7 @@ macro_rules! create_suggestion {
         display_info = $display_info:expr,
     ) => {
         Suggestion::new(
-            AddMod::new(
+            AddModInfo::new(
                 Intent::new()
                     .with_action($action)
                     $(.add_parameter($name, $reference))*,

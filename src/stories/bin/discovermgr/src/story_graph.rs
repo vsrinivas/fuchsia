@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-
 use {
     crate::models::Intent,
     maplit::{hashmap, hashset},
@@ -17,12 +15,14 @@ type EntityReference = String;
 type EntityType = String;
 type ModuleId = String;
 type OutputName = String;
+#[cfg(test)]
 type StoryId = String;
 
-struct SessionGraph {
+#[cfg(test)]
+pub struct SessionGraph {
     stories: HashMap<StoryId, StoryGraph>,
 }
-
+#[cfg(test)]
 impl SessionGraph {
     /// Creates a new empty session graph.
     pub fn new() -> Self {
@@ -44,14 +44,14 @@ impl SessionGraph {
         self.stories.get_mut(story_id)
     }
 }
-
-struct StoryGraph {
+#[derive(Clone)]
+pub struct StoryGraph {
     modules: HashMap<ModuleId, ModuleData>,
 }
 
 impl StoryGraph {
     /// Creates a new empty story graph.
-    fn new() -> Self {
+    pub fn new() -> Self {
         StoryGraph { modules: hashmap!() }
     }
 
@@ -61,21 +61,34 @@ impl StoryGraph {
         self.modules.insert(module_id_str.clone(), ModuleData::new(intent));
     }
 
+    #[cfg(test)]
     /// Returns the module data associated to the given |module_id|.
     pub fn get_module_data(&self, module_id: &str) -> Option<&ModuleData> {
         self.modules.get(module_id)
     }
 
+    #[cfg(test)]
     /// Returns the mutable module data associated to the given |module_id|.
     pub fn get_module_data_mut(&mut self, module_id: &str) -> Option<&mut ModuleData> {
         self.modules.get_mut(module_id)
     }
+
+    /// Returns an iterator of all modules in it.
+    pub fn get_all_modules(&self) -> impl Iterator<Item = &ModuleData> {
+        self.modules.values()
+    }
+
+    /// Retures the number of modules in this story.
+    pub fn get_module_count(&self) -> usize {
+        self.modules.len()
+    }
 }
 
-struct ModuleData {
+#[derive(Clone)]
+pub struct ModuleData {
     outputs: HashMap<OutputName, ModuleOutput>,
     children: HashSet<ModuleId>,
-    last_intent: Intent,
+    pub last_intent: Intent,
     created_timestamp: u128,
     last_modified_timestamp: u128,
 }
@@ -94,6 +107,7 @@ impl ModuleData {
         }
     }
 
+    #[cfg(test)]
     /// Updates an output with the given reference. If no reference is given, the
     /// output is removed.
     pub fn update_output(&mut self, output_name: &str, new_reference: Option<String>) {
@@ -112,12 +126,14 @@ impl ModuleData {
         self.update_timestamp();
     }
 
+    #[cfg(test)]
     /// Updates the last intent issued to the module with |new_intent|.
     pub fn update_intent(&mut self, new_intent: Intent) {
         self.last_intent = new_intent;
         self.update_timestamp();
     }
 
+    #[cfg(test)]
     /// Links two mods through intents. This means this module issued an intent to
     /// the module with id |child_module_id|.
     pub fn add_child(&mut self, child_module_id: impl Into<String>) {
@@ -125,23 +141,25 @@ impl ModuleData {
         self.update_timestamp();
     }
 
+    #[cfg(test)]
     /// Unlinks two mods through linked through intent issuing.
     pub fn remove_child(&mut self, child_module_id: &str) {
         self.children.remove(child_module_id);
         self.update_timestamp();
     }
 
+    #[cfg(test)]
     fn update_timestamp(&mut self) {
         self.last_modified_timestamp =
             SystemTime::now().duration_since(UNIX_EPOCH).expect("time went backwards").as_nanos();
     }
 }
-
-struct ModuleOutput {
+#[derive(Clone)]
+pub struct ModuleOutput {
     entity_reference: EntityReference,
     consumers: HashSet<(ModuleId, EntityType)>,
 }
-
+#[cfg(test)]
 impl ModuleOutput {
     fn new(entity_reference: impl Into<String>) -> Self {
         ModuleOutput { entity_reference: entity_reference.into(), consumers: hashset!() }
@@ -187,6 +205,7 @@ mod tests {
 
         let intent = Intent::new().with_action("SOME_ACTION");
         story_graph.add_module("mod-id", intent.clone());
+        assert_eq!(story_graph.get_module_count(), 1);
         assert!(story_graph.modules.contains_key("mod-id"));
         assert!(story_graph.get_module_data_mut("mod-id").is_some());
 

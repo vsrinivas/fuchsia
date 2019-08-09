@@ -7,7 +7,7 @@ use {
     crate::story_context_store::ContextEntity,
     fidl_fuchsia_app_discover::Suggestion as FidlSuggestion,
     fidl_fuchsia_modular::{
-        AddMod as FidlAddMod, DisplayInfo as FidlDisplayInfo, Intent as FidlIntent,
+        AddMod as FidlAddModInfo, DisplayInfo as FidlDisplayInfo, Intent as FidlIntent,
         IntentParameter as FidlIntentParameter, IntentParameterData as FidlIntentParameterData,
         SurfaceArrangement, SurfaceDependency, SurfaceRelation,
     },
@@ -62,15 +62,42 @@ pub struct WebFulfillment {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct RestoreStoryInfo {
+    pub story_name: String,
+}
+
+impl RestoreStoryInfo {
+    pub fn new(story_name: impl Into<String>) -> Self {
+        RestoreStoryInfo { story_name: story_name.into() }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum SuggestedAction {
+    RestoreStory(RestoreStoryInfo),
+    AddMod(AddModInfo),
+}
+
+impl SuggestedAction {
+    fn restore_story(story_name: String) -> SuggestedAction {
+        SuggestedAction::RestoreStory(RestoreStoryInfo::new(story_name))
+    }
+
+    fn add_mod(action: AddModInfo) -> SuggestedAction {
+        SuggestedAction::AddMod(action)
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 // TODO: Suggestions at this point should contain ActionDisplayInfo
 pub struct Suggestion {
     id: String,
     display_info: DisplayInfo,
-    action: AddMod,
+    action: SuggestedAction,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub struct AddMod {
+pub struct AddModInfo {
     pub mod_name: String,
     story_name: String,
     pub intent: Intent,
@@ -90,11 +117,23 @@ pub struct IntentParameter {
 }
 
 impl Suggestion {
-    pub fn new(action: AddMod, display_info: DisplayInfo) -> Self {
-        Suggestion { id: Uuid::new_v4().to_string(), action, display_info }
+    pub fn new(action: AddModInfo, display_info: DisplayInfo) -> Self {
+        Suggestion {
+            id: Uuid::new_v4().to_string(),
+            display_info,
+            action: SuggestedAction::add_mod(action),
+        }
     }
 
-    pub fn action(&self) -> &AddMod {
+    pub fn new_story_suggestion(story_name: String, display_info: DisplayInfo) -> Self {
+        Suggestion {
+            id: Uuid::new_v4().to_string(),
+            display_info,
+            action: SuggestedAction::restore_story(story_name),
+        }
+    }
+
+    pub fn action(&self) -> &SuggestedAction {
         &self.action
     }
 
@@ -177,7 +216,6 @@ impl DisplayInfo {
         DisplayInfo { title: None, icon: None, subtitle: None }
     }
 
-    #[cfg(test)]
     pub fn with_title(mut self, title: &str) -> Self {
         self.title = Some(title.to_string());
         self
@@ -208,13 +246,13 @@ impl<'a> EntityMatching<'a> {
     }
 }
 
-impl AddMod {
+impl AddModInfo {
     pub fn new_raw(
         component_url: &str,
         story_name: Option<String>,
         mod_name: Option<String>,
     ) -> Self {
-        AddMod {
+        AddModInfo {
             story_name: story_name.unwrap_or(Uuid::new_v4().to_string()),
             mod_name: mod_name.unwrap_or(Uuid::new_v4().to_string()),
             intent: Intent::new().with_handler(component_url),
@@ -222,7 +260,7 @@ impl AddMod {
     }
 
     pub fn new(intent: Intent, story_name: Option<String>, mod_name: Option<String>) -> Self {
-        AddMod {
+        AddModInfo {
             story_name: story_name.unwrap_or(Uuid::new_v4().to_string()),
             mod_name: mod_name.unwrap_or(Uuid::new_v4().to_string()),
             intent: intent,
@@ -238,7 +276,7 @@ impl AddMod {
     }
 
     pub fn replace_reference_in_parameters(self, old: &str, new: &str) -> Self {
-        AddMod {
+        AddModInfo {
             story_name: self.story_name,
             mod_name: self.mod_name,
             intent: Intent {
@@ -327,9 +365,9 @@ impl Into<FidlIntentParameter> for IntentParameter {
     }
 }
 
-impl Into<FidlAddMod> for AddMod {
-    fn into(self) -> FidlAddMod {
-        FidlAddMod {
+impl Into<FidlAddModInfo> for AddModInfo {
+    fn into(self) -> FidlAddModInfo {
+        FidlAddModInfo {
             mod_name: vec![],
             mod_name_transitional: Some(self.mod_name),
             intent: self.intent.into(),
@@ -395,11 +433,11 @@ mod tests {
                 icon: None,
                 subtitle: Some("suggestion subtitle".to_string()),
             },
-            action: AddMod {
+            action: SuggestedAction::AddMod(AddModInfo {
                 mod_name: "mod_name".to_string(),
                 intent: Intent { handler: None, action: None, parameters: btreeset!() },
                 story_name: "story_name".to_string(),
-            },
+            }),
         };
 
         let suggestion_fidl: FidlSuggestion = suggestion.clone().into();
@@ -420,12 +458,12 @@ mod tests {
                 entity_reference: "ref".to_string(),
             }),
         };
-        let add_mod = AddMod {
+        let add_mod = AddModInfo {
             story_name: "story_name".to_string(),
             mod_name: "mod_name".to_string(),
             intent: intent,
         };
-        let add_mod_fidl: FidlAddMod = add_mod.clone().into();
+        let add_mod_fidl: FidlAddModInfo = add_mod.clone().into();
 
         assert_eq!(add_mod_fidl.mod_name_transitional, Some(add_mod.mod_name));
         assert_eq!(add_mod_fidl.intent.handler, add_mod.intent.handler);
@@ -461,7 +499,7 @@ mod tests {
             action: Some("action".to_string()),
             parameters: BTreeSet::from_iter(params.clone().into_iter()),
         };
-        let add_mod = AddMod {
+        let add_mod = AddModInfo {
             story_name: "story_name".to_string(),
             mod_name: "mod_name".to_string(),
             intent: intent.clone(),

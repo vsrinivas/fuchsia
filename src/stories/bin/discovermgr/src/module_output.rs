@@ -116,8 +116,9 @@ mod tests {
     use {
         super::*,
         crate::{
-            models::{AddMod, Intent},
+            models::{AddModInfo, Intent},
             story_context_store::{ContextEntity, Contributor},
+            story_manager::StoryManager,
             testing::{FakeEntityData, FakeEntityResolver, PuppetMasterFake},
         },
         fidl_fuchsia_app_discover::ModuleOutputWriterMarker,
@@ -132,7 +133,9 @@ mod tests {
     async fn test_write() {
         let (puppet_master_client, _) =
             fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
-        let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master_client)));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let mod_manager =
+            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
 
         let (entity_resolver, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
@@ -217,9 +220,10 @@ mod tests {
 
         // Set initial state of connected mods. The actions here will be executed with the new
         // entity reference in the parameter.
-        let mut mod_manager = ModManager::new(puppet_master_client);
+        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let mut mod_manager = ModManager::new(puppet_master_client, story_manager);
         let intent = Intent::new().with_action("PLAY_MUSIC").add_parameter("artist", "peridot-ref");
-        let action = AddMod::new(intent, Some("story1".to_string()), Some("mod-a".to_string()));
+        let action = AddModInfo::new(intent, Some("story1".to_string()), Some("mod-a".to_string()));
         mod_manager.actions = hashmap!("peridot-ref".to_string() => hashset!(action));
 
         let mut context_store = StoryContextStore::new(entity_resolver);

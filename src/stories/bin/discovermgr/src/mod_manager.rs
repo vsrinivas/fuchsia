@@ -3,14 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    crate::models::{AddMod, Suggestion},
+    crate::{
+        models::{AddModInfo, SuggestedAction, Suggestion},
+        story_manager::StoryManager,
+    },
     failure::{bail, Error},
     fidl_fuchsia_modular::{
         ExecuteStatus, FocusMod, PuppetMasterProxy, SetFocusState, StoryCommand,
         StoryPuppetMasterMarker,
     },
     futures::future::join_all,
-    std::collections::{HashMap, HashSet},
+    parking_lot::Mutex,
+    std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    },
 };
 
 type EntityReference = String;
@@ -19,22 +26,48 @@ type EntityReference = String;
 /// when entities change.
 pub struct ModManager {
     // Maps an entity reference to actions launched with it.
-    pub(super) actions: HashMap<EntityReference, HashSet<AddMod>>,
+    pub(super) actions: HashMap<EntityReference, HashSet<AddModInfo>>,
     puppet_master: PuppetMasterProxy,
+    story_manager: Arc<Mutex<StoryManager>>,
 }
 
 impl ModManager {
-    pub fn new(puppet_master: PuppetMasterProxy) -> Self {
-        ModManager { actions: HashMap::new(), puppet_master }
+    pub fn new(puppet_master: PuppetMasterProxy, story_manager: Arc<Mutex<StoryManager>>) -> Self {
+        ModManager { actions: HashMap::new(), puppet_master, story_manager }
     }
 
     pub async fn execute_suggestion(&mut self, suggestion: Suggestion) -> Result<(), Error> {
-        await!(self.execute_actions(&suggestion.action(), /*focus=*/ true))?;
-        for param in suggestion.action().intent().parameters() {
-            self.actions
-                .entry(param.entity_reference().to_string())
-                .or_insert(HashSet::new())
-                .insert(suggestion.action().clone());
+        match suggestion.action() {
+            SuggestedAction::AddMod(action) => {
+                // execute a mod suggestion
+                await!(self.execute_actions(vec![&action], /*focus=*/ true))?;
+                self.story_manager.lock().add_to_story_graph(&action);
+                for param in action.intent().parameters() {
+                    self.actions
+                        .entry(param.entity_reference().to_string())
+                        .or_insert(HashSet::new())
+                        .insert(action.clone());
+                }
+            }
+
+            SuggestedAction::RestoreStory(restore_story_info) => {
+                let actions = self
+                    .story_manager
+                    .lock()
+                    .restore_story_graph(restore_story_info.story_name.to_string())
+                    .map(|module| {
+                        AddModInfo::new(
+                            module.last_intent.clone(),
+                            Some(restore_story_info.story_name.clone()),
+                            None,
+                        )
+                    })
+                    .collect::<Vec<AddModInfo>>();
+                await!(self.execute_actions(
+                    actions.iter().map(|action| action).collect(),
+                    /*focus=*/ true,
+                ))?;
+            }
         }
         Ok(())
     }
@@ -46,24 +79,33 @@ impl ModManager {
             .unwrap_or(HashSet::new())
             .into_iter()
             .map(|action| action.replace_reference_in_parameters(old, new))
-            .collect::<HashSet<AddMod>>();
+            .collect::<HashSet<AddModInfo>>();
         await!(join_all(
-            actions.iter().map(|action| self.execute_actions(action, /*focus=*/ false))
+            actions.iter().map(|action| self.execute_actions(vec![action], /*focus=*/ false)),
         ));
         self.actions.insert(new.to_string(), actions);
     }
 
-    async fn execute_actions<'a>(&'a self, action: &'a AddMod, focus: bool) -> Result<(), Error> {
+    async fn execute_actions<'a>(
+        &'a self,
+        actions: Vec<&'a AddModInfo>,
+        focus: bool,
+    ) -> Result<(), Error> {
         let (story_puppet_master, server_end) =
             fidl::endpoints::create_proxy::<StoryPuppetMasterMarker>()?;
-        self.puppet_master.control_story(&action.story_name(), server_end)?;
-        let mut commands = vec![StoryCommand::AddMod(action.clone().into())];
+        self.puppet_master.control_story(&actions[0].story_name(), server_end)?;
+        let mut commands = actions
+            .iter()
+            .map(|&action| StoryCommand::AddMod(action.clone().into()))
+            .collect::<Vec<StoryCommand>>();
 
+        // TODO: story_manager to record the name of focused mod in a story.
+        // Currently we just focus on the first mod in a story.
         if focus {
             commands.push(StoryCommand::SetFocusState(SetFocusState { focused: true }));
             commands.push(StoryCommand::FocusMod(FocusMod {
                 mod_name: vec![],
-                mod_name_transitional: Some(action.mod_name.to_string()),
+                mod_name_transitional: Some(actions[0].mod_name.to_string()),
             }));
         }
 
@@ -130,7 +172,8 @@ mod tests {
         });
 
         puppet_master_fake.spawn(request_stream);
-        let mut mod_manager = ModManager::new(puppet_master_client);
+        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let mut mod_manager = ModManager::new(puppet_master_client, story_manager);
 
         let suggestion = suggestion!(
             action = "PLAY_MUSIC",
@@ -138,11 +181,20 @@ mod tests {
             parameters = [(name = "artist", entity_reference = "peridot-ref")],
             story = "story_name"
         );
-        let action = suggestion.action().clone();
-
-        await!(mod_manager.execute_suggestion(suggestion))?;
-        // Assert the action and the reference that originated it are tracked.
-        assert_eq!(mod_manager.actions, hashmap!("peridot-ref".to_string() => hashset!(action)));
+        match suggestion.action() {
+            SuggestedAction::AddMod(action) => {
+                let action_clone = action.clone();
+                await!(mod_manager.execute_suggestion(suggestion))?;
+                // Assert the action and the reference that originated it are tracked.
+                assert_eq!(
+                    mod_manager.actions,
+                    hashmap!("peridot-ref".to_string() => hashset!(action_clone))
+                );
+            }
+            SuggestedAction::RestoreStory(_) => {
+                assert!(false);
+            }
+        }
 
         Ok(())
     }
@@ -179,13 +231,14 @@ mod tests {
         });
 
         puppet_master_fake.spawn(request_stream);
-        let mut mod_manager = ModManager::new(puppet_master_client);
+        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let mut mod_manager = ModManager::new(puppet_master_client, story_manager);
 
         // Set initial state. The actions here will be executed with the new
         // entity reference in the parameter.
         let intent = Intent::new().with_action("PLAY_MUSIC").add_parameter("artist", "peridot-ref");
         let action =
-            AddMod::new(intent, Some("story_name".to_string()), Some("mod_name".to_string()));
+            AddModInfo::new(intent, Some("story_name".to_string()), Some("mod_name".to_string()));
         mod_manager.actions = hashmap!("peridot-ref".to_string() => hashset!(action));
 
         await!(mod_manager.replace("peridot-ref", "garnet-ref"));
@@ -193,7 +246,7 @@ mod tests {
         // Assert the action was replaced.
         let intent = Intent::new().with_action("PLAY_MUSIC").add_parameter("artist", "garnet-ref");
         let action =
-            AddMod::new(intent, Some("story_name".to_string()), Some("mod_name".to_string()));
+            AddModInfo::new(intent, Some("story_name".to_string()), Some("mod_name".to_string()));
         assert_eq!(mod_manager.actions, hashmap!("garnet-ref".to_string() => hashset!(action)));
 
         Ok(())

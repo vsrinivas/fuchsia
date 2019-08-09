@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        models::{AddMod, DisplayInfo, Suggestion},
+        models::{AddModInfo, DisplayInfo, Suggestion},
         story_context_store::ContextEntity,
         suggestions_manager::SearchSuggestionsProvider,
     },
@@ -41,7 +41,7 @@ impl PackageSuggestionsProvider {
         let caps = re.captures(&url)?;
         display_info.title = Some(format!("open {}", &caps["name"]));
         Some(Suggestion::new(
-            AddMod::new_raw(&url, None /* story_name */, None /* mod_name */),
+            AddModInfo::new_raw(&url, None /* story_name */, None /* mod_name */),
             display_info,
         ))
     }
@@ -85,7 +85,7 @@ impl SearchSuggestionsProvider for PackageSuggestionsProvider {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync};
+    use {super::*, crate::models::SuggestedAction, fuchsia_async as fasync};
 
     #[fasync::run_singlethreaded(test)]
     async fn test_request() -> Result<(), Error> {
@@ -95,16 +95,26 @@ mod tests {
         assert_eq!(results.len(), 2);
         for result in results.into_iter() {
             let title = result.display_info().title.as_ref().unwrap();
-            let handler = result.action().intent.handler.as_ref().unwrap();
-            if title == "open discovermgr" {
-                assert_eq!(handler, "fuchsia-pkg://fuchsia.com/discovermgr#meta/discovermgr.cmx");
-            } else if title == "open discovermgr_tests" {
-                assert_eq!(
+            match result.action() {
+                SuggestedAction::AddMod(action) => {
+                    let handler = action.intent.handler.as_ref().unwrap();
+                    if title == "open discovermgr" {
+                        assert_eq!(
+                            handler,
+                            "fuchsia-pkg://fuchsia.com/discovermgr#meta/discovermgr.cmx"
+                        );
+                    } else if title == "open discovermgr_tests" {
+                        assert_eq!(
                     handler,
                     "fuchsia-pkg://fuchsia.com/discovermgr_tests#meta/discovermgr_bin_test.cmx"
                 );
-            } else {
-                assert!(false, format!("unexpected result {:?}", result));
+                    } else {
+                        assert!(false, format!("unexpected result {:?}", result));
+                    }
+                }
+                SuggestedAction::RestoreStory(_) => {
+                    assert!(false);
+                }
             }
         }
         Ok(())
@@ -115,7 +125,14 @@ mod tests {
         let url = "fuchsia-pkg://fuchsia.com/my_component#meta/my_component.cmx";
         let suggestion =
             PackageSuggestionsProvider::package_url_to_suggestion(url.to_string()).unwrap();
-        assert_eq!(suggestion.action().intent.handler, Some(url.to_string()));
+        match suggestion.action() {
+            SuggestedAction::AddMod(action) => {
+                assert_eq!(action.intent.handler, Some(url.to_string()));
+            }
+            SuggestedAction::RestoreStory(_) => {
+                assert!(false);
+            }
+        }
         assert_eq!(suggestion.display_info().title, Some("open my_component".to_string()));
     }
 

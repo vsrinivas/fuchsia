@@ -10,7 +10,10 @@ use {
         local_action_provider::get_local_actions,
         mod_manager::ModManager,
         story_context_store::StoryContextStore,
-        suggestion_providers::{ContextualSuggestionsProvider, PackageSuggestionsProvider},
+        story_manager::StoryManager,
+        suggestion_providers::{
+            ContextualSuggestionsProvider, PackageSuggestionsProvider, StorySuggestionsProvider,
+        },
         suggestions_manager::SuggestionsManager,
         suggestions_service::SuggestionsService,
     },
@@ -37,7 +40,7 @@ mod models;
 mod module_output;
 mod story_context_store;
 mod story_graph;
-mod story_name_index;
+mod story_manager;
 mod suggestion_providers;
 mod suggestions_manager;
 mod suggestions_service;
@@ -75,9 +78,13 @@ async fn main() -> Result<(), Error> {
 
     let puppet_master =
         connect_to_service::<PuppetMasterMarker>().context("failed to connect to puppet master")?;
-    let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master)));
+    let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+    let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master, story_manager.clone())));
 
     let mut suggestions_manager = SuggestionsManager::new(mod_manager.clone());
+    suggestions_manager.register_suggestions_provider(Box::new(StorySuggestionsProvider::new(
+        story_manager.clone(),
+    )));
     suggestions_manager.register_suggestions_provider(Box::new(PackageSuggestionsProvider::new()));
 
     let mut actions = await!(get_cloud_actions()).unwrap_or_else(|e| {

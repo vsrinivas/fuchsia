@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        models::{AddMod, DisplayInfo, Intent, Suggestion},
+        models::{AddModInfo, DisplayInfo, Intent, Suggestion},
         story_context_store::ContextEntity,
         suggestions_manager::SearchSuggestionsProvider,
     },
