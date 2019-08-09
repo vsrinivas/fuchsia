@@ -19,6 +19,10 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 
 namespace cloud_sync {
+
+using ::storage::fake::FakeObject;
+using ::storage::fake::FakePiece;
+
 TestPageStorage::TestPageStorage(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 std::unique_ptr<TestCommit> TestPageStorage::NewCommit(std::string id, std::string content,
@@ -77,8 +81,19 @@ void TestPageStorage::AddCommitsFromSync(
 
 void TestPageStorage::GetUnsyncedPieces(
     fit::function<void(ledger::Status, std::vector<storage::ObjectIdentifier>)> callback) {
-  async::PostTask(dispatcher_, [callback = std::move(callback)] {
-    callback(ledger::Status::OK, std::vector<storage::ObjectIdentifier>());
+  if (should_fail_get_unsynced_pieces) {
+    async::PostTask(dispatcher_,
+                    [callback = std::move(callback)] { callback(ledger::Status::IO_ERROR, {}); });
+    return;
+  }
+
+  std::vector<storage::ObjectIdentifier> object_identifiers;
+  for (auto& digest_object_pair : unsynced_objects_to_return) {
+    object_identifiers.push_back(digest_object_pair.first);
+  }
+  async::PostTask(dispatcher_, [callback = std::move(callback),
+                                object_identifiers = std::move(object_identifiers)] {
+    callback(ledger::Status::OK, std::move(object_identifiers));
   });
 }
 
@@ -123,6 +138,18 @@ void TestPageStorage::MarkCommitSynced(const storage::CommitId& commit_id,
   async::PostTask(dispatcher_, [callback = std::move(callback)] { callback(ledger::Status::OK); });
 }
 
+void TestPageStorage::MarkPieceSynced(storage::ObjectIdentifier object_identifier,
+                                      fit::function<void(ledger::Status)> callback) {
+  if (should_fail_mark_piece_synced) {
+    async::PostTask(dispatcher_,
+                    [callback = std::move(callback)] { callback(ledger::Status::IO_ERROR); });
+    return;
+  }
+
+  objects_marked_as_synced.insert(object_identifier);
+  async::PostTask(dispatcher_, [callback = std::move(callback)] { callback(ledger::Status::OK); });
+}
+
 void TestPageStorage::SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                                       fit::function<void(ledger::Status)> callback) {
   sync_metadata[key.ToString()] = value.ToString();
@@ -141,6 +168,26 @@ void TestPageStorage::GetSyncMetadata(fxl::StringView key,
   async::PostTask(dispatcher_, [callback = std::move(callback), metadata = it->second] {
     callback(ledger::Status::OK, metadata);
   });
+}
+
+void TestPageStorage::GetObject(
+    storage::ObjectIdentifier object_identifier, Location /*location*/,
+    fit::function<void(ledger::Status, std::unique_ptr<const storage::Object>)> callback) {
+  auto& object = unsynced_objects_to_return[std::move(object_identifier)];
+  async::PostTask(dispatcher_,
+                  [object = std::move(object), callback = std::move(callback)]() mutable {
+                    callback(ledger::Status::OK, std::make_unique<FakeObject>(std::move(object)));
+                  });
+}
+
+void TestPageStorage::GetPiece(
+    storage::ObjectIdentifier object_identifier,
+    fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>)> callback) {
+  auto& piece = unsynced_objects_to_return[std::move(object_identifier)];
+  async::PostTask(dispatcher_,
+                  [piece = std::move(piece), callback = std::move(callback)]() mutable {
+                    callback(ledger::Status::OK, std::move(piece));
+                  });
 }
 
 }  // namespace cloud_sync

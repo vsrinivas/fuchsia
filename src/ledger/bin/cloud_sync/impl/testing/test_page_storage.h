@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_commit.h"
+#include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 
@@ -23,6 +24,7 @@ namespace cloud_sync {
 // Fake implementation of storage::PageStorage. Injects the data that PageSync
 // asks about: page id and existing unsynced commits to be retrieved through
 // GetUnsyncedCommits(). Registers the commits marked as synced.
+// TODO(LE-829): migrate to storage::fake::FakePageStorage.
 class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit TestPageStorage(async_dispatcher_t* dispatcher);
@@ -54,25 +56,42 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   void MarkCommitSynced(const storage::CommitId& commit_id,
                         fit::function<void(ledger::Status)> callback) override;
 
+  void MarkPieceSynced(storage::ObjectIdentifier object_identifier,
+                       fit::function<void(ledger::Status)> callback) override;
+
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        fit::function<void(ledger::Status)> callback) override;
 
   void GetSyncMetadata(fxl::StringView key,
                        fit::function<void(ledger::Status, std::string)> callback) override;
 
+  void GetObject(storage::ObjectIdentifier object_identifier, Location /*location*/,
+                 fit::function<void(ledger::Status, std::unique_ptr<const storage::Object>)>
+                     callback) override;
+
+  void GetPiece(
+      storage::ObjectIdentifier object_identifier,
+      fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>)> callback) override;
+
   storage::PageId page_id_to_return;
   // Commits to be returned from GetUnsyncedCommits calls.
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits_to_return;
+  // Objects to be returned from GetUnsyncedPieces/GetObject calls.
+  std::map<storage::ObjectIdentifier, std::unique_ptr<const storage::fake::FakePiece>>
+      unsynced_objects_to_return;
   size_t head_count = 1;
   bool should_fail_get_unsynced_commits = false;
+  bool should_fail_get_unsynced_pieces = false;
   bool should_fail_add_commit_from_sync = false;
   bool should_delay_add_commit_confirmation = false;
+  bool should_fail_mark_piece_synced = false;
   std::vector<fit::closure> delayed_add_commit_confirmations;
 
   unsigned int add_commits_from_sync_calls = 0u;
 
   storage::PageSyncDelegate* page_sync_delegate_;
   std::set<storage::CommitId> commits_marked_as_synced;
+  std::set<storage::ObjectIdentifier> objects_marked_as_synced;
   storage::CommitWatcher* watcher_ = nullptr;
   bool watcher_set = false;
   bool watcher_removed = false;

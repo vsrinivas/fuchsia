@@ -15,13 +15,12 @@
 #include <utility>
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
+#include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/ledger/bin/storage/testing/commit_empty_impl.h"
-#include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
@@ -30,115 +29,13 @@ namespace {
 using ::storage::fake::FakeObject;
 using ::storage::fake::FakePiece;
 
-// Fake implementation of storage::Commit.
-// TODO(kerneis): migrate to storage::fake::FakeCommit.
-class TestCommit : public storage::CommitEmptyImpl {
- public:
-  TestCommit(std::string id, std::string storage_bytes)
-      : id(std::move(id)), storage_bytes(std::move(storage_bytes)) {}
-  ~TestCommit() override = default;
-
-  const storage::CommitId& GetId() const override { return id; }
-
-  fxl::StringView GetStorageBytes() const override { return storage_bytes; }
-
-  std::unique_ptr<const storage::Commit> Clone() const override {
-    return std::make_unique<TestCommit>(id, storage_bytes);
-  }
-
-  storage::CommitId id;
-  std::string storage_bytes;
-};
-
-// Fake implementation of storage::PageStorage. Injects the data that
-// BatchUpload asks about: page id and unsynced objects to be uploaded.
-// Registers the reported results of the upload: commits and objects marked as
-// synced.
-// TODO(kerneis): migrate to storage::fake::FakePageStorage.
-class TestPageStorage : public storage::PageStorageEmptyImpl {
- public:
-  TestPageStorage() = default;
-  ~TestPageStorage() override = default;
-
-  void GetUnsyncedCommits(
-      fit::function<void(ledger::Status, std::vector<std::unique_ptr<const storage::Commit>>)>
-          callback) override {
-    std::vector<std::unique_ptr<const storage::Commit>> results;
-    std::transform(
-        unsynced_commits.begin(), unsynced_commits.end(), std::inserter(results, results.begin()),
-        [](const std::unique_ptr<const storage::Commit>& commit) { return commit->Clone(); });
-    callback(ledger::Status::OK, std::move(results));
-  }
-
-  void GetUnsyncedPieces(fit::function<void(ledger::Status, std::vector<storage::ObjectIdentifier>)>
-                             callback) override {
-    std::vector<storage::ObjectIdentifier> object_identifiers;
-    for (auto& digest_object_pair : unsynced_objects_to_return) {
-      object_identifiers.push_back(digest_object_pair.first);
-    }
-    callback(ledger::Status::OK, std::move(object_identifiers));
-  }
-
-  void GetObject(storage::ObjectIdentifier object_identifier, Location /*location*/,
-                 fit::function<void(ledger::Status, std::unique_ptr<const storage::Object>)>
-                     callback) override {
-    callback(ledger::Status::OK, std::make_unique<FakeObject>(std::move(
-                                     unsynced_objects_to_return[std::move(object_identifier)])));
-  }
-
-  void GetPiece(storage::ObjectIdentifier object_identifier,
-                fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>)> callback)
-      override {
-    callback(ledger::Status::OK,
-             std::move(unsynced_objects_to_return[std::move(object_identifier)]));
-  }
-
-  void MarkPieceSynced(storage::ObjectIdentifier object_identifier,
-                       fit::function<void(ledger::Status)> callback) override {
-    objects_marked_as_synced.insert(object_identifier);
-    callback(ledger::Status::OK);
-  }
-
-  void MarkCommitSynced(const storage::CommitId& commit_id,
-                        fit::function<void(ledger::Status)> callback) override {
-    commits_marked_as_synced.insert(commit_id);
-    unsynced_commits.erase(
-        std::remove_if(unsynced_commits.begin(), unsynced_commits.end(),
-                       [&commit_id](const std::unique_ptr<const storage::Commit>& commit) {
-                         return commit->GetId() == commit_id;
-                       }),
-        unsynced_commits.end());
-    callback(ledger::Status::OK);
-  }
-
-  std::unique_ptr<TestCommit> NewCommit(std::string id, std::string content) {
-    auto commit = std::make_unique<TestCommit>(std::move(id), std::move(content));
-    unsynced_commits.push_back(commit->Clone());
-    return commit;
-  }
-
-  std::map<storage::ObjectIdentifier, std::unique_ptr<const FakePiece>> unsynced_objects_to_return;
-  std::set<storage::ObjectIdentifier> objects_marked_as_synced;
-  std::set<storage::CommitId> commits_marked_as_synced;
-  std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
-};
-
-// Fake implementation of storage::PageStorage. Fails when trying to mark
-// objects as synced and can be used to verify behavior on object upload storage
-// errors.
-class TestPageStorageFailingToMarkPieces : public TestPageStorage {
- public:
-  void MarkPieceSynced(storage::ObjectIdentifier /*object_identifier*/,
-                       fit::function<void(ledger::Status)> callback) override {
-    callback(ledger::Status::NOT_IMPLEMENTED);
-  }
-};
-
 template <typename E>
 class BaseBatchUploadTest : public gtest::TestLoopFixture {
  public:
   BaseBatchUploadTest()
-      : encryption_service_(dispatcher()), page_cloud_(page_cloud_ptr_.NewRequest()) {}
+      : storage_(dispatcher()),
+        encryption_service_(dispatcher()),
+        page_cloud_(page_cloud_ptr_.NewRequest()) {}
   ~BaseBatchUploadTest() override {}
 
  public:
@@ -192,7 +89,7 @@ using BatchUploadTest = BaseBatchUploadTest<encryption::FakeEncryptionService>;
 // Test an upload of a single commit with no unsynced objects.
 TEST_F(BatchUploadTest, SingleCommit) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content"));
+  commits.push_back(storage_.NewCommit("id", "content", true));
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   batch_upload->Start();
@@ -216,8 +113,8 @@ TEST_F(BatchUploadTest, SingleCommit) {
 // Test an upload of multiple commits with no unsynced objects.
 TEST_F(BatchUploadTest, MultipleCommits) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id0", "content0"));
-  commits.push_back(storage_.NewCommit("id1", "content1"));
+  commits.push_back(storage_.NewCommit("id0", "content0", true));
+  commits.push_back(storage_.NewCommit("id1", "content1", true));
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
   batch_upload->Start();
@@ -245,7 +142,7 @@ TEST_F(BatchUploadTest, MultipleCommits) {
 // Test an upload of a commit with a few unsynced objects.
 TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content"));
+  commits.push_back(storage_.NewCommit("id", "content", true));
   auto id1 = MakeObjectIdentifier("obj_digest1");
   auto id2 = MakeObjectIdentifier("obj_digest2");
 
@@ -284,7 +181,7 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
 // |max_concurrent_uploads|.
 TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content"));
+  commits.push_back(storage_.NewCommit("id", "content", true));
   storage::ObjectIdentifier id0 = MakeObjectIdentifier("obj_digest0");
   storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
@@ -329,7 +226,7 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
 // Test an upload that fails on uploading objects.
 TEST_F(BatchUploadTest, FailedObjectUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content"));
+  commits.push_back(storage_.NewCommit("id", "content", true));
 
   storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
@@ -357,7 +254,7 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
 // Test an upload that fails on uploading the commit.
 TEST_F(BatchUploadTest, FailedCommitUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content"));
+  commits.push_back(storage_.NewCommit("id", "content", true));
 
   storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
@@ -394,7 +291,7 @@ TEST_F(BatchUploadTest, FailedCommitUpload) {
 // Test an upload that fails and a subsequent retry that succeeds.
 TEST_F(BatchUploadTest, ErrorAndRetry) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content"));
+  commits.push_back(storage_.NewCommit("id", "content", true));
 
   storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
@@ -444,12 +341,13 @@ TEST_F(BatchUploadTest, ErrorAndRetry) {
 }
 
 // Test a commit upload that gets an error from storage.
-TEST_F(BatchUploadTest, FailedCommitUploadWitStorageError) {
-  storage::PageStorageEmptyImpl test_storage;
-  std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content"));
+TEST_F(BatchUploadTest, FailedCommitUploadWithStorageError) {
+  storage_.should_fail_get_unsynced_pieces = true;
 
-  auto batch_upload = MakeBatchUploadWithStorage(&test_storage, std::move(commits));
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content", true));
+
+  auto batch_upload = MakeBatchUploadWithStorage(&storage_, std::move(commits));
 
   batch_upload->Start();
   RunLoopUntilIdle();
@@ -463,17 +361,18 @@ TEST_F(BatchUploadTest, FailedCommitUploadWitStorageError) {
 
 // Test objects upload that get an error from storage.
 TEST_F(BatchUploadTest, FailedObjectUploadWitStorageError) {
-  TestPageStorageFailingToMarkPieces test_storage;
+  storage_.should_fail_mark_piece_synced = true;
+
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content"));
+  commits.push_back(storage_.NewCommit("id", "content", true));
 
   storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
   storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
 
-  test_storage.unsynced_objects_to_return[id1] = std::make_unique<FakePiece>(id1, "obj_data1");
-  test_storage.unsynced_objects_to_return[id2] = std::make_unique<FakePiece>(id2, "obj_data2");
+  storage_.unsynced_objects_to_return[id1] = std::make_unique<FakePiece>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] = std::make_unique<FakePiece>(id2, "obj_data2");
 
-  auto batch_upload = MakeBatchUploadWithStorage(&test_storage, std::move(commits));
+  auto batch_upload = MakeBatchUploadWithStorage(&storage_, std::move(commits));
 
   batch_upload->Start();
   RunLoopUntilIdle();
@@ -490,7 +389,7 @@ TEST_F(BatchUploadTest, FailedObjectUploadWitStorageError) {
 // client.
 TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content"));
+  commits.push_back(storage_.NewCommit("id", "content", true));
 
   storage::ObjectIdentifier id0 = MakeObjectIdentifier("obj_digest0");
   storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
@@ -551,7 +450,7 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommits) {
 // Verifies that we do not upload synced commits on retries.
 TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(storage_.NewCommit("id", "content"));
+  commits.push_back(storage_.NewCommit("id", "content", true));
 
   auto batch_upload = MakeBatchUpload(std::move(commits));
 
@@ -570,7 +469,7 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   storage_.MarkCommitSynced("id", callback::Capture(QuitLoopClosure(), &status));
   RunLoopUntilIdle();
   EXPECT_EQ(status, ledger::Status::OK);
-  EXPECT_EQ(storage_.unsynced_commits.size(), 0u);
+  EXPECT_EQ(storage_.unsynced_commits_to_return.size(), 0u);
 
   // Retry.
   page_cloud_.add_commits_calls = 0;
@@ -628,7 +527,7 @@ TYPED_TEST_SUITE(FailingBatchUploadTest, FailingEncryptionServices);
 
 TYPED_TEST(FailingBatchUploadTest, Fail) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(this->storage_.NewCommit("id", "content"));
+  commits.push_back(this->storage_.NewCommit("id", "content", true));
   auto id1 = this->MakeObjectIdentifier("obj_digest1");
   auto id2 = this->MakeObjectIdentifier("obj_digest2");
 
