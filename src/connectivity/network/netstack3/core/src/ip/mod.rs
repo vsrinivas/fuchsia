@@ -533,7 +533,6 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
         IpProto::NoNextHeader => Ok(()),
 
         // IPv4 and IPv6.
-        IpProto::Tcp => crate::transport::tcp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
         IpProto::Udp => crate::transport::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
 
         _ => {
@@ -574,10 +573,10 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
         // eventually need to restructure the control flow here to handle that
         // case.
 
-        // tcp::receive_ip_packet and udp::receive_ip_packet promise to return
-        // the buffer in the same state it was in when they were called. Thus,
-        // all we have to do is undo the parsing of the IP packet header, and
-        // the buffer will be back to containing the entire original IP packet.
+        // udp::receive_ip_packet promises to return the buffer in the same
+        // state it was in when they were called. Thus, all we have to do is
+        // undo the parsing of the IP packet header, and the buffer will be back
+        // to containing the entire original IP packet.
         let meta = parse_metadata.unwrap();
         buffer.undo_parse(meta);
         #[ipv4addr]
@@ -1606,7 +1605,7 @@ mod tests {
         #[rustfmt::skip]
         bytes[40..64].copy_from_slice(&[
             // Destination Options Extension Header
-            IpProto::Tcp.into(),      // Next Header
+            IpProto::Udp.into(),      // Next Header
             1,                        // Hdr Ext Len (In 8-octet units, not including first 8 octets)
             0,                        // Pad1
             1,   0,                   // Pad2
@@ -1642,7 +1641,7 @@ mod tests {
             Ipv4Addr::new([192, 168, 0, 100]),
             DUMMY_CONFIG_V4.local_ip,
             10,
-            IpProto::Tcp,
+            IpProto::Udp,
         )
     }
 
@@ -1713,7 +1712,7 @@ mod tests {
         bytes[8..24]
             .copy_from_slice(&[16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]);
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
-        bytes[40] = IpProto::Tcp.into();
+        bytes[40] = IpProto::Udp.into();
         bytes[42] = fragment_offset >> 5;
         bytes[43] = ((fragment_offset & 0x1F) << 3) | if m_flag { 1 } else { 0 };
         NetworkEndian::write_u32(&mut bytes[44..48], fragment_id as u32);
@@ -1779,7 +1778,7 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
             // Routing Extension Header
-            IpProto::Tcp.into(),         // Next Header
+            IpProto::Udp.into(),         // Next Header
             4,                                  // Hdr Ext Len (In 8-octet units, not including first 8 octets)
             255,                                // Routing Type (Invalid)
             1,                                  // Segments Left
@@ -2204,7 +2203,7 @@ mod tests {
 
         // Ip packet from some node destined to a remote on this network, arriving locally.
         let mut ipv6_packet_buf = Buf::new(body.clone(), ..)
-            .encapsulate(Ipv6PacketBuilder::new(extra_ip, dummy_config.remote_ip, 64, IpProto::Tcp))
+            .encapsulate(Ipv6PacketBuilder::new(extra_ip, dummy_config.remote_ip, 64, IpProto::Udp))
             .serialize_vec_outer()
             .unwrap();
         // Receive the IP packet.
@@ -2433,7 +2432,7 @@ mod tests {
     /// where the original packet's body  length is `body_len`.
     fn create_orig_packet_buf(src_ip: Ipv4Addr, dst_ip: Ipv4Addr, body_len: usize) -> Buf<Vec<u8>> {
         Buf::new(vec![0; body_len], ..)
-            .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Tcp))
+            .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Udp))
             .serialize_vec_outer()
             .unwrap()
             .into_inner()
@@ -2643,7 +2642,7 @@ mod tests {
                 config.remote_ip,
                 multi_addr,
                 64,
-                IpProto::Tcp,
+                IpProto::Udp,
             ))
             .serialize_vec_outer()
             .ok()
@@ -2739,7 +2738,7 @@ mod tests {
                 config.remote_ip,
                 config.local_ip,
                 64,
-                IpProto::Tcp,
+                IpProto::Udp,
             ))
             .serialize_vec_outer()
             .unwrap()
@@ -2757,7 +2756,7 @@ mod tests {
         crate::device::set_ip_addr_subnet(&mut ctx, device, AddrSubnet::new(ip, 128).unwrap());
 
         let buf = Buf::new(vec![0; 10], ..)
-            .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Tcp))
+            .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Udp))
             .serialize_vec_outer()
             .unwrap()
             .into_inner();

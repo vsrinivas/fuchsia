@@ -69,7 +69,6 @@ use crate::{Context, EventDispatcher};
 
 /// The state associated with the transport layer.
 pub(crate) struct TransportLayerState {
-    tcp: self::tcp::TcpState,
     udpv4: self::udp::UdpState<Ipv4>,
     udpv6: self::udp::UdpState<Ipv6>,
 }
@@ -77,7 +76,6 @@ pub(crate) struct TransportLayerState {
 impl Default for TransportLayerState {
     fn default() -> TransportLayerState {
         TransportLayerState {
-            tcp: self::tcp::TcpState::default(),
             udpv4: self::udp::UdpState::default(),
             udpv6: self::udp::UdpState::default(),
         }
@@ -86,14 +84,11 @@ impl Default for TransportLayerState {
 
 /// The identifier for timer events in the transport layer.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub(crate) enum TransportLayerTimerId {
-    /// A timer event in the TCP layer
-    Tcp(tcp::TcpTimerId),
-}
+pub(crate) enum TransportLayerTimerId {}
 
 /// Handle a timer event firing in the transport layer.
 pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TransportLayerTimerId) {
-    unimplemented!()
+    match id {}
 }
 
 /// An event dispatcher for the transport layer.
