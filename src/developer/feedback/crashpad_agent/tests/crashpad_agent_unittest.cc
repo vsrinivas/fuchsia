@@ -12,8 +12,8 @@
 #include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/job.h>
-#include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <stdint.h>
@@ -311,16 +311,15 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
 
 TEST_F(CrashpadAgentTest, Succeed_OnNativeException) {
   zx::job job;
-  zx::port exception_port;
+  zx::channel exception_channel;
   zx::process process;
   zx::thread thread;
 
-  // Create the child jobs of the current job now so we can bind to the exception port before
+  // Create the child jobs of the current job now so we can bind to the exception channel before
   // spawning the crashing program.
   zx::unowned_job current_job(zx_job_default());
   ASSERT_EQ(zx::job::create(*current_job, 0, &job), ZX_OK);
-  ASSERT_EQ(zx::port::create(0u, &exception_port), ZX_OK);
-  ASSERT_EQ(zx_task_bind_exception_port(job.get(), exception_port.get(), 0u, 0u), ZX_OK);
+  ASSERT_EQ(job.create_exception_channel(0u, &exception_channel), ZX_OK);
 
   // Create child process using our utility program `crasher` that will crash on startup.
   const char* argv[] = {"crasher", nullptr};
@@ -332,9 +331,9 @@ TEST_F(CrashpadAgentTest, Succeed_OnNativeException) {
 
   // Wait up to 1s for the exception to be thrown. We need the process and thread to be blocked in
   // the exception for Crashpad to analyze them.
-  zx_port_packet_t packet;
-  ASSERT_EQ(exception_port.wait(zx::deadline_after(zx::sec(1)), &packet), ZX_OK);
-  ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type));
+  ASSERT_EQ(
+      exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(1)), nullptr),
+      ZX_OK);
 
   // Get the one thread from the child process.
   zx_koid_t thread_ids[1];
