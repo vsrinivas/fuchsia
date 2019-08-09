@@ -14,6 +14,9 @@ static zx_koid_t proc_koid;
 static port_handler_t log_ph;
 static vc_t* log_vc;
 
+// This is the list for logs on displays other than the main display.
+static struct list_node log_list = LIST_INITIAL_VALUE(log_list);
+
 void set_log_listener_active(bool active) {
   if (active) {
     port_wait(&port, &log_ph);
@@ -49,6 +52,19 @@ int log_start(void) {
   return 0;
 }
 
+static void write_to_log(vc_t* vc, zx_log_record_t* rec) {
+  char tmp[64];
+  snprintf(tmp, 64,
+           "\033[32m%05d.%03d\033[39m] \033[31m%05" PRIu64 ".\033[36m%05" PRIu64 "\033[39m> ",
+           (int)(rec->timestamp / 1000000000ULL), (int)((rec->timestamp / 1000000ULL) % 1000ULL),
+           rec->pid, rec->tid);
+  vc_write(vc, tmp, strlen(tmp), 0);
+  vc_write(vc, rec->data, rec->datalen, 0);
+  if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
+    vc_write(vc, "\n", 1, 0);
+  }
+}
+
 zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
   char buf[ZX_LOG_RECORD_MAX];
   zx_log_record_t* rec = (zx_log_record_t*)buf;
@@ -64,16 +80,10 @@ zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt
     if (rec->pid == proc_koid) {
       continue;
     }
-    char tmp[64];
-    snprintf(tmp, 64,
-             "\033[32m%05d.%03d\033[39m] \033[31m%05" PRIu64 ".\033[36m%05" PRIu64 "\033[39m> ",
-             (int)(rec->timestamp / 1000000000ULL), (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-             rec->pid, rec->tid);
-    vc_write(log_vc, tmp, strlen(tmp), 0);
-    vc_write(log_vc, rec->data, rec->datalen, 0);
-    if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
-      vc_write(log_vc, "\n", 1, 0);
-    }
+    write_to_log(log_vc, rec);
+
+    vc_t* vc = NULL;
+    list_for_every_entry (&log_list, vc, vc_t, node) { write_to_log(vc, rec); }
   }
 
   const char* oops = "<<LOG ERROR>>\n";
