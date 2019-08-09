@@ -27,7 +27,7 @@ pub struct NewIfaceDevice {
 }
 
 pub fn watch_phy_devices<E: wlan_dev::DeviceEnv>(
-) -> io::Result<impl Stream<Item = io::Result<NewPhyDevice>>> {
+) -> io::Result<impl Stream<Item = Result<NewPhyDevice, failure::Error>>> {
     Ok(watch_new_devices::<_, E>(E::PHY_PATH)?.try_filter_map(|path| {
         future::ready(Ok(handle_open_error(&path, new_phy::<E>(&path), "phy")))
     }))
@@ -35,7 +35,7 @@ pub fn watch_phy_devices<E: wlan_dev::DeviceEnv>(
 
 #[deprecated(note = "function is obsolete once WLAN-927 landed")]
 pub fn watch_iface_devices<E: wlan_dev::DeviceEnv>(
-) -> io::Result<impl Stream<Item = io::Result<NewIfaceDevice>>> {
+) -> io::Result<impl Stream<Item = Result<NewIfaceDevice, failure::Error>>> {
     #[allow(deprecated)]
     Ok(watch_new_devices::<_, E>(E::IFACE_PATH)?.try_filter_map(|path| {
         future::ready(Ok(handle_open_error(&path, new_iface::<E>(&path), "iface")))
@@ -59,15 +59,17 @@ fn handle_open_error<T>(
 
 fn watch_new_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
     path: P,
-) -> io::Result<impl Stream<Item = io::Result<PathBuf>>> {
+) -> io::Result<impl Stream<Item = Result<PathBuf, failure::Error>>> {
     let dir = E::open_dir(&path)?;
-    let watcher = Watcher::new(&dir)?;
-    Ok(watcher.try_filter_map(move |msg| {
-        future::ready(Ok(match msg.event {
-            WatchEvent::EXISTING | WatchEvent::ADD_FILE => Some(path.as_ref().join(msg.filename)),
-            _ => None,
-        }))
-    }))
+    Ok(async move {
+        let watcher = Watcher::new(&dir).await?;
+        Ok(watcher.try_filter_map(move |msg| {
+            future::ready(Ok(match msg.event {
+                WatchEvent::EXISTING | WatchEvent::ADD_FILE => Some(path.as_ref().join(msg.filename)),
+                _ => None,
+            }))
+        }).err_into())
+    }.try_flatten_stream())
 }
 
 fn new_phy<E: wlan_dev::DeviceEnv>(path: &PathBuf) -> Result<NewPhyDevice, failure::Error> {
@@ -102,13 +104,15 @@ mod tests {
     use fidl_fuchsia_wlan_tap as fidl_wlantap;
     use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
     use fuchsia_zircon::prelude::*;
+    use pin_utils::pin_mut;
     use wlantap_client;
 
     #[test]
     fn watch_phys() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
-        let mut new_phy_stream =
+        let new_phy_stream =
             watch_phy_devices::<wlan_dev::RealDeviceEnv>().expect("watch_phy_devices() failed");
+        pin_mut!(new_phy_stream);
         let wlantap = wlantap_client::Wlantap::open().expect("Failed to connect to wlantapctl");
         let _tap_phy = wlantap.create_phy(create_wlantap_config(*b"wtchph"));
         for _ in 0..10 {

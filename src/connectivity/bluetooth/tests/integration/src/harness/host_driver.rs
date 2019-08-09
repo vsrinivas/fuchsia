@@ -205,7 +205,7 @@ where
     let result = test_func(host_test.clone()).await;
 
     // Shut down the fake bt-hci device and make sure the bt-host device gets removed.
-    let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout_duration())?;
+    let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout_duration()).await?;
     let host_path = &host_test.read().host_path;
     host_test.aux().1 = None;
     watcher.watch_removed(host_path).await?;

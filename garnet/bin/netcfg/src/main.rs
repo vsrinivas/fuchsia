@@ -211,9 +211,11 @@ fn main() -> Result<(), failure::Error> {
     let interface_ids = Arc::new(Mutex::new(interface_ids));
 
     let ethdir = fs::File::open(ETHDIR).with_context(|_| format!("could not open {}", ETHDIR))?;
-    let mut watcher = fuchsia_vfs_watcher::Watcher::new(&ethdir)
-        .with_context(|_| format!("could not watch {}", ETHDIR))?;
     let ethernet_device = async {
+        let mut watcher = fuchsia_vfs_watcher::Watcher::new(&ethdir)
+            .await
+            .with_context(|_| format!("could not watch {}", ETHDIR))?;
+
         while let Some(fuchsia_vfs_watcher::WatchMessage { event, filename }) =
             await!(watcher.try_next()).with_context(|_| format!("watching {}", ETHDIR))?
         {

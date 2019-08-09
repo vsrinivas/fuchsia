@@ -78,7 +78,7 @@ impl Emulator {
         &self,
         settings: EmulatorSettings,
     ) -> Result<DeviceFile, Error> {
-        let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, watch_timeout())?;
+        let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, watch_timeout()).await?;
         let _ = self.publish(settings).await?;
         let topo = PathBuf::from(fdio::device_get_topo_path(self.file())?);
         watcher.watch_new(&topo, WatchFilter::AddedOrExisting).await
@@ -157,7 +157,7 @@ impl TestDevice {
 
         // Wait until a bt-emulator device gets published under our test device.
         let topo_path = PathBuf::from(fdio::device_get_topo_path(&self.0)?);
-        let mut watcher = DeviceWatcher::new(EMULATOR_DEVICE_DIR, watch_timeout())?;
+        let mut watcher = DeviceWatcher::new(EMULATOR_DEVICE_DIR, watch_timeout()).await?;
         let emulator_dev = watcher.watch_new(&topo_path, WatchFilter::AddedOrExisting).await?;
 
         // Connect to the bt-emulator device.
@@ -211,6 +211,7 @@ mod tests {
 
             // A bt-emulator device should already exist by now.
             emul_watcher = DeviceWatcher::new(EMULATOR_DEVICE_DIR, watch_timeout())
+                .await
                 .expect("Failed to create bt-emulator device watcher");
             emul_dev = emul_watcher
                 .watch_existing(&topo_path)
@@ -221,6 +222,7 @@ mod tests {
             // bt-hci device. (Note: it is important for `hci_watcher` to get constructed here since
             // our expectation is based on the `ADD_FILE` event).
             hci_watcher = DeviceWatcher::new(HCI_DEVICE_DIR, watch_timeout())
+                .await
                 .expect("Failed to create bt-hci device watcher");
             let _ = fake_dev
                 .publish(default_settings())

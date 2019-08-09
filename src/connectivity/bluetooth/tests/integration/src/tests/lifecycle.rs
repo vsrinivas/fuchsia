@@ -39,7 +39,7 @@ pub async fn lifecycle_test(_: ()) -> Result<(), Error> {
 
     // Publish the bt-hci device and verify that a bt-host appears under its topology within a
     // reasonable timeout.
-    let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout())?;
+    let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout()).await?;
     let _ = emulator.publish(settings).await?;
     let bthost = watcher.watch_new(&hci_topo, WatchFilter::AddedOnly).await?;
 

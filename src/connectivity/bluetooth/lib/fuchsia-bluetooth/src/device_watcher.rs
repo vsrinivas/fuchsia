@@ -66,9 +66,9 @@ pub enum WatchFilter {
 }
 
 impl DeviceWatcher {
-    pub fn new(dir: &str, timeout: zx::Duration) -> Result<DeviceWatcher, Error> {
+    pub async fn new(dir: &str, timeout: zx::Duration) -> Result<DeviceWatcher, Error> {
         let f = File::open(dir)?;
-        Ok(DeviceWatcher { dir: PathBuf::from(dir), watcher: VfsWatcher::new(&f)?, timeout })
+        Ok(DeviceWatcher { dir: PathBuf::from(dir), watcher: VfsWatcher::new(&f).await?, timeout })
     }
 
     /// Functions for watching devices. All of these return a Future that resolves when the desired
@@ -205,6 +205,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_new() {
         let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
+            .await
             .expect("Failed to create watcher for test devices");
         let dev = create_test_dev("test-watch-new").expect("Failed to create test device");
         eprintln!("created: {:?}", dev.topo_path());
@@ -217,6 +218,7 @@ mod tests {
 
         // Calling with the `existing` flag should succeed.
         let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
+            .await
             .expect("Failed to create watcher for test devices");
         let found = watcher
             .watch_new(dev.topo_path(), WatchFilter::AddedOrExisting)
@@ -230,6 +232,7 @@ mod tests {
     async fn test_watch_existing() {
         let dev = create_test_dev("test-watch-existing").expect("Failed to create test device");
         let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
+            .await
             .expect("Failed to create watcher for test devices");
         let found = watcher
             .watch_existing(dev.topo_path())
@@ -243,6 +246,7 @@ mod tests {
     async fn test_watch_removed() {
         let dev = create_test_dev("test-watch-removed").expect("Failed to create test device");
         let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
+            .await
             .expect("Failed to create watcher for test devices");
 
         remove_test_dev(&dev).expect("Failed to remove test device");
@@ -255,6 +259,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_timeout() {
         let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, zx::Duration::from_nanos(0))
+            .await
             .expect("Failed to create watcher");
         let path = PathBuf::from("/device_watcher/test_watch_timeout");
 

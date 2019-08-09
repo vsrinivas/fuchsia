@@ -124,7 +124,7 @@ impl Manager {
         // TODO(bwb): make more generic to support non-qmi devices
         let path: &Path = Path::new(QMI_TRANSPORT);
         let dir = File::open(QMI_TRANSPORT).unwrap();
-        let mut watcher = Watcher::new(&dir).unwrap();
+        let mut watcher = Watcher::new(&dir).await.unwrap();
         while let Some(msg) = await!(watcher.try_next())? {
             match msg.event {
                 WatchEvent::EXISTING | WatchEvent::ADD_FILE => {

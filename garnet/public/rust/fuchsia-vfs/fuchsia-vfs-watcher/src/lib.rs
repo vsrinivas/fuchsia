@@ -4,6 +4,7 @@
 
 //! Stream-based Fuchsia VFS directory watcher
 
+#![feature(async_await)]
 #![deny(missing_docs)]
 
 use fuchsia_async as fasync;
@@ -11,6 +12,7 @@ use fuchsia_zircon::{self as zx, assoc_values};
 
 use fdio::fdio_sys;
 use fidl_fuchsia_io::WATCH_MASK_ALL;
+use fidl::endpoints::Proxy;
 use futures::{
     stream::{FusedStream, Stream},
     task::Context,
@@ -64,27 +66,17 @@ impl Unpin for Watcher {}
 
 impl Watcher {
     /// Creates a new `Watcher` for the directory given by `dir`.
-    pub fn new(dir: &File) -> Result<Watcher, zx::Status> {
+    pub async fn new(dir: &File) -> Result<Watcher, failure::Error> {
         let (h0, h1) = zx::Channel::create()?;
-
-        // TODO(smklein): Borrow this channel, instead of cloning it, when
-        // supported by FIDL.
         let channel = fdio::clone_channel(dir)?;
-
-        // TODO(US-535): This API should return a future, rather than
-        // making a synchronous call.
-        let mut directory = fidl::client::sync::Client::new(channel);
-        // TODO(FIDL-524): Manually migrate.
-        let ordinal: u64 = 1522700084 << 32; // DirectoryWatch
-        zx::Status::ok(
-            directory
-                .send_query::<_, i32>(&mut (WATCH_MASK_ALL, 0, h1), ordinal, zx::Time::INFINITE)
-                .map_err(|_io_status| zx::Status::IO)?,
-        )?;
-
+        let async_channel = fasync::Channel::from_channel(channel)?;
+        let directory = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
+        let options = 0u32;
+        let status = directory.watch(WATCH_MASK_ALL, options, h1).await?;
+        zx::Status::ok(status)?;
         let mut buf = zx::MessageBuf::new();
         buf.ensure_capacity_bytes(fidl_fuchsia_io::MAX_BUF as usize);
-        Ok(Watcher { ch: fasync::Channel::from_channel(h0)?, buf: buf, idx: 0 })
+        Ok(Watcher { ch: fasync::Channel::from_channel(h0)?, buf, idx: 0 })
     }
 
     fn reset_buf(&mut self) {
@@ -186,60 +178,54 @@ mod tests {
     use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
     use fuchsia_zircon::prelude::*;
     use futures::prelude::*;
-    use pin_utils::pin_mut;
     use std::fmt::Debug;
     use std::path::Path;
     use tempfile::tempdir;
 
-    fn one_step<S, OK, ERR>(exec: &mut fasync::Executor, s: &mut S) -> OK
+    fn one_step<'a, S, OK, ERR>(s: &'a mut S) -> impl Future<Output = OK> + 'a
     where
         S: Stream<Item = Result<OK, ERR>> + Unpin,
         ERR: Debug,
     {
         let f = s.next();
         let f = f.on_timeout(500.millis().after_now(), || panic!("timeout waiting for watcher"));
-
-        let next = exec.run_singlethreaded(f);
-
-        next.expect("the stream yielded no next item")
-            .unwrap_or_else(|e| panic!("Error waiting for watcher: {:?}", e))
+        f.map(|next| {
+            next.expect("the stream yielded no next item")
+                .unwrap_or_else(|e| panic!("Error waiting for watcher: {:?}", e))
+        })
     }
 
-    #[test]
-    fn test_existing() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_existing() {
         let tmp_dir = tempdir().unwrap();
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
 
-        let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
-        let w = Watcher::new(&dir).unwrap();
+        let mut w = Watcher::new(&dir).await.unwrap();
 
         // TODO(tkilbourn): this assumes "." always comes before "file1". If this test ever starts
         // flaking, handle the case of unordered EXISTING files.
-        pin_mut!(w);
-        let msg = one_step(exec, &mut w);
+        let msg = one_step(&mut w).await;
         assert_eq!(WatchEvent::EXISTING, msg.event);
         assert_eq!(Path::new("."), msg.filename);
 
-        let msg = one_step(exec, &mut w);
+        let msg = one_step(&mut w).await;
         assert_eq!(WatchEvent::EXISTING, msg.event);
         assert_eq!(Path::new("file1"), msg.filename);
 
-        let msg = one_step(exec, &mut w);
+        let msg = one_step(&mut w).await;
         assert_eq!(WatchEvent::IDLE, msg.event);
     }
 
-    #[test]
-    fn test_add() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add() {
         let tmp_dir = tempdir().unwrap();
 
-        let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
-        let w = Watcher::new(&dir).unwrap();
-        pin_mut!(w);
+        let mut w = Watcher::new(&dir).await.unwrap();
 
         loop {
-            let msg = one_step(exec, &mut w);
+            let msg = one_step(&mut w).await;
             match msg.event {
                 WatchEvent::EXISTING => continue,
                 WatchEvent::IDLE => break,
@@ -248,26 +234,24 @@ mod tests {
         }
 
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
-        let msg = one_step(exec, &mut w);
+        let msg = one_step(&mut w).await;
         assert_eq!(WatchEvent::ADD_FILE, msg.event);
         assert_eq!(Path::new("file1"), msg.filename);
     }
 
-    #[test]
-    fn test_remove() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_remove() {
         let tmp_dir = tempdir().unwrap();
 
         let filename = "file1";
         let filepath = tmp_dir.path().join(filename);
         let _ = File::create(&filepath).unwrap();
 
-        let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
-        let w = Watcher::new(&dir).unwrap();
-        pin_mut!(w);
+        let mut w = Watcher::new(&dir).await.unwrap();
 
         loop {
-            let msg = one_step(exec, &mut w);
+            let msg = one_step(&mut w).await;
             match msg.event {
                 WatchEvent::EXISTING => continue,
                 WatchEvent::IDLE => break,
@@ -276,23 +260,21 @@ mod tests {
         }
 
         ::std::fs::remove_file(&filepath).unwrap();
-        let msg = one_step(exec, &mut w);
+        let msg = one_step(&mut w).await;
         assert_eq!(WatchEvent::REMOVE_FILE, msg.event);
         assert_eq!(Path::new(filename), msg.filename);
     }
 
-    #[test]
+    #[fasync::run_singlethreaded(test)]
     #[should_panic]
-    fn test_timeout() {
+    async fn test_timeout() {
         let tmp_dir = tempdir().unwrap();
 
-        let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
-        let w = Watcher::new(&dir).unwrap();
-        pin_mut!(w);
+        let mut w = Watcher::new(&dir).await.unwrap();
 
         loop {
-            let msg = one_step(exec, &mut w);
+            let msg = one_step(&mut w).await;
             match msg.event {
                 WatchEvent::EXISTING => continue,
                 WatchEvent::IDLE => break,
@@ -302,6 +284,6 @@ mod tests {
 
         // Ensure that our test timeouts actually work by waiting for another event that will never
         // arrive.
-        let _ = one_step(exec, &mut w);
+        let _ = one_step(&mut w).await;
     }
 }

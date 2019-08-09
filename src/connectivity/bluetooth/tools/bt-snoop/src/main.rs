@@ -328,69 +328,65 @@ struct Opt {
 }
 
 /// Setup the main loop of execution in a Task and run it.
-fn run(
+async fn run(
     config: SnoopConfig,
-    mut exec: fasync::Executor,
     mut service_handler: impl Unpin + FusedStream + Stream<Item = SnoopRequestStream>,
     inspect: inspect::Node,
 ) -> Result<(), Error> {
     let mut id_gen = IdGenerator::new();
     let hci_dir = File::open(HCI_DEVICE_CLASS_PATH).expect("Failed to open hci dev directory");
-    let mut hci_device_events = Watcher::new(&hci_dir).context("Cannot create device watcher")?;
+    let mut hci_device_events = Watcher::new(&hci_dir).await.context("Cannot create device watcher")?;
     let mut client_requests = ConcurrentClientRequestFutures::new();
     let mut subscribers = SubscriptionManager::new();
     let mut snoopers = ConcurrentSnooperPacketFutures::new();
     let mut packet_logs =
         PacketLogs::new(config.max_device_count, config.log_size_bytes, config.log_time, inspect);
 
-    let main_loop = async {
-        fx_vlog!(1, "Capturing snoop packets...");
+    fx_vlog!(1, "Capturing snoop packets...");
 
-        loop {
-            select! {
-                // A new client has connected to one of the exposed services.
-                request_stream = service_handler.select_next_some() => {
-                    register_new_client(request_stream, &mut client_requests, id_gen.next());
-                },
+    loop {
+        select! {
+            // A new client has connected to one of the exposed services.
+            request_stream = service_handler.select_next_some() => {
+                register_new_client(request_stream, &mut client_requests, id_gen.next());
+            },
 
-                // A new filesystem event in the hci device watch directory has been received.
-                event = hci_device_events.next() => {
-                    let message = event
-                        .ok_or(err_msg("Cannot reach watch server"))
-                        .and_then(|r| Ok(r?));
-                    match message {
-                        Ok(message) => {
-                            handle_hci_device_event(message, &mut snoopers, &mut subscribers,
-                                &mut packet_logs);
-                        }
-                        Err(e) => {
-                            // Attempt to recreate watcher in the event of an error.
-                            fx_log_warn!("VFS Watcher has died with error: {:?}", e);
-                            hci_device_events = Watcher::new(&hci_dir)
-                                .context("Cannot create device watcher")?;
-                        }
+            // A new filesystem event in the hci device watch directory has been received.
+            event = hci_device_events.next() => {
+                let message = event
+                    .ok_or(err_msg("Cannot reach watch server"))
+                    .and_then(|r| Ok(r?));
+                match message {
+                    Ok(message) => {
+                        handle_hci_device_event(message, &mut snoopers, &mut subscribers,
+                            &mut packet_logs);
                     }
-                },
-
-                // A client has made a request to the server.
-                request = client_requests.select_next_some() => {
-                    if let Err(e) = handle_client_request(request, &mut client_requests,
-                        &mut subscribers, &mut packet_logs)
-                    {
-                        fx_vlog!(1, "Unable to handle client request: {:?}", e);
+                    Err(e) => {
+                        // Attempt to recreate watcher in the event of an error.
+                        fx_log_warn!("VFS Watcher has died with error: {:?}", e);
+                        hci_device_events = Watcher::new(&hci_dir)
+                            .await
+                            .context("Cannot create device watcher")?;
                     }
-                },
+                }
+            },
 
-                // A new snoop packet has been received from an hci device.
-                (packet, snooper) = snoopers.select_next_some() => {
-                    handle_packet(packet, snooper, &mut snoopers, &mut subscribers,
-                        &mut packet_logs, config.truncate_payload);
-                },
-            }
+            // A client has made a request to the server.
+            request = client_requests.select_next_some() => {
+                if let Err(e) = handle_client_request(request, &mut client_requests,
+                    &mut subscribers, &mut packet_logs)
+                {
+                    fx_vlog!(1, "Unable to handle client request: {:?}", e);
+                }
+            },
+
+            // A new snoop packet has been received from an hci device.
+            (packet, snooper) = snoopers.select_next_some() => {
+                handle_packet(packet, snooper, &mut snoopers, &mut subscribers,
+                    &mut packet_logs, config.truncate_payload);
+            },
         }
-    };
-
-    exec.run_singlethreaded(main_loop)
+    }
 }
 
 /// Initializes syslog with tags and verbosity
@@ -405,8 +401,8 @@ fn init_logging(verbosity: u16) {
 }
 
 /// Parse program arguments, call the main loop, and log any unrecoverable errors.
-fn main() {
-    let exec = fasync::Executor::new().expect("Could not create executor");
+#[fasync::run_singlethreaded]
+async fn main() {
     let opt = Opt::from_args();
 
     init_logging(opt.verbosity);
@@ -425,7 +421,7 @@ fn main() {
 
     fs.take_and_serve_directory_handle().expect("serve ServiceFS directory");
 
-    match run(config, exec, fs.fuse(), runtime_inspect) {
+    match run(config, fs.fuse(), runtime_inspect).await {
         Err(err) => fx_log_err!("Failed with critical error: {:?}", err),
         _ => {}
     };

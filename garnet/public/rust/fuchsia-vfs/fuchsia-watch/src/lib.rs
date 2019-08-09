@@ -99,14 +99,15 @@ impl AsRef<Path> for PathEvent {
 /// Returns a stream of PathEvents if a watcher could be installed on the path successfully.
 ///
 /// TODO(TC-555): This should generate a stream rather than spawning tasks.
-pub fn watch(path: impl Into<PathBuf>) -> Result<BoxStream<'static, PathEvent>, Error> {
-    inner_watch(path.into())
+pub async fn watch(path: impl Into<PathBuf>) -> Result<BoxStream<'static, PathEvent>, Error> {
+    inner_watch(path.into()).await
 }
 
-fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Error> {
-    let mut watcher = Watcher::new(&File::open(&path)?)?;
-
+async fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Error> {
+    let file = File::open(&path)?;
     let (mut tx, rx) = channel(1);
+    let mut watcher = Watcher::new(&file).await?;
+
     let path_future = async move {
         while let Ok(message) = await!(watcher.try_next()) {
             let message = match message {
@@ -155,7 +156,7 @@ fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Error> {
 
     fasync::spawn(path_future);
 
-    Ok(rx.boxed())
+    Ok(rx.boxed() as BoxStream<_>)
 }
 
 /// Watches a path and all directories under that path for changes.
@@ -187,7 +188,7 @@ fn inner_watch_recursive(
     existing: bool,
 ) -> BoxFuture<'static, ()> {
     async move {
-        let mut watch_stream = match watch(&path) {
+        let mut watch_stream = match watch(&path).await {
             Ok(stream) => stream,
             Err(e) => {
                 await!(tx.send(Err(e))).unwrap_or_else(|_| {});
@@ -259,7 +260,7 @@ mod tests {
         let subdir = path.join("subdir");
 
         fs::write(&existing_path, "a").expect("write existing");
-        let mut watch_stream = watch(path.clone()).expect("watch stream");
+        let mut watch_stream = watch(path.clone()).await.expect("watch stream");
         fs::write(&file1, "a").expect("write file1");
 
         assert_eq!(
@@ -320,7 +321,7 @@ mod tests {
         let dir = tempdir().expect("make tempdir");
         let path = dir.path();
 
-        assert!(watch(path.join("does_not_exist")).is_err());
+        assert!(watch(path.join("does_not_exist")).await.is_err());
     }
 
     #[fasync::run_singlethreaded(test)]

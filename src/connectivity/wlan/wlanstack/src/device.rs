@@ -14,6 +14,7 @@ use {
         stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
     },
     log::{error, info},
+    pin_utils::pin_mut,
     std::{marker::Unpin, sync::Arc},
     void::Void,
     wlan_inspect,
@@ -89,11 +90,12 @@ pub type PhyMap = WatchableMap<u16, PhyDevice>;
 pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 
 pub async fn serve_phys(phys: Arc<PhyMap>, isolated_devmgr: bool) -> Result<Void, Error> {
-    let mut new_phys = if isolated_devmgr {
+    let new_phys = if isolated_devmgr {
         device_watch::watch_phy_devices::<wlan_dev::IsolatedDeviceEnv>()?.left_stream()
     } else {
         device_watch::watch_phy_devices::<wlan_dev::RealDeviceEnv>()?.right_stream()
     };
+    pin_mut!(new_phys);
     let mut active_phys = FuturesUnordered::new();
     loop {
         select! {
@@ -133,11 +135,12 @@ pub async fn serve_ifaces(
     isolated_devmgr: bool,
 ) -> Result<Void, Error> {
     #[allow(deprecated)]
-    let mut new_ifaces = if isolated_devmgr {
+    let new_ifaces = if isolated_devmgr {
         device_watch::watch_iface_devices::<wlan_dev::IsolatedDeviceEnv>()?.left_stream()
     } else {
         device_watch::watch_iface_devices::<wlan_dev::RealDeviceEnv>()?.right_stream()
     };
+    pin_mut!(new_ifaces);
     let mut active_ifaces = FuturesUnordered::new();
     loop {
         select! {

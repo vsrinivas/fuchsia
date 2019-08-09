@@ -34,7 +34,7 @@ async fn main() -> Result<(), Error> {
 
     // Enumerate existing TEE devices
     {
-        let mut watcher = create_watcher()?;
+        let mut watcher = create_watcher().await?;
 
         while let Some(msg) = await!(watcher.try_next())? {
             match msg.event {
@@ -86,8 +86,8 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn create_watcher() -> Result<vfs::Watcher, Error> {
+async fn create_watcher() -> Result<vfs::Watcher, Error> {
     let tee_dir = File::open(DEV_TEE_PATH)?;
-    let watcher = vfs::Watcher::new(&tee_dir)?;
+    let watcher = vfs::Watcher::new(&tee_dir).await?;
     Ok(watcher)
 }
