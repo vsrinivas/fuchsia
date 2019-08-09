@@ -47,6 +47,10 @@ Note, one needs to get OSRB approval first _before_ uploading a CL for review.
    ```
    This will update `crate_map.json` with information about the Rust crates
    available for each target (Fuchsia and host).
+   Note that this step uses information from the build step - make sure that the
+   build for the `third_party` folder has succeeded first before running this
+   command.  This would be part of the `fx build` you are expected to run in the
+   previous step.
 1. Identify all the crates to be brought
    (see the diff in //third_party/rust_crates/vendor/).
    Do not submit the CL for code review. Get OSRB approval first.
