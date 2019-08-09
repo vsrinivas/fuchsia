@@ -9,6 +9,7 @@
 namespace rawnand {
 
 static constexpr uint32_t kInstructionTypeData = 2;
+static constexpr uint32_t kInstructionTypeReadId = 27;
 static constexpr uint32_t kInstructionTypeReadParameterPage = 28;
 
 class CmdReg0 : public hwreg::RegisterBase<CmdReg0, uint32_t> {

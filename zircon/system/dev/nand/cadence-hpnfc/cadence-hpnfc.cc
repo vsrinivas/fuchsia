@@ -21,47 +21,61 @@
 
 namespace {
 
+struct JedecIdMap {
+  uint8_t jedec_id[2];
+  const char* manufacturer;
+  const char* device;
+  uint32_t page_size;
+  uint32_t pages_per_block;
+  uint32_t num_blocks;
+  uint32_t ecc_bits;
+  uint32_t oob_size;
+};
+
+constexpr JedecIdMap kJedecIdMap[] = {
+    {
+        .jedec_id = {0x98, 0xdc},
+        .manufacturer = "Toshiba",
+        .device = "TC58NVG2S0Hxxxx",
+        .page_size = 4096,
+        .pages_per_block = 64,
+        .num_blocks = 2048,
+        .ecc_bits = 8,
+        .oob_size = 256,
+    },
+};
+
 // Row address bits 5 and below are the page address, 6 and above are the block address.
 constexpr uint32_t kBlockAddressIndex = 6;
 constexpr uint32_t kPagesPerBlock = 1 << kBlockAddressIndex;
 // Selects BCH correction strength 48 from BCH config registers.
 constexpr uint32_t kEccCorrectionStrength = 5;
 
-constexpr uint32_t kOobSize = 32;
+constexpr uint32_t kMaxOobSize = 32;
 
 constexpr uint32_t kParameterPageSize = 256;
 static_assert(kParameterPageSize % sizeof(uint32_t) == 0);
+constexpr uint8_t kParameterPageSignature[] = {0x4f, 0x4e, 0x46, 0x49};
+
+// Only the first two bytes are needed but the controller requires that we round up to eight bytes.
+constexpr uint32_t kJedecIdSize = 8;
 
 // These values were taken from the bootloader NAND driver.
 constexpr zx::duration kWaitDelay = zx::usec(50);
 constexpr uint32_t kTimeoutCount = 8000;
 
+constexpr uint32_t kBytesToMebibytes = 1024 * 1024;
+
+inline uint16_t ReadParameterPage16(const uint8_t* buffer, uint32_t offset) {
+  const uint16_t* buffer16 = reinterpret_cast<const uint16_t*>(buffer);
+  ZX_DEBUG_ASSERT(offset % sizeof(uint16_t) == 0);
+  return letoh16(buffer16[offset / sizeof(uint16_t)]);
+}
+
 inline uint32_t ReadParameterPage32(const uint8_t* buffer, uint32_t offset) {
   const uint32_t* buffer32 = reinterpret_cast<const uint32_t*>(buffer);
   ZX_DEBUG_ASSERT(offset % sizeof(uint32_t) == 0);
   return letoh32(buffer32[offset / sizeof(uint32_t)]);
-}
-
-void PopulateNandInfo(const uint8_t* buffer, nand_info_t* nand_info) {
-  constexpr uint32_t kPageSizeOffset = 80;
-  constexpr uint32_t kPagesPerBlockOffset = 92;
-  constexpr uint32_t kBlocksPerLunOffset = 96;
-  constexpr uint32_t kLunsOffset = 100;
-  constexpr uint32_t kEccBitsCorrectabilityOffset = 112;
-
-  // TODO(bradenkell): Read the Extended ECC Information if this is 0xff.
-  ZX_DEBUG_ASSERT(buffer[kEccBitsCorrectabilityOffset] != 0xff);
-
-  nand_info->page_size = ReadParameterPage32(buffer, kPageSizeOffset);
-  nand_info->pages_per_block = ReadParameterPage32(buffer, kPagesPerBlockOffset);
-  nand_info->num_blocks = ReadParameterPage32(buffer, kBlocksPerLunOffset) * buffer[kLunsOffset];
-  nand_info->ecc_bits = buffer[kEccBitsCorrectabilityOffset];
-  nand_info->oob_size = kOobSize;
-  nand_info->nand_class = fuchsia_hardware_nand_Class_PARTMAP;
-  memset(nand_info->partition_guid, 0, sizeof(nand_info->partition_guid));
-
-  ZX_DEBUG_ASSERT(nand_info->page_size % sizeof(uint32_t) == 0);
-  ZX_DEBUG_ASSERT(nand_info->oob_size % sizeof(uint32_t) == 0);
 }
 
 }  // namespace
@@ -179,19 +193,13 @@ zx_status_t CadenceHpnfc::Init() {
   if (!WaitForRBn())
     return ZX_ERR_TIMED_OUT;
 
-  zx_status_t status = ReadDeviceParams();
-  if (status != ZX_OK) {
-    return status;
+  if (PopulateNandInfoOnfi() != ZX_OK && PopulateNandInfoJedec() != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get NAND device info\n", __FILE__);
+    return ZX_ERR_NOT_FOUND;
   }
 
   // TODO(bradenkell): Check the NAND info we got against the corresponding values in the
   //                   partition map metadata.
-
-  const uint64_t capacity = static_cast<uint64_t>(nand_info_.page_size) *
-                            nand_info_.pages_per_block * nand_info_.num_blocks;
-
-  zxlogf(INFO, "CadenceHpnfc: Found NAND device with capacity %ld bytes\n", capacity);
-
   // TODO(bradenkell): Calculate the following values instead of hard coding them.
 
   NfDevLayout::Get()
@@ -255,17 +263,97 @@ void CadenceHpnfc::CopyToFifo(const void* buffer, size_t size) {
   }
 }
 
-zx_status_t CadenceHpnfc::ReadDeviceParams() {
+zx_status_t CadenceHpnfc::PopulateNandInfoJedec() {
+  uint8_t jedec_id[kJedecIdSize] = {};
+  zx_status_t status = DoGenericCommand(kInstructionTypeReadId, jedec_id, sizeof(jedec_id));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to read ID: %d\n", __FILE__, status);
+    return status;
+  }
+
+  for (size_t i = 0; i < fbl::count_of(kJedecIdMap); i++) {
+    if (kJedecIdMap[i].jedec_id[0] == jedec_id[0] && kJedecIdMap[i].jedec_id[1] == jedec_id[1]) {
+      nand_info_.page_size = kJedecIdMap[i].page_size;
+      nand_info_.pages_per_block = kJedecIdMap[i].pages_per_block;
+      nand_info_.num_blocks = kJedecIdMap[i].num_blocks;
+      nand_info_.ecc_bits = kJedecIdMap[i].ecc_bits;
+      nand_info_.oob_size = std::min(kJedecIdMap[i].oob_size, kMaxOobSize);
+      nand_info_.nand_class = fuchsia_hardware_nand_Class_PARTMAP;
+      memset(nand_info_.partition_guid, 0, sizeof(nand_info_.partition_guid));
+
+      const uint64_t capacity = static_cast<uint64_t>(nand_info_.page_size) *
+                                nand_info_.pages_per_block * nand_info_.num_blocks;
+
+      zxlogf(INFO, "CadenceHpnfc: Found NAND device %s with capacity %ld MiB\n",
+             kJedecIdMap[i].device, capacity / kBytesToMebibytes);
+
+      return ZX_OK;
+    }
+  }
+
+  return ZX_ERR_NOT_FOUND;
+}
+
+zx_status_t CadenceHpnfc::PopulateNandInfoOnfi() {
+  uint8_t parameter_page[kParameterPageSize] = {};
+  zx_status_t status =
+      DoGenericCommand(kInstructionTypeReadParameterPage, parameter_page, sizeof(parameter_page));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to read parameter page: %d\n", __FILE__, status);
+    return status;
+  }
+
+  if (memcmp(parameter_page, kParameterPageSignature, sizeof(kParameterPageSignature)) != 0) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  constexpr uint32_t kDeviceModelOffset = 44;
+  constexpr uint32_t kDeviceModelSize = 20;
+  constexpr uint32_t kPageSizeOffset = 80;
+  constexpr uint32_t kOobSizeOffset = 84;
+  constexpr uint32_t kPagesPerBlockOffset = 92;
+  constexpr uint32_t kBlocksPerLunOffset = 96;
+  constexpr uint32_t kLunsOffset = 100;
+  constexpr uint32_t kEccBitsCorrectabilityOffset = 112;
+
+  // TODO(bradenkell): Read the Extended ECC Information if this is 0xff.
+  ZX_DEBUG_ASSERT(parameter_page[kEccBitsCorrectabilityOffset] != 0xff);
+
+  nand_info_.page_size = ReadParameterPage32(parameter_page, kPageSizeOffset);
+  nand_info_.pages_per_block = ReadParameterPage32(parameter_page, kPagesPerBlockOffset);
+  nand_info_.num_blocks =
+      ReadParameterPage32(parameter_page, kBlocksPerLunOffset) * parameter_page[kLunsOffset];
+  nand_info_.ecc_bits = parameter_page[kEccBitsCorrectabilityOffset];
+  nand_info_.oob_size =
+      std::min<uint32_t>(ReadParameterPage16(parameter_page, kOobSizeOffset), kMaxOobSize);
+  nand_info_.nand_class = fuchsia_hardware_nand_Class_PARTMAP;
+  memset(nand_info_.partition_guid, 0, sizeof(nand_info_.partition_guid));
+
+  ZX_DEBUG_ASSERT(nand_info_.page_size % sizeof(uint32_t) == 0);
+  ZX_DEBUG_ASSERT(nand_info_.oob_size % sizeof(uint32_t) == 0);
+
+  const uint64_t capacity = static_cast<uint64_t>(nand_info_.page_size) *
+                            nand_info_.pages_per_block * nand_info_.num_blocks;
+
+  char model[kDeviceModelSize + 1];
+  memcpy(model, parameter_page + kDeviceModelOffset, kDeviceModelSize);
+
+  char* const first_space = reinterpret_cast<char*>(memchr(model, ' ', kDeviceModelSize));
+  model[first_space ? (first_space - model) : kDeviceModelSize] = '\0';
+
+  zxlogf(INFO, "CadenceHpnfc: Found NAND device %s with capacity %ld MiB\n", model,
+         capacity / kBytesToMebibytes);
+
+  return ZX_OK;
+}
+
+zx_status_t CadenceHpnfc::DoGenericCommand(uint32_t instruction, uint8_t* out_data, uint32_t size) {
   if (!WaitForThread())
     return ZX_ERR_TIMED_OUT;
 
   IntrStatus::Get().ReadFrom(&mmio_).clear().WriteTo(&mmio_);
 
-  CmdReg1::Get().FromValue(0).WriteTo(&mmio_);
-  CmdReg2Command::Get()
-      .FromValue(0)
-      .set_instruction_type(kInstructionTypeReadParameterPage)
-      .WriteTo(&mmio_);
+  CmdReg2Command::Get().FromValue(0).set_instruction_type(instruction).WriteTo(&mmio_);
   CmdReg3::Get().FromValue(0).WriteTo(&mmio_);
   CmdReg0::Get().FromValue(0).set_command_type(CmdReg0::kCommandTypeGeneric).WriteTo(&mmio_);
 
@@ -274,25 +362,18 @@ zx_status_t CadenceHpnfc::ReadDeviceParams() {
 
   CmdReg1::Get().FromValue(0).WriteTo(&mmio_);
   CmdReg2Data::Get().FromValue(0).set_instruction_type(kInstructionTypeData).WriteTo(&mmio_);
-  CmdReg3::Get()
-      .FromValue(0)
-      .set_last_sector_size(kParameterPageSize)
-      .set_sector_count(1)
-      .WriteTo(&mmio_);
+  CmdReg3::Get().FromValue(0).set_last_sector_size(size).set_sector_count(1).WriteTo(&mmio_);
   CmdReg0::Get().FromValue(0).set_command_type(CmdReg0::kCommandTypeGeneric).WriteTo(&mmio_);
 
   if (!WaitForSdmaTrigger())
     return ZX_ERR_TIMED_OUT;
 
-  uint8_t parameter_page[kParameterPageSize];
-  CopyFromFifo(parameter_page, sizeof(parameter_page));
+  CopyFromFifo(out_data, size);
 
   if (!WaitForThread())
     return ZX_ERR_TIMED_OUT;
   if (!WaitForRBn())
     return ZX_ERR_TIMED_OUT;
-
-  PopulateNandInfo(parameter_page, &nand_info_);
 
   return ZX_OK;
 }

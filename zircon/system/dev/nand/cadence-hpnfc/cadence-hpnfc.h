@@ -38,7 +38,11 @@ class CadenceHpnfc : public DeviceType,
 
  private:
   zx_status_t Init();
-  zx_status_t ReadDeviceParams();
+
+  zx_status_t PopulateNandInfoJedec();
+  zx_status_t PopulateNandInfoOnfi();
+
+  zx_status_t DoGenericCommand(uint32_t instruction, uint8_t* out_data, uint32_t size);
 
   // Copy data to or from the FIFO. size is the total number of bytes expected. CopyFromFifo returns
   // the number of bytes read into buffer, which may be zero if buffer is null.

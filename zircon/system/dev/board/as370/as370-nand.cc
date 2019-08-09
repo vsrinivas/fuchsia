@@ -17,11 +17,6 @@
 namespace board_as370 {
 
 zx_status_t As370::NandInit() {
-  // TODO(bradenkell): Test NAND driver on Visalia.
-  if (board_info_.vid != PDEV_VID_SYNAPTICS || board_info_.pid != PDEV_PID_SYNAPTICS_AS370) {
-    return ZX_OK;
-  }
-
   constexpr pbus_mmio_t nand_mmios[] = {
       {.base = as370::kNandBase, .length = as370::kNandSize},
       {.base = as370::kNandFifoBase, .length = as370::kNandFifoSize},
