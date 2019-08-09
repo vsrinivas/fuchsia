@@ -32,13 +32,7 @@ executable("vkcopy") {
     "$magma_build_root/src/magma_util",
   ]
 
-  if (use_vulkan_loader_for_tests) {
-    deps = [
-      "//src/graphics/lib/vulkan",
-    ]
-  } else {
-    deps = [
-      "$magma_build_root/tests/vulkan_shim",
-    ]
-  }
+  deps = [
+    "//src/graphics/lib/vulkan",
+  ]
 }

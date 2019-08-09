@@ -28,16 +28,6 @@ declare_args() {
 }
 
 declare_args() {
-  # Mesa doesn't properly handle loader-less operation;
-  # their GetInstanceProcAddr implementation returns 0 for some interfaces.
-  # On ARM there may be multiple libvulkan_arms, so they can't all be linked
-  # to.
-  use_vulkan_loader_for_tests = true
-
-  # The following are lists of targets that will be built as vulkan ICDS. If
-  # more than one target is given then use_vulkan_loader_for_tests must be set
-  # to true, as otherwise tests won't know which libvulkan to use.
-
   # Targets that will be built as mali vulkan ICDS.
   build_libvulkan_arm_mali = []
 

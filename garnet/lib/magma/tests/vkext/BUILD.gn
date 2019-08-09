@@ -25,9 +25,5 @@ executable("vkext") {
     "//zircon/public/lib/fdio",
   ]
 
-  if (use_vulkan_loader_for_tests) {
-    deps += [ "//src/graphics/lib/vulkan" ]
-  } else {
-    deps += [ "$magma_build_root/tests/vulkan_shim" ]
-  }
+  deps += [ "//src/graphics/lib/vulkan" ]
 }

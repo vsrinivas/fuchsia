@@ -16,11 +16,7 @@ source_set("vkreadback_src") {
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
   ]
-  if (use_vulkan_loader_for_tests) {
-    public_deps += [ "//src/graphics/lib/vulkan" ]
-  } else {
-    public_deps += [ "$magma_build_root/tests/vulkan_shim" ]
-  }
+  public_deps += [ "//src/graphics/lib/vulkan" ]
 }
 
 executable("vkreadback") {
@@ -44,9 +40,5 @@ executable("mt_create_vkdevice_loop") {
     "$magma_build_root/src/magma_util",
   ]
 
-  if (use_vulkan_loader_for_tests) {
-    public_deps += [ "//src/graphics/lib/vulkan" ]
-  } else {
-    public_deps += [ "$magma_build_root/tests/vulkan_shim" ]
-  }
+  public_deps += [ "//src/graphics/lib/vulkan" ]
 }

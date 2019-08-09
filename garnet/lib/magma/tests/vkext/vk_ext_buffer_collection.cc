@@ -5,11 +5,6 @@
 #include "gtest/gtest.h"
 
 #define MAGMA_DLOG_ENABLE 1
-#if defined(MAGMA_USE_SHIM)
-#include "vulkan_shim.h"
-#else
-#include <vulkan/vulkan.h>
-#endif
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
@@ -18,6 +13,8 @@
 #include <string.h>
 
 #include <vector>
+
+#include <vulkan/vulkan.h>
 
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "magma_util/dlog.h"

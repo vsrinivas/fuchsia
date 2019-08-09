@@ -19,9 +19,6 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-#if defined(MAGMA_USE_SHIM)
-  VulkanShimInit();
-#endif
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

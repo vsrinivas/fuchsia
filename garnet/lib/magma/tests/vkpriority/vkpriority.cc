@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-
-#if defined(MAGMA_USE_SHIM)
-#include "vulkan_shim.h"
-#else
-#include <vulkan/vulkan.h>
-#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +12,9 @@
 #include <thread>
 #include <vector>
 
+#include <vulkan/vulkan.h>
+
+#include "gtest/gtest.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 

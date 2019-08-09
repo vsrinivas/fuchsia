@@ -23,9 +23,5 @@ executable("vkloop") {
     "//third_party/googletest:gtest",
   ]
 
-  if (use_vulkan_loader_for_tests) {
-    public_deps += [ "//src/graphics/lib/vulkan" ]
-  } else {
-    public_deps += [ "//garnet/lib/magma/tests/vulkan_shim" ]
-  }
+  public_deps += [ "//src/graphics/lib/vulkan" ]
 }

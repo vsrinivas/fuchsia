@@ -12,20 +12,15 @@ group("tests") {
   testonly = true
 
   deps = [
+    "benchmark",
     "codegen",
+    "icd_load",
     "unit_tests",
+    "vkext",
+    "vkloop",
+    "vkpriority",
+    "vkreadback",
   ]
-
-  if (have_libvulkan || use_vulkan_loader_for_tests) {
-    deps += [
-      "benchmark",
-      "icd_load",
-      "vkext",
-      "vkloop",
-      "vkpriority",
-      "vkreadback",
-    ]
-  }
 
   # Intel
   if (target_cpu == "x64") {
@@ -75,64 +70,62 @@ test_package("magma_abi_conformance_tests") {
 }
 
 test_package("vulkan-tests") {
-  if (have_libvulkan || use_vulkan_loader_for_tests) {
-    deps = [
-      "benchmark",
-      "icd_load",
-      "vk_timer_query",
-      "vkext",
-      "vkloop",
-      "vkpriority",
-      "vkreadback",
-    ]
-    loadable_modules = vulkan_validation_layers.loadable_modules
-    resources = vulkan_validation_layers.resources
-    public_deps = vulkan_validation_layers.public_deps
+  deps = [
+    "benchmark",
+    "icd_load",
+    "vk_timer_query",
+    "vkext",
+    "vkloop",
+    "vkpriority",
+    "vkreadback",
+  ]
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+  public_deps = vulkan_validation_layers.public_deps
 
-    tests = [
-      {
-        name = "icd_load"
-        environments = magma_libvulkan_hardware_envs
-      },
-      {
-        name = "magma_memcpy"
-        environments = magma_libvulkan_hardware_envs
-      },
-      {
-        name = "vkreadback"
-        environments = magma_libvulkan_hardware_envs
-      },
-      {
-        name = "vkloop"
+  tests = [
+    {
+      name = "icd_load"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "magma_memcpy"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "vkreadback"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "vkloop"
 
-        # TODO(MA-530): re-enable once working again.
-        disabled = true
-      },
-      {
-        name = "vkext"
-        environments = magma_libvulkan_hardware_envs
-      },
-      {
-        name = "vkcopy"
-        environments = magma_libvulkan_hardware_envs
-      },
-      {
-        name = "vkpriority"
+      # TODO(MA-530): re-enable once working again.
+      disabled = true
+    },
+    {
+      name = "vkext"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "vkcopy"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "vkpriority"
 
-        # No available hardware to run it on; cannot run with an Intel GPU.
-        disabled = true
-      },
-      {
-        name = "vk_timer_query_tests"
-        environments = magma_libvulkan_arm_hardware_envs
-      },
-    ]
+      # No available hardware to run it on; cannot run with an Intel GPU.
+      disabled = true
+    },
+    {
+      name = "vk_timer_query_tests"
+      environments = magma_libvulkan_arm_hardware_envs
+    },
+  ]
 
-    resources += [
-      {
-        path = "vkloop/comp.spv"
-        dest = "vkloop.spv"
-      },
-    ]
-  }
+  resources += [
+    {
+      path = "vkloop/comp.spv"
+      dest = "vkloop.spv"
+    },
+  ]
 }

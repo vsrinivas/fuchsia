@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-
-#if MAGMA_USE_SHIM
-#include "vulkan_shim.h"
-#else
-#include <vulkan/vulkan.h>
-#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,6 +11,9 @@
 #include <thread>
 #include <vector>
 
+#include <vulkan/vulkan.h>
+
+#include "gtest/gtest.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "platform_semaphore.h"
@@ -93,10 +89,8 @@ bool VulkanTest::InitVulkan() {
     return DRETF(false, "failed to find instance extensions");
 
   std::vector<const char*> layers;
-#if !MAGMA_USE_SHIM
   // Vulkan loader is needed for loading layers.
   layers.push_back("VK_LAYER_LUNARG_standard_validation");
-#endif
   VkInstanceCreateInfo create_info{
       VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,  // VkStructureType             sType;
       nullptr,                                 // const void*                 pNext;

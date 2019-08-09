@@ -8,15 +8,11 @@
 #include <cstdio>
 #include <vector>
 
+#include <vulkan/vulkan.h>
+
 #include "gtest/gtest.h"
 #include "magma_util/dlog.h"
 #include "src/lib/fxl/test/test_settings.h"
-
-#if defined(MAGMA_USE_SHIM)
-#include "vulkan_shim.h"
-#else
-#include <vulkan/vulkan.h>
-#endif
 
 void IcdLoadTest::LoadIcd() {
   // vkEnumerateInstanceExtensionProperties is the chosen entrypoint because
@@ -51,9 +47,6 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-#if defined(MAGMA_USE_SHIM)
-  VulkanShimInit();
-#endif
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

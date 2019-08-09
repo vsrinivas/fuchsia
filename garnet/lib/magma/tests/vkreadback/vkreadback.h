@@ -5,13 +5,6 @@
 #ifndef GARNET_LIB_MAGMA_TESTS_VKREADBACK_VKREADBACK_H_
 #define GARNET_LIB_MAGMA_TESTS_VKREADBACK_VKREADBACK_H_
 
-#include "gtest/gtest.h"
-
-#if defined(MAGMA_USE_SHIM)
-#include "vulkan_shim.h"
-#else
-#include <vulkan/vulkan.h>
-#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +13,9 @@
 
 #include <vector>
 
+#include <vulkan/vulkan.h>
+
+#include "gtest/gtest.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
