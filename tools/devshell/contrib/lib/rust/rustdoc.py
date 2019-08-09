@@ -77,11 +77,12 @@ def main():
 
     # run cargo from third_party/rust_crates which has an appropriate .cargo/config
     cwd = os.path.join(ROOT_PATH, "third_party", "rust_crates")
-    buildtools_dir = os.path.join(ROOT_PATH, "buildtools", host_platform)
-    clang_prefix = os.path.join(buildtools_dir, "clang", "bin")
-    cmake_dir = os.path.join(buildtools_dir, "cmake", "bin")
-    cargo = os.path.join(buildtools_dir, "rust", "bin", "cargo")
-    rustc = os.path.join(buildtools_dir, "rust", "bin", "rustc")
+    buildtools_dir = os.path.join(ROOT_PATH, "prebuilt", "third_party")
+    clang_prefix = os.path.join(buildtools_dir, "clang", host_platform, "bin")
+    cmake_dir = os.path.join(buildtools_dir, "cmake", host_platform, "bin")
+    rust_dir = os.path.join(buildtools_dir, "rust", host_platform, "bin")
+    cargo = os.path.join(rust_dir, "cargo")
+    rustc = os.path.join(rust_dir, "rustc")
     rustdoc = os.path.join(ROOT_PATH, "scripts", "rust", "rustdoc_no_ld_library_path.sh")
 
     shared_libs_root = os.path.join(ROOT_PATH, build_dir)
