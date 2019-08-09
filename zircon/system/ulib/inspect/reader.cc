@@ -281,7 +281,7 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
   const size_t total_length = remaining_length;
 
   size_t current_offset = 0;
-  char buf[total_length];
+  std::vector<uint8_t> buf(total_length);
 
   BlockIndex cur_extent = PropertyBlockPayload::ExtentIndex::Get<BlockIndex>(block->payload.u64);
   auto* extent = snapshot_.GetBlock(cur_extent);
@@ -290,7 +290,7 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
       break;
     }
     size_t len = std::min(remaining_length, PayloadCapacity(GetOrder(extent)));
-    memcpy(buf + current_offset, extent->payload.data, len);
+    memcpy(&buf[current_offset], extent->payload.data, len);
     remaining_length -= len;
     current_offset += len;
     extent =
@@ -300,12 +300,11 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
   auto& parent_properties = parent->hierarchy.node().properties();
   if (PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64) &
       static_cast<uint8_t>(inspect::PropertyBlockFormat::kBinary)) {
-    parent_properties.emplace_back(inspect::PropertyValue(
-        std::move(name),
-        inspect::ByteVectorPropertyValue(std::vector<uint8_t>(buf, buf + total_length))));
+    parent_properties.emplace_back(
+        inspect::PropertyValue(std::move(name), inspect::ByteVectorPropertyValue(buf)));
   } else {
     parent_properties.emplace_back(inspect::PropertyValue(
-        std::move(name), inspect::StringPropertyValue(std::string(buf, total_length))));
+        std::move(name), inspect::StringPropertyValue(std::string(buf.begin(), buf.end()))));
   }
 }
 

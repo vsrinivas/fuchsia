@@ -34,6 +34,21 @@ TEST(Inspect, CreateDeleteActive) {
   EXPECT_TRUE(bool(child));
 }
 
+TEST(Inspect, CreateLargeHeap) {
+  // Make a 16MB heap.
+  auto inspector = std::make_unique<Inspector>(
+      "root", inspect::InspectSettings{.maximum_size = 16 * 1024 * 1024});
+
+  // Store a 4MB string.
+  std::string s(4 * 1024 * 1024, 'a');
+  auto property = inspector->GetRoot().CreateString("big_string", s);
+  auto result = inspect::ReadFromVmo(*inspector->GetVmo().take_value());
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+
+  EXPECT_EQ(s, hierarchy.node().properties()[0].Get<inspect::StringPropertyValue>().value());
+}
+
 TEST(Inspect, CreateInvalidSize) {
   auto inspector = std::make_unique<Inspector>("root", inspect::InspectSettings{.maximum_size = 0});
   EXPECT_FALSE(inspector->GetVmo().is_ok());
