@@ -45,7 +45,7 @@ We recommend the following four-step process for dealing with flakes:
 
 1.  Observer: Identify the flake.
 2.  Observer: File a bug under the FLK project.
-3.  Resolver: Revert or disable the offending test immediately.
+3.  Resolver: Remove the offending test from CQ immediately.
 4.  Resolver: Fix the offending test offline, re-enable the test.
 
 #### Observer: Identify
@@ -61,7 +61,7 @@ providing context and revealing which subtest failed.
 (Googlers-Only) File a bug under go/test-flake: Link to the failing bot, and
 include the name of the failing test.
 
-#### Resolver: Revert or disable
+#### Resolver: Remove from CQ
 
 A resolver should prioritize, above all else, removing the test from the commit
 queue. This can be achieved in the following ways:
@@ -76,22 +76,15 @@ queue. This can be achieved in the following ways:
     comment in the BUILD.gn file.
     [Example change](https://fuchsia-review.googlesource.com/c/topaz/+/296629/3/bin/flutter_screencap_test/BUILD.gn).
 
-These mechanisms are recommended: They remove the faulty test, and prevent the
-commit queue becoming unreliable. The first option (reverting code) is
-preferred, but it is not as easy as the second option (disabling test), which
+The above mechanisms are recommended because they remove the faulty test, and
+prevent the commit queue becoming unreliable. The first option (reverting code)
+is preferred, but it is not as easy as the second option (disabling test), which
 reduces test coverage. Importantly, neither of these options prevent diagnosis
 and fixing of the flake, but they allow it to be processed offline.
 
-There is a third alternative to disable tests, but it is explicitly not
-recommended:
-
--   Finding a fix for the flake and resolving it directly.
-
-This alternative is not recommended, because it combines the steps of “disable
-the test” with “fixing the test offline”. Although this is the most
-straight-line path for removing flake, it has a serious cost: it causes the CQ
-to be unreliable for all other contributors, which allows additional flakes to
-compound in the codebase.
+It is **not** recommended to attempt to fix the test without first
+removing it from CQ. This causes the CQ to be unreliable for all other
+contributors, which allows additional flakes to compound in the codebase.
 
 #### Resolver: Fix Offline
 
