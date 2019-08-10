@@ -6,10 +6,11 @@
 #define LIB_ZX_TIME_H_
 
 #include <stdint.h>
-#include <limits>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
+
+#include <limits>
 
 namespace zx {
 
@@ -261,18 +262,6 @@ constexpr basic_time<kClockId> operator+(duration delta, basic_time<kClockId> ti
 using time = basic_time<ZX_CLOCK_MONOTONIC>;
 using time_utc = basic_time<ZX_CLOCK_UTC>;
 using time_thread = basic_time<ZX_CLOCK_THREAD>;
-
-class clock final {
- public:
-  clock() = delete;
-
-  template <zx_clock_t kClockId>
-  static zx_status_t get(basic_time<kClockId>* result) {
-    return zx_clock_get(kClockId, result->get_address());
-  }
-
-  static time get_monotonic() { return time(zx_clock_get_monotonic()); }
-};
 
 constexpr inline duration nsec(int64_t n) { return duration(ZX_NSEC(n)); }
 

@@ -1,7 +1,7 @@
 {
   "pkg/zx/include/lib/zx/bti.h": "36d67577c4f3ac4eddce4c10fc8bd581",
   "pkg/zx/include/lib/zx/channel.h": "abc9cc02dde72ead569a4f96436094a1",
-  "pkg/zx/include/lib/zx/clock.h": "be074c7005b4b6860ea128efcf923144",
+  "pkg/zx/include/lib/zx/clock.h": "ddb9592ded348b7e66bb026fbeae86bd",
   "pkg/zx/include/lib/zx/debuglog.h": "a3a2f15f51712d8c1b9590260bce915d",
   "pkg/zx/include/lib/zx/event.h": "6ec782bf5ff54dbc4ec81900c1bf26b1",
   "pkg/zx/include/lib/zx/eventpair.h": "bb272cfae2830213ec344de293286279",
@@ -24,7 +24,7 @@
   "pkg/zx/include/lib/zx/suspend_token.h": "a1fc9750a272e2cc164c0a7c16ed117c",
   "pkg/zx/include/lib/zx/task.h": "a961716f9360f5c4261d58e17d947279",
   "pkg/zx/include/lib/zx/thread.h": "973f91c7367b0c041bc43ac7882a2c99",
-  "pkg/zx/include/lib/zx/time.h": "2738103d0061a967a3a5277c2b9a9501",
+  "pkg/zx/include/lib/zx/time.h": "4a4513be675bbf611e7489ca9dfe2a8c",
   "pkg/zx/include/lib/zx/timer.h": "8f82d3859534e3eea20e8cc3abca049b",
   "pkg/zx/include/lib/zx/vcpu.h": "e5aa76d99865c1574caafa8d2e5adadd",
   "pkg/zx/include/lib/zx/vmar.h": "3395611c6ade911276a81bc2db6c24dc",
