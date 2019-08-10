@@ -125,7 +125,7 @@ impl UrlLoaderHttpClient {
         let mut request = http_request.0;
 
         let UrlResponse { error, body: response_body, status_code, .. } =
-            await!(self.url_loader.start(&mut request))
+            self.url_loader.start(&mut request).await
                 .auth_provider_status(AuthProviderStatus::UnknownError)?;
         if error.is_some() {
             return Err(AuthProviderError::new(AuthProviderStatus::NetworkError));
@@ -139,7 +139,7 @@ impl UrlLoaderHttpClient {
                 let mut socket = fasync::Socket::from_socket(sock)
                     .auth_provider_status(AuthProviderStatus::UnknownError)?;
                 let mut response_body = Vec::<u8>::with_capacity(RESPONSE_BUFFER_SIZE);
-                await!(socket.read_to_end(&mut response_body))
+                socket.read_to_end(&mut response_body).await
                     .auth_provider_status(AuthProviderStatus::UnknownError)?;
                 let response_str = String::from_utf8(response_body)
                     .auth_provider_status(AuthProviderStatus::UnknownError)?;
@@ -160,7 +160,7 @@ impl HttpClient for UrlLoaderHttpClient {
         &'a self,
         http_request: HttpRequest,
     ) -> FutureObj<'a, AuthProviderResult<(Option<String>, StatusCode)>> {
-        FutureObj::new(Box::new(async move { await!(Self::request_inner(self, http_request)) }))
+        FutureObj::new(Box::new(async move { Self::request_inner(self, http_request).await }))
     }
 }
 
@@ -261,7 +261,7 @@ mod test {
                 .expect("Failed to create URL loader proxy.");
         fasync::spawn(async move {
             let req =
-                await!(url_loader_stream.try_next()).expect("Failed to get request from stream");
+                url_loader_stream.try_next().await.expect("Failed to get request from stream");
             if let Some(UrlLoaderRequest::Start { responder, .. }) = req {
                 responder.send(&mut response).expect("Failed to send response");
             } else {
@@ -286,7 +286,7 @@ mod test {
             None,
         ));
         let request = HttpRequestBuilder::new(TEST_URL.as_str(), "GET").finish()?;
-        let (response_body, status) = await!(http_client.request(request))?;
+        let (response_body, status) = http_client.request(request).await?;
         assert_eq!(response_body, Some("response-body".to_string()));
         assert_eq!(status, StatusCode::FORBIDDEN);
         Ok(())
@@ -303,7 +303,7 @@ mod test {
             None,
         ));
         let request = HttpRequestBuilder::new(TEST_URL.as_str(), "GET").finish()?;
-        let (response_body, status) = await!(http_client.request(request))?;
+        let (response_body, status) = http_client.request(request).await?;
         assert_eq!(Some(long_body), response_body);
         assert_eq!(StatusCode::OK, status);
         Ok(())
@@ -313,7 +313,7 @@ mod test {
     async fn test_network_error() -> Result<(), Error> {
         let http_client = UrlLoaderHttpClient::new(url_loader_with_response("", 0, Some(0)));
         let request = HttpRequestBuilder::new(TEST_URL.as_str(), "GET").finish()?;
-        let result = await!(http_client.request(request));
+        let result = http_client.request(request).await;
         assert_eq!(result.unwrap_err().status, AuthProviderStatus::NetworkError);
         Ok(())
     }

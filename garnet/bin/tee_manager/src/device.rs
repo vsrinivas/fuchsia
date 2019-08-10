@@ -56,9 +56,9 @@ impl TeeDeviceConnection {
 
         fasync::spawn(async move {
             let abort_handles_lock = abort_handles_lock_cloned;
-            await!(on_closed_fut);
+            on_closed_fut.await;
 
-            let abort_context = &mut *await!(abort_handles_lock.lock());
+            let abort_context = &mut *abort_handles_lock.lock().await;
             abort_context.is_aborted = true;
             for handle in &abort_context.abort_handles {
                 handle.abort();
@@ -71,7 +71,7 @@ impl TeeDeviceConnection {
 
     /// Register an `AbortHandle` to be invoked when the device connection closes.
     pub async fn register_abort_handle_on_closed(&self, handle: AbortHandle) {
-        let abort_context = &mut *await!(self.abort_handles_lock.lock());
+        let abort_context = &mut *self.abort_handles_lock.lock().await;
         if abort_context.is_aborted {
             // Since the device closed event has already been received, immediately close the handle
             handle.abort();

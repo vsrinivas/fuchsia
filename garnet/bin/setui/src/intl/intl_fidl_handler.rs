@@ -35,7 +35,7 @@ impl IntlFidlHandler {
         fasync::spawn(async move {
             let handler = Self { switchboard_handle: switchboard.clone() };
 
-            while let Some(req) = await!(stream.try_next()).unwrap() {
+            while let Some(req) = stream.try_next().await.unwrap() {
                 // Support future expansion of FIDL
                 #[allow(unreachable_patterns)]
                 match req {
@@ -56,7 +56,7 @@ impl IntlFidlHandler {
                                 .unwrap();
                         }
 
-                        if let Ok(Some(SettingResponse::Intl(info))) = await!(response_rx).unwrap()
+                        if let Ok(Some(SettingResponse::Intl(info))) = response_rx.await.unwrap()
                         {
                             let mut intl_settings = IntlSettings::empty();
                             intl_settings.time_zone_id = Some(TimeZoneId { id: info.time_zone_id });
@@ -84,7 +84,7 @@ impl IntlFidlHandler {
                 async move {
                     // Return success if we get a Ok result from the
                     // switchboard.
-                    if let Ok(Ok(_optional_response)) = await!(response_rx) {
+                    if let Ok(Ok(_optional_response)) = response_rx.await {
                         responder.send(&mut Ok(())).ok();
                         return Ok(());
                     }

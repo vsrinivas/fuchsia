@@ -189,17 +189,17 @@ mod tests {
             io_util::open_file(&root_of_memfs, &file_name, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)
                 .expect("failed to open file");
         let (s, _) =
-            await!(file_proxy.write(&mut file_contents.clone().as_bytes().to_vec().drain(..)))
+            file_proxy.write(&mut file_contents.clone().as_bytes().to_vec().drain(..)).await
                 .expect("failed to write to file");
         assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
-        let s = await!(file_proxy.close()).expect("failed to close file");
+        let s = file_proxy.close().await.expect("failed to close file");
         assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
 
         // Open the same file and read the contents back
         let file_proxy =
             io_util::open_file(&root_of_memfs, &file_name, OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE)
                 .expect("failed to open file");
-        let read_contents = await!(io_util::read_file(&file_proxy)).expect("failed to read file");
+        let read_contents = io_util::read_file(&file_proxy).await.expect("failed to read file");
 
         assert_eq!(file_contents, read_contents);
 

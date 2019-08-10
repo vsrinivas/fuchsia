@@ -42,8 +42,8 @@ impl AccountHandlerContext {
         &self,
         mut stream: AccountHandlerContextRequestStream,
     ) -> Result<(), Error> {
-        while let Some(req) = await!(stream.try_next())? {
-            await!(self.handle_request(req))?;
+        while let Some(req) = stream.try_next().await? {
+            self.handle_request(req).await?;
         }
         Ok(())
     }
@@ -55,7 +55,7 @@ impl AccountHandlerContext {
                 auth_provider_type,
                 auth_provider,
                 responder,
-            } => responder.send(await!(self.get_auth_provider(&auth_provider_type, auth_provider))),
+            } => responder.send(self.get_auth_provider(&auth_provider_type, auth_provider).await),
         }
     }
 
@@ -65,7 +65,7 @@ impl AccountHandlerContext {
         auth_provider: ServerEnd<AuthProviderMarker>,
     ) -> Status {
         match self.auth_provider_connections.get(auth_provider_type) {
-            Some(apc) => match await!(apc.connect(auth_provider)) {
+            Some(apc) => match apc.connect(auth_provider).await {
                 Ok(()) => Status::Ok,
                 Err(_) => Status::UnknownError,
             },

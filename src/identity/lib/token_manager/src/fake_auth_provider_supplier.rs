@@ -66,7 +66,7 @@ impl FakeAuthProviderSupplier {
     /// This is intended to run concurrently with the client code under test.
     pub async fn run(&self) -> Result<(), FakeAuthProviderError> {
         let futs = std::mem::replace(&mut *self.servers.lock(), FuturesUnordered::new());
-        await!(futs.collect::<Vec<_>>())
+        futs.collect::<Vec<_>>().await
             .into_iter()
             .collect::<Result<Vec<_>, fidl::Error>>()
             .map_err(|err| FakeAuthProviderError::ServerError(err))?;
@@ -113,11 +113,11 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn auth_provider_fake_test() {
         let auth_provider_supplier = Arc::new(FakeAuthProviderSupplier::new());
-        assert!(await!(auth_provider_supplier.get("myspace")).is_err()); // Non-existing provider
+        assert!(auth_provider_supplier.get("myspace").await.is_err()); // Non-existing provider
 
         auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
             async move {
-                match await!(stream.try_next())? {
+                match stream.try_next().await? {
                     Some(AuthProviderRequest::RevokeAppOrPersistentCredential {
                         responder,
                         credential,
@@ -127,14 +127,14 @@ mod tests {
                     }
                     _ => panic!("Unexpected message received"),
                 }
-                assert!(await!(stream.try_next())?.is_none());
+                assert!(stream.try_next().await?.is_none());
                 Ok(())
             }
         });
 
         auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
             async move {
-                match await!(stream.try_next())? {
+                match stream.try_next().await? {
                     Some(AuthProviderRequest::GetAppIdToken {
                         responder,
                         credential,
@@ -146,7 +146,7 @@ mod tests {
                     }
                     _ => panic!("Unexpected message received"),
                 }
-                assert!(await!(stream.try_next())?.is_none());
+                assert!(stream.try_next().await?.is_none());
                 Ok(())
             }
         });
@@ -155,23 +155,23 @@ mod tests {
 
         let client_fn = async move {
             let ap_proxy =
-                await!(auth_provider_supplier_clone.get("hooli")).unwrap().into_proxy().unwrap();
+                auth_provider_supplier_clone.get("hooli").await.unwrap().into_proxy().unwrap();
             let status =
-                await!(ap_proxy.revoke_app_or_persistent_credential("HOOLI_CREDENTIAL")).unwrap();
+                ap_proxy.revoke_app_or_persistent_credential("HOOLI_CREDENTIAL").await.unwrap();
             assert_eq!(status, AuthProviderStatus::BadRequest);
 
-            let ap_proxy = await!(auth_provider_supplier_clone.get("pied-piper"))
+            let ap_proxy = auth_provider_supplier_clone.get("pied-piper").await
                 .unwrap()
                 .into_proxy()
                 .unwrap();
             let (status, auth_token) =
-                await!(ap_proxy.get_app_id_token("PIED_PIPER_CREDENTIAL", None)).unwrap();
+                ap_proxy.get_app_id_token("PIED_PIPER_CREDENTIAL", None).await.unwrap();
             assert_eq!(status, AuthProviderStatus::Ok);
             assert!(auth_token.is_none());
         };
-        let (run_result, _) = await!(join(auth_provider_supplier.run(), client_fn));
+        let (run_result, _) = join(auth_provider_supplier.run(), client_fn).await;
         assert!(run_result.is_ok());
-        assert!(await!(auth_provider_supplier.get("hooli")).is_err());
-        assert!(await!(auth_provider_supplier.get("pied-piper")).is_err());
+        assert!(auth_provider_supplier.get("hooli").await.is_err());
+        assert!(auth_provider_supplier.get("pied-piper").await.is_err());
     }
 }

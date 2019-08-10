@@ -122,8 +122,8 @@ impl AccountManager {
         &self,
         mut stream: AccountManagerRequestStream,
     ) -> Result<(), Error> {
-        while let Some(req) = await!(stream.try_next())? {
-            await!(self.handle_request(req))?;
+        while let Some(req) = stream.try_next().await? {
+            self.handle_request(req).await?;
         }
         Ok(())
     }
@@ -132,20 +132,20 @@ impl AccountManager {
     pub async fn handle_request(&self, req: AccountManagerRequest) -> Result<(), fidl::Error> {
         match req {
             AccountManagerRequest::GetAccountIds { responder } => {
-                responder.send(&mut await!(self.get_account_ids()).iter_mut())
+                responder.send(&mut self.get_account_ids().await.iter_mut())
             }
             AccountManagerRequest::GetAccountAuthStates { responder } => {
-                let mut response = await!(self.get_account_auth_states());
+                let mut response = self.get_account_auth_states().await;
                 responder.send(response.0, &mut response.1.iter_mut())
             }
             AccountManagerRequest::GetAccount { id, auth_context_provider, account, responder } => {
-                responder.send(await!(self.get_account(id.into(), auth_context_provider, account)))
+                responder.send(self.get_account(id.into(), auth_context_provider, account).await)
             }
             AccountManagerRequest::RegisterAccountListener { listener, options, responder } => {
-                responder.send(await!(self.register_account_listener(listener, options)))
+                responder.send(self.register_account_listener(listener, options).await)
             }
             AccountManagerRequest::RemoveAccount { id, force, responder } => {
-                responder.send(await!(self.remove_account(id.into(), force)))
+                responder.send(self.remove_account(id.into(), force).await)
             }
             AccountManagerRequest::ProvisionFromAuthProvider {
                 auth_context_provider,
@@ -153,15 +153,15 @@ impl AccountManager {
                 lifetime,
                 responder,
             } => {
-                let mut response = await!(self.provision_from_auth_provider(
+                let mut response = self.provision_from_auth_provider(
                     auth_context_provider,
                     auth_provider_type,
                     lifetime
-                ));
+                ).await;
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))
             }
             AccountManagerRequest::ProvisionNewAccount { lifetime, responder } => {
-                let mut response = await!(self.provision_new_account(lifetime));
+                let mut response = self.provision_new_account(lifetime).await;
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))
             }
         }
@@ -180,17 +180,17 @@ impl AccountManager {
             Some(None) => { /* ID is valid but a handler doesn't exist yet */ }
         }
 
-        let new_handler = Arc::new(await!(AccountHandlerConnection::load_account(
+        let new_handler = Arc::new(AccountHandlerConnection::load_account(
             account_id,
             Arc::clone(&self.context)
-        ))?);
+        ).await?);
         ids_to_handlers.insert(account_id.clone(), Some(Arc::clone(&new_handler)));
         self.accounts_inspect.active.set(count_populated(ids_to_handlers) as u64);
         Ok(new_handler)
     }
 
     async fn get_account_ids(&self) -> Vec<FidlLocalAccountId> {
-        await!(self.ids_to_handlers.lock()).keys().map(|id| id.clone().into()).collect()
+        self.ids_to_handlers.lock().await.keys().map(|id| id.clone().into()).collect()
     }
 
     async fn get_account_auth_states(&self) -> (Status, Vec<FidlAccountAuthState>) {
@@ -198,7 +198,7 @@ impl AccountManager {
         // returning a fixed value. This will involve opening account handler connections (in
         // parallel) for all of the accounts where encryption keys for the account's data partition
         // are available.
-        let ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
+        let ids_to_handlers_lock = self.ids_to_handlers.lock().await;
         (
             Status::Ok,
             ids_to_handlers_lock
@@ -218,8 +218,8 @@ impl AccountManager {
         account: ServerEnd<AccountMarker>,
     ) -> Status {
         let account_handler = {
-            let mut ids_to_handlers = await!(self.ids_to_handlers.lock());
-            match await!(self.get_handler_for_existing_account(&mut *ids_to_handlers, &id)) {
+            let mut ids_to_handlers = self.ids_to_handlers.lock().await;
+            match self.get_handler_for_existing_account(&mut *ids_to_handlers, &id).await {
                 Ok(account_handler) => account_handler,
                 Err(err) => {
                     warn!("Failure getting account handler connection: {:?}", err);
@@ -228,7 +228,7 @@ impl AccountManager {
             }
         };
 
-        await!(account_handler.proxy().get_account(auth_context_provider, account)).unwrap_or_else(
+        account_handler.proxy().get_account(auth_context_provider, account).await.unwrap_or_else(
             |err| {
                 warn!("Failure calling get account: {:?}", err);
                 Status::IoError
@@ -241,7 +241,7 @@ impl AccountManager {
         listener: ClientEnd<AccountListenerMarker>,
         options: AccountListenerOptions,
     ) -> Status {
-        let ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
+        let ids_to_handlers_lock = self.ids_to_handlers.lock().await;
         let account_auth_states: Vec<AccountAuthState> = ids_to_handlers_lock
             .keys()
             // TODO(dnordstrom): Get the real auth states
@@ -255,7 +255,7 @@ impl AccountManager {
                 return Status::InvalidRequest;
             }
         };
-        match await!(self.event_emitter.add_listener(proxy, options, &account_auth_states)) {
+        match self.event_emitter.add_listener(proxy, options, &account_auth_states).await {
             Ok(()) => Status::Ok,
             Err(err) => {
                 warn!("Could not instantiate AccountListener client {:?}", err);
@@ -265,15 +265,15 @@ impl AccountManager {
     }
 
     async fn remove_account(&self, account_id: LocalAccountId, force: bool) -> Status {
-        let mut ids_to_handlers = await!(self.ids_to_handlers.lock());
+        let mut ids_to_handlers = self.ids_to_handlers.lock().await;
         let account_handler =
-            match await!(self.get_handler_for_existing_account(&mut *ids_to_handlers, &account_id))
+            match self.get_handler_for_existing_account(&mut *ids_to_handlers, &account_id).await
             {
                 Ok(account_handler) => account_handler,
                 Err(err) => return err.status,
             };
-        match await!(account_handler.proxy().remove_account(force)) {
-            Ok(Status::Ok) => await!(account_handler.terminate()),
+        match account_handler.proxy().remove_account(force).await {
+            Ok(Status::Ok) => account_handler.terminate().await,
             Ok(status) => return status,
             Err(_) => return Status::IoError,
         };
@@ -288,7 +288,7 @@ impl AccountManager {
             }
         }
         let event = AccountEvent::AccountRemoved(account_id.clone());
-        await!(self.event_emitter.publish(&event));
+        self.event_emitter.publish(&event).await;
         ids_to_handlers.remove(&account_id);
         self.accounts_inspect.total.set(ids_to_handlers.len() as u64);
         self.accounts_inspect.active.set(count_populated(&ids_to_handlers) as u64);
@@ -300,10 +300,10 @@ impl AccountManager {
         lifetime: Lifetime,
     ) -> (Status, Option<FidlLocalAccountId>) {
         // Create an account
-        let (account_handler, account_id) = match await!(AccountHandlerConnection::create_account(
+        let (account_handler, account_id) = match AccountHandlerConnection::create_account(
             Arc::clone(&self.context),
             lifetime
-        )) {
+        ).await {
             Ok((connection, account_id)) => (Arc::new(connection), account_id),
             Err(err) => {
                 warn!("Failure creating account: {:?}", err);
@@ -312,9 +312,9 @@ impl AccountManager {
         };
 
         // Persist the account both in memory and on disk
-        if let Err(err) = await!(self.add_account(account_handler.clone(), account_id.clone())) {
+        if let Err(err) = self.add_account(account_handler.clone(), account_id.clone()).await {
             warn!("Failure adding account: {:?}", err);
-            await!(account_handler.terminate());
+            account_handler.terminate().await;
             (err.status, None)
         } else {
             info!("Adding new local account {:?}", &account_id);
@@ -329,10 +329,10 @@ impl AccountManager {
         lifetime: Lifetime,
     ) -> (Status, Option<FidlLocalAccountId>) {
         // Create an account
-        let (account_handler, account_id) = match await!(AccountHandlerConnection::create_account(
+        let (account_handler, account_id) = match AccountHandlerConnection::create_account(
             Arc::clone(&self.context),
             lifetime
-        )) {
+        ).await {
             Ok((connection, account_id)) => (Arc::new(connection), account_id),
             Err(err) => {
                 warn!("Failure adding account: {:?}", err);
@@ -341,24 +341,24 @@ impl AccountManager {
         };
 
         // Add a service provider to the account
-        let _user_profile = match await!(Self::add_service_provider_account(
+        let _user_profile = match Self::add_service_provider_account(
             auth_context_provider,
             auth_provider_type,
             account_handler.clone()
-        )) {
+        ).await {
             Ok(user_profile) => user_profile,
             Err(err) => {
                 // TODO(dnordstrom): Remove the newly created account handler as a cleanup.
                 warn!("Failure adding service provider account: {:?}", err);
-                await!(account_handler.terminate());
+                account_handler.terminate().await;
                 return (err.status, None);
             }
         };
 
         // Persist the account both in memory and on disk
-        if let Err(err) = await!(self.add_account(account_handler.clone(), account_id.clone())) {
+        if let Err(err) = self.add_account(account_handler.clone(), account_id.clone()).await {
             warn!("Failure adding service provider account: {:?}", err);
-            await!(account_handler.terminate());
+            account_handler.terminate().await;
             (err.status, None)
         } else {
             info!("Adding new account {:?}", &account_id);
@@ -375,7 +375,7 @@ impl AccountManager {
         // Use account handler to get a channel to the account
         let (account_client_end, account_server_end) =
             create_endpoints().account_manager_status(Status::IoError)?;
-        match await!(account_handler.proxy().get_account(auth_context_provider, account_server_end))
+        match account_handler.proxy().get_account(auth_context_provider, account_server_end).await
         {
             Ok(Status::Ok) => Ok(()),
             Ok(status) => Err(AccountManagerError::new(status)),
@@ -387,7 +387,7 @@ impl AccountManager {
         // Use the account to get the persona
         let (persona_client_end, persona_server_end) =
             create_endpoints().account_manager_status(Status::IoError)?;
-        match await!(account_proxy.get_default_persona(persona_server_end)) {
+        match account_proxy.get_default_persona(persona_server_end).await {
             Ok((Status::Ok, _)) => Ok(()),
             Ok((status, _)) => Err(AccountManagerError::new(status)),
             Err(err) => Err(AccountManagerError::new(Status::IoError).with_cause(err)),
@@ -398,7 +398,7 @@ impl AccountManager {
         // Use the persona to get the token manager
         let (tm_client_end, tm_server_end) =
             create_endpoints().account_manager_status(Status::IoError)?;
-        match await!(persona_proxy.get_token_manager(SELF_URL, tm_server_end)) {
+        match persona_proxy.get_token_manager(SELF_URL, tm_server_end).await {
             Ok(Status::Ok) => Ok(()),
             Ok(status) => Err(AccountManagerError::new(status)),
             Err(err) => Err(AccountManagerError::new(Status::IoError).with_cause(err)),
@@ -412,13 +412,13 @@ impl AccountManager {
             client_secret: None,
             redirect_uri: None,
         };
-        match await!(tm_proxy.authorize(
+        match tm_proxy.authorize(
             &mut app_config,
             None, /* auth_ui_context */
             &mut APP_SCOPES.iter().map(|x| &**x),
             None, /* user_profile_id */
             None, /* auth_code */
-        )) {
+        ).await {
             Ok((AuthStatus::Ok, None)) => Err(AccountManagerError::new(Status::InternalError)
                 .with_cause(format_err!("Invalid response from token manager"))),
             Ok((AuthStatus::Ok, Some(user_profile))) => Ok(*user_profile),
@@ -433,7 +433,7 @@ impl AccountManager {
         account_handler: Arc<AccountHandlerConnection>,
         account_id: LocalAccountId,
     ) -> Result<(), AccountManagerError> {
-        let mut ids_to_handlers = await!(self.ids_to_handlers.lock());
+        let mut ids_to_handlers = self.ids_to_handlers.lock().await;
         if ids_to_handlers.get(&account_id).is_some() {
             // IDs are 64 bit integers that are meant to be random. Its very unlikely we'll create
             // the same one twice but not impossible.
@@ -452,7 +452,7 @@ impl AccountManager {
         }
         ids_to_handlers.insert(account_id.clone(), Some(account_handler));
         let event = AccountEvent::AccountAdded(account_id.clone());
-        await!(self.event_emitter.publish(&event));
+        self.event_emitter.publish(&event).await;
         self.accounts_inspect.total.set(ids_to_handlers.len() as u64);
         self.accounts_inspect.active.set(count_populated(&ids_to_handlers) as u64);
         Ok(())
@@ -524,7 +524,7 @@ mod tests {
         let account_manager_arc = Arc::new(account_manager);
         let account_manager_clone = Arc::clone(&account_manager_arc);
         fasync::spawn(async move {
-            await!(account_manager_clone.handle_requests_from_stream(request_stream))
+            account_manager_clone.handle_requests_from_stream(request_stream).await
                 .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
         });
 
@@ -574,8 +574,8 @@ mod tests {
         request_stream_test(
             AccountManager::new(data_dir.path().into(), &AUTH_PROVIDER_CONFIG, &inspector).unwrap(),
             |proxy, _| async move {
-                assert_eq!(await!(proxy.get_account_ids())?, vec![]);
-                assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
+                assert_eq!(proxy.get_account_ids().await?, vec![]);
+                assert_eq!(proxy.get_account_auth_states().await?, (Status::Ok, vec![]));
                 Ok(())
             },
         );
@@ -587,8 +587,8 @@ mod tests {
         request_stream_test(
             create_accounts(vec![], data_dir.path()),
             |proxy, test_object| async move {
-                assert_eq!(await!(proxy.get_account_ids())?, vec![]);
-                assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
+                assert_eq!(proxy.get_account_ids().await?, vec![]);
+                assert_eq!(proxy.get_account_auth_states().await?, (Status::Ok, vec![]));
                 assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 0);
                 assert_eq!(test_object.accounts_inspect.active.get().unwrap(), 0);
                 Ok(())
@@ -606,7 +606,7 @@ mod tests {
         request_stream_test(read_accounts(data_dir.path()), |proxy, test_object| async move {
             // Try to delete a very different account from the one we added.
             assert_eq!(
-                await!(proxy.remove_account(LocalAccountId::new(42).as_mut(), FORCE_REMOVE_ON))?,
+                proxy.remove_account(LocalAccountId::new(42).as_mut(), FORCE_REMOVE_ON).await?,
                 Status::NotFound
             );
             assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 1);
@@ -630,7 +630,7 @@ mod tests {
             let (client_end, mut stream) =
                 create_request_stream::<AccountListenerMarker>().unwrap();
             let serve_fut = async move {
-                let request = await!(stream.try_next()).expect("stream error");
+                let request = stream.try_next().await.expect("stream error");
                 if let Some(AccountListenerRequest::OnInitialize {
                     account_auth_states,
                     responder,
@@ -651,18 +651,18 @@ mod tests {
                 } else {
                     panic!("Unexpected message received");
                 };
-                if let Some(_) = await!(stream.try_next()).expect("stream error") {
+                if let Some(_) = stream.try_next().await.expect("stream error") {
                     panic!("Unexpected message, channel should be closed");
                 }
             };
             let request_fut = async move {
                 // The registering itself triggers the init event.
                 assert_eq!(
-                    await!(proxy.register_account_listener(client_end, &mut options)).unwrap(),
+                    proxy.register_account_listener(client_end, &mut options).await.unwrap(),
                     Status::Ok
                 );
             };
-            await!(join(request_fut, serve_fut));
+            join(request_fut, serve_fut).await;
             Ok(())
         });
     }

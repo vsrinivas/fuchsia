@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     cm_rust::FrameworkCapabilityDecl,
@@ -46,16 +46,16 @@ impl HubTestHook {
     // of entries within that directory.
     pub async fn observe(&self, path: &str) -> HubReportEvent {
         let mut receiver = {
-            let mut observers = await!(self.observers.lock());
+            let mut observers = self.observers.lock().await;
             // Avoid holding onto to the observers lock while waiting for a
             // message to avoid deadlock.
             let channel = get_or_insert_channel(&mut observers, path.to_string());
             channel.receiver.take().unwrap()
         };
-        let event = await!(receiver.next()).expect("Missing HubReportEvent");
+        let event = receiver.next().await.expect("Missing HubReportEvent");
         // Transfer ownership back to the observers HashMap after the listing has
         // been received.
-        let mut observers = await!(self.observers.lock());
+        let mut observers = self.observers.lock().await;
         let channel = get_or_insert_channel(&mut observers, path.to_string());
         channel.receiver = Some(receiver);
 
@@ -137,7 +137,7 @@ impl HubTestCapability {
             .expect("could not convert channel into stream");
         let observers = self.observers.clone();
         fasync::spawn(async move {
-            while let Some(Ok(request)) = await!(stream.next()) {
+            while let Some(Ok(request)) = stream.next().await {
                 let (path, event) = match request {
                     fhub::HubReportRequest::ListDirectory { path, entries, .. } => {
                         (path, HubReportEvent::DirectoryListing(entries))
@@ -149,14 +149,14 @@ impl HubTestCapability {
                 let mut sender = {
                     // Avoid holding onto to the observers lock while sending a
                     // message to avoid deadlock.
-                    let mut observers = await!(observers.lock());
+                    let mut observers = observers.lock().await;
                     let channel = get_or_insert_channel(&mut observers, path.clone());
                     channel.sender.take().unwrap()
                 };
-                await!(sender.send(event)).expect("Unable to send HubEvent.");
+                sender.send(event).await.expect("Unable to send HubEvent.");
                 // Transfer ownership back to the observers HashMap after the listing has
                 // been sent.
-                let mut observers = await!(observers.lock());
+                let mut observers = observers.lock().await;
                 let channel = get_or_insert_channel(&mut observers, path.clone());
                 channel.sender = Some(sender);
             }

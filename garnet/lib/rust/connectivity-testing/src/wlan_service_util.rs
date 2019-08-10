@@ -17,7 +17,7 @@ const SCAN_TIMEOUT_SECONDS: u8 = 20;
 
 // Helper methods for calling wlan_service fidl methods
 pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, Error> {
-    let response = await!(wlan_svc.list_ifaces()).context("Error getting iface list")?;
+    let response = wlan_svc.list_ifaces().await.context("Error getting iface list")?;
     let mut wlan_iface_ids = Vec::new();
     for iface in response.ifaces {
         wlan_iface_ids.push(iface.iface_id);
@@ -30,7 +30,7 @@ pub async fn get_iface_sme_proxy(
     iface_id: u16,
 ) -> Result<fidl_sme::ClientSmeProxy, Error> {
     let (sme_proxy, sme_remote) = endpoints::create_proxy()?;
-    let status = await!(wlan_svc.get_client_sme(iface_id, sme_remote))
+    let status = wlan_svc.get_client_sme(iface_id, sme_remote).await
         .context("error sending GetClientSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(sme_proxy)
@@ -65,7 +65,7 @@ pub async fn connect_to_network(
 
     let _result = iface_sme_proxy.connect(&mut req, Some(connection_remote))?;
 
-    let connection_code = await!(handle_connect_transaction(connection_proxy))?;
+    let connection_code = handle_connect_transaction(connection_proxy).await?;
 
     #[allow(unreachable_patterns)]
     let mut connected = match connection_code {
@@ -91,7 +91,7 @@ pub async fn connect_to_network(
 
     if connected == true {
         let rsp =
-            await!(iface_sme_proxy.status()).context("failed to check status from sme_proxy")?;
+            iface_sme_proxy.status().await.context("failed to check status from sme_proxy")?;
 
         connected = connected
             && match rsp.connected_to {
@@ -118,7 +118,7 @@ async fn handle_connect_transaction(
 
     let mut result_code = fidl_sme::ConnectResultCode::Failed;
 
-    while let Some(evt) = await!(event_stream.try_next())
+    while let Some(evt) = event_stream.try_next().await
         .context("failed to receive connect result before the channel was closed")?
     {
         match evt {
@@ -135,10 +135,10 @@ async fn handle_connect_transaction(
 pub async fn disconnect_from_network(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
 ) -> Result<(), Error> {
-    await!(iface_sme_proxy.disconnect()).context("failed to trigger disconnect")?;
+    iface_sme_proxy.disconnect().await.context("failed to trigger disconnect")?;
 
     // check the status and ensure we are not connected to or connecting to anything
-    let rsp = await!(iface_sme_proxy.status()).context("failed to check status from sme_proxy")?;
+    let rsp = iface_sme_proxy.status().await.context("failed to check status from sme_proxy")?;
     if rsp.connected_to.is_some() || !rsp.connecting_to_ssid.is_empty() {
         bail!(
             "Disconnect confirmation failed: connected_to[{:?}] connecting_to_ssid:[{:?}]",
@@ -154,7 +154,7 @@ pub async fn perform_scan(
 ) -> Result<Vec<fidl_sme::EssInfo>, Error> {
     let scan_transaction = start_scan_transaction(&iface_sme_proxy)?;
 
-    await!(get_scan_results(scan_transaction)).map_err(Into::into)
+    get_scan_results(scan_transaction).await.map_err(Into::into)
 }
 
 fn start_scan_transaction(
@@ -175,7 +175,7 @@ async fn get_scan_results(
     let mut stream = scan_txn.take_event_stream();
     let mut scan_results = vec![];
 
-    while let Some(event) = await!(stream.try_next())
+    while let Some(event) = stream.try_next().await
         .context("failed to receive scan result before the channel was closed")?
     {
         match event {

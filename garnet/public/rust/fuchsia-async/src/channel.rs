@@ -133,7 +133,7 @@ mod tests {
 
         let receiver = async move {
             let mut buffer = MessageBuf::new();
-            await!(f_rx.recv_msg(&mut buffer)).expect("failed to receive message");
+            f_rx.recv_msg(&mut buffer).await.expect("failed to receive message");
             assert_eq!(bytes, buffer.bytes());
         };
         pin_mut!(receiver);
@@ -159,7 +159,7 @@ mod tests {
         // f_rx0 and f_rx1 use the same key.
         let receiver = async move {
             let mut buffer = MessageBuf::new();
-            await!(f_rx1.recv_msg(&mut buffer)).expect("failed to receive message");
+            f_rx1.recv_msg(&mut buffer).await.expect("failed to receive message");
         };
         pin_mut!(receiver);
 

@@ -4,7 +4,7 @@
 
 //! A futures-rs executor design specifically for Fuchsia OS.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![deny(missing_docs)]
 
 // Set the system allocator for anything using this crate

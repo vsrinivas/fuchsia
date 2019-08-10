@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 #[cfg(test)]
 mod test {
@@ -47,7 +47,7 @@ mod test {
                         hostname,
                         options,
                         responder,
-                    })) = await!(stream.next())
+                    })) = stream.next().await
                     {
                         let mut result = fnet::IpAddressInfo {
                             ipv4_addrs: vec![],
@@ -75,9 +75,9 @@ mod test {
             },
         );
         fs.serve_connection(server_chan).unwrap();
-        await!(fs.collect::<()>());
+        fs.collect::<()>().await;
         let mut controller_stream = controller.take_event_stream();
-        match await!(controller_stream.next()).unwrap().unwrap() {
+        match controller_stream.next().await.unwrap().unwrap() {
             fsys::ComponentControllerEvent::OnTerminated {
                 termination_reason: fsys::TerminationReason::Exited,
                 return_code: 0,

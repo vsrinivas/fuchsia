@@ -24,7 +24,7 @@ impl TennisService {
         let self_clone = self.clone();
         fuchsia_async::spawn(
             async move {
-                while let Some(msg) = await!(stream.try_next())
+                while let Some(msg) = stream.try_next().await
                     .context("error reading value from tennis service request stream")?
                 {
                     match msg {
@@ -60,7 +60,7 @@ impl TennisService {
         let player_state = game.register_new_paddle(player_name.clone(), paddle_proxy);
         fasync::spawn(
             async move {
-                while let Some(event) = await!(stream.try_next())
+                while let Some(event) = stream.try_next().await
                     .context("error reading value from paddle event stream")?
                 {
                     let state = match event {
@@ -83,7 +83,7 @@ impl TennisService {
                     loop {
                         game_arc.lock().step();
                         let time_step: i64 = (100.0 * game_arc.lock().time_scale_factor()) as i64;
-                        await!(fuchsia_async::Timer::new(time_step.millis().after_now()));
+                        fuchsia_async::Timer::new(time_step.millis().after_now()).await;
                         if !game_arc.lock().players_ready() {
                             fx_log_info!("someone disconnected!");
                             return;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "256"]
 
 mod controller;
@@ -64,6 +64,6 @@ async fn main() -> Result<(), Error> {
         }
     });
 
-    await!(fut);
+    fut.await;
     Ok(())
 }

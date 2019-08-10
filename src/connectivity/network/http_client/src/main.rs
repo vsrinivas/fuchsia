@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::Error;
 use fidl::endpoints::ServerEnd;
@@ -126,7 +126,7 @@ fn spawn_old_url_loader(server: ServerEnd<oldhttp::UrlLoaderMarker>) {
             let client = fhyper::new_client();
             let c = &client;
             let stream = server.into_stream()?;
-            await!(stream.err_into().try_for_each_concurrent(None, |message| async move {
+            stream.err_into().try_for_each_concurrent(None, |message| async move {
                 match message {
                     oldhttp::UrlLoaderRequest::Start { request, responder } => {
                         let mut builder = hyper::Request::builder();
@@ -137,8 +137,8 @@ fn spawn_old_url_loader(server: ServerEnd<oldhttp::UrlLoaderMarker>) {
                                 builder.header(header.name.as_str(), header.value.as_str());
                             }
                         }
-                        let req = builder.body(await!(to_body(request.body))?)?;
-                        let result = await!(c.request(req).compat());
+                        let req = builder.body(to_body(request.body).await?)?;
+                        let result = c.request(req).compat().await;
                         responder.send(&mut match result {
                             Ok(resp) => to_success_response(request.url, resp),
                             Err(error) => to_error_response(error),
@@ -156,7 +156,7 @@ fn spawn_old_url_loader(server: ServerEnd<oldhttp::UrlLoaderMarker>) {
                     }
                 };
                 Ok(())
-            }))
+            }).await
         }
             .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
     );
@@ -165,11 +165,11 @@ fn spawn_old_url_loader(server: ServerEnd<oldhttp::UrlLoaderMarker>) {
 fn spawn_old_server(stream: oldhttp::HttpServiceRequestStream) {
     fasync::spawn(
         async move {
-            await!(stream.err_into().try_for_each_concurrent(None, |message| async move {
+            stream.err_into().try_for_each_concurrent(None, |message| async move {
                 let oldhttp::HttpServiceRequest::CreateUrlLoader { loader, .. } = message;
                 spawn_old_url_loader(loader);
                 Ok(())
-            }))
+            }).await
         }
             .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
     );
@@ -180,6 +180,6 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(spawn_old_server);
     fs.take_and_serve_directory_handle()?;
-    let () = await!(fs.collect());
+    let () = fs.collect().await;
     Ok(())
 }

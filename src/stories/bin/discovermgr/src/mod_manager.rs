@@ -40,7 +40,7 @@ impl ModManager {
         match suggestion.action() {
             SuggestedAction::AddMod(action) => {
                 // execute a mod suggestion
-                await!(self.execute_actions(vec![&action], /*focus=*/ true))?;
+                self.execute_actions(vec![&action], /*focus=*/ true).await?;
                 self.story_manager.lock().add_to_story_graph(&action);
                 for param in action.intent().parameters() {
                     self.actions
@@ -63,10 +63,10 @@ impl ModManager {
                         )
                     })
                     .collect::<Vec<AddModInfo>>();
-                await!(self.execute_actions(
+                self.execute_actions(
                     actions.iter().map(|action| action).collect(),
                     /*focus=*/ true,
-                ))?;
+                ).await?;
             }
         }
         Ok(())
@@ -80,9 +80,9 @@ impl ModManager {
             .into_iter()
             .map(|action| action.replace_reference_in_parameters(old, new))
             .collect::<HashSet<AddModInfo>>();
-        await!(join_all(
+        join_all(
             actions.iter().map(|action| self.execute_actions(vec![action], /*focus=*/ false)),
-        ));
+        ).await;
         self.actions.insert(new.to_string(), actions);
     }
 
@@ -110,7 +110,7 @@ impl ModManager {
         }
 
         story_puppet_master.enqueue(&mut commands.iter_mut())?;
-        let result = await!(story_puppet_master.execute())?;
+        let result = story_puppet_master.execute().await?;
         if result.status != ExecuteStatus::Ok {
             bail!(
                 "Modular error status:{:?} message:{}",
@@ -184,7 +184,7 @@ mod tests {
         match suggestion.action() {
             SuggestedAction::AddMod(action) => {
                 let action_clone = action.clone();
-                await!(mod_manager.execute_suggestion(suggestion))?;
+                mod_manager.execute_suggestion(suggestion).await?;
                 // Assert the action and the reference that originated it are tracked.
                 assert_eq!(
                     mod_manager.actions,
@@ -241,7 +241,7 @@ mod tests {
             AddModInfo::new(intent, Some("story_name".to_string()), Some("mod_name".to_string()));
         mod_manager.actions = hashmap!("peridot-ref".to_string() => hashset!(action));
 
-        await!(mod_manager.replace("peridot-ref", "garnet-ref"));
+        mod_manager.replace("peridot-ref", "garnet-ref").await;
 
         // Assert the action was replaced.
         let intent = Intent::new().with_action("PLAY_MUSIC").add_parameter("artist", "garnet-ref");

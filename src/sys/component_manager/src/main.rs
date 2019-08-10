@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     component_manager_lib::{
@@ -56,12 +56,12 @@ fn main() -> Result<(), Error> {
 }
 
 async fn run_root(model: Arc<Model>) {
-    match await!(model.look_up_and_bind_instance(AbsoluteMoniker::root())) {
+    match model.look_up_and_bind_instance(AbsoluteMoniker::root()).await {
         Ok(()) => {
             // TODO: Exit the component manager when the root component's binding is lost
             // (when it terminates) or perhaps attempt to rebind automatically.
             // For now, the component manager just runs forever.
-            await!(future::pending::<()>())
+            future::pending::<()>().await
         }
         Err(error) => {
             error!("Failed to bind to root component: {:?}", error);

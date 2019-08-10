@@ -52,16 +52,16 @@ pub async fn route_use_capability<'a>(
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
     if let UseDecl::Storage(_) = use_decl {
-        return await!(route_and_open_storage_capability(
+        return route_and_open_storage_capability(
             model,
             use_decl,
             open_mode,
             abs_moniker,
             server_chan,
-        ));
+        ).await;
     }
-    let source = await!(find_used_capability_source(model, use_decl, &abs_moniker))?;
-    await!(open_capability_at_source(model, flags, open_mode, relative_path, source, server_chan))
+    let source = find_used_capability_source(model, use_decl, &abs_moniker).await?;
+    open_capability_at_source(model, flags, open_mode, relative_path, source, server_chan).await
 }
 
 /// Finds the source of the expose capability used at `source_path` by
@@ -78,8 +78,8 @@ pub async fn route_expose_capability<'a>(
     let capability = RoutedCapability::Expose(expose_decl.clone());
     let mut pos =
         WalkPosition { capability, last_child_moniker: None, moniker: Some(abs_moniker.clone()) };
-    let source = await!(walk_expose_chain(model, &mut pos))?;
-    await!(open_capability_at_source(model, flags, open_mode, String::new(), source, server_chan))
+    let source = walk_expose_chain(model, &mut pos).await?;
+    open_capability_at_source(model, flags, open_mode, String::new(), source, server_chan).await
 }
 
 /// Open the capability at the given source, binding to its component instance if necessary.
@@ -98,14 +98,14 @@ async fn open_capability_at_source<'a>(
         }
         CapabilitySource::Component(source_capability, realm) => {
             if let Some(path) = source_capability.source_path() {
-                await!(Model::bind_instance_open_outgoing(
+                Model::bind_instance_open_outgoing(
                     &model,
                     realm,
                     flags,
                     open_mode,
                     path,
                     server_chan,
-                ))?;
+                ).await?;
             } else {
                 return Err(ModelError::capability_discovery_error(format_err!(
                     "invalid capability type to come from a component"
@@ -113,7 +113,7 @@ async fn open_capability_at_source<'a>(
             }
         }
         CapabilitySource::Framework(capability_decl, realm) => {
-            await!(open_framework_capability(
+            open_framework_capability(
                 model.clone(),
                 FLAGS,
                 open_mode,
@@ -121,7 +121,7 @@ async fn open_capability_at_source<'a>(
                 realm,
                 &capability_decl,
                 server_chan,
-            ))?;
+            ).await?;
         }
         CapabilitySource::StorageDecl(..) => {
             panic!("storage capabilities must be separately routed and opened");
@@ -142,15 +142,15 @@ async fn open_framework_capability<'a>(
     let mut capability = None;
 
     for hook in model.hooks.iter() {
-        capability = await!(hook.on_route_framework_capability(
+        capability = hook.on_route_framework_capability(
             realm.clone(),
             &capability_decl,
             capability,
-        ))?;
+        ).await?;
     }
 
     if let Some(capability) = capability {
-        await!(capability.open(flags, open_mode, relative_path, server_chan))?;
+        capability.open(flags, open_mode, relative_path, server_chan).await?;
     }
 
     Ok(())
@@ -178,7 +178,7 @@ pub async fn route_and_open_storage_capability<'a>(
         moniker: Some(parent_moniker),
     };
 
-    let source = await!(walk_offer_chain(model, &mut pos))?;
+    let source = walk_offer_chain(model, &mut pos).await?;
 
     let (storage_decl, storage_decl_realm) = match source {
         Some(CapabilitySource::StorageDecl(s, r)) => (s, r),
@@ -195,11 +195,11 @@ pub async fn route_and_open_storage_capability<'a>(
             StorageDirectorySource::Self_ => (storage_decl.source_path, storage_decl_realm.clone()),
             StorageDirectorySource::Realm => {
                 let capability = RoutedCapability::Storage(storage_decl);
-                let source = await!(find_offered_capability_source(
+                let source = find_offered_capability_source(
                     model,
                     capability,
                     &storage_decl_realm.abs_moniker,
-                ))?;
+                ).await?;
                 match source {
                     CapabilitySource::Component(source_capability, realm) => {
                         (source_capability.source_path().unwrap().clone(), realm)
@@ -215,7 +215,7 @@ pub async fn route_and_open_storage_capability<'a>(
                 );
                 let capability = RoutedCapability::Storage(storage_decl);
                 let mut pos = WalkPosition { capability, last_child_moniker: None, moniker };
-                match await!(walk_expose_chain(model, &mut pos))? {
+                match walk_expose_chain(model, &mut pos).await? {
                     CapabilitySource::Component(source_capability, realm) => {
                         (source_capability.source_path().unwrap().clone(), realm)
                     }
@@ -230,14 +230,14 @@ pub async fn route_and_open_storage_capability<'a>(
     // this component.
     let (dir_proxy, local_server_end) =
         create_proxy::<DirectoryMarker>().expect("failed to create proxy");
-    await!(Model::bind_instance_open_outgoing(
+    Model::bind_instance_open_outgoing(
         &model,
         dir_source_realm,
         FLAGS,
         open_mode,
         &source_path,
         local_server_end.into_channel(),
-    ))?;
+    ).await?;
 
     // Open each node individually, so it can be created if it doesn't exist
     let relative_moniker =
@@ -323,7 +323,7 @@ async fn find_framework_capability<'a>(
     abs_moniker: &'a AbsoluteMoniker,
 ) -> Result<Option<CapabilitySource>, ModelError> {
     if let Ok(capability_decl) = FrameworkCapabilityDecl::try_from(use_decl) {
-        let realm = await!(model.look_up_realm(abs_moniker))?;
+        let realm = model.look_up_realm(abs_moniker).await?;
         return Ok(Some(CapabilitySource::Framework(capability_decl, realm)));
     }
     return Ok(None);
@@ -356,12 +356,12 @@ async fn find_used_capability_source<'a>(
     abs_moniker: &'a AbsoluteMoniker,
 ) -> Result<CapabilitySource, ModelError> {
     if let Some(framework_capability) =
-        await!(find_framework_capability(model, use_decl, abs_moniker))?
+        find_framework_capability(model, use_decl, abs_moniker).await?
     {
         return Ok(framework_capability);
     }
     let capability = RoutedCapability::Use(use_decl.clone());
-    await!(find_offered_capability_source(model, capability, abs_moniker))
+    find_offered_capability_source(model, capability, abs_moniker).await
 }
 
 /// Walks the component tree to find the originating source of a capability, starting on the given
@@ -379,10 +379,10 @@ async fn find_offered_capability_source<'a>(
         last_child_moniker: abs_moniker.path().last().map(|c| c.clone()),
         moniker: abs_moniker.parent(),
     };
-    if let Some(source) = await!(walk_offer_chain(model, &mut pos))? {
+    if let Some(source) = walk_offer_chain(model, &mut pos).await? {
         return Ok(source);
     }
-    await!(walk_expose_chain(model, &mut pos))
+    walk_expose_chain(model, &mut pos).await
 }
 
 /// Follows `offer` declarations up the component tree, starting at `pos`. The algorithm looks
@@ -405,8 +405,8 @@ async fn walk_offer_chain<'a>(
                 )));
             }
         }
-        let current_realm = await!(model.look_up_realm(&pos.moniker()))?;
-        let realm_state = await!(current_realm.state.lock());
+        let current_realm = model.look_up_realm(&pos.moniker()).await?;
+        let realm_state = current_realm.state.lock().await;
         // This get_decl() is safe because `look_up_realm` populates this field
         let decl = realm_state.get_decl();
         let last_child_moniker = pos.last_child_moniker.as_ref().unwrap();
@@ -496,8 +496,8 @@ async fn walk_expose_chain<'a>(
         }
     };
     loop {
-        let current_realm = await!(model.look_up_realm(&pos.moniker()))?;
-        let realm_state = await!(current_realm.state.lock());
+        let current_realm = model.look_up_realm(&pos.moniker()).await?;
+        let realm_state = current_realm.state.lock().await;
         // This get_decl() is safe because look_up_realm populates this field
         let decl = realm_state.get_decl();
         let first_expose = first_expose.take();

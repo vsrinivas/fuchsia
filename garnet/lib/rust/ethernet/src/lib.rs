@@ -4,7 +4,7 @@
 
 //! Fuchsia Ethernet client
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![deny(missing_docs)]
 
 use bitflags::bitflags;
@@ -66,14 +66,14 @@ impl Client {
         buf_size: usize,
         name: &str,
     ) -> Result<Self, failure::Error> {
-        zx::Status::ok(await!(dev.set_client_name(name))?)?;
-        let (status, fifos) = await!(dev.get_fifos())?;
+        zx::Status::ok(dev.set_client_name(name).await?)?;
+        let (status, fifos) = dev.get_fifos().await?;
         zx::Status::ok(status)?;
         // Safe because we checked the return status above.
         let fifos = *fifos.unwrap();
         {
             let buf = zx::Vmo::from(buf.as_handle_ref().duplicate(zx::Rights::SAME_RIGHTS)?);
-            await!(dev.set_io_buffer(buf))?;
+            dev.set_io_buffer(buf).await?;
         }
         let pool = Mutex::new(buffer::BufferPool::new(buf, buf_size)?);
         Ok(Client { inner: Arc::new(ClientInner::new(dev, pool, fifos)?) })
@@ -102,7 +102,7 @@ impl Client {
             fuchsia_zircon::Channel::from(unsafe { fuchsia_zircon::Handle::from_raw(client) }),
         )
         .into_proxy()?;
-        await!(Client::new(dev, buf, buf_size, name))
+        Client::new(dev, buf, buf_size, name).await
     }
 
     /// Get a stream of events from the Ethernet device.
@@ -115,7 +115,7 @@ impl Client {
 
     /// Retrieve information about the Ethernet device.
     pub async fn info(&self) -> Result<EthernetInfo, fidl::Error> {
-        let info = await!(self.inner.dev.get_info())?;
+        let info = self.inner.dev.get_info().await?;
         Ok(info.into())
     }
 
@@ -123,7 +123,7 @@ impl Client {
     ///
     /// Before this is called, no packets will be transferred.
     pub async fn start(&self) -> Result<(), failure::Error> {
-        let raw = await!(self.inner.dev.start())?;
+        let raw = self.inner.dev.start().await?;
         Ok(zx::Status::ok(raw)?)
     }
 
@@ -131,25 +131,25 @@ impl Client {
     ///
     /// After this is called, no packets will be transferred.
     pub async fn stop(&self) -> Result<(), fidl::Error> {
-        await!(self.inner.dev.stop())
+        self.inner.dev.stop().await
     }
 
     /// Start receiving all packets transmitted by this host.
     ///
     /// Such packets will have the `EthernetQueueFlags::TX_ECHO` bit set.
     pub async fn tx_listen_start(&self) -> Result<(), failure::Error> {
-        let raw = await!(self.inner.dev.listen_start())?;
+        let raw = self.inner.dev.listen_start().await?;
         Ok(zx::Status::ok(raw)?)
     }
 
     /// Stop receiving all packets transmitted by this host.
     pub async fn tx_listen_stop(&self) -> Result<(), fidl::Error> {
-        await!(self.inner.dev.listen_stop())
+        self.inner.dev.listen_stop().await
     }
 
     /// Get the status of the Ethernet device.
     pub async fn get_status(&self) -> Result<EthernetStatus, fidl::Error> {
-        Ok(EthernetStatus::from_bits_truncate(await!(self.inner.dev.get_status())?))
+        Ok(EthernetStatus::from_bits_truncate(self.inner.dev.get_status().await?))
     }
 
     /// Send a buffer with the Ethernet device.

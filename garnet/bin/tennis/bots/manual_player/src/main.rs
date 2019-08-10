@@ -1,7 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 use failure::{Error, ResultExt};
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_game_tennis::{PaddleRequest, TennisServiceMarker};
@@ -23,7 +23,7 @@ fn main() -> Result<(), Error> {
     fasync::spawn(
         async move {
             while let Some(PaddleRequest::NewGame { is_player_2, .. }) =
-                await!(prs.try_next()).unwrap()
+                prs.try_next().await.unwrap()
             {
                 // TODO: remove unwrap
                 if is_player_2 {

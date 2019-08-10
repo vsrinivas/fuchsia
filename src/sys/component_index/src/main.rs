@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fidl_fuchsia_sys_index::{
@@ -19,7 +19,7 @@ async fn run_fuzzy_search_server(
     index: Arc<Vec<String>>,
 ) -> Result<(), Error> {
     while let Some(ComponentIndexRequest::FuzzySearch { needle, responder }) =
-        await!(stream.try_next()).context("Error serving fuzzy search")?
+        stream.try_next().await.context("Error serving fuzzy search")?
     {
         if !check_needle(&needle) {
             responder
@@ -60,7 +60,7 @@ async fn main() -> Result<(), Error> {
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, |IncomingServices::ComponentIndex(stream)| {
         run_fuzzy_search_server(stream, index.clone()).unwrap_or_else(|e| println!("{:?}", e))
     });
-    await!(fut);
+    fut.await;
     Ok(())
 }
 

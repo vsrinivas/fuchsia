@@ -260,7 +260,7 @@ impl Socket {
     /// Reads the next datagram that becomes available onto the end of |out|.  Note: Using this
     /// multiple times concurrently is an error and the first one will never complete.
     pub async fn read_datagram<'a>(&'a self, out: &'a mut Vec<u8>) -> Result<usize, zx::Status> {
-        await!(poll_fn(move |cx| self.poll_datagram(cx, out)))
+        poll_fn(move |cx| self.poll_datagram(cx, out)).await
     }
 }
 
@@ -450,7 +450,7 @@ mod tests {
 
         let stream_read_fut = async move {
             let mut count = 0;
-            while let Some(packet) = await!(rx.next()) {
+            while let Some(packet) = rx.next().await {
                 let packet = match packet {
                     Ok(bytes) => bytes,
                     Err(zx::Status::PEER_CLOSED) => break,

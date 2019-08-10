@@ -9,7 +9,7 @@ macro_rules! during_impl {
         impl $name {
             async fn add_method_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
                 let mut stream = $fidl_library::AddMethodRequestStream::from_channel(chan);
-                while let Some(req) = await!(stream.try_next())? {
+                while let Some(req) = stream.try_next().await? {
                     #![allow(unreachable_patterns)]
                     match req {
                         $fidl_library::AddMethodRequest::ExistingMethod { .. } => {}
@@ -21,7 +21,7 @@ macro_rules! during_impl {
 
             async fn remove_method_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
                 let mut stream = $fidl_library::RemoveMethodRequestStream::from_channel(chan);
-                while let Some(req) = await!(stream.try_next())? {
+                while let Some(req) = stream.try_next().await? {
                     #![allow(unreachable_patterns)]
                     match req {
                         $fidl_library::RemoveMethodRequest::ExistingMethod { .. } => {}
@@ -33,7 +33,7 @@ macro_rules! during_impl {
 
             async fn add_event_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
                 let mut stream = $fidl_library::AddEventRequestStream::from_channel(chan);
-                while let Some(req) = await!(stream.try_next())? {
+                while let Some(req) = stream.try_next().await? {
                     #![allow(unreachable_patterns)]
                     match req {
                         $fidl_library::AddEventRequest::ExistingMethod { .. } => {}
@@ -45,7 +45,7 @@ macro_rules! during_impl {
 
             async fn remove_event_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
                 let mut stream = $fidl_library::RemoveEventRequestStream::from_channel(chan);
-                while let Some(req) = await!(stream.try_next())? {
+                while let Some(req) = stream.try_next().await? {
                     #![allow(unreachable_patterns)]
                     match req {
                         $fidl_library::RemoveEventRequest::ExistingMethod { .. } => {}

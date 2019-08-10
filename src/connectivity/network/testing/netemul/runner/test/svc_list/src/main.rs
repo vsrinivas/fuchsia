@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{format_err, Error, ResultExt};
 
@@ -61,7 +61,7 @@ async fn wait_for_component(
 ) -> Result<(), Error> {
     // wait for child to exit and mimic the result code
     let result = loop {
-        let event = await!(component_events.try_next())
+        let event = component_events.try_next().await
             .context("wait for child component to exit")?
             .ok_or_else(|| format_err!("Child didn't exit cleanly"))?;
 
@@ -103,7 +103,7 @@ async fn run_test() -> Result<(), Error> {
     let mut cfg = EndpointConfig { backing: EndpointBacking::Ethertap, mac: None, mtu: 1500 };
 
     // create a network endpoint
-    let (_, ep) = await!(epm.create_endpoint(EP_NAME, &mut cfg))?;
+    let (_, ep) = epm.create_endpoint(EP_NAME, &mut cfg).await?;
     let ep = ep.unwrap().into_proxy()?;
 
     // get the endpoint proxy to pass to child environment
@@ -159,7 +159,7 @@ async fn run_test() -> Result<(), Error> {
     let mut component_events = comp_controller.take_event_stream();
     launcher.create_component(&mut linfo, Some(comp_controller_req))?;
 
-    await!(wait_for_component(&mut component_events))
+    wait_for_component(&mut component_events).await
 }
 
 fn check_service(service: &str) -> Result<(), Error> {
@@ -241,7 +241,7 @@ async fn launch_grandchild() -> Result<(), Error> {
     let mut component_events = comp_controller.take_event_stream();
     launcher.create_component(&mut linfo, Some(comp_controller_req))?;
 
-    await!(wait_for_component(&mut component_events))
+    wait_for_component(&mut component_events).await
 }
 
 fn main() -> Result<(), Error> {

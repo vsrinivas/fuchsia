@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "128"]
 
 mod device;
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Error> {
     {
         let mut watcher = create_watcher().await?;
 
-        while let Some(msg) = await!(watcher.try_next())? {
+        while let Some(msg) = watcher.try_next().await? {
             match msg.event {
                 vfs::WatchEvent::EXISTING => {
                     let path = PathBuf::new().join(DEV_TEE_PATH).join(msg.filename);
@@ -79,9 +79,9 @@ async fn main() -> Result<(), Error> {
     });
     fs.take_and_serve_directory_handle()?;
     let (fidl_server, abort_handle) = abortable(fs.collect());
-    await!(dev_connection.register_abort_handle_on_closed(abort_handle));
+    dev_connection.register_abort_handle_on_closed(abort_handle).await;
 
-    let _: Result<(), Aborted> = await!(fidl_server);
+    let _: Result<(), Aborted> = fidl_server.await;
 
     Ok(())
 }

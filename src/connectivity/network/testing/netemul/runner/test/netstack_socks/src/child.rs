@@ -80,10 +80,10 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     netctx.get_endpoint_manager(epmch)?;
 
     // retrieve the created endpoint:
-    let ep = await!(epm.get_endpoint(&opt.endpoint))?;
+    let ep = epm.get_endpoint(&opt.endpoint).await?;
     let ep = ep.ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?.into_proxy()?;
     // and the ethernet device:
-    let eth = await!(ep.get_ethernet_device())?;
+    let eth = ep.get_ethernet_device().await?;
 
     let if_name = format!("eth-{}", opt.endpoint);
     // connect to netstack:
@@ -120,13 +120,13 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
         },
     );
     let nicid =
-        await!(netstack.add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth))
+        netstack.add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth).await
             .context("can't add ethernet device")?;
     let () = netstack.set_interface_status(nicid as u32, true)?;
     let fidl_fuchsia_net::Subnet { mut addr, prefix_len } = static_ip.clone().into();
-    let _ = await!(netstack.set_interface_address(nicid as u32, &mut addr, prefix_len))?;
+    let _ = netstack.set_interface_address(nicid as u32, &mut addr, prefix_len).await?;
 
-    let (if_id, hwaddr) = await!(if_changed.try_next())
+    let (if_id, hwaddr) = if_changed.try_next().await
         .context("wait for interfaces")?
         .ok_or_else(|| format_err!("interface added"))?;
 

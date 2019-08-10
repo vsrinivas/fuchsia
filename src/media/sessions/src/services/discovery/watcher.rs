@@ -67,20 +67,20 @@ impl Watcher {
         let mut acks = FuturesUnordered::new();
         let (mut emit_trigger, mut emit_signal) = mpsc::channel(CHANNEL_BUFFER_SIZE);
 
-        await!(emit_trigger.send(()))?;
+        emit_trigger.send(()).await?;
 
         // Loop until the proxy disconnects. Since we never close `emit`, we will never not have a
         // stream to poll in the select.
         loop {
             futures::select! {
                 _ = acks.select_next_some() => {
-                    await!(emit_trigger.send(()))?;
+                    emit_trigger.send(()).await?;
                 }
                 _ = emit_signal.select_next_some() => {
                     // TODO(turnage): Reject out-of-order ACKs
                     if acks.len() < MAX_EVENTS_SENT_WITHOUT_ACK {
                         let budget = MAX_EVENTS_SENT_WITHOUT_ACK - acks.len();
-                        for ack in await!(self.maybe_emit_events(&proxy, budget))? {
+                        for ack in self.maybe_emit_events(&proxy, budget).await? {
                             acks.push(ack);
                         }
                     }
@@ -96,7 +96,7 @@ impl Watcher {
                         self.players.entry(id).or_default().update(&event);
                     }
                     self.staged.insert(id, event);
-                    await!(emit_trigger.send(()))?;
+                    emit_trigger.send(()).await?;
                 }
                 complete => panic!("The emitter stream should never die."),
             }
@@ -118,7 +118,7 @@ impl Watcher {
         let ids: Vec<u64> = self.staged.keys().cloned().collect();
         for id in ids {
             let event = self.staged.remove(&id).expect("Getting value of key we just read");
-            if await!(self.filter_event(id, &event)) {
+            if self.filter_event(id, &event).await {
                 to_send.push((id, event.sessions_watcher_event()));
             } else {
                 self.staged.insert(id, event);

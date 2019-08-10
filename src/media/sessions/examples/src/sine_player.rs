@@ -11,7 +11,7 @@
 //! `fx shell run fuchsia-pkg://fuchsia.com/sine_player#meta/sine_player.cmx` to
 //! see how it works.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "256"]
 
 use byteorder::{ByteOrder, NativeEndian};
@@ -278,13 +278,13 @@ async fn main() -> Result<()> {
     // off to interested parties.
     let publisher_proxy =
         component::client::connect_to_service::<PublisherMarker>().context("Connecting to publisher.")?;
-    let session_id = await!(publisher_proxy.publish(controller_client_end))
+    let session_id = publisher_proxy.publish(controller_client_end).await
         .context("Publishing our session client end.")?;
     println!("Registered with Media Session API. Our id is {:?}.", session_id);
 
     // Start the player! (Commentary continues in serve().)
     let player = SinePlayer::new().context("Building sine player.")?;
-    await!(player.serve(controller_server_end).map_err(|e| eprintln!("{:?}", e)).map(|_| ()));
+    player.serve(controller_server_end).map_err(|e| eprintln!("{:?}", e)).map(|_| ()).await;
 
     Ok(())
 }

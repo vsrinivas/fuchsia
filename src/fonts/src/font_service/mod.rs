@@ -419,7 +419,7 @@ impl FontService {
         fasync::spawn(
             async move {
                 let mut stream = iterator.into_stream()?;
-                while let Some(request) = await!(stream.try_next())? {
+                while let Some(request) = stream.try_next().await? {
                     match request {
                         fonts_exp::ListTypefacesIteratorRequest::GetNext { responder } => {
                             let split_at =
@@ -497,17 +497,17 @@ impl FontService {
 
     pub async fn run(self, fs: ServiceFs<ServiceObj<'static, ProviderRequestStream>>) {
         let self_ = Arc::new(self);
-        await!(fs.for_each_concurrent(None, move |stream| self_.clone().handle_stream(stream)));
+        fs.for_each_concurrent(None, move |stream| self_.clone().handle_stream(stream)).await;
     }
 
     async fn handle_stream(self: Arc<Self>, stream: ProviderRequestStream) {
         let self_ = self.clone();
         match stream {
             ProviderRequestStream::Stable(stream) => {
-                await!(self_.as_ref().handle_stream_stable(stream)).unwrap_or_default()
+                self_.as_ref().handle_stream_stable(stream).await.unwrap_or_default()
             }
             ProviderRequestStream::Experimental(stream) => {
-                await!(self_.as_ref().handle_stream_experimental(stream)).unwrap_or_default()
+                self_.as_ref().handle_stream_experimental(stream).await.unwrap_or_default()
             }
         }
     }
@@ -516,8 +516,8 @@ impl FontService {
         &self,
         mut stream: fonts::ProviderRequestStream,
     ) -> Result<(), Error> {
-        while let Some(request) = await!(stream.try_next()).context("Error running provider")? {
-            await!(self.handle_font_provider_request(request))
+        while let Some(request) = stream.try_next().await.context("Error running provider")? {
+            self.handle_font_provider_request(request).await
                 .context("Error while handling request")?;
         }
         Ok(())
@@ -527,8 +527,8 @@ impl FontService {
         &self,
         mut stream: fonts_exp::ProviderRequestStream,
     ) -> Result<(), Error> {
-        while let Some(request) = await!(stream.try_next()).context("Error running provider")? {
-            await!(self.handle_experimental_request(request))
+        while let Some(request) = stream.try_next().await.context("Error running provider")? {
+            self.handle_experimental_request(request).await
                 .context("Error while handling request")?;
         }
         Ok(())

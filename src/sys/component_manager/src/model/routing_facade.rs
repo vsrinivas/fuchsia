@@ -51,7 +51,7 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
             let abs_moniker = abs_moniker.clone();
             let use_ = use_.clone();
             fasync::spawn(async move {
-                let res = await!(route_use_capability(
+                let res = route_use_capability(
                     &model,
                     flags,
                     mode,
@@ -59,7 +59,7 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
                     &use_,
                     abs_moniker.clone(),
                     server_end.into_channel(),
-                ));
+                ).await;
                 if let Err(e) = res {
                     error!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);
                 }
@@ -75,14 +75,14 @@ fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDec
             let abs_moniker = abs_moniker.clone();
             let expose = expose.clone();
             fasync::spawn(async move {
-                let res = await!(route_expose_capability(
+                let res = route_expose_capability(
                     &model,
                     flags,
                     mode,
                     &expose,
                     abs_moniker.clone(),
                     server_end.into_channel(),
-                ));
+                ).await;
                 if let Err(e) = res {
                     error!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);
                 }

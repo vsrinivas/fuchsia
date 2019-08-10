@@ -68,16 +68,16 @@ impl StreamRunner {
                 output: vec![],
             };
 
-            await!(stream.start())?;
+            stream.start().await?;
 
             let channel_closed = loop {
-                let event = if let Some(event) = await!(events.try_next())? {
+                let event = if let Some(event) = events.try_next().await? {
                     event
                 } else {
                     break true;
                 };
 
-                let control_flow = await!(stream.handle_event(event))?;
+                let control_flow = stream.handle_event(event).await?;
                 match control_flow {
                     StreamControlFlow::Continue => {}
                     StreamControlFlow::Stop => break false,

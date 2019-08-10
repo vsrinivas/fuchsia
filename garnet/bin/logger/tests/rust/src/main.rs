@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 // dummy main. We do not copy this binary to fuchsia, only tests.
 fn main() {}
@@ -52,7 +52,7 @@ mod tests {
         fasync::spawn(
             async move {
                 let fut = syslog_listener::run_log_listener(l, Some(&mut options), false);
-                if let Err(e) = await!(fut) {
+                if let Err(e) = fut.await {
                     panic!("test fail {:?}", e);
                 }
             }

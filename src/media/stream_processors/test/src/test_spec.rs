@@ -50,10 +50,10 @@ impl TestSpec {
     pub async fn run(self) -> Result<()> {
         match self.relation {
             CaseRelation::Serial => {
-                await!(run_cases_serially(self.stream_processor_factory.as_ref(), self.cases))
+                run_cases_serially(self.stream_processor_factory.as_ref(), self.cases).await
             }
             CaseRelation::Concurrent => {
-                await!(run_cases_concurrently(self.stream_processor_factory.as_ref(), self.cases))
+                run_cases_concurrently(self.stream_processor_factory.as_ref(), self.cases).await
             }
         }
     }
@@ -65,8 +65,8 @@ async fn run_cases_serially(
 ) -> Result<()> {
     let stream_processor =
         if let Some(stream) = cases.first().as_ref().map(|case| case.stream.as_ref()) {
-            await!(stream_processor_factory
-                .connect_to_stream_processor(stream, FIRST_FORMAT_DETAILS_VERSION_ORDINAL,))?
+            stream_processor_factory
+                .connect_to_stream_processor(stream, FIRST_FORMAT_DETAILS_VERSION_ORDINAL,).await?
         } else {
             return Err(FatalError(String::from("No test cases provided.")).into());
         };
@@ -74,7 +74,7 @@ async fn run_cases_serially(
 
     for case in cases {
         let output =
-            await!(stream_runner.run_stream(case.stream, case.stream_options.unwrap_or_default()))
+            stream_runner.run_stream(case.stream, case.stream_options.unwrap_or_default()).await
                 .context(format!("Running case {}", case.name))?;
         for validator in case.validators {
             validator.validate(&output).context(format!("Validating case {}", case.name))?;
@@ -93,7 +93,7 @@ async fn run_cases_concurrently(
         unordered.push(run_cases_serially(stream_processor_factory, vec![case]))
     }
 
-    while let Some(()) = await!(unordered.try_next())? {}
+    while let Some(()) = unordered.try_next().await? {}
 
     Ok(())
 }

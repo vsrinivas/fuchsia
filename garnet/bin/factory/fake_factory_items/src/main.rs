@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 mod config;
 mod fake_factory_items_server;
@@ -28,6 +28,6 @@ async fn main() -> Result<(), Error> {
     });
     fs.take_and_serve_directory_handle()?;
 
-    await!(fs.collect::<()>());
+    fs.collect::<()>().await;
     Ok(())
 }

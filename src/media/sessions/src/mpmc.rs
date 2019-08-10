@@ -30,7 +30,7 @@ impl<T> SenderSet<T> {
 
     async fn take(&mut self) -> Vec<mpsc::Sender<T>> {
         let mut snapshot = vec![];
-        snapshot.append(await!(self.inner.lock()).deref_mut());
+        snapshot.append(self.inner.lock().await.deref_mut());
 
         while let Some(new_sender) = self.pending_senders.try_pop() {
             snapshot.push(new_sender);
@@ -39,7 +39,7 @@ impl<T> SenderSet<T> {
     }
 
     async fn append(&mut self, mut addendum: Vec<mpsc::Sender<T>>) {
-        await!(self.inner.lock()).deref_mut().append(&mut addendum)
+        self.inner.lock().await.deref_mut().append(&mut addendum)
     }
 }
 
@@ -59,14 +59,14 @@ impl<T> Default for Sender<T> {
 
 impl<T: Clone> Sender<T> {
     pub async fn send(&mut self, payload: T) {
-        let senders = await!(self.inner.take());
+        let senders = self.inner.take().await;
         let mut living_senders = vec![];
         for mut sender in senders {
             if sender.try_send(payload.clone()).is_ok() {
                 living_senders.push(sender);
             }
         }
-        await!(self.inner.append(living_senders));
+        self.inner.append(living_senders).await;
     }
 
     pub fn new_receiver(&self) -> Receiver<T> {
@@ -131,9 +131,9 @@ mod test {
         let (mut s, mut r1) = channel(100);
         let mut r2 = r1.clone();
 
-        await!(s.send(20));
-        assert_eq!(await!(r1.next()), Some(20));
-        assert_eq!(await!(r2.next()), Some(20));
+        s.send(20).await;
+        assert_eq!(r1.next().await, Some(20));
+        assert_eq!(r2.next().await, Some(20));
     }
 
     #[fasync::run_singlethreaded]
@@ -143,8 +143,8 @@ mod test {
         let mut r1 = s.new_receiver();
         let mut r2 = s.new_receiver();
 
-        await!(s.send(20));
-        assert_eq!(await!(r1.next()), Some(20));
-        assert_eq!(await!(r2.next()), Some(20));
+        s.send(20).await;
+        assert_eq!(r1.next().await, Some(20));
+        assert_eq!(r2.next().await, Some(20));
     }
 }

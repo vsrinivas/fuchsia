@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![cfg(test)]
 
 use failure::{Error, ResultExt};
@@ -65,7 +65,7 @@ async fn test_oldhttp() -> Result<(), Error> {
         response_body_mode: oldhttp::ResponseBodyMode::Buffer,
         auto_follow_redirects: false,
     };
-    let response = await!(loader.start(&mut request))?;
+    let response = loader.start(&mut request).await?;
 
     assert_eq!(response.status_code, 200);
     // We can't check the body yet because the service doesn't return it.

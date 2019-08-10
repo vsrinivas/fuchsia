@@ -72,13 +72,13 @@ impl ProcessLauncherService {
         // consumed/reset by either Launch or CreateWithoutStarting.
         let mut state = ProcessLauncherState::default();
 
-        while let Some(req) = await!(stream.try_next())? {
+        while let Some(req) = stream.try_next().await? {
             match req {
                 fproc::LauncherRequest::Launch { info, responder } => {
                     let job_koid = info.job.get_koid();
                     let name = info.name.clone();
 
-                    match await!(Self::launch_process(info, state)) {
+                    match Self::launch_process(info, state).await {
                         Ok(process) => {
                             responder.send(zx::Status::OK.into_raw(), Some(process))?;
                         }
@@ -100,7 +100,7 @@ impl ProcessLauncherService {
                     let job_koid = info.job.get_koid();
                     let name = info.name.clone();
 
-                    match await!(Self::create_process(info, state)) {
+                    match Self::create_process(info, state).await {
                         Ok(built) => {
                             let mut process_data = fproc::ProcessStartData {
                                 process: built.process,
@@ -152,14 +152,14 @@ impl ProcessLauncherService {
         info: fproc::LaunchInfo,
         state: ProcessLauncherState,
     ) -> Result<zx::Process, LauncherError> {
-        Ok(await!(Self::create_process(info, state))?.start()?)
+        Ok(Self::create_process(info, state).await?.start()?)
     }
 
     async fn create_process(
         info: fproc::LaunchInfo,
         state: ProcessLauncherState,
     ) -> Result<BuiltProcess, LauncherError> {
-        Ok(await!(Self::create_process_builder(info, state)?.build())?)
+        Ok(Self::create_process_builder(info, state)?.build().await?)
     }
 
     fn create_process_builder(
@@ -301,7 +301,7 @@ mod tests {
     }
 
     async fn check_process_exited_ok(process: &zx::Process) -> Result<(), Error> {
-        await!(fasync::OnSignals::new(process, zx::Signals::PROCESS_TERMINATED))?;
+        fasync::OnSignals::new(process, zx::Signals::PROCESS_TERMINATED).await?;
 
         let info = process.info()?;
         assert_eq!(
@@ -358,7 +358,7 @@ mod tests {
             test_args_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>);
         launcher.add_args(&mut test_args_iters)?;
 
-        let (status, process) = await!(launcher.launch(&mut launch_info))?;
+        let (status, process) = launcher.launch(&mut launch_info).await?;
         if expect_access_denied() {
             assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
             return Ok(());
@@ -367,11 +367,11 @@ mod tests {
         let process = process.expect("Status was OK but no process returned");
         check_process_running(&process)?;
 
-        let proc_args = await!(proxy.get_arguments()).context("failed to get args from util")?;
+        let proc_args = proxy.get_arguments().await.context("failed to get args from util")?;
         assert_eq!(proc_args, test_args);
 
         mem::drop(proxy);
-        await!(check_process_exited_ok(&process))?;
+        check_process_exited_ok(&process).await?;
         Ok(())
     }
 
@@ -387,7 +387,7 @@ mod tests {
             test_env_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>);
         launcher.add_environs(&mut test_env_iters)?;
 
-        let (status, process) = await!(launcher.launch(&mut launch_info))?;
+        let (status, process) = launcher.launch(&mut launch_info).await?;
         if expect_access_denied() {
             assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
             return Ok(());
@@ -396,7 +396,7 @@ mod tests {
         let process = process.expect("Status was OK but no process returned");
         check_process_running(&process)?;
 
-        let proc_env = await!(proxy.get_environment()).context("failed to get env from util")?;
+        let proc_env = proxy.get_environment().await.context("failed to get env from util")?;
         let proc_env_tuple: Vec<(&str, &str)> =
             proc_env.iter().map(|v| (&*v.key, &*v.value)).collect();
         assert_eq!(proc_env_tuple, test_env);
@@ -424,7 +424,7 @@ mod tests {
                 &mut iter::empty(),
                 ServerEnd::new(dir_server),
             );
-            await!(dir);
+            dir.await;
             panic!("Pseudo dir stopped serving!");
         });
 
@@ -434,7 +434,7 @@ mod tests {
         }];
         launcher.add_names(&mut name_infos.iter_mut())?;
 
-        let (status, process) = await!(launcher.launch(&mut launch_info))?;
+        let (status, process) = launcher.launch(&mut launch_info).await?;
         if expect_access_denied() {
             assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
             return Ok(());
@@ -443,10 +443,10 @@ mod tests {
         let process = process.expect("Status was OK but no process returned");
         check_process_running(&process)?;
 
-        let namespace_dump = await!(proxy.dump_namespace()).context("failed to dump namespace")?;
+        let namespace_dump = proxy.dump_namespace().await.context("failed to dump namespace")?;
         assert_eq!(namespace_dump, "/dir, /dir/test_file");
         let dir_contents =
-            await!(proxy.read_file("/dir/test_file")).context("failed to read file via util")?;
+            proxy.read_file("/dir/test_file").await.context("failed to read file via util")?;
         assert_eq!(dir_contents, test_content);
         Ok(())
     }
@@ -462,7 +462,7 @@ mod tests {
             test_args_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>);
         launcher.add_args(&mut test_args_iters)?;
 
-        let (status, start_data) = await!(launcher.create_without_starting(&mut launch_info))?;
+        let (status, start_data) = launcher.create_without_starting(&mut launch_info).await?;
         if expect_access_denied() {
             assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
             return Ok(());
@@ -495,11 +495,11 @@ mod tests {
             .context("Failed to start process from ProcessStartData")?;
         check_process_running(&start_data.process)?;
 
-        let proc_args = await!(proxy.get_arguments()).context("failed to get args from util")?;
+        let proc_args = proxy.get_arguments().await.context("failed to get args from util")?;
         assert_eq!(proc_args, test_args);
 
         mem::drop(proxy);
-        await!(check_process_exited_ok(&start_data.process))?;
+        check_process_exited_ok(&start_data.process).await?;
         Ok(())
     }
 }

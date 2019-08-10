@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![allow(dead_code)]
 
 use {
@@ -130,9 +130,9 @@ async fn run_archivist() -> Result<(), Error> {
 
     component::health().set_ok();
 
-    while let Some(event) = await!(events.next()) {
+    while let Some(event) = events.next().await {
         let state = state.clone();
-        await!(process_event(state.clone(), event)).unwrap_or_else(|e| {
+        process_event(state.clone(), event).await.unwrap_or_else(|e| {
             let mut state = state.lock().unwrap();
             inspect_log!(state.log_node, event: "Failed to log event", result: format!("{:?}", e));
             fx_log_err!("Failed to log event: {:?}", e);

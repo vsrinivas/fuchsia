@@ -14,7 +14,7 @@
 //! `token_manager_factory` may be downscoped to only handle tokens that are independent of user.
 
 #![deny(missing_docs)]
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 mod auth_provider_supplier;
 mod token_manager_factory;
@@ -41,7 +41,7 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {
         let tmf_clone = Arc::clone(&token_manager_factory);
-        fasync::spawn(async move { await!(tmf_clone.handle_requests_from_stream(stream)) });
+        fasync::spawn(async move { tmf_clone.handle_requests_from_stream(stream).await });
     });
     fs.take_and_serve_directory_handle()?;
 

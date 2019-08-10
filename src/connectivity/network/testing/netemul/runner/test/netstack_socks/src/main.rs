@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
@@ -61,13 +61,13 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
     };
 
     // create a network endpoint
-    let (_, ep) = await!(epm.create_endpoint(env_name, &mut cfg))?;
+    let (_, ep) = epm.create_endpoint(env_name, &mut cfg).await?;
     let ep = ep.unwrap().into_proxy()?;
 
-    let stat = await!(network.attach_endpoint(env_name))?;
+    let stat = network.attach_endpoint(env_name).await?;
     let () = zx::Status::ok(stat)?;
 
-    await!(ep.set_link_up(true))?;
+    ep.set_link_up(true).await?;
 
     // get the endpoint proxy to pass to child environment
     let (ep_proxy_client, ep_proxy_server) =
@@ -146,7 +146,7 @@ async fn wait_for_component(component: &ComponentControllerProxy) -> Result<(), 
     let mut component_events = component.take_event_stream();
     // wait for child to exit and mimic the result code
     let result = loop {
-        let event = await!(component_events.try_next())
+        let event = component_events.try_next().await
             .context("wait for child component to exit")?
             .ok_or_else(|| format_err!("Child didn't exit cleanly"))?;
 
@@ -179,13 +179,13 @@ async fn create_network() -> Result<NetworkProxy, Error> {
     let (netm, netm_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
     netctx.get_network_manager(netm_server_end)?;
     let config = NetworkConfig { latency: None, packet_loss: None, reorder: None };
-    let (_, network) = await!(netm.create_network(NETWORK_NAME, config))?;
+    let (_, network) = netm.create_network(NETWORK_NAME, config).await?;
     let network = network.ok_or_else(|| format_err!("can't create network"))?.into_proxy()?;
     Ok(network)
 }
 
 async fn prepare_env() -> Result<(), Error> {
-    let net = await!(create_network())?;
+    let net = create_network().await?;
     let server_ip_cfg = "192.168.0.1/24";
     let server_ip = "192.168.0.1";
     let client_ip_cfg = "192.168.0.2/24";
@@ -193,20 +193,20 @@ async fn prepare_env() -> Result<(), Error> {
     let bus = common::BusConnection::new("root")?;
 
     println!("Starting server...");
-    let server = await!(spawn_env(
+    let server = spawn_env(
         &net,
         SpawnOptions { env_name: "server", ip: server_ip_cfg, remote: None },
-    ))?;
+    ).await?;
 
-    let () = await!(bus.wait_for_event(common::SERVER_READY))?;
+    let () = bus.wait_for_event(common::SERVER_READY).await?;
     println!("Server ready, starting client...");
 
-    let client = await!(spawn_env(
+    let client = spawn_env(
         &net,
         SpawnOptions { env_name: "client", ip: client_ip_cfg, remote: Some(server_ip) },
-    ))?;
-    let () = await!(wait_for_component(&client.controller))?;
-    let () = await!(wait_for_component(&server.controller))?;
+    ).await?;
+    let () = wait_for_component(&client.controller).await?;
+    let () = wait_for_component(&server.controller).await?;
     Ok(())
 }
 

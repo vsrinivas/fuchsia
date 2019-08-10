@@ -180,10 +180,10 @@ impl Vsock {
             endpoints::create_endpoints::<CallbacksMarker>()?;
         let server_stream = callbacks_server.into_stream()?;
 
-        await!(device
+        device
             .start(callbacks_client)
             .map(|x| map_driver_result(x))
-            .err_into::<failure::Error>())?;
+            .err_into::<failure::Error>().await?;
 
         let service = State {
             device,
@@ -206,7 +206,7 @@ impl Vsock {
     async fn run_callbacks(
         self, mut callbacks: CallbacksRequestStream,
     ) -> Result<Void, failure::Error> {
-        while let Some(Ok(cb)) = await!(callbacks.next()) {
+        while let Some(Ok(cb)) = callbacks.next().await {
             self.lock().do_callback(cb);
         }
         // The only way to get here is if our callbacks stream ended, since our notifications
@@ -240,7 +240,7 @@ impl Vsock {
                 con,
                 responder,
             } => send_result(
-                await!(self.make_connection(remote_cid, remote_port, con)),
+                self.make_connection(remote_cid, remote_port, con).await,
                 |r, v| responder.send(r, v.unwrap_or(0)),
             ),
             ConnectorRequest::Listen {
@@ -270,7 +270,7 @@ impl Vsock {
                     .or_else(|e| future::ready(if e.is_comm_failure() { Err(e) } else { Ok(()) }))
             })
             .err_into();
-        await!(fut)
+        fut.await
     }
     fn alloc_ephemeral_port(self) -> Option<AllocatedPort> {
         let p = self.lock().used_ports.allocate();
@@ -338,7 +338,7 @@ impl Vsock {
         let send_request_fut = self.lock().device.send_request(&mut addr.clone(), data);
 
         Ok(async move {
-            map_driver_result(await!(send_request_fut))?;
+            map_driver_result(send_request_fut.await)?;
             Ok((shutdown_callback, response_callback))
         })
     }
@@ -353,7 +353,7 @@ impl Vsock {
         let send_request_fut = self.lock().device.send_response(&mut addr.clone(), data);
 
         Ok(async move {
-            map_driver_result(await!(send_request_fut))?;
+            map_driver_result(send_request_fut.await)?;
             Ok(shutdown_callback)
         })
     }
@@ -371,7 +371,7 @@ impl Vsock {
             .send_vmo(&mut addr.clone(), vmo, off, len);
 
         Ok(async move {
-            map_driver_result(await!(send_request_fut))?;
+            map_driver_result(send_request_fut.await)?;
             Ok(vmo_callback)
         })
     }
@@ -407,20 +407,20 @@ impl Vsock {
         loop {
             select! {
                 shutdown_event = shutdown_event => {
-                    return await!(future::ready(shutdown_event)
+                    return future::ready(shutdown_event)
                         .err_into()
                         .and_then(|()| self.lock().send_rst(&addr))
-                    );
+                    .await;
                 },
                 request = requests.next() => {
                     match request {
                         Some(Ok(ConnectionRequest::Shutdown{control_handle: _control_handle})) => {
-                            return await!(
+                            return 
                                 self.lock().send_shutdown(&addr)
                                     // Wait to either receive the RST for the client or to be
                                     // shut down for some other reason
                                     .and_then(|()| shutdown_event.err_into())
-                            );
+                            .await;
                         },
                         Some(Ok(ConnectionRequest::SendVmo{vmo, off, len, responder})) => {
                             // Acquire the potential future from send_vmo in a temporary so we
@@ -428,12 +428,12 @@ impl Vsock {
                             let result = self.send_vmo(&addr, vmo, off, len);
                             // Equivalent of and_then to expand the Ok future case.
                             let result = match result {
-                                Ok(fut) => await!(fut),
+                                Ok(fut) => fut.await,
                                 Err(e) => Err(e),
                             };
                             let status = match result {
                                 Ok(cb) => {
-                                    match await!(wait_vmo_complete(&mut shutdown_event, cb)) {
+                                    match wait_vmo_complete(&mut shutdown_event, cb).await {
                                         Err(e) => return e,
                                         Ok(o) => o,
                                     }
@@ -445,11 +445,11 @@ impl Vsock {
                         },
                         // Generate a RST for a non graceful client disconnect.
                         Some(Err(e)) => {
-                            await!(self.lock().send_rst(&addr))?;
+                            self.lock().send_rst(&addr).await?;
                             return Err(Error::ClientCommunication(e.into()));
                         },
                         None => {
-                            return await!(self.lock().send_rst(&addr));
+                            return self.lock().send_rst(&addr).await;
                         },
                     }
                 },
@@ -463,7 +463,7 @@ impl Vsock {
     async fn run_connection_listener(
         self, incoming: ListenStream, acceptor: AcceptorProxy,
     ) -> Result<(), Error> {
-        await!(incoming
+        incoming
             .then(|addr| acceptor
                 .accept(&mut *addr.clone())
                 .map_ok(|maybe_con| (maybe_con, addr)))
@@ -476,7 +476,7 @@ impl Vsock {
                             .con
                             .into_stream()
                             .map_err(|x| Error::ClientCommunication(x.into()))?;
-                        let shutdown_event = await!(self.send_response(&addr, data)?)?;
+                        let shutdown_event = self.send_response(&addr, data)?.await?;
                         fasync::spawn(
                             self.clone()
                                 .run_connection(addr, shutdown_event, con, None)
@@ -487,9 +487,9 @@ impl Vsock {
                         );
                         Ok(())
                     }
-                    None => await!(self.lock().send_rst(&addr)),
+                    None => self.lock().send_rst(&addr).await,
                 }
-            }))
+            }).await
     }
 
     // Attempts to connect to the given remote cid/port. If successful spawns a new
@@ -508,7 +508,7 @@ impl Vsock {
             .ok_or(Error::OutOfPorts)?;
         let port_value = *port;
         let addr = addr::Vsock::new(port_value, remote_port, remote_cid);
-        let (shutdown_event, response_event) = await!(self.send_request(&addr, data)?)?;
+        let (shutdown_event, response_event) = self.send_request(&addr, data)?.await?;
         let mut shutdown_event = shutdown_event.fuse();
         select! {
             _shutdown_event = shutdown_event => {

@@ -46,7 +46,7 @@ impl FakeEntityResolver {
         fasync::spawn(
             async move {
                 while let Some(request) =
-                    await!(stream.try_next()).context("error running entity resolver")?
+                    stream.try_next().await.context("error running entity resolver")?
                 {
                     match request {
                         EntityResolverRequest::ResolveEntity {
@@ -85,7 +85,7 @@ impl FakeEntityServer {
         fasync::spawn(
             async move {
                 while let Some(request) =
-                    await!(stream.try_next()).context("error running entity server")?
+                    stream.try_next().await.context("error running entity server")?
                 {
                     match request {
                         EntityRequest::GetTypes { responder } => {

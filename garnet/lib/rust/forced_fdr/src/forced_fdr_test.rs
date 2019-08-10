@@ -19,7 +19,7 @@ use {
 
 fn spawn_update_info_with_channel(mut stream: InfoRequestStream, channel: String) {
     fasync::spawn(async move {
-        let req = await!(stream.try_next())
+        let req = stream.try_next().await
             .expect("Failed to get request from stream")
             .expect("Failed to get request from stream");
 
@@ -32,7 +32,7 @@ fn spawn_factory_reset(mut stream: FactoryResetRequestStream) -> Arc<Mutex<i32>>
     let call_count = Arc::new(Mutex::new(0));
     let ret = call_count.clone();
     fasync::spawn(async move {
-        let req = await!(stream.try_next())
+        let req = stream.try_next().await
             .expect("Failed to get request from stream")
             .expect("Failed to get request from stream");
 
@@ -114,7 +114,7 @@ async fn test_it_fdrs_nominally() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_ok());
@@ -136,7 +136,7 @@ async fn test_it_fdrs_nominally_at_boundry() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_ok());
@@ -158,7 +158,7 @@ async fn test_it_does_not_fdr_when_equal_index() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_err());
@@ -180,7 +180,7 @@ async fn test_it_does_not_fdr_when_greater_index() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_err());
@@ -202,7 +202,7 @@ async fn test_it_does_not_fdr_when_channel_not_in_list() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-three");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_err());
@@ -224,7 +224,7 @@ async fn test_it_writes_stored_file_when_missing() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_ok());
@@ -247,7 +247,7 @@ async fn test_it_writes_stored_file_when_file_empty() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_ok());
@@ -270,7 +270,7 @@ async fn test_it_writes_stored_file_when_file_invalid() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_ok());
@@ -290,7 +290,7 @@ async fn test_it_skips_fdr_when_config_invalid() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_err());
@@ -309,7 +309,7 @@ async fn test_it_skips_fdr_when_config_empty() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_err());
@@ -328,7 +328,7 @@ async fn test_it_skips_fdr_when_config_missing() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_err());
@@ -347,7 +347,7 @@ async fn test_it_skips_fdr_when_config_channel_list_empty() {
     let (mock, fdr_call_count) = spawn(&dir, "channel-two");
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_err());
@@ -374,7 +374,7 @@ async fn test_it_skips_fdr_when_channel_unavailable() {
     let fdr_call_count = spawn_factory_reset(fdr_stream);
 
     // Act
-    let result = await!(run(mock));
+    let result = run(mock).await;
 
     // Assert
     assert!(result.is_err());

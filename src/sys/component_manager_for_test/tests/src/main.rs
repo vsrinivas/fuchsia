@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use fidl_fuchsia_test::SuiteMarker;
 
@@ -22,7 +22,7 @@ async fn can_launch_and_connect_to_test_service() {
 
     let suite = app.connect_to_service::<SuiteMarker>().expect("cannot connect to Suite");
 
-    let tests = await!(suite.get_tests()).expect("Cannot get tests");
+    let tests = suite.get_tests().await.expect("Cannot get tests");
 
     // make sure component_manager_for_test was able to launch test and expose the service.
     assert_eq!(tests.len(), 3);

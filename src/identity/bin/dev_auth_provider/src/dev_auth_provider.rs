@@ -223,7 +223,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_persistent_credential() -> Result<(), Error> {
         let dev_auth_provider = get_auth_provider_connection_proxy();
-        await!(
+        
             dev_auth_provider
                 .get_persistent_credential(None, None)
                 .map_ok(move |response| {
@@ -246,7 +246,7 @@ mod tests {
                     assert!(url.unwrap().contains(USER_PROFILE_INFO_URL));
                     assert!(image_url.unwrap().contains(USER_PROFILE_INFO_IMAGE_URL));
                 })
-        )
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
@@ -255,7 +255,7 @@ mod tests {
         let credential = "rt_".to_string() + &generate_random_string();
         let client_id = generate_random_string();
         let mut scopes = vec![].into_iter();
-        await!(
+        
             dev_auth_provider
                 .get_app_access_token(&credential, Some(&client_id), &mut scopes)
                 .map_ok(move |response| match response {
@@ -273,14 +273,14 @@ mod tests {
                         "AuthProviderStatus not correct. Or response doesn't contain access_token."
                     ),
                 })
-        )
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_app_id_token() -> Result<(), Error> {
         let dev_auth_provider = get_auth_provider_connection_proxy();
         let credential = "rt_".to_string() + &generate_random_string();
-        await!(
+        
             dev_auth_provider
                 .get_app_id_token(&credential, None)
                 .map_ok(move |response| match response {
@@ -294,13 +294,13 @@ mod tests {
                         "AuthProviderStatus not correct. Or response doesn't contain id_token."
                     ),
                 })
-        )
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_app_firebase_token() -> Result<(), Error> {
         let dev_auth_provider = get_auth_provider_connection_proxy();
-        await!(
+        
             dev_auth_provider
                 .get_app_firebase_token("test_id_token", "test_firebase_api_key")
                 .map_ok(move |response| match response {
@@ -313,20 +313,20 @@ mod tests {
                          firebase_token."
                     ),
                 })
-        )
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_revoke_app_or_persistent_credential() -> Result<(), Error> {
         let dev_auth_provider = get_auth_provider_connection_proxy();
         let credential = "testing_credential";
-        await!(
+        
             dev_auth_provider
                 .revoke_app_or_persistent_credential(credential)
                 .map_ok(move |response| {
                     assert_eq!(response, AuthProviderStatus::Ok);
                 })
-        )
+        .await
     }
 
 }

@@ -36,7 +36,7 @@ impl WaitGroup {
     }
 
     pub async fn wait(&mut self) {
-        let _ = await!(future::join_all(self.members.split_off(0)));
+        let _ = future::join_all(self.members.split_off(0)).await;
     }
 }
 

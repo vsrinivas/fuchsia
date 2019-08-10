@@ -38,7 +38,7 @@ impl SearchSuggestionsProvider for ContextualSuggestionsProvider {
                 .iter()
                 .filter_map(|action| ActionMatching::try_to_match(action.clone(), context))
                 .map(|matching| matching.suggestions());
-            let result = await!(join_all(futs))
+            let result = join_all(futs).await
                 .into_iter()
                 .flat_map(|suggestions| suggestions.into_iter())
                 .collect::<Vec<Suggestion>>();
@@ -103,11 +103,11 @@ impl<'a> ActionMatching<'a> {
                         }
                     });
                 let add_mod = AddModInfo::new(intent, story_name, None);
-                await!(action.load_display_info(parameters))
+                action.load_display_info(parameters).await
                     .map(|display_info| Suggestion::new(add_mod, display_info))
             }
         });
-        await!(join_all(futs)).into_iter().filter_map(|result| result)
+        join_all(futs).await.into_iter().filter_map(|result| result)
     }
 }
 
@@ -156,9 +156,9 @@ mod tests {
     async fn get_suggestions() -> Result<(), Error> {
         let contextual_suggestions_provider =
             ContextualSuggestionsProvider::new(test_action_index());
-        let context = await!(test_context())?;
+        let context = test_context().await?;
         let context_refs = context.iter().collect::<Vec<_>>();
-        let results = await!(contextual_suggestions_provider.request("", &context_refs))?;
+        let results = contextual_suggestions_provider.request("", &context_refs).await?;
 
         let expected_results = vec![
             suggestion!(
@@ -270,7 +270,7 @@ mod tests {
                 hashset!(Contributor::module_new("story1", "mod-b", "param-bar")),
             ),
         ];
-        Ok(await!(join_all(futs)).into_iter().map(|e| e.unwrap()).collect::<Vec<ContextEntity>>())
+        Ok(join_all(futs).await.into_iter().map(|e| e.unwrap()).collect::<Vec<ContextEntity>>())
     }
 
     fn test_action_index() -> Vec<Action> {

@@ -52,7 +52,7 @@ fn extract_login_override(value: &str) -> Result<LoginOverride, Error> {
 /// Retrieves the current setting for the spcified type.
 pub async fn get(setui: SetUiServiceProxy, setting_type: String) -> Result<SettingsObject, Error> {
     let converted_type = extract_setting_type(&setting_type)?;
-    let setting = await!(setui.watch(converted_type))?;
+    let setting = setui.watch(converted_type).await?;
     Ok(setting)
 }
 
@@ -66,11 +66,11 @@ pub async fn mutate(
     match converted_type {
         SettingType::Unknown => {
             let mut mutation = generate_string_mutation(&value)?;
-            await!(setui.mutate(converted_type, &mut mutation))?;
+            setui.mutate(converted_type, &mut mutation).await?;
         }
         SettingType::Account => {
             let mut mutation = generate_account_mutation(&value)?;
-            await!(setui.mutate(converted_type, &mut mutation))?;
+            setui.mutate(converted_type, &mut mutation).await?;
         }
         _ => {
             return Err(format_err!("unsupported type"));

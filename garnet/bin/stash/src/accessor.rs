@@ -63,9 +63,9 @@ impl Accessor {
     /// called yet, the modified version will be returned.
     pub async fn get_value<'a>(&'a self, key: &'a str) -> Result<Option<Value>, Error> {
         fx_log_info!("retrieving value for key: {}", key);
-        let store_manager = await!(self.store_manager.lock());
+        let store_manager = self.store_manager.lock().await;
 
-        if let Some(o_val) = await!(self.fields_updated.lock()).get(key) {
+        if let Some(o_val) = self.fields_updated.lock().await.get(key) {
             // This accessor has an uncommited update for the field, so let's return that.
             match (self.enable_bytes, o_val) {
                 (false, Some(Value::Bytesval(_))) => {
@@ -103,7 +103,7 @@ impl Accessor {
             }
         }
 
-        await!(self.fields_updated.lock()).insert(key, Some(val));
+        self.fields_updated.lock().await.insert(key, Some(val));
 
         Ok(())
     }
@@ -114,7 +114,7 @@ impl Accessor {
             return Err(err_msg("client attempted to delete a value with a read-only accessor"));
         }
 
-        await!(self.fields_updated.lock()).insert(key, None);
+        self.fields_updated.lock().await.insert(key, None);
         Ok(())
     }
 
@@ -122,10 +122,10 @@ impl Accessor {
     /// where the key contains the given prefix.
     pub async fn list_prefix(&mut self, prefix: String, server_end: ServerEnd<ListIteratorMarker>) {
         let mut list_results =
-            await!(self.store_manager.lock()).list_prefix(&self.client_name, &prefix);
+            self.store_manager.lock().await.list_prefix(&self.client_name, &prefix);
 
         // Merge the results with the pending updated fields
-        let fields_updated = await!(self.fields_updated.lock());
+        let fields_updated = self.fields_updated.lock().await;
         if !fields_updated.is_empty() {
             // Delete any fields that have been marked for removal
             list_results.retain(|li| field_has_been_deleted(fields_updated.get(&li.key)));
@@ -155,7 +155,7 @@ impl Accessor {
                 let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
                 let mut stream = ListIteratorRequestStream::from_channel(server_chan);
                 while let Some(ListIteratorRequest::GetNext { responder }) =
-                    await!(stream.try_next())?
+                    stream.try_next().await?
                 {
                     let split_at =
                         list_results.len() - LIST_PREFIX_CHUNK_SIZE.min(list_results.len());
@@ -178,10 +178,10 @@ impl Accessor {
         server_end: ServerEnd<GetIteratorMarker>,
     ) -> Result<(), Error> {
         let mut get_results =
-            await!(self.store_manager.lock()).get_prefix(&self.client_name, &prefix)?;
+            self.store_manager.lock().await.get_prefix(&self.client_name, &prefix)?;
 
         // Merge the results with the pending updated fields
-        let fields_updated = await!(self.fields_updated.lock());
+        let fields_updated = self.fields_updated.lock().await;
         if !fields_updated.is_empty() {
             // Delete any fields that have been marked for removal
             get_results.retain(|kv| field_has_been_deleted(fields_updated.get(&kv.key)));
@@ -213,7 +213,7 @@ impl Accessor {
                 let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
                 let mut stream = GetIteratorRequestStream::from_channel(server_chan);
                 while let Some(GetIteratorRequest::GetNext { responder }) =
-                    await!(stream.try_next())?
+                    stream.try_next().await?
                 {
                     let split_at = get_results.len() - GET_PREFIX_CHUNK_SIZE.min(get_results.len());
                     let mut chunk = get_results.split_off(split_at);
@@ -243,8 +243,8 @@ impl Accessor {
             return Err(err_msg("client attempted to delete a prefix with a read-only accessor"));
         }
 
-        let sm = await!(self.store_manager.lock());
-        let mut fields_updated = await!(self.fields_updated.lock());
+        let sm = self.store_manager.lock().await;
+        let mut fields_updated = self.fields_updated.lock().await;
 
         let list_results = sm.list_prefix(&self.client_name, &prefix);
 
@@ -265,8 +265,8 @@ impl Accessor {
             return Err(err_msg("client attempted to commit with a read-only accessor"));
         }
 
-        let mut store_manager = await!(self.store_manager.lock());
-        let mut fields_updated = await!(self.fields_updated.lock());
+        let mut store_manager = self.store_manager.lock().await;
+        let mut fields_updated = self.fields_updated.lock().await;
         let mut old_values: HashMap<String, Option<Value>> = HashMap::new();
 
         // Iterate over each key updated. For each key, record the current value and then set or
@@ -354,7 +354,7 @@ mod tests {
     {
         let mut res = Vec::new();
         loop {
-            let mut subset = await!(f()).unwrap();
+            let mut subset = f().await.unwrap();
             if subset.len() == 0 {
                 break;
             }
@@ -372,13 +372,13 @@ mod tests {
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
-        await!(sm.lock())
+        sm.lock().await
             .set_value(&test_client_name, test_key.clone(), Value::Boolval(true))
             .unwrap();
 
-        let fetched_val = await!(acc.get_value(&test_key)).unwrap();
+        let fetched_val = acc.get_value(&test_key).await.unwrap();
         assert_eq!(Some(Value::Boolval(true)), fetched_val);
-        assert_eq!(0, await!(acc.fields_updated.lock()).len());
+        assert_eq!(0, acc.fields_updated.lock().await.len());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -393,19 +393,19 @@ mod tests {
         let test_val = Value::Boolval(true);
         let expected_val = Value::Boolval(true);
 
-        await!(acc.set_value(test_key.clone(), test_val)).unwrap();
-        assert_eq!(None, await!(sm.lock()).get_value(&test_client_name, &test_key));
-        assert_eq!(1, await!(acc.fields_updated.lock()).len());
-        assert_eq!(&Some(expected_val), await!(acc.fields_updated.lock()).get(&test_key).unwrap());
+        acc.set_value(test_key.clone(), test_val).await.unwrap();
+        assert_eq!(None, sm.lock().await.get_value(&test_client_name, &test_key));
+        assert_eq!(1, acc.fields_updated.lock().await.len());
+        assert_eq!(&Some(expected_val), acc.fields_updated.lock().await.get(&test_key).unwrap());
 
-        assert_eq!(None, await!(sm.lock()).get_value(&test_client_name, &test_key));
+        assert_eq!(None, sm.lock().await.get_value(&test_client_name, &test_key));
 
-        await!(acc.commit()).unwrap();
+        acc.commit().await.unwrap();
         assert_eq!(
             &Value::Boolval(true),
-            await!(sm.lock()).get_value(&test_client_name, &test_key).unwrap()
+            sm.lock().await.get_value(&test_client_name, &test_key).unwrap()
         );
-        assert_eq!(0, await!(acc.fields_updated.lock()).len());
+        assert_eq!(0, acc.fields_updated.lock().await.len());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -416,30 +416,30 @@ mod tests {
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
-        await!(sm.lock())
+        sm.lock().await
             .set_value(&test_client_name, "a".to_string(), Value::Boolval(true))
             .unwrap();
 
-        assert_eq!(0, await!(acc.fields_updated.lock()).len());
-        await!(acc.delete_value("b".to_string())).unwrap();
-        assert_eq!(1, await!(acc.fields_updated.lock()).len());
+        assert_eq!(0, acc.fields_updated.lock().await.len());
+        acc.delete_value("b".to_string()).await.unwrap();
+        assert_eq!(1, acc.fields_updated.lock().await.len());
 
-        await!(acc.delete_value("a".to_string())).unwrap();
-        assert_eq!(2, await!(acc.fields_updated.lock()).len());
-        assert_eq!(&None, await!(acc.fields_updated.lock()).get("a").unwrap());
+        acc.delete_value("a".to_string()).await.unwrap();
+        assert_eq!(2, acc.fields_updated.lock().await.len());
+        assert_eq!(&None, acc.fields_updated.lock().await.get("a").unwrap());
 
-        await!(acc.delete_value("a".to_string())).unwrap();
-        assert_eq!(2, await!(acc.fields_updated.lock()).len());
-        assert_eq!(&None, await!(acc.fields_updated.lock()).get("a").unwrap());
+        acc.delete_value("a".to_string()).await.unwrap();
+        assert_eq!(2, acc.fields_updated.lock().await.len());
+        assert_eq!(&None, acc.fields_updated.lock().await.get("a").unwrap());
 
         assert_eq!(
             Some(&Value::Boolval(true)),
-            await!(sm.lock()).get_value(&test_client_name, &"a".to_string())
+            sm.lock().await.get_value(&test_client_name, &"a".to_string())
         );
 
-        await!(acc.commit()).unwrap();
-        assert_eq!(None, await!(sm.lock()).get_value(&test_client_name, &"a".to_string()));
-        assert_eq!(0, await!(acc.fields_updated.lock()).len());
+        acc.commit().await.unwrap();
+        assert_eq!(None, sm.lock().await.get_value(&test_client_name, &"a".to_string()));
+        assert_eq!(0, acc.fields_updated.lock().await.len());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -450,7 +450,7 @@ mod tests {
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
 
         for key in vec!["a", "a/a", "a/b", "a/a/b", "b", "b/c", "bbbbb"] {
-            await!(sm.lock())
+            sm.lock().await
                 .set_value(&test_client_name, key.to_string(), Value::Boolval(true))
                 .unwrap();
         }
@@ -460,9 +460,9 @@ mod tests {
                        mut expected: Vec<String>| async move {
             let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
             let (list_iterator, server_end) = create_proxy().unwrap();
-            await!(acc.list_prefix(prefix.to_string(), server_end));
+            acc.list_prefix(prefix.to_string(), server_end).await;
 
-            let actual = await!(drain_stash_iterator(|| list_iterator.get_next()));
+            let actual = drain_stash_iterator(|| list_iterator.get_next()).await;
             let mut actual: Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
 
             expected.sort_unstable();
@@ -470,35 +470,35 @@ mod tests {
             assert_eq!(expected, actual);
         };
 
-        await!(run_test(
+        run_test(
             sm.clone(),
             "".to_string(),
             vec!["a", "a/a", "a/b", "a/a/b", "b", "b/c", "bbbbb"]
                 .iter()
                 .map(|s| s.to_string())
                 .collect()
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "a".to_string(),
             vec!["a", "a/a", "a/b", "a/a/b"].iter().map(|s| s.to_string()).collect()
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "a/a".to_string(),
             vec!["a/a", "a/a/b"].iter().map(|s| s.to_string()).collect()
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "b".to_string(),
             vec!["b", "b/c", "bbbbb"].iter().map(|s| s.to_string()).collect()
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "bb".to_string(),
             vec!["bbbbb"].iter().map(|s| s.to_string()).collect()
-        ));
-        await!(run_test(sm.clone(), "c".to_string(), vec![]));
+        ).await;
+        run_test(sm.clone(), "c".to_string(), vec![]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -507,7 +507,7 @@ mod tests {
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
 
         for key in vec!["a", "a/a", "a/b", "a/a/b", "b", "b/c", "bbbbb"] {
-            await!(sm.lock())
+            sm.lock().await
                 .set_value("test_client", key.to_string(), Value::Boolval(true))
                 .unwrap();
         }
@@ -517,9 +517,9 @@ mod tests {
                                    mut expected: Vec<String>| async move {
             let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
             let (list_iterator, server_end) = create_proxy().unwrap();
-            await!(acc.list_prefix(prefix.to_string(), server_end));
+            acc.list_prefix(prefix.to_string(), server_end).await;
 
-            let actual = await!(drain_stash_iterator(|| list_iterator.get_next()));
+            let actual = drain_stash_iterator(|| list_iterator.get_next()).await;
             let mut actual: Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
 
             expected.sort_unstable();
@@ -527,35 +527,35 @@ mod tests {
             assert_eq!(expected, actual);
         };
 
-        await!(run_test(
+        run_test(
             sm.clone(),
             "".to_string(),
             vec!["a", "a/a", "a/b", "a/a/b", "b", "b/c", "bbbbb"]
                 .iter()
                 .map(|s| s.to_string())
                 .collect()
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "a".to_string(),
             vec!["a", "a/a", "a/b", "a/a/b"].iter().map(|s| s.to_string()).collect()
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "a/a".to_string(),
             vec!["a/a", "a/a/b"].iter().map(|s| s.to_string()).collect()
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "b".to_string(),
             vec!["b", "b/c", "bbbbb"].iter().map(|s| s.to_string()).collect()
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "bb".to_string(),
             vec!["bbbbb"].iter().map(|s| s.to_string()).collect()
-        ));
-        await!(run_test(sm.clone(), "c".to_string(), vec![]));
+        ).await;
+        run_test(sm.clone(), "c".to_string(), vec![]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -572,7 +572,7 @@ mod tests {
             ("b/c", true),
             ("bbbbb", true),
         ] {
-            await!(sm.lock())
+            sm.lock().await
                 .set_value("test_client", key.to_string(), Value::Boolval(val))
                 .unwrap();
         }
@@ -582,11 +582,11 @@ mod tests {
                                    mut expected: Vec<(String, bool)>| async move {
             let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
             let (get_iterator, server_end) = create_proxy().unwrap();
-            await!(acc.get_prefix(prefix.to_string(), server_end)).unwrap();
+            acc.get_prefix(prefix.to_string(), server_end).await.unwrap();
 
             let mut actual = Vec::new();
             loop {
-                let subset = await!(get_iterator.get_next()).unwrap();
+                let subset = get_iterator.get_next().await.unwrap();
                 if subset.len() == 0 {
                     break;
                 }
@@ -603,7 +603,7 @@ mod tests {
             assert_eq!(expected, actual);
         };
 
-        await!(run_test(
+        run_test(
             sm.clone(),
             "".to_string(),
             vec![
@@ -615,8 +615,8 @@ mod tests {
                 ("b/c".to_string(), true),
                 ("bbbbb".to_string(), true),
             ],
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "a".to_string(),
             vec![
@@ -625,19 +625,19 @@ mod tests {
                 ("a/b".to_string(), false),
                 ("a/a/b".to_string(), false),
             ],
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "a/a".to_string(),
             vec![("a/a".to_string(), true), ("a/a/b".to_string(), false)],
-        ));
-        await!(run_test(
+        ).await;
+        run_test(
             sm.clone(),
             "b".to_string(),
             vec![("b".to_string(), false), ("b/c".to_string(), true), ("bbbbb".to_string(), true),],
-        ));
-        await!(run_test(sm.clone(), "bb".to_string(), vec![("bbbbb".to_string(), true)]));
-        await!(run_test(sm.clone(), "c".to_string(), vec![]));
+        ).await;
+        run_test(sm.clone(), "bb".to_string(), vec![("bbbbb".to_string(), true)]).await;
+        run_test(sm.clone(), "c".to_string(), vec![]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -649,25 +649,25 @@ mod tests {
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
         for key in vec!["a", "a/a", "a/b", "a/a/b", "b", "b/c", "bbbbb"] {
-            await!(sm.lock())
+            sm.lock().await
                 .set_value(&test_client_name, key.to_string(), Value::Boolval(true))
                 .unwrap();
         }
 
-        await!(acc.delete_prefix("a".to_string())).unwrap();
-        assert_eq!(&None, await!(acc.fields_updated.lock()).get("a").unwrap());
-        assert_eq!(&None, await!(acc.fields_updated.lock()).get("a/a").unwrap());
-        assert_eq!(&None, await!(acc.fields_updated.lock()).get("a/b").unwrap());
-        assert_eq!(&None, await!(acc.fields_updated.lock()).get("a/a/b").unwrap());
-        assert_eq!(4, await!(acc.fields_updated.lock()).len());
-        await!(acc.commit()).unwrap();
+        acc.delete_prefix("a".to_string()).await.unwrap();
+        assert_eq!(&None, acc.fields_updated.lock().await.get("a").unwrap());
+        assert_eq!(&None, acc.fields_updated.lock().await.get("a/a").unwrap());
+        assert_eq!(&None, acc.fields_updated.lock().await.get("a/b").unwrap());
+        assert_eq!(&None, acc.fields_updated.lock().await.get("a/a/b").unwrap());
+        assert_eq!(4, acc.fields_updated.lock().await.len());
+        acc.commit().await.unwrap();
 
         let (list_iterator, server_end) = create_proxy().unwrap();
-        await!(acc.list_prefix("".to_string(), server_end));
+        acc.list_prefix("".to_string(), server_end).await;
 
         let mut actual = Vec::new();
         loop {
-            let subset = await!(list_iterator.get_next()).unwrap();
+            let subset = list_iterator.get_next().await.unwrap();
             if subset.len() == 0 {
                 break;
             }
@@ -689,31 +689,31 @@ mod tests {
         let mut acc2 = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
         {
-            let mut sm = await!(sm.lock());
+            let mut sm = sm.lock().await;
             sm.set_value(&test_client_name, "a".to_string(), Value::Boolval(true)).unwrap();
             sm.set_value(&test_client_name, "b".to_string(), Value::Boolval(false)).unwrap();
         }
 
-        await!(acc1.get_value("a")).unwrap();
-        await!(acc1.set_value("b".to_string(), Value::Boolval(true))).unwrap();
+        acc1.get_value("a").await.unwrap();
+        acc1.set_value("b".to_string(), Value::Boolval(true)).await.unwrap();
 
-        await!(acc1.commit()).unwrap();
+        acc1.commit().await.unwrap();
 
         assert_eq!(
             &Value::Boolval(true),
-            await!(sm.lock()).get_value(&test_client_name, &"b".to_string()).unwrap()
+            sm.lock().await.get_value(&test_client_name, &"b".to_string()).unwrap()
         );
 
-        await!(acc2.get_value("a")).unwrap();
-        await!(acc2.delete_value("b".to_string())).unwrap();
+        acc2.get_value("a").await.unwrap();
+        acc2.delete_value("b".to_string()).await.unwrap();
 
-        await!(acc2.commit()).unwrap();
+        acc2.commit().await.unwrap();
 
-        assert_eq!(None, await!(sm.lock()).get_value(&test_client_name, &"b".to_string()));
+        assert_eq!(None, sm.lock().await.get_value(&test_client_name, &"b".to_string()));
 
         // Confirm that the fields touched and fields updated maps have been cleared
-        assert_eq!(0, await!(acc1.fields_updated.lock()).len());
-        assert_eq!(0, await!(acc2.fields_updated.lock()).len());
+        assert_eq!(0, acc1.fields_updated.lock().await.len());
+        assert_eq!(0, acc2.fields_updated.lock().await.len());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -725,29 +725,29 @@ mod tests {
         let mut acc1 = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
         {
-            let mut sm = await!(sm.lock());
+            let mut sm = sm.lock().await;
             sm.set_value(&test_client_name, "a".to_string(), Value::Boolval(true)).unwrap();
             sm.set_value(&test_client_name, "b".to_string(), Value::Boolval(false)).unwrap();
         }
 
-        await!(acc1.get_value("a")).unwrap();
-        await!(acc1.set_value("b".to_string(), Value::Boolval(true))).unwrap();
+        acc1.get_value("a").await.unwrap();
+        acc1.set_value("b".to_string(), Value::Boolval(true)).await.unwrap();
 
-        await!(acc1.commit()).unwrap();
-        assert_eq!(0, await!(acc1.fields_updated.lock()).len());
+        acc1.commit().await.unwrap();
+        assert_eq!(0, acc1.fields_updated.lock().await.len());
 
         assert_eq!(
             &Value::Boolval(true),
-            await!(sm.lock()).get_value(&test_client_name, &"b".to_string()).unwrap()
+            sm.lock().await.get_value(&test_client_name, &"b".to_string()).unwrap()
         );
 
-        await!(acc1.get_value("a")).unwrap();
-        await!(acc1.delete_value("b".to_string())).unwrap();
+        acc1.get_value("a").await.unwrap();
+        acc1.delete_value("b".to_string()).await.unwrap();
 
-        await!(acc1.commit()).unwrap();
-        assert_eq!(0, await!(acc1.fields_updated.lock()).len());
+        acc1.commit().await.unwrap();
+        assert_eq!(0, acc1.fields_updated.lock().await.len());
 
-        assert_eq!(None, await!(sm.lock()).get_value(&test_client_name, &"b".to_string()));
+        assert_eq!(None, sm.lock().await.get_value(&test_client_name, &"b".to_string()));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -759,21 +759,21 @@ mod tests {
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
         for key in vec!["a", "aa", "aaa"] {
-            await!(acc.set_value(key.to_owned(), Value::Boolval(true))).unwrap();
+            acc.set_value(key.to_owned(), Value::Boolval(true)).await.unwrap();
         }
-        await!(acc.commit()).unwrap();
+        acc.commit().await.unwrap();
         for key in vec!["b", "bb", "bbb"] {
-            await!(acc.set_value(key.to_owned(), Value::Boolval(true))).unwrap();
+            acc.set_value(key.to_owned(), Value::Boolval(true)).await.unwrap();
         }
 
-        await!(acc.delete_prefix("".to_string())).unwrap();
+        acc.delete_prefix("".to_string()).await.unwrap();
 
         let mut keys: Vec<String> =
-            await!(acc.fields_updated.lock()).keys().map(|s| s.clone()).collect();
+            acc.fields_updated.lock().await.keys().map(|s| s.clone()).collect();
         keys.sort_unstable();
         assert_eq!(vec!["a", "aa", "aaa", "b", "bb", "bbb"], keys);
         for key in vec!["a", "aa", "aaa", "b", "bb", "bbb"] {
-            assert_eq!(Some(&None), await!(acc.fields_updated.lock()).get(key));
+            assert_eq!(Some(&None), acc.fields_updated.lock().await.get(key));
         }
     }
 
@@ -786,17 +786,17 @@ mod tests {
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
         for key in vec!["a", "aa", "aaa"] {
-            await!(acc.set_value(key.to_owned(), Value::Boolval(true))).unwrap();
+            acc.set_value(key.to_owned(), Value::Boolval(true)).await.unwrap();
         }
-        await!(acc.commit()).unwrap();
+        acc.commit().await.unwrap();
         for key in vec!["b", "bb", "bbb"] {
-            await!(acc.set_value(key.to_owned(), Value::Boolval(true))).unwrap();
+            acc.set_value(key.to_owned(), Value::Boolval(true)).await.unwrap();
         }
 
         let (list_iterator, server_end) = create_proxy().unwrap();
-        await!(acc.list_prefix("".to_string(), server_end));
+        acc.list_prefix("".to_string(), server_end).await;
 
-        let res = await!(drain_stash_iterator(|| list_iterator.get_next()));
+        let res = drain_stash_iterator(|| list_iterator.get_next()).await;
         let mut res: Vec<String> = res.iter().map(|li| li.key.clone()).collect();
 
         res.sort_unstable();
@@ -812,17 +812,17 @@ mod tests {
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
         for key in vec!["a", "aa", "aaa"] {
-            await!(acc.set_value(key.to_owned(), Value::Boolval(true))).unwrap();
+            acc.set_value(key.to_owned(), Value::Boolval(true)).await.unwrap();
         }
-        await!(acc.commit()).unwrap();
+        acc.commit().await.unwrap();
         for key in vec!["b", "bb", "bbb"] {
-            await!(acc.set_value(key.to_owned(), Value::Boolval(true))).unwrap();
+            acc.set_value(key.to_owned(), Value::Boolval(true)).await.unwrap();
         }
 
         let (get_iterator, server_end) = create_proxy().unwrap();
-        await!(acc.get_prefix("".to_string(), server_end)).unwrap();
+        acc.get_prefix("".to_string(), server_end).await.unwrap();
 
-        let res = await!(drain_stash_iterator(|| get_iterator.get_next()));
+        let res = drain_stash_iterator(|| get_iterator.get_next()).await;
         let mut res: Vec<String> = res.iter().map(|kv| kv.key.clone()).collect();
 
         res.sort_unstable();

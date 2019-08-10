@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 mod font_service;
 
@@ -66,7 +66,7 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     let fs = fs;
 
-    await!(service.run(fs));
+    service.run(fs).await;
 
     Ok(())
 }

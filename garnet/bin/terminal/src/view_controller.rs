@@ -106,16 +106,16 @@ impl ViewController {
                     // Otherwise it's unused, which closes the channel immediately.
                     let _dummy = ime_listener;
                     let mut stream = ime_client_listener_request.into_stream()?;
-                    while let Some(request) = await!(stream.try_next())? {
+                    while let Some(request) = stream.try_next().await? {
                         match request {
                             InputMethodEditorClientRequest::DidUpdateState {
                                 event: Some(event),
                                 ..
                             } => {
-                                await!(ViewController::handle_input_event(
+                                ViewController::handle_input_event(
                                     &view_controller,
                                     *event
-                                ))
+                                ).await
                                 .unwrap_or_else(
                                     |e: failure::Error| {
                                         eprintln!("Unable to handle input event: {:?}", e)
@@ -135,7 +135,7 @@ impl ViewController {
             fasync::spawn_local(
                 async move {
                     let mut stream = session_listener_request.into_stream()?;
-                    while let Some(request) = await!(stream.try_next())? {
+                    while let Some(request) = stream.try_next().await? {
                         match request {
                             SessionListenerRequest::OnScenicEvent { events, control_handle: _ } => {
                                 view_controller.lock().handle_session_events(events)
@@ -167,7 +167,7 @@ impl ViewController {
                 // TODO(MS-2378) Wait until we have the actual window size before spawning.
                 // This will require that we spawn the view controller in an async call which
                 // requires a refactor of the app class.
-                await!(pty.spawn(WindowSize { width: 1000, height: 1000 }))
+                pty.spawn(WindowSize { width: 1000, height: 1000 }).await
                     .expect("failed to spawn pty");
             }
             let mut evented_fd = unsafe {
@@ -180,7 +180,7 @@ impl ViewController {
             let mut read_buf = [0u8, 32];
             loop {
                 let bytes_read =
-                    await!(evented_fd.read(&mut read_buf)).unwrap_or_else(|e: std::io::Error| {
+                    evented_fd.read(&mut read_buf).await.unwrap_or_else(|e: std::io::Error| {
                         eprintln!(
                             "failed to read bytes from io_loop, dropping current message: {:?}",
                             e
@@ -260,7 +260,7 @@ impl ViewController {
                     WindowSize { width: logical_size.x as u32, height: logical_size.y as u32 };
                 fasync::spawn_local(async move {
                     let pty = pty_ref.borrow();
-                    await!(pty.resize(window_size)).unwrap_or_else(|e: failure::Error| {
+                    pty.resize(window_size).await.unwrap_or_else(|e: failure::Error| {
                         eprintln!("failed to send resize message to pty: {:?}", e)
                     });
                 });
@@ -367,7 +367,7 @@ impl ViewController {
                 fasync::net::EventedFd::new(view_controller.lock().pty_write_fd.try_clone()?)?
             };
 
-            await!(evented_fd.write_all(string.as_bytes()))
+            evented_fd.write_all(string.as_bytes()).await
                 .context("failed to write string to evented_fd")?;
         }
 

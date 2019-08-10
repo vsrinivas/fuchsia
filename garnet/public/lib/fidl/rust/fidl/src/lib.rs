@@ -4,7 +4,7 @@
 
 //! Library and runtime for fidl bindings.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![deny(missing_docs)]
 
 #[macro_use]

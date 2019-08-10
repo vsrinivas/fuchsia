@@ -19,14 +19,14 @@ pub fn spawn_display_controller(
         futures::channel::mpsc::unbounded::<Command>();
 
     fasync::spawn(async move {
-        while let Some(command) = await!(display_handler_rx.next()) {
+        while let Some(command) = display_handler_rx.next().await {
             match command {
                 Command::ChangeState(_state) => {}
                 Command::HandleRequest(request, responder) => {
                     #[allow(unreachable_patterns)]
                     match request {
                         SettingRequest::SetBrightness(brightness_value) => {
-                            await!(brightness_service.set_brightness(brightness_value.into()))
+                            brightness_service.set_brightness(brightness_value.into()).await
                                 .unwrap();
                             responder.send(Ok(None)).unwrap();
                         }
@@ -36,7 +36,7 @@ pub fn spawn_display_controller(
                         }
                         SettingRequest::Get => {
                             let (_success, value) =
-                                await!(brightness_service.get_brightness()).unwrap();
+                                brightness_service.get_brightness().await.unwrap();
                             responder
                                 .send(Ok(Some(SettingResponse::Brightness(
                                     BrightnessInfo::ManualBrightness(value as f32),

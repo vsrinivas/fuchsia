@@ -66,8 +66,8 @@ impl TokenManagerFactory {
     /// factory. Not that currently no failure modes meet this condition since requests for
     /// different users are independant.
     pub async fn handle_requests_from_stream(&self, mut stream: TokenManagerFactoryRequestStream) {
-        while let Ok(Some(req)) = await!(stream.try_next()) {
-            await!(self.handle_request(req)).unwrap_or_else(|err| {
+        while let Ok(Some(req)) = stream.try_next().await {
+            self.handle_request(req).await.unwrap_or_else(|err| {
                 warn!("Error handling TokenManagerFactoryRequest: {:?}", err);
             });
         }
@@ -101,11 +101,11 @@ impl TokenManagerFactory {
                     .context("Error creating request stream")?;
 
                 let token_manager_clone = Arc::clone(&token_manager);
-                await!(token_manager.task_group().spawn(|cancel| async move {
-                    await!(token_manager_clone
-                        .handle_requests_from_stream(&context, stream, cancel))
+                token_manager.task_group().spawn(|cancel| async move {
+                    token_manager_clone
+                        .handle_requests_from_stream(&context, stream, cancel).await
                     .unwrap_or_else(|e| warn!("Error handling TokenManager channel {:?}", e))
-                }))?;
+                }).await?;
                 Ok(())
             }
         }

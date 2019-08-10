@@ -11,7 +11,7 @@
 //! system and is intended only for use by the most trusted parts of the system.
 
 #![deny(missing_docs)]
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 mod account_event_emitter;
 mod account_handler_connection;
@@ -97,7 +97,7 @@ fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_manager_clone = Arc::clone(&account_manager);
         fasync::spawn(async move {
-            await!(account_manager_clone.handle_requests_from_stream(stream))
+            account_manager_clone.handle_requests_from_stream(stream).await
                 .unwrap_or_else(|e| error!("Error handling AccountManager channel {:?}", e))
         });
     });

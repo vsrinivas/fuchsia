@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{err_msg, format_err, Error, ResultExt};
 use fidl_fuchsia_sys_index::{ComponentIndexMarker, FuzzySearchError};
@@ -13,7 +13,7 @@ use std::env;
 
 #[fasync::run_singlethreaded]
 async fn main() {
-    match await!(run_locate()) {
+    match run_locate().await {
         Err(e) => {
             eprintln!("Error: {}", e);
             std::process::exit(1);
@@ -40,7 +40,7 @@ async fn run_locate() -> Result<(), Error> {
         .connect_to_service::<ComponentIndexMarker>()
         .context("Failed to connect to component_index service.")?;
 
-    match await!(component_index.fuzzy_search(&cfg.search_keyword))? {
+    match component_index.fuzzy_search(&cfg.search_keyword).await? {
         Ok(res_vec) => fuzzy_search_result(res_vec, cfg),
         Err(e) => fuzzy_search_error(e, cfg),
     }

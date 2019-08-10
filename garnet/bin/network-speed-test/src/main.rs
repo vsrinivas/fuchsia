@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 // Explicitly added due to conflict using custom_attribute and async_await above.
 #[macro_use]
@@ -118,7 +118,7 @@ async fn fetch_and_discard_url(http_service: HttpServiceProxy,
 
     let loader_proxy = http::UrlLoaderProxy::new(proxy);
     let start_time = zx::Time::get(zx::ClockId::Monotonic);
-    let response = await!(loader_proxy.start(&mut url_request))?;
+    let response = loader_proxy.start(&mut url_request).await?;
 
     if let Some(e) = response.error {
         bail!("UrlLoaderProxy error - code:{} ({})", e.code, e.description.unwrap_or("".into()))
@@ -133,7 +133,7 @@ async fn fetch_and_discard_url(http_service: HttpServiceProxy,
 
     // discard the bytes
     let mut stdio_sink = AllowStdIo::new(::std::io::sink());
-    let bytes_received = await!(socket.copy_into(&mut stdio_sink))?;
+    let bytes_received = socket.copy_into(&mut stdio_sink).await?;
     let stop_time = zx::Time::get(zx::ClockId::Monotonic);
 
     let time_nanos = (stop_time - start_time).into_nanos() as u64;

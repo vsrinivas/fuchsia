@@ -75,8 +75,8 @@ where
         &self,
         mut stream: AuthProviderRequestStream,
     ) -> Result<(), Error> {
-        while let Some(request) = await!(stream.try_next())? {
-            await!(self.handle_request(request));
+        while let Some(request) = stream.try_next().await? {
+            self.handle_request(request).await;
         }
         Ok(())
     }
@@ -88,22 +88,22 @@ where
                 auth_ui_context,
                 user_profile_id,
                 responder,
-            } => responder.send_result(await!(
+            } => responder.send_result(
                 self.get_persistent_credential(auth_ui_context, user_profile_id)
-            )),
+            .await),
             AuthProviderRequest::GetAppAccessToken { credential, client_id, scopes, responder } => {
                 responder
-                    .send_result(await!(self.get_app_access_token(credential, client_id, scopes)))
+                    .send_result(self.get_app_access_token(credential, client_id, scopes).await)
             }
             AuthProviderRequest::GetAppIdToken { credential, audience, responder } => {
-                responder.send_result(await!(self.get_app_id_token(credential, audience)))
+                responder.send_result(self.get_app_id_token(credential, audience).await)
             }
             AuthProviderRequest::GetAppFirebaseToken { id_token, firebase_api_key, responder } => {
                 responder
-                    .send_result(await!(self.get_app_firebase_token(id_token, firebase_api_key)))
+                    .send_result(self.get_app_firebase_token(id_token, firebase_api_key).await)
             }
             AuthProviderRequest::RevokeAppOrPersistentCredential { credential, responder } => {
-                responder.send_result(await!(self.revoke_app_or_persistent_credential(credential)))
+                responder.send_result(self.revoke_app_or_persistent_credential(credential).await)
             }
             AuthProviderRequest::GetPersistentCredentialFromAttestationJwt {
                 attestation_signer,
@@ -111,25 +111,25 @@ where
                 auth_ui_context,
                 user_profile_id,
                 responder,
-            } => responder.send_result(await!(self
+            } => responder.send_result(self
                 .get_persistent_credential_from_attestation_jwt(
                     attestation_signer,
                     jwt_params,
                     auth_ui_context,
                     user_profile_id
-                ))),
+                ).await),
             AuthProviderRequest::GetAppAccessTokenFromAssertionJwt {
                 attestation_signer,
                 jwt_params,
                 credential,
                 scopes,
                 responder,
-            } => responder.send_result(await!(self.get_app_access_token_from_assertion_jwt(
+            } => responder.send_result(self.get_app_access_token_from_assertion_jwt(
                 attestation_signer,
                 jwt_params,
                 credential,
                 scopes
-            ))),
+            ).await),
         }
     }
 
@@ -142,11 +142,11 @@ where
     ) -> AuthProviderResult<(String, UserProfileInfo)> {
         match auth_ui_context {
             Some(ui_context) => {
-                let auth_code = await!(self.get_auth_code(ui_context, user_profile_id))?;
+                let auth_code = self.get_auth_code(ui_context, user_profile_id).await?;
                 info!("Received auth code of length: {:?}", &auth_code.0.len());
-                let (refresh_token, access_token) = await!(self.exchange_auth_code(auth_code))?;
+                let (refresh_token, access_token) = self.exchange_auth_code(auth_code).await?;
                 info!("Received refresh token of length {:?}", &refresh_token.0.len());
-                let user_profile_info = await!(self.get_user_profile_info(access_token))?;
+                let user_profile_info = self.get_user_profile_info(access_token).await?;
                 Ok((refresh_token.0, user_profile_info))
             }
             None => Err(AuthProviderError::new(AuthProviderStatus::BadRequest)),
@@ -167,7 +167,7 @@ where
 
         let request =
             build_request_with_refresh_token(RefreshToken(credential), scopes, client_id)?;
-        let (response_body, status) = await!(self.http_client.request(request))?;
+        let (response_body, status) = self.http_client.request(request).await?;
         let (access_token, expires_in) =
             parse_response_without_refresh_token(response_body, status)?;
         Ok(AuthToken { token_type: TokenType::AccessToken, token: access_token.0, expires_in })
@@ -206,7 +206,7 @@ where
         }
 
         let request = build_revocation_request(credential)?;
-        let (response_body, status) = await!(self.http_client.request(request))?;
+        let (response_body, status) = self.http_client.request(request).await?;
         parse_revocation_response(response_body, status)
     }
 
@@ -253,12 +253,12 @@ where
             ViewTokenPair::new().auth_provider_status(AuthProviderStatus::UnknownError)?;
         let authorize_url = Self::authorize_url(user_profile_id)?;
 
-        await!(web_frame.display_url(view_token, authorize_url))?;
+        web_frame.display_url(view_token, authorize_url).await?;
         auth_ui_context
             .start_overlay(&mut view_holder_token)
             .auth_provider_status(AuthProviderStatus::UnknownError)?;
 
-        let redirect_url = await!(web_frame.wait_for_redirect(REDIRECT_URI.clone()))?;
+        let redirect_url = web_frame.wait_for_redirect(REDIRECT_URI.clone()).await?;
 
         if let Err(err) = auth_ui_context.stop_overlay() {
             warn!("Error while attempting to stop UI overlay: {:?}", err);
@@ -289,7 +289,7 @@ where
         auth_code: AuthCode,
     ) -> AuthProviderResult<(RefreshToken, AccessToken)> {
         let request = build_request_with_auth_code(auth_code)?;
-        let (response_body, status_code) = await!(self.http_client.request(request))?;
+        let (response_body, status_code) = self.http_client.request(request).await?;
         parse_response_with_refresh_token(response_body, status_code)
     }
 
@@ -299,7 +299,7 @@ where
         access_token: AccessToken,
     ) -> AuthProviderResult<UserProfileInfo> {
         let request = build_user_info_request(access_token)?;
-        let (response_body, status_code) = await!(self.http_client.request(request))?;
+        let (response_body, status_code) = self.http_client.request(request).await?;
         parse_user_info_response(response_body, status_code)
     }
 }
@@ -588,7 +588,7 @@ mod tests {
 
         let auth_provider = GoogleAuthProvider::new(frame_supplier, http);
         fasync::spawn(async move {
-            await!(auth_provider.handle_requests_from_stream(provider_request_stream))
+            auth_provider.handle_requests_from_stream(provider_request_stream).await
                 .expect("Error handling AuthProvider channel");
         });
 
@@ -598,7 +598,7 @@ mod tests {
     fn get_authentication_ui_context() -> ClientEnd<AuthenticationUiContextMarker> {
         let (client, mut stream) = create_request_stream::<AuthenticationUiContextMarker>()
             .expect("Failed to create authentication UI context stream");
-        fasync::spawn(async move { while let Some(_) = await!(stream.try_next()).unwrap() {} });
+        fasync::spawn(async move { while let Some(_) = stream.try_next().await.unwrap() {} });
         client
     }
 
@@ -623,7 +623,7 @@ mod tests {
 
         let ui_context = get_authentication_ui_context();
         let (status, refresh_token, user_info) =
-            await!(auth_provider.get_persistent_credential(Some(ui_context), None))?;
+            auth_provider.get_persistent_credential(Some(ui_context), None).await?;
 
         assert_eq!(status, AuthProviderStatus::Ok);
         assert_eq!(refresh_token.unwrap(), "test-refresh-token".to_string());
@@ -647,30 +647,30 @@ mod tests {
             Ok(Url::parse_with_params(REDIRECT_URI.as_str(), vec![("error", "access_denied")])
                 .unwrap()),
         );
-        await!(assert_persistent_credential_web_err(
+        assert_persistent_credential_web_err(
             frame_supplier,
             AuthProviderStatus::UserCancelled
-        ))?;
+        ).await?;
 
         // Web frame error - UI maybe canceled
         let frame_supplier = TestWebFrameSupplier::new(
             Ok(()),
             Err(AuthProviderError::new(AuthProviderStatus::UnknownError)),
         );
-        await!(assert_persistent_credential_web_err(
+        assert_persistent_credential_web_err(
             frame_supplier,
             AuthProviderStatus::UnknownError
-        ))?;
+        ).await?;
 
         // Network error
         let frame_supplier = TestWebFrameSupplier::new(
             Err(AuthProviderError::new(AuthProviderStatus::NetworkError)),
             Err(AuthProviderError::new(AuthProviderStatus::NetworkError)),
         );
-        await!(assert_persistent_credential_web_err(
+        assert_persistent_credential_web_err(
             frame_supplier,
             AuthProviderStatus::NetworkError
-        ))?;
+        ).await?;
         Ok(())
     }
 
@@ -684,7 +684,7 @@ mod tests {
 
         let ui_context = get_authentication_ui_context();
         let (status, refresh_token, user_info) =
-            await!(auth_provider.get_persistent_credential(Some(ui_context), None))?;
+            auth_provider.get_persistent_credential(Some(ui_context), None).await?;
         assert_eq!(status, expected_status);
         assert!(refresh_token.is_none());
         assert!(user_info.is_none());
@@ -698,11 +698,11 @@ mod tests {
             Some("{\"error\": \"invalid_grant\", \"error_description\": \"ouch\"}"),
             StatusCode::BAD_REQUEST,
         );
-        await!(assert_persistent_credential_http_err(http, AuthProviderStatus::ReauthRequired))?;
+        assert_persistent_credential_http_err(http, AuthProviderStatus::ReauthRequired).await?;
 
         // Network error
         let http = TestHttpClient::with_error(AuthProviderStatus::NetworkError);
-        await!(assert_persistent_credential_http_err(http, AuthProviderStatus::NetworkError))?;
+        assert_persistent_credential_http_err(http, AuthProviderStatus::NetworkError).await?;
         Ok(())
     }
 
@@ -718,14 +718,14 @@ mod tests {
             clone_result(&auth_code_exchange_response),
             Ok((None, StatusCode::INTERNAL_SERVER_ERROR)),
         ]);
-        await!(assert_persistent_credential_http_err(http, AuthProviderStatus::OauthServerError))?;
+        assert_persistent_credential_http_err(http, AuthProviderStatus::OauthServerError).await?;
 
         // Network error
         let http = TestHttpClient::with_responses(vec![
             auth_code_exchange_response,
             Err(AuthProviderError::new(AuthProviderStatus::NetworkError)),
         ]);
-        await!(assert_persistent_credential_http_err(http, AuthProviderStatus::NetworkError))?;
+        assert_persistent_credential_http_err(http, AuthProviderStatus::NetworkError).await?;
         Ok(())
     }
 
@@ -744,7 +744,7 @@ mod tests {
 
         let ui_context = get_authentication_ui_context();
         let (status, refresh_token, user_info) =
-            await!(auth_provider.get_persistent_credential(Some(ui_context), None))?;
+            auth_provider.get_persistent_credential(Some(ui_context), None).await?;
         assert_eq!(status, expected_status);
         assert!(refresh_token.is_none());
         assert!(user_info.is_none());
@@ -754,7 +754,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_persistent_credential_requires_ui_context() -> Result<(), Error> {
         let auth_provider = get_auth_provider_proxy(None, None);
-        let result = await!(auth_provider.get_persistent_credential(None, None))?;
+        let result = auth_provider.get_persistent_credential(None, None).await?;
         assert_eq!(result.0, AuthProviderStatus::BadRequest);
         Ok(())
     }
@@ -764,11 +764,11 @@ mod tests {
         let http_result = "{\"access_token\": \"test-access-token\", \"expires_in\": 3600}";
         let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::OK);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
-        let (result_status, result_token) = await!(auth_provider.get_app_access_token(
+        let (result_status, result_token) = auth_provider.get_app_access_token(
             "credential",
             None,
             &mut vec![].into_iter()
-        ))?;
+        ).await?;
         assert_eq!(result_status, AuthProviderStatus::Ok);
         assert_eq!(
             result_token.unwrap(),
@@ -786,28 +786,28 @@ mod tests {
         // Invalid request
         let mock_http = TestHttpClient::with_error(AuthProviderStatus::InternalError);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
-        let result = await!(auth_provider.get_app_access_token("", None, &mut vec![].into_iter()))?;
+        let result = auth_provider.get_app_access_token("", None, &mut vec![].into_iter()).await?;
         assert_eq!(result.0, AuthProviderStatus::BadRequest);
 
         // Error response
         let http_result = "{\"error\": \"invalid_scope\", \"error_description\": \"bad scope\"}";
         let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::BAD_REQUEST);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
-        let result = await!(auth_provider.get_app_access_token(
+        let result = auth_provider.get_app_access_token(
             "credential",
             None,
             &mut vec!["bad-scope"].into_iter()
-        ))?;
+        ).await?;
         assert_eq!(result.0, AuthProviderStatus::OauthServerError);
 
         // Network error
         let mock_http = TestHttpClient::with_error(AuthProviderStatus::NetworkError);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
-        let result = await!(auth_provider.get_app_access_token(
+        let result = auth_provider.get_app_access_token(
             "credential",
             None,
             &mut vec![].into_iter()
-        ))?;
+        ).await?;
         assert_eq!(result.0, AuthProviderStatus::NetworkError);
 
         Ok(())
@@ -816,7 +816,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_app_id_token() -> Result<(), Error> {
         let auth_provider = get_auth_provider_proxy(None, None);
-        let result = await!(auth_provider.get_app_id_token("credential", None))?;
+        let result = auth_provider.get_app_id_token("credential", None).await?;
         assert_eq!(result.0, AuthProviderStatus::InternalError);
         Ok(())
     }
@@ -824,7 +824,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_app_firebase_token() -> Result<(), Error> {
         let auth_provider = get_auth_provider_proxy(None, None);
-        let result = await!(auth_provider.get_app_firebase_token("id_token", "api_key"))?;
+        let result = auth_provider.get_app_firebase_token("id_token", "api_key").await?;
         assert_eq!(result.0, AuthProviderStatus::InternalError);
         Ok(())
     }
@@ -833,7 +833,7 @@ mod tests {
     async fn test_revoke_app_or_persistent_credential_success() -> Result<(), Error> {
         let mock_http = TestHttpClient::with_response(None, StatusCode::OK);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
-        let result = await!(auth_provider.revoke_app_or_persistent_credential("credential"))?;
+        let result = auth_provider.revoke_app_or_persistent_credential("credential").await?;
         assert_eq!(result, AuthProviderStatus::Ok);
         Ok(())
     }
@@ -842,7 +842,7 @@ mod tests {
     async fn test_revoke_app_or_persistent_credential_failures() -> Result<(), Error> {
         // Empty credential
         let auth_provider = get_auth_provider_proxy(None, None);
-        let result = await!(auth_provider.revoke_app_or_persistent_credential(""))?;
+        let result = auth_provider.revoke_app_or_persistent_credential("").await?;
         assert_eq!(result, AuthProviderStatus::BadRequest);
 
         // Error response
@@ -850,7 +850,7 @@ mod tests {
         let mock_http = TestHttpClient::with_response(Some(http_response), StatusCode::BAD_REQUEST);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
         assert_eq!(
-            await!(auth_provider.revoke_app_or_persistent_credential("credential"))?,
+            auth_provider.revoke_app_or_persistent_credential("credential").await?,
             AuthProviderStatus::OauthServerError
         );
 
@@ -858,7 +858,7 @@ mod tests {
         let mock_http = TestHttpClient::with_error(AuthProviderStatus::NetworkError);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
         assert_eq!(
-            await!(auth_provider.revoke_app_or_persistent_credential("credential"))?,
+            auth_provider.revoke_app_or_persistent_credential("credential").await?,
             AuthProviderStatus::NetworkError
         );
 

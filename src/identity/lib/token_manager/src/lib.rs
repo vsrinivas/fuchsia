@@ -12,7 +12,7 @@
 //! for AuthProviders and AuthenticationUiContexts.
 
 #![deny(missing_docs)]
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{AuthProviderMarker, AuthenticationContextProviderProxy};

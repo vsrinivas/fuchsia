@@ -48,7 +48,7 @@ impl Eq for ComponentInstance {}
 impl ComponentInstance {
     pub async fn print(&self) -> String {
         let mut s: String = self.abs_moniker.path().last().map_or("", |m| m.as_str()).to_string();
-        let mut children = await!(self.children.lock());
+        let mut children = self.children.lock().await;
         if children.is_empty() {
             return s;
         }
@@ -65,7 +65,7 @@ impl ComponentInstance {
             if count > 0 {
                 s.push(',');
             }
-            s.push_str(&await!(child.boxed_print()));
+            s.push_str(&child.boxed_print().await);
             count += 1;
         }
         s.push(')');
@@ -116,9 +116,9 @@ impl TestHook {
         realm_state: &'a RealmState,
         _routing_facade: RoutingFacade,
     ) -> Result<(), ModelError> {
-        await!(self.create_instance_if_necessary(realm.abs_moniker.clone()))?;
+        self.create_instance_if_necessary(realm.abs_moniker.clone()).await?;
         for child_realm in realm_state.get_child_realms().values() {
-            await!(self.create_instance_if_necessary(child_realm.abs_moniker.clone()))?;
+            self.create_instance_if_necessary(child_realm.abs_moniker.clone()).await?;
         }
         Ok(())
     }
@@ -127,7 +127,7 @@ impl TestHook {
         &self,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let mut instances = await!(self.instances.lock());
+        let mut instances = self.instances.lock().await;
         if let Some(parent_moniker) = abs_moniker.parent() {
             // If the parent isn't available yet then opt_parent_instance will have a value
             // of None.
@@ -142,7 +142,7 @@ impl TestHook {
             instances.insert(abs_moniker.clone(), new_instance.clone());
             // If the parent is available then add this instance as a child to it.
             if let Some(parent_instance) = opt_parent_instance {
-                let mut children = await!(parent_instance.children.lock());
+                let mut children = parent_instance.children.lock().await;
                 let opt_index =
                     children.iter().position(|c| c.abs_moniker == new_instance.abs_moniker);
                 if let Some(index) = opt_index {
@@ -155,13 +155,13 @@ impl TestHook {
     }
 
     pub async fn remove_instance(&self, abs_moniker: AbsoluteMoniker) -> Result<(), ModelError> {
-        let mut instances = await!(self.instances.lock());
+        let mut instances = self.instances.lock().await;
         if let Some(parent_moniker) = abs_moniker.parent() {
             instances.remove(&abs_moniker);
             let parent_instance = instances
                 .get(&parent_moniker)
                 .expect(&format!("parent instance {} not found", parent_moniker));
-            let mut children = await!(parent_instance.children.lock());
+            let mut children = parent_instance.children.lock().await;
             let opt_index = children.iter().position(|c| c.abs_moniker == abs_moniker);
             if let Some(index) = opt_index {
                 children.remove(index);
@@ -291,7 +291,7 @@ impl HubInjectionCapability {
         );
 
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
-        await!(self.intercepted_capability.open(flags, open_mode, String::new(), server_chan))?;
+        self.intercepted_capability.open(flags, open_mode, String::new(), server_chan).await?;
 
         let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
             .into_proxy()
@@ -311,7 +311,7 @@ impl HubInjectionCapability {
         );
 
         fasync::spawn(async move {
-            let _ = await!(dir);
+            let _ = dir.await;
         });
 
         Ok(())
@@ -365,47 +365,47 @@ mod tests {
         // is correct.
         {
             let test_hook = TestHook::new();
-            assert!(await!(test_hook.create_instance_if_necessary(a.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(ab.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(ac.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(abd.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(abe.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(acf.clone())).is_ok());
+            assert!(test_hook.create_instance_if_necessary(a.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(ab.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(ac.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(abd.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(abe.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(acf.clone()).await.is_ok());
             assert_eq!("(a(b(d,e),c(f)))", test_hook.print());
         }
 
         // Changing the order of monikers should not affect the output string.
         {
             let test_hook = TestHook::new();
-            assert!(await!(test_hook.create_instance_if_necessary(a.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(ac.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(ab.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(abd.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(abe.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(acf.clone())).is_ok());
+            assert!(test_hook.create_instance_if_necessary(a.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(ac.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(ab.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(abd.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(abe.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(acf.clone()).await.is_ok());
             assert_eq!("(a(b(d,e),c(f)))", test_hook.print());
         }
 
         // Submitting children before parents should still succeed.
         {
             let test_hook = TestHook::new();
-            assert!(await!(test_hook.create_instance_if_necessary(acf.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(abe.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(abd.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(ab.clone())).is_ok());
+            assert!(test_hook.create_instance_if_necessary(acf.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(abe.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(abd.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(ab.clone()).await.is_ok());
             // Model will call create_instance_if_necessary for ab's children again
             // after the call to bind_instance for ab.
-            assert!(await!(test_hook.create_instance_if_necessary(abe.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(abd.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(ac.clone())).is_ok());
+            assert!(test_hook.create_instance_if_necessary(abe.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(abd.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(ac.clone()).await.is_ok());
             // Model will call create_instance_if_necessary for ac's children again
             // after the call to bind_instance for ac.
-            assert!(await!(test_hook.create_instance_if_necessary(acf.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(a.clone())).is_ok());
+            assert!(test_hook.create_instance_if_necessary(acf.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(a.clone()).await.is_ok());
             // Model will call create_instance_if_necessary for a's children again
             // after the call to bind_instance for a.
-            assert!(await!(test_hook.create_instance_if_necessary(ab.clone())).is_ok());
-            assert!(await!(test_hook.create_instance_if_necessary(ac.clone())).is_ok());
+            assert!(test_hook.create_instance_if_necessary(ab.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(ac.clone()).await.is_ok());
             assert_eq!("(a(b(d,e),c(f)))", test_hook.print());
         }
     }

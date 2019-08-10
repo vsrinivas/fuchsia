@@ -178,26 +178,26 @@ mod tests {
             ServerEnd::<NodeMarker>::new(in_dir_server.into()),
         );
         fasync::spawn(async move {
-            let _ = await!(in_dir);
+            let _ = in_dir.await;
         });
         let in_dir_proxy = ClientEnd::<DirectoryMarker>::new(in_dir_client)
             .into_proxy()
             .expect("failed to create directory proxy");
         assert_eq!(
             vec!["in/data/cache", "in/data/hippo", "in/data/persistent", "in/svc/hippo"],
-            await!(test_utils::list_directory_recursive(&in_dir_proxy))
+            test_utils::list_directory_recursive(&in_dir_proxy).await
         );
 
         // Expect that calls on the directory nodes reach the mock directory/service.
-        assert_eq!("friend", await!(test_utils::read_file(&in_dir_proxy, "in/data/hippo/hello")));
+        assert_eq!("friend", test_utils::read_file(&in_dir_proxy, "in/data/hippo/hello").await);
         assert_eq!(
             "friend",
-            await!(test_utils::read_file(&in_dir_proxy, "in/data/persistent/hello"))
+            test_utils::read_file(&in_dir_proxy, "in/data/persistent/hello").await
         );
-        assert_eq!("friend", await!(test_utils::read_file(&in_dir_proxy, "in/data/cache/hello")));
+        assert_eq!("friend", test_utils::read_file(&in_dir_proxy, "in/data/cache/hello").await);
         assert_eq!(
             "hippos".to_string(),
-            await!(test_utils::call_echo(&in_dir_proxy, "in/svc/hippo"))
+            test_utils::call_echo(&in_dir_proxy, "in/svc/hippo").await
         );
     }
 
@@ -240,25 +240,25 @@ mod tests {
             ServerEnd::<NodeMarker>::new(expose_dir_server.into()),
         );
         fasync::spawn(async move {
-            let _ = await!(expose_dir);
+            let _ = expose_dir.await;
         });
         let expose_dir_proxy = ClientEnd::<DirectoryMarker>::new(expose_dir_client)
             .into_proxy()
             .expect("failed to create directory proxy");
         assert_eq!(
             vec!["in/data/bar", "in/data/hippo", "in/svc/hippo"],
-            await!(test_utils::list_directory_recursive(&expose_dir_proxy))
+            test_utils::list_directory_recursive(&expose_dir_proxy).await
         );
 
         // Expect that calls on the directory nodes reach the mock directory/service.
-        assert_eq!("friend", await!(test_utils::read_file(&expose_dir_proxy, "in/data/bar/hello")));
+        assert_eq!("friend", test_utils::read_file(&expose_dir_proxy, "in/data/bar/hello").await);
         assert_eq!(
             "friend",
-            await!(test_utils::read_file(&expose_dir_proxy, "in/data/hippo/hello"))
+            test_utils::read_file(&expose_dir_proxy, "in/data/hippo/hello").await
         );
         assert_eq!(
             "hippos".to_string(),
-            await!(test_utils::call_echo(&expose_dir_proxy, "in/svc/hippo"))
+            test_utils::call_echo(&expose_dir_proxy, "in/svc/hippo").await
         );
     }
 }

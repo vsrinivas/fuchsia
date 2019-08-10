@@ -34,7 +34,7 @@ where
         fasync::spawn(
             async move {
                 while let Some(request) =
-                    await!(stream.try_next()).context("error running fake puppet master")?
+                    stream.try_next().await.context("error running fake puppet master")?
                 {
                     match request {
                         PuppetMasterRequest::ControlStory { story_name, request, .. } => {
@@ -72,7 +72,7 @@ where
         fasync::spawn(
             async move {
                 while let Some(request) =
-                    await!(stream.try_next()).context("error running fake story puppet master")?
+                    stream.try_next().await.context("error running fake story puppet master")?
                 {
                     match request {
                         StoryPuppetMasterRequest::Enqueue { commands, .. } => {

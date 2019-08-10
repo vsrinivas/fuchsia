@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     component_manager_lib::{
@@ -78,7 +78,7 @@ async fn main() -> Result<(), Error> {
 
     let model = Arc::new(Model::new(params));
 
-    match await!(model.look_up_and_bind_instance(AbsoluteMoniker::root())) {
+    match model.look_up_and_bind_instance(AbsoluteMoniker::root()).await {
         Ok(()) => {
             // TODO: Exit the component manager when the root component's binding is lost
             // (when it terminates).
@@ -101,13 +101,13 @@ async fn main() -> Result<(), Error> {
     )
     .expect("Failed to open directory");
 
-    assert_eq!(vec![SuiteMarker::DEBUG_NAME], await!(list_directory(&expose_dir_proxy)));
+    assert_eq!(vec![SuiteMarker::DEBUG_NAME], list_directory(&expose_dir_proxy).await);
 
     // bind expose/svc to out/svc of this v1 component.
     let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
     fs.add_remote("svc", expose_dir_proxy);
 
     fs.take_and_serve_directory_handle()?;
-    await!(fs.collect::<()>());
+    fs.collect::<()>().await;
     Ok(())
 }

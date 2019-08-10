@@ -61,7 +61,7 @@ impl StandaloneWebFrame for DefaultStandaloneWebFrame {
         url: Url,
     ) -> FutureObj<'a, AuthProviderResult<()>> {
         FutureObj::new(Box::new(
-            async move { await!(Self::display_url_inner(self, view_token, url)) },
+            async move { Self::display_url_inner(self, view_token, url).await },
         ))
     }
 
@@ -70,7 +70,7 @@ impl StandaloneWebFrame for DefaultStandaloneWebFrame {
         redirect_target: Url,
     ) -> FutureObj<'a, AuthProviderResult<Url>> {
         FutureObj::new(Box::new(async move {
-            await!(Self::wait_for_redirect_inner(self, redirect_target))
+            Self::wait_for_redirect_inner(self, redirect_target).await
         }))
     }
 }
@@ -96,7 +96,7 @@ impl DefaultStandaloneWebFrame {
             .get_navigation_controller(navigation_controller_server_end)
             .auth_provider_status(AuthProviderStatus::UnknownError)?;
 
-        await!(navigation_controller_proxy.load_url(
+        navigation_controller_proxy.load_url(
             url.as_str(),
             LoadUrlParams {
                 type_: None,
@@ -104,24 +104,24 @@ impl DefaultStandaloneWebFrame {
                 was_user_activated: None,
                 headers: None
             }
-        ))
+        ).await
         .auth_provider_status(AuthProviderStatus::UnknownError)??;
         self.frame
             .create_view(&mut view_token)
             .auth_provider_status(AuthProviderStatus::UnknownError)?;
 
         let navigation_event_stream = self.get_navigation_event_stream()?;
-        await!(Self::poll_until_loaded(navigation_event_stream))
+        Self::poll_until_loaded(navigation_event_stream).await
     }
 
     async fn wait_for_redirect_inner(&mut self, redirect_target: Url) -> AuthProviderResult<Url> {
         let navigation_event_stream = self.get_navigation_event_stream()?;
 
         // pull redirect URL out from events.
-        await!(Self::poll_for_url_navigation_event(navigation_event_stream, |url| {
+        Self::poll_for_url_navigation_event(navigation_event_stream, |url| {
             (url.scheme(), url.domain(), url.path())
                 == (redirect_target.scheme(), redirect_target.domain(), redirect_target.path())
-        }))
+        }).await
     }
 
     /// Registers a navigation listener with the Chrome frame and returns the created event
@@ -149,7 +149,7 @@ impl DefaultStandaloneWebFrame {
     {
         // Any errors encountered with the stream here may be a result of the
         // overlay being canceled externally.
-        while let Some(request) = await!(request_stream.try_next())
+        while let Some(request) = request_stream.try_next().await
             .auth_provider_status(AuthProviderStatus::UnknownError)?
         {
             let NavigationEventListenerRequest::OnNavigationStateChanged { change, responder } =
@@ -183,7 +183,7 @@ impl DefaultStandaloneWebFrame {
         // until both points are found.
         let mut known_page_type: Option<PageType> = None;
         let mut main_document_loaded = false;
-        while let Some(request) = await!(request_stream.try_next())
+        while let Some(request) = request_stream.try_next().await
             .auth_provider_status(AuthProviderStatus::UnknownError)?
         {
             // update known state.
@@ -229,7 +229,7 @@ mod test {
         let (context, _) = create_proxy::<ContextMarker>()?;
         let (frame, frame_server_end) = create_request_stream::<FrameMarker>()?;
         fasync::spawn(async move {
-            await!(handle_frame_stream(frame_server_end, events))
+            handle_frame_stream(frame_server_end, events).await
                 .unwrap_or_else(|e| error!("Error running frame stream: {:?}", e));
         });
         Ok(DefaultStandaloneWebFrame::new(context, frame.into_proxy()?))
@@ -239,11 +239,11 @@ mod test {
         mut stream: FrameRequestStream,
         events: Vec<NavigationState>,
     ) -> Result<(), Error> {
-        if let Some(request) = await!(stream.try_next())? {
+        if let Some(request) = stream.try_next().await? {
             match request {
                 FrameRequest::SetNavigationEventListener { listener, .. } => {
                     fasync::spawn(async move {
-                        await!(feed_event_requests(listener.unwrap(), events))
+                        feed_event_requests(listener.unwrap(), events).await
                             .unwrap_or_else(|e| error!("Error in event sender: {:?}", e));
                     });
                 }
@@ -259,7 +259,7 @@ mod test {
     ) -> Result<(), Error> {
         let client_end = client_end.into_proxy()?;
         for event in events.into_iter() {
-            await!(client_end.on_navigation_state_changed(event))?;
+            client_end.on_navigation_state_changed(event).await?;
         }
         Ok(())
     }
@@ -302,7 +302,7 @@ mod test {
 
         let mut web_frame = create_frame_with_events(events)?;
         let target_url = Url::parse("http://test/")?;
-        let matched_url = await!(web_frame.wait_for_redirect(target_url))?;
+        let matched_url = web_frame.wait_for_redirect(target_url).await?;
         assert_eq!(matched_url, Url::parse("http://test/?key=val").unwrap());
         Ok(())
     }
@@ -316,7 +316,7 @@ mod test {
 
         let mut web_frame = create_frame_with_events(events)?;
         let target_url = Url::parse("http://test/")?;
-        let result = await!(web_frame.wait_for_redirect(target_url));
+        let result = web_frame.wait_for_redirect(target_url).await;
         assert!(result.is_err());
         Ok(())
     }
@@ -330,7 +330,7 @@ mod test {
 
         let web_frame = create_frame_with_events(events)?;
         let stream = web_frame.get_navigation_event_stream()?;
-        assert!(await!(DefaultStandaloneWebFrame::poll_until_loaded(stream)).is_ok());
+        assert!(DefaultStandaloneWebFrame::poll_until_loaded(stream).await.is_ok());
 
         // Verify functionality when pagetype and document_loaded events sent
         // separately
@@ -342,7 +342,7 @@ mod test {
 
         let web_frame = create_frame_with_events(events)?;
         let stream = web_frame.get_navigation_event_stream()?;
-        assert!(await!(DefaultStandaloneWebFrame::poll_until_loaded(stream)).is_ok());
+        assert!(DefaultStandaloneWebFrame::poll_until_loaded(stream).await.is_ok());
         Ok(())
     }
 
@@ -357,7 +357,7 @@ mod test {
         let web_frame = create_frame_with_events(events)?;
         let stream = web_frame.get_navigation_event_stream()?;
         assert_eq!(
-            await!(DefaultStandaloneWebFrame::poll_until_loaded(stream)).unwrap_err().status,
+            DefaultStandaloneWebFrame::poll_until_loaded(stream).await.unwrap_err().status,
             AuthProviderStatus::NetworkError
         );
         Ok(())
@@ -373,7 +373,7 @@ mod test {
         let web_frame = create_frame_with_events(events)?;
         let stream = web_frame.get_navigation_event_stream()?;
         assert_eq!(
-            await!(DefaultStandaloneWebFrame::poll_until_loaded(stream)).unwrap_err().status,
+            DefaultStandaloneWebFrame::poll_until_loaded(stream).await.unwrap_err().status,
             AuthProviderStatus::UnknownError
         );
         Ok(())

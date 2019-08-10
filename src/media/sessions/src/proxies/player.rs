@@ -143,7 +143,7 @@ impl Player {
         async move {
             (
                 id,
-                await!(proxy.watch_info_change())
+                proxy.watch_info_change().await
                     .map_err(Into::into)
                     .and_then(|delta| ValidPlayerInfoDelta::try_from(delta).map_err(Into::into)),
             )
@@ -175,7 +175,7 @@ impl Player {
         fasync::spawn_local(
             Abortable::new(
                 async move {
-                    while let Ok(Some(Ok(_))) = await!(requests.try_next()).map(|r| {
+                    while let Ok(Some(Ok(_))) = requests.try_next().await.map(|r| {
                         r.map(|r| match r {
                             SessionControlRequest::Play { .. } => proxy.play(),
                             SessionControlRequest::Pause { .. } => proxy.pause(),
@@ -212,7 +212,7 @@ impl Player {
         for server in self.server_handles.drain(0..) {
             server.abort();
         }
-        await!(self.server_wait_group.wait());
+        self.server_wait_group.wait().await;
     }
 }
 
@@ -239,7 +239,7 @@ mod test {
 
         assert!(session_control_fidl_proxy.play().is_ok());
 
-        await!(player.disconnect_proxied_clients());
+        player.disconnect_proxied_clients().await;
 
         assert!(session_control_fidl_proxy.pause().is_err());
 

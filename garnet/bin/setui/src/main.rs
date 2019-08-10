@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![allow(unreachable_code)]
 #![allow(dead_code)]
 
@@ -123,7 +123,7 @@ fn create_fidl_service<'a>(
 
         fx_log_info!("Connecting to setui_service");
         fasync::spawn(async move {
-            await!(handler_clone.handle_stream(stream))
+            handler_clone.handle_stream(stream).await
                 .unwrap_or_else(|e| error!("Failed to spawn {:?}", e))
         });
     });
@@ -133,7 +133,7 @@ fn create_fidl_service<'a>(
         let system_handler_clone = system_handler.clone();
         fx_log_info!("Connecting to System");
         fasync::spawn(async move {
-            await!(system_handler_clone.handle_system_stream(stream))
+            system_handler_clone.handle_system_stream(stream).await
                 .unwrap_or_else(|e| error!("Failed to spawn {:?}", e))
         });
     });
@@ -182,7 +182,7 @@ mod tests {
 
         fasync::spawn(async move {
             let mut stored_brightness_value: f64 = STARTING_BRIGHTNESS.into();
-            while let Some(req) = await!(manager_stream.try_next()).unwrap() {
+            while let Some(req) = manager_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
                     fidl_fuchsia_device_display::ManagerRequest::GetBrightness { responder } => {
@@ -225,17 +225,17 @@ mod tests {
         });
 
         let settings =
-            await!(display_proxy.watch()).expect("watch completed").expect("watch successful");
+            display_proxy.watch().await.expect("watch completed").expect("watch successful");
 
         assert_eq!(settings.brightness_value, Some(STARTING_BRIGHTNESS));
 
         let mut display_settings = DisplaySettings::empty();
         display_settings.brightness_value = Some(CHANGED_BRIGHTNESS);
-        await!(display_proxy.set(display_settings))
+        display_proxy.set(display_settings).await
             .expect("set completed")
             .expect("set successful");
         let settings =
-            await!(display_proxy.watch()).expect("watch completed").expect("watch successful");
+            display_proxy.watch().await.expect("watch completed").expect("watch successful");
 
         assert_eq!(settings.brightness_value, Some(CHANGED_BRIGHTNESS));
     }
@@ -250,7 +250,7 @@ mod tests {
 
         fasync::spawn(async move {
             let mut stored_timezone = INITIAL_TIME_ZONE.to_string();
-            while let Some(req) = await!(timezone_stream.try_next()).unwrap() {
+            while let Some(req) = timezone_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
                     fidl_fuchsia_timezone::TimezoneRequest::GetTimezoneId { responder } => {
@@ -308,7 +308,7 @@ mod tests {
 
         let intl_service = env.connect_to_service::<IntlMarker>().unwrap();
         let settings =
-            await!(intl_service.watch()).expect("watch completed").expect("watch successful");
+            intl_service.watch().await.expect("watch completed").expect("watch successful");
 
         if let Some(time_zone_id) = settings.time_zone_id {
             assert_eq!(time_zone_id.id, INITIAL_TIME_ZONE);
@@ -319,9 +319,9 @@ mod tests {
 
         intl_settings.time_zone_id =
             Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
-        await!(intl_service.set(intl_settings)).expect("set completed").expect("set successful");
+        intl_service.set(intl_settings).await.expect("set completed").expect("set successful");
         let settings =
-            await!(intl_service.watch()).expect("watch completed").expect("watch successful");
+            intl_service.watch().await.expect("watch completed").expect("watch successful");
         assert_eq!(
             settings.time_zone_id,
             Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() })

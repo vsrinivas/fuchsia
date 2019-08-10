@@ -54,15 +54,15 @@ impl Discovery {
                             session_id, session_control_request, ..
                         } => {
                             if let Ok(requests) = session_control_request.into_stream() {
-                                await!(self.players.lock()).get_mut(&session_id).map(|player| {
+                                self.players.lock().await.get_mut(&session_id).map(|player| {
                                     player.player.serve_controls(requests);
                                 });
                             }
                         }
                         DiscoveryRequest::WatchSessions { watch_options, session_watcher, ..} => {
-                            spawn_log_error(await!(Watcher::new(
+                            spawn_log_error(Watcher::new(
                                 watch_options,
-                                await!(self.players.lock())
+                                self.players.lock().await
                                     .iter()
                                     .map(|(id, registered_player)| {
                                         (
@@ -80,7 +80,7 @@ impl Discovery {
                                     })
                                     .collect(),
                                 sender.new_receiver()
-                            )).serve(session_watcher));
+                            ).await.serve(session_watcher));
                         }
                     }
                 }
@@ -94,19 +94,19 @@ impl Discovery {
                         active: false,
                     };
                     player_updates.push(registered_player.player.poll(id));
-                    await!(sender.send((id, PlayerEvent::Updated{
+                    sender.send((id, PlayerEvent::Updated{
                         delta: registered_player.player.state().clone(),
                         registration: Some(registered_player.registration.clone()),
                         active: None,
-                    })));
-                    await!(self.players.lock()).insert(id, registered_player);
+                    })).await;
+                    self.players.lock().await.insert(id, registered_player);
                 }
                 // A player answered a hanging get for its status.
                 player_update = player_updates.select_next_some() => {
                     let (id, delta) = player_update;
                     match delta {
                         Ok(delta) => {
-                            if let Some(player) = await!(self.players.lock()).get_mut(&id) {
+                            if let Some(player) = self.players.lock().await.get_mut(&id) {
                                 player.player.update(delta.clone());
                                 let event = PlayerEvent::Updated {
                                     active: delta.is_active().map(|new_active_status|{
@@ -116,7 +116,7 @@ impl Discovery {
                                     delta,
                                     registration: None,
                                 };
-                                await!(sender.send((id, event)));
+                                sender.send((id, event)).await;
                                 player_updates.push(player.player.poll(id));
                             }
                         }
@@ -124,10 +124,10 @@ impl Discovery {
                             fuchsia_syslog::fx_log_info!(
                                 tag: "mediasession",
                                 "Disconnecting player: {:#?}", e);
-                            if let Some(mut player) = await!(self.players.lock()).remove(&id) {
-                                await!(player.player.disconnect_proxied_clients());
+                            if let Some(mut player) = self.players.lock().await.remove(&id) {
+                                player.player.disconnect_proxied_clients().await;
                             }
-                            await!(sender.send((id, PlayerEvent::Removed)));
+                            sender.send((id, PlayerEvent::Removed)).await;
                         }
                     }
                 }

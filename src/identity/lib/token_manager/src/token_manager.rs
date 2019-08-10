@@ -96,9 +96,9 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         cancel: TaskGroupCancel,
     ) -> Result<(), failure::Error> {
         // TODO(dnordstrom): Allow cancellation within long running requests
-        while let Some(result) = await!(cancel_or(&cancel, stream.try_next())) {
+        while let Some(result) = cancel_or(&cancel, stream.try_next()).await {
             match result? {
-                Some(request) => await!(self.handle_request(context, request))?,
+                Some(request) => self.handle_request(context, request).await?,
                 None => break,
             }
         }
@@ -121,56 +121,56 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
                 app_scopes,
                 auth_code,
                 responder,
-            } => responder.send_result(await!(self.authorize(
+            } => responder.send_result(self.authorize(
                 context,
                 app_config,
                 auth_ui_context,
                 user_profile_id,
                 app_scopes,
                 auth_code
-            ))),
+            ).await),
             TokenManagerRequest::GetAccessToken {
                 app_config,
                 user_profile_id,
                 app_scopes,
                 responder,
-            } => responder.send_result(await!(self.get_access_token(
+            } => responder.send_result(self.get_access_token(
                 app_config,
                 user_profile_id,
                 app_scopes
-            ))),
+            ).await),
             TokenManagerRequest::GetIdToken {
                 app_config,
                 user_profile_id,
                 audience,
                 responder,
-            } => responder.send_result(await!(self.get_id_token(
+            } => responder.send_result(self.get_id_token(
                 app_config,
                 user_profile_id,
                 audience
-            ))),
+            ).await),
             TokenManagerRequest::GetFirebaseToken {
                 app_config,
                 user_profile_id,
                 audience,
                 firebase_api_key,
                 responder,
-            } => responder.send_result(await!(self.get_firebase_token(
+            } => responder.send_result(self.get_firebase_token(
                 app_config,
                 user_profile_id,
                 audience,
                 firebase_api_key
-            ))),
+            ).await),
             TokenManagerRequest::DeleteAllTokens {
                 app_config,
                 user_profile_id,
                 force,
                 responder,
-            } => responder.send_result(await!(self.delete_all_tokens(
+            } => responder.send_result(self.delete_all_tokens(
                 app_config,
                 user_profile_id,
                 force
-            ))),
+            ).await),
             TokenManagerRequest::ListProfileIds { app_config, responder } => {
                 responder.send_result(self.list_profile_ids(app_config))
             }
@@ -195,15 +195,15 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         // only a short-term solution. Eventually, this information will be coming from the
         // AuthProviderConfig params in some form.
         if app_config.auth_provider_type.to_ascii_lowercase().contains("iotid") {
-            await!(self.handle_iotid_authorize(
+            self.handle_iotid_authorize(
                 context,
                 app_config,
                 user_profile_id,
                 app_scopes,
                 auth_code
-            ))
+            ).await
         } else {
-            await!(self.handle_authorize(context, app_config, user_profile_id, app_scopes))
+            self.handle_authorize(context, app_config, user_profile_id, app_scopes).await
         }
     }
 
@@ -218,7 +218,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         auth_code: Option<String>,
     ) -> TokenManagerResult<UserProfileInfo> {
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
+        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
 
         let (ui_context_client_end, ui_context_server_end) =
             create_endpoints().token_manager_status(Status::UnknownError)?;
@@ -251,12 +251,12 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         };
 
         let (status, credential, _access_token, auth_challenge, user_profile_info) =
-            await!(auth_provider_proxy.get_persistent_credential_from_attestation_jwt(
+            auth_provider_proxy.get_persistent_credential_from_attestation_jwt(
                 attestation_signer_client_end,
                 &mut attestation_jwt_params,
                 Some(ui_context_client_end),
                 user_profile_id.as_ref().map(|x| &**x),
-            ))
+            ).await
             .map_err(|err| {
                 self.discard_auth_provider_proxy(auth_provider_type);
                 TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
@@ -293,7 +293,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         _app_scopes: Vec<String>,
     ) -> TokenManagerResult<UserProfileInfo> {
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
+        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
 
         let (ui_context_client_end, ui_context_server_end) =
             create_endpoints().token_manager_status(Status::UnknownError)?;
@@ -302,11 +302,11 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             .get_authentication_ui_context(ui_context_server_end)
             .token_manager_status(Status::InvalidAuthContext)?;
 
-        let (status, credential, user_profile_info) = await!(auth_provider_proxy
+        let (status, credential, user_profile_info) = auth_provider_proxy
             .get_persistent_credential(
                 Some(ui_context_client_end),
                 user_profile_id.as_ref().map(|x| &**x),
-            ))
+            ).await
         .map_err(|err| {
             self.discard_auth_provider_proxy(auth_provider_type);
             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
@@ -357,15 +357,15 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         // AuthProviderConfig params in some form or based on existence of credential_key for the
         // given user.
         if app_config.auth_provider_type.to_ascii_lowercase().contains("iotid") {
-            await!(self.handle_iotid_get_access_token(
+            self.handle_iotid_get_access_token(
                 app_config,
                 user_profile_id,
                 refresh_token,
                 app_scopes,
                 cache_key,
-            ))
+            ).await
         } else {
-            await!(self.handle_get_access_token(app_config, refresh_token, app_scopes, cache_key))
+            self.handle_get_access_token(app_config, refresh_token, app_scopes, cache_key).await
         }
     }
 
@@ -380,7 +380,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         cache_key: AccessTokenKey,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
+        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
 
         // TODO(ukode): Retrieve the ephemeral credential key from store and add the public key
         // params here.
@@ -405,12 +405,12 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         };
 
         let (status, updated_credential, access_token, auth_challenge) =
-            await!(auth_provider_proxy.get_app_access_token_from_assertion_jwt(
+            auth_provider_proxy.get_app_access_token_from_assertion_jwt(
                 attestation_signer,
                 &mut assertion_jwt_params,
                 &refresh_token,
                 &mut app_scopes.iter().map(|x| &**x),
-            ))
+            ).await
             .map_err(|err| {
                 self.discard_auth_provider_proxy(auth_provider_type);
                 TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
@@ -450,13 +450,13 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         cache_key: AccessTokenKey,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
+        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
 
-        let (status, provider_token) = await!(auth_provider_proxy.get_app_access_token(
+        let (status, provider_token) = auth_provider_proxy.get_app_access_token(
             &refresh_token,
             app_config.client_id.as_ref().map(|x| &**x),
             &mut app_scopes.iter().map(|x| &**x),
-        ))
+        ).await
         .map_err(|err| {
             self.discard_auth_provider_proxy(auth_provider_type);
             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
@@ -493,10 +493,10 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         let db_key = Self::create_db_key(&app_config, &user_profile_id)?;
         let refresh_token = self.get_refresh_token(&db_key)?;
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
+        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
         let (status, provider_token) =
-            await!(auth_provider_proxy
-                .get_app_id_token(&refresh_token, audience.as_ref().map(|x| &**x)))
+            auth_provider_proxy
+                .get_app_id_token(&refresh_token, audience.as_ref().map(|x| &**x)).await
             .map_err(|err| {
                 self.discard_auth_provider_proxy(auth_provider_type);
                 TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
@@ -534,9 +534,9 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         let id_token_future = self.get_id_token(app_config, user_profile_id, Some(audience));
         let proxy_future = self.get_auth_provider_proxy(&auth_provider_type);
         let (id_token, auth_provider_proxy) = try_join!(id_token_future, proxy_future)?;
-        let (status, provider_token) = await!(
+        let (status, provider_token) = 
             auth_provider_proxy.get_app_firebase_token(&*id_token, &api_key)
-        )
+        .await
         .map_err(|err| {
             self.discard_auth_provider_proxy(&auth_provider_type);
             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
@@ -569,9 +569,9 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
 
         // Request that the auth provider revoke the credential server-side.
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
+        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
         let status =
-            await!(auth_provider_proxy.revoke_app_or_persistent_credential(&refresh_token))
+            auth_provider_proxy.revoke_app_or_persistent_credential(&refresh_token).await
                 .map_err(|err| {
                     self.discard_auth_provider_proxy(auth_provider_type);
                     TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
@@ -630,7 +630,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             return Ok(Arc::clone(auth_provider));
         }
 
-        let client_end = await!(self.auth_provider_supplier.get(auth_provider_type))?;
+        let client_end = self.auth_provider_supplier.get(auth_provider_type).await?;
         let proxy = Arc::new(client_end.into_proxy().token_manager_status(Status::UnknownError)?);
         self.auth_providers.lock().insert(auth_provider_type.to_string(), Arc::clone(&proxy));
 
@@ -796,7 +796,7 @@ mod tests {
     fn create_token_manager_context() -> TokenManagerContext {
         let (ui_context_provider_proxy, mut stream) =
             create_proxy_and_stream::<AuthenticationContextProviderMarker>().unwrap();
-        fasync::spawn(async move { while let Some(_) = await!(stream.try_next()).unwrap() {} });
+        fasync::spawn(async move { while let Some(_) = stream.try_next().await.unwrap() {} });
         TokenManagerContext {
             application_url: "APPLICATION_URL".to_string(),
             auth_ui_context_provider: ui_context_provider_proxy,
@@ -810,11 +810,11 @@ mod tests {
     ) -> Result<(), failure::Error> {
         let tmp_dir = TempDir::new().unwrap();
         let db_path = tmp_dir.path().join("tokens.json");
-        await!(create_and_serve_token_manager_with_db_path(
+        create_and_serve_token_manager_with_db_path(
             &db_path,
             stream,
             auth_provider_supplier
-        ))
+        ).await
     }
 
     /// Creates an in-memory TokenManager and serves requests for it.
@@ -826,7 +826,7 @@ mod tests {
         let token_manager = TokenManager::new_in_memory(auth_provider_supplier, task_group.clone());
         let context = create_token_manager_context();
         let (_sender, receiver) = oneshot::channel();
-        await!(token_manager.handle_requests_from_stream(&context, stream, receiver.shared()))
+        token_manager.handle_requests_from_stream(&context, stream, receiver.shared()).await
     }
 
     /// Creates a TokenManager given a location to the file db, and serves requests for it.
@@ -841,7 +841,7 @@ mod tests {
             .expect("failed creating TokenManager");
         let context = create_token_manager_context();
         let (_sender, receiver) = oneshot::channel();
-        await!(token_manager.handle_requests_from_stream(&context, stream, receiver.shared()))
+        token_manager.handle_requests_from_stream(&context, stream, receiver.shared()).await
     }
 
     /// Expect a GetPersistentCredential request, configurable with user_id. Generates a response.
@@ -955,13 +955,13 @@ mod tests {
         let auth_ui_context = None;
         let app_scopes = Vec::<String>::default();
         let auth_code = None;
-        await!(tm_proxy.authorize(
+        tm_proxy.authorize(
             &mut app_config,
             auth_ui_context,
             &mut app_scopes.iter().map(|x| &**x),
             Some(user_profile_id),
             auth_code
-        ))
+        ).await
     }
 
     /// Wrapper for TokenManager::GetAccessToken
@@ -972,11 +972,11 @@ mod tests {
     ) -> Result<(Status, Option<String>), fidl::Error> {
         let mut app_config = create_app_config(auth_provider_type);
         let app_scopes = Vec::<String>::default();
-        await!(tm_proxy.get_access_token(
+        tm_proxy.get_access_token(
             &mut app_config,
             user_profile_id,
             &mut app_scopes.iter().map(|x| &**x)
-        ))
+        ).await
     }
 
     /// Wrapper for TokenManager::GetIdToken
@@ -986,7 +986,7 @@ mod tests {
         user_profile_id: &'a str,
     ) -> Result<(Status, Option<String>), fidl::Error> {
         let mut app_config = create_app_config(auth_provider_type);
-        await!(tm_proxy.get_id_token(&mut app_config, user_profile_id, Some("AUDIENCE")))
+        tm_proxy.get_id_token(&mut app_config, user_profile_id, Some("AUDIENCE")).await
     }
 
     /// Wrapper for TokenManager::GetFirebaseToken
@@ -996,12 +996,12 @@ mod tests {
         user_profile_id: &'a str,
     ) -> Result<(Status, Option<Box<FirebaseToken>>), fidl::Error> {
         let mut app_config = create_app_config(auth_provider_type);
-        await!(tm_proxy.get_firebase_token(
+        tm_proxy.get_firebase_token(
             &mut app_config,
             user_profile_id,
             "AUDIENCE",
             "FIREBASE_API_KEY"
-        ))
+        ).await
     }
 
     /// Wrapper for TokenManager::DeleteAllTokens
@@ -1012,7 +1012,7 @@ mod tests {
     ) -> Result<Status, fidl::Error> {
         let mut app_config = create_app_config(auth_provider_type);
         let force = true;
-        await!(tm_proxy.delete_all_tokens(&mut app_config, user_profile_id, force))
+        tm_proxy.delete_all_tokens(&mut app_config, user_profile_id, force).await
     }
 
     /// Create a TokenManager and terminate it using its task group.
@@ -1029,21 +1029,21 @@ mod tests {
         );
         let (proxy, stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
         let token_manager_clone = Arc::clone(&token_manager);
-        await!(token_manager.task_group().spawn(|cancel| async move {
+        token_manager.task_group().spawn(|cancel| async move {
             let context = create_token_manager_context();
-            assert!(await!(
+            assert!(
                 token_manager_clone.handle_requests_from_stream(&context, stream, cancel)
-            )
+            .await
             .is_ok());
-        }))
+        }).await
         .expect("spawning failed");
-        assert!(await!(token_manager.task_group().cancel()).is_ok());
+        assert!(token_manager.task_group().cancel().await.is_ok());
         // Check that the accessor's task group cancelled the task group that was passed to new()
-        assert!(await!(task_group.cancel()).is_err());
+        assert!(task_group.cancel().await.is_err());
 
         // Now the channel should be closed
         let mut app_config = create_app_config("hooli");
-        assert!(await!(proxy.list_profile_ids(&mut app_config)).is_err());
+        assert!(proxy.list_profile_ids(&mut app_config).await.is_err());
     }
 
     /// Authorize with multiple auth providers and multiple users per auth provider
@@ -1052,15 +1052,15 @@ mod tests {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
         auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
             async move {
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "GAVIN")?;
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "DENPAK")?;
-                Ok(assert!(await!(stream.try_next())?.is_none()))
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "DENPAK")?;
+                Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
         auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
             async move {
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
-                Ok(assert!(await!(stream.try_next())?.is_none()))
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+                Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
 
@@ -1068,7 +1068,7 @@ mod tests {
         let client_fut = async move {
             // Authorize Gavin to Hooli
             let (status, user_profile_info) =
-                await!(authorize_simple(&tm_proxy, "hooli", "GAVIN"))?;
+                authorize_simple(&tm_proxy, "hooli", "GAVIN").await?;
             assert_eq!(status, Status::Ok);
             let user_profile_info = user_profile_info.expect("user_profile_info is empty");
             assert_eq!(user_profile_info.id, "GAVIN");
@@ -1081,7 +1081,7 @@ mod tests {
 
             // Authorize Richard to Pied Piper
             let (status, user_profile_info) =
-                await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?;
+                authorize_simple(&tm_proxy, "pied-piper", "RICHARD").await?;
             assert_eq!(status, Status::Ok);
             let user_profile_info = user_profile_info.expect("user_profile_info is empty");
             assert_eq!(user_profile_info.id, "RICHARD");
@@ -1094,23 +1094,23 @@ mod tests {
 
             // Again, authorize Gavin to Hooli (with just basic assertions)
             let (status, user_profile_info) =
-                await!(authorize_simple(&tm_proxy, "hooli", "DENPAK"))?;
+                authorize_simple(&tm_proxy, "hooli", "DENPAK").await?;
             assert_eq!(status, Status::Ok);
             assert_eq!(user_profile_info.expect("user_profile_info is empty").id, "DENPAK");
 
             // Authorize against a non-existing auth provider
             assert_eq!(
                 (Status::AuthProviderServiceUnavailable, None),
-                await!(authorize_simple(&tm_proxy, "myspace", "MR_ROBOT"))?
+                authorize_simple(&tm_proxy, "myspace", "MR_ROBOT").await?
             );
 
             Result::<(), fidl::Error>::Ok(())
         };
-        let (ap_result, client_result, tm_result) = await!(join3(
+        let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
             create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
-        ));
+        ).await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1122,39 +1122,39 @@ mod tests {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
         auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
             async move {
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "GAVIN")?;
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "DENPAK")?;
-                Ok(assert!(await!(stream.try_next())?.is_none()))
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "DENPAK")?;
+                Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
         auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
             async move {
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
-                Ok(assert!(await!(stream.try_next())?.is_none()))
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+                Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
         let client_fut = async move {
-            assert_eq!(await!(authorize_simple(&tm_proxy, "hooli", "GAVIN"))?.0, Status::Ok);
-            assert_eq!(await!(authorize_simple(&tm_proxy, "hooli", "DENPAK"))?.0, Status::Ok);
-            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0, Status::Ok);
+            assert_eq!(authorize_simple(&tm_proxy, "hooli", "GAVIN").await?.0, Status::Ok);
+            assert_eq!(authorize_simple(&tm_proxy, "hooli", "DENPAK").await?.0, Status::Ok);
+            assert_eq!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0, Status::Ok);
 
-            let profile_ids = await!(tm_proxy.list_profile_ids(&mut create_app_config("hooli")))?;
+            let profile_ids = tm_proxy.list_profile_ids(&mut create_app_config("hooli")).await?;
             assert_eq!(profile_ids, (Status::Ok, vec!["DENPAK".to_string(), "GAVIN".to_string()]));
             let profile_ids =
-                await!(tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")))?;
+                tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")).await?;
             assert_eq!(profile_ids, (Status::Ok, vec!["RICHARD".to_string()]));
-            let profile_ids = await!(tm_proxy.list_profile_ids(&mut create_app_config("myspace")))?;
+            let profile_ids = tm_proxy.list_profile_ids(&mut create_app_config("myspace")).await?;
             assert_eq!(profile_ids, (Status::Ok, vec![]));
 
             Result::<(), fidl::Error>::Ok(())
         };
-        let (ap_result, client_result, tm_result) = await!(join3(
+        let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
             create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
-        ));
+        ).await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1167,41 +1167,41 @@ mod tests {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
         auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
             async move {
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
                 expect_get_access_token(
-                    await!(stream.try_next())?.expect("End of stream"),
+                    stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
                 )?;
                 expect_get_id_token(
-                    await!(stream.try_next())?.expect("End of stream"),
+                    stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
                 )?;
                 expect_get_firebase_token(
-                    await!(stream.try_next())?.expect("End of stream"),
+                    stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL_ID",
                 )?;
-                Ok(assert!(await!(stream.try_next())?.is_none()))
+                Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
         let client_fut = async move {
-            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0, Status::Ok);
+            assert_eq!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0, Status::Ok);
 
             // Check that "_CREDENTIAL" was added by the authorize call and that "_ACCESS", "_ID" or
             // "_FIREBASE", respectively, was added by the token exchange calls. In the second
             // iteration, make the same calls, but this time they should be delivered from cache.
             for _ in 0..2 {
                 assert_eq!(
-                    await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                    get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                     (Status::Ok, Some("RICHARD_CREDENTIAL_ACCESS".to_string()))
                 );
                 assert_eq!(
-                    await!(get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                    get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                     (Status::Ok, Some("RICHARD_CREDENTIAL_ID".to_string()))
                 );
                 let (status, firebase_token) =
-                    await!(get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?;
+                    get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?;
                 assert_eq!(status, Status::Ok);
                 assert_eq!(
                     firebase_token.expect("firebase token is empty").id_token,
@@ -1211,21 +1211,21 @@ mod tests {
 
             // Errors
             assert_eq!(
-                await!(get_access_token_simple(&tm_proxy, "pied-piper", "DINESH"))?,
+                get_access_token_simple(&tm_proxy, "pied-piper", "DINESH").await?,
                 (Status::UserNotFound, None)
             );
             assert_eq!(
-                await!(get_access_token_simple(&tm_proxy, "myspace", "MR_ROBOT"))?,
+                get_access_token_simple(&tm_proxy, "myspace", "MR_ROBOT").await?,
                 (Status::UserNotFound, None)
             );
 
             Result::<(), fidl::Error>::Ok(())
         };
-        let (ap_result, client_result, tm_result) = await!(join3(
+        let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
             create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
-        ));
+        ).await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1237,84 +1237,84 @@ mod tests {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
         auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
             async move {
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "DINESH")?;
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "DINESH")?;
                 expect_get_access_token(
-                    await!(stream.try_next())?.expect("End of stream"),
+                    stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
                 )?;
                 expect_get_id_token(
-                    await!(stream.try_next())?.expect("End of stream"),
+                    stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
                 )?;
                 expect_get_firebase_token(
-                    await!(stream.try_next())?.expect("End of stream"),
+                    stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL_ID",
                 )?;
                 expect_revoke_cred(
-                    await!(stream.try_next())?.expect("End of stream"),
+                    stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
                 )?;
-                Ok(assert!(await!(stream.try_next())?.is_none()))
+                Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
         let client_fut = async move {
-            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0, Status::Ok);
-            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "DINESH"))?.0, Status::Ok);
+            assert_eq!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0, Status::Ok);
+            assert_eq!(authorize_simple(&tm_proxy, "pied-piper", "DINESH").await?.0, Status::Ok);
 
             // Put an access token, an id token and firebase token in the cache
             assert_eq!(
-                await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0,
+                get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0,
                 Status::Ok
             );
             assert_eq!(
-                await!(get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0,
+                get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0,
                 Status::Ok
             );
             assert_eq!(
-                await!(get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0,
+                get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0,
                 Status::Ok
             );
 
             // Deleting an existing token succeeds
             assert_eq!(
-                await!(delete_all_tokens_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                delete_all_tokens_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                 Status::Ok
             );
             // Deleting a non-existing token succeeds
             assert_eq!(
-                await!(delete_all_tokens_simple(&tm_proxy, "myspace", "MR_ROBOT"))?,
+                delete_all_tokens_simple(&tm_proxy, "myspace", "MR_ROBOT").await?,
                 Status::Ok
             );
 
             // No longer present in list
             let profile_ids =
-                await!(tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")))?;
+                tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")).await?;
             assert_eq!(profile_ids, (Status::Ok, vec!["DINESH".to_string()]));
 
             // Check that they was also removed from cache
             assert_eq!(
-                await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                 (Status::UserNotFound, None)
             );
             assert_eq!(
-                await!(get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                 (Status::UserNotFound, None)
             );
             assert_eq!(
-                await!(get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                 (Status::UserNotFound, None)
             );
 
             Result::<(), fidl::Error>::Ok(())
         };
-        let (ap_result, client_result, tm_result) = await!(join3(
+        let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
             create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
-        ));
+        ).await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1330,18 +1330,18 @@ mod tests {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
         auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
             async move {
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
-                Ok(assert!(await!(stream.try_next())?.is_none()))
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+                Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
         let client_fut = async move {
-            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0, Status::Ok);
+            assert_eq!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0, Status::Ok);
 
             Result::<(), fidl::Error>::Ok(())
         };
-        let (ap_result, client_result, tm_result) = await!(join3(
+        let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
             create_and_serve_token_manager_with_db_path(
@@ -1349,7 +1349,7 @@ mod tests {
                 tm_stream,
                 &auth_provider_supplier
             )
-        ));
+        ).await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1359,10 +1359,10 @@ mod tests {
         auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
             async move {
                 expect_get_access_token(
-                    await!(stream.try_next())?.expect("End of stream"),
+                    stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
                 )?;
-                Ok(assert!(await!(stream.try_next())?.is_none()))
+                Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
 
@@ -1370,19 +1370,19 @@ mod tests {
         let client_fut = async move {
             // Check that the profile list survived
             let profile_ids =
-                await!(tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")))?;
+                tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")).await?;
             assert_eq!(profile_ids, (Status::Ok, vec!["RICHARD".to_string()]));
 
             // Check that the credential survived, and that it triggers a call to the auth provider
             // since the cache did not survive
             assert_eq!(
-                await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                 (Status::Ok, Some("RICHARD_CREDENTIAL_ACCESS".to_string()))
             );
 
             Result::<(), fidl::Error>::Ok(())
         };
-        let (ap_result, client_result, tm_result) = await!(join3(
+        let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
             create_and_serve_token_manager_with_db_path(
@@ -1390,7 +1390,7 @@ mod tests {
                 tm_stream,
                 &auth_provider_supplier
             )
-        ));
+        ).await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1402,83 +1402,83 @@ mod tests {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
         auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
             async move {
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "GAVIN")?;
-                Ok(assert!(await!(stream.try_next())?.is_none()))
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+                Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
         auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
             async move {
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
-                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "DINESH")?;
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+                expect_get_cred(stream.try_next().await?.expect("End of stream"), "DINESH")?;
                 expect_get_access_token(
-                    await!(stream.try_next())?.expect("End of stream"),
+                    stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
                 )?;
                 expect_revoke_cred(
-                    await!(stream.try_next())?.expect("End of stream"),
+                    stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
                 )?;
-                Ok(assert!(await!(stream.try_next())?.is_none()))
+                Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
         let client_fut = async move {
-            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0, Status::Ok);
-            assert_eq!(await!(authorize_simple(&tm_proxy, "hooli", "GAVIN"))?.0, Status::Ok);
-            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "DINESH"))?.0, Status::Ok);
+            assert_eq!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0, Status::Ok);
+            assert_eq!(authorize_simple(&tm_proxy, "hooli", "GAVIN").await?.0, Status::Ok);
+            assert_eq!(authorize_simple(&tm_proxy, "pied-piper", "DINESH").await?.0, Status::Ok);
 
             // Check listing
             assert_eq!(
-                await!(tm_proxy.list_profile_ids(&mut create_app_config("hooli")))?,
+                tm_proxy.list_profile_ids(&mut create_app_config("hooli")).await?,
                 (Status::Ok, vec!["GAVIN".to_string()])
             );
 
             assert_eq!(
-                await!(tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")))?,
+                tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")).await?,
                 (Status::Ok, vec!["DINESH".to_string(), "RICHARD".to_string()])
             );
 
             assert_eq!(
-                await!(tm_proxy.list_profile_ids(&mut create_app_config("myspace")))?,
+                tm_proxy.list_profile_ids(&mut create_app_config("myspace")).await?,
                 (Status::Ok, vec![])
             );
 
             // This puts an access token in the cache
             assert_eq!(
-                await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0,
+                get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0,
                 Status::Ok
             );
 
             // Ask for the same token again, expecting it delivered from the cache
             assert_eq!(
-                await!(delete_all_tokens_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                delete_all_tokens_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                 Status::Ok
             );
             // Deleting a non-existing token succeeds
             assert_eq!(
-                await!(delete_all_tokens_simple(&tm_proxy, "myspace", "MR_ROBOT"))?,
+                delete_all_tokens_simple(&tm_proxy, "myspace", "MR_ROBOT").await?,
                 Status::Ok
             );
 
             // Richard no longer present in list
             let profile_ids =
-                await!(tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")))?;
+                tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")).await?;
             assert_eq!(profile_ids, (Status::Ok, vec!["DINESH".to_string()]));
 
             // Check that it was also removed from cache
             assert_eq!(
-                await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                 (Status::UserNotFound, None)
             );
 
             Result::<(), fidl::Error>::Ok(())
         };
-        let (ap_result, client_result, tm_result) = await!(join3(
+        let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
             create_and_serve_in_memory_token_manager(tm_stream, &auth_provider_supplier)
-        ));
+        ).await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());

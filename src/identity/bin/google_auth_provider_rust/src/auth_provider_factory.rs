@@ -45,8 +45,8 @@ impl GoogleAuthProviderFactory {
         &self,
         mut stream: AuthProviderFactoryRequestStream,
     ) -> Result<(), Error> {
-        while let Some(request) = await!(stream.try_next())? {
-            await!(self.handle_request(request))?;
+        while let Some(request) = stream.try_next().await? {
+            self.handle_request(request).await?;
         }
         Ok(())
     }
@@ -60,7 +60,7 @@ impl GoogleAuthProviderFactory {
         let request_stream = server_end.into_stream()?;
         let auth_provider = Arc::clone(&self.google_auth_provider);
         fasync::spawn(async move {
-            await!(auth_provider.handle_requests_from_stream(request_stream))
+            auth_provider.handle_requests_from_stream(request_stream).await
                 .unwrap_or_else(|e| error!("Error handling AuthProvider channel {:?}", e));
         });
         responder.send(AuthProviderStatus::Ok)?;

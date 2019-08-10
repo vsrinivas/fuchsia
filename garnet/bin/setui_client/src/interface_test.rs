@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![allow(dead_code)]
 
 use {
@@ -30,33 +30,33 @@ const ENV_NAME: &str = "setui_client_test_environment";
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     println!("account mutation tests");
-    await!(validate_account_mutate(
+    validate_account_mutate(
         "autologinguest".to_string(),
         fidl_fuchsia_setui::LoginOverride::AutologinGuest
-    ))?;
-    await!(validate_account_mutate(
+    ).await?;
+    validate_account_mutate(
         "auth".to_string(),
         fidl_fuchsia_setui::LoginOverride::AuthProvider
-    ))?;
-    await!(validate_account_mutate("none".to_string(), fidl_fuchsia_setui::LoginOverride::None))?;
+    ).await?;
+    validate_account_mutate("none".to_string(), fidl_fuchsia_setui::LoginOverride::None).await?;
 
     println!("display service tests");
     println!("  client calls display watch");
-    await!(validate_display(None, None))?;
+    validate_display(None, None).await?;
 
     println!("  client calls set brightness");
-    await!(validate_display(Some(0.5), None))?;
+    validate_display(Some(0.5), None).await?;
 
     println!("  client calls set auto brightness");
-    await!(validate_display(None, Some(true)))?;
+    validate_display(None, Some(true)).await?;
 
     println!("intl service tests");
     println!("  client calls set temperature unit");
-    await!(validate_temperature_unit())?;
+    validate_temperature_unit().await?;
 
     println!("system service tests");
     println!("  client calls set login mode");
-    await!(validate_system_override())?;
+    validate_system_override().await?;
 
     Ok(())
 }
@@ -78,7 +78,7 @@ macro_rules! create_service  {
                 #![allow(unreachable_patterns)]
                 match connection {
                     $setting_type(stream) => {
-                        await!(stream
+                        stream
                             .err_into::<failure::Error>()
                             .try_for_each(|req| async move {
                                 match req {
@@ -90,7 +90,7 @@ macro_rules! create_service  {
                             .unwrap_or_else(|e: failure::Error| panic!(
                                 "error running setui server: {:?}",
                                 e
-                            )));
+                            )).await;
                     }
                     _ => {
                         panic!("Unexpected service");
@@ -116,7 +116,7 @@ async fn validate_system_override() -> Result<(), Error> {
     let system_service =
         env.connect_to_service::<SystemMarker>().context("Failed to connect to intl service")?;
 
-    await!(system::command(system_service, Some("auth".to_string())))?;
+    system::command(system_service, Some("auth".to_string())).await?;
 
     Ok(())
 }
@@ -138,12 +138,12 @@ async fn validate_temperature_unit() -> Result<(), Error> {
     let intl_service =
         env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
 
-    await!(intl::command(
+    intl::command(
         intl_service,
         None,
         Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
         vec![]
-    ))?;
+    ).await?;
 
     Ok(())
 }
@@ -179,7 +179,7 @@ async fn validate_display(
         .connect_to_service::<DisplayMarker>()
         .context("Failed to connect to display service")?;
 
-    await!(display::command(display_service, expected_brightness, expected_auto_brightness))?;
+    display::command(display_service, expected_brightness, expected_auto_brightness).await?;
 
     Ok(())
 }
@@ -196,7 +196,7 @@ async fn validate_account_mutate(
         async move {
             match req {
                 Services::SetUi(stream) => {
-                    await!(serve_check_login_override_mutate(stream, expected_override))
+                    serve_check_login_override_mutate(stream, expected_override).await
                 }
                 _ => {}
             }
@@ -207,7 +207,7 @@ async fn validate_account_mutate(
         .connect_to_service::<fidl_fuchsia_setui::SetUiServiceMarker>()
         .context("Failed to connect to setui service")?;
 
-    await!(client::mutate(setui, "login".to_string(), specified_type))?;
+    client::mutate(setui, "login".to_string(), specified_type).await?;
     Ok(())
 }
 

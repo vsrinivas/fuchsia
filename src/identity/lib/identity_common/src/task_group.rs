@@ -91,7 +91,7 @@ impl TaskGroup {
         F: (FnOnce(TaskGroupCancel) -> Fut) + Send + 'static,
         Fut: Future<Output = ()> + Send + 'static,
     {
-        let mut state_lock = await!(self.state.lock());
+        let mut state_lock = self.state.lock().await;
         let state = &mut *state_lock;
         match state {
             TaskGroupState::Cancelled => Err(TaskGroupError::AlreadyCancelled),
@@ -121,7 +121,7 @@ impl TaskGroup {
         let state = self.state.clone();
         async move {
             let state = {
-                let mut state_lock = await!(state.lock());
+                let mut state_lock = state.lock().await;
                 std::mem::replace(&mut *state_lock, TaskGroupState::Cancelled)
             };
             match state {
@@ -129,9 +129,9 @@ impl TaskGroup {
                 TaskGroupState::Active { cancel_sender, tasks, children } => {
                     let cancel_children: FuturesUnordered<_> =
                         children.iter().map(|child| child.cancel()).collect();
-                    let _ = await!(cancel_children.collect::<Vec<_>>());
+                    let _ = cancel_children.collect::<Vec<_>>().await;
                     let _ = cancel_sender.send(());
-                    await!(tasks.collect::<()>());
+                    tasks.collect::<()>().await;
                     Ok(())
                 }
             }
@@ -141,7 +141,7 @@ impl TaskGroup {
 
     /// Create a child TaskGroup that will be automatically cancelled when the parent is cancelled.
     pub async fn create_child(&self) -> Result<Self, TaskGroupError> {
-        let mut state_lock = await!(self.state.lock());
+        let mut state_lock = self.state.lock().await;
         let state = &mut *state_lock;
         match state {
             TaskGroupState::Cancelled => Err(TaskGroupError::AlreadyCancelled),
@@ -181,8 +181,8 @@ mod test {
     #[fuchsia_async::run_until_stalled(test)]
     async fn empty_test() {
         let tg = TaskGroup::new();
-        assert!(await!(tg.cancel()).is_ok());
-        assert!(await!(tg.cancel()).is_err());
+        assert!(tg.cancel().await.is_ok());
+        assert!(tg.cancel().await.is_err());
     }
 
     // Tasks without await-points
@@ -190,13 +190,13 @@ mod test {
     async fn trivial_test() {
         let tg = TaskGroup::new();
         let fut = future::ready(());
-        assert!(await!(tg.spawn(move |_cancel| fut)).is_ok());
-        assert!(await!(tg.spawn(|_cancel| async move {})).is_ok());
-        assert!(await!(tg.cancel()).is_ok());
+        assert!(tg.spawn(move |_cancel| fut).await.is_ok());
+        assert!(tg.spawn(|_cancel| async move {}).await.is_ok());
+        assert!(tg.cancel().await.is_ok());
 
         // Can't cancel or spawn now
-        assert!(await!(tg.spawn(|_cancel| async move {})).is_err());
-        assert!(await!(tg.cancel()).is_err());
+        assert!(tg.spawn(|_cancel| async move {}).await.is_err());
+        assert!(tg.cancel().await.is_err());
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -209,9 +209,9 @@ mod test {
             }
         };
         let tg = TaskGroup::new();
-        await!(tg.spawn(a_task)).expect("spawning failed");
-        assert_eq!(await!(receiver), Ok(10));
-        assert!(await!(tg.cancel()).is_ok());
+        tg.spawn(a_task).await.expect("spawning failed");
+        assert_eq!(receiver.await, Ok(10));
+        assert!(tg.cancel().await.is_ok());
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -220,14 +220,14 @@ mod test {
         let (sender, receiver) = oneshot::channel();
         let a_task = |cancel: TaskGroupCancel| {
             async {
-                await!(cancel).expect("cancel signal not delivered properly");
+                cancel.await.expect("cancel signal not delivered properly");
                 sender.send(10).expect("sending failed");
             }
         };
         let tg = TaskGroup::new();
-        await!(tg.spawn(a_task)).expect("spawning failed");
-        await!(tg.cancel()).expect("cancelling failed");
-        assert_eq!(await!(receiver), Ok(10));
+        tg.spawn(a_task).await.expect("spawning failed");
+        tg.cancel().await.expect("cancelling failed");
+        assert_eq!(receiver.await, Ok(10));
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -238,26 +238,26 @@ mod test {
         let (sender_2, receiver_2) = oneshot::channel();
         let task_1 = |cancel: TaskGroupCancel| {
             async {
-                await!(cancel).expect("cancel signal not delivered properly");
+                cancel.await.expect("cancel signal not delivered properly");
                 sender_1.send(1).expect("sending failed");
             }
         };
         let task_2 = |cancel: TaskGroupCancel| {
             async {
-                await!(cancel).expect("cancel signal not delivered properly");
+                cancel.await.expect("cancel signal not delivered properly");
                 sender_2.send(2).expect("sending failed");
             }
         };
         let tg = TaskGroup::new();
-        assert!(await!(tg.spawn(task_1)).is_ok());
+        assert!(tg.spawn(task_1).await.is_ok());
         let tg_clone = tg.clone();
-        assert!(await!(tg_clone.spawn(task_2)).is_ok());
-        assert!(await!(tg_clone.cancel()).is_ok());
-        assert_eq!(await!(receiver_1), Ok(1));
-        assert_eq!(await!(receiver_2), Ok(2));
-        assert!(await!(tg_clone.cancel()).is_err());
-        assert!(await!(tg.cancel()).is_err());
-        assert!(await!(tg.spawn(|_| future::ready(()))).is_err());
+        assert!(tg_clone.spawn(task_2).await.is_ok());
+        assert!(tg_clone.cancel().await.is_ok());
+        assert_eq!(receiver_1.await, Ok(1));
+        assert_eq!(receiver_2.await, Ok(2));
+        assert!(tg_clone.cancel().await.is_err());
+        assert!(tg.cancel().await.is_err());
+        assert!(tg.spawn(|_| future::ready(())).await.is_err());
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -267,26 +267,26 @@ mod test {
         let (sender_2, receiver_2) = oneshot::channel();
         let task_1 = |cancel: TaskGroupCancel| {
             async {
-                await!(cancel).expect("cancel signal not delivered properly");
+                cancel.await.expect("cancel signal not delivered properly");
                 sender_1.send(1).expect("sending failed");
             }
         };
         let task_2 = |cancel: TaskGroupCancel| {
             async {
-                await!(cancel).expect("cancel signal not delivered properly");
+                cancel.await.expect("cancel signal not delivered properly");
                 sender_2.send(2).expect("sending failed");
             }
         };
         let tg_parent = TaskGroup::new();
-        assert!(await!(tg_parent.spawn(task_1)).is_ok());
-        let tg_child = await!(tg_parent.create_child()).expect("failed creating child task group");
-        assert!(await!(tg_child.spawn(task_2)).is_ok());
-        assert!(await!(tg_parent.cancel()).is_ok());
-        assert_eq!(await!(receiver_1), Ok(1));
-        assert_eq!(await!(receiver_2), Ok(2));
-        assert!(await!(tg_child.cancel()).is_err());
-        assert!(await!(tg_parent.spawn(|_| future::ready(()))).is_err());
-        assert!(await!(tg_child.spawn(|_| future::ready(()))).is_err());
+        assert!(tg_parent.spawn(task_1).await.is_ok());
+        let tg_child = tg_parent.create_child().await.expect("failed creating child task group");
+        assert!(tg_child.spawn(task_2).await.is_ok());
+        assert!(tg_parent.cancel().await.is_ok());
+        assert_eq!(receiver_1.await, Ok(1));
+        assert_eq!(receiver_2.await, Ok(2));
+        assert!(tg_child.cancel().await.is_err());
+        assert!(tg_parent.spawn(|_| future::ready(())).await.is_err());
+        assert!(tg_child.spawn(|_| future::ready(())).await.is_err());
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -296,35 +296,35 @@ mod test {
 
         let task_1 = |cancel: TaskGroupCancel| {
             async {
-                await!(cancel).expect("cancel signal not delivered properly");
+                cancel.await.expect("cancel signal not delivered properly");
                 sender_1.send(1).expect("sending failed");
             }
         };
         let task_2 = |cancel: TaskGroupCancel| {
             async {
-                await!(cancel).expect("cancel signal not delivered properly");
+                cancel.await.expect("cancel signal not delivered properly");
                 sender_2.send(2).expect("sending failed");
             }
         };
         let tg_parent = TaskGroup::new();
-        assert!(await!(tg_parent.spawn(task_1)).is_ok());
-        let tg_child = await!(tg_parent.create_child()).expect("failed creating child task group");
-        assert!(await!(tg_child.spawn(task_2)).is_ok());
-        assert!(await!(tg_child.cancel()).is_ok());
-        assert_eq!(await!(receiver_2), Ok(2));
-        assert!(await!(tg_child.cancel()).is_err());
+        assert!(tg_parent.spawn(task_1).await.is_ok());
+        let tg_child = tg_parent.create_child().await.expect("failed creating child task group");
+        assert!(tg_child.spawn(task_2).await.is_ok());
+        assert!(tg_child.cancel().await.is_ok());
+        assert_eq!(receiver_2.await, Ok(2));
+        assert!(tg_child.cancel().await.is_err());
 
         // Verify we can create another child task group.
         let tg_child_2 =
-            await!(tg_parent.create_child()).expect("failed creating child task group");
-        assert!(await!(tg_child.spawn(|_| future::ready(()))).is_err());
-        assert!(await!(tg_child.create_child()).is_err());
+            tg_parent.create_child().await.expect("failed creating child task group");
+        assert!(tg_child.spawn(|_| future::ready(())).await.is_err());
+        assert!(tg_child.create_child().await.is_err());
 
-        assert!(await!(tg_parent.cancel()).is_ok());
-        assert!(await!(tg_child_2.cancel()).is_err());
-        assert!(await!(tg_parent.create_child()).is_err());
-        assert_eq!(await!(receiver_1), Ok(1));
-        assert!(await!(tg_parent.spawn(|_| future::ready(()))).is_err());
+        assert!(tg_parent.cancel().await.is_ok());
+        assert!(tg_child_2.cancel().await.is_err());
+        assert!(tg_parent.create_child().await.is_err());
+        assert_eq!(receiver_1.await, Ok(1));
+        assert!(tg_parent.spawn(|_| future::ready(())).await.is_err());
     }
 
     #[test]
@@ -336,8 +336,8 @@ mod test {
         let tg = TaskGroup::new();
         let tg_clone = tg.clone();
         let spawn_fut = &mut async move {
-            await!(tg_clone.spawn(complete)).expect("spawning failed");
-            await!(tg_clone.spawn(never_complete)).expect("spawning failed");
+            tg_clone.spawn(complete).await.expect("spawning failed");
+            tg_clone.spawn(never_complete).await.expect("spawning failed");
         }
             .boxed();
         let cancel_fut = &mut tg.cancel().boxed();
@@ -353,23 +353,23 @@ mod test {
         let a_task = |cancel: TaskGroupCancel| {
             async move {
                 // if fut is ready and cancel is pending, fut wins
-                assert_eq!(await!(cancel_or(&cancel, future::ready(9000))), Some(9000));
+                assert_eq!(cancel_or(&cancel, future::ready(9000)).await, Some(9000));
 
                 // this send triggers the cancellation
                 sender_1.send(10).expect("sending failed");
 
                 // if fut is pending, and cancel is (or soon becomes) ready, cancel wins
-                assert!(await!(cancel_or(&cancel, future::pending::<i64>())).is_none());
+                assert!(cancel_or(&cancel, future::pending::<i64>()).await.is_none());
 
                 // if both fut and cancel is ready, cancel wins
-                assert!(await!(cancel_or(&cancel, future::ready(9001))).is_none());
+                assert!(cancel_or(&cancel, future::ready(9001)).await.is_none());
                 sender_2.send(20).expect("sending failed");
             }
         };
         let tg = TaskGroup::new();
-        await!(tg.spawn(a_task)).expect("spawning failed");
-        assert_eq!(await!(receiver_1), Ok(10));
-        await!(tg.cancel()).expect("cancelling failed");
-        assert_eq!(await!(receiver_2), Ok(20));
+        tg.spawn(a_task).await.expect("spawning failed");
+        assert_eq!(receiver_1.await, Ok(10));
+        tg.cancel().await.expect("cancelling failed");
+        assert_eq!(receiver_2.await, Ok(20));
     }
 }

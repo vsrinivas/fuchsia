@@ -47,12 +47,12 @@ impl FuchsiaPkgResolver {
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let selectors: [&str; 0] = [];
         let mut update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
-        let status = await!(self.pkg_resolver.resolve(
+        let status = self.pkg_resolver.resolve(
             &package_url,
             &mut selectors.iter().map(|s| *s),
             &mut update_policy,
             ServerEnd::new(package_dir_s),
-        ))
+        ).await
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let status = zx::Status::from_raw(status);
         if status != zx::Status::OK {
@@ -68,7 +68,7 @@ impl FuchsiaPkgResolver {
             .expect("failed to create directory proxy");
         let file = io_util::open_file(&dir, cm_path, io_util::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
-        let cm_str = await!(io_util::read_file(&file))
+        let cm_str = io_util::read_file(&file).await
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
         let component_decl = cm_fidl_translator::translate(&cm_str)
             .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
@@ -118,7 +118,7 @@ mod tests {
                     dir,
                     responder,
                     ..
-                }) = await!(stream.try_next()).expect("failed to read request")
+                }) = stream.try_next().await.expect("failed to read request")
                 {
                     let s = match pkg_resolver.resolve(&package_url, dir) {
                         Ok(()) => 0,
@@ -154,7 +154,7 @@ mod tests {
         let resolver = FuchsiaPkgResolver::new(pkg_resolver);
         let url = "fuchsia-pkg://fuchsia.com/hello_world#\
                    meta/component_manager_tests_hello_world.cm";
-        let component = await!(resolver.resolve_async(url)).expect("resolve failed");
+        let component = resolver.resolve_async(url).await.expect("resolve failed");
 
         // Check that both the returned component manifest and the component manifest in
         // the returned package dir match the expected value. This also tests that
@@ -185,7 +185,7 @@ mod tests {
         let path = Path::new("meta/component_manager_tests_hello_world.cm");
         let file_proxy = io_util::open_file(&dir_proxy, path, io_util::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
-        let cm_contents = await!(io_util::read_file(&file_proxy)).expect("could not read cm");
+        let cm_contents = io_util::read_file(&file_proxy).await.expect("could not read cm");
         assert_eq!(
             cm_fidl_translator::translate(&cm_contents).expect("could not parse cm"),
             expected_decl
@@ -195,7 +195,7 @@ mod tests {
     macro_rules! test_resolve_error {
         ($resolver:ident, $url:expr, $resolver_error_expected:ident) => {
             let url = $url;
-            let res = await!($resolver.resolve_async(url));
+            let res = $resolver.resolve_async(url).await;
             match res.err().expect("unexpected success") {
                 ResolverError::$resolver_error_expected { url: u, .. } => {
                     assert_eq!(u, url);

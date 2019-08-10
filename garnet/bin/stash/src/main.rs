@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
@@ -114,7 +114,7 @@ fn stash_server(
                 store_manager: store_manager,
             };
 
-            while let Some(req) = await!(stream.try_next()).context("error running stash server")? {
+            while let Some(req) = stream.try_next().await.context("error running stash server")? {
                 match req {
                     StoreRequest::Identify { name, control_handle } => {
                         if let Err(e) = state.identify(name.clone()) {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![cfg(test)]
 
 mod h264;
@@ -86,5 +86,5 @@ async fn serial_bear_on_same_codec() -> std::result::Result<(), ::failure::Error
         stream_processor_factory: Rc::new(DecoderFactory),
     };
 
-    await!(spec.run())
+    spec.run().await
 }

@@ -159,7 +159,7 @@ impl Action {
     ) -> Option<DisplayInfo> {
         match self.action_display {
             None => None,
-            Some(ref action_display) => await!(action_display.load_display_info(parameters)),
+            Some(ref action_display) => action_display.load_display_info(parameters).await,
         }
     }
 }
@@ -172,9 +172,9 @@ impl ActionDisplayInfo {
         match self.display_info {
             None => None,
             Some(ref display_info) => Some(DisplayInfo {
-                title: await!(self.interpolate(&display_info.title, &parameters)),
-                subtitle: await!(self.interpolate(&display_info.subtitle, &parameters)),
-                icon: await!(self.interpolate(&display_info.icon, &parameters)),
+                title: self.interpolate(&display_info.title, &parameters).await,
+                subtitle: self.interpolate(&display_info.subtitle, &parameters).await,
+                icon: self.interpolate(&display_info.icon, &parameters).await,
             }),
         }
     }
@@ -200,7 +200,7 @@ impl ActionDisplayInfo {
                     let intent_param = parts.next().unwrap();
                     let subfield_path = parts.collect::<Vec<&str>>();
                     if let Some(matching) = parameters.get(intent_param) {
-                        if let Some(data) = await!(matching.get_data(subfield_path)) {
+                        if let Some(data) = matching.get_data(subfield_path).await {
                             result = result.replace(&template_part, &data);
                         }
                     }
@@ -242,7 +242,7 @@ pub struct EntityMatching<'a> {
 
 impl<'a> EntityMatching<'a> {
     async fn get_data(&'a self, path: Vec<&'a str>) -> Option<String> {
-        await!(self.context_entity.get_string_data(path, &self.matching_type))
+        self.context_entity.get_string_data(path, &self.matching_type).await
     }
 }
 
@@ -539,7 +539,7 @@ mod tests {
             ContextEntity::from_entity(entity_proxy, hashset!())
         });
         let entities =
-            await!(join_all(futs)).into_iter().map(|e| e.unwrap()).collect::<Vec<ContextEntity>>();
+            join_all(futs).await.into_iter().map(|e| e.unwrap()).collect::<Vec<ContextEntity>>();
         let parameters = hashmap!(
             "param1".to_string() => EntityMatching {
                 context_entity: &entities[0],
@@ -575,7 +575,7 @@ mod tests {
             parameter_mapping: parameter_mapping.clone(),
         };
         assert_eq!(
-            await!(action_display.load_display_info(parameters.clone())),
+            action_display.load_display_info(parameters.clone()).await,
             Some(
                 DisplayInfo::new()
                     .with_title("Hello 1")
@@ -587,7 +587,7 @@ mod tests {
         // Without display info, nothing is returned.
         let action_display =
             ActionDisplayInfo { display_info: None, parameter_mapping: parameter_mapping.clone() };
-        assert_eq!(await!(action_display.load_display_info(parameters.clone())), None);
+        assert_eq!(action_display.load_display_info(parameters.clone()).await, None);
 
         // Without parameter mapping, the same display info is returned
         let action_display = ActionDisplayInfo {
@@ -595,7 +595,7 @@ mod tests {
             parameter_mapping: vec![],
         };
         assert_eq!(
-            await!(action_display.load_display_info(parameters.clone())),
+            action_display.load_display_info(parameters.clone()).await,
             Some(display_info.clone())
         );
 
@@ -615,7 +615,7 @@ mod tests {
             parameter_mapping: parameter_mapping.clone(),
         };
         assert_eq!(
-            await!(action_display.load_display_info(parameters)),
+            action_display.load_display_info(parameters).await,
             Some(
                 DisplayInfo::new()
                     .with_title("Hello 1")

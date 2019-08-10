@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     ethernet,
@@ -50,12 +50,12 @@ async fn run_mock_guest() -> Result<(), Error> {
     let (netm, netm_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
     ctx.get_network_manager(netm_server_end)?;
 
-    let ep = await!(epm.get_endpoint("mock-ep"))?.unwrap().into_proxy()?;
-    let net = await!(netm.get_network("mock_guest"))?.unwrap().into_proxy()?;
+    let ep = epm.get_endpoint("mock-ep").await?.unwrap().into_proxy()?;
+    let net = netm.get_network("mock_guest").await?.unwrap().into_proxy()?;
     let (fake_ep, fake_ep_server_end) = fidl::endpoints::create_proxy::<FakeEndpointMarker>()?;
     net.create_fake_endpoint(fake_ep_server_end)?;
 
-    let eth_device = await!(ep.get_ethernet_device())?;
+    let eth_device = ep.get_ethernet_device().await?;
 
     let netstack = client::connect_to_service::<NetstackMarker>()?;
     let ip_addr_config = IpAddressConfig::Dhcp(true);
@@ -66,20 +66,20 @@ async fn run_mock_guest() -> Result<(), Error> {
         metric: DEFAULT_METRIC,
     };
 
-    let _nicid = await!(netstack.add_ethernet_device("/mock_device", &mut cfg, eth_device))?;
+    let _nicid = netstack.add_ethernet_device("/mock_device", &mut cfg, eth_device).await?;
 
     // Send a message to the server and expect it to be echoed back.
     let echo_string = String::from("hello");
 
     let bus = open_bus("mock_guest")?;
-    await!(bus.wait_for_clients(&mut vec!(SRV_NAME).drain(..), 0))?;
+    bus.wait_for_clients(&mut vec!(SRV_NAME).drain(..), 0).await?;
 
     fake_ep.write(&mut echo_string.clone().into_bytes().drain(0..))?;
 
     println!("To Server: {}", echo_string);
 
     let mut ep_events = fake_ep.take_event_stream();
-    while let Some(event) = await!(ep_events.try_next())? {
+    while let Some(event) = ep_events.try_next().await? {
         match event {
             FakeEndpointEvent::OnData { data } => {
                 let server_string = str::from_utf8(&data)?;
@@ -104,7 +104,7 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
     netctx.get_endpoint_manager(epm_server_end)?;
 
-    let ep = await!(epm.get_endpoint(&ep_name))?;
+    let ep = epm.get_endpoint(&ep_name).await?;
 
     let ep = match ep {
         Some(ep) => ep.into_proxy().unwrap(),
@@ -114,16 +114,16 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     // Create an EthernetClient to wrap around the Endpoint's ethernet device.
     let vmo = zx::Vmo::create(256 * ethernet::DEFAULT_BUFFER_SIZE as u64)?;
 
-    let eth_dev = await!(ep.get_ethernet_device())?;
+    let eth_dev = ep.get_ethernet_device().await?;
     let eth_proxy = match eth_dev.into_proxy() {
         Ok(proxy) => proxy,
         _ => bail!("Could not get ethernet proxy"),
     };
 
     let mut eth_client =
-        await!(ethernet::Client::new(eth_proxy, vmo, ethernet::DEFAULT_BUFFER_SIZE, &ep_name))?;
+        ethernet::Client::new(eth_proxy, vmo, ethernet::DEFAULT_BUFFER_SIZE, &ep_name).await?;
 
-    await!(eth_client.start())?;
+    eth_client.start().await?;
 
     // Listen for a receive event from the client, echo back the client's
     // message, and then exit.
@@ -133,7 +133,7 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     // get on bus to unlock mock_guest part of test
     let _bus = open_bus(SRV_NAME)?;
 
-    while let Some(event) = await!(eth_events.try_next())? {
+    while let Some(event) = eth_events.try_next().await? {
         match event {
             ethernet::Event::Receive(rx, _flags) => {
                 if !sent_response {
@@ -146,7 +146,7 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
 
                     // Start listening for the server's response to be
                     // transmitted to the guest.
-                    await!(eth_client.tx_listen_start())?;
+                    eth_client.tx_listen_start().await?;
                 } else {
                     // The mock guest will not send anything to the server
                     // beyond its initial request.  After the server has echoed
@@ -167,11 +167,11 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
 
 async fn do_run(opt: Opt) -> Result<(), Error> {
     if opt.is_mock_guest {
-        await!(run_mock_guest())?;
+        run_mock_guest().await?;
     } else if opt.is_server {
         match opt.endpoint_name {
             Some(endpoint_name) => {
-                await!(run_echo_server(endpoint_name))?;
+                run_echo_server(endpoint_name).await?;
             }
             None => {
                 bail!("Must provide endpoint_name for server");

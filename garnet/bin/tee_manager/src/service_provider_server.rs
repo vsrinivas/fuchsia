@@ -26,7 +26,7 @@ impl ServiceProviderServer {
     pub async fn serve(self, chan: fasync::Channel) -> Result<(), Error> {
         let mut request_stream = ServiceProviderRequestStream::from_channel(chan);
 
-        while let Some(request) = await!(request_stream.try_next())
+        while let Some(request) = request_stream.try_next().await
             .context("Error receiving ServiceProviderRequestStream message")?
         {
             let ServiceProviderRequest::RequestPersistentStorage { dir, .. } = request;

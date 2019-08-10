@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{format_err, Error},
@@ -73,7 +73,7 @@ async fn attach_device(ep_name: &str) -> Result<(), Error> {
     netctx.get_endpoint_manager(epm_server_end)?;
 
     // get endpoint by name
-    let ep = await!(epm.get_endpoint(ep_name))?;
+    let ep = epm.get_endpoint(ep_name).await?;
 
     let ep = match ep {
         Some(ep) => Ok(ep.into_proxy()?),
@@ -103,7 +103,7 @@ async fn create_endpoint(name: &str) -> Result<EndpointProxy, Error> {
         mac: None, // let network service create a random mac for us
         mtu: 1500,
     };
-    let (_, ep) = await!(epm.create_endpoint(name, &mut cfg))?;
+    let (_, ep) = epm.create_endpoint(name, &mut cfg).await?;
     match ep {
         Some(ep) => Ok(ep.into_proxy()?),
         None => Err(format_err!("Failed to create device")),
@@ -117,15 +117,15 @@ async fn main() -> Result<(), Error> {
     let () = check_device_absent("ep2")?;
     let () = check_device_absent("ep3")?;
     // attach cmx-created endpoint ep2 and check that it shows up
-    let () = await!(attach_device("ep2"))?;
+    let () = attach_device("ep2").await?;
     let () = try_with_failure_tolerance(|| check_device_present("ep2"))?;
     // attach cmx-created endpoint ep3 and check that it shows up
-    let () = await!(attach_device("ep3"))?;
+    let () = attach_device("ep3").await?;
     let () = try_with_failure_tolerance(|| check_device_present("ep3"))?;
 
     // create a new endpoint and attach:
-    let ep4 = await!(create_endpoint("ep4"))?;
-    let () = await!(attach_device("ep4"))?;
+    let ep4 = create_endpoint("ep4").await?;
+    let () = attach_device("ep4").await?;
     let () = try_with_failure_tolerance(|| check_device_present("ep4"))?;
 
     // remove ep2:

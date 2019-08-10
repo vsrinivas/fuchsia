@@ -28,7 +28,7 @@ async fn get_components() -> Result<Vec<String>, Error> {
         e
     })?;
     // Empty string returns all components.
-    let index_response = await!(index_service.fuzzy_search("")).map_err(|e| {
+    let index_response = index_service.fuzzy_search("").await.map_err(|e| {
         fx_log_err!("Fuzzy search error from component index: {:?}", e);
         e
     })?;
@@ -40,10 +40,10 @@ async fn get_components() -> Result<Vec<String>, Error> {
 
 // Gets a vector of all actions on the system
 pub async fn get_local_actions() -> Result<Vec<Action>, Error> {
-    let urls = await!(get_components())?;
+    let urls = get_components().await?;
     let mut result = vec![];
     for url in urls {
-        let module_facet = await!(load_module_facet(&url))?;
+        let module_facet = load_module_facet(&url).await?;
         for intent_filter in module_facet.intent_filters.into_iter() {
             // Convert from Indexing to Models
             result.push(Action {
@@ -73,7 +73,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_component_index() -> Result<(), Error> {
         // TODO fix tests -- failing only in CQ
-        let result = await!(get_local_actions()).unwrap_or_else(|e| {
+        let result = get_local_actions().await.unwrap_or_else(|e| {
             fx_log_err!("Error! {:?}", e);
             vec![]
         });

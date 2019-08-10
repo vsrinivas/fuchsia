@@ -44,7 +44,7 @@ impl SetUIHandler {
         // watch calls per connection, and ends when the stream ends.
         let last_seen_settings = Arc::new(RwLock::new(HashMap::new()));
 
-        while let Some(req) = await!(stream.try_next())? {
+        while let Some(req) = stream.try_next().await? {
             match req {
                 SetUiServiceRequest::Mutate { setting_type, mutation, responder } => {
                     let mut response = self.mutate(setting_type, mutation);
@@ -84,12 +84,12 @@ impl SetUIHandler {
             // Creates a new thread per watcher which waits for a change before calling the
             // responder.
             fasync::spawn(async move {
-                await!(receiver.map(|data| {
+                receiver.map(|data| {
                     if let Ok(data) = data {
                         last_seen_settings.write().unwrap().insert(setting_type, data.clone());
                         responder(data.clone()).ok();
                     }
-                }));
+                }).await;
             });
         } else {
             fx_log_err!("watch: no valid adapter for type");

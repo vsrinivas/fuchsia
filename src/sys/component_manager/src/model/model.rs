@@ -137,16 +137,16 @@ impl Model {
         &self,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let realm: Arc<Realm> = await!(self.look_up_realm(&abs_moniker))?;
-        await!(self.bind_instance(realm))
+        let realm: Arc<Realm> = self.look_up_realm(&abs_moniker).await?;
+        self.bind_instance(realm).await
     }
 
     /// Binds to the component instance of the specified realm, causing it to start if it is
     /// not already running. Also binds to any descendant component instances that need to be
     /// eagerly started.
     pub async fn bind_instance(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
-        let eager_children = await!(self.bind_single_instance(realm))?;
-        await!(self.bind_eager_children_recursive(eager_children))?;
+        let eager_children = self.bind_single_instance(realm).await?;
+        self.bind_eager_children_recursive(eager_children).await?;
         Ok(())
     }
 
@@ -161,9 +161,9 @@ impl Model {
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
         let eager_children = {
-            let eager_children = await!(self.bind_single_instance(realm.clone()))?;
+            let eager_children = self.bind_single_instance(realm.clone()).await?;
             let server_end = ServerEnd::new(server_chan);
-            let state = await!(realm.state.lock());
+            let state = realm.state.lock().await;
             let out_dir = &state
                 .execution
                 .as_ref()
@@ -182,7 +182,7 @@ impl Model {
             out_dir.open(flags, open_mode, path, server_end).expect("failed to send open message");
             eager_children
         };
-        await!(self.bind_eager_children_recursive(eager_children))?;
+        self.bind_eager_children_recursive(eager_children).await?;
         Ok(())
     }
 
@@ -194,9 +194,9 @@ impl Model {
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
         let eager_children = {
-            let eager_children = await!(self.bind_single_instance(realm.clone()))?;
+            let eager_children = self.bind_single_instance(realm.clone()).await?;
             let server_end = ServerEnd::new(server_chan);
-            let state = await!(realm.state.lock());
+            let state = realm.state.lock().await;
             let exposed_dir = &state
                 .execution
                 .as_ref()
@@ -206,11 +206,11 @@ impl Model {
                 )))?
                 .exposed_dir;
             let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
-            await!(exposed_dir.root_dir.open(flags, MODE_TYPE_DIRECTORY, vec![], server_end))
+            exposed_dir.root_dir.open(flags, MODE_TYPE_DIRECTORY, vec![], server_end).await
                 .expect("failed to send open message");
             eager_children
         };
-        await!(self.bind_eager_children_recursive(eager_children))?;
+        self.bind_eager_children_recursive(eager_children).await?;
         Ok(())
     }
 
@@ -223,8 +223,8 @@ impl Model {
         let mut cur_realm = self.root_realm.clone();
         for moniker in look_up_abs_moniker.path().iter() {
             cur_realm = {
-                await!(cur_realm.resolve_decl())?;
-                let cur_state = await!(cur_realm.state.lock());
+                cur_realm.resolve_decl().await?;
+                let cur_state = cur_realm.state.lock().await;
                 let child_realms = cur_state.get_child_realms();
                 if !child_realms.contains_key(&moniker) {
                     return Err(ModelError::instance_not_found(look_up_abs_moniker.clone()));
@@ -232,7 +232,7 @@ impl Model {
                 child_realms[moniker].clone()
             }
         }
-        await!(cur_realm.resolve_decl())?;
+        cur_realm.resolve_decl().await?;
         Ok(cur_realm)
     }
 
@@ -245,12 +245,12 @@ impl Model {
         realm: Arc<Realm>,
     ) -> Result<Vec<Arc<Realm>>, ModelError> {
         let eager_children = {
-            let mut state = await!(realm.state.lock());
-            let eager_children = await!(self.bind_inner(&mut *state, realm.clone()))?;
+            let mut state = realm.state.lock().await;
+            let eager_children = self.bind_inner(&mut *state, realm.clone()).await?;
             let routing_facade = RoutingFacade::new(self.clone());
             // TODO: Don't hold the lock while calling the hooks.
             for hook in self.hooks.iter() {
-                await!(hook.on_bind_instance(realm.clone(), &*state, routing_facade.clone()))?;
+                hook.on_bind_instance(realm.clone(), &*state, routing_facade.clone()).await?;
             }
             eager_children
         };
@@ -269,10 +269,10 @@ impl Model {
             let futures: Vec<_> = instances_to_bind
                 .iter()
                 .map(|realm| {
-                    Box::pin(async move { await!(self.bind_single_instance(realm.clone())) })
+                    Box::pin(async move { self.bind_single_instance(realm.clone()).await })
                 })
                 .collect();
-            let res = await!(join_all(futures));
+            let res = join_all(futures).await;
             instances_to_bind.clear();
             for e in res {
                 instances_to_bind.append(&mut e?);
@@ -294,8 +294,8 @@ impl Model {
             Ok(vec![])
         } else {
             // Execution does not exist yet, create it.
-            let component = await!(realm.resolver_registry.resolve(&realm.component_url))?;
-            await!(state.populate_decl(component.decl, &*realm))?;
+            let component = realm.resolver_registry.resolve(&realm.component_url).await?;
+            state.populate_decl(component.decl, &*realm).await?;
             let decl = state.get_decl();
             let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, state)?;
             let execution = if decl.program.is_some() {
@@ -304,7 +304,7 @@ impl Model {
                 let (runtime_dir_client, runtime_dir_server) =
                     zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
                 let mut namespace = IncomingNamespace::new(component.package)?;
-                let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
+                let ns = namespace.populate(self.clone(), &realm.abs_moniker, decl).await?;
                 let execution = Execution::start_from(
                     component.resolved_url,
                     Some(namespace),
@@ -323,7 +323,7 @@ impl Model {
                     outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
                     runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
                 };
-                await!(realm.default_runner.start(start_info))?;
+                realm.default_runner.start(start_info).await?;
                 execution
             } else {
                 // Although this component has no runtime environment, it is still possible to bind

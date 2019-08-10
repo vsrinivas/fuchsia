@@ -1,4 +1,4 @@
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, ResultExt},
@@ -79,39 +79,39 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let setui = connect_to_service::<SetUiServiceMarker>()
                 .context("Failed to connect to setui service")?;
 
-            await!(client::mutate(setui, setting_type, value))?;
+            client::mutate(setui, setting_type, value).await?;
 
             if remove_users {
                 let device_settings = connect_to_service::<DeviceSettingsManagerMarker>()
                     .context("Failed to connect to devicesettings service")?;
-                await!(device_settings.set_integer("FactoryReset", 1))?;
+                device_settings.set_integer("FactoryReset", 1).await?;
                 let device_admin = connect_to_service::<AdministratorMarker>()
                     .context("Failed to connect to deviceadmin service")?;
-                await!(device_admin.suspend(SUSPEND_FLAG_REBOOT))?;
+                device_admin.suspend(SUSPEND_FLAG_REBOOT).await?;
             }
         }
         SettingClient::Get { setting_type } => {
             let setui = connect_to_service::<SetUiServiceMarker>()
                 .context("Failed to connect to setui service")?;
-            let description = describe_setting(await!(client::get(setui, setting_type.clone()))?)?;
+            let description = describe_setting(client::get(setui, setting_type.clone()).await?)?;
             println!("value for setting[{}]:{}", setting_type, description);
         }
         SettingClient::System { login_mode } => {
             let system_service = connect_to_service::<fidl_fuchsia_settings::SystemMarker>()
                 .context("Failed to connect to system service")?;
-            let output = await!(system::command(system_service, login_mode))?;
+            let output = system::command(system_service, login_mode).await?;
             println!("System: {}", output);
         }
         SettingClient::Display { brightness, auto_brightness } => {
             let display_service = connect_to_service::<fidl_fuchsia_settings::DisplayMarker>()
                 .context("Failed to connect to display service")?;
-            let output = await!(display::command(display_service, brightness, auto_brightness))?;
+            let output = display::command(display_service, brightness, auto_brightness).await?;
             println!("Display: {}", output);
         }
         SettingClient::Intl { time_zone, temperature_unit, locales } => {
             let intl_service = connect_to_service::<fidl_fuchsia_settings::IntlMarker>()
                 .context("Failed to connect to intl service")?;
-            let output = await!(intl::command(intl_service, time_zone, temperature_unit, locales))?;
+            let output = intl::command(intl_service, time_zone, temperature_unit, locales).await?;
             println!("Intl: {}", output);
         }
     }

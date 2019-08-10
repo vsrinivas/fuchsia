@@ -61,7 +61,7 @@
 // alternative front-end for that, similar to our C++ ProcessBuilder library, though that pulls in
 // a dependency on fdio).
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![deny(missing_docs)]
 
 pub use self::elf_load::ElfLoadError;
@@ -426,7 +426,7 @@ impl ProcessBuilder {
             _reserve_vmar = ReservationVmar::reserve_low_address_space(&self.inner.root_vmar)?;
 
             // Get the dynamic linker and map it into the process's address space.
-            let ld_vmo = await!(get_dynamic_linker(&ldsvc, &self.executable, interp_hdr))?;
+            let ld_vmo = get_dynamic_linker(&ldsvc, &self.executable, interp_hdr).await?;
             let ld_headers = elf_parse::Elf64Headers::from_vmo(&ld_vmo)?;
             loaded_elf = elf_load::load_elf(&ld_vmo, &self.inner.root_vmar, &ld_headers)?;
 
@@ -731,7 +731,7 @@ async fn get_dynamic_linker<'a>(
         .on_timeout(fasync::Time::after(LDSO_LOAD_TIMEOUT_SEC.seconds()), || {
             Err(ProcessBuilderError::LoadDynamicLinkerTimeout())
         });
-    let (status, ld_vmo) = await!(load_fut)?;
+    let (status, ld_vmo) = load_fut.await?;
     zx::Status::ok(status).map_err(|s| {
         ProcessBuilderError::GenericStatus(
             "Failed to load dynamic linker from fuchsia.ldsvc.Loader",
@@ -965,7 +965,7 @@ mod tests {
     }
 
     async fn check_process_exited_ok(process: &zx::Process) -> Result<(), Error> {
-        await!(fasync::OnSignals::new(process, zx::Signals::PROCESS_TERMINATED))?;
+        fasync::OnSignals::new(process, zx::Signals::PROCESS_TERMINATED).await?;
 
         let info = process.info()?;
         assert_eq!(
@@ -994,17 +994,17 @@ mod tests {
 
         let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.add_arguments(test_args_cstr);
-        let process = await!(builder.build())?.start()?;
+        let process = builder.build().await?.start()?;
         check_process_running(&process)?;
 
         // Use the util protocol to confirm that the new process was set up correctly. A successful
         // connection to the util validates that handles are passed correctly to the new process,
         // since the DirectoryRequest handle made it.
-        let proc_args = await!(proxy.get_arguments()).context("failed to get args from util")?;
+        let proc_args = proxy.get_arguments().await.context("failed to get args from util")?;
         assert_eq!(proc_args, test_args);
 
         mem::drop(proxy);
-        await!(check_process_exited_ok(&process))?;
+        check_process_exited_ok(&process).await?;
         Ok(())
     }
 
@@ -1019,17 +1019,17 @@ mod tests {
         let (mut builder, proxy) = setup_test_util_builder(false)?;
         builder.set_loader_service(clone_loader_service()?)?;
         builder.add_arguments(test_args_cstr);
-        let process = await!(builder.build())?.start()?;
+        let process = builder.build().await?.start()?;
         check_process_running(&process)?;
 
         // Use the util protocol to confirm that the new process was set up correctly. A successful
         // connection to the util validates that handles are passed correctly to the new process,
         // since the DirectoryRequest handle made it.
-        let proc_args = await!(proxy.get_arguments()).context("failed to get args from util")?;
+        let proc_args = proxy.get_arguments().await.context("failed to get args from util")?;
         assert_eq!(proc_args, test_args);
 
         mem::drop(proxy);
-        await!(check_process_exited_ok(&process))?;
+        check_process_exited_ok(&process).await?;
         Ok(())
     }
 
@@ -1043,16 +1043,16 @@ mod tests {
 
         let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.add_environment_variables(test_env_cstr);
-        let process = await!(builder.build())?.start()?;
+        let process = builder.build().await?.start()?;
         check_process_running(&process)?;
 
-        let proc_env = await!(proxy.get_environment()).context("failed to get env from util")?;
+        let proc_env = proxy.get_environment().await.context("failed to get env from util")?;
         let proc_env_tuple: Vec<(&str, &str)> =
             proc_env.iter().map(|v| (&*v.key, &*v.value)).collect();
         assert_eq!(proc_env_tuple, test_env);
 
         mem::drop(proxy);
-        await!(check_process_exited_ok(&process))?;
+        check_process_exited_ok(&process).await?;
         Ok(())
     }
 
@@ -1076,7 +1076,7 @@ mod tests {
                 &mut iter::empty(),
                 ServerEnd::new(dir1_server),
             );
-            await!(dir1);
+            dir1.await;
             panic!("Psuedo dir stopped serving!");
         });
 
@@ -1092,7 +1092,7 @@ mod tests {
                 &mut iter::empty(),
                 ServerEnd::new(dir2_server),
             );
-            await!(dir2);
+            dir2.await;
             panic!("Psuedo dir stopped serving!");
         });
 
@@ -1101,21 +1101,21 @@ mod tests {
             NamespaceEntry { path: CString::new("/dir1")?, directory: ClientEnd::new(dir1_client) },
             NamespaceEntry { path: CString::new("/dir2")?, directory: ClientEnd::new(dir2_client) },
         ])?;
-        let process = await!(builder.build())?.start()?;
+        let process = builder.build().await?.start()?;
         check_process_running(&process)?;
 
-        let namespace_dump = await!(proxy.dump_namespace()).context("failed to dump namespace")?;
+        let namespace_dump = proxy.dump_namespace().await.context("failed to dump namespace")?;
         assert_eq!(namespace_dump, "/dir1, /dir1/test_file1, /dir2, /dir2/test_file2");
 
         let dir1_contents =
-            await!(proxy.read_file("/dir1/test_file1")).context("failed to read file via util")?;
+            proxy.read_file("/dir1/test_file1").await.context("failed to read file via util")?;
         assert_eq!(dir1_contents, test_content1);
         let dir2_contents =
-            await!(proxy.read_file("/dir2/test_file2")).context("failed to read file via util")?;
+            proxy.read_file("/dir2/test_file2").await.context("failed to read file via util")?;
         assert_eq!(dir2_contents, test_content2);
 
         mem::drop(proxy);
-        await!(check_process_exited_ok(&process))?;
+        check_process_exited_ok(&process).await?;
         Ok(())
     }
 
@@ -1124,7 +1124,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_no_loader_fails() -> Result<(), Error> {
         let (builder, _) = setup_test_util_builder(false)?;
-        let result = await!(builder.build());
+        let result = builder.build().await;
 
         match result {
             Err(ProcessBuilderError::LoaderMissing()) => {}
@@ -1143,7 +1143,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn verify_low_address_range_reserved() -> Result<(), Error> {
         let (builder, _) = setup_test_util_builder(true)?;
-        let built = await!(builder.build())?;
+        let built = builder.build().await?;
 
         // This ends up being the same thing ReservationVmar does, but it's not reused here so that
         // this catches bugs or bad changes to ReservationVmar itself.
@@ -1194,7 +1194,7 @@ mod tests {
     async fn correct_handles_present() -> Result<(), Error> {
         let mut builder = create_test_util_builder()?;
         builder.set_loader_service(clone_loader_service()?)?;
-        let built = await!(builder.build())?;
+        let built = builder.build().await?;
 
         for correct in &[LINKER_MESSAGE_HANDLES, MAIN_MESSAGE_HANDLES] {
             let mut msg_buf = zx::MessageBuf::new();
@@ -1317,11 +1317,11 @@ mod tests {
         local.write(&test_message, &mut vec![])?;
 
         // Start process and wait for channel to have a message to read or be closed.
-        await!(builder.build())?.start()?;
-        let signals = await!(fasync::OnSignals::new(
+        builder.build().await?.start()?;
+        let signals = fasync::OnSignals::new(
             &local,
             zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED
-        ))?;
+        ).await?;
         assert!(signals.contains(zx::Signals::CHANNEL_READABLE));
 
         let mut echoed = zx::MessageBuf::new();

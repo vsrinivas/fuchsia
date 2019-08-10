@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fidl_fuchsia_game_tennis::{GameState, TennisServiceMarker};
@@ -29,9 +29,9 @@ fn main() -> Result<(), Error> {
         async move {
             loop {
                 let time_step: i64 = 1000 / 20;
-                await!(fuchsia_async::Timer::new(time_step.millis().after_now()));
+                fuchsia_async::Timer::new(time_step.millis().after_now()).await;
 
-                let state = await!(tennis_service.get_state())?;
+                let state = tennis_service.get_state().await?;
                 if state.game_num == 0 {
                     continue;
                 }

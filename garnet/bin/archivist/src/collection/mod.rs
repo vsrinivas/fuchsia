@@ -245,7 +245,7 @@ impl ExtraDataCollector {
             }
         };
 
-        for entry in await!(files_async::readdir_recursive(&proxy))?.into_iter() {
+        for entry in files_async::readdir_recursive(&proxy).await?.into_iter() {
             // We are only currently interested in inspect files.
             if !entry.name.ends_with(".inspect") || entry.dir_type != files_async::DirentType::File
             {
@@ -264,7 +264,7 @@ impl ExtraDataCollector {
             };
 
             // Obtain the vmo backing any VmoFiles.
-            match await!(proxy.describe()) {
+            match proxy.describe().await {
                 Ok(nodeinfo) => match nodeinfo {
                     NodeInfo::Vmofile(vmofile) => {
                         self.maybe_add(
@@ -332,10 +332,10 @@ impl HubCollector {
         self.component_extra_data.insert(path, None);
         match existing {
             ExistingPath(false) => {
-                await!(self.component_event_sender.send(ComponentEvent::Start(data)))?
+                self.component_event_sender.send(ComponentEvent::Start(data)).await?
             }
             ExistingPath(true) => {
-                await!(self.component_event_sender.send(ComponentEvent::Existing(data)))?
+                self.component_event_sender.send(ComponentEvent::Existing(data)).await?
             }
         };
         Ok(())
@@ -355,7 +355,7 @@ impl HubCollector {
             _ => None,
         };
 
-        await!(self.component_event_sender.send(ComponentEvent::Stop(data)))?;
+        self.component_event_sender.send(ComponentEvent::Stop(data)).await?;
         Ok(())
     }
 
@@ -399,7 +399,7 @@ impl HubCollector {
     pub async fn start(mut self) -> Result<(), Error> {
         let mut watch_stream = fuchsia_watch::watch_recursive(&self.path);
 
-        while let Some(result) = await!(watch_stream.next()) {
+        while let Some(result) = watch_stream.next().await {
             let event = match result {
                 Err(_) => {
                     continue;
@@ -421,7 +421,7 @@ impl HubCollector {
                             self.add_out_watcher(relative_path);
                         }
                     } else if let Ok(data) = path_to_event_data(&relative_path) {
-                        await!(self.add_component(relative_path, data, ExistingPath(false)))
+                        self.add_component(relative_path, data, ExistingPath(false)).await
                             .unwrap_or_else(|e| {
                                 eprintln!("Error adding component: {:?}", e);
                             });
@@ -433,7 +433,7 @@ impl HubCollector {
                             self.add_out_watcher(relative_path);
                         }
                     } else if let Ok(data) = path_to_event_data(&relative_path) {
-                        await!(self.add_component(relative_path, data, ExistingPath(true)))
+                        self.add_component(relative_path, data, ExistingPath(true)).await
                             .unwrap_or_else(|e| {
                                 eprintln!("Error adding existing component: {:?}", e);
                             });
@@ -441,7 +441,7 @@ impl HubCollector {
                 }
                 PathEvent::Removed(_) => {
                     if let Ok(data) = path_to_event_data(&relative_path) {
-                        await!(self.remove_component(relative_path, data)).unwrap_or_else(|e| {
+                        self.remove_component(relative_path, data).await.unwrap_or_else(|e| {
                             eprintln!("Error removing component: {:?}", e);
                         });
                     }
@@ -537,7 +537,7 @@ mod tests {
             executor.run_singlethreaded(async {
                 let collector = ExtraDataCollector::new();
 
-                await!(collector.clone().collect(path)).unwrap();
+                collector.clone().collect(path).await.unwrap();
 
                 let extra_data = collector.take_data().expect("collector missing data");
                 assert_eq!(1, extra_data.len());
@@ -560,7 +560,7 @@ mod tests {
             });
         });
 
-        await!(fasync::OnSignals::new(&done0, zx::Signals::USER_0)).unwrap();
+        fasync::OnSignals::new(&done0, zx::Signals::USER_0).await.unwrap();
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
@@ -577,7 +577,7 @@ mod tests {
 
         assert_eq!(
             make_existing("my_component.cmx", "10", None),
-            await!(component_events.next()).unwrap()
+            component_events.next().await.unwrap()
         );
 
         fs::create_dir_all(path.join("r/app/1/r/test/2/c/other_component.cmx/11/out")).unwrap();
@@ -588,7 +588,7 @@ mod tests {
                 "11",
                 None
             ),
-            await!(component_events.next()).unwrap()
+            component_events.next().await.unwrap()
         );
 
         fs::remove_dir_all(path.join("r")).unwrap();
@@ -599,32 +599,32 @@ mod tests {
                 "11",
                 None
             ),
-            await!(component_events.next()).unwrap()
+            component_events.next().await.unwrap()
         );
 
         fs::remove_dir_all(path.join("c")).unwrap();
         assert_eq!(
             make_stop("my_component.cmx", "10", Some(HashMap::new())),
-            await!(component_events.next()).unwrap()
+            component_events.next().await.unwrap()
         );
 
         fs::create_dir_all(path.join("r/app/1/c/runner_component.cmx/12/out")).unwrap();
         assert_eq!(
             make_start_with_realm(vec!["app".to_string()], "runner_component.cmx", "12", None),
-            await!(component_events.next()).unwrap()
+            component_events.next().await.unwrap()
         );
 
         fs::create_dir_all(path.join("r/app/1/c/runner_component.cmx/12/c/with_runner.cmx/1"))
             .unwrap();
         assert_eq!(
             make_start_with_realm(vec!["app".to_string()], "with_runner.cmx", "1", None),
-            await!(component_events.next()).unwrap()
+            component_events.next().await.unwrap()
         );
 
         fs::remove_dir_all(&path).unwrap();
         assert_eq!(
             make_stop_with_realm(vec!["app".to_string()], "with_runner.cmx", "1", None),
-            await!(component_events.next()).unwrap()
+            component_events.next().await.unwrap()
         );
         assert_eq!(
             make_stop_with_realm(
@@ -633,7 +633,7 @@ mod tests {
                 "12",
                 Some(HashMap::new())
             ),
-            await!(component_events.next()).unwrap()
+            component_events.next().await.unwrap()
         );
     }
 

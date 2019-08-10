@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "256"]
 
 use {
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Error> {
         .context("Failed to make channel")?;
 
     let (service, event_loop) =
-        await!(service::Vsock::new(dev)).context("Failed to initialize vsock service")?;
+        service::Vsock::new(dev).await.context("Failed to initialize vsock service")?;
 
     let service_clone = service.clone();
     let mut fs = ServiceFs::new();
@@ -49,6 +49,6 @@ async fn main() -> Result<(), Error> {
 
     // Run the event loop until completion. The event loop only terminates
     // with an error.
-    await!(event_loop)?;
+    event_loop.await?;
     Ok(())
 }

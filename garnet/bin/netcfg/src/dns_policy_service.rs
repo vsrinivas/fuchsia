@@ -22,7 +22,7 @@ async fn serve_fidl_requests(
     resolver_admin: fidl_fuchsia_netstack::ResolverAdminProxy,
     stream: DnsPolicyRequestStream,
 ) -> Result<(), fidl::Error> {
-    await!(stream.try_for_each(|req| handle_request(&resolver_admin, req)))
+    stream.try_for_each(|req| handle_request(&resolver_admin, req)).await
 }
 
 async fn handle_request(

@@ -21,7 +21,7 @@ pub async fn run_server(
     mut stream: DiscoverRegistryRequestStream,
 ) -> Result<(), Error> {
     while let Some(request) =
-        await!(stream.try_next()).context("Error running discover registry")?
+        stream.try_next().await.context("Error running discover registry")?
     {
         match request {
             DiscoverRegistryRequest::RegisterModuleOutputWriter { module, request, .. } => {
@@ -78,7 +78,7 @@ mod tests {
         let state = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
         let story_context = state.clone();
         fasync::spawn_local(
-            async move { await!(run_server(story_context, mod_manager, request_stream)) }
+            async move { run_server(story_context, mod_manager, request_stream).await }
                 .unwrap_or_else(|e: Error| eprintln!("error running server {}", e)),
         );
 
@@ -92,7 +92,7 @@ mod tests {
         assert!(client.register_module_output_writer(module, server_end).is_ok());
 
         // Exercise the module output we got
-        assert!(await!(module_output_proxy.write("param-foo", Some("foo"))).is_ok());
+        assert!(module_output_proxy.write("param-foo", Some("foo")).await.is_ok());
 
         // Verify state.
         let expected_entity = ContextEntity::new_test(

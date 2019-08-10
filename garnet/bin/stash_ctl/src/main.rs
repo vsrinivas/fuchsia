@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{err_msg, Error, ResultExt};
 use fidl::endpoints::create_proxy;
@@ -73,7 +73,7 @@ fn main() -> Result<(), Error> {
 
             let resp: Result<(), Error> = executor.run_singlethreaded(async {
                 loop {
-                    let res = await!(list_iterator.get_next())?;
+                    let res = list_iterator.get_next().await?;
                     if res.len() == 0 {
                         return Ok(());
                     }
@@ -88,7 +88,7 @@ fn main() -> Result<(), Error> {
 
             let resp: Result<(), Error> = executor.run_singlethreaded(async {
                 loop {
-                    let res = await!(get_iterator.get_next())?;
+                    let res = get_iterator.get_next().await?;
                     if res.len() == 0 {
                         return Ok(());
                     }

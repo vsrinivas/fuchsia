@@ -140,9 +140,9 @@ mod tests {
         let buf = b"hello world";
         let socket = UdpSocket::bind(&addr).expect("could not create socket");
         let fut = async move {
-            await!(socket.send_to(buf, addr))?;
+            socket.send_to(buf, addr).await?;
             let mut recvbuf = vec![0; 11];
-            let (received, sender) = await!(socket.recv_from(&mut *recvbuf))?;
+            let (received, sender) = socket.recv_from(&mut *recvbuf).await?;
             assert_eq!(addr, sender);
             assert_eq!(received, buf.len());
             assert_eq!(&*buf, &*recvbuf);

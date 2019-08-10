@@ -4,7 +4,7 @@
 
 //! This is the client library for interacting with the Cobalt FIDL service.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![deny(missing_docs)]
 
 pub mod connector;

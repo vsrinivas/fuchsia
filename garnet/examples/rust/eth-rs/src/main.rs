@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
@@ -20,15 +20,15 @@ fn main() -> Result<(), Error> {
     let dev = File::open(path)?;
     let fut = async {
         let client =
-            await!(ethernet::Client::from_file(dev, vmo, ethernet::DEFAULT_BUFFER_SIZE, "eth-rs"))?;
+            ethernet::Client::from_file(dev, vmo, ethernet::DEFAULT_BUFFER_SIZE, "eth-rs").await?;
         println!("created client {:?}", client);
-        println!("info: {:?}", await!(client.info())?);
-        println!("status: {:?}", await!(client.get_status())?);
-        await!(client.start())?;
-        await!(client.tx_listen_start())?;
+        println!("info: {:?}", client.info().await?);
+        println!("status: {:?}", client.get_status().await?);
+        client.start().await?;
+        client.tx_listen_start().await?;
 
         let mut events = client.get_stream();
-        while let Some(evt) = await!(events.try_next())? {
+        while let Some(evt) = events.try_next().await? {
             if let ethernet::Event::Receive(rx, flags) = evt {
                 let mut buf = [0; 64];
                 let r = rx.read(&mut buf);

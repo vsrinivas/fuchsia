@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fidl_fuchsia_modular::*;
@@ -22,7 +22,7 @@ const SERVICE_DIRECTORY: &'static str = "svc";
 /// Returns:
 /// `Ok` once the request stream is closed.
 async fn run_module_resolver(mut stream: ModuleResolverRequestStream) -> Result<(), Error> {
-    while let Some(request) = await!(stream.try_next()).context("Error running module resolver.")? {
+    while let Some(request) = stream.try_next().await.context("Error running module resolver.")? {
         match request {
             ModuleResolverRequest::FindModules { query, responder } => {
                 let index: local_resolver::ModuleActionIndex =
@@ -46,6 +46,6 @@ async fn main() -> Result<(), Error> {
         run_module_resolver(stream).unwrap_or_else(|e| println!("{:?}", e))
     });
 
-    await!(fut);
+    fut.await;
     Ok(())
 }

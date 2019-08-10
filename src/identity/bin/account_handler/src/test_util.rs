@@ -85,8 +85,8 @@ impl FakeAccountHandlerContext {
         &self,
         mut stream: AccountHandlerContextRequestStream,
     ) -> Result<(), fidl::Error> {
-        while let Some(req) = await!(stream.try_next())? {
-            await!(self.handle_request(req))?;
+        while let Some(req) = stream.try_next().await? {
+            self.handle_request(req).await?;
         }
         Ok(())
     }
@@ -110,7 +110,7 @@ pub fn spawn_context_channel(
     let request_stream = server_end.into_stream().unwrap();
     let context_clone = Arc::clone(&context);
     fasync::spawn(async move {
-        await!(context_clone.handle_requests_from_stream(request_stream))
+        context_clone.handle_requests_from_stream(request_stream).await
             .unwrap_or_else(|err| error!("Error handling FakeAccountHandlerContext: {:?}", err))
     });
     client_end
@@ -127,7 +127,7 @@ mod tests {
         let proxy = client_end.into_proxy().unwrap();
         let (_, ap_server_end) = create_endpoints().expect("failed creating channel pair");
         assert_eq!(
-            await!(proxy.get_auth_provider("dummy_auth_provider", ap_server_end)).unwrap(),
+            proxy.get_auth_provider("dummy_auth_provider", ap_server_end).await.unwrap(),
             Status::InternalError
         );
     }

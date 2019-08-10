@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #[cfg(test)]
 use {
     fidl::endpoints,
@@ -19,9 +19,9 @@ async fn test_spawn_local_stream_handler() {
     };
     let proxy: EchoProxy =
         endpoints::spawn_local_stream_handler(f).expect("could not spawn handler");
-    let res = await!(proxy.echo_string(Some("hello world"))).expect("echo failed");
+    let res = proxy.echo_string(Some("hello world")).await.expect("echo failed");
     assert_eq!(res, Some("hello world".to_string()));
-    let res = await!(proxy.echo_string(Some("goodbye world"))).expect("echo failed");
+    let res = proxy.echo_string(Some("goodbye world")).await.expect("echo failed");
     assert_eq!(res, Some("goodbye world".to_string()));
 }
 
@@ -34,8 +34,8 @@ async fn test_spawn_stream_handler() {
         }
     };
     let proxy: EchoProxy = endpoints::spawn_stream_handler(f).expect("could not spawn handler");
-    let res = await!(proxy.echo_string(Some("hello world"))).expect("echo failed");
+    let res = proxy.echo_string(Some("hello world")).await.expect("echo failed");
     assert_eq!(res, Some("hello world".to_string()));
-    let res = await!(proxy.echo_string(Some("goodbye world"))).expect("echo failed");
+    let res = proxy.echo_string(Some("goodbye world")).await.expect("echo failed");
     assert_eq!(res, Some("goodbye world".to_string()));
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 mod test_helpers;
 mod tests;
@@ -55,14 +55,14 @@ fn main() -> Result<(), Error> {
 fn bind_text_tester(mut stream: txt_testing::TextFieldTestSuiteRequestStream) {
     fasync::spawn(async move {
         while let Some(msg) =
-            await!(stream.try_next()).expect("error reading value from IME service request stream")
+            stream.try_next().await.expect("error reading value from IME service request stream")
         {
             match msg {
                 txt_testing::TextFieldTestSuiteRequest::RunTest { field, test_id, responder } => {
-                    let res = await!(run_test(
+                    let res = run_test(
                         field.into_proxy().expect("failed to convert ClientEnd to proxy"),
                         test_id
-                    ));
+                    ).await;
                     let (ok, message) = match res {
                         Ok(()) => (true, format!("passed")),
                         Err(e) => (false, e),
@@ -80,9 +80,9 @@ fn bind_text_tester(mut stream: txt_testing::TextFieldTestSuiteRequestStream) {
 }
 
 async fn run_test(text_field: txt::TextFieldProxy, test_id: u64) -> Result<(), String> {
-    let mut wrapper = await!(TextFieldWrapper::new(text_field)).map_err(|e| format!("{}", e))?;
+    let mut wrapper = TextFieldWrapper::new(text_field).await.map_err(|e| format!("{}", e))?;
     let res = match TEST_FNS.get(test_id as usize) {
-        Some((_test_name, test_fn)) => await!(test_fn(&mut wrapper)),
+        Some((_test_name, test_fn)) => test_fn(&mut wrapper).await,
         None => return Err(format!("unknown test id: {}", test_id)),
     };
     res.map_err(|e| format!("{}", e))

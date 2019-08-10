@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{format_err, Error, ResultExt},
@@ -54,7 +54,7 @@ impl BusConnection {
     }
 
     pub async fn wait_for_client(&mut self, expect: &'static str) -> Result<(), Error> {
-        let _ = await!(self.bus.wait_for_clients(&mut vec![expect].drain(..), 0))?;
+        let _ = self.bus.wait_for_clients(&mut vec![expect].drain(..), 0).await?;
         Ok(())
     }
 
@@ -72,7 +72,7 @@ impl BusConnection {
             },
             _ => futures::future::ok(None),
         });
-        await!(stream.try_next())?;
+        stream.try_next().await?;
         Ok(())
     }
 }
@@ -115,17 +115,17 @@ async fn check_network() -> Result<(), Error> {
     let (netm, netmch) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
     let () = netctx.get_network_manager(netmch)?;
 
-    let net = await!(netm.get_network(NETWORK_NAME))?;
+    let net = netm.get_network(NETWORK_NAME).await?;
     if net == None {
         return Err(format_err!("Could not retrieve network {}.", NETWORK_NAME));
     }
 
-    let ep0 = await!(epm.get_endpoint(EP0_NAME))?;
+    let ep0 = epm.get_endpoint(EP0_NAME).await?;
     if ep0 == None {
         return Err(format_err!("Could not retrieve endpoint {}", EP0_NAME));
     }
 
-    let ep1 = await!(epm.get_endpoint(EP1_NAME))?;
+    let ep1 = epm.get_endpoint(EP1_NAME).await?;
     if ep1 == None {
         return Err(format_err!("Could not retrieve endpoint {}", EP1_NAME));
     }
@@ -136,7 +136,7 @@ async fn check_network() -> Result<(), Error> {
 async fn root_wait_for_children(mut bus: BusConnection) -> Result<(), Error> {
     // wait for three hits on the bus, representing each child test
     for i in 0..3 {
-        let () = await!(bus.wait_for_event(EVENT_CODE))?;
+        let () = bus.wait_for_event(EVENT_CODE).await?;
         fx_log_info!("Got ping from child {}", i);
     }
 
@@ -145,7 +145,7 @@ async fn root_wait_for_children(mut bus: BusConnection) -> Result<(), Error> {
 
 async fn child_publish_on_bus(mut bus: BusConnection) -> Result<(), Error> {
     // wait for root to show up on the bus...
-    let () = await!(bus.wait_for_client("root"))?;
+    let () = bus.wait_for_client("root").await?;
     // ... then publish an event so root knows we were spawned
     let () = bus.publish_code(EVENT_CODE)?;
     Ok(())

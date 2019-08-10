@@ -14,7 +14,7 @@
 //!
 //! TODO: Figure out a better way to run these tests.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{err_msg, format_err, Error, ResultExt},
@@ -71,7 +71,7 @@ async fn main() -> Result<(), Error> {
         fdio::SpawnAction::add_namespace_entry(&pkg_str, fdio::transfer_fd(pkg_dir)?),
     ];
 
-    let root_job = await!(get_root_job())?;
+    let root_job = get_root_job().await?;
     let argv: Vec<CString> =
         args.into_iter().skip(1).map(CString::new).collect::<Result<_, _>>()?;
     let argv_ref: Vec<&CStr> = argv.iter().map(|a| &**a).collect();
@@ -84,7 +84,7 @@ async fn main() -> Result<(), Error> {
 
     // Wait for the process to terminate. We're hosting it's /svc directory, which will go away if
     // we exit before it.
-    await!(fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED))?;
+    fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED).await?;
 
     // Return the same code as the test process, in case it failed.
     let info = process.info()?;
@@ -96,7 +96,7 @@ async fn get_root_job() -> Result<zx::Job, Error> {
     fdio::service_connect("/dev/misc/sysinfo", server_end.into_channel())
         .context("Failed to connect to sysinfo servie")?;
 
-    let (status, job) = await!(proxy.get_root_job())?;
+    let (status, job) = proxy.get_root_job().await?;
     zx::Status::ok(status)?;
     Ok(job.ok_or(err_msg("sysinfo returned OK status but no root job handle!"))?)
 }

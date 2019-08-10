@@ -5,7 +5,7 @@
 //! Triggers a forced fdr by comparing the configured
 //! index against the stored index
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{bail, format_err, Error, ResultExt},
@@ -90,18 +90,18 @@ impl ForcedFDR {
 /// where the library is unable to determine if an FDR is necessary. In
 /// all of these cases, the library will *not* FDR.
 pub async fn perform_fdr_if_necessary() {
-    await!(perform_fdr_if_necessary_impl())
+    perform_fdr_if_necessary_impl().await
         .unwrap_or_else(|err| fx_log_info!(tag: "forced-fdr", "{:?}\n", err))
 }
 
 async fn perform_fdr_if_necessary_impl() -> Result<(), Error> {
     let forced_fdr = ForcedFDR::new().context("Failed to connect to required services")?;
-    await!(run(forced_fdr))
+    run(forced_fdr).await
 }
 
 async fn run(fdr: ForcedFDR) -> Result<(), Error> {
     let current_channel =
-        await!(get_current_channel(&fdr)).context("Failed to get current channel")?;
+        get_current_channel(&fdr).await.context("Failed to get current channel")?;
 
     let channel_indices = get_channel_indices(&fdr).context("Channel indices not available")?;
 
@@ -129,7 +129,7 @@ async fn run(fdr: ForcedFDR) -> Result<(), Error> {
         bail!("FDR not required");
     }
 
-    await!(trigger_fdr(&fdr)).context("Failed to trigger FDR")?;
+    trigger_fdr(&fdr).await.context("Failed to trigger FDR")?;
 
     Ok(())
 }
@@ -146,7 +146,7 @@ fn open_channel_indices_file(fdr: &ForcedFDR) -> Result<File, Error> {
 }
 
 async fn get_current_channel(fdr: &ForcedFDR) -> Result<String, Error> {
-    Ok(await!(fdr.info_proxy.get_channel())?)
+    Ok(fdr.info_proxy.get_channel().await?)
 }
 
 fn get_device_index(fdr: &ForcedFDR) -> Result<i32, Error> {
@@ -164,7 +164,7 @@ fn get_channel_index(channel_indices: &HashMap<String, i32>, channel: &String) -
 
 async fn trigger_fdr(fdr: &ForcedFDR) -> Result<(i32), Error> {
     fx_log_warn!(tag: "forced-fdr", "Triggering FDR. SSH keys will be lost\n");
-    Ok(await!(fdr.factory_reset_proxy.reset())?)
+    Ok(fdr.factory_reset_proxy.reset().await?)
 }
 
 fn write_device_index(fdr: &ForcedFDR, index: i32) -> Result<(), Error> {

@@ -21,14 +21,14 @@ pub async fn command(proxy: SystemProxy, login_override: Option<String>) -> Resu
             let mut settings = SystemSettings::empty();
             settings.mode = Some(extract_login_override(&override_value)?);
 
-            let mutate_result = await!(proxy.set(settings))?;
+            let mutate_result = proxy.set(settings).await?;
             match mutate_result {
                 Ok(()) => output.push_str(&format!("Successfully set to {}", override_value)),
                 Err(err) => output.push_str(&format!("{:?}", err)),
             }
         }
         None => {
-            let setting = await!(proxy.watch())?;
+            let setting = proxy.watch().await?;
 
             match setting {
                 Ok(setting) => {

@@ -259,7 +259,7 @@ mod tests {
         let mut launch_info =
             LaunchInfo { name: "ab\0cd".into(), executable: zx::Vmo::create(1)?, job };
         let (status, process) =
-            await!(launcher.launch(&mut launch_info)).expect("FIDL call to launcher failed");
+            launcher.launch(&mut launch_info).await.expect("FIDL call to launcher failed");
         assert_eq!(zx::Status::from_raw(status), zx::Status::INVALID_ARGS);
         assert_eq!(process, None);
         Ok(())
@@ -274,7 +274,7 @@ mod tests {
         let proxy = builtin.connect_to_service::<EchoMarker>()?;
 
         // But calls to the service should fail, since it doesn't exist.
-        let res = await!(proxy.echo_string(Some("hippos")));
+        let res = proxy.echo_string(Some("hippos")).await;
         let err = res.expect_err("echo_string unexpected succeeded");
         match err {
             fidl::Error::ClientRead(zx::Status::PEER_CLOSED)

@@ -41,18 +41,18 @@ impl SuggestionsService {
         mut stream: SuggestionsRequestStream,
     ) -> Result<(), Error> {
         while let Some(request) =
-            await!(stream.try_next()).context("error running discover context")?
+            stream.try_next().await.context("error running discover context")?
         {
             match request {
                 SuggestionsRequest::GetSuggestions { query, iterator, .. } => {
                     let stream = iterator.into_stream()?;
-                    await!(self.serve_suggestions(query, stream));
+                    self.serve_suggestions(query, stream).await;
                 }
                 SuggestionsRequest::NotifyInteraction { suggestion_id, interaction, .. } => {
                     match interaction {
                         InteractionType::Selected => {
                             let mut manager = self.suggestions_manager.lock();
-                            if let Err(e) = await!(manager.execute(&suggestion_id)) {
+                            if let Err(e) = manager.execute(&suggestion_id).await {
                                 fx_log_err!("Error executing suggestion {}: {}", suggestion_id, e);
                             }
                         }
@@ -71,13 +71,13 @@ impl SuggestionsService {
         let context_store_lock = self.context_store.lock();
         let context = context_store_lock.current().collect::<Vec<&ContextEntity>>();
         let mut manager = self.suggestions_manager.lock();
-        let suggestions = await!(manager.get_suggestions(&query, &context))
+        let suggestions = manager.get_suggestions(&query, &context).await
             .map(|s| s.clone().into())
             .collect::<Vec<Suggestion>>();
         fasync::spawn(
             async move {
                 let mut iter = suggestions.into_iter();
-                while let Some(request) = await!(stream.try_next())? {
+                while let Some(request) = stream.try_next().await? {
                     let SuggestionsIteratorRequest::Next { responder } = request;
                     responder.send(&mut iter.by_ref().take(ITERATOR_CHUNK_SIZE))?;
                 }
@@ -117,7 +117,7 @@ mod tests {
         fasync::spawn_local(
             async move {
                 let mut service = SuggestionsService::new(context_store, suggestions_manager);
-                await!(service.handle_client(request_stream))
+                service.handle_client(request_stream).await
             }
                 .unwrap_or_else(|e: Error| eprintln!("error running server {}", e)),
         );
@@ -132,7 +132,7 @@ mod tests {
         assert!(client.get_suggestions("test", server_end).is_ok());
 
         // TODO: test actual data once implementation is done.
-        assert!(await!(iterator.next())?.is_empty());
+        assert!(iterator.next().await?.is_empty());
 
         Ok(())
     }

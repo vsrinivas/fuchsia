@@ -64,7 +64,7 @@ impl SearchSuggestionsProvider for PackageSuggestionsProvider {
                 fx_log_err!("Failed to connect to index service");
                 e
             })?;
-            let index_response = await!(index_service.fuzzy_search(query)).map_err(|e| {
+            let index_response = index_service.fuzzy_search(query).await.map_err(|e| {
                 fx_log_err!("Fuzzy search error from component index: {:?}", e);
                 e
             })?;
@@ -91,7 +91,7 @@ mod tests {
     async fn test_request() -> Result<(), Error> {
         let package_suggestions_provider = PackageSuggestionsProvider::new();
         let context = vec![];
-        let results = await!(package_suggestions_provider.request("discovermgr", &context))?;
+        let results = package_suggestions_provider.request("discovermgr", &context).await?;
         assert_eq!(results.len(), 2);
         for result in results.into_iter() {
             let title = result.display_info().title.as_ref().unwrap();

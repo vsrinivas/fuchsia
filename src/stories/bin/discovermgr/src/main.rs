@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     crate::{
@@ -58,7 +58,7 @@ enum IncomingServices {
 }
 
 async fn run_lifecycle_server(mut stream: LifecycleRequestStream) -> Result<(), Error> {
-    while let Some(request) = await!(stream.try_next()).context("Error running lifecycle")? {
+    while let Some(request) = stream.try_next().await.context("Error running lifecycle")? {
         match request {
             LifecycleRequest::Terminate { .. } => {
                 std::process::exit(0);
@@ -77,13 +77,13 @@ async fn run_fidl_service(
 ) -> Result<(), Error> {
     match incoming_service_stream {
         IncomingServices::DiscoverRegistry(stream) => {
-            await!(discover_registry::run_server(story_context_store, mod_manager, stream))
+            discover_registry::run_server(story_context_store, mod_manager, stream).await
         }
         IncomingServices::Suggestions(stream) => {
             let mut service = SuggestionsService::new(story_context_store, suggestions_manager);
-            await!(service.handle_client(stream))
+            service.handle_client(stream).await
         }
-        IncomingServices::Lifecycle(stream) => await!(run_lifecycle_server(stream)),
+        IncomingServices::Lifecycle(stream) => run_lifecycle_server(stream).await,
     }
 }
 
@@ -102,14 +102,14 @@ async fn main() -> Result<(), Error> {
     )));
     suggestions_manager.register_suggestions_provider(Box::new(PackageSuggestionsProvider::new()));
 
-    let mut actions = await!(get_cloud_actions()).unwrap_or_else(|e| {
+    let mut actions = get_cloud_actions().await.unwrap_or_else(|e| {
         fx_log_err!("Error fetching cloud actions index: {}", e);
         vec![]
     });
     // If no cloud action, use local action.
     // Note: can't await! in the closure above because async_block! isn't yet ported
     if actions.is_empty() {
-        actions = await!(get_local_actions()).unwrap_or_else(|e| {
+        actions = get_local_actions().await.unwrap_or_else(|e| {
             fx_log_err!("Error fetching local actions index: {}", e);
             vec![]
         });
@@ -142,6 +142,6 @@ async fn main() -> Result<(), Error> {
         .unwrap_or_else(|e| fx_log_err!("{:?}", e))
     });
 
-    await!(fut);
+    fut.await;
     Ok(())
 }

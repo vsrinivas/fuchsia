@@ -7,7 +7,7 @@
 //! an integration test for appmgr, as the example and test are identical. Take care when changing
 //! this file to not accidentally reduce test coverage of appmgr.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use std::{fs, io};
 
@@ -62,7 +62,7 @@ mod tests {
 
         // Connect to CacheControl, clear the cache for the system
         let cache_control = connect_to_service::<systest::CacheControlMarker>()?;
-        await!(cache_control.clear()).context("failed to clear cache")?;
+        cache_control.clear().await.context("failed to clear cache")?;
 
         // Make sure the contents of /cache match what we expect
         assert!(read_dir_paths("/cache")?.is_empty());

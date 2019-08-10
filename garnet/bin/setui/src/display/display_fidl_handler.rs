@@ -25,7 +25,7 @@ pub fn spawn_display_fidl_handler(
     }
 
     fasync::spawn(async move {
-        while let Ok(Some(req)) = await!(stream.try_next()) {
+        while let Ok(Some(req)) = stream.try_next().await {
             // Support future expansion of FIDL
             #[allow(unreachable_patterns)]
             match req {
@@ -65,7 +65,7 @@ pub fn spawn_display_fidl_handler(
                             .unwrap();
                     }
                     if let Ok(Some(SettingResponse::Brightness(info))) =
-                        await!(response_rx).unwrap()
+                        response_rx.await.unwrap()
                     {
                         let mut display_settings = fidl_fuchsia_settings::DisplaySettings::empty();
 

@@ -375,24 +375,24 @@ mod tests {
         // are transmitted at once, and the last write is actually blocked.
         let writes_completed = AtomicUsize::new(0);
         let sender = async {
-            await!(tx.write_entries(&elements[..2]))?;
+            tx.write_entries(&elements[..2]).await?;
             writes_completed.fetch_add(1, Ordering::SeqCst);
-            await!(tx.write_entries(&elements[2..]))?;
+            tx.write_entries(&elements[2..]).await?;
             writes_completed.fetch_add(1, Ordering::SeqCst);
             Ok::<(), zx::Status>(())
         };
 
         // Wait 10 ms, then read the messages from the fifo.
         let receive_future = async {
-            await!(Timer::new(10.millis().after_now()));
-            let entry = await!(rx.read_entry())?;
+            Timer::new(10.millis().after_now()).await;
+            let entry = rx.read_entry().await?;
             assert_eq!(writes_completed.load(Ordering::SeqCst), 1);
             assert_eq!(elements[0], entry.expect("peer closed"));
-            let entry = await!(rx.read_entry())?;
+            let entry = rx.read_entry().await?;
             // At this point, the last write may or may not have
             // been written.
             assert_eq!(elements[1], entry.expect("peer closed"));
-            let entry = await!(rx.read_entry())?;
+            let entry = rx.read_entry().await?;
             assert_eq!(writes_completed.load(Ordering::SeqCst), 2);
             assert_eq!(elements[2], entry.expect("peer closed"));
             Ok::<(), zx::Status>(())
@@ -427,12 +427,12 @@ mod tests {
 
         // Wait 10 ms, then read the messages from the fifo.
         let receive_future = async {
-            await!(Timer::new(10.millis().after_now()));
-            let entry = await!(rx.read_entry())?;
+            Timer::new(10.millis().after_now()).await;
+            let entry = rx.read_entry().await?;
             assert_eq!(elements[0], entry.expect("peer closed"));
-            let entry = await!(rx.read_entry())?;
+            let entry = rx.read_entry().await?;
             assert_eq!(elements[1], entry.expect("peer closed"));
-            let entry = await!(rx.read_entry())?;
+            let entry = rx.read_entry().await?;
             assert_eq!(elements[2], entry.expect("peer closed"));
             Ok::<(), zx::Status>(())
         };

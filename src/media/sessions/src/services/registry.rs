@@ -47,8 +47,8 @@ impl Registry {
     pub async fn serve(mut self, mut request_stream: RegistryRequestStream) -> Result<()> {
         let control_handle = request_stream.control_handle();
         let (mut active_session_subscriber, mut sessions_change_subscriber) = match (
-            await!(self.initialize_active_session_subscriber(control_handle.clone()))?,
-            await!(self.initialize_sessions_change_subscriber(control_handle.clone()))?,
+            self.initialize_active_session_subscriber(control_handle.clone()).await?,
+            self.initialize_sessions_change_subscriber(control_handle.clone()).await?,
         ) {
             (Some(as_sub), Some(sc_sub)) => (as_sub, sc_sub),
             _ => {
@@ -67,8 +67,8 @@ impl Registry {
                             ..
                         } => {
                             let koid = session_id.as_handle_ref().get_koid()?;
-                            if let Some(session) = await!(self.session_list.lock()).get(koid) {
-                                await!(session.connect(session_request))?;
+                            if let Some(session) = self.session_list.lock().await.get(koid) {
+                                session.connect(session_request).await?;
                             }
                         }
                         RegistryRequest::NotifyActiveSessionChangeHandled { .. } => {
@@ -129,7 +129,7 @@ impl Registry {
     ) -> Result<Option<Subscriber>> {
         let mut active_session_subscriber = Subscriber::new(control_handle.clone());
         let should_keep = active_session_subscriber.send(ActiveSession {
-            session_id: await!(self.active_session_queue.lock())
+            session_id: self.active_session_queue.lock().await
                 .active_session()
                 .map(|registration| clone_session_id_handle(registration.id.deref()))
                 .transpose()?,
@@ -147,7 +147,7 @@ impl Registry {
         control_handle: RegistryControlHandle,
     ) -> Result<Option<Subscriber>> {
         let sessions_change_subscriber = Subscriber::new(control_handle);
-        let should_keep: bool = await!(self.session_list.lock())
+        let should_keep: bool = self.session_list.lock().await
             .list()
             .map(|registration| -> Result<SessionsChange> {
                 Ok(SessionsChange {

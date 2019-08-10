@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{format_err, Error, ResultExt};
 use fdio;
@@ -107,7 +107,7 @@ impl Netstack {
             // Safe because we checked the return status above.
             zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),
         );
-        let (err, id) = await!(self.stack.add_ethernet_interface(&topological_path, dev))
+        let (err, id) = self.stack.add_ethernet_interface(&topological_path, dev).await
             .context("error adding device")?;
 
         match err {
@@ -124,17 +124,17 @@ impl Netstack {
     ) -> Result<(), Error> {
         let mut fidl_addr =
             netstack::InterfaceAddress { ip_address: copy_ip(&ip_address), prefix_len };
-        let response = await!(self.stack.add_interface_address(id, &mut fidl_addr))
+        let response = self.stack.add_interface_address(id, &mut fidl_addr).await
             .context("error setting interface address")?;
 
         if let Some(e) = response {
             return Err(format_err!("Error adding interface address {}: {:?}", id, e));
         }
 
-        let response = await!(self.stack.add_forwarding_entry(&mut netstack::ForwardingEntry {
+        let response = self.stack.add_forwarding_entry(&mut netstack::ForwardingEntry {
             subnet: net::Subnet { addr: mask_with_prefix(ip_address, prefix_len), prefix_len },
             destination: netstack::ForwardingDestination::DeviceId(id),
-        }))
+        }).await
         .context("error adding forwarding entry")?;
 
         match response {
@@ -166,12 +166,12 @@ async fn main() -> Result<(), Error> {
     let stack = Netstack::new(&env)?;
     if let Some(eth_path) = options.ethernet {
         // open ethernet device and send to stack.
-        let id = await!(stack.add_ethernet(eth_path))?;
+        let id = stack.add_ethernet(eth_path).await?;
         println!("Created interface with id {}", id);
 
         if let Some(ip_prefix) = options.ip_prefix {
             let (addr, prefix) = parse_ip_addr_and_prefix(&ip_prefix)?;
-            await!(stack.set_ip(id, addr, prefix))?;
+            stack.set_ip(id, addr, prefix).await?;
             println!("Configured interface {} for address: {}", id, ip_prefix);
         }
     }
@@ -189,6 +189,6 @@ async fn main() -> Result<(), Error> {
     // from outside. We want enclosed_runner to keep alive so we will have
     // the test environment alive as well so we can chrealm into it, or just
     // observe netstack3.
-    let () = await!(futures::future::pending());
+    let () = futures::future::pending().await;
     Ok(())
 }

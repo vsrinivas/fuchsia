@@ -30,7 +30,7 @@ impl IntlController {
         let handle_clone = handle.clone();
         fasync::spawn(
             async move {
-                while let Some(command) = await!(ctrl_rx.next()) {
+                while let Some(command) = ctrl_rx.next().await {
                     handle_clone.write().unwrap().process_command(command);
                 }
                 Ok(())
@@ -64,7 +64,7 @@ impl IntlController {
         let proxy = self.proxy.clone();
         fasync::spawn(
             async move {
-                if let Ok(id) = await!(proxy.get_timezone_id()) {
+                if let Ok(id) = proxy.get_timezone_id().await {
                     responder
                         .send(Ok(Some(SettingResponse::Intl(IntlInfo { time_zone_id: id }))))
                         .ok();
@@ -81,7 +81,7 @@ impl IntlController {
         let proxy = self.proxy.clone();
         fasync::spawn(
             async move {
-                if let Ok(true) = await!(proxy.set_timezone(time_zone_id.as_str())) {
+                if let Ok(true) = proxy.set_timezone(time_zone_id.as_str()).await {
                     responder.send(Ok(None)).ok();
                 } else {
                     responder.send(Err(format_err!("set time zone failed"))).ok();

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fidl_fidl_examples_echo::{EchoRequest, EchoRequestStream};
@@ -12,7 +12,7 @@ use futures::prelude::*;
 
 async fn run_echo_server(mut stream: EchoRequestStream, quiet: bool) -> Result<(), Error> {
     while let Some(EchoRequest::EchoString { value, responder }) =
-        await!(stream.try_next()).context("error running echo server")?
+        stream.try_next().await.context("error running echo server")?
     {
         if !quiet {
             println!("Received echo request for string {:?}", value);
@@ -46,6 +46,6 @@ async fn main() -> Result<(), Error> {
             .unwrap_or_else(|e| println!("{:?}", e))
     );
 
-    await!(fut);
+    fut.await;
     Ok(())
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::Error,
@@ -22,9 +22,9 @@ async fn main() -> Result<(), Error> {
     // and that we're connected to its implementation of the service which always
     // returns `42` rather than echoing.
     let echo = connect_to_service::<EchoExposedByParentMarker>()?;
-    assert_eq!(42, await!(echo.echo(1))?);
+    assert_eq!(42, echo.echo(1).await?);
     let echo = connect_to_service::<EchoHiddenByParentMarker>()?;
-    match await!(echo.echo(2)) {
+    match echo.echo(2).await {
         Err(fidl::Error::ClientRead(zx::Status::PEER_CLOSED))
         | Err(fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)) => {}
         Ok(_) => panic!("inner nested component successfully echoed through parent"),

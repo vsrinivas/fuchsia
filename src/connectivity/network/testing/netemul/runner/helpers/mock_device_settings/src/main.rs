@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{format_err, Error};
 use fidl_fuchsia_devicesettings::{
@@ -188,7 +188,7 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc")
         .add_fidl_service(move |stream| spawn_device_settings_server(state.clone(), stream));
     fs.take_and_serve_directory_handle()?;
-    let () = await!(fs.collect());
+    let () = fs.collect().await;
     Ok(())
 }
 
@@ -207,12 +207,12 @@ mod test {
     #[test]
     async fn test_string_key() {
         let manager = client::connect_to_service::<DeviceSettingsManagerMarker>().unwrap();
-        let res = await!(manager.set_string("StringKey", "HelloWorld"))
+        let res = manager.set_string("StringKey", "HelloWorld").await
             .context("can't set string")
             .unwrap();
         assert_eq!(res, true);
         let (val, status) =
-            await!(manager.get_string("StringKey")).context("can't get string").unwrap();
+            manager.get_string("StringKey").await.context("can't get string").unwrap();
         assert_eq!(status, Status::Ok);
         assert_eq!(val, "HelloWorld");
     }
@@ -221,9 +221,9 @@ mod test {
     #[test]
     async fn test_int_key() {
         let manager = client::connect_to_service::<DeviceSettingsManagerMarker>().unwrap();
-        let res = await!(manager.set_integer("IntKey", 1234)).context("can't set int").unwrap();
+        let res = manager.set_integer("IntKey", 1234).await.context("can't set int").unwrap();
         assert_eq!(res, true);
-        let (val, status) = await!(manager.get_integer("IntKey")).context("can't get int").unwrap();
+        let (val, status) = manager.get_integer("IntKey").await.context("can't get int").unwrap();
         assert_eq!(status, Status::Ok);
         assert_eq!(val, 1234);
     }
@@ -234,16 +234,16 @@ mod test {
         let manager = client::connect_to_service::<DeviceSettingsManagerMarker>().unwrap();
         let (watcher_client_end, watcher_server_end) =
             fidl::endpoints::create_endpoints::<DeviceSettingsWatcherMarker>().unwrap();
-        let status = await!(manager.watch("WatchKey", watcher_client_end))
+        let status = manager.watch("WatchKey", watcher_client_end).await
             .context("can't set watch")
             .unwrap();
         assert_eq!(status, Status::Ok);
 
-        let res = await!(manager.set_integer("WatchKey", 3456)).context("can't set int").unwrap();
+        let res = manager.set_integer("WatchKey", 3456).await.context("can't set int").unwrap();
         assert_eq!(res, true);
 
         let (val, status) =
-            await!(manager.get_integer("WatchKey")).context("can't get int").unwrap();
+            manager.get_integer("WatchKey").await.context("can't get int").unwrap();
         assert_eq!(status, Status::Ok);
         assert_eq!(val, 3456);
 
@@ -257,6 +257,6 @@ mod test {
                 }
             });
 
-        await!(wait_watch.try_next()).unwrap();
+        wait_watch.try_next().await.unwrap();
     }
 }

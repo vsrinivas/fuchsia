@@ -101,7 +101,7 @@ impl AuthProviderConnection {
     ) -> Result<(), TokenManagerError> {
         let factory_proxy = self.get_factory_proxy()?;
 
-        match await!(factory_proxy.get_auth_provider(server_end)) {
+        match factory_proxy.get_auth_provider(server_end).await {
             Ok(AuthProviderStatus::Ok) => Ok(()),
             Ok(status) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
                 .with_cause(format_err!("Error getting auth provider: {:?}", status))),
@@ -115,7 +115,7 @@ impl AuthProviderConnection {
     pub async fn get(&self) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError> {
         let (server_chan, client_chan) =
             zx::Channel::create().token_manager_status(Status::UnknownError)?;
-        await!(self.connect(ServerEnd::new(server_chan)))?;
+        self.connect(ServerEnd::new(server_chan)).await?;
         Ok(ClientEnd::new(client_chan))
     }
 }

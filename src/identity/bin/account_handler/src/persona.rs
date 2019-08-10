@@ -99,9 +99,9 @@ impl Persona {
     ) -> Result<(), Error> {
         self.inspect.open_client_channels.add(1);
         scopeguard::defer!(self.inspect.open_client_channels.subtract(1));
-        while let Some(result) = await!(cancel_or(&cancel, stream.try_next())) {
+        while let Some(result) = cancel_or(&cancel, stream.try_next()).await {
             if let Some(request) = result? {
-                await!(self.handle_request(context, request))?;
+                self.handle_request(context, request).await?;
             } else {
                 break;
             }
@@ -136,7 +136,7 @@ impl Persona {
             }
             PersonaRequest::GetTokenManager { application_url, token_manager, responder } => {
                 let response =
-                    await!(self.get_token_manager(context, application_url, token_manager));
+                    self.get_token_manager(context, application_url, token_manager).await;
                 responder.send(response)?;
             }
         }
@@ -176,14 +176,14 @@ impl Persona {
         };
         match token_manager_server_end.into_stream() {
             Ok(stream) => {
-                match await!(self.token_manager.task_group().spawn(|cancel| async move {
-                    await!(token_manager_clone.handle_requests_from_stream(
+                match self.token_manager.task_group().spawn(|cancel| async move {
+                    token_manager_clone.handle_requests_from_stream(
                         &token_manager_context,
                         stream,
                         cancel
-                    ))
+                    ).await
                     .unwrap_or_else(|e| error!("Error handling TokenManager channel {:?}", e))
-                })) {
+                }).await {
                     Err(_) => Status::RemovalInProgress,
                     Ok(()) => Status::Ok,
                 }
@@ -275,16 +275,16 @@ mod tests {
             };
 
             let task_group = TaskGroup::new();
-            await!(task_group.spawn(|cancel| async move {
-                await!(test_object.handle_requests_from_stream(
+            task_group.spawn(|cancel| async move {
+                test_object.handle_requests_from_stream(
                     &persona_context,
                     request_stream,
                     cancel
-                ))
+                ).await
                 .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err));
-            },))
+            },).await
             .expect("Unable to spawn task");
-            await!(test_fn(persona_proxy)).expect("Failed running test fn.")
+            test_fn(persona_proxy).await.expect("Failed running test fn.")
         }
     }
 
@@ -309,39 +309,39 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_auth_state() {
         let mut test = Test::new();
-        await!(test.run(test.create_persona(), |proxy| async move {
+        test.run(test.create_persona(), |proxy| async move {
             assert_eq!(
-                await!(proxy.get_auth_state())?,
+                proxy.get_auth_state().await?,
                 (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
             );
             Ok(())
-        }));
+        }).await;
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_register_auth_listener() {
         let mut test = Test::new();
-        await!(test.run(test.create_persona(), |proxy| async move {
+        test.run(test.create_persona(), |proxy| async move {
             let (auth_listener_client_end, _) = create_endpoints().unwrap();
             assert_eq!(
-                await!(proxy.register_auth_listener(
+                proxy.register_auth_listener(
                     auth_listener_client_end,
                     true, /* include initial state */
                     &mut AuthChangeGranularity { summary_changes: true }
-                ))?,
+                ).await?,
                 Status::InternalError
             );
             Ok(())
-        }));
+        }).await;
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_token_manager() {
         let mut test = Test::new();
-        await!(test.run(test.create_persona(), |proxy| async move {
+        test.run(test.create_persona(), |proxy| async move {
             let (token_manager_client_end, token_manager_server_end) = create_endpoints().unwrap();
             assert_eq!(
-                await!(proxy.get_token_manager(&TEST_APPLICATION_URL, token_manager_server_end))?,
+                proxy.get_token_manager(&TEST_APPLICATION_URL, token_manager_server_end).await?,
                 Status::Ok
             );
 
@@ -349,11 +349,11 @@ mod tests {
             let token_manager_proxy = token_manager_client_end.into_proxy().unwrap();
             let mut app_config = create_dummy_app_config();
             assert_eq!(
-                await!(token_manager_proxy.list_profile_ids(&mut app_config))?,
+                token_manager_proxy.list_profile_ids(&mut app_config).await?,
                 (fidl_fuchsia_auth::Status::Ok, vec![])
             );
 
             Ok(())
-        }));
+        }).await;
     }
 }

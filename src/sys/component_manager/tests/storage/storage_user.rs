@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "128"]
 
 use {
@@ -45,7 +45,7 @@ async fn main() -> Result<(), Error> {
         ServerEnd::new(zx::Channel::from(out_dir_handle)),
     );
     fx_log_info!("storage_user successfully initialized");
-    let _ = await!(out_dir);
+    let _ = out_dir.await;
     fx_log_info!("storage_user exiting");
     Err(format_err!("storage user exiting when it shouldn't"))
 }

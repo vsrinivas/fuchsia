@@ -82,7 +82,7 @@ where
         let event = E::from(TimerEvent { inner: timer_id.clone(), id: next_id });
 
         let timeout = async move {
-            await!(fasync::Timer::new(fasync::Time::from_zx(time.0)));
+            fasync::Timer::new(fasync::Time::from_zx(time.0)).await;
             timer_send.unbounded_send(event).unwrap();
         };
 
@@ -215,9 +215,9 @@ mod tests {
         let mut d = TimerDispatcher::<usize, OuterEvent>::new(snd);
         assert!(d.schedule_timer(1, nanos_from_now(1)).is_none());
         assert!(d.schedule_timer(2, nanos_from_now(2)).is_none());
-        let t1 = await!(rcv.next()).unwrap();
+        let t1 = rcv.next().await.unwrap();
         assert_eq!(d.commit_timer(t1.0).unwrap(), 1);
-        let t2 = await!(rcv.next()).unwrap();
+        let t2 = rcv.next().await.unwrap();
         assert_eq!(d.commit_timer(t2.0).unwrap(), 2);
     }
 
@@ -236,7 +236,7 @@ mod tests {
         assert!(d.schedule_timer(2, time2).is_none());
 
         assert_eq!(d.cancel_timer(&1).unwrap(), time1);
-        let t = await!(rcv.next()).unwrap();
+        let t = rcv.next().await.unwrap();
         assert_eq!(d.cancel_timer(&2).unwrap(), time2);
         // only event 2 should come out:
         assert_eq!(t.0.inner, 2);
@@ -246,7 +246,7 @@ mod tests {
         // schedule another timer and wait for it, just to prove that timer 1's
         // event never gets fired:
         assert!(d.schedule_timer(3, nanos_from_now(5)).is_none());
-        let t = await!(rcv.next()).unwrap();
+        let t = rcv.next().await.unwrap();
         assert_eq!(t.0.inner, 3);
     }
 
@@ -267,7 +267,7 @@ mod tests {
         assert!(d.schedule_timer(2, time2).is_none());
 
         assert_eq!(d.schedule_timer(1, resched1).unwrap(), time1);
-        let t = await!(rcv.next()).unwrap();
+        let t = rcv.next().await.unwrap();
         assert_eq!(d.schedule_timer(2, resched2).unwrap(), time2);
         // only event 2 should come out:
         assert_eq!(t.0.inner, 2);
@@ -275,12 +275,12 @@ mod tests {
         assert!(d.commit_timer(t.0).is_none());
 
         // now we can go at it again and get the rescheduled timer 1...:
-        let t = await!(rcv.next()).unwrap();
+        let t = rcv.next().await.unwrap();
         assert_eq!(t.0.inner, 1);
         assert_eq!(d.commit_timer(t.0).unwrap(), 1);
 
         // ... and timer 2:
-        let t = await!(rcv.next()).unwrap();
+        let t = rcv.next().await.unwrap();
         assert_eq!(t.0.inner, 2);
         assert_eq!(d.commit_timer(t.0).unwrap(), 2);
     }
@@ -302,7 +302,7 @@ mod tests {
         assert_eq!(d.timers.len(), 1);
 
         // get the timer and assert that it is the timer with id == 2.
-        let t = await!(rcv.next()).unwrap();
+        let t = rcv.next().await.unwrap();
         assert_eq!(t.0.inner, 2);
         assert_eq!(d.commit_timer(t.0).unwrap(), 2);
     }

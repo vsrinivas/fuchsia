@@ -67,8 +67,8 @@ impl AccountHandler {
         &self,
         mut stream: AccountHandlerControlRequestStream,
     ) -> Result<(), Error> {
-        while let Some(req) = await!(stream.try_next())? {
-            await!(self.handle_request(req))?;
+        while let Some(req) = stream.try_next().await? {
+            self.handle_request(req).await?;
         }
         Ok(())
     }
@@ -81,15 +81,15 @@ impl AccountHandler {
     ) -> Result<(), fidl::Error> {
         match req {
             AccountHandlerControlRequest::CreateAccount { context, id, responder } => {
-                let response = await!(self.create_account(id.into(), context));
+                let response = self.create_account(id.into(), context).await;
                 responder.send(response)?;
             }
             AccountHandlerControlRequest::LoadAccount { context, id, responder } => {
-                let response = await!(self.load_account(id.into(), context));
+                let response = self.load_account(id.into(), context).await;
                 responder.send(response)?;
             }
             AccountHandlerControlRequest::RemoveAccount { force, responder } => {
-                let response = await!(self.remove_account(force));
+                let response = self.remove_account(force).await;
                 responder.send(response)?;
             }
             AccountHandlerControlRequest::GetAccount {
@@ -97,11 +97,11 @@ impl AccountHandler {
                 account,
                 responder,
             } => {
-                let response = await!(self.get_account(auth_context_provider, account));
+                let response = self.get_account(auth_context_provider, account).await;
                 responder.send(response)?;
             }
             AccountHandlerControlRequest::Terminate { control_handle } => {
-                await!(self.terminate());
+                self.terminate().await;
                 control_handle.shutdown();
             }
         }
@@ -127,12 +127,12 @@ impl AccountHandler {
 
         // The function evaluation is front loaded because await is not allowed while holding the
         // lock.
-        let account_result = await!(construct_account_fn(
+        let account_result = construct_account_fn(
             id,
             self.lifetime.clone(),
             context_proxy,
             self.inspect.get_node()
-        ));
+        ).await;
         let mut account_lock = self.account.write();
         match *account_lock {
             Lifecycle::Uninitialized => {
@@ -151,7 +151,7 @@ impl AccountHandler {
         id: LocalAccountId,
         context: ClientEnd<AccountHandlerContextMarker>,
     ) -> Status {
-        match await!(self.init_account(Account::create, id, context)) {
+        match self.init_account(Account::create, id, context).await {
             Ok(()) => Status::Ok,
             Err(err) => {
                 warn!("Failed creating Fuchsia account: {:?}", err);
@@ -166,7 +166,7 @@ impl AccountHandler {
         id: LocalAccountId,
         context: ClientEnd<AccountHandlerContextMarker>,
     ) -> Status {
-        match await!(self.init_account(Account::load, id, context)) {
+        match self.init_account(Account::load, id, context).await {
             Ok(()) => Status::Ok,
             Err(err) => {
                 warn!("Failed loading Fuchsia account: {:?}", err);
@@ -196,7 +196,7 @@ impl AccountHandler {
         };
         // TODO(AUTH-212): After this point, error recovery might include putting the account back
         // in the lock.
-        if let Err(TaskGroupError::AlreadyCancelled) = await!(account_arc.task_group().cancel()) {
+        if let Err(TaskGroupError::AlreadyCancelled) = account_arc.task_group().cancel().await {
             warn!("Task group was already cancelled prior to account removal.");
         }
         // At this point we have exclusive access to the account, so we move it out of the Arc to
@@ -250,10 +250,10 @@ impl AccountHandler {
         };
 
         let account_arc_clone = Arc::clone(&account_arc);
-        match await!(account_arc.task_group().spawn(|cancel| async move {
-            await!(account_arc_clone.handle_requests_from_stream(&context, stream, cancel))
+        match account_arc.task_group().spawn(|cancel| async move {
+            account_arc_clone.handle_requests_from_stream(&context, stream, cancel).await
                 .unwrap_or_else(|e| error!("Error handling Account channel {:?}", e));
-        })) {
+        }).await {
             // Since AccountHandler serves only one channel of requests in serial, this is an
             // inconsistent state rather than a conflict.
             Err(_) => Status::InternalError,
@@ -268,7 +268,7 @@ impl AccountHandler {
             std::mem::replace(&mut *account_lock, Lifecycle::Finished)
         };
         if let Lifecycle::Initialized { account } = old_lifecycle {
-            if await!(account.task_group().cancel()).is_err() {
+            if account.task_group().cancel().await.is_err() {
                 warn!("Task group cancelled but account is still initialized");
             }
         }
@@ -313,7 +313,7 @@ mod tests {
         let request_stream = server_end.into_stream().unwrap();
 
         fasync::spawn(async move {
-            await!(test_object.handle_requests_from_stream(request_stream))
+            test_object.handle_requests_from_stream(request_stream).await
                 .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err));
 
             // Check that no more objects are lurking in inspect
@@ -334,7 +334,7 @@ mod tests {
                 let (_, account_server_end) = create_endpoints().unwrap();
                 let (acp_client_end, _) = create_endpoints().unwrap();
                 assert_eq!(
-                    await!(proxy.get_account(acp_client_end, account_server_end))?,
+                    proxy.get_account(acp_client_end, account_server_end).await?,
                     Status::NotFound
                 );
                 Ok(())
@@ -350,17 +350,17 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy, ahc_client_end| async move {
                 let status =
-                    await!(proxy
-                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()))?;
+                    proxy
+                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()).await?;
                 assert_eq!(status, Status::Ok);
 
                 let fake_context_2 = Arc::new(FakeAccountHandlerContext::new());
                 let ahc_client_end_2 = spawn_context_channel(fake_context_2.clone());
                 assert_eq!(
-                    await!(proxy.create_account(
+                    proxy.create_account(
                         ahc_client_end_2,
                         TEST_ACCOUNT_ID.clone().as_mut().into()
-                    ))?,
+                    ).await?,
                     Status::InternalError
                 );
                 Ok(())
@@ -376,8 +376,8 @@ mod tests {
             location.to_persistent_lifetime(),
             Arc::clone(&inspector),
             |account_handler_proxy, ahc_client_end| async move {
-                let status = await!(account_handler_proxy
-                    .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()))?;
+                let status = account_handler_proxy
+                    .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()).await?;
                 assert_eq!(status, Status::Ok, "wtf");
 
                 assert_inspect_tree!(inspector, root: {
@@ -391,7 +391,7 @@ mod tests {
                 let (account_client_end, account_server_end) = create_endpoints().unwrap();
                 let (acp_client_end, _) = create_endpoints().unwrap();
                 assert_eq!(
-                    await!(account_handler_proxy.get_account(acp_client_end, account_server_end))?,
+                    account_handler_proxy.get_account(acp_client_end, account_server_end).await?,
                     Status::Ok
                 );
 
@@ -406,7 +406,7 @@ mod tests {
                 // The account channel should now be usable.
                 let account_proxy = account_client_end.into_proxy().unwrap();
                 assert_eq!(
-                    await!(account_proxy.get_auth_state())?,
+                    account_proxy.get_auth_state().await?,
                     (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
                 );
                 Ok(())
@@ -423,8 +423,8 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy, ahc_client_end| async move {
                 let status =
-                    await!(proxy
-                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()))?;
+                    proxy
+                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()).await?;
                 assert_eq!(status, Status::Ok);
                 Ok(())
             },
@@ -434,9 +434,9 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy, ahc_client_end| async move {
                 assert_eq!(
-                    await!(
+                    
                         proxy.load_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
-                    )?,
+                    .await?,
                     Status::Ok
                 );
                 Ok(())
@@ -452,7 +452,7 @@ mod tests {
             |proxy, ahc_client_end| async move {
                 let mut expected_id = TEST_ACCOUNT_ID.clone();
                 assert_eq!(
-                    await!(proxy.load_account(ahc_client_end, expected_id.as_mut().into()))?,
+                    proxy.load_account(ahc_client_end, expected_id.as_mut().into()).await?,
                     Status::InternalError
                 );
                 Ok(())
@@ -475,8 +475,8 @@ mod tests {
                 });
 
                 assert_eq!(
-                    await!(proxy
-                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()))?,
+                    proxy
+                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()).await?,
                     Status::Ok
                 );
                 assert_inspect_tree!(inspector, root: {
@@ -496,14 +496,14 @@ mod tests {
                 // Keep an open channel to an account.
                 let (account_client_end, account_server_end) = create_endpoints().unwrap();
                 let (acp_client_end, _) = create_endpoints().unwrap();
-                await!(proxy.get_account(acp_client_end, account_server_end)).unwrap();
+                proxy.get_account(acp_client_end, account_server_end).await.unwrap();
                 let account_proxy = account_client_end.into_proxy().unwrap();
 
                 // Simple check that non-force account removal returns error due to not implemented.
-                assert_eq!(await!(proxy.remove_account(FORCE_REMOVE_OFF))?, Status::InternalError);
+                assert_eq!(proxy.remove_account(FORCE_REMOVE_OFF).await?, Status::InternalError);
 
                 // Make sure remove_account() can make progress with an open channel.
-                assert_eq!(await!(proxy.remove_account(FORCE_REMOVE_ON))?, Status::Ok);
+                assert_eq!(proxy.remove_account(FORCE_REMOVE_ON).await?, Status::Ok);
 
                 assert_inspect_tree!(inspector, root: {
                     account_handler: {
@@ -512,10 +512,10 @@ mod tests {
                 });
 
                 // Make sure that the channel is in fact closed.
-                assert!(await!(account_proxy.get_auth_state()).is_err());
+                assert!(account_proxy.get_auth_state().await.is_err());
 
                 // We cannot remove twice.
-                assert_eq!(await!(proxy.remove_account(FORCE_REMOVE_ON))?, Status::InvalidRequest);
+                assert_eq!(proxy.remove_account(FORCE_REMOVE_ON).await?, Status::InvalidRequest);
                 Ok(())
             },
         );
@@ -528,7 +528,7 @@ mod tests {
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
             |proxy, _| async move {
-                assert_eq!(await!(proxy.remove_account(FORCE_REMOVE_ON))?, Status::InvalidRequest);
+                assert_eq!(proxy.remove_account(FORCE_REMOVE_ON).await?, Status::InvalidRequest);
                 Ok(())
             },
         );
@@ -542,30 +542,30 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy, ahc_client_end| async move {
                 let status =
-                    await!(proxy
-                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()))?;
+                    proxy
+                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()).await?;
                 assert_eq!(status, Status::Ok);
-                assert_eq!(await!(proxy.remove_account(FORCE_REMOVE_ON))?, Status::Ok);
+                assert_eq!(proxy.remove_account(FORCE_REMOVE_ON).await?, Status::Ok);
                 assert_eq!(
-                    await!(proxy.remove_account(FORCE_REMOVE_ON))?,
+                    proxy.remove_account(FORCE_REMOVE_ON).await?,
                     Status::InvalidRequest // You can only remove once
                 );
 
                 // Keep an open channel to an account.
                 let (account_client_end, account_server_end) = create_endpoints().unwrap();
                 let (acp_client_end, _) = create_endpoints().unwrap();
-                await!(proxy.get_account(acp_client_end, account_server_end)).unwrap();
+                proxy.get_account(acp_client_end, account_server_end).await.unwrap();
                 let account_proxy = account_client_end.into_proxy().unwrap();
 
                 // Terminate the handler
                 assert!(proxy.terminate().is_ok());
 
                 // Check that further operations fail
-                assert!(await!(proxy.remove_account(FORCE_REMOVE_ON)).is_err());
+                assert!(proxy.remove_account(FORCE_REMOVE_ON).await.is_err());
                 assert!(proxy.terminate().is_err());
 
                 // Make sure that the channel closed too.
-                assert!(await!(account_proxy.get_auth_state()).is_err());
+                assert!(account_proxy.get_auth_state().await.is_err());
                 Ok(())
             },
         );
@@ -579,10 +579,10 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy, ahc_client_end| async move {
                 assert_eq!(
-                    await!(proxy.load_account(
+                    proxy.load_account(
                         ahc_client_end,
                         &mut FidlLocalAccountId { id: WRONG_ACCOUNT_ID }
-                    ))?,
+                    ).await?,
                     Status::NotFound
                 );
                 Ok(())

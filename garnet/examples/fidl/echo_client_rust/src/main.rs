@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fidl_fidl_examples_echo::EchoMarker;
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Error> {
     let echo = app.connect_to_service::<EchoMarker>()
        .context("Failed to connect to echo service")?;
 
-    let res = await!(echo.echo_string(Some("hello world!")))?;
+    let res = echo.echo_string(Some("hello world!")).await?;
     println!("response: {:?}", res);
     Ok(())
 }

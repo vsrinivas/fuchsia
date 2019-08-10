@@ -171,7 +171,7 @@ mod tests {
         );
 
         // Resolve known scheme that returns success.
-        let component = await!(registry.resolve("foo://url")).unwrap();
+        let component = registry.resolve("foo://url").await.unwrap();
         assert_eq!("foo://resolved", component.resolved_url.unwrap());
 
         // Resolve a different scheme that produces an error.
@@ -179,7 +179,7 @@ mod tests {
             Err(ResolverError::component_not_available("bar://url", format_err!("not available")));
         assert_eq!(
             format!("{:?}", expected_res),
-            format!("{:?}", await!(registry.resolve("bar://url")))
+            format!("{:?}", registry.resolve("bar://url").await)
         );
 
         // Resolve an unknown scheme
@@ -187,12 +187,12 @@ mod tests {
             Err(ResolverError::SchemeNotRegistered);
         assert_eq!(
             format!("{:?}", expected_res),
-            format!("{:?}", await!(registry.resolve("unknown://url"))),
+            format!("{:?}", registry.resolve("unknown://url").await),
         );
 
         // Resolve an URL lacking a scheme.
         let expected_res: Result<fsys::Component, ResolverError> =
             Err(ResolverError::url_parse_error("xxx", url::ParseError::RelativeUrlWithoutBase));
-        assert_eq!(format!("{:?}", expected_res), format!("{:?}", await!(registry.resolve("xxx"))),);
+        assert_eq!(format!("{:?}", expected_res), format!("{:?}", registry.resolve("xxx").await),);
     }
 }

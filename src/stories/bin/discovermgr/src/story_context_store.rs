@@ -64,8 +64,8 @@ impl ContextEntity {
         contributors: HashSet<Contributor>,
     ) -> Result<Self, Error> {
         use std::iter::FromIterator;
-        let reference = await!(entity.get_reference())?;
-        let types = HashSet::from_iter(await!(entity.get_types())?.into_iter());
+        let reference = entity.get_reference().await?;
+        let types = HashSet::from_iter(entity.get_types().await?.into_iter());
         Ok(ContextEntity { reference, types, contributors, entity: Some(entity) })
     }
 
@@ -86,7 +86,7 @@ impl ContextEntity {
         if self.entity.is_none() {
             return None;
         }
-        let data = await!(self.entity.as_ref().unwrap().get_data(entity_type)).ok()?;
+        let data = self.entity.as_ref().unwrap().get_data(entity_type).await.ok()?;
         data.and_then(|buffer| {
             utils::vmo_buffer_to_string(buffer)
                 .map_err(|e| {
@@ -148,7 +148,7 @@ impl StoryContextStore {
         // Get the entity proxy client.
         let (entity_proxy, server_end) = fidl::endpoints::create_proxy::<EntityMarker>()?;
         self.entity_resolver.resolve_entity(reference, server_end)?;
-        let types = await!(entity_proxy.get_types())?;
+        let types = entity_proxy.get_types().await?;
 
         // Remove previous contributions for this contributor.
         self.clear_contributor(&contributor);
@@ -230,7 +230,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn contribute() -> Result<(), Error> {
         let mut story_context_store = StoryContextStore::new(test_entity_resolver());
-        await!(init_context_store(&mut story_context_store))?;
+        init_context_store(&mut story_context_store).await?;
 
         // Verify context store state
         let expected_context_entities = hashmap! {
@@ -249,7 +249,7 @@ mod tests {
         assert_eq!(story_context_store.context_entities, expected_context_entities);
 
         // Contributing the same entity shouldn't have an effect.
-        await!(story_context_store.contribute("story1", "mod-a", "param-foo", "foo"))?;
+        story_context_store.contribute("story1", "mod-a", "param-foo", "foo").await?;
         assert_eq!(story_context_store.context_entities, expected_context_entities);
 
         Ok(())
@@ -258,7 +258,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn withdraw() -> Result<(), Error> {
         let mut story_context_store = StoryContextStore::new(test_entity_resolver());
-        await!(init_context_store(&mut story_context_store))?;
+        init_context_store(&mut story_context_store).await?;
 
         // Remove a few of them
         story_context_store.withdraw("story2", "mod-b", "param-baz");
@@ -279,7 +279,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn withdraw_all() -> Result<(), Error> {
         let mut story_context_store = StoryContextStore::new(test_entity_resolver());
-        await!(init_context_store(&mut story_context_store))?;
+        init_context_store(&mut story_context_store).await?;
 
         // Withdraw all context for one of the mods
         story_context_store.withdraw_all("story1", "mod-a");
@@ -303,18 +303,18 @@ mod tests {
         let (entity_proxy, server_end) = fidl::endpoints::create_proxy::<EntityMarker>()?;
         entity_resolver.resolve_entity("foo", server_end)?;
 
-        let context_entity = await!(ContextEntity::from_entity(entity_proxy, hashset!()))?;
+        let context_entity = ContextEntity::from_entity(entity_proxy, hashset!()).await?;
         // Verify successful case
         assert_eq!(
-            await!(context_entity.get_string_data(vec!["a", "b", "c"], "foo-type")),
+            context_entity.get_string_data(vec!["a", "b", "c"], "foo-type").await,
             Some("1".to_string())
         );
 
         // Verify case with path that leads to an object, not a string node.
-        assert_eq!(await!(context_entity.get_string_data(vec!["a", "b"], "foo-type")), None);
+        assert_eq!(context_entity.get_string_data(vec!["a", "b"], "foo-type").await, None);
 
         // Verify case with unknown path
-        assert_eq!(await!(context_entity.get_string_data(vec!["a", "x", "c"], "foo-type")), None);
+        assert_eq!(context_entity.get_string_data(vec!["a", "x", "c"], "foo-type").await, None);
 
         Ok(())
     }
@@ -337,9 +337,9 @@ mod tests {
     }
 
     async fn init_context_store(story_context_store: &mut StoryContextStore) -> Result<(), Error> {
-        await!(story_context_store.contribute("story1", "mod-a", "param-foo", "foo"))?;
-        await!(story_context_store.contribute("story2", "mod-b", "param-baz", "foo"))?;
-        await!(story_context_store.contribute("story1", "mod-a", "param-bar", "bar"))?;
+        story_context_store.contribute("story1", "mod-a", "param-foo", "foo").await?;
+        story_context_store.contribute("story2", "mod-b", "param-baz", "foo").await?;
+        story_context_store.contribute("story1", "mod-a", "param-bar", "bar").await?;
         Ok(())
     }
 

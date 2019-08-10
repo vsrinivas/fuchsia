@@ -1,4 +1,4 @@
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::Error, fuchsia_async as fasync, fuchsia_syslog as syslog, setui_client_lib::*,
@@ -11,7 +11,7 @@ async fn main() -> Result<(), Error> {
 
     let command = SettingClient::from_args();
 
-    await!(run_command(command))?;
+    run_command(command).await?;
 
     Ok(())
 }

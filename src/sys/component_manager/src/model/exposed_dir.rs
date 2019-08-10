@@ -44,7 +44,7 @@ impl ExposedDir {
         let future = Abortable::new(controlled, abort_registration);
         fasync::spawn(async move {
             // Drop unused return value.
-            let _ = await!(future);
+            let _ = future.await;
         });
         Ok(ExposedDir { root_dir: controller, dir_abort_handles })
     }

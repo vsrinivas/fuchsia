@@ -96,9 +96,9 @@ pub struct AudioEncoderHashTest {
 
 impl AudioEncoderTestCase {
     pub async fn run(self) -> Result<()> {
-        await!(self.test_termination())?;
-        await!(self.test_timestamps())?;
-        await!(self.test_hashes())
+        self.test_termination().await?;
+        self.test_timestamps().await?;
+        self.test_hashes().await
     }
 
     async fn test_hashes(self) -> Result<()> {
@@ -144,7 +144,7 @@ impl AudioEncoderTestCase {
             stream_processor_factory: Rc::new(EncoderFactory),
         };
 
-        await!(spec.run())
+        spec.run().await
     }
 
     async fn test_termination(&self) -> Result<()> {
@@ -167,7 +167,7 @@ impl AudioEncoderTestCase {
             stream_processor_factory: Rc::new(EncoderFactory),
         };
 
-        await!(spec.run())
+        spec.run().await
     }
 
     async fn test_timestamps(&self) -> Result<()> {
@@ -224,7 +224,7 @@ impl AudioEncoderTestCase {
             stream_processor_factory: Rc::new(EncoderFactory),
         };
 
-        await!(spec.run())
+        spec.run().await
     }
 
     fn create_test_stream(

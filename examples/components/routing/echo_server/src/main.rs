@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, ResultExt},
@@ -16,7 +16,7 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::spawn_local(
-            async move { await!(run_echo_service(stream)).expect("failed to run echo service") },
+            async move { run_echo_service(stream).await.expect("failed to run echo service") },
         );
     });
     fs.take_and_serve_directory_handle()?;
@@ -25,7 +25,7 @@ fn main() -> Result<(), Error> {
 }
 
 async fn run_echo_service(mut stream: fecho::EchoRequestStream) -> Result<(), Error> {
-    while let Some(event) = await!(stream.try_next())? {
+    while let Some(event) = stream.try_next().await? {
         let fecho::EchoRequest::EchoString { value, responder } = event;
         responder.send(value.as_ref().map(|s| &**s)).context("failed to send")?;
     }

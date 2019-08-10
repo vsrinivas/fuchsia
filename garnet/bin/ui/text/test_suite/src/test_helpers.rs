@@ -26,7 +26,7 @@ impl TextFieldWrapper {
     /// Creates a new TextFieldWrapper from a proxy. This is a async function and can fail, since it
     /// waits for the initial state update to come from the TextField.
     pub async fn new(proxy: txt::TextFieldProxy) -> Result<TextFieldWrapper, Error> {
-        let state = await!(get_update(&proxy)).context("Receiving initial state.")?;
+        let state = get_update(&proxy).await.context("Receiving initial state.")?;
         Ok(TextFieldWrapper {
             proxy,
             current_point_ids: all_point_ids_for_state(&state),
@@ -37,7 +37,7 @@ impl TextFieldWrapper {
 
     /// Returns a cloned version of the latest state from the server. To update this, either use one
     /// of the editing methods on the TextFieldWrapper, or if making calls on the proxy directly,
-    /// call `await!(text_field_wrapper.wait_for_update())` after you expect a new state update from
+    /// call `text_field_wrapper.wait_for_update().await` after you expect a new state update from
     /// the TextField.
     pub fn state(&self) -> TextFieldState {
         self.last_state.clone()
@@ -51,7 +51,7 @@ impl TextFieldWrapper {
     pub async fn wait_for_update(&mut self) -> Result<(), Error> {
         self.defunct_point_ids =
             &self.defunct_point_ids | &all_point_ids_for_state(&self.last_state);
-        self.last_state = match await!(get_update(&self.proxy)) {
+        self.last_state = match get_update(&self.proxy).await {
             Ok(v) => v,
             Err(e) => bail!(format!("{}", e)),
         };
@@ -87,10 +87,10 @@ impl TextFieldWrapper {
         let rev = self.last_state.revision;
         self.proxy.begin_edit(rev)?;
         self.proxy.replace(&mut self.last_state.selection.range, contents)?;
-        if await!(self.proxy.commit_edit())? != txt::Error::Ok {
+        if self.proxy.commit_edit().await? != txt::Error::Ok {
             bail!("Expected commit_edit to succeed");
         }
-        await!(self.wait_for_update())?;
+        self.wait_for_update().await?;
         Ok(())
     }
 
@@ -105,7 +105,7 @@ impl TextFieldWrapper {
         offset: i64,
     ) -> Result<txt::Position, Error> {
         let (new_point, err) =
-            await!(self.proxy.position_offset(&mut point, offset, self.last_state.revision))?;
+            self.proxy.position_offset(&mut point, offset, self.last_state.revision).await?;
         if err != txt::Error::Ok {
             bail!(format!("Expected point_offset request to succeed, returned {:?} instead", err));
         }
@@ -122,7 +122,7 @@ impl TextFieldWrapper {
         range: &'a mut txt::Range,
     ) -> Result<(String, txt::Position), Error> {
         let (contents, actual_start, err) =
-            await!(self.proxy.contents(range, self.last_state.revision))?;
+            self.proxy.contents(range, self.last_state.revision).await?;
         if err != txt::Error::Ok {
             bail!(format!("Expected contents request to succeed, returned {:?} instead", err));
         }
@@ -131,7 +131,7 @@ impl TextFieldWrapper {
 
     /// A convenience function that returns the distance of a range.
     pub async fn distance<'a>(&'a mut self, range: &'a mut txt::Range) -> Result<i64, Error> {
-        let (length, err) = await!(self.proxy.distance(range, self.last_state.revision))?;
+        let (length, err) = self.proxy.distance(range, self.last_state.revision).await?;
         if err != txt::Error::Ok {
             bail!(format!("Expected length request to succeed, returned {:?} instead", err));
         }
@@ -150,7 +150,7 @@ impl TextFieldWrapper {
             start: txt::Position { id: range.start.id },
             end: txt::Position { id: range.end.id },
         };
-        let length = await!(self.distance(&mut new_range))?;
+        let length = self.distance(&mut new_range).await?;
         if length != expected_result {
             bail!(format!(
                 "Expected distance request to return {:?}, instead got {:?}",
@@ -163,7 +163,7 @@ impl TextFieldWrapper {
             start: txt::Position { id: range.end.id },
             end: txt::Position { id: range.start.id },
         };
-        let length = await!(self.distance(&mut new_range))?;
+        let length = self.distance(&mut new_range).await?;
         if length != inverted_expected_result {
             bail!(format!(
                 "Expected distance request to return {:?}, instead got {:?}",
@@ -185,7 +185,7 @@ impl TextFieldWrapper {
             start: txt::Position { id: range.start.id },
             end: txt::Position { id: range.end.id },
         };
-        let (contents, _true_start_point) = await!(self.contents(&mut new_range))?;
+        let (contents, _true_start_point) = self.contents(&mut new_range).await?;
         if contents != expected_result {
             bail!(format!(
                 "Expected contents request to return {:?}, instead got {:?}",
@@ -197,7 +197,7 @@ impl TextFieldWrapper {
             start: txt::Position { id: range.end.id },
             end: txt::Position { id: range.start.id },
         };
-        let (contents, _true_start_point) = await!(self.contents(&mut new_range))?;
+        let (contents, _true_start_point) = self.contents(&mut new_range).await?;
         if contents != expected_result {
             bail!(format!(
                 "Expected contents request to return {:?}, instead got {:?}",
@@ -214,7 +214,7 @@ async fn get_update(text_field: &txt::TextFieldProxy) -> Result<TextFieldState, 
         .try_next()
         .map_err(|e| err_msg(format!("{}", e)))
         .on_timeout(*crate::TEST_TIMEOUT, || Err(err_msg("Waiting for on_update event timed out")));
-    let msg = await!(msg_future)?.ok_or(err_msg("TextMgr event stream unexpectedly closed"))?;
+    let msg = msg_future.await?.ok_or(err_msg("TextMgr event stream unexpectedly closed"))?;
     match msg {
         txt::TextFieldEvent::OnUpdate { state, .. } => Ok(state.try_into()?),
     }
@@ -265,25 +265,25 @@ mod test {
             .expect("Should have created stream and control handle");
         control_handle.send_on_update(default_state(0).into()).expect("Should have sent update");
         fuchsia_async::spawn(async {
-            let mut wrapper = await!(TextFieldWrapper::new(proxy))
+            let mut wrapper = TextFieldWrapper::new(proxy).await
                 .expect("Should have created text field wrapper");
-            await!(wrapper.simple_insert("meow!")).expect("Should have inserted successfully");
+            wrapper.simple_insert("meow!").await.expect("Should have inserted successfully");
         });
-        let (revision, _ch) = await!(stream.try_next())
+        let (revision, _ch) = stream.try_next().await
             .expect("Waiting for message failed")
             .expect("Should have sent message")
             .into_begin_edit()
             .expect("Expected BeginEdit");
         assert_eq!(revision, 4);
 
-        let (_range, new_text, _ch) = await!(stream.try_next())
+        let (_range, new_text, _ch) = stream.try_next().await
             .expect("Waiting for message failed")
             .expect("Should have sent message")
             .into_replace()
             .expect("Expected Replace");
         assert_eq!(new_text, "meow!");
 
-        let _responder = await!(stream.try_next())
+        let _responder = stream.try_next().await
             .expect("Waiting for message failed")
             .expect("Should have sent message")
             .into_commit_edit()
@@ -300,19 +300,19 @@ mod test {
             .expect("Should have created stream and control handle");
         control_handle.send_on_update(default_state(0).into()).expect("Should have sent update");
         let mut wrapper =
-            await!(TextFieldWrapper::new(proxy)).expect("Should have created text field wrapper");
+            TextFieldWrapper::new(proxy).await.expect("Should have created text field wrapper");
 
         // send a valid update and make sure it works as expected
         let mut state = default_state(10);
         control_handle.send_on_update(state.clone().into()).expect("Should have sent update");
-        let res = await!(wrapper.wait_for_update());
+        let res = wrapper.wait_for_update().await;
         assert!(res.is_ok());
         assert_eq!(wrapper.state().document.start.id, 10);
 
         // send an update with the same points but an incremented revision
         state.revision += 1;
         control_handle.send_on_update(state.into()).expect("Should have sent update");
-        let res = await!(wrapper.wait_for_update());
+        let res = wrapper.wait_for_update().await;
         assert!(res.is_err()); // should fail since some points were reused
     }
 }

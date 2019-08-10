@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(await_macro, async_await)]
+#![feature(async_await)]
 
 use {
     failure::{err_msg, format_err, Error},
@@ -126,7 +126,7 @@ pub fn open_file_in_namespace(path: &str, flags: u32) -> Result<FileProxy, Error
 pub async fn read_file(file: &FileProxy) -> Result<String, Error> {
     let mut out = String::new();
     loop {
-        let (status, bytes) = await!(file.read(MAX_BUF)).map_err(|e| Error::from(e))?;
+        let (status, bytes) = file.read(MAX_BUF).await.map_err(|e| Error::from(e))?;
         let status = zx::Status::from_raw(status);
         if status != zx::Status::OK {
             return Err(format_err!("failed to read file: {}", status));
@@ -201,7 +201,7 @@ mod tests {
                 .expect("could not open tmp dir");
         let path = Path::new("myfile");
         let file = open_file(&dir, &path, OPEN_RIGHT_READABLE).expect("could not open file");
-        let contents = await!(read_file(&file)).expect("could not read file");
+        let contents = read_file(&file).await.expect("could not read file");
         assert_eq!(&contents, &data, "File contents did not match");
     }
 
@@ -249,7 +249,7 @@ mod tests {
             ServerEnd::new(example_dir_service.into_channel()),
         );
         fasync::spawn(async move {
-            let _ = await!(example_dir);
+            let _ = example_dir.await;
         });
 
         for (file_name, flags, should_succeed) in vec![
@@ -264,7 +264,7 @@ mod tests {
             ("write_only", OPEN_RIGHT_WRITABLE, true),
         ] {
             let file_proxy = open_file(&example_dir_proxy, &Path::new(file_name), flags)?;
-            match (should_succeed, await!(file_proxy.describe())) {
+            match (should_succeed, file_proxy.describe().await) {
                 (true, Ok(_)) => (),
                 (false, Err(_)) => continue,
                 (true, Err(e)) => {
@@ -275,13 +275,13 @@ mod tests {
                 }
             }
             if flags & OPEN_RIGHT_READABLE != 0 {
-                assert_eq!(file_name, await!(read_file(&file_proxy)).expect("failed to read file"));
+                assert_eq!(file_name, read_file(&file_proxy).await.expect("failed to read file"));
             }
             if flags & OPEN_RIGHT_WRITABLE != 0 {
-                let (s, _) = await!(file_proxy.write(&mut b"write_only".to_vec().into_iter()))?;
+                let (s, _) = file_proxy.write(&mut b"write_only".to_vec().into_iter()).await?;
                 assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
             }
-            assert_eq!(zx::Status::OK, zx::Status::from_raw(await!(file_proxy.close())?));
+            assert_eq!(zx::Status::OK, zx::Status::from_raw(file_proxy.close().await?));
         }
         Ok(())
     }
@@ -309,7 +309,7 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
         )?;
 
-        let (s, _) = await!(file.write(&mut data.as_bytes().to_vec().into_iter()))?;
+        let (s, _) = file.write(&mut data.as_bytes().to_vec().into_iter()).await?;
         assert_eq!(zx::Status::OK, zx::Status::from_raw(s), "writing to the file failed");
 
         let contents = std::fs::read_to_string(tempdir.path().join(path).join(file_name))?;

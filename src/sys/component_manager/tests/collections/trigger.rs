@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 /// This program hosts the `Trigger` service, which echoes the command-line arguments when invoked.
 
@@ -19,7 +19,7 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::spawn_local(async move {
-            await!(run_trigger_service(stream)).expect("failed to run trigger service")
+            run_trigger_service(stream).await.expect("failed to run trigger service")
         });
     });
     fs.take_and_serve_directory_handle()?;
@@ -30,11 +30,11 @@ fn main() -> Result<(), Error> {
 async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) -> Result<(), Error> {
     let echo =
         client::connect_to_service::<fecho::EchoMarker>().context("error connecting to echo")?;
-    while let Some(event) = await!(stream.try_next())? {
+    while let Some(event) = stream.try_next().await? {
         let ftest::TriggerRequest::Run { responder } = event;
         let args: Vec<_> = std::env::args().collect();
         let echo_str = args[1..].join(" ");
-        let out = await!(echo.echo_string(Some(&echo_str))).context("echo_string failed")?;
+        let out = echo.echo_string(Some(&echo_str)).await.context("echo_string failed")?;
         let out = out.ok_or(format_err!("empty result"))?;
         println!("{}", out);
         responder.send().context("failed to send")?;

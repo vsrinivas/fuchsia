@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use carnelian::{
     set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
@@ -63,7 +63,7 @@ impl SpinningSquareAppAssistant {
             async move {
                 let mut stream = EchoRequestStream::from_channel(channel);
                 while let Some(EchoRequest::EchoString { value, responder }) =
-                    await!(stream.try_next()).context("error running echo server")?
+                    stream.try_next().await.context("error running echo server")?
                 {
                     if !quiet {
                         println!("Spinning Square received echo request for string {:?}", value);

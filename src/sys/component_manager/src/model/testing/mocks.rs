@@ -76,7 +76,7 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
                             ServerEnd::new(server_end.into_channel());
                         let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
                         while let Some(EchoRequest::EchoString { value, responder }) =
-                            await!(stream.try_next()).unwrap()
+                            stream.try_next().await.unwrap()
                         {
                             responder.send(value.as_ref().map(|s| &**s)).unwrap();
                         }
@@ -90,7 +90,7 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
                         .expect("Failed to add 'hello' entry");
                     sub_dir.open(flags, mode, &mut relative_path.split("/"), server_end);
                     fasync::spawn(async move {
-                        let _ = await!(sub_dir);
+                        let _ = sub_dir.await;
                     });
                 }
             }
@@ -165,8 +165,8 @@ impl MockRunner {
         if self.failing_urls.contains(&resolved_url) {
             return Err(RunnerError::component_launch_error(resolved_url, format_err!("ouch")));
         }
-        await!(self.urls_run.lock()).push(resolved_url.clone());
-        await!(self.namespaces.lock()).insert(resolved_url.clone(), start_info.ns.unwrap());
+        self.urls_run.lock().await.push(resolved_url.clone());
+        self.namespaces.lock().await.insert(resolved_url.clone(), start_info.ns.unwrap());
         // If no host_fn was provided, then start_info.outgoing_dir will be
         // automatically closed once it goes out of scope at the end of this
         // function.
@@ -202,7 +202,7 @@ impl FrameworkServiceHost for MockFrameworkServiceHost {
         stream: fsys::RealmRequestStream,
     ) -> BoxFuture<Result<(), FrameworkServiceError>> {
         Box::pin(async move {
-            await!(self.do_serve_realm_service(realm, stream))
+            self.do_serve_realm_service(realm, stream).await
                 .expect(&format!("serving {} failed", REALM_SERVICE.to_string()));
             Ok(())
         })
@@ -219,10 +219,10 @@ impl MockFrameworkServiceHost {
         realm: Arc<Realm>,
         mut stream: fsys::RealmRequestStream,
     ) -> Result<(), Error> {
-        while let Some(request) = await!(stream.try_next())? {
+        while let Some(request) = stream.try_next().await? {
             match request {
                 fsys::RealmRequest::BindChild { responder, .. } => {
-                    await!(self.bind_calls.lock()).push(
+                    self.bind_calls.lock().await.push(
                         realm
                             .abs_moniker
                             .path()

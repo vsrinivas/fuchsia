@@ -25,8 +25,8 @@ impl SessionContext {
         &self,
         mut stream: SessionContextRequestStream,
     ) -> Result<(), fidl::Error> {
-        while let Some(req) = await!(stream.try_next())? {
-            await!(self.handle_request(req)).unwrap_or_else(|err| {
+        while let Some(req) = stream.try_next().await? {
+            self.handle_request(req).await.unwrap_or_else(|err| {
                 fx_log_warn!("Error handling SessionContextRequest: {:?}", err);
             });
         }

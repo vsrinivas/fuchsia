@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 // NOTE: The comments that have [START/END ...] in them are used to identify code snippets that
 // appear in the documentation.  Please be aware that changes in these blocks will affect the
@@ -39,7 +39,7 @@ mod hello_tests {
     #[fasync::run_until_stalled(test)]
     async fn my_test() {
         let some_future = async { 4 };
-        assert_eq!(await!(some_future), 4);
+        assert_eq!(some_future.await, 4);
     }
     // [END async_test]
 

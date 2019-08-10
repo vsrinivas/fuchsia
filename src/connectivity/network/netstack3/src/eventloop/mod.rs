@@ -178,14 +178,14 @@ impl EthernetSetupWorker {
         fasync::spawn_local(
             async move {
                 let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
-                let eth_client = await!(eth::Client::new(
+                let eth_client = eth::Client::new(
                     self.dev,
                     vmo,
                     eth::DEFAULT_BUFFER_SIZE,
                     "recovery-ns",
-                ))?;
-                let info = await!(eth_client.info())?;
-                await!(eth_client.start())?;
+                ).await?;
+                let info = eth_client.info().await?;
+                eth_client.start().await?;
                 let eth_device_event = Event::EthSetupEvent(EthernetDeviceReady {
                     path: self.path,
                     client: eth_client,
@@ -217,7 +217,7 @@ impl EthernetWorker {
         let id = self.id;
         fasync::spawn_local(
             async move {
-                while let Some(evt) = await!(events.try_next())? {
+                while let Some(evt) = events.try_next().await? {
                     sender.unbounded_send(Event::EthEvent((id, evt)));
                 }
                 Ok(())
@@ -318,10 +318,10 @@ impl EventLoop {
                 }
             }
             Some(Event::FidlStackEvent(req)) => {
-                await!(self.handle_fidl_stack_request(req));
+                self.handle_fidl_stack_request(req).await;
             }
             Some(Event::FidlSocketProviderEvent(req)) => {
-                await!(self.handle_fidl_socket_provider_request(req));
+                self.handle_fidl_socket_provider_request(req).await;
             }
             Some(Event::FidlSocketControlEvent((sock, req))) => {
                 sock.lock().unwrap().handle_request(self, req);
@@ -332,7 +332,7 @@ impl EventLoop {
                 // acks the message, and prevents the device from sending more status changed
                 // messages.
                 if let Some(device) = self.ctx.dispatcher().get_device_info(id) {
-                    if let Ok(status) = await!(device.client().get_status()) {
+                    if let Ok(status) = device.client().get_status().await {
                         info!("device {:?} status changed to: {:?}", id, status);
                         #[cfg(test)]
                         self.ctx
@@ -368,9 +368,9 @@ impl EventLoop {
         let mut buf = [0; 2048];
         let mut fut = Some(fut);
         loop {
-            match await!(futures::future::select(self.event_recv.next(), fut.take().unwrap())) {
+            match futures::future::select(self.event_recv.next(), fut.take().unwrap()).await {
                 future::Either::Left((evt, f)) => {
-                    await!(self.handle_event(&mut buf, evt))?;
+                    self.handle_event(&mut buf, evt).await?;
                     fut = Some(f);
                 }
                 future::Either::Right((result, _)) => break Ok(result),
@@ -382,8 +382,8 @@ impl EventLoop {
     pub async fn run(mut self) -> Result<(), Error> {
         let mut buf = [0; 2048];
         loop {
-            let evt = await!(self.event_recv.next());
-            await!(self.handle_event(&mut buf, evt))?;
+            let evt = self.event_recv.next().await;
+            self.handle_event(&mut buf, evt).await?;
         }
         Ok(())
     }
@@ -444,10 +444,10 @@ impl EventLoop {
                 );
             }
             StackRequest::ListInterfaces { responder } => {
-                responder.send(&mut await!(self.fidl_list_interfaces()).iter_mut());
+                responder.send(&mut self.fidl_list_interfaces().await.iter_mut());
             }
             StackRequest::GetInterfaceInfo { id, responder } => {
-                let (mut info, mut error) = match (await!(self.fidl_get_interface_info(id))) {
+                let (mut info, mut error) = match (self.fidl_get_interface_info(id).await) {
                     Ok(info) => (Some(info), None),
                     Err(error) => (None, Some(error)),
                 };
@@ -458,7 +458,7 @@ impl EventLoop {
             }
             StackRequest::EnableInterface { id, responder } => {
                 responder.send(
-                    await!(self.fidl_enable_interface(id))
+                    self.fidl_enable_interface(id).await
                         .err()
                         .as_mut()
                         .map(fidl::encoding::OutOfLine),
@@ -542,8 +542,8 @@ impl EventLoop {
         let mut devices = vec![];
         for device in self.ctx.dispatcher().devices.iter_devices() {
             // TODO(wesleyac): Cache info and status
-            let info = await!(device.client().info());
-            let status = await!(device.client().get_status());
+            let info = device.client().info().await;
+            let status = device.client().get_status().await;
             let is_active = device.is_active();
             let mut addresses = vec![];
             if let Some(core_id) = device.core_id() {
@@ -594,9 +594,9 @@ impl EventLoop {
         let device =
             self.ctx.dispatcher().get_device_info(id).ok_or(stack_fidl_error!(NotFound))?;
         // TODO(wesleyac): Cache info and status
-        let info = await!(device.client().info()).map_err(|_| stack_fidl_error!(Internal))?;
+        let info = device.client().info().await.map_err(|_| stack_fidl_error!(Internal))?;
         let status =
-            await!(device.client().get_status()).map_err(|_| stack_fidl_error!(Internal))?;
+            device.client().get_status().await.map_err(|_| stack_fidl_error!(Internal))?;
         let is_active = device.is_active();
         let mut addresses = vec![];
         if let Some(core_id) = device.core_id() {
@@ -634,7 +634,7 @@ impl EventLoop {
     async fn fidl_enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         let (state, disp) = self.ctx.state_and_dispatcher();
         let device = disp.get_device_info(id).ok_or(stack_fidl_error!(NotFound))?;
-        let info = await!(device.client().info()).map_err(|_| stack_fidl_error!(Internal))?;
+        let info = device.client().info().await.map_err(|_| stack_fidl_error!(Internal))?;
         // TODO(rheacock, NET-2140): Handle core and driver state in two stages: add device to the
         // core to get an id, then reach into the driver to get updated info before triggering the
         // core to allow traffic on the interface.

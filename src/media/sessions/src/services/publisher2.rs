@@ -43,11 +43,11 @@ impl Publisher {
     }
 
     pub async fn serve(mut self, mut request_stream: PublisherRequestStream) -> Result<()> {
-        while let Some(request) = await!(request_stream.try_next()).context("Publisher requests")? {
+        while let Some(request) = request_stream.try_next().await.context("Publisher requests")? {
             match request {
                 PublisherRequest::PublishPlayer { player, registration, .. } => {
                     match NewPlayer::new(player, registration) {
-                        Ok(new_player) => await!(self.player_sink.send(new_player))?,
+                        Ok(new_player) => self.player_sink.send(new_player).await?,
                         Err(e) => {
                             eprintln!("A request to publish a player was invalid: {:?}", e);
                         }

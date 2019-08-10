@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{format_err, Error, ResultExt},
@@ -13,7 +13,7 @@ use {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let echo = connect_to_service::<fecho::EchoMarker>().context("error connecting to echo")?;
-    let out = await!(echo.echo_string(Some("Hippos rule!"))).context("echo_string failed")?;
+    let out = echo.echo_string(Some("Hippos rule!")).await.context("echo_string failed")?;
     println!("{}", out.ok_or(format_err!("empty result"))?);
     Ok(())
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, ResultExt},
@@ -112,18 +112,18 @@ impl Server {
         &mut self,
         listener: PropertyProviderControlHandle,
     ) -> PropertyProviderListenerKey {
-        await!(self.0.listeners.lock().map(|mut listeners| listeners.add(listener)))
+        self.0.listeners.lock().map(|mut listeners| listeners.add(listener)).await
     }
 
     /// Remove a registered listener by key.
     async fn remove_listener(&mut self, key: PropertyProviderListenerKey) {
-        await!(self.0.listeners.lock().map(|mut listeners| listeners.remove(key)))
+        self.0.listeners.lock().map(|mut listeners| listeners.remove(key)).await
     }
 
     /// Send `OnChange` event to registered listeners of `PropertyProvider`.
     async fn notify_listeners(&mut self) {
         fx_log_verbose!("Notifying listeners");
-        await!(self.0.listeners.lock().map(|mut listeners| listeners.notify()));
+        self.0.listeners.lock().map(|mut listeners| listeners.notify()).await;
         fx_log_verbose!("Notified listeners");
     }
 
@@ -131,9 +131,9 @@ impl Server {
     /// (`PropertyProvider`, `PropertyManager`).
     async fn run(&mut self, fs: ServiceFs<ServiceObjLocal<'static, Service>>) {
         let self_ = Rc::new(self.clone());
-        await!(fs.for_each_concurrent(None, move |service| {
+        fs.for_each_concurrent(None, move |service| {
             self_.clone().handle_service_stream(service)
-        }));
+        }).await;
         fx_log_verbose!("Registered services");
     }
 
@@ -141,8 +141,8 @@ impl Server {
         fx_log_verbose!("handle_service_stream: {:#?}", service);
         let mut self_ = self.as_ref().clone();
         match service {
-            Service::Provider(stream) => await!(self_.run_provider(stream)).unwrap_or_default(),
-            Service::Manager(stream) => await!(self_.run_manager(stream)).unwrap_or_default(),
+            Service::Provider(stream) => self_.run_provider(stream).await.unwrap_or_default(),
+            Service::Manager(stream) => self_.run_manager(stream).await.unwrap_or_default(),
         }
     }
 
@@ -151,10 +151,10 @@ impl Server {
         &mut self,
         mut stream: PropertyProviderRequestStream,
     ) -> Result<(), Error> {
-        let listener_key = await!(self.add_listener(stream.control_handle().clone()));
+        let listener_key = self.add_listener(stream.control_handle().clone()).await;
 
         while let Some(PropertyProviderRequest::GetProfile { responder }) =
-            await!(stream.try_next()).context("Error running property provider server")?
+            stream.try_next().await.context("Error running property provider server")?
         {
             {
                 fx_log_verbose!("Received profile get request");
@@ -180,7 +180,7 @@ impl Server {
         }
 
         // Don't leak listeners after they disconnect.
-        await!(self.remove_listener(listener_key));
+        self.remove_listener(listener_key).await;
 
         Ok(())
     }
@@ -188,14 +188,14 @@ impl Server {
     /// Handle `PropertyManager` requests as an infinite stream.
     async fn run_manager(&mut self, mut stream: PropertyManagerRequestStream) -> Result<(), Error> {
         while let Some(PropertyManagerRequest::SetProfile { intl_profile, responder }) =
-            await!(stream.try_next()).context("Error running property manager server")?
+            stream.try_next().await.context("Error running property manager server")?
         {
             fx_log_verbose!("Received profile set request: {:#?}", &intl_profile);
             let changed = self.set_profile(intl_profile);
             responder.send().context("Error sending response")?;
             fx_log_verbose!("Sent profile set response");
             if changed {
-                await!(self.notify_listeners());
+                self.notify_listeners().await;
             }
         }
         Ok(())
@@ -236,7 +236,7 @@ async fn main() -> Result<(), Error> {
 
     let mut server = Server::new(None);
     fx_log_info!("Starting server...");
-    await!(server.run(fs));
+    server.run(fs).await;
     Ok(())
 }
 
@@ -301,21 +301,21 @@ mod test {
             .connect_to_service::<PropertyProviderMarker>()
             .context("Failed to connect to intl PropertyProvider service")?;
 
-        let initial_profile = await!(property_provider.get_profile())?;
+        let initial_profile = property_provider.get_profile().await?;
         assert_eq!(initial_profile, *PROFILE_EMPTY);
 
         let mut event_stream: PropertyProviderEventStream = property_provider.take_event_stream();
 
-        await!(property_manager.set_profile(PROFILE_A.clone()))?;
+        property_manager.set_profile(PROFILE_A.clone()).await?;
         let event_a_msg = "Failed to get event for PROFILE_A";
-        await!(event_stream.next()).expect(event_a_msg).expect(event_a_msg);
-        let actual = await!(property_provider.get_profile())?;
+        event_stream.next().await.expect(event_a_msg).expect(event_a_msg);
+        let actual = property_provider.get_profile().await?;
         assert_eq!(actual, *PROFILE_A);
 
-        await!(property_manager.set_profile(PROFILE_B.clone()))?;
+        property_manager.set_profile(PROFILE_B.clone()).await?;
         let event_b_msg = "Failed to get event for PROFILE_B";
-        await!(event_stream.next()).expect(event_b_msg).expect(event_b_msg);
-        let actual = await!(property_provider.get_profile())?;
+        event_stream.next().await.expect(event_b_msg).expect(event_b_msg);
+        let actual = property_provider.get_profile().await?;
         assert_eq!(actual, *PROFILE_B);
 
         Ok(())

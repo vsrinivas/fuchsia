@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "128"]
 
 use {
@@ -25,7 +25,7 @@ async fn main() -> Result<(), Error> {
 
     let (child_data_proxy, server_end) = create_proxy::<fio::DirectoryMarker>()?;
     let mut child_ref = fsys::ChildRef { name: "storage_user".to_string(), collection: None };
-    await!(realm_proxy.bind_child(&mut child_ref, server_end))?
+    realm_proxy.bind_child(&mut child_ref, server_end).await?
         .map_err(|e| format_err!("failed to bind: {:?}", e))?;
     let child_data_proxy = io_util::open_directory(
         &child_data_proxy,
@@ -43,14 +43,14 @@ async fn main() -> Result<(), Error> {
         &PathBuf::from(file_name),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
     )?;
-    let (s, _) = await!(file.write(&mut file_contents.as_bytes().to_vec().into_iter()))?;
+    let (s, _) = file.write(&mut file_contents.as_bytes().to_vec().into_iter()).await?;
     assert_eq!(zx::Status::OK, zx::Status::from_raw(s), "writing to the file failed");
 
     fx_log_info!("successfully wrote to file \"hippo\" in child's outgoing directory");
 
     let (memfs_proxy, server_end) = create_proxy::<fio::DirectoryMarker>()?;
     let mut child_ref = fsys::ChildRef { name: "memfs".to_string(), collection: None };
-    await!(realm_proxy.bind_child(&mut child_ref, server_end))?
+    realm_proxy.bind_child(&mut child_ref, server_end).await?
         .map_err(|e| format_err!("failed to bind: {:?}", e))?;
     let memfs_proxy = io_util::open_directory(
         &memfs_proxy,
@@ -65,7 +65,7 @@ async fn main() -> Result<(), Error> {
         &PathBuf::from("storage_user/data/hippo"),
         OPEN_RIGHT_READABLE,
     )?;
-    let read_contents = await!(io_util::read_file(&file_proxy))?;
+    let read_contents = io_util::read_file(&file_proxy).await?;
 
     fx_log_info!("successfully read back contents of file from memfs directly");
     assert_eq!(read_contents, file_contents, "file contents did not match what was written");

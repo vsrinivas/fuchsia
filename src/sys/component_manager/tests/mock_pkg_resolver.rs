@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::Error,
@@ -31,12 +31,12 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |stream| {
         let packages_to_mock = packages_to_mock.clone();
         fasync::spawn_local(async move {
-            await!(run_resolver_service(stream, packages_to_mock))
+            run_resolver_service(stream, packages_to_mock).await
                 .expect("failed to run resolver service")
         });
     });
     fs.take_and_serve_directory_handle()?;
-    await!(fs.collect::<()>());
+    fs.collect::<()>().await;
     Ok(())
 }
 
@@ -45,9 +45,9 @@ async fn run_resolver_service(
     packages_to_mock: Vec<String>,
 ) -> Result<(), Error> {
     fx_log_info!("running mock resolver service");
-    while let Some(event) = await!(stream.try_next())? {
+    while let Some(event) = stream.try_next().await? {
         let fpkg::PackageResolverRequest::Resolve { package_url, dir, responder, .. } = event;
-        let status = await!(resolve(package_url, dir, packages_to_mock.clone()));
+        let status = resolve(package_url, dir, packages_to_mock.clone()).await;
         responder.send(Status::from(status).into_raw())?;
         if let Err(s) = status {
             fx_log_err!("request failed: {}", s);

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "512"]
 
 #[macro_use]
@@ -101,5 +101,5 @@ async fn main() {
         );
     server.take_and_serve_directory_handle().expect("To serve Media Session services");
 
-    await!(server.collect::<()>());
+    server.collect::<()>().await;
 }

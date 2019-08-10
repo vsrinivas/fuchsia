@@ -137,14 +137,14 @@ pub async fn load_module_facet(component_url: &str) -> Result<ModuleFacet, Error
     let loader =
         connect_to_service::<fsys::LoaderMarker>().context("Error connecting to loader.")?;
 
-    let loader_result = await!(loader.load_url(&component_url))
+    let loader_result = loader.load_url(&component_url).await
         .context(format!("Could not load package: {:?}", component_url))?;
 
     let package: fsys::Package = *loader_result.ok_or_else(|| {
         err_msg(format!("Loader result did not contain package: {:?}", component_url))
     })?;
 
-    let cmx_file_contents: String = await!(read_cmx_file(package))?;
+    let cmx_file_contents: String = read_cmx_file(package).await?;
     let component_manifest: ComponentManifest = serde_json::from_str(&cmx_file_contents)?;
 
     let facets = component_manifest.facets.unwrap_or_else(|| Facets { module: None });
@@ -193,5 +193,5 @@ async fn read_cmx_file(package: fsys::Package) -> Result<String, Error> {
     )
     .context("Could not open cmx file for package.")?;
 
-    await!(io_util::read_file(&cmx_file))
+    io_util::read_file(&cmx_file).await
 }

@@ -73,7 +73,7 @@ impl dyn FrameworkServiceHost {
                 .expect("could not convert channel into stream");
             fasync::spawn(async move {
                 if let Err(e) =
-                    await!(framework_services.serve_realm_service(model.clone(), realm, stream))
+                    framework_services.serve_realm_service(model.clone(), realm, stream).await
                 {
                     // TODO: Set an epitaph to indicate this was an unexpected error.
                     warn!("serve_realm failed: {}", e);

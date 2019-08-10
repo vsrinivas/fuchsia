@@ -15,7 +15,7 @@
 
 #![deny(missing_docs)]
 #![feature(async_await)]
-#![feature(await_macro)]
+#![feature()]
 
 #[allow(bad_style)]
 mod ramdevice_sys;
@@ -104,7 +104,7 @@ mod tests {
             fasync::Channel::from_channel(device).expect("failed to convert to fasync channel");
         let proxy = NodeProxy::new(fasync_channel);
         executor.run_singlethreaded(async move {
-            let info = await!(proxy.describe()).expect("failed to get node info");
+            let info = proxy.describe().await.expect("failed to get node info");
             if let NodeInfo::Device(_) = info {
                 println!("device!");
             } else {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, ResultExt},
@@ -68,23 +68,23 @@ async fn main() -> Result<(), Error> {
     fasync::spawn(fs.for_each_concurrent(None, |req| {
         async {
             match req {
-                Services::Exposed(stream) => await!(echo_exposed_server(stream)),
-                Services::Hidden(stream) => await!(echo_hidden_server(stream)),
+                Services::Exposed(stream) => echo_exposed_server(stream).await,
+                Services::Hidden(stream) => echo_hidden_server(stream).await,
             }
         }
     }));
 
     // verify sibling is running by connecting directly to its service
     let multiply_by_two = sibling.connect_to_service::<EchoExposedBySiblingMarker>()?;
-    assert_eq!(14, await!(multiply_by_two.echo(7))?);
+    assert_eq!(14, multiply_by_two.echo(7).await?);
 
     // verify sibling is running by connecting to its service through the nested environment
     let multiply_by_two = env.connect_to_service::<EchoExposedBySiblingMarker>()?;
-    assert_eq!(14, await!(multiply_by_two.echo(7))?);
+    assert_eq!(14, multiply_by_two.echo(7).await?);
 
     // wait for middle component to exit
     let mut component_stream = child_app.controller().take_event_stream();
-    match await!(component_stream.next())
+    match component_stream.next().await
         .expect("component event stream ended before termination event")?
     {
         ComponentControllerEvent::OnDirectoryReady {} => {

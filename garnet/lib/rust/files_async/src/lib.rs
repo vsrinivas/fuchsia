@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::Error;
 use fidl_fuchsia_io::{DirectoryProxy, MAX_BUF};
@@ -65,7 +65,7 @@ pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Er
 
     // Prime directory queue with immediate descendants.
     {
-        for entry in await!(readdir(dir))?.into_iter() {
+        for entry in readdir(dir).await?.into_iter() {
             if entry.is_dir() {
                 directories.push_back(entry)
             } else {
@@ -82,7 +82,7 @@ pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Er
         dir.open(flags, 0, &entry.name, subdir_server_end)?;
         let subdir = DirectoryProxy::new(subdir.into_channel().unwrap());
 
-        let subentries = await!(readdir(&subdir))?;
+        let subentries = readdir(&subdir).await?;
 
         // Emit empty directories as a single entry.
         if subentries.is_empty() {
@@ -113,7 +113,7 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
 
     let mut entries = vec![];
     loop {
-        let (status, buf) = await!(dir.read_dirents(MAX_BUF))?;
+        let (status, buf) = dir.read_dirents(MAX_BUF).await?;
         zx::Status::ok(status)?;
 
         if buf.is_empty() {

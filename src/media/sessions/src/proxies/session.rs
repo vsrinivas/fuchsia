@@ -65,30 +65,30 @@ impl Session {
             cancel_signal,
         };
         fasync::spawn_local(async move {
-            while let Ok(Some(event)) = await!(event_stream.try_next()) {
+            while let Ok(Some(event)) = event_stream.try_next().await {
                 if is_active_status(&event) && registration.is_local {
-                    let ref mut queue = await!(active_session_queue.lock());
+                    let ref mut queue = active_session_queue.lock().await;
                     let active_session_changed = queue.promote_session(registration.clone());
                     if active_session_changed {
-                        await!(active_session_sink.send(queue.active_session()));
+                        active_session_sink.send(queue.active_session()).await;
                     }
                 }
-                await!(state.lock()).deref_mut().update(&event);
-                await!(event_sender.send(Clonable(event)));
+                state.lock().await.deref_mut().update(&event);
+                event_sender.send(Clonable(event)).await;
             }
-            await!(session_list.lock()).deref_mut().remove(registration.koid);
-            await!(active_session_queue.lock()).deref_mut().remove_session(&registration);
+            session_list.lock().await.deref_mut().remove(registration.koid);
+            active_session_queue.lock().await.deref_mut().remove_session(&registration);
             collection_event_sink
                 .send((registration.clone(), SessionCollectionEvent::Removed))
                 .await;
-            await!(cancel_signaller.send(()));
+            cancel_signaller.send(()).await;
         });
         Ok(session)
     }
 
     pub async fn connect(&self, server_end: ServerEnd<SessionMarker>) -> Result<()> {
         let (request_stream, control_handle) = server_end.into_stream_and_control_handle()?;
-        let events_to_catch_up_client = await!(self.state.lock()).deref().events();
+        let events_to_catch_up_client = self.state.lock().await.deref().events();
         for event in events_to_catch_up_client {
             if Self::send_event(&control_handle, &event).is_err() {
                 // Client is disconnected.
@@ -114,7 +114,7 @@ impl Session {
             loop {
                 futures::select! {
                     request = request_stream.select_next_some() => {
-                        await!(Self::serve_request(proxy.deref(), request?))?;
+                        Self::serve_request(proxy.deref(), request?).await?;
                     },
                     _cancel = cancel_signal => {
                         break;
@@ -197,11 +197,11 @@ impl Session {
                 mut desired_size,
                 responder,
             } => {
-                let mut bitmap = await!(proxy.get_media_image_bitmap(
+                let mut bitmap = proxy.get_media_image_bitmap(
                     &url,
                     &mut minimum_size,
                     &mut desired_size,
-                ))?;
+                ).await?;
                 let response = bitmap.as_mut().map(|b| OutOfLine(b.deref_mut()));
                 responder.send(response)?
             }

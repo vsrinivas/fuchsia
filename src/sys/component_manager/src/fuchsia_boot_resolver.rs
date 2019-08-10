@@ -68,7 +68,7 @@ impl FuchsiaBootResolver {
         // Read component manifest from resource into a component decl.
         let cm_file = io_util::open_file(&self.boot_proxy, &res_path, io_util::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
-        let cm_str = await!(io_util::read_file(&cm_file))
+        let cm_str = io_util::read_file(&cm_file).await
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let component_decl = translate(&cm_str)
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
@@ -136,7 +136,7 @@ mod tests {
                 &mut std::iter::empty(),
                 server_end,
             );
-            await!(dir);
+            dir.await;
             panic!("Pseudo dir stopped serving!");
         });
         let proxy = io_util::node_to_directory(proxy)?;
@@ -144,7 +144,7 @@ mod tests {
 
         let url =
             "fuchsia-boot:///packages/hello_world#meta/component_manager_tests_hello_world.cm";
-        let component = await!(resolver.resolve_async(url))?;
+        let component = resolver.resolve_async(url).await?;
         assert_eq!(url, component.resolved_url.unwrap());
 
         let program = fdata::Dictionary {

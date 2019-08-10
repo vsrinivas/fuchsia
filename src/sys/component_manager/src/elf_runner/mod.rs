@@ -195,7 +195,7 @@ impl ElfRunner {
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         let future = Abortable::new(runtime_controlled, abort_registration);
         fasync::spawn(async move {
-            let _ = await!(future);
+            let _ = future.await;
         });
 
         RuntimeDirectory { controller: runtime_controller, abort_handle }
@@ -215,7 +215,7 @@ impl ElfRunner {
         elf_dir
             .add_entry("job_id", { read_only(move || Ok(Vec::from(job_id.to_string()))) })
             .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
-        await!(runtime_dir.controller.add_entry_res("elf", elf_dir))
+        runtime_dir.controller.add_entry_res("elf", elf_dir).await
             .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
         Ok(())
     }
@@ -264,7 +264,7 @@ impl ElfRunner {
         // applications to get handles to things the application author didn't intend.
         library_loader::start(lib_proxy, ll_service_chan);
 
-        let executable_vmo = await!(library_loader::load_vmo(pkg_proxy, &bin_path))
+        let executable_vmo = library_loader::load_vmo(pkg_proxy, &bin_path).await
             .context("error loading executable")?;
 
         let child_job = job_default().create_child_job()?;
@@ -319,7 +319,7 @@ impl ElfRunner {
         // TODO(fsamuel): runtime_dir may be unavailable in tests. We should fix tests so
         // that we don't have to have this check here.
         if let Some(dir) = start_info.runtime_dir {
-            runtime_dir = Some(await!(self.create_runtime_directory(dir, &args)));
+            runtime_dir = Some(self.create_runtime_directory(dir, &args).await);
         }
 
         Ok((
@@ -340,7 +340,7 @@ impl ElfRunner {
 
         // Load the component
         let (runtime_dir, mut launch_info) =
-            await!(self.load_launch_info(&resolved_url, start_info, &launcher))
+            self.load_launch_info(&resolved_url, start_info, &launcher).await
                 .map_err(|e| RunnerError::component_load_error(&*resolved_url, e))?;
 
         let job_koid = launch_info
@@ -350,8 +350,8 @@ impl ElfRunner {
             .raw_koid();
 
         // Launch the component
-        let process_koid = await!(async {
-            let (status, process) = await!(launcher.launch(&mut launch_info))?;
+        let process_koid = async {
+            let (status, process) = launcher.launch(&mut launch_info).await?;
             if zx::Status::from_raw(status) != zx::Status::OK {
                 return Err(format_err!("failed to launch component: {}", status));
             }
@@ -367,18 +367,18 @@ impl ElfRunner {
             }
 
             Ok(process_koid)
-        })
+        }.await
             .map_err(|e| RunnerError::component_launch_error(resolved_url.clone(), e))?;
 
         if let Some(runtime_dir) = runtime_dir {
-            await!(self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid))?;
+            self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
             // TODO(fsamuel): This should be keyed off the to-be-implemented
             // ComponentController interface, and not some random number.
             let exec_id = {
                 let mut rand_num_generator = rand::thread_rng();
                 rand_num_generator.gen::<u32>()
             };
-            let mut instances = await!(self.instances.lock());
+            let mut instances = self.instances.lock().await;
             instances.insert(exec_id, runtime_dir);
         }
 
@@ -498,7 +498,7 @@ mod tests {
         let file_proxy =
             io_util::open_file(&root_proxy, &Path::new(path), io_util::OPEN_RIGHT_READABLE)
                 .expect("Failed to open file.");
-        let res = await!(io_util::read_file(&file_proxy));
+        let res = io_util::read_file(&file_proxy).await;
         res.expect("Unable to read file.")
     }
 
@@ -522,18 +522,18 @@ mod tests {
         // TODO: This test currently results in a bunch of log spew when this test process exits
         // because this does not stop the component, which means its loader service suddenly goes
         // away. Stop the component when the Runner trait provides a way to do so.
-        await!(runner.start_async(start_info)).expect("hello_world_test start failed");
+        runner.start_async(start_info).await.expect("hello_world_test start failed");
 
         // Verify that args are added to the runtime directory.
-        assert_eq!("foo", await!(read_file(&runtime_dir_proxy, "args/0")));
-        assert_eq!("bar", await!(read_file(&runtime_dir_proxy, "args/1")));
+        assert_eq!("foo", read_file(&runtime_dir_proxy, "args/0").await);
+        assert_eq!("bar", read_file(&runtime_dir_proxy, "args/1").await);
 
         // Process Id and Job Id will vary with every run of this test. Here we verify that
         // they exist in the runtime directory, they can be parsed as unsigned integers, they're
         // greater than zero and they are not the same value. Those are about the only invariants
         // we can verify across test runs.
-        let process_id = await!(read_file(&runtime_dir_proxy, "elf/process_id")).parse::<u64>()?;
-        let job_id = await!(read_file(&runtime_dir_proxy, "elf/job_id")).parse::<u64>()?;
+        let process_id = read_file(&runtime_dir_proxy, "elf/process_id").await.parse::<u64>()?;
+        let job_id = read_file(&runtime_dir_proxy, "elf/job_id").await.parse::<u64>()?;
         assert!(process_id > 0);
         assert!(job_id > 0);
         assert_ne!(process_id, job_id);
@@ -557,7 +557,7 @@ mod tests {
         let builtin_services = Arc::new(BuiltinRootServices::new(&args)?);
         let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
         let runner = ElfRunner::new(launcher_connector);
-        await!(runner.start_async(start_info))
+        runner.start_async(start_info).await
             .expect_err("hello_world_fail_test succeeded unexpectedly");
         Ok(())
     }

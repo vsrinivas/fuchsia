@@ -248,14 +248,14 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_persistent_credential() -> Result<(), Error> {
         let dev_auth_provider_iotid = get_auth_provider_proxy();
-        await!(
+        
             dev_auth_provider_iotid
                 .get_persistent_credential(None, None)
                 .map_ok(move |response| {
                     let (status, _, _) = response;
                     assert_eq!(status, AuthProviderStatus::BadRequest);
                 })
-        )
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
@@ -264,54 +264,54 @@ mod tests {
         let credential = "rt_".to_string() + &generate_random_string();
         let client_id = generate_random_string();
         let mut scopes = vec![].into_iter();
-        await!(
+        
             dev_auth_provider_iotid
                 .get_app_access_token(&credential, Some(&client_id), &mut scopes)
                 .map_ok(move |response| {
                     let (status, _) = response;
                     assert_eq!(status, AuthProviderStatus::BadRequest);
                 })
-        )
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_app_id_token() -> Result<(), Error> {
         let dev_auth_provider_iotid = get_auth_provider_proxy();
         let credential = "rt_".to_string() + &generate_random_string();
-        await!(
+        
             dev_auth_provider_iotid
                 .get_app_id_token(&credential, None)
                 .map_ok(move |response| {
                     let (status, _) = response;
                     assert_eq!(status, AuthProviderStatus::BadRequest);
                 })
-        )
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_app_firebase_token() -> Result<(), Error> {
         let dev_auth_provider_iotid = get_auth_provider_proxy();
-        await!(
+        
             dev_auth_provider_iotid
                 .get_app_firebase_token("test_id_token", "test_firebase_api_key")
                 .map_ok(move |response| {
                     let (status, _) = response;
                     assert_eq!(status, AuthProviderStatus::BadRequest);
                 })
-        )
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_revoke_app_or_persistent_credential() -> Result<(), Error> {
         let dev_auth_provider_iotid = get_auth_provider_proxy();
         let credential = "testing_credential";
-        await!(
+        
             dev_auth_provider_iotid
                 .revoke_app_or_persistent_credential(credential)
                 .map_ok(move |response| {
                     assert_eq!(response, AuthProviderStatus::Ok);
                 })
-        )
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
@@ -323,7 +323,7 @@ mod tests {
             certificate_chain: vec![],
             auth_code: "test_auth_code".to_string(),
         };
-        await!(
+        
             dev_auth_provider_iotid
                 .get_persistent_credential_from_attestation_jwt(
                     attestation_signer,
@@ -363,7 +363,7 @@ mod tests {
                     );
                     assert!(id.contains(USER_PROFILE_INFO_ID_DOMAIN));
                 })
-        )
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
@@ -377,7 +377,7 @@ mod tests {
 
         let credential = "rt_".to_string() + &generate_random_string();
         let mut scopes = vec![].into_iter();
-        await!(
+        
             dev_auth_provider_iotid
                 .get_app_access_token_from_assertion_jwt(
                     attestation_signer,
@@ -407,6 +407,6 @@ mod tests {
                     assert_eq!(expires_in, CHALLENGE_LIFETIME.as_secs());
                     assert!(challenge.contains("ch_"));
                 })
-        )
+        .await
     }
 }

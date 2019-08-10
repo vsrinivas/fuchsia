@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
@@ -251,9 +251,9 @@ mod tests {
     #[test]
     fn test_int() {
         async_test(&["TestKey"], |device_settings| async move {
-            let response = await!(device_settings.set_integer("TestKey", 18))?;
+            let response = device_settings.set_integer("TestKey", 18).await?;
             assert!(response, "set_integer failed");
-            let response = await!(device_settings.get_integer("TestKey"))?;
+            let response = device_settings.get_integer("TestKey").await?;
             assert_eq!(response, (18, Status::Ok));
             Ok(())
         });
@@ -262,9 +262,9 @@ mod tests {
     #[test]
     fn test_string() {
         async_test(&["TestKey"], |device_settings| async move {
-            let response = await!(device_settings.set_string("TestKey", "mystring"))?;
+            let response = device_settings.set_string("TestKey", "mystring").await?;
             assert!(response, "set_string failed");
-            let response = await!(device_settings.get_string("TestKey"))?;
+            let response = device_settings.get_string("TestKey").await?;
             assert_eq!(response, ("mystring".to_string(), Status::Ok));
             Ok(())
         });
@@ -273,9 +273,9 @@ mod tests {
     #[test]
     fn test_invalid_key() {
         async_test(&[], |device_settings| async move {
-            let response = await!(device_settings.get_string("TestKey"))?;
+            let response = device_settings.get_string("TestKey").await?;
             assert_eq!(response, ("".to_string(), Status::ErrInvalidSetting));
-            let response = await!(device_settings.get_integer("TestKey"))?;
+            let response = device_settings.get_integer("TestKey").await?;
             assert_eq!(response, (0, Status::ErrInvalidSetting));
             Ok(())
         });
@@ -284,9 +284,9 @@ mod tests {
     #[test]
     fn test_incorrect_type() {
         async_test(&["TestKey"], |device_settings| async move {
-            let response = await!(device_settings.set_string("TestKey", "mystring"))?;
+            let response = device_settings.set_string("TestKey", "mystring").await?;
             assert!(response, "set_string failed");
-            let response = await!(device_settings.get_integer("TestKey"))?;
+            let response = device_settings.get_integer("TestKey").await?;
             assert_eq!(response, (0, Status::ErrIncorrectType));
             Ok(())
         });
@@ -295,9 +295,9 @@ mod tests {
     #[test]
     fn test_not_set_err() {
         async_test(&["TestKey"], |device_settings| async move {
-            let response = await!(device_settings.get_integer("TestKey"))?;
+            let response = device_settings.get_integer("TestKey").await?;
             assert_eq!(response, (0, Status::ErrNotSet));
-            let response = await!(device_settings.get_string("TestKey"))?;
+            let response = device_settings.get_string("TestKey").await?;
             assert_eq!(response, ("".to_string(), Status::ErrNotSet));
             Ok(())
         });
@@ -306,13 +306,13 @@ mod tests {
     #[test]
     fn test_multiple_keys() {
         async_test(&["TestKey1", "TestKey2"], |device_settings| async move {
-            let response = await!(device_settings.set_integer("TestKey1", 18))?;
+            let response = device_settings.set_integer("TestKey1", 18).await?;
             assert!(response, "set_integer failed");
-            let response = await!(device_settings.set_string("TestKey2", "mystring"))?;
+            let response = device_settings.set_string("TestKey2", "mystring").await?;
             assert!(response, "set_string failed");
-            let response = await!(device_settings.get_integer("TestKey1"))?;
+            let response = device_settings.get_integer("TestKey1").await?;
             assert_eq!(response, (18, Status::Ok));
-            let response = await!(device_settings.get_string("TestKey2"))?;
+            let response = device_settings.get_string("TestKey2").await?;
             assert_eq!(response, ("mystring".to_string(), Status::Ok));
             Ok(())
         });

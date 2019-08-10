@@ -30,7 +30,7 @@ async fn get_discover_cloud_http_headers() -> Result<Vec<http::HttpHeader>, Erro
     let device_settings_manager = component::client::connect_to_service::<
         fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker,
     >()?;
-    let (device_name, status) = await!(device_settings_manager.get_string("DeviceName"))?;
+    let (device_name, status) = device_settings_manager.get_string("DeviceName").await?;
 
     if status != fidl_fuchsia_devicesettings::Status::Ok {
         bail!("Could not get DeviceName from DeviceSettingsManagerMarker");
@@ -69,7 +69,7 @@ async fn http_get(url: &str, headers: Vec<http::HttpHeader>) -> Result<String, E
         response_body_mode: http::ResponseBodyMode::Stream,
     };
 
-    let resp = await!(loader_proxy.start(&mut req))?;
+    let resp = loader_proxy.start(&mut req).await?;
     if let Some(e) = resp.error {
         return Err(failure::err_msg(e.description.unwrap_or("".into())));
     }
@@ -81,7 +81,7 @@ async fn http_get(url: &str, headers: Vec<http::HttpHeader>) -> Result<String, E
 
     // Copy the socket contents to a String.
     let mut output = vec![];
-    await!(socket.read_to_end(&mut output))?;
+    socket.read_to_end(&mut output).await?;
     let result = String::from_utf8(output)?;
     fx_log_info!("Returned http bytes {} from {}", result.len(), url);
     Ok(result)
@@ -95,9 +95,9 @@ fn serde_from_str(json: &str) -> Result<Vec<Action>, Error> {
 /// Fetch actions from cloud.
 ///
 async fn get_actions_http(url: &str) -> Result<Vec<Action>, Error> {
-    let http_headers = await!(get_discover_cloud_http_headers())?;
+    let http_headers = get_discover_cloud_http_headers().await?;
     // Fetch the body and parse, returning error messages on failure
-    await!(http_get(url, http_headers))
+    http_get(url, http_headers).await
         .or_else(|_| {
             fx_log_err!("Unable to fetch actions from cloud - ({})", url);
             Err(failure::err_msg(format!("Unable to fetch actions from cloud ({})", url)))
@@ -114,7 +114,7 @@ pub async fn get_cloud_actions() -> Result<Vec<Action>, Error> {
     // Configuration struct for this module contain the default cloud url
     let config: Config =
         serde_json::from_str(include_str!("../config/cloud_discover.json")).unwrap();
-    await!(get_actions_http(&config.url))
+    get_actions_http(&config.url).await
 }
 
 /// The URL for cloud_discover is configurable
@@ -130,10 +130,10 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_http_get() -> Result<(), Error> {
         // Check for default url, expect an Err()
-        assert!(await!(get_cloud_actions()).is_err());
+        assert!(get_cloud_actions().await.is_err());
 
         // Check for bad url, expect an Err()
-        assert!(await!(get_actions_http("http://example.com")).is_err());
+        assert!(get_actions_http("http://example.com").await.is_err());
 
         Ok(())
     }
@@ -145,7 +145,7 @@ mod test {
         // When running in test, "DeviceName" isn't set yet in
         // DeviceSettingsManagerMarker.
         // Check that we return an appropriate error.
-        let response = await!(get_discover_cloud_http_headers());
+        let response = get_discover_cloud_http_headers().await;
         assert_eq!(
             response.err().unwrap().to_string(),
             "Could not get DeviceName from DeviceSettingsManagerMarker"

@@ -51,7 +51,7 @@ impl ModuleOutputWriterService {
     pub fn spawn(self, mut stream: ModuleOutputWriterRequestStream) {
         fasync::spawn_local(
             async move {
-                while let Some(request) = await!(stream.try_next()).context(format!(
+                while let Some(request) = stream.try_next().await.context(format!(
                     "Error running module output for {:?} {:?}",
                     self.story_id, self.module_id,
                 ))? {
@@ -61,7 +61,7 @@ impl ModuleOutputWriterService {
                             entity_reference,
                             responder,
                         } => {
-                            await!(self.handle_write(output_name, entity_reference))?;
+                            self.handle_write(output_name, entity_reference).await?;
                             responder.send(&mut Ok(()))?;
                         }
                     }
@@ -96,14 +96,14 @@ impl ModuleOutputWriterService {
                     context_store_lock.get_reference(&self.story_id, &self.module_id, &output_name)
                 {
                     let mut issuer_lock = self.mod_manager.lock();
-                    await!(issuer_lock.replace(old_reference, &reference));
+                    issuer_lock.replace(old_reference, &reference).await;
                 }
-                await!(context_store_lock.contribute(
+                context_store_lock.contribute(
                     &self.story_id,
                     &self.module_id,
                     &output_name,
                     &reference,
-                ))?;
+                ).await?;
             }
             None => context_store_lock.withdraw(&self.story_id, &self.module_id, &output_name),
         }
@@ -157,7 +157,7 @@ mod tests {
             .spawn(request_stream);
 
         // Write a module output.
-        assert!(await!(client.write("param-foo", Some("foo"))).is_ok());
+        assert!(client.write("param-foo", Some("foo")).await.is_ok());
 
         // Verify we have one entity with the right contributor.
         {
@@ -173,7 +173,7 @@ mod tests {
         }
 
         // Write no entity to the same output. This should withdraw the entity.
-        assert!(await!(client.write("param-foo", None)).is_ok());
+        assert!(client.write("param-foo", None).await.is_ok());
 
         // Verify we have no values.
         let context_store = state.lock();
@@ -227,7 +227,7 @@ mod tests {
         mod_manager.actions = hashmap!("peridot-ref".to_string() => hashset!(action));
 
         let mut context_store = StoryContextStore::new(entity_resolver);
-        await!(context_store.contribute("story1", "mod-a", "artist", "peridot-ref"))?;
+        context_store.contribute("story1", "mod-a", "artist", "peridot-ref").await?;
         let context_store_ref = Arc::new(Mutex::new(context_store));
 
         // Initialize service client and server.
@@ -243,7 +243,7 @@ mod tests {
             .spawn(request_stream);
 
         // Write a module output.
-        assert!(await!(client.write("artist", Some("garnet-ref"))).is_ok());
+        assert!(client.write("artist", Some("garnet-ref")).await.is_ok());
 
         Ok(())
     }

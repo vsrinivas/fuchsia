@@ -1,4 +1,4 @@
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit = "1024"]
 
 use failure::Error;
@@ -38,7 +38,7 @@ fn stdin_lines() -> Result<Receiver<String>> {
             async move {
                 for line in io::stdin().lock().lines() {
                     let line = String::from(line.expect("Stdin line.").trim());
-                    if let Err(e) = await!(line_sender.send(line)) {
+                    if let Err(e) = line_sender.send(line).await {
                         eprintln!("Media Session Service task died: {:?}", e);
                     }
                 }
@@ -68,7 +68,7 @@ async fn control_active_session(
                             let session_proxy = client_end.into_proxy()?;
                             let mut session_events = session_proxy.take_event_stream();
                             fasync::spawn(async move {
-                                while let Ok(Some(event)) = await!(session_events.try_next()) {
+                                while let Ok(Some(event)) = session_events.try_next().await {
                                     println!("Active session event:");
                                     println!("{:#?}", event);
                                 }
@@ -132,7 +132,7 @@ async fn main() -> Result<()> {
 
     println!("{}", HELP_TEXT);
 
-    await!(control_sender.send_all(&mut line_feed).map_err(|e| eprintln!("{:?}", e)).map(|_| ()));
+    control_sender.send_all(&mut line_feed).map_err(|e| eprintln!("{:?}", e)).map(|_| ()).await;
 
     Ok(())
 }

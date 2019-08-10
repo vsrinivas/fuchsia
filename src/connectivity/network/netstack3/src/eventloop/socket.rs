@@ -70,7 +70,7 @@ impl SocketControlWorker {
     pub fn spawn(mut self, sender: mpsc::UnboundedSender<Event>) {
         fasync::spawn_local(
             async move {
-                while let Some(evt) = await!(self.events.try_next())? {
+                while let Some(evt) = self.events.try_next().await? {
                     sender.unbounded_send(Event::FidlSocketControlEvent((
                         Arc::clone(&self.inner),
                         evt,

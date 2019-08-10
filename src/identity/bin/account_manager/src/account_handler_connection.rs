@@ -107,7 +107,7 @@ impl AccountHandlerConnection {
         let request_stream = AccountHandlerContextRequestStream::from_channel(server_async_chan);
         let context_clone = Arc::clone(&context);
         fasync::spawn(async move {
-            await!(context_clone.handle_requests_from_stream(request_stream))
+            context_clone.handle_requests_from_stream(request_stream).await
                 .unwrap_or_else(|err| error!("Error handling AccountHandlerContext: {:?}", err))
         });
         Ok(ClientEnd::new(client_chan))
@@ -121,9 +121,9 @@ impl AccountHandlerConnection {
     ) -> Result<Self, AccountManagerError> {
         let connection = Self::new(account_id.clone(), Lifetime::Persistent)?;
         let context_client_end = Self::spawn_context_channel(context)?;
-        match await!(connection
+        match connection
             .proxy
-            .load_account(context_client_end, account_id.clone().as_mut().into()))
+            .load_account(context_client_end, account_id.clone().as_mut().into()).await
         .account_manager_status(Status::IoError)?
         {
             Status::Ok => Ok(connection),
@@ -142,9 +142,9 @@ impl AccountHandlerConnection {
         let connection = Self::new(account_id.clone(), lifetime)?;
         let context_client_end = Self::spawn_context_channel(context)?;
 
-        match await!(connection
+        match connection
             .proxy()
-            .create_account(context_client_end, account_id.clone().as_mut().into()))
+            .create_account(context_client_end, account_id.clone().as_mut().into()).await
         .account_manager_status(Status::IoError)?
         {
             Status::Ok => {
@@ -172,7 +172,7 @@ impl AccountHandlerConnection {
         if let Err(err) = self.proxy.terminate() {
             warn!("Error gracefully terminating account handler {:?}", err);
         } else {
-            while let Ok(Some(_)) = await!(event_stream.try_next()) {}
+            while let Ok(Some(_)) = event_stream.try_next().await {}
             info!("Gracefully terminated AccountHandler instance");
         }
     }

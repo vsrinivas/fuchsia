@@ -44,13 +44,13 @@ impl Realm {
     /// populated.
     pub async fn resolve_decl(&self) -> Result<(), ModelError> {
         let not_resolved = {
-            let state = await!(self.state.lock());
+            let state = self.state.lock().await;
             state.decl.is_none()
         };
         if not_resolved {
-            let component = await!(self.resolver_registry.resolve(&self.component_url))?;
-            let mut state = await!(self.state.lock());
-            await!(state.populate_decl(component.decl, &self))?;
+            let component = self.resolver_registry.resolve(&self.component_url).await?;
+            let mut state = self.state.lock().await;
+            state.populate_decl(component.decl, &self).await?;
         }
         Ok(())
     }
@@ -62,7 +62,7 @@ impl Realm {
         &'a self,
         model: &'a Model,
     ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
-        let state = await!(self.state.lock());
+        let state = self.state.lock().await;
         if state.meta_dir.is_some() {
             return Ok(Some(state.meta_dir.as_ref().unwrap().clone()));
         }
@@ -81,17 +81,17 @@ impl Realm {
         let (meta_client_chan, server_chan) =
             zx::Channel::create().expect("failed to create channel");
 
-        await!(routing::route_and_open_storage_capability(
+        routing::route_and_open_storage_capability(
             &model,
             &meta_use,
             MODE_TYPE_DIRECTORY,
             self.abs_moniker.clone(),
             server_chan,
-        ))?;
+        ).await?;
         let meta_dir = Some(Arc::new(DirectoryProxy::from_channel(
             fasync::Channel::from_channel(meta_client_chan).unwrap(),
         )));
-        await!(self.state.lock()).meta_dir = meta_dir.clone();
+        self.state.lock().await.meta_dir = meta_dir.clone();
         Ok(meta_dir)
     }
 
@@ -109,9 +109,9 @@ impl Realm {
                 return Err(ModelError::unsupported("Eager startup"));
             }
         }
-        await!(self.resolve_decl())?;
+        self.resolve_decl().await?;
         let child_realm = {
-            let mut state = await!(self.state.lock());
+            let mut state = self.state.lock().await;
             let collection_decl = state.get_decl()
                 .find_collection(&collection_name)
                 .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?;
@@ -135,7 +135,7 @@ impl Realm {
         };
         // Call hooks outside of lock
         for hook in hooks.iter() {
-            await!(hook.on_add_dynamic_child(child_realm.clone()))?;
+            hook.on_add_dynamic_child(child_realm.clone()).await?;
         }
         Ok(())
     }
@@ -146,9 +146,9 @@ impl Realm {
         child_moniker: &'a ChildMoniker,
         hooks: &'a Hooks,
     ) -> Result<(), ModelError> {
-        await!(self.resolve_decl())?;
+        self.resolve_decl().await?;
         let child_realm = {
-            let mut state = await!(self.state.lock());
+            let mut state = self.state.lock().await;
             if let Some(child_realm) = state.child_realms.as_mut().unwrap().remove(&child_moniker) {
                 state.deleting_child_realms.push(child_realm.clone());
                 child_realm
@@ -160,7 +160,7 @@ impl Realm {
         };
         // Call hooks outside of lock
         for hook in hooks.iter() {
-            await!(hook.on_remove_dynamic_child(child_realm.clone()))?;
+            hook.on_remove_dynamic_child(child_realm.clone()).await?;
         }
         Ok(())
     }

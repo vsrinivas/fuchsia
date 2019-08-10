@@ -165,7 +165,7 @@ impl TestService {
     /// expectation.
     async fn expect_active_session(&mut self, expected: Option<zx::Koid>) {
         assert!(!self.registry_events.is_terminated());
-        let actual = await!(self.registry_events.try_next())
+        let actual = self.registry_events.try_next().await
             .expect("taking registry event")
             .expect("unwrapping registry event")
             .into_on_active_session_changed()
@@ -178,7 +178,7 @@ impl TestService {
 
     async fn expect_sessions_change(&mut self, expected_change: SessionsChange) {
         assert!(!self.registry_events.is_terminated());
-        let sessions_change = await!(self.registry_events.try_next())
+        let sessions_change = self.registry_events.try_next().await
             .expect("taking registry event")
             .expect("unwrapping registry event")
             .into_on_sessions_changed()
@@ -219,7 +219,7 @@ impl TestService {
     ) {
         assert!(!self.registry_events.is_terminated());
         for _ in 0..2 {
-            let event = await!(self.registry_events.try_next())
+            let event = self.registry_events.try_next().await
                 .expect("taking registry event")
                 .expect("unwrapping registry event");
             match event {
@@ -272,7 +272,7 @@ impl TestService {
         let mut sessions = vec![];
 
         while sessions.len() < expected_sessions.len() {
-            let event = await!(new_client_events.try_next())
+            let event = new_client_events.try_next().await
                 .expect("taking registry event")
                 .expect("unwrapping registry event");
 
@@ -309,8 +309,8 @@ impl TestService {
 #[test]
 async fn empty_service_reports_no_sessions() {
     let mut test_service = TestService::new().expect("making test service");
-    await!(test_service.expect_active_session(None));
-    await!(test_service.expect_session_list(vec![]));
+    test_service.expect_active_session(None).await;
+    test_service.expect_session_list(vec![]).await;
 }
 
 #[fasync::run_singlethreaded]
@@ -323,7 +323,7 @@ async fn service_routes_bitmaps() {
     let new_session = || {
         async {
             let test_session = TestSession::new().expect("making test session");
-            let session_id = await!(test_service.publisher.publish(test_session.client_end))
+            let session_id = test_service.publisher.publish(test_session.client_end).await
                 .expect("taking session id");
             let (client_end, server_end) =
                 create_endpoints::<SessionMarker>().expect("making session endpoints");
@@ -336,7 +336,7 @@ async fn service_routes_bitmaps() {
         }
     };
 
-    let (proxy, mut request_stream) = await!(new_session());
+    let (proxy, mut request_stream) = new_session().await;
 
     let expected_bitmap = MediaImageBitmap {
         size: Size { width: 102, height: 140 },
@@ -355,7 +355,7 @@ async fn service_routes_bitmaps() {
                      expected_bitmap| {
         async move {
             let event =
-                await!(request_stream.try_next()).expect("pulling next request from session");
+                request_stream.try_next().await.expect("pulling next request from session");
 
             match event {
                 Some(SessionRequest::GetMediaImageBitmap {
@@ -382,11 +382,11 @@ async fn service_routes_bitmaps() {
         clone_media_image_bitmap(&expected_bitmap),
     ));
 
-    let bitmap = await!(proxy.get_media_image_bitmap(
+    let bitmap = proxy.get_media_image_bitmap(
         &mut expected_url,
         &mut expected_minimum_size,
         &mut expected_desired_size,
-    ))
+    ).await
         .expect("receiving media image bitmap");
     match (bitmap, expected_bitmap) {
         (Some(actual), expected) => {
@@ -406,7 +406,7 @@ async fn service_routes_controls() {
     let new_session = || {
         async {
             let test_session = TestSession::new().expect("making test session");
-            let session_id = await!(test_service.publisher.publish(test_session.client_end))
+            let session_id = test_service.publisher.publish(test_session.client_end).await
                 .expect("taking session id");
             let (client_end, server_end) =
                 create_endpoints::<SessionMarker>().expect("making session endpoints");
@@ -419,14 +419,14 @@ async fn service_routes_controls() {
         }
     };
 
-    let (proxy_a, mut request_stream_a) = await!(new_session());
-    let (proxy_b, mut request_stream_b) = await!(new_session());
+    let (proxy_a, mut request_stream_a) = new_session().await;
+    let (proxy_b, mut request_stream_b) = new_session().await;
 
     proxy_a.play().expect("To call Play() on Session a");
     proxy_b.pause().expect("To call Pause() on Session b");
 
-    let a_event = await!(request_stream_a.try_next()).expect("taking next request from session a");
-    let b_event = await!(request_stream_b.try_next()).expect("taking next request from session b");
+    let a_event = request_stream_a.try_next().await.expect("taking next request from session a");
+    let b_event = request_stream_b.try_next().await.expect("taking next request from session b");
 
     a_event.expect("missing play event").into_play().expect("wasn't a play event");
 
@@ -436,7 +436,7 @@ async fn service_routes_controls() {
 
     proxy_b.play().expect("To call Play() on Session b");
 
-    let b_event = await!(request_stream_b.try_next()).expect("taking next request from session b");
+    let b_event = request_stream_b.try_next().await.expect("taking next request from session b");
 
     b_event
         .expect("missing play event on session b")
@@ -448,50 +448,50 @@ async fn service_routes_controls() {
 #[test]
 async fn service_reports_published_active_session() {
     let mut test_service = TestService::new().expect("making test service");
-    await!(test_service.expect_active_session(None));
+    test_service.expect_active_session(None).await;
     test_service.notify_events_handled();
 
     let test_session = TestSession::new().expect("making test session");
     let our_session_id =
-        await!(test_service.publisher.publish(test_session.client_end)).expect("taking session id");
+        test_service.publisher.publish(test_session.client_end).await.expect("taking session id");
     test_session
         .control_handle
         .send_on_playback_status_changed(default_playback_status())
         .expect("To update playback status");
-    await!(test_service.expect_update_events(
+    test_service.expect_update_events(
         Some(our_session_id.as_handle_ref().get_koid().expect("taking handle KOID")),
         SessionsChange {
             session: SessionEntry { session_id: Some(our_session_id), local: Some(true) },
             delta: SessionDelta::Added,
         },
-    ));
+    ).await;
 }
 
 #[fasync::run_singlethreaded]
 #[test]
 async fn nonlocal_session_does_not_compete_for_active() {
     let mut test_service = TestService::new().expect("making test service");
-    await!(test_service.expect_active_session(None));
+    test_service.expect_active_session(None).await;
     test_service.notify_events_handled();
 
     // Register a remote session.
     let remote_test_session = TestSession::new().expect("making test session");
     let remote_session_id =
-        await!(test_service.publisher.publish_remote(remote_test_session.client_end))
+        test_service.publisher.publish_remote(remote_test_session.client_end).await
             .expect("Remote session id");
     remote_test_session
         .control_handle
         .send_on_playback_status_changed(default_playback_status())
         .expect("To update remote playback status");
-    await!(test_service.expect_sessions_change(SessionsChange {
+    test_service.expect_sessions_change(SessionsChange {
         session: SessionEntry { session_id: Some(remote_session_id), local: Some(false) },
         delta: SessionDelta::Added,
-    }));
+    }).await;
     test_service.notify_events_handled();
 
     // Register a local session.
     let local_test_session = TestSession::new().expect("making test session");
-    let local_session_id = await!(test_service.publisher.publish(local_test_session.client_end))
+    let local_session_id = test_service.publisher.publish(local_test_session.client_end).await
         .expect("Local session id");
     local_test_session
         .control_handle
@@ -499,20 +499,20 @@ async fn nonlocal_session_does_not_compete_for_active() {
         .expect("To update local playback status");
 
     // Ensure that the only active session update we get is for the local session.
-    await!(test_service.expect_update_events(
+    test_service.expect_update_events(
         Some(local_session_id.as_handle_ref().get_koid().expect("taking handle KOID")),
         SessionsChange {
             session: SessionEntry { session_id: Some(local_session_id), local: Some(true) },
             delta: SessionDelta::Added,
         },
-    ));
+    ).await;
 }
 
 #[fasync::run_singlethreaded]
 #[test]
 async fn service_reports_changed_active_session() {
     let mut test_service = TestService::new().expect("making test service");
-    await!(test_service.expect_active_session(None));
+    test_service.expect_active_session(None).await;
     test_service.notify_events_handled();
 
     // Publish sessions.
@@ -520,19 +520,19 @@ async fn service_reports_changed_active_session() {
     let mut keep_alive = Vec::new();
     for i in 0..session_count {
         let test_session = TestSession::new().expect(&format!("making test session {}.", i));
-        let session_id = await!(test_service.publisher.publish(test_session.client_end))
+        let session_id = test_service.publisher.publish(test_session.client_end).await
             .expect(&format!("Session {}", i));
         test_session
             .control_handle
             .send_on_playback_status_changed(default_playback_status())
             .expect("To update playback status");
-        await!(test_service.expect_update_events(
+        test_service.expect_update_events(
             Some(session_id.as_handle_ref().get_koid().expect("taking handle KOID")),
             SessionsChange {
                 session: SessionEntry { session_id: Some(session_id), local: Some(true) },
                 delta: SessionDelta::Added,
             },
-        ));
+        ).await;
         test_service.notify_events_handled();
         keep_alive.push(test_session.control_handle);
     }
@@ -542,14 +542,14 @@ async fn service_reports_changed_active_session() {
 #[test]
 async fn service_broadcasts_events() {
     let mut test_service = TestService::new().expect("making test service");
-    await!(test_service.expect_active_session(None));
+    test_service.expect_active_session(None).await;
     test_service.notify_events_handled();
 
     let test_session = TestSession::new().expect("making test session");
-    let session_id = await!(test_service.publisher.publish(test_session.client_end))
+    let session_id = test_service.publisher.publish(test_session.client_end).await
         .expect("publishing session");
 
-    await!(test_service.expect_sessions_change(SessionsChange {
+    test_service.expect_sessions_change(SessionsChange {
         session: SessionEntry {
             session_id: Some(
                 clone_session_id_handle(&session_id).expect("duplicating session handle"),
@@ -557,7 +557,7 @@ async fn service_broadcasts_events() {
             local: Some(true),
         },
         delta: SessionDelta::Added,
-    }));
+    }).await;
     test_service.notify_events_handled();
 
     let expected_playback_capabilities = || PlaybackCapabilities {
@@ -606,9 +606,9 @@ async fn service_broadcasts_events() {
         .expect("updating playback status");
 
     // Ensure we wait for the service to accept the session.
-    await!(test_service.expect_active_session(Some(
+    test_service.expect_active_session(Some(
         session_id.as_handle_ref().get_koid().expect("taking handle KOID"),
-    )));
+    )).await;
     test_service.notify_events_handled();
 
     // Connect many clients and ensure they all receive the event.
@@ -643,9 +643,9 @@ async fn service_broadcasts_events() {
         };
 
         // Expect we get all of our published events; accept any order.
-        check_event(await!(event_stream.try_next()).expect("taking next Session event"));
-        check_event(await!(event_stream.try_next()).expect("taking next Session event"));
-        check_event(await!(event_stream.try_next()).expect("taking next Session event"));
+        check_event(event_stream.try_next().await.expect("taking next Session event"));
+        check_event(event_stream.try_next().await.expect("taking next Session event"));
+        check_event(event_stream.try_next().await.expect("taking next Session event"));
     }
 }
 
@@ -653,8 +653,8 @@ async fn service_broadcasts_events() {
 #[test]
 async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
     let mut test_service = TestService::new().expect("making test service");
-    await!(test_service.expect_active_session(None));
-    await!(test_service.expect_session_list(vec![]));
+    test_service.expect_active_session(None).await;
+    test_service.expect_session_list(vec![]).await;
 
     // Publish many sessions and have each of them post a playback status.
     let count = 100;
@@ -663,7 +663,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
         |i| PlaybackStatus { duration: Some(i), ..default_playback_status() };
     for i in 0..count {
         let test_session = TestSession::new().expect(&format!("making test session {}.", i));
-        let session_id = await!(test_service.publisher.publish(test_session.client_end))
+        let session_id = test_service.publisher.publish(test_session.client_end).await
             .expect(&format!("publishing test session {}.", i));
         test_session
             .control_handle
@@ -674,7 +674,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
             test_session.control_handle,
         ));
 
-        await!(test_service.expect_update_events(
+        test_service.expect_update_events(
             Some(session_id.as_handle_ref().get_koid().expect("taking new active session koid")),
             SessionsChange {
                 session: SessionEntry {
@@ -685,7 +685,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
                 },
                 delta: SessionDelta::Added,
             },
-        ));
+        ).await;
         test_service.notify_events_handled();
     }
 
@@ -726,7 +726,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
             .into_proxy()
             .expect(&format!("making Session into a proxy for session {:?}.", session_id))
             .take_event_stream();
-        let maybe_event = await!(event_stream.try_next()).expect("taking next session event");
+        let maybe_event = event_stream.try_next().await.expect("taking next session event");
         match expectation {
             Expectation::SessionIsDropped => {
                 // If we shutdown the session, this or the next event should be
@@ -734,7 +734,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
                 // before this request.
                 if maybe_event.is_some() {
                     let next_event =
-                        await!(event_stream.try_next()).expect("taking next session event");
+                        event_stream.try_next().await.expect("taking next session event");
                     assert!(next_event.is_none(), "{:?}", next_event)
                 }
             }
@@ -752,8 +752,8 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
 #[test]
 async fn service_stops_sending_sessions_change_events_to_inactive_clients() {
     let mut test_service = TestService::new().expect("making test service");
-    await!(test_service.expect_active_session(None));
-    await!(test_service.expect_session_list(vec![]));
+    test_service.expect_active_session(None).await;
+    test_service.expect_session_list(vec![]).await;
 
     // Force the service to generate MAX_EVENTS_SENT_WITHOUT_ACK + 1 events to
     // send us, and consume all but the last of them.
@@ -762,7 +762,7 @@ async fn service_stops_sending_sessions_change_events_to_inactive_clients() {
     let mut expected_sessions = Vec::new();
     for i in 0..count {
         let test_session = TestSession::new().expect(&format!("making test session {}.", i));
-        let session_id = await!(test_service.publisher.publish(test_session.client_end))
+        let session_id = test_service.publisher.publish(test_session.client_end).await
             .expect(&format!("To publish test session {}.", i));
         let entry = SessionEntry { session_id: Some(session_id), local: Some(true) };
         test_sessions.push(test_session.control_handle);
@@ -772,10 +772,10 @@ async fn service_stops_sending_sessions_change_events_to_inactive_clients() {
 
         test_service.notify_active_session_change_handled();
         if i < MAX_EVENTS_SENT_WITHOUT_ACK {
-            await!(test_service.expect_sessions_change(SessionsChange {
+            test_service.expect_sessions_change(SessionsChange {
                 session: entry,
                 delta: SessionDelta::Added,
-            }));
+            }).await;
         }
     }
 
@@ -794,8 +794,8 @@ async fn service_stops_sending_sessions_change_events_to_inactive_clients() {
 #[test]
 async fn service_stops_sending_active_session_change_events_to_inactive_clients() {
     let mut test_service = TestService::new().expect("making test service");
-    await!(test_service.expect_active_session(None));
-    await!(test_service.expect_session_list(vec![]));
+    test_service.expect_active_session(None).await;
+    test_service.expect_session_list(vec![]).await;
 
     // Force the service to generate MAX_EVENTS_SENT_WITHOUT_ACK + 1 events to
     // send us, and consume all but the last of them. The first event generated
@@ -805,7 +805,7 @@ async fn service_stops_sending_active_session_change_events_to_inactive_clients(
     let mut expected_sessions = Vec::new();
     for i in 0..count {
         let test_session = TestSession::new().expect(&format!("making test session {}.", i));
-        let session_id = await!(test_service.publisher.publish(test_session.client_end))
+        let session_id = test_service.publisher.publish(test_session.client_end).await
             .expect(&format!("publishing test session {}.", i));
         test_session
             .control_handle
@@ -821,17 +821,17 @@ async fn service_stops_sending_active_session_change_events_to_inactive_clients(
         );
 
         if i < MAX_EVENTS_SENT_WITHOUT_ACK - 1 {
-            await!(test_service.expect_update_events(
+            test_service.expect_update_events(
                 Some(
                     session_id.as_handle_ref().get_koid().expect("taking new active session koid"),
                 ),
                 SessionsChange { session: entry, delta: SessionDelta::Added },
-            ));
+            ).await;
         } else {
-            await!(test_service.expect_sessions_change(SessionsChange {
+            test_service.expect_sessions_change(SessionsChange {
                 session: entry,
                 delta: SessionDelta::Added,
-            }));
+            }).await;
         }
         test_service.notify_sessions_change_handled();
     }
@@ -850,8 +850,8 @@ async fn service_stops_sending_active_session_change_events_to_inactive_clients(
 #[test]
 async fn service_maintains_session_list() {
     let mut test_service = TestService::new().expect("making test service");
-    await!(test_service.expect_active_session(None));
-    await!(test_service.expect_session_list(vec![]));
+    test_service.expect_active_session(None).await;
+    test_service.expect_session_list(vec![]).await;
     test_service.notify_events_handled();
 
     // Publish many sessions and check at each point that the session list is
@@ -861,7 +861,7 @@ async fn service_maintains_session_list() {
     let mut expected_sessions = Vec::new();
     for i in 0..count {
         let test_session = TestSession::new().expect(&format!("making test session {}.", i));
-        let session_id = await!(test_service.publisher.publish(test_session.client_end))
+        let session_id = test_service.publisher.publish(test_session.client_end).await
             .expect(&format!("publishing test session {}.", i));
         let entry = SessionEntry { session_id: Some(session_id), local: Some(true) };
         expected_sessions.push(
@@ -890,10 +890,10 @@ async fn service_maintains_session_list() {
         let entry = expected_sessions.swap_remove(i * 2 - removed);
         removed += 1;
         // We wait for the removal event first to ensure the server sees the disconnect.
-        await!(test_service.expect_sessions_change(SessionsChange {
+        test_service.expect_sessions_change(SessionsChange {
             session: entry,
             delta: SessionDelta::Removed,
-        }));
+        }).await;
         test_service
             .expect_session_list(
                 expected_sessions

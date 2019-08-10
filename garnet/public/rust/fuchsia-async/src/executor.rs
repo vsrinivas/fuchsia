@@ -1240,11 +1240,11 @@ mod tests {
         let spawned_fut_completed = Arc::new(AtomicBool::new(false));
         let spawned_fut_completed_writer = spawned_fut_completed.clone();
         let spawned_fut = Box::pin(async move {
-            await!(Timer::new(Time::after(5.seconds())));
+            Timer::new(Time::after(5.seconds())).await;
             spawned_fut_completed_writer.store(true, Ordering::SeqCst);
         });
         let main_fut = async {
-            await!(Timer::new(Time::after(10.seconds())));
+            Timer::new(Time::after(10.seconds())).await;
         };
         pin_mut!(main_fut);
         spawn(spawned_fut);

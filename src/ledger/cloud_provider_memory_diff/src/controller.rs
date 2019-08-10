@@ -150,7 +150,7 @@ mod tests {
         let cloud_provider = cloud_provider.into_proxy()?;
 
         let (device_set, device_set_request) = create_endpoints::<DeviceSetMarker>()?;
-        assert_eq!(await!(cloud_provider.get_device_set(device_set_request))?, Status::Ok);
+        assert_eq!(cloud_provider.get_device_set(device_set_request).await?, Status::Ok);
         let device_set = device_set.into_proxy()?;
 
         Ok(DeviceSetConnection { cloud_controller, cloud_provider, device_set })
@@ -170,16 +170,16 @@ mod tests {
 
         let proxy = client.into_proxy().unwrap();
         let client_fut = async move {
-            let client0 = await!(connect_device_set(&proxy)).unwrap();
-            let client1 = await!(connect_device_set(&proxy)).unwrap();
+            let client0 = connect_device_set(&proxy).await.unwrap();
+            let client1 = connect_device_set(&proxy).await.unwrap();
             let fingerprint = || vec![1, 2, 3].into_iter();
 
             assert_eq!(
-                await!(client0.device_set.set_fingerprint(&mut fingerprint())).unwrap(),
+                client0.device_set.set_fingerprint(&mut fingerprint()).await.unwrap(),
                 Status::Ok
             );
             assert_eq!(
-                await!(client1.device_set.check_fingerprint(&mut fingerprint())).unwrap(),
+                client1.device_set.check_fingerprint(&mut fingerprint()).await.unwrap(),
                 Status::Ok
             );
         };
@@ -201,18 +201,18 @@ mod tests {
 
         let proxy = client.into_proxy().unwrap();
         let client_fut = async move {
-            let client0 = await!(connect_device_set(&proxy)).unwrap();
-            let client1 = await!(connect_device_set(&proxy)).unwrap();
+            let client0 = connect_device_set(&proxy).await.unwrap();
+            let client1 = connect_device_set(&proxy).await.unwrap();
             let fingerprint = || vec![1, 2, 3].into_iter();
 
             // Disconnect the first provider.
-            await!(client0.cloud_controller.set_network_state(NetworkState::Disconnected)).unwrap();
+            client0.cloud_controller.set_network_state(NetworkState::Disconnected).await.unwrap();
             assert_eq!(
-                await!(client0.device_set.check_fingerprint(&mut fingerprint())).unwrap(),
+                client0.device_set.check_fingerprint(&mut fingerprint()).await.unwrap(),
                 Status::NetworkError
             );
             assert_eq!(
-                await!(client1.device_set.check_fingerprint(&mut fingerprint())).unwrap(),
+                client1.device_set.check_fingerprint(&mut fingerprint()).await.unwrap(),
                 Status::NotFound
             );
         };

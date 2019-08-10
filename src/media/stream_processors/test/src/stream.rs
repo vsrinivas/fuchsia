@@ -79,13 +79,13 @@ impl<'a: 'b, 'b> Stream<'a> {
                 vlog!(2, "Received input constraints.");
                 vlog!(3, "Input constraints are: {:#?}", input_constraints);
 
-                let buffer_set = await!(BufferSetFactory::buffer_set(
+                let buffer_set = BufferSetFactory::buffer_set(
                     get_ordinal(self.input_buffer_ordinals),
                     ValidStreamBufferConstraints::try_from(input_constraints)?,
                     self.stream_processor,
                     BufferSetType::Input,
                     self.options.input_buffer_collection_constraints,
-                ))?;
+                ).await?;
 
                 vlog!(2, "Sending input format details in response to input constraints.");
                 self.stream_processor.queue_input_format_details(
@@ -107,13 +107,13 @@ impl<'a: 'b, 'b> Stream<'a> {
 
                 let constraints = ValidStreamOutputConstraints::try_from(output_config)?;
                 if constraints.buffer_constraints_action_required {
-                    self.output_buffer_set = Some(await!(BufferSetFactory::buffer_set(
+                    self.output_buffer_set = Some(BufferSetFactory::buffer_set(
                         get_ordinal(self.output_buffer_ordinals),
                         constraints.buffer_constraints,
                         self.stream_processor,
                         BufferSetType::Output,
                         self.options.output_buffer_collection_constraints,
-                    ))?);
+                    ).await?);
                 }
             }
             StreamProcessorEvent::OnFreeInputPacket { free_input_packet } => {
@@ -186,7 +186,7 @@ impl<'a: 'b, 'b> Stream<'a> {
                     self.options.release_input_buffers_at_end,
                     self.options.release_output_buffers_at_end,
                 )?;
-                await!(self.stream_processor.sync())?;
+                self.stream_processor.sync().await?;
 
                 // TODO(turnage): Some codecs return all input packets explicitly, not
                 //                implicitly. All codecs should return explicitly. For now

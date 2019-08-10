@@ -16,7 +16,7 @@ pub async fn get_iface_ap_sme_proxy(
     iface_id: u16,
 ) -> Result<fidl_sme::ApSmeProxy, Error> {
     let (sme_proxy, sme_remote) = endpoints::create_proxy()?;
-    let status = await!(wlan_svc.get_ap_sme(iface_id, sme_remote))
+    let status = wlan_svc.get_ap_sme(iface_id, sme_remote).await
         .context("error sending GetApSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(sme_proxy)
@@ -26,7 +26,7 @@ pub async fn get_iface_ap_sme_proxy(
 }
 
 pub async fn stop_ap(iface_sme_proxy: &fidl_sme::ApSmeProxy) -> Result<(), Error> {
-    let stop_ap_result_code = await!(iface_sme_proxy.stop());
+    let stop_ap_result_code = iface_sme_proxy.stop().await;
 
     match stop_ap_result_code {
         Ok(result_code) => Ok(result_code),
@@ -53,7 +53,7 @@ pub async fn start_ap(
             primary_chan: channel,
         },
     };
-    let start_ap_result_code = await!(iface_sme_proxy.start(&mut config));
+    let start_ap_result_code = iface_sme_proxy.start(&mut config).await;
 
     match start_ap_result_code {
         Ok(result_code) => Ok(result_code),

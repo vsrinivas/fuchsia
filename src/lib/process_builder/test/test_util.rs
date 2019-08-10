@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, ResultExt},
@@ -15,7 +15,7 @@ use {
 };
 
 async fn run_util_server(mut stream: UtilRequestStream) -> Result<(), Error> {
-    while let Some(req) = await!(stream.try_next()).context("error running echo server")? {
+    while let Some(req) = stream.try_next().await.context("error running echo server")? {
         match req {
             UtilRequest::GetArguments { responder } => {
                 let args: Vec<String> = env::args().collect();
@@ -73,8 +73,8 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
 
     const MAX_CONCURRENT: usize = 10;
-    await!(fs.for_each_concurrent(MAX_CONCURRENT, |IncomingServices::Util(stream)| {
+    fs.for_each_concurrent(MAX_CONCURRENT, |IncomingServices::Util(stream)| {
         run_util_server(stream).unwrap_or_else(|e| println!("{:?}", e))
-    }));
+    }).await;
     Ok(())
 }

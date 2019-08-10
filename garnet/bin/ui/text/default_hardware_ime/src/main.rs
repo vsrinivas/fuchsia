@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{bail, format_err, Error};
 use fidl_fuchsia_ui_input as uii;
@@ -69,7 +69,7 @@ impl DefaultHardwareIme {
         fasync::spawn(async move {
             let mut evt_stream = text_field.take_event_stream();
             // wait for first onupdate to populate self.current_field
-            let res = await!(evt_stream.next());
+            let res = evt_stream.next().await;
             if let Some(Ok(txt::TextFieldEvent::OnUpdate { state })) = res {
                 let internal_state = match state.try_into() {
                     Ok(v) => v,
@@ -78,8 +78,8 @@ impl DefaultHardwareIme {
                         return;
                     }
                 };
-                await!(this.0.lock()).on_first_update(text_field, internal_state);
-                await!(this.process_text_field_events(evt_stream)).unwrap_or_else(|e| {
+                this.0.lock().await.on_first_update(text_field, internal_state);
+                this.process_text_field_events(evt_stream).await.unwrap_or_else(|e| {
                     fx_log_err!("{}", e);
                 });
             } else {
@@ -92,12 +92,12 @@ impl DefaultHardwareIme {
         &self,
         mut evt_stream: txt::TextFieldEventStream,
     ) -> Result<(), Error> {
-        while let Some(msg) = await!(evt_stream.next()) {
+        while let Some(msg) = evt_stream.next().await {
             match msg {
                 Ok(txt::TextFieldEvent::OnUpdate { state }) => {
-                    let mut lock = await!(self.0.lock());
+                    let mut lock = self.0.lock().await;
                     lock.on_update(state.try_into()?);
-                    await!(lock.process_input_queue());
+                    lock.process_input_queue().await;
                 }
                 Err(e) => {
                     bail!("error when receiving message from TextFieldEventStream: {}", e);
@@ -137,7 +137,7 @@ impl DefaultHardwareImeState {
 
     async fn process_input_queue(&mut self) {
         while let Some(key) = self.input_queue.pop_front() {
-            match await!(self.on_input_event(&key)) {
+            match self.on_input_event(&key).await {
                 Ok(()) => {} // next
                 Err(OnInputError::Retry) => {
                     // put it back in queue and return
@@ -194,7 +194,7 @@ impl DefaultHardwareImeState {
                     let mut range = clone_range(&field_state.last_selection.range);
                     field_state.proxy.begin_edit(field_state.last_revision)?;
                     field_state.proxy.replace(&mut range, &output)?;
-                    convert_commit_result(await!(field_state.proxy.commit_edit()))?;
+                    convert_commit_result(field_state.proxy.commit_edit().await)?;
 
                     self.unicode_input_mode = false;
                     self.unicode_input_buffer = String::new();
@@ -225,7 +225,7 @@ impl DefaultHardwareImeState {
                     let mut range = clone_range(&field_state.last_selection.range);
                     field_state.proxy.begin_edit(field_state.last_revision)?;
                     field_state.proxy.replace(&mut range, &output)?;
-                    convert_commit_result(await!(field_state.proxy.commit_edit()))?;
+                    convert_commit_result(field_state.proxy.commit_edit().await)?;
                 }
                 self.dead_key_state = None;
             }
@@ -311,19 +311,19 @@ async fn main() -> Result<(), Error> {
     let ime = DefaultHardwareIme::new()?;
     let text_service = connect_to_service::<txt::TextInputContextMarker>()?;
     let mut evt_stream = text_service.take_event_stream();
-    while let Some(evt) = await!(evt_stream.next()) {
+    while let Some(evt) = evt_stream.next().await {
         match evt {
             Ok(txt::TextInputContextEvent::OnFocus { text_field }) => {
                 ime.on_focus(text_field.into_proxy()?);
             }
             Ok(txt::TextInputContextEvent::OnInputEvent { event }) => match event {
                 uii::InputEvent::Keyboard(ke) => {
-                    let mut lock = await!(ime.0.lock());
+                    let mut lock = ime.0.lock().await;
                     // drop inputs if the queue is really long
                     if lock.input_queue.len() < MAX_QUEUED_INPUTS {
                         lock.input_queue.push_back(ke);
                     }
-                    await!(lock.process_input_queue());
+                    lock.process_input_queue().await;
                 }
                 _ => {
                     fx_log_err!("DefaultHardwareIme received a non-keyboard event");
@@ -405,7 +405,7 @@ mod tests {
         let mut request_stream = server_end.into_stream().unwrap();
 
         let client = async move {
-            let mut lock = await!(ime.0.lock());
+            let mut lock = ime.0.lock().await;
 
             // simulate onupdate
             lock.on_first_update(proxy, default_state().into());
@@ -420,26 +420,26 @@ mod tests {
                 code_point: 33,
                 modifiers: 0,
             });
-            await!(lock.process_input_queue());
+            lock.process_input_queue().await;
 
             // try again
-            await!(lock.process_input_queue());
+            lock.process_input_queue().await;
         };
         let server = async move {
             // first set of edits, reply with BadRevision
-            let msg = await!(request_stream.try_next()).unwrap().unwrap();
+            let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
                 txt::TextFieldRequest::BeginEdit { .. } => {}
                 _ => panic!("expected first BeginEdit request"),
             }
-            let msg = await!(request_stream.try_next()).unwrap().unwrap();
+            let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
                 txt::TextFieldRequest::Replace { new_text, .. } => {
                     assert_eq!("a", new_text);
                 }
                 _ => panic!("expected first Replace request"),
             }
-            let msg = await!(request_stream.try_next()).unwrap().unwrap();
+            let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
                 txt::TextFieldRequest::CommitEdit { responder, .. } => {
                     responder.send(txt::Error::BadRevision).unwrap();
@@ -448,19 +448,19 @@ mod tests {
             }
 
             // second round of updates
-            let msg = await!(request_stream.try_next()).unwrap().unwrap();
+            let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
                 txt::TextFieldRequest::BeginEdit { .. } => {}
                 _ => panic!("expected second BeginEdit request"),
             }
-            let msg = await!(request_stream.try_next()).unwrap().unwrap();
+            let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
                 txt::TextFieldRequest::Replace { new_text, .. } => {
                     assert_eq!("a", new_text);
                 }
                 _ => panic!("expected second Replace request"),
             }
-            let msg = await!(request_stream.try_next()).unwrap().unwrap();
+            let msg = request_stream.try_next().await.unwrap().unwrap();
             match msg {
                 txt::TextFieldRequest::CommitEdit { responder, .. } => {
                     responder.send(txt::Error::Ok).unwrap();
@@ -468,6 +468,6 @@ mod tests {
                 _ => panic!("expected second CommitEdit request"),
             }
         };
-        await!(join(server, client));
+        join(server, client).await;
     }
 }

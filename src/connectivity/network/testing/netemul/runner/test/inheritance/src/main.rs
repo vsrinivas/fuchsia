@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{format_err, Error, ResultExt},
@@ -45,7 +45,7 @@ struct Opt {
 async fn simple_increment(expect: u32) -> Result<(), Error> {
     let counter = client::connect_to_service::<CounterMarker>()?;
 
-    let value = await!(counter.increment())?;
+    let value = counter.increment().await?;
     if value != expect {
         return Err(format_err!("unexpected counter value {}, was expecting {}", value, expect));
     }
@@ -56,7 +56,7 @@ async fn wait_for_component(component: &ComponentControllerProxy) -> Result<(), 
     let mut component_events = component.take_event_stream();
     // wait for child to exit and mimic the result code
     let result = loop {
-        let event = await!(component_events.try_next())
+        let event = component_events.try_next().await
             .context("wait for child component to exit")?
             .ok_or_else(|| format_err!("Child didn't exit cleanly"))?;
 
@@ -101,7 +101,7 @@ async fn spawn_child_and_expect(env: EnvironmentProxy, expect: u32) -> Result<()
     let (comp_controller, comp_controller_req) =
         fidl::endpoints::create_proxy::<ComponentControllerMarker>()?;
     let () = launcher.create_component(&mut linfo, Some(comp_controller_req))?;
-    let () = await!(wait_for_component(&comp_controller))?;
+    let () = wait_for_component(&comp_controller).await?;
 
     Ok(())
 }
@@ -109,14 +109,14 @@ async fn spawn_child_and_expect(env: EnvironmentProxy, expect: u32) -> Result<()
 async fn run_root() -> Result<(), Error> {
     // root process should have a brand new instance of the counter service,
     // so we should expect the value to be 1 after a first increment:
-    let () = await!(simple_increment(1))?;
+    let () = simple_increment(1).await?;
 
     // not let's try to spawn a process in this environment
     // it should have access to exactly the same instance of the counter service,
     // hence we're tell it to expect the value "2" on the counter:
 
     let env = client::connect_to_service::<EnvironmentMarker>()?;
-    let () = await!(spawn_child_and_expect(env, 2))?;
+    let () = spawn_child_and_expect(env, 2).await?;
 
     // finally we can spawn another fidl.sys.Environment from the first one
     // with the option to inherit the parent services.
@@ -140,13 +140,13 @@ async fn run_root() -> Result<(), Error> {
         None,
         &mut options,
     )?;
-    let () = await!(spawn_child_and_expect(child_env, 3))?;
+    let () = spawn_child_and_expect(child_env, 3).await?;
 
     Ok(())
 }
 
 async fn run_no_inherit() -> Result<(), Error> {
-    await!(simple_increment(1))
+    simple_increment(1).await
         .expect_err("Shouldn't be able to use service due to inheritance setup");
     Ok(())
 }
@@ -159,7 +159,7 @@ fn spawn_counter_server(mut stream: CounterRequestStream, data: Arc<Mutex<Counte
     fasync::spawn(
         async move {
             while let Some(CounterRequest::Increment { responder }) =
-                await!(stream.try_next()).context("error running counter server")?
+                stream.try_next().await.context("error running counter server")?
             {
                 let mut d = data.lock().unwrap();
                 d.value += 1;
@@ -177,7 +177,7 @@ async fn run_server() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |chan| spawn_counter_server(chan, data.clone()));
     fs.take_and_serve_directory_handle()?;
-    let () = await!(fs.collect());
+    let () = fs.collect().await;
     Ok(())
 }
 
@@ -199,10 +199,10 @@ async fn main() -> Result<(), Error> {
 
     let opt = Opt::from_args();
     match opt.mode {
-        None => await!(run_root()),
-        Some(Ops::Inherit) => await!(simple_increment(1)),
-        Some(Ops::Serve) => await!(run_server()),
-        Some(Ops::NoInherit) => await!(run_no_inherit()),
-        Some(Ops::SameInstance { expect }) => await!(simple_increment(expect)),
+        None => run_root().await,
+        Some(Ops::Inherit) => simple_increment(1).await,
+        Some(Ops::Serve) => run_server().await,
+        Some(Ops::NoInherit) => run_no_inherit().await,
+        Some(Ops::SameInstance { expect }) => simple_increment(expect).await,
     }
 }

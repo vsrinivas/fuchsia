@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![recursion_limit="512"]
 
 mod addr;
@@ -40,7 +40,7 @@ mod tests {
 
     macro_rules! unwrap_msg {
         ($msg:path{$($bindings:tt)*} from $stream:expr) => {
-            if let Some(Ok($msg{$($bindings)*})) = await!($stream.next()) {
+            if let Some(Ok($msg{$($bindings)*})) = $stream.next().await {
                 ($($bindings)*)
             } else {
                 panic!("Expected msg {}", stringify!($msg));
@@ -68,13 +68,13 @@ mod tests {
             },
         );
 
-        let (service, event_loop) = await!(Vsock::new(driver_client.into_proxy()?))?;
+        let (service, event_loop) = Vsock::new(driver_client.into_proxy()?).await?;
         fasync::spawn(
             event_loop
                 .map_err(|x| panic!("Event loop stopped {}", x))
                 .map(|_| ()),
         );
-        let (driver_server, driver_callbacks) = await!(rx)?;
+        let (driver_server, driver_callbacks) = rx.await?;
         let driver = MockDriver::new(driver_server, driver_callbacks);
         Ok((driver, service))
     }
@@ -103,7 +103,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn basic_listen() -> Result<(), failure::Error> {
-        let (mut driver, service) = await!(common_setup())?;
+        let (mut driver, service) = common_setup().await?;
 
         let app_client = make_client(&service)?;
 
@@ -112,7 +112,7 @@ mod tests {
             let (acceptor_remote, _acceptor_client) =
                 endpoints::create_endpoints::<AcceptorMarker>()?;
             assert_eq!(
-                await!(app_client.listen(49152, acceptor_remote))?,
+                app_client.listen(49152, acceptor_remote).await?,
                 zx::sys::ZX_ERR_UNAVAILABLE
             );
         }
@@ -120,7 +120,7 @@ mod tests {
         // Listen on a reasonable value.
         let (acceptor_remote, acceptor_client) = endpoints::create_endpoints::<AcceptorMarker>()?;
         assert_eq!(
-            await!(app_client.listen(8000, acceptor_remote))?,
+            app_client.listen(8000, acceptor_remote).await?,
             zx::sys::ZX_OK
         );
         let mut acceptor_client = acceptor_client.into_stream()?;
@@ -130,7 +130,7 @@ mod tests {
             let (acceptor_remote, _acceptor_client) =
                 endpoints::create_endpoints::<AcceptorMarker>()?;
             assert_eq!(
-                await!(app_client.listen(8000, acceptor_remote))?,
+                app_client.listen(8000, acceptor_remote).await?,
                 zx::sys::ZX_ERR_ALREADY_BOUND
             );
         }
@@ -155,7 +155,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn reject_connection() -> Result<(), failure::Error> {
-        let (mut driver, service) = await!(common_setup())?;
+        let (mut driver, service) = common_setup().await?;
 
         let app_client = make_client(&service)?;
 
@@ -173,14 +173,14 @@ mod tests {
             // Leave this scope to drop the server_data_socket
         }
         // Request should resolve to an error
-        let (status, _port) = await!(request)?;
+        let (status, _port) = request.await?;
         assert_eq!(status, zx::sys::ZX_ERR_UNAVAILABLE);
         Ok(())
     }
 
     #[fasync::run_until_stalled(test)]
     async fn transport_reset() -> Result<(), failure::Error> {
-        let (mut driver, service) = await!(common_setup())?;
+        let (mut driver, service) = common_setup().await?;
 
         let app_client = make_client(&service)?;
 
@@ -191,20 +191,20 @@ mod tests {
             unwrap_msg!(DeviceRequest::SendRequest{addr, data, responder} from driver.client);
         responder.send(zx::Status::OK.into_raw())?;
         driver.callbacks.response(&mut addr)?;
-        let (status, _) = await!(request)?;
+        let (status, _) = request.await?;
         zx::Status::ok(status)?;
 
         // Start a listener
         let (acceptor_remote, acceptor_client) = endpoints::create_endpoints::<AcceptorMarker>()?;
         assert_eq!(
-            await!(app_client.listen(9000, acceptor_remote))?,
+            app_client.listen(9000, acceptor_remote).await?,
             zx::sys::ZX_OK
         );
         let mut acceptor_client = acceptor_client.into_stream()?;
 
         // Perform a transport reset
         drop(server_data_socket_request);
-        await!(driver.callbacks.transport_reset(7))?;
+        driver.callbacks.transport_reset(7).await?;
 
         // Connection should be closed
         assert!(client_end_request

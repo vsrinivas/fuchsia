@@ -57,20 +57,20 @@ impl HubCapability {
                 .collect::<Vec<String>>(),
         );
 
-        let instances_map = await!(self.instances.lock());
+        let instances_map = self.instances.lock().await;
         if !instances_map.contains_key(&self.abs_moniker) {
             return Err(ModelError::unsupported_hook_error(format_err!(
                 "HubCapability is unable to find Realm \"{}\"",
                 self.abs_moniker
             )));
         }
-        await!(instances_map[&self.abs_moniker].directory.open_node(
+        instances_map[&self.abs_moniker].directory.open_node(
             flags,
             open_mode,
             dir_path,
             ServerEnd::<NodeMarker>::new(server_end),
             &self.abs_moniker,
-        ))?;
+        ).await?;
 
         Ok(())
     }
@@ -133,7 +133,7 @@ impl Hub {
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         let future = Abortable::new(root_directory, abort_registration);
         fasync::spawn(async move {
-            let _ = await!(future);
+            let _ = future.await;
         });
 
         Ok(Hub { instances: Arc::new(Mutex::new(instances_map)), abort_handle })
@@ -189,11 +189,11 @@ impl Hub {
             Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
         {
             if let (Some(name), Some(parent_moniker)) = (abs_moniker.name(), abs_moniker.parent()) {
-                await!(instances_map[&parent_moniker].children_directory.add_node(
+                instances_map[&parent_moniker].children_directory.add_node(
                     &name,
                     controlled,
                     &abs_moniker,
-                ))?;
+                ).await?;
             }
         }
         Ok(())
@@ -295,13 +295,13 @@ impl Hub {
     ) -> Result<(), ModelError> {
         let component_url = realm.component_url.clone();
         let abs_moniker = realm.abs_moniker.clone();
-        let mut instances_map = await!(self.instances.lock());
+        let mut instances_map = self.instances.lock().await;
 
-        await!(Self::add_instance_to_parent_if_necessary(
+        Self::add_instance_to_parent_if_necessary(
             &abs_moniker,
             component_url,
             &mut instances_map,
-        ))?;
+        ).await?;
 
         let instance = instances_map
             .get_mut(&abs_moniker)
@@ -343,16 +343,16 @@ impl Hub {
 
                 Self::add_runtime_directory(&mut execution_controlled, execution, &abs_moniker)?;
 
-                await!(instance.directory.add_node("exec", execution_controlled, &abs_moniker))?;
+                instance.directory.add_node("exec", execution_controlled, &abs_moniker).await?;
             }
         }
 
         for child_realm in realm_state.get_child_realms().values() {
-            await!(Self::add_instance_to_parent_if_necessary(
+            Self::add_instance_to_parent_if_necessary(
                 &child_realm.abs_moniker,
                 child_realm.component_url.clone(),
                 &mut instances_map,
-            ))?;
+            ).await?;
         }
 
         Ok(())
@@ -481,7 +481,7 @@ mod tests {
                 .expect("Failed to add 'test' directory.");
 
             fasync::spawn(async move {
-                let _ = await!(out_dir);
+                let _ = out_dir.await;
             });
         })
     }
@@ -503,7 +503,7 @@ mod tests {
                 ServerEnd::new(server_end.into_channel()),
             );
             fasync::spawn(async move {
-                let _ = await!(pseudo_dir);
+                let _ = pseudo_dir.await;
             });
         })
     }
@@ -521,7 +521,7 @@ mod tests {
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
     ) -> (Arc<model::Model>, DirectoryProxy) {
-        await!(start_component_manager_with_hub_and_hooks(root_component_url, components, vec![]))
+        start_component_manager_with_hub_and_hooks(root_component_url, components, vec![]).await
     }
 
     async fn start_component_manager_with_hub_and_hooks(
@@ -570,7 +570,7 @@ mod tests {
             config: model::ModelConfig::default(),
         }));
 
-        let res = await!(model.look_up_and_bind_instance(model::AbsoluteMoniker::root()));
+        let res = model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await;
         let expected_res: Result<(), model::ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
 
@@ -584,7 +584,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_basic() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = await!(start_component_manager_with_hub(
+        let (_model, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![
                 ComponentDescriptor {
@@ -607,20 +607,20 @@ mod tests {
                     runtime_host_fn: None,
                 },
             ],
-        ));
+        ).await;
 
-        assert_eq!(root_component_url, await!(read_file(&hub_proxy, "self/url")));
+        assert_eq!(root_component_url, read_file(&hub_proxy, "self/url").await);
         assert_eq!(
             format!("{}_resolved", root_component_url),
-            await!(read_file(&hub_proxy, "self/exec/resolved_url"))
+            read_file(&hub_proxy, "self/exec/resolved_url").await
         );
-        assert_eq!("test:///a", await!(read_file(&hub_proxy, "self/children/a/url")));
+        assert_eq!("test:///a", read_file(&hub_proxy, "self/children/a/url").await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_out_directory() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = await!(start_component_manager_with_hub(
+        let (_model, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
@@ -635,19 +635,19 @@ mod tests {
                 host_fn: Some(foo_out_dir_fn()),
                 runtime_host_fn: None,
             }],
-        ));
+        ).await;
 
-        assert!(await!(dir_contains(&hub_proxy, "self/exec", "out")));
-        assert!(await!(dir_contains(&hub_proxy, "self/exec/out", "foo")));
-        assert!(await!(dir_contains(&hub_proxy, "self/exec/out/test", "aaa")));
-        assert_eq!("bar", await!(read_file(&hub_proxy, "self/exec/out/foo")));
-        assert_eq!("bbb", await!(read_file(&hub_proxy, "self/exec/out/test/aaa")));
+        assert!(dir_contains(&hub_proxy, "self/exec", "out").await);
+        assert!(dir_contains(&hub_proxy, "self/exec/out", "foo").await);
+        assert!(dir_contains(&hub_proxy, "self/exec/out/test", "aaa").await);
+        assert_eq!("bar", read_file(&hub_proxy, "self/exec/out/foo").await);
+        assert_eq!("bbb", read_file(&hub_proxy, "self/exec/out/test/aaa").await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_runtime_directory() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = await!(start_component_manager_with_hub(
+        let (_model, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
@@ -662,15 +662,15 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: Some(bleep_runtime_dir_fn()),
             }],
-        ));
+        ).await;
 
-        assert_eq!("blah", await!(read_file(&hub_proxy, "self/exec/runtime/bleep")));
+        assert_eq!("blah", read_file(&hub_proxy, "self/exec/runtime/bleep").await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_test_hook_interception() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = await!(start_component_manager_with_hub_and_hooks(
+        let (_model, hub_proxy) = start_component_manager_with_hub_and_hooks(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
@@ -691,7 +691,7 @@ mod tests {
                 runtime_host_fn: None,
             }],
             vec![Arc::new(HubInjectionTestHook::new())],
-        ));
+        ).await;
 
         let in_dir = io_util::open_directory(
             &hub_proxy,
@@ -699,7 +699,7 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["hub"], await!(list_directory(&in_dir)));
+        assert_eq!(vec!["hub"], list_directory(&in_dir).await);
 
         let scoped_hub_dir_proxy = io_util::open_directory(
             &hub_proxy,
@@ -708,7 +708,7 @@ mod tests {
         )
         .expect("Failed to open directory");
         // There are no out or runtime directories because there is no program running.
-        assert_eq!(vec!["old_hub"], await!(list_directory(&scoped_hub_dir_proxy)));
+        assert_eq!(vec!["old_hub"], list_directory(&scoped_hub_dir_proxy).await);
 
         let old_hub_dir_proxy = io_util::open_directory(
             &hub_proxy,
@@ -719,14 +719,14 @@ mod tests {
         // There are no out or runtime directories because there is no program running.
         assert_eq!(
             vec!["expose", "in", "resolved_url"],
-            await!(list_directory(&old_hub_dir_proxy))
+            list_directory(&old_hub_dir_proxy).await
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_in_directory() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = await!(start_component_manager_with_hub(
+        let (_model, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
@@ -758,7 +758,7 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: None,
             }],
-        ));
+        ).await;
 
         let in_dir = io_util::open_directory(
             &hub_proxy,
@@ -766,7 +766,7 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["data", "hub", "svc"], await!(list_directory(&in_dir)));
+        assert_eq!(vec!["data", "hub", "svc"], list_directory(&in_dir).await);
 
         let scoped_hub_dir_proxy = io_util::open_directory(
             &hub_proxy,
@@ -777,14 +777,14 @@ mod tests {
         // There are no out or runtime directories because there is no program running.
         assert_eq!(
             vec!["expose", "in", "resolved_url"],
-            await!(list_directory(&scoped_hub_dir_proxy))
+            list_directory(&scoped_hub_dir_proxy).await
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn hub_expose_directory() {
         let root_component_url = "test:///root".to_string();
-        let (_model, hub_proxy) = await!(start_component_manager_with_hub(
+        let (_model, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
@@ -811,7 +811,7 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: None,
             }],
-        ));
+        ).await;
 
         let expose_dir = io_util::open_directory(
             &hub_proxy,
@@ -819,6 +819,6 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["data/hippo", "svc/bar"], await!(list_directory_recursive(&expose_dir)));
+        assert_eq!(vec!["data/hippo", "svc/bar"], list_directory_recursive(&expose_dir).await);
     }
 }

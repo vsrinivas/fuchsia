@@ -47,7 +47,7 @@ impl SwitchboardImpl {
         let switchboard_clone = switchboard.clone();
         fasync::spawn(
             async move {
-                while let Some(event) = await!(event_rx.next()) {
+                while let Some(event) = event_rx.next().await {
                     switchboard_clone.write().unwrap().process_event(event);
                 }
                 Ok(())
@@ -154,7 +154,7 @@ mod tests {
             .is_ok());
 
         // Ensure request is received.
-        let action = await!(action_rx.next()).unwrap();
+        let action = action_rx.next().await.unwrap();
 
         assert_eq!(SettingType::Unknown, action.setting_type);
         if let SettingActionData::Request(request) = action.data {
@@ -167,7 +167,7 @@ mod tests {
         assert!(event_tx.unbounded_send(SettingEvent::Response(action.id, Ok(None))).is_ok());
 
         // Ensure response is received.
-        let response = await!(response_rx).unwrap();
+        let response = response_rx.await.unwrap();
         assert!(response.is_ok());
     }
 
@@ -181,7 +181,7 @@ mod tests {
         let (notify_tx1, mut notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
         assert!(switchboard.write().unwrap().listen(setting_type, notify_tx1).is_ok());
         {
-            let action = await!(action_rx.next()).unwrap();
+            let action = action_rx.next().await.unwrap();
 
             assert_eq!(action.setting_type, setting_type);
             assert_eq!(action.data, SettingActionData::Listen(1));
@@ -191,7 +191,7 @@ mod tests {
         let (notify_tx2, mut notify_rx2) = futures::channel::mpsc::unbounded::<SettingType>();
         assert!(switchboard.write().unwrap().listen(setting_type, notify_tx2).is_ok());
         {
-            let action = await!(action_rx.next()).unwrap();
+            let action = action_rx.next().await.unwrap();
 
             assert_eq!(action.setting_type, setting_type);
             assert_eq!(action.data, SettingActionData::Listen(2));
@@ -202,11 +202,11 @@ mod tests {
 
         // Ensure both listeners receive notifications.
         {
-            let notification = await!(notify_rx1.next()).unwrap();
+            let notification = notify_rx1.next().await.unwrap();
             assert_eq!(notification, setting_type);
         }
         {
-            let notification = await!(notify_rx2.next()).unwrap();
+            let notification = notify_rx2.next().await.unwrap();
             assert_eq!(notification, setting_type);
         }
     }

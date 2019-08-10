@@ -34,7 +34,7 @@ async fn provision_new_account(
     account_manager: &AccountManagerProxy,
     lifetime: Lifetime,
 ) -> Result<LocalAccountId, Error> {
-    match await!(account_manager.provision_new_account(lifetime))? {
+    match account_manager.provision_new_account(lifetime).await? {
         (Status::Ok, Some(new_account_id)) => Ok(*new_account_id),
         (status, _) => Err(format_err!("ProvisionNewAccount returned status: {:?}", status)),
     }
@@ -54,7 +54,7 @@ async fn provision_account_from_dev_auth_provider(
     // This async function mocks out the auth context provider channel, although it supplies no data
     // for the test.
     let serve_fn = async move {
-        let request = await!(acp_request_stream.try_next())
+        let request = acp_request_stream.try_next().await
             .expect("AuthenticationContextProvider failed receiving message");
         match request {
             Some(AuthenticationContextProviderRequest::GetAuthenticationUiContext { .. }) => Ok(()),
@@ -62,14 +62,14 @@ async fn provision_account_from_dev_auth_provider(
         }
     };
 
-    let (serve_result, provision_result) = await!(join(
+    let (serve_result, provision_result) = join(
         serve_fn,
         account_manager.provision_from_auth_provider(
             acp_client_end,
             "dev_auth_provider",
             Lifetime::Persistent
         ),
-    ));
+    ).await;
     serve_result?;
     match provision_result? {
         (Status::Ok, Some(new_account_id)) => Ok(*new_account_id),
@@ -138,26 +138,26 @@ async fn test_provision_new_account() -> Result<(), Error> {
         .expect("Failed to launch account manager in nested environment.");
 
     // Verify we initially have no accounts.
-    assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
     // Provision a new account.
-    let account_1 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
+    let account_1 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
     assert_eq!(
-        await!(account_manager.get_account_ids())?,
+        account_manager.get_account_ids().await?,
         vec![LocalAccountId { id: account_1.id }]
     );
 
     // Provision a second new account and verify it has a different ID.
-    let account_2 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
+    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
     assert_ne!(account_1.id, account_2.id);
 
-    let account_ids = await!(account_manager.get_account_ids())?;
+    let account_ids = account_manager.get_account_ids().await?;
     assert_eq!(account_ids.len(), 2);
     assert!(account_ids.contains(&account_1));
     assert!(account_ids.contains(&account_2));
 
     // Auth state should be unknown for the new accounts
-    let (_, auth_states) = await!(account_manager.get_account_auth_states())?;
+    let (_, auth_states) = account_manager.get_account_auth_states().await?;
     assert_eq!(auth_states.len(), 2);
     assert!(auth_states.iter().all(|state| state.auth_state.summary == AuthStateSummary::Unknown
         && account_ids.contains(&state.account_id)));
@@ -171,26 +171,26 @@ async fn test_provision_new_account_from_auth_provider() -> Result<(), Error> {
         .expect("Failed to launch account manager in nested environment.");
 
     // Verify we initially have no accounts.
-    assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
     // Provision a new account.
-    let account_1 = await!(provision_account_from_dev_auth_provider(&account_manager))?;
+    let account_1 = provision_account_from_dev_auth_provider(&account_manager).await?;
     assert_eq!(
-        await!(account_manager.get_account_ids())?,
+        account_manager.get_account_ids().await?,
         vec![LocalAccountId { id: account_1.id }]
     );
 
     // Provision a second new account and verify it has a different ID.
-    let account_2 = await!(provision_account_from_dev_auth_provider(&account_manager))?;
+    let account_2 = provision_account_from_dev_auth_provider(&account_manager).await?;
     assert_ne!(account_1.id, account_2.id);
 
-    let account_ids = await!(account_manager.get_account_ids())?;
+    let account_ids = account_manager.get_account_ids().await?;
     assert_eq!(account_ids.len(), 2);
     assert!(account_ids.contains(&account_1));
     assert!(account_ids.contains(&account_2));
 
     // Auth state should be unknown for the new accounts
-    let (_, auth_states) = await!(account_manager.get_account_auth_states())?;
+    let (_, auth_states) = account_manager.get_account_auth_states().await?;
     assert_eq!(auth_states.len(), 2);
     assert!(auth_states.iter().all(|state| state.auth_state.summary == AuthStateSummary::Unknown
         && account_ids.contains(&state.account_id)));
@@ -203,46 +203,46 @@ async fn get_account_and_persona_helper(lifetime: Lifetime) -> Result<(), Error>
     let account_manager = create_account_manager(None)
         .expect("Failed to launch account manager in nested environment.");
 
-    assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
-    let mut account = await!(provision_new_account(&account_manager, lifetime))?;
+    let mut account = provision_new_account(&account_manager, lifetime).await?;
     // Connect a channel to the newly created account and verify it's usable.
     let (acp_client_end, _) = create_endpoints()?;
     let (account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        await!(account_manager.get_account(&mut account, acp_client_end, account_server_end))?,
+        account_manager.get_account(&mut account, acp_client_end, account_server_end).await?,
         Status::Ok
     );
     let account_proxy = account_client_end.into_proxy()?;
-    let account_auth_state = match await!(account_proxy.get_auth_state())? {
+    let account_auth_state = match account_proxy.get_auth_state().await? {
         (Status::Ok, Some(auth_state)) => *auth_state,
         (status, _) => return Err(format_err!("GetAuthState returned status: {:?}", status)),
     };
     assert_eq!(account_auth_state.summary, AuthStateSummary::Unknown);
-    assert_eq!(await!(account_proxy.get_lifetime())?, lifetime);
+    assert_eq!(account_proxy.get_lifetime().await?, lifetime);
 
     // Connect a channel to the account's default persona and verify it's usable.
     let (persona_client_end, persona_server_end) = create_endpoints()?;
-    assert_eq!(await!(account_proxy.get_default_persona(persona_server_end))?.0, Status::Ok);
+    assert_eq!(account_proxy.get_default_persona(persona_server_end).await?.0, Status::Ok);
     let persona_proxy = persona_client_end.into_proxy()?;
-    let persona_auth_state = match await!(persona_proxy.get_auth_state())? {
+    let persona_auth_state = match persona_proxy.get_auth_state().await? {
         (Status::Ok, Some(auth_state)) => *auth_state,
         (status, _) => return Err(format_err!("GetAuthState returned status: {:?}", status)),
     };
     assert_eq!(persona_auth_state.summary, AuthStateSummary::Unknown);
-    assert_eq!(await!(persona_proxy.get_lifetime())?, lifetime);
+    assert_eq!(persona_proxy.get_lifetime().await?, lifetime);
 
     Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_get_persistent_account_and_persona() -> Result<(), Error> {
-    await!(get_account_and_persona_helper(Lifetime::Persistent))
+    get_account_and_persona_helper(Lifetime::Persistent).await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_get_ephemeral_account_and_persona() -> Result<(), Error> {
-    await!(get_account_and_persona_helper(Lifetime::Ephemeral))
+    get_account_and_persona_helper(Lifetime::Ephemeral).await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -250,26 +250,26 @@ async fn test_account_deletion() -> Result<(), Error> {
     let account_manager = create_account_manager(None)
         .expect("Failed to launch account manager in nested environment.");
 
-    assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
-    let mut account_1 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
-    let account_2 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
-    let existing_accounts = await!(account_manager.get_account_ids())?;
+    let mut account_1 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
+    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
+    let existing_accounts = account_manager.get_account_ids().await?;
     assert!(existing_accounts.contains(&LocalAccountId { id: account_1.id }));
     assert!(existing_accounts.contains(&LocalAccountId { id: account_2.id }));
     assert_eq!(existing_accounts.len(), 2);
 
     // Delete an account and verify it is removed.
-    assert_eq!(await!(account_manager.remove_account(&mut account_1, true))?, Status::Ok);
+    assert_eq!(account_manager.remove_account(&mut account_1, true).await?, Status::Ok);
     assert_eq!(
-        await!(account_manager.get_account_ids())?,
+        account_manager.get_account_ids().await?,
         vec![LocalAccountId { id: account_2.id }]
     );
     // Connecting to the deleted account should fail.
     let (acp_client_end, _acp_server_end) = create_endpoints()?;
     let (_account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        await!(account_manager.get_account(&mut account_1, acp_client_end, account_server_end))?,
+        account_manager.get_account(&mut account_1, acp_client_end, account_server_end).await?,
         Status::NotFound
     );
 
@@ -284,13 +284,13 @@ async fn test_lifecycle() -> Result<(), Error> {
     let account_manager = create_account_manager(Some("test_account_deletion".to_string()))
         .expect("Failed to launch account manager in nested environment.");
 
-    assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
-    let mut account_1 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
-    let mut account_2 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
-    let mut account_3 = await!(provision_new_account(&account_manager, Lifetime::Ephemeral))?;
+    let mut account_1 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
+    let mut account_2 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
+    let mut account_3 = provision_new_account(&account_manager, Lifetime::Ephemeral).await?;
 
-    let existing_accounts = await!(account_manager.get_account_ids())?;
+    let existing_accounts = account_manager.get_account_ids().await?;
     assert_eq!(existing_accounts.len(), 3);
 
     // Kill and restart account manager in the same environment
@@ -298,28 +298,28 @@ async fn test_lifecycle() -> Result<(), Error> {
     let account_manager = create_account_manager(Some("test_account_deletion".to_string()))
         .expect("Failed to launch account manager in nested environment.");
 
-    let existing_accounts = await!(account_manager.get_account_ids())?;
+    let existing_accounts = account_manager.get_account_ids().await?;
     assert_eq!(existing_accounts.len(), 2); // The ephemeral account was dropped
 
     // Make sure we can't retrieve the ephemeral account
     let (acp_client_end, _) = create_endpoints()?;
     let (_account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        await!(account_manager.get_account(&mut account_3, acp_client_end, account_server_end))?,
+        account_manager.get_account(&mut account_3, acp_client_end, account_server_end).await?,
         Status::NotFound
     );
     // Retrieve a persistent account that was created in the earlier lifetime
     let (acp_client_end, _) = create_endpoints()?;
     let (_account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        await!(account_manager.get_account(&mut account_1, acp_client_end, account_server_end))?,
+        account_manager.get_account(&mut account_1, acp_client_end, account_server_end).await?,
         Status::Ok
     );
 
     // Delete an account and verify it is removed.
-    assert_eq!(await!(account_manager.remove_account(&mut account_2, true))?, Status::Ok);
+    assert_eq!(account_manager.remove_account(&mut account_2, true).await?, Status::Ok);
     assert_eq!(
-        await!(account_manager.get_account_ids())?,
+        account_manager.get_account_ids().await?,
         vec![LocalAccountId { id: account_1.id }]
     );
 

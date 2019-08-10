@@ -37,7 +37,7 @@ impl Pty {
     /// shell will not respond to any commands.
     pub async fn spawn(&mut self, window_size: WindowSize) -> Result<(), Error> {
         let spawn_fd = self.try_clone_fd().context("unable to clone pty for shell spawn")?;
-        let process = await!(Pty::launch_shell(&spawn_fd, &cstr!("/boot/bin/sh")))
+        let process = Pty::launch_shell(&spawn_fd, &cstr!("/boot/bin/sh")).await
             .context("launch shell process")?;
 
         {
@@ -45,7 +45,7 @@ impl Pty {
             *option = Some(process);
         }
 
-        await!(Pty::set_window_size(&spawn_fd, window_size))
+        Pty::set_window_size(&spawn_fd, window_size).await
             .context("unable to set initial window size for shell")?;
 
         Ok(())
@@ -69,7 +69,7 @@ impl Pty {
 
     /// Sends a message to the shell that the window has been resized.
     pub async fn resize(&self, window_size: WindowSize) -> Result<(), Error> {
-        await!(Pty::set_window_size(&self.server_pty, window_size))?;
+        Pty::set_window_size(&self.server_pty, window_size).await?;
         Ok(())
     }
 
@@ -85,7 +85,7 @@ impl Pty {
     /// shell.
     async fn launch_shell(server_pty: &File, command: &CStr) -> Result<zx::Process, Error> {
         let client_pty =
-            await!(Pty::open_client_pty(server_pty)).context("unable to create client_pty")?;
+            Pty::open_client_pty(server_pty).await.context("unable to create client_pty")?;
         let process = Pty::spawn_shell_process(client_pty, command)
             .context("unable to spawn shell process")?;
 
@@ -102,7 +102,7 @@ impl Pty {
             .context("failed to create FIDL channel from zircon channel")?;
 
         let device_proxy = DeviceProxy::new(server_pty_fidl_channel);
-        await!(device_proxy.open_client(0, device_channel))
+        device_proxy.open_client(0, device_channel).await
             .context("failed to attach PTY to channel")?;
 
         // convert the client side into a file descriptor. This must be called
@@ -141,7 +141,7 @@ impl Pty {
             .context("failed to create FIDL channel from zircon channel")?;
         let device_proxy = DeviceProxy::new(server_pty_fidl_channel);
 
-        await!(device_proxy.set_window_size(&mut window_size))
+        device_proxy.set_window_size(&mut window_size).await
             .context("Unable to resize window")?;
         Ok(())
     }
@@ -169,7 +169,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn can_open_client_pty() -> Result<(), Error> {
         let server_pty = Pty::open_server_pty()?;
-        let client_pty = await!(Pty::open_client_pty(&server_pty))?;
+        let client_pty = Pty::open_client_pty(&server_pty).await?;
         assert!(client_pty.as_raw_fd() > 0);
 
         Ok(())
@@ -186,7 +186,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn can_spawn_shell_process() -> Result<(), Error> {
         let server_pty = Pty::open_server_pty()?;
-        let process = await!(Pty::launch_shell(&server_pty, &cstr!("/pkg/bin/sh")))?;
+        let process = Pty::launch_shell(&server_pty, &cstr!("/pkg/bin/sh")).await?;
 
         let mut started = false;
         if let Ok(info) = process.info() {
@@ -200,7 +200,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn shell_process_is_spawned() -> Result<(), Error> {
-        let pty = await!(spawn_pty());
+        let pty = spawn_pty().await;
 
         let mut started = false;
         let process_ref = pty.shell_process.clone();
@@ -215,7 +215,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn shell_is_killed_on_close() -> Result<(), Error> {
-        let pty = await!(spawn_pty());
+        let pty = spawn_pty().await;
 
         pty.close()?;
 
@@ -232,7 +232,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn can_safely_call_close_twice() -> Result<(), Error> {
-        let pty = await!(spawn_pty());
+        let pty = spawn_pty().await;
 
         pty.close()?;
         pty.close()?;
@@ -242,15 +242,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn can_write_to_shell() -> Result<(), Error> {
-        let pty = await!(spawn_pty());
+        let pty = spawn_pty().await;
         let mut evented_fd = unsafe { fasync::net::EventedFd::new(pty.try_clone_fd()?)? };
 
-        await!(flush(&mut evented_fd))?;
+        flush(&mut evented_fd).await?;
 
-        await!(evented_fd.write_all("a".as_bytes()))?;
+        evented_fd.write_all("a".as_bytes()).await?;
 
         let mut output = [0u8, 4];
-        let result = await!(evented_fd.read(&mut output))?;
+        let result = evented_fd.read(&mut output).await?;
         assert_eq!(&output[0..result], "a".as_bytes());
 
         Ok(())
@@ -258,14 +258,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn can_resize_window() -> Result<(), Error> {
-        let pty = await!(spawn_pty());
-        await!(pty.resize(WindowSize { width: 400, height: 400 }))?;
+        let pty = spawn_pty().await;
+        pty.resize(WindowSize { width: 400, height: 400 }).await?;
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn pty_calls_close_on_drop() -> Result<(), Error> {
-        let pty = await!(spawn_pty());
+        let pty = spawn_pty().await;
         let process_ref = pty.shell_process.clone();
 
         drop(pty);
@@ -289,7 +289,7 @@ mod tests {
     async fn flush(evented_fd: &mut fasync::net::EventedFd<File>) -> Result<(), Error> {
         loop {
             let mut output = [0u8, 16];
-            let _ = await!(evented_fd.read(&mut output))?;
+            let _ = evented_fd.read(&mut output).await?;
             // Look for a space to signal we have reached the end.
             if output.contains(&32) {
                 break;
@@ -302,7 +302,7 @@ mod tests {
     async fn spawn_pty() -> Pty {
         let window_size = WindowSize { width: 300 as u32, height: 300 as u32 };
         let mut pty = Pty::new().unwrap();
-        let _ = await!(pty.spawn(window_size));
+        let _ = pty.spawn(window_size).await;
         pty
     }
 

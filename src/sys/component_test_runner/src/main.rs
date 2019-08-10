@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints::{create_proxy, ServerEnd};
@@ -46,9 +46,9 @@ async fn file_contents_at_path(dir: zx::Channel, path: &str) -> Result<Vec<u8>, 
 
     dir_proxy.open(0, 0, path, ServerEnd::<NodeMarker>::new(server.into_channel()))?;
 
-    let attr = await!(file.get_attr())?.1;
+    let attr = file.get_attr().await?.1;
 
-    let (_, vec) = await!(file.read(attr.content_size))?;
+    let (_, vec) = file.read(attr.content_size).await?;
     Ok(vec)
 }
 
@@ -95,7 +95,7 @@ async fn run_runner_server(mut stream: RunnerRequestStream) -> Result<(), Error>
         mut startup_info,
         controller: _,
         control_handle,
-    }) = await!(stream.try_next()).context("error running server")?
+    }) = stream.try_next().await.context("error running server")?
     {
         fx_log_info!("Received runner request for component {}", package.resolved_url);
 
@@ -108,7 +108,7 @@ async fn run_runner_server(mut stream: RunnerRequestStream) -> Result<(), Error>
 
         fx_log_info!("Found package directory handle");
 
-        let meta_contents = await!(file_contents_at_path(pkg_directory_channel, &manifest_path))?;
+        let meta_contents = file_contents_at_path(pkg_directory_channel, &manifest_path).await?;
 
         fx_log_info!("Meta contents: {:#?}", std::str::from_utf8(&meta_contents)?);
 
@@ -145,7 +145,7 @@ async fn main() -> Result<(), Error> {
         run_runner_server(stream).unwrap_or_else(|e| println!("{:?}", e))
     });
 
-    await!(fut);
+    fut.await;
     Ok(())
 }
 

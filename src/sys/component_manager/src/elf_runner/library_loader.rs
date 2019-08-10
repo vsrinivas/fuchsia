@@ -24,7 +24,7 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
             // Wait for requests
             let mut stream =
                 LoaderRequestStream::from_channel(fasync::Channel::from_channel(chan)?);
-            'request_loop: while let Some(req) = await!(stream.try_next())? {
+            'request_loop: while let Some(req) = stream.try_next().await? {
                 match req {
                     LoaderRequest::Done { control_handle } => {
                         control_handle.shutdown();
@@ -35,7 +35,7 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
                         let object_name = object_name.trim_matches(char::from(0)).to_string();
                         let mut errors = vec![];
                         for dir_proxy in &search_dirs {
-                            match await!(load_vmo(dir_proxy, &object_name)) {
+                            match load_vmo(dir_proxy, &object_name).await {
                                 Ok(b) => {
                                     responder.send(zx::sys::ZX_OK, Some(b))?;
                                     continue 'request_loop;
@@ -92,7 +92,7 @@ pub async fn load_vmo<'a>(
 ) -> Result<zx::Vmo, Error> {
     let file_proxy =
         io_util::open_file(dir_proxy, &Path::new(object_name), io_util::OPEN_RIGHT_READABLE)?;
-    let (status, fidlbuf) = await!(file_proxy.get_buffer(VMO_FLAG_READ))
+    let (status, fidlbuf) = file_proxy.get_buffer(VMO_FLAG_READ).await
         .map_err(|e| format_err!("reading object at {:?} failed: {}", object_name, e))?;
     let status = zx::Status::from_raw(status);
     if status != zx::Status::OK {
@@ -169,7 +169,7 @@ mod tests {
             // Should not be able to access meta/component_manager_tests_hello_world.cm
             ("../meta/component_manager_tests_hello_world.cm", false),
         ] {
-            let (res, o_vmo) = await!(loader.load_object(obj_name))?;
+            let (res, o_vmo) = loader.load_object(obj_name).await?;
             if should_succeed {
                 assert_eq!(zx::sys::ZX_OK, res);
                 assert!(o_vmo.is_some());
@@ -199,7 +199,7 @@ mod tests {
             ServerEnd::new(example_dir_service.into_channel()),
         );
         fasync::spawn(async move {
-            let _ = await!(example_dir);
+            let _ = example_dir.await;
         });
 
         // Attempt to access things with different configurations
@@ -226,10 +226,10 @@ mod tests {
             start(example_dir_proxy_clone, loader_service.into_channel());
 
             if let Some(config) = config {
-                assert_eq!(zx::sys::ZX_OK, await!(loader_proxy.config(config))?);
+                assert_eq!(zx::sys::ZX_OK, loader_proxy.config(config).await?);
             }
 
-            let (res, o_vmo) = await!(loader_proxy.load_object(obj_name))?;
+            let (res, o_vmo) = loader_proxy.load_object(obj_name).await?;
             if let Some(expected_result) = expected_result {
                 assert_eq!(zx::sys::ZX_OK, res);
                 let mut buf = vec![0; expected_result.len()];

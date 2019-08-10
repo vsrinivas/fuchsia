@@ -318,7 +318,7 @@ mod tests {
         let connector = TcpStream::connect(addr).expect("could not create server");
 
         let fut = async move {
-            let res = await!(connector);
+            let res = connector.await;
             assert!(res.is_err());
             Ok::<(), Error>(())
         };
@@ -338,27 +338,27 @@ mod tests {
 
         let server = async move {
             let (mut socket, _clientaddr) =
-                await!(listener.next()).expect("stream to not be done").expect("client to connect");
+                listener.next().await.expect("stream to not be done").expect("client to connect");
             drop(listener);
 
             let mut buf = [0u8; 20];
-            let n = await!(socket.read(&mut buf[..])).expect("server read to succeed");
+            let n = socket.read(&mut buf[..]).await.expect("server read to succeed");
             assert_eq!(query, &buf[..n]);
 
-            await!(socket.write_all(&response[..])).expect("server write to succeed");
+            socket.write_all(&response[..]).await.expect("server write to succeed");
 
-            let err = await!(socket.read_exact(&mut buf[..])).unwrap_err();
+            let err = socket.read_exact(&mut buf[..]).await.unwrap_err();
             assert_eq!(err.kind(), ErrorKind::UnexpectedEof);
         };
 
         let client = async move {
             let connector = TcpStream::connect(addr).expect("could not create server");
-            let mut socket = await!(connector).expect("client to connect to server");
+            let mut socket = connector.await.expect("client to connect to server");
 
-            await!(socket.write_all(&query[..])).expect("client write to succeed");
+            socket.write_all(&query[..]).await.expect("client write to succeed");
 
             let mut buf = [0u8; 20];
-            let n = await!(socket.read(&mut buf[..])).expect("client read to succeed");
+            let n = socket.read(&mut buf[..]).await.expect("client read to succeed");
             assert_eq!(response, &buf[..n]);
         };
 

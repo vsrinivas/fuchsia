@@ -26,8 +26,8 @@ impl FakeFactoryItemsServer {
         &self,
         mut stream: FactoryItemsRequestStream,
     ) -> Result<(), fidl::Error> {
-        while let Some(req) = await!(stream.try_next())? {
-            await!(self.handle_request(req))?;
+        while let Some(req) = stream.try_next().await? {
+            self.handle_request(req).await?;
         }
         Ok(())
     }
@@ -57,7 +57,7 @@ pub fn spawn_fake_factory_items_server(
     stream: FactoryItemsRequestStream,
 ) {
     fasync::spawn(async move {
-        await!(server.handle_requests_from_stream(stream))
+        server.handle_requests_from_stream(stream).await
             .expect("Failed to run fake_factory_store service")
     });
 }

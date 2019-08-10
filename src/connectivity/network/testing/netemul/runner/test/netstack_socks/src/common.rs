@@ -31,9 +31,9 @@ impl BusConnection {
     }
 
     pub async fn wait_for_event(&self, code: i32) -> Result<(), Error> {
-        let _ = await!(self
+        let _ = self
             .bus
-            .wait_for_event(Event { code: Some(code), message: None, arguments: None }, 0))?;
+            .wait_for_event(Event { code: Some(code), message: None, arguments: None }, 0).await?;
         Ok(())
     }
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![cfg(test)]
 
 mod pcm_audio;
@@ -69,7 +69,7 @@ async fn sbc_test_suite() -> Result<()> {
         }],
     };
 
-    await!(sbc_tests.run())
+    sbc_tests.run().await
 }
 
 #[fuchsia_async::run_singlethreaded]
@@ -102,5 +102,5 @@ async fn aac_test_suite() -> Result<()> {
         }],
     };
 
-    await!(sbc_tests.run())
+    sbc_tests.run().await
 }

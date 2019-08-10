@@ -18,7 +18,7 @@ pub async fn command(
         let mut settings = IntlSettings::empty();
         settings.time_zone_id = Some(time_zone_value);
 
-        let mutate_result = await!(proxy.set(settings))?;
+        let mutate_result = proxy.set(settings).await?;
         match mutate_result {
             Ok(_) => {
                 output.push_str(&format!("Successfully set time_zone to {}", time_zone_string))
@@ -29,7 +29,7 @@ pub async fn command(
         let mut settings = IntlSettings::empty();
         settings.temperature_unit = Some(temperature_unit_value);
 
-        let mutate_result = await!(proxy.set(settings))?;
+        let mutate_result = proxy.set(settings).await?;
         match mutate_result {
             Ok(_) => output.push_str(&format!(
                 "Successfully set temperature unit to {}",
@@ -43,7 +43,7 @@ pub async fn command(
         let mut settings = IntlSettings::empty();
         settings.locales = Some(locales);
 
-        let mutate_result = await!(proxy.set(settings))?;
+        let mutate_result = proxy.set(settings).await?;
         match mutate_result {
             Ok(_) => {
                 output.push_str(&format!("Successfully set locales to {}", locales_description))
@@ -51,7 +51,7 @@ pub async fn command(
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else {
-        let setting = await!(proxy.watch())?;
+        let setting = proxy.watch().await?;
 
         match setting {
             Ok(setting_value) => {

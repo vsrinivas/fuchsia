@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use carnelian::{
     set_node_color, App, AppAssistant, Color, Message, Point, ViewAssistant, ViewAssistantContext,
@@ -171,7 +171,7 @@ impl VoilaViewAssistant {
         let session_context = SessionContext {};
         let session_context_stream = session_context_server.into_stream()?;
         fasync::spawn_local(async move {
-            await!(session_context.handle_requests_from_stream(session_context_stream))
+            session_context.handle_requests_from_stream(session_context_stream).await
                 .unwrap_or_else(|err| {
                     fx_log_warn!("error handling SessionContext request channel: {:?}", err);
                 })

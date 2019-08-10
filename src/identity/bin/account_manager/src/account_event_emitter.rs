@@ -98,7 +98,7 @@ impl AccountEventEmitter {
     /// Send an event to all active listeners filtered by their respective options. Awaits until
     /// all messages have been confirmed by the servers.
     pub async fn publish<'a>(&'a self, event: &'a AccountEvent) {
-        let mut clients_lock = await!(self.clients.lock());
+        let mut clients_lock = self.clients.lock().await;
         clients_lock.retain(|client| !client.listener.is_closed());
         let futures = (&*clients_lock)
             .into_iter()
@@ -106,7 +106,7 @@ impl AccountEventEmitter {
             .map(|fut| Pin::<Box<_>>::from(Box::new(fut)));
         let all_futures = join_all(futures);
         std::mem::drop(clients_lock);
-        await!(all_futures);
+        all_futures.await;
         self.inspect.events.add(1);
     }
 
@@ -117,7 +117,7 @@ impl AccountEventEmitter {
         options: AccountListenerOptions,
         initial_auth_states: &'a Vec<AccountAuthState>,
     ) -> Result<(), fidl::Error> {
-        let mut clients_lock = await!(self.clients.lock());
+        let mut clients_lock = self.clients.lock().await;
         let future = if options.initial_state {
             let mut v: Vec<FidlAccountAuthState> = initial_auth_states
                 .into_iter()
@@ -130,7 +130,7 @@ impl AccountEventEmitter {
         clients_lock.push(Client::new(listener, options));
         self.inspect.active.set(clients_lock.len() as u64);
         std::mem::drop(clients_lock);
-        await!(future)
+        future.await
     }
 }
 
@@ -221,22 +221,22 @@ mod tests {
 
         // Expect only the AccountAdded event, the filter skips the AccountRemoved event
         let serve_fut = async move {
-            let request = await!(stream.try_next()).unwrap();
+            let request = stream.try_next().await.unwrap();
             if let Some(AccountListenerRequest::OnAccountAdded { id, responder }) = request {
                 assert_eq!(LocalAccountId::from(id), ACCOUNT_ID_ADD.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");
             };
-            if let Some(_) = await!(stream.try_next()).unwrap() {
+            if let Some(_) = stream.try_next().await.unwrap() {
                 panic!("Unexpected message, channel should be closed");
             }
         };
         let request_fut = async move {
-            assert!(await!(client.possibly_send(&EVENT_ADDED)).is_ok());
-            assert!(await!(client.possibly_send(&EVENT_REMOVED)).is_ok());
+            assert!(client.possibly_send(&EVENT_ADDED).await.is_ok());
+            assert!(client.possibly_send(&EVENT_REMOVED).await.is_ok());
         };
-        await!(join(serve_fut, request_fut));
+        join(serve_fut, request_fut).await;
     }
 
     /// Given two independent clients with different options/filters, send events and check
@@ -264,20 +264,20 @@ mod tests {
         let account_event_emitter = create_account_event_emitter();
 
         let serve_fut_1 = async move {
-            let request = await!(stream_1.try_next()).unwrap();
+            let request = stream_1.try_next().await.unwrap();
             if let Some(AccountListenerRequest::OnAccountAdded { id, responder }) = request {
                 assert_eq!(LocalAccountId::from(id), ACCOUNT_ID_ADD.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");
             };
-            if let Some(_) = await!(stream_1.try_next()).unwrap() {
+            if let Some(_) = stream_1.try_next().await.unwrap() {
                 panic!("Unexpected message, channel should be closed");
             }
         };
 
         let serve_fut_2 = async move {
-            let request = await!(stream_2.try_next()).unwrap();
+            let request = stream_2.try_next().await.unwrap();
             if let Some(AccountListenerRequest::OnInitialize { account_auth_states, responder }) =
                 request
             {
@@ -289,42 +289,42 @@ mod tests {
             } else {
                 panic!("Unexpected message received");
             };
-            let request = await!(stream_2.try_next()).unwrap();
+            let request = stream_2.try_next().await.unwrap();
             if let Some(AccountListenerRequest::OnAccountRemoved { id, responder }) = request {
                 assert_eq!(LocalAccountId::from(id), ACCOUNT_ID_REMOVE.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");
             };
-            if let Some(_) = await!(stream_2.try_next()).unwrap() {
+            if let Some(_) = stream_2.try_next().await.unwrap() {
                 panic!("Unexpected message, channel should be closed");
             }
         };
 
         let request_fut = async move {
             assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 0);
-            assert!(await!(account_event_emitter.add_listener(
+            assert!(account_event_emitter.add_listener(
                 listener_1,
                 options_1,
                 &AUTH_STATES
-            ))
+            ).await
             .is_ok());
             assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 1);
-            assert!(await!(account_event_emitter.add_listener(
+            assert!(account_event_emitter.add_listener(
                 listener_2,
                 options_2,
                 &AUTH_STATES
-            ))
+            ).await
             .is_ok());
             assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 2);
 
             assert_eq!(account_event_emitter.inspect.events.get().unwrap(), 0);
-            await!(account_event_emitter.publish(&EVENT_ADDED));
+            account_event_emitter.publish(&EVENT_ADDED).await;
             assert_eq!(account_event_emitter.inspect.events.get().unwrap(), 1);
-            await!(account_event_emitter.publish(&EVENT_REMOVED));
+            account_event_emitter.publish(&EVENT_REMOVED).await;
             assert_eq!(account_event_emitter.inspect.events.get().unwrap(), 2);
         };
-        await!(join3(serve_fut_1, serve_fut_2, request_fut));
+        join3(serve_fut_1, serve_fut_2, request_fut).await;
     }
 
     /// Check that that stale clients are cleaned up, once the server is closed
@@ -339,10 +339,10 @@ mod tests {
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();
         let listener = client_end.into_proxy().unwrap();
         let account_event_emitter = create_account_event_emitter();
-        assert!(await!(account_event_emitter.add_listener(listener, options, &AUTH_STATES)).is_ok());
+        assert!(account_event_emitter.add_listener(listener, options, &AUTH_STATES).await.is_ok());
 
         let serve_fut = async move {
-            let request = await!(stream.try_next()).unwrap();
+            let request = stream.try_next().await.unwrap();
             if let Some(AccountListenerRequest::OnAccountAdded { id, responder }) = request {
                 assert_eq!(LocalAccountId::from(id), ACCOUNT_ID_ADD.clone());
                 responder.send().unwrap();
@@ -352,18 +352,18 @@ mod tests {
         };
 
         let request_fut = async move {
-            await!(account_event_emitter.publish(&EVENT_ADDED)); // Normal event
+            account_event_emitter.publish(&EVENT_ADDED).await; // Normal event
             {
-                let clients_lock = await!(account_event_emitter.clients.lock());
+                let clients_lock = account_event_emitter.clients.lock().await;
                 assert_eq!(clients_lock.len(), 1); // Listener remains
             }
             account_event_emitter
         };
-        let (_, account_event_emitter) = await!(join(serve_fut, request_fut));
+        let (_, account_event_emitter) = join(serve_fut, request_fut).await;
 
         // Now the server is dropped, so the new publish should trigger a drop of the client
-        await!(account_event_emitter.publish(&EVENT_REMOVED));
-        let clients_lock = await!(account_event_emitter.clients.lock());
+        account_event_emitter.publish(&EVENT_REMOVED).await;
+        let clients_lock = account_event_emitter.clients.lock().await;
         assert!(clients_lock.is_empty());
     }
 }

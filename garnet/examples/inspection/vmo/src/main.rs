@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::Error,
@@ -66,7 +66,7 @@ async fn main() -> Result<(), Error> {
     inspector.export(&mut fs);
     fs.take_and_serve_directory_handle()?;
 
-    await!(fs.collect::<()>());
+    fs.collect::<()>().await;
 
     Ok(())
 }

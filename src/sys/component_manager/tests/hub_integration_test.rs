@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     component_manager_lib::{
@@ -37,7 +37,7 @@ async fn connect_to_echo_service(hub_proxy: &DirectoryProxy, echo_service_path: 
     )
     .expect("failed to open echo service");
     let echo_proxy = fecho::EchoProxy::new(node_proxy.into_channel().unwrap());
-    let res = await!(echo_proxy.echo_string(Some("hippos")));
+    let res = echo_proxy.echo_string(Some("hippos")).await;
     assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()));
 }
 
@@ -84,7 +84,7 @@ async fn test() -> Result<(), Error> {
 
     let model = Arc::new(Model::new(params));
 
-    let res = await!(model.look_up_and_bind_instance(model::AbsoluteMoniker::root()));
+    let res = model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await;
     let expected_res: Result<(), model::ModelError> = Ok(());
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
 
@@ -99,16 +99,16 @@ async fn test() -> Result<(), Error> {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
-    assert_eq!(vec!["echo_server", "hub_client"], await!(list_directory(&children_dir_proxy)));
+    assert_eq!(vec!["echo_server", "hub_client"], list_directory(&children_dir_proxy).await);
 
     // These args are from hub_client.cml.
     assert_eq!(
         "Hippos",
-        await!(read_file(&hub_proxy, "self/children/hub_client/exec/runtime/args/0"))
+        read_file(&hub_proxy, "self/children/hub_client/exec/runtime/args/0").await
     );
     assert_eq!(
         "rule!",
-        await!(read_file(&hub_proxy, "self/children/hub_client/exec/runtime/args/1"))
+        read_file(&hub_proxy, "self/children/hub_client/exec/runtime/args/1").await
     );
 
     let echo_service_name = "fidl.examples.routing.echo.Echo";
@@ -120,7 +120,7 @@ async fn test() -> Result<(), Error> {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
-    assert_eq!(vec![echo_service_name], await!(list_directory(&expose_svc_dir_proxy)));
+    assert_eq!(vec![echo_service_name], list_directory(&expose_svc_dir_proxy).await);
 
     let in_dir = "self/children/hub_client/exec/in";
     let svc_dir = format!("{}/{}", in_dir, "svc");
@@ -132,7 +132,7 @@ async fn test() -> Result<(), Error> {
     .expect("Failed to open directory");
     assert_eq!(
         vec![echo_service_name, hub_report_service_name],
-        await!(list_directory(&svc_dir_proxy))
+        list_directory(&svc_dir_proxy).await
     );
 
     // Verify that the 'pkg' directory is avaialble.
@@ -143,15 +143,15 @@ async fn test() -> Result<(), Error> {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
-    assert_eq!(vec!["bin", "lib", "meta", "test"], await!(list_directory(&pkg_dir_proxy)));
+    assert_eq!(vec!["bin", "lib", "meta", "test"], list_directory(&pkg_dir_proxy).await);
 
     // Verify that we can connect to the echo service from the in/svc directory.
     let in_echo_service_path = format!("{}/{}", svc_dir, echo_service_name);
-    await!(connect_to_echo_service(&hub_proxy, in_echo_service_path));
+    connect_to_echo_service(&hub_proxy, in_echo_service_path).await;
 
     // Verify that we can connect to the echo service from the expose/svc directory.
     let expose_echo_service_path = format!("{}/{}", expose_svc_dir, echo_service_name);
-    await!(connect_to_echo_service(&hub_proxy, expose_echo_service_path));
+    connect_to_echo_service(&hub_proxy, expose_echo_service_path).await;
 
     // Verify that the 'hub' directory is avaialble. The 'hub' mapped to 'hub_client''s
     // namespace is actually mapped to the 'exec' directory of 'hub_client'.
@@ -164,27 +164,27 @@ async fn test() -> Result<(), Error> {
     .expect("Failed to open directory");
     assert_eq!(
         vec!["expose", "in", "out", "resolved_url", "runtime"],
-        await!(list_directory(&scoped_hub_dir_proxy))
+        list_directory(&scoped_hub_dir_proxy).await
     );
 
     // Verify that hub_client's view of the hub matches the view reachable from
     // the global hub.
     assert_eq!(
         hub_directory_listing(vec!["expose", "in", "out", "resolved_url", "runtime"]),
-        await!(hub_test_hook.observe("/hub"))
+        hub_test_hook.observe("/hub").await
     );
 
     // Verify that hub_client's view is able to correctly read the names of the
     // children of the parent echo_realm.
     assert_eq!(
         hub_directory_listing(vec!["echo_server", "hub_client"]),
-        await!(hub_test_hook.observe("/parent_hub/children"))
+        hub_test_hook.observe("/parent_hub/children").await
     );
 
     // Verify that hub_client is able to see its sibling's hub correctly.
     assert_eq!(
         file_content("fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm"),
-        await!(hub_test_hook.observe("/sibling_hub/exec/resolved_url"))
+        hub_test_hook.observe("/sibling_hub/exec/resolved_url").await
     );
 
     Ok(())

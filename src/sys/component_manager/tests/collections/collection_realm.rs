@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{format_err, Error, ResultExt},
@@ -36,30 +36,30 @@ async fn main() -> Result<(), Error> {
             )),
             startup: Some(fsys::StartupMode::Lazy),
         };
-        await!(realm.create_child(&mut collection_ref, child_decl))
+        realm.create_child(&mut collection_ref, child_decl).await
             .context(format!("create_child {} failed", name))?
             .expect(&format!("failed to create child {}", name));
     }
 
-    println!("{}", await!(list_children(&realm))?);
+    println!("{}", list_children(&realm).await?);
 
     // Bind to children, causing them to execute.
     println!("Binding to children");
     for name in vec!["a", "b"] {
         let mut child_ref = new_child_ref(name, "coll");
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        await!(realm.bind_child(&mut child_ref, server_end))
+        realm.bind_child(&mut child_ref, server_end).await
             .context(format!("bind_child {} failed", name))?
             .expect(&format!("failed to bind to child {}", name));
         let trigger = open_trigger_svc(&dir)?;
-        await!(trigger.run()).context(format!("trigger {} failed", name))?;
+        trigger.run().await.context(format!("trigger {} failed", name))?;
     }
 
     // Destroy one.
     println!("Destroying child");
     {
         let mut child_ref = new_child_ref("a", "coll");
-        await!(realm.destroy_child(&mut child_ref))
+        realm.destroy_child(&mut child_ref).await
             .context("destroy_child a failed")?
             .expect("failed to destroy child");
     }
@@ -69,13 +69,13 @@ async fn main() -> Result<(), Error> {
     {
         let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let mut child_ref = new_child_ref("a", "coll");
-        let res = await!(realm.bind_child(&mut child_ref, server_end))
+        let res = realm.bind_child(&mut child_ref, server_end).await
             .context("second bind_child a failed")?;
         let err = res.err().ok_or(format_err!("expected bind_child a to fail"))?;
         assert_eq!(err, fsys::Error::InstanceNotFound);
     }
 
-    println!("{}", await!(list_children(&realm))?);
+    println!("{}", list_children(&realm).await?);
 
     // Recreate child (with different URL), and bind to it. Should work.
     println!("Recreating and binding to child");
@@ -89,21 +89,21 @@ async fn main() -> Result<(), Error> {
             ),
             startup: Some(fsys::StartupMode::Lazy),
         };
-        await!(realm.create_child(&mut collection_ref, child_decl))
+        realm.create_child(&mut collection_ref, child_decl).await
             .context("second create_child a failed")?
             .expect("failed to create second child a");
     }
     {
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let mut child_ref = new_child_ref("a", "coll");
-        await!(realm.bind_child(&mut child_ref, server_end))
+        realm.bind_child(&mut child_ref, server_end).await
             .context("bind_child a failed")?
             .expect("failed to bind to child a");
         let trigger = open_trigger_svc(&dir)?;
-        await!(trigger.run()).context("second trigger a failed")?;
+        trigger.run().await.context("second trigger a failed")?;
     }
 
-    println!("{}", await!(list_children(&realm))?);
+    println!("{}", list_children(&realm).await?);
 
     println!("Done");
     Ok(())
@@ -116,10 +116,10 @@ fn new_child_ref(name: &str, collection: &str) -> fsys::ChildRef {
 async fn list_children(realm: &fsys::RealmProxy) -> Result<String, Error> {
     let (iterator_proxy, server_end) = endpoints::create_proxy().unwrap();
     let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-    await!(realm.list_children(&mut collection_ref, server_end))
+    realm.list_children(&mut collection_ref, server_end).await
         .context("list_children failed")?
         .expect("failed to list children");
-    let res = await!(iterator_proxy.next());
+    let res = iterator_proxy.next().await;
     let children = res.expect("failed to iterate over children");
     let children: Vec<_> = children
         .iter()

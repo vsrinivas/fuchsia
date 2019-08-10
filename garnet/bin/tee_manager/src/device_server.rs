@@ -35,7 +35,7 @@ pub async fn serve_passthrough(
             .unwrap_or_else(|e| fx_log_err!("{:?}", e)),
     );
 
-    await!(dev_connection.register_abort_handle_on_closed(abort_handle));
+    dev_connection.register_abort_handle_on_closed(abort_handle).await;
     fasync::spawn(service_provider_server_fut.unwrap_or_else(|Aborted| ()));
 
     dev_connection

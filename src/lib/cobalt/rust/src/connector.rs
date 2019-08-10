@@ -86,14 +86,14 @@ impl CobaltConnector {
         let (sender, receiver) = mpsc::channel(self.buffer_size);
         let sender = CobaltSender::new(sender);
         let fut = async move {
-            let logger = match await!(self.get_cobalt_logger(connection_type)) {
+            let logger = match self.get_cobalt_logger(connection_type).await {
                 Ok(logger) => logger,
                 Err(e) => {
                     error!("Error obtaining a Cobalt Logger: {}", e);
                     return;
                 }
             };
-            await!(Self::send_cobalt_events(logger, receiver))
+            Self::send_cobalt_events(logger, receiver).await
         };
         (sender, fut)
     }
@@ -108,8 +108,8 @@ impl CobaltConnector {
             .context("Failed to connect to the Cobalt LoggerFactory")?;
 
         let res = match connection_type {
-            ConnectionType::ProjectName(project_name) => await!(logger_factory
-                .create_logger_from_project_name(&project_name, self.release_stage, server_end)),
+            ConnectionType::ProjectName(project_name) => logger_factory
+                .create_logger_from_project_name(&project_name, self.release_stage, server_end).await,
 
             ConnectionType::ConfigPath(config_path) => {
                 let mut cobalt_config = File::open(config_path.as_ref())?;
@@ -118,10 +118,10 @@ impl CobaltConnector {
 
                 let config = fuchsia_mem::Buffer { vmo, size };
 
-                await!(logger_factory.create_logger(
+                logger_factory.create_logger(
                     &mut ProjectProfile { config, release_stage: self.release_stage },
                     server_end,
-                ))
+                ).await
             }
         };
 
@@ -142,8 +142,8 @@ impl CobaltConnector {
 
     async fn send_cobalt_events(logger: LoggerProxy, mut receiver: mpsc::Receiver<CobaltEvent>) {
         let mut log_error = log_first_n_factory(30, |e| error!("{}", e));
-        while let Some(mut event) = await!(receiver.next()) {
-            let resp = await!(logger.log_cobalt_event(&mut event));
+        while let Some(mut event) = receiver.next().await {
+            let resp = logger.log_cobalt_event(&mut event).await;
             match resp {
                 Ok(Status::Ok) => continue,
                 Ok(other) => log_error(format!("Cobalt returned an error for metric {}: {:?}",

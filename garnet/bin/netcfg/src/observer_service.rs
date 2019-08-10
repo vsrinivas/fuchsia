@@ -21,12 +21,12 @@ pub async fn serve_fidl_requests(
     stream: ObserverRequestStream,
     interface_ids: Arc<Mutex<HashMap<String, u64>>>,
 ) -> Result<(), fidl::Error> {
-    await!(stream.try_for_each(|req| {
+    stream.try_for_each(|req| {
         async {
-            let interface_ids_lock = await!(interface_ids.lock());
+            let interface_ids_lock = interface_ids.lock().await;
             match req {
                 ObserverRequest::ListInterfaces { responder } => {
-                    let (mut infos, status) = if let Ok(infos) = await!(stack.list_interfaces()) {
+                    let (mut infos, status) = if let Ok(infos) = stack.list_interfaces().await {
                         let infos = infos
                             .into_iter()
                             .filter_map(|info| {
@@ -63,7 +63,7 @@ pub async fn serve_fidl_requests(
                 }
                 ObserverRequest::GetInterfaceInfo { name, responder } => {
                     let (mut info, status) = if let Some(&id) = interface_ids_lock.get(&name) {
-                        if let Ok((info, None)) = await!(stack.get_interface_info(id)) {
+                        if let Ok((info, None)) = stack.get_interface_info(id).await {
                             (
                                 Some(InterfaceInfo { name, properties: info.unwrap().properties }),
                                 zx::sys::ZX_OK,
@@ -78,7 +78,7 @@ pub async fn serve_fidl_requests(
                 }
             }
         }
-    }))
+    }).await
 }
 
 #[cfg(test)]

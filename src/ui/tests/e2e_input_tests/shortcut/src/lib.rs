@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![cfg(test)]
 use failure::{Error, ResultExt};
 use fidl_fuchsia_ui_input2 as ui_input;
@@ -56,13 +56,13 @@ fn shortcut_detection() -> Result<(), Error> {
         presenter.present_view(&mut token_pair.view_holder_token, None).expect("present_view");
 
         let scenic = connect_to_service::<ui_scenic::ScenicMarker>().expect("connect to Scenic");
-        await!(scenic.get_display_info()).expect("get_display_info");
+        scenic.get_display_info().await.expect("get_display_info");
 
-        await!(input_synthesis::keyboard_event_command(0x04, Duration::from_millis(0)))
+        input_synthesis::keyboard_event_command(0x04, Duration::from_millis(0)).await
             .expect("keyboard_event_command injects input");
 
         // Wait for shortcut listener callback to be activated.
-        match await!(listener_stream.next()) {
+        match listener_stream.next().await {
             Some(Ok(req)) => {
                 match req {
                     ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. } => {

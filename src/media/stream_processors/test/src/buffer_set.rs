@@ -156,11 +156,11 @@ impl BufferSetFactory {
         buffer_set_type: BufferSetType,
         buffer_collection_constraints: Option<BufferCollectionConstraints>,
     ) -> Result<BufferSet> {
-        let (collection_client, settings) = await!(Self::settings(
+        let (collection_client, settings) = Self::settings(
             buffer_lifetime_ordinal,
             constraints,
             buffer_collection_constraints
-        ))?;
+        ).await?;
 
         vlog!(2, "Got settings; waiting for buffers.");
 
@@ -173,7 +173,7 @@ impl BufferSetFactory {
                 .context("Sending output partial settings to codec")?,
         };
 
-        let (status, collection_info) = await!(collection_client.wait_for_buffers_allocated())
+        let (status, collection_info) = collection_client.wait_for_buffers_allocated().await
             .context("Waiting for buffers")?;
         vlog!(2, "Sysmem responded: {:?}", status);
         let collection_info = zx::Status::ok(status).map(|_| collection_info)?;
@@ -234,7 +234,7 @@ impl BufferSetFactory {
             collection_request,
         )?;
         let collection_client = collection_client.into_proxy()?;
-        await!(collection_client.sync()).context("Syncing codec_token_request with sysmem")?;
+        collection_client.sync().await.context("Syncing codec_token_request with sysmem")?;
 
         let mut collection_constraints =
             buffer_collection_constraints.unwrap_or(BUFFER_COLLECTION_CONSTRAINTS_DEFAULT);

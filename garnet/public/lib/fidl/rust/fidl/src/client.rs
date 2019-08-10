@@ -696,7 +696,7 @@ mod tests {
         let server = fasync::Channel::from_channel(server_end).unwrap();
         let receiver = async move {
             let mut buffer = zx::MessageBuf::new();
-            await!(server.recv_msg(&mut buffer)).expect("failed to recv msg");
+            server.recv_msg(&mut buffer).await.expect("failed to recv msg");
             assert_eq!(SEND_EXPECTED, buffer.bytes());
         };
 
@@ -730,7 +730,7 @@ mod tests {
         let server = fasync::Channel::from_channel(server_end).unwrap();
         let mut buffer = zx::MessageBuf::new();
         let receiver = async move {
-            await!(server.recv_msg(&mut buffer)).expect("failed to recv msg");
+            server.recv_msg(&mut buffer).await.expect("failed to recv msg");
             assert_eq!(EXPECTED, buffer.bytes());
             let id = 1; // internally, the first slot in a slab returns a `0`. We then add one
                         // since FIDL txids start with `1`.

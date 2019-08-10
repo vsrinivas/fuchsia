@@ -4,7 +4,7 @@
 
 //! Rust fuchsia logger library.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![deny(missing_docs)]
 
 use failure::{Error, ResultExt};
@@ -32,7 +32,7 @@ async fn log_listener(
     mut processor: impl LogProcessor,
     mut stream: LogListenerRequestStream,
 ) -> Result<(), fidl::Error> {
-    while let Some(request) = await!(stream.try_next())? {
+    while let Some(request) = stream.try_next().await? {
         match request {
             LogListenerRequest::Log { log, control_handle: _ } => {
                 processor.log(log);
@@ -68,6 +68,6 @@ pub async fn run_log_listener<'a>(
         logger.listen(listener_ptr, options).context("failed to register listener")?;
     }
 
-    await!(log_listener(processor, listener_stream))?;
+    log_listener(processor, listener_stream).await?;
     Ok(())
 }

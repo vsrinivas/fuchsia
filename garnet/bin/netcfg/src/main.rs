@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -77,12 +77,12 @@ const FILTER_CAS_RETRY_INTERVAL_MILLIS: i64 = 500;
 macro_rules! cas_filter_rules {
     ($filter:ident, $get_rules:ident, $update_rules:ident, $rules:expr) => {
         for retry in 0..FILTER_CAS_RETRY_MAX {
-            let (_, generation, status) = await!($filter.$get_rules())?;
+            let (_, generation, status) = $filter.$get_rules().await?;
             if status != fidl_fuchsia_net_filter::Status::Ok {
                 let () =
                     Err(failure::format_err!("{} failed: {:?}", stringify!($get_rules), status))?;
             }
-            let status = await!($filter.$update_rules(&mut $rules.iter_mut(), generation))
+            let status = $filter.$update_rules(&mut $rules.iter_mut(), generation).await
                 .context("error getting response")?;
             match status {
                 fidl_fuchsia_net_filter::Status::Ok => {
@@ -91,9 +91,9 @@ macro_rules! cas_filter_rules {
                 fidl_fuchsia_net_filter::Status::ErrGenerationMismatch
                     if retry < FILTER_CAS_RETRY_MAX - 1 =>
                 {
-                    await!(fuchsia_async::Timer::new(
+                    fuchsia_async::Timer::new(
                         FILTER_CAS_RETRY_INTERVAL_MILLIS.millis().after_now(),
-                    ));
+                    ).await;
                 }
                 _ => {
                     let () = Err(failure::format_err!(
@@ -217,7 +217,7 @@ fn main() -> Result<(), failure::Error> {
             .with_context(|_| format!("could not watch {}", ETHDIR))?;
 
         while let Some(fuchsia_vfs_watcher::WatchMessage { event, filename }) =
-            await!(watcher.try_next()).with_context(|_| format!("watching {}", ETHDIR))?
+            watcher.try_next().await.with_context(|_| format!("watching {}", ETHDIR))?
         {
             match event {
                 fuchsia_vfs_watcher::WatchEvent::ADD_FILE
@@ -251,7 +251,7 @@ fn main() -> Result<(), failure::Error> {
                     >::new(client)
                     .into_proxy()?;
 
-                    if let Ok(device_info) = await!(device.get_info()) {
+                    if let Ok(device_info) = device.get_info().await {
                         let device_info: fidl_fuchsia_hardware_ethernet_ext::EthernetInfo =
                             device_info.into();
 
@@ -292,13 +292,13 @@ fn main() -> Result<(), failure::Error> {
                                 &default_config_rules,
                                 &filepath,
                             );
-                            let nic_id = await!(netstack.add_ethernet_device(
+                            let nic_id = netstack.add_ethernet_device(
                                 &topological_path,
                                 &mut derived_interface_config,
                                 fidl::endpoints::ClientEnd::<
                                     fidl_fuchsia_hardware_ethernet::DeviceMarker,
                                 >::new(client),
-                            ))
+                            ).await
                                 .with_context(|_| {
                                     format!(
                                         "fidl_netstack::Netstack::add_ethernet_device({})",
@@ -329,7 +329,7 @@ fn main() -> Result<(), failure::Error> {
                                 })?;
                             };
 
-                            await!(match derived_interface_config.ip_address_config {
+                            match derived_interface_config.ip_address_config {
                                 fidl_fuchsia_netstack::IpAddressConfig::Dhcp(_) => {
                                     netstack.set_dhcp_client_status(nic_id as u32, true)
                                 }
@@ -340,12 +340,12 @@ fn main() -> Result<(), failure::Error> {
                                     &mut address,
                                     prefix_len,
                                 ),
-                            })?;
+                            }.await?;
                             let () = netstack.set_interface_status(nic_id as u32, true)?;
 
                             // TODO(chunyingw): when netcfg switches to stack.add_ethernet_interface,
                             // remove casting nic_id to u64.
-                            await!(interface_ids.lock())
+                            interface_ids.lock().await
                                 .insert(derived_interface_config.name, nic_id as u64);
                         }
                     }

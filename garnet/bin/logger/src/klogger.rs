@@ -92,10 +92,10 @@ pub fn listen(
         async move {
             loop {
                 if !is_readable {
-                    if let Err(e) = await!(fasync::OnSignals::new(
+                    if let Err(e) = fasync::OnSignals::new(
                         &klogger.debuglogger,
                         zx::Signals::LOG_READABLE
-                    )) {
+                    ).await {
                         break Some((Err(e), (is_readable, klogger)));
                     }
                 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{Error, ResultExt},
@@ -22,7 +22,7 @@ async fn main() -> Result<(), Error> {
         io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
     )
     .expect("Unable to open Hub.");
-    let directory_listing = await!(files_async::readdir(&hub_proxy)).expect("readdir failed");
+    let directory_listing = files_async::readdir(&hub_proxy).await.expect("readdir failed");
     hub_report
         .list_directory("/hub", &mut directory_listing.iter().map(|entry| &entry.name as &str))
         .context("list directory failed")?;
@@ -35,7 +35,7 @@ async fn main() -> Result<(), Error> {
     )
     .expect("Unable to open the parent Hub.");
     let parent_hub_children_directory_listing =
-        await!(files_async::readdir(&parent_hub_children_proxy)).expect("readdir failed");
+        files_async::readdir(&parent_hub_children_proxy).await.expect("readdir failed");
     hub_report
         .list_directory(
             "/parent_hub/children",
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Error> {
     )
     .expect("Unable to open the sibling Hub.");
     let resolved_url_file_content =
-        await!(io_util::read_file(&resolved_url_proxy)).expect("readdir failed");
+        io_util::read_file(&resolved_url_proxy).await.expect("readdir failed");
     hub_report
         .report_file_content("/sibling_hub/exec/resolved_url", &resolved_url_file_content)
         .context("list directory failed")?;

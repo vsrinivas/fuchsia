@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     failure::{format_err, Error, ResultExt},
@@ -38,7 +38,7 @@ impl BusConnection {
     }
 
     pub async fn wait_for_client(&mut self, expect: &'static str) -> Result<(), Error> {
-        let _ = await!(self.bus.wait_for_clients(&mut vec![expect].drain(..), 0))?;
+        let _ = self.bus.wait_for_clients(&mut vec![expect].drain(..), 0).await?;
         Ok(())
     }
 }
@@ -71,12 +71,12 @@ async fn run_client(gateway: Option<String>) -> Result<(), Error> {
             gateway.parse::<std::net::IpAddr>().context("failed to parse gateway address")?,
         )
         .into();
-        await!(test_gateway(gw_addr)).context("test_gateway failed")?;
+        test_gateway(gw_addr).await.context("test_gateway failed")?;
     }
 
     fx_log_info!("Waiting for server...");
     let mut bus = BusConnection::new(CLIENT_NAME)?;
-    let () = await!(bus.wait_for_client(SERVER_NAME))?;
+    let () = bus.wait_for_client(SERVER_NAME).await?;
     fx_log_info!("Connecting to server...");
     let addr: SocketAddr = format!("{}:{}", SERVER_IP, PORT).parse()?;
     let mut stream = TcpStream::connect(&addr).context("Tcp connection failed")?;
@@ -98,7 +98,7 @@ async fn test_gateway(gw_addr: fidl_fuchsia_net::IpAddress) -> Result<(), Error>
     let stack =
         client::connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
     let response =
-        await!(stack.get_forwarding_table()).context("failed to call get_forwarding_table")?;
+        stack.get_forwarding_table().await.context("failed to call get_forwarding_table")?;
     let found = response.iter().any(|entry| {
         let fidl_fuchsia_net_ext::IpAddress(entry_addr) = entry.subnet.addr.into();
         if let fidl_fuchsia_net_stack::ForwardingDestination::NextHop(gw) = entry.destination {
@@ -136,9 +136,9 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     executor.run_singlethreaded(async {
         if opt.is_child {
-            await!(run_client(opt.gateway))
+            run_client(opt.gateway).await
         } else {
-            await!(run_server())
+            run_server().await
         }
     })
 }

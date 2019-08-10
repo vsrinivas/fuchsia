@@ -184,10 +184,10 @@ impl IncomingNamespace {
             let server_end = fasync::Channel::from_channel(server_end.into_channel())
                 .expect("failed to convert server_end into async channel");
             let on_signal_fut = fasync::OnSignals::new(&server_end, zx::Signals::CHANNEL_READABLE);
-            await!(on_signal_fut).unwrap();
+            on_signal_fut.await.unwrap();
             // Route this capability to the right component
             let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
-            let res = await!(route_use_capability(
+            let res = route_use_capability(
                 &model,
                 flags,
                 MODE_TYPE_DIRECTORY,
@@ -195,7 +195,7 @@ impl IncomingNamespace {
                 &use_,
                 abs_moniker.clone(),
                 server_end.into_zx_channel(),
-            ));
+            ).await;
             if let Err(e) = res {
                 error!("failed to route storage for component {}: {:?}", abs_moniker, e);
             }
@@ -220,10 +220,10 @@ impl IncomingNamespace {
 
             // The future for a directory waiter will only terminate once the directory channel is
             // first used, so we must start up a new task here to run the future instead of calling
-            // await on it directly. This is wrapped in an async move {await!();}` block to drop
+            // await on it directly. This is wrapped in an async move {.await;}` block to drop
             // the unused return value.
             fasync::spawn(async move {
-                let _ = await!(future);
+                let _ = future.await;
             });
         }
         Ok(())
@@ -253,7 +253,7 @@ impl IncomingNamespace {
                 let model = model.clone();
                 let abs_moniker = abs_moniker.clone();
                 fasync::spawn(async move {
-                    let res = await!(route_use_capability(
+                    let res = route_use_capability(
                         &model,
                         flags,
                         mode,
@@ -261,7 +261,7 @@ impl IncomingNamespace {
                         &use_,
                         abs_moniker.clone(),
                         server_end.into_channel(),
-                    ));
+                    ).await;
                     if let Err(e) = res {
                         error!("failed to route service for component {}: {:?}", abs_moniker, e);
                     }
@@ -306,9 +306,9 @@ impl IncomingNamespace {
 
             // The future for a pseudo directory will never terminate, so we must start up a new
             // task here to run the future instead of calling await on it directly. This is
-            // wrapped in an async move {await!();}` block like to drop the unused return value.
+            // wrapped in an async move {.await;}` block like to drop the unused return value.
             fasync::spawn(async move {
-                let _ = await!(future);
+                let _ = future.await;
             });
 
             ns.paths.push(target_dir_path.as_str().to_string());

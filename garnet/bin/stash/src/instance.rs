@@ -56,28 +56,28 @@ impl Instance {
         fasync::spawn(
             async move {
                 let mut stream = StoreAccessorRequestStream::from_channel(server_chan);
-                while let Some(req) = await!(stream.try_next())? {
+                while let Some(req) = stream.try_next().await? {
                     match req {
                         StoreAccessorRequest::GetValue { key, responder } => {
-                            let mut res = await!(acc.get_value(&key))?;
+                            let mut res = acc.get_value(&key).await?;
                             responder.send(res.as_mut().map(OutOfLine))?;
                         }
                         StoreAccessorRequest::SetValue { key, val, .. } => {
-                            await!(acc.set_value(key, val))?
+                            acc.set_value(key, val).await?
                         }
                         StoreAccessorRequest::DeleteValue { key, .. } => {
-                            await!(acc.delete_value(key))?
+                            acc.delete_value(key).await?
                         }
                         StoreAccessorRequest::ListPrefix { prefix, it, .. } => {
-                            await!(acc.list_prefix(prefix, it))
+                            acc.list_prefix(prefix, it).await
                         }
                         StoreAccessorRequest::GetPrefix { prefix, it, .. } => {
-                            await!(acc.get_prefix(prefix, it))?
+                            acc.get_prefix(prefix, it).await?
                         }
                         StoreAccessorRequest::DeletePrefix { prefix, .. } => {
-                            await!(acc.delete_prefix(prefix))?
+                            acc.delete_prefix(prefix).await?
                         }
-                        StoreAccessorRequest::Commit { .. } => await!(acc.commit())?,
+                        StoreAccessorRequest::Commit { .. } => acc.commit().await?,
                     }
                 }
                 Ok(())

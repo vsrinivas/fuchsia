@@ -52,7 +52,7 @@ impl SuggestionsManager {
             .iter()
             .map(|p| p.request(query, context))
             .map(|fut| Pin::<Box<_>>::from(Box::new(fut)));
-        let results = await!(join_all(futs));
+        let results = join_all(futs).await;
         self.suggestions = results
             .into_iter()
             .filter(|result| result.is_ok())
@@ -80,7 +80,7 @@ impl SuggestionsManager {
             }
             Some(suggestion) => {
                 let mut issuer = self.mod_manager.lock();
-                await!(issuer.execute_suggestion(suggestion))
+                issuer.execute_suggestion(suggestion).await
             }
         }
     }
@@ -130,7 +130,7 @@ mod tests {
 
         // Get suggestions and ensure the right ones are received.
         let context = vec![];
-        let suggestions = await!(suggestions_manager.get_suggestions("garnet", &context))
+        let suggestions = suggestions_manager.get_suggestions("garnet", &context).await
             .collect::<Vec<&Suggestion>>();
         assert_eq!(suggestions.len(), 2);
         let titles = suggestions
@@ -191,7 +191,7 @@ mod tests {
         ));
 
         // Execute the suggestion
-        await!(suggestions_manager.execute("12345"))?;
+        suggestions_manager.execute("12345").await?;
 
         // The suggestion should be gone
         assert_eq!(suggestions_manager.suggestions.len(), 0);

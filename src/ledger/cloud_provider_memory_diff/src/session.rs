@@ -202,7 +202,7 @@ impl PageSession {
         loop {
             let fut = shared.storage.borrow_mut().get_page(page_id.clone()).watch(position);
             if let Some(fut) = fut {
-                await!(fut).expect("Cloud state destoyed before PageSession");
+                fut.await.expect("Cloud state destoyed before PageSession");
             }
             let mut exclusive_storage = shared.storage.borrow_mut();
             if let Some((next_position, commits)) =
@@ -213,9 +213,9 @@ impl PageSession {
                 // Release the storage before await-ing.
                 std::mem::drop(exclusive_storage);
 
-                match await!(
+                match 
                     proxy.on_new_commits(&mut CommitPack { buffer: buf }, &mut position.into(),)
-                ) {
+                .await {
                     Ok(()) => {}
                     Err(_) => return (), // Assume the connection closed.
                 }
@@ -449,43 +449,43 @@ mod tests {
 
         let proxy = client.into_proxy().unwrap();
         let client_fut = async move {
-            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            let (status, _, _) = proxy.get_commits(None).await.unwrap();
             assert_eq!(status, Status::Ok);
 
             let (watcher_client, watcher_server) =
                 create_endpoints::<PageCloudWatcherMarker>().unwrap();
-            let status = await!(proxy.set_watcher(None, watcher_client)).unwrap();
+            let status = proxy.set_watcher(None, watcher_client).await.unwrap();
             assert_eq!(status, Status::Ok);
 
             // The watcher will stay still until the cloud provider gets disconnected.
             let mut watcher_stream = watcher_server.into_stream().unwrap();
             waiting_on_watcher_clone.set(true);
-            let message = await!(watcher_stream.try_next()).unwrap();
+            let message = watcher_stream.try_next().await.unwrap();
             match message {
                 Some(PageCloudWatcherRequest::OnError { status: Status::NetworkError, .. }) => {}
                 _ => assert!(false),
             };
             waiting_on_watcher_clone.set(false);
-            let message = await!(watcher_stream.try_next()).unwrap();
+            let message = watcher_stream.try_next().await.unwrap();
             assert!(message.is_none());
 
             // Requests return NetworkError.
-            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            let (status, _, _) = proxy.get_commits(None).await.unwrap();
             assert_eq!(status, Status::NetworkError);
 
             let (watcher_client, watcher_server) =
                 create_endpoints::<PageCloudWatcherMarker>().unwrap();
-            let status = await!(proxy.set_watcher(None, watcher_client)).unwrap();
+            let status = proxy.set_watcher(None, watcher_client).await.unwrap();
             assert_eq!(status, Status::Ok);
 
             // Setting a watcher returns Ok, but the watcher is immediately closed with a network error.
             let mut watcher_stream = watcher_server.into_stream().unwrap();
-            let message = await!(watcher_stream.try_next()).unwrap();
+            let message = watcher_stream.try_next().await.unwrap();
             match message {
                 Some(PageCloudWatcherRequest::OnError { status: Status::NetworkError, .. }) => {}
                 _ => assert!(false),
             };
-            let message = await!(watcher_stream.try_next()).unwrap();
+            let message = watcher_stream.try_next().await.unwrap();
             assert!(message.is_none());
         };
         pin_mut!(client_fut);
@@ -515,48 +515,48 @@ mod tests {
         let client_fut = async move {
             let fingerprint: Vec<u8> = vec![1, 2, 3];
             let status =
-                await!(proxy.set_fingerprint(&mut fingerprint.clone().into_iter())).unwrap();
+                proxy.set_fingerprint(&mut fingerprint.clone().into_iter()).await.unwrap();
             assert_eq!(status, Status::Ok);
 
             let (watcher_client, watcher_server) =
                 create_endpoints::<DeviceSetWatcherMarker>().unwrap();
             let status =
-                await!(proxy.set_watcher(&mut fingerprint.clone().into_iter(), watcher_client))
+                proxy.set_watcher(&mut fingerprint.clone().into_iter(), watcher_client).await
                     .unwrap();
             assert_eq!(status, Status::Ok);
 
             // The watcher will stay still until the cloud provider gets disconnected.
             let mut watcher_stream = watcher_server.into_stream().unwrap();
             waiting_on_watcher_clone.set(true);
-            let message = await!(watcher_stream.try_next()).unwrap();
+            let message = watcher_stream.try_next().await.unwrap();
             match message {
                 Some(DeviceSetWatcherRequest::OnError { status: Status::NetworkError, .. }) => {}
                 _ => assert!(false),
             };
             waiting_on_watcher_clone.set(false);
-            let message = await!(watcher_stream.try_next()).unwrap();
+            let message = watcher_stream.try_next().await.unwrap();
             assert!(message.is_none());
 
             // Requests return NetworkError.
             let status =
-                await!(proxy.set_fingerprint(&mut fingerprint.clone().into_iter())).unwrap();
+                proxy.set_fingerprint(&mut fingerprint.clone().into_iter()).await.unwrap();
             assert_eq!(status, Status::NetworkError);
 
             let (watcher_client, watcher_server) =
                 create_endpoints::<DeviceSetWatcherMarker>().unwrap();
             let status =
-                await!(proxy.set_watcher(&mut fingerprint.clone().into_iter(), watcher_client))
+                proxy.set_watcher(&mut fingerprint.clone().into_iter(), watcher_client).await
                     .unwrap();
             assert_eq!(status, Status::NetworkError);
 
             // The watcher also gets NetworkError.
             let mut watcher_stream = watcher_server.into_stream().unwrap();
-            let message = await!(watcher_stream.try_next()).unwrap();
+            let message = watcher_stream.try_next().await.unwrap();
             match message {
                 Some(DeviceSetWatcherRequest::OnError { status: Status::NetworkError, .. }) => {}
                 _ => assert!(false),
             };
-            let message = await!(watcher_stream.try_next()).unwrap();
+            let message = watcher_stream.try_next().await.unwrap();
             assert!(message.is_none());
         };
         pin_mut!(client_fut);
@@ -585,23 +585,23 @@ mod tests {
         let proxy = client.into_proxy().unwrap();
         let client_fut = async move {
             // Query A fails twice.
-            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            let (status, _, _) = proxy.get_commits(None).await.unwrap();
             assert_eq!(status, Status::NetworkError);
-            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            let (status, _, _) = proxy.get_commits(None).await.unwrap();
             assert_eq!(status, Status::NetworkError);
             // Query B fails.
             let mut token = Token::into(Token(4));
-            let (status, _, _) = await!(proxy.get_commits(Some(OutOfLine(&mut token)))).unwrap();
+            let (status, _, _) = proxy.get_commits(Some(OutOfLine(&mut token))).await.unwrap();
             assert_eq!(status, Status::NetworkError);
             // Query A succeeds on the third try.
-            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            let (status, _, _) = proxy.get_commits(None).await.unwrap();
             assert_eq!(status, Status::Ok);
             // Query A's count is reset and it fails again.
-            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            let (status, _, _) = proxy.get_commits(None).await.unwrap();
             assert_eq!(status, Status::NetworkError);
-            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            let (status, _, _) = proxy.get_commits(None).await.unwrap();
             assert_eq!(status, Status::NetworkError);
-            let (status, _, _) = await!(proxy.get_commits(None)).unwrap();
+            let (status, _, _) = proxy.get_commits(None).await.unwrap();
             assert_eq!(status, Status::Ok);
         };
         pin_mut!(client_fut);

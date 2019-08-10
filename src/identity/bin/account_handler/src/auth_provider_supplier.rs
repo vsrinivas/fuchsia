@@ -43,9 +43,9 @@ impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
         };
 
         FutureObj::new(Box::new(async move {
-            match await!(self
+            match self
                 .account_handler_context
-                .get_auth_provider(auth_provider_type, server_end))
+                .get_auth_provider(auth_provider_type, server_end).await
             {
                 Ok(fidl_fuchsia_auth_account::Status::Ok) => Ok(client_end),
                 Ok(stat) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
@@ -79,7 +79,7 @@ mod tests {
         let proxy = client_end.into_proxy().unwrap();
         let auth_provider_supplier = AuthProviderSupplier::new(proxy);
         executor.run_singlethreaded(async move {
-            let result = await!(auth_provider_supplier.get(TEST_AUTH_PROVIDER_TYPE));
+            let result = auth_provider_supplier.get(TEST_AUTH_PROVIDER_TYPE).await;
             match expected_error {
                 Some(status) => {
                     assert!(result.is_err());
@@ -105,7 +105,7 @@ mod tests {
                 auth_provider_type,
                 auth_provider: _,
                 responder,
-            })) = await!(request_stream.try_next())
+            })) = request_stream.try_next().await
             {
                 if auth_provider_type == TEST_AUTH_PROVIDER_TYPE {
                     responder.send(status).expect("Failed to send test response");

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     chrono::prelude::*,
@@ -44,7 +44,7 @@ async fn main() -> Result<(), Error> {
 
     info!("added notifier, serving servicefs");
     fs.take_and_serve_directory_handle()?;
-    let () = await!(fs.collect());
+    let () = fs.collect().await;
     Ok(())
 }
 
@@ -82,14 +82,14 @@ async fn maintain_utc(
     let mut conn_events = connectivity.take_event_stream();
     loop {
         if let Ok(Some(fnet::ConnectivityEvent::OnNetworkReachable { reachable: true })) =
-            await!(conn_events.try_next())
+            conn_events.try_next().await
         {
             break;
         }
     }
 
     for i in 0.. {
-        match await!(time_service.update(1)) {
+        match time_service.update(1).await {
             Ok(true) => {
                 let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
                 let utc_now = Utc::now().timestamp_nanos();
@@ -109,7 +109,7 @@ async fn maintain_utc(
             }
         }
         let sleep_duration = zx::Duration::from_seconds(2i64.pow(i)); // exponential backoff
-        await!(fasync::Timer::new(sleep_duration.after_now()));
+        fasync::Timer::new(sleep_duration.after_now()).await;
     }
 }
 
@@ -134,7 +134,7 @@ impl Notifier {
             let mut counted_requests = requests.enumerate();
             let mut last_seen_state = notifier.0.lock().source;
             while let Some((request_count, Ok(ftime::UtcRequest::WatchState { responder }))) =
-                await!(counted_requests.next())
+                counted_requests.next().await
             {
                 let mut n = notifier.0.lock();
                 // we return immediately if this is the first request on this channel, but if
@@ -249,17 +249,17 @@ mod tests {
 
         fasync::spawn(async move {
             while let Some(Ok(ftz::TimeServiceRequest::Update { responder, .. })) =
-                await!(time_requests.next())
+                time_requests.next().await
             {
-                let () = await!(wait_for_update.next()).unwrap();
+                let () = wait_for_update.next().await.unwrap();
                 responder.send(true).unwrap();
             }
         });
 
         info!("checking that the time source has not been externally initialized yet");
-        assert_eq!(await!(utc.watch_state()).unwrap().source.unwrap(), ftime::UtcSource::Backstop);
+        assert_eq!(utc.watch_state().await.unwrap().source.unwrap(), ftime::UtcSource::Backstop);
 
-        let task_waker = await!(futures::future::poll_fn(|cx| { Poll::Ready(cx.waker().clone()) }));
+        let task_waker = futures::future::poll_fn(|cx| { Poll::Ready(cx.waker().clone()) }).await;
         let mut cx = Context::from_waker(&task_waker);
 
         let mut hanging = Box::pin(utc.watch_state());
@@ -272,6 +272,6 @@ mod tests {
         allow_update.try_send(()).unwrap();
 
         info!("waiting for time source update");
-        assert_eq!(await!(hanging).unwrap().source.unwrap(), ftime::UtcSource::External);
+        assert_eq!(hanging.await.unwrap().source.unwrap(), ftime::UtcSource::External);
     }
 }

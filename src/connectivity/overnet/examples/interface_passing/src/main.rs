@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 
 use {
     clap::{App, Arg, SubCommand},
@@ -34,7 +34,7 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 async fn exec_client(svc: OvernetProxy, text: Option<&str>) -> Result<(), Error> {
     let mut last_version: u64 = 0;
     loop {
-        let (version, peers) = await!(svc.list_peers(last_version))?;
+        let (version, peers) = svc.list_peers(last_version).await?;
         last_version = version;
         for mut peer in peers {
             let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
@@ -56,7 +56,7 @@ async fn exec_client(svc: OvernetProxy, text: Option<&str>) -> Result<(), Error>
                 println!("ERROR REQUESTING INTERFACE: {:?}", e);
                 continue;
             }
-            println!("received {:?}", await!(cli_echo.echo_string(text))?);
+            println!("received {:?}", cli_echo.echo_string(text).await?);
             return Ok(());
         }
     }
@@ -70,7 +70,7 @@ fn spawn_echo_server(chan: ServerEnd<echo::EchoMarker>, quiet: bool) {
         async move {
             let mut stream = chan.into_stream()?;
             while let Some(echo::EchoRequest::EchoString { value, responder }) =
-                await!(stream.try_next()).context("error running echo server")?
+                stream.try_next().await.context("error running echo server")?
             {
                 if !quiet {
                     println!("Received echo request for string {:?}", value);
@@ -91,7 +91,7 @@ fn spawn_example_server(chan: fasync::Channel, quiet: bool) {
         async move {
             let mut stream = interfacepassing::ExampleRequestStream::from_channel(chan);
             while let Some(request) =
-                await!(stream.try_next()).context("error running echo server")?
+                stream.try_next().await.context("error running echo server")?
             {
                 match request {
                     interfacepassing::ExampleRequest::Request { iface, .. } => {
@@ -112,7 +112,7 @@ async fn next_request(
     stream: &mut ServiceProviderRequestStream,
 ) -> Result<Option<ServiceProviderRequest>, Error> {
     println!("Awaiting request");
-    Ok(await!(stream.try_next()).context("error running service provider server")?)
+    Ok(stream.try_next().await.context("error running service provider server")?)
 }
 
 async fn exec_server(svc: OvernetProxy, quiet: bool) -> Result<(), Error> {
@@ -123,7 +123,7 @@ async fn exec_server(svc: OvernetProxy, quiet: bool) -> Result<(), Error> {
     while let Some(ServiceProviderRequest::ConnectToService {
         chan,
         control_handle: _control_handle,
-    }) = await!(next_request(&mut stream))?
+    }) = next_request(&mut stream).await?
     {
         if !quiet {
             println!("Received service request for service");
