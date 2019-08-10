@@ -398,8 +398,6 @@ template("rustc_artifact") {
   # https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/languages/rust/unstable.md
   unstable_rust_features = [
     "async_await",
-    "await_macro",
-    "futures_api",
   ]
 
   # Specifically enable specialization for use in recovery_netstack.
