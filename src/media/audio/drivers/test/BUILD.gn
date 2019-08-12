@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//src/media/audio/hardware.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":audio_driver_tests",
+  ]
+}
+
+test_package("audio_driver_tests") {
+  deps = [
+    ":audio_driver_tests_bin",
+  ]
+
+  tests = [
+    {
+      name = "audio_driver_tests"
+
+      # This test should be run on real hardware, although it can run everywhere. virtual_audio is
+      # not automatically loaded (or involved in any way), but if manually loaded ahead of time it
+      # does successfully load and pass, just like any other audio driver.
+      environments = hardware_envs
+    },
+  ]
+}
+
+executable("audio_driver_tests_bin") {
+  testonly = true
+  output_name = "audio_driver_tests"
+
+  sources = [
+    "audio_driver_test.cc",
+    "audio_driver_test.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.media",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:test_settings",
+    "//src/media/audio/lib/logging",
+    "//src/media/audio/lib/test:message_transceiver",
+    "//src/media/audio/lib/test:test_fixture",
+    "//zircon/public/fidl/fuchsia-hardware-audio",
+    "//zircon/public/lib/fzl",
+  ]
+}

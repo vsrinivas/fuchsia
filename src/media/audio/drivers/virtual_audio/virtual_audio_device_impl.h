@@ -38,8 +38,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
       .max_frames_per_second = 48000,
       .flags = ASF_RANGE_FLAG_FPS_48000_FAMILY};
 
-  // Default FIFO is 1 msec, at 48k stereo 16
-  static constexpr uint32_t kDefaultFifoDepthBytes = 192;
+  // Default FIFO is 250 usec, at 48k stereo 16
+  static constexpr uint32_t kDefaultFifoDepthBytes = 48;
   static constexpr zx_time_t kDefaultExternalDelayNsec = 0;
 
   // At default rate 48k, this is 250 msec
@@ -129,7 +129,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   virtual void NotifyStop(zx_time_t stop_time, uint32_t ring_buffer_position);
 
   void GetPosition(fuchsia::virtualaudio::Device::GetPositionCallback callback) override;
-  virtual void NotifyPosition(uint32_t ring_buffer_position, zx_time_t start_time);
+  virtual void NotifyPosition(uint32_t ring_buffer_position, zx_time_t monotonic_time);
 
   void ChangePlugState(zx_time_t plug_change_time, bool plugged) override;
 

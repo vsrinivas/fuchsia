@@ -409,7 +409,7 @@ void VirtualAudioStream::HandlePositionRequests() {
 
     zx::time now = zx::clock::get_monotonic();
     zx::duration running_duration = now - start_time;
-    uint64_t frames = (running_duration.get() * frame_rate) / ZX_SEC(1);
+    uint64_t frames = (running_duration * frame_rate) / zx::sec(1);
     uint32_t ring_buffer_position = (frames % num_rb_frames) * frame_size;
     zx_time_t time_for_position = now.get();
 
@@ -435,7 +435,7 @@ void VirtualAudioStream::HandleSetNotifications() {
       if (alt_notifications_per_ring_ == 0) {
         alt_notification_period_ = zx::duration(0);
       } else {
-        alt_notification_period_ = zx::duration((ZX_SEC(1) * num_ring_buffer_frames_) /
+        alt_notification_period_ = zx::duration((zx::sec(1) * num_ring_buffer_frames_) /
                                                 (frame_rate_ * alt_notifications_per_ring_));
       }
     } else {
@@ -498,14 +498,14 @@ zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBu
   if (notifications_per_ring_ == 0) {
     notification_period_ = zx::duration(0);
   } else {
-    notification_period_ = zx::duration((ZX_SEC(1) * num_ring_buffer_frames_) /
+    notification_period_ = zx::duration((zx::sec(1) * num_ring_buffer_frames_) /
                                         (frame_rate_ * notifications_per_ring_));
   }
   if (using_alt_notifications_) {
     if (alt_notifications_per_ring_ == 0) {
       alt_notification_period_ = zx::duration(0);
     } else {
-      alt_notification_period_ = zx::duration((ZX_SEC(1) * num_ring_buffer_frames_) /
+      alt_notification_period_ = zx::duration((zx::sec(1) * num_ring_buffer_frames_) /
                                               (frame_rate_ * alt_notifications_per_ring_));
     }
   }
@@ -569,7 +569,7 @@ zx_status_t VirtualAudioStream::SetGain(const audio::audio_proto::SetGainReq& re
 zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
   // Incorporate delay caused by fifo_depth_
   start_time_ =
-      zx::clock::get_monotonic() + zx::duration((ZX_SEC(1) * fifo_depth_) / bytes_per_sec_);
+      zx::clock::get_monotonic() + zx::duration((zx::sec(1) * fifo_depth_) / bytes_per_sec_);
 
   // Set the timer here (if notifications are enabled).
   if (notification_period_.get() > 0) {
@@ -591,12 +591,14 @@ zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
 // override the notification frequency, and to VAD clients that set it to the same value that
 // AudioCore has selected.
 zx_status_t VirtualAudioStream::ProcessRingNotification() {
-  ZX_DEBUG_ASSERT(target_notification_time_.get() > 0);
   ZX_DEBUG_ASSERT(notification_period_.get() > 0);
 
-  // TODO(mpuryear): use a proper Timeline object here. Reference MTWN-57.
-  zx::duration running_duration = target_notification_time_ - start_time_;
-  uint64_t frames = (running_duration.get() * frame_rate_) / ZX_SEC(1);
+  auto monotonic_time = target_notification_time_.get();
+  ZX_DEBUG_ASSERT(monotonic_time > 0);
+
+  // TODO(MTWN-57): use a proper Timeline object here.
+  auto running_duration = target_notification_time_ - start_time_;
+  uint64_t frames = (running_duration * frame_rate_) / zx::sec(1);
   uint32_t ring_buffer_position = (frames % num_ring_buffer_frames_) * frame_size_;
 
   audio::audio_proto::RingBufPositionNotify resp = {};
@@ -606,7 +608,7 @@ zx_status_t VirtualAudioStream::ProcessRingNotification() {
   zx_status_t status = NotifyPosition(resp);
 
   if (!using_alt_notifications_) {
-    parent_->NotifyPosition(ring_buffer_position, target_notification_time_.get());
+    parent_->NotifyPosition(ring_buffer_position, monotonic_time);
   }
 
   target_notification_time_ += notification_period_;
@@ -619,15 +621,17 @@ zx_status_t VirtualAudioStream::ProcessRingNotification() {
 // different notification frequency. These are not sent to AudioCore.
 zx_status_t VirtualAudioStream::ProcessAltRingNotification() {
   ZX_DEBUG_ASSERT(using_alt_notifications_);
-  ZX_DEBUG_ASSERT(target_alt_notification_time_.get() > 0);
   ZX_DEBUG_ASSERT(alt_notification_period_.get() > 0);
 
-  // TODO(mpuryear): use a proper Timeline object here. Reference MTWN-57.
-  zx::duration running_duration = target_alt_notification_time_ - start_time_;
-  uint64_t frames = (running_duration.get() * frame_rate_) / ZX_SEC(1);
+  auto monotonic_time = target_alt_notification_time_.get();
+  ZX_DEBUG_ASSERT(monotonic_time > 0);
+
+  // TODO(MTWN-57): use a proper Timeline object here.
+  auto running_duration = target_alt_notification_time_ - start_time_;
+  uint64_t frames = (running_duration * frame_rate_) / zx::sec(1);
   uint32_t ring_buffer_position = (frames % num_ring_buffer_frames_) * frame_size_;
 
-  parent_->NotifyPosition(ring_buffer_position, target_alt_notification_time_.get());
+  parent_->NotifyPosition(ring_buffer_position, monotonic_time);
 
   target_alt_notification_time_ += alt_notification_period_;
   alt_notify_timer_->Arm(target_alt_notification_time_.get());
@@ -642,13 +646,15 @@ zx_status_t VirtualAudioStream::Stop() {
   alt_notify_timer_->Cancel();
 
   zx::duration running_duration = stop_time - start_time_;
-  uint64_t frames = (running_duration.get() * frame_rate_) / ZX_SEC(1);
+  uint64_t frames = (running_duration * frame_rate_) / zx::sec(1);
   uint32_t ring_buf_position = (frames % num_ring_buffer_frames_) * frame_size_;
   parent_->NotifyStop(stop_time.get(), ring_buf_position);
 
   start_time_ = zx::time(0);
   target_notification_time_ = zx::time(0);
   target_alt_notification_time_ = zx::time(0);
+  notification_period_ = zx::duration(0);
+  alt_notification_period_ = zx::duration(0);
 
   return ZX_OK;
 }

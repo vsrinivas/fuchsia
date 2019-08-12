@@ -22,6 +22,7 @@ group("tests") {
   deps = [
     "audio:tests",
     "audio_core:tests",
+    "drivers:tests",
     "lib:tests",
     "lib/audio_test_devmgr",
   ]

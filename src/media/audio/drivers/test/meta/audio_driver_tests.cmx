@@ -1,0 +1,23 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.scheduler.ProfileProvider"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/audio_driver_tests"
+    },
+    "sandbox": {
+        "dev": [
+            "class/audio-input",
+            "class/audio-output"
+        ],
+        "services": [
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}
