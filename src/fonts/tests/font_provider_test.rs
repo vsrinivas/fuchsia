@@ -46,16 +46,18 @@ mod old_api {
         language: Option<Vec<String>>,
         character: char,
     ) -> Result<FontInfo, Error> {
-        let font = font_provider.get_font(&mut fonts::Request {
-            family: name.clone(),
-            weight: 400,
-            width: 5,
-            slant: fonts::Slant::Upright,
-            character: character as u32,
-            language,
-            fallback_group: fonts::FallbackGroup::None,
-            flags: 0,
-        }).await?;
+        let font = font_provider
+            .get_font(&mut fonts::Request {
+                family: name.clone(),
+                weight: 400,
+                width: 5,
+                slant: fonts::Slant::Upright,
+                character: character as u32,
+                language,
+                fallback_group: fonts::FallbackGroup::None,
+                flags: 0,
+            })
+            .await?;
         let font = *font.ok_or_else(|| format_err!("Received empty response for {:?}", name))?;
 
         assert!(font.buffer.size > 0);
@@ -93,12 +95,15 @@ mod old_api {
     async fn test_basic() -> Result<(), Error> {
         let (_app, font_provider) = start_provider_with_default_fonts()?;
 
-        let default = get_font_info_basic(&font_provider, None).await
+        let default = get_font_info_basic(&font_provider, None)
+            .await
             .context("Failed to load default font")?;
-        let roboto = get_font_info_basic(&font_provider, Some("Roboto".to_string())).await
+        let roboto = get_font_info_basic(&font_provider, Some("Roboto".to_string()))
+            .await
             .context("Failed to load Roboto")?;
         let material_icons =
-            get_font_info_basic(&font_provider, Some("Material Icons".to_string())).await
+            get_font_info_basic(&font_provider, Some("Material Icons".to_string()))
+                .await
                 .context("Failed to load Material Icons")?;
 
         // Roboto should be returned by default.
@@ -115,11 +120,12 @@ mod old_api {
         let (_app, font_provider) = start_provider_with_default_fonts()?;
 
         // Both requests should return the same font.
-        let materialicons =
-            get_font_info_basic(&font_provider, Some("MaterialIcons".to_string())).await
-                .context("Failed to load MaterialIcons")?;
+        let materialicons = get_font_info_basic(&font_provider, Some("MaterialIcons".to_string()))
+            .await
+            .context("Failed to load MaterialIcons")?;
         let material_icons =
-            get_font_info_basic(&font_provider, Some("Material Icons".to_string())).await
+            get_font_info_basic(&font_provider, Some("Material Icons".to_string()))
+                .await
                 .context("Failed to load Material Icons")?;
 
         assert_buf_eq!(materialicons, material_icons);
@@ -161,15 +167,17 @@ mod old_api {
             &font_provider,
             Some("NotoSansCJK".to_string()),
             Some(vec!["ja".to_string()]),
-            '\0'
-        ).await
+            '\0',
+        )
+        .await
         .context("Failed to load NotoSansCJK font")?;
         let noto_sans_cjk_sc = get_font_info(
             &font_provider,
             Some("NotoSansCJK".to_string()),
             Some(vec!["zh-Hans".to_string()]),
-            '\0'
-        ).await
+            '\0',
+        )
+        .await
         .context("Failed to load NotoSansCJK font")?;
 
         assert_buf_eq!(noto_sans_cjk_ja, noto_sans_cjk_sc);
@@ -194,16 +202,18 @@ mod old_api {
             &font_provider,
             Some("NotoSansCJK".to_string()),
             Some(vec!["ja".to_string()]),
-            '\0'
-        ).await
+            '\0',
+        )
+        .await
         .context("Failed to load NotoSansCJK font")?;
 
         let noto_sans_cjk_ja_by_char = get_font_info(
             &font_provider,
             Some("Roboto".to_string()),
             Some(vec!["ja".to_string()]),
-            'な'
-        ).await
+            'な',
+        )
+        .await
         .context("Failed to load NotoSansCJK font")?;
 
         // Same font should be returned in both cases.
@@ -221,16 +231,18 @@ mod old_api {
             &font_provider,
             Some("Noto Serif CJK".to_string()),
             Some(vec!["ja".to_string()]),
-            '\0'
-        ).await
+            '\0',
+        )
+        .await
         .context("Failed to load Noto Serif CJK font")?;
 
         let noto_serif_cjk_ja_by_char = get_font_info(
             &font_provider,
             Some("Roboto Slab".to_string()),
             Some(vec!["ja".to_string()]),
-            'な'
-        ).await
+            'な',
+        )
+        .await
         .context("Failed to load Noto Serif CJK font")?;
 
         // The query above requested Roboto Slab, so it's expected to return
@@ -297,24 +309,28 @@ mod reviewed_api {
         languages: Option<Vec<String>>,
         code_points: Option<Vec<char>>,
     ) -> Result<TypefaceInfo, Error> {
-        let typeface = font_provider.get_typeface(fonts::TypefaceRequest {
-            query: Some(fonts::TypefaceQuery {
-                family: name.as_ref().map(|name| fonts::FamilyName { name: name.to_string() }),
-                style: Some(fonts::Style2 {
-                    weight: Some(fonts::WEIGHT_NORMAL),
-                    width: Some(fonts::Width::SemiExpanded),
-                    slant: Some(fonts::Slant::Upright)
+        let typeface = font_provider
+            .get_typeface(fonts::TypefaceRequest {
+                query: Some(fonts::TypefaceQuery {
+                    family: name.as_ref().map(|name| fonts::FamilyName { name: name.to_string() }),
+                    style: Some(fonts::Style2 {
+                        weight: Some(fonts::WEIGHT_NORMAL),
+                        width: Some(fonts::Width::SemiExpanded),
+                        slant: Some(fonts::Slant::Upright),
+                    }),
+                    code_points: code_points
+                        .map(|code_points| code_points.into_iter().map(|ch| ch as u32).collect()),
+                    languages: languages.map(|languages| {
+                        languages
+                            .into_iter()
+                            .map(|lang_code| intl::LocaleId { id: lang_code })
+                            .collect()
+                    }),
+                    fallback_family: None,
                 }),
-                code_points: code_points
-                    .map(|code_points| code_points.into_iter().map(|ch| ch as u32).collect()),
-                languages: languages.map(|languages| languages
-                    .into_iter()
-                    .map(|lang_code| intl::LocaleId { id: lang_code })
-                    .collect()),
-                fallback_family: None,
-            }),
-            flags: Some(fonts::TypefaceRequestFlags::empty()),
-        }).await?;
+                flags: Some(fonts::TypefaceRequestFlags::empty()),
+            })
+            .await?;
 
         assert!(!typeface.is_empty(), "Received empty response for {:?}", name);
         let buffer = typeface.buffer.unwrap();
@@ -353,12 +369,15 @@ mod reviewed_api {
     async fn test_basic() -> Result<(), Error> {
         let (_app, font_provider) = start_provider_with_default_fonts()?;
 
-        let default = get_typeface_info_basic(&font_provider, None).await
+        let default = get_typeface_info_basic(&font_provider, None)
+            .await
             .context("Failed to load default font")?;
-        let roboto = get_typeface_info_basic(&font_provider, Some("Roboto".to_string())).await
+        let roboto = get_typeface_info_basic(&font_provider, Some("Roboto".to_string()))
+            .await
             .context("Failed to load Roboto")?;
         let material_icons =
-            get_typeface_info_basic(&font_provider, Some("Material Icons".to_string())).await
+            get_typeface_info_basic(&font_provider, Some("Material Icons".to_string()))
+                .await
                 .context("Failed to load Material Icons")?;
 
         // Roboto should be returned by default.
@@ -377,10 +396,12 @@ mod reviewed_api {
 
         // Both requests should return the same font.
         let materialicons =
-            get_typeface_info_basic(&font_provider, Some("MaterialIcons".to_string())).await
+            get_typeface_info_basic(&font_provider, Some("MaterialIcons".to_string()))
+                .await
                 .context("Failed to load MaterialIcons")?;
         let material_icons =
-            get_typeface_info_basic(&font_provider, Some("Material Icons".to_string())).await
+            get_typeface_info_basic(&font_provider, Some("Material Icons".to_string()))
+                .await
                 .context("Failed to load Material Icons")?;
 
         assert_buf_eq!(materialicons, material_icons);
@@ -422,15 +443,17 @@ mod reviewed_api {
             &font_provider,
             Some("NotoSansCJK".to_string()),
             Some(vec!["ja".to_string()]),
-            None
-        ).await
+            None,
+        )
+        .await
         .context("Failed to load NotoSansCJK font")?;
         let noto_sans_cjk_sc = get_typeface_info(
             &font_provider,
             Some("NotoSansCJK".to_string()),
             Some(vec!["zh-Hans".to_string()]),
-            None
-        ).await
+            None,
+        )
+        .await
         .context("Failed to load NotoSansCJK font")?;
 
         assert_buf_eq!(noto_sans_cjk_ja, noto_sans_cjk_sc);
@@ -454,16 +477,18 @@ mod reviewed_api {
             &font_provider,
             Some("NotoSansCJK".to_string()),
             Some(vec!["ja".to_string()]),
-            None
-        ).await
+            None,
+        )
+        .await
         .context("Failed to load NotoSansCJK font")?;
 
         let noto_sans_cjk_ja_by_char = get_typeface_info(
             &font_provider,
             Some("Roboto".to_string()),
             Some(vec!["ja".to_string()]),
-            Some(vec!['な', 'ナ'])
-        ).await
+            Some(vec!['な', 'ナ']),
+        )
+        .await
         .context("Failed to load NotoSansCJK font")?;
 
         // Same font should be returned in both cases.
@@ -481,16 +506,18 @@ mod reviewed_api {
             &font_provider,
             Some("Noto Serif CJK".to_string()),
             Some(vec!["ja".to_string()]),
-            None
-        ).await
+            None,
+        )
+        .await
         .context("Failed to load Noto Serif CJK font")?;
 
         let noto_serif_cjk_ja_by_char = get_typeface_info(
             &font_provider,
             Some("Roboto Slab".to_string()),
             Some(vec!["ja".to_string()]),
-            Some(vec!['な'])
-        ).await
+            Some(vec!['な']),
+        )
+        .await
         .context("Failed to load Noto Serif CJK font")?;
 
         // The query above requested Roboto Slab, so it's expected to return
@@ -506,7 +533,8 @@ mod reviewed_api {
         let (_app, font_provider) = start_provider_with_default_fonts()?;
 
         let font_family_info = font_provider
-            .get_font_family_info(&mut fonts::FamilyName { name: "materialicons".to_string() }).await?;
+            .get_font_family_info(&mut fonts::FamilyName { name: "materialicons".to_string() })
+            .await?;
 
         assert!(!font_family_info.is_empty());
 
@@ -690,7 +718,9 @@ mod experimental_api {
 
         let request = empty_list_typefaces_request();
 
-        font_provider.list_typefaces(request, iterator).await?
+        font_provider
+            .list_typefaces(request, iterator)
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -707,7 +737,9 @@ mod experimental_api {
 
         let request = empty_list_typefaces_request();
 
-        font_provider.list_typefaces(request, iterator.into()).await?
+        font_provider
+            .list_typefaces(request, iterator.into())
+            .await?
             .expect("ListTypefaces request failed");
 
         let first = client.get_next().await?.results.unwrap();
@@ -726,7 +758,9 @@ mod experimental_api {
 
         let request = empty_list_typefaces_request();
 
-        font_provider.list_typefaces(request, iterator.into()).await?
+        font_provider
+            .list_typefaces(request, iterator.into())
+            .await?
             .expect("ListTypefaces request failed");
 
         let first = client.get_next().await?.results.unwrap();
@@ -770,7 +804,9 @@ mod experimental_api {
 
         let request = name_query("404FontNotFound");
 
-        font_provider.list_typefaces(request, iterator.into()).await?
+        font_provider
+            .list_typefaces(request, iterator.into())
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -787,7 +823,9 @@ mod experimental_api {
 
         let request = name_query("Roboto");
 
-        font_provider.list_typefaces(request, iterator.into()).await?
+        font_provider
+            .list_typefaces(request, iterator.into())
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -807,7 +845,9 @@ mod experimental_api {
 
         let request = name_query("MaterialIcons");
 
-        font_provider.list_typefaces(request, iterator.into()).await?
+        font_provider
+            .list_typefaces(request, iterator.into())
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -825,7 +865,9 @@ mod experimental_api {
 
         let request = name_query("roboto");
 
-        font_provider.list_typefaces(request, iterator.into()).await?
+        font_provider
+            .list_typefaces(request, iterator.into())
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -846,7 +888,9 @@ mod experimental_api {
         let mut request = name_query("Noto");
         request.flags = Some(fonts_exp::ListTypefacesFlags::MatchFamilyNameSubstring);
 
-        font_provider.list_typefaces(request, iterator.into()).await?
+        font_provider
+            .list_typefaces(request, iterator.into())
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -879,7 +923,9 @@ mod experimental_api {
 
         let request = slant_query(fonts::Slant::Upright, fonts::Slant::Italic);
 
-        font_provider.list_typefaces(request, iterator).await?
+        font_provider
+            .list_typefaces(request, iterator)
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -900,7 +946,9 @@ mod experimental_api {
 
         let request = slant_query(fonts::Slant::Italic, fonts::Slant::Italic);
 
-        font_provider.list_typefaces(request, iterator).await?
+        font_provider
+            .list_typefaces(request, iterator)
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -934,7 +982,9 @@ mod experimental_api {
 
         let request = weight_query(200, 300);
 
-        font_provider.list_typefaces(request, iterator).await?
+        font_provider
+            .list_typefaces(request, iterator)
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -955,7 +1005,9 @@ mod experimental_api {
 
         let request = weight_query(300, 300);
 
-        font_provider.list_typefaces(request, iterator).await?
+        font_provider
+            .list_typefaces(request, iterator)
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -989,7 +1041,9 @@ mod experimental_api {
 
         let request = width_query(fonts::Width::Condensed, fonts::Width::Expanded);
 
-        font_provider.list_typefaces(request, iterator).await?
+        font_provider
+            .list_typefaces(request, iterator)
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -1010,7 +1064,9 @@ mod experimental_api {
 
         let request = width_query(fonts::Width::Normal, fonts::Width::Normal);
 
-        font_provider.list_typefaces(request, iterator).await?
+        font_provider
+            .list_typefaces(request, iterator)
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -1048,7 +1104,9 @@ mod experimental_api {
 
         let request = lang_query(vec![locale("ja")]);
 
-        font_provider.list_typefaces(request, iterator.into()).await?
+        font_provider
+            .list_typefaces(request, iterator.into())
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -1081,7 +1139,9 @@ mod experimental_api {
 
         let request = code_point_query(vec!['な' as u32]);
 
-        font_provider.list_typefaces(request, iterator.into()).await?
+        font_provider
+            .list_typefaces(request, iterator.into())
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
@@ -1116,7 +1176,9 @@ mod experimental_api {
 
         let request = generic_family_query(fonts::GenericFontFamily::SansSerif);
 
-        font_provider.list_typefaces(request, iterator.into()).await?
+        font_provider
+            .list_typefaces(request, iterator.into())
+            .await?
             .expect("ListTypefaces request failed");
 
         let response = client.get_next().await?;
