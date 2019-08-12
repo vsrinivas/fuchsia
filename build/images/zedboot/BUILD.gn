@@ -38,6 +38,7 @@ zedboot_images = []
 zedboot_binary_patterns = [
   # These are the core things needed for booting (local and netboot).
   "bin/bootsvc",
+  "bin/console",
   "bin/devcoordinator",
   "bin/device-name-provider",
   "bin/dlog",
