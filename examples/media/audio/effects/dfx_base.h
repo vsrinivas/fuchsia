@@ -8,10 +8,11 @@
 #ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_BASE_H_
 #define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_BASE_H_
 
-#include <lib/media/audio_dfx/cpp/audio_device_fx.h>
+#include <lib/media/audio/effects/audio_effects.h>
 #include <stdint.h>
 
 #include <memory>
+#include <string_view>
 
 namespace media::audio_dfx_test {
 
@@ -22,17 +23,14 @@ class DfxBase {
   static constexpr uint16_t kNumTestEffects = Effect::Count;
 
   static bool GetNumEffects(uint32_t* num_effects_out);
-  static bool GetInfo(uint32_t effect_id, fuchsia_audio_dfx_description* dfx_desc);
-  static bool GetControlInfo(uint32_t effect_id, uint16_t control_num,
-                             fuchsia_audio_dfx_control_description* dfx_control_desc);
+  static bool GetInfo(uint32_t effect_id, fuchsia_audio_effects_description* dfx_desc);
 
   static DfxBase* Create(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
-                         uint16_t channels_out);
+                         uint16_t channels_out, std::string_view config);
 
-  DfxBase(uint32_t effect_id, uint16_t num_controls, uint32_t frame_rate, uint16_t channels_in,
-          uint16_t channels_out, uint32_t frames_latency, uint32_t suggested_buff_frames)
+  DfxBase(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
+          uint32_t frames_latency, uint32_t suggested_buff_frames)
       : effect_id_(effect_id),
-        num_controls_(num_controls),
         frame_rate_(frame_rate),
         channels_in_(channels_in),
         channels_out_(channels_out),
@@ -41,21 +39,16 @@ class DfxBase {
 
   virtual ~DfxBase() = default;
 
-  bool GetParameters(fuchsia_audio_dfx_parameters* device_fx_params);
+  bool GetParameters(fuchsia_audio_effects_parameters* device_fx_params);
 
-  virtual bool GetControlValue(uint16_t, float*) { return false; }
-  virtual bool SetControlValue(uint16_t, float) { return false; }
-  virtual bool Reset() { return true; }
+  virtual bool UpdateConfiguration(std::string_view) { return false; }
 
   virtual bool ProcessInplace(uint32_t, float*) { return false; }
   virtual bool Process(uint32_t, const float*, float*) { return false; }
   virtual bool Flush() { return true; }
 
-  uint16_t num_controls() { return num_controls_; }
-
  protected:
   uint32_t effect_id_;
-  uint16_t num_controls_;
 
   uint32_t frame_rate_;
   uint16_t channels_in_;

@@ -19,30 +19,31 @@ EffectsProcessor::~EffectsProcessor() {
 
 // Create and insert an effect instance, at the specified position.
 // If position is out-of-range, return an error (don't clamp).
-fx_token_t EffectsProcessor::CreateFx(uint32_t effect_id, uint16_t channels_in,
-                                      uint16_t channels_out, uint8_t position) {
-  fx_token_t fx_token =
-      effects_loader_->CreateFx(effect_id, frame_rate_, channels_in, channels_out);
+fuchsia_audio_effects_handle_t EffectsProcessor::CreateFx(uint32_t effect_id, uint16_t channels_in,
+                                                          uint16_t channels_out, uint8_t position,
+                                                          std::string_view config) {
+  fuchsia_audio_effects_handle_t handle =
+      effects_loader_->CreateFx(effect_id, frame_rate_, channels_in, channels_out, config);
 
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
-    return fx_token;
+  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
+    return handle;
   }
 
   // If we successfully create but can't insert, delete before returning error.
-  if (InsertFx(fx_token, position) != ZX_OK) {
-    effects_loader_->DeleteFx(fx_token);
-    return FUCHSIA_AUDIO_DFX_INVALID_TOKEN;
+  if (InsertFx(handle, position) != ZX_OK) {
+    effects_loader_->DeleteFx(handle);
+    return FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
   }
-  return fx_token;
+  return handle;
 }
 
 // Return the number of active instances in this chain.
 uint16_t EffectsProcessor::GetNumFx() { return fx_chain_.size(); }
 
 // If position is out-of-range, return an error (don't clamp).
-fx_token_t EffectsProcessor::GetFxAt(uint16_t position) {
+fuchsia_audio_effects_handle_t EffectsProcessor::GetFxAt(uint16_t position) {
   if (position >= fx_chain_.size()) {
-    return FUCHSIA_AUDIO_DFX_INVALID_TOKEN;
+    return FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
   }
 
   return fx_chain_[position];
@@ -50,29 +51,30 @@ fx_token_t EffectsProcessor::GetFxAt(uint16_t position) {
 
 // Move the specified instance to a new position in the FX chain.
 // If position is out-of-range, return an error (don't clamp).
-zx_status_t EffectsProcessor::ReorderFx(fx_token_t fx_token, uint8_t new_position) {
+zx_status_t EffectsProcessor::ReorderFx(fuchsia_audio_effects_handle_t handle,
+                                        uint8_t new_position) {
   if (new_position >= fx_chain_.size()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  if (RemoveFx(fx_token) != ZX_OK) {
+  if (RemoveFx(handle) != ZX_OK) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  return InsertFx(fx_token, new_position);
+  return InsertFx(handle, new_position);
 }
 
 // Remove and delete the specified instance.
-zx_status_t EffectsProcessor::DeleteFx(fx_token_t fx_token) {
+zx_status_t EffectsProcessor::DeleteFx(fuchsia_audio_effects_handle_t handle) {
   if (effects_loader_ == nullptr) {
     return ZX_ERR_NOT_FOUND;
   }
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
+  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t ret_val = RemoveFx(fx_token);
+  zx_status_t ret_val = RemoveFx(handle);
   if (ret_val == ZX_OK) {
-    ret_val = effects_loader_->DeleteFx(fx_token);
+    ret_val = effects_loader_->DeleteFx(handle);
   }
 
   return ret_val;
@@ -90,13 +92,12 @@ zx_status_t EffectsProcessor::ProcessInPlace(uint32_t num_frames, float* audio_b
     return ZX_OK;
   }
 
-  for (auto fx_token : fx_chain_) {
-    if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
+  for (auto handle : fx_chain_) {
+    if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
       return ZX_ERR_INTERNAL;
     }
 
-    zx_status_t ret_val =
-        effects_loader_->FxProcessInPlace(fx_token, num_frames, audio_buff_in_out);
+    zx_status_t ret_val = effects_loader_->FxProcessInPlace(handle, num_frames, audio_buff_in_out);
     if (ret_val != ZX_OK) {
       return ret_val;
     }
@@ -109,12 +110,12 @@ zx_status_t EffectsProcessor::ProcessInPlace(uint32_t num_frames, float* audio_b
 // If any instance fails, exit without calling the others.
 // TODO(mpuryear): Because Flush is a cleanup, do we Flush ALL even on error?
 zx_status_t EffectsProcessor::Flush() {
-  for (auto fx_token : fx_chain_) {
-    if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
+  for (auto handle : fx_chain_) {
+    if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
       return ZX_ERR_INTERNAL;
     }
 
-    zx_status_t ret_val = effects_loader_->FxFlush(fx_token);
+    zx_status_t ret_val = effects_loader_->FxFlush(handle);
     if (ret_val != ZX_OK) {
       return ret_val;
     }
@@ -129,21 +130,21 @@ zx_status_t EffectsProcessor::Flush() {
 
 // Insert an already-created effect instance at the specified position.
 // If position is out-of-range, return an error (don't clamp).
-zx_status_t EffectsProcessor::InsertFx(fx_token_t fx_token, uint8_t position) {
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
+zx_status_t EffectsProcessor::InsertFx(fuchsia_audio_effects_handle_t handle, uint8_t position) {
+  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (position > fx_chain_.size()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  fx_chain_.insert(fx_chain_.begin() + position, fx_token);
+  fx_chain_.insert(fx_chain_.begin() + position, handle);
   return ZX_OK;
 }
 
 // Remove an existing effect instance from the FX chain.
-zx_status_t EffectsProcessor::RemoveFx(fx_token_t fx_token) {
-  auto iter = std::find(fx_chain_.begin(), fx_chain_.end(), fx_token);
+zx_status_t EffectsProcessor::RemoveFx(fuchsia_audio_effects_handle_t handle) {
+  auto iter = std::find(fx_chain_.begin(), fx_chain_.end(), handle);
   if (iter == fx_chain_.end()) {
     return ZX_ERR_NOT_FOUND;
   }

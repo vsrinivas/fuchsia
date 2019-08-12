@@ -9,15 +9,15 @@
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio {
+namespace {
 
-// Private internal method
-bool EffectsLoader::TryLoad(void* lib, const char* export_name, void** export_func_ptr) {
+bool TryLoad(void* lib, const char* export_name, void** export_ptr) {
   FXL_DCHECK(lib != nullptr);
   FXL_DCHECK(export_name != nullptr);
-  FXL_DCHECK(export_func_ptr != nullptr);
+  FXL_DCHECK(export_ptr != nullptr);
 
-  *export_func_ptr = dlsym(lib, export_name);
-  if (*export_func_ptr == nullptr) {
+  *export_ptr = dlsym(lib, export_name);
+  if (*export_ptr == nullptr) {
     FXL_LOG(ERROR) << "Failed to load .SO export [" << export_name << "]";
     return false;
   }
@@ -25,30 +25,8 @@ bool EffectsLoader::TryLoad(void* lib, const char* export_name, void** export_fu
   return true;
 }
 
-void EffectsLoader::ClearExports() {
-  exports_loaded_ = false;
+}  // namespace
 
-  fn_get_num_fx_ = nullptr;
-  fn_get_info_ = nullptr;
-  fn_get_ctrl_info_ = nullptr;
-
-  fn_create_ = nullptr;
-  fn_delete_ = nullptr;
-  fn_get_params_ = nullptr;
-
-  fn_get_ctrl_val_ = nullptr;
-  fn_set_ctrl_val_ = nullptr;
-  fn_reset_ = nullptr;
-
-  fn_process_inplace_ = nullptr;
-  fn_process_ = nullptr;
-  fn_flush_ = nullptr;
-}
-
-//
-// Protected methods
-//
-// Virtual, can be overridden by children (test fixtures)
 void* EffectsLoader::OpenLoadableModuleBinary() {
   auto module = dlopen(lib_name_, RTLD_LAZY | RTLD_GLOBAL);
   if (module == nullptr) {
@@ -57,11 +35,6 @@ void* EffectsLoader::OpenLoadableModuleBinary() {
   return module;
 }
 
-//
-// Public methods
-//
-// TODO(mpuryear): Consider moving to a single export symbol, which in turn
-// returns the function pointers that I currently load/check individually.
 zx_status_t EffectsLoader::LoadLibrary() {
   if (fx_lib_ != nullptr) {
     return ZX_ERR_ALREADY_EXISTS;
@@ -71,49 +44,10 @@ zx_status_t EffectsLoader::LoadLibrary() {
   if (fx_lib_ == nullptr) {
     return ZX_ERR_UNAVAILABLE;
   }
-
-  bool load_success = true;
-  // Don't stop at the first failure; try to load ALL the exports. The &&=
-  // operator "short-circuits" (exits early), so we use bitwise &= instead.
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_get_num_effects",
-                          reinterpret_cast<void**>(&fn_get_num_fx_));
-  load_success &=
-      TryLoad(fx_lib_, "fuchsia_audio_dfx_get_info", reinterpret_cast<void**>(&fn_get_info_));
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_get_control_info",
-                          reinterpret_cast<void**>(&fn_get_ctrl_info_));
-
-  load_success &=
-      TryLoad(fx_lib_, "fuchsia_audio_dfx_create", reinterpret_cast<void**>(&fn_create_));
-  load_success &=
-      TryLoad(fx_lib_, "fuchsia_audio_dfx_delete", reinterpret_cast<void**>(&fn_delete_));
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_get_parameters",
-                          reinterpret_cast<void**>(&fn_get_params_));
-
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_get_control_value",
-                          reinterpret_cast<void**>(&fn_get_ctrl_val_));
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_set_control_value",
-                          reinterpret_cast<void**>(&fn_set_ctrl_val_));
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_reset", reinterpret_cast<void**>(&fn_reset_));
-
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_process_inplace",
-                          reinterpret_cast<void**>(&fn_process_inplace_));
-  load_success &=
-      TryLoad(fx_lib_, "fuchsia_audio_dfx_process", reinterpret_cast<void**>(&fn_process_));
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_flush", reinterpret_cast<void**>(&fn_flush_));
-
-  if (!load_success) {
-    ClearExports();
+  if (!TryLoad(fx_lib_, "fuchsia_audio_effects_module_v1_instance",
+               reinterpret_cast<void**>(&module_))) {
     return ZX_ERR_NOT_FOUND;
   }
-
-  exports_loaded_ = true;
-
-  // Pre-fetch this lib's number of effects. This can be 0, but shouldn't fail.
-  if (fn_get_num_fx_(&num_fx_) == false) {
-    num_fx_ = 0;
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   return ZX_OK;
 }
 
@@ -130,186 +64,138 @@ zx_status_t EffectsLoader::UnloadLibrary() {
     ret_val = ZX_ERR_UNAVAILABLE;
   }
 
-  ClearExports();
+  module_ = nullptr;
   fx_lib_ = nullptr;
 
   return ret_val;
 }
 
 zx_status_t EffectsLoader::GetNumFx(uint32_t* num_fx_out) {
-  if (!exports_loaded_) {
+  if (!module_) {
     return ZX_ERR_NOT_FOUND;
   }
   if (num_fx_out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  *num_fx_out = num_fx_;
+  *num_fx_out = module_->num_effects;
   return ZX_OK;
 }
 
-zx_status_t EffectsLoader::GetFxInfo(uint32_t effect_id, fuchsia_audio_dfx_description* fx_desc) {
-  if (!exports_loaded_) {
+zx_status_t EffectsLoader::GetFxInfo(uint32_t effect_id, fuchsia_audio_effects_description* desc) {
+  if (!module_) {
     return ZX_ERR_NOT_FOUND;
   }
-  if (fx_desc == nullptr) {
+  if (desc == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (effect_id >= num_fx_) {
+  if (effect_id >= module_->num_effects) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  if (fn_get_info_(effect_id, fx_desc) == false) {
+  if (!module_->get_info || !module_->get_info(effect_id, desc)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-
   return ZX_OK;
 }
 
-zx_status_t EffectsLoader::GetFxControlInfo(uint32_t effect_id, uint16_t ctrl_num,
-                                            fuchsia_audio_dfx_control_description* fx_ctrl_desc) {
-  if (!exports_loaded_) {
+fuchsia_audio_effects_handle_t EffectsLoader::CreateFx(uint32_t effect_id, uint32_t frame_rate,
+                                                       uint16_t channels_in, uint16_t channels_out,
+                                                       std::string_view config) {
+  if (!module_) {
+    return FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
+  }
+  if (effect_id >= module_->num_effects) {
+    return FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
+  }
+  if (!module_->create_effect) {
+    return FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
+  }
+  return module_->create_effect(effect_id, frame_rate, channels_in, channels_out, config.data(),
+                                config.size());
+}
+
+zx_status_t EffectsLoader::FxUpdateConfiguration(fuchsia_audio_effects_handle_t handle,
+                                                 std::string_view config) {
+  if (!module_) {
     return ZX_ERR_NOT_FOUND;
   }
-  if (fx_ctrl_desc == nullptr) {
+  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (effect_id >= num_fx_) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  if (fn_get_ctrl_info_(effect_id, ctrl_num, fx_ctrl_desc) == false) {
+  if (!module_->update_effect_configuration ||
+      !module_->update_effect_configuration(handle, config.data(), config.size())) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-
   return ZX_OK;
 }
 
-fx_token_t EffectsLoader::CreateFx(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
-                                   uint16_t channels_out) {
-  if (!exports_loaded_) {
-    return FUCHSIA_AUDIO_DFX_INVALID_TOKEN;
-  }
-  if (effect_id >= num_fx_) {
-    return FUCHSIA_AUDIO_DFX_INVALID_TOKEN;
-  }
-
-  return fn_create_(effect_id, frame_rate, channels_in, channels_out);
-}
-
-zx_status_t EffectsLoader::DeleteFx(fx_token_t fx_token) {
-  if (!exports_loaded_) {
+zx_status_t EffectsLoader::DeleteFx(fuchsia_audio_effects_handle_t handle) {
+  if (!module_) {
     return ZX_ERR_NOT_FOUND;
   }
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
+  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (fn_delete_(fx_token) == false) {
+  if (!module_->delete_effect || !module_->delete_effect(handle)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-
   return ZX_OK;
 }
 
-zx_status_t EffectsLoader::FxGetParameters(fx_token_t fx_token,
-                                           fuchsia_audio_dfx_parameters* fx_params) {
-  if (!exports_loaded_) {
+zx_status_t EffectsLoader::FxGetParameters(fuchsia_audio_effects_handle_t handle,
+                                           fuchsia_audio_effects_parameters* params) {
+  if (!module_) {
     return ZX_ERR_NOT_FOUND;
   }
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN || fx_params == nullptr) {
+  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || params == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (fn_get_params_(fx_token, fx_params) == false) {
+  if (!module_->get_parameters || !module_->get_parameters(handle, params)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-
   return ZX_OK;
 }
 
-zx_status_t EffectsLoader::FxGetControlValue(fx_token_t fx_token, uint16_t ctrl_num,
-                                             float* ctrl_val_out) {
-  if (!exports_loaded_) {
+zx_status_t EffectsLoader::FxProcessInPlace(fuchsia_audio_effects_handle_t handle,
+                                            uint32_t num_frames, float* audio_buff_in_out) {
+  if (!module_) {
     return ZX_ERR_NOT_FOUND;
   }
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN || ctrl_val_out == nullptr) {
+  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || audio_buff_in_out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (fn_get_ctrl_val_(fx_token, ctrl_num, ctrl_val_out) == false) {
+  if (!module_->process_inplace ||
+      !module_->process_inplace(handle, num_frames, audio_buff_in_out)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-
   return ZX_OK;
 }
 
-zx_status_t EffectsLoader::FxSetControlValue(fx_token_t fx_token, uint16_t ctrl_num,
-                                             float ctrl_val) {
-  if (!exports_loaded_) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (fn_set_ctrl_val_(fx_token, ctrl_num, ctrl_val) == false) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t EffectsLoader::FxReset(fx_token_t fx_token) {
-  if (!exports_loaded_) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (fn_reset_(fx_token) == false) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t EffectsLoader::FxProcessInPlace(fx_token_t fx_token, uint32_t num_frames,
-                                            float* audio_buff_in_out) {
-  if (!exports_loaded_) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN || audio_buff_in_out == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (fn_process_inplace_(fx_token, num_frames, audio_buff_in_out) == false) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t EffectsLoader::FxProcess(fx_token_t fx_token, uint32_t num_frames,
+zx_status_t EffectsLoader::FxProcess(fuchsia_audio_effects_handle_t handle, uint32_t num_frames,
                                      const float* audio_buff_in, float* audio_buff_out) {
-  if (!exports_loaded_) {
+  if (!module_) {
     return ZX_ERR_NOT_FOUND;
   }
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN || audio_buff_in == nullptr ||
+  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || audio_buff_in == nullptr ||
       audio_buff_out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (fn_process_(fx_token, num_frames, audio_buff_in, audio_buff_out) == false) {
+  if (!module_->process || !module_->process(handle, num_frames, audio_buff_in, audio_buff_out)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-
   return ZX_OK;
 }
 
-zx_status_t EffectsLoader::FxFlush(fx_token_t fx_token) {
-  if (!exports_loaded_) {
+zx_status_t EffectsLoader::FxFlush(fuchsia_audio_effects_handle_t handle) {
+  if (!module_) {
     return ZX_ERR_NOT_FOUND;
   }
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
+  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (fn_flush_(fx_token) == false) {
+  if (!module_->flush || !module_->flush(handle)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-
   return ZX_OK;
 }
 

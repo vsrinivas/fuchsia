@@ -5,9 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECTS_LOADER_H_
 #define SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECTS_LOADER_H_
 
+#include <lib/media/audio/effects/audio_effects.h>
 #include <zircon/types.h>
 
-#include "lib/media/audio_dfx/cpp/audio_device_fx.h"
+#include <string_view>
 
 namespace media::audio {
 
@@ -25,7 +26,7 @@ namespace media::audio {
 class EffectsLoader {
  public:
   EffectsLoader(const char* lib_name) : lib_name_(lib_name) {}
-  EffectsLoader() : EffectsLoader("audiofx.so") {}
+  EffectsLoader() : EffectsLoader("audio_effects.so") {}
 
   ~EffectsLoader() { (void)UnloadLibrary(); }
 
@@ -34,53 +35,27 @@ class EffectsLoader {
 
   // The following methods map directly to SO exports
   zx_status_t GetNumFx(uint32_t* num_effects_out);
-
-  zx_status_t GetFxInfo(uint32_t effect_id, fuchsia_audio_dfx_description* fx_desc);
-  zx_status_t GetFxControlInfo(uint32_t effect_id, uint16_t ctrl_num,
-                               fuchsia_audio_dfx_control_description* fx_ctrl_desc);
-
-  fx_token_t CreateFx(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
-                      uint16_t channels_out);
-  zx_status_t DeleteFx(fx_token_t fx_token);
-  zx_status_t FxGetParameters(fx_token_t fx_token, fuchsia_audio_dfx_parameters* fx_params);
-
-  zx_status_t FxGetControlValue(fx_token_t fx_token, uint16_t ctrl_num, float* value_out);
-  zx_status_t FxSetControlValue(fx_token_t fx_token, uint16_t ctrl_num, float value);
-  zx_status_t FxReset(fx_token_t fx_token);
-
-  zx_status_t FxProcessInPlace(fx_token_t fx_token, uint32_t num_frames, float* audio_buff_in_out);
-  zx_status_t FxProcess(fx_token_t fx_token, uint32_t num_frames, const float* audio_buff_in,
-                        float* audio_buff_out);
-  zx_status_t FxFlush(fx_token_t fx_token);
+  zx_status_t GetFxInfo(uint32_t effect_id, fuchsia_audio_effects_description* fx_desc);
+  fuchsia_audio_effects_handle_t CreateFx(uint32_t effect_id, uint32_t frame_rate,
+                                          uint16_t channels_in, uint16_t channels_out,
+                                          std::string_view config);
+  zx_status_t FxUpdateConfiguration(fuchsia_audio_effects_handle_t handle, std::string_view config);
+  zx_status_t DeleteFx(fuchsia_audio_effects_handle_t handle);
+  zx_status_t FxGetParameters(fuchsia_audio_effects_handle_t handle,
+                              fuchsia_audio_effects_parameters* fx_params);
+  zx_status_t FxProcessInPlace(fuchsia_audio_effects_handle_t handle, uint32_t num_frames,
+                               float* audio_buff_in_out);
+  zx_status_t FxProcess(fuchsia_audio_effects_handle_t handle, uint32_t num_frames,
+                        const float* audio_buff_in, float* audio_buff_out);
+  zx_status_t FxFlush(fuchsia_audio_effects_handle_t handle);
 
  protected:
   virtual void* OpenLoadableModuleBinary();
 
-  bool exports_loaded_ = false;
-
  private:
-  bool TryLoad(void* lib, const char* export_name, void** export_func_ptr);
-  void ClearExports();
-
   const char* lib_name_;
   void* fx_lib_ = nullptr;
-  uint32_t num_fx_ = 0;
-
-  bool (*fn_get_num_fx_)(uint32_t*);
-  bool (*fn_get_info_)(uint32_t, fuchsia_audio_dfx_description*);
-  bool (*fn_get_ctrl_info_)(uint32_t, uint16_t, fuchsia_audio_dfx_control_description*);
-
-  fx_token_t (*fn_create_)(uint32_t, uint32_t, uint16_t, uint16_t);
-  bool (*fn_delete_)(fx_token_t);
-  bool (*fn_get_params_)(fx_token_t, fuchsia_audio_dfx_parameters*);
-
-  bool (*fn_get_ctrl_val_)(fx_token_t, uint16_t, float*);
-  bool (*fn_set_ctrl_val_)(fx_token_t, uint16_t, float);
-  bool (*fn_reset_)(fx_token_t);
-
-  bool (*fn_process_inplace_)(fx_token_t, uint32_t, float*);
-  bool (*fn_process_)(fx_token_t, uint32_t, const float*, float*);
-  bool (*fn_flush_)(fx_token_t);
+  fuchsia_audio_effects_module_v1* module_ = nullptr;
 };
 
 }  // namespace media::audio

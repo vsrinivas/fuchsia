@@ -11,7 +11,7 @@
 namespace media::audio {
 namespace {
 
-static constexpr const char* kPassthroughModuleName = "audiofx.so";
+static constexpr const char* kPassthroughModuleName = "audio_effects.so";
 static constexpr uint32_t kPassthroughEffectId = 0;
 static constexpr uint32_t kInvalidEffectId = 1;
 static constexpr uint32_t kFrameRate = 48000;
@@ -84,15 +84,15 @@ TEST(EffectsLoaderTest, GetNumEffectsModuleNotLoaded) {
 }
 
 TEST(EffectsLoaderTest, GetFxInfo) {
-  fuchsia_audio_dfx_description dfx_desc;
+  fuchsia_audio_effects_description dfx_desc;
   AutoEffectsLoader loader(kPassthroughModuleName);
   EXPECT_EQ(loader->GetFxInfo(kPassthroughEffectId, &dfx_desc), ZX_OK);
-  EXPECT_TRUE(dfx_desc.incoming_channels == FUCHSIA_AUDIO_DFX_CHANNELS_ANY);
-  EXPECT_TRUE(dfx_desc.outgoing_channels == FUCHSIA_AUDIO_DFX_CHANNELS_SAME_AS_IN);
+  EXPECT_TRUE(dfx_desc.incoming_channels == FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY);
+  EXPECT_TRUE(dfx_desc.outgoing_channels == FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN);
 }
 
 TEST(EffectsLoaderTest, GetFxInfoModuleNotLoaded) {
-  fuchsia_audio_dfx_description dfx_desc;
+  fuchsia_audio_effects_description dfx_desc;
   EffectsLoader loader(kPassthroughModuleName);
   EXPECT_EQ(loader.GetFxInfo(kPassthroughEffectId, &dfx_desc), ZX_ERR_NOT_FOUND);
 }
@@ -103,65 +103,70 @@ TEST(EffectsLoaderTest, GetFxInfoNullInfoPointer) {
 }
 
 TEST(EffectsLoaderTest, GetFxInfoInvalidEffextId) {
-  fuchsia_audio_dfx_description dfx_desc;
+  fuchsia_audio_effects_description dfx_desc;
   AutoEffectsLoader loader(kPassthroughModuleName);
   EXPECT_EQ(loader->GetFxInfo(kInvalidEffectId, &dfx_desc), ZX_ERR_OUT_OF_RANGE);
 }
 
 TEST(EffectsLoaderTest, CreateFx) {
   AutoEffectsLoader loader(kPassthroughModuleName);
-  fx_token_t token = loader->CreateFx(kPassthroughEffectId, kFrameRate, kTwoChannels, kTwoChannels);
-  EXPECT_NE(token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+  fuchsia_audio_effects_handle_t handle =
+      loader->CreateFx(kPassthroughEffectId, kFrameRate, kTwoChannels, kTwoChannels, {});
+  EXPECT_NE(handle, FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
 }
 
 TEST(EffectsLoaderTest, CreateFxModuleNotLoaded) {
   EffectsLoader loader(kPassthroughModuleName);
-  fx_token_t token = loader.CreateFx(kPassthroughEffectId, kFrameRate, kTwoChannels, kTwoChannels);
-  EXPECT_EQ(token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+  fuchsia_audio_effects_handle_t handle =
+      loader.CreateFx(kPassthroughEffectId, kFrameRate, kTwoChannels, kTwoChannels, {});
+  EXPECT_EQ(handle, FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
 }
 
 TEST(EffectsLoaderTest, CreateFxInvalidEffectId) {
   AutoEffectsLoader loader(kPassthroughModuleName);
-  fx_token_t token = loader->CreateFx(kInvalidEffectId, kFrameRate, kTwoChannels, kTwoChannels);
-  EXPECT_EQ(token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+  fuchsia_audio_effects_handle_t handle =
+      loader->CreateFx(kInvalidEffectId, kFrameRate, kTwoChannels, kTwoChannels, {});
+  EXPECT_EQ(handle, FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
 }
 
 TEST(EffectsLoaderTest, CreateFxInvalidChannelConfiguration) {
   // The passthrough effect requres in_chans == out_chans.
   AutoEffectsLoader loader(kPassthroughModuleName);
-  fx_token_t token =
-      loader->CreateFx(kPassthroughEffectId, kFrameRate, kTwoChannels, kTwoChannels - 1);
-  EXPECT_EQ(token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+  fuchsia_audio_effects_handle_t handle =
+      loader->CreateFx(kPassthroughEffectId, kFrameRate, kTwoChannels, kTwoChannels - 1, {});
+  EXPECT_EQ(handle, FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
 }
 
 TEST(EffectsLoaderTest, CreateFxTooManyChannels) {
   AutoEffectsLoader loader(kPassthroughModuleName);
-  static constexpr uint32_t kTooManyChannels = FUCHSIA_AUDIO_DFX_CHANNELS_MAX + 1;
-  fx_token_t token =
-      loader->CreateFx(kPassthroughEffectId, kFrameRate, kTooManyChannels, kTooManyChannels);
-  EXPECT_EQ(token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+  static constexpr uint32_t kTooManyChannels = FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX + 1;
+  fuchsia_audio_effects_handle_t handle =
+      loader->CreateFx(kPassthroughEffectId, kFrameRate, kTooManyChannels, kTooManyChannels, {});
+  EXPECT_EQ(handle, FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
 }
 
 TEST(EffectsLoaderTest, DeleteFx) {
   AutoEffectsLoader loader(kPassthroughModuleName);
-  fx_token_t token = loader->CreateFx(kPassthroughEffectId, kFrameRate, kTwoChannels, kTwoChannels);
-  EXPECT_NE(token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
-  EXPECT_EQ(loader->DeleteFx(token), ZX_OK);
+  fuchsia_audio_effects_handle_t handle =
+      loader->CreateFx(kPassthroughEffectId, kFrameRate, kTwoChannels, kTwoChannels, {});
+  EXPECT_NE(handle, FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
+  EXPECT_EQ(loader->DeleteFx(handle), ZX_OK);
 }
 
 TEST(EffectsLoaderTest, DeleteFxInvalidToken) {
   AutoEffectsLoader loader(kPassthroughModuleName);
-  EXPECT_EQ(loader->DeleteFx(FUCHSIA_AUDIO_DFX_INVALID_TOKEN), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(loader->DeleteFx(FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE), ZX_ERR_INVALID_ARGS);
 }
 
 TEST(EffectsLoaderTest, DeleteFxLibraryNotLoaded) {
   EffectsLoader loader(kPassthroughModuleName);
   EXPECT_EQ(loader.LoadLibrary(), ZX_OK);
-  fx_token_t token = loader.CreateFx(kPassthroughEffectId, kFrameRate, kTwoChannels, kTwoChannels);
-  EXPECT_NE(token, FUCHSIA_AUDIO_DFX_INVALID_TOKEN);
+  fuchsia_audio_effects_handle_t handle =
+      loader.CreateFx(kPassthroughEffectId, kFrameRate, kTwoChannels, kTwoChannels, {});
+  EXPECT_NE(handle, FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
   EXPECT_EQ(loader.UnloadLibrary(), ZX_OK);
 
-  EXPECT_EQ(loader.DeleteFx(token), ZX_ERR_NOT_FOUND);
+  EXPECT_EQ(loader.DeleteFx(handle), ZX_ERR_NOT_FOUND);
 }
 
 }  // namespace

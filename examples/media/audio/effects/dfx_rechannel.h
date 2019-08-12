@@ -8,7 +8,7 @@
 #ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_RECHANNEL_H_
 #define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_RECHANNEL_H_
 
-#include <lib/media/audio_dfx/cpp/audio_device_fx.h>
+#include <lib/media/audio/effects/audio_effects.h>
 #include <stdint.h>
 
 #include "examples/media/audio/effects/dfx_base.h"
@@ -20,30 +20,27 @@ namespace media::audio_dfx_test {
 // channels and produce two channels. It does so while adding no latency.
 class DfxRechannel : public DfxBase {
  public:
-  static constexpr uint16_t kNumControls = 0;
   static constexpr uint16_t kNumChannelsIn = 6;
   static constexpr uint16_t kNumChannelsOut = 2;
   static constexpr uint32_t kLatencyFrames = 0;
 
-  static bool GetInfo(fuchsia_audio_dfx_description* dfx_desc) {
+  static bool GetInfo(fuchsia_audio_effects_description* dfx_desc) {
     std::strcpy(dfx_desc->name, "5.1 to Stereo");
-    dfx_desc->num_controls = kNumControls;
     dfx_desc->incoming_channels = kNumChannelsIn;
     dfx_desc->outgoing_channels = kNumChannelsOut;
     return true;
   }
 
-  static bool GetControlInfo(uint16_t, fuchsia_audio_dfx_control_description*) { return false; }
-
-  static DfxRechannel* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out) {
+  static DfxRechannel* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
+                              std::string_view) {
     return (channels_in == kNumChannelsIn && channels_out == kNumChannelsOut
                 ? new DfxRechannel(frame_rate)
                 : nullptr);
   }
 
   DfxRechannel(uint32_t frame_rate)
-      : DfxBase(Effect::Rechannel, kNumControls, frame_rate, kNumChannelsIn, kNumChannelsOut,
-                kLatencyFrames, kLatencyFrames) {}
+      : DfxBase(Effect::Rechannel, frame_rate, kNumChannelsIn, kNumChannelsOut, kLatencyFrames,
+                kLatencyFrames) {}
 
   // Effect converts a 5.1 mix into stereo.
   // Left  = FL + FC*sqr(.5) + BL  -and-  Right = FR + FC*sqr(.5) + BR

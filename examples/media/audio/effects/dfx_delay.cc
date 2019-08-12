@@ -4,93 +4,99 @@
 
 #include "examples/media/audio/effects/dfx_delay.h"
 
-#include <lib/media/audio_dfx/cpp/audio_device_fx.h>
-
 #include <cmath>
+#include <optional>
 
 #include <fbl/algorithm.h>
+#include <rapidjson/document.h>
 
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio_dfx_test {
+namespace {
+struct DelayConfig {
+  uint32_t delay_frames;
+};
+
+std::optional<DelayConfig> ParseConfig(std::string_view config_json) {
+  rapidjson::Document document;
+  document.Parse(config_json.data(), config_json.size());
+  if (!document.IsObject()) {
+    return {};
+  }
+  auto it = document.FindMember("delay_frames");
+  if (it == document.MemberEnd()) {
+    return {};
+  }
+  if (!it->value.IsUint()) {
+    return {};
+  }
+  auto delay_frames = it->value.GetUint();
+  if (delay_frames > DfxDelay::kMaxDelayFrames || delay_frames < DfxDelay::kMinDelayFrames) {
+    return {};
+  }
+
+  return {{delay_frames}};
+}
+
+constexpr uint32_t ComputeDelaySamples(uint16_t channels_in, uint16_t delay_frames) {
+  return channels_in * delay_frames;
+}
+
+}  // namespace
 
 //
 // DfxDelay: static member functions
 //
 
 // static -- called from static DfxBase::GetInfo; uses DfxDelay classwide consts
-bool DfxDelay::GetInfo(fuchsia_audio_dfx_description* dfx_desc) {
+bool DfxDelay::GetInfo(fuchsia_audio_effects_description* dfx_desc) {
   strlcpy(dfx_desc->name, "Delay effect", sizeof(dfx_desc->name));
-  dfx_desc->num_controls = kNumControls;
   dfx_desc->incoming_channels = kNumChannelsIn;
   dfx_desc->outgoing_channels = kNumChannelsOut;
   return true;
 }
 
-// static -- uses DfxDelay classwide consts
-bool DfxDelay::GetControlInfo(uint16_t control_num,
-                              fuchsia_audio_dfx_control_description* device_fx_control_desc) {
-  if (control_num >= kNumControls) {
-    return false;
-  }
-
-  strlcpy(device_fx_control_desc->name, "Delay (in frames)", sizeof(device_fx_control_desc->name));
-  device_fx_control_desc->max_val = static_cast<float>(kMaxDelayFrames);
-  device_fx_control_desc->min_val = static_cast<float>(kMinDelayFrames);
-  device_fx_control_desc->initial_val = static_cast<float>(kInitialDelayFrames);
-  return true;
-}
-
 // static -- called from static DfxBase::Create
-DfxDelay* DfxDelay::Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out) {
+DfxDelay* DfxDelay::Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
+                           std::string_view config_json) {
   if (channels_in != channels_out) {
     return nullptr;
   }
 
-  return new DfxDelay(frame_rate, channels_in);
+  auto config = ParseConfig(config_json);
+  if (!config) {
+    return nullptr;
+  }
+
+  return new DfxDelay(frame_rate, channels_in, config->delay_frames);
 }
 
 //
 // DfxDelay: instance member functions
 //
-DfxDelay::DfxDelay(uint32_t frame_rate, uint16_t channels)
-    : DfxBase(Effect::Delay, kNumControls, frame_rate, channels, channels, kLatencyFrames,
-              kLatencyFrames) {
+DfxDelay::DfxDelay(uint32_t frame_rate, uint16_t channels, uint32_t delay_frames)
+    : DfxBase(Effect::Delay, frame_rate, channels, channels, kLatencyFrames, kLatencyFrames) {
   // This buff must accommodate our maximum delay, plus the largest 'num_frames'
   // required by process_inplace -- which can be as large as frame_rate.
   delay_buff_ = std::make_unique<float[]>((kMaxDelayFrames + frame_rate) * channels);
 
-  delay_samples_ = kInitialDelayFrames * channels_in_;
+  delay_samples_ = ComputeDelaySamples(channels_in_, delay_frames);
   ::memset(delay_buff_.get(), 0, delay_samples_ * sizeof(float));
 }
 
-// Returns FRAMES of delay. We cache SAMPLES for convenience, so convert back.
-bool DfxDelay::GetControlValue(uint16_t control_num, float* value_out) {
-  *value_out = static_cast<float>(delay_samples_) / channels_in_;
-  return true;
-}
-
-// This effect chooses to self-flush, upon any change to our delay setting.
-bool DfxDelay::SetControlValue(uint16_t control_num, float value) {
-  if (control_num >= kNumControls || value > kMaxDelayFrames || value < kMinDelayFrames) {
+bool DfxDelay::UpdateConfiguration(std::string_view config_json) {
+  auto config = ParseConfig(config_json);
+  if (!config) {
     return false;
   }
 
-  uint32_t new_delay_samples = static_cast<uint32_t>(value) * channels_in_;
+  uint32_t new_delay_samples = ComputeDelaySamples(channels_in_, config->delay_frames);
   if (new_delay_samples != delay_samples_) {
     delay_samples_ = new_delay_samples;
     return Flush();
   }
-
   return true;
-}
-
-// Revert effect instance to a just-initialized state (incl. control settings).
-// Reset should always Flush, if relevant settings are changed.
-bool DfxDelay::Reset() {
-  delay_samples_ = kInitialDelayFrames * channels_in_;
-
-  return Flush();
 }
 
 // Delay the incoming stream by the number of frames specified in control 0.

@@ -2,14 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# audio_core currently only supports a single .so that must be called 'audiofx.so'.
-loadable_module("audiofx") {
+# audio_core currently only supports a single .so that must be called 'audio_effects.so'.
+loadable_module("audio_effects") {
   sources = [
     "passthrough.cc",
   ]
 
   deps = [
-    "//sdk/lib/media/audio_dfx/cpp",
+    "//sdk/lib/media/audio/effects",
     "//src/lib/fxl",
   ]
 }

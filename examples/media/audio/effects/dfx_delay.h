@@ -8,7 +8,7 @@
 #ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_DELAY_H_
 #define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_DELAY_H_
 
-#include <lib/media/audio_dfx/cpp/audio_device_fx.h>
+#include <lib/media/audio/effects/audio_effects.h>
 #include <stdint.h>
 
 #include <memory>
@@ -25,27 +25,22 @@ namespace media::audio_dfx_test {
 // should NOT try to compensate for; in fact it adds zero "unwanted" latency.
 class DfxDelay : public DfxBase {
  public:
-  static constexpr uint16_t kNumControls = 1;
-  static constexpr uint16_t kNumChannelsIn = FUCHSIA_AUDIO_DFX_CHANNELS_ANY;
-  static constexpr uint16_t kNumChannelsOut = FUCHSIA_AUDIO_DFX_CHANNELS_SAME_AS_IN;
+  static constexpr uint16_t kNumChannelsIn = FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY;
+  static constexpr uint16_t kNumChannelsOut = FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN;
   static constexpr uint32_t kLatencyFrames = 0;
 
   static constexpr uint32_t kMaxDelayFrames = 64000;
   static constexpr uint32_t kMinDelayFrames = 0;
-  static constexpr uint32_t kInitialDelayFrames = 0;
 
-  static bool GetInfo(fuchsia_audio_dfx_description* dfx_desc);
-  static bool GetControlInfo(uint16_t control_num,
-                             fuchsia_audio_dfx_control_description* device_fx_control_desc);
+  static bool GetInfo(fuchsia_audio_effects_description* dfx_desc);
 
-  static DfxDelay* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out);
+  static DfxDelay* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
+                          std::string_view config);
 
-  DfxDelay(uint32_t frame_rate, uint16_t channels);
+  DfxDelay(uint32_t frame_rate, uint16_t channels, uint32_t delay_frames);
   ~DfxDelay() = default;
 
-  bool GetControlValue(uint16_t control_num, float* value_out) override;
-  bool SetControlValue(uint16_t control_num, float value) override;
-  bool Reset() override;
+  bool UpdateConfiguration(std::string_view config) override;
 
   bool ProcessInplace(uint32_t num_frames, float* audio_buff) override;
   bool Flush() override;

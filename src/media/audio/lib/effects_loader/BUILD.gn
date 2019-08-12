@@ -14,7 +14,7 @@ source_set("effects_loader") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
-    "//sdk/lib/media/audio_dfx/cpp",
+    "//sdk/lib/media/audio/effects",
     "//zircon/public/lib/fbl",
   ]
 
@@ -42,12 +42,12 @@ executable("test") {
 unittest_package("effects_loader_unittests") {
   deps = [
     ":test",
-    "//src/media/audio/effects/passthrough:audiofx",
+    "//src/media/audio/effects/passthrough:audio_effects",
   ]
 
   loadable_modules = [
     {
-      name = "audiofx.so"
+      name = "audio_effects.so"
     },
   ]
 

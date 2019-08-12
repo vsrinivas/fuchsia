@@ -27,7 +27,7 @@ action_foreach("generate_schemas") {
 package("audio_core") {
   deps = [
     "//src/media/audio/audio_core:audio_core_bin",
-    "//src/media/audio/effects/passthrough:audiofx",
+    "//src/media/audio/effects/passthrough:audio_effects",
   ]
 
   binaries = [
@@ -39,7 +39,7 @@ package("audio_core") {
   loadable_modules = [
     {
       # This audio processing library is hosted in the audio_core process.
-      name = "audiofx.so"
+      name = "audio_effects.so"
     },
   ]
 

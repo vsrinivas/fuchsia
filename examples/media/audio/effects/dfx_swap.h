@@ -8,7 +8,7 @@
 #ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_SWAP_H_
 #define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_SWAP_H_
 
-#include <lib/media/audio_dfx/cpp/audio_device_fx.h>
+#include <lib/media/audio/effects/audio_effects.h>
 #include <stdint.h>
 
 #include "examples/media/audio/effects/dfx_base.h"
@@ -20,30 +20,26 @@ namespace media::audio_dfx_test {
 // and right channels, and does so without adding latency.
 class DfxSwap : public DfxBase {
  public:
-  static constexpr uint16_t kNumControls = 0;
   static constexpr uint16_t kNumChannelsIn = 2;
   static constexpr uint16_t kNumChannelsOut = 2;
   static constexpr uint32_t kLatencyFrames = 0;
 
-  static bool GetInfo(fuchsia_audio_dfx_description* dfx_desc) {
+  static bool GetInfo(fuchsia_audio_effects_description* dfx_desc) {
     std::strcpy(dfx_desc->name, "Left-Right Swap");
-    dfx_desc->num_controls = kNumControls;
     dfx_desc->incoming_channels = kNumChannelsIn;
     dfx_desc->outgoing_channels = kNumChannelsOut;
     return true;
   }
 
-  static bool GetControlInfo(uint16_t, fuchsia_audio_dfx_control_description*) { return false; }
-
-  static DfxSwap* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out) {
+  static DfxSwap* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
+                         std::string_view) {
     return (channels_in == kNumChannelsIn && channels_out == kNumChannelsOut
                 ? new DfxSwap(frame_rate, channels_in)
                 : nullptr);
   }
 
   DfxSwap(uint32_t frame_rate, uint16_t channels)
-      : DfxBase(Effect::Swap, kNumControls, frame_rate, channels, channels, kLatencyFrames,
-                kLatencyFrames) {}
+      : DfxBase(Effect::Swap, frame_rate, channels, channels, kLatencyFrames, kLatencyFrames) {}
 
   bool ProcessInplace(uint32_t num_frames, float* audio_buff) {
     for (uint32_t sample = 0; sample < num_frames * channels_in_; sample += channels_in_) {

@@ -15,10 +15,9 @@ source_set("headers") {
   ]
 }
 
-# This DFX exists for test purposes, to validate the DFX interface.
 loadable_module("effects") {
   testonly = true
-  output_name = "audio_dfx"
+  output_name = "example_audio_effects"
 
   sources = [
     "dfx_base.cc",
@@ -28,13 +27,13 @@ loadable_module("effects") {
 
   deps = [
     ":headers",
-    "//sdk/lib/media/audio_dfx/cpp",
+    "//sdk/lib/media/audio/effects",
     "//src/lib/fxl",
+    "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
   ]
 }
 
-# This standalone test expects to find a audio_dfx.so in this package.
 executable("test_bin") {
   testonly = true
   output_name = "audio_dfx_tests"
@@ -47,10 +46,11 @@ executable("test_bin") {
 
   deps = [
     ":headers",
-    "//sdk/lib/media/audio_dfx/cpp",
+    "//sdk/lib/media/audio/effects",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/effects_loader",
+    "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",
   ]
 }
@@ -63,8 +63,7 @@ unittest_package("audio_dfx_tests") {
 
   loadable_modules = [
     {
-      # This test-only library is hosted in the audio_dfx_tests process.
-      name = "audio_dfx.so"
+      name = "example_audio_effects.so"
     },
   ]
 
