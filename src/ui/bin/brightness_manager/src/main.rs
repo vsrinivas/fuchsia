@@ -7,6 +7,7 @@
 use std::sync::Arc;
 
 use failure::{Error, ResultExt};
+use futures::future::{AbortHandle, Abortable};
 use futures::lock::Mutex;
 use futures::prelude::*;
 
@@ -20,7 +21,6 @@ use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use fuchsia_zircon::{Duration, DurationNum};
-use std::sync::atomic::{AtomicBool, Ordering};
 
 mod backlight;
 mod sensor;
@@ -35,8 +35,8 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
     let sensor = Arc::new(Mutex::new(sensor));
 
     // Startup auto-brightness loop
-    let mut auto_brightness_active = Arc::new(AtomicBool::new(true));
-    start_auto_brightness_task(sensor.clone(), backlight.clone(), auto_brightness_active.clone());
+    let mut auto_brightness_abort_handle =
+        start_auto_brightness_task(sensor.clone(), backlight.clone());
 
     while let Some(request) = stream.try_next().await.context("error running brightness server")? {
         // TODO(kpt): (b/138802653) Use try_for_each_concurrent and short circuit set-brightness_slowly
@@ -44,19 +44,9 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
         match request {
             BrightnessControlRequest::SetAutoBrightness { control_handle: _ } => {
                 fx_log_info!("Auto-brightness turned on");
-                let running = auto_brightness_active.load(Ordering::Relaxed);
-                // Is the autobrightness task running or not?
-                if !running {
-                    // This replaces the old auto_brightness_active boolean for the old task.
-                    // The old task will stop when it sees its bool set to false (if it
-                    // hasn't already) and the boolean's memory will be released.
-                    auto_brightness_active = Arc::new(AtomicBool::new(true));
-                    start_auto_brightness_task(
-                        sensor.clone(),
-                        backlight.clone(),
-                        auto_brightness_active.clone(),
-                    );
-                }
+                auto_brightness_abort_handle.abort();
+                auto_brightness_abort_handle =
+                    start_auto_brightness_task(sensor.clone(), backlight.clone());
             }
             BrightnessControlRequest::WatchAutoBrightness { responder } => {
                 // Hanging get is not implemented yet. We want to get autobrightness into team-food.
@@ -67,7 +57,7 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
             BrightnessControlRequest::SetManualBrightness { value, control_handle: _ } => {
                 fx_log_info!("Auto-brightness off, brightness set to {}", value);
                 // Stop the background auto-brightness task, if any
-                auto_brightness_active.swap(false, Ordering::Relaxed);
+                auto_brightness_abort_handle.abort();
                 // Lossy conversion but will change when brightness is set as an f32 (0.0..=1.0)
                 let nits = num_traits::clamp(value as u16, 0, 255);
                 let backlight_clone = backlight.clone();
@@ -93,31 +83,37 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
 fn start_auto_brightness_task(
     sensor: Arc<Mutex<SensorProxy>>,
     backlight: Arc<Mutex<BacklightProxy>>,
-    running: Arc<AtomicBool>,
-) {
-    fasync::spawn(async move {
-        loop {
-            // TODO(kpt): Pull main body without timer to function for testing.
-            let lux = {
-                // Get the sensor reading in its own mutex block
-                let sensor = sensor.lock().await;
-                // TODO(kpt) Do we need a Mutex if sensor is only read?
-                let report =
-                    sensor::read_sensor(&sensor).await.expect("Could not read from the sensor");
-                report.illuminance
-            };
-            let nits = brightness_curve_lux_to_nits(lux);
-            let backlight_clone = backlight.clone();
-            set_brightness(nits, backlight_clone).await.expect("Could not set the brightness");
-            // Check every second
-            let timeout: i64 = 500;
-            fuchsia_async::Timer::new(timeout.millis().after_now()).await;
-            // TODO(kpt): Look into using futures::future::abortable
-            if !running.load(Ordering::Relaxed) {
-                break;
-            }
-        }
-    });
+) -> AbortHandle {
+    let (abort_handle, abort_registration) = AbortHandle::new_pair();
+    fasync::spawn(
+        Abortable::new(
+            async move {
+                loop {
+                    // TODO(kpt): Pull main body without timer function for testing.
+                    let lux = {
+                        // Get the sensor reading in its own mutex block
+                        let sensor = sensor.lock().await;
+                        // TODO(kpt) Do we need a Mutex if sensor is only read?
+                        let report = sensor::read_sensor(&sensor)
+                            .await
+                            .expect("Could not read from the sensor");
+                        report.illuminance
+                    };
+                    let nits = brightness_curve_lux_to_nits(lux);
+                    let backlight_clone = backlight.clone();
+                    set_brightness(nits, backlight_clone)
+                        .await
+                        .expect("Could not set the brightness");
+                    // Check every half second
+                    let timeout: i64 = 500;
+                    fuchsia_async::Timer::new(timeout.millis().after_now()).await;
+                }
+            },
+            abort_registration,
+        )
+        .unwrap_or_else(|_| ()),
+    );
+    abort_handle
 }
 
 /// Sets the appropriate backlight brightness based on the ambient light sensor reading.
@@ -144,20 +140,14 @@ fn brightness_curve_lux_to_nits(mut lux: u16) -> u16 {
 
 async fn set_brightness(nits: u16, backlight: Arc<Mutex<BacklightProxy>>) -> Result<(), Error> {
     let backlight = backlight.lock().await;
-    let current_nits = match backlight::get_brightness(&backlight).await {
-        Ok(b) => b,
-        Err(e) => {
-            fx_log_err!("Failed to get backlight: {}. assuming 200", e);
-            200
-        }
-    } as u16;
-    let set_brightness = |nits| match backlight::set_brightness(&backlight, nits)
-        {
-            Ok(b) => b,
-            Err(e) => {
-                fx_log_err!("Failed to set backlight: {}", e);
-            }
-        };
+    let current_nits = backlight::get_brightness(&backlight).await.unwrap_or_else(|e| {
+        fx_log_err!("Failed to get backlight: {}. assuming 200", e);
+        200
+    }) as u16;
+    let set_brightness = |nits| {
+        backlight::set_brightness(&backlight, nits)
+            .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
+    };
     set_brightness_slowly(current_nits, nits, &set_brightness, 10.millis()).await?;
     Ok(())
 }
