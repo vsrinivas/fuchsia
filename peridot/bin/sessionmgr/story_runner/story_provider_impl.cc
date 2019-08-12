@@ -82,7 +82,8 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
     // TODO(thatguy); Understand the above comment, and rewrite it.
     async::PostTask(async_get_default_dispatcher(), [this, flow] {
       story_runtime_containers_->erase(story_id_.value_or(""));
-      message_queue_manager_->DeleteNamespace(EncodeModuleComponentNamespace(story_id_.value_or("")), [flow] {});
+      message_queue_manager_->DeleteNamespace(
+          EncodeModuleComponentNamespace(story_id_.value_or("")), [flow] {});
     });
   }
 
@@ -390,7 +391,8 @@ std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
       story_shell_factory_->DetachStory(story_id.value_or(""), std::move(done));
     };
 
-    return std::make_unique<ClosureAsyncHolder>(story_id.value_or("") /* name */, std::move(on_teardown));
+    return std::make_unique<ClosureAsyncHolder>(story_id.value_or("") /* name */,
+                                                std::move(on_teardown));
   }
 
   MaybeLoadStoryShell();
@@ -486,7 +488,8 @@ void StoryProviderImpl::RequestStoryFocus(fidl::StringPtr story_id) {
 
 void StoryProviderImpl::AttachView(fidl::StringPtr story_id,
                                    fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  FXL_CHECK(session_shell_);
+  FXL_CHECK(session_shell_)
+      << "Is the session shell component exporting a fuchsia.modular.SessionShell service?";
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = story_id.value_or("");
   session_shell_->AttachView2(std::move(view_id), std::move(view_holder_token));
@@ -515,7 +518,8 @@ void StoryProviderImpl::NotifyStoryStateChange(fidl::StringPtr story_id) {
 void StoryProviderImpl::NotifyStoryActivityChange(
     fidl::StringPtr story_id,
     fidl::VectorPtr<fuchsia::modular::OngoingActivityType> ongoing_activities) {
-  const std::vector<fuchsia::modular::OngoingActivityType> activities(ongoing_activities.value_or({}));
+  const std::vector<fuchsia::modular::OngoingActivityType> activities(
+      ongoing_activities.value_or({}));
   for (const auto& i : activity_watchers_.ptrs()) {
     (*i)->OnStoryActivityChange(story_id.value_or(""), activities);
   }
