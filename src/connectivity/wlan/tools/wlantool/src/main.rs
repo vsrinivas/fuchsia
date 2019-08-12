@@ -7,7 +7,7 @@
 use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_device_service::{
-    self as wlan_service, DeviceServiceMarker, DeviceServiceProxy,
+    self as wlan_service, DeviceServiceMarker, DeviceServiceProxy, QueryIfaceResponse,
 };
 use fidl_fuchsia_wlan_minstrel::Peer;
 use fidl_fuchsia_wlan_sme::{
@@ -121,9 +121,18 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             println!("response: {:?}", response);
         }
         opts::IfaceCmd::Query { iface_id } => {
-            let response =
+            let (status, response) =
                 wlan_svc.query_iface(iface_id).await.context("error querying iface")?;
-            println!("response: {:?}", response);
+            match status {
+                zx::sys::ZX_OK => {
+                    let response_str = match response {
+                        Some(response) => format_iface_query_response(*response),
+                        None => format!("Iface {} returns empty query response", iface_id),
+                    };
+                    println!("response: {}", response_str)
+                }
+                status => println!("error querying Iface {}: {}", iface_id, status),
+            }
         }
         opts::IfaceCmd::Stats { iface_id } => {
             let ids = get_iface_ids(wlan_svc.clone(), iface_id).await?;
@@ -593,6 +602,18 @@ async fn get_peer_addrs(
         Some(addr) => Ok(vec![addr]),
         None => list_minstrel_peers(wlan_svc, iface_id).await,
     }
+}
+
+fn format_iface_query_response(resp: QueryIfaceResponse) -> String {
+    format!(
+        "QueryIfaceResponse {{ role: {:?}, id: {}, phy_id: {}, phy_assigned_id: {}, dev_path: \"{}\", mac_addr: {} }}",
+        resp.role,
+        resp.id,
+        resp.phy_id,
+        resp.phy_assigned_id,
+        resp.dev_path,
+        MacAddr(resp.mac_addr)
+    )
 }
 
 fn print_minstrel_stats(mut peer: Box<Peer>) {
