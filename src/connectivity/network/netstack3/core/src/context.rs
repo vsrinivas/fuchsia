@@ -435,7 +435,7 @@ pub(crate) mod testutil {
         }
 
         fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, mut f: F) {
-            self.timers = self.timers.drain().filter(|t| f(&t.1)).collect::<Vec<_>>().into();
+            self.timers = self.timers.drain().filter(|t| !f(&t.1)).collect::<Vec<_>>().into();
         }
     }
 

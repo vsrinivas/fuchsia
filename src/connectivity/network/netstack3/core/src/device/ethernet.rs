@@ -498,6 +498,15 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
     ndp::insert_neighbor::<D, EthernetNdpDevice>(ctx, device_id, addr, mac)
 }
 
+/// Deinitializes and cleans up state for ethernet devices
+///
+/// After this function is called, the ethernet device should not be used and
+/// nothing else should be done with the state.
+pub(crate) fn deinitialize<D: EventDispatcher>(ctx: &mut Context<D>, device_id: usize) {
+    crate::device::arp::deinitialize(ctx, device_id);
+    crate::device::ndp::deinitialize(ctx, device_id);
+}
+
 fn get_device_state_mut<D: EventDispatcher>(
     state: &mut StackState<D>,
     device_id: usize,

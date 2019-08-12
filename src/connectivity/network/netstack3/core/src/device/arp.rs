@@ -86,6 +86,10 @@ impl<D, P: PType> ArpTimerId<D, P> {
     fn new_entry_expiration_timer_id(device_id: D, proto_addr: P) -> ArpTimerId<D, P> {
         ArpTimerId { device_id, inner: ArpTimerIdInner::EntryExpiration { proto_addr } }
     }
+
+    pub(crate) fn get_device_id(&self) -> &D {
+        &self.device_id
+    }
 }
 
 /// The metadata associated with an ARP frame.
@@ -94,6 +98,19 @@ pub(crate) struct ArpFrameMetadata<D, H> {
     pub(crate) device_id: D,
     /// The destination hardware address.
     pub(crate) dst_addr: H,
+}
+
+/// Cleans up state associated with the device.
+///
+/// The contract is that after deinitialize is called, nothing else should be done
+/// with the state.
+pub(crate) fn deinitialize<P: PType, H: HType, C: ArpContext<P, H>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
+) {
+    // Remove all timers associated with the device
+    ctx.cancel_timers_with(|timer_id| *timer_id.get_device_id() == device_id);
+    // TODO(rheacock): Send any immediate packets, and potentially flag the state as uninitialized?
 }
 
 /// An execution context for the ARP protocol when a buffer is provided.
@@ -126,7 +143,7 @@ pub(crate) trait ArpContext<P: PType, H: HType>:
     + CounterContext
 {
     /// An ID that identifies a particular device.
-    type DeviceId: Copy;
+    type DeviceId: Copy + PartialEq;
 
     /// Get the protocol address of this interface.
     fn get_protocol_addr(&self, device_id: Self::DeviceId) -> Option<P>;
@@ -813,6 +830,70 @@ mod tests {
         // Gratuitous ARPs should not send a response (the 1 frame is for the
         // original request).
         assert_eq!(ctx.frames().len(), 1);
+    }
+
+    #[test]
+    fn test_cancel_timers_on_deinitialize() {
+        // Test that associated timers are cancelled when the arp device
+        // is deinitialized.
+
+        // Cancelling timers matches on the DeviceId, so setup a context that
+        // uses IDs. The test doesn't use the context functions, so it's okay
+        // that they return the same info.
+        type DummyContext2 = crate::context::testutil::DummyContext<
+            DummyArpContext,
+            ArpTimerId<usize, Ipv4Addr>,
+            ArpFrameMetadata<usize, Mac>,
+        >;
+
+        impl ArpContext<Ipv4Addr, Mac> for DummyContext2 {
+            type DeviceId = usize;
+
+            fn get_protocol_addr(&self, _device_id: usize) -> Option<Ipv4Addr> {
+                self.get_ref().proto_addr
+            }
+
+            fn get_hardware_addr(&self, _device_id: usize) -> Mac {
+                self.get_ref().hw_addr
+            }
+
+            fn address_resolved(&mut self, _device_id: usize, proto_addr: Ipv4Addr, hw_addr: Mac) {
+                self.get_mut().addr_resolved.push((proto_addr, hw_addr));
+            }
+
+            fn address_resolution_failed(&mut self, _device_id: usize, proto_addr: Ipv4Addr) {
+                self.get_mut().addr_resolution_failed.push(proto_addr);
+            }
+        }
+
+        impl StateContext<usize, ArpState<Ipv4Addr, Mac>> for DummyContext2 {
+            fn get_state(&self, _id: usize) -> &ArpState<Ipv4Addr, Mac> {
+                &self.get_ref().arp_state
+            }
+
+            fn get_state_mut(&mut self, _id: usize) -> &mut ArpState<Ipv4Addr, Mac> {
+                &mut self.get_mut().arp_state
+            }
+        }
+
+        // Setup up a dummy context and trigger a timer with a lookup
+        let mut ctx = DummyContext2::default();
+
+        let device_id_0: usize = 0;
+        let device_id_1: usize = 1;
+
+        lookup(&mut ctx, device_id_0, TEST_LOCAL_MAC, TEST_REMOTE_IPV4);
+
+        // We should have installed a single retry timer.
+        assert_eq!(ctx.timers().len(), 1);
+
+        // Deinitializing a different ID should not impact the current timer.
+        deinitialize(&mut ctx, device_id_1);
+        assert_eq!(ctx.timers().len(), 1);
+
+        // Deinitializing the correct ID should cancel the timer.
+        deinitialize(&mut ctx, device_id_0);
+        assert_eq!(ctx.timers().len(), 0);
     }
 
     #[test]

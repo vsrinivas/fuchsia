@@ -959,7 +959,7 @@ impl EventDispatcher for DummyEventDispatcher {
 
     fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, mut f: F) {
         self.timer_events =
-            self.timer_events.drain().filter(|t| f(&t.1)).collect::<Vec<_>>().into();
+            self.timer_events.drain().filter(|t| !f(&t.1)).collect::<Vec<_>>().into();
     }
 
     type Rng = FakeCryptoRng<XorShiftRng>;

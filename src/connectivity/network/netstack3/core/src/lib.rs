@@ -45,7 +45,8 @@ use log::trace;
 
 pub use crate::data_structures::{IdMapCollection, IdMapCollectionKey};
 pub use crate::device::{
-    get_ip_addr_subnet, initialize_device, receive_frame, DeviceId, DeviceLayerEventDispatcher,
+    get_ip_addr_subnet, initialize_device, receive_frame, remove_device, DeviceId,
+    DeviceLayerEventDispatcher,
 };
 pub use crate::error::NetstackError;
 pub use crate::ip::{

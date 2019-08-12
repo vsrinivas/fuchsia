@@ -128,7 +128,7 @@ use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 use netstack3_core::icmp::{IcmpConnId, IcmpEventDispatcher};
 use netstack3_core::{
     add_route, del_device_route, get_all_ip_addr_subnet, get_all_routes, handle_timeout,
-    initialize_device, receive_frame, set_ip_addr_subnet, Context, DeviceId,
+    initialize_device, receive_frame, remove_device, set_ip_addr_subnet, Context, DeviceId,
     DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpLayerEventDispatcher,
     NetstackError, StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
@@ -653,8 +653,14 @@ impl EventLoop {
 
     fn fidl_disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         match self.ctx.dispatcher_mut().devices.deactivate_device(id) {
-            Ok(_) => Ok(()),
-            // TODO(rheacock, NET-2140): handle core and driver state
+            Ok((core_id, device_info)) => {
+                // Disabling the interface deactivates it in the bindings, and will remove
+                // it completely from the core.
+                match remove_device(&mut self.ctx, core_id) {
+                    Some(_) => Ok(()), // TODO(rheacock): schedule and send the received frames
+                    None => Ok(()),
+                }
+            }
             Err(toggle_error) => {
                 match toggle_error {
                     ToggleError::NoChange => Ok(()),

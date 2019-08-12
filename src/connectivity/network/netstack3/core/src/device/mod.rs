@@ -172,8 +172,6 @@ impl DeviceLayerState {
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
     }
-
-    // TODO(rheacock, NET-2140): Add ability to remove inactive devices
 }
 
 /// Common state across devices.
@@ -308,6 +306,33 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
     match device.protocol {
         DeviceProtocol::Ethernet => {
             ndp::start_soliciting_routers::<_, ethernet::EthernetNdpDevice>(ctx, device.id)
+        }
+    }
+}
+
+/// Remove a device from the device layer.
+///
+/// This function returns frames for the bindings to send if the shutdown is graceful - they can be
+/// safely ignored otherwise.
+///
+/// # Panics
+///
+/// Panics if `device` does not refer to an existing device.
+pub fn remove_device<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+) -> Option<Vec<usize>> {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            // TODO(rheacock): Generate any final frames to send here.
+            crate::device::ethernet::deinitialize(ctx, device.id);
+            ctx.state_mut()
+                .device
+                .ethernet
+                .remove(device.id)
+                .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id));
+            debug!("removing Ethernet device with ID {}", device.id);
+            None
         }
     }
 }

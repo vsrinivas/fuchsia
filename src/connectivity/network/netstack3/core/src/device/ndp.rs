@@ -287,6 +287,24 @@ pub(crate) trait NdpDevice: Sized {
     fn set_mtu<D: EventDispatcher>(ctx: &mut StackState<D>, device_id: usize, mtu: u32);
 }
 
+/// Cleans up state associated with the device.
+///
+/// The contract is that after deinitialize is called, nothing else should be done
+/// with the state.
+pub(crate) fn deinitialize<D: EventDispatcher>(ctx: &mut Context<D>, device_id: usize) {
+    // Remove all timers associated with the device
+    // TODO(rheacock): this logic can be removed when NDP becomes contextified.
+    ctx.dispatcher_mut().cancel_timeouts_with(|timer_id| match timer_id {
+        TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::Ndp(inner_id))) => {
+            let timer_device_id = inner_id.get_device_id();
+            (timer_device_id.protocol == DeviceProtocol::Ethernet)
+                && (timer_device_id.id == device_id)
+        }
+        _ => false,
+    });
+    // TODO(rheacock): Send any immediate packets, and potentially flag the state as uninitialized?
+}
+
 /// Per interface configurations for NDP.
 #[derive(Debug, Clone)]
 pub struct NdpConfigurations {
@@ -658,6 +676,10 @@ impl NdpTimerId {
             inner: InnerNdpTimerId::PrefixInvalidation { addr_subnet },
         }
         .into()
+    }
+
+    pub(crate) fn get_device_id(&self) -> DeviceId {
+        self.device_id
     }
 }
 
@@ -1893,6 +1915,32 @@ mod tests {
         // TODO(brunodalbo): we should be able to verify that remote also sends
         //  back an echo reply, but we're having some trouble with IPv6 link
         //  local addresses.
+    }
+
+    #[test]
+    fn test_deinitialize_cancels_timers() {
+        // Test that associated timers are cancelled when the NDP device
+        // is deinitialized.
+
+        set_logger_for_test();
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let dev_id = ctx.state_mut().device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, dev_id);
+        // Now we have to manually assign the IP addresses, see `EthernetNdpDevice::get_ipv6_addr`
+        set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip(), 128).unwrap());
+
+        lookup::<DummyEventDispatcher, EthernetNdpDevice>(&mut ctx, dev_id.id(), remote_ip());
+
+        // This should have scheduled a timer
+        assert_eq!(ctx.dispatcher.timer_events().count(), 1);
+
+        // Deinitializing a different ID should not impact the current timer
+        deinitialize(&mut ctx, dev_id.id + 1);
+        assert_eq!(ctx.dispatcher.timer_events().count(), 1);
+
+        // Deinitializing the correct ID should cancel the timer.
+        deinitialize(&mut ctx, dev_id.id);
+        assert_eq!(ctx.dispatcher.timer_events().count(), 0);
     }
 
     #[test]
