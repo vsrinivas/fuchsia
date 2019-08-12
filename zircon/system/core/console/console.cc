@@ -39,10 +39,10 @@ Console::Console(async_dispatcher_t* dispatcher, zx::eventpair event1, zx::event
       rx_fifo_(std::move(event1)),
       rx_event_(std::move(event2)),
       rx_source_(std::move(rx_source)),
-      tx_sink_(std::move(tx_sink)) {
-  std::thread debug_reader([this]() { DebugReaderThread(); });
-  debug_reader.detach();
-}
+      tx_sink_(std::move(tx_sink)),
+      rx_thread_(std::thread([this]() { DebugReaderThread(); })) {}
+
+Console::~Console() { rx_thread_.join(); }
 
 zx_status_t Console::Read(void* data, size_t len, size_t offset, size_t* out_actual) {
   // Don't try to read more than the FIFO can hold.

@@ -8,6 +8,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 
+#include <thread>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -24,16 +26,17 @@ class Console : public fbl::RefCounted<Console> {
   // it is assumed that no data from this request was transmitted.
   using TxSink = fit::function<zx_status_t(const uint8_t* buffer, size_t length)>;
 
+  // Do not use, instead use Create()
+  Console(async_dispatcher_t* dispatcher, zx::eventpair event1, zx::eventpair event2,
+          RxSource rx_source, TxSink tx_sink);
+  ~Console();
+
   static zx_status_t Create(async_dispatcher_t* dispatcher, RxSource rx_source, TxSink tx_sink,
                             fbl::RefPtr<Console>* console);
 
   // Used to implement fuchsia.io.File/{Read,Write}
   zx_status_t Read(void* data, size_t len, size_t offset, size_t* out_actual);
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual);
-
-  // Do not use, instead use Create()
-  Console(async_dispatcher_t* dispatcher, zx::eventpair event1, zx::eventpair event2,
-          RxSource rx_source, TxSink tx_sink);
 
   async_dispatcher_t* dispatcher() { return dispatcher_; }
 
@@ -52,4 +55,5 @@ class Console : public fbl::RefCounted<Console> {
   zx::eventpair rx_event_;
   RxSource rx_source_;
   TxSink tx_sink_;
+  std::thread rx_thread_;
 };
