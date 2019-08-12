@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/helper_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "services": [
+            "fuchsia.netemul.environment.ManagedEnvironment",
+            "fuchsia.netemul.network.NetworkContext",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}

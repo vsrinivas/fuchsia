@@ -55,6 +55,7 @@ group("tests") {
   deps = [
     ":netdump",
     ":netdump_unit_tests",
+    "integration:tests",
   ]
 }
 

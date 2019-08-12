@@ -1,0 +1,58 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "environment": {
+                "devices": [
+                    "basic_integration_tx",
+                    "basic_integration_rx"
+                ],
+                "services": {
+                    "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                },
+                "setup": [
+                    {
+                        "arguments": [
+                            "-e",
+                            "basic_integration_tx",
+                            "-i",
+                            "192.168.0.1/24"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                    },
+                    {
+                        "arguments": [
+                            "-e",
+                            "basic_integration_rx",
+                            "-i",
+                            "192.168.0.2/24"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                    }
+                ],
+                "test": [
+                    "fuchsia-pkg://fuchsia.com/netdump_integration_tests#meta/basic_integration.cmx"
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "basic_integration_tx"
+                        },
+                        {
+                            "name": "basic_integration_rx"
+                        }
+                    ],
+                    "name": "basic_integration_net"
+                }
+            ],
+            "timeout": 120
+        }
+    },
+    "program": {
+        "binary": "test/basic_integration_test"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

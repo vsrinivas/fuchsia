@@ -5,6 +5,9 @@
     "sandbox": {
         "dev": [
             "class/ethernet"
+        ],
+        "features": [
+            "isolated-persistent-storage"
         ]
     }
 }

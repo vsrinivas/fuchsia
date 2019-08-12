@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/ethernet/c/fidl.h>
-
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -18,7 +17,6 @@
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
-#include <pretty/hexdump.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/assert.h>
@@ -33,6 +31,8 @@
 #include <string>
 #include <vector>
 
+#include <pretty/hexdump.h>
+
 static constexpr size_t BUFSIZE = 2048;
 static constexpr int64_t DEFAULT_TIMEOUT_SECONDS = 60;
 
@@ -40,7 +40,7 @@ namespace netdump {
 
 class NetdumpOptions {
  public:
-  const char* device = nullptr;
+  std::string device;
   bool raw = false;
   bool link_level = false;
   bool promisc = false;
@@ -445,7 +445,7 @@ int parse_args(StringIterator begin, StringIterator end, NetdumpOptions* options
     return usage();
   }
 
-  options->device = last.c_str();
+  options->device = last;
   return 0;
 }
 
@@ -461,7 +461,7 @@ int main(int argc, const char** argv) {
   }
 
   int fd;
-  if ((fd = open(options.device, O_RDWR)) < 0) {
+  if ((fd = open(options.device.c_str(), O_RDWR)) < 0) {
     std::cerr << "netdump: cannot open '" << options.device << "'" << std::endl;
     return -1;
   }
