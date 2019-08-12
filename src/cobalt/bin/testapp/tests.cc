@@ -8,8 +8,6 @@
 #include "src/cobalt/bin/testapp/test_constants.h"
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
-#include "third_party/cobalt/config/cobalt_registry.pb.h"
-#include "third_party/cobalt/config/metric_definition.pb.h"
 #include "third_party/cobalt/util/crypto_util/base64.h"
 #include "third_party/cobalt/util/datetime_util.h"
 
