@@ -269,9 +269,10 @@ fn handle_info_event(
                 }
             }
         }
-        InfoEvent::DiscoveryScanStats(_scan_stats, discovery_stats) => {
+        InfoEvent::DiscoveryScanStats(scan_stats, discovery_stats) => {
             if let Some(s) = discovery_stats {
-                telemetry::report_neighbor_networks_count(cobalt_sender, s.bss_count, s.ess_count);
+                let bss_count = scan_stats.bss_count;
+                telemetry::report_neighbor_networks_count(cobalt_sender, bss_count, s.ess_count);
                 telemetry::report_standards(cobalt_sender, s.num_bss_by_standard);
                 telemetry::report_channels(cobalt_sender, s.num_bss_by_channel);
             }

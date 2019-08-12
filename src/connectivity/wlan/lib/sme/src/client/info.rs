@@ -67,6 +67,9 @@ pub struct ScanStats {
     pub scan_type: fidl_mlme::ScanTypes,
     pub scan_start_while_connected: bool,
     pub result: ScanResult,
+    /// Number of BSS found in scan result. For join scan, this only counts BSS with requested
+    /// SSID.
+    pub bss_count: usize,
 }
 
 impl ScanStats {
@@ -77,7 +80,6 @@ impl ScanStats {
 
 #[derive(Debug, PartialEq)]
 pub struct DiscoveryStats {
-    pub bss_count: usize,
     pub ess_count: usize,
     pub num_bss_by_standard: HashMap<Standard, usize>,
     pub num_bss_by_channel: HashMap<u8, usize>,
@@ -101,7 +103,7 @@ pub struct ConnectStats {
     pub rsna_end_at: Option<zx::Time>,
 
     pub result: ConnectResult,
-    pub selected_network: Option<fidl_mlme::BssDescription>,
+    pub candidate_network: Option<fidl_mlme::BssDescription>,
 
     /// Number of consecutive connection attempts that have been made to the same SSID
     pub attempts: u32,
@@ -124,6 +126,8 @@ pub struct ScanStartStats {
 pub struct ScanEndStats {
     pub scan_end_at: zx::Time,
     pub result: ScanResult,
+    /// Number of BSS found with the requested SSID from join scan
+    pub bss_count: usize,
 }
 
 impl ConnectStats {
@@ -139,6 +143,7 @@ impl ConnectStats {
                 scan_type: start_stats.scan_type,
                 scan_start_while_connected: start_stats.scan_start_while_connected,
                 result: end_stats.result.clone(),
+                bss_count: end_stats.bss_count,
             }),
             _ => None,
         }
@@ -291,10 +296,11 @@ impl InfoReporter {
                 }
             }
             scan::ScanResult::JoinScanFinished { result, .. } => {
-                let (_bss_list, scan_result) = convert_scan_result(result);
+                let (bss_list, scan_result) = convert_scan_result(result);
                 // Join scan stats are collected as part of ConnectStats, which will be reported
                 // when the connect attempt finishes
-                warn_if_err!(self.stats_collector.report_join_scan_ended(scan_result));
+                let bss_count = bss_list.map(|bss_list| bss_list.len()).unwrap_or(0);
+                warn_if_err!(self.stats_collector.report_join_scan_ended(scan_result, bss_count));
             }
             scan::ScanResult::None => (),
         }
@@ -307,8 +313,8 @@ impl InfoReporter {
         }
     }
 
-    pub fn report_network_selected(&mut self, desc: fidl_mlme::BssDescription) {
-        warn_if_err!(self.stats_collector.report_network_selected(desc));
+    pub fn report_candidate_network(&mut self, desc: fidl_mlme::BssDescription) {
+        warn_if_err!(self.stats_collector.report_candidate_network(desc));
     }
 
     pub fn report_join_started(&mut self, att_id: ConnectionAttemptId) {
@@ -414,21 +420,22 @@ impl StatsCollector {
             scan_start_at: pending_stats.scan_start_at,
             scan_end_at: now,
             result,
+            bss_count: bss_list.map(|bss_list| bss_list.len()).unwrap_or(0),
         };
         let discovery_stats = bss_list.map(|bss_list| {
-            let bss_count = bss_list.len();
             let ess_count = cfg.group_networks(&bss_list).len();
             let num_bss_by_standard = get_phy_standard_map(&bss_list);
             let num_bss_by_channel = get_channel_map(&bss_list);
 
-            DiscoveryStats { bss_count, ess_count, num_bss_by_standard, num_bss_by_channel }
+            DiscoveryStats { ess_count, num_bss_by_standard, num_bss_by_channel }
         });
 
         Ok((scan_stats, discovery_stats))
     }
 
-    pub fn report_join_scan_ended(&mut self, result: ScanResult) -> Result<(), StatsError> {
-        self.connect_stats()?.scan_end_stats.replace(ScanEndStats { scan_end_at: now(), result });
+    pub fn report_join_scan_ended(&mut self, result: ScanResult, bss_count: usize) -> Result<(), StatsError> {
+        let stats = ScanEndStats { scan_end_at: now(), result, bss_count };
+        self.connect_stats()?.scan_end_stats.replace(stats);
         Ok(())
     }
 
@@ -444,11 +451,11 @@ impl StatsCollector {
         }
     }
 
-    pub fn report_network_selected(
+    pub fn report_candidate_network(
         &mut self,
         desc: fidl_mlme::BssDescription,
     ) -> Result<(), StatsError> {
-        self.connect_stats()?.selected_network.replace(desc);
+        self.connect_stats()?.candidate_network.replace(desc);
         Ok(())
     }
 
@@ -526,7 +533,7 @@ impl StatsCollector {
             rsna_start_at: pending_stats.rsna_start_at,
             rsna_end_at: pending_stats.rsna_end_at,
             result,
-            selected_network: pending_stats.selected_network,
+            candidate_network: pending_stats.candidate_network,
             attempts: connect_attempts.attempts,
             last_ten_failures: connect_attempts.last_ten_failures.clone(),
         })
@@ -592,6 +599,7 @@ impl ConnectAttempts {
                     pending_stats.scan_end_stats.replace(ScanEndStats {
                         scan_end_at: now,
                         result: ScanResult::Failed(*code),
+                        bss_count: 0,
                     });
                 }
                 ConnectFailure::AuthenticationFailure(..) => {
@@ -635,7 +643,7 @@ pub struct PendingConnectStats {
     assoc_end_at: Option<zx::Time>,
     rsna_start_at: Option<zx::Time>,
     rsna_end_at: Option<zx::Time>,
-    selected_network: Option<fidl_mlme::BssDescription>,
+    candidate_network: Option<fidl_mlme::BssDescription>,
 }
 
 impl PendingConnectStats {
@@ -650,7 +658,7 @@ impl PendingConnectStats {
             assoc_end_at: None,
             rsna_start_at: None,
             rsna_end_at: None,
-            selected_network: None,
+            candidate_network: None,
         }
     }
 }
@@ -686,8 +694,8 @@ mod tests {
             assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
             assert_eq!(scan_stats.scan_start_while_connected, is_connected);
             assert_eq!(scan_stats.result, ScanResult::Success);
+            assert_eq!(scan_stats.bss_count, 1);
             assert_eq!(discovery_stats, Some(DiscoveryStats {
-                bss_count: 1,
                 ess_count: 1,
                 num_bss_by_channel: hashmap! { 1 => 1 },
                 num_bss_by_standard: hashmap! { Standard::Dot11G => 1 },
@@ -703,9 +711,9 @@ mod tests {
         let scan_req = fake_scan_request();
         let is_connected = false;
         assert!(stats_collector.report_join_scan_started(scan_req, is_connected).is_ok());
-        assert!(stats_collector.report_join_scan_ended(ScanResult::Success).is_ok());
+        assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
         let bss_desc = fake_protected_bss_description(b"foo".to_vec());
-        assert!(stats_collector.report_network_selected(bss_desc).is_ok());
+        assert!(stats_collector.report_candidate_network(bss_desc).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());
         assert!(stats_collector.report_assoc_started().is_ok());
         assert!(stats_collector.report_assoc_success().is_ok());
@@ -720,13 +728,14 @@ mod tests {
                 assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
                 assert_eq!(scan_stats.scan_start_while_connected, is_connected);
                 assert_eq!(scan_stats.result, ScanResult::Success);
+                assert_eq!(scan_stats.bss_count, 1);
             });
             assert!(stats.auth_time().is_some());
             assert!(stats.assoc_time().is_some());
             assert!(stats.rsna_time().is_some());
             assert_eq!(stats.result, ConnectResult::Success);
             let bss_desc = fake_protected_bss_description(b"foo".to_vec());
-            assert_eq!(stats.selected_network, Some(bss_desc));
+            assert_eq!(stats.candidate_network, Some(bss_desc));
         });
     }
 
@@ -738,9 +747,9 @@ mod tests {
         let scan_req = fake_scan_request();
         let is_connected = false;
         assert!(stats_collector.report_join_scan_started(scan_req, is_connected).is_ok());
-        assert!(stats_collector.report_join_scan_ended(ScanResult::Success).is_ok());
+        assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
         let bss_desc = fake_protected_bss_description(b"foo".to_vec());
-        assert!(stats_collector.report_network_selected(bss_desc).is_ok());
+        assert!(stats_collector.report_candidate_network(bss_desc).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());
         let result = ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
             fidl_mlme::AuthenticateResultCodes::Refused,
@@ -754,7 +763,7 @@ mod tests {
             assert!(stats.assoc_time().is_none());
             assert!(stats.rsna_time().is_none());
             assert_eq!(stats.result, result);
-            assert!(stats.selected_network.is_some());
+            assert!(stats.candidate_network.is_some());
         });
     }
 
@@ -841,12 +850,12 @@ mod tests {
     #[test]
     fn test_no_pending_connect_stats() {
         assert_variant!(
-            StatsCollector::default().report_join_scan_ended(ScanResult::Success),
+            StatsCollector::default().report_join_scan_ended(ScanResult::Success, 1),
             Err(StatsError::NoPendingConnect)
         );
         let bss_desc = fake_protected_bss_description(b"foo".to_vec());
         assert_variant!(
-            StatsCollector::default().report_network_selected(bss_desc),
+            StatsCollector::default().report_candidate_network(bss_desc),
             Err(StatsError::NoPendingConnect)
         );
         assert_variant!(

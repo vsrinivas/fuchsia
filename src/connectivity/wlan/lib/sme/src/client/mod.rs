@@ -257,12 +257,13 @@ impl super::Station for ClientSme {
                     scan::ScanResult::None => (),
                     scan::ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
                         let mut inspect_msg: Option<String> = None;
-                        match self.cfg.get_best_bss(&bss_list) {
+                        let best_bss = self.cfg.get_best_bss(&bss_list);
+                        if let Some(ref best_bss) = best_bss {
+                            self.context.info.report_candidate_network(clone_bss_desc(best_bss));
+                        }
+                        match best_bss {
                             // BSS found and compatible.
                             Some(best_bss) if self.cfg.is_bss_compatible(best_bss) => {
-                                self.context
-                                    .info
-                                    .report_network_selected(clone_bss_desc(&best_bss));
                                 match get_protection(
                                     &self.context.device_info,
                                     &token.credential,
@@ -892,12 +893,13 @@ mod tests {
             assert!(!scan_stats.scan_start_while_connected);
             assert!(scan_stats.scan_time().into_nanos() > 0);
             assert_eq!(scan_stats.result, ScanResult::Success);
+            assert_eq!(scan_stats.bss_count, 1);
             assert!(stats.auth_time().is_some());
             assert!(stats.assoc_time().is_some());
             assert!(stats.rsna_time().is_none());
             assert!(stats.connect_time().into_nanos() > 0);
             assert_eq!(stats.result, ConnectResult::Success);
-            assert!(stats.selected_network.is_some());
+            assert!(stats.candidate_network.is_some());
         });
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionMilestone(info))) => {
             assert_eq!(info.milestone, ConnectionMilestone::Connected);
@@ -934,7 +936,7 @@ mod tests {
             assert!(stats.rsna_time().is_none());
             assert!(stats.connect_time().into_nanos() > 0);
             assert_eq!(stats.result, result);
-            assert!(stats.selected_network.is_some());
+            assert!(stats.candidate_network.is_some());
         });
         expect_stream_empty(&mut info_stream, "unexpected event in info stream");
     }
@@ -964,7 +966,7 @@ mod tests {
 
             assert!(stats.connect_time().into_nanos() > 0);
             assert_eq!(stats.result, ConnectResult::Canceled);
-            assert!(stats.selected_network.is_none());
+            assert!(stats.candidate_network.is_none());
         });
         // New connect attempt reports starting right away (though it won't progress until old
         // scan finishes)
@@ -1002,7 +1004,46 @@ mod tests {
             assert_eq!(stats.join_scan_stats().expect("no scan stats").result, ScanResult::Success);
             assert!(stats.connect_time().into_nanos() > 0);
             assert_eq!(stats.result, ConnectResult::Canceled);
-            assert!(stats.selected_network.is_some());
+            assert!(stats.candidate_network.is_some());
+        });
+    }
+
+    #[test]
+    fn test_info_event_candidate_network_multiple_bss() {
+        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        expect_info_event(&mut info_stream, InfoEvent::ConnectStarted);
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 });
+
+        let bss = fake_unprotected_bss_description(b"foo".to_vec());
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+        });
+        let bss = fake_unprotected_bss_description(b"foo".to_vec());
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+        });
+        // This scan result should not be counted since it's not the SSID we request
+        let bss = fake_unprotected_bss_description(b"bar".to_vec());
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCodes::Success },
+        });
+
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
+        expect_info_event(&mut info_stream, InfoEvent::JoinStarted { att_id: 1 });
+
+        // Stop connecting attempt early since we just want to get ConnectStats
+        sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCodes::JoinFailureTimeout));
+
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectFinished { .. })));
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
+            assert_eq!(stats.join_scan_stats().expect("no scan stats").bss_count, 2);
+            assert!(stats.candidate_network.is_some());
         });
     }
 
@@ -1021,8 +1062,8 @@ mod tests {
             assert!(scan_stats.scan_time().into_nanos() > 0);
             assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
             assert_eq!(scan_stats.result, ScanResult::Success);
+            assert_eq!(scan_stats.bss_count, 1);
             assert_eq!(discovery_stats, Some(DiscoveryStats {
-                bss_count: 1,
                 ess_count: 1,
                 num_bss_by_channel: hashmap! { 1 => 1 },
                 num_bss_by_standard: hashmap! { Standard::Dot11G => 1 },
