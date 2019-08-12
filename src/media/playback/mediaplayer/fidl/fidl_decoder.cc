@@ -98,7 +98,7 @@ void FidlDecoder::Init(fuchsia::media::StreamProcessorPtr decoder,
 
   outboard_decoder_.set_error_handler(fit::bind_member(this, &FidlDecoder::OnConnectionFailed));
 
-  outboard_decoder_.events().OnStreamFailed = fit::bind_member(this, &FidlDecoder::OnStreamFailed);
+  outboard_decoder_.events().OnStreamFailed2 = fit::bind_member(this, &FidlDecoder::OnStreamFailed);
   outboard_decoder_.events().OnInputConstraints =
       fit::bind_member(this, &FidlDecoder::OnInputConstraints);
   outboard_decoder_.events().OnOutputConstraints =
@@ -390,8 +390,11 @@ void FidlDecoder::OnConnectionFailed(zx_status_t error) {
   // TODO(dalesat): Report failure.
 }
 
-void FidlDecoder::OnStreamFailed(uint64_t stream_lifetime_ordinal) {
+void FidlDecoder::OnStreamFailed(uint64_t stream_lifetime_ordinal,
+                                 fuchsia::media::StreamError error) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  FXL_LOG(ERROR) << "OnStreamFailed: stream_lifetime_ordinal: " << stream_lifetime_ordinal
+                 << " error: " << std::hex << static_cast<uint32_t>(error);
   // TODO(dalesat): Report failure.
 }
 

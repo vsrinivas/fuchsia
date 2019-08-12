@@ -5,7 +5,6 @@
 #ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_IMPL_H_
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_IMPL_H_
 
-#include <fbl/macros.h>
 #include <fuchsia/media/drm/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -16,6 +15,8 @@
 
 #include <list>
 #include <queue>
+
+#include <fbl/macros.h>
 
 #include "closure_queue.h"
 #include "codec_adapter.h"
@@ -890,7 +891,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   // The core codec should only call this method at times when there is a
   // current stream, not between streams.
-  void onCoreCodecFailStream() override;
+  void onCoreCodecFailStream(fuchsia::media::StreamError error) override;
 
   // "Mid-stream" can mean at the start of a stream also - it's just required
   // that a stream be active currently.  The core codec must ensure that this

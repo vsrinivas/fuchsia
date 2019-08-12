@@ -5,12 +5,13 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_VP9_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_VP9_H_
 
-#include <fbl/macros.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/zx/bti.h>
 
 #include <random>
+
+#include <fbl/macros.h>
 
 #include "vp9_decoder.h"
 
@@ -77,7 +78,7 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
                                       uint32_t sar_width, uint32_t sar_height);
 
   void OnCoreCodecEos();
-  void OnCoreCodecFailStream();
+  void OnCoreCodecFailStream(fuchsia::media::StreamError error);
   CodecPacket* GetFreePacket();
 
   DeviceCtx* device_ = nullptr;

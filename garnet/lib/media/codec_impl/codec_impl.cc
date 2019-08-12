@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/macros.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
 #include <lib/media/codec_impl/codec_impl.h>
 #include <threads.h>
+
+#include <fbl/macros.h>
 
 #include "lib/media/codec_impl/closure_queue.h"
 #include "lib/syslog/cpp/logger.h"
@@ -2986,7 +2987,7 @@ void CodecImpl::onCoreCodecFailCodec(const char* format, ...) {
   va_end(args);
 }
 
-void CodecImpl::onCoreCodecFailStream() {
+void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (IsStoppingLocked()) {
@@ -3033,10 +3034,12 @@ void CodecImpl::onCoreCodecFailStream() {
     // There's not actually any need to track that the stream failed anywhere
     // in the CodecImpl.  The client needs to move on from the failed
     // stream to a new stream, or close the Codec channel.
-    PostToSharedFidl([this, stream_lifetime_ordinal = stream_lifetime_ordinal_] {
+    PostToSharedFidl([this, stream_lifetime_ordinal = stream_lifetime_ordinal_, error] {
       // See "is_bound_checks" comment up top.
       if (binding_.is_bound()) {
+        // TODO(MTWN-411): Complete soft transition and only send one event.
         binding_.events().OnStreamFailed(stream_lifetime_ordinal);
+        binding_.events().OnStreamFailed2(stream_lifetime_ordinal, error);
       }
     });
   }  // ~lock

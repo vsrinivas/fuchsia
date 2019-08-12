@@ -5,15 +5,15 @@
 #ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_DECRYPTOR_ADAPTER_H_
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_DECRYPTOR_ADAPTER_H_
 
+#include <fuchsia/media/drm/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/media/codec_impl/codec_adapter.h>
+
 #include <array>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
-
-#include <fuchsia/media/drm/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/media/codec_impl/codec_adapter.h>
 
 #include "garnet/bin/media/codecs/mpsc_queue.h"
 
@@ -91,11 +91,11 @@ class DecryptorAdapter : public CodecAdapter {
   using OutputBuffer = std::variant<ClearOutputBuffer, SecureOutputBuffer>;
 
   // Decryptor interface
-  virtual bool Decrypt(const EncryptionParams& params, const InputBuffer& input,
-                       const OutputBuffer& output) = 0;
+  virtual std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
+                                                             const InputBuffer& input,
+                                                             const OutputBuffer& output) = 0;
 
   bool is_secure() const { return secure_mode_; }
-  void OnCoreCodecFailStream();
 
  private:
   void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
@@ -104,6 +104,7 @@ class DecryptorAdapter : public CodecAdapter {
   CodecInputItem DequeueInputItem();
   void ProcessInput();
   bool UpdateEncryptionParams(const fuchsia::media::EncryptedFormat& encrypted_format);
+  void OnCoreCodecFailStream(fuchsia::media::StreamError error);
 
   EncryptionParams encryption_params_;
   bool secure_mode_ = false;

@@ -90,7 +90,7 @@ class FidlDecoder : public Decoder {
   void OnConnectionFailed(zx_status_t error);
 
   // Handles the |OnStreamFailed| event from the outboard decoder.
-  void OnStreamFailed(uint64_t stream_lifetime_ordinal);
+  void OnStreamFailed(uint64_t stream_lifetime_ordinal, fuchsia::media::StreamError error);
 
   // Handles the |OnInputConstraints| event from the outboard decoder after
   // |ConfigureConnectors| is called.

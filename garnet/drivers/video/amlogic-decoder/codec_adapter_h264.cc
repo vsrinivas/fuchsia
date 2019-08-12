@@ -218,7 +218,8 @@ void CodecAdapterH264::CoreCodecStartStream() {
   });
   decoder->SetInitializeFramesHandler(
       fit::bind_member(this, &CodecAdapterH264::InitializeFramesHandler));
-  decoder->SetErrorHandler([this] { OnCoreCodecFailStream(); });
+  decoder->SetErrorHandler(
+      [this] { OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN); });
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
@@ -954,7 +955,7 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
       // minimum the oob buffer needs to be large enough to contain both the
       // sps_count and pps_count fields, which is a min of 7 bytes.
       if (oob->size() < 7) {
-        OnCoreCodecFailStream();
+        OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
         return false;
       }
       uint32_t stashed_pseudo_nal_length_bytes = ((*oob)[4] & 0x3) + 1;
@@ -965,12 +966,12 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
       uint32_t offset = 6;
       for (uint32_t i = 0; i < sps_count; ++i) {
         if (offset + 2 > oob->size()) {
-          OnCoreCodecFailStream();
+          OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return false;
         }
         uint32_t sps_length = (*oob)[offset] * 256 + (*oob)[offset + 1];
         if (offset + 2 + sps_length > oob->size()) {
-          OnCoreCodecFailStream();
+          OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return false;
         }
         if (!ParseVideo(&oob->data()[offset], 2 + sps_length)) {
@@ -979,18 +980,18 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
         offset += 2 + sps_length;
       }
       if (offset + 1 > oob->size()) {
-        OnCoreCodecFailStream();
+        OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
         return false;
       }
       uint32_t pps_count = (*oob)[offset++];
       for (uint32_t i = 0; i < pps_count; ++i) {
         if (offset + 2 > oob->size()) {
-          OnCoreCodecFailStream();
+          OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return false;
         }
         uint32_t pps_length = (*oob)[offset] * 256 + (*oob)[offset + 1];
         if (offset + 2 + pps_length > oob->size()) {
-          OnCoreCodecFailStream();
+          OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return false;
         }
         if (!ParseVideo(&oob->data()[offset], 2 + pps_length)) {
@@ -1004,7 +1005,7 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
       return true;
     }
     default:
-      OnCoreCodecFailStream();
+      OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
       return false;
   }
 }
@@ -1040,7 +1041,7 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
   uint32_t i = 0;
   while (i < length) {
     if (i + pseudo_nal_length_field_bytes_ > length) {
-      OnCoreCodecFailStream();
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
     // Read pseudo_nal_length field, which is a field which can be 1-4 bytes
@@ -1051,7 +1052,7 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
     }
     i += pseudo_nal_length_field_bytes_;
     if (i + pseudo_nal_length > length) {
-      OnCoreCodecFailStream();
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
     i += pseudo_nal_length;
@@ -1068,7 +1069,7 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
   uint32_t o = 0;
   while (i < length) {
     if (i + pseudo_nal_length_field_bytes_ > length) {
-      OnCoreCodecFailStream();
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
     uint32_t pseudo_nal_length = 0;
@@ -1077,7 +1078,7 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
     }
     i += pseudo_nal_length_field_bytes_;
     if (i + pseudo_nal_length > length) {
-      OnCoreCodecFailStream();
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
 
@@ -1111,7 +1112,7 @@ bool CodecAdapterH264::ParseVideoAnnexB(const uint8_t* data, uint32_t length) {
   //
   // The data won't be modified by ParseVideo().
   if (ZX_OK != video_->ParseVideo(static_cast<void*>(const_cast<uint8_t*>(data)), length)) {
-    OnCoreCodecFailStream();
+    OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
     return false;
   }
   parsed_video_size_ += length;
@@ -1145,7 +1146,7 @@ bool CodecAdapterH264::ParseVideoAnnexB(const uint8_t* data, uint32_t length) {
 
   if (is_cancelling || ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
     video_->CancelParsing();
-    OnCoreCodecFailStream();
+    OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
     return false;
   }
   return true;
@@ -1240,12 +1241,12 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(::zx::bti bti, uint32_t fr
   return ZX_OK;
 }
 
-void CodecAdapterH264::OnCoreCodecFailStream() {
+void CodecAdapterH264::OnCoreCodecFailStream(fuchsia::media::StreamError error) {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = true;
   }
-  events_->onCoreCodecFailStream();
+  events_->onCoreCodecFailStream(error);
 }
 
 CodecPacket* CodecAdapterH264::GetFreePacket() {

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
-#include <cstdint>
-#include <limits>
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/media/codec_impl/codec_impl.h>
 #include <lib/media/codec_impl/codec_port.h>
 #include <lib/media/codec_impl/decryptor_adapter.h>
 #include <zircon/assert.h>
+
+#include <algorithm>
+#include <cstdint>
+#include <limits>
 
 namespace {
 
@@ -460,8 +460,9 @@ void DecryptorAdapter::ProcessInput() {
       output = clear_output;
     }
 
-    if (!Decrypt(encryption_params_, input, output)) {
-      OnCoreCodecFailStream();
+    auto error = Decrypt(encryption_params_, input, output);
+    if (error) {
+      OnCoreCodecFailStream(*error);
       return;
     }
 
@@ -518,10 +519,10 @@ CodecInputItem DecryptorAdapter::DequeueInputItem() {
   return to_ret;
 }
 
-void DecryptorAdapter::OnCoreCodecFailStream() {
+void DecryptorAdapter::OnCoreCodecFailStream(fuchsia::media::StreamError error) {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = true;
   }
-  events_->onCoreCodecFailStream();
+  events_->onCoreCodecFailStream(error);
 }

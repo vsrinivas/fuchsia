@@ -39,6 +39,38 @@ struct Parameter {
     Value value;
 };
 
+/// StreamError
+///
+/// This error code encapsulates various errors that might emanate from a
+/// StreamProcessor server. It can be sent either as an OnStreamFailed event or
+/// as an epitaph for the channel.
+enum StreamError : uint32 {
+    // Common errors 0x00
+    /// An internal error with an unspecified reason.
+    UNKNOWN = 0x00000001;
+    /// The client provided invalid input format details.
+    INVALID_INPUT_FORMAT_DETAILS = 0x00000002;
+    /// The server received buffers that are not suitable for the operation to
+    /// be performed. An example of this would be if a Decoder received output
+    /// buffers that are too small to decode a frame into.
+    INCOMPATIBLE_BUFFERS_PROVIDED = 0x00000003;
+
+    // Decoder errors 0x01
+    /// An internal decoder error with an unspecified reason.
+    DECODER_UNKNOWN = 0x01000001;
+
+    // Encoder errors 0x02
+    /// An internal encoder error with an unspecified reason.
+    ENCODER_UNKNOWN = 0x02000001;
+
+    // Decryptor errors 0x03
+    /// An internal decryptor error with an unspecified reason.
+    DECRYPTOR_UNKNOWN = 0x03000001;
+    /// The requested KeyId is not available for use by the Decryptor. The
+    /// client may try again later if that key becomes available.
+    DECRYPTOR_NO_KEY = 0x03000002;
+};
+
 xunion AudioCompressedFormat {
     AudioCompressedFormatAac aac;
     AudioCompressedFormatSbc sbc;

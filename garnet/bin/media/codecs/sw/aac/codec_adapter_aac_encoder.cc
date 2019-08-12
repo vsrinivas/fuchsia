@@ -322,7 +322,7 @@ void CodecAdapterAacEncoder::ProcessInput(CodecInputItem input_item) {
               "Codec stream failed; extrapolation was needed because "
               "of an unaligned timestamp, but no timebase was provided "
               "in `input_details`.\n");
-      events_->onCoreCodecFailStream();
+      events_->onCoreCodecFailStream(fuchsia::media::StreamError::ENCODER_UNKNOWN);
     case ChunkInputStream::kUserTerminated:
       // A failure was reported through `events_`.
       stream_ = std::nullopt;

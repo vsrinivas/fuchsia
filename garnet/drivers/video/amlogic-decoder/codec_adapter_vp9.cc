@@ -385,7 +385,8 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     events_->onCoreCodecOutputPacket(packet, false, false);
   });
   decoder->SetEosHandler([this]{OnCoreCodecEos();});
-  decoder->SetErrorHandler([this] { OnCoreCodecFailStream(); });
+  decoder->SetErrorHandler(
+      [this] { OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN); });
   decoder->SetCheckOutputReady([this] {
     std::lock_guard<std::mutex> lock(lock_);
     // We're ready if output hasn't been configured yet, or if we have free
@@ -867,11 +868,11 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       SplitSuperframe(reinterpret_cast<const uint8_t*>(&new_stream_ivf[kHeaderSkipBytes]),
                       new_stream_ivf_len - kHeaderSkipBytes, &split_data);
       if (ZX_OK != video_->ProcessVideoNoParser(split_data.data(), split_data.size())) {
-        OnCoreCodecFailStream();
+        OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
         return;
       }
       if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
-        OnCoreCodecFailStream();
+        OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
         return;
       }
       // Intentionally not including kFlushThroughZeroes - this only includes
@@ -899,7 +900,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     // TODO: Check for short writes and either feed in extra data as space is
     // made or resize the buffer to fit.
     if (ZX_OK != video_->ProcessVideoNoParser(split_data.data(), split_data.size())) {
-      OnCoreCodecFailStream();
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
 
@@ -908,13 +909,13 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     // we can get hangs.
     if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes,
                                               sizeof(kFlushThroughZeroes))) {
-      OnCoreCodecFailStream();
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
     queued_frame_sizes_ = std::move(new_queued_frame_sizes);
 
     if (queued_frame_sizes_.size() == 0) {
-      OnCoreCodecFailStream();
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
     // Only one frame per superframe should be given at a time, as otherwise the
@@ -1090,12 +1091,12 @@ void CodecAdapterVp9::OnCoreCodecEos() {
   events_->onCoreCodecOutputEndOfStream(false);
 }
 
-void CodecAdapterVp9::OnCoreCodecFailStream() {
+void CodecAdapterVp9::OnCoreCodecFailStream(fuchsia::media::StreamError error) {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = true;
   }
-  events_->onCoreCodecFailStream();
+  events_->onCoreCodecFailStream(error);
 }
 
 CodecPacket* CodecAdapterVp9::GetFreePacket() {

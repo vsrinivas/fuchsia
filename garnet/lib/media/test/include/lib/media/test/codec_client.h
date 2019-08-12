@@ -141,7 +141,7 @@ class CodecClient {
   // Events:
   //
 
-  void OnStreamFailed(uint64_t stream_lifetime_ordinal);
+  void OnStreamFailed(uint64_t stream_lifetime_ordinal, fuchsia::media::StreamError error);
 
   void OnInputConstraints(fuchsia::media::StreamBufferConstraints input_constraints);
   void OnFreeInputPacket(fuchsia::media::PacketHeader free_input_packet);

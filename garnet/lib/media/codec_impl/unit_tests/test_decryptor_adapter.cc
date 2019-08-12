@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/media/drm/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/interface_handle.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <zircon/types.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -9,15 +17,8 @@
 #include <unordered_map>
 #include <variant>
 
-#include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/media/drm/cpp/fidl.h>
-#include <fuchsia/sysmem/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/cpp/interface_handle.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <sdk/lib/sys/cpp/testing/test_with_environment.h>
-#include <zircon/types.h>
 
 #include "lib/media/codec_impl/codec_impl.h"
 #include "lib/media/codec_impl/decryptor_adapter.h"
@@ -86,21 +87,31 @@ class ClearTextDecryptorAdapter : public DecryptorAdapter {
   explicit ClearTextDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
       : DecryptorAdapter(lock, codec_adapter_events, false) {}
 
-  bool Decrypt(const EncryptionParams& params, const InputBuffer& input,
-               const OutputBuffer& output) override {
+  void set_has_keys(bool has_keys) { has_keys_ = has_keys; }
+
+  std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
+                                                     const InputBuffer& input,
+                                                     const OutputBuffer& output) override {
     if (!std::holds_alternative<ClearOutputBuffer>(output)) {
-      return false;
+      return fuchsia::media::StreamError::DECRYPTOR_UNKNOWN;
     }
     auto& clear_output = std::get<ClearOutputBuffer>(output);
 
     if (input.data_length != clear_output.data_length) {
-      return false;
+      return fuchsia::media::StreamError::DECRYPTOR_UNKNOWN;
+    }
+
+    if (!has_keys_) {
+      return fuchsia::media::StreamError::DECRYPTOR_NO_KEY;
     }
 
     std::memcpy(clear_output.data, input.data, input.data_length);
 
-    return true;
+    return std::nullopt;
   }
+
+ private:
+  bool has_keys_ = false;
 };
 
 }  // namespace
@@ -127,6 +138,21 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     decryptor_.set_error_handler([this](zx_status_t s) { decryptor_error_ = s; });
     input_collection_.set_error_handler([this](zx_status_t s) { input_collection_error_ = s; });
     output_collection_.set_error_handler([this](zx_status_t s) { output_collection_error_ = s; });
+
+    decryptor_.events().OnStreamFailed2 =
+        fit::bind_member(this, &DecryptorAdapterTest::OnStreamFailed);
+    decryptor_.events().OnInputConstraints =
+        fit::bind_member(this, &DecryptorAdapterTest::OnInputConstraints);
+    decryptor_.events().OnOutputConstraints =
+        fit::bind_member(this, &DecryptorAdapterTest::OnOutputConstraints);
+    decryptor_.events().OnOutputFormat =
+        fit::bind_member(this, &DecryptorAdapterTest::OnOutputFormat);
+    decryptor_.events().OnOutputPacket =
+        fit::bind_member(this, &DecryptorAdapterTest::OnOutputPacket);
+    decryptor_.events().OnFreeInputPacket =
+        fit::bind_member(this, &DecryptorAdapterTest::OnFreeInputPacket);
+    decryptor_.events().OnOutputEndOfStream =
+        fit::bind_member(this, &DecryptorAdapterTest::OnOutputEndOfStream);
   }
 
   void ConnectDecryptor() {
@@ -136,10 +162,75 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     codec_impl_ =
         std::make_unique<CodecImpl>(std::move(allocator), nullptr, dispatcher(), thrd_current(),
                                     CreateDecryptorParams(), decryptor_.NewRequest());
-    codec_impl_->SetCoreCodecAdapter(
-        std::make_unique<ClearTextDecryptorAdapter>(codec_impl_->lock(), codec_impl_.get()));
+    auto adapter =
+        std::make_unique<ClearTextDecryptorAdapter>(codec_impl_->lock(), codec_impl_.get());
+    // Grab a non-owning reference to the adapter for test manipulation.
+    decryptor_adapter_ = adapter.get();
+    codec_impl_->SetCoreCodecAdapter(std::move(adapter));
 
     codec_impl_->BindAsync([this]() { codec_impl_.reset(); });
+  }
+
+  void OnStreamFailed(uint64_t stream_lifetime_ordinal, fuchsia::media::StreamError error) {
+    stream_error_ = std::move(error);
+  }
+
+  void OnInputConstraints(fuchsia::media::StreamBufferConstraints ic) {
+    auto settings = BindBufferCollection(
+        input_collection_, fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften,
+        ic);
+    input_collection_->WaitForBuffersAllocated(
+        [this](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
+          ASSERT_EQ(status, ZX_OK);
+          input_buffer_info_ = std::move(info);
+        });
+
+    input_collection_->Sync([this, settings = std::move(settings)]() mutable {
+      decryptor_->SetInputBufferPartialSettings(std::move(settings));
+    });
+
+    input_constraints_ = std::move(ic);
+  }
+
+  void OnOutputConstraints(fuchsia::media::StreamOutputConstraints oc) {
+    auto settings = BindBufferCollection(
+        output_collection_, fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften,
+        oc.buffer_constraints());
+    output_collection_->WaitForBuffersAllocated(
+        [this](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
+          ASSERT_EQ(status, ZX_OK);
+          output_buffer_info_ = std::move(info);
+        });
+
+    output_collection_->Sync([this, settings = std::move(settings)]() mutable {
+      decryptor_->SetOutputBufferPartialSettings(std::move(settings));
+      decryptor_->CompleteOutputBufferPartialSettings(kBufferLifetimeOrdinal);
+    });
+
+    output_constraints_ = std::move(oc);
+  }
+
+  void OnOutputFormat(fuchsia::media::StreamOutputFormat of) { output_format_ = std::move(of); }
+
+  void OnOutputPacket(fuchsia::media::Packet packet, bool error_before, bool error_during) {
+    EXPECT_FALSE(error_before);
+    EXPECT_FALSE(error_during);
+    auto header = fidl::Clone(packet.header());
+    output_data_.emplace_back(ExtractPayloadData(std::move(packet)));
+    decryptor_->RecycleOutputPacket(std::move(header));
+  }
+
+  void OnFreeInputPacket(fuchsia::media::PacketHeader header) {
+    ASSERT_TRUE(header.has_packet_index());
+    FreePacket(header.packet_index());
+    if (end_of_stream_set_) {
+      return;
+    }
+    PumpInput();
+  }
+
+  void OnOutputEndOfStream(uint64_t stream_lifetime_ordinal, bool error_before) {
+    end_of_stream_reached_ = true;
   }
 
   void PopulateInputData() {
@@ -152,10 +243,12 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
       std::generate(v.begin(), v.end(), [this, &dist]() { return dist(prng_); });
       input_data_.emplace_back(std::move(v));
     }
+    input_iter_ = input_data_.begin();
   }
 
-  auto BindBufferCollection(fuchsia::sysmem::BufferCollectionPtr& collection, uint32_t cpu_usage,
-                            const fuchsia::media::StreamBufferConstraints& constraints) {
+  fuchsia::media::StreamBufferPartialSettings BindBufferCollection(
+      fuchsia::sysmem::BufferCollectionPtr& collection, uint32_t cpu_usage,
+      const fuchsia::media::StreamBufferConstraints& constraints) {
     fuchsia::sysmem::BufferCollectionTokenPtr client_token;
     allocator_->AllocateSharedCollection(client_token.NewRequest());
 
@@ -168,7 +261,7 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     return CreateStreamBufferPartialSettings(constraints, std::move(decryptor_token));
   }
 
-  auto CreateInputPacket(const std::vector<uint8_t>& data) {
+  fuchsia::media::Packet CreateInputPacket(const std::vector<uint8_t>& data) {
     fuchsia::media::Packet packet;
     static uint64_t timestamp_ish = 42;
     uint32_t packet_index;
@@ -250,14 +343,42 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     free_packets_.insert(used_packets_.extract(packet_index));
   }
 
+  void PumpInput() {
+    while (input_iter_ != input_data_.end() && HasFreePackets()) {
+      decryptor_->QueueInputPacket(CreateInputPacket(*input_iter_));
+      input_iter_++;
+    }
+    if (input_iter_ == input_data_.end() && !end_of_stream_set_) {
+      decryptor_->QueueInputEndOfStream(kStreamLifetimeOrdinal);
+      end_of_stream_set_ = true;
+    }
+  }
+
+  void AssertNoChannelErrors() {
+    ASSERT_FALSE(decryptor_error_) << "Decryptor error = " << *decryptor_error_;
+    ASSERT_FALSE(sysmem_error_) << "Sysmem error = " << *sysmem_error_;
+    ASSERT_FALSE(input_collection_error_)
+        << "Input BufferCollection error = " << *input_collection_error_;
+    ASSERT_FALSE(output_collection_error_)
+        << "Output BufferCollection error = " << *output_collection_error_;
+  }
+
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::media::StreamProcessorPtr decryptor_;
   fuchsia::sysmem::AllocatorPtr allocator_;
   std::unique_ptr<CodecImpl> codec_impl_;
+  ClearTextDecryptorAdapter* decryptor_adapter_;
 
   using DataSet = std::vector<std::vector<uint8_t>>;
   DataSet input_data_;
   DataSet output_data_;
+
+  std::optional<fuchsia::media::StreamBufferConstraints> input_constraints_;
+  std::optional<fuchsia::media::StreamOutputConstraints> output_constraints_;
+  std::optional<fuchsia::media::StreamOutputFormat> output_format_;
+  bool end_of_stream_set_ = false;
+  bool end_of_stream_reached_ = false;
+  DataSet::const_iterator input_iter_;
 
   fuchsia::sysmem::BufferCollectionPtr input_collection_;
   fuchsia::sysmem::BufferCollectionPtr output_collection_;
@@ -265,6 +386,7 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
   std::optional<fuchsia::sysmem::BufferCollectionInfo_2> input_buffer_info_;
   std::optional<fuchsia::sysmem::BufferCollectionInfo_2> output_buffer_info_;
 
+  std::optional<fuchsia::media::StreamError> stream_error_;
   std::optional<zx_status_t> sysmem_error_;
   std::optional<zx_status_t> decryptor_error_;
   std::optional<zx_status_t> input_collection_error_;
@@ -280,86 +402,12 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
 };
 
 TEST_F(DecryptorAdapterTest, ClearTextDecrypt) {
-  std::optional<fuchsia::media::StreamBufferConstraints> input_constraints;
-  std::optional<fuchsia::media::StreamOutputConstraints> output_constraints;
-  std::optional<fuchsia::media::StreamOutputFormat> output_format;
-  bool end_of_stream_set = false;
-  bool end_of_stream_reached = false;
-  DataSet::const_iterator input_iter = input_data_.begin();
-
-  decryptor_.events().OnInputConstraints = [this, &input_constraints](auto ic) {
-    auto settings = BindBufferCollection(
-        input_collection_, fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften,
-        ic);
-    input_collection_->WaitForBuffersAllocated(
-        [this](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
-          ASSERT_EQ(status, ZX_OK);
-          input_buffer_info_ = std::move(info);
-        });
-
-    input_collection_->Sync([this, settings = std::move(settings)]() mutable {
-      decryptor_->SetInputBufferPartialSettings(std::move(settings));
-    });
-
-    input_constraints = std::move(ic);
-  };
-  decryptor_.events().OnOutputConstraints = [this, &output_constraints](auto oc) {
-    auto settings = BindBufferCollection(
-        output_collection_, fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften,
-        oc.buffer_constraints());
-    output_collection_->WaitForBuffersAllocated(
-        [this](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 info) {
-          ASSERT_EQ(status, ZX_OK);
-          output_buffer_info_ = std::move(info);
-        });
-
-    output_collection_->Sync([this, settings = std::move(settings)]() mutable {
-      decryptor_->SetOutputBufferPartialSettings(std::move(settings));
-      decryptor_->CompleteOutputBufferPartialSettings(kBufferLifetimeOrdinal);
-    });
-
-    output_constraints = std::move(oc);
-  };
-  decryptor_.events().OnOutputFormat = [&output_format](auto of) { output_format = std::move(of); };
-  decryptor_.events().OnOutputPacket = [this](fuchsia::media::Packet packet, bool error_before,
-                                              bool error_during) {
-    EXPECT_FALSE(error_before);
-    EXPECT_FALSE(error_during);
-    auto header = fidl::Clone(packet.header());
-    output_data_.emplace_back(ExtractPayloadData(std::move(packet)));
-    decryptor_->RecycleOutputPacket(std::move(header));
-  };
-  decryptor_.events().OnFreeInputPacket =
-      [this, &input_iter, &end_of_stream_set](fuchsia::media::PacketHeader header) {
-        ASSERT_TRUE(header.has_packet_index());
-        FreePacket(header.packet_index());
-        if (end_of_stream_set) {
-          return;
-        }
-        if (input_iter == input_data_.end()) {
-          decryptor_->QueueInputEndOfStream(kStreamLifetimeOrdinal);
-          end_of_stream_set = true;
-        } else {
-          decryptor_->QueueInputPacket(CreateInputPacket(*input_iter));
-          input_iter++;
-        }
-      };
-  decryptor_.events().OnOutputEndOfStream =
-      [&end_of_stream_reached](uint64_t stream_lifetime_ordinal, bool error_before) {
-        end_of_stream_reached = true;
-      };
-
   ConnectDecryptor();
+  decryptor_adapter_->set_has_keys(true);
 
-  EXPECT_TRUE(
-      RunLoopWithTimeoutOrUntil([this]() { return input_buffer_info_.has_value(); }, zx::sec(5)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return input_buffer_info_.has_value(); }));
 
-  ASSERT_FALSE(decryptor_error_) << "Decryptor error = " << *decryptor_error_;
-  ASSERT_FALSE(sysmem_error_) << "Sysmem error = " << *sysmem_error_;
-  ASSERT_FALSE(input_collection_error_)
-      << "Input BufferCollection error = " << *input_collection_error_;
-  ASSERT_FALSE(output_collection_error_)
-      << "Output BufferCollection error = " << *output_collection_error_;
+  AssertNoChannelErrors();
   ASSERT_TRUE(input_buffer_info_);
 
   ConfigureInputPackets();
@@ -367,30 +415,42 @@ TEST_F(DecryptorAdapterTest, ClearTextDecrypt) {
   decryptor_->QueueInputFormatDetails(
       kStreamLifetimeOrdinal, CreateInputFormatDetails("clear", fuchsia::media::KeyId{}, {}));
 
-  while (input_iter != input_data_.end() && HasFreePackets()) {
-    decryptor_->QueueInputPacket(CreateInputPacket(*input_iter));
-    input_iter++;
-  }
-  if (input_iter == input_data_.end() && !end_of_stream_set) {
-    decryptor_->QueueInputEndOfStream(kStreamLifetimeOrdinal);
-    end_of_stream_set = true;
-  }
+  PumpInput();
 
-  EXPECT_TRUE(
-      RunLoopWithTimeoutOrUntil([&end_of_stream_reached]() { return end_of_stream_reached; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return end_of_stream_reached_; }));
 
-  EXPECT_FALSE(decryptor_error_) << "Decryptor error = " << *decryptor_error_;
-  EXPECT_FALSE(sysmem_error_) << "Sysmem error = " << *sysmem_error_;
-  EXPECT_FALSE(input_collection_error_)
-      << "Input BufferCollection error = " << *input_collection_error_;
-  EXPECT_FALSE(output_collection_error_)
-      << "Output BufferCollection error = " << *output_collection_error_;
+  AssertNoChannelErrors();
 
-  EXPECT_TRUE(input_constraints);
-  EXPECT_TRUE(output_constraints);
-  EXPECT_TRUE(output_format);
+  EXPECT_TRUE(input_constraints_);
+  EXPECT_TRUE(output_constraints_);
+  EXPECT_TRUE(output_format_);
 
-  ASSERT_TRUE(end_of_stream_reached);
+  ASSERT_TRUE(end_of_stream_reached_);
   // ClearText decryptor just copies data across
   EXPECT_EQ(output_data_, input_data_);
+}
+
+TEST_F(DecryptorAdapterTest, NoKeys) {
+  ConnectDecryptor();
+  decryptor_adapter_->set_has_keys(false);
+  decryptor_->EnableOnStreamFailed();
+
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return input_buffer_info_.has_value(); }));
+
+  AssertNoChannelErrors();
+  ASSERT_TRUE(input_buffer_info_);
+
+  ConfigureInputPackets();
+
+  decryptor_->QueueInputFormatDetails(
+      kStreamLifetimeOrdinal, CreateInputFormatDetails("clear", fuchsia::media::KeyId{}, {}));
+
+  PumpInput();
+
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return stream_error_.has_value(); }));
+
+  AssertNoChannelErrors();
+
+  ASSERT_TRUE(stream_error_.has_value());
+  EXPECT_EQ(*stream_error_, fuchsia::media::StreamError::DECRYPTOR_NO_KEY);
 }
