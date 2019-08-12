@@ -241,6 +241,7 @@ Provides support for records larger than 32KB. Large records have a
 ![drawing](largerecord.png)
 
 _header word_
+
 - `[0 ..  3]`: record type (15)
 - `[4 .. 35]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[36 .. 39]`: large record type
@@ -901,6 +902,7 @@ included in the record.
 ![drawing](largeblob.png)
 
 _header word_
+
 - `[0 ..  3]`: record type (15)
 - `[4 .. 35]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[36 .. 39]`: large record type (0)
@@ -921,6 +923,7 @@ within the blob.
 ![drawing](largeblob0.png)
 
 _header word_
+
 - `[0 ..  3]`: record type (15)
 - `[4 .. 35]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[36 .. 39]`: large record type (0)
@@ -928,6 +931,7 @@ _header word_
 - `[44 .. 63]`: reserved, must be zero
 
 _format header word_
+
 - `[0 .. 15]`: category (string ref)
 - `[16 .. 31]`: name (string ref)
 - `[32 .. 35]`: number of arguments
@@ -935,27 +939,35 @@ _format header word_
 - `[44 .. 63]`: reserved, must be zero
 
 _category stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _timestamp word_
+
 - `[0 .. 63]`: number of ticks
 
 _process id word_ (omitted unless thread ref denotes inline thread)
+
 - `[0 .. 63]`: process koid (kernel object id)
 
 _thread id word_ (omitted unless thread ref denotes inline thread)
+
 - `[0 .. 63]`: thread koid (kernel object id)
 
 _argument data_ (repeats for each argument)
+
 - (see below)
 
 _blob size word_
+
 - `[0 .. 63]`: blob payload size in bytes (excluding padding)
 
 _payload stream_ (variable size)
+
 - binary data, padded with zeros to 8 byte alignment
 
 #### In Band Large Blob Record No Metadata (blob format = 1)
@@ -972,6 +984,7 @@ within the blob.
 ![drawing](largeblob1.png)
 
 _header word_
+
 - `[0 ..  3]`: record type (15)
 - `[4 .. 35]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[36 .. 39]`: large record type (0)
@@ -979,20 +992,25 @@ _header word_
 - `[44 .. 63]`: reserved, must be zero
 
 _format header word_
+
 - `[0 .. 15]`: category (string ref)
 - `[16 .. 31]`: name (string ref)
 - `[32 .. 63]`: reserved, must be zero
 
 _category stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _name stream_ (omitted unless string ref denotes inline string)
+
 - UTF-8 string, padded with zeros to 8 byte alignment
 
 _blob size word_
+
 - `[0 .. 63]`: blob payload size in bytes (excluding padding)
 
 _payload stream_ (variable size)
+
 - binary data, padded with zeros to 8 byte alignment
 
 
