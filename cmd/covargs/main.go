@@ -176,7 +176,8 @@ func mergeInfo(info *indexedInfo) ([]ProfileEntry, error) {
 			if ref, ok := info.ids[mod.Build]; ok {
 				moduleFiles = append(moduleFiles, ref.Filepath)
 			} else {
-				return nil, fmt.Errorf("module with build id %s not found in ids.txt file", mod.Build)
+				fmt.Fprintf(os.Stderr, "WARN: module with build id %s not found in ids.txt file", mod.Build)
+				continue
 			}
 		}
 
