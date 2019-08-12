@@ -13,7 +13,11 @@ String diffTwoFiles(String leftPath, String rightPath) {
   }
 
   // TODO(DX-1760): Describe the differences.
-  return 'APIs do not match';
+
+  var message = 'Error: API has changed!\n'
+      'Please acknowledge this change by running:\n'
+      '    cp $leftPath $rightPath \n';
+  return message;
 }
 
 String readFile(String path) {
