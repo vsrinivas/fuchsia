@@ -24,7 +24,6 @@ group("core") {
     "//peridot/packages:all",
     "//src:tests",
     "//tools:tests",
-    "//topaz/packages:all",
   ]
 }
 
