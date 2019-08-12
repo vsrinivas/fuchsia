@@ -7,5 +7,8 @@
 /// with the Switchboard.
 pub mod base;
 
-/// This mode provides a concrete implementation of the Switchboard.
+/// This mod provides a concrete implementation of the Switchboard.
 pub mod switchboard_impl;
+
+/// This mod provides a standard way to handle a hanging get in a mod
+pub mod hanging_get_handler;

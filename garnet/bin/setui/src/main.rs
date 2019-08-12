@@ -234,6 +234,7 @@ mod tests {
         display_proxy.set(display_settings).await
             .expect("set completed")
             .expect("set successful");
+
         let settings =
             display_proxy.watch().await.expect("watch completed").expect("watch successful");
 

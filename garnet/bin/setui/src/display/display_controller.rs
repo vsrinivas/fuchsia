@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::registry::base::Command,
-    crate::switchboard::base::{BrightnessInfo, SettingRequest, SettingResponse},
+    crate::registry::base::{Command, Notifier, State},
+    crate::switchboard::base::{BrightnessInfo, SettingRequest, SettingResponse, SettingType},
     fuchsia_async as fasync,
     futures::StreamExt,
+    std::sync::{Arc, RwLock},
 };
 
 /// Controller that handles commands for SettingType::Display.
@@ -18,10 +19,19 @@ pub fn spawn_display_controller(
     let (display_handler_tx, mut display_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
 
+    let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
+
     fasync::spawn(async move {
         while let Some(command) = display_handler_rx.next().await {
             match command {
-                Command::ChangeState(_state) => {}
+                Command::ChangeState(state) => match state {
+                    State::Listen(notifier) => {
+                        *notifier_lock.write().unwrap() = Some(notifier);
+                    }
+                    State::EndListen => {
+                        *notifier_lock.write().unwrap() = None;
+                    }
+                },
                 Command::HandleRequest(request, responder) => {
                     #[allow(unreachable_patterns)]
                     match request {
@@ -29,6 +39,9 @@ pub fn spawn_display_controller(
                             brightness_service.set_brightness(brightness_value.into()).await
                                 .unwrap();
                             responder.send(Ok(None)).unwrap();
+                            if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
+                                notifier.unbounded_send(SettingType::Display).unwrap();
+                            }
                         }
                         SettingRequest::SetAutoBrightness(_brightness_enabled) => {
                             // TODO: implement when connecting to brightness service

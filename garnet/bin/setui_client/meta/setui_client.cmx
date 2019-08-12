@@ -11,6 +11,7 @@
             "fuchsia.netstack.Netstack",
             "fuchsia.sys.Environment",
             "fuchsia.setui.SetUiService",
+            "fuchsia.settings.Display",
             "fuchsia.settings.Intl",
             "fuchsia.settings.System",
             "fuchsia.sys.Launcher"

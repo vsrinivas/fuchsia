@@ -42,6 +42,7 @@ pub struct IntlInfo {
 /// The possible responses to a SettingRequest.
 #[derive(PartialEq, Debug, Clone)]
 pub enum SettingResponse {
+    Unknown,
     /// Response to a request to get current brightness state.AccessibilityEncoder
     Brightness(BrightnessInfo),
     Intl(IntlInfo),
