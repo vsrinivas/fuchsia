@@ -30,7 +30,7 @@ zx_status_t As370::NandInit() {
       .bad_block_config = {
           .type = kSynaptics,
           .synaptics = {
-              .table_start_block = 2040,
+              .table_start_block = 2044,
               .table_end_block = 2047
           }
       },
