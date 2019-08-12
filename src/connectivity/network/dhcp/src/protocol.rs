@@ -5,6 +5,7 @@
 use crate::configuration::RequestedConfig;
 use byteorder::{BigEndian, ByteOrder};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
+use serde_derive::{Deserialize, Serialize};
 use std::iter::Iterator;
 use std::net::Ipv4Addr;
 
@@ -239,7 +240,7 @@ impl OpCode {
 /// `ConfigOption`s can be fixed or variable length per RFC 1533. When
 /// `value` is left empty, the `ConfigOption` will be treated as a fixed
 /// length field.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ConfigOption {
     pub code: OptionCode,
     pub value: Vec<u8>,
@@ -262,7 +263,7 @@ impl ConfigOption {
 /// RFC 1533. Note that not all options defined in the RFC are represented
 /// here; options which are not in this type are not currently supported. Supported
 /// options appear in this type in the order in which they are defined in the RFC.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum OptionCode {
     Pad,
     End,

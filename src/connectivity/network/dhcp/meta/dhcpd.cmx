@@ -10,7 +10,8 @@
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.net.SocketProvider"
+            "fuchsia.net.SocketProvider",
+            "fuchsia.stash.Store"
         ]
     }
 }

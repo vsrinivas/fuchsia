@@ -13,9 +13,14 @@ rustc_library("dhcp") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
@@ -23,10 +28,11 @@ rustc_library("dhcp") {
   ]
 }
 
-unittest_package("dhcp_tests") {
+test_package("dhcp_tests") {
   deps = [
     ":dhcp_test",
   ]
+
   tests = [
     {
       name = "dhcp_lib_test"

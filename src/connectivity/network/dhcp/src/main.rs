@@ -3,23 +3,24 @@
 // found in the LICENSE file.
 
 #![feature(async_await)]
+#![deny(warnings)]
 
 use {
     dhcp::{
         configuration,
         protocol::{Message, SERVER_PORT},
-        server::Server,
+        server::{Server, DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX},
     },
     failure::{Error, Fail, ResultExt},
-    fuchsia_async::{net::UdpSocket, Executor, Interval},
+    fuchsia_async::{self as fasync, net::UdpSocket, Interval},
     fuchsia_syslog::{self as fx_syslog, fx_log_info},
     fuchsia_zircon::{self as zx, DurationNum},
-    futures::{future::try_join, Future, StreamExt, TryStreamExt},
+    futures::{future::try_join, Future, StreamExt, TryFutureExt, TryStreamExt},
     getopts::Options,
     std::{
+        cell::RefCell,
         env,
         net::{IpAddr, Ipv4Addr, SocketAddr},
-        sync::Mutex,
     },
     void::Void,
 };
@@ -32,26 +33,30 @@ const DEFAULT_CONFIG_PATH: &str = "/pkg/data/config.json";
 // TODO(atait): Replace with Duration type after it has been updated to const fn.
 const EXPIRATION_INTERVAL_SECS: i64 = 5;
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     fx_syslog::init_with_tags(&["dhcpd"])?;
 
-    let mut exec = Executor::new().context("error creating executor")?;
     let path = get_server_config_file_path()?;
     let config = configuration::load_server_config_from_file(path)?;
     let server_ip = config.server_ip;
     let socket_addr = SocketAddr::new(IpAddr::V4(server_ip), SERVER_PORT);
     let udp_socket = UdpSocket::bind(&socket_addr).context("unable to bind socket")?;
     udp_socket.set_broadcast(true).context("unable to set broadcast")?;
-    let server = Mutex::new(Server::from_config(config, || {
-        zx::Time::get(zx::ClockId::UTC).into_nanos() / 1_000_000_000
-    }));
+    let server = Server::from_config(
+        config,
+        || zx::Time::get(zx::ClockId::UTC).into_nanos() / 1_000_000_000,
+        DEFAULT_STASH_ID,
+        DEFAULT_STASH_PREFIX,
+    )
+    .await
+    .context("failed to create server")?;
+    let server = RefCell::new(server);
     let msg_handling_loop = define_msg_handling_loop_future(udp_socket, &server);
     let lease_expiration_handler = define_lease_expiration_handler_future(&server);
 
-    fx_log_info!(tag: "dhcpd", "starting server");
-    exec.run_singlethreaded(try_join(msg_handling_loop, lease_expiration_handler))
-        .map_err(|e| e.context("failed to start event loop"))?;
-    fx_log_info!(tag: "dhcpd", "server shutting down");
+    fx_log_info!("starting server");
+    try_join(msg_handling_loop, lease_expiration_handler).err_into::<Error>().await?;
     Ok(())
 }
 
@@ -75,22 +80,21 @@ fn get_server_config_file_path() -> Result<String, Error> {
 
 async fn define_msg_handling_loop_future<F: Fn() -> i64>(
     sock: UdpSocket,
-    server: &Mutex<Server<F>>,
+    server: &RefCell<Server<F>>,
 ) -> Result<Void, Error> {
     let mut buf = vec![0u8; BUF_SZ];
     loop {
-        let (received, mut sender) = sock.recv_from(&mut *buf).await
+        let (received, mut sender) = sock
+            .recv_from(&mut *buf)
+            .await
             .map_err(|_e| failure::err_msg("unable to receive buffer"))?;
         fx_log_info!("received message from: {:?}", sender);
         let msg = Message::from_buffer(&buf[0..received])
             .ok_or_else(|| failure::err_msg("unable to parse buffer"))?;
         fx_log_info!("parsed message: {:?}", msg);
         // This call should not block because the server is single-threaded.
-        let response = server
-            .lock()
-            .unwrap()
-            .dispatch(msg)
-            .ok_or_else(|| failure::err_msg("invalid message"))?;
+        let response =
+            server.borrow_mut().dispatch(msg).ok_or_else(|| failure::err_msg("invalid message"))?;
         fx_log_info!("generated response: {:?}", response);
         let response_buffer = response.serialize();
         // A new DHCP client sending a DHCPDISCOVER message will send
@@ -106,13 +110,11 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
 }
 
 fn define_lease_expiration_handler_future<'a, F: Fn() -> i64>(
-    server: &'a Mutex<Server<F>>,
+    server: &'a RefCell<Server<F>>,
 ) -> impl Future<Output = Result<(), Error>> + 'a {
     let expiration_interval = Interval::new(EXPIRATION_INTERVAL_SECS.seconds());
     expiration_interval
-        .map(move |()| {
-            server.lock().unwrap().release_expired_leases();
-        })
+        .map(move |()| server.borrow_mut().release_expired_leases())
         .map(|_| Ok(()))
         .try_collect::<()>()
 }
