@@ -16,6 +16,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/job.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -23,6 +24,7 @@
 #include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/syscalls/system.h>
 
 #include <utility>
 
@@ -30,23 +32,77 @@
 
 static fbl::Vector<fbl::String> arguments;
 
-int main(int argc, char** argv) {
-  // Copy arguments for later use in tests.
-  for (int i = 0; i < argc; ++i) {
-    arguments.push_back(fbl::String(argv[i]));
-  }
-
-  return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-
-namespace {
-
 constexpr char kArgumentsPath[] = "/svc/" fuchsia_boot_Arguments_Name;
 constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kLogPath[] = "/svc/" fuchsia_boot_Log_Name;
 constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
 constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
+
+[[noreturn]] void poweroff() {
+  // Grab the root resource, needed to make the poweroff call.
+  // We ignore returned status codes; there's nothing useful for us to do in
+  // the event of a failure.
+  zx::channel local, remote;
+  zx::channel::create(0, &local, &remote);
+  fdio_service_connect(kRootResourcePath, remote.release());
+  zx::resource root_resource;
+  fuchsia_boot_RootResourceGet(local.get(), root_resource.reset_and_get_address());
+
+  // Power off.
+  zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, NULL);
+
+  while (true) {
+    __builtin_trap();
+  }
+}
+
+void print_test_success_string() {
+  // Get the debuglog handle.
+  // If any of these operations fail, there's nothing we can really do here, so
+  // just move along.
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return;
+  }
+  status = fdio_service_connect(kLogPath, remote.release());
+  if (status != ZX_OK) {
+    return;
+  }
+
+  zx::debuglog log;
+  status = fuchsia_boot_LogGet(local.get(), log.reset_and_get_address());
+  if (status != ZX_OK) {
+    return;
+  }
+
+  // print the success string to the debug log
+  zx_debuglog_write(log.get(), 0, ZBI_TEST_SUCCESS_STRING,
+                    sizeof(ZBI_TEST_SUCCESS_STRING));
+}
+
+int main(int argc, char** argv) {
+  // Copy arguments for later use in tests.
+  for (int i = 0; i < argc; ++i) {
+    arguments.push_back(fbl::String(argv[i]));
+  }
+
+  int result = unittest_run_all_tests(argc, argv) ? 0 : -1;
+  if (result == 0) {
+    print_test_success_string();
+  }
+
+  // Sleep 3 seconds to allow buffers to flush before powering off
+  zx::nanosleep(zx::deadline_after(zx::sec(3)));
+
+  // Exit.  This won't actually return.
+  poweroff();
+
+  return result;
+}
+
+namespace {
 
 // Make sure the loader works
 bool TestLoader() {
@@ -228,6 +284,9 @@ bool TestBootItems() {
     status = fuchsia_boot_ItemsGet(local.get(), type, 0, payload.reset_and_get_address(), &length);
     ASSERT_EQ(ZX_OK, status);
 
+#ifdef __x64_64__
+    // (The following is only implemented on x64 at this time, so we only test
+    // it there.)
     // If we see a ZBI_TYPE_CRASHLOG item, then the kernel should have
     // translated it into a VMO file, and bootsvc should have put it at the
     // path below.
@@ -243,6 +302,7 @@ bool TestBootItems() {
       ASSERT_EQ(ZX_OK, payload.read(payload_buf.get(), 0, length));
       ASSERT_BYTES_EQ(file_buf.get(), payload_buf.get(), length, "");
     }
+#endif
   }
 
   END_TEST;
