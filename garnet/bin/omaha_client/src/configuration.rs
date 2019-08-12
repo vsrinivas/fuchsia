@@ -5,25 +5,25 @@
 use failure::Error;
 use log::warn;
 use omaha_client::{
-    common::{App, UserCounting, Version},
+    common::{App, AppSet, UserCounting, Version},
     configuration::{Config, Updater},
     protocol::{request::OS, Cohort},
 };
 use std::fs;
 use std::io;
 
-pub fn get_apps() -> Result<Vec<App>, Error> {
+pub fn get_app_set() -> Result<AppSet, Error> {
     let id = fs::read_to_string("/config/build-info/omaha_product_id")?;
     // We use the console build id as the version.
     let version: Version = fs::read_to_string("/config/build-info/omaha_build_id")?.parse()?;
     // Fuchsia only has a single app.
-    Ok(vec![App {
+    Ok(AppSet::new(vec![App {
         id,
         version,
         fingerprint: None,
         cohort: Cohort::default(),
         user_counting: UserCounting::ClientRegulatedByDate(None),
-    }])
+    }]))
 }
 
 pub fn get_config() -> Config {

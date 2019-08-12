@@ -46,6 +46,12 @@ impl Cohort {
     pub fn from_hint(hint: &str) -> Cohort {
         Cohort { id: None, hint: Some(hint.to_string()), name: None }
     }
+
+    pub fn update_from_omaha(&mut self, omaha_cohort: Self) {
+        // Do not overwrite cohort hint, because Omaha should never send cohort hint back.
+        self.id = omaha_cohort.id;
+        self.name = omaha_cohort.name;
+    }
 }
 
 #[cfg(test)]
@@ -57,6 +63,16 @@ mod tests {
         let cohort = Cohort::new("my_cohort");
         assert_eq!(Some("my_cohort".to_string()), cohort.id);
         assert_eq!(None, cohort.hint);
+        assert_eq!(None, cohort.name);
+    }
+
+    #[test]
+    fn test_cohort_update_from_omaha() {
+        let mut cohort = Cohort::from_hint("hint");
+        let omaha_cohort = Cohort::new("my_cohort");
+        cohort.update_from_omaha(omaha_cohort);
+        assert_eq!(Some("my_cohort".to_string()), cohort.id);
+        assert_eq!(Some("hint".to_string()), cohort.hint);
         assert_eq!(None, cohort.name);
     }
 

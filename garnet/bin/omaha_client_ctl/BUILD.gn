@@ -9,7 +9,6 @@ rustc_binary("omaha_client_ctl_bin") {
   name = "omaha_client_ctl_bin"
   edition = "2018"
   deps = [
-    "//garnet/bin/omaha_client:fuchsia.omaha.client-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",

@@ -6,7 +6,7 @@
 
 use failure::{Error, ResultExt};
 use fuchsia_component::server::ServiceFs;
-use futures::prelude::*;
+use futures::{lock::Mutex, prelude::*};
 use http_request::FuchsiaHyperHttpRequest;
 use log::info;
 use omaha_client::state_machine::StateMachine;
@@ -32,8 +32,8 @@ fn main() -> Result<(), Error> {
     let mut executor = fuchsia_async::Executor::new().context("Error creating executor")?;
 
     executor.run_singlethreaded(async {
-        let apps = configuration::get_apps()?;
-        info!("Omaha apps: {:?}", apps);
+        let app_set = configuration::get_app_set()?;
+        info!("Omaha app set: {:?}", app_set);
         let config = configuration::get_config();
         info!("Update config: {:?}", config);
 
@@ -42,19 +42,20 @@ fn main() -> Result<(), Error> {
         let http = FuchsiaHyperHttpRequest::new();
         let installer = temp_installer::FuchsiaInstaller::new()?;
         let stash = storage::Stash::new("omaha-client").await?;
-        let mut state_machine = StateMachine::new(
+        let stash_ref = Rc::new(Mutex::new(stash));
+        let state_machine = StateMachine::new(
             policy::FuchsiaPolicyEngine,
             http,
             installer,
             &config,
             timer::FuchsiaTimer,
             metrics_reporter,
-            stash,
+            stash_ref.clone(),
+            app_set.clone(),
         )
         .await;
-        state_machine.add_apps(apps).await;
         let state_machine_ref = Rc::new(RefCell::new(state_machine));
-        let fidl = fidl::FidlServer::new(state_machine_ref.clone());
+        let fidl = fidl::FidlServer::new(state_machine_ref.clone(), stash_ref, app_set);
         let mut fs = ServiceFs::new_local();
         fs.take_and_serve_directory_handle()?;
         future::join3(StateMachine::start(state_machine_ref), fidl.start(fs), cobalt_fut).await;

@@ -15,7 +15,6 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    ":fuchsia.omaha.client-rustc",
     ":mos_metrics_registry_rustlib",
     "//garnet/lib/rust/omaha_client",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -26,8 +25,8 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//sdk/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//third_party/rust_crates:failure",
@@ -70,12 +69,6 @@ test_package("omaha_client_service_bin_tests") {
       name = "omaha_client_service_bin_test"
       environments = basic_envs
     },
-  ]
-}
-
-fidl("fuchsia.omaha.client") {
-  sources = [
-    "fuchsia.omaha.client.fidl",
   ]
 }
 

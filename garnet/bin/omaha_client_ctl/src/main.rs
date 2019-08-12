@@ -5,13 +5,12 @@
 #![feature(async_await)]
 
 use failure::{Error, ResultExt};
-use fidl_fuchsia_omaha_client::OmahaClientConfigurationMarker;
 use fidl_fuchsia_update::{
-    Initiator, ManagerMarker, MonitorEvent, MonitorMarker, MonitorProxy, Options, State,
+    ChannelControlMarker, Initiator, ManagerMarker, MonitorEvent, MonitorMarker, MonitorProxy,
+    Options, State,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, launcher};
-use fuchsia_zircon as zx;
 use futures::prelude::*;
 use structopt::StructOpt;
 
@@ -54,14 +53,14 @@ async fn main() -> Result<(), Error> {
     #[derive(Debug, StructOpt)]
     #[structopt(rename_all = "kebab-case")]
     enum Command {
-        // fuchsia.omaha.client OmahaClientConfiguration protocol:
+        // fuchsia.update ChannelControl protocol:
+        /// Get the current channel.
         GetChannel,
-        SetChannel {
+        /// Get the target channel.
+        GetTarget,
+        /// Set the target channel.
+        SetTarget {
             channel: String,
-
-            #[structopt(long = "no-factory-reset")]
-            // Can't change default value for bool, it always defaults to false.
-            no_factory_reset: bool,
         },
 
         // fuchsia.update Manager protocol:
@@ -84,19 +83,22 @@ async fn main() -> Result<(), Error> {
     let app =
         launch(&launcher, server_url, None).context("Failed to launch omaha client service")?;
     match cmd {
-        Command::GetChannel | Command::SetChannel { .. } => {
-            let omaha_client = app
-                .connect_to_service::<OmahaClientConfigurationMarker>()
-                .context("Failed to connect to omaha client configuration service")?;
+        Command::GetChannel | Command::GetTarget | Command::SetTarget { .. } => {
+            let channel_control = app
+                .connect_to_service::<ChannelControlMarker>()
+                .context("Failed to connect to channel control service")?;
 
             match cmd {
                 Command::GetChannel => {
-                    let channel = omaha_client.get_channel().await?;
-                    println!("channel: {}", channel);
+                    let channel = channel_control.get_channel().await?;
+                    println!("current channel: {}", channel);
                 }
-                Command::SetChannel { channel, no_factory_reset } => {
-                    let status = omaha_client.set_channel(&channel, !no_factory_reset).await?;
-                    zx::Status::ok(status)?;
+                Command::GetTarget => {
+                    let channel = channel_control.get_target().await?;
+                    println!("target channel: {}", channel);
+                }
+                Command::SetTarget { channel } => {
+                    channel_control.set_target(&channel).await?;
                 }
                 _ => {}
             }

@@ -7,12 +7,15 @@
 
 use crate::{
     protocol::{self, request::InstallSource, Cohort},
+    state_machine::update_check::AppResponse,
     storage::Storage,
 };
+use futures::lock::Mutex;
 use itertools::Itertools;
 use log::error;
 use serde_derive::{Deserialize, Serialize};
 use std::fmt;
+use std::rc::Rc;
 use std::str::FromStr;
 use std::time::SystemTime;
 
@@ -209,6 +212,98 @@ impl App {
             }
         }
     }
+
+    /// Get the current channel name from cohort name, returns default stable-channel if no cohort
+    /// name set for the app.
+    pub fn get_current_channel(&self) -> &str {
+        self.cohort.name.as_ref().map(|s| s.as_str()).unwrap_or("stable-channel")
+    }
+
+    /// Get the target channel name from cohort hint, fallback to current channel if no hint.
+    pub fn get_target_channel(&self) -> &str {
+        self.cohort.hint.as_ref().map(|s| s.as_str()).unwrap_or(self.get_current_channel())
+    }
+
+    /// Set the cohort hint to |channel|.
+    pub fn set_target_channel(&mut self, channel: Option<String>) {
+        self.cohort.hint = channel;
+    }
+}
+
+/// A set of Apps.
+#[derive(Clone, Debug)]
+pub struct AppSet {
+    apps: Rc<Mutex<Vec<App>>>,
+}
+
+impl AppSet {
+    /// Create a new AppSet with the given `apps`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `apps` is empty.
+    pub fn new(apps: Vec<App>) -> Self {
+        assert!(!apps.is_empty());
+        AppSet { apps: Rc::new(Mutex::new(apps)) }
+    }
+
+    /// Load data from |storage|, only overwrite existing fields if data exists.
+    pub async fn load<'a>(&'a mut self, storage: &'a impl Storage) {
+        let mut apps = self.apps.lock().await;
+        for app in apps.iter_mut() {
+            app.load(storage).await;
+        }
+    }
+
+    /// Persist cohort and user counting to |storage|, will try to set all of them to storage even
+    /// if previous set fails.
+    /// It will NOT call commit() on |storage|, caller is responsible to call commit().
+    pub async fn persist<'a>(&'a self, storage: &'a mut impl Storage) {
+        let apps = self.apps.lock().await;
+        for app in apps.iter() {
+            app.persist(storage).await;
+        }
+    }
+
+    /// Get the current channel name from cohort name, returns default stable-channel if no cohort
+    /// name set for the app.
+    pub async fn get_current_channel(&self) -> String {
+        let apps = self.apps.lock().await;
+        apps[0].get_current_channel().to_string()
+    }
+
+    /// Get the target channel name from cohort hint, fallback to current channel if no hint.
+    pub async fn get_target_channel(&self) -> String {
+        let apps = self.apps.lock().await;
+        apps[0].get_target_channel().to_string()
+    }
+
+    /// Set the cohort hint of all apps to |channel|.
+    pub async fn set_target_channel(&self, channel: Option<String>) {
+        let mut apps = self.apps.lock().await;
+        for app in apps.iter_mut() {
+            app.set_target_channel(channel.clone());
+        }
+    }
+
+    /// Update the cohort for each app from Omaha app response.
+    pub async fn update_from_omaha(&mut self, app_responses: Vec<AppResponse>) {
+        let mut apps = self.apps.lock().await;
+
+        for app_response in app_responses {
+            for app in apps.iter_mut() {
+                if app.id == app_response.app_id {
+                    app.cohort.update_from_omaha(app_response.cohort);
+                    break;
+                }
+            }
+        }
+    }
+
+    /// Clone the apps into a Vec.
+    pub async fn to_vec(&self) -> Vec<App> {
+        self.apps.lock().await.clone()
+    }
 }
 
 /// Options controlling a single update check
@@ -267,7 +362,7 @@ pub struct ProtocolState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::MemStorage;
+    use crate::{state_machine::update_check::Action, storage::MemStorage};
     use futures::executor::block_on;
     use pretty_assertions::assert_eq;
 
@@ -516,6 +611,81 @@ mod tests {
             let json = storage.get_string(&app.id).await.unwrap();
             assert_eq!(expected, serde_json::Value::from_str(&json).unwrap());
             assert_eq!(false, storage.committed());
+        });
+    }
+
+    #[test]
+    fn test_app_get_current_channel() {
+        let cohort = Cohort { name: Some("current-channel-123".to_string()), ..Cohort::default() };
+        let app = App::new("some_id", [0, 1], cohort);
+        assert_eq!("current-channel-123", app.get_current_channel());
+    }
+
+    #[test]
+    fn test_app_get_current_channel_default() {
+        let app = App::new("some_id", [0, 1], Cohort::default());
+        assert_eq!("stable-channel", app.get_current_channel());
+    }
+
+    #[test]
+    fn test_app_get_target_channel() {
+        let cohort = Cohort::from_hint("target-channel-456");
+        let app = App::new("some_id", [0, 1], cohort);
+        assert_eq!("target-channel-456", app.get_target_channel());
+    }
+
+    #[test]
+    fn test_app_get_target_channel_fallback() {
+        let cohort = Cohort { name: Some("current-channel-123".to_string()), ..Cohort::default() };
+        let app = App::new("some_id", [0, 1], cohort);
+        assert_eq!("current-channel-123", app.get_target_channel());
+    }
+
+    #[test]
+    fn test_app_get_target_channel_default() {
+        let app = App::new("some_id", [0, 1], Cohort::default());
+        assert_eq!("stable-channel", app.get_target_channel());
+    }
+
+    #[test]
+    fn test_app_set_target_channel() {
+        let mut app = App::new("some_id", [0, 1], Cohort::default());
+        assert_eq!("stable-channel", app.get_target_channel());
+        app.set_target_channel(Some("new-target-channel".to_string()));
+        assert_eq!("new-target-channel", app.get_target_channel());
+        app.set_target_channel(None);
+        assert_eq!("stable-channel", app.get_target_channel());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_appset_panics_with_empty_vec() {
+        AppSet::new(vec![]);
+    }
+
+    #[test]
+    fn test_appset_update_from_omaha() {
+        let mut app_set = AppSet::new(vec![App::new("some_id", [0, 1], Cohort::default())]);
+        let cohort = Cohort { name: Some("some-channel".to_string()), ..Cohort::default() };
+        let app_responses = vec![AppResponse {
+            app_id: "some_id".to_string(),
+            cohort: cohort.clone(),
+            user_counting: UserCounting::ClientRegulatedByDate(None),
+            result: Action::Updated,
+        }];
+        block_on(async {
+            app_set.update_from_omaha(app_responses).await;
+            assert_eq!(cohort, app_set.to_vec().await[0].cohort);
+        });
+    }
+
+    #[test]
+    fn test_appset_to_vec() {
+        block_on(async {
+            let app_set = AppSet::new(vec![App::new("some_id", [0, 1], Cohort::default())]);
+            let mut vec = app_set.to_vec().await;
+            vec[0].id = "some_other_id".to_string();
+            assert_eq!("some_id", app_set.to_vec().await[0].id);
         });
     }
 }
