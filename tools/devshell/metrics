@@ -42,6 +42,7 @@ the session and user workflow in order to improve the user experience:
 
 1. For every "fx" invocation:
    - The output of "uname -rs" (Kernel name and release)
+   - The version of the shell (bash or zsh)
    - The name of the "fx" subcommand invoked
    - (in the future) Imports in BUILDDIR/args.gn for product and board
    - (in the future) Value FUCHSIA_ARCH from BUILDDIR/fx.config

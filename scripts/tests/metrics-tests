@@ -8,8 +8,9 @@
 # Usage: metrics-tests
 
 set -o errexit
-set -o nounset
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/../../tools/devshell/lib >/dev/null 2>&1 && pwd)"/vars.sh || exit $?
 
+set -o nounset
 # Read in the test framework and the library to test
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/lib >/dev/null 2>&1 && pwd)"/common.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/../../tools/devshell/lib >/dev/null 2>&1 && pwd)"/metrics.sh || exit $?

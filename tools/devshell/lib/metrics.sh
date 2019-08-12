@@ -136,14 +136,10 @@ function track-command-execution {
   fi
 
   analytics_args=(
-    "v=1" \
-    "tid=${GA_PROPERTY_ID}" \
-    "an=fx" \
-    "cid=${METRICS_UUID}" \
     "t=event" \
     "ec=fx" \
     "ea=${subcommand}" \
-    "el=${args}"
+    "el=${args}" \
     )
 
   send-analytics-event "event" "${analytics_args[@]}"
@@ -182,29 +178,21 @@ function track-command-finished {
     # Successes are logged as timing hits
     hit_type="timing"
     analytics_args=(
-      "v=1" \
-      "tid=${GA_PROPERTY_ID}" \
-      "an=fx" \
-      "cid=${METRICS_UUID}" \
       "t=timing" \
       "utc=fx" \
       "utv=${subcommand}" \
       "utt=${timing}" \
-      "utl=${args}"
+      "utl=${args}" \
       )
   else
     # Failures are logged as event hits with a separate category
     hit_type="event"
     analytics_args=(
-      "v=1" \
-      "tid=${GA_PROPERTY_ID}" \
-      "an=fx" \
-      "cid=${METRICS_UUID}" \
       "t=event" \
       "ec=fx_exception" \
       "ea=${subcommand}" \
       "el=${args}" \
-      "ev=${exit_status}"
+      "ev=${exit_status}" \
       )
   fi
 
@@ -218,11 +206,22 @@ function track-command-finished {
 function send-analytics-event {
   hit_type="$1"
   shift
+  analytics_args=("$@")
+  local app_name="$(_app_name)"
+  local app_version="$(_app_version)"
+
+  analytics_args+=(
+    "v=1" \
+    "an=${app_name}" \
+    "av=${app_version}" \
+    "tid=${GA_PROPERTY_ID}" \
+    "cid=${METRICS_UUID}" \
+    )
 
   curl_args=()
-  for a in "$@"; do
+  for a in "${analytics_args[@]}"; do
     curl_args+=(--data-urlencode)
-    curl_args+=("$a")
+    curl_args+=("\"$a\"")
   done
 
   local user_agent="Fuchsia-fx $(_os_data)"
@@ -239,12 +238,32 @@ function send-analytics-event {
       -H "User-Agent: $user_agent" \
       "https://www.google-analytics.com/${url_path}")
   fi
-  metrics-maybe-log "${hit_type}" "$@" "RESULT=${result}"
+  metrics-maybe-log "${hit_type}" "${analytics_args[@]}" "RESULT=${result}"
 }
 
 function _os_data {
   if command -v uname >/dev/null 2>&1 ; then
     uname -rs
+  else
+    echo "Unknown"
+  fi
+}
+
+function _app_name {
+  if [[ -n "${BASH_VERSION}" ]]; then
+    echo "bash"
+  elif [[ -n "${ZSH_VERSION}" ]]; then
+    echo "zsh"
+  else
+    echo "Unknown"
+  fi
+}
+
+function _app_version {
+  if [[ -n "${BASH_VERSION}" ]]; then
+    echo "${BASH_VERSION}"
+  elif [[ -n "${ZSH_VERSION}" ]]; then
+    echo "${ZSH_VERSION}"
   else
     echo "Unknown"
   fi
