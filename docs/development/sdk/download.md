@@ -15,7 +15,7 @@ The Core SDK is a version of the SDK that is build system agnostic. The Core SDK
 contains metadata that can be used by an [SDK backend](README.md#backend) to
 generate an SDK for a specific build system.
 
-* Linux: https://chrome-infra-packages.appspot.com/p/fuchsia/sdk/core/linux-amd64/+/latest
+* Linux: [https://chrome-infra-packages.appspot.com/p/fuchsia/sdk/core/linux-amd64/+/latest](https://chrome-infra-packages.appspot.com/p/fuchsia/sdk/core/linux-amd64/+/latest)
 * MacOS: https://chrome-infra-packages.appspot.com/p/fuchsia/sdk/core/mac-amd64/+/latest
 
 ## Qemu
