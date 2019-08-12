@@ -132,10 +132,76 @@ bool test_cpus_2970wx_x399() {
   END_TEST;
 }
 
+// Uses bad data to trigger the fallback topology, (everything flat).
+bool test_cpus_fallback() {
+  BEGIN_TEST;
+
+  // The minimal cpuid data set to fallthrough our level parsing.
+  // The number of processors is pulled from acpi so combining these gets us a
+  // bad-cpuid but good acpi condition we are seeing on some hypervisors.
+  const cpu_id::TestDataSet fallback_cpuid_data = {
+    .features = {},
+    .missing_features = {},
+    .leaf0 = {},
+    .leaf1 = {},
+    .leaf4 = {},
+    .leaf7 = {},
+    .leafB = {},
+    .leaf8_0 = {.reg = {0x80000008, 0x0, 0x0}},
+    .leaf8_1 = {},
+    .leaf8_8 = {},
+    .leaf8_1D = {},
+    .leaf8_1E = {},
+  };
+
+  fbl::Vector<zbi_topology_node_t> flat_topology;
+  auto status =
+      x86::GenerateFlatTopology(cpu_id::FakeCpuId(fallback_cpuid_data),
+                                AcpiTables(&acpi_test_data::kEveTableProvider), &flat_topology);
+  ASSERT_EQ(ZX_OK, status, "");
+
+  int numa_count = 0;
+  int die_count = 0;
+  int core_count = 0;
+  int cache_count = 0;
+  int thread_count = 0;
+  for (int i = 0; i < (int)flat_topology.size(); i++) {
+    const auto& node = flat_topology[i];
+    switch (node.entity_type) {
+      case ZBI_TOPOLOGY_ENTITY_NUMA_REGION:
+        numa_count++;
+        break;
+      case ZBI_TOPOLOGY_ENTITY_DIE:
+        die_count++;
+        break;
+      case ZBI_TOPOLOGY_ENTITY_CACHE:
+        cache_count++;
+        break;
+      case ZBI_TOPOLOGY_ENTITY_PROCESSOR:
+        core_count++;
+        thread_count += node.entity.processor.logical_id_count;
+        break;
+    }
+  }
+
+  EXPECT_EQ(0, numa_count, "");
+  EXPECT_EQ(1, die_count, "");
+  EXPECT_EQ(0, cache_count, "");
+  EXPECT_EQ(4, core_count, "");
+  EXPECT_EQ(4, thread_count, "");
+
+  // Ensure the format can be parsed and validated by the system topology library.
+  Graph graph;
+  EXPECT_EQ(ZX_OK, Graph::Initialize(&graph, flat_topology.get(), flat_topology.size()), "");
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(x86_topology_tests)
 UNITTEST("Enumerate cpus using data from HP z840.", test_cpus_z840)
 UNITTEST("Enumerate cpus using data from ThreadRipper 2970wx/X399.", test_cpus_2970wx_x399)
+UNITTEST("Enumerate cpus using data triggering fallback.", test_cpus_fallback)
 UNITTEST_END_TESTCASE(x86_topology_tests, "x86_topology",
                       "Test determining x86 topology through CPUID/APIC.");

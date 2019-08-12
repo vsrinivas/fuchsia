@@ -177,10 +177,16 @@ class ApicDecoder {
 
     const auto levels_opt = topology.levels();
     if (!levels_opt) {
-      return {};
+      printf("ERROR: Unable to determine topology from cpuid. Falling back to flat!\n");
     }
 
-    const auto& levels = *levels_opt;
+    // If cpuid failed to provide levels fallback to one that just treats
+    // every core as separate.
+    const auto& levels = levels_opt ? *levels_opt :
+        cpu_id::Topology::Levels {
+          .levels = {{.type = cpu_id::Topology::LevelType::CORE, .id_bits = 31}},
+          .level_count = 1 };
+
     for (int i = 0; i < levels.level_count; i++) {
       const auto& level = levels.levels[i];
       switch (level.type) {
@@ -400,17 +406,44 @@ zx_status_t FlattenTree(const fbl::Vector<ktl::unique_ptr<Die>>& dies,
   return ZX_OK;
 }
 
-void SystemTopologyInit(uint32_t) {
+static constexpr zbi_topology_node_t kFallbackTopology = {
+    .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
+    .parent_index = ZBI_TOPOLOGY_NO_PARENT,
+    .entity = {
+        .processor = {
+             .logical_ids = {0},
+             .logical_id_count = 1,
+             .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
+             .architecture = ZBI_TOPOLOGY_ARCH_X86,
+             .architecture_info = {
+                 .x86 = {
+                     .apic_ids = {0},
+                     .apic_id_count = 1,
+                 }}}}};
+
+
+zx_status_t GenerateAndInitSystemTopology() {
   const AcpiTableProvider table_provider;
   fbl::Vector<zbi_topology_node_t> topology;
 
-  const auto generate_status =
+  const auto status =
       x86::GenerateFlatTopology(cpu_id::CpuId(), AcpiTables(&table_provider), &topology);
-  ASSERT_MSG(generate_status == ZX_OK, "Failed to generate topology!");
+  if (status != ZX_OK) {
+    printf("ERROR: failed to generate flat topology from cpuid and acpi data! : %d\n", status);
+    return status;
+  }
 
-  const auto init_status =
-      system_topology::Graph::InitializeSystemTopology(topology.get(), topology.size());
-  ASSERT_MSG(init_status == ZX_OK, "Failed to load system topology!");
+  return system_topology::Graph::InitializeSystemTopology(topology.get(), topology.size());
+}
+
+void SystemTopologyInit(uint32_t) {
+  auto status = GenerateAndInitSystemTopology();
+  if (status != ZX_OK) {
+    printf("ERROR: Auto topology generation failed, falling back to only boot core! status: %d\n",
+           status);
+    status = system_topology::Graph::InitializeSystemTopology(&kFallbackTopology, 1);
+    ZX_ASSERT(status == ZX_OK);
+  }
 }
 
 }  // namespace
