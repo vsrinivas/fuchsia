@@ -7,12 +7,13 @@
 #include <zircon/status.h>
 
 #include <cstdio>
+#include <iomanip>
 
 #include <audio-proto-utils/format-utils.h>
 
 #include "lib/fidl/cpp/clone.h"
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/driver_utils.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 
@@ -22,6 +23,17 @@ static constexpr zx_txid_t TXID = 1;
 // errors. Correctly functioning hardware and drivers should never result in any timeouts.
 static constexpr zx_duration_t kDefaultShortCmdTimeout = ZX_SEC(1);
 static constexpr zx_duration_t kDefaultLongCmdTimeout = ZX_SEC(4);
+
+static constexpr bool kEnablePositionNotifications = true;
+// To what extent should position notification messages be logged? If logging level is SPEW, every
+// notification is logged. If TRACE, we log less frequently, as specified by the Trace const. If
+// INFO, we log even less frequently, per the Info const (INFO is default for NDEBUG builds).
+// Default for audio_core in NDEBUG builds is WARNING, so by default we do not log any of these
+// messages on NDEBUG builds. Set the bool to false to not log at all, even when unsolicited.
+static constexpr bool kLogPositionNotifications = true;
+static constexpr uint16_t kPositionNotificationSpewInterval = 1;
+static constexpr uint16_t kPositionNotificationTraceInterval = 60;
+static constexpr uint16_t kPositionNotificationInfoInterval = 3600;
 
 AudioDriver::AudioDriver(AudioDevice* owner) : owner_(owner) {
   FXL_DCHECK(owner_ != nullptr);
@@ -821,7 +833,7 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
   req.hdr.cmd = AUDIO_RB_CMD_GET_BUFFER;
   req.hdr.transaction_id = TXID;
   req.min_ring_buffer_frames = static_cast<uint32_t>(min_frames_64);
-  req.notifications_per_ring = 0;
+  req.notifications_per_ring = (kEnablePositionNotifications ? 2 : 0);
 
   zx_status_t res = rb_channel_->Write(&req, sizeof(req));
   if (res != ZX_OK) {
@@ -925,8 +937,31 @@ zx_status_t AudioDriver::ProcessStopResponse(const audio_rb_cmd_stop_resp_t& res
 // benign and can be safely ignored. However, we did not request it, so this may indicate some other
 // problem in the driver state machine. Issue a (debug-only) warning, eat the msg, and continue.
 zx_status_t AudioDriver::ProcessPositionNotify(const audio_rb_position_notify_t& notify) {
-  FXL_DLOG(INFO) << "Unsolicited ring buffer position notification!  Time:"
-                 << zx::clock::get_monotonic().get() << " Pos:" << notify.ring_buffer_pos;
+  if constexpr (kLogPositionNotifications) {
+    if ((kPositionNotificationInfoInterval > 0) &&
+        (position_notification_count_ % kPositionNotificationInfoInterval == 0)) {
+      FXL_LOG(INFO) << "    " << reinterpret_cast<void*>(this)
+                    << (kEnablePositionNotifications ? " Pos" : " Unsolicited pos") << " notif (1/"
+                    << kPositionNotificationInfoInterval << ") @ "
+                    << zx::clock::get_monotonic().get() << " Pos:" << std::setw(6)
+                    << notify.ring_buffer_pos;
+    } else if ((kPositionNotificationTraceInterval > 0) &&
+               (position_notification_count_ % kPositionNotificationTraceInterval == 0)) {
+      FXL_VLOG(TRACE) << reinterpret_cast<void*>(this)
+                      << (kEnablePositionNotifications ? " Pos" : " Unsolicited pos")
+                      << " notif (1/" << kPositionNotificationTraceInterval << ")  @ "
+                      << zx::clock::get_monotonic().get() << " Pos:" << std::setw(6)
+                      << notify.ring_buffer_pos;
+    } else if ((kPositionNotificationSpewInterval > 0) &&
+               (position_notification_count_ % kPositionNotificationSpewInterval == 0)) {
+      FXL_VLOG(SPEW) << reinterpret_cast<void*>(this)
+                     << (kEnablePositionNotifications ? " Pos" : " Unsolicited pos") << " notif (1/"
+                     << kPositionNotificationSpewInterval << ") @ "
+                     << zx::clock::get_monotonic().get() << " Pos:" << std::setw(6)
+                     << notify.ring_buffer_pos;
+    }
+    ++position_notification_count_;
+  }
 
   return ZX_OK;
 }

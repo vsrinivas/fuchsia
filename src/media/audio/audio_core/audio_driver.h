@@ -134,6 +134,8 @@ class AudioDriver {
                                                 kDriverInfoHasProdStr | kDriverInfoHasGainState |
                                                 kDriverInfoHasFormats;
 
+  uint16_t position_notification_count_ = 0;
+
   // Dispatchers for messages received over stream and ring buffer channels.
   zx_status_t ReadMessage(dispatcher::Channel* channel, void* buf, uint32_t buf_size,
                           uint32_t* bytes_read_out, zx::handle* handle_out)

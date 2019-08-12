@@ -155,7 +155,8 @@ void AudioPipelineTest::SetVirtualAudioEvents() {
         received_ring_buffer_ = true;
         rb_vmo_ = std::move(ring_buffer_vmo);
         num_rb_frames_ = num_ring_buffer_frames;
-        AUD_VLOG(TRACE) << "OnBufferCreated callback: " << num_ring_buffer_frames;
+        AUD_VLOG(TRACE) << "OnBufferCreated callback: " << num_ring_buffer_frames << " frames, "
+                        << notifications_per_ring << " notifs/ring";
       });
   output_.events().OnStart = CompletionCallback([this](zx_time_t start_time) {
     received_start_ = true;
@@ -457,7 +458,7 @@ void AudioPipelineTest::SynchronizedPlay() {
   ExpectCondition([this]() { return (running_ring_pos_ >= kRingBytes); });
 
   // Calculate the ref_time for Play
-  auto ns_per_byte = TimelineRate(ZX_SEC(1), kDefaultFrameRate * kDefaultFrameSize);
+  auto ns_per_byte = TimelineRate(zx::sec(1).get(), kDefaultFrameRate * kDefaultFrameSize);
   int64_t running_pos_for_play = ((running_ring_pos_ / kRingBytes) + 1) * kRingBytes;
   auto running_pos_to_ref_time = TimelineFunction(start_time_, 0, ns_per_byte);
   auto ref_time_for_play = running_pos_to_ref_time.Apply(running_pos_for_play);
@@ -477,7 +478,8 @@ void AudioPipelineTest::SynchronizedPlay() {
 // buffer as expected.
 TEST_F(AudioPipelineTest, RenderWithPts) {
   ASSERT_GT(min_lead_time_, 0);
-  uint32_t num_packets = ZX_NSEC(min_lead_time_) / ZX_MSEC(kPacketMs) + 1;
+  uint32_t num_packets = zx::duration(min_lead_time_) / zx::msec(kPacketMs);
+  ++num_packets;
 
   CreateAndSendPackets(num_packets);
   SynchronizedPlay();
