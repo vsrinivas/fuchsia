@@ -125,8 +125,8 @@ impl OutputWorker {
 
     fn on_position_notify(
         &mut self,
+        _monotonic_time: i64,
         ring_position: u32,
-        _clock_time: i64,
         capturing: bool,
     ) -> Result<(), Error> {
         if capturing && self.next_read != self.next_read_end {
@@ -206,7 +206,7 @@ impl OutputWorker {
                         Some(OutputEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames, notifications_per_ring }) => {
                             self.on_buffer_created(ring_buffer, num_ring_buffer_frames, notifications_per_ring)?;
                         },
-                        Some(OutputEvent::OnPositionNotify { ring_position, clock_time }) => {
+                        Some(OutputEvent::OnPositionNotify { monotonic_time, ring_position }) => {
                             // Log if we have been delayed more than 150ms.  This is highly abnormal and
                             // is indicative of possible glitching in the captured audio.
                             let now = zx::Time::get(zx::ClockId::Monotonic);
@@ -218,7 +218,7 @@ impl OutputWorker {
                             }
                             last_notify = now;
 
-                            self.on_position_notify(ring_position, clock_time, self.capturing)?;
+                            self.on_position_notify(monotonic_time, ring_position, self.capturing)?;
                         },
                         Some(evt) => {
                             fx_log_info!("Got unknown InputEvent {:?}", evt);
@@ -423,8 +423,8 @@ impl InputWorker {
 
     fn on_position_notify(
         &mut self,
+        _monotonic_time: i64,
         ring_position: u32,
-        _clock_time: i64,
         active: bool,
     ) -> Result<(), Error> {
         let vmo = if let Some(vmo) = &self.vmo { vmo } else { return Ok(()) };
@@ -538,7 +538,7 @@ impl InputWorker {
                         Some(InputEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames, notifications_per_ring }) => {
                             self.on_buffer_created(ring_buffer, num_ring_buffer_frames, notifications_per_ring)?;
                         },
-                        Some(InputEvent::OnPositionNotify { ring_position, clock_time }) => {
+                        Some(InputEvent::OnPositionNotify { monotonic_time, ring_position }) => {
                             // Log if we have been delayed more than 150ms.  This is highly abnormal and
                             // is indicative of possible glitching in the injection.
                             let now = zx::Time::get(zx::ClockId::Monotonic);
@@ -551,7 +551,7 @@ impl InputWorker {
                             last_notify = now;
 
                             let mut active = active.lock().await;
-                            self.on_position_notify(ring_position, clock_time, *active)?;
+                            self.on_position_notify(monotonic_time, ring_position, *active)?;
                             if self.zeros_written >= self.work_space as usize {
                                 *(active) = false;
                             }

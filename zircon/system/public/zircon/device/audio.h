@@ -420,6 +420,9 @@ typedef struct audio_rb_cmd_stop_resp {
 typedef struct audio_rb_position_notify {
   audio_cmd_hdr_t hdr;
 
+  // The time, per system monotonic clock, of the below byte position.
+  zx_time_t monotonic_time;
+
   // The current position (in bytes) of the driver/hardware's read (output) or
   // write (input) pointer in the ring buffer.
   uint32_t ring_buffer_pos;

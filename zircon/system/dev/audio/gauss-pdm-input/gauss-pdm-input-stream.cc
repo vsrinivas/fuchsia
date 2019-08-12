@@ -2,19 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gauss-pdm-input-stream.h"
+
+#include <lib/device-protocol/platform-device.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/vmar.h>
+#include <zircon/device/audio.h>
+
+#include <limits>
+#include <utility>
+
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <lib/device-protocol/platform-device.h>
 #include <fbl/algorithm.h>
-#include <lib/zx/vmar.h>
-#include <limits>
-#include <utility>
-#include <zircon/device/audio.h>
 
 #include "a113-pdm.h"
 #include "dispatcher-pool/dispatcher-thread-pool.h"
-#include "gauss-pdm-input-stream.h"
 
 namespace audio {
 namespace gauss {
@@ -412,6 +416,7 @@ int GaussPdmInputStream::IrqThread() {
     vmo_helper_.printoffsetinvmo(offset);
 
     audio_proto::RingBufPositionNotify resp;
+    resp.monotonic_time = zx::clock::get_monotonic().get();
     resp.ring_buffer_pos = offset;
     resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
     resp.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
@@ -656,7 +661,7 @@ zx_status_t GaussPdmInputStream::OnStart(dispatcher::Channel* channel,
   a113_pdm_fifo_reset(&audio_device_);
   a113_toddr_enable(&audio_device_, 1);
   a113_pdm_enable(&audio_device_, 1);
-  resp.start_time = zx_clock_get_monotonic();
+  resp.start_time = zx::clock::get_monotonic().get();
 
   resp.result = ZX_OK;
   return channel->Write(&resp, sizeof(resp));

@@ -4,6 +4,9 @@
 
 #include "audio-stream-out.h"
 
+#include <lib/mmio/mmio.h>
+#include <lib/zx/clock.h>
+
 #include <optional>
 #include <utility>
 
@@ -15,7 +18,6 @@
 #include <ddk/protocol/composite.h>
 #include <ddktl/metadata/audio.h>
 #include <fbl/array.h>
-#include <lib/mmio/mmio.h>
 #include <soc/as370/as370-audio-regs.h>
 
 // TODO(andresoportus): Add handling for the other formats supported by this controller.
@@ -229,6 +231,7 @@ zx_status_t As370AudioStreamOut::ProcessRingNotification() {
   audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
+  resp.monotonic_time = zx::clock::get_monotonic().get();
   resp.ring_buffer_pos = lib_->GetRingPosition();
   return NotifyPosition(resp);
 }

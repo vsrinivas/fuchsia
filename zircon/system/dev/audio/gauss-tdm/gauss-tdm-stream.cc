@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/device-protocol/platform-device.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/vmar.h>
+#include <string.h>
+#include <zircon/device/audio.h>
+
+#include <limits>
+#include <utility>
+
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/composite.h>
-#include <lib/device-protocol/platform-device.h>
-#include <lib/zx/vmar.h>
-#include <limits>
-#include <string.h>
-#include <utility>
-#include <zircon/device/audio.h>
 
 #include "dispatcher-pool/dispatcher-thread-pool.h"
 #include "tas57xx.h"
@@ -677,6 +680,7 @@ zx_status_t TdmOutputStream::ProcessRingNotification() {
   audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
+  resp.monotonic_time = zx::clock::get_monotonic().get();
   resp.ring_buffer_pos = mmio_->Read32(RegOffset(frddr[2].status2)) - ring_buffer_phys_;
 
   fbl::AutoLock lock(&lock_);
@@ -732,7 +736,7 @@ zx_status_t TdmOutputStream::OnStartLocked(dispatcher::Channel* channel,
   // enable tdmout
   mmio_->SetBits32(1 << 31, RegOffset(tdmout[TDM_OUT_C].ctl0));
 
-  resp.start_time = zx_clock_get_monotonic();
+  resp.start_time = zx::clock::get_monotonic().get();
   return channel->Write(&resp, sizeof(resp));
 }
 

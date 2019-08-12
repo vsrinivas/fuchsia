@@ -162,18 +162,22 @@ protocol Device {
     /// position will re-begin at 0, if the device is again Started.
     -> OnStop(zx.time stop_time, uint32 ring_position);
 
-    /// Return the current position (in bytes) within the ring buffer. This can
-    /// only be called after the ring buffer is established. If the device has
-    /// not yet Started streaming, then zero will always be returned.
-    GetPosition() -> (uint32 ring_position, zx.time clock_time);
+    /// Return the current position (in bytes) within the ring buffer, along
+    /// with the time (per MONOTONIC clock) that corresponds with that position.
+    /// This can only be called after the ring buffer is established. If the
+    /// device has not yet Started streaming, then zero will always be returned.
+    GetPosition() -> (zx.time monotonic_time, uint32 ring_position);
 
     /// Notify all subscribed listeners, when any `AUDIO_RB_POSITION_NOTIFY`
     /// position notification is issued by the driver. The frequency of these
     /// per-stream notifications is set by AudioCore, reported to VAD clients
     /// via `GetBuffer` or the `->OnBufferCreated` event. VirtualAudioDevice
     /// clients can enable an alternate notification frequency for a given
-    /// stream by calling `SetNotificationFrequency`.
-    -> OnPositionNotify(uint32 ring_position, zx.time clock_time);
+    /// stream by calling `SetNotificationFrequency`. As with a direct call to
+    /// `GetPosition`, the returned parameters are the current position (in
+    /// bytes) in the ring buffer, as well as the time (per MONOTONIC clock)
+    /// that corresponds with that ring buffer position.
+    -> OnPositionNotify(zx.time monotonic_time, uint32 ring_position);
 
     /// Hot-plug or hot-unplug an active virtual device, at the specified time.
     /// For devices marked as capable of asynchronously notifying the system of

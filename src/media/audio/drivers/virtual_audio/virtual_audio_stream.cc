@@ -414,8 +414,8 @@ void VirtualAudioStream::HandlePositionRequests() {
     zx_time_t time_for_position = now.get();
 
     parent_->PostToDispatcher(
-        [position_callback = std::move(position_callback), ring_buffer_position,
-         time_for_position]() { position_callback(ring_buffer_position, time_for_position); });
+        [position_callback = std::move(position_callback), time_for_position,
+         ring_buffer_position]() { position_callback(time_for_position, ring_buffer_position); });
   }
 }
 
@@ -603,12 +603,13 @@ zx_status_t VirtualAudioStream::ProcessRingNotification() {
 
   audio::audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
+  resp.monotonic_time = monotonic_time;
   resp.ring_buffer_pos = ring_buffer_position;
 
   zx_status_t status = NotifyPosition(resp);
 
   if (!using_alt_notifications_) {
-    parent_->NotifyPosition(ring_buffer_position, monotonic_time);
+    parent_->NotifyPosition(monotonic_time, ring_buffer_position);
   }
 
   target_notification_time_ += notification_period_;
@@ -631,7 +632,7 @@ zx_status_t VirtualAudioStream::ProcessAltRingNotification() {
   uint64_t frames = (running_duration * frame_rate_) / zx::sec(1);
   uint32_t ring_buffer_position = (frames % num_ring_buffer_frames_) * frame_size_;
 
-  parent_->NotifyPosition(ring_buffer_position, monotonic_time);
+  parent_->NotifyPosition(monotonic_time, ring_buffer_position);
 
   target_alt_notification_time_ += alt_notification_period_;
   alt_notify_timer_->Arm(target_alt_notification_time_.get());

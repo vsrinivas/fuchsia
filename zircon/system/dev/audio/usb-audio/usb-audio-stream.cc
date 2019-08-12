@@ -2,26 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "usb-audio-stream.h"
+
+#include <lib/zx/clock.h>
+#include <lib/zx/vmar.h>
+#include <string.h>
+#include <zircon/hw/usb/audio.h>
+#include <zircon/process.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
+
+#include <limits>
+#include <utility>
+
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/device.h>
 #include <digest/digest.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <lib/zx/vmar.h>
-#include <limits>
-#include <string.h>
 #include <usb/usb-request.h>
-#include <utility>
-#include <zircon/hw/usb/audio.h>
-#include <zircon/process.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
 
-#include "usb-audio.h"
 #include "usb-audio-device.h"
-#include "usb-audio-stream.h"
 #include "usb-audio-stream-interface.h"
+#include "usb-audio.h"
 
 namespace audio {
 namespace usb {
@@ -47,7 +51,7 @@ UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent, fbl::unique_ptr<UsbAudioS
       parent_(*parent),
       ifc_(std::move(ifc)),
       default_domain_(std::move(default_domain)),
-      create_time_(zx_clock_get_monotonic()) {
+      create_time_(zx::clock::get_monotonic().get()) {
   snprintf(log_prefix_, sizeof(log_prefix_), "UsbAud %04hx:%04hx %s-%03d", parent_.vid(),
            parent_.pid(), is_input() ? "input" : "output", ifc_->term_link());
 }
@@ -912,7 +916,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
     audio_proto::RingBufPositionNotify notify_pos;
   } resp;
 
-  uint64_t complete_time = zx_clock_get_monotonic();
+  uint64_t complete_time = zx::clock::get_monotonic().get();
   Action when_finished = Action::NONE;
 
   // TODO(johngro) : See ZX-940.  Eliminate this as soon as we have a more
@@ -957,6 +961,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
             (notification_acc_ >= bytes_per_notification_)) {
           when_finished = Action::NOTIFY_POSITION;
           notification_acc_ = (notification_acc_ % bytes_per_notification_);
+          resp.notify_pos.monotonic_time = zx::clock::get_monotonic().get();
           resp.notify_pos.ring_buffer_pos = ring_buffer_pos_;
         }
       }

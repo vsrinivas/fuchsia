@@ -4,13 +4,15 @@
 
 #include "realtek-stream.h"
 
+#include <lib/zx/clock.h>
+
+#include <utility>
+
 #include <fbl/vector.h>
 #include <intel-hda/utils/codec-caps.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/codec-state.h>
 #include <intel-hda/utils/utils.h>
-
-#include <utility>
 
 #include "debug-logging.h"
 
@@ -206,7 +208,7 @@ zx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
   if (plug_state_ != plugged) {
     // Update our internal state.
     plug_state_ = plugged;
-    last_plug_time_ = zx_clock_get_monotonic();
+    last_plug_time_ = zx::clock::get_monotonic().get();
 
     // Inform anyone who has registered for notification.
     ZX_DEBUG_ASSERT(pc_.async_plug_det);
@@ -672,7 +674,7 @@ zx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
 
 zx_status_t RealtekStream::ProcessPinState(const Command& cmd, const CodecResponse& resp) {
   plug_state_ = PinSenseState(resp.data).presence_detect();
-  last_plug_time_ = zx_clock_get_monotonic();
+  last_plug_time_ = zx::clock::get_monotonic().get();
   return UpdateSetupProgressLocked(PLUG_STATE_SETUP_COMPLETE);
 }
 

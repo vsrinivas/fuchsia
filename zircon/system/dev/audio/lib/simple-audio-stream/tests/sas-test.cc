@@ -4,6 +4,8 @@
 
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
+#include <lib/zx/clock.h>
+
 #include <unittest/unittest.h>
 
 namespace audio {
@@ -60,7 +62,7 @@ class MockSimpleAudio : public SimpleAudioStream {
   }
 
   zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_->token()) override {
-    *out_start_time = zx_clock_get_monotonic();
+    *out_start_time = zx::clock::get_monotonic().get();
     return ZX_OK;
   }
 

@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <audio-proto-utils/format-utils.h>
-#include <ddk/debug.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
+#include <lib/zx/clock.h>
+#include <zircon/device/audio.h>
+
 #include <limits>
 #include <utility>
-#include <zircon/device/audio.h>
+
+#include <audio-proto-utils/format-utils.h>
+#include <ddk/debug.h>
 
 namespace audio {
 
@@ -55,7 +58,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
     }
     // If no subclass has set this, we need to do so here.
     if (plug_time_ == 0) {
-      plug_time_ = zx_clock_get_monotonic();
+      plug_time_ = zx::clock::get_monotonic().get();
     }
   }
 
@@ -106,7 +109,7 @@ void SimpleAudioStream::SetInitialPlugState(audio_pd_notify_flags_t initial_stat
   ZX_DEBUG_ASSERT((initial_state & known_flags) == initial_state);
 
   pd_flags_ = initial_state;
-  plug_time_ = zx_clock_get_monotonic();
+  plug_time_ = zx::clock::get_monotonic().get();
 }
 
 // Called by a child subclass when a dynamic plug state change occurs.
@@ -123,7 +126,7 @@ zx_status_t SimpleAudioStream::SetPlugState(bool plugged) {
   } else {
     pd_flags_ &= ~AUDIO_PDNF_PLUGGED;
   }
-  plug_time_ = zx_clock_get_monotonic();
+  plug_time_ = zx::clock::get_monotonic().get();
 
   if (pd_flags_ & AUDIO_PDNF_CAN_NOTIFY) {
     return NotifyPlugDetect();

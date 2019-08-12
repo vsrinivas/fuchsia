@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "audio-stream-in.h"
 
+#include <lib/zx/clock.h>
 #include <limits.h>
 
 #include <optional>
@@ -198,6 +199,7 @@ zx_status_t Mt8167AudioStreamIn::ProcessRingNotification() {
   audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
+  resp.monotonic_time = zx::clock::get_monotonic().get();
   resp.ring_buffer_pos = mt_audio_->GetRingPosition();
   return NotifyPosition(resp);
 }

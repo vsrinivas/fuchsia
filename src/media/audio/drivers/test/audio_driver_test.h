@@ -1,4 +1,4 @@
- // Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -163,6 +163,7 @@ class AudioDriverTest : public TestFixture {
   zx_time_t start_time_ = 0;
 
   uint32_t ring_buffer_position_ = 0;
+  zx_time_t last_monotonic_time_ = 0;
 
   bool received_get_unique_id_ = false;
   bool received_get_string_manufacturer_ = false;

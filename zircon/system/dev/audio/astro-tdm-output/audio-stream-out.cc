@@ -3,14 +3,16 @@
 // found in the LICENSE file.
 #include "audio-stream-out.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
+#include <lib/zx/clock.h>
 #include <math.h>
 
 #include <optional>
 #include <utility>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
 
 namespace audio {
 namespace astro {
@@ -180,6 +182,7 @@ zx_status_t AstroAudioStreamOut::ProcessRingNotification() {
   audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
+  resp.monotonic_time = zx::clock::get_monotonic().get();
   resp.ring_buffer_pos = aml_audio_->GetRingPosition();
   return NotifyPosition(resp);
 }

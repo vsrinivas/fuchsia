@@ -4,6 +4,8 @@
 
 #include "audio-stream-out.h"
 
+#include <lib/zx/clock.h>
+
 #include <optional>
 #include <utility>
 
@@ -217,6 +219,7 @@ zx_status_t Mt8167AudioStreamOut::ProcessRingNotification() {
   audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
+  resp.monotonic_time = zx::clock::get_monotonic().get();
   resp.ring_buffer_pos = mt_audio_->GetRingPosition();
   return NotifyPosition(resp);
 }

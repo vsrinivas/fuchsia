@@ -106,7 +106,7 @@ class VirtualAudioUtil {
   static constexpr uint8_t kDefaultFormatRangeOption = 0;
 
   static constexpr uint32_t kDefaultFifoDepth = 0x100;
-  static constexpr uint64_t kDefaultExternalDelayNsec = ZX_MSEC(1);
+  static constexpr uint64_t kDefaultExternalDelayNsec = zx::msec(1).get();
   static constexpr uint8_t kDefaultRingBufferOption = 0;
 
   static constexpr uint8_t kDefaultGainPropsOption = 0;
@@ -197,9 +197,9 @@ class VirtualAudioUtil {
   static void StopNotification(zx_time_t stop_time, uint32_t ring_position);
 
   template <bool is_out>
-  static void PositionNotification(uint32_t ring_position, zx_time_t clock_time);
+  static void PositionNotification(zx_time_t monotonic_time, uint32_t ring_position);
   template <bool is_out>
-  static void PositionCallback(uint32_t ring_position, zx_time_t clock_time);
+  static void PositionCallback(zx_time_t monotonic_time, uint32_t ring_position);
 };
 
 ::async::Loop* VirtualAudioUtil::loop_;
@@ -1077,14 +1077,14 @@ void VirtualAudioUtil::StopNotification(zx_time_t stop_time, uint32_t rb_pos) {
 }
 
 template <bool is_out>
-void VirtualAudioUtil::PositionNotification(uint32_t rb_pos, zx_time_t time_for_pos) {
-  printf("--Received Position (pos: %u, time: %zu) for %s\n", rb_pos, time_for_pos,
+void VirtualAudioUtil::PositionNotification(zx_time_t time_for_pos, uint32_t rb_pos) {
+  printf("--Received Position (time: %zu, pos: %u) for %s\n", time_for_pos, rb_pos,
          (is_out ? "output" : "input"));
 }
 template <bool is_out>
-void VirtualAudioUtil::PositionCallback(uint32_t rb_pos, zx_time_t time_for_pos) {
+void VirtualAudioUtil::PositionCallback(zx_time_t time_for_pos, uint32_t rb_pos) {
   VirtualAudioUtil::CallbackReceived();
-  VirtualAudioUtil::PositionNotification<is_out>(rb_pos, time_for_pos);
+  VirtualAudioUtil::PositionNotification<is_out>(time_for_pos, rb_pos);
 }
 
 }  // namespace virtual_audio

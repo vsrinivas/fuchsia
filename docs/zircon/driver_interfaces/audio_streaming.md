@@ -731,53 +731,44 @@ response has been enqueued.
 
 ### Position notifications
 
-If requested by the application during the `GET_BUFFER` operation, the driver
-will periodically send updates to the application informing it of its current
-production or consumption position in the buffer.  This position is expressed in
-bytes in the `ring_buffer_pos` field of the `audio_rb_position_notify_t`
-message.  These messages **must** only be sent while the ring-buffer is
-started.  Note, these position notifications indicate where in the buffer the
-driver has consumed or produced data, *not* where the nominal playback or
-capture position is.  Their arrival is not guaranteed to be perfectly uniform
-and they should not be used in an attempt to effect clock recovery.  If an
-application discovers that a driver has consumed past the point in the ring
-buffer where it has written data for playback, audio presentation is
-undefined.  Applications should increase their clock lead time and be
-certain to stay ahead of this point in the stream in the future.  Likewise,
-applications which are capturing audio data **should not** attempt to read
-beyond the point in the ring buffer indicated by the most recent position
-notification sent by the driver.
+If requested by the client during the `GET_BUFFER` operation, the driver will
+periodically send updates to the client informing it of its current production
+or consumption position in the buffer. This position is expressed in bytes in
+the `ring_buffer_pos` field of the `audio_rb_position_notify_t` message. The
+message also includes a `monotonic_time` field that contains the time (as
+zx_time_t) that this byte position was valid. AUDIO_RB_POSITION_NOTIFY messages
+**must** only be sent while the ring-buffer is started. Note, these position
+notifications indicate where in the buffer the driver has consumed or produced
+data, *not* the nominal playback or capture position (sometimes called the
+"write cursor" or "read cursor" respectively). The timing of their arrival is
+not guaranteed to be perfectly uniform and should not be used to effect clock
+recovery. However, the correspondence pair (`monotonic_time`, `ring_buffer_pos`)
+values themselves ARE intended to be used to recover the clock for the audio
+stream. If a client discovers that a driver has consumed past the point in the
+ring buffer where that client has written playback data, audio presentation is
+undefined. Clients should increase their clock lead time and be certain to stay
+ahead of this point in the stream in the future. Likewise, clients which capture
+audio **should not** attempt to read beyond the point in the ring buffer
+indicated by the most recent position notification sent by the driver.
 
-Driver playback/capture positions *always* begin at byte 0 in the ring buffer
-immediately following a successful start command.  When they reach the size of
-the VMO (as determined by [zx_vmo_get_size(...)](../syscalls/vmo_get_size.md))
-they wrap back to zero.  Drivers are not required to consume or produce data in
-integral numbers of audio frames.  Client whose notion of stream position
+Driver playback/capture position **must** *always* begin at ring buffer byte 0,
+immediately following a successful `AUDIO_RB_CMD_START` command. When the ring
+buffer position reaches the end of the VMO (as indicated by
+[zx_vmo_get_size(...)](../syscalls/vmo_get_size.md)), the ring buffer position
+wraps back to zero. Drivers are not required to consume or produce data in
+integral numbers of audio frames. Clients whose notion of stream position
 depends on position notifications should take care to request that a sufficient
-number of notifications per ring be sent (minimum 2) and that they are processed
-quickly enough that aliasing does not occur.
-
-### Error notifications
-
-> TODO: define these and what the behavior of drivers should be in case they
-> occur.
-
-### Unexpected application termination
-
-If the client side of a ring buffer control channel is closed for any reason,
-drivers **must** immediately close the control channel, and shut down the ring
-buffer such that no audio is produced.  While drivers
-are encouraged to do so in a way which produces a graceful transition to
-silence, the requirement is that the audio stream go silent instead of looping.
-Once a transition to silence is complete, the resources associated with
-playback may be released and reused by the driver.
-
-This way, if an application teminates unexpectedly, the kernel will close the
-application's channels and cause audio playback to stop instead of continuing to
-loop.
+number of notifications per ring be sent (minimum 2) and to process them quickly
+enough that aliasing does not occur.
 
 ### Clock recovery
 
+> TODO: rewrite this section to include how clock recovery occurs, and how this
+> is exposed to clients. Also, detail how slewable oscillators are discovered
+> and controlled. We may need rate-change notifications to clients of slewable
+> clocks.
+>
+> Previous content:
 > TODO: define a way that clock recovery information can be sent to clients in
 > the case that the audio output oscillator is not derived from the
 > `ZX_CLOCK_MONOTONIC` oscillator.  In addition, if the oscillator is slew-able
@@ -787,3 +778,20 @@ loop.
 > identifier and provide the ability to obtain a channel on which clock
 > recovery notifications can be delivered to clients and HW slewing command can
 > be sent from clients to the clock.
+
+### Error notifications
+
+> TODO: define these and what driver behavior should be, if/when they occur.
+
+### Unexpected client termination
+
+If the client side of a ring buffer control channel is closed for any reason,
+drivers **must** immediately close the control channel and shut down the ring
+buffer, such that no further audio is emitted nor captured. While drivers are
+encouraged to do so in a way which produces a graceful transition to silence,
+they **must** ensure that the audio stream goes silent instead of looping. Once
+the transition to silence is complete, resources associated with playback or
+capture **may** be released and reused by the driver.
+
+This way, if a playback client teminates unexpectedly, the system will close the
+client channels, causing audio playback to stop instead of continuing to loop.

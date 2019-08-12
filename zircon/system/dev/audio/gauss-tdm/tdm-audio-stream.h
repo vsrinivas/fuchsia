@@ -2,30 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TDM_AUDIO_STREAM_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TDM_AUDIO_STREAM_H_
 
+#include <fuchsia/hardware/audio/c/fidl.h>
+#include <lib/mmio/mmio.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/vmo.h>
+#include <zircon/listnode.h>
+
+#include <optional>
+#include <utility>
+
+#include <audio-proto/audio-proto.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <fbl/mutex.h>
-#include <fbl/vector.h>
-#include <fuchsia/hardware/audio/c/fidl.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/vmo.h>
-#include <zircon/listnode.h>
-
-#include <audio-proto/audio-proto.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-timer.h>
+#include <fbl/mutex.h>
+#include <fbl/vector.h>
 #include <soc/aml-a113/aml-tdm.h>
-
-#include <optional>
-#include <utility>
 
 namespace audio {
 namespace gauss {
@@ -63,7 +65,7 @@ class TdmOutputStream : public TdmAudioStreamBase,
   TdmOutputStream(zx_device_t* parent, fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
       : TdmAudioStreamBase(parent),
         default_domain_(std::move(default_domain)),
-        create_time_(zx_clock_get_monotonic()) {}
+        create_time_(zx::clock::get_monotonic().get()) {}
 
   virtual ~TdmOutputStream();
 
@@ -164,3 +166,5 @@ class TdmOutputStream : public TdmAudioStreamBase,
 
 }  // namespace gauss
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TDM_AUDIO_STREAM_H_

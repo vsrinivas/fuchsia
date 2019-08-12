@@ -1034,7 +1034,16 @@ void AudioDriverTest::HandlePositionNotify(const audio_rb_position_notify_t& not
 
   auto now = zx::clock::get_monotonic().get();
   EXPECT_LT(start_time_, now);
+  EXPECT_LT(notify.monotonic_time, now);
 
+  if (position_notification_count_) {
+    EXPECT_GT(notify.monotonic_time, start_time_);
+    EXPECT_GT(notify.monotonic_time, last_monotonic_time_);
+  } else {
+    EXPECT_GE(notify.monotonic_time, start_time_);
+  }
+
+  last_monotonic_time_ = notify.monotonic_time;
   ring_buffer_position_ = notify.ring_buffer_pos;
   EXPECT_LT(ring_buffer_position_, ring_buffer_frames_ * frame_size_);
 
@@ -1052,6 +1061,7 @@ void AudioDriverTest::ExpectPositionNotifyCount(uint32_t count) {
 
   ExpectCondition([this, count]() { return position_notification_count_ >= count; });
 
+  auto timestamp_duration = last_monotonic_time_ - start_time_;
   auto observed_duration = zx::clock::get_monotonic().get() - start_time_;
   EXPECT_GE(position_notification_count_, count);
 
@@ -1062,11 +1072,17 @@ void AudioDriverTest::ExpectPositionNotifyCount(uint32_t count) {
   auto expected_time = ns_per_notification.get() * count;
   auto expected_max_time = ns_per_notification.get() * (count + 1);
 
+  AUD_VLOG(TRACE) << " Timestamp delta from min/ideal/max: " << std::setw(10)
+                  << (expected_min_time - timestamp_duration) << " : " << std::setw(10)
+                  << (expected_time - timestamp_duration) << " : " << std::setw(10)
+                  << (expected_max_time - timestamp_duration);
+  EXPECT_GE(timestamp_duration, expected_min_time);
+  EXPECT_LE(timestamp_duration, expected_time);
+
   AUD_VLOG(TRACE) << "  Observed delta from min/ideal/max: " << std::setw(10)
                   << (expected_min_time - observed_duration) << " : " << std::setw(10)
                   << (expected_time - observed_duration) << " : " << std::setw(10)
                   << (expected_max_time - observed_duration);
-
   EXPECT_GT(observed_duration, expected_min_time);
   EXPECT_LT(observed_duration, expected_max_time);
 }
@@ -1503,5 +1519,7 @@ TEST_F(AudioDriverTest, OutputNoPositionNotifyAfterStop) {
 
   ExpectNoPositionNotifications();
 }
+
+// For input stream, verify that monotonic_time values are close to NOW, and always increasing.
 
 }  // namespace media::audio::test

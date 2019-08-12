@@ -15,15 +15,17 @@
 
 #define AUD_LOG(level)                                                                          \
   FXL_LOG(level) << std::fixed << std::setprecision(3)                                          \
-                 << (static_cast<double>(zx::clock::get_monotonic().get()) / ZX_MSEC(1)) << " " \
-                 << std::setw(25) << __func__
-#define AUD_LOG_OBJ(level, object) AUD_LOG(level) << " for " << reinterpret_cast<void*>(object)
+                 << (static_cast<double>(zx::clock::get_monotonic().get()) / zx::msec(1).get()) \
+                 << " " << std::setw(25) << __func__ << " "
+#define AUD_LOG_OBJ(level, object) \
+  AUD_LOG(level) << "for " << reinterpret_cast<void*>(object) << " "
 
 #define AUD_VLOG(level)                                                                          \
   FXL_VLOG(level) << std::fixed << std::setprecision(3)                                          \
-                  << (static_cast<double>(zx::clock::get_monotonic().get()) / ZX_MSEC(1)) << " " \
-                  << std::setw(25) << __func__
-#define AUD_VLOG_OBJ(level, object) AUD_VLOG(level) << " for " << reinterpret_cast<void*>(object)
+                  << (static_cast<double>(zx::clock::get_monotonic().get()) / zx::msec(1).get()) \
+                  << " " << std::setw(25) << __func__ << " "
+#define AUD_VLOG_OBJ(level, object) \
+  AUD_VLOG(level) << "for " << reinterpret_cast<void*>(object) << " "
 
 namespace media::audio {
 

@@ -129,7 +129,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   virtual void NotifyStop(zx_time_t stop_time, uint32_t ring_buffer_position);
 
   void GetPosition(fuchsia::virtualaudio::Device::GetPositionCallback callback) override;
-  virtual void NotifyPosition(uint32_t ring_buffer_position, zx_time_t monotonic_time);
+  virtual void NotifyPosition(zx_time_t monotonic_time, uint32_t ring_buffer_position);
 
   void ChangePlugState(zx_time_t plug_change_time, bool plugged) override;
 

@@ -391,13 +391,15 @@ void VirtualAudioDeviceImpl::GetPosition(
 }
 
 // Deliver Position notification on binding's thread, if binding is valid.
-void VirtualAudioDeviceImpl::NotifyPosition(uint32_t ring_buffer_position,
-                                            zx_time_t time_for_position) {
-  PostToDispatcher([this, ring_buffer_position, time_for_position]() {
-    if (input_binding_ && input_binding_->is_bound()) {
-      input_binding_->events().OnPositionNotify(ring_buffer_position, time_for_position);
-    } else if (output_binding_ && output_binding_->is_bound()) {
-      output_binding_->events().OnPositionNotify(ring_buffer_position, time_for_position);
+void VirtualAudioDeviceImpl::NotifyPosition(zx_time_t monotonic_time,
+                                            uint32_t ring_buffer_position) {
+  PostToDispatcher([this, monotonic_time, ring_buffer_position]() {
+    if (is_input_) {
+      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
+      input_binding_->events().OnPositionNotify(monotonic_time, ring_buffer_position);
+    } else {
+      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
+      output_binding_->events().OnPositionNotify(monotonic_time, ring_buffer_position);
     }
   });
 }

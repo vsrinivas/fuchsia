@@ -26,10 +26,10 @@ static constexpr zx_duration_t kDefaultLongCmdTimeout = ZX_SEC(4);
 
 static constexpr bool kEnablePositionNotifications = true;
 // To what extent should position notification messages be logged? If logging level is SPEW, every
-// notification is logged. If TRACE, we log less frequently, as specified by the Trace const. If
-// INFO, we log even less frequently, per the Info const (INFO is default for NDEBUG builds).
+// notification is logged (specified by Spew const). If TRACE, log less frequently, specified by
+// Trace const. If INFO, even less frequently per Info const (INFO is default for DEBUG builds).
 // Default for audio_core in NDEBUG builds is WARNING, so by default we do not log any of these
-// messages on NDEBUG builds. Set the bool to false to not log at all, even when unsolicited.
+// messages on Release builds. Set to false to not log at all, even for unsolicited notifications.
 static constexpr bool kLogPositionNotifications = true;
 static constexpr uint16_t kPositionNotificationSpewInterval = 1;
 static constexpr uint16_t kPositionNotificationTraceInterval = 60;
@@ -284,7 +284,7 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second, uint32_t channels
   channel_count_ = static_cast<uint16_t>(channels);
   sample_format_ = driver_format;
   bytes_per_frame_ = ::audio::utils::ComputeFrameSize(channel_count_, sample_format_);
-  ;
+
   min_ring_buffer_duration_ = min_ring_buffer_duration;
 
   // Start the process of configuring by sending the message to set the format.
@@ -940,28 +940,29 @@ zx_status_t AudioDriver::ProcessPositionNotify(const audio_rb_position_notify_t&
   if constexpr (kLogPositionNotifications) {
     if ((kPositionNotificationInfoInterval > 0) &&
         (position_notification_count_ % kPositionNotificationInfoInterval == 0)) {
-      FXL_LOG(INFO) << "    " << reinterpret_cast<void*>(this)
-                    << (kEnablePositionNotifications ? " Pos" : " Unsolicited pos") << " notif (1/"
-                    << kPositionNotificationInfoInterval << ") @ "
-                    << zx::clock::get_monotonic().get() << " Pos:" << std::setw(6)
-                    << notify.ring_buffer_pos;
+      AUD_LOG_OBJ(INFO, this) << (kEnablePositionNotifications ? "Notification"
+                                                               : "Unsolicited notification")
+                              << " (1/" << kPositionNotificationInfoInterval
+                              << ") Time:" << notify.monotonic_time << ", Pos:" << std::setw(6)
+                              << notify.ring_buffer_pos;
     } else if ((kPositionNotificationTraceInterval > 0) &&
                (position_notification_count_ % kPositionNotificationTraceInterval == 0)) {
-      FXL_VLOG(TRACE) << reinterpret_cast<void*>(this)
-                      << (kEnablePositionNotifications ? " Pos" : " Unsolicited pos")
-                      << " notif (1/" << kPositionNotificationTraceInterval << ")  @ "
-                      << zx::clock::get_monotonic().get() << " Pos:" << std::setw(6)
-                      << notify.ring_buffer_pos;
+      AUD_VLOG_OBJ(TRACE, this) << (kEnablePositionNotifications ? "Notification"
+                                                                 : "Unsolicited notification")
+                                << " (1/" << kPositionNotificationTraceInterval
+                                << ") Time:" << notify.monotonic_time << ",  Pos:" << std::setw(6)
+                                << notify.ring_buffer_pos;
     } else if ((kPositionNotificationSpewInterval > 0) &&
                (position_notification_count_ % kPositionNotificationSpewInterval == 0)) {
-      FXL_VLOG(SPEW) << reinterpret_cast<void*>(this)
-                     << (kEnablePositionNotifications ? " Pos" : " Unsolicited pos") << " notif (1/"
-                     << kPositionNotificationSpewInterval << ") @ "
-                     << zx::clock::get_monotonic().get() << " Pos:" << std::setw(6)
-                     << notify.ring_buffer_pos;
+      AUD_VLOG_OBJ(SPEW, this) << (kEnablePositionNotifications ? "Notification"
+                                                                : "Unsolicited notification")
+                               << " (1/" << kPositionNotificationSpewInterval
+                               << ") Time:" << notify.monotonic_time << ", Pos:" << std::setw(6)
+                               << notify.ring_buffer_pos;
     }
-    ++position_notification_count_;
   }
+  // Even if we don't log them, keep a running count of position notifications since START.
+  ++position_notification_count_;
 
   return ZX_OK;
 }

@@ -170,7 +170,7 @@ void AudioPipelineTest::SetVirtualAudioEvents() {
     AUD_VLOG(TRACE) << "OnStop callback: " << stop_time << ", " << ring_pos;
   });
   output_.events().OnPositionNotify =
-      CompletionCallback([this](uint32_t ring_pos, zx_time_t clock_time) {
+      CompletionCallback([this](zx_time_t monotonic_time, uint32_t ring_pos) {
         // compare to prev ring_pos - if less, then add RingBufferSize()
         if (ring_pos < ring_pos_) {
           running_ring_pos_ += RingBufferSize();
@@ -178,8 +178,8 @@ void AudioPipelineTest::SetVirtualAudioEvents() {
         running_ring_pos_ += ring_pos;
         running_ring_pos_ -= ring_pos_;
         ring_pos_ = ring_pos;
-        latest_pos_notify_time_ = clock_time;
-        AUD_VLOG(SPEW) << "OnPositionNotify callback: " << ring_pos << ", " << clock_time;
+        latest_pos_notify_time_ = monotonic_time;
+        AUD_VLOG(SPEW) << "OnPositionNotify callback: " << monotonic_time << ", " << ring_pos;
       });
 }
 

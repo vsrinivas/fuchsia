@@ -4,13 +4,15 @@
 
 #include "intel-hda-stream.h"
 
-#include <hw/arch_ops.h>
-#include <intel-hda/utils/utils.h>
+#include <lib/zx/clock.h>
 #include <string.h>
 #include <zircon/syscalls.h>
 
 #include <limits>
 #include <utility>
+
+#include <hw/arch_ops.h>
+#include <intel-hda/utils/utils.h>
 
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
@@ -325,6 +327,7 @@ void IntelHDAStream::ProcessStreamIRQ() {
     audio_proto::RingBufPositionNotify msg;
     msg.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
     msg.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
+    msg.monotonic_time = zx::clock::get_monotonic().get();
     msg.ring_buffer_pos = REG_RD(&regs_->lpib);
     irq_channel_->Write(&msg, sizeof(msg));
   }
@@ -638,7 +641,7 @@ zx_status_t IntelHDAStream::ProcessStartLocked(const audio_proto::RingBufStartRe
                              HDA_SD_REG_CTRL_DEIE | HDA_SD_REG_STS32_ACK;
     REG_SET_BITS(&regs_->ctl_sts.w, SET);
     hw_wmb();
-    resp.start_time = zx_clock_get_monotonic();
+    resp.start_time = zx::clock::get_monotonic().get();
   }
 
   // Success, we are now running.
