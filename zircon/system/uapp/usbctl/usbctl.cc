@@ -116,8 +116,13 @@ static fuchsia_hardware_usb_peripheral_DeviceDescriptor device_desc = {
     .bDeviceProtocol = 0,
     .bMaxPacketSize0 = 64,
     //   idVendor and idProduct are filled in later
+    .idVendor = 0,
+    .idProduct = 0,
     .bcdDevice = htole16(0x0100),
     //    iManufacturer, iProduct and iSerialNumber are filled in later
+    .iManufacturer = 0,
+    .iProduct = 0,
+    .iSerialNumber = 0,
     .bNumConfigurations = 1,
 };
 

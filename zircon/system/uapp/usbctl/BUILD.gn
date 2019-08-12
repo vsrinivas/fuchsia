@@ -4,7 +4,7 @@
 
 executable("usbctl") {
   sources = [
-    "usbctl.c",
+    "usbctl.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb.modeswitch",
