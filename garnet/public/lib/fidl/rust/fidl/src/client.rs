@@ -85,7 +85,8 @@ impl Txid {
         Txid((int_id.0 + 1) as u32)
     }
 
-    fn as_raw_id(&self) -> u32 {
+    /// Get the raw u32 transaction ID.
+    pub fn as_raw_id(&self) -> u32 {
         self.0
     }
 }
@@ -135,10 +136,7 @@ impl Client {
 
     /// Send an encodable message without expecting a response.
     pub fn send<T: Encodable>(&self, body: &mut T, ordinal: u64) -> Result<(), Error> {
-        let msg = &mut TransactionMessage {
-            header: TransactionHeader { tx_id: 0, ordinal },
-            body,
-        };
+        let msg = &mut TransactionMessage { header: TransactionHeader { tx_id: 0, ordinal }, body };
         crate::encoding::with_tls_encoded(msg, |bytes, handles| {
             self.send_raw_msg(&**bytes, handles)
         })
@@ -754,7 +752,7 @@ mod tests {
         let sender = sender
             .on_timeout(300.millis().after_now(), || panic!("did not receive response in time!"));
 
-        let ((), ()) =  executor.run_singlethreaded(join(receiver, sender));
+        let ((), ()) = executor.run_singlethreaded(join(receiver, sender));
     }
 
     #[test]
@@ -828,8 +826,7 @@ mod tests {
         let mut response_txid = Txid(0);
         let mut response_future = client.send_raw_query(|tx_id, bytes, handles| {
             response_txid = tx_id;
-            let header =
-                TransactionHeader { tx_id: response_txid.as_raw_id(), ordinal: 42 };
+            let header = TransactionHeader { tx_id: response_txid.as_raw_id(), ordinal: 42 };
             encode_transaction(header, bytes, handles);
             Ok(())
         });
