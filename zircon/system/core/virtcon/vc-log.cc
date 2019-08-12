@@ -25,6 +25,35 @@ void set_log_listener_active(bool active) {
   }
 }
 
+zx_status_t log_create_vc(vc_gfx_t* graphics, vc_t** vc_out) {
+  vc_t* vc;
+  zx_status_t status = vc_alloc(&vc, &color_schemes[kDefaultColorScheme]);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Copy the log buffer into the new vc.
+  size_t textbuf_size = log_vc->rows * log_vc->columns * sizeof(vc_char_t);
+  memcpy(vc->text_buf, log_vc->text_buf, textbuf_size);
+  vc->cursor_x = log_vc->cursor_x;
+  vc->cursor_y = log_vc->cursor_y;
+
+  // Set the new vc graphics and flush the text.
+  vc->active = true;
+  vc->graphics = graphics;
+  vc_attach_gfx(vc);
+  vc_full_repaint(vc);
+
+  list_add_tail(&log_list, &vc->node);
+  *vc_out = vc;
+  return ZX_OK;
+}
+
+void log_delete_vc(vc_t* vc) {
+  list_delete(&vc->node);
+  vc_free(vc);
+}
+
 int log_start(void) {
   // Create initial console for debug log.
   if (vc_create(&log_vc, &color_schemes[kDefaultColorScheme]) != ZX_OK) {

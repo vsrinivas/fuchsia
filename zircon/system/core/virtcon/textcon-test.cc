@@ -2,13 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gfx/gfx.h>
-#include <fbl/unique_ptr.h>
+#include "textcon.h"
+
 #include <sys/param.h>
+
+#include <fbl/unique_ptr.h>
+#include <gfx/gfx.h>
 #include <unittest/unittest.h>
 
-#include "textcon.h"
 #include "vc.h"
+
+// The graphics used for testing.
+vc_gfx_t main_test_graphics = {};
+void vc_attach_to_main_display(vc_t* vc) {
+  vc->graphics = &main_test_graphics;
+  vc_attach_gfx(vc);
+}
 
 // This is needed to satisfy a reference from vc_handle_device_control_keys
 // in vc-input.cpp but the code path to that reference is dead in this test.
@@ -74,7 +83,7 @@ class TextconHelper {
                                     ZX_PIXEL_FORMAT_RGB_565, 0);
     EXPECT_TRUE(vc_surface, "");
     // This takes ownership of vc_surface.
-    EXPECT_EQ(vc_init_gfx(vc_surface), ZX_OK, "");
+    EXPECT_EQ(vc_init_gfx(&main_test_graphics, vc_surface), ZX_OK, "");
     EXPECT_EQ(vc_alloc(&vc_dev, color_scheme), ZX_OK, "");
     EXPECT_EQ(vc_dev->columns, size_x, "");
     EXPECT_EQ(vc_rows(vc_dev), static_cast<int>(size_y), "");
@@ -83,7 +92,7 @@ class TextconHelper {
     vc_dev->active = true;
     // Propagate the initial display contents to vc_surface.
     vc_full_repaint(vc_dev);
-    vc_gfx_invalidate_all(vc_dev);
+    vc_gfx_invalidate_all(&main_test_graphics, vc_dev);
   }
 
   ~TextconHelper() {
@@ -160,7 +169,7 @@ class TextconHelper {
 
   void InvalidateAllGraphics() {
     vc_full_repaint(vc_dev);
-    vc_gfx_invalidate_all(vc_dev);
+    vc_gfx_invalidate_all(&main_test_graphics, vc_dev);
   }
 
   void PutString(const char* str) {

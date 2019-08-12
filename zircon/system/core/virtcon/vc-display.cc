@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/fd.h>
@@ -11,7 +10,6 @@
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-#include <port/port.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/device/display-controller.h>
@@ -19,6 +17,9 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <fbl/unique_fd.h>
+#include <port/port.h>
 
 #include "fuchsia/hardware/display/c/fidl.h"
 #include "vc.h"
@@ -37,20 +38,29 @@ typedef struct display_info {
   uint64_t id;
   uint32_t width;
   uint32_t height;
+  uint32_t stride;
   zx_pixel_format_t format;
 
   uint64_t image_id;
   uint64_t layer_id;
 
+  bool bound;
+
+  // Only valid when |bound| is true.
+  zx_handle_t image_vmo;
+  fuchsia_hardware_display_ImageConfig image_config;
+
+  vc_gfx_t* graphics;
+
   struct list_node node;
+  // If the display is not a main display, then this is the log vc for the
+  // display.
+  vc_t* log_vc;
 } display_info_t;
 
 static struct list_node display_list = LIST_INITIAL_VALUE(display_list);
 
-static bool displays_bound = false;
-// Owned by vc_gfx, only valid when displays_bound is true
-static zx_handle_t image_vmo = ZX_HANDLE_INVALID;
-static fuchsia_hardware_display_ImageConfig image_config;
+static bool primary_bound = false;
 
 // remember whether the virtual console controls the display
 bool g_vc_owns_display = false;
@@ -63,6 +73,15 @@ static zx_status_t vc_set_mode(uint8_t mode) {
   request.mode = mode;
 
   return zx_channel_write(dc_ph.handle, 0, &request, sizeof(request), nullptr, 0);
+}
+
+void vc_attach_to_main_display(vc_t* vc) {
+  if (list_is_empty(&display_list)) {
+    return;
+  }
+  display_info_t* primary = list_peek_head_type(&display_list, display_info_t, node);
+  vc->graphics = primary->graphics;
+  vc_attach_gfx(vc);
 }
 
 void vc_toggle_framebuffer() {
@@ -169,7 +188,8 @@ static void release_image(uint64_t image_id) {
 
 static zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
                                         fuchsia_hardware_display_Mode* mode, int32_t pixel_format) {
-  display_info_t* display_info = reinterpret_cast<display_info_t*>(malloc(sizeof(display_info_t)));
+  display_info_t* display_info =
+      reinterpret_cast<display_info_t*>(calloc(1, sizeof(display_info_t)));
   if (!display_info) {
     printf("vc: failed to alloc display info\n");
     return ZX_ERR_NO_MEMORY;
@@ -187,6 +207,10 @@ static zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
   display_info->height = mode->vertical_resolution;
   display_info->format = reinterpret_cast<int32_t*>(info->pixel_format.data)[0];
   display_info->image_id = 0;
+  display_info->image_vmo = ZX_HANDLE_INVALID;
+  display_info->bound = false;
+  display_info->log_vc = nullptr;
+  display_info->graphics = nullptr;
 
   list_add_tail(&display_list, &display_info->node);
 
@@ -206,19 +230,22 @@ static void handle_display_removed(uint64_t id) {
     if (info->id == id) {
       destroy_layer(info->layer_id);
       release_image(info->image_id);
-
       list_delete(&info->node);
+      zx_handle_close(info->image_vmo);
+
+      if (info->graphics) {
+        free(info->graphics);
+      }
+      if (info->log_vc) {
+        log_delete_vc(info->log_vc);
+      }
       free(info);
-    } else if (was_primary) {
-      release_image(info->image_id);
-      info->image_id = 0;
     }
   }
 
   if (was_primary) {
     set_log_listener_active(false);
-    vc_free_gfx();
-    displays_bound = false;
+    primary_bound = false;
   }
 }
 
@@ -430,6 +457,45 @@ static zx_status_t apply_configuration() {
   return ZX_OK;
 }
 
+static zx_status_t alloc_display_info_vmo(display_info_t* display) {
+  if (get_single_framebuffer(&display->image_vmo, &display->stride) != ZX_OK) {
+    fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest stride_msg;
+    stride_msg.hdr.ordinal = fuchsia_hardware_display_ControllerComputeLinearImageStrideOrdinal;
+    stride_msg.width = display->width;
+    stride_msg.pixel_format = display->format;
+
+    fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse stride_rsp;
+    zx_channel_call_args_t stride_call = {};
+    stride_call.wr_bytes = &stride_msg;
+    stride_call.rd_bytes = &stride_rsp;
+    stride_call.wr_num_bytes = sizeof(stride_msg);
+    stride_call.rd_num_bytes = sizeof(stride_rsp);
+    uint32_t actual_bytes, actual_handles;
+    zx_status_t status;
+    if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &stride_call, &actual_bytes,
+                                  &actual_handles)) != ZX_OK) {
+      printf("vc: Failed to compute fb stride: %d (%s)\n", status, zx_status_get_string(status));
+      return status;
+    }
+
+    if (stride_rsp.stride < display->width) {
+      printf("vc: Got bad stride\n");
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    display->stride = stride_rsp.stride;
+    uint32_t size = display->stride * display->height * ZX_PIXEL_FORMAT_BYTES(display->format);
+    if ((status = allocate_vmo(size, &display->image_vmo)) != ZX_OK) {
+      return ZX_ERR_NO_MEMORY;
+    }
+  }
+  display->image_config.height = display->height;
+  display->image_config.width = display->width;
+  display->image_config.pixel_format = display->format;
+  display->image_config.type = IMAGE_TYPE_SIMPLE;
+  return ZX_OK;
+}
+
 static zx_status_t rebind_display(bool use_all) {
   // Arbitrarily pick the oldest display as the primary dispay
   display_info* primary = list_peek_head_type(&display_list, display_info, node);
@@ -439,62 +505,50 @@ static zx_status_t rebind_display(bool use_all) {
   }
 
   zx_status_t status;
-  if (!displays_bound) {
-    uint32_t stride;
-    if (get_single_framebuffer(&image_vmo, &stride) != ZX_OK) {
-      fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest stride_msg;
-      stride_msg.hdr.ordinal = fuchsia_hardware_display_ControllerComputeLinearImageStrideOrdinal;
-      stride_msg.width = primary->width;
-      stride_msg.pixel_format = primary->format;
-
-      fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse stride_rsp;
-      zx_channel_call_args_t stride_call = {};
-      stride_call.wr_bytes = &stride_msg;
-      stride_call.rd_bytes = &stride_rsp;
-      stride_call.wr_num_bytes = sizeof(stride_msg);
-      stride_call.rd_num_bytes = sizeof(stride_rsp);
-      uint32_t actual_bytes, actual_handles;
-      zx_status_t status;
-      if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &stride_call, &actual_bytes,
-                                    &actual_handles)) != ZX_OK) {
-        printf("vc: Failed to compute fb stride: %d (%s)\n", status, zx_status_get_string(status));
-        return status;
-      }
-
-      if (stride_rsp.stride < primary->width) {
-        printf("vc: Got bad stride\n");
-        return ZX_ERR_INVALID_ARGS;
-      }
-
-      stride = stride_rsp.stride;
-      uint32_t size = stride * primary->height * ZX_PIXEL_FORMAT_BYTES(primary->format);
-      if ((status = allocate_vmo(size, &image_vmo)) != ZX_OK) {
-        return ZX_ERR_NO_MEMORY;
-      }
+  // This happens when the last primary disconnected and a new, already
+  // bound display becomes primary. We must un-bind the display and
+  // rebind.
+  if (!primary_bound && primary->bound) {
+    // Remove the primary display's log console.
+    if (primary->log_vc) {
+      log_delete_vc(primary->log_vc);
+      primary->log_vc = nullptr;
     }
-    image_config.height = primary->height;
-    image_config.width = primary->width;
-    image_config.pixel_format = primary->format;
-    image_config.type = IMAGE_TYPE_SIMPLE;
-
-    if ((status = vc_init_gfx(image_vmo, primary->width, primary->height, primary->format,
-                              stride)) != ZX_OK) {
-      printf("vc: failed to initialize graphics for new display %d\n", status);
-      zx_handle_close(image_vmo);
-      return status;
-    }
+    // Switch all of the current vcs to using this display.
+    vc_change_graphics(primary->graphics);
   }
 
   display_info_t* info = nullptr;
   list_for_every_entry (&display_list, info, display_info_t, node) {
     if (!use_all && info != primary) {
-      // If we're not showing anything on this display, remove its layer
+      // If we're not showing anything on this display, remove its layer.
       if ((status = set_display_layer(info->id, 0)) != ZX_OK) {
         break;
       }
     } else if (info->image_id == 0) {
-      // If we want to display something but aren't, configure the display
-      if ((status = import_vmo(image_vmo, &image_config, &info->image_id)) != ZX_OK) {
+      // If we want to display something but aren't, configure the display.
+      if ((status = alloc_display_info_vmo(info)) != ZX_OK) {
+        printf("vc: failed to allocate vmo for new display %d\n", status);
+        break;
+      }
+
+      info->graphics = reinterpret_cast<vc_gfx_t*>(calloc(1, sizeof(vc_gfx_t)));
+      if ((status = vc_init_gfx(info->graphics, info->image_vmo, info->width, info->height,
+                                info->format, info->stride)) != ZX_OK) {
+        printf("vc: failed to initialize graphics for new display %d\n", status);
+        break;
+      }
+
+      // If this is not the primary display then create the log console
+      // for the display.
+      if (info != primary) {
+        if ((status = log_create_vc(info->graphics, &info->log_vc)) != ZX_OK) {
+          break;
+        }
+      }
+      info->bound = true;
+
+      if ((status = import_vmo(info->image_vmo, &info->image_config, &info->image_id)) != ZX_OK) {
         break;
       }
 
@@ -502,8 +556,8 @@ static zx_status_t rebind_display(bool use_all) {
         break;
       }
 
-      if ((status =
-               configure_layer(info, info->layer_id, info->image_id, &image_config) != ZX_OK)) {
+      if ((status = configure_layer(info, info->layer_id, info->image_id, &info->image_config) !=
+                    ZX_OK)) {
         break;
       }
     }
@@ -515,10 +569,10 @@ static zx_status_t rebind_display(bool use_all) {
     // log message (which is helpful when tracing the addition/removal of
     // observers).
     set_log_listener_active(true);
-    vc_show_active();
+    vc_change_graphics(primary->graphics);
 
     printf("vc: Successfully attached to display %ld\n", primary->id);
-    displays_bound = true;
+    primary_bound = true;
     return ZX_OK;
   } else {
     display_info_t* info = nullptr;
@@ -527,9 +581,15 @@ static zx_status_t rebind_display(bool use_all) {
         release_image(info->image_id);
         info->image_id = 0;
       }
+      if (info->image_vmo) {
+        zx_handle_close(info->image_vmo);
+        info->image_vmo = 0;
+      }
+      if (info->graphics) {
+        free(info->graphics);
+        info->graphics = nullptr;
+      }
     }
-
-    vc_free_gfx();
 
     if (use_all) {
       return rebind_display(false);

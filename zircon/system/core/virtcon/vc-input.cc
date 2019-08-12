@@ -5,12 +5,13 @@
 #include <fcntl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/hardware/pty/c/fidl.h>
-#include <hid/usages.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 #include <sys/param.h>
+
+#include <hid/usages.h>
 
 #include "keyboard-vt100.h"
 #include "keyboard.h"
@@ -190,6 +191,12 @@ void vc_show_active() {
       vc_render(vc);
     }
   }
+}
+
+void vc_change_graphics(vc_gfx_t* graphics) {
+  vc_t* vc = NULL;
+  list_for_every_entry (&g_vc_list, vc, vc_t, node) { vc->graphics = graphics; }
+  vc_show_active();
 }
 
 void vc_status_update() {

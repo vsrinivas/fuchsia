@@ -4,15 +4,14 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <lib/gfx-font-data/gfx-font-data.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
-
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
 #include <fbl/auto_lock.h>
-#include <lib/gfx-font-data/gfx-font-data.h>
 
 #include "vc.h"
 
@@ -23,11 +22,6 @@
 #define SCROLLBACK_ROWS 1024  // TODO make configurable
 
 #define ABS(val) (((val) >= 0) ? (val) : -(val))
-
-// shared with vc-gfx.cpp
-extern gfx_surface* vc_gfx;
-extern gfx_surface* vc_tb_gfx;
-extern const gfx_font* vc_font;
 
 static zx_status_t vc_setup(vc_t* vc, const color_scheme_t* color_scheme) {
   // calculate how many rows/columns we have
@@ -60,10 +54,12 @@ static zx_status_t vc_setup(vc_t* vc, const color_scheme_t* color_scheme) {
   return ZX_OK;
 }
 
+bool vc_graphics_enabled(vc_t* vc) { return vc->graphics && vc->graphics->vc_gfx; }
+
 static void vc_invalidate(void* cookie, int x0, int y0, int w, int h) {
   vc_t* vc = reinterpret_cast<vc_t*>(cookie);
 
-  if (!g_vc_owns_display || !vc->active || !vc_gfx) {
+  if (!g_vc_owns_display || !vc->active || !vc_graphics_enabled(vc)) {
     return;
   }
 
@@ -85,7 +81,7 @@ static void vc_invalidate(void* cookie, int x0, int y0, int w, int h) {
       // Scrollback row.
       vc_char_t* row = vc_get_scrollback_line_ptr(vc, y + vc->scrollback_rows_count);
       for (int x = x0; x < x0 + w; x++) {
-        vc_gfx_draw_char(vc, row[x], x, y - vc->viewport_y,
+        vc_gfx_draw_char(vc->graphics, vc, row[x], x, y - vc->viewport_y,
                          /* invert= */ false);
       }
     } else {
@@ -100,7 +96,7 @@ static void vc_invalidate(void* cookie, int x0, int y0, int w, int h) {
         // gnome-terminal.
         bool invert = (!vc->hide_cursor && static_cast<unsigned>(x) == vc->cursor_x &&
                        static_cast<unsigned>(y) == vc->cursor_y);
-        vc_gfx_draw_char(vc, row[x], x, y - vc->viewport_y, invert);
+        vc_gfx_draw_char(vc->graphics, vc, row[x], x, y - vc->viewport_y, invert);
       }
     }
   }
@@ -226,15 +222,15 @@ static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src, int line_count
   // The next two calls can be done in any order.
   tc_copy_lines(&vc->textcon, y_dest, y_src, line_count);
 
-  if (g_vc_owns_display && vc->active && vc_gfx) {
-    gfx_copyrect(vc_gfx, 0, y_src * vc->charh, vc_gfx->width, line_count * vc->charh, 0,
-                 y_dest * vc->charh);
+  if (g_vc_owns_display && vc->active && vc_graphics_enabled(vc)) {
+    gfx_copyrect(vc->graphics->vc_gfx, 0, y_src * vc->charh, vc->graphics->vc_gfx->width,
+                 line_count * vc->charh, 0, y_dest * vc->charh);
 
     // Restore the cursor.
     vc_set_cursor_hidden(vc, old_hide_cursor);
 
     vc_status_update();
-    vc_gfx_invalidate_status();
+    vc_gfx_invalidate_status(vc->graphics);
     vc_invalidate_lines(vc, 0, vc_rows(vc));
   }
 }
@@ -246,8 +242,8 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
       strncpy(vc->title, (char*)arg, sizeof(vc->title));
       vc->title[sizeof(vc->title) - 1] = '\0';
       vc_status_update();
-      if (g_vc_owns_display && vc_gfx) {
-        vc_gfx_invalidate_status();
+      if (g_vc_owns_display && vc_graphics_enabled(vc)) {
+        vc_gfx_invalidate_status(vc->graphics);
       }
       break;
     case TC_SHOW_CURSOR:
@@ -262,8 +258,9 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
 
 static void vc_clear_gfx(vc_t* vc) {
   // Fill display with background color
-  if (g_vc_owns_display && vc->active && vc_gfx) {
-    gfx_fillrect(vc_gfx, 0, 0, vc_gfx->width, vc_gfx->height, palette_to_color(vc, vc->back_color));
+  if (g_vc_owns_display && vc->active && vc_graphics_enabled(vc)) {
+    gfx_fillrect(vc->graphics->vc_gfx, 0, 0, vc->graphics->vc_gfx->width,
+                 vc->graphics->vc_gfx->height, palette_to_color(vc, vc->back_color));
   }
 }
 
@@ -291,21 +288,23 @@ static void vc_reset(vc_t* vc) {
   }
 
   vc_clear_gfx(vc);
-  if (vc_gfx) {
-    vc_gfx_invalidate_all(vc);
+  if (vc_graphics_enabled(vc)) {
+    vc_gfx_invalidate_all(vc->graphics, vc);
   }
 }
 
 void vc_status_clear() {
-  if (g_vc_owns_display && vc_gfx) {
-    gfx_fillrect(vc_tb_gfx, 0, 0, vc_tb_gfx->width, vc_tb_gfx->height,
+  if (g_vc_owns_display && g_active_vc && vc_graphics_enabled(g_active_vc)) {
+    gfx_fillrect(g_active_vc->graphics->vc_status_bar_gfx, 0, 0,
+                 g_active_vc->graphics->vc_status_bar_gfx->width,
+                 g_active_vc->graphics->vc_status_bar_gfx->height,
                  default_palette[STATUS_COLOR_BG]);
   }
 }
 
 void vc_status_commit() {
-  if (g_vc_owns_display && vc_gfx) {
-    vc_gfx_invalidate_status();
+  if (g_vc_owns_display && g_active_vc && vc_graphics_enabled(g_active_vc)) {
+    vc_gfx_invalidate_status(g_active_vc->graphics);
   }
 }
 
@@ -313,25 +312,29 @@ void vc_status_write(int x, unsigned color, const char* text) {
   char c;
   unsigned fg = default_palette[color];
   unsigned bg = default_palette[STATUS_COLOR_BG];
+  vc_t* vc = g_active_vc;
+  if (!g_active_vc) {
+    return;
+  }
 
-  if (g_vc_owns_display && vc_gfx) {
-    x *= vc_font->width;
+  if (g_vc_owns_display && vc_graphics_enabled(vc)) {
+    x *= vc->graphics->vc_font->width;
     while ((c = *text++) != 0) {
-      gfx_putchar(vc_tb_gfx, vc_font, c, x, 0, fg, bg);
-      x += vc_font->width;
+      gfx_putchar(vc->graphics->vc_status_bar_gfx, vc->graphics->vc_font, c, x, 0, fg, bg);
+      x += vc->graphics->vc_font->width;
     }
   }
 }
 
 void vc_render(vc_t* vc) {
-  if (g_vc_owns_display && vc->active && vc_gfx) {
+  if (g_vc_owns_display && vc->active && vc_graphics_enabled(vc)) {
     vc_status_update();
-    vc_gfx_invalidate_all(vc);
+    vc_gfx_invalidate_all(vc->graphics, vc);
   }
 }
 
 void vc_full_repaint(vc_t* vc) {
-  if (g_vc_owns_display && vc_gfx) {
+  if (g_vc_owns_display && vc_graphics_enabled(vc)) {
     vc_clear_gfx(vc);
     int scrollback_lines = vc_get_scrollback_lines(vc);
     vc_invalidate(vc, 0, -scrollback_lines, vc->columns, scrollback_lines + vc->rows);
@@ -357,7 +360,7 @@ static void vc_scroll_viewport_abs(vc_t* vc, int vpy) {
   int diff_abs = ABS(diff);
   vc->viewport_y = vpy;
   int rows = vc_rows(vc);
-  if (!g_vc_owns_display || !vc->active || !vc_gfx) {
+  if (!g_vc_owns_display || !vc->active || !vc_graphics_enabled(vc)) {
     return;
   }
   if (diff_abs >= rows) {
@@ -366,12 +369,12 @@ static void vc_scroll_viewport_abs(vc_t* vc, int vpy) {
     vc_invalidate(vc, 0, vpy, vc->columns, rows);
   } else {
     if (diff > 0) {
-      gfx_copyrect(vc_gfx, 0, diff_abs * vc->charh, vc_gfx->width, (rows - diff_abs) * vc->charh, 0,
-                   0);
+      gfx_copyrect(vc->graphics->vc_gfx, 0, diff_abs * vc->charh, vc->graphics->vc_gfx->width,
+                   (rows - diff_abs) * vc->charh, 0, 0);
       vc_invalidate(vc, 0, vpy + rows - diff_abs, vc->columns, diff_abs);
     } else {
-      gfx_copyrect(vc_gfx, 0, 0, vc_gfx->width, (rows - diff_abs) * vc->charh, 0,
-                   diff_abs * vc->charh);
+      gfx_copyrect(vc->graphics->vc_gfx, 0, 0, vc->graphics->vc_gfx->width,
+                   (rows - diff_abs) * vc->charh, 0, diff_abs * vc->charh);
       vc_invalidate(vc, 0, vpy, vc->columns, diff_abs);
     }
   }
@@ -413,11 +416,14 @@ const gfx_font* vc_get_font() {
 }
 
 void vc_attach_gfx(vc_t* vc) {
+  if (vc->graphics == nullptr) {
+    return;
+  }
   // If the size of the new gfx console doesn't match what we had been
   // attached to, we need to allocate new memory and copy the existing
   // data over.
-  unsigned rows = vc_gfx->height / vc->charh;
-  unsigned columns = vc_gfx->width / vc->charw;
+  unsigned rows = vc->graphics->vc_gfx->height / vc->charh;
+  unsigned columns = vc->graphics->vc_gfx->width / vc->charw;
   if (rows == vc->rows && columns == vc->columns) {
     return;
   }
@@ -530,9 +536,7 @@ zx_status_t vc_alloc(vc_t** out, const color_scheme_t* color_scheme) {
     return status;
   }
 
-  if (vc_gfx) {
-    vc_attach_gfx(vc);
-  }
+  vc_attach_to_main_display(vc);
   vc_reset(vc);
 
   *out = vc;
@@ -549,18 +553,19 @@ void vc_free(vc_t* vc) {
 }
 
 void vc_flush(vc_t* vc) {
-  if (g_vc_owns_display && vc_gfx && vc->invy1 >= 0) {
+  if (g_vc_owns_display && vc_graphics_enabled(vc) && vc->invy1 >= 0) {
     int rows = vc_rows(vc);
     // Adjust for the current viewport position.  Convert
     // console-relative row numbers to screen-relative row numbers.
     int invalidate_y0 = MIN(vc->invy0 - vc->viewport_y, rows);
     int invalidate_y1 = MIN(vc->invy1 - vc->viewport_y, rows);
-    vc_gfx_invalidate(vc, 0, invalidate_y0, vc->columns, invalidate_y1 - invalidate_y0);
+    vc_gfx_invalidate(vc->graphics, vc, 0, invalidate_y0, vc->columns,
+                      invalidate_y1 - invalidate_y0);
   }
 }
 
 void vc_flush_all(vc_t* vc) {
-  if (g_vc_owns_display && vc_gfx) {
-    vc_gfx_invalidate_all(vc);
+  if (g_vc_owns_display && vc_graphics_enabled(vc)) {
+    vc_gfx_invalidate_all(vc->graphics, vc);
   }
 }

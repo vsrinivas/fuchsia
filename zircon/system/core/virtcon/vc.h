@@ -18,16 +18,9 @@
 
 #include "textcon.h"
 #include "vc-colors.h"
+#include "vc-gfx.h"
 
 #define MAX_COLOR 0xf
-
-#if BUILD_FOR_TEST
-zx_status_t vc_init_gfx(gfx_surface* gfx);
-#else
-zx_status_t vc_init_gfx(zx_handle_t fb_vmo, int32_t width, int32_t height, zx_pixel_format_t format,
-                        int32_t stride);
-void vc_free_gfx();
-#endif
 
 typedef void (*keypress_handler_t)(uint8_t keycode, int modifiers);
 
@@ -94,6 +87,8 @@ typedef struct vc {
   struct list_node node;
   // for virtual console list
 
+  vc_gfx_t* graphics;
+
 #if !BUILD_FOR_TEST
   port_fd_handler fh;
   zx_handle_t proc;
@@ -108,7 +103,8 @@ typedef struct vc {
 #define VC_FLAG_FULLSCREEN (1 << 1)
 
 const gfx_font* vc_get_font();
-zx_status_t vc_alloc(vc_t** out, const color_scheme* color_scheme);
+
+zx_status_t vc_alloc(vc_t** out, const color_scheme_t* color_scheme);
 void vc_attach_gfx(vc_t* vc);
 void vc_free(vc_t* vc);
 void vc_flush(vc_t* vc);
@@ -138,16 +134,6 @@ static inline int vc_rows(vc_t* vc) {
   return vc->flags & VC_FLAG_FULLSCREEN ? vc->rows : vc->rows - 1;
 }
 
-// drawing:
-
-void vc_gfx_invalidate_all(vc_t* vc);
-void vc_gfx_invalidate_status();
-// invalidates a region in characters
-void vc_gfx_invalidate(vc_t* vc, unsigned x, unsigned y, unsigned w, unsigned h);
-// invalidates a region in pixels
-void vc_gfx_invalidate_region(vc_t* vc, unsigned x, unsigned y, unsigned w, unsigned h);
-void vc_gfx_draw_char(vc_t* vc, vc_char_t ch, unsigned x, unsigned y, bool invert);
-
 static inline uint32_t palette_to_color(vc_t* vc, uint8_t color) {
   assert(color <= MAX_COLOR);
   return vc->palette[color];
@@ -166,12 +152,16 @@ void vc_destroy(vc_t* vc);
 ssize_t vc_write(vc_t* vc, const void* buf, size_t count, zx_off_t off);
 zx_status_t vc_set_active(int num, vc_t* vc);
 void vc_show_active();
+void vc_change_graphics(vc_gfx_t* graphics);
 
 void set_log_listener_active(bool active);
 int log_start(void);
 zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
+zx_status_t log_create_vc(vc_gfx_t* graphics, vc_t** vc_out);
+void log_delete_vc(vc_t* vc);
 
 bool vc_display_init(void);
+void vc_attach_to_main_display(vc_t* vc);
 
 void set_log_listener_active(bool active);
 zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,
