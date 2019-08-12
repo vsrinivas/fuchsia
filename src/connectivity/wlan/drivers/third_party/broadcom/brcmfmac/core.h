@@ -21,7 +21,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_
 
+#include <lib/sync/completion.h>
+#include <netinet/if_ether.h>
 #include <threads.h>
+
+#include <array>
 #include <atomic>
 #include <mutex>
 
@@ -65,6 +69,8 @@
 #define BRCMF_DRIVER_FIRMWARE_VERSION_LEN 32
 
 #define NDOL_MAX_ENTRIES 8
+
+#define RSSI_HISTOGRAM_LEN 129
 
 static inline bool address_is_multicast(const uint8_t* address) { return 1 & *address; }
 
@@ -275,6 +281,8 @@ struct net_device {
     int multicast;
     int rx_errors;
     int tx_errors;
+    // rssi histogram, index = -(rssi), For ex, -128 => 128....-1 => 1
+    std::array<uint64_t, RSSI_HISTOGRAM_LEN> rssi_buckets;
   } stats;
   uint32_t features;
   uint32_t needed_headroom;

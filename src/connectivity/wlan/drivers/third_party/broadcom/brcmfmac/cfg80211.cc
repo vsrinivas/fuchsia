@@ -18,14 +18,15 @@
 
 #include "cfg80211.h"
 
+#include <threads.h>
+#include <zircon/status.h>
+
 #include <algorithm>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/if-impl.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/status.h>
-
-#include <threads.h>
 
 #include "bits.h"
 #include "brcmu_utils.h"
@@ -3550,6 +3551,10 @@ void brcmf_hook_stats_query_req(void* ctx) {
         mlme_stats.client_mlme_stats.tx_frame.drop.count = pktcnt.tx_bad_pkt;
         mlme_stats.client_mlme_stats.tx_frame.drop.name = "Bad";
       }
+      // Pass on the data rssi histogram (populated in fwsignal.cc)
+      mlme_stats.client_mlme_stats.assoc_data_rssi.hist = ndev->stats.rssi_buckets.data();
+      mlme_stats.client_mlme_stats.assoc_data_rssi.hist_len =
+          sizeof(ndev->stats.rssi_buckets) / sizeof(uint64_t);
       break;
     }
     case WLAN_INFO_MAC_ROLE_AP: {
