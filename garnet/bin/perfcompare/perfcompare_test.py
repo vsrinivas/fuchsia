@@ -119,6 +119,11 @@ def GenerateTestData(mean, stddev):
     return [x * stddev + mean for x in TEST_VALUES]
 
 
+# This is an example of a slow running time value for an initial run of a
+# test.  This should be skipped by the software under test.
+SLOW_INITIAL_RUN = [1e6]
+
+
 class StatisticsTest(TempDirTestCase):
 
     # Generate some example perf test data, allowing variation at each
@@ -136,7 +141,8 @@ class StatisticsTest(TempDirTestCase):
 
         # This reads 4**3 + 4**2 + 4 = 84 values from TEST_VALUES, so
         # it does not exceed the number of values in TEST_VALUES.
-        return [[GenerateValues(mean_within_process, stddev_across_iters, 4)
+        return [[SLOW_INITIAL_RUN
+                 + GenerateValues(mean_within_process, stddev_across_iters, 4)
                  for mean_within_process in GenerateValues(
                          mean_within_boot, stddev_across_processes, 4)]
                 for mean_within_boot in GenerateValues(
@@ -244,7 +250,7 @@ class PerfCompareTest(TempDirTestCase):
                     [{'label': test_name,
                       'test_suite': 'fuchsia.example.perf_test',
                       'unit': 'nanoseconds',
-                      'values': [value]}])
+                      'values': SLOW_INITIAL_RUN + [value]}])
 
     def ExampleDataDir(self, **kwargs):
         dir_path = self.MakeTempDir()

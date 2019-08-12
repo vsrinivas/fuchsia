@@ -142,7 +142,13 @@ def ResultsFromDirs(filenames):
         results_for_boot = {}
         for process_run_results in RawResultsFromDir(boot_results_path):
             for test_case in process_run_results:
-                new_value = Mean(test_case['values'])
+                # Skip the running time from the test's initial run within
+                # the process; treat it as a warmup run.  The initial run
+                # is often slower than later runs, so it would skew the
+                # mean if we included it.  The RoundTrip_*_MultiProcess
+                # tests are an extreme case, because the first run waits
+                # for a subprocess to start up.  See PT-244.
+                new_value = Mean(test_case['values'][1:])
                 results_for_boot.setdefault(test_case['label'], []).append(
                     new_value)
         for label, values in results_for_boot.iteritems():
