@@ -1244,6 +1244,15 @@ if (target_cpu != "arm64" && !use_vboot) {
   ]
 } else {
   if (bootloader_prebuilt != "") {
+    copy("bootloader_image") {
+      testonly = true
+      sources = [
+        rebase_path("$bootloader_prebuilt$bootloader_hw_revision", root_build_dir),
+      ]
+      outputs = [
+        "$root_out_dir/bootloader.img",
+      ]
+    }
     images += [
       {
         deps = []
@@ -1257,8 +1266,11 @@ if (target_cpu != "arm64" && !use_vboot) {
         public = [
           "IMAGE_BOOTLOADER_RAW",
         ]
+        deps = [
+          ":bootloader_image",
+        ]
         sources = [
-          "$bootloader_prebuilt$bootloader_hw_revision",
+          "$root_out_dir/bootloader.img",
         ]
       },
     ]
