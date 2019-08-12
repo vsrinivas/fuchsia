@@ -26,6 +26,9 @@ pub async fn get_brightness(backlight: &BacklightProxy) -> Result<u8, Error> {
 }
 
 pub fn set_brightness(backlight: &BacklightProxy, nits: u16) -> Result<(), Error> {
-    backlight.set_state(&mut BacklightState { on: true, brightness: nits as u8 })?;
+    backlight.set_state(&mut BacklightState {
+        on: nits != 0,
+        brightness: nits as u8,
+    })?;
     Ok(())
 }

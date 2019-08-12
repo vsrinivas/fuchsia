@@ -163,7 +163,7 @@ async fn set_brightness_slowly(
     time_per_step: Duration,
 ) -> Result<(), Error> {
     let mut current_nits = current_nits;
-    let to_nits = num_traits::clamp(to_nits, 1, 255);
+    let to_nits = num_traits::clamp(to_nits, 0, 255);
     assert!(to_nits <= 255);
     assert!(current_nits <= 255);
     let difference = to_nits as i16 - current_nits as i16;
@@ -180,6 +180,8 @@ async fn set_brightness_slowly(
             }
         }
     }
+    // Make sure we get to the correct value, there may be rounding errors
+    set_brightness(to_nits);
     Ok(())
 }
 
@@ -234,12 +236,13 @@ mod tests {
             result.push(nits);
         };
         set_brightness_slowly(100, 200, set_brightness, 0.millis()).await.unwrap();
-        assert_eq!(100, result.len(), "wrong length");
+        assert_eq!(101, result.len(), "wrong length");
         assert_eq!(101, result[0]);
         assert_eq!(102, result[1]);
         assert_eq!(151, result[50]);
         assert_eq!(199, result[98]);
         assert_eq!(200, result[99]);
+        assert_eq!(200, result[100]);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -249,12 +252,13 @@ mod tests {
             result.push(nits);
         };
         set_brightness_slowly(100, 0, set_brightness, 0.millis()).await.unwrap();
-        assert_eq!(99, result.len(), "wrong length");
+        assert_eq!(101, result.len(), "wrong length");
         assert_eq!(99, result[0]);
         assert_eq!(98, result[1]);
         assert_eq!(49, result[50]);
         assert_eq!(2, result[97]);
-        assert_eq!(1, result[98]);
+        assert_eq!(1, result[99]);
+        assert_eq!(0, result[100]);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -264,10 +268,11 @@ mod tests {
             result.push(nits);
         };
         set_brightness_slowly(240, 260, set_brightness, 0.millis()).await.unwrap();
-        assert_eq!(15, result.len(), "wrong length");
+        assert_eq!(16, result.len(), "wrong length");
         assert_eq!(241, result[0]);
         assert_eq!(248, result[7]);
         assert_eq!(254, result[13]);
         assert_eq!(255, result[14]);
+        assert_eq!(255, result[15]);
     }
 }
