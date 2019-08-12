@@ -16,7 +16,6 @@ group("peridot") {
     "lib",
     "public",
     "tests",
-    "third_party",
   ]
 }
 

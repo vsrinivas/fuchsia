@@ -18,7 +18,6 @@ source_set("primitives") {
 
   deps = [
     "//peridot/lib/rng",
-    "//peridot/third_party/modp_b64",
     "//src/lib/fxl",
     "//third_party/boringssl",
   ]

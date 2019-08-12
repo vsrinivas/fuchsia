@@ -19,6 +19,6 @@ source_set("base64url") {
   ]
 
   deps = [
-    "//peridot/third_party/modp_b64",
+    "//third_party/modp_b64",
   ]
 }

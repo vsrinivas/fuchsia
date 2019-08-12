@@ -73,6 +73,7 @@ json_generator_tests_*.txt
 /test_data/
 /third_party/*
 !/third_party/rust_crates
+!/third_party/modp_b64
 /tmp/
 /topaz/
 /vendor/
