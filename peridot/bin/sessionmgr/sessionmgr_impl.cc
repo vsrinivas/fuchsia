@@ -676,6 +676,7 @@ void SessionmgrImpl::InitializeDiscovermgr() {
   auto service_list = fuchsia::sys::ServiceList::New();
   service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
   service_list->names.push_back(fuchsia::modular::EntityResolver::Name_);
+  service_list->names.push_back(fuchsia::ledger::Ledger::Name_);
   discovermgr_ns_services_.AddService<fuchsia::modular::PuppetMaster>([this](auto request) {
     if (terminating_) {
       return;
@@ -688,7 +689,12 @@ void SessionmgrImpl::InitializeDiscovermgr() {
     }
     entity_provider_runner_->ConnectEntityResolver(std::move(request));
   });
-
+  discovermgr_ns_services_.AddService<fuchsia::ledger::Ledger>([this](auto request) {
+    if (terminating_) {
+      return;
+    }
+    ledger_repository_->GetLedger(to_array(kDiscovermgrUrl), std::move(request));
+  });
   discovermgr_ns_services_.AddBinding(service_list->provider.NewRequest());
 
   fuchsia::modular::AppConfig discovermgr_config;
