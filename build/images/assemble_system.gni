@@ -7,8 +7,8 @@ import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/fvm.gni")
+import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
-import("//garnet/build/pkgfs.gni")
 
 # Assembles a Fuchsia system.
 #

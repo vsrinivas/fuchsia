@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/zbi.gni")
 import("//build/images/assemble_system.gni")
-import("//garnet/build/pkgfs.gni")
+import("//build/images/pkgfs.gni")
 
 guest_packages = [
   "//garnet/bin/appmgr",
