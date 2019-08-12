@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/telephony_bin_test"
+    }
+}

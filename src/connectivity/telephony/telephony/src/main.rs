@@ -8,7 +8,9 @@
 use {
     failure::{Error, Fail, ResultExt},
     fidl_fuchsia_telephony_manager::{ManagerRequest, ManagerRequestStream},
-    fidl_fuchsia_telephony_ril::{SetupMarker, RadioInterfaceLayerMarker, RadioInterfaceLayerProxy},
+    fidl_fuchsia_telephony_ril::{
+        RadioInterfaceLayerMarker, RadioInterfaceLayerProxy, SetupMarker,
+    },
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{launch, launcher, App},
@@ -18,7 +20,10 @@ use {
     fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon as zx,
-    futures::{future::{self, join}, Future, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{
+        future::{self, join},
+        Future, StreamExt, TryFutureExt, TryStreamExt,
+    },
     parking_lot::RwLock,
     qmi::connect_transport_device,
     std::fs::File,
@@ -165,4 +170,12 @@ fn main() -> Result<(), Error> {
 
     let ((), ()) = executor.run_singlethreaded(join(device_watcher, fs.collect::<()>()));
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn pass() -> () {
+        ();
+    }
 }
