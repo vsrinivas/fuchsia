@@ -10,5 +10,6 @@ group("tests") {
     "//tools/blackout:tests",
     "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
     "//tools/fidlcat:fidlcat_tests",
+    "//tools/kazoo:kazoo_host_tests($host_toolchain)",
   ]
 }

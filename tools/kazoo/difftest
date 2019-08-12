@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+pushd ../..
+
+function compare() {
+  echo "------ $1 ------"
+  # +4 and +6 are to skip the copyright headers
+  tail +4 $2 > /tmp/before
+  tail +6 < $3 > /tmp/after
+  diff /tmp/before /tmp/after
+}
+
+fx ninja -C out/default host_x64/kazoo host_x64/kazoo_host_tests
+
+out/default/host_x64/exe.unstripped/kazoo_host_tests
+
+out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
+      --json /tmp/syscalls.json \
+      --files zircon/experimental/syscalls/*.fidl
+
+out/default/host_x64/exe.unstripped/kazoo \
+  --ktrace=/tmp/ktrace.inc \
+  --kernel-branches=/tmp/kernel-branches.S \
+  /tmp/syscalls.json
+
+compare "ktrace" \
+        "out/default.zircon/kernel-x64-clang/gen/kernel/lib/ktrace/zircon/syscall-ktrace-info.inc" \
+        "/tmp/ktrace.inc"
+
+compare "kernel-branches" \
+        "out/default.zircon/kernel-x64-clang/gen/kernel/syscalls/zircon/syscall-kernel-branches.S" \
+        "/tmp/kernel-branches.S"

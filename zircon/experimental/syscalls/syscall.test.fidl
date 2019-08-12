@@ -10,26 +10,26 @@ library zz;
 
 [Transport="Syscall"]
 protocol Syscall {
-    Test0() -> (status status);
+    Test_0() -> (status status);
 
     [TestCategory1]
-    Test1(int32 a) -> (status status);
+    Test_1(int32 a) -> (status status);
 
     [TestCategory1]
-    Test2(int32 a, int32 b) -> (status status);
+    Test_2(int32 a, int32 b) -> (status status);
 
     [TestCategory2]
-    Test3(int32 a, int32 b, int32 c) -> (status status);
+    Test_3(int32 a, int32 b, int32 c) -> (status status);
 
-    Test4(int32 a, int32 b, int32 c, int32 d) -> (status status);
+    Test_4(int32 a, int32 b, int32 c, int32 d) -> (status status);
 
-    Test5(int32 a, int32 b, int32 c, int32 d, int32 e) -> (status status);
+    Test_5(int32 a, int32 b, int32 c, int32 d, int32 e) -> (status status);
 
-    Test6(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f) -> (status status);
+    Test_6(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f) -> (status status);
 
-    Test7(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g) -> (status status);
+    Test_7(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g) -> (status status);
 
-    Test8(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g, int32 h) ->
+    Test_8(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g, int32 h) ->
         (status status);
 
     TestWrapper(int32 a, int32 b, int32 c) -> (status status);

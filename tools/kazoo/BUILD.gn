@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_executable.gni")
+import("//build/host.gni")
+import("//build/test.gni")
+
+if (current_toolchain == host_toolchain) {
+  sdk_executable("bin") {
+    category = "partner"
+
+    output_name = "kazoo"
+
+    sources = [
+      "main.cc",
+    ]
+    deps = [
+      ":lib",
+      "//zircon/public/lib/cmdline",
+    ]
+  }
+
+  static_library("lib") {
+    sources = [
+      "kernel_branches_output.cc",
+      "ktrace_output.cc",
+      "output_util.cc",
+      "output_util.h",
+      "outputs.h",
+      "syscall_library.cc",
+      "syscall_library.h",
+      "writer.cc",
+      "writer.h",
+    ]
+
+    deps = [
+      "//src/lib/files",
+      "//zircon/public/lib/fbl",
+    ]
+    public_deps = [
+      "//src/lib/fxl",
+      "//third_party/rapidjson",
+    ]
+  }
+
+  test("kazoo_host_tests") {
+    deps = [
+      ":lib",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+    ]
+
+    sources = [
+      "kernel_branches_output_test.cc",
+      "ktrace_output_test.cc",
+      "output_util_test.cc",
+      "syscall_library_test.cc",
+      "writer_test.cc",
+    ]
+  }
+}
+
+install_host_tools("kazoo_host") {
+  deps = [
+    ":bin",
+  ]
+  outputs = [
+    "kazoo",
+  ]
+}
