@@ -99,6 +99,7 @@ class Sherlock : public SherlockType {
   zx_status_t ThermalInit();
   zx_status_t TouchInit();
   zx_status_t LightInit();
+  zx_status_t OtRadioInit();
   int Thread();
 
   zx_status_t EnableWifi32K(void);
@@ -107,6 +108,7 @@ class Sherlock : public SherlockType {
   ddk::IommuProtocolClient iommu_;
   ddk::GpioImplProtocolClient gpio_impl_;
   thrd_t thread_;
+
 };
 
 }  // namespace sherlock

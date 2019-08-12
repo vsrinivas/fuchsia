@@ -95,6 +95,9 @@ static const gpio_pin_t gpio_pins[] = {
     {T931_EMMC_RST},
     // For SDIO.
     {T931_WIFI_REG_ON},
+    // For OpenThread radio
+    {GPIO_OT_RADIO_RESET},
+    {GPIO_OT_RADIO_INTERRUPT},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

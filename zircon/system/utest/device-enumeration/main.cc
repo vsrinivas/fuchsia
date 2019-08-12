@@ -252,6 +252,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/00:00:f/fallback-rtc",
       "spi/aml-spi-0/spi/spi-0-0",
       "sherlock-buttons/hid-buttons",
+      "nrf52840-radio",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

@@ -141,6 +141,7 @@ group("drivers") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:bluetooth_drivers",
+    "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:usb_video",
     "//garnet/packages/prod:virtual_audio_driver",
     "//garnet/packages/prod:virtual_camera",
@@ -164,6 +165,13 @@ group("debugserver") {
   testonly = true
   public_deps = [
     "//garnet/bin/debugserver",
+  ]
+}
+
+group("openthread") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/openthread/drivers/ot-radio:openthread",
   ]
 }
 
@@ -226,6 +234,7 @@ group("all") {
     "//garnet/packages/prod:odu",
     "//garnet/packages/prod:omaha_client",
     "//garnet/packages/prod:openssh",
+    "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:overnetstack",
     "//garnet/packages/prod:pkg_cache",
     "//garnet/packages/prod:pkg_ctl",

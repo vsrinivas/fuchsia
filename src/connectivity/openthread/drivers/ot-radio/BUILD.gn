@@ -1,0 +1,44 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("ot-radio") {
+  output_name = "ot-radio-driver"
+
+  sources = [
+    "ot_radio.cc",
+  ]
+
+  deps = [
+    "//zircon/public/banjo/ddk.protocol.composite",
+    "//zircon/public/banjo/ddk.protocol.gpio",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+package("openthread") {
+  # Fuchsia does not yet support loading drivers out of packages.
+  deprecated_system_image = true
+
+  deps = [
+    ":ot-radio",
+  ]
+
+  drivers = [
+    {
+      name = "ot-radio-driver.so"
+    },
+  ]
+}

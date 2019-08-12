@@ -163,6 +163,10 @@ int Sherlock::Thread() {
     return -1;
   }
 
+  if (OtRadioInit() != ZX_OK) {
+    zxlogf(ERROR, "OtRadioInit() failed\n");
+  }
+
   zx_status_t status = pbus_.DeviceAdd(&rtc_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d\n", __func__, status);
