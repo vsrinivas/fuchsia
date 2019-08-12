@@ -1,4 +1,4 @@
 {
-  "fidl/fuchsia.accessibility.semantics/node.fidl": "e49f25cf193a76307a1f1b8bd2890ce7",
-  "fidl/fuchsia.accessibility.semantics/semantics_manager.fidl": "a11c7dd5777eaa8cc6a6a4271abc3e72"
+  "fidl/fuchsia.accessibility.semantics/node.fidl": "db28ac1362aaf4c61f28029a18afa2b3",
+  "fidl/fuchsia.accessibility.semantics/semantics_manager.fidl": "25912da1e6bf6b9916bfda81da669873"
 }
