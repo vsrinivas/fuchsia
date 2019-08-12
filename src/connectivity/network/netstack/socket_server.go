@@ -570,6 +570,8 @@ func tcpipErrorToCode(err *tcpip.Error) int16 {
 		return C.ENOBUFS
 	case tcpip.ErrBroadcastDisabled, tcpip.ErrNotPermitted:
 		return C.EACCES
+	case tcpip.ErrAddressFamilyNotSupported:
+		return C.EAFNOSUPPORT
 	default:
 		panic(fmt.Sprintf("unknown error %v", err))
 	}
