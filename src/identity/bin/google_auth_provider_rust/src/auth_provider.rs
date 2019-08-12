@@ -89,8 +89,8 @@ where
                 user_profile_id,
                 responder,
             } => responder.send_result(
-                self.get_persistent_credential(auth_ui_context, user_profile_id)
-            .await),
+                self.get_persistent_credential(auth_ui_context, user_profile_id).await,
+            ),
             AuthProviderRequest::GetAppAccessToken { credential, client_id, scopes, responder } => {
                 responder
                     .send_result(self.get_app_access_token(credential, client_id, scopes).await)
@@ -99,8 +99,7 @@ where
                 responder.send_result(self.get_app_id_token(credential, audience).await)
             }
             AuthProviderRequest::GetAppFirebaseToken { id_token, firebase_api_key, responder } => {
-                responder
-                    .send_result(self.get_app_firebase_token(id_token, firebase_api_key).await)
+                responder.send_result(self.get_app_firebase_token(id_token, firebase_api_key).await)
             }
             AuthProviderRequest::RevokeAppOrPersistentCredential { credential, responder } => {
                 responder.send_result(self.revoke_app_or_persistent_credential(credential).await)
@@ -111,25 +110,30 @@ where
                 auth_ui_context,
                 user_profile_id,
                 responder,
-            } => responder.send_result(self
-                .get_persistent_credential_from_attestation_jwt(
+            } => responder.send_result(
+                self.get_persistent_credential_from_attestation_jwt(
                     attestation_signer,
                     jwt_params,
                     auth_ui_context,
-                    user_profile_id
-                ).await),
+                    user_profile_id,
+                )
+                .await,
+            ),
             AuthProviderRequest::GetAppAccessTokenFromAssertionJwt {
                 attestation_signer,
                 jwt_params,
                 credential,
                 scopes,
                 responder,
-            } => responder.send_result(self.get_app_access_token_from_assertion_jwt(
-                attestation_signer,
-                jwt_params,
-                credential,
-                scopes
-            ).await),
+            } => responder.send_result(
+                self.get_app_access_token_from_assertion_jwt(
+                    attestation_signer,
+                    jwt_params,
+                    credential,
+                    scopes,
+                )
+                .await,
+            ),
         }
     }
 
@@ -588,7 +592,9 @@ mod tests {
 
         let auth_provider = GoogleAuthProvider::new(frame_supplier, http);
         fasync::spawn(async move {
-            auth_provider.handle_requests_from_stream(provider_request_stream).await
+            auth_provider
+                .handle_requests_from_stream(provider_request_stream)
+                .await
                 .expect("Error handling AuthProvider channel");
         });
 
@@ -647,30 +653,24 @@ mod tests {
             Ok(Url::parse_with_params(REDIRECT_URI.as_str(), vec![("error", "access_denied")])
                 .unwrap()),
         );
-        assert_persistent_credential_web_err(
-            frame_supplier,
-            AuthProviderStatus::UserCancelled
-        ).await?;
+        assert_persistent_credential_web_err(frame_supplier, AuthProviderStatus::UserCancelled)
+            .await?;
 
         // Web frame error - UI maybe canceled
         let frame_supplier = TestWebFrameSupplier::new(
             Ok(()),
             Err(AuthProviderError::new(AuthProviderStatus::UnknownError)),
         );
-        assert_persistent_credential_web_err(
-            frame_supplier,
-            AuthProviderStatus::UnknownError
-        ).await?;
+        assert_persistent_credential_web_err(frame_supplier, AuthProviderStatus::UnknownError)
+            .await?;
 
         // Network error
         let frame_supplier = TestWebFrameSupplier::new(
             Err(AuthProviderError::new(AuthProviderStatus::NetworkError)),
             Err(AuthProviderError::new(AuthProviderStatus::NetworkError)),
         );
-        assert_persistent_credential_web_err(
-            frame_supplier,
-            AuthProviderStatus::NetworkError
-        ).await?;
+        assert_persistent_credential_web_err(frame_supplier, AuthProviderStatus::NetworkError)
+            .await?;
         Ok(())
     }
 
@@ -764,11 +764,8 @@ mod tests {
         let http_result = "{\"access_token\": \"test-access-token\", \"expires_in\": 3600}";
         let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::OK);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
-        let (result_status, result_token) = auth_provider.get_app_access_token(
-            "credential",
-            None,
-            &mut vec![].into_iter()
-        ).await?;
+        let (result_status, result_token) =
+            auth_provider.get_app_access_token("credential", None, &mut vec![].into_iter()).await?;
         assert_eq!(result_status, AuthProviderStatus::Ok);
         assert_eq!(
             result_token.unwrap(),
@@ -793,21 +790,16 @@ mod tests {
         let http_result = "{\"error\": \"invalid_scope\", \"error_description\": \"bad scope\"}";
         let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::BAD_REQUEST);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
-        let result = auth_provider.get_app_access_token(
-            "credential",
-            None,
-            &mut vec!["bad-scope"].into_iter()
-        ).await?;
+        let result = auth_provider
+            .get_app_access_token("credential", None, &mut vec!["bad-scope"].into_iter())
+            .await?;
         assert_eq!(result.0, AuthProviderStatus::OauthServerError);
 
         // Network error
         let mock_http = TestHttpClient::with_error(AuthProviderStatus::NetworkError);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
-        let result = auth_provider.get_app_access_token(
-            "credential",
-            None,
-            &mut vec![].into_iter()
-        ).await?;
+        let result =
+            auth_provider.get_app_access_token("credential", None, &mut vec![].into_iter()).await?;
         assert_eq!(result.0, AuthProviderStatus::NetworkError);
 
         Ok(())

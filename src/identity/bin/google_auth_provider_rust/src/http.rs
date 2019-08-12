@@ -124,9 +124,11 @@ impl UrlLoaderHttpClient {
     ) -> AuthProviderResult<(Option<String>, StatusCode)> {
         let mut request = http_request.0;
 
-        let UrlResponse { error, body: response_body, status_code, .. } =
-            self.url_loader.start(&mut request).await
-                .auth_provider_status(AuthProviderStatus::UnknownError)?;
+        let UrlResponse { error, body: response_body, status_code, .. } = self
+            .url_loader
+            .start(&mut request)
+            .await
+            .auth_provider_status(AuthProviderStatus::UnknownError)?;
         if error.is_some() {
             return Err(AuthProviderError::new(AuthProviderStatus::NetworkError));
         }
@@ -139,7 +141,9 @@ impl UrlLoaderHttpClient {
                 let mut socket = fasync::Socket::from_socket(sock)
                     .auth_provider_status(AuthProviderStatus::UnknownError)?;
                 let mut response_body = Vec::<u8>::with_capacity(RESPONSE_BUFFER_SIZE);
-                socket.read_to_end(&mut response_body).await
+                socket
+                    .read_to_end(&mut response_body)
+                    .await
                     .auth_provider_status(AuthProviderStatus::UnknownError)?;
                 let response_str = String::from_utf8(response_body)
                     .auth_provider_status(AuthProviderStatus::UnknownError)?;

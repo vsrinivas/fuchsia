@@ -96,16 +96,18 @@ impl DefaultStandaloneWebFrame {
             .get_navigation_controller(navigation_controller_server_end)
             .auth_provider_status(AuthProviderStatus::UnknownError)?;
 
-        navigation_controller_proxy.load_url(
-            url.as_str(),
-            LoadUrlParams {
-                type_: None,
-                referrer_url: None,
-                was_user_activated: None,
-                headers: None
-            }
-        ).await
-        .auth_provider_status(AuthProviderStatus::UnknownError)??;
+        navigation_controller_proxy
+            .load_url(
+                url.as_str(),
+                LoadUrlParams {
+                    type_: None,
+                    referrer_url: None,
+                    was_user_activated: None,
+                    headers: None,
+                },
+            )
+            .await
+            .auth_provider_status(AuthProviderStatus::UnknownError)??;
         self.frame
             .create_view(&mut view_token)
             .auth_provider_status(AuthProviderStatus::UnknownError)?;
@@ -121,7 +123,8 @@ impl DefaultStandaloneWebFrame {
         Self::poll_for_url_navigation_event(navigation_event_stream, |url| {
             (url.scheme(), url.domain(), url.path())
                 == (redirect_target.scheme(), redirect_target.domain(), redirect_target.path())
-        }).await
+        })
+        .await
     }
 
     /// Registers a navigation listener with the Chrome frame and returns the created event
@@ -149,7 +152,9 @@ impl DefaultStandaloneWebFrame {
     {
         // Any errors encountered with the stream here may be a result of the
         // overlay being canceled externally.
-        while let Some(request) = request_stream.try_next().await
+        while let Some(request) = request_stream
+            .try_next()
+            .await
             .auth_provider_status(AuthProviderStatus::UnknownError)?
         {
             let NavigationEventListenerRequest::OnNavigationStateChanged { change, responder } =
@@ -183,7 +188,9 @@ impl DefaultStandaloneWebFrame {
         // until both points are found.
         let mut known_page_type: Option<PageType> = None;
         let mut main_document_loaded = false;
-        while let Some(request) = request_stream.try_next().await
+        while let Some(request) = request_stream
+            .try_next()
+            .await
             .auth_provider_status(AuthProviderStatus::UnknownError)?
         {
             // update known state.
@@ -229,7 +236,8 @@ mod test {
         let (context, _) = create_proxy::<ContextMarker>()?;
         let (frame, frame_server_end) = create_request_stream::<FrameMarker>()?;
         fasync::spawn(async move {
-            handle_frame_stream(frame_server_end, events).await
+            handle_frame_stream(frame_server_end, events)
+                .await
                 .unwrap_or_else(|e| error!("Error running frame stream: {:?}", e));
         });
         Ok(DefaultStandaloneWebFrame::new(context, frame.into_proxy()?))
@@ -243,7 +251,8 @@ mod test {
             match request {
                 FrameRequest::SetNavigationEventListener { listener, .. } => {
                     fasync::spawn(async move {
-                        feed_event_requests(listener.unwrap(), events).await
+                        feed_event_requests(listener.unwrap(), events)
+                            .await
                             .unwrap_or_else(|e| error!("Error in event sender: {:?}", e));
                     });
                 }
