@@ -21,9 +21,8 @@
 
 namespace cloud_sync {
 // Fake implementation of storage::PageStorage. Injects the data that PageSync
-// asks about: page id, existing unsynced commits to be retrieved through
-// GetUnsyncedCommits() and new commits to be retrieved through GetCommit().
-// Registers the commits marked as synced.
+// asks about: page id and existing unsynced commits to be retrieved through
+// GetUnsyncedCommits(). Registers the commits marked as synced.
 class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit TestPageStorage(async_dispatcher_t* dispatcher);
@@ -36,10 +35,6 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   ledger::Status GetHeadCommits(
       std::vector<std::unique_ptr<const storage::Commit>>* head_commits) override;
-
-  void GetCommit(storage::CommitIdView commit_id,
-                 fit::function<void(ledger::Status, std::unique_ptr<const storage::Commit>)>
-                     callback) override;
 
   void AddCommitsFromSync(
       std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes, storage::ChangeSource source,
@@ -69,10 +64,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   // Commits to be returned from GetUnsyncedCommits calls.
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits_to_return;
   size_t head_count = 1;
-  // Commits to be returned from GetCommit() calls.
-  std::map<storage::CommitId, std::unique_ptr<const storage::Commit>> new_commits_to_return;
   bool should_fail_get_unsynced_commits = false;
-  bool should_fail_get_commit = false;
   bool should_fail_add_commit_from_sync = false;
   bool should_delay_add_commit_confirmation = false;
   std::vector<fit::closure> delayed_add_commit_confirmations;

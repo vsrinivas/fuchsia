@@ -42,23 +42,6 @@ ledger::Status TestPageStorage::GetHeadCommits(
   return ledger::Status::OK;
 }
 
-void TestPageStorage::GetCommit(
-    storage::CommitIdView commit_id,
-    fit::function<void(ledger::Status, std::unique_ptr<const storage::Commit>)> callback) {
-  if (should_fail_get_commit) {
-    async::PostTask(dispatcher_, [callback = std::move(callback)] {
-      callback(ledger::Status::IO_ERROR, nullptr);
-    });
-    return;
-  }
-
-  async::PostTask(dispatcher_,
-                  [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
-                    callback(ledger::Status::OK, std::move(new_commits_to_return[commit_id]));
-                  });
-  new_commits_to_return.erase(commit_id.ToString());
-}
-
 void TestPageStorage::AddCommitsFromSync(
     std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes, storage::ChangeSource /*source*/,
     fit::function<void(ledger::Status, std::vector<storage::CommitId>)> callback) {

@@ -125,7 +125,6 @@ TEST_F(PageUploadTest, UploadBacklogOnlyOnSingleHead) {
   upload_is_idle = false;
   storage_.head_count = 1;
   auto commit = storage_.NewCommit("id2", "content2");
-  storage_.new_commits_to_return["id2"] = commit->Clone();
   storage_.watcher_->OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
@@ -204,16 +203,13 @@ TEST_F(PageUploadTest, UploadNewCommits) {
   upload_is_idle = false;
 
   auto commit1 = storage_.NewCommit("id1", "content1");
-  storage_.new_commits_to_return["id1"] = commit1->Clone();
   storage_.watcher_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
 
   // The commit coming from sync should be ignored.
   auto commit2 = storage_.NewCommit("id2", "content2", false);
-  storage_.new_commits_to_return["id2"] = commit2->Clone();
   storage_.watcher_->OnNewCommits(commit2->AsList(), storage::ChangeSource::CLOUD);
 
   auto commit3 = storage_.NewCommit("id3", "content3");
-  storage_.new_commits_to_return["id3"] = commit3->Clone();
   storage_.watcher_->OnNewCommits(commit3->AsList(), storage::ChangeSource::LOCAL);
 
   RunLoopUntilIdle();
@@ -245,7 +241,6 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   // uploaded.
   storage_.head_count = 1;
   auto commit0 = storage_.NewCommit("id0", "content0");
-  storage_.new_commits_to_return["id0"] = commit0->Clone();
   storage_.watcher_->OnNewCommits(commit0->AsList(), storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_upload_->IsIdle());
   RunLoopUntilIdle();
@@ -262,7 +257,6 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   page_cloud_.received_commits.clear();
   storage_.head_count = 2;
   auto commit1 = storage_.NewCommit("id1", "content1");
-  storage_.new_commits_to_return["id1"] = commit1->Clone();
   storage_.watcher_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
@@ -274,7 +268,6 @@ TEST_F(PageUploadTest, UploadNewCommitsOnlyOnSingleHead) {
   // both commits are uploaded.
   storage_.head_count = 1;
   auto commit2 = storage_.NewCommit("id2", "content2");
-  storage_.new_commits_to_return["id2"] = commit2->Clone();
   storage_.watcher_->OnNewCommits(commit2->AsList(), storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_upload_->IsIdle());
   RunLoopUntilIdle();
@@ -301,7 +294,6 @@ TEST_F(PageUploadTest, UploadExistingAndNewCommits) {
   upload_is_idle = false;
 
   auto commit = storage_.NewCommit("id2", "content2");
-  storage_.new_commits_to_return["id2"] = commit->Clone();
   storage_.watcher_->OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
@@ -329,7 +321,6 @@ TEST_F(PageUploadTest, RetryUpload) {
 
   page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   auto commit1 = storage_.NewCommit("id1", "content1");
-  storage_.new_commits_to_return["id1"] = commit1->Clone();
   storage_.watcher_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
   RunLoopFor(kHalfBackoffInterval);
   EXPECT_GE(backoff_->get_next_count, 0);
@@ -366,7 +357,6 @@ TEST_F(PageUploadTest, UploadIdleStatus) {
   // Notify about a new commit to upload and verify that the idle callback was
   // called again on completion.
   auto commit3 = storage_.NewCommit("id3", "content3");
-  storage_.new_commits_to_return["id3"] = commit3->Clone();
   storage_.watcher_->OnNewCommits(commit3->AsList(), storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_upload_->IsIdle());
   RunLoopUntilIdle();
@@ -403,7 +393,6 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommits) {
   upload_is_idle = false;
 
   auto commit = std::make_unique<TestCommit>("id", "content");
-  storage_.new_commits_to_return["id"] = commit->Clone();
   storage_.watcher_->OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);
@@ -430,7 +419,6 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   page_cloud_.commit_status_to_return = cloud_provider::Status::NETWORK_ERROR;
 
   auto commit = storage_.NewCommit("id", "content");
-  storage_.new_commits_to_return["id"] = commit->Clone();
   storage_.watcher_->OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
 
   // The page upload should run into temporary error.
@@ -466,11 +454,9 @@ TEST_F(PageUploadTest, UploadNewCommitsConcurrentNoCrash) {
 
   storage_.head_count = 2;
   auto commit0 = storage_.NewCommit("id0", "content0");
-  storage_.new_commits_to_return["id0"] = commit0->Clone();
   storage_.watcher_->OnNewCommits(commit0->AsList(), storage::ChangeSource::LOCAL);
 
   auto commit1 = storage_.NewCommit("id1", "content1");
-  storage_.new_commits_to_return["id1"] = commit1->Clone();
   storage_.watcher_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
   RunLoopUntilIdle();
 }

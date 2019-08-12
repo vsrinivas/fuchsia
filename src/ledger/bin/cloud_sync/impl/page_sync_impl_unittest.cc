@@ -235,7 +235,6 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
   page_sync_->SetOnBacklogDownloaded([this] {
     async::PostTask(dispatcher(), [this] {
       auto commit = storage_.NewCommit("id2", "content2");
-      storage_.new_commits_to_return["id2"] = commit->Clone();
       storage_.watcher_->OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
     });
   });
@@ -278,7 +277,6 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
   // Notify about a new commit to upload and verify that the idle callback was
   // called again on completion.
   auto commit3 = storage_.NewCommit("id3", "content3");
-  storage_.new_commits_to_return["id3"] = commit3->Clone();
   storage_.watcher_->OnNewCommits(commit3->AsList(), storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_sync_->IsIdle());
   RunLoopUntilIdle();
@@ -373,7 +371,6 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   // Create a local commit, but make the upload fail.
   page_cloud_.commit_status_to_return = cloud_provider::Status::SERVER_ERROR;
   auto commit1 = storage_.NewCommit("id1", "content1");
-  storage_.new_commits_to_return["id1"] = commit1->Clone();
   storage_.watcher_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
 
   // We need to wait for the callback to be executed on the PageSync side.
