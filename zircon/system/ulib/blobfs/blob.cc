@@ -682,11 +682,15 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out
     return status;
   }
 
-  // TODO(mdempsky): Push elsewhere.
-  if ((status = clone.replace_as_executable(zx::handle(), &clone)) != ZX_OK) {
-    return status;
+  // Only add exec right to VMO if explictly requested.  (Saves a syscall if
+  // we're just going to drop the right back again in replace() call below.)
+  if (rights & ZX_RIGHT_EXECUTE) {
+    if ((status = clone.replace_as_executable(zx::handle(), &clone)) != ZX_OK) {
+      return status;
+    }
   }
 
+  // Narrow rights to those requested.
   if ((status = clone.replace(rights, &clone)) != ZX_OK) {
     return status;
   }
