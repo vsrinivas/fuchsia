@@ -33,6 +33,7 @@ class FullscreenStory extends StatelessWidget {
                 ]),
                 builder: (context, _) {
                   return Listener(
+                    // ignore: deprecated_member_use
                     onPointerHover: (event) {
                       if (event.position.dy == 0) {
                         showFullscreenTitle.value = true;

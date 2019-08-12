@@ -44,6 +44,7 @@ class AskSuggestionList extends StatelessWidget {
     return FadeTransition(
       opacity: animation,
       child: Listener(
+        // ignore: deprecated_member_use
         onPointerHover: (_) {
           model.selection.value = index;
         },
