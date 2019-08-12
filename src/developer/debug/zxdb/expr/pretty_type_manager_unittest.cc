@@ -87,11 +87,10 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
   auto array_access = pretty_vector->GetArrayAccess();
   ASSERT_TRUE(array_access);
   called = false;
-  ExprValue result_value;
-  array_access(context, vec_value, 1, [&called, loop = &loop()](const Err& err, ExprValue value) {
+  array_access(context, vec_value, 1, [&called, loop = &loop()](ErrOrValue result) {
     called = true;
-    EXPECT_FALSE(err.has_error()) << err.msg();
-    EXPECT_EQ(99, value.GetAs<int32_t>());
+    EXPECT_FALSE(result.has_error()) << result.err().msg();
+    EXPECT_EQ(99, result.value().GetAs<int32_t>());
     loop->QuitNow();
   });
   EXPECT_FALSE(called);  // Should be async (requires memory fetch).

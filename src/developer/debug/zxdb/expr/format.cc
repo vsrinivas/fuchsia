@@ -865,23 +865,23 @@ void FormatArrayNode(FormatNode* node, const ExprValue& value, int elt_count,
   int print_count = std::min(static_cast<int>(options.max_array_size), elt_count);
 
   ResolveArray(eval_context, value, 0, print_count,
-               [weak_node = node->GetWeakPtr(), elt_count, cb = std::move(cb)](
-                   const Err& err, std::vector<ExprValue> items) mutable {
+               [weak_node = node->GetWeakPtr(), elt_count,
+                cb = std::move(cb)](ErrOrValueVector result) mutable {
                  if (!weak_node)
                    return;
                  FormatNode* node = weak_node.get();
 
-                 if (err.has_error())
-                   return node->SetDescribedError(err);
+                 if (result.has_error())
+                   return node->SetDescribedError(result.err());
 
-                 for (size_t i = 0; i < items.size(); i++) {
+                 for (size_t i = 0; i < result.value().size(); i++) {
                    auto item_node = std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i),
-                                                                 std::move(items[i]));
+                                                                 std::move(result.value()[i]));
                    item_node->set_child_kind(FormatNode::kArrayItem);
                    node->children().push_back(std::move(item_node));
                  }
 
-                 if (static_cast<uint32_t>(elt_count) > items.size()) {
+                 if (static_cast<uint32_t>(elt_count) > result.value().size()) {
                    // Add "..." annotation to show some things were clipped.
                    //
                    // TODO(brettW) We may want to put a flag on the node that it was clipped,

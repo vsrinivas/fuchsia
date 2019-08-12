@@ -272,36 +272,36 @@ PrettyStdString::EvalFunction PrettyStdString::GetGetter(const std::string& gett
 
 PrettyStdString::EvalArrayFunction PrettyStdString::GetArrayAccess() const {
   return [](fxl::RefPtr<EvalContext> context, const ExprValue& object_value, int64_t index,
-            fit::callback<void(const Err&, ExprValue)> cb) {
+            fit::callback<void(ErrOrValue)> cb) {
     EnsureStdStringMemory(
         context, object_value,
         [context, cb = std::move(cb), index](const Err& err, ExprValue value) mutable {
           if (err.has_error())
-            return cb(err, ExprValue());
+            return cb(err);
           if (IsInlineString(value.data())) {
             // Use the inline data. Need to range check since we're indexing into our local
             // address space.
             if (index >= static_cast<int64_t>(kShortSizeOffset) || index < 0)
-              return cb(Err("String index out of range."), ExprValue());
+              return cb(Err("String index out of range."));
 
             // Inline array starts from the beginning of the string.
-            return cb(Err(), ExprValue(GetStdStringCharType(), {value.data()[index]},
-                                       value.source().GetOffsetInto(index)));
+            return cb(ExprValue(GetStdStringCharType(), {value.data()[index]},
+                                value.source().GetOffsetInto(index)));
           } else {
             uint64_t ptr = 0;
             if (Err err = GetStringPtr(value, &ptr); err.has_error())
-              return cb(err, ExprValue());
+              return cb(err);
 
             context->GetDataProvider()->GetMemoryAsync(
                 ptr, 1,
                 [context, ptr, cb = std::move(cb)](const Err& err,
                                                    std::vector<uint8_t> data) mutable {
                   if (err.has_error())
-                    return cb(err, ExprValue());
+                    return cb(err);
                   if (data.size() == 0)
-                    return cb(Err("Invalid address 0x%" PRIx64, ptr), ExprValue());
+                    return cb(Err("Invalid address 0x%" PRIx64, ptr));
 
-                  cb(Err(), ExprValue(GetStdStringCharType(), {data[0]}, ExprValueSource(ptr)));
+                  cb(ExprValue(GetStdStringCharType(), {data[0]}, ExprValueSource(ptr)));
                 });
           }
         });

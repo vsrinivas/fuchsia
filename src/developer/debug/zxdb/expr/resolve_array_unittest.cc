@@ -31,7 +31,7 @@ class TestPrettyArray : public PrettyType {
               fit::deferred_callback cb) override {}
   EvalArrayFunction GetArrayAccess() const override {
     return [](fxl::RefPtr<EvalContext>, const ExprValue& object_value, int64_t index,
-              fit::callback<void(const Err&, ExprValue)> cb) { cb(Err(), ExprValue(index * 2)); };
+              fit::callback<void(ErrOrValue)> cb) { cb(ExprValue(index * 2)); };
   }
 };
 
@@ -54,21 +54,20 @@ TEST_F(ResolveArrayTest, ResolveStatic) {
   std::vector<uint8_t> array_bytes = {0x22, 0x11, 0x44, 0x33, 0x66, 0x55};
   ExprValue value(array_type, array_bytes, ExprValueSource(kBaseAddress));
 
-  std::vector<ExprValue> result;
-  Err err = ResolveArray(eval_context, value, kBeginIndex, kEndIndex, &result);
-  EXPECT_FALSE(err.has_error());
+  ErrOrValueVector result = ResolveArray(eval_context, value, kBeginIndex, kEndIndex);
+  EXPECT_FALSE(result.has_error());
 
   // Should have returned two values (the overlap of the array and the
   // requested range).
-  ASSERT_EQ(2u, result.size());
+  ASSERT_EQ(2u, result.value().size());
 
-  EXPECT_EQ(elt_type.get(), result[0].type());
-  EXPECT_EQ(0x3344, result[0].GetAs<uint16_t>());
-  EXPECT_EQ(kBaseAddress + kTypeSize, result[0].source().address());
+  EXPECT_EQ(elt_type.get(), result.value()[0].type());
+  EXPECT_EQ(0x3344, result.value()[0].GetAs<uint16_t>());
+  EXPECT_EQ(kBaseAddress + kTypeSize, result.value()[0].source().address());
 
-  EXPECT_EQ(elt_type.get(), result[1].type());
-  EXPECT_EQ(0x5566, result[1].GetAs<uint16_t>());
-  EXPECT_EQ(kBaseAddress + kTypeSize * 2, result[1].source().address());
+  EXPECT_EQ(elt_type.get(), result.value()[1].type());
+  EXPECT_EQ(0x5566, result.value()[1].GetAs<uint16_t>());
+  EXPECT_EQ(kBaseAddress + kTypeSize * 2, result.value()[1].source().address());
 }
 
 // Resolves an array element with a pointer as the base.
@@ -95,13 +94,11 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
   ExprValue value(ptr_type, {0, 0, 0x10, 0, 0, 0, 0, 0});
 
   bool called = false;
-  Err out_err;
-  std::vector<ExprValue> result;
+  ErrOrValueVector result((std::vector<ExprValue>()));
   ResolveArray(eval_context, value, kBeginIndex, kEndIndex,
-               [&called, &out_err, &result](const Err& err, std::vector<ExprValue> values) {
+               [&called, &result](ErrOrValueVector cb_result) {
                  called = true;
-                 out_err = err;
-                 result = std::move(values);
+                 result = std::move(cb_result);
                  debug_ipc::MessageLoop::Current()->QuitNow();
                });
 
@@ -111,36 +108,35 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
   EXPECT_TRUE(called);
 
   // Should have returned two values (the overlap of the array and the requested range).
-  ASSERT_EQ(2u, result.size());
+  ASSERT_TRUE(result.ok());
+  ASSERT_EQ(2u, result.value().size());
 
-  EXPECT_EQ(elt_type.get(), result[0].type());
-  EXPECT_EQ(0x3344, result[0].GetAs<uint16_t>());
-  EXPECT_EQ(kBaseAddress + kTypeSize, result[0].source().address());
+  EXPECT_EQ(elt_type.get(), result.value()[0].type());
+  EXPECT_EQ(0x3344, result.value()[0].GetAs<uint16_t>());
+  EXPECT_EQ(kBaseAddress + kTypeSize, result.value()[0].source().address());
 
-  EXPECT_EQ(elt_type.get(), result[1].type());
-  EXPECT_EQ(0x5566, result[1].GetAs<uint16_t>());
-  EXPECT_EQ(kBaseAddress + kTypeSize * 2, result[1].source().address());
+  EXPECT_EQ(elt_type.get(), result.value()[1].type());
+  EXPECT_EQ(0x5566, result.value()[1].GetAs<uint16_t>());
+  EXPECT_EQ(kBaseAddress + kTypeSize * 2, result.value()[1].source().address());
 
   // Test the one-element variant.
   called = false;
-  out_err = Err();
-  ExprValue single_result;
-  ResolveArrayItem(eval_context, value, kBeginIndex,
-                   [&called, &out_err, &single_result](const Err& err, ExprValue value) {
-                     called = true;
-                     out_err = err;
-                     single_result = std::move(value);
-                     debug_ipc::MessageLoop::Current()->QuitNow();
-                   });
+  ErrOrValue single_result((ExprValue()));
+  ResolveArrayItem(eval_context, value, kBeginIndex, [&called, &single_result](ErrOrValue result) {
+    called = true;
+    single_result = std::move(result);
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
 
   // Should be called async.
   EXPECT_FALSE(called);
   loop().Run();
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(elt_type.get(), single_result.type());
-  EXPECT_EQ(0x3344, single_result.GetAs<uint16_t>());
-  EXPECT_EQ(kBaseAddress + kTypeSize, single_result.source().address());
+  ASSERT_TRUE(single_result.ok());
+  EXPECT_EQ(elt_type.get(), single_result.value().type());
+  EXPECT_EQ(0x3344, single_result.value().GetAs<uint16_t>());
+  EXPECT_EQ(kBaseAddress + kTypeSize, single_result.value().source().address());
 }
 
 TEST_F(ResolveArrayTest, Invalid) {
@@ -148,22 +144,20 @@ TEST_F(ResolveArrayTest, Invalid) {
 
   // Resolving an array on an empty ExprValue.
   bool called = false;
-  ResolveArrayItem(eval_context, ExprValue(), 1,
-               [&called](const Err& err, ExprValue values) {
-                 called = true;
-                 EXPECT_TRUE(err.has_error());
-                 EXPECT_EQ("No type information.", err.msg());
-               });
+  ResolveArrayItem(eval_context, ExprValue(), 1, [&called](ErrOrValue result) {
+    called = true;
+    EXPECT_TRUE(result.has_error());
+    EXPECT_EQ("No type information.", result.err().msg());
+  });
   EXPECT_TRUE(called);
 
   // Resolving an array on an integer type.
   called = false;
-  ResolveArrayItem(eval_context, ExprValue(56), 1,
-               [&called](const Err& err, ExprValue values) {
-                 called = true;
-                 EXPECT_TRUE(err.has_error());
-                 EXPECT_EQ("Can't resolve an array access on type 'int32_t'.", err.msg());
-               });
+  ResolveArrayItem(eval_context, ExprValue(56), 1, [&called](ErrOrValue result) {
+    called = true;
+    EXPECT_TRUE(result.has_error());
+    EXPECT_EQ("Can't resolve an array access on type 'int32_t'.", result.err().msg());
+  });
   EXPECT_TRUE(called);
 }
 
@@ -186,21 +180,19 @@ TEST_F(ResolveArrayTest, PrettyArray) {
 
   // Test the one-element variant.
   bool called = false;
-  Err out_err;
-  ExprValue result;
-  ResolveArrayItem(eval_context, my_value, kIndex,
-                   [&called, &out_err, &result](const Err& err, ExprValue value) {
-                     called = true;
-                     out_err = err;
-                     result = std::move(value);
-                     debug_ipc::MessageLoop::Current()->QuitNow();
-                   });
+  ErrOrValue result((ExprValue()));
+  ResolveArrayItem(eval_context, my_value, kIndex, [&called, &result](ErrOrValue value) {
+    called = true;
+    result = std::move(value);
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
 
   // The PrettyType executes synchronously so it should complete synchronouly.
   EXPECT_TRUE(called);
+  ASSERT_TRUE(result.ok());
 
   // Result should be twice the input.
-  EXPECT_EQ(kIndex * 2, result.GetAs<uint64_t>());
+  EXPECT_EQ(kIndex * 2, result.value().GetAs<uint64_t>());
 }
 
 }  // namespace zxdb

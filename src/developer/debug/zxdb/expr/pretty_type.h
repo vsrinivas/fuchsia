@@ -11,11 +11,12 @@
 #include "lib/fit/defer.h"
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
+#include "src/developer/debug/zxdb/expr/expr_value.h"
 
 namespace zxdb {
 
-class ExprValue;
 class FormatNode;
 struct FormatOptions;
 
@@ -34,9 +35,8 @@ class PrettyType {
  public:
   using EvalFunction = fit::function<void(fxl::RefPtr<EvalContext>, const ExprValue& object_value,
                                           fit::callback<void(const Err&, ExprValue)>)>;
-  using EvalArrayFunction =
-      fit::function<void(fxl::RefPtr<EvalContext>, const ExprValue& object_value, int64_t index,
-                         fit::callback<void(const Err&, ExprValue)>)>;
+  using EvalArrayFunction = fit::function<void(
+      fxl::RefPtr<EvalContext>, const ExprValue& object_value, int64_t index, EvalCallback)>;
 
   PrettyType() = default;
 

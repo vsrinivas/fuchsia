@@ -19,8 +19,8 @@ namespace zxdb {
 
 namespace {
 
-Err ResolveStaticArray(const ExprValue& array, const ArrayType* array_type, size_t begin_index,
-                       size_t end_index, std::vector<ExprValue>* result) {
+ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayType* array_type,
+                                    size_t begin_index, size_t end_index) {
   const std::vector<uint8_t>& data = array.data();
   if (data.size() < array_type->byte_size()) {
     return Err(
@@ -32,36 +32,33 @@ Err ResolveStaticArray(const ExprValue& array, const ArrayType* array_type, size
   const Type* value_type = array_type->value_type();
   uint32_t type_size = value_type->byte_size();
 
-  result->reserve(end_index - begin_index);
+  std::vector<ExprValue> result;
+  result.reserve(end_index - begin_index);
   for (size_t i = begin_index; i < end_index; i++) {
     size_t begin_offset = i * type_size;
     if (begin_offset + type_size > data.size())
       break;
 
     std::vector<uint8_t> item_data(&data[begin_offset], &data[begin_offset] + type_size);
-    result->emplace_back(RefPtrTo(value_type), std::move(item_data),
-                         array.source().GetOffsetInto(begin_offset));
+    result.emplace_back(RefPtrTo(value_type), std::move(item_data),
+                        array.source().GetOffsetInto(begin_offset));
   }
-  return Err();
+  return result;
 }
 
 // Handles the "Foo*" case.
 void ResolvePointerArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
                          const ModifiedType* ptr_type, size_t begin_index, size_t end_index,
-                         fit::callback<void(const Err&, std::vector<ExprValue>)> cb) {
+                         fit::callback<void(ErrOrValueVector)> cb) {
   const Type* abstract_value_type = ptr_type->modified().Get()->AsType();
-  if (!abstract_value_type) {
-    cb(Err("Bad type information."), std::vector<ExprValue>());
-    return;
-  }
+  if (!abstract_value_type)
+    return cb(Err("Bad type information."));
   fxl::RefPtr<Type> value_type = eval_context->GetConcreteType(abstract_value_type);
 
   // The address is stored in the contents of the array value.
   Err err = array.EnsureSizeIs(kTargetPointerSize);
-  if (err.has_error()) {
-    cb(err, std::vector<ExprValue>());
-    return;
-  }
+  if (err.has_error())
+    return cb(err);
   TargetPointer base_address = array.GetAs<TargetPointer>();
 
   uint32_t type_size = value_type->byte_size();
@@ -72,10 +69,9 @@ void ResolvePointerArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue&
       begin_address, end_address - begin_address,
       [value_type, begin_address, count = end_index - begin_index, cb = std::move(cb)](
           const Err& err, std::vector<uint8_t> data) mutable {
-        if (err.has_error()) {
-          cb(err, std::vector<ExprValue>());
-          return;
-        }
+        if (err.has_error())
+          return cb(err);
+
         // Convert returned raw memory to ExprValues.
         uint32_t type_size = value_type->byte_size();
         std::vector<ExprValue> result;
@@ -89,7 +85,7 @@ void ResolvePointerArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue&
           result.emplace_back(value_type, std::move(item_data),
                               ExprValueSource(begin_address + begin_offset));
         }
-        cb(Err(), std::move(result));
+        cb(std::move(result));
       });
 }
 
@@ -100,17 +96,16 @@ void ResolvePointerArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue&
 // means that the item wasn't an array and the callback was not used.
 bool DoResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
                     size_t begin_index, size_t end_index,
-                    fit::callback<void(const Err&, std::vector<ExprValue>)> cb) {
+                    fit::callback<void(ErrOrValueVector)> cb) {
   if (!array.type()) {
-    cb(Err("No type information."), std::vector<ExprValue>());
+    cb(Err("No type information."));
     return true;  // Invalid but the callback was issued.
   }
 
   fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(array.type());
   if (const ArrayType* array_type = concrete->AsArrayType()) {
     std::vector<ExprValue> result;
-    Err err = ResolveStaticArray(array, array_type, begin_index, end_index, &result);
-    cb(err, result);
+    cb(ResolveStaticArray(array, array_type, begin_index, end_index));
     return true;
   } else if (const ModifiedType* modified_type = concrete->AsModifiedType()) {
     if (modified_type->tag() == DwarfTag::kPointerType) {
@@ -126,42 +121,40 @@ bool DoResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& arra
 
 }  // namespace
 
-Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
-                 size_t end_index, std::vector<ExprValue>* result) {
+ErrOrValueVector ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+                              size_t begin_index, size_t end_index) {
   if (!array.type())
     return Err("No type information.");
 
   fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(array.type());
-  if (const ArrayType* array_type = concrete->AsArrayType()) {
-    return ResolveStaticArray(array, array_type, begin_index, end_index, result);
-  }
+  if (const ArrayType* array_type = concrete->AsArrayType())
+    return ResolveStaticArray(array, array_type, begin_index, end_index);
   return Err("Can't dereference a non-array type.");
 }
 
 void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
-                  size_t end_index, fit::callback<void(const Err&, std::vector<ExprValue>)> cb) {
+                  size_t end_index, fit::callback<void(ErrOrValueVector)> cb) {
   if (!DoResolveArray(eval_context, array, begin_index, end_index, std::move(cb)))
-    cb(Err("Can't dereference a non-pointer or array type."), std::vector<ExprValue>());
+    cb(Err("Can't dereference a non-pointer or array type."));
 }
 
 void ResolveArrayItem(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t index,
-                      fit::callback<void(const Err&, ExprValue)> cb) {
+                      EvalCallback cb) {
   // This callback might possibly be bound to the regular array access function and we won't know
   // if it was needed until the function returns. We want to try regular resolution first to avoid
   // over-triggering pretty-printing if something is configured incorrectly. This case is not
   // performance sensitive so this extra allocation doesn't matter much.
-  auto shared_cb = std::make_shared<fit::callback<void(const Err&, ExprValue)>>(std::move(cb));
+  auto shared_cb = std::make_shared<fit::callback<void(ErrOrValue)>>(std::move(cb));
 
   // Try a regular access first.
-  if (DoResolveArray(eval_context, array, index, index + 1,
-                     [shared_cb](const Err& err, std::vector<ExprValue> result_vect) {
-                       if (err.has_error())
-                         (*shared_cb)(err, ExprValue());
-                       else if (result_vect.empty())  // Short read.
-                         (*shared_cb)(Err("Invalid array index."), ExprValue());
-                       else
-                         (*shared_cb)(Err(), std::move(result_vect[0]));
-                     }))
+  if (DoResolveArray(eval_context, array, index, index + 1, [shared_cb](ErrOrValueVector result) {
+        if (result.has_error())
+          (*shared_cb)(result.err());
+        else if (result.value().empty())  // Short read.
+          (*shared_cb)(Err("Invalid array index."));
+        else
+          (*shared_cb)(std::move(result.value()[0]));  // Should have only one value.
+      }))
     return;  // Handled by the regular array access.
 
   // Check for pretty types that support array access, shared_cb is our responsibility.
@@ -171,8 +164,7 @@ void ResolveArrayItem(fxl::RefPtr<EvalContext> eval_context, const ExprValue& ar
   }
 
   (*shared_cb)(Err("Can't resolve an array access on type '%s'.",
-                   array.type() ? array.type()->GetFullName().c_str() : "<Unknown>"),
-               ExprValue());
+                   array.type() ? array.type()->GetFullName().c_str() : "<Unknown>"));
 }
 
 }  // namespace zxdb

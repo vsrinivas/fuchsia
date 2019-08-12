@@ -162,10 +162,10 @@ PrettyArray::EvalArrayFunction PrettyArray::GetArrayAccess() const {
   // Since the PrettyArray is accessed by its pointer, we can just use the array access operator
   // combined with the pointer expression to produce an expression that references into the array.
   return [expression = ptr_expr_](fxl::RefPtr<EvalContext> context, const ExprValue& object_value,
-                                  int64_t index, fit::callback<void(const Err&, ExprValue)> cb) {
+                                  int64_t index, fit::callback<void(ErrOrValue)> cb) {
     EvalExpressionOn(context, object_value,
                      fxl::StringPrintf("(%s)[%" PRId64 "]", expression.c_str(), index),
-                     std::move(cb));
+                     ErrOrValue::ToPairCallback(std::move(cb)));
   };
 }
 
@@ -207,10 +207,10 @@ void PrettyHeapString::Format(FormatNode* node, const FormatOptions& options,
 
 PrettyHeapString::EvalArrayFunction PrettyHeapString::GetArrayAccess() const {
   return [expression = ptr_expr_](fxl::RefPtr<EvalContext> context, const ExprValue& object_value,
-                                  int64_t index, fit::callback<void(const Err&, ExprValue)> cb) {
+                                  int64_t index, fit::callback<void(ErrOrValue)> cb) {
     EvalExpressionOn(context, object_value,
                      fxl::StringPrintf("(%s)[%" PRId64 "]", expression.c_str(), index),
-                     std::move(cb));
+                     ErrOrValue::ToPairCallback(std::move(cb)));
   };
 }
 

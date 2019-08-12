@@ -96,7 +96,8 @@ void ArrayAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb
               if (offset_err.has_error()) {
                 cb(offset_err, ExprValue());
               } else {
-                ResolveArrayItem(std::move(context), std::move(left_value), offset, std::move(cb));
+                ResolveArrayItem(std::move(context), std::move(left_value), offset,
+                                 ErrOrValue::FromPairCallback(std::move(cb)));
               }
             }
           });

@@ -8,12 +8,13 @@
 #include <vector>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/expr/eval_callback.h"
+#include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 
 class Err;
-class ExprValue;
 class Type;
 class EvalContext;
 
@@ -26,8 +27,8 @@ class EvalContext;
 // compile time and therefor the entire array is contained in the ExprValue's data.
 //
 // This does not apply pretty types for item resolution.
-Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
-                 size_t end_index, std::vector<ExprValue>* result);
+ErrOrValueVector ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+                              size_t begin_index, size_t end_index);
 
 // This variant handles both the static array version above and also dereferencing pointers using
 // array indexing. Since this requires memory fetches is must be asynchronous.
@@ -36,12 +37,12 @@ Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, 
 //
 // This does not apply pretty types for item resolution.
 void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
-                  size_t end_index, fit::callback<void(const Err&, std::vector<ExprValue>)> cb);
+                  size_t end_index, fit::callback<void(ErrOrValueVector)>);
 
 // Resolves a single item in an array and applies pretty types for item resolution. This is the
 // backend for array access [ <number> ] in expressions.
 void ResolveArrayItem(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t index,
-                      fit::callback<void(const Err&, ExprValue)> cb);
+                      EvalCallback cb);
 
 }  // namespace zxdb
 

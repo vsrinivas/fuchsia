@@ -154,6 +154,7 @@ template <>
 double ExprValue::GetAs<double>() const;
 
 using ErrOrValue = ErrOr<ExprValue>;
+using ErrOrValueVector = ErrOr<std::vector<ExprValue>>;
 
 }  // namespace zxdb
 
