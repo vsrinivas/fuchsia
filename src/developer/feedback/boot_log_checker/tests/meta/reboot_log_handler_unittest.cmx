@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/reboot_log_handler_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable",
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}
