@@ -18,4 +18,31 @@ library("launchpad") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
   ]
+  visibility = [
+    ":*",
+    "test:*",
+    "$zx/system/core/bootsvc:*",
+
+    # Do not add anymore targets to this list.
+    # Instead of launchpad, use fdio_spawn or fuchsia.process.Launcher.
+    "$zx/system/core/devmgr/devcoordinator:*",
+    "$zx/system/core/devmgr/shared:*",
+    "$zx/system/dev/block/ftl/test:*",
+    "$zx/system/ulib:*",
+    "$zx/system/ulib/elf-search/test:*",
+    "$zx/system/ulib/process-launcher:*",
+    "$zx/system/ulib/test-utils:*",
+    "$zx/system/utest/abigen:*",
+    "$zx/system/utest/channel-fatal:*",
+    "$zx/system/utest/debugger:*",
+    "$zx/system/utest/dlfcn:*",
+    "$zx/system/utest/exception:*",
+    "$zx/system/utest/fs:*",
+    "$zx/system/utest/property:*",
+    "$zx/system/utest/spawn:*",
+    "$zx/system/utest/stdio:*",
+    "$zx/system/utest/thread-state:*",
+    "$zx/system/utest/usb-virtual-bus:*",
+    "$zx/system/utest/vdso-variant:*",
+  ]
 }
