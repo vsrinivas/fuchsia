@@ -12,7 +12,7 @@ struct FunctionDescriptor {
     uint8 interface_protocol;
 };
 
-// The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification.
+/// The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification.
 struct DeviceDescriptor {
     uint16 bcdUSB;
     uint8 bDeviceClass;
@@ -30,10 +30,10 @@ struct DeviceDescriptor {
 
 const uint32 MAX_STRING_LENGTH = 127;
 
-// Events protocol that is used as a callback to inform the client
-// of the completion of various server-side events.
-// This callback interface can be registered using the SetStateChangeListener
-// method on the Device protocol.
+/// Events protocol that is used as a callback to inform the client
+/// of the completion of various server-side events.
+/// This callback interface can be registered using the SetStateChangeListener
+/// method on the Device protocol.
 [Layout = "Simple"]
 protocol Events {
     // Invoked when a function registers
@@ -42,22 +42,22 @@ protocol Events {
 
 [Layout = "Simple"]
 protocol Device {
-    // Sets the device's USB device descriptor.
-    SetDeviceDescriptor(DeviceDescriptor desc) -> (zx.status s);
-    // Sets a string descriptor a string in the USB device descriptor.
-    AllocStringDesc(string:MAX_STRING_LENGTH name) -> (zx.status s, uint8 index);
-    // Adds a new function to the USB current configuration.
-    // Must be called before BindFunctions or after ClearFunctions.
-    AddFunction(FunctionDescriptor desc) -> (zx.status s);
-    // Tells the device to create child devices for the configuration's interfaces.
-    BindFunctions() -> (zx.status s);
-    // Tells the device to remove the child devices for the configuration's interfaces
-    // and reset the list of functions to empty.
-    ClearFunctions() -> (zx.status s);
-    // Returns the current USB mode.
-    GetMode() -> (zx.status s, uint32 mode);
-    // Sets the current USB mode.
-    SetMode(uint32 mode) -> (zx.status s);
-    // Adds a state change listener that is invoked when a state change completes.
+    /// Sets the device's USB device descriptor.
+    SetDeviceDescriptor(DeviceDescriptor desc) -> (zx.status status);
+    /// Sets a string descriptor a string in the USB device descriptor.
+    AllocStringDesc(string:MAX_STRING_LENGTH name) -> (zx.status status, uint8 index);
+    /// Adds a new function to the USB current configuration.
+    /// Must be called before BindFunctions or after ClearFunctions.
+    AddFunction(FunctionDescriptor desc) -> (zx.status status);
+    /// Tells the device to create child devices for the configuration's interfaces.
+    BindFunctions() -> (zx.status status);
+    /// Tells the device to remove the child devices for the configuration's interfaces
+    /// and reset the list of functions to empty.
+    ClearFunctions() -> (zx.status status);
+    /// Returns the current USB mode.
+    GetMode() -> (zx.status status, uint32 mode);
+    /// Sets the current USB mode.
+    SetMode(uint32 mode) -> (zx.status status);
+    /// Adds a state change listener that is invoked when a state change completes.
     SetStateChangeListener(request<Events> listener);
 };

@@ -67,11 +67,11 @@ Bus::UnownedResultOf::Enable Bus::Call::Enable(zx::unowned_channel _client_end, 
   return UnownedResultOf::Enable(std::move(_client_end), std::move(_response_buffer));
 }
 
-zx_status_t Bus::SyncClient::Enable_Deprecated(int32_t* out_s) {
-  return Bus::Call::Enable_Deprecated(zx::unowned_channel(this->channel_), out_s);
+zx_status_t Bus::SyncClient::Enable_Deprecated(int32_t* out_status) {
+  return Bus::Call::Enable_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, int32_t* out_s) {
+zx_status_t Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<EnableRequest*>(_write_bytes);
@@ -95,15 +95,15 @@ zx_status_t Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, int32_
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_s = std::move(_response.s);
+  *out_status = std::move(_response.status);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Bus::EnableResponse> Bus::SyncClient::Enable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Bus::Call::Enable_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Bus::EnableResponse> Bus::SyncClient::Enable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Bus::Call::Enable_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Bus::EnableResponse> Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Bus::EnableResponse> Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(EnableRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<EnableRequest*>(_request_buffer.data());
@@ -124,7 +124,7 @@ zx_status_t Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, int32_
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_s = std::move(_response.s);
+  *out_status = std::move(_response.status);
   return _decode_result;
 }
 
@@ -190,11 +190,11 @@ Bus::UnownedResultOf::Disable Bus::Call::Disable(zx::unowned_channel _client_end
   return UnownedResultOf::Disable(std::move(_client_end), std::move(_response_buffer));
 }
 
-zx_status_t Bus::SyncClient::Disable_Deprecated(int32_t* out_s) {
-  return Bus::Call::Disable_Deprecated(zx::unowned_channel(this->channel_), out_s);
+zx_status_t Bus::SyncClient::Disable_Deprecated(int32_t* out_status) {
+  return Bus::Call::Disable_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, int32_t* out_s) {
+zx_status_t Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DisableRequest*>(_write_bytes);
@@ -218,15 +218,15 @@ zx_status_t Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, int32
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_s = std::move(_response.s);
+  *out_status = std::move(_response.status);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Bus::DisableResponse> Bus::SyncClient::Disable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Bus::Call::Disable_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Bus::DisableResponse> Bus::SyncClient::Disable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Bus::Call::Disable_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Bus::DisableResponse> Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Bus::DisableResponse> Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisableRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<DisableRequest*>(_request_buffer.data());
@@ -247,7 +247,7 @@ zx_status_t Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, int32
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_s = std::move(_response.s);
+  *out_status = std::move(_response.status);
   return _decode_result;
 }
 
@@ -313,11 +313,11 @@ Bus::UnownedResultOf::Connect Bus::Call::Connect(zx::unowned_channel _client_end
   return UnownedResultOf::Connect(std::move(_client_end), std::move(_response_buffer));
 }
 
-zx_status_t Bus::SyncClient::Connect_Deprecated(int32_t* out_s) {
-  return Bus::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), out_s);
+zx_status_t Bus::SyncClient::Connect_Deprecated(int32_t* out_status) {
+  return Bus::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, int32_t* out_s) {
+zx_status_t Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ConnectRequest*>(_write_bytes);
@@ -341,15 +341,15 @@ zx_status_t Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, int32
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_s = std::move(_response.s);
+  *out_status = std::move(_response.status);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Bus::ConnectResponse> Bus::SyncClient::Connect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Bus::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Bus::ConnectResponse> Bus::SyncClient::Connect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Bus::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Bus::ConnectResponse> Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Bus::ConnectResponse> Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ConnectRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<ConnectRequest*>(_request_buffer.data());
@@ -370,7 +370,7 @@ zx_status_t Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, int32
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_s = std::move(_response.s);
+  *out_status = std::move(_response.status);
   return _decode_result;
 }
 
@@ -436,11 +436,11 @@ Bus::UnownedResultOf::Disconnect Bus::Call::Disconnect(zx::unowned_channel _clie
   return UnownedResultOf::Disconnect(std::move(_client_end), std::move(_response_buffer));
 }
 
-zx_status_t Bus::SyncClient::Disconnect_Deprecated(int32_t* out_s) {
-  return Bus::Call::Disconnect_Deprecated(zx::unowned_channel(this->channel_), out_s);
+zx_status_t Bus::SyncClient::Disconnect_Deprecated(int32_t* out_status) {
+  return Bus::Call::Disconnect_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, int32_t* out_s) {
+zx_status_t Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DisconnectRequest*>(_write_bytes);
@@ -464,15 +464,15 @@ zx_status_t Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, in
     return _decode_result.status;
   }
   auto& _response = *_decode_result.message.message();
-  *out_s = std::move(_response.s);
+  *out_status = std::move(_response.status);
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Bus::DisconnectResponse> Bus::SyncClient::Disconnect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Bus::Call::Disconnect_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Bus::DisconnectResponse> Bus::SyncClient::Disconnect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Bus::Call::Disconnect_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Bus::DisconnectResponse> Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Bus::DisconnectResponse> Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisconnectRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<DisconnectRequest*>(_request_buffer.data());
@@ -493,7 +493,7 @@ zx_status_t Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, in
     return _decode_result;
   }
   auto& _response = *_decode_result.message.message();
-  *out_s = std::move(_response.s);
+  *out_status = std::move(_response.status);
   return _decode_result;
 }
 
@@ -588,24 +588,24 @@ bool Bus::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
 }
 
 
-void Bus::Interface::EnableCompleterBase::Reply(int32_t s) {
+void Bus::Interface::EnableCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<EnableResponse*>(_write_bytes);
   _response._hdr.ordinal = kBus_Enable_GenOrdinal;
-  _response.s = std::move(s);
+  _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(EnableResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<EnableResponse>(std::move(_response_bytes)));
 }
 
-void Bus::Interface::EnableCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s) {
+void Bus::Interface::EnableCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < EnableResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<EnableResponse*>(_buffer.data());
   _response._hdr.ordinal = kBus_Enable_GenOrdinal;
-  _response.s = std::move(s);
+  _response.status = std::move(status);
   _buffer.set_actual(sizeof(EnableResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<EnableResponse>(std::move(_buffer)));
 }
@@ -617,24 +617,24 @@ void Bus::Interface::EnableCompleterBase::Reply(::fidl::DecodedMessage<EnableRes
 }
 
 
-void Bus::Interface::DisableCompleterBase::Reply(int32_t s) {
+void Bus::Interface::DisableCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DisableResponse*>(_write_bytes);
   _response._hdr.ordinal = kBus_Disable_GenOrdinal;
-  _response.s = std::move(s);
+  _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DisableResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DisableResponse>(std::move(_response_bytes)));
 }
 
-void Bus::Interface::DisableCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s) {
+void Bus::Interface::DisableCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < DisableResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<DisableResponse*>(_buffer.data());
   _response._hdr.ordinal = kBus_Disable_GenOrdinal;
-  _response.s = std::move(s);
+  _response.status = std::move(status);
   _buffer.set_actual(sizeof(DisableResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DisableResponse>(std::move(_buffer)));
 }
@@ -646,24 +646,24 @@ void Bus::Interface::DisableCompleterBase::Reply(::fidl::DecodedMessage<DisableR
 }
 
 
-void Bus::Interface::ConnectCompleterBase::Reply(int32_t s) {
+void Bus::Interface::ConnectCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConnectResponse*>(_write_bytes);
   _response._hdr.ordinal = kBus_Connect_GenOrdinal;
-  _response.s = std::move(s);
+  _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConnectResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConnectResponse>(std::move(_response_bytes)));
 }
 
-void Bus::Interface::ConnectCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s) {
+void Bus::Interface::ConnectCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < ConnectResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<ConnectResponse*>(_buffer.data());
   _response._hdr.ordinal = kBus_Connect_GenOrdinal;
-  _response.s = std::move(s);
+  _response.status = std::move(status);
   _buffer.set_actual(sizeof(ConnectResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConnectResponse>(std::move(_buffer)));
 }
@@ -675,24 +675,24 @@ void Bus::Interface::ConnectCompleterBase::Reply(::fidl::DecodedMessage<ConnectR
 }
 
 
-void Bus::Interface::DisconnectCompleterBase::Reply(int32_t s) {
+void Bus::Interface::DisconnectCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DisconnectResponse*>(_write_bytes);
   _response._hdr.ordinal = kBus_Disconnect_GenOrdinal;
-  _response.s = std::move(s);
+  _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DisconnectResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DisconnectResponse>(std::move(_response_bytes)));
 }
 
-void Bus::Interface::DisconnectCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s) {
+void Bus::Interface::DisconnectCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < DisconnectResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<DisconnectResponse*>(_buffer.data());
   _response._hdr.ordinal = kBus_Disconnect_GenOrdinal;
-  _response.s = std::move(s);
+  _response.status = std::move(status);
   _buffer.set_actual(sizeof(DisconnectResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DisconnectResponse>(std::move(_buffer)));
 }

@@ -26,6 +26,10 @@ struct FunctionDescriptor;
 struct DeviceDescriptor;
 class Device;
 
+// Events protocol that is used as a callback to inform the client
+// of the completion of various server-side events.
+// This callback interface can be registered using the SetStateChangeListener
+// method on the Device protocol.
 class Events final {
   Events() = delete;
  public:
@@ -191,6 +195,7 @@ struct FunctionDescriptor {
 
 
 
+// The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification.
 struct DeviceDescriptor {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -241,7 +246,7 @@ class Device final {
   struct SetDeviceDescriptorResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t s;
+    int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceSetDeviceDescriptorResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -263,7 +268,7 @@ class Device final {
   struct AllocStringDescResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t s;
+    int32_t status;
     uint8_t index;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceAllocStringDescResponseTable;
@@ -286,7 +291,7 @@ class Device final {
   struct AddFunctionResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t s;
+    int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceAddFunctionResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -308,7 +313,7 @@ class Device final {
   struct BindFunctionsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t s;
+    int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceBindFunctionsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -320,7 +325,7 @@ class Device final {
   struct ClearFunctionsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t s;
+    int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -332,7 +337,7 @@ class Device final {
   struct GetModeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t s;
+    int32_t status;
     uint32_t mode;
 
     static constexpr const fidl_type_t* Type = nullptr;
@@ -345,7 +350,7 @@ class Device final {
   struct SetModeResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t s;
+    int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceSetModeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -666,98 +671,138 @@ class Device final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Sets the device's USB device descriptor.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetDeviceDescriptor SetDeviceDescriptor(DeviceDescriptor desc);
 
+    // Sets the device's USB device descriptor.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetDeviceDescriptor SetDeviceDescriptor(::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer);
 
-    zx_status_t SetDeviceDescriptor_Deprecated(DeviceDescriptor desc, int32_t* out_s);
+    // Sets the device's USB device descriptor.
+    zx_status_t SetDeviceDescriptor_Deprecated(DeviceDescriptor desc, int32_t* out_status);
 
+    // Sets the device's USB device descriptor.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Sets a string descriptor a string in the USB device descriptor.
     // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AllocStringDesc AllocStringDesc(::fidl::StringView name);
 
+    // Sets a string descriptor a string in the USB device descriptor.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::AllocStringDesc AllocStringDesc(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer);
 
-    zx_status_t AllocStringDesc_Deprecated(::fidl::StringView name, int32_t* out_s, uint8_t* out_index);
+    // Sets a string descriptor a string in the USB device descriptor.
+    zx_status_t AllocStringDesc_Deprecated(::fidl::StringView name, int32_t* out_status, uint8_t* out_index);
 
+    // Sets a string descriptor a string in the USB device descriptor.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer, int32_t* out_s, uint8_t* out_index);
+    ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer, int32_t* out_status, uint8_t* out_index);
 
+    // Adds a new function to the USB current configuration.
+    // Must be called before BindFunctions or after ClearFunctions.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AddFunction AddFunction(FunctionDescriptor desc);
 
+    // Adds a new function to the USB current configuration.
+    // Must be called before BindFunctions or after ClearFunctions.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::AddFunction AddFunction(::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer);
 
-    zx_status_t AddFunction_Deprecated(FunctionDescriptor desc, int32_t* out_s);
+    // Adds a new function to the USB current configuration.
+    // Must be called before BindFunctions or after ClearFunctions.
+    zx_status_t AddFunction_Deprecated(FunctionDescriptor desc, int32_t* out_status);
 
+    // Adds a new function to the USB current configuration.
+    // Must be called before BindFunctions or after ClearFunctions.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Tells the device to create child devices for the configuration's interfaces.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::BindFunctions BindFunctions();
 
+    // Tells the device to create child devices for the configuration's interfaces.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::BindFunctions BindFunctions(::fidl::BytePart _response_buffer);
 
-    zx_status_t BindFunctions_Deprecated(int32_t* out_s);
+    // Tells the device to create child devices for the configuration's interfaces.
+    zx_status_t BindFunctions_Deprecated(int32_t* out_status);
 
+    // Tells the device to create child devices for the configuration's interfaces.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
+    ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Tells the device to remove the child devices for the configuration's interfaces
+    // and reset the list of functions to empty.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ClearFunctions ClearFunctions();
 
+    // Tells the device to remove the child devices for the configuration's interfaces
+    // and reset the list of functions to empty.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ClearFunctions ClearFunctions(::fidl::BytePart _response_buffer);
 
-    zx_status_t ClearFunctions_Deprecated(int32_t* out_s);
+    // Tells the device to remove the child devices for the configuration's interfaces
+    // and reset the list of functions to empty.
+    zx_status_t ClearFunctions_Deprecated(int32_t* out_status);
 
+    // Tells the device to remove the child devices for the configuration's interfaces
+    // and reset the list of functions to empty.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
+    ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Returns the current USB mode.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetMode GetMode();
 
+    // Returns the current USB mode.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetMode GetMode(::fidl::BytePart _response_buffer);
 
-    zx_status_t GetMode_Deprecated(int32_t* out_s, uint32_t* out_mode);
+    // Returns the current USB mode.
+    zx_status_t GetMode_Deprecated(int32_t* out_status, uint32_t* out_mode);
 
+    // Returns the current USB mode.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_mode);
+    ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, uint32_t* out_mode);
 
+    // Sets the current USB mode.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetMode SetMode(uint32_t mode);
 
+    // Sets the current USB mode.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetMode SetMode(::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer);
 
-    zx_status_t SetMode_Deprecated(uint32_t mode, int32_t* out_s);
+    // Sets the current USB mode.
+    zx_status_t SetMode_Deprecated(uint32_t mode, int32_t* out_status);
 
+    // Sets the current USB mode.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Adds a state change listener that is invoked when a state change completes.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetStateChangeListener SetStateChangeListener(::zx::channel listener);
 
+    // Adds a state change listener that is invoked when a state change completes.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetStateChangeListener SetStateChangeListener(::fidl::BytePart _request_buffer, ::zx::channel listener);
 
+    // Adds a state change listener that is invoked when a state change completes.
     zx_status_t SetStateChangeListener_Deprecated(::zx::channel listener);
 
+    // Adds a state change listener that is invoked when a state change completes.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t SetStateChangeListener_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel listener);
 
@@ -770,98 +815,138 @@ class Device final {
     Call() = delete;
    public:
 
+    // Sets the device's USB device descriptor.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetDeviceDescriptor SetDeviceDescriptor(zx::unowned_channel _client_end, DeviceDescriptor desc);
 
+    // Sets the device's USB device descriptor.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetDeviceDescriptor SetDeviceDescriptor(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t SetDeviceDescriptor_Deprecated(zx::unowned_channel _client_end, DeviceDescriptor desc, int32_t* out_s);
+    // Sets the device's USB device descriptor.
+    static zx_status_t SetDeviceDescriptor_Deprecated(zx::unowned_channel _client_end, DeviceDescriptor desc, int32_t* out_status);
 
+    // Sets the device's USB device descriptor.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    static ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Sets a string descriptor a string in the USB device descriptor.
     // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AllocStringDesc AllocStringDesc(zx::unowned_channel _client_end, ::fidl::StringView name);
 
+    // Sets a string descriptor a string in the USB device descriptor.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::AllocStringDesc AllocStringDesc(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t AllocStringDesc_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView name, int32_t* out_s, uint8_t* out_index);
+    // Sets a string descriptor a string in the USB device descriptor.
+    static zx_status_t AllocStringDesc_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView name, int32_t* out_status, uint8_t* out_index);
 
+    // Sets a string descriptor a string in the USB device descriptor.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer, int32_t* out_s, uint8_t* out_index);
+    static ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer, int32_t* out_status, uint8_t* out_index);
 
+    // Adds a new function to the USB current configuration.
+    // Must be called before BindFunctions or after ClearFunctions.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AddFunction AddFunction(zx::unowned_channel _client_end, FunctionDescriptor desc);
 
+    // Adds a new function to the USB current configuration.
+    // Must be called before BindFunctions or after ClearFunctions.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::AddFunction AddFunction(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t AddFunction_Deprecated(zx::unowned_channel _client_end, FunctionDescriptor desc, int32_t* out_s);
+    // Adds a new function to the USB current configuration.
+    // Must be called before BindFunctions or after ClearFunctions.
+    static zx_status_t AddFunction_Deprecated(zx::unowned_channel _client_end, FunctionDescriptor desc, int32_t* out_status);
 
+    // Adds a new function to the USB current configuration.
+    // Must be called before BindFunctions or after ClearFunctions.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    static ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Tells the device to create child devices for the configuration's interfaces.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::BindFunctions BindFunctions(zx::unowned_channel _client_end);
 
+    // Tells the device to create child devices for the configuration's interfaces.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::BindFunctions BindFunctions(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t BindFunctions_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
+    // Tells the device to create child devices for the configuration's interfaces.
+    static zx_status_t BindFunctions_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
 
+    // Tells the device to create child devices for the configuration's interfaces.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    static ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Tells the device to remove the child devices for the configuration's interfaces
+    // and reset the list of functions to empty.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ClearFunctions ClearFunctions(zx::unowned_channel _client_end);
 
+    // Tells the device to remove the child devices for the configuration's interfaces
+    // and reset the list of functions to empty.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ClearFunctions ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t ClearFunctions_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
+    // Tells the device to remove the child devices for the configuration's interfaces
+    // and reset the list of functions to empty.
+    static zx_status_t ClearFunctions_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
 
+    // Tells the device to remove the child devices for the configuration's interfaces
+    // and reset the list of functions to empty.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Returns the current USB mode.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetMode GetMode(zx::unowned_channel _client_end);
 
+    // Returns the current USB mode.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetMode GetMode(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t GetMode_Deprecated(zx::unowned_channel _client_end, int32_t* out_s, uint32_t* out_mode);
+    // Returns the current USB mode.
+    static zx_status_t GetMode_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, uint32_t* out_mode);
 
+    // Returns the current USB mode.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_mode);
+    static ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, uint32_t* out_mode);
 
+    // Sets the current USB mode.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetMode SetMode(zx::unowned_channel _client_end, uint32_t mode);
 
+    // Sets the current USB mode.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetMode SetMode(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t SetMode_Deprecated(zx::unowned_channel _client_end, uint32_t mode, int32_t* out_s);
+    // Sets the current USB mode.
+    static zx_status_t SetMode_Deprecated(zx::unowned_channel _client_end, uint32_t mode, int32_t* out_status);
 
+    // Sets the current USB mode.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    static ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Adds a state change listener that is invoked when a state change completes.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetStateChangeListener SetStateChangeListener(zx::unowned_channel _client_end, ::zx::channel listener);
 
+    // Adds a state change listener that is invoked when a state change completes.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetStateChangeListener SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
 
+    // Adds a state change listener that is invoked when a state change completes.
     static zx_status_t SetStateChangeListener_Deprecated(zx::unowned_channel _client_end, ::zx::channel listener);
 
+    // Adds a state change listener that is invoked when a state change completes.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t SetStateChangeListener_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
 
@@ -873,20 +958,30 @@ class Device final {
     InPlace() = delete;
    public:
 
+    // Sets the device's USB device descriptor.
     static ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDeviceDescriptorRequest> params, ::fidl::BytePart response_buffer);
 
+    // Sets a string descriptor a string in the USB device descriptor.
     static ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocStringDescRequest> params, ::fidl::BytePart response_buffer);
 
+    // Adds a new function to the USB current configuration.
+    // Must be called before BindFunctions or after ClearFunctions.
     static ::fidl::DecodeResult<AddFunctionResponse> AddFunction(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddFunctionRequest> params, ::fidl::BytePart response_buffer);
 
+    // Tells the device to create child devices for the configuration's interfaces.
     static ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Tells the device to remove the child devices for the configuration's interfaces
+    // and reset the list of functions to empty.
     static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Returns the current USB mode.
     static ::fidl::DecodeResult<GetModeResponse> GetMode(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Sets the current USB mode.
     static ::fidl::DecodeResult<SetModeResponse> SetMode(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetModeRequest> params, ::fidl::BytePart response_buffer);
 
+    // Adds a state change listener that is invoked when a state change completes.
     static ::fidl::internal::StatusAndError SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateChangeListenerRequest> params);
 
   };
@@ -901,8 +996,8 @@ class Device final {
 
     class SetDeviceDescriptorCompleterBase : public _Base {
      public:
-      void Reply(int32_t s);
-      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
       void Reply(::fidl::DecodedMessage<SetDeviceDescriptorResponse> params);
 
      protected:
@@ -915,8 +1010,8 @@ class Device final {
 
     class AllocStringDescCompleterBase : public _Base {
      public:
-      void Reply(int32_t s, uint8_t index);
-      void Reply(::fidl::BytePart _buffer, int32_t s, uint8_t index);
+      void Reply(int32_t status, uint8_t index);
+      void Reply(::fidl::BytePart _buffer, int32_t status, uint8_t index);
       void Reply(::fidl::DecodedMessage<AllocStringDescResponse> params);
 
      protected:
@@ -929,8 +1024,8 @@ class Device final {
 
     class AddFunctionCompleterBase : public _Base {
      public:
-      void Reply(int32_t s);
-      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
       void Reply(::fidl::DecodedMessage<AddFunctionResponse> params);
 
      protected:
@@ -943,8 +1038,8 @@ class Device final {
 
     class BindFunctionsCompleterBase : public _Base {
      public:
-      void Reply(int32_t s);
-      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
       void Reply(::fidl::DecodedMessage<BindFunctionsResponse> params);
 
      protected:
@@ -957,8 +1052,8 @@ class Device final {
 
     class ClearFunctionsCompleterBase : public _Base {
      public:
-      void Reply(int32_t s);
-      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
       void Reply(::fidl::DecodedMessage<ClearFunctionsResponse> params);
 
      protected:
@@ -971,8 +1066,8 @@ class Device final {
 
     class GetModeCompleterBase : public _Base {
      public:
-      void Reply(int32_t s, uint32_t mode);
-      void Reply(::fidl::BytePart _buffer, int32_t s, uint32_t mode);
+      void Reply(int32_t status, uint32_t mode);
+      void Reply(::fidl::BytePart _buffer, int32_t status, uint32_t mode);
       void Reply(::fidl::DecodedMessage<GetModeResponse> params);
 
      protected:
@@ -985,8 +1080,8 @@ class Device final {
 
     class SetModeCompleterBase : public _Base {
      public:
-      void Reply(int32_t s);
-      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
       void Reply(::fidl::DecodedMessage<SetModeResponse> params);
 
      protected:
@@ -1070,7 +1165,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::hardware::usb::peripheral::Device::SetDeviceDescriptorResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device::SetDeviceDescriptorResponse)
     == ::llcpp::fuchsia::hardware::usb::peripheral::Device::SetDeviceDescriptorResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::SetDeviceDescriptorResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::SetDeviceDescriptorResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::Device::AllocStringDescRequest> : public std::true_type {};
@@ -1086,7 +1181,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::hardware::usb::peripheral::Device::AllocStringDescResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device::AllocStringDescResponse)
     == ::llcpp::fuchsia::hardware::usb::peripheral::Device::AllocStringDescResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::AllocStringDescResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::AllocStringDescResponse, status) == 16);
 static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::AllocStringDescResponse, index) == 20);
 
 template <>
@@ -1103,7 +1198,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::hardware::usb::peripheral::Device::AddFunctionResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device::AddFunctionResponse)
     == ::llcpp::fuchsia::hardware::usb::peripheral::Device::AddFunctionResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::AddFunctionResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::AddFunctionResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::Device::BindFunctionsResponse> : public std::true_type {};
@@ -1111,7 +1206,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::hardware::usb::peripheral::Device::BindFunctionsResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device::BindFunctionsResponse)
     == ::llcpp::fuchsia::hardware::usb::peripheral::Device::BindFunctionsResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::BindFunctionsResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::BindFunctionsResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse> : public std::true_type {};
@@ -1119,7 +1214,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse)
     == ::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::Device::GetModeResponse> : public std::true_type {};
@@ -1127,7 +1222,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::hardware::usb::peripheral::Device::GetModeResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device::GetModeResponse)
     == ::llcpp::fuchsia::hardware::usb::peripheral::Device::GetModeResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::GetModeResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::GetModeResponse, status) == 16);
 static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::GetModeResponse, mode) == 20);
 
 template <>
@@ -1144,7 +1239,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::hardware::usb::peripheral::Device::SetModeResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device::SetModeResponse)
     == ::llcpp::fuchsia::hardware::usb::peripheral::Device::SetModeResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::SetModeResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::SetModeResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::Device::SetStateChangeListenerRequest> : public std::true_type {};

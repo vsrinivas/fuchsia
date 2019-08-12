@@ -42,17 +42,17 @@ protocol Device {
     GetReportIds() -> (vector<ReportId>:MAX_REPORT_IDS ids);
 
     // Get the size of a single report for the given (type, id) pair.
-    GetReportSize(ReportType type, ReportId id) -> (zx.status s, uint16 size);
+    GetReportSize(ReportType type, ReportId id) -> (zx.status status, uint16 size);
 
     // Get the maximum size of a single input report.
     GetMaxInputReportSize() -> (uint16 size);
 
     // Get a single report of the given (type, id) pair.  This interface is not intended
     // to be used for continuous polling of the reports.
-    GetReport(ReportType type, ReportId id) -> (zx.status s, vector<uint8>:MAX_REPORT_LEN report);
+    GetReport(ReportType type, ReportId id) -> (zx.status status, vector<uint8>:MAX_REPORT_LEN report);
 
     // Set a single report of the given (type, id) pair.
-    SetReport(ReportType type, ReportId id, vector<uint8>:MAX_REPORT_LEN report) -> (zx.status s);
+    SetReport(ReportType type, ReportId id, vector<uint8>:MAX_REPORT_LEN report) -> (zx.status status);
 
     // Set the trace ID that is used for HID report flow events.
     SetTraceId(uint32 id);

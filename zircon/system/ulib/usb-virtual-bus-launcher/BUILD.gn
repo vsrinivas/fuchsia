@@ -14,21 +14,20 @@ library("usb-virtual-bus-launcher") {
     "usb-virtual-bus-launcher-helper.cc",
     "usb-virtual-bus-launcher.cc",
   ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
+    "$zx/system/ulib/driver-integration-test",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+    ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c",
-    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:c",
-    "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/ddk",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/devmgr-launcher",
-    "$zx/system/ulib/driver-integration-test",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-async",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

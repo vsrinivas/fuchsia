@@ -6,27 +6,27 @@ library fuchsia.hardware.usb.peripheral.block;
 
 using zx;
 
-// Represents a simulated USB block device whose cache can be controlled.
-// This allows for integration testing of USB mass storage devices
-// both with and without caches.
+/// Represents a simulated USB block device whose cache can be controlled.
+/// This allows for integration testing of USB mass storage devices
+/// both with and without caches.
 [Layout = "Simple"]
 protocol Device {
-    // Enables writeback caching. This requires the device
-    // to be disconnected at the time of the call. Calling it when the device is connected
-    // will result in undefined behavior.
-    // All writes will be buffered until a BLOCK_OP_FLUSH is received.
-    EnableWritebackCache() -> (zx.status s);
-    // Disables writeback caching. This requires the device to be disconnected at the time
-    // of the call. Calling it when the device is connected will result in undefined behavior.
-    // Disabling this cache will cause any writes to be written immediately to non-volatile storage
-    // before returning to the caller.
-    DisableWritebackCache() -> (zx.status s);
-    // Sets writeback cache reporting behavior. This requires the device
-    // to be disconnected at the time of the call. Calling it when the device is connected
-    // will result in undefined behavior.
-    // If report is set to true, the device will report its cache capability correctly to the
-    // host. If set to false, the writeback caching capabilities will NOT be reported.
-    // This can be used to test host drivers to ensure that they respond properly
-    // when the device does not report its caching capabilities.
-    SetWritebackCacheReported(bool report) -> (zx.status s);
+    /// Enables writeback caching. This requires the device
+    /// to be disconnected at the time of the call. Calling it when the device is connected
+    /// will result in undefined behavior.
+    /// All writes will be buffered until a BLOCK_OP_FLUSH is received.
+    EnableWritebackCache() -> (zx.status status);
+    /// Disables writeback caching. This requires the device to be disconnected at the time
+    /// of the call. Calling it when the device is connected will result in undefined behavior.
+    /// Disabling this cache will cause any writes to be written immediately to non-volatile storage
+    /// before returning to the caller.
+    DisableWritebackCache() -> (zx.status status);
+    /// Sets writeback cache reporting behavior. This requires the device
+    /// to be disconnected at the time of the call. Calling it when the device is connected
+    /// will result in undefined behavior.
+    /// If report is set to true, the device will report its cache capability correctly to the
+    /// host. If set to false, the writeback caching capabilities will NOT be reported.
+    /// This can be used to test host drivers to ensure that they respond properly
+    /// when the device does not report its caching capabilities.
+    SetWritebackCacheReported(bool report) -> (zx.status status);
 };

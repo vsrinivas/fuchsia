@@ -2,51 +2,78 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/platform-defs.h>
 #include <dirent.h>
 #include <endian.h>
-#include <fbl/auto_call.h>
-#include <fbl/function.h>
-#include <fbl/unique_ptr.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/usb/peripheral/c/fidl.h>
-#include <fuchsia/hardware/usb/virtual/bus/c/fidl.h>
-#include <hid/boot.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/loop.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/namespace.h>
-#include <lib/fdio/spawn.h>
-#include <lib/fdio/unsafe.h>
+#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
+#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fidl-async/bind.h>
-#include <lib/fzl/fdio.h>
+#include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/hw/usb.h>
-#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <zxtest/zxtest.h>
 
 #include <ctime>
 
-#include "usb-virtual-bus.h"
+#include <ddk/platform-defs.h>
+#include <fbl/string.h>
+#include <hid/boot.h>
+#include <zxtest/zxtest.h>
 
+namespace usb_virtual_bus {
 namespace {
+
+class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
+ public:
+  USBVirtualBus() {}
+
+  // Initialize an FTDI device. Asserts on failure.
+  void InitFtdi(fbl::String* devpath);
+};
+
+// Initialize an FTDI USB device. Asserts on failure.
+void USBVirtualBus::InitFtdi(fbl::String* devpath) {
+  namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
+
+  usb_peripheral::DeviceDescriptor device_desc = {};
+  device_desc.bcdUSB = htole16(0x0200);
+  device_desc.bMaxPacketSize0 = 64;
+  device_desc.bcdDevice = htole16(0x0100);
+  device_desc.bNumConfigurations = 1;
+
+  // Setting FTDI Vendor
+  device_desc.idVendor = htole16(0x403);
+  // Setting 232H product
+  device_desc.idProduct = htole16(0x6014);
+
+  usb_peripheral::FunctionDescriptor ftdi_function_desc = {
+      .interface_class = USB_CLASS_VENDOR,
+      .interface_subclass = USB_SUBCLASS_VENDOR,
+      .interface_protocol = USB_PROTOCOL_TEST_FTDI,
+  };
+
+  std::vector<usb_peripheral::FunctionDescriptor> function_descs;
+  function_descs.push_back(ftdi_function_desc);
+
+  ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(device_desc, std::move(function_descs)));
+
+  fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/serial", O_RDONLY));
+  while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {
+  }
+  *devpath = fbl::String::Concat({fbl::String("class/serial/"), *devpath});
+}
 
 class FtdiTest : public zxtest::Test {
  public:
-  void SetUp() override {
-    ASSERT_NO_FATAL_FAILURES(bus_.InitFtdi(&devpath_));
-    bus_.GetHandles(&peripheral_, &virtual_bus_handle_);
-  }
+  void SetUp() override { ASSERT_NO_FATAL_FAILURES(bus_.InitFtdi(&devpath_)); }
 
   void TearDown() override {
-    ASSERT_EQ(ZX_OK,
-              FidlCall(fuchsia_hardware_usb_peripheral_DeviceClearFunctions, peripheral_->get()));
-    ASSERT_EQ(ZX_OK,
-              FidlCall(fuchsia_hardware_usb_virtual_bus_BusDisable, virtual_bus_handle_->get()));
+    auto result = bus_.peripheral().ClearFunctions();
+    ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
+
+    auto result2 = bus_.virtual_bus().Disable();
+    ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));
   }
 
   zx_status_t ReadWithTimeout(int fd, void* data, size_t size, size_t* actual) {
@@ -63,10 +90,8 @@ class FtdiTest : public zxtest::Test {
   }
 
  protected:
-  usb_virtual_bus::USBVirtualBus bus_;
+  USBVirtualBus bus_;
   fbl::String devpath_;
-  zx::unowned_channel peripheral_;
-  zx::unowned_channel virtual_bus_handle_;
 };
 
 TEST_F(FtdiTest, ReadAndWriteTest) {
@@ -99,3 +124,4 @@ TEST_F(FtdiTest, ReadAndWriteTest) {
 }
 
 }  // namespace
+}  // namespace usb_virtual_bus
