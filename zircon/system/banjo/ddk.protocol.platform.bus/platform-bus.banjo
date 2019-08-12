@@ -115,5 +115,5 @@ protocol PBus {
     /// |coresident_device_index| is not allowed to be zero, since we don't want platform device
     /// drivers running in the platform bus's devhost. 
     CompositeDeviceAdd(PbusDev dev, vector<ddk.driver.DeviceComponent> components,
-                       uint32_t coresident_device_index) -> (zx.status s);
+                       uint32 coresident_device_index) -> (zx.status s);
 };
