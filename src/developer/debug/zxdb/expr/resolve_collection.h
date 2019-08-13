@@ -60,8 +60,10 @@ void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& b
 // For the version that takes a type and an offset, the type must already have been computed as some
 // type of base class that lives at the given offset. It need not be a direct base and no type
 // checking is done as long as the offsets and sizes are valid.
-ErrOrValue ResolveInherited(const ExprValue& value, const InheritedFrom* from);
-ErrOrValue ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type, uint64_t offset);
+ErrOrValue ResolveInherited(fxl::RefPtr<EvalContext> context, const ExprValue& value,
+                            const InheritedFrom* from);
+ErrOrValue ResolveInherited(fxl::RefPtr<EvalContext> context, const ExprValue& value,
+                            fxl::RefPtr<Type> base_type, uint64_t offset);
 
 // Verifies that |input| type is a pointer to a collection and fills the pointed-to type into
 // |*pointed_to|. In other cases, returns an error. The input type can be null (which will produce

@@ -30,8 +30,8 @@ namespace {
 // Returns true if an index search is required for the options. Everything but local variables
 // requires the index.
 bool OptionsRequiresIndex(const FindNameOptions& options) {
-  return options.find_types || options.find_functions || options.find_templates ||
-         options.find_namespaces;
+  return options.find_types || options.find_type_defs || options.find_functions ||
+         options.find_templates || options.find_namespaces;
 }
 
 // Returns true if the |name| of an object matches what we're |looking_for| given the current
@@ -86,7 +86,9 @@ FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols, const FindNam
   }
 
   if (const Type* type = symbol->AsType()) {
-    if (options.find_types)
+    if (options.find_types)  // All types.
+      return FoundName(RefPtrTo(type));
+    if (options.find_type_defs && !type->is_declaration())  // Type definitions only.
       return FoundName(RefPtrTo(type));
     return FoundName();
   }
