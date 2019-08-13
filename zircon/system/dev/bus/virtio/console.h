@@ -3,13 +3,17 @@
 // found in the LICENSE file.
 #pragma once
 
-#include "device.h"
-#include "ring.h"
+#include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddk/device.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
-#include <lib/zircon-internal/thread_annotations.h>
+#include <fs/managed-vfs.h>
+
+#include "device.h"
+#include "ring.h"
 
 namespace virtio {
 
@@ -56,16 +60,26 @@ class TransferQueue {
 };
 
 // Actual virtio console implementation
-class ConsoleDevice : public Device {
+class ConsoleDevice : public Device,
+                      public ::llcpp::fuchsia::hardware::virtioconsole::Device::Interface {
  public:
   explicit ConsoleDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
-  virtual ~ConsoleDevice();
+  ~ConsoleDevice() override;
 
-  virtual zx_status_t Init() override;
+  zx_status_t Init() override;
+  void Unbind() override;
 
-  virtual void IrqRingUpdate() override;
-  virtual void IrqConfigChange() override {}  // No need to handle configuration changes
+  void IrqRingUpdate() override;
+  void IrqConfigChange() override {}  // No need to handle configuration changes
   const char* tag() const override { return "virtio-console"; }
+
+  void GetChannel(zx::channel req, GetChannelCompleter::Sync completer) override;
+  zx_status_t GetEvent(zx::eventpair* event) {
+    return event_remote_.duplicate(ZX_RIGHTS_BASIC, event);
+  }
+
+  zx_status_t Read(void* buf, size_t len, size_t* actual);
+  zx_status_t Write(const void* buf, size_t len, size_t* actual);
 
  private:
   // For two queues it sums up to 32KiB, we probably don't need that much
@@ -78,9 +92,6 @@ class ConsoleDevice : public Device {
   static zx_status_t virtio_console_write(void* ctx, const void* buf, size_t len, zx_off_t off,
                                           size_t* actual);
 
-  zx_status_t Read(void* buf, size_t len, zx_off_t off, size_t* actual);
-  zx_status_t Write(const void* buf, size_t len, zx_off_t off, size_t* actual);
-
   fbl::Mutex request_lock_;
 
   TransferBuffer port0_receive_buffer_ TA_GUARDED(request_lock_);
@@ -90,6 +101,11 @@ class ConsoleDevice : public Device {
   TransferBuffer port0_transmit_buffer_ TA_GUARDED(request_lock_);
   TransferQueue port0_transmit_descriptors_ TA_GUARDED(request_lock_);
   Ring port0_transmit_queue_ TA_GUARDED(request_lock_) = {this};
+
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
+  fs::ManagedVfs vfs_{loop_.dispatcher()};
+  fbl::RefPtr<fs::Vnode> console_vnode_;
+  zx::eventpair event_, event_remote_;
 };
 
 }  // namespace virtio

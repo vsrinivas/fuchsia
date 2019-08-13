@@ -3,13 +3,10 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
-#include <fbl/string_printf.h>
-#include <fbl/unique_fd.h>
-#include <fbl/vector.h>
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
 #include <getopt.h>
-#include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/directory.h>
@@ -18,6 +15,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
@@ -25,7 +23,6 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <loader-service/loader-service.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +41,12 @@
 #include <zircon/syscalls/policy.h>
 
 #include <utility>
+
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
+#include <fbl/vector.h>
+#include <launchpad/launchpad.h>
+#include <loader-service/loader-service.h>
 
 #include "../shared/env.h"
 #include "../shared/fdio.h"
@@ -303,6 +306,46 @@ int console_starter(void* arg) {
     if (!fd.is_valid()) {
       printf("devcoordinator: failed to open console '%s'\n", device);
       return 1;
+    }
+
+    // TODO(ZX-3385): Clean this up once devhost stops speaking fuchsia.io.File
+    // on behalf of drivers.  Once that happens, the virtio-console driver
+    // should just speak that instead of this shim interface.
+    if (boot_args.GetBool("console.is_virtio", false)) {
+      // If the console is a virtio connection, then speak the
+      // fuchsia.hardware.virtioconsole.Device interface to get the real
+      // fuchsia.io.File connection
+      zx::channel virtio_channel;
+      status = fdio_get_service_handle(fd.release(), virtio_channel.reset_and_get_address());
+      if (status != ZX_OK) {
+        printf("devcoordinator: failed to get console handle '%s'\n", device);
+        return 1;
+      }
+
+      zx::channel local, remote;
+      status = zx::channel::create(0, &local, &remote);
+      if (status != ZX_OK) {
+        printf("devcoordinator: failed to create channel for console '%s'\n", device);
+        return 1;
+      }
+
+      ::llcpp::fuchsia::hardware::virtioconsole::Device::SyncClient virtio_client(
+          std::move(virtio_channel));
+      virtio_client.GetChannel(std::move(remote));
+
+      fdio_t* fdio;
+      status = fdio_create(local.release(), &fdio);
+      if (status != ZX_OK) {
+        printf("devcoordinator: failed to setup fdio for console '%s'\n", device);
+        return 1;
+      }
+
+      fd.reset(fdio_bind_to_fd(fdio, -1, 3));
+      if (!fd.is_valid()) {
+        fdio_unsafe_release(fdio);
+        printf("devcoordinator: failed to transfer fdio for console '%s'\n", device);
+        return 1;
+      }
     }
 
     const char* argv_sh[] = {"/boot/bin/sh", nullptr};

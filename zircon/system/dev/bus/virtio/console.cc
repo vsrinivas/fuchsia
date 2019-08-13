@@ -5,14 +5,19 @@
 #include "console.h"
 
 #include <fuchsia/hardware/pty/c/fidl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fs-pty/service.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
 
 #include <utility>
 
 #include <ddk/debug.h>
+#include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+#include <fs/vfs.h>
+#include <fs/vnode.h>
 #include <virtio/virtio.h>
 
 #define LOCAL_TRACE 0
@@ -119,6 +124,22 @@ ConsoleDevice::~ConsoleDevice() {}
 // We don't need to hold request_lock_ during initialization
 zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   LTRACE_ENTRY;
+
+  zx_status_t status = zx::eventpair::create(0, &event_, &event_remote_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to create event pair (%d)\n", tag(), status);
+    return status;
+  }
+
+  status = loop_.StartThread("virtio-console-connection");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to launch connection processing thread (%d)\n", tag(), status);
+    return status;
+  }
+
+  using Vnode = fs_pty::TtyService<fs_pty::SimpleConsoleOps<ConsoleDevice*>, ConsoleDevice*>;
+  console_vnode_ = fbl::AdoptRef(new Vnode(this));
+
   // It's a common part for all virtio devices: reset the device, notify
   // about the driver and negotiate supported features
   DeviceReset();
@@ -129,7 +150,7 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   }
   DriverFeatureAck(VIRTIO_F_VERSION_1);
 
-  zx_status_t status = DeviceStatusFeaturesOk();
+  status = DeviceStatusFeaturesOk();
   if (status) {
     zxlogf(ERROR, "%s: Feature negotiation failed (%d)\n", tag(), status);
     return status;
@@ -176,8 +197,6 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   }
 
   device_ops_.message = virtio_console_message;
-  device_ops_.read = virtio_console_read;
-  device_ops_.write = virtio_console_write;
 
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
@@ -200,6 +219,13 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
 
   LTRACE_EXIT;
   return ZX_OK;
+}
+
+void ConsoleDevice::Unbind() {
+  // Request all console connections be terminated.  Once that completes, finish
+  // the unbind.
+  fs::Vfs::ShutdownCallback shutdown_cb = [this](zx_status_t status) { device_remove(device_); };
+  vfs_.Shutdown(std::move(shutdown_cb));
 }
 
 void ConsoleDevice::IrqRingUpdate() {
@@ -231,7 +257,7 @@ void ConsoleDevice::IrqRingUpdate() {
       index = next;
       desc = port0_receive_queue_.DescFromIndex(index);
     }
-    device_state_set(device_, DEV_STATE_READABLE);
+    event_.signal_peer(0, DEV_STATE_READABLE);
   });
 
   port0_transmit_queue_.IrqRingUpdate([this](vring_used_elem* elem) TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -253,19 +279,12 @@ void ConsoleDevice::IrqRingUpdate() {
       index = next;
       desc = port0_transmit_queue_.DescFromIndex(index);
     }
-    device_state_set(device_, DEV_STATE_WRITABLE);
+    event_.signal_peer(0, DEV_STATE_WRITABLE);
   });
   LTRACE_EXIT;
 }
 
-zx_status_t ConsoleDevice::virtio_console_read(void* ctx, void* buf, size_t count, zx_off_t off,
-                                               size_t* actual) {
-  ConsoleDevice* console = reinterpret_cast<ConsoleDevice*>(ctx);
-
-  return console->Read(buf, count, off, actual);
-}
-
-zx_status_t ConsoleDevice::Read(void* buf, size_t count, zx_off_t off, size_t* actual) {
+zx_status_t ConsoleDevice::Read(void* buf, size_t count, size_t* actual) {
   LTRACE_ENTRY;
   *actual = 0;
 
@@ -276,7 +295,7 @@ zx_status_t ConsoleDevice::Read(void* buf, size_t count, zx_off_t off, size_t* a
 
   TransferDescriptor* desc = port0_receive_descriptors_.Peek();
   if (!desc) {
-    device_state_clr(device_, DEV_STATE_READABLE);
+    event_.signal_peer(DEV_STATE_READABLE, 0);
     return ZX_ERR_SHOULD_WAIT;
   }
 
@@ -296,14 +315,7 @@ zx_status_t ConsoleDevice::Read(void* buf, size_t count, zx_off_t off, size_t* a
   return ZX_OK;
 }
 
-zx_status_t ConsoleDevice::virtio_console_write(void* ctx, const void* buf, size_t count,
-                                                zx_off_t off, size_t* actual) {
-  ConsoleDevice* console = reinterpret_cast<ConsoleDevice*>(ctx);
-
-  return console->Write(buf, count, off, actual);
-}
-
-zx_status_t ConsoleDevice::Write(const void* buf, size_t count, zx_off_t off, size_t* actual) {
+zx_status_t ConsoleDevice::Write(const void* buf, size_t count, size_t* actual) {
   LTRACE_ENTRY;
   *actual = 0;
 
@@ -314,7 +326,7 @@ zx_status_t ConsoleDevice::Write(const void* buf, size_t count, zx_off_t off, si
 
   TransferDescriptor* desc = port0_transmit_descriptors_.Dequeue();
   if (!desc) {
-    device_state_clr(device_, DEV_STATE_WRITABLE);
+    event_.signal_peer(DEV_STATE_WRITABLE, 0);
     return ZX_ERR_SHOULD_WAIT;
   }
 
@@ -330,48 +342,18 @@ zx_status_t ConsoleDevice::Write(const void* buf, size_t count, zx_off_t off, si
   return ZX_OK;
 }
 
-static zx_status_t virtio_console_OpenClient(void* ctx, uint32_t id, zx_handle_t handle,
-                                             fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_DeviceOpenClient_reply(txn, ZX_ERR_NOT_SUPPORTED);
+void ConsoleDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync completer) {
+  // Must post a task, since ManagedVfs is not thread-safe.
+  async::PostTask(loop_.dispatcher(), [this, req = std::move(req)]() mutable {
+    console_vnode_->Serve(&vfs_, std::move(req), ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE);
+  });
 }
-
-static zx_status_t virtio_console_ClrSetFeature(void* ctx, uint32_t clr, uint32_t set,
-                                                fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_DeviceClrSetFeature_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
-}
-
-static zx_status_t virtio_console_GetWindowSize(void* ctx, fidl_txn_t* txn) {
-  fuchsia_hardware_pty_WindowSize wsz = {.width = 0, .height = 0};
-  return fuchsia_hardware_pty_DeviceGetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED, &wsz);
-}
-
-static zx_status_t virtio_console_MakeActive(void* ctx, uint32_t client_pty_id, fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_DeviceMakeActive_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static zx_status_t virtio_console_ReadEvents(void* ctx, fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_DeviceReadEvents_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
-}
-
-static zx_status_t virtio_console_SetWindowSize(void* ctx,
-                                                const fuchsia_hardware_pty_WindowSize* size,
-                                                fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_DeviceSetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static constexpr fuchsia_hardware_pty_Device_ops_t fidl_ops = []() {
-  fuchsia_hardware_pty_Device_ops_t ops = {};
-  ops.OpenClient = virtio_console_OpenClient;
-  ops.ClrSetFeature = virtio_console_ClrSetFeature;
-  ops.GetWindowSize = virtio_console_GetWindowSize;
-  ops.MakeActive = virtio_console_MakeActive;
-  ops.ReadEvents = virtio_console_ReadEvents;
-  ops.SetWindowSize = virtio_console_SetWindowSize;
-  return ops;
-}();
 
 zx_status_t ConsoleDevice::virtio_console_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);
+  DdkTransaction transaction(txn);
+  ::llcpp::fuchsia::hardware::virtioconsole::Device::Dispatch(reinterpret_cast<ConsoleDevice*>(ctx),
+                                                              msg, &transaction);
+  return transaction.Status();
 }
 
 }  // namespace virtio

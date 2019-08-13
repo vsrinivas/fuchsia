@@ -10,6 +10,7 @@ executable("devcoordinator") {
   deps = [
     ":common",
     "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-hardware-virtioconsole:llcpp",
     "$zx/system/ulib/devmgr-launcher",
     "../shared",
   ]

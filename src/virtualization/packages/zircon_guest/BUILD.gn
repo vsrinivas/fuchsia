@@ -26,7 +26,8 @@ guest_package("zircon_guest") {
   ]
   zircon = "$root_out_dir/guest.zbi"
 
-  cmdline = "console.path=/dev/class/console/virtio-console"
+  cmdline =
+      "console.path=/dev/class/console/virtio-console console.is_virtio=true"
 
   disk_filename = "filesystem.fvm"
   fvm = get_label_info(guest_fvm_blk_label, "target_out_dir") + "/fvm.blk"
