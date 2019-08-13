@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/app_model.dart';
+import '../../utils/styles.dart';
 import '../animation_driver.dart';
 import 'ask.dart';
 
@@ -28,6 +29,8 @@ class AskContainer extends StatelessWidget {
               width: 500,
               child: AnimationDriver(
                 tween: Tween<Offset>(begin: Offset(0, 0), end: Offset(0, 1)),
+                curve: ErmineStyle.kScreenAnimationCurve,
+                duration: ErmineStyle.kScreenAnimationDuration,
                 builder: (context, animation) => FractionalTranslation(
                   translation: animation.value,
                   child: child,
