@@ -21,10 +21,6 @@ namespace gdc {
 // output buffer collections.
 class Task {
  public:
-  Task() = default;
-
-  ~Task() = default;
-
   // Returns the physical address for the config VMO.
   zx_paddr_t GetConigVmoPhysAddr() const { return config_vmo_pinned_.region(0).phys_addr; }
 

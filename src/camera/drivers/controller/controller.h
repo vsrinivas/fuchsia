@@ -41,8 +41,6 @@ class Controller : public ControllerDeviceType, public ddk::EmptyProtocol<ZX_PRO
         gdc_(gdc),
         controller_loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
-  ~Controller() = default;
-
   // Setup() is used to create an instance of Controller.
   static zx_status_t Setup(zx_device_t* parent, std::unique_ptr<Controller>* out);
 

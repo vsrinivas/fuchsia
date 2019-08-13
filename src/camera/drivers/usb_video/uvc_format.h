@@ -95,6 +95,7 @@ class UvcFormatList {
     number_of_formats_ = other.number_of_formats_;
     other.number_of_formats_ = 0;
   }
+
   UvcFormatList() = default;
 
  private:

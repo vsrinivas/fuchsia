@@ -26,7 +26,6 @@ class StatsManager {
 
   static fbl::unique_ptr<StatsManager> Create(ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
                                               ddk::CameraSensorProtocolClient camera_sensor);
-  ~StatsManager();
 
   void SensorStartStreaming() { sensor_->StartStreaming(); }
   void SensorStopStreaming() { sensor_->StopStreaming(); }

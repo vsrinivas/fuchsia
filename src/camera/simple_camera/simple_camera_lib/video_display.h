@@ -35,7 +35,6 @@ class VideoDisplay {
 
   void DisconnectFromCamera();
 
-  ~VideoDisplay() = default;
   VideoDisplay() = default;
 
  private:

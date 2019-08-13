@@ -28,6 +28,4 @@ fbl::unique_ptr<StatsManager> StatsManager::Create(ddk::MmioView isp_mmio,
   return statsmanager;
 }
 
-StatsManager::~StatsManager() {}
-
 }  // namespace camera
