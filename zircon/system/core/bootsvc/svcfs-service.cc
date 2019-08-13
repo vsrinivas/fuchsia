@@ -42,12 +42,18 @@ zx_status_t FactoryItemsGet(void* ctx, uint32_t extra, fidl_txn_t* txn) {
     return fuchsia_boot_FactoryItemsGet_reply(txn, ZX_HANDLE_INVALID, 0);
   }
 
-  // Erase the entry after reading.
-  zx_handle_t vmo_handle = it->second.vmo.release();
+  const zx::vmo& vmo = it->second.vmo;
   uint32_t length = it->second.length;
-  map->erase(it);
+  zx::vmo payload;
+  zx_status_t status =
+      vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS & ~(ZX_RIGHT_WRITE | ZX_RIGHT_SET_PROPERTY), &payload);
+  if (status != ZX_OK) {
+    printf("bootsvc: Failed to duplicate handle for factory item VMO: %s",
+           zx_status_get_string(status));
+    return status;
+  }
 
-  return fuchsia_boot_FactoryItemsGet_reply(txn, vmo_handle, length);
+  return fuchsia_boot_FactoryItemsGet_reply(txn, payload.release(), length);
 }
 
 constexpr fuchsia_boot_FactoryItems_ops kFactoryItemsOps = {

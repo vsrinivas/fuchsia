@@ -739,20 +739,12 @@ class FactoryItems final {
     // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     // extra field set to `extra`.
     //
-    // This method vends `payload` at most once for each `extra` for the
-    // lifetime of the service that implements this protocol. On subsequent
-    // calls, `payload` will be `ZX_HANDLE_INVALID` and `length` will be 0.
-    //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Get Get(uint32_t extra);
 
     // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     // extra field set to `extra`.
-    //
-    // This method vends `payload` at most once for each `extra` for the
-    // lifetime of the service that implements this protocol. On subsequent
-    // calls, `payload` will be `ZX_HANDLE_INVALID` and `length` will be 0.
     //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -761,19 +753,11 @@ class FactoryItems final {
     // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     // extra field set to `extra`.
     //
-    // This method vends `payload` at most once for each `extra` for the
-    // lifetime of the service that implements this protocol. On subsequent
-    // calls, `payload` will be `ZX_HANDLE_INVALID` and `length` will be 0.
-    //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     zx_status_t Get_Deprecated(uint32_t extra, ::zx::vmo* out_payload, uint32_t* out_length);
 
     // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     // extra field set to `extra`.
-    //
-    // This method vends `payload` at most once for each `extra` for the
-    // lifetime of the service that implements this protocol. On subsequent
-    // calls, `payload` will be `ZX_HANDLE_INVALID` and `length` will be 0.
     //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -792,20 +776,12 @@ class FactoryItems final {
     // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     // extra field set to `extra`.
     //
-    // This method vends `payload` at most once for each `extra` for the
-    // lifetime of the service that implements this protocol. On subsequent
-    // calls, `payload` will be `ZX_HANDLE_INVALID` and `length` will be 0.
-    //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Get Get(zx::unowned_channel _client_end, uint32_t extra);
 
     // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     // extra field set to `extra`.
-    //
-    // This method vends `payload` at most once for each `extra` for the
-    // lifetime of the service that implements this protocol. On subsequent
-    // calls, `payload` will be `ZX_HANDLE_INVALID` and `length` will be 0.
     //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -814,19 +790,11 @@ class FactoryItems final {
     // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     // extra field set to `extra`.
     //
-    // This method vends `payload` at most once for each `extra` for the
-    // lifetime of the service that implements this protocol. On subsequent
-    // calls, `payload` will be `ZX_HANDLE_INVALID` and `length` will be 0.
-    //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     static zx_status_t Get_Deprecated(zx::unowned_channel _client_end, uint32_t extra, ::zx::vmo* out_payload, uint32_t* out_length);
 
     // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     // extra field set to `extra`.
-    //
-    // This method vends `payload` at most once for each `extra` for the
-    // lifetime of the service that implements this protocol. On subsequent
-    // calls, `payload` will be `ZX_HANDLE_INVALID` and `length` will be 0.
     //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -843,10 +811,6 @@ class FactoryItems final {
 
     // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     // extra field set to `extra`.
-    //
-    // This method vends `payload` at most once for each `extra` for the
-    // lifetime of the service that implements this protocol. On subsequent
-    // calls, `payload` will be `ZX_HANDLE_INVALID` and `length` will be 0.
     //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRequest> params, ::fidl::BytePart response_buffer);

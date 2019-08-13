@@ -4,11 +4,6 @@
 
 #include <dirent.h>
 #include <dlfcn.h>
-#include <fbl/algorithm.h>
-#include <fbl/string.h>
-#include <fbl/string_printf.h>
-#include <fbl/unique_fd.h>
-#include <fbl/vector.h>
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
@@ -20,13 +15,19 @@
 #include <lib/zx/vmo.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls/system.h>
 
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <fbl/string.h>
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
+#include <fbl/vector.h>
+#include <unittest/unittest.h>
 
 #include "util.h"
 
@@ -212,19 +213,19 @@ bool TestFactoryItems() {
   status = fdio_service_connect(kFactoryItemsPath, remote_factory_items.release());
   ASSERT_EQ(ZX_OK, status);
 
-  status = fuchsia_boot_FactoryItemsGet(local_factory_items.get(), 0,
-                                        payload.reset_and_get_address(), &length);
-  ASSERT_EQ(ZX_OK, status);
-  // Expect a valid payload.
-  ASSERT_TRUE(payload.is_valid());
+  static constexpr char kExpected[] = "IAmAFactoryItemHooray";
+  uint8_t buf[sizeof(kExpected) - 1];
 
-  // Verify that a second call vends nothing.
-  status = fuchsia_boot_FactoryItemsGet(local_factory_items.get(), 0,
-                                        payload.reset_and_get_address(), &length);
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_FALSE(payload.is_valid());
-  ASSERT_EQ(0, length);
-
+  // Verify that multiple calls work.
+  for (int i = 0; i < 2; i++) {
+    status = fuchsia_boot_FactoryItemsGet(local_factory_items.get(), 0,
+                                          payload.reset_and_get_address(), &length);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_TRUE(payload.is_valid());
+    ASSERT_EQ(sizeof(buf), length);
+    ASSERT_EQ(ZX_OK, payload.read(buf, 0, sizeof(buf)));
+    ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kExpected), buf, sizeof(buf), "");
+  }
   END_TEST;
 }
 
