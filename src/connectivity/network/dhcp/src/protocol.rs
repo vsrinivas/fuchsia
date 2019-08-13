@@ -6,6 +6,7 @@ use crate::configuration::RequestedConfig;
 use byteorder::{BigEndian, ByteOrder};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use serde_derive::{Deserialize, Serialize};
+use std::convert::TryFrom;
 use std::iter::Iterator;
 use std::net::Ipv4Addr;
 
@@ -219,14 +220,14 @@ impl Into<u8> for OpCode {
     }
 }
 
-enum OpCodeError {
+pub enum OpCodeError {
     UnknownCode(u8),
 }
 
-impl OpCode {
-    fn try_from(n: u8) -> Result<Self, OpCodeError> {
-        // TODO(atait): implement TryFrom when that is stable.
-        // See https://github.com/rust-lang/rust/issues/33417.
+impl TryFrom<u8> for OpCode {
+    type Error = OpCodeError;
+
+    fn try_from(n: u8) -> Result<Self, Self::Error> {
         match n {
             1 => Ok(OpCode::BOOTREQUEST),
             2 => Ok(OpCode::BOOTREPLY),
@@ -296,14 +297,14 @@ impl Into<u8> for OptionCode {
     }
 }
 
-enum OptionCodeError {
+pub enum OptionCodeError {
     UnknownCode(u8),
 }
 
-impl OptionCode {
-    fn try_from(n: u8) -> Result<Self, OptionCodeError> {
-        // TODO(atait): implement TryFrom when that is stable.
-        // See https://github.com/rust-lang/rust/issues/33417.
+impl TryFrom<u8> for OptionCode {
+    type Error = OptionCodeError;
+
+    fn try_from(n: u8) -> Result<Self, Self::Error> {
         match n {
             0 => Ok(OptionCode::Pad),
             255 => Ok(OptionCode::End),
@@ -352,14 +353,14 @@ impl Into<u8> for MessageType {
     }
 }
 
-enum MessageTypeError {
+pub enum MessageTypeError {
     UnknownMessageType(u8),
 }
 
-impl MessageType {
-    fn try_from(n: u8) -> Result<Self, MessageTypeError> {
-        // TODO(atait): implement TryFrom when that is stable.
-        // See https://github.com/rust-lang/rust/issues/33417.
+impl TryFrom<u8> for MessageType {
+    type Error = MessageTypeError;
+
+    fn try_from(n: u8) -> Result<Self, Self::Error> {
         match n {
             1 => Ok(MessageType::DHCPDISCOVER),
             2 => Ok(MessageType::DHCPOFFER),
