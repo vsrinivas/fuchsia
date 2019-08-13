@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
@@ -19,8 +21,22 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), monitor::Monitor::kTraceName);
+  std::unique_ptr<sys::ComponentContext> startup_context = sys::ComponentContext::Create();
 
-  monitor::Monitor app(sys::ComponentContext::Create(), command_line, loop.dispatcher());
+  // Lower the priority.
+  fuchsia::scheduler::ProfileProviderSyncPtr profile_provider;
+  startup_context->svc()->Connect<fuchsia::scheduler::ProfileProvider>(
+      profile_provider.NewRequest());
+  zx_status_t fidl_status;
+  zx::profile profile;
+  auto status = profile_provider->GetProfile(8 /* LOW_PRIORITY */, "memory_monitor.cmx",
+                                             &fidl_status, &profile);
+  FXL_CHECK(status == ZX_OK);
+  FXL_CHECK(fidl_status == ZX_OK);
+  auto set_status = zx_object_set_profile(zx_thread_self(), profile.get(), 0);
+  FXL_CHECK(set_status == ZX_OK);
+
+  monitor::Monitor app(std::move(startup_context), command_line, loop.dispatcher());
   loop.Run();
 
   FXL_VLOG(2) << argv[0] << ": exiting";

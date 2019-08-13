@@ -11,6 +11,7 @@
         ],
         "services": [
             "fuchsia.boot.RootResource",
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.tracing.provider.Registry"
         ]
     }
