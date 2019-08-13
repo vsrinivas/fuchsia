@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{as_dir, as_file},
+    crate::as_dir,
     failure::{bail, format_err, Error, ResultExt},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::{ClientEnd, ServerEnd},
@@ -13,7 +13,7 @@ use {
     fuchsia_zircon as zx,
     openat::Dir,
     ramdevice_client::RamdiskClient,
-    std::{ffi::CString, fs::File},
+    std::ffi::CString,
     zx::prelude::*,
 };
 
@@ -128,14 +128,6 @@ impl TestBlobFs {
     /// Opens the root of this blobfs instance as a directory.
     pub fn as_dir(&self) -> Result<Dir, Error> {
         Ok(as_dir(self.root_dir_handle()?))
-    }
-
-    /// Opens the root of this blobfs instance as a file.
-    ///
-    /// TODO: remove once there is an equivalent API to `add_dir_to_namespace` that doesn't
-    /// accept a File.
-    pub fn as_file(&self) -> Result<File, Error> {
-        Ok(as_file(self.root_dir_handle()?))
     }
 
     /// Returns a sorted list of all blobs present in this blobfs instance.
