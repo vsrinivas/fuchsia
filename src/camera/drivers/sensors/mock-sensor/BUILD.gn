@@ -1,0 +1,39 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mock-sensor") {
+  testonly = true
+  sources = [
+    "mock-sensor-device.cc",
+    "mock-sensor-device.h",
+  ]
+
+  deps = [
+    "//zircon/public/banjo/ddk.protocol.camerasensor",
+    "//zircon/public/banjo/ddk.protocol.platform.device",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/sync",
+  ]
+}
+
+executable("mock-sensor-device-test") {
+  testonly = true
+  sources = [
+    "mock-sensor-device-test.cc",
+    "mock-sensor-device.cc",
+    "mock-sensor-device.h",
+  ]
+
+  deps = [
+    "//zircon/public/banjo/ddk.protocol.camerasensor",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zxtest",
+  ]
+}
