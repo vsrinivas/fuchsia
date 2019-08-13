@@ -90,6 +90,9 @@ impl IncomingNamespace {
                 cm_rust::UseDecl::LegacyService(_) => {
                     Self::add_service_use(&mut svc_dirs, use_, model.clone(), abs_moniker.clone())?;
                 }
+                cm_rust::UseDecl::Service(_) => {
+                    return Err(ModelError::unsupported("Service capability"))
+                }
                 cm_rust::UseDecl::Storage(_) => {
                     Self::add_storage_use(
                         &mut ns,

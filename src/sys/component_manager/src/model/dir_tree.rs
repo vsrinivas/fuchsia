@@ -74,6 +74,7 @@ impl DirTree {
         use_: &UseDecl,
     ) -> Result<(), ModelError> {
         let path = match use_ {
+            cm_rust::UseDecl::Service(d) => &d.target_path,
             cm_rust::UseDecl::LegacyService(d) => &d.target_path,
             cm_rust::UseDecl::Directory(d) => &d.target_path,
             cm_rust::UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
@@ -96,6 +97,7 @@ impl DirTree {
         expose: &ExposeDecl,
     ) {
         let path = match expose {
+            cm_rust::ExposeDecl::Service(d) => &d.target_path,
             cm_rust::ExposeDecl::LegacyService(d) => &d.target_path,
             cm_rust::ExposeDecl::Directory(d) => &d.target_path,
         };
@@ -213,15 +215,15 @@ mod tests {
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                 }),
-                ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
-                    source: ExposeSource::Self_,
-                    source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                    target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
-                }),
                 ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/bar").unwrap(),
+                }),
+                ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                    target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
                 }),
             ],
             ..default_component_decl()

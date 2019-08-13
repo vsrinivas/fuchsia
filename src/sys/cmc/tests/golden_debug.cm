@@ -4,12 +4,21 @@
     },
     "uses": [
         {
-            "legacy_service": {
+            "service": {
                 "source": {
                     "realm": {}
                 },
                 "source_path": "/fonts/CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "realm": {}
+                },
+                "source_path": "/fonts/LegacyCoolFonts",
+                "target_path": "/svc/fuchsia.fonts.LegacyProvider"
             }
         }
     ],
@@ -26,7 +35,7 @@
     ],
     "offers": [
         {
-            "legacy_service": {
+            "service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -39,6 +48,22 @@
                     }
                 },
                 "target_path": "/svc/fuchsia.logger.Log"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/fuchsia.logger.LegacyLog",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "/svc/fuchsia.logger.LegacyLog"
             }
         }
     ],

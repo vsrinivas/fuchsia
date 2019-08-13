@@ -2,8 +2,9 @@ use {
     crate::model::*,
     cm_rust::{
         self, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-        ExposeLegacyServiceDecl, OfferDecl, OfferDirectoryDecl, OfferLegacyServiceDecl,
-        OfferTarget, StorageDecl, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl,
+        ExposeLegacyServiceDecl, ExposeServiceDecl, OfferDecl, OfferDirectoryDecl,
+        OfferLegacyServiceDecl, OfferServiceDecl, OfferTarget, StorageDecl, UseDecl,
+        UseDirectoryDecl, UseLegacyServiceDecl, UseServiceDecl,
     },
     fidl_fuchsia_sys2 as fsys,
 };
@@ -23,6 +24,7 @@ impl RoutedCapability {
     pub fn source_path(&self) -> Option<&CapabilityPath> {
         match self {
             RoutedCapability::Use(use_) => match use_ {
+                UseDecl::Service(UseServiceDecl { source_path, .. }) => Some(source_path),
                 UseDecl::LegacyService(UseLegacyServiceDecl { source_path, .. }) => {
                     Some(source_path)
                 }
@@ -30,12 +32,14 @@ impl RoutedCapability {
                 _ => None,
             },
             RoutedCapability::Expose(expose) => match expose {
+                ExposeDecl::Service(ExposeServiceDecl { source_path, .. }) => Some(source_path),
                 ExposeDecl::LegacyService(ExposeLegacyServiceDecl { source_path, .. }) => {
                     Some(source_path)
                 }
                 ExposeDecl::Directory(ExposeDirectoryDecl { source_path, .. }) => Some(source_path),
             },
             RoutedCapability::Offer(offer) => match offer {
+                OfferDecl::Service(OfferServiceDecl { source_path, .. }) => Some(source_path),
                 OfferDecl::LegacyService(OfferLegacyServiceDecl { source_path, .. }) => {
                     Some(source_path)
                 }
@@ -49,6 +53,15 @@ impl RoutedCapability {
     /// Returns the `ExposeDecl` that exposes the capability, if it exists.
     pub fn find_expose_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a ExposeDecl> {
         decl.exposes.iter().find(|&expose| match (self, expose) {
+            // Service exposed to me that has a matching `expose` or `offer`.
+            (
+                RoutedCapability::Offer(OfferDecl::Service(parent_offer)),
+                ExposeDecl::Service(expose),
+            ) => parent_offer.source_path == expose.target_path,
+            (
+                RoutedCapability::Expose(ExposeDecl::Service(parent_expose)),
+                ExposeDecl::Service(expose),
+            ) => parent_expose.source_path == expose.target_path,
             // LegacyService exposed to me that has a matching `expose` or `offer`.
             (
                 RoutedCapability::Offer(OfferDecl::LegacyService(parent_offer)),
@@ -83,11 +96,29 @@ impl RoutedCapability {
         child_moniker: &ChildMoniker,
     ) -> Option<&'a OfferDecl> {
         decl.offers.iter().find(|&offer| match (self, offer) {
+            // Service offered to me that matches a service `use` or `offer` declaration.
+            (RoutedCapability::Use(UseDecl::Service(child_use)), OfferDecl::Service(offer)) => {
+                Self::is_offer_service_or_dir_match(
+                    child_moniker,
+                    &child_use.source_path,
+                    &offer.target,
+                    &offer.target_path,
+                )
+            }
+            (
+                RoutedCapability::Offer(OfferDecl::Service(child_offer)),
+                OfferDecl::Service(offer),
+            ) => Self::is_offer_service_or_dir_match(
+                child_moniker,
+                &child_offer.source_path,
+                &offer.target,
+                &offer.target_path,
+            ),
             // LegacyService offered to me that matches a service `use` or `offer` declaration.
             (
                 RoutedCapability::Use(UseDecl::LegacyService(child_use)),
                 OfferDecl::LegacyService(offer),
-            ) => Self::is_offer_legacy_service_or_dir_match(
+            ) => Self::is_offer_service_or_dir_match(
                 child_moniker,
                 &child_use.source_path,
                 &offer.target,
@@ -96,7 +127,7 @@ impl RoutedCapability {
             (
                 RoutedCapability::Offer(OfferDecl::LegacyService(child_offer)),
                 OfferDecl::LegacyService(offer),
-            ) => Self::is_offer_legacy_service_or_dir_match(
+            ) => Self::is_offer_service_or_dir_match(
                 child_moniker,
                 &child_offer.source_path,
                 &offer.target,
@@ -104,7 +135,7 @@ impl RoutedCapability {
             ),
             // Directory offered to me that matches a directory `use` or `offer` declaration.
             (RoutedCapability::Use(UseDecl::Directory(child_use)), OfferDecl::Directory(offer)) => {
-                Self::is_offer_legacy_service_or_dir_match(
+                Self::is_offer_service_or_dir_match(
                     child_moniker,
                     &child_use.source_path,
                     &offer.target,
@@ -114,7 +145,7 @@ impl RoutedCapability {
             (
                 RoutedCapability::Offer(OfferDecl::Directory(child_offer)),
                 OfferDecl::Directory(offer),
-            ) => Self::is_offer_legacy_service_or_dir_match(
+            ) => Self::is_offer_service_or_dir_match(
                 child_moniker,
                 &child_offer.source_path,
                 &offer.target,
@@ -122,7 +153,7 @@ impl RoutedCapability {
             ),
             // Directory offered to me that matches a `storage` declaration which consumes it.
             (RoutedCapability::Storage(child_storage), OfferDecl::Directory(offer)) => {
-                Self::is_offer_legacy_service_or_dir_match(
+                Self::is_offer_service_or_dir_match(
                     child_moniker,
                     &child_storage.source_path,
                     &offer.target,
@@ -151,7 +182,7 @@ impl RoutedCapability {
         })
     }
 
-    fn is_offer_legacy_service_or_dir_match(
+    fn is_offer_service_or_dir_match(
         child_moniker: &ChildMoniker,
         path: &CapabilityPath,
         target: &OfferTarget,

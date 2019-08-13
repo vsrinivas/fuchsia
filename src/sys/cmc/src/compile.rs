@@ -98,7 +98,15 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
         let target_path = extract_target_path(use_, use_);
-        let out = if let Some(p) = use_.legacy_service() {
+        let out = if let Some(p) = use_.service() {
+            let source = extract_use_source(use_)?;
+            let target_path = target_path.ok_or(Error::internal(format!("no capability")))?;
+            Ok(cm::Use::Service(cm::UseService {
+                source,
+                source_path: cm::Path::new(p.clone())?,
+                target_path: cm::Path::new(target_path)?,
+            }))
+        } else if let Some(p) = use_.legacy_service() {
             let source = extract_use_source(use_)?;
             let target_path = target_path.ok_or(Error::internal(format!("no capability")))?;
             Ok(cm::Use::LegacyService(cm::UseLegacyService {
@@ -133,7 +141,13 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
         let source = extract_expose_source(expose)?;
         let target_path =
             extract_target_path(expose, expose).ok_or(Error::internal(format!("no capability")))?;
-        let out = if let Some(p) = expose.legacy_service() {
+        let out = if let Some(p) = expose.service() {
+            Ok(cm::Expose::Service(cm::ExposeService {
+                source,
+                source_path: cm::Path::new(p.clone())?,
+                target_path: cm::Path::new(target_path)?,
+            }))
+        } else if let Some(p) = expose.legacy_service() {
             Ok(cm::Expose::LegacyService(cm::ExposeLegacyService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
@@ -160,7 +174,18 @@ fn translate_offer(
 ) -> Result<Vec<cm::Offer>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
-        if let Some(p) = offer.legacy_service() {
+        if let Some(p) = offer.service() {
+            let source = extract_offer_source(offer)?;
+            let targets = extract_targets(offer, all_children, all_collections)?;
+            for (target, target_path) in targets {
+                out_offers.push(cm::Offer::Service(cm::OfferService {
+                    source_path: cm::Path::new(p.clone())?,
+                    source: source.clone(),
+                    target,
+                    target_path: cm::Path::new(target_path)?,
+                }));
+            }
+        } else if let Some(p) = offer.legacy_service() {
             let source = extract_offer_source(offer)?;
             let targets = extract_targets(offer, all_children, all_collections)?;
             for (target, target_path) in targets {
@@ -386,7 +411,9 @@ where
     if let Some(as_) = to_obj.r#as() {
         Some(as_.clone())
     } else {
-        if let Some(p) = in_obj.legacy_service() {
+        if let Some(p) = in_obj.service() {
+            Some(p.clone())
+        } else if let Some(p) = in_obj.legacy_service() {
             Some(p.clone())
         } else if let Some(p) = in_obj.directory() {
             Some(p.clone())
@@ -476,8 +503,10 @@ mod tests {
         test_compile_use => {
             input = json!({
                 "use": [
-                    { "legacy_service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                    { "legacy_service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                    { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                    { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                    { "legacy_service": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
+                    { "legacy_service": "/svc/fuchsia.sys2.LegacyRealm", "from": "framework" },
                     { "directory": "/data/assets" },
                     { "directory": "/data/config", "from": "realm" },
                     { "storage": "meta" },
@@ -487,7 +516,7 @@ mod tests {
             output = r#"{
     "uses": [
         {
-            "legacy_service": {
+            "service": {
                 "source": {
                     "realm": {}
                 },
@@ -496,12 +525,30 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service": {
                 "source": {
                     "framework": {}
                 },
                 "source_path": "/svc/fuchsia.sys2.Realm",
                 "target_path": "/svc/fuchsia.sys2.Realm"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "realm": {}
+                },
+                "source_path": "/fonts/LegacyCoolFonts",
+                "target_path": "/svc/fuchsia.fonts.LegacyProvider"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "framework": {}
+                },
+                "source_path": "/svc/fuchsia.sys2.LegacyRealm",
+                "target_path": "/svc/fuchsia.sys2.LegacyRealm"
             }
         },
         {
@@ -541,9 +588,14 @@ mod tests {
             input = json!({
                 "expose": [
                     {
-                      "legacy_service": "/loggers/fuchsia.logger.Log",
+                      "service": "/loggers/fuchsia.logger.Log",
                       "from": "#logger",
                       "as": "/svc/fuchsia.logger.Log"
+                    },
+                    {
+                      "legacy_service": "/loggers/fuchsia.logger.LegacyLog",
+                      "from": "#logger",
+                      "as": "/svc/fuchsia.logger.LegacyLog"
                     },
                     { "directory": "/volumes/blobfs", "from": "self" },
                     { "directory": "/hub", "from": "framework" }
@@ -558,7 +610,7 @@ mod tests {
             output = r#"{
     "exposes": [
         {
-            "legacy_service": {
+            "service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -566,6 +618,17 @@ mod tests {
                 },
                 "source_path": "/loggers/fuchsia.logger.Log",
                 "target_path": "/svc/fuchsia.logger.Log"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/loggers/fuchsia.logger.LegacyLog",
+                "target_path": "/svc/fuchsia.logger.LegacyLog"
             }
         },
         {
@@ -601,11 +664,19 @@ mod tests {
             input = json!({
                 "offer": [
                     {
-                        "legacy_service": "/svc/fuchsia.logger.Log",
+                        "service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
                         "to": [
                             { "dest": "#netstack" },
                             { "dest": "#modular", "as": "/svc/fuchsia.logger.SysLog" },
+                        ]
+                    },
+                    {
+                        "legacy_service": "/svc/fuchsia.logger.LegacyLog",
+                        "from": "#logger",
+                        "to": [
+                            { "dest": "#netstack" },
+                            { "dest": "#modular", "as": "/svc/fuchsia.logger.LegacySysLog" },
                         ]
                     },
                     {
@@ -659,7 +730,7 @@ mod tests {
             output = r#"{
     "offers": [
         {
-            "legacy_service": {
+            "service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -675,7 +746,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -688,6 +759,38 @@ mod tests {
                     }
                 },
                 "target_path": "/svc/fuchsia.logger.SysLog"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/fuchsia.logger.LegacyLog",
+                "target": {
+                    "child": {
+                        "name": "netstack"
+                    }
+                },
+                "target_path": "/svc/fuchsia.logger.LegacyLog"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/fuchsia.logger.LegacyLog",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "/svc/fuchsia.logger.LegacySysLog"
             }
         },
         {
@@ -930,14 +1033,23 @@ mod tests {
                     "binary": "bin/app",
                 },
                 "use": [
-                    { "legacy_service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                    { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                    { "legacy_service": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
                 ],
                 "expose": [
                     { "directory": "/volumes/blobfs", "from": "self" },
                 ],
                 "offer": [
                     {
-                        "legacy_service": "/svc/fuchsia.logger.Log",
+                        "service": "/svc/fuchsia.logger.Log",
+                        "from": "#logger",
+                        "to": [
+                            { "dest": "#netstack" },
+                            { "dest": "#modular" },
+                        ],
+                    },
+                    {
+                        "legacy_service": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": [
                             { "dest": "#netstack" },
@@ -972,12 +1084,21 @@ mod tests {
     },
     "uses": [
         {
-            "legacy_service": {
+            "service": {
                 "source": {
                     "realm": {}
                 },
                 "source_path": "/fonts/CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "realm": {}
+                },
+                "source_path": "/fonts/LegacyCoolFonts",
+                "target_path": "/svc/fuchsia.fonts.LegacyProvider"
             }
         }
     ],
@@ -994,7 +1115,7 @@ mod tests {
     ],
     "offers": [
         {
-            "legacy_service": {
+            "service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -1010,7 +1131,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -1023,6 +1144,38 @@ mod tests {
                     }
                 },
                 "target_path": "/svc/fuchsia.logger.Log"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/fuchsia.logger.LegacyLog",
+                "target": {
+                    "child": {
+                        "name": "netstack"
+                    }
+                },
+                "target_path": "/svc/fuchsia.logger.LegacyLog"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/fuchsia.logger.LegacyLog",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "/svc/fuchsia.logger.LegacyLog"
             }
         }
     ],
@@ -1056,11 +1209,12 @@ mod tests {
     fn test_compile_compact() {
         let input = json!({
             "use": [
-                { "legacy_service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
+                { "legacy_service": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
                 { "directory": "/data/assets" }
             ]
         });
-        let output = r#"{"uses":[{"legacy_service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets"}}]}"#;
+        let output = r#"{"uses":[{"service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"legacy_service":{"source":{"realm":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets"}}]}"#;
         compile_test(input, &output, false);
     }
 

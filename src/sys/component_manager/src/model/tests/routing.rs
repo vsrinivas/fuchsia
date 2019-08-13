@@ -10,8 +10,8 @@ use {
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
         ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl,
-        OfferDirectorySource, OfferLegacyServiceDecl, OfferLegacyServiceSource, OfferTarget,
-        UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
+        OfferDirectorySource, OfferLegacyServiceDecl, OfferServiceSource, OfferTarget, UseDecl,
+        UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
     },
     fidl_fuchsia_sys2 as fsys,
     std::convert::{TryFrom, TryInto},
@@ -83,13 +83,13 @@ async fn use_from_parent() {
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Self_,
+                        source: OfferServiceSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Self_,
+                        source: OfferServiceSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/file").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/device").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
@@ -166,7 +166,7 @@ async fn use_from_grandparent() {
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Self_,
+                        source: OfferServiceSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
@@ -191,7 +191,7 @@ async fn use_from_grandparent() {
                         target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Realm,
+                        source: OfferServiceSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
@@ -270,7 +270,7 @@ async fn use_from_sibling_no_root() {
                         target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Child("d".to_string()),
+                        source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
@@ -361,7 +361,7 @@ async fn use_from_sibling_root() {
                         target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Child("b".to_string()),
+                        source: OfferServiceSource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
@@ -455,7 +455,7 @@ async fn use_from_niece() {
                         target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Child("b".to_string()),
+                        source: OfferServiceSource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
@@ -568,7 +568,7 @@ async fn use_kitchen_sink() {
             ComponentDecl {
                 offers: vec![
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Self_,
+                        source: OfferServiceSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
@@ -607,7 +607,7 @@ async fn use_kitchen_sink() {
                         target: OfferTarget::Child("e".to_string()),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Realm,
+                        source: OfferServiceSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
@@ -645,7 +645,7 @@ async fn use_kitchen_sink() {
                         target: OfferTarget::Child("f".to_string()),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Child("g".to_string()),
+                        source: OfferServiceSource::Child("g".to_string()),
                         source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
@@ -786,7 +786,7 @@ async fn use_from_component_manager_namespace() {
                         target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
-                        source: OfferLegacyServiceSource::Realm,
+                        source: OfferServiceSource::Realm,
                         source_path: CapabilityPath::try_from("/hippo/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/echo/echo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
@@ -908,7 +908,7 @@ async fn use_offer_source_not_exposed() {
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        source: OfferLegacyServiceSource::Child("b".to_string()),
+                        source: OfferServiceSource::Child("b".to_string()),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }),
@@ -997,7 +997,7 @@ async fn use_offer_source_not_offered() {
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        source: OfferLegacyServiceSource::Realm,
+                        source: OfferServiceSource::Realm,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }),
@@ -1144,7 +1144,7 @@ async fn offer_from_non_executable() {
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        source: OfferLegacyServiceSource::Self_,
+                        source: OfferServiceSource::Self_,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
@@ -1212,7 +1212,7 @@ async fn use_in_collection() {
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                        source: OfferLegacyServiceSource::Self_,
+                        source: OfferServiceSource::Self_,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),
@@ -1242,7 +1242,7 @@ async fn use_in_collection() {
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        source: OfferLegacyServiceSource::Realm,
+                        source: OfferServiceSource::Realm,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Collection("coll".to_string()),
                     }),
@@ -1331,7 +1331,7 @@ async fn use_in_collection_not_offered() {
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                        source: OfferLegacyServiceSource::Self_,
+                        source: OfferServiceSource::Self_,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                     }),

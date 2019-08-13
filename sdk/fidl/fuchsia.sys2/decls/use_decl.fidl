@@ -7,9 +7,33 @@ library fuchsia.sys2;
 /// Declares a capability used by a component, which was offered to the
 /// component's environment.
 xunion UseDecl {
+    UseServiceDecl service;
     UseLegacyServiceDecl legacy_service;
     UseDirectoryDecl directory;
     UseStorageDecl storage;
+};
+
+/// Declares a service used by a component, which was offered to the component's
+/// environment.
+///
+/// To learn more about services, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#service
+table UseServiceDecl {
+    /// The provider of the service relative to the component itself. Must
+    /// be |realm| or |framework|.
+    1: Ref source;
+
+    /// Path identifying the service, by which it was presented to this
+    /// component.
+    ///
+    /// Must be an absolute path starting with /.
+    2: string:MAX_PATH_LENGTH source_path;
+
+    /// The path where the capability should be installed in the component's
+    /// namespace.
+    ///
+    /// Must be an absolute path starting with /.
+    3: string:MAX_PATH_LENGTH target_path;
 };
 
 /// Declares a legacy service used by a component, which was offered to the

@@ -61,6 +61,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
 impl CmInto<fsys::UseDecl> for cm::Use {
     fn cm_into(self) -> Result<fsys::UseDecl, Error> {
         Ok(match self {
+            cm::Use::Service(s) => fsys::UseDecl::Service(s.cm_into()?),
             cm::Use::LegacyService(s) => fsys::UseDecl::LegacyService(s.cm_into()?),
             cm::Use::Directory(d) => fsys::UseDecl::Directory(d.cm_into()?),
             cm::Use::Storage(s) => fsys::UseDecl::Storage(s.cm_into()?),
@@ -71,6 +72,7 @@ impl CmInto<fsys::UseDecl> for cm::Use {
 impl CmInto<fsys::ExposeDecl> for cm::Expose {
     fn cm_into(self) -> Result<fsys::ExposeDecl, Error> {
         Ok(match self {
+            cm::Expose::Service(s) => fsys::ExposeDecl::Service(s.cm_into()?),
             cm::Expose::LegacyService(s) => fsys::ExposeDecl::LegacyService(s.cm_into()?),
             cm::Expose::Directory(d) => fsys::ExposeDecl::Directory(d.cm_into()?),
         })
@@ -80,9 +82,20 @@ impl CmInto<fsys::ExposeDecl> for cm::Expose {
 impl CmInto<fsys::OfferDecl> for cm::Offer {
     fn cm_into(self) -> Result<fsys::OfferDecl, Error> {
         Ok(match self {
+            cm::Offer::Service(s) => fsys::OfferDecl::Service(s.cm_into()?),
             cm::Offer::LegacyService(s) => fsys::OfferDecl::LegacyService(s.cm_into()?),
             cm::Offer::Directory(d) => fsys::OfferDecl::Directory(d.cm_into()?),
             cm::Offer::Storage(s) => fsys::OfferDecl::Storage(s.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::UseServiceDecl> for cm::UseService {
+    fn cm_into(self) -> Result<fsys::UseServiceDecl, Error> {
+        Ok(fsys::UseServiceDecl {
+            source: Some(self.source.cm_into()?),
+            source_path: Some(self.source_path.into()),
+            target_path: Some(self.target_path.into()),
         })
     }
 }
@@ -116,6 +129,16 @@ impl CmInto<fsys::UseStorageDecl> for cm::UseStorage {
     }
 }
 
+impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
+    fn cm_into(self) -> Result<fsys::ExposeServiceDecl, Error> {
+        Ok(fsys::ExposeServiceDecl {
+            source: Some(self.source.cm_into()?),
+            source_path: Some(self.source_path.into()),
+            target_path: Some(self.target_path.into()),
+        })
+    }
+}
+
 impl CmInto<fsys::ExposeLegacyServiceDecl> for cm::ExposeLegacyService {
     fn cm_into(self) -> Result<fsys::ExposeLegacyServiceDecl, Error> {
         Ok(fsys::ExposeLegacyServiceDecl {
@@ -131,6 +154,17 @@ impl CmInto<fsys::ExposeDirectoryDecl> for cm::ExposeDirectory {
         Ok(fsys::ExposeDirectoryDecl {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
+            target_path: Some(self.target_path.into()),
+        })
+    }
+}
+
+impl CmInto<fsys::OfferServiceDecl> for cm::OfferService {
+    fn cm_into(self) -> Result<fsys::OfferServiceDecl, Error> {
+        Ok(fsys::OfferServiceDecl {
+            source: Some(self.source.cm_into()?),
+            source_path: Some(self.source_path.into()),
+            target: Some(self.target.cm_into()?),
             target_path: Some(self.target_path.into()),
         })
     }
@@ -489,6 +523,24 @@ mod tests {
             input = json!({
                 "uses": [
                     {
+                        "service": {
+                            "source": {
+                                "realm": {}
+                            },
+                            "source_path": "/fonts/CoolFonts",
+                            "target_path": "/svc/fuchsia.fonts.Provider"
+                        }
+                    },
+                    {
+                        "service": {
+                            "source": {
+                                "framework": {}
+                            },
+                            "source_path": "/svc/fuchsia.sys2.Realm",
+                            "target_path": "/svc/fuchsia.sys2.Realm"
+                        }
+                    },
+                    {
                         "legacy_service": {
                             "source": {
                                 "realm": {}
@@ -534,6 +586,16 @@ mod tests {
             }),
             output = {
                 let uses = vec![
+                    fsys::UseDecl::Service(fsys::UseServiceDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/fonts/CoolFonts".to_string()),
+                        target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                    }),
+                    fsys::UseDecl::Service(fsys::UseServiceDecl {
+                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                        source_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                        target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                    }),
                     fsys::UseDecl::LegacyService(fsys::UseLegacyServiceDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
@@ -568,7 +630,7 @@ mod tests {
             input = json!({
                 "exposes": [
                     {
-                        "legacy_service": {
+                        "service": {
                             "source": {
                                 "child": {
                                     "name": "logger"
@@ -576,6 +638,17 @@ mod tests {
                             },
                             "source_path": "/loggers/fuchsia.logger.Log",
                             "target_path": "/svc/fuchsia.logger.Log"
+                        }
+                    },
+                    {
+                        "legacy_service": {
+                            "source": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "source_path": "/loggers/fuchsia.logger.LegacyLog",
+                            "target_path": "/svc/fuchsia.logger.LegacyLog"
                         }
                     },
                     {
@@ -598,13 +671,21 @@ mod tests {
             }),
             output = {
                 let exposes = vec![
-                    fsys::ExposeDecl::LegacyService(fsys::ExposeLegacyServiceDecl {
+                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
                             collection: None,
                         })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                    }),
+                    fsys::ExposeDecl::LegacyService(fsys::ExposeLegacyServiceDecl {
+                        source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
                     }),
                     fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                         source_path: Some("/volumes/blobfs".to_string()),
@@ -657,7 +738,7 @@ mod tests {
                         }
                     },
                     {
-                        "legacy_service": {
+                        "service": {
                             "source": {
                                 "self": {}
                             },
@@ -671,7 +752,7 @@ mod tests {
                         }
                     },
                     {
-                        "legacy_service": {
+                        "service": {
                             "source": {
                                 "child": {
                                     "name": "logger"
@@ -684,6 +765,36 @@ mod tests {
                                 }
                             },
                             "target_path": "/svc/fuchsia.logger.SysLog"
+                        }
+                    },
+                    {
+                        "legacy_service": {
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/svc/fuchsia.netstack.LegacyNetstack",
+                            "target": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "target_path": "/svc/fuchsia.netstack.LegacyNetstack"
+                        }
+                    },
+                    {
+                        "legacy_service": {
+                            "source": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "source_path": "/svc/fuchsia.logger.LegacyLog",
+                            "target": {
+                                "collection": {
+                                    "name": "modular"
+                                }
+                            },
+                            "target_path": "/svc/fuchsia.logger.LegacySysLog"
                         }
                     },
                     {
@@ -794,7 +905,7 @@ mod tests {
                         )),
                         target_path: Some("/data/config".to_string()),
                     }),
-                    fsys::OfferDecl::LegacyService(fsys::OfferLegacyServiceDecl {
+                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
                         target: Some(fsys::Ref::Child(
@@ -805,7 +916,7 @@ mod tests {
                         )),
                         target_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
                     }),
-                    fsys::OfferDecl::LegacyService(fsys::OfferLegacyServiceDecl {
+                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
                             collection: None,
@@ -817,6 +928,30 @@ mod tests {
                            }
                         )),
                         target_path: Some("/svc/fuchsia.logger.SysLog".to_string()),
+                    }),
+                    fsys::OfferDecl::LegacyService(fsys::OfferLegacyServiceDecl {
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                        source_path: Some("/svc/fuchsia.netstack.LegacyNetstack".to_string()),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: "logger".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("/svc/fuchsia.netstack.LegacyNetstack".to_string()),
+                    }),
+                    fsys::OfferDecl::LegacyService(fsys::OfferLegacyServiceDecl {
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        source_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                        target: Some(fsys::Ref::Collection(
+                           fsys::CollectionRef {
+                               name: "modular".to_string(),
+                           }
+                        )),
+                        target_path: Some("/svc/fuchsia.logger.LegacySysLog".to_string()),
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Data),
@@ -1014,7 +1149,7 @@ mod tests {
                 },
                 "uses": [
                     {
-                        "legacy_service": {
+                        "service": {
                             "source": {
                                 "realm": {}
                             },
@@ -1036,7 +1171,7 @@ mod tests {
                 ],
                 "offers": [
                     {
-                        "legacy_service": {
+                        "service": {
                             "source": {
                                 "child": {
                                     "name": "logger"
@@ -1092,7 +1227,7 @@ mod tests {
                     },
                 ]};
                 let uses = vec![
-                    fsys::UseDecl::LegacyService(fsys::UseLegacyServiceDecl {
+                    fsys::UseDecl::Service(fsys::UseServiceDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
@@ -1106,7 +1241,7 @@ mod tests {
                     }),
                 ];
                 let offers = vec![
-                    fsys::OfferDecl::LegacyService(fsys::OfferLegacyServiceDecl {
+                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
                             collection: None,

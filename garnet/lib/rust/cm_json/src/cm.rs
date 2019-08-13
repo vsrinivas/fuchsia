@@ -110,6 +110,8 @@ pub struct Storage {
 #[serde(rename_all = "snake_case")]
 pub enum Use {
     /// Used service capability.
+    Service(UseService),
+    /// Used legacy service capability.
     LegacyService(UseLegacyService),
     /// Used directory capability.
     Directory(UseDirectory),
@@ -117,7 +119,20 @@ pub enum Use {
     Storage(UseStorage),
 }
 
-/// Used service capability. See [`UseLegacyServiceDecl`].
+/// Used service capability. See [`UseServiceDecl`].
+///
+/// [`UseServiceDecl`]: ../../fidl_fuchsia_sys2/struct.UseServiceDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UseService {
+    /// Used service source.
+    pub source: Ref,
+    /// Used service source path.
+    pub source_path: Path,
+    /// Used service target path.
+    pub target_path: Path,
+}
+
+/// Used legacy service capability. See [`UseLegacyServiceDecl`].
 ///
 /// [`UseLegacyServiceDecl`]: ../../fidl_fuchsia_sys2/struct.UseLegacyServiceDecl.html
 #[derive(Serialize, Deserialize, Debug)]
@@ -162,11 +177,22 @@ pub struct UseStorage {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum Expose {
+    Service(ExposeService),
     LegacyService(ExposeLegacyService),
     Directory(ExposeDirectory),
 }
 
-/// Exposed service capability. See [`ExposeLegacyServiceDecl`].
+/// Exposed service capability. See [`ExposeServiceDecl`].
+///
+/// [`ExposeServiceDecl`]: ../../fidl_fuchsia_sys2/struct.ExposeServiceDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExposeService {
+    pub source: Ref,
+    pub source_path: Path,
+    pub target_path: Path,
+}
+
+/// Exposed legacy service capability. See [`ExposeLegacyServiceDecl`].
 ///
 /// [`ExposeLegacyServiceDecl`]: ../../fidl_fuchsia_sys2/struct.ExposeLegacyServiceDecl.html
 #[derive(Serialize, Deserialize, Debug)]
@@ -192,12 +218,28 @@ pub struct ExposeDirectory {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum Offer {
+    Service(OfferService),
     LegacyService(OfferLegacyService),
     Directory(OfferDirectory),
     Storage(OfferStorage),
 }
 
-/// Offered service capability. See [`OfferLegacyServiceDecl`].
+/// Offered service capability. See [`OfferServiceDecl`].
+///
+/// [`OfferServiceDecl`]: ../../fidl_fuchsia_sys2/struct.OfferServiceDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OfferService {
+    /// Offered capability source component.
+    pub source: Ref,
+    /// Offered capability source path.
+    pub source_path: Path,
+    /// Offered capability target.
+    pub target: Ref,
+    /// Offered capability target path.
+    pub target_path: Path,
+}
+
+/// Offered legacy service capability. See [`OfferLegacyServiceDecl`].
 ///
 /// [`OfferLegacyServiceDecl`]: ../../fidl_fuchsia_sys2/struct.OfferLegacyServiceDecl.html
 #[derive(Serialize, Deserialize, Debug)]

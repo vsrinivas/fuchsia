@@ -148,6 +148,9 @@
         "type": "object",
         "oneOf": [
           {
+            "required": [ "service" ]
+          },
+          {
             "required": [ "legacy_service" ]
           },
           {
@@ -158,6 +161,29 @@
           }
         ],
         "properties": {
+          "service": {
+            "type": "object",
+            "title": "Used service capability",
+            "required": [
+              "source",
+              "source_path",
+              "target_path"
+            ],
+            "properties": {
+              "source": {
+                "title": "Used service source",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+              },
+              "source_path": {
+                "title": "Used service source path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "target_path": {
+                "title": "Used service target path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              }
+            }
+          },
           "legacy_service": {
             "type": "object",
             "title": "Used legacy service capability",
@@ -233,6 +259,9 @@
         "type": "object",
         "oneOf": [
           {
+            "required": [ "service" ]
+          },
+          {
             "required": [ "legacy_service" ]
           },
           {
@@ -240,6 +269,29 @@
           }
         ],
         "properties": {
+          "service": {
+            "type": "object",
+            "title": "Exposed service capability",
+            "required": [
+              "source",
+              "source_path",
+              "target_path"
+            ],
+            "properties": {
+              "source": {
+                "title": "Exposed service source component",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+              },
+              "source_path": {
+                "title": "Exposed service source path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "target_path": {
+                "allOf": [{ "$ref": "#/definitions/path-clause" }],
+                "title": "Exposed service target path"
+              }
+            }
+          },
           "legacy_service": {
             "type": "object",
             "title": "Exposed legacy service capability",
@@ -297,6 +349,9 @@
         "type": "object",
         "oneOf": [
           {
+            "required": [ "service" ]
+          },
+          {
             "required": [ "legacy_service" ]
           },
           {
@@ -307,6 +362,10 @@
           }
         ],
         "properties": {
+          "service": {
+            "title": "Offered service",
+            "allOf": [{ "$ref": "#/definitions/offer-clause" }]
+          },
           "legacy_service": {
             "title": "Offered legacy service",
             "allOf": [{ "$ref": "#/definitions/offer-clause" }]

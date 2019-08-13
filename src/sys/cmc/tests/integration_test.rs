@@ -3,8 +3,8 @@ use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
-    ExposeDirectoryDecl, OfferDecl, OfferLegacyServiceDecl, RealmRef, Ref, SelfRef, StartupMode,
-    UseDecl, UseLegacyServiceDecl,
+    ExposeDirectoryDecl, OfferDecl, OfferLegacyServiceDecl, OfferServiceDecl, RealmRef, Ref,
+    SelfRef, StartupMode, UseDecl, UseLegacyServiceDecl, UseServiceDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -23,22 +23,37 @@ fn main() {
                 value: Some(Box::new(fd::Value::Str("bin/example".to_string()))),
             }],
         };
-        let uses = vec![UseDecl::LegacyService(UseLegacyServiceDecl {
-            source: Some(Ref::Realm(RealmRef {})),
-            source_path: Some("/fonts/CoolFonts".to_string()),
-            target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
-        })];
+        let uses = vec![
+            UseDecl::Service(UseServiceDecl {
+                source: Some(Ref::Realm(RealmRef {})),
+                source_path: Some("/fonts/CoolFonts".to_string()),
+                target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+            }),
+            UseDecl::LegacyService(UseLegacyServiceDecl {
+                source: Some(Ref::Realm(RealmRef {})),
+                source_path: Some("/fonts/LegacyCoolFonts".to_string()),
+                target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
+            }),
+        ];
         let exposes = vec![ExposeDecl::Directory(ExposeDirectoryDecl {
             source: Some(Ref::Self_(SelfRef {})),
             source_path: Some("/volumes/blobfs".to_string()),
             target_path: Some("/volumes/blobfs".to_string()),
         })];
-        let offers = vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
-            source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
-            source_path: Some("/svc/fuchsia.logger.Log".to_string()),
-            target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
-            target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-        })];
+        let offers = vec![
+            OfferDecl::Service(OfferServiceDecl {
+                source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
+                source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
+                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+            }),
+            OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
+                source_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
+                target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+            }),
+        ];
         let children = vec![ChildDecl {
             name: Some("logger".to_string()),
             url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),

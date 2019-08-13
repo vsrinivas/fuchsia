@@ -253,6 +253,14 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_use_decl(&mut self, use_: &fsys::UseDecl) {
         match use_ {
+            fsys::UseDecl::Service(u) => {
+                self.validate_use_fields(
+                    "UseServiceDecl",
+                    u.source.as_ref(),
+                    u.source_path.as_ref(),
+                    u.target_path.as_ref(),
+                );
+            }
             fsys::UseDecl::LegacyService(u) => {
                 self.validate_use_fields(
                     "UseLegacyServiceDecl",
@@ -394,6 +402,15 @@ impl<'a> ValidationContext<'a> {
         prev_target_paths: &mut HashSet<&'a str>,
     ) {
         match expose {
+            fsys::ExposeDecl::Service(e) => {
+                self.validate_expose_fields(
+                    "ExposeServiceDecl",
+                    e.source.as_ref(),
+                    e.source_path.as_ref(),
+                    e.target_path.as_ref(),
+                    prev_target_paths,
+                );
+            }
             fsys::ExposeDecl::LegacyService(e) => {
                 self.validate_expose_fields(
                     "ExposeLegacyServiceDecl",
@@ -452,6 +469,15 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_offers_decl(&mut self, offer: &'a fsys::OfferDecl) {
         match offer {
+            fsys::OfferDecl::Service(o) => {
+                self.validate_offers_fields(
+                    "OfferServiceDecl",
+                    o.source.as_ref(),
+                    o.source_path.as_ref(),
+                    o.target.as_ref(),
+                    o.target_path.as_ref(),
+                );
+            }
             fsys::OfferDecl::LegacyService(o) => {
                 self.validate_offers_fields(
                     "OfferLegacyServiceDecl",
@@ -767,10 +793,10 @@ mod tests {
         super::*,
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
-            ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, OfferDecl,
-            OfferDirectoryDecl, OfferLegacyServiceDecl, OfferStorageDecl, RealmRef, Ref, SelfRef,
-            StartupMode, StorageDecl, StorageRef, StorageType, UseDecl, UseDirectoryDecl,
-            UseLegacyServiceDecl, UseStorageDecl,
+            ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeServiceDecl, OfferDecl,
+            OfferDirectoryDecl, OfferLegacyServiceDecl, OfferServiceDecl, OfferStorageDecl,
+            RealmRef, Ref, SelfRef, StartupMode, StorageDecl, StorageRef, StorageType, UseDecl,
+            UseDirectoryDecl, UseLegacyServiceDecl, UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -1015,6 +1041,11 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
+                    UseDecl::Service(UseServiceDecl {
+                        source: None,
+                        source_path: None,
+                        target_path: None,
+                    }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: None,
                         source_path: None,
@@ -1037,6 +1068,9 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::missing_field("UseServiceDecl", "source"),
+                Error::missing_field("UseServiceDecl", "source_path"),
+                Error::missing_field("UseServiceDecl", "target_path"),
                 Error::missing_field("UseLegacyServiceDecl", "source"),
                 Error::missing_field("UseLegacyServiceDecl", "source_path"),
                 Error::missing_field("UseLegacyServiceDecl", "target_path"),
@@ -1051,6 +1085,11 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
+                    UseDecl::Service(UseServiceDecl {
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                        source_path: Some("foo/".to_string()),
+                        target_path: Some("/".to_string()),
+                    }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_path: Some("foo/".to_string()),
@@ -1073,6 +1112,9 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::invalid_field("UseServiceDecl", "source"),
+                Error::invalid_field("UseServiceDecl", "source_path"),
+                Error::invalid_field("UseServiceDecl", "target_path"),
                 Error::invalid_field("UseLegacyServiceDecl", "source"),
                 Error::invalid_field("UseLegacyServiceDecl", "source_path"),
                 Error::invalid_field("UseLegacyServiceDecl", "target_path"),
@@ -1087,6 +1129,11 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
+                    UseDecl::Service(UseServiceDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                    }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
@@ -1105,6 +1152,8 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::field_too_long("UseServiceDecl", "source_path"),
+                Error::field_too_long("UseServiceDecl", "target_path"),
                 Error::field_too_long("UseLegacyServiceDecl", "source_path"),
                 Error::field_too_long("UseLegacyServiceDecl", "target_path"),
                 Error::field_too_long("UseDirectoryDecl", "source_path"),
@@ -1118,6 +1167,11 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: None,
+                        source_path: None,
+                        target_path: None,
+                    }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: None,
                         source_path: None,
@@ -1132,6 +1186,9 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::missing_field("ExposeServiceDecl", "source"),
+                Error::missing_field("ExposeServiceDecl", "source_path"),
+                Error::missing_field("ExposeServiceDecl", "target_path"),
                 Error::missing_field("ExposeLegacyServiceDecl", "source"),
                 Error::missing_field("ExposeLegacyServiceDecl", "source_path"),
                 Error::missing_field("ExposeLegacyServiceDecl", "target_path"),
@@ -1144,13 +1201,21 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
-                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "logger".to_string(),
                             collection: Some("modular".to_string()),
                         })),
                         source_path: Some("/svc/logger".to_string()),
                         target_path: Some("/svc/logger".to_string()),
+                    }),
+                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: Some("modular".to_string()),
+                        })),
+                        source_path: Some("/svc/legacy_logger".to_string()),
+                        target_path: Some("/svc/legacy_logger".to_string()),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1164,6 +1229,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::extraneous_field("ExposeServiceDecl", "source.child.collection"),
                 Error::extraneous_field("ExposeLegacyServiceDecl", "source.child.collection"),
                 Error::extraneous_field("ExposeDirectoryDecl", "source.child.collection"),
             ])),
@@ -1172,6 +1238,14 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        source_path: Some("foo/".to_string()),
+                        target_path: Some("/".to_string()),
+                    }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "^bad".to_string(),
@@ -1192,6 +1266,9 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::invalid_character_in_field("ExposeServiceDecl", "source.child.name", '^'),
+                Error::invalid_field("ExposeServiceDecl", "source_path"),
+                Error::invalid_field("ExposeServiceDecl", "target_path"),
                 Error::invalid_character_in_field("ExposeLegacyServiceDecl", "source.child.name", '^'),
                 Error::invalid_field("ExposeLegacyServiceDecl", "source_path"),
                 Error::invalid_field("ExposeLegacyServiceDecl", "target_path"),
@@ -1204,6 +1281,14 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "b".repeat(101),
+                            collection: None,
+                        })),
+                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                    }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "b".repeat(101),
@@ -1224,6 +1309,9 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::field_too_long("ExposeServiceDecl", "source.child.name"),
+                Error::field_too_long("ExposeServiceDecl", "source_path"),
+                Error::field_too_long("ExposeServiceDecl", "target_path"),
                 Error::field_too_long("ExposeLegacyServiceDecl", "source.child.name"),
                 Error::field_too_long("ExposeLegacyServiceDecl", "source_path"),
                 Error::field_too_long("ExposeLegacyServiceDecl", "target_path"),
@@ -1236,13 +1324,21 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
-                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "netstack".to_string(),
                             collection: None,
                         })),
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                    }),
+                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
+                        target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1256,6 +1352,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::invalid_child("ExposeServiceDecl", "source", "netstack"),
                 Error::invalid_child("ExposeLegacyServiceDecl", "source", "netstack"),
                 Error::invalid_child("ExposeDirectoryDecl", "source", "netstack"),
             ])),
@@ -1264,7 +1361,7 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![
-                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
@@ -1288,6 +1385,12 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: None,
+                        source_path: None,
+                        target: None,
+                        target_path: None,
+                    }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: None,
                         source_path: None,
@@ -1309,6 +1412,10 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::missing_field("OfferServiceDecl", "source"),
+                Error::missing_field("OfferServiceDecl", "source_path"),
+                Error::missing_field("OfferServiceDecl", "target"),
+                Error::missing_field("OfferServiceDecl", "target_path"),
                 Error::missing_field("OfferLegacyServiceDecl", "source"),
                 Error::missing_field("OfferLegacyServiceDecl", "source_path"),
                 Error::missing_field("OfferLegacyServiceDecl", "target"),
@@ -1326,6 +1433,30 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "a".repeat(101),
+                            collection: None,
+                        })),
+                        source_path: Some(format!("/{}", "a".repeat(1024))),
+                        target: Some(Ref::Child(
+                           ChildRef {
+                               name: "b".repeat(101),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(Ref::Self_(SelfRef {})),
+                        source_path: Some("/a".to_string()),
+                        target: Some(Ref::Collection(
+                           CollectionRef {
+                               name: "b".repeat(101),
+                           }
+                        )),
+                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                    }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "a".repeat(101),
@@ -1350,7 +1481,7 @@ mod tests {
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                     }),
-                   OfferDecl::Directory(OfferDirectoryDecl {
+                    OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "a".repeat(101),
                             collection: None,
@@ -1395,6 +1526,12 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::field_too_long("OfferServiceDecl", "source.child.name"),
+                Error::field_too_long("OfferServiceDecl", "source_path"),
+                Error::field_too_long("OfferServiceDecl", "target.child.name"),
+                Error::field_too_long("OfferServiceDecl", "target_path"),
+                Error::field_too_long("OfferServiceDecl", "target.collection.name"),
+                Error::field_too_long("OfferServiceDecl", "target_path"),
                 Error::field_too_long("OfferLegacyServiceDecl", "source.child.name"),
                 Error::field_too_long("OfferLegacyServiceDecl", "source_path"),
                 Error::field_too_long("OfferLegacyServiceDecl", "target.child.name"),
@@ -1415,6 +1552,20 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: Some("modular".to_string()),
+                        })),
+                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        target: Some(Ref::Child(
+                            ChildRef {
+                                name: "netstack".to_string(),
+                                collection: Some("modular".to_string()),
+                            }
+                        )),
+                        target_path: Some("/data/realm_assets".to_string()),
+                    }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "logger".to_string(),
@@ -1457,6 +1608,8 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::extraneous_field("OfferServiceDecl", "source.child.collection"),
+                Error::extraneous_field("OfferServiceDecl", "target.child.collection"),
                 Error::extraneous_field("OfferLegacyServiceDecl", "source.child.collection"),
                 Error::extraneous_field("OfferLegacyServiceDecl", "target.child.collection"),
                 Error::extraneous_field("OfferDirectoryDecl", "source.child.collection"),
@@ -1468,7 +1621,7 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "logger".to_string(),
                             collection: None,
@@ -1481,6 +1634,20 @@ mod tests {
                            }
                         )),
                         target_path: Some("/svc/logger".to_string()),
+                    }),
+                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        source_path: Some("/svc/legacy_logger".to_string()),
+                        target: Some(Ref::Child(
+                           ChildRef {
+                               name: "logger".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("/svc/legacy_logger".to_string()),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1505,6 +1672,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::offer_target_equals_source("OfferServiceDecl", "logger"),
                 Error::offer_target_equals_source("OfferLegacyServiceDecl", "logger"),
                 Error::offer_target_equals_source("OfferDirectoryDecl", "logger"),
             ])),
@@ -1552,7 +1720,7 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "logger".to_string(),
                             collection: None,
@@ -1565,6 +1733,20 @@ mod tests {
                            }
                         )),
                         target_path: Some("/data/realm_assets".to_string()),
+                    }),
+                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
+                        target: Some(Ref::Child(
+                           ChildRef {
+                               name: "netstack".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("/data/legacy_realm_assets".to_string()),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1605,6 +1787,7 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_child("StorageDecl", "source", "logger"),
+                Error::invalid_child("OfferServiceDecl", "source", "logger"),
                 Error::invalid_child("OfferLegacyServiceDecl", "source", "logger"),
                 Error::invalid_child("OfferDirectoryDecl", "source", "logger"),
             ])),
@@ -1613,7 +1796,7 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         target: Some(Ref::Child(
@@ -1624,7 +1807,7 @@ mod tests {
                         )),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         target: Some(Ref::Child(
@@ -1668,7 +1851,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::duplicate_field("OfferLegacyServiceDecl", "target_path", "/svc/fuchsia.logger.Log"),
+                Error::duplicate_field("OfferServiceDecl", "target_path", "/svc/fuchsia.logger.Log"),
                 Error::duplicate_field("OfferDirectoryDecl", "target_path", "/data"),
             ])),
         },
@@ -1676,7 +1859,7 @@ mod tests {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         target: Some(Ref::Child(
@@ -1687,13 +1870,32 @@ mod tests {
                         )),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string(), }
                         )),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                    }),
+                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/svc/legacy_logger".to_string()),
+                        target: Some(Ref::Child(
+                           ChildRef {
+                               name: "netstack".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                    }),
+                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/svc/legacy_logger".to_string()),
+                        target: Some(Ref::Collection(
+                           CollectionRef { name: "modular".to_string(), }
+                        )),
+                        target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -1735,6 +1937,8 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::invalid_child("OfferServiceDecl", "target", "netstack"),
+                Error::invalid_collection("OfferServiceDecl", "target", "modular"),
                 Error::invalid_child("OfferLegacyServiceDecl", "target", "netstack"),
                 Error::invalid_collection("OfferLegacyServiceDecl", "target", "modular"),
                 Error::invalid_child("OfferDirectoryDecl", "target", "netstack"),

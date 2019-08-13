@@ -9,8 +9,7 @@ use {
     },
     cm_rust::{
         CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
-        OfferDirectorySource, OfferLegacyServiceSource, StorageDirectorySource, UseDecl,
-        UseStorageDecl,
+        OfferDirectorySource, OfferServiceSource, StorageDirectorySource, UseDecl, UseStorageDecl,
     },
     fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
@@ -80,6 +79,10 @@ pub fn default_component_decl() -> ComponentDecl {
 }
 
 pub enum CheckUse {
+    Service {
+        path: CapabilityPath,
+        should_succeed: bool,
+    },
     LegacyService {
         path: CapabilityPath,
         should_succeed: bool,
@@ -198,6 +201,7 @@ impl RoutingTest {
             self.components.clone(),
         ).await;
         match check {
+            CheckUse::Service { .. } => panic!("service capability unsupported"),
             CheckUse::LegacyService { path, should_succeed } => {
                 capability_util::call_echo_svc_from_namespace(
                     path,
@@ -249,6 +253,7 @@ impl RoutingTest {
     /// Checks using a capability from a component's exposed directory.
     pub async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         match check {
+            CheckUse::Service { .. } => panic!("service capability unsupported"),
             CheckUse::LegacyService { path, should_succeed } => {
                 capability_util::call_echo_svc_from_exposed_dir(
                     path,
@@ -289,6 +294,7 @@ impl RoutingTest {
             .into_iter()
             .filter_map(|u| match u {
                 UseDecl::Directory(d) => Some(d.target_path.to_string()),
+                UseDecl::Service(s) => Some(s.target_path.to_string()),
                 UseDecl::LegacyService(s) => Some(s.target_path.dirname),
                 UseDecl::Storage(UseStorageDecl::Data(p)) => Some(p.to_string()),
                 UseDecl::Storage(UseStorageDecl::Cache(p)) => Some(p.to_string()),
@@ -355,6 +361,9 @@ impl RoutingTest {
         let mut out_dir = None;
         for expose in decl.exposes.iter() {
             match expose {
+                ExposeDecl::Service(s) if s.source == ExposeSource::Self_ => {
+                    panic!("service capability unsupported")
+                }
                 ExposeDecl::LegacyService(s) if s.source == ExposeSource::Self_ => {
                     out_dir.get_or_insert(OutDir::new()).add_service()
                 }
@@ -366,7 +375,10 @@ impl RoutingTest {
         }
         for offer in decl.offers.iter() {
             match offer {
-                OfferDecl::LegacyService(s) if s.source == OfferLegacyServiceSource::Self_ => {
+                OfferDecl::Service(s) if s.source == OfferServiceSource::Self_ => {
+                    panic!("service capability unsupported")
+                }
+                OfferDecl::LegacyService(s) if s.source == OfferServiceSource::Self_ => {
                     out_dir.get_or_insert(OutDir::new()).add_service()
                 }
                 OfferDecl::Directory(d) if d.source == OfferDirectorySource::Self_ => {

@@ -6,7 +6,7 @@ use {
     crate::model::*,
     cm_rust::{
         self, CapabilityPath, ExposeDecl, ExposeSource, FrameworkCapabilityDecl, OfferDecl,
-        OfferDirectorySource, OfferLegacyServiceSource, OfferStorageSource, StorageDecl,
+        OfferDirectorySource, OfferServiceSource, OfferStorageSource, StorageDecl,
         StorageDirectorySource, UseDecl,
     },
     failure::format_err,
@@ -19,7 +19,10 @@ const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
 
 /// Describes the source of a capability, for any type of capability.
 enum OfferSource<'a> {
-    LegacyService(&'a OfferLegacyServiceSource),
+    // TODO(CF-908): Enable this once unified services are implemented.
+    #[allow(dead_code)]
+    Service(&'a OfferServiceSource),
+    LegacyService(&'a OfferServiceSource),
     Directory(&'a OfferDirectorySource),
     Storage(&'a OfferStorageSource),
 }
@@ -412,6 +415,7 @@ async fn walk_offer_chain<'a>(
         let last_child_moniker = pos.last_child_moniker.as_ref().unwrap();
         if let Some(offer) = pos.capability.find_offer_source(decl, last_child_moniker) {
             let source = match offer {
+                OfferDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
                 OfferDecl::LegacyService(s) => OfferSource::LegacyService(&s.source),
                 OfferDecl::Directory(d) => OfferSource::Directory(&d.source),
                 OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
@@ -431,7 +435,8 @@ async fn walk_offer_chain<'a>(
                         current_realm.clone(),
                     )));
                 }
-                OfferSource::LegacyService(OfferLegacyServiceSource::Realm)
+                OfferSource::Service(OfferServiceSource::Realm)
+                | OfferSource::LegacyService(OfferServiceSource::Realm)
                 | OfferSource::Directory(OfferDirectorySource::Realm)
                 | OfferSource::Storage(OfferStorageSource::Realm) => {
                     // The offered capability comes from the realm, so follow the
@@ -441,7 +446,8 @@ async fn walk_offer_chain<'a>(
                     pos.moniker = pos.moniker().parent();
                     continue 'offerloop;
                 }
-                OfferSource::LegacyService(OfferLegacyServiceSource::Self_)
+                OfferSource::Service(OfferServiceSource::Self_)
+                | OfferSource::LegacyService(OfferServiceSource::Self_)
                 | OfferSource::Directory(OfferDirectorySource::Self_) => {
                     // The offered capability comes from the current component,
                     // return our current location in the tree.
@@ -450,7 +456,8 @@ async fn walk_offer_chain<'a>(
                         current_realm.clone(),
                     )));
                 }
-                OfferSource::LegacyService(OfferLegacyServiceSource::Child(child_name))
+                OfferSource::Service(OfferServiceSource::Child(child_name))
+                | OfferSource::LegacyService(OfferServiceSource::Child(child_name))
                 | OfferSource::Directory(OfferDirectorySource::Child(child_name)) => {
                     // The offered capability comes from a child, break the loop
                     // and begin walking the expose chain.
@@ -507,6 +514,9 @@ async fn walk_expose_chain<'a>(
         };
         if let Some(expose) = expose {
             let source = match expose {
+                ExposeDecl::Service(_) => {
+                    return Err(ModelError::unsupported("Service capability"))
+                }
                 ExposeDecl::LegacyService(d) => &d.source,
                 ExposeDecl::Directory(d) => &d.source,
             };
