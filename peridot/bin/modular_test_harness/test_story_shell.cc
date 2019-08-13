@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <memory>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
@@ -52,12 +52,17 @@ class TestStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Sto
 
   // |fuchsia::modular::StoryShell|
   void AddSurface(fuchsia::modular::ViewConnection view_connection,
-                  fuchsia::modular::SurfaceInfo /*surface_info*/) override {
-    if (view_) {
-      view_->ConnectView(std::move(view_connection.view_holder_token));
-    } else {
-      child_view_holder_tokens_.push_back(std::move(view_connection.view_holder_token));
+                  fuchsia::modular::SurfaceInfo surface_info) override {
+    fuchsia::modular::SurfaceInfo2 surface_info2;
+    surface_info2.set_parent_id(surface_info.parent_id);
+    if (surface_info.surface_relation) {
+      surface_info2.set_surface_relation(*surface_info.surface_relation);
     }
+    if (surface_info.module_manifest) {
+      surface_info2.set_module_manifest(std::move(*surface_info.module_manifest));
+    }
+    surface_info2.set_module_source(surface_info.module_source);
+    AddSurface3(std::move(view_connection), std::move(surface_info2));
   }
 
   // |fuchsia::modular::StoryShell|
@@ -69,6 +74,16 @@ class TestStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Sto
             .view_holder_token = std::move(view_connection.view_holder_token),
         },
         std::move(surface_info));
+  }
+
+  // |fuchsia::modular::StoryShell|
+  void AddSurface3(fuchsia::modular::ViewConnection view_connection,
+                   fuchsia::modular::SurfaceInfo2 /*surface_info*/) override {
+    if (view_) {
+      view_->ConnectView(std::move(view_connection.view_holder_token));
+    } else {
+      child_view_holder_tokens_.push_back(std::move(view_connection.view_holder_token));
+    }
   }
 
   // |fuchsia::modular::StoryShell|

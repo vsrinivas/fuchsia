@@ -9,6 +9,7 @@
 #include <lib/modular_test_harness/cpp/fake_story_shell.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+
 #include <src/lib/fxl/logging.h>
 
 namespace {

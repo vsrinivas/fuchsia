@@ -24,13 +24,14 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/join_strings.h>
-#include <src/lib/fxl/strings/split_string.h>
 
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/strings/split_string.h>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
@@ -433,16 +434,20 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
     const auto surface_id = ModulePathToSurfaceID(module_data_.module_path);
 
-    fuchsia::modular::ViewConnection2 view_connection;
+    fuchsia::modular::ViewConnection view_connection;
     view_connection.surface_id = surface_id;
     view_connection.view_holder_token = std::move(view_holder_token);
 
-    fuchsia::modular::SurfaceInfo surface_info;
-    surface_info.parent_id = anchor_surface_id.value_or("");
-    surface_info.surface_relation = std::move(module_data_.surface_relation);
-    surface_info.module_manifest = std::move(module_manifest_);
-    surface_info.module_source = std::move(module_data_.module_source);
-    story_controller_impl_->story_shell_->AddSurface2(std::move(view_connection),
+    fuchsia::modular::SurfaceInfo2 surface_info;
+    surface_info.set_parent_id(anchor_surface_id.value_or(""));
+    if (module_data_.surface_relation) {
+      surface_info.set_surface_relation(*module_data_.surface_relation);
+    }
+    if (module_manifest_) {
+      surface_info.set_module_manifest(std::move(*module_manifest_));
+    }
+    surface_info.set_module_source(module_data_.module_source);
+    story_controller_impl_->story_shell_->AddSurface3(std::move(view_connection),
                                                       std::move(surface_info));
 
     story_controller_impl_->connected_views_.emplace(surface_id);
@@ -1171,15 +1176,19 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
     }
 
     const auto surface_id = ModulePathToSurfaceID(kv.second.module_path);
-    fuchsia::modular::ViewConnection2 view_connection;
+    fuchsia::modular::ViewConnection view_connection;
     view_connection.surface_id = surface_id;
     view_connection.view_holder_token = std::move(kv.second.view_holder_token);
-    fuchsia::modular::SurfaceInfo surface_info;
-    surface_info.parent_id = anchor_surface_id;
-    surface_info.surface_relation = std::move(kv.second.surface_relation);
-    surface_info.module_manifest = std::move(kv.second.module_manifest);
-    surface_info.module_source = std::move(kv.second.module_source);
-    story_shell_->AddSurface2(std::move(view_connection), std::move(surface_info));
+    fuchsia::modular::SurfaceInfo2 surface_info;
+    surface_info.set_parent_id(anchor_surface_id);
+    if (kv.second.surface_relation) {
+      surface_info.set_surface_relation(*kv.second.surface_relation);
+    }
+    if (kv.second.module_manifest) {
+      surface_info.set_module_manifest(std::move(*kv.second.module_manifest));
+    }
+    surface_info.set_module_source(std::move(kv.second.module_source));
+    story_shell_->AddSurface3(std::move(view_connection), std::move(surface_info));
     connected_views_.emplace(surface_id);
 
     added_keys.push_back(kv.first);
@@ -1371,10 +1380,10 @@ void StoryControllerImpl::InitStoryEnvironment() {
 
   static const auto* const kEnvServices =
       new std::vector<std::string>{fuchsia::modular::ContextWriter::Name_};
-  story_environment_ =
-      std::make_unique<Environment>(story_provider_impl_->user_environment(),
-                                    kStoryEnvironmentLabelPrefix + story_id_.value_or(""), *kEnvServices,
-                                    /* kill_on_oom = */ false);
+  story_environment_ = std::make_unique<Environment>(
+      story_provider_impl_->user_environment(),
+      kStoryEnvironmentLabelPrefix + story_id_.value_or(""), *kEnvServices,
+      /* kill_on_oom = */ false);
   story_environment_->AddService<fuchsia::modular::ContextWriter>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
         intelligence_services_->GetContextWriter(std::move(request));
@@ -1410,8 +1419,8 @@ void StoryControllerImpl::CreateEntity(
     std::string type, fuchsia::mem::Buffer data,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
     fit::function<void(std::string /* entity_reference */)> callback) {
-  story_provider_impl_->CreateEntity(story_id_.value_or(""), type, std::move(data), std::move(entity_request),
-                                     std::move(callback));
+  story_provider_impl_->CreateEntity(story_id_.value_or(""), type, std::move(data),
+                                     std::move(entity_request), std::move(callback));
 }
 
 void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {

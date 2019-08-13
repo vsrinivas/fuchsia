@@ -6,6 +6,7 @@
 #define LIB_MODULAR_TEST_HARNESS_CPP_FAKE_STORY_SHELL_H_
 
 #include <lib/modular_test_harness/cpp/fake_component.h>
+
 #include <sdk/lib/sys/cpp/component_context.h>
 
 namespace modular {
@@ -64,9 +65,13 @@ class FakeStoryShell : public modular::testing::FakeComponent, fuchsia::modular:
                   fuchsia::modular::SurfaceInfo surface_info) override;
 
   // |fuchsia::modular::StoryShell|
-  // Checks if the surface relationships match expectations
   void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
                    fuchsia::modular::SurfaceInfo surface_info) override;
+
+  // |fuchsia::modular::StoryShell|
+  // Checks if the surface relationships match expectations
+  void AddSurface3(fuchsia::modular::ViewConnection view_connection,
+                   fuchsia::modular::SurfaceInfo2 surface_info) override;
 
   // |fuchsia::modular::StoryShell|
   void FocusSurface(std::string /* surface_id */) override {}
