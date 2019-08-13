@@ -247,9 +247,7 @@ mod tests {
 
         let mut display_settings = DisplaySettings::empty();
         display_settings.brightness_value = Some(CHANGED_BRIGHTNESS);
-        display_proxy.set(display_settings).await
-            .expect("set completed")
-            .expect("set successful");
+        display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
         let settings =
             display_proxy.watch().await.expect("watch completed").expect("watch successful");

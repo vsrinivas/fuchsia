@@ -91,6 +91,14 @@ pub enum SettingEvent {
     Response(u64, SettingResponseResult),
 }
 
+/// A trait handed back from Switchboard's listen interface. Allows client to
+/// signal they want to end the session.
+pub trait ListenSession: Drop {
+    /// Invoked to close the current listening session. No further updates will
+    /// be provided to the listener provided at the initial listen call.
+    fn close(&mut self);
+}
+
 /// A interface for send SettingActions.
 pub trait Switchboard {
     /// Transmits a SettingRequest. Results are returned from the passed in
@@ -108,5 +116,5 @@ pub trait Switchboard {
         &mut self,
         setting_type: SettingType,
         listener: UnboundedSender<SettingType>,
-    ) -> Result<(), Error>;
+    ) -> Result<Box<ListenSession + Send + Sync>, Error>;
 }

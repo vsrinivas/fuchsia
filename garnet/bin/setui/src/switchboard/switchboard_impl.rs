@@ -4,7 +4,7 @@
 
 use crate::switchboard::base::*;
 
-use failure::Error;
+use failure::{format_err, Error};
 
 use futures::channel::mpsc::UnboundedSender;
 
@@ -13,17 +13,79 @@ use std::sync::{Arc, RwLock};
 
 use fuchsia_async as fasync;
 use futures::stream::StreamExt;
-use futures::TryFutureExt;
 
 type ResponderMap = HashMap<u64, SettingRequestResponder>;
 type Listener = UnboundedSender<SettingType>;
-type ListenerMap = HashMap<SettingType, Vec<Listener>>;
+type ListenerMap = HashMap<SettingType, Vec<ListenSessionInfo>>;
+
+/// Minimal data necessary to uniquely identify and interact with a listen
+/// session.
+#[derive(Clone, Debug)]
+struct ListenSessionInfo {
+    session_id: u64,
+
+    /// Setting type listening to
+    setting_type: SettingType,
+
+    listener: Listener,
+}
+
+impl PartialEq for ListenSessionInfo {
+    fn eq(&self, other: &Self) -> bool {
+        // We cannot derive PartialEq as UnboundedSender does not implement it.
+        self.session_id == other.session_id && self.setting_type == other.setting_type
+    }
+}
+
+/// Wrapper around ListenSessioninfo that provides cancellation ability as a
+/// ListenSession.
+struct ListenSessionImpl {
+    info: ListenSessionInfo,
+
+    /// Sender to invoke cancellation on. Sends the listener associated with
+    /// this session.
+    cancellation_sender: UnboundedSender<ListenSessionInfo>,
+
+    closed: bool,
+}
+
+impl ListenSessionImpl {
+    fn new(
+        info: ListenSessionInfo,
+        cancellation_sender: UnboundedSender<ListenSessionInfo>,
+    ) -> Self {
+        Self { info: info, cancellation_sender: cancellation_sender, closed: false }
+    }
+}
+
+impl ListenSession for ListenSessionImpl {
+    fn close(&mut self) {
+        if self.closed {
+            return;
+        }
+
+        let info_clone = self.info.clone();
+        self.cancellation_sender.unbounded_send(info_clone).ok();
+        self.closed = true;
+    }
+}
+
+impl Drop for ListenSessionImpl {
+    fn drop(&mut self) {
+        self.close();
+    }
+}
 
 pub struct SwitchboardImpl {
-    /// Next available id.
+    /// Next available session id.
+    next_session_id: u64,
+    /// Next available action id.
     next_action_id: u64,
     /// Acquired during construction and used internally to send input.
     action_sender: UnboundedSender<SettingAction>,
+    /// Acquired during construction - passed during listen to allow callback
+    /// for canceling listen.
+    listen_cancellation_sender: UnboundedSender<ListenSessionInfo>,
     /// mapping of request output ids to responders.
     request_responders: ResponderMap,
     /// mapping of listeners for changes
@@ -37,23 +99,35 @@ impl SwitchboardImpl {
         action_sender: UnboundedSender<SettingAction>,
     ) -> (Arc<RwLock<SwitchboardImpl>>, UnboundedSender<SettingEvent>) {
         let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<SettingEvent>();
+        let (cancel_listen_tx, mut cancel_listen_rx) =
+            futures::channel::mpsc::unbounded::<ListenSessionInfo>();
+
         let switchboard = Arc::new(RwLock::new(Self {
+            next_session_id: 0,
             next_action_id: 0,
             action_sender: action_sender,
+            listen_cancellation_sender: cancel_listen_tx,
             request_responders: HashMap::new(),
             listeners: HashMap::new(),
         }));
 
-        let switchboard_clone = switchboard.clone();
-        fasync::spawn(
-            async move {
+        {
+            let switchboard_clone = switchboard.clone();
+            fasync::spawn(async move {
                 while let Some(event) = event_rx.next().await {
                     switchboard_clone.write().unwrap().process_event(event);
                 }
-                Ok(())
-            }
-                .unwrap_or_else(|_e: failure::Error| {}),
-        );
+            });
+        }
+
+        {
+            let switchboard_clone = switchboard.clone();
+            fasync::spawn(async move {
+                while let Some(info) = cancel_listen_rx.next().await {
+                    switchboard_clone.write().unwrap().stop_listening(info);
+                }
+            });
+        }
 
         return (switchboard, event_tx);
     }
@@ -75,10 +149,32 @@ impl SwitchboardImpl {
         }
     }
 
+    fn stop_listening(&mut self, session_info: ListenSessionInfo) {
+        let action_id = self.get_next_action_id();
+
+        if let Some(session_infos) = self.listeners.get_mut(&session_info.setting_type) {
+            // FIXME: use `Vec::remove_item` upon stabilization
+            let listener_to_remove =
+                session_infos.iter().enumerate().find(|(_i, elem)| **elem == session_info);
+            if let Some((i, _elem)) = listener_to_remove {
+                session_infos.remove(i);
+
+                // Send updated listening size.
+                self.action_sender
+                    .unbounded_send(SettingAction {
+                        id: action_id,
+                        setting_type: session_info.setting_type,
+                        data: SettingActionData::Listen(session_infos.len() as u64),
+                    })
+                    .ok();
+            }
+        }
+    }
+
     fn notify_listeners(&self, setting_type: SettingType) {
-        if let Some(listeners) = self.listeners.get(&setting_type) {
-            for listener in listeners {
-                listener.unbounded_send(setting_type).ok();
+        if let Some(session_infos) = self.listeners.get(&setting_type) {
+            for info in session_infos {
+                info.listener.unbounded_send(setting_type).ok();
             }
         }
     }
@@ -114,7 +210,7 @@ impl Switchboard for SwitchboardImpl {
         &mut self,
         setting_type: SettingType,
         listener: UnboundedSender<SettingType>,
-    ) -> Result<(), Error> {
+    ) -> Result<Box<ListenSession + Send + Sync>, Error> {
         let action_id = self.get_next_action_id();
 
         if !self.listeners.contains_key(&setting_type) {
@@ -122,16 +218,29 @@ impl Switchboard for SwitchboardImpl {
         }
 
         if let Some(listeners) = self.listeners.get_mut(&setting_type) {
-            listeners.push(listener);
+            let info = ListenSessionInfo {
+                session_id: self.next_session_id,
+                setting_type: setting_type,
+                listener: listener,
+            };
+
+            self.next_session_id += 1;
+
+            listeners.push(info.clone());
 
             self.action_sender.unbounded_send(SettingAction {
                 id: action_id,
                 setting_type,
                 data: SettingActionData::Listen(listeners.len() as u64),
             })?;
+
+            return Ok(Box::new(ListenSessionImpl::new(
+                info,
+                self.listen_cancellation_sender.clone(),
+            )));
         }
 
-        return Ok(());
+        return Err(format_err!("invalid error"));
     }
 }
 
@@ -169,6 +278,39 @@ mod tests {
         // Ensure response is received.
         let response = response_rx.await.unwrap();
         assert!(response.is_ok());
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_listen() {
+        let (action_tx, mut action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
+        let (switchboard, _event_tx) = SwitchboardImpl::create(action_tx);
+        let setting_type = SettingType::Unknown;
+
+        // Register first listener and verify count.
+        let (notify_tx1, _notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
+        let listen_result = switchboard.write().unwrap().listen(setting_type, notify_tx1);
+
+        assert!(listen_result.is_ok());
+        {
+            let action = action_rx.next().await.unwrap();
+
+            assert_eq!(action.setting_type, setting_type);
+            assert_eq!(action.data, SettingActionData::Listen(1));
+        }
+
+        // Unregister and verify count.
+        if let Ok(mut listen_session) = listen_result {
+            listen_session.close();
+        } else {
+            panic!("should have a session");
+        }
+
+        {
+            let action = action_rx.next().await.unwrap();
+
+            assert_eq!(action.setting_type, setting_type);
+            assert_eq!(action.data, SettingActionData::Listen(0));
+        }
     }
 
     #[fuchsia_async::run_until_stalled(test)]

@@ -18,6 +18,7 @@ use {
 /// something that sender can use.
 pub struct HangingGetHandler<T, ST> {
     switchboard_handle: Arc<RwLock<Switchboard + Send + Sync>>,
+    listen_session: Box<ListenSession + Send + Sync>,
     sent_latest_value: bool,
     hanging_get: Option<ST>,
     data_type: PhantomData<T>,
@@ -43,25 +44,27 @@ where
 
         let hanging_get_handler = Arc::new(Mutex::new(HangingGetHandler::<T, ST> {
             switchboard_handle: switchboard_handle.clone(),
+            listen_session: switchboard_handle
+                .clone()
+                .write()
+                .unwrap()
+                .listen(setting_type, on_change_sender)
+                .unwrap(),
             sent_latest_value: false,
             hanging_get: None,
             data_type: PhantomData,
             setting_type: setting_type,
         }));
 
-        let hanging_get_handler_clone = hanging_get_handler.clone();
-        fasync::spawn(async move {
-            while let Some(setting_type) = on_change_receiver.next().await {
-                assert_eq!(setting_type, setting_type);
-                let mut handler_lock = hanging_get_handler_clone.lock().await;
-                handler_lock.on_change().await;
-            }
-        });
-
-        // Start listening to changes to display when connected.
         {
-            let mut switchboard = switchboard_handle.write().unwrap();
-            switchboard.listen(setting_type, on_change_sender).unwrap();
+            let hanging_get_handler_clone = hanging_get_handler.clone();
+            fasync::spawn(async move {
+                while let Some(setting_type) = on_change_receiver.next().await {
+                    assert_eq!(setting_type, setting_type);
+                    let mut handler_lock = hanging_get_handler_clone.lock().await;
+                    handler_lock.on_change().await;
+                }
+            });
         }
 
         hanging_get_handler
@@ -127,6 +130,16 @@ mod tests {
         sender: UnboundedSender<TestStruct>,
     }
 
+    struct TestListenSession {}
+
+    impl ListenSession for TestListenSession {
+        fn close(&mut self) {}
+    }
+
+    impl Drop for TestListenSession {
+        fn drop(&mut self) {}
+    }
+
     struct TestSwitchboard {
         id_to_send: Arc<RwLock<f32>>,
         setting_type: Option<SettingType>,
@@ -135,7 +148,9 @@ mod tests {
 
     impl TestSwitchboard {
         fn notify_listener(&self) {
+            println!("here 2!");
             if let Some(setting_type_value) = self.setting_type {
+                println!("here 3!");
                 if let Some(listener_sender) = self.listener.clone() {
                     listener_sender.unbounded_send(setting_type_value).unwrap();
                     return;
@@ -143,7 +158,6 @@ mod tests {
             }
             panic!("Missing listener to notify");
         }
-
     }
 
     impl Sender<TestStruct> for TestSender {
@@ -186,10 +200,10 @@ mod tests {
             &mut self,
             setting_type: SettingType,
             listener: UnboundedSender<SettingType>,
-        ) -> Result<(), Error> {
+        ) -> Result<Box<ListenSession + Send + Sync>, Error> {
             self.setting_type = Some(setting_type);
             self.listener = Some(listener);
-            Ok(())
+            Ok(Box::new(TestListenSession {}))
         }
     }
 
@@ -227,6 +241,7 @@ mod tests {
             *current_id.write().unwrap() = ID2;
         }
 
+        println!("here!");
         {
             let switchboard = switchboard_handle.read().unwrap();
             switchboard.notify_listener();

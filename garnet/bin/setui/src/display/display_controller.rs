@@ -49,7 +49,9 @@ pub fn spawn_display_controller(
                     #[allow(unreachable_patterns)]
                     match request {
                         SettingRequest::SetBrightness(brightness_value) => {
-                            brightness_service.set_brightness(brightness_value.into()).await
+                            brightness_service
+                                .set_brightness(brightness_value.into())
+                                .await
                                 .unwrap();
                             responder.send(Ok(None)).unwrap();
                             if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {

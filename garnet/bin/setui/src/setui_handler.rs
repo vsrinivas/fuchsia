@@ -84,12 +84,14 @@ impl SetUIHandler {
             // Creates a new thread per watcher which waits for a change before calling the
             // responder.
             fasync::spawn(async move {
-                receiver.map(|data| {
-                    if let Ok(data) = data {
-                        last_seen_settings.write().unwrap().insert(setting_type, data.clone());
-                        responder(data.clone()).ok();
-                    }
-                }).await;
+                receiver
+                    .map(|data| {
+                        if let Ok(data) = data {
+                            last_seen_settings.write().unwrap().insert(setting_type, data.clone());
+                            responder(data.clone()).ok();
+                        }
+                    })
+                    .await;
             });
         } else {
             fx_log_err!("watch: no valid adapter for type");

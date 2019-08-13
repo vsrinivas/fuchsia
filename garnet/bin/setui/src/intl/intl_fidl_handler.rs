@@ -56,8 +56,7 @@ impl IntlFidlHandler {
                                 .unwrap();
                         }
 
-                        if let Ok(Some(SettingResponse::Intl(info))) = response_rx.await.unwrap()
-                        {
+                        if let Ok(Some(SettingResponse::Intl(info))) = response_rx.await.unwrap() {
                             let mut intl_settings = IntlSettings::empty();
                             intl_settings.time_zone_id = Some(TimeZoneId { id: info.time_zone_id });
 
