@@ -241,6 +241,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    #[ignore] // TODO(34797) reenable after making test less flaky
     async fn can_write_to_shell() -> Result<(), Error> {
         let pty = spawn_pty().await;
         let mut evented_fd = unsafe { fasync::net::EventedFd::new(pty.try_clone_fd()?)? };
