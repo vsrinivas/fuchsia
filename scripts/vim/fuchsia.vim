@@ -23,6 +23,9 @@ if jiri_manifest != ""
   if filereadable(g:fuchsia_dir . '/compile_commands.json')
     let g:ycm_use_clangd = 1
     let g:ycm_clangd_binary_path = systemlist(g:fuchsia_dir . "/scripts/youcompleteme/paths.py CLANG_PATH")[0] . '/bin/clangd'
+    " Disable clang tidy warnings for YCM, they're too noisy and cause you to quickly hit the YCM
+    " diagnostics limit
+    let g:ycm_clangd_args = ["-clang-tidy=false"]
   else
     let g:ycm_use_clangd = 0
   endif
