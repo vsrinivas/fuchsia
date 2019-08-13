@@ -5,6 +5,7 @@
 //! The Ethernet protocol.
 
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::num::NonZeroU8;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
@@ -113,6 +114,7 @@ impl EthernetDeviceStateBuilder {
             mac: self.mac,
             mtu: self.mtu,
             hw_mtu: self.mtu,
+            ipv6_hop_limit: ndp::HOP_LIMIT_DEFAULT,
             ipv4_addr_sub: None,
             ipv6_addr_sub: None,
             ipv4_multicast_groups: HashSet::new(),
@@ -126,19 +128,42 @@ impl EthernetDeviceStateBuilder {
 
 /// The state associated with an Ethernet device.
 pub(crate) struct EthernetDeviceState {
+    /// Mac address of the device this state is for.
     mac: Mac,
+
     /// The value this netstack assumes as the device's current MTU.
     mtu: u32,
+
     /// The maximum MTU allowed by the hardware.
     ///
     /// `mtu` MUST NEVER be greater than `hw_mtu`.
     hw_mtu: u32,
+
+    /// Default hop limit for new IPv6 packets sent from this device.
+    // TODO(ghanan): Once we separate out device-IP state from device-specific
+    //               state, move this to some IPv6-device state.
+    ipv6_hop_limit: NonZeroU8,
+
+    /// Assigned IPv4 address.
     ipv4_addr_sub: Option<AddrSubnet<Ipv4Addr>>,
+
+    /// Assigned IPv6 address.
+    ///
+    /// May be tentative (performing NDP's Duplicate Address Detection)
     ipv6_addr_sub: Option<Tentative<AddrSubnet<Ipv6Addr>>>,
+
+    /// IPv4 multicast groups this device has joined.
     ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
+
+    /// IPv6 multicast groups this device has joined,
     ipv6_multicast_groups: HashSet<MulticastAddr<Ipv6Addr>>,
+
+    /// IPv4 ARP state.
     ipv4_arp: ArpState<Ipv4Addr, Mac>,
+
+    /// (IPv6) NDP state.
     ndp: ndp::NdpState<EthernetNdpDevice>,
+
     // pending_frames stores a list of serialized frames indexed by their
     // desintation IP addresses. The frames contain an entire EthernetFrame
     // body and the MTU check is performed before queueing them here.
@@ -475,6 +500,14 @@ pub(crate) fn get_mtu<D: EventDispatcher>(state: &StackState<D>, device_id: usiz
     get_device_state(state, device_id).mtu
 }
 
+/// Get the hop limit for new IPv6 packets that will be sent out from `device_id`.
+pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(
+    ctx: &Context<D>,
+    device_id: usize,
+) -> NonZeroU8 {
+    get_device_state(ctx.state(), device_id).ipv6_hop_limit
+}
+
 /// Insert a static entry into this device's ARP table.
 ///
 /// This will cause any conflicting dynamic entry to be removed, and
@@ -765,6 +798,14 @@ impl ndp::NdpDevice for EthernetNdpDevice {
 
         trace!("ethernet::ndp_device::set_mtu: setting link MTU to {:?}", mtu);
         dev_state.mtu = mtu;
+    }
+
+    fn set_hop_limit<D: EventDispatcher>(
+        state: &mut StackState<D>,
+        device_id: usize,
+        hop_limit: NonZeroU8,
+    ) {
+        get_device_state_mut(state, device_id).ipv6_hop_limit = hop_limit;
     }
 }
 

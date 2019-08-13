@@ -50,10 +50,10 @@ use crate::wire::icmp::{IcmpIpExt, Icmpv4ParameterProblem, Icmpv6ParameterProble
 use crate::wire::ipv4::{Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions};
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
-// default IPv4 TTL or IPv6 hops
+/// Default IPv4 TTL.
 const DEFAULT_TTL: u8 = 64;
 
-// Minimum MTU required by all IPv6 devices.
+/// Minimum MTU required by all IPv6 devices.
 pub(crate) const IPV6_MIN_MTU: u32 = 1280;
 
 // The ipv4 multicast address for all routers.
@@ -1359,7 +1359,12 @@ where
     // therefore, no packet should have a source ip set to a tentative address.
     debug_assert!(!crate::device::is_addr_tentative_on_device(ctx, src_ip, device));
 
-    let builder = <A::Version as IpExt>::PacketBuilder::new(src_ip, dst_ip, DEFAULT_TTL, proto);
+    let builder = <A::Version as IpExt>::PacketBuilder::new(
+        src_ip,
+        dst_ip,
+        get_hop_limit::<_, A::Version>(ctx, device),
+        proto,
+    );
     let body = body.encapsulate(builder);
 
     if let Some(mtu) = mtu {
@@ -1523,6 +1528,23 @@ impl<I: IcmpIpExt, B: BufferMut, D: BufferDispatcher<B>> IcmpContext<I, B> for C
 /// Is `ctx` configured for a router?
 pub(crate) fn is_router<D: EventDispatcher, I: Ip>(ctx: &Context<D>) -> bool {
     get_state_inner::<I, _>(ctx.state()).forward
+}
+
+/// Get the hop limit for new IP packets that will be sent out from `device`.
+#[specialize_ip]
+fn get_hop_limit<D: EventDispatcher, I: Ip>(ctx: &Context<D>, device: DeviceId) -> u8 {
+    // TODO(ghanan): Should IPv4 packets use the same TTL value
+    //               as IPv6 packets? Currently for the IPv6 case,
+    //               we get the default hop limit from the device
+    //               state which can be updated by NDP's Router
+    //               Advertisement.
+
+    #[ipv4]
+    return DEFAULT_TTL;
+
+    // This value can be updated by NDP's Router Advertisements.
+    #[ipv6]
+    return crate::device::get_ipv6_hop_limit(ctx, device).get();
 }
 
 #[cfg(test)]

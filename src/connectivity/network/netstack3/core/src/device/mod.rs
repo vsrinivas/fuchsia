@@ -9,6 +9,7 @@ pub(crate) mod ethernet;
 pub(crate) mod ndp;
 
 use std::fmt::{self, Debug, Display, Formatter};
+use std::num::NonZeroU8;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
@@ -495,6 +496,16 @@ pub(crate) fn is_in_ip_multicast<D: EventDispatcher, A: IpAddress>(
 pub(crate) fn get_mtu<D: EventDispatcher>(state: &StackState<D>, device: DeviceId) -> u32 {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::get_mtu(state, device.id),
+    }
+}
+
+/// Get the hop limit for new IPv6 packets that will be sent out from `device`.
+pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(
+    ctx: &Context<D>,
+    device: DeviceId,
+) -> NonZeroU8 {
+    match device.protocol {
+        DeviceProtocol::Ethernet => self::ethernet::get_ipv6_hop_limit(ctx, device.id),
     }
 }
 

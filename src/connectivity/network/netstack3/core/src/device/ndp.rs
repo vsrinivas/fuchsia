@@ -54,7 +54,8 @@ pub(crate) const DUP_ADDR_DETECT_TRANSMITS: u8 = 1;
 
 /// The default value for the default hop limit to be used when sending IP
 /// packets.
-const HOP_LIMIT_DEFAULT: u8 = 64;
+// We know the call to `new_unchecked` is safe because 64 is non-zero.
+pub(crate) const HOP_LIMIT_DEFAULT: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(64) };
 
 /// The default value for *BaseReachableTime* as defined in
 /// [RFC 4861 section 10].
@@ -285,6 +286,17 @@ pub(crate) trait NdpDevice: Sized {
     /// [`IPV6_MIN_MTU`]: crate::ip::path_mtu::IPV6_MIN_MTU
     /// [RFC 4861 section 6.3.4]: https://tools.ietf.org/html/rfc4861#section-6.3.4
     fn set_mtu<D: EventDispatcher>(ctx: &mut StackState<D>, device_id: usize, mtu: u32);
+
+    /// Set default hop limit for IP packets sent from `device_id`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the new hop limit is `0`.
+    fn set_hop_limit<D: EventDispatcher>(
+        state: &mut StackState<D>,
+        device_id: usize,
+        hop_limit: NonZeroU8,
+    );
 }
 
 /// Cleans up state associated with the device.
@@ -1424,7 +1436,17 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                 ndp_state.set_retrans_timer(retransmit_timer);
             }
 
-            // TODO(ghanan): Handle CurHopLimit changes.
+            // As per RFC 4861 section 6.3.4:
+            // If the received Cur Hop Limit value is non-zero, the host SHOULD set
+            // its CurHopLimit variable to the received value.
+            //
+            // TODO(ghanan): Make the updating of this field from the RA message configurable
+            //               since the RFC does not say we MUST update the field.
+            if let Some(hop_limit) = NonZeroU8::new(ra.current_hop_limit()) {
+                trace!("receive_ndp_packet_inner: NDP RA: updating device's hop limit to {:?} for router: {:?}", ra.current_hop_limit(), src_ip);
+
+                ND::set_hop_limit(state, device_id, hop_limit);
+            }
 
             for option in p.body().iter() {
                 match option {
@@ -1699,14 +1721,14 @@ mod tests {
     use zerocopy::LayoutVerified;
 
     use crate::device::{
-        ethernet::EthernetNdpDevice, get_ip_addr_subnet, get_mtu, is_in_ip_multicast,
-        set_ip_addr_subnet,
+        ethernet::EthernetNdpDevice, get_ip_addr_subnet, get_ipv6_hop_limit, get_mtu,
+        is_in_ip_multicast, set_ip_addr_subnet,
     };
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
-        self, get_counter_val, get_dummy_config, parse_icmp_packet_in_ip_packet_in_ethernet_frame,
-        set_logger_for_test, trigger_next_timer, DummyEventDispatcher, DummyEventDispatcherBuilder,
-        DummyNetwork,
+        self, get_counter_val, get_dummy_config, parse_ethernet_frame,
+        parse_icmp_packet_in_ip_packet_in_ethernet_frame, set_logger_for_test, trigger_next_timer,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, DummyNetwork,
     };
     use crate::wire::icmp::ndp::{
         options::PrefixInformation, OptionsSerializer, RouterAdvertisement, RouterSolicitation,
@@ -2323,6 +2345,7 @@ mod tests {
             ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
         );
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(5));
+        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 1);
 
         //
         // Receive a new router advertisement for the same router with a valid lifetime.
@@ -2346,13 +2369,14 @@ mod tests {
             ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
         );
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(11));
+        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 7);
 
         //
         // Receive a new router advertisement for the same router with a valid lifetime and
         // zero valued parameters.
         //
 
-        // Zero value for Reachable Time should not update base_reachable_time, or reachable_time.
+        // Zero value for Reachable Time should not update base_reachable_time.
         // Other non zero values should update.
         let mut icmpv6_packet_buf =
             router_advertisement_message(src_ip.get(), config.local_ip, 13, 14, 15, 0, 17);
@@ -2369,6 +2393,8 @@ mod tests {
         assert_eq!(ndp_state.reachable_time, reachable_time);
         // Should update to new value.
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(17));
+        // Should update to new value.
+        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 13);
 
         // Zero value for Retransmit Time should not update our retrans_time.
         // Other non zero values should update.
@@ -2391,22 +2417,48 @@ mod tests {
         );
         // Should be the same value as before.
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(17));
+        // Should update to new value.
+        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 19);
 
-        //
-        // Receive new router advertisement with 0 router lifetime, but new parameters.
-        //
-
+        // Zero value for CurrHopLimit should not update our hop_limit.
+        // Other non zero values should update.
         let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 25, 16, 0, 28, 29);
+            router_advertisement_message(src_ip.get(), config.local_ip, 0, 26, 27, 28, 29);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 5);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(ndp_state.has_default_router(&src_ip));
+        // Should update to new value.
+        let base = Duration::from_millis(28);
+        let min_reachable = base / 2;
+        let max_reachable = min_reachable * 3;
+        assert_eq!(ndp_state.base_reachable_time, base);
+        assert!(
+            ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
+        );
+        // Should update to new value.
+        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(29));
+        // Should be the same value as before.
+        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 19);
+
+        //
+        // Receive new router advertisement with 0 router lifetime, but new parameters.
+        //
+
+        let mut icmpv6_packet_buf =
+            router_advertisement_message(src_ip.get(), config.local_ip, 31, 32, 0, 34, 35);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 6);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         // Router should no longer be in our list.
         assert!(!ndp_state.has_default_router(&src_ip));
-        let base = Duration::from_millis(28);
+        let base = Duration::from_millis(34);
         let min_reachable = base / 2;
         let max_reachable = min_reachable * 3;
         let reachable_time = ndp_state.reachable_time;
@@ -2414,7 +2466,8 @@ mod tests {
         assert!(
             ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
         );
-        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(29));
+        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(35));
+        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 31);
 
         // Router invalidation timeout must have been cleared since we invalided with the
         // received router advertisement with lifetime 0.
@@ -2425,16 +2478,16 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 31, 32, 33, 34, 35);
+            router_advertisement_message(src_ip.get(), config.local_ip, 37, 38, 39, 40, 41);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
         ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
-        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 6);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 7);
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         // Router should be re-added.
         assert!(ndp_state.has_default_router(&src_ip));
-        let base = Duration::from_millis(34);
+        let base = Duration::from_millis(40);
         let min_reachable = base / 2;
         let max_reachable = min_reachable * 3;
         let reachable_time = ndp_state.reachable_time;
@@ -2442,7 +2495,8 @@ mod tests {
         assert!(
             ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
         );
-        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(35));
+        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(41));
+        assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), 37);
 
         // Invaldate the router by triggering the timeout.
         assert!(trigger_next_timer(&mut ctx));
@@ -2451,6 +2505,53 @@ mod tests {
 
         // No more timers.
         assert!(!trigger_next_timer(&mut ctx));
+    }
+
+    #[test]
+    fn test_sending_ipv6_packet_after_hop_limit_change() {
+        // Sets the hop limit with a router advertisement
+        // and sends a packet to make sure the packet uses
+        // the new hop limit.
+        fn inner_test(ctx: &mut Context<DummyEventDispatcher>, hop_limit: u8, frame_offset: usize) {
+            let config = get_dummy_config::<Ipv6Addr>();
+            let device = Some(DeviceId::new_ethernet(0));
+            let device_id = device.map(|x| x.id()).unwrap();
+            let src_ip = config.remote_mac.to_ipv6_link_local();
+
+            let mut icmpv6_packet_buf =
+                router_advertisement_message(src_ip.get(), config.local_ip, hop_limit, 0, 0, 0, 0);
+            let icmpv6_packet = icmpv6_packet_buf
+                .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+                .unwrap();
+            assert!(!EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id)
+                .has_default_router(&src_ip));
+            ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet);
+            assert_eq!(get_ipv6_hop_limit(&ctx, device.unwrap()).get(), hop_limit);
+            crate::ip::send_ip_packet_from_device(
+                ctx,
+                device.unwrap(),
+                config.local_ip,
+                config.remote_ip,
+                config.remote_ip,
+                IpProto::Tcp,
+                Buf::new(vec![0; 10], ..),
+                None,
+            )
+            .unwrap();
+            let (buf, _, _, _) =
+                parse_ethernet_frame(&ctx.dispatcher().frames_sent()[frame_offset].1[..]).unwrap();
+            // Packet's hop limit should be 100.
+            assert_eq!(buf[7], hop_limit);
+        }
+
+        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<Ipv6Addr>())
+            .build::<DummyEventDispatcher>();
+
+        // Set hop limit to 100.
+        inner_test(&mut ctx, 100, 0);
+
+        // Set hop limit to 30.
+        inner_test(&mut ctx, 30, 1);
     }
 
     #[test]
