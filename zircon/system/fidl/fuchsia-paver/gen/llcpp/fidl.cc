@@ -393,9 +393,6 @@ extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationResponseTa
 constexpr uint64_t kPaver_MarkActiveConfigurationSuccessful_GenOrdinal = 0x268547aa00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverMarkActiveConfigurationSuccessfulResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_ForceRecoveryConfiguration_GenOrdinal = 0x3936a0e600000000lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverForceRecoveryConfigurationResponseTable;
-[[maybe_unused]]
 constexpr uint64_t kPaver_WriteAsset_GenOrdinal = 0x6a1ccf9c00000000lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
@@ -603,68 +600,6 @@ Paver::UnownedResultOf::MarkActiveConfigurationSuccessful Paver::Call::MarkActiv
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Paver::ResultOf::ForceRecoveryConfiguration_Impl<Paver::ForceRecoveryConfigurationResponse>::ForceRecoveryConfiguration_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, ForceRecoveryConfigurationRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ForceRecoveryConfigurationRequest));
-  ::fidl::DecodedMessage<ForceRecoveryConfigurationRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      Paver::InPlace::ForceRecoveryConfiguration(std::move(_client_end), Super::response_buffer()));
-}
-
-Paver::ResultOf::ForceRecoveryConfiguration Paver::SyncClient::ForceRecoveryConfiguration() {
-  return ResultOf::ForceRecoveryConfiguration(zx::unowned_channel(this->channel_));
-}
-
-Paver::ResultOf::ForceRecoveryConfiguration Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel _client_end) {
-  return ResultOf::ForceRecoveryConfiguration(std::move(_client_end));
-}
-
-template <>
-Paver::UnownedResultOf::ForceRecoveryConfiguration_Impl<Paver::ForceRecoveryConfigurationResponse>::ForceRecoveryConfiguration_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ForceRecoveryConfigurationRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, ForceRecoveryConfigurationRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(ForceRecoveryConfigurationRequest));
-  ::fidl::DecodedMessage<ForceRecoveryConfigurationRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Paver::InPlace::ForceRecoveryConfiguration(std::move(_client_end), std::move(_response_buffer)));
-}
-
-Paver::UnownedResultOf::ForceRecoveryConfiguration Paver::SyncClient::ForceRecoveryConfiguration(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ForceRecoveryConfiguration(zx::unowned_channel(this->channel_), std::move(_response_buffer));
-}
-
-Paver::UnownedResultOf::ForceRecoveryConfiguration Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ForceRecoveryConfiguration(std::move(_client_end), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse> Paver::InPlace::ForceRecoveryConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(ForceRecoveryConfigurationRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<ForceRecoveryConfigurationRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<ForceRecoveryConfigurationRequest, ForceRecoveryConfigurationResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -1102,17 +1037,6 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::MarkActiveConfigurationSuccessfulCompleter::Sync(txn));
       return true;
     }
-    case kPaver_ForceRecoveryConfiguration_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<ForceRecoveryConfigurationRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->ForceRecoveryConfiguration(
-        Interface::ForceRecoveryConfigurationCompleter::Sync(txn));
-      return true;
-    }
     case kPaver_WriteAsset_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteAssetRequest>(msg);
@@ -1284,35 +1208,6 @@ void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(::f
 void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(::fidl::DecodedMessage<MarkActiveConfigurationSuccessfulResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_GenOrdinal;
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Paver::Interface::ForceRecoveryConfigurationCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ForceRecoveryConfigurationResponse*>(_write_bytes);
-  _response._hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ForceRecoveryConfigurationResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ForceRecoveryConfigurationResponse>(std::move(_response_bytes)));
-}
-
-void Paver::Interface::ForceRecoveryConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < ForceRecoveryConfigurationResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<ForceRecoveryConfigurationResponse*>(_buffer.data());
-  _response._hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(ForceRecoveryConfigurationResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ForceRecoveryConfigurationResponse>(std::move(_buffer)));
-}
-
-void Paver::Interface::ForceRecoveryConfigurationCompleterBase::Reply(::fidl::DecodedMessage<ForceRecoveryConfigurationResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

@@ -237,12 +237,6 @@ TEST_F(PaverServiceTest, MarkActiveConfigurationSuccessful) {
   ASSERT_STATUS(result.value().status, ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST_F(PaverServiceTest, ForceRecoveryConfiguration) {
-  auto result = client_->ForceRecoveryConfiguration();
-  ASSERT_OK(result.status());
-  ASSERT_STATUS(result.value().status, ZX_ERR_NOT_SUPPORTED);
-}
-
 TEST_F(PaverServiceTest, WriteAssetKernelConfigA) {
   SpawnIsolatedDevmgr();
   ::llcpp::fuchsia::mem::Buffer payload;

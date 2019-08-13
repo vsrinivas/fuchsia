@@ -43,7 +43,6 @@ enum class Command {
   kQueryActiveConfiguration,
   kSetActiveConfiguration,
   kMarkActiveConfigurationSuccessful,
-  kForceRecoveryConfiguration,
   kWriteAsset,
   kWriteVolumes,
   kWriteBootloader,
@@ -74,11 +73,6 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
   void MarkActiveConfigurationSuccessful(
       MarkActiveConfigurationSuccessfulCompleter::Sync completer) {
     last_command_ = Command::kMarkActiveConfigurationSuccessful;
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void ForceRecoveryConfiguration(ForceRecoveryConfigurationCompleter::Sync completer) {
-    last_command_ = Command::kForceRecoveryConfiguration;
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 

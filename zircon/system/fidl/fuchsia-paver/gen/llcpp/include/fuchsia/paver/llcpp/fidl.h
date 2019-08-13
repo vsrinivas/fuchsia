@@ -537,7 +537,6 @@ struct Paver_QueryActiveConfiguration_Result {
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverMarkActiveConfigurationSuccessfulResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverForceRecoveryConfigurationResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesRequestTable;
@@ -620,21 +619,6 @@ class Paver final {
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
   using MarkActiveConfigurationSuccessfulRequest = ::fidl::AnyZeroArgMessage;
-
-  struct ForceRecoveryConfigurationResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverForceRecoveryConfigurationResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  using ForceRecoveryConfigurationRequest = ::fidl::AnyZeroArgMessage;
 
   struct WriteAssetResponse final {
     FIDL_ALIGNDECL
@@ -861,22 +845,6 @@ class Paver final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class ForceRecoveryConfiguration_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      ForceRecoveryConfiguration_Impl(zx::unowned_channel _client_end);
-      ~ForceRecoveryConfiguration_Impl() = default;
-      ForceRecoveryConfiguration_Impl(ForceRecoveryConfiguration_Impl&& other) = default;
-      ForceRecoveryConfiguration_Impl& operator=(ForceRecoveryConfiguration_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class WriteAsset_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -977,7 +945,6 @@ class Paver final {
     using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
     using SetActiveConfiguration = SetActiveConfiguration_Impl<SetActiveConfigurationResponse>;
     using MarkActiveConfigurationSuccessful = MarkActiveConfigurationSuccessful_Impl<MarkActiveConfigurationSuccessfulResponse>;
-    using ForceRecoveryConfiguration = ForceRecoveryConfiguration_Impl<ForceRecoveryConfigurationResponse>;
     using WriteAsset = WriteAsset_Impl<WriteAssetResponse>;
     using WriteVolumes = WriteVolumes_Impl<WriteVolumesResponse>;
     using WriteBootloader = WriteBootloader_Impl<WriteBootloaderResponse>;
@@ -1031,22 +998,6 @@ class Paver final {
       ~MarkActiveConfigurationSuccessful_Impl() = default;
       MarkActiveConfigurationSuccessful_Impl(MarkActiveConfigurationSuccessful_Impl&& other) = default;
       MarkActiveConfigurationSuccessful_Impl& operator=(MarkActiveConfigurationSuccessful_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class ForceRecoveryConfiguration_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      ForceRecoveryConfiguration_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~ForceRecoveryConfiguration_Impl() = default;
-      ForceRecoveryConfiguration_Impl(ForceRecoveryConfiguration_Impl&& other) = default;
-      ForceRecoveryConfiguration_Impl& operator=(ForceRecoveryConfiguration_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1156,7 +1107,6 @@ class Paver final {
     using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
     using SetActiveConfiguration = SetActiveConfiguration_Impl<SetActiveConfigurationResponse>;
     using MarkActiveConfigurationSuccessful = MarkActiveConfigurationSuccessful_Impl<MarkActiveConfigurationSuccessfulResponse>;
-    using ForceRecoveryConfiguration = ForceRecoveryConfiguration_Impl<ForceRecoveryConfigurationResponse>;
     using WriteAsset = WriteAsset_Impl<WriteAssetResponse>;
     using WriteVolumes = WriteVolumes_Impl<WriteVolumesResponse>;
     using WriteBootloader = WriteBootloader_Impl<WriteBootloaderResponse>;
@@ -1207,16 +1157,6 @@ class Paver final {
     // boot attempt after `SetActiveConfiguration` was called.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::MarkActiveConfigurationSuccessful MarkActiveConfigurationSuccessful(::fidl::BytePart _response_buffer);
-
-    // Force the next reboot to boot into the recovery configuration. Does not persist between
-    // subsequent boots.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::ForceRecoveryConfiguration ForceRecoveryConfiguration();
-
-    // Force the next reboot to boot into the recovery configuration. Does not persist between
-    // subsequent boots.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ForceRecoveryConfiguration ForceRecoveryConfiguration(::fidl::BytePart _response_buffer);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
@@ -1341,16 +1281,6 @@ class Paver final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::MarkActiveConfigurationSuccessful MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Force the next reboot to boot into the recovery configuration. Does not persist between
-    // subsequent boots.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ForceRecoveryConfiguration ForceRecoveryConfiguration(zx::unowned_channel _client_end);
-
-    // Force the next reboot to boot into the recovery configuration. Does not persist between
-    // subsequent boots.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ForceRecoveryConfiguration ForceRecoveryConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
@@ -1454,10 +1384,6 @@ class Paver final {
     // boot attempt after `SetActiveConfiguration` was called.
     static ::fidl::DecodeResult<MarkActiveConfigurationSuccessfulResponse> MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // Force the next reboot to boot into the recovery configuration. Does not persist between
-    // subsequent boots.
-    static ::fidl::DecodeResult<ForceRecoveryConfigurationResponse> ForceRecoveryConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     // Will zero out rest of the partition if `payload` is smaller than the size of the partition
     // being written.
@@ -1544,20 +1470,6 @@ class Paver final {
     using MarkActiveConfigurationSuccessfulCompleter = ::fidl::Completer<MarkActiveConfigurationSuccessfulCompleterBase>;
 
     virtual void MarkActiveConfigurationSuccessful(MarkActiveConfigurationSuccessfulCompleter::Sync _completer) = 0;
-
-    class ForceRecoveryConfigurationCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<ForceRecoveryConfigurationResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using ForceRecoveryConfigurationCompleter = ::fidl::Completer<ForceRecoveryConfigurationCompleterBase>;
-
-    virtual void ForceRecoveryConfiguration(ForceRecoveryConfigurationCompleter::Sync _completer) = 0;
 
     class WriteAssetCompleterBase : public _Base {
      public:
@@ -1747,14 +1659,6 @@ struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::MarkActiveConfigurationSucc
 static_assert(sizeof(::llcpp::fuchsia::paver::Paver::MarkActiveConfigurationSuccessfulResponse)
     == ::llcpp::fuchsia::paver::Paver::MarkActiveConfigurationSuccessfulResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::paver::Paver::MarkActiveConfigurationSuccessfulResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::ForceRecoveryConfigurationResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::ForceRecoveryConfigurationResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::ForceRecoveryConfigurationResponse)
-    == ::llcpp::fuchsia::paver::Paver::ForceRecoveryConfigurationResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::ForceRecoveryConfigurationResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteAssetRequest> : public std::true_type {};

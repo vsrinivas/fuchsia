@@ -68,10 +68,6 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void ForceRecoveryConfiguration(ForceRecoveryConfigurationCompleter::Sync completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
-
   void set_devfs_root(fbl::unique_fd devfs_root) { devfs_root_ = std::move(devfs_root); }
 
  private:

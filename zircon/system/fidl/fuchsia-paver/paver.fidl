@@ -73,10 +73,6 @@ protocol Paver {
     /// boot attempt after `SetActiveConfiguration` was called.
     MarkActiveConfigurationSuccessful() -> (zx.status status);
 
-    /// Force the next reboot to boot into the recovery configuration. Does not persist between
-    /// subsequent boots.
-    ForceRecoveryConfiguration() -> (zx.status status);
-
     /// Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     /// Will zero out rest of the partition if `payload` is smaller than the size of the partition
     /// being written.
