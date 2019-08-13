@@ -30,16 +30,15 @@ constexpr uint32_t kStatusNotFound = 404u;
 
 // static
 std::shared_ptr<HttpReader> HttpReader::Create(
-    component::StartupContext* startup_context, const std::string& url,
+    ServiceProvider* service_provider, const std::string& url,
     fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) {
-  return std::make_shared<HttpReader>(startup_context, url, std::move(headers));
+  return std::make_shared<HttpReader>(service_provider, url, std::move(headers));
 }
 
-HttpReader::HttpReader(component::StartupContext* startup_context, const std::string& url,
+HttpReader::HttpReader(ServiceProvider* service_provider, const std::string& url,
                        fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers)
     : url_(url), headers_(std::move(headers)), ready_(async_get_default_dispatcher()) {
-  http::HttpServicePtr network_service =
-      startup_context->ConnectToEnvironmentService<http::HttpService>();
+  http::HttpServicePtr network_service = service_provider->ConnectToService<http::HttpService>();
 
   network_service->CreateURLLoader(url_loader_.NewRequest());
 

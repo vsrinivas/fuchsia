@@ -5,11 +5,11 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DECODE_DECODER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DECODE_DECODER_H_
 
-#include "lib/component/cpp/startup_context.h"
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
 #include "src/media/playback/mediaplayer/graph/packet.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/result.h"
+#include "src/media/playback/mediaplayer/graph/service_provider.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 
 namespace media_player {
@@ -27,7 +27,7 @@ class Decoder : public Node {
 class DecoderFactory {
  public:
   // Creates a decoder factory.
-  static std::unique_ptr<DecoderFactory> Create(component::StartupContext* startup_context);
+  static std::unique_ptr<DecoderFactory> Create(ServiceProvider* service_provider);
 
   virtual ~DecoderFactory() {}
 

@@ -9,8 +9,7 @@
 namespace media_player {
 
 // static
-std::unique_ptr<DemuxFactory> FfmpegDemuxFactory::Create(
-    component::StartupContext* startup_context) {
+std::unique_ptr<DemuxFactory> FfmpegDemuxFactory::Create(ServiceProvider* service_provider) {
   return std::make_unique<FfmpegDemuxFactory>();
 }
 

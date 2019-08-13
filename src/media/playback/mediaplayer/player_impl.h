@@ -21,6 +21,7 @@
 #include "src/media/playback/mediaplayer/demux/reader.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_audio_renderer.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_video_renderer.h"
+#include "src/media/playback/mediaplayer/graph/service_provider.h"
 #include "src/media/playback/mediaplayer/source_impl.h"
 
 namespace media_player {
@@ -28,7 +29,7 @@ namespace media_player {
 static_assert(fuchsia::media::NO_TIMESTAMP == Packet::kNoPts);
 
 // Fidl agent that renders streams.
-class PlayerImpl : public fuchsia::media::playback::Player {
+class PlayerImpl : public fuchsia::media::playback::Player, public ServiceProvider {
  public:
   static std::unique_ptr<PlayerImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::playback::Player> request,
@@ -82,6 +83,9 @@ class PlayerImpl : public fuchsia::media::playback::Player {
 
   void CancelSourceTransition(
       fidl::InterfaceRequest<fuchsia::media::playback::Source> returned_source_request) override;
+
+  // ServiceProvider implementation.
+  void ConnectToService(std::string service_path, zx::channel channel) override;
 
  private:
   static constexpr int64_t kMinimumLeadTime = ZX_MSEC(30);

@@ -10,12 +10,12 @@
 #include <memory>
 #include <vector>
 
-#include "lib/component/cpp/startup_context.h"
 #include "src/media/playback/mediaplayer/demux/reader_cache.h"
 #include "src/media/playback/mediaplayer/graph/metadata.h"
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
 #include "src/media/playback/mediaplayer/graph/packet.h"
 #include "src/media/playback/mediaplayer/graph/result.h"
+#include "src/media/playback/mediaplayer/graph/service_provider.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 
 namespace media_player {
@@ -67,7 +67,7 @@ class Demux : public Node {
 class DemuxFactory {
  public:
   // Creates a demux factory.
-  static std::unique_ptr<DemuxFactory> Create(component::StartupContext* startup_context);
+  static std::unique_ptr<DemuxFactory> Create(ServiceProvider* service_provider);
 
   virtual ~DemuxFactory() {}
 

@@ -4,7 +4,6 @@
 
 #include "src/media/playback/mediaplayer/player_impl.h"
 
-#include <fs/pseudo-file.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -13,6 +12,8 @@
 #include <lib/zx/clock.h>
 
 #include <sstream>
+
+#include <fs/pseudo-file.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
@@ -78,9 +79,9 @@ PlayerImpl::PlayerImpl(fidl::InterfaceRequest<fuchsia::media::playback::Player> 
   FXL_DCHECK(startup_context_);
   FXL_DCHECK(quit_callback_);
 
-  demux_factory_ = DemuxFactory::Create(startup_context_);
+  demux_factory_ = DemuxFactory::Create(this);
   FXL_DCHECK(demux_factory_);
-  decoder_factory_ = DecoderFactory::Create(startup_context_);
+  decoder_factory_ = DecoderFactory::Create(this);
   FXL_DCHECK(decoder_factory_);
 
   startup_context_->outgoing().debug_dir()->AddEntry(
@@ -147,7 +148,7 @@ void PlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
   switch (medium) {
     case StreamType::Medium::kAudio:
       if (!audio_renderer_) {
-        auto audio = startup_context_->ConnectToEnvironmentService<fuchsia::media::Audio>();
+        auto audio = ServiceProvider::ConnectToService<fuchsia::media::Audio>();
         fuchsia::media::AudioRendererPtr audio_renderer;
         audio->CreateAudioRenderer(audio_renderer.NewRequest());
         audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
@@ -394,8 +395,7 @@ void PlayerImpl::SetTimelineFunction(float rate, int64_t reference_time, fit::cl
 
 void PlayerImpl::SetHttpSource(std::string http_url,
                                fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) {
-  BeginSetSource(
-      CreateSource(HttpReader::Create(startup_context_, http_url, std::move(headers)), nullptr));
+  BeginSetSource(CreateSource(HttpReader::Create(this, http_url, std::move(headers)), nullptr));
 }
 
 void PlayerImpl::SetFileSource(zx::channel file_channel) {
@@ -514,7 +514,7 @@ void PlayerImpl::CreateHttpSource(
 
   zx_koid_t koid = GetKoid(source_request);
   source_impls_by_koid_.emplace(
-      koid, CreateSource(HttpReader::Create(startup_context_, http_url, std::move(headers)),
+      koid, CreateSource(HttpReader::Create(this, http_url, std::move(headers)),
                          std::move(source_request),
                          [this, koid]() { source_impls_by_koid_.erase(koid); }));
 }
@@ -595,6 +595,11 @@ void PlayerImpl::CancelSourceTransition(
     fidl::InterfaceRequest<fuchsia::media::playback::Source> returned_source_request) {
   FXL_NOTIMPLEMENTED();
   bindings_.CloseAll();
+}
+
+void PlayerImpl::ConnectToService(std::string service_path, zx::channel channel) {
+  FXL_DCHECK(startup_context_);
+  startup_context_->incoming_services()->ConnectToService(std::move(channel), service_path);
 }
 
 std::unique_ptr<SourceImpl> PlayerImpl::CreateSource(

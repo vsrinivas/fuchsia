@@ -32,6 +32,7 @@ source_set("graph") {
     "refs.cc",
     "refs.h",
     "result.h",
+    "service_provider.h",
     "types/audio_stream_type.cc",
     "types/audio_stream_type.h",
     "types/bytes.cc",

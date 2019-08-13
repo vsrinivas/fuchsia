@@ -10,8 +10,8 @@
 
 #include <string>
 
-#include "lib/component/cpp/startup_context.h"
 #include "src/media/playback/mediaplayer/demux/reader.h"
+#include "src/media/playback/mediaplayer/graph/service_provider.h"
 #include "src/media/playback/mediaplayer/util/incident.h"
 
 namespace media_player {
@@ -20,10 +20,10 @@ namespace media_player {
 class HttpReader : public Reader {
  public:
   static std::shared_ptr<HttpReader> Create(
-      component::StartupContext* startup_context, const std::string& url,
+      ServiceProvider* service_provider, const std::string& url,
       fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers);
 
-  HttpReader(component::StartupContext* startup_context, const std::string& url,
+  HttpReader(ServiceProvider* service_provider, const std::string& url,
              fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers);
 
   ~HttpReader() override;

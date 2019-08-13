@@ -15,7 +15,7 @@ namespace media_player {
 class FfmpegDecoderFactory : public DecoderFactory {
  public:
   // Creates an ffmmpeg decoder factory.
-  static std::unique_ptr<DecoderFactory> Create(component::StartupContext* startup_context);
+  static std::unique_ptr<DecoderFactory> Create(ServiceProvider* service_provider);
 
   FfmpegDecoderFactory();
 

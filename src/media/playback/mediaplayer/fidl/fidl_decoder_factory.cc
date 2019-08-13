@@ -13,14 +13,12 @@
 namespace media_player {
 
 // static
-std::unique_ptr<DecoderFactory> FidlDecoderFactory::Create(
-    component::StartupContext* startup_context) {
-  return std::make_unique<FidlDecoderFactory>(startup_context);
+std::unique_ptr<DecoderFactory> FidlDecoderFactory::Create(ServiceProvider* service_provider) {
+  return std::make_unique<FidlDecoderFactory>(service_provider);
 }
 
-FidlDecoderFactory::FidlDecoderFactory(component::StartupContext* startup_context) {
-  codec_factory_ =
-      startup_context->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>();
+FidlDecoderFactory::FidlDecoderFactory(ServiceProvider* service_provider) {
+  codec_factory_ = service_provider->ConnectToService<fuchsia::mediacodec::CodecFactory>();
 }
 
 FidlDecoderFactory::~FidlDecoderFactory() {}

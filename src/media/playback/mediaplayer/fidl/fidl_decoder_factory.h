@@ -17,9 +17,9 @@ namespace media_player {
 class FidlDecoderFactory : public DecoderFactory {
  public:
   // Creates a fidl decoder factory.
-  static std::unique_ptr<DecoderFactory> Create(component::StartupContext* startup_context);
+  static std::unique_ptr<DecoderFactory> Create(ServiceProvider* service_provider);
 
-  FidlDecoderFactory(component::StartupContext* startup_context);
+  FidlDecoderFactory(ServiceProvider* service_provider);
 
   ~FidlDecoderFactory() override;
 

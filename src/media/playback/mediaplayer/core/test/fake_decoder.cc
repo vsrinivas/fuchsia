@@ -47,7 +47,7 @@ void FakeDecoderFactory::CreateDecoder(const StreamType& stream_type,
 }  // namespace test
 
 // static
-std::unique_ptr<DecoderFactory> DecoderFactory::Create(component::StartupContext* startup_context) {
+std::unique_ptr<DecoderFactory> DecoderFactory::Create(ServiceProvider* service_provider) {
   return std::make_unique<test::FakeDecoderFactory>();
 }
 

@@ -11,8 +11,7 @@
 namespace media_player {
 
 // static
-std::unique_ptr<DecoderFactory> FfmpegDecoderFactory::Create(
-    component::StartupContext* startup_context) {
+std::unique_ptr<DecoderFactory> FfmpegDecoderFactory::Create(ServiceProvider* service_provider) {
   return std::make_unique<FfmpegDecoderFactory>();
 }
 

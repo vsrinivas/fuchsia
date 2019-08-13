@@ -7,13 +7,14 @@
 
 #include "src/media/playback/mediaplayer/demux/demux.h"
 #include "src/media/playback/mediaplayer/demux/reader_cache.h"
+#include "src/media/playback/mediaplayer/graph/service_provider.h"
 
 namespace media_player {
 
 class FfmpegDemuxFactory : public DemuxFactory {
  public:
   // Creates an ffmpeg demux factory.
-  static std::unique_ptr<DemuxFactory> Create(component::StartupContext* startup_context);
+  static std::unique_ptr<DemuxFactory> Create(ServiceProvider* service_provider);
 
   FfmpegDemuxFactory();
 
