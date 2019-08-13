@@ -68,7 +68,8 @@ class UsbHidTest : public zxtest::Test {
 
   void TearDown() override {
     auto result = bus_.peripheral().ClearFunctions();
-    ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
+    ASSERT_OK(result.status());
+    ASSERT_FALSE(result->result.is_err());
 
     auto result2 = bus_.virtual_bus().Disable();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));

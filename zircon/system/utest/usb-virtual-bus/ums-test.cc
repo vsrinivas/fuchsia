@@ -27,22 +27,16 @@
 #include <fbl/string.h>
 #include <zxtest/zxtest.h>
 
-
 namespace usb_virtual_bus {
 namespace {
 
 namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
 
-class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
- public:
-  USBVirtualBus() {}
+constexpr const char* kManufacturer  = "Google";
+constexpr const char* kProduct = "USB test drive";
+constexpr const char* kSerial = "ebfd5ad49d2a";
 
-  // Initialize UMS. Asserts on failure.
-  void InitUMS(fbl::String* devpath);
-};
-
-// Initialize UMS. Asserts on failure.
-void USBVirtualBus::InitUMS(fbl::String* devpath) {
+usb_peripheral::DeviceDescriptor GetDeviceDescriptor() {
   usb_peripheral::DeviceDescriptor device_desc = {};
   device_desc.bcdUSB = htole16(0x0200);
   device_desc.bDeviceClass = 0;
@@ -54,25 +48,26 @@ void USBVirtualBus::InitUMS(fbl::String* devpath) {
   // iManufacturer; iProduct and iSerialNumber are filled in later
   device_desc.bNumConfigurations = 1;
 
-  constexpr char kManufacturer[] = "Google";
-  auto result =
-      peripheral().AllocStringDesc(fidl::StringView(strlen(kManufacturer), kManufacturer));
-  ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
-  device_desc.iManufacturer = result->index;
-
-  constexpr char kProduct[] = "USB test drive";
-  result = peripheral().AllocStringDesc(fidl::StringView(strlen(kProduct), kProduct));
-  ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
-  device_desc.iProduct = result->index;
-
-  constexpr char kSerial[] = "ebfd5ad49d2a";
-  result = peripheral().AllocStringDesc(fidl::StringView(strlen(kSerial), kSerial));
-  ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
-  device_desc.iSerialNumber = result->index;
+  device_desc.manufacturer = fidl::StringView(strlen(kManufacturer), kManufacturer);
+  device_desc.product = fidl::StringView(strlen(kProduct), kProduct);
+  device_desc.serial = fidl::StringView(strlen(kSerial), kSerial);
 
   device_desc.idVendor = htole16(0x18D1);
   device_desc.idProduct = htole16(0xA021);
+  return device_desc;
+}
 
+class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
+ public:
+  USBVirtualBus() {}
+
+  // Initialize UMS. Asserts on failure.
+  void InitUMS(fbl::String* devpath);
+};
+
+// Initialize UMS. Asserts on failure.
+void USBVirtualBus::InitUMS(fbl::String* devpath) {
+  auto device_desc = GetDeviceDescriptor();
   usb_peripheral::FunctionDescriptor ums_function_desc = {
       .interface_class = USB_CLASS_MSC,
       .interface_subclass = USB_SUBCLASS_MSC_SCSI,
@@ -98,13 +93,15 @@ class BlockDeviceController {
 
   void Disconnect() {
     auto result = peripheral().ClearFunctions();
-    ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
+    ASSERT_OK(result.status());
+    ASSERT_FALSE(result->result.is_err());
 
     auto result2 = virtual_bus().Disconnect();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));
   }
 
   void Connect() {
+    auto device_desc = GetDeviceDescriptor();
     usb_peripheral::FunctionDescriptor ums_function_desc = {
         .interface_class = USB_CLASS_MSC,
         .interface_subclass = USB_SUBCLASS_MSC_SCSI,
@@ -114,7 +111,7 @@ class BlockDeviceController {
     std::vector<usb_peripheral::FunctionDescriptor> function_descs;
     function_descs.push_back(ums_function_desc);
 
-    ASSERT_NO_FATAL_FAILURES(bus_->ChangeDeviceFunction(std::move(function_descs)));
+    ASSERT_NO_FATAL_FAILURES(bus_->SetupPeripheralDevice(device_desc, std::move(function_descs)));
 
     fbl::String devpath;
     while (fdio_watch_directory(openat(bus_->GetRootFd(), "class/usb-cache-test", O_RDONLY),
@@ -205,7 +202,8 @@ void UmsTest::SetUp() { ASSERT_NO_FATAL_FAILURES(bus_.InitUMS(&devpath_)); }
 
 void UmsTest::TearDown() {
   auto result = bus_.peripheral().ClearFunctions();
-  ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->result.is_err());
 
   auto result2 = bus_.virtual_bus().Disable();
   ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));

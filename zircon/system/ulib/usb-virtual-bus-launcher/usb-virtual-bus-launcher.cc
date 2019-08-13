@@ -73,7 +73,8 @@ USBVirtualBusBase::USBVirtualBusBase() {
   peripheral_.emplace(std::move(peripheral));
 
   auto clear_result = peripheral_->ClearFunctions();
-  ASSERT_NO_FATAL_FAILURES(ValidateResult(clear_result));
+  ASSERT_OK(clear_result.status());
+  ASSERT_FALSE(clear_result->result.is_err());
 }
 
 int USBVirtualBusBase::GetRootFd() { return devmgr_.devfs_root().get(); }
@@ -110,25 +111,15 @@ void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync complete
 
 void USBVirtualBusBase::SetupPeripheralDevice(const DeviceDescriptor& device_desc,
                                               std::vector<FunctionDescriptor> function_descs) {
-  auto result = peripheral_->SetDeviceDescriptor(device_desc);
-  ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
-
-  ASSERT_NO_FATAL_FAILURES(ChangeDeviceFunction(std::move(function_descs)));
-}
-
-void USBVirtualBusBase::ChangeDeviceFunction(std::vector<FunctionDescriptor> function_descs) {
   zx::channel handles[2];
   ASSERT_OK(zx::channel::create(0, handles, handles + 1));
   auto set_result = peripheral_->SetStateChangeListener(std::move(handles[1]));
   ASSERT_OK(set_result.status());
 
-  for (const auto func_desc : function_descs) {
-    auto add_result = peripheral_->AddFunction(func_desc);
-    ASSERT_NO_FATAL_FAILURES(ValidateResult(add_result));
-  }
-
-  auto bind_result = peripheral_->BindFunctions();
-  ASSERT_NO_FATAL_FAILURES(ValidateResult(bind_result));
+  auto set_config = peripheral_->SetConfiguration(
+      device_desc, ::fidl::VectorView(function_descs.size(), function_descs.data()));
+  ASSERT_OK(set_config.status());
+  ASSERT_FALSE(set_config->result.is_err());
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   EventWatcher watcher(&loop, std::move(handles[0]), function_descs.size());

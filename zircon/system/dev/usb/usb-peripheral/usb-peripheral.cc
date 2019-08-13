@@ -32,6 +32,8 @@
 
 #include "usb-function.h"
 
+namespace peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
+
 namespace usb_peripheral {
 
 zx_status_t UsbPeripheral::Create(void* ctx, zx_device_t* parent) {
@@ -134,20 +136,22 @@ zx_status_t UsbPeripheral::Init() {
   device_desc_.idProduct = config->pid;
 
   size_t max_str_len = strnlen(config->manufacturer, sizeof(config->manufacturer));
-  status =
-      AllocStringDesc(fbl::String(config->manufacturer, max_str_len), &device_desc_.iManufacturer);
+  status = AllocStringDesc(fbl::String(
+      config->manufacturer, max_str_len), &device_desc_.iManufacturer);
   if (status != ZX_OK) {
     return status;
   }
 
   max_str_len = strnlen(config->product, sizeof(config->product));
-  status = AllocStringDesc(fbl::String(config->product, max_str_len), &device_desc_.iProduct);
+  status = AllocStringDesc(fbl::String(
+      config->product, max_str_len), &device_desc_.iProduct);
   if (status != ZX_OK) {
     return status;
   }
 
   max_str_len = strnlen(config->serial, sizeof(config->serial));
-  status = AllocStringDesc(fbl::String(config->serial, max_str_len), &device_desc_.iSerialNumber);
+  status = AllocStringDesc(fbl::String(
+      config->serial, max_str_len), &device_desc_.iSerialNumber);
   if (status != ZX_OK) {
     return status;
   }
@@ -272,7 +276,7 @@ zx_status_t UsbPeripheral::FunctionRegistered() {
   zxlogf(TRACE, "usb_device_function_registered functions_registered = true\n");
   functions_registered_ = true;
   if (listener_) {
-    ::llcpp::fuchsia::hardware::usb::peripheral::Events::Call::FunctionRegistered_Deprecated(
+    peripheral::Events::Call::FunctionRegistered_Deprecated(
         zx::unowned_channel(listener_.get()));
   }
   return DeviceStateChanged();
@@ -703,13 +707,40 @@ void UsbPeripheral::UsbDciInterfaceSetConnected(bool connected) {
 
 void UsbPeripheral::UsbDciInterfaceSetSpeed(usb_speed_t speed) { speed_ = speed; }
 
-void UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc,
-                                        SetDeviceDescriptorCompleter::Sync completer) {
-  zx_status_t status;
+void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
+                                     ::fidl::VectorView<FunctionDescriptor> func_descs,
+                                     SetConfigurationCompleter::Sync completer) {
+  peripheral::Device_SetConfiguration_Result response;
+  if (func_descs.count() == 0) {
+    response.set_err(ZX_ERR_INVALID_ARGS);
+    completer.Reply(std::move(response));
+    return;
+  }
+
+  zx_status_t status = SetDeviceDescriptor(device_desc);
+  if (status != ZX_OK) {
+    response.set_err(status);
+    completer.Reply(std::move(response));
+    return;
+  }
+  for (auto func_desc : func_descs) {
+    AddFunction(func_desc);
+  }
+  status = BindFunctions();
+  if (status != ZX_OK) {
+    response.set_err(status);
+    completer.Reply(std::move(response));
+    return;
+  }
+  response.set_response(peripheral::Device_SetConfiguration_Response{});
+  completer.Reply(std::move(response));
+}
+
+zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {
   if (desc.bNumConfigurations != 1) {
     zxlogf(ERROR, "usb_device_ioctl: bNumConfigurations: %u, only 1 supported\n",
            desc.bNumConfigurations);
-    status = ZX_ERR_INVALID_ARGS;
+    return ZX_ERR_INVALID_ARGS;
   } else {
     device_desc_.bLength = sizeof(usb_device_descriptor_t);
     device_desc_.bDescriptorType = USB_DT_DEVICE;
@@ -721,43 +752,38 @@ void UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc,
     device_desc_.idVendor = desc.idVendor;
     device_desc_.idProduct = desc.idProduct;
     device_desc_.bcdDevice = desc.bcdDevice;
-    device_desc_.iManufacturer = desc.iManufacturer;
-    device_desc_.iProduct = desc.iProduct;
-    device_desc_.iSerialNumber = desc.iSerialNumber;
+    zx_status_t status = AllocStringDesc(fbl::String(
+        desc.manufacturer.data(), desc.manufacturer.size()), &device_desc_.iManufacturer);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = AllocStringDesc(
+        fbl::String(desc.product.data(), desc.product.size()), &device_desc_.iProduct);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = AllocStringDesc(
+        fbl::String(desc.serial.data(), desc.serial.size()), &device_desc_.iSerialNumber);
+    if (status != ZX_OK) {
+      return status;
+    }
     device_desc_.bNumConfigurations = desc.bNumConfigurations;
-    status = ZX_OK;
+    return ZX_OK;
   }
-
-  completer.Reply(status);
-}
-
-void UsbPeripheral::AllocStringDesc(fidl::StringView name,
-                                    AllocStringDescCompleter::Sync completer) {
-  uint8_t index = 0;
-  auto status = AllocStringDesc(fbl::String(name.data(), name.size()), &index);
-  completer.Reply(status, index);
-}
-
-void UsbPeripheral::AddFunction(FunctionDescriptor desc, AddFunctionCompleter::Sync completer) {
-  completer.Reply(AddFunction(std::move(desc)));
-}
-
-void UsbPeripheral::BindFunctions(BindFunctionsCompleter::Sync completer) {
-  completer.Reply(BindFunctions());
 }
 
 void UsbPeripheral::ClearFunctions(ClearFunctionsCompleter::Sync completer) {
   zxlogf(TRACE, "%s\n", __func__);
 
-  completer.Reply(ClearFunctions());
-}
-
-void UsbPeripheral::GetMode(GetModeCompleter::Sync completer) {
-  fbl::AutoLock lock(&lock_);
-
-  uint32_t mode = usb_mode_;
-
-  completer.Reply(ZX_OK, mode);
+  peripheral::Device_ClearFunctions_Result response;
+  zx_status_t status = ClearFunctions();
+  if (status != ZX_OK) {
+    response.set_err(status);
+    completer.Reply(std::move(response));
+    return;
+  }
+  response.set_response(peripheral::Device_ClearFunctions_Response{});
+  completer.Reply(std::move(response));
 }
 
 int UsbPeripheral::ListenerCleanupThread() {
@@ -814,15 +840,9 @@ void UsbPeripheral::SetStateChangeListener(zx::channel listener,
   }
 }
 
-void UsbPeripheral::SetMode(uint32_t mode, SetModeCompleter::Sync completer) {
-  fbl::AutoLock lock(&lock_);
-  usb_mode_ = mode;
-  completer.Reply(DeviceStateChanged());
-}
-
 zx_status_t UsbPeripheral::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  ::llcpp::fuchsia::hardware::usb::peripheral::Device::Dispatch(this, msg, &transaction);
+  peripheral::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

@@ -33,19 +33,17 @@
     (Device Controller Interface) which is implemented by a driver for the actual
     USB controller hardware for the peripheral role.
 
-    There are several steps needed to initialize and start USB in the peripheral role.
-    The first step is setting up the USB configuration via the FIDL interface.
-    SetDeviceDescriptor() sets the USB device descriptor to be presented
-    to the host during enumeration.
-    Next, AddFunction() can be called one or more times to add descriptors for the USB functions
-    to be included in the USB configuration.
-    Finally after all the functions have been added, BindFunctions() tells this driver
-    that configuration is complete and it is now possible to build the configuration descriptor.
+    The FIDL interface SetConfiguration() is used to initialize and start USB in the
+    peripheral role. Internally this consists of several steps.
+    The first step is setting up the USB device descriptor to be presented to the host
+    during enumeration.
+    Next, the descriptors for the USB functions are added to the configuration.
+    Finally after all the functions have been added, the configuration is complete and
+    it is now possible to build the configuration descriptor.
     Once we get to this point, UsbPeripheral.functions_bound_ is set to true.
 
-    Independent of this configuration process, the FIDL SetMode() message can be used
-    to configure the role of the USB controller. If the role is set to USB_MODE_PERIPHERAL
-    and functions_bound_ is true, then we are ready to start USB in peripheral role.
+    If the role is set to USB_MODE_PERIPHERAL and functions_bound_ is true,
+    then we are ready to start USB in peripheral role.
     At this point, we create DDK devices for our list of functions.
     When the function drivers bind to these functions, they register an interface of type
     usb_function_interface_protocol_t with this driver via the usb_function_register() API.
@@ -58,12 +56,8 @@
     by calling usb_mode_switch_set_mode(USB_MODE_PERIPHERAL) on its ZX_PROTOCOL_USB_MODE_SWITCH
     interface. Now the USB controller hardware is up and running as a USB peripheral.
 
-    Teardown of the peripheral role one of two ways:
-    First, the FIDL ClearFunctions() message will reset this device's list of USB functions.
-    Second, the USB mode can be set to something other than USB_MODE_PERIPHERAL.
-    In this second case, we will remove the DDK devices for the USB functions
-    so the function drivers will unbind, but the USB configuration remains ready to go
-    for when the USB mode is switched back to USB_MODE_PERIPHERAL.
+    Teardown of the peripheral role:
+    The FIDL ClearFunctions() message will reset this device's list of USB functions.
 */
 
 namespace usb_peripheral {
@@ -101,17 +95,15 @@ class UsbPeripheral : public UsbPeripheralType,
   void UsbDciInterfaceSetSpeed(usb_speed_t speed);
 
   // FIDL messages
-  void SetDeviceDescriptor(DeviceDescriptor desc,
-                           SetDeviceDescriptorCompleter::Sync completer) override;
-  void AllocStringDesc(fidl::StringView name, AllocStringDescCompleter::Sync completer) override;
-  void AddFunction(FunctionDescriptor desc, AddFunctionCompleter::Sync completer) override;
-  void BindFunctions(BindFunctionsCompleter::Sync completer) override;
+
+  void SetConfiguration(DeviceDescriptor desc,
+                        ::fidl::VectorView<FunctionDescriptor> function_descriptors,
+                        SetConfigurationCompleter::Sync completer) override;
   void ClearFunctions(ClearFunctionsCompleter::Sync completer) override;
-  void GetMode(GetModeCompleter::Sync completer) override;
-  void SetMode(uint32_t mode, SetModeCompleter::Sync completer) override;
   void SetStateChangeListener(zx::channel listener,
                               SetStateChangeListenerCompleter::Sync completer) override;
 
+  zx_status_t SetDeviceDescriptor(DeviceDescriptor desc);
   zx_status_t SetFunctionInterface(fbl::RefPtr<UsbFunction> function,
                                    const usb_function_interface_protocol_t* interface);
   zx_status_t AllocInterface(fbl::RefPtr<UsbFunction> function, uint8_t* out_intf_num);

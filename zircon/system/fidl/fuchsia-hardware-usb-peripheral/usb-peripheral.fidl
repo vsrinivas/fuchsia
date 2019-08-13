@@ -6,13 +6,19 @@ library fuchsia.hardware.usb.peripheral;
 
 using zx;
 
+const uint32 MAX_FUNCTION_DESCRIPTORS = 32;
+const uint32 MAX_STRING_DESCRIPTORS = 255;
+
+const uint32 MAX_STRING_LENGTH = 127;
+
 struct FunctionDescriptor {
     uint8 interface_class;
     uint8 interface_subclass;
     uint8 interface_protocol;
 };
 
-/// The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification.
+/// The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification,
+/// except for the string fields.
 struct DeviceDescriptor {
     uint16 bcdUSB;
     uint8 bDeviceClass;
@@ -22,13 +28,11 @@ struct DeviceDescriptor {
     uint16 idVendor;
     uint16 idProduct;
     uint16 bcdDevice;
-    uint8 iManufacturer;
-    uint8 iProduct;
-    uint8 iSerialNumber;
+    string:MAX_STRING_LENGTH manufacturer;
+    string:MAX_STRING_LENGTH product;
+    string:MAX_STRING_LENGTH serial;
     uint8 bNumConfigurations;
 };
-
-const uint32 MAX_STRING_LENGTH = 127;
 
 /// Events protocol that is used as a callback to inform the client
 /// of the completion of various server-side events.
@@ -36,28 +40,21 @@ const uint32 MAX_STRING_LENGTH = 127;
 /// method on the Device protocol.
 [Layout = "Simple"]
 protocol Events {
-    // Invoked when a function registers
+    /// Invoked when a function registers
     FunctionRegistered() -> ();
 };
 
-[Layout = "Simple"]
 protocol Device {
-    /// Sets the device's USB device descriptor.
-    SetDeviceDescriptor(DeviceDescriptor desc) -> (zx.status status);
-    /// Sets a string descriptor a string in the USB device descriptor.
-    AllocStringDesc(string:MAX_STRING_LENGTH name) -> (zx.status status, uint8 index);
-    /// Adds a new function to the USB current configuration.
-    /// Must be called before BindFunctions or after ClearFunctions.
-    AddFunction(FunctionDescriptor desc) -> (zx.status status);
-    /// Tells the device to create child devices for the configuration's interfaces.
-    BindFunctions() -> (zx.status status);
+    /// Sets the device's descriptors, adds the functions and creates the child devices for the
+    /// configuration's interfaces.
+    /// At least one function descriptor must be provided.
+    SetConfiguration(DeviceDescriptor device_desc,
+                     vector<FunctionDescriptor>:MAX_FUNCTION_DESCRIPTORS function_descriptors)
+        -> () error zx.status;
+
     /// Tells the device to remove the child devices for the configuration's interfaces
     /// and reset the list of functions to empty.
-    ClearFunctions() -> (zx.status status);
-    /// Returns the current USB mode.
-    GetMode() -> (zx.status status, uint32 mode);
-    /// Sets the current USB mode.
-    SetMode(uint32 mode) -> (zx.status status);
+    ClearFunctions() -> () error zx.status;
     /// Adds a state change listener that is invoked when a state change completes.
     SetStateChangeListener(request<Events> listener);
 };
