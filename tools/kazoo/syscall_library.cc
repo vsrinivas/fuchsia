@@ -437,6 +437,7 @@ bool SyscallLibraryLoader::MakeSyscallOrderMatchOldDeclarationOrder(SyscallLibra
       "syscall_test_7",
       "syscall_test_8",
       "syscall_test_wrapper",
+      "syscall_test_handle_create",
   };
 
   if (library->syscalls_.size() != countof(kOrderFromOriginalSyscallsAbigen)) {
