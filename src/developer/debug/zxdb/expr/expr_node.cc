@@ -153,7 +153,7 @@ void CastExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const
     if (err.has_error()) {
       cb(err, value);
     } else {
-      ErrOrValue result = CastExprValue(context.get(), cast_type, value, to_type);
+      ErrOrValue result = CastExprValue(context, cast_type, value, to_type);
       if (result.has_error())
         cb(result.err(), ExprValue());
       else
@@ -165,7 +165,7 @@ void CastExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const
                         exec_cast = std::move(exec_cast)](const Err& err, ExprValue value) mutable {
     // This lambda optionally follows the reference on the value according to the requirements of
     // the cast.
-    if (err.has_error() || !CastShouldFollowReferences(context.get(), cast_type, value, to_type)) {
+    if (err.has_error() || !CastShouldFollowReferences(context, cast_type, value, to_type)) {
       exec_cast(err, value);  // Also handles the error cases.
     } else {
       EnsureResolveReference(context, std::move(value),

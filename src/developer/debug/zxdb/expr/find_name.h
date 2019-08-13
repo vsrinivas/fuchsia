@@ -80,6 +80,7 @@ struct FindNameOptions {
   enum InitialKinds : bool { kNoKinds = false, kAllKinds = true };
   explicit FindNameOptions(InitialKinds initial)
       : find_types(initial),
+        find_type_defs(initial),
         find_functions(initial),
         find_vars(initial),
         find_templates(initial),
@@ -87,6 +88,7 @@ struct FindNameOptions {
 
   // The types of named things that will be matched.
   bool find_types = true;
+  bool find_type_defs = true;  // Subset of "types": definitions only, not forward declarations.
   bool find_functions = true;  // Global and member functions.
   bool find_vars = true;       // Local and "this" member vars.
   bool find_templates = true;  // Templatized types without <...>.

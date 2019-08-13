@@ -56,7 +56,7 @@ void DoAssignment(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
   // The coerced value will be the result. It should have the "source" of the left-hand-side since
   // the location being assigned to doesn't change.
   ErrOrValue coerced =
-      CastExprValue(context.get(), CastType::kImplicit, right_value, left_value.type_ref());
+      CastExprValue(context, CastType::kImplicit, right_value, left_value.type_ref());
   if (coerced.has_error())
     return cb(std::move(coerced));
 
@@ -242,7 +242,7 @@ ErrOrValue DoIntBinaryOp(const OpValue& left, const OpValue& right, bool check_f
 }
 
 // Converts the given value to a double if possible when
-Err OpValueToDouble(EvalContext* context, const OpValue& in, double* out) {
+Err OpValueToDouble(const fxl::RefPtr<EvalContext>& context, const OpValue& in, double* out) {
   if (in.realm == MathRealm::kFloat)
     return in.value->PromoteToDouble(out);  // Already floating-point.
 
@@ -266,10 +266,10 @@ ErrOrValue DoFloatBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& left
   // The inputs could be various types like signed or unsigned integers or even bools. Use the
   // casting infrastructure to convert these when necessary.
   double left_double = 0.0;
-  if (Err err = OpValueToDouble(context.get(), left, &left_double); err.has_error())
+  if (Err err = OpValueToDouble(context, left, &left_double); err.has_error())
     return err;
   double right_double = 0.0;
-  if (Err err = OpValueToDouble(context.get(), right, &right_double); err.has_error())
+  if (Err err = OpValueToDouble(context, right, &right_double); err.has_error())
     return err;
 
   // The actual operation.
@@ -429,12 +429,12 @@ ErrOrValue DoLogicalBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& le
   // In general the left will have already been converted to a bool and checks to implement
   // short-ciruiting for these operators. But reevaluate anyway which is useful for tests.
   ErrOrValue left_as_bool =
-      CastExprValue(context.get(), CastType::kImplicit, *left_value.value, MakeBoolType());
+      CastExprValue(context, CastType::kImplicit, *left_value.value, MakeBoolType());
   if (left_as_bool.has_error())
     return left_as_bool;
 
   ErrOrValue right_as_bool =
-      CastExprValue(context.get(), CastType::kImplicit, *right_value.value, MakeBoolType());
+      CastExprValue(context, CastType::kImplicit, *right_value.value, MakeBoolType());
   if (right_as_bool.has_error())
     return right_as_bool;
 
@@ -629,7 +629,7 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<Expr
     if (op.type() == ExprTokenType::kLogicalOr || op.type() == ExprTokenType::kDoubleAnd) {
       // Short-circuit for || and &&.
       ErrOrValue left_as_bool =
-          CastExprValue(context.get(), CastType::kImplicit, left_value, MakeBoolType());
+          CastExprValue(context, CastType::kImplicit, left_value, MakeBoolType());
       if (left_as_bool.has_error())
         return cb(left_as_bool.err());
 

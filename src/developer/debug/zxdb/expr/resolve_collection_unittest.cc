@@ -26,7 +26,49 @@ namespace zxdb {
 
 namespace {
 
-class ResolveCollectionTest : public TestWithLoop {};
+// Load address for the mock module that's injected.
+constexpr uint64_t kModuleLoadAddress = 0x1000000;
+
+class ResolveCollectionTest : public TestWithLoop {
+ public:
+  ResolveCollectionTest() : module_symbol_context_(kModuleLoadAddress) {}
+
+  void SetUp() override {
+    TestWithLoop::SetUp();
+
+    // Need a bunch of symbol stuff to have the index.
+    auto mod_ref = std::make_unique<MockModuleSymbols>("mod.so");
+    module_symbols_ = mod_ref.get();  // Save for later.
+
+    process_setup_.InjectModule("mod1", "1234", kModuleLoadAddress, std::move(mod_ref));
+    index_root_ = &module_symbols_->index().root();  // Root of the index for module 1.
+
+    data_provider_ = fxl::MakeRefCounted<MockSymbolDataProvider>();
+
+    // With the mock symbol system above, we make a real EvalContext that uses it.
+    eval_context_ = fxl::MakeRefCounted<EvalContextImpl>(process_setup_.process().GetWeakPtr(),
+                                                         module_symbol_context_, data_provider_,
+                                                         fxl::RefPtr<CodeBlock>());
+  }
+  void TearDown() override {
+    index_root_ = nullptr;
+    data_provider_.reset();
+    eval_context_.reset();
+
+    TestWithLoop::TearDown();
+  }
+
+ protected:
+  ProcessSymbolsTestSetup process_setup_;
+
+  // Injected module.
+  MockModuleSymbols* module_symbols_ = nullptr;  // Ptr owned by process_setup_.
+  SymbolContext module_symbol_context_;
+  IndexNode* index_root_ = nullptr;
+
+  fxl::RefPtr<MockSymbolDataProvider> data_provider_;
+  fxl::RefPtr<EvalContextImpl> eval_context_;
+};
 
 // Defines a class with two member types "a" and "b". It puts the definitions of "a" and "b' members
 // into the two out params.
@@ -54,8 +96,6 @@ ErrOrValue ResolveMemberFromString(fxl::RefPtr<EvalContext> eval_context, const 
 }  // namespace
 
 TEST_F(ResolveCollectionTest, GoodMemberAccess) {
-  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
-
   const DataMember* a_data;
   const DataMember* b_data;
   auto sc = GetTestClassType(&a_data, &b_data);
@@ -70,7 +110,7 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
                  ExprValueSource(kBaseAddr));
 
   // Resolve A.
-  ErrOrValue out = ResolveMember(eval_context, base, a_data);
+  ErrOrValue out = ResolveMember(eval_context_, base, a_data);
   ASSERT_TRUE(out.ok()) << out.err().msg();
   EXPECT_EQ("int32_t", out.value().type()->GetAssignedName());
   EXPECT_EQ(4u, out.value().data().size());
@@ -78,12 +118,12 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
   EXPECT_EQ(kBaseAddr, out.value().source().address());
 
   // Resolve A by name.
-  ErrOrValue out_by_name = ResolveMemberFromString(eval_context, base, "a");
+  ErrOrValue out_by_name = ResolveMemberFromString(eval_context_, base, "a");
   ASSERT_TRUE(out_by_name.ok());
   EXPECT_EQ(out.value(), out_by_name.value());
 
   // Resolve B.
-  out = ResolveMember(eval_context, base, b_data);
+  out = ResolveMember(eval_context_, base, b_data);
   ASSERT_TRUE(out.ok()) << out.err().msg();
   EXPECT_EQ("int32_t", out.value().type()->GetAssignedName());
   EXPECT_EQ(4u, out.value().data().size());
@@ -91,7 +131,7 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
   EXPECT_EQ(kBaseAddr + 4, out.value().source().address());
 
   // Resolve B by name.
-  out_by_name = ResolveMemberFromString(eval_context, base, "b");
+  out_by_name = ResolveMemberFromString(eval_context_, base, "b");
   ASSERT_TRUE(out_by_name.ok());
   EXPECT_EQ(out.value(), out_by_name.value());
 }
@@ -99,22 +139,6 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
 // Tests that "a->b" can be resolved when the type of "a" is a forward definition. This requires
 // looking up the symbol in the index to find its definition.
 TEST_F(ResolveCollectionTest, ForwardDefinitionPtr) {
-  // Need a bunch of symbol stuff to have the index.
-  ProcessSymbolsTestSetup setup;
-  auto mod_ref = std::make_unique<MockModuleSymbols>("mod.so");
-  MockModuleSymbols* mod = mod_ref.get();  // Save for later.
-
-  constexpr uint64_t kLoadAddress = 0x1000000;
-  SymbolContext symbol_context(kLoadAddress);
-  setup.InjectModule("mod1", "1234", kLoadAddress, std::move(mod_ref));
-  auto& root = mod->index().root();  // Root of the index for module 1.
-
-  auto provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
-
-  // With the mock symbol system above, we make a real EvalContext that uses it.
-  auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), symbol_context,
-                                                      provider, fxl::RefPtr<CodeBlock>());
-
   // Forward-declared type.
   const char kMyStructName[] = "MyStruct";
   auto forward_decl = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
@@ -127,12 +151,12 @@ TEST_F(ResolveCollectionTest, ForwardDefinitionPtr) {
   // Make a definition for the type and index it. It has one 32-bit data member.
   auto int32_type = MakeInt32Type();
   auto def = MakeCollectionType(DwarfTag::kStructureType, kMyStructName, {{"a", int32_type}});
-  TestIndexedSymbol indexed_def(mod, &root, kMyStructName, def);
+  TestIndexedSymbol indexed_def(module_symbols_, index_root_, kMyStructName, def);
 
   // Define the data for the object. It has a 32-bit little-endian value.
   const uint64_t kObjectAddr = 0x12345678;
   const uint8_t kIntValue = 42;
-  provider->AddMemory(kObjectAddr, {kIntValue, 0, 0, 0});
+  data_provider_->AddMemory(kObjectAddr, {kIntValue, 0, 0, 0});
 
   // This pointer value references the memory above and its type is the forward declaration which
   // does not define the members.
@@ -145,7 +169,7 @@ TEST_F(ResolveCollectionTest, ForwardDefinitionPtr) {
   // Resolve by name on an object with the type referencing the forward declaration.
   bool called = false;
   ErrOrValue out((ExprValue()));
-  ResolveMemberByPointer(context, ptr_value, a_ident,
+  ResolveMemberByPointer(eval_context_, ptr_value, a_ident,
                          [&called, &out](ErrOrValue value, fxl::RefPtr<DataMember>) {
                            called = true;
                            out = std::move(value);
@@ -164,15 +188,50 @@ TEST_F(ResolveCollectionTest, ForwardDefinitionPtr) {
   EXPECT_EQ(kIntValue, out.value().GetAs<int32_t>());
 }
 
-TEST_F(ResolveCollectionTest, BadMemberArgs) {
-  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+// Tests that a member type can be a forward definition and we can still find the size to extract it
+// properly. This happens for std::string which is an extern template. The full definition is
+// included only in libc++ even though the full definition is known at the time a struct including
+// it is compiled.
+TEST_F(ResolveCollectionTest, ForwardDefMember) {
+  // Forward-declared type.
+  const char kFwdDeclaredName[] = "FwdDeclared";
+  auto forward_decl = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
+  forward_decl->set_assigned_name(kFwdDeclaredName);
+  forward_decl->set_is_declaration(true);
+  EXPECT_EQ(0u, forward_decl->byte_size());  // Forward-decls don't have sizes.
 
+  // Real definition of the type in the index.
+  auto int32_type = MakeInt32Type();
+  auto def = MakeCollectionType(DwarfTag::kStructureType, kFwdDeclaredName, {{"a", int32_type}});
+  TestIndexedSymbol indexed_def(module_symbols_, index_root_, kFwdDeclaredName, def);
+
+  // Struct that contains a reference to the forward-declared type as a member.
+  const char kMemberName[] = "a";
+  auto containing =
+      MakeCollectionType(DwarfTag::kStructureType, "Containing", {{kMemberName, forward_decl}});
+  containing->set_byte_size(def->byte_size());
+  ExprValue containing_value(containing, {1, 0, 0, 0});
+
+  // Now resolve the member.
+  auto result = ResolveMember(eval_context_, containing_value, ParsedIdentifier(kMemberName));
+  ASSERT_TRUE(result.ok());
+
+  // The result should be the right size which it should have picked up from the index, but the
+  // actual type should be the forward declaration (in this case, it might be more convenient if
+  // the return value was the definition since it's equivalent, but in practice there might by
+  // typedefs or C-V qualifiers so we always need to return the type specified in the struct
+  // definition.
+  EXPECT_EQ(def->byte_size(), result.value().data().size());
+  EXPECT_EQ(forward_decl.get(), result.value().type());
+}
+
+TEST_F(ResolveCollectionTest, BadMemberArgs) {
   const DataMember* a_data;
   const DataMember* b_data;
   auto sc = GetTestClassType(&a_data, &b_data);
 
   // Test null base class pointer.
-  ErrOrValue out = ResolveMember(eval_context, ExprValue(), a_data);
+  ErrOrValue out = ResolveMember(eval_context_, ExprValue(), a_data);
   ASSERT_TRUE(out.has_error());
   EXPECT_EQ("Can't resolve data member on non-struct/class value.", out.err().msg());
 
@@ -180,14 +239,12 @@ TEST_F(ResolveCollectionTest, BadMemberArgs) {
   ExprValue base(sc, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00}, ExprValueSource(kBaseAddr));
 
   // Null data member pointer.
-  out = ResolveMember(eval_context, base, nullptr);
+  out = ResolveMember(eval_context_, base, nullptr);
   EXPECT_TRUE(out.has_error());
   EXPECT_EQ("Invalid data member for struct 'Foo'.", out.err().msg());
 }
 
 TEST_F(ResolveCollectionTest, BadMemberAccess) {
-  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
-
   const DataMember* a_data;
   const DataMember* b_data;
   auto sc = GetTestClassType(&a_data, &b_data);
@@ -196,7 +253,7 @@ TEST_F(ResolveCollectionTest, BadMemberAccess) {
   ExprValue base(sc, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00}, ExprValueSource(kBaseAddr));
 
   // Lookup by name that doesn't exist.
-  ErrOrValue out = ResolveMemberFromString(eval_context, base, "c");
+  ErrOrValue out = ResolveMemberFromString(eval_context_, base, "c");
   ASSERT_TRUE(out.has_error());
   EXPECT_EQ("No member 'c' in struct 'Foo'.", out.err().msg());
 
@@ -206,15 +263,13 @@ TEST_F(ResolveCollectionTest, BadMemberAccess) {
   bad_member->set_type(MakeInt32Type());
   bad_member->set_member_location(5);
 
-  out = ResolveMember(eval_context, base, bad_member.get());
+  out = ResolveMember(eval_context_, base, bad_member.get());
   ASSERT_TRUE(out.has_error());
-  EXPECT_EQ("Invalid data member for struct 'Foo'.", out.err().msg());
+  EXPECT_EQ("Invalid data offset 5 in object of size 8.", out.err().msg());
 }
 
 // Tests foo.bar where bar is in a derived class of foo's type.
 TEST_F(ResolveCollectionTest, DerivedClass) {
-  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
-
   const DataMember* a_data;
   const DataMember* b_data;
   auto base = GetTestClassType(&a_data, &b_data);
@@ -232,7 +287,7 @@ TEST_F(ResolveCollectionTest, DerivedClass) {
                   ExprValueSource(kBaseAddr));
 
   // Resolve B by name.
-  ErrOrValue out = ResolveMemberFromString(eval_context, value, "b");
+  ErrOrValue out = ResolveMemberFromString(eval_context_, value, "b");
   ASSERT_TRUE(out.ok()) << out.err().msg();
   EXPECT_EQ("int32_t", out.value().type()->GetAssignedName());
   EXPECT_EQ(4u, out.value().data().size());
@@ -242,7 +297,7 @@ TEST_F(ResolveCollectionTest, DerivedClass) {
   EXPECT_EQ(kBaseAddr + base_offset + 4, out.value().source().address());
 
   // Test extracting the base class from the derived one.
-  ErrOrValue base_value = ResolveInherited(value, inherited.get());
+  ErrOrValue base_value = ResolveInherited(eval_context_, value, inherited.get());
   ASSERT_TRUE(base_value.ok());
 
   ExprValue expected_base(base, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
@@ -250,7 +305,7 @@ TEST_F(ResolveCollectionTest, DerivedClass) {
   EXPECT_EQ(expected_base, base_value.value());
 
   // Test the other variant of ResolveInherited.
-  base_value = ResolveInherited(value, base, base_offset);
+  base_value = ResolveInherited(eval_context_, value, base, base_offset);
   ASSERT_TRUE(base_value.ok());
   EXPECT_EQ(expected_base, base_value.value());
 }

@@ -382,7 +382,7 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
     std::string from_name = from->GetFullName();
     std::unique_ptr<FormatNode> base_class_node;
 
-    ErrOrValue from_value = ResolveInherited(node->value(), inherited);
+    ErrOrValue from_value = ResolveInherited(eval_context, node->value(), inherited);
     // TODO(brettw) make FormatNode take a ErrOrValue constructor.
     if (from_value.has_error())
       base_class_node = std::make_unique<FormatNode>(from_name, from_value.err());
