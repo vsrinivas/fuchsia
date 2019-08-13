@@ -39,6 +39,7 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.amber($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg.rewrite($go_toolchain)",
+    "//sdk/fidl/fuchsia.space($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//sdk/fidl/fuchsia.update($go_toolchain)",
     "//zircon/public/fidl/fuchsia-cobalt($go_toolchain)",
@@ -179,7 +180,7 @@ test_targets = [
 ]
 foreach(test, test_targets) {
   go_test(test.name) {
-    gopackages = [test.gopkg]
+    gopackages = [ test.gopkg ]
 
     deps = [
       ":lib",

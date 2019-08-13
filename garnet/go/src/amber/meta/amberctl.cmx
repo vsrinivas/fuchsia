@@ -12,6 +12,7 @@
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",
             "fuchsia.posix.socket.Provider",
+            "fuchsia.space.Manager",
             "fuchsia.update.Manager"
         ]
     }

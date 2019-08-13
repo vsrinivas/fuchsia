@@ -30,6 +30,7 @@ import (
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/pkg/rewrite"
+	"fidl/fuchsia/space"
 	"fidl/fuchsia/update"
 )
 
@@ -109,6 +110,7 @@ type Services struct {
 	resolver      *pkg.PackageResolverInterface
 	repoMgr       *pkg.RepositoryManagerInterface
 	rewriteEngine *rewrite.EngineInterface
+	space         *space.ManagerInterface
 	updateManager *update.ManagerInterface
 }
 
@@ -141,6 +143,15 @@ func connectToRepositoryManager(ctx *context.Context) *pkg.RepositoryManagerInte
 
 func connectToRewriteEngine(ctx *context.Context) *rewrite.EngineInterface {
 	req, pxy, err := rewrite.NewEngineInterfaceRequest()
+	if err != nil {
+		panic(err)
+	}
+	ctx.ConnectToEnvService(req)
+	return pxy
+}
+
+func connectToSpace(ctx *context.Context) *space.ManagerInterface {
+	req, pxy, err := space.NewManagerInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -580,12 +591,16 @@ func do(services Services) int {
 		}
 		fmt.Printf("Source %q disabled\n", *name)
 	case "gc":
-		err := services.amber.Gc()
+		res, err := services.space.Gc()
 		if err != nil {
 			log.Printf("Error collecting garbage: %s", err)
 			return 1
 		}
-		log.Printf("Started garbage collection. See logs for details")
+		if res.Which() == space.ManagerGcResultErr {
+			log.Printf("Error collecting garbage: %s", res.Err)
+			return 1
+		}
+		log.Printf("Garbage collection complete. See logs for details.")
 	case "print_state":
 		if err := filepath.Walk("/hub", func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -657,6 +672,9 @@ func Main() {
 
 	services.rewriteEngine = connectToRewriteEngine(ctx)
 	defer services.rewriteEngine.Close()
+
+	services.space = connectToSpace(ctx)
+	defer services.space.Close()
 
 	services.updateManager = connectToUpdateManager(ctx)
 	defer services.updateManager.Close()

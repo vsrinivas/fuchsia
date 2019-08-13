@@ -86,6 +86,27 @@ impl MockUpdateManager {
     }
 }
 
+struct MockSpaceManager {
+    called: Mutex<u32>,
+}
+impl MockSpaceManager {
+    fn new() -> Self {
+        Self { called: Mutex::new(0) }
+    }
+
+    async fn run(
+        self: Arc<Self>,
+        mut stream: fidl_fuchsia_space::ManagerRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(event) = stream.try_next().await? {
+            *self.called.lock() += 1;
+            let fidl_fuchsia_space::ManagerRequest::Gc { responder } = event;
+            responder.send(&mut Ok(()))?;
+        }
+        Ok(())
+    }
+}
+
 struct TestEnv {
     _amber: App,
     _pkg_resolver: App,
@@ -625,4 +646,37 @@ async fn test_system_update() {
         .expect("amberctl to succeed");
 
     assert_eq!(*update_manager.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_gc() {
+    // skip using TestEnv because we don't need to start pkg_resolver or amber here.
+    let mut fs = ServiceFs::new();
+
+    let space_manager = Arc::new(MockSpaceManager::new());
+    let space_manager_clone = Arc::clone(&space_manager);
+    fs.add_fidl_service(move |stream| {
+        let space_manager_clone = Arc::clone(&space_manager_clone);
+        fasync::spawn(
+            space_manager_clone
+                .run(stream)
+                .unwrap_or_else(|e| panic!("error running mock space manager: {:?}", e)),
+        )
+    });
+
+    let env = fs
+        .create_salted_nested_environment("amberctl_env")
+        .expect("nested environment to create successfully");
+    fasync::spawn(fs.collect());
+
+    amberctl()
+        .arg("gc")
+        .output(env.launcher())
+        .expect("amberctl to launch")
+        .await
+        .expect("amberctl to run")
+        .ok()
+        .expect("amberctl to succeed");
+
+    assert_eq!(*space_manager.called.lock(), 1);
 }
