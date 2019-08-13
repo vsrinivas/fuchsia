@@ -20,20 +20,9 @@ import (
 var _ inspect.Inspect = (*statCounterInspectImpl)(nil)
 
 type statCounterInspectImpl struct {
+	svc  *inspect.InspectService
 	name string
 	reflect.Value
-}
-
-func (v *statCounterInspectImpl) bind(c zx.Channel) error {
-	b := fidl.Binding{
-		Stub:    &inspect.InspectStub{Impl: v},
-		Channel: c,
-	}
-	return b.Init(func(error) {
-		if err := b.Close(); err != nil {
-			panic(err)
-		}
-	})
 }
 
 func (v *statCounterInspectImpl) ReadData() (inspect.Object, error) {
@@ -86,26 +75,39 @@ func (v *statCounterInspectImpl) OpenChild(childName string, childChannel inspec
 	if v.Kind() != reflect.Struct {
 		return false, nil
 	}
+	svc := v.svc
 	if v := v.FieldByName(childName); v.IsValid() {
-		return true, (&statCounterInspectImpl{
+		svc := (&statCounterInspectImpl{
+			svc:   svc,
 			name:  childName,
 			Value: v,
-		}).bind(childChannel.Channel)
+		}).asService()
+		return true, svc.AddFn(svc.Stub, childChannel.Channel)
 	}
 	return false, nil
 }
 
 var _ context.Directory = (*statCounterInspectImpl)(nil)
 
+func (v *statCounterInspectImpl) asService() *context.Service {
+	return &context.Service{
+		Stub: &inspect.InspectStub{Impl: v},
+		AddFn: func(s fidl.Stub, c zx.Channel) error {
+			_, err := v.svc.BindingSet.Add(s, c, nil)
+			return err
+		},
+	}
+}
+
 func (v *statCounterInspectImpl) Get(name string) (context.Node, bool) {
 	if name == inspect.InspectName {
-		return context.ServiceFn(v.bind), true
+		return v.asService(), true
 	}
 	return nil, false
 }
 
 func (v *statCounterInspectImpl) ForEach(fn func(string, context.Node)) {
-	fn(inspect.InspectName, context.ServiceFn(v.bind))
+	fn(inspect.InspectName, v.asService())
 }
 
 var _ context.File = (*statCounterFile)(nil)

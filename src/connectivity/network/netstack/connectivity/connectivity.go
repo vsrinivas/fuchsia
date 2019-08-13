@@ -7,6 +7,7 @@ package connectivity
 import (
 	"sync"
 	"syscall/zx"
+	"syscall/zx/fidl"
 
 	"app/context"
 	"syslog"
@@ -18,19 +19,23 @@ import (
 	"fidl/fuchsia/netstack"
 )
 
-var service *net.ConnectivityService = &net.ConnectivityService{}
-var reachable bool = false
+var service = &net.ConnectivityService{}
+var reachable = false
 var mu sync.Mutex
 
 func AddOutgoingService(ctx *context.Context) error {
-	ctx.OutgoingService.AddService(net.ConnectivityName, func(c zx.Channel) error {
-		k, err := service.Add(struct{}{}, c, nil)
-		// Let clients know the status of the network when they get added.
-		if p, ok := service.EventProxyFor(k); ok {
-			p.OnNetworkReachable(reachable)
-		}
-		return err
-	})
+	ctx.OutgoingService.AddService(
+		net.ConnectivityName,
+		&net.ConnectivityStub{Impl: struct{}{}},
+		func(s fidl.Stub, c zx.Channel) error {
+			k, err := service.BindingSet.Add(s, c, nil)
+			// Let clients know the status of the network when they get added.
+			if p, ok := service.EventProxyFor(k); ok {
+				p.OnNetworkReachable(reachable)
+			}
+			return err
+		},
+	)
 	return nil
 }
 

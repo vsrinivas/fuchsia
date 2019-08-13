@@ -71,8 +71,8 @@ func (od OutDirectory) AddObjects(name string, n Node) {
 	od.getMapDirectory("objects")[name] = n
 }
 
-func (od OutDirectory) AddService(name string, service ServiceFn) {
-	od.getMapDirectory("svc")[name] = service
+func (od OutDirectory) AddService(name string, stub fidl.Stub, addFn addFn) {
+	od.getMapDirectory("svc")[name] = &Service{Stub: stub, AddFn: addFn}
 }
 
 type Context struct {

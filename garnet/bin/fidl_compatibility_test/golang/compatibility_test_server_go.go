@@ -176,10 +176,13 @@ var echoService compatibility.EchoService
 func main() {
 	ctx := context.CreateFromStartupInfo()
 
-	ctx.OutgoingService.AddService(compatibility.EchoName,
-		func(c zx.Channel) error {
-			_, err := echoService.Add(&echoImpl{ctx: ctx}, c, nil)
+	ctx.OutgoingService.AddService(
+		compatibility.EchoName,
+		&compatibility.EchoStub{Impl: &echoImpl{ctx: ctx}},
+		func(s fidl.Stub, c zx.Channel) error {
+			_, err := echoService.BindingSet.Add(s, c, nil)
 			return err
-		})
+		},
+	)
 	fidl.Serve()
 }

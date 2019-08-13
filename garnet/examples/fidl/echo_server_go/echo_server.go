@@ -29,11 +29,15 @@ func (echo *echoImpl) EchoString(inValue *string) (outValue *string, err error) 
 
 func main() {
 	quiet := (len(os.Args) > 1) && os.Args[1] == "-q"
-	echoService := &echo.EchoService{}
+	var echoService echo.EchoService
 	c := context.CreateFromStartupInfo()
-	c.OutgoingService.AddService(echo.EchoName, func(c zx.Channel) error {
-		_, err := echoService.Add(&echoImpl{quiet}, c, nil)
-		return err
-	})
+	c.OutgoingService.AddService(
+		echo.EchoName,
+		&echo.EchoStub{Impl: &echoImpl{quiet: quiet}},
+		func(s fidl.Stub, c zx.Channel) error {
+			_, err := echoService.BindingSet.Add(s, c, nil)
+			return err
+		},
+	)
 	fidl.Serve()
 }

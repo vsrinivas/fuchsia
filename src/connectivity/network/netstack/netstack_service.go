@@ -292,7 +292,7 @@ func (ni *netstackImpl) StartRouteTableTransaction(req netstack.RouteTableTransa
 		defer ni.ns.mu.Unlock()
 
 		if ni.ns.mu.transactionRequest != nil {
-			oldChannel := ni.ns.mu.transactionRequest.ToChannel()
+			oldChannel := ni.ns.mu.transactionRequest.Channel
 			observed, _ := zxwait.Wait(zx.Handle(oldChannel), 0, 0)
 			// If the channel is neither readable nor writable, there is no
 			// data left to be processed (not readable) and we can't return
@@ -313,7 +313,7 @@ func (ni *netstackImpl) StartRouteTableTransaction(req netstack.RouteTableTransa
 	// We don't use the error handler to free the channel because it's
 	// possible that the peer closes the channel before our service has
 	// finished processing.
-	c := req.ToChannel()
+	c := req.Channel
 	_, err := routeTableService.Add(&transaction, c, nil)
 	if err != nil {
 		return int32(zx.ErrShouldWait), err

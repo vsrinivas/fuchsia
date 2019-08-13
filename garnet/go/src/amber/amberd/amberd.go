@@ -56,11 +56,14 @@ func Main() {
 		log.Fatalf("failed to start daemon: %s", err)
 	}
 
-	ctlSvr := control_server.NewControlServer(d)
-	ctx.OutgoingService.AddService(amber.ControlName, func(c zx.Channel) error {
-		_, err := ctlSvc.Add(ctlSvr, c, nil)
-		return err
-	})
+	ctx.OutgoingService.AddService(
+		amber.ControlName,
+		&amber.ControlStub{Impl: control_server.NewControlServer(d)},
+		func(s fidl.Stub, c zx.Channel) error {
+			_, err := ctlSvc.BindingSet.Add(s, c, nil)
+			return err
+		},
+	)
 
 	for i := 1; i < runtime.NumCPU(); i++ {
 		go fidl.Serve()

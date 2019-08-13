@@ -6,6 +6,7 @@ package filter
 
 import (
 	"syscall/zx"
+	"syscall/zx/fidl"
 
 	"app/context"
 	"syslog"
@@ -20,10 +21,14 @@ type filterImpl struct {
 var filterService filter.FilterService
 
 func AddOutgoingService(ctx *context.Context, f *Filter) error {
-	ctx.OutgoingService.AddService(filter.FilterName, func(c zx.Channel) error {
-		_, err := filterService.Add(&filterImpl{filter: f}, c, nil)
-		return err
-	})
+	ctx.OutgoingService.AddService(
+		filter.FilterName,
+		&filter.FilterStub{Impl: &filterImpl{filter: f}},
+		func(s fidl.Stub, c zx.Channel) error {
+			_, err := filterService.BindingSet.Add(s, c, nil)
+			return err
+		},
+	)
 	return nil
 }
 

@@ -45,16 +45,21 @@ type Node interface {
 	addConnection(flags, mode uint32, req fidlio.NodeInterfaceRequest) error
 }
 
-type ServiceFn func(zx.Channel) error
+type addFn func(fidl.Stub, zx.Channel) error
 
-var _ Node = (*ServiceFn)(nil)
-var _ fidlio.Node = (*ServiceFn)(nil)
+type Service struct {
+	Stub  fidl.Stub
+	AddFn addFn
+}
 
-func (s ServiceFn) getIO() fidlio.Node {
+var _ Node = (*Service)(nil)
+var _ fidlio.Node = (*Service)(nil)
+
+func (s *Service) getIO() fidlio.Node {
 	return s
 }
 
-func (s ServiceFn) addConnection(flags, mode uint32, req fidlio.NodeInterfaceRequest) error {
+func (s *Service) addConnection(flags, mode uint32, req fidlio.NodeInterfaceRequest) error {
 	// TODO(ZX-3805): this does not implement the node protocol correctly,
 	// but matches the behaviour of SDK FVS.
 	if flags&fidlio.OpenFlagNodeReference != 0 {
@@ -68,27 +73,26 @@ func (s ServiceFn) addConnection(flags, mode uint32, req fidlio.NodeInterfaceReq
 			}
 		}), s)
 	}
-
-	return respond(flags, req, s(req.Channel), s)
+	return respond(flags, req, s.AddFn(s.Stub, req.Channel), s)
 }
 
-func (s ServiceFn) Clone(flags uint32, req fidlio.NodeInterfaceRequest) error {
+func (s *Service) Clone(flags uint32, req fidlio.NodeInterfaceRequest) error {
 	return s.addConnection(flags, 0, req)
 }
 
-func (s ServiceFn) Close() (int32, error) {
+func (s *Service) Close() (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s ServiceFn) Describe() (fidlio.NodeInfo, error) {
+func (s *Service) Describe() (fidlio.NodeInfo, error) {
 	return fidlio.NodeInfo{NodeInfoTag: fidlio.NodeInfoService}, nil
 }
 
-func (s ServiceFn) Sync() (int32, error) {
+func (s *Service) Sync() (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (s ServiceFn) GetAttr() (int32, fidlio.NodeAttributes, error) {
+func (s *Service) GetAttr() (int32, fidlio.NodeAttributes, error) {
 	return int32(zx.ErrOk), fidlio.NodeAttributes{
 		Mode:      fidlio.ModeTypeService,
 		Id:        fidlio.InoUnknown,
@@ -96,11 +100,11 @@ func (s ServiceFn) GetAttr() (int32, fidlio.NodeAttributes, error) {
 	}, nil
 }
 
-func (s ServiceFn) SetAttr(flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
+func (s *Service) SetAttr(flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (s ServiceFn) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (int32, []zx.Handle, []uint8, error) {
+func (s *Service) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (int32, []zx.Handle, []uint8, error) {
 	return int32(zx.ErrNotSupported), nil, nil, nil
 }
 

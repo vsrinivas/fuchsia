@@ -22,6 +22,7 @@ import (
 	"netstack/link/eth"
 
 	"fidl/fuchsia/device"
+	"fidl/fuchsia/inspect"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -118,75 +119,97 @@ func Main() {
 	}
 
 	stats := reflect.ValueOf(stk.Stats())
+	var inspectService inspect.InspectService
 	ctx.OutgoingService.AddObjects("counters", &context.DirectoryWrapper{
 		Directory: &context.DirectoryWrapper{
 			Directory: &statCounterInspectImpl{
+				svc:   &inspectService,
 				name:  "Networking Stat Counters",
 				Value: stats,
 			},
 		},
 	})
 
-	netstackImpl := &netstackImpl{
-		ns: ns,
-		getIO: (&context.DirectoryWrapper{
-			Directory: &reflectNode{
-				Value: stats,
-			},
-		}).GetDirectory,
-	}
-	ctx.OutgoingService.AddService(netstack.NetstackName, func(c zx.Channel) error {
-		k, err := netstackService.Add(netstackImpl, c, nil)
-		if err != nil {
-			syslog.Fatalf("%v", err)
-		}
-		// Send a synthetic InterfacesChanged event to each client when they join
-		// Prevents clients from having to race GetInterfaces / InterfacesChanged.
-		if p, ok := netstackService.EventProxyFor(k); ok {
-			ns.mu.Lock()
-			interfaces2 := ns.getNetInterfaces2Locked()
-			interfaces := interfaces2ListToInterfacesList(interfaces2)
-			ns.mu.Unlock()
-
-			if err := p.OnInterfacesChanged(interfaces); err != nil {
-				syslog.Warnf("OnInterfacesChanged failed: %v", err)
+	ctx.OutgoingService.AddService(
+		netstack.NetstackName,
+		&netstack.NetstackStub{Impl: &netstackImpl{
+			ns: ns,
+			getIO: (&context.DirectoryWrapper{
+				Directory: &reflectNode{
+					Value: stats,
+				},
+			}).GetDirectory,
+		}},
+		func(s fidl.Stub, c zx.Channel) error {
+			k, err := netstackService.BindingSet.Add(s, c, nil)
+			if err != nil {
+				syslog.Fatalf("%v", err)
 			}
-		}
-		return nil
-	})
+			// Send a synthetic InterfacesChanged event to each client when they join
+			// Prevents clients from having to race GetInterfaces / InterfacesChanged.
+			if p, ok := netstackService.EventProxyFor(k); ok {
+				ns.mu.Lock()
+				interfaces2 := ns.getNetInterfaces2Locked()
+				interfaces := interfaces2ListToInterfacesList(interfaces2)
+				ns.mu.Unlock()
+
+				if err := p.OnInterfacesChanged(interfaces); err != nil {
+					syslog.Warnf("OnInterfacesChanged failed: %v", err)
+				}
+			}
+			return nil
+		},
+	)
 
 	var dnsService netstack.ResolverAdminService
-	ctx.OutgoingService.AddService(netstack.ResolverAdminName, func(c zx.Channel) error {
-		_, err := dnsService.Add(&dnsImpl{ns: ns}, c, nil)
-		return err
-	})
+	ctx.OutgoingService.AddService(
+		netstack.ResolverAdminName,
+		&netstack.ResolverAdminStub{Impl: &dnsImpl{ns: ns}},
+		func(s fidl.Stub, c zx.Channel) error {
+			_, err := dnsService.BindingSet.Add(s, c, nil)
+			return err
+		},
+	)
 
 	var stackService stack.StackService
-	ctx.OutgoingService.AddService(stack.StackName, func(c zx.Channel) error {
-		_, err := stackService.Add(&stackImpl{ns: ns}, c, nil)
-		return err
-	})
+	ctx.OutgoingService.AddService(
+		stack.StackName,
+		&stack.StackStub{Impl: &stackImpl{ns: ns}},
+		func(s fidl.Stub, c zx.Channel) error {
+			_, err := stackService.BindingSet.Add(s, c, nil)
+			return err
+		},
+	)
 
 	var nameLookupService net.NameLookupService
-	nameLookupImpl := nameLookupImpl{dnsClient: ns.dnsClient}
-	ctx.OutgoingService.AddService(net.NameLookupName, func(c zx.Channel) error {
-		_, err := nameLookupService.Add(&nameLookupImpl, c, nil)
-		return err
-	})
+	ctx.OutgoingService.AddService(
+		net.NameLookupName,
+		&net.NameLookupStub{Impl: &nameLookupImpl{dnsClient: ns.dnsClient}},
+		func(s fidl.Stub, c zx.Channel) error {
+			_, err := nameLookupService.BindingSet.Add(s, c, nil)
+			return err
+		},
+	)
 
-	netSocketProvider := &socketProviderImpl{ns: ns}
 	var netSocketProviderService net.SocketProviderService
-	ctx.OutgoingService.AddService(net.SocketProviderName, func(c zx.Channel) error {
-		_, err := netSocketProviderService.Add(netSocketProvider, c, nil)
-		return err
-	})
+	ctx.OutgoingService.AddService(
+		net.SocketProviderName,
+		&net.SocketProviderStub{Impl: &socketProviderImpl{ns: ns}},
+		func(s fidl.Stub, c zx.Channel) error {
+			_, err := netSocketProviderService.BindingSet.Add(s, c, nil)
+			return err
+		},
+	)
 
-	posixSocketProvider := &providerImpl{ns: ns}
 	var posixSocketProviderService socket.ProviderService
-	ctx.OutgoingService.AddService(socket.ProviderName, func(c zx.Channel) error {
-		_, err := posixSocketProviderService.Add(posixSocketProvider, c, nil)
-		return err
-	})
+	ctx.OutgoingService.AddService(
+		socket.ProviderName,
+		&socket.ProviderStub{Impl: &providerImpl{ns: ns}},
+		func(s fidl.Stub, c zx.Channel) error {
+			_, err := posixSocketProviderService.BindingSet.Add(s, c, nil)
+			return err
+		},
+	)
 
 	if err := connectivity.AddOutgoingService(ctx); err != nil {
 		syslog.Fatalf("%v", err)
