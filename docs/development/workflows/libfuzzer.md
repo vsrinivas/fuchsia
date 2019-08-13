@@ -268,7 +268,22 @@ $ fx set core.x64 --fuzz-with asan --with //bundles:tests
 $ fx build
 ```
 
-Zircon fuzzers will be built with all supported sanitizers automatically.
+## Q: How do I create a Zircon fuzzer?
+
+Zircon has an equivalent [template][zircon_fuzzer.gni] to that of Fuchsia, and is used similarly:
+```python
+fuzzer("zx_fuzzer") {
+  sources = [ "zx_fuzzer.cpp" ]
+  deps = [ ":zx_sources" ]
+}
+```
+
+Zircon fuzzers will be built with all supported sanitizers automatically. These fuzzers can be included in a
+Fuchsia instance by includong the `zircon_fuzzers` package, e.g.:
+```
+$ fx set core.x64 --with //garnet/tests/zircon:zircon_fuzzers
+$ fx build
+```
 
 ## Q: How do I run a fuzzer?
 
@@ -453,3 +468,4 @@ become available.
 [latest corpus]: #q-how-do-i-manage-my-corpus-
 [fx fuzz tool]: #q-how-do-i-run-a-fuzzer-
 [fuzzer scope]: #q-how-should-i-scope-my-fuzzer?
+[zircon_fuzzer.gni]: /zircon/public/gn/fuzzer.gni
