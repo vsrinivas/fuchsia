@@ -20,8 +20,8 @@ sdk_shared_library("svc") {
   ]
 
   deps = [
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fs",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/vfs/cpp",
   ]
 
   include_base = "//sdk"
@@ -30,10 +30,7 @@ sdk_shared_library("svc") {
 
   public_configs = [ "//sdk/config" ]
 
-  runtime_deps = [
-    "//zircon/public/lib/fdio:fdio_sdk",
-    "//zircon/public/lib/trace-engine:trace-engine_sdk",
-  ]
+  runtime_deps = [ "//zircon/public/lib/fdio:fdio_sdk" ]
 }
 
 test("svc_unittests") {

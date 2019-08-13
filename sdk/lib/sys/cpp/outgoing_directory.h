@@ -201,12 +201,19 @@ class OutgoingDirectory final {
   // ZX_ERR_NOT_FOUND: The instance was not found.
   zx_status_t RemoveNamedService(const std::string& service, const std::string& instance) const;
 
-  // Gets the directory to publish debug data.
+  // Gets the root directory.
+  //
   // The returned directory is owned by this class.
-  vfs::PseudoDir* debug_dir() { return debug_; }
+  vfs::PseudoDir* root_dir() const { return root_.get(); }
+
+  // Gets the directory to publish debug data.
+  //
+  // The returned directory is owned by this class.
+  vfs::PseudoDir* debug_dir() const { return debug_; }
 
   // Gets a subdirectory with the given |name|, creates it if it does not
   // already exist.
+  //
   // The returned directory is owned by this class.
   vfs::PseudoDir* GetOrCreateDirectory(const std::string& name);
 
