@@ -75,9 +75,12 @@ fuchsia-community-appeals@google.com.
 
 ## Acknowledgements
 
-This Code of Conduct is adapted from the Chromium Code of Conduct, based on the
-Geek Feminism Code of Conduct, the Django Code of Conduct and the Geek Feminism
-Wiki "Effective codes of conduct" guide.
+This Code of Conduct is adapted from the
+[Chromium Code of Conduct](https://chromium.googlesource.com/chromium/src/+/master/CODE_OF_CONDUCT.md),
+based on the Geek Feminism Code of Conduct,
+the Django Code of Conduct,
+and the Geek Feminism Wiki,
+["Effective codes of conduct" guide](https://geekfeminism.wikia.org/wiki/Code_of_conduct_evaluations).
 
 ## License
 
