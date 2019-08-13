@@ -74,7 +74,7 @@ handle_subtype = { "process" | "thread" | "vmo" | "channel" | "eventpair" | "por
                  "debuglog" | "vcpu" | "iommu" | "pager" | "pmt" }
 
 compound_ident = ${ ident ~ ("." ~ ident)* }
-ident = { ("@")? ~ (alpha | digit | "_")+ }
+ident = @{ ("@")? ~ (alpha | digit | "_")+ }
 alpha = { 'a'..'z' | 'A'..'Z' }
 digit = { '0'..'9' }
 string = { "\"" ~ ("-" | "_" | "/" | "." | "," | "'" | "(" | ")" | "&" | "*" |

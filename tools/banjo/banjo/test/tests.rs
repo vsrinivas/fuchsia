@@ -7,6 +7,7 @@
 mod ast_tests;
 mod codegen_tests;
 mod fidl_tests;
+mod negative_tests;
 
 /// Makes a banjo backend test.
 /// Arguments:
@@ -43,4 +44,21 @@ macro_rules! codegen_test {
                 assert_eq!(output, expected);
             }
     }
+}
+
+/// Makes a negative banjo parse test.
+/// Arguments:
+///     id: name of test
+///     [input files]: vector of path relative input files
+#[macro_export]
+macro_rules! negative_parse_test {
+    ( $id:ident, $banjo_file:expr ) => {
+        #[test]
+        fn $id() {
+            use banjo_lib::parser::{BanjoParser, Rule};
+            use pest::Parser;
+            let input = include_str!($banjo_file);
+            assert_eq!(BanjoParser::parse(Rule::file, input).is_err(), true);
+        }
+    };
 }

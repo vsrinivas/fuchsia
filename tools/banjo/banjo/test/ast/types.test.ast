@@ -4502,7 +4502,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "x ",
+                        name: "x",
                         value: Constant(
                             "23",
                         ),
@@ -4525,7 +4525,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "x ",
+                        name: "x",
                         value: Constant(
                             "23",
                         ),
@@ -4548,7 +4548,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "x ",
+                        name: "x",
                         value: Constant(
                             "23",
                         ),
@@ -4571,7 +4571,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "x ",
+                        name: "x",
                         value: Constant(
                             "23",
                         ),
@@ -4594,7 +4594,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "x ",
+                        name: "x",
                         value: Constant(
                             "23",
                         ),
@@ -4617,7 +4617,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "x ",
+                        name: "x",
                         value: Constant(
                             "23",
                         ),
@@ -4640,7 +4640,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "x ",
+                        name: "x",
                         value: Constant(
                             "23",
                         ),
@@ -4663,7 +4663,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "x ",
+                        name: "x",
                         value: Constant(
                             "23",
                         ),
@@ -4686,7 +4686,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        name: "x ",
+                        name: "x",
                         value: Constant(
                             "23",
                         ),
