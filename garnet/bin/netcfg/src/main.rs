@@ -139,7 +139,7 @@ fn main() -> Result<(), failure::Error> {
         rules: default_config_rules,
         filter_config,
         filter_enabled_interface_types,
-    } = Config::load("/pkg/data/default.json")?;
+    } = Config::load("/config/data/default.json")?;
 
     let parse_result: HashSet<InterfaceType> =
         filter_enabled_interface_types.into_iter().map(Into::into).collect();

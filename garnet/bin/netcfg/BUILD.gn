@@ -59,12 +59,15 @@ package("netcfg") {
       dest = "netcfg.cmx"
     },
   ]
+}
 
-  resources = [
-    {
-      path = rebase_path("config/default.json")
-      dest = "default.json"
-    },
+config_data("filter_config") {
+  for_pkg = "netcfg"
+  sources = [
+    rebase_path("config/default.json"),
+  ]
+  outputs = [
+    "default.json",
   ]
 }
 

@@ -10,6 +10,7 @@ recovery_packages = [
   "//build/info:build-info",
   "//garnet/bin/appmgr:appmgr_scheme_config",
   "//garnet/bin/appmgr",
+  "//garnet/bin/netcfg:filter_config",
   "//garnet/bin/netcfg:config",
   "//garnet/bin/netcfg",
   "//garnet/bin/network_time_service",

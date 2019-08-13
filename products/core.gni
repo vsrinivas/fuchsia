@@ -26,6 +26,7 @@ base_package_labels += [
   "//garnet/bin/net-cli",
   "//garnet/bin/netcfg",
   "//garnet/bin/netcfg:config",
+  "//garnet/bin/netcfg:filter_config",
   "//garnet/bin/network_time_service",
   "//garnet/bin/pkg_cache",
   "//garnet/bin/pkg_resolver",
