@@ -479,7 +479,6 @@ const (
 var (
 	ioctlNetcGetNumIfs   = ioctlNum(ioctlKindDefault, ioctlFamilyNetconfig, 1)
 	ioctlNetcGetIfInfoAt = ioctlNum(ioctlKindDefault, ioctlFamilyNetconfig, 2)
-	ioctlNetcGetNodename = ioctlNum(ioctlKindDefault, ioctlFamilyNetconfig, 8)
 )
 
 // We remember the interface list from the last time ioctlNetcGetNumIfs was called. This avoids
@@ -878,9 +877,6 @@ func (ios *iostate) Ioctl(req int16, in []uint8) (int16, []uint8, error) {
 			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil, nil
 		}
 		return 0, lastIfInfo.info[requestedIndex].Marshal(), nil
-
-	case ioctlNetcGetNodename:
-		return 0, append([]byte(ios.ns.getDeviceName()), 0), nil
 
 	default:
 		return 0, nil, fmt.Errorf("opIoctl req=0x%x, in=%x", req, in)
