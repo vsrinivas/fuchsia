@@ -23,7 +23,8 @@ lazy_static! {
 
 const BASELINE: i32 = 0;
 
-fn make_font_description<'a, 'b>(size: u32, baseline: i32) -> FontDescription<'a, 'b> {
+/// Make a font description for the one included font
+pub fn make_font_description<'a, 'b>(size: u32, baseline: i32) -> FontDescription<'a, 'b> {
     FontDescription { face: &FONT_FACE, size: size, baseline: baseline }
 }
 

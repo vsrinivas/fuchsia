@@ -684,6 +684,9 @@ impl<T: PixelSink> Canvas<T> {
 /// Measure a line of text `text` and with the typographic characteristics in `font`.
 /// Returns the measured width and height.
 pub fn measure_text(text: &str, font: &FontDescription) -> Size {
+    if font.size == 0 {
+        return Size::zero();
+    }
     let scale = Scale::uniform(font.size as f32);
     let v_metrics = font.face.font.v_metrics(scale);
     let offset = rusttype::point(0.0, v_metrics.ascent);
@@ -698,7 +701,10 @@ pub fn measure_text(text: &str, font: &FontDescription) -> Size {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Canvas, Color, Coord, IntSize, PixelSink, Point, Rect, Size};
+    use crate::{
+        label::make_font_description, measure_text, Canvas, Color, Coord, IntSize, PixelSink,
+        Point, Rect, Size,
+    };
     use fuchsia_framebuffer::{Config, PixelFormat};
     use std::collections::HashSet;
 
@@ -798,5 +804,11 @@ mod tests {
             "Expected 0 pixels touched, got {}",
             canvas.pixel_sink.touched_offsets.len()
         );
+    }
+
+    #[test]
+    fn test_measure_font_size_zero() {
+        let font = make_font_description(0, 0);
+        assert_eq!(measure_text("hello", &font), Size::zero());
     }
 }
