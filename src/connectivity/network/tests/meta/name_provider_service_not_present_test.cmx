@@ -7,6 +7,6 @@
         }
     },
     "program": {
-        "binary": "test/name_provider_no_sandbox_access_test"
+        "binary": "test/name_provider_service_not_present_test"
     }
 }

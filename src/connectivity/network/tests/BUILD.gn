@@ -130,9 +130,9 @@ test("name_provider_no_network_test") {
   ]
 }
 
-test("name_provider_no_sandbox_access_test") {
+test("name_provider_service_not_present_test") {
   sources = [
-    "name_provider_no_sandbox_access_test.cc",
+    "name_provider_service_not_present_test.cc",
   ]
 
   deps = [
@@ -149,7 +149,7 @@ group("netemul_empty_binaries") {
 test_package("netstack_c_api_tests") {
   deps = [
     ":name_provider_no_network_test",
-    ":name_provider_no_sandbox_access_test",
+    ":name_provider_service_not_present_test",
     ":netemul_empty_binaries",
     ":netstack_bsdsocket_c_api_test",
     ":netstack_external_network_test_client",
@@ -172,7 +172,7 @@ test_package("netstack_c_api_tests") {
 
   tests = [
     {
-      name = "name_provider_no_sandbox_access_test"
+      name = "name_provider_service_not_present_test"
       environments = [ qemu_env ]
     },
     {
