@@ -122,11 +122,31 @@ class IntrStatus : public hwreg::RegisterBase<IntrStatus, uint32_t> {
   DEF_BIT(16, cdma_idle);
 };
 
+class IntrEnable : public hwreg::RegisterBase<IntrEnable, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<IntrEnable>(0x0114); }
+
+  DEF_BIT(31, interrupts_enable);
+  DEF_BIT(22, sdma_error_enable);
+  DEF_BIT(21, sdma_trigger_enable);
+  DEF_BIT(20, cmd_ignored_enable);
+  DEF_BIT(18, ddma_target_error_enable);
+  DEF_BIT(17, cdma_target_error_enable);
+  DEF_BIT(16, cdma_idle_enable);
+};
+
 class TrdStatus : public hwreg::RegisterBase<TrdStatus, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<TrdStatus>(0x0120); }
 
   bool thread_busy(uint32_t thread) { return reg_value() & (1 << thread); }
+};
+
+class TrdCompIntrStatus : public hwreg::RegisterBase<TrdCompIntrStatus, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<TrdCompIntrStatus>(0x0138); }
+
+  bool thread_complete(uint32_t thread) { return reg_value() & (1 << thread); }
 };
 
 class TransferCfg0 : public hwreg::RegisterBase<TransferCfg0, uint32_t> {

@@ -12,10 +12,12 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/time.h>
+#include <zircon/threads.h>
 
 #include "cadence-hpnfc-reg.h"
 
@@ -82,7 +84,6 @@ inline uint32_t ReadParameterPage32(const uint8_t* buffer, uint32_t offset) {
 
 namespace rawnand {
 
-// TODO(bradenkell): Use interrupts.
 // TODO(bradenkell): Use DMA.
 
 zx_status_t CadenceHpnfc::Create(void* ctx, zx_device_t* parent) {
@@ -105,31 +106,44 @@ zx_status_t CadenceHpnfc::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  zx::bti bti;
-  if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get BTI: %d\n", __FILE__, status);
+  zx::interrupt interrupt;
+  if ((status = pdev.GetInterrupt(0, &interrupt)) != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get interrupt: %d\n", __FILE__, status);
     return status;
   }
 
   fbl::AllocChecker ac;
   auto device = fbl::make_unique_checked<CadenceHpnfc>(&ac, parent, *std::move(mmio),
-                                                       *std::move(fifo_mmio), std::move(bti));
+                                                       *std::move(fifo_mmio), std::move(interrupt));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: Failed to allocate device memory\n", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((status = device->Init()) != ZX_OK) {
+  if ((status = device->StartInterruptThread()) != ZX_OK) {
     return status;
   }
 
-  if ((status = device->DdkAdd("cadence-hpnfc")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __FILE__, status);
+  if ((status = device->Init()) != ZX_OK) {
+    device->StopInterruptThread();
+    return status;
+  }
+
+  if ((status = device->Bind()) != ZX_OK) {
+    device->StopInterruptThread();
     return status;
   }
 
   __UNUSED auto* dummy = device.release();
   return ZX_OK;
+}
+
+zx_status_t CadenceHpnfc::Bind() {
+  zx_status_t status = DdkAdd("cadence-hpnfc");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __FILE__, status);
+  }
+  return status;
 }
 
 bool CadenceHpnfc::WaitForRBn() {
@@ -150,30 +164,76 @@ bool CadenceHpnfc::WaitForThread() {
   return !reg.thread_busy(0);
 }
 
-bool CadenceHpnfc::WaitForSdmaTrigger() {
-  auto intr_status = IntrStatus::Get().ReadFrom(&mmio_);
-  for (uint32_t i = 0; !intr_status.sdma_trigger() && i < kTimeoutCount; i++) {
-    zx::nanosleep(zx::deadline_after(kWaitDelay));
-    intr_status.ReadFrom(&mmio_);
+zx_status_t CadenceHpnfc::WaitForSdmaTrigger() {
+  if (sync_completion_wait(&completion_, zx::sec(10).get()) != ZX_OK) {
+    zxlogf(ERROR, "%s: Timed out waiting for FIFO data\n", __FILE__);
+    return ZX_ERR_TIMED_OUT;
   }
 
-  intr_status.WriteTo(&mmio_);
-  return intr_status.sdma_trigger();
+  fbl::AutoLock lock(&lock_);
+
+  sync_completion_reset(&completion_);
+  zx_status_t status = sdma_status_;
+  sdma_status_ = ZX_ERR_BAD_STATE;
+
+  return status;
 }
 
 bool CadenceHpnfc::WaitForCommandComplete() {
-  auto cmd_status = CmdStatus::Get().ReadFrom(&mmio_);
-  for (uint32_t i = 0; !cmd_status.complete() && i < kTimeoutCount; i++) {
-    zx::nanosleep(zx::deadline_after(kWaitDelay));
-    cmd_status.ReadFrom(&mmio_);
+  if (sync_completion_wait(&completion_, zx::sec(10).get()) != ZX_OK) {
+    zxlogf(ERROR, "%s: Timed out waiting for command to complete\n", __FILE__);
+    return false;
   }
-  return cmd_status.complete();
+
+  fbl::AutoLock lock(&lock_);
+
+  sync_completion_reset(&completion_);
+  bool complete = cmd_complete_;
+  cmd_complete_ = false;
+
+  return complete;
+}
+
+zx_status_t CadenceHpnfc::StartInterruptThread() {
+  fbl::AutoLock lock(&lock_);
+  int thread_status = thrd_create_with_name(
+      &interrupt_thread_,
+      [](void* ctx) -> int { return reinterpret_cast<CadenceHpnfc*>(ctx)->InterruptThread(); },
+      this, "cadence-hpnfc-thread");
+  if (thread_status != thrd_success) {
+    zxlogf(ERROR, "%s: Failed to create interrupt thread\n", __FILE__);
+    return thrd_status_to_zx_status(thread_status);
+  }
+
+  thread_started_ = true;
+  return ZX_OK;
+}
+
+void CadenceHpnfc::StopInterruptThread() {
+  bool should_join = false;
+  {
+    fbl::AutoLock lock(&lock_);
+    should_join = thread_started_;
+  }
+
+  interrupt_.destroy();
+
+  if (should_join) {
+    thrd_join(interrupt_thread_, nullptr);
+  }
 }
 
 zx_status_t CadenceHpnfc::Init() {
   CmdStatusPtr::Get().ReadFrom(&mmio_).set_thread_status_select(0).WriteTo(&mmio_);
 
   IntrStatus::Get().ReadFrom(&mmio_).clear().WriteTo(&mmio_);
+  IntrEnable::Get()
+      .FromValue(0)
+      .set_interrupts_enable(1)
+      .set_sdma_error_enable(1)
+      .set_sdma_trigger_enable(1)
+      .set_cmd_ignored_enable(1)
+      .WriteTo(&mmio_);
 
   if (!WaitForThread())
     return ZX_ERR_TIMED_OUT;
@@ -183,13 +243,10 @@ zx_status_t CadenceHpnfc::Init() {
       .FromValue(0)
       .set_command_type(CmdReg0::kCommandTypePio)
       .set_thread_number(0)
-      .set_interrupt_enable(0)
       .set_volume_id(0)
       .set_command_code(CmdReg0::kCommandCodeReset)
       .WriteTo(&mmio_);
 
-  if (!WaitForThread())
-    return ZX_ERR_TIMED_OUT;
   if (!WaitForRBn())
     return ZX_ERR_TIMED_OUT;
 
@@ -365,15 +422,11 @@ zx_status_t CadenceHpnfc::DoGenericCommand(uint32_t instruction, uint8_t* out_da
   CmdReg3::Get().FromValue(0).set_last_sector_size(size).set_sector_count(1).WriteTo(&mmio_);
   CmdReg0::Get().FromValue(0).set_command_type(CmdReg0::kCommandTypeGeneric).WriteTo(&mmio_);
 
-  if (!WaitForSdmaTrigger())
-    return ZX_ERR_TIMED_OUT;
+  zx_status_t status = WaitForSdmaTrigger();
+  if (status != ZX_OK)
+    return status;
 
   CopyFromFifo(out_data, size);
-
-  if (!WaitForThread())
-    return ZX_ERR_TIMED_OUT;
-  if (!WaitForRBn())
-    return ZX_ERR_TIMED_OUT;
 
   return ZX_OK;
 }
@@ -401,8 +454,9 @@ zx_status_t CadenceHpnfc::RawNandReadPageHwecc(uint32_t nandpage, void* out_data
       .set_command_code(CmdReg0::kCommandCodeReadPage)
       .WriteTo(&mmio_);
 
-  if (!WaitForSdmaTrigger())
-    return ZX_ERR_TIMED_OUT;
+  zx_status_t status = WaitForSdmaTrigger();
+  if (status != ZX_OK)
+    return status;
 
   const uint32_t sdma_size = SdmaSize::Get().ReadFrom(&mmio_).reg_value();
   if (sdma_size != nand_info_.page_size + nand_info_.oob_size) {
@@ -433,11 +487,6 @@ zx_status_t CadenceHpnfc::RawNandReadPageHwecc(uint32_t nandpage, void* out_data
     return ZX_ERR_IO;
   }
 
-  if (!WaitForThread())
-    return ZX_ERR_TIMED_OUT;
-  if (!WaitForRBn())
-    return ZX_ERR_TIMED_OUT;
-
   return ZX_OK;
 }
 
@@ -463,8 +512,9 @@ zx_status_t CadenceHpnfc::RawNandWritePageHwecc(const void* data_buffer, size_t 
       .set_command_code(CmdReg0::kCommandCodeProgramPage)
       .WriteTo(&mmio_);
 
-  if (!WaitForSdmaTrigger())
-    return ZX_ERR_TIMED_OUT;
+  zx_status_t status = WaitForSdmaTrigger();
+  if (status != ZX_OK)
+    return status;
 
   const uint32_t sdma_size = SdmaSize::Get().ReadFrom(&mmio_).reg_value();
   if (SdmaSize::Get().ReadFrom(&mmio_).reg_value() != nand_info_.page_size + nand_info_.oob_size) {
@@ -482,11 +532,6 @@ zx_status_t CadenceHpnfc::RawNandWritePageHwecc(const void* data_buffer, size_t 
     return ZX_ERR_IO;
   }
 
-  if (!WaitForThread())
-    return ZX_ERR_TIMED_OUT;
-  if (!WaitForRBn())
-    return ZX_ERR_TIMED_OUT;
-
   return ZX_OK;
 }
 
@@ -502,14 +547,11 @@ zx_status_t CadenceHpnfc::RawNandEraseBlock(uint32_t nandpage) {
   CmdReg0::Get()
       .FromValue(0)
       .set_command_type(CmdReg0::kCommandTypePio)
+      .set_interrupt_enable(1)
       .set_command_code(CmdReg0::kCommandCodeEraseBlock)
       .WriteTo(&mmio_);
 
   if (!WaitForCommandComplete())
-    return ZX_ERR_TIMED_OUT;
-  if (!WaitForThread())
-    return ZX_ERR_TIMED_OUT;
-  if (!WaitForRBn())
     return ZX_ERR_TIMED_OUT;
 
   auto cmd_status = CmdStatus::Get().ReadFrom(&mmio_);
@@ -521,10 +563,51 @@ zx_status_t CadenceHpnfc::RawNandEraseBlock(uint32_t nandpage) {
   return ZX_OK;
 }
 
+int CadenceHpnfc::InterruptThread() {
+  for (;;) {
+    zx_status_t status = interrupt_.wait(nullptr);
+    if (status == ZX_ERR_CANCELED) {
+      break;
+    }
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: Interrupt wait failed: %d\n", __FILE__, status);
+      return thrd_error;
+    }
+
+    auto intr_status = IntrStatus::Get().ReadFrom(&mmio_).WriteTo(&mmio_);
+    auto thrd_status = TrdCompIntrStatus::Get().ReadFrom(&mmio_).WriteTo(&mmio_);
+
+    fbl::AutoLock lock(&lock_);
+
+    if (intr_status.sdma_trigger()) {
+      sdma_status_ = ZX_OK;
+      sync_completion_signal(&completion_);
+    } else if (intr_status.cmd_ignored()) {
+      sdma_status_ = ZX_ERR_NOT_SUPPORTED;
+      sync_completion_signal(&completion_);
+    } else if (intr_status.sdma_error()) {
+      sdma_status_ = ZX_ERR_IO;
+      sync_completion_signal(&completion_);
+    } else if (thrd_status.thread_complete(0)) {
+      cmd_complete_ = true;
+      sync_completion_signal(&completion_);
+    }
+  }
+
+  return thrd_success;
+}
+
 zx_status_t CadenceHpnfc::RawNandGetNandInfo(nand_info_t* out_info) {
   memcpy(out_info, &nand_info_, sizeof(nand_info_));
   return ZX_OK;
 }
+
+void CadenceHpnfc::DdkUnbind() {
+  StopInterruptThread();
+  DdkRemove();
+}
+
+void CadenceHpnfc::DdkRelease() { delete this; }
 
 }  // namespace rawnand
 

@@ -22,8 +22,11 @@ zx_status_t As370::NandInit() {
       {.base = as370::kNandFifoBase, .length = as370::kNandFifoSize},
   };
 
-  constexpr pbus_bti_t nand_btis[] = {
-      {.iommu_index = 0, .bti_id = BTI_NAND},
+  constexpr pbus_irq_t nand_irqs[] = {
+      {
+          .irq = as370::kNandIrq,
+          .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+      },
   };
 
   constexpr nand_config_t nand_config = {
@@ -98,8 +101,8 @@ zx_status_t As370::NandInit() {
   nand_dev.did = PDEV_DID_CADENCE_HPNFC;
   nand_dev.mmio_list = nand_mmios;
   nand_dev.mmio_count = countof(nand_mmios);
-  nand_dev.bti_list = nand_btis;
-  nand_dev.bti_count = countof(nand_btis);
+  nand_dev.irq_list = nand_irqs;
+  nand_dev.irq_count = countof(nand_irqs);
   nand_dev.metadata_list = nand_metadata;
   nand_dev.metadata_count = countof(nand_metadata);
 

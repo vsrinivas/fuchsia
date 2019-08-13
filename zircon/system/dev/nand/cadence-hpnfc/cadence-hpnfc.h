@@ -4,10 +4,15 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/rawnand.h>
+#include <fbl/mutex.h>
 #include <lib/mmio/mmio.h>
-#include <lib/zx/bti.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 namespace rawnand {
 
@@ -19,14 +24,15 @@ class CadenceHpnfc : public DeviceType,
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  CadenceHpnfc(zx_device_t* parent, ddk::MmioBuffer mmio, ddk::MmioBuffer fifo_mmio, zx::bti bti)
+  CadenceHpnfc(zx_device_t* parent, ddk::MmioBuffer mmio, ddk::MmioBuffer fifo_mmio,
+               zx::interrupt interrupt)
       : DeviceType(parent),
         mmio_(std::move(mmio)),
         fifo_mmio_(std::move(fifo_mmio)),
-        bti_(std::move(bti)) {}
+        interrupt_(std::move(interrupt)) {}
 
-  void DdkRelease() { delete this; }
-  void DdkUnbind() { DdkRemove(); }
+  void DdkUnbind();
+  void DdkRelease();
 
   zx_status_t RawNandReadPageHwecc(uint32_t nandpage, void* out_data_buffer, size_t data_size,
                                    size_t* out_data_actual, void* out_oob_buffer, size_t oob_size,
@@ -35,6 +41,10 @@ class CadenceHpnfc : public DeviceType,
                                     const void* oob_buffer, size_t oob_size, uint32_t nandpage);
   zx_status_t RawNandEraseBlock(uint32_t nandpage);
   zx_status_t RawNandGetNandInfo(nand_info_t* out_info);
+
+  // Visible for testing.
+  zx_status_t Bind();
+  zx_status_t StartInterruptThread();
 
  private:
   zx_status_t Init();
@@ -51,13 +61,23 @@ class CadenceHpnfc : public DeviceType,
 
   bool WaitForRBn();
   bool WaitForThread();
-  bool WaitForSdmaTrigger();
+  zx_status_t WaitForSdmaTrigger();
   bool WaitForCommandComplete();
+
+  void StopInterruptThread();
+  int InterruptThread();
 
   ddk::MmioBuffer mmio_;
   ddk::MmioBuffer fifo_mmio_;
-  zx::bti bti_;
+  zx::interrupt interrupt_;
   nand_info_t nand_info_;
+
+  fbl::Mutex lock_;
+  thrd_t interrupt_thread_;
+  sync_completion_t completion_;
+  bool thread_started_ TA_GUARDED(lock_) = false;
+  zx_status_t sdma_status_ TA_GUARDED(lock_) = ZX_ERR_BAD_STATE;
+  bool cmd_complete_ TA_GUARDED(lock_) = false;
 };
 
 }  // namespace rawnand

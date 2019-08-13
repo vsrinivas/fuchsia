@@ -15,7 +15,35 @@ driver("cadence-hpnfc") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
+  ]
+}
+
+test("cadence-hpnfc-test") {
+  testonly = "true"
+  output_name = "cadence-hpnfc-test"
+  sources = [
+    "cadence-hpnfc-test.cc",
+    "cadence-hpnfc.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.rawnand",
+    "$zx/system/dev/lib/as370",
+    "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

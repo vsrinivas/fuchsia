@@ -18,7 +18,6 @@ enum {
   BTI_BOARD,
   BTI_USB,
   BTI_AUDIO_OUT,
-  BTI_NAND,
 };
 
 class As370 : public ddk::Device<As370> {

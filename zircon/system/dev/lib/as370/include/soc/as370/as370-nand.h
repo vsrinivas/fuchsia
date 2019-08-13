@@ -16,4 +16,6 @@ constexpr uint32_t kNandSize = fbl::round_up<uint32_t, uint32_t>(0x2084, PAGE_SI
 constexpr uint32_t kNandFifoBase = 0xf7f0'0000;
 constexpr uint32_t kNandFifoSize = PAGE_SIZE;
 
+constexpr uint32_t kNandIrq = 20 + 32;
+
 }  // namespace as370
