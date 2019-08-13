@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 use {
     crate::registry::base::{Command, Notifier, State},
+    crate::registry::service_context::ServiceContext,
     crate::switchboard::base::{BrightnessInfo, SettingRequest, SettingResponse, SettingType},
+    failure::format_err,
     fuchsia_async as fasync,
     futures::StreamExt,
     std::sync::{Arc, RwLock},
@@ -14,7 +16,7 @@ use {
 /// TODO(ejia): store persistently
 /// TODO(ejia): replace with new service
 pub fn spawn_display_controller(
-    brightness_service: fidl_fuchsia_device_display::ManagerProxy,
+    service_context_handle: Arc<RwLock<ServiceContext>>,
 ) -> futures::channel::mpsc::UnboundedSender<Command> {
     let (display_handler_tx, mut display_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
@@ -33,6 +35,17 @@ pub fn spawn_display_controller(
                     }
                 },
                 Command::HandleRequest(request, responder) => {
+                    let service_result = service_context_handle
+                        .read()
+                        .unwrap()
+                        .connect::<fidl_fuchsia_device_display::ManagerMarker>();
+                    if service_result.is_err() {
+                        responder.send(Err(format_err!("get brightness service failed"))).ok();
+                        return;
+                    }
+
+                    let brightness_service = service_result.unwrap();
+
                     #[allow(unreachable_patterns)]
                     match request {
                         SettingRequest::SetBrightness(brightness_value) => {

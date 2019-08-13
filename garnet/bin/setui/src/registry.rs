@@ -7,6 +7,8 @@
 /// blocks used with the Registry.
 pub mod base;
 
+pub mod service_context;
+
 /// This mod provides a concrete implementation of the Registry trait. It should
 /// be shared as the trait beyond its construction.
 pub mod registry_impl;

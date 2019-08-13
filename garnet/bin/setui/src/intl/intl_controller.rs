@@ -3,27 +3,27 @@
 // found in the LICENSE file.
 
 use crate::registry::base::Command;
+use crate::registry::service_context::ServiceContext;
 use crate::switchboard::base::{
     IntlInfo, SettingRequest, SettingRequestResponder, SettingResponse,
 };
 use failure::{format_err, Error};
-use fidl_fuchsia_timezone::*;
 use fuchsia_async as fasync;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use std::sync::{Arc, RwLock};
 
 pub struct IntlController {
-    proxy: TimezoneProxy,
+    service_context_handle: Arc<RwLock<ServiceContext>>,
 }
 
 /// Controller for processing switchboard messages surrounding the Intl
 /// protocol, backed by a number of services, including TimeZone.
 impl IntlController {
     pub fn spawn(
-        proxy: TimezoneProxy,
+        service_context_handle: Arc<RwLock<ServiceContext>>,
     ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, Error> {
-        let handle = Arc::new(RwLock::new(Self { proxy: proxy }));
+        let handle = Arc::new(RwLock::new(Self { service_context_handle: service_context_handle }));
 
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
 
@@ -61,7 +61,19 @@ impl IntlController {
     }
 
     fn get(&self, responder: SettingRequestResponder) {
-        let proxy = self.proxy.clone();
+        let service_result = self
+            .service_context_handle
+            .write()
+            .unwrap()
+            .connect::<fidl_fuchsia_timezone::TimezoneMarker>();
+
+        if service_result.is_err() {
+            responder.send(Err(format_err!("get time zone failed"))).ok();
+            return;
+        }
+
+        let proxy = service_result.unwrap();
+
         fasync::spawn(
             async move {
                 if let Ok(id) = proxy.get_timezone_id().await {
@@ -78,7 +90,19 @@ impl IntlController {
     }
 
     fn set_time_zone(&self, time_zone_id: String, responder: SettingRequestResponder) {
-        let proxy = self.proxy.clone();
+        let service_result = self
+            .service_context_handle
+            .write()
+            .unwrap()
+            .connect::<fidl_fuchsia_timezone::TimezoneMarker>();;
+
+        if service_result.is_err() {
+            responder.send(Err(format_err!("get time zone failed"))).ok();
+            return;
+        }
+
+        let proxy = service_result.unwrap();
+
         fasync::spawn(
             async move {
                 if let Ok(true) = proxy.set_timezone(time_zone_id.as_str()).await {

@@ -5,6 +5,7 @@
 use failure::Error;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
+use std::collections::HashSet;
 
 pub type SettingResponseResult = Result<Option<SettingResponse>, Error>;
 pub type SettingRequestResponder = Sender<SettingResponseResult>;
@@ -16,6 +17,16 @@ pub enum SettingType {
     Unknown,
     Display,
     Intl,
+}
+
+/// Returns all known setting types. New additions to SettingType should also
+/// be inserted here.
+pub fn get_all_setting_types() -> HashSet<SettingType> {
+    let mut set = HashSet::new();
+    set.insert(SettingType::Display);
+    set.insert(SettingType::Intl);
+
+    set
 }
 
 /// The possible requests that can be made on a setting. The sink will expect a

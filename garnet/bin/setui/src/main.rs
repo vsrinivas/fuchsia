@@ -15,20 +15,21 @@ use {
     crate::mutation::*,
     crate::registry::base::Registry,
     crate::registry::registry_impl::RegistryImpl,
+    crate::registry::service_context::ServiceContext,
     crate::setting_adapter::{MutationHandler, SettingAdapter},
-    crate::switchboard::base::SettingAction,
+    crate::switchboard::base::{get_all_setting_types, SettingAction, SettingType},
     crate::switchboard::switchboard_impl::SwitchboardImpl,
-    failure::{Error, ResultExt},
+    failure::Error,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_setui::*,
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
-    fuchsia_component::server::{ServiceFs, ServiceObj},
+    fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::StreamExt,
     log::error,
     setui_handler::SetUIHandler,
-    std::sync::Arc,
+    std::collections::HashSet,
+    std::sync::{Arc, RwLock},
     system_handler::SystemStreamHandler,
 };
 
@@ -51,23 +52,27 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new()?;
 
-    let brightness_service =
-        connect_to_service::<fidl_fuchsia_device_display::ManagerMarker>().unwrap();
+    let service_context = Arc::new(RwLock::new(ServiceContext::new(None)));
 
-    let timezone_service = connect_to_service::<fidl_fuchsia_timezone::TimezoneMarker>()
-        .context("Failed to connect to timezone service")?;
+    let mut fs = ServiceFs::new();
 
-    let mut fs = create_fidl_service(brightness_service, timezone_service);
+    create_fidl_service(fs.dir("svc"), get_all_setting_types(), service_context);
 
     fs.take_and_serve_directory_handle()?;
     let () = executor.run_singlethreaded(fs.collect());
     Ok(())
 }
 
+/// Brings up the settings service fidl environment.
+///
+/// This method generates the necessary infrastructure to support the settings
+/// service (switchboard, registry, etc.) and brings up the components necessary
+/// to support the components specified in the components HashSet.
 fn create_fidl_service<'a>(
-    brightness_service: fidl_fuchsia_device_display::ManagerProxy,
-    time_zone_service: fidl_fuchsia_timezone::TimezoneProxy,
-) -> ServiceFs<ServiceObj<'a, ()>> {
+    mut service_dir: ServiceFsDir<ServiceObj<'a, ()>>,
+    components: HashSet<switchboard::base::SettingType>,
+    service_context_handle: Arc<RwLock<ServiceContext>>,
+) {
     let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
 
     // Creates switchboard, handed to interface implementations to send messages
@@ -77,38 +82,19 @@ fn create_fidl_service<'a>(
     // Creates registry, used to register handlers for setting types.
     let registry_handle = RegistryImpl::create(event_tx, action_rx);
 
-    registry_handle
-        .write()
-        .unwrap()
-        .register(
-            switchboard::base::SettingType::Display,
-            spawn_display_controller(brightness_service),
-        )
-        .unwrap();
-
-    registry_handle
-        .write()
-        .unwrap()
-        .register(
-            switchboard::base::SettingType::Intl,
-            IntlController::spawn(time_zone_service).unwrap(),
-        )
-        .unwrap();
-
-    let mut fs = ServiceFs::new();
     let handler = Arc::new(SetUIHandler::new());
     let system_handler = Arc::new(SystemStreamHandler::new(handler.clone()));
 
     // TODO(SU-210): Remove once other adapters are ready.
     handler.register_adapter(Box::new(SettingAdapter::new(
-        SettingType::Unknown,
+        fidl_fuchsia_setui::SettingType::Unknown,
         Box::new(DefaultStore::new("/data/unknown.dat".to_string(), Box::new(JsonCodec::new()))),
         MutationHandler { process: &process_string_mutation, check_sync: None },
         None,
     )));
 
     handler.register_adapter(Box::new(SettingAdapter::new(
-        SettingType::Account,
+        fidl_fuchsia_setui::SettingType::Account,
         Box::new(DefaultStore::new("/data/account.dat".to_string(), Box::new(JsonCodec::new()))),
         MutationHandler {
             process: &process_account_mutation,
@@ -118,45 +104,71 @@ fn create_fidl_service<'a>(
     )));
 
     let handler_clone = handler.clone();
-    fs.dir("svc").add_fidl_service(move |stream: SetUiServiceRequestStream| {
+
+    service_dir.add_fidl_service(move |stream: SetUiServiceRequestStream| {
         let handler_clone = handler_clone.clone();
 
         fx_log_info!("Connecting to setui_service");
         fasync::spawn(async move {
-            handler_clone.handle_stream(stream).await
+            handler_clone
+                .handle_stream(stream)
+                .await
                 .unwrap_or_else(|e| error!("Failed to spawn {:?}", e))
         });
     });
 
     // Register for the new settings APIs as well.
-    fs.dir("svc").add_fidl_service(move |stream: SystemRequestStream| {
+
+    service_dir.add_fidl_service(move |stream: SystemRequestStream| {
         let system_handler_clone = system_handler.clone();
         fx_log_info!("Connecting to System");
         fasync::spawn(async move {
-            system_handler_clone.handle_system_stream(stream).await
+            system_handler_clone
+                .handle_system_stream(stream)
+                .await
                 .unwrap_or_else(|e| error!("Failed to spawn {:?}", e))
         });
     });
 
-    {
+    if components.contains(&SettingType::Display) {
+        registry_handle
+            .write()
+            .unwrap()
+            .register(
+                switchboard::base::SettingType::Display,
+                spawn_display_controller(service_context_handle.clone()),
+            )
+            .unwrap();
+
         let switchboard_handle_clone = switchboard_handle.clone();
-        fs.dir("svc").add_fidl_service(move |stream: DisplayRequestStream| {
+        service_dir.add_fidl_service(move |stream: DisplayRequestStream| {
             spawn_display_fidl_handler(switchboard_handle_clone.clone(), stream);
         });
     }
-    {
+
+    if components.contains(&SettingType::Intl) {
+        registry_handle
+            .write()
+            .unwrap()
+            .register(
+                switchboard::base::SettingType::Intl,
+                IntlController::spawn(service_context_handle.clone()).unwrap(),
+            )
+            .unwrap();
+
         let switchboard_handle_clone = switchboard_handle.clone();
-        fs.dir("svc").add_fidl_service(move |stream: IntlRequestStream| {
+        service_dir.add_fidl_service(move |stream: IntlRequestStream| {
             IntlFidlHandler::spawn(switchboard_handle_clone.clone(), stream);
         });
     }
-
-    fs
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use failure::format_err;
+    use fidl::endpoints::{ServerEnd, ServiceMarker};
+    use fuchsia_zircon as zx;
     use futures::prelude::*;
 
     const ENV_NAME: &str = "settings_service_test_environment";
@@ -175,54 +187,58 @@ mod tests {
         const STARTING_BRIGHTNESS: f32 = 0.5;
         const CHANGED_BRIGHTNESS: f32 = 0.8;
 
-        let (manager_proxy, mut manager_stream) = fidl::endpoints::create_proxy_and_stream::<
-            fidl_fuchsia_device_display::ManagerMarker,
-        >()
-        .unwrap();
+        let stored_brightness_value: Arc<RwLock<f64>> =
+            Arc::new(RwLock::new(STARTING_BRIGHTNESS.into()));
 
-        fasync::spawn(async move {
-            let mut stored_brightness_value: f64 = STARTING_BRIGHTNESS.into();
-            while let Some(req) = manager_stream.try_next().await.unwrap() {
-                #[allow(unreachable_patterns)]
-                match req {
-                    fidl_fuchsia_device_display::ManagerRequest::GetBrightness { responder } => {
-                        responder.send(true, stored_brightness_value.into()).unwrap();
-                    }
-                    fidl_fuchsia_device_display::ManagerRequest::SetBrightness {
-                        brightness,
-                        responder,
-                    } => {
-                        stored_brightness_value = brightness;
-                        responder.send(true).unwrap();
+        let stored_brightness_value_clone = stored_brightness_value.clone();
+
+        let service_gen = move |service_name: &str, channel: zx::Channel| {
+            if service_name != fidl_fuchsia_device_display::ManagerMarker::NAME {
+                return Err(format_err!("unsupported!"));
+            }
+
+            let mut manager_stream =
+                ServerEnd::<fidl_fuchsia_device_display::ManagerMarker>::new(channel)
+                    .into_stream()?;
+
+            let stored_brightness_value_clone = stored_brightness_value_clone.clone();
+            fasync::spawn(async move {
+                while let Some(req) = manager_stream.try_next().await.unwrap() {
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        fidl_fuchsia_device_display::ManagerRequest::GetBrightness {
+                            responder,
+                        } => {
+                            responder
+                                .send(true, (*stored_brightness_value_clone.read().unwrap()).into())
+                                .unwrap();
+                        }
+                        fidl_fuchsia_device_display::ManagerRequest::SetBrightness {
+                            brightness,
+                            responder,
+                        } => {
+                            *stored_brightness_value_clone.write().unwrap() = brightness;
+                            responder.send(true).unwrap();
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
+            Ok(())
+        };
 
-        // Creates switchboard, handed to interface implementations to send messages
-        // to handlers.
-        let (switchboard_handle, event_tx) = SwitchboardImpl::create(action_tx);
+        let mut fs = ServiceFs::new();
 
-        // Creates registry, used to register handlers for setting types.
-        let registry_handle = RegistryImpl::create(event_tx, action_rx);
+        create_fidl_service(
+            fs.root_dir(),
+            [SettingType::Display].iter().cloned().collect(),
+            Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        );
 
-        registry_handle
-            .write()
-            .unwrap()
-            .register(
-                switchboard::base::SettingType::Display,
-                spawn_display_controller(manager_proxy),
-            )
-            .unwrap();
+        let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+        fasync::spawn(fs.collect());
 
-        let (display_proxy, display_stream) =
-            fidl::endpoints::create_proxy_and_stream::<DisplayMarker>().unwrap();
-
-        fasync::spawn(async move {
-            spawn_display_fidl_handler(switchboard_handle.clone(), display_stream);
-        });
+        let display_proxy = env.connect_to_service::<DisplayMarker>().unwrap();
 
         let settings =
             display_proxy.watch().await.expect("watch completed").expect("watch successful");
@@ -243,69 +259,48 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_intl() {
-        const INITIAL_TIME_ZONE: &str = "PDT";
+        const INITIAL_TIME_ZONE: &'static str = "PDT";
 
-        let (timezone_proxy, mut timezone_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_timezone::TimezoneMarker>()
-                .unwrap();
-
-        fasync::spawn(async move {
-            let mut stored_timezone = INITIAL_TIME_ZONE.to_string();
-            while let Some(req) = timezone_stream.try_next().await.unwrap() {
-                #[allow(unreachable_patterns)]
-                match req {
-                    fidl_fuchsia_timezone::TimezoneRequest::GetTimezoneId { responder } => {
-                        responder.send(&stored_timezone).unwrap();
-                    }
-                    fidl_fuchsia_timezone::TimezoneRequest::SetTimezone {
-                        timezone_id,
-                        responder,
-                    } => {
-                        stored_timezone = timezone_id;
-                        responder.send(true).unwrap();
-                    }
-                    _ => {}
-                }
+        let service_gen = |service_name: &str, channel: zx::Channel| {
+            if service_name != fidl_fuchsia_timezone::TimezoneMarker::NAME {
+                return Err(format_err!("unsupported!"));
             }
-        });
 
-        let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
+            let mut timezone_stream =
+                ServerEnd::<fidl_fuchsia_timezone::TimezoneMarker>::new(channel).into_stream()?;
 
-        // Creates switchboard, handed to interface implementations to send messages
-        // to handlers.
-        let (switchboard_handle, event_tx) = SwitchboardImpl::create(action_tx);
-
-        // Creates registry, used to register handlers for setting types.
-        let registry_handle = RegistryImpl::create(event_tx, action_rx);
-
-        registry_handle
-            .write()
-            .unwrap()
-            .register(
-                switchboard::base::SettingType::Intl,
-                IntlController::spawn(timezone_proxy).unwrap(),
-            )
-            .unwrap();
+            fasync::spawn(async move {
+                let mut stored_timezone = INITIAL_TIME_ZONE.to_string();
+                while let Some(req) = timezone_stream.try_next().await.unwrap() {
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        fidl_fuchsia_timezone::TimezoneRequest::GetTimezoneId { responder } => {
+                            responder.send(&stored_timezone).unwrap();
+                        }
+                        fidl_fuchsia_timezone::TimezoneRequest::SetTimezone {
+                            timezone_id,
+                            responder,
+                        } => {
+                            stored_timezone = timezone_id;
+                            responder.send(true).unwrap();
+                        }
+                        _ => {}
+                    }
+                }
+            });
+            Ok(())
+        };
 
         let mut fs = ServiceFs::new();
 
-        fs.add_fidl_service(Services::Intl);
+        create_fidl_service(
+            fs.root_dir(),
+            [SettingType::Intl].iter().cloned().collect(),
+            Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        );
 
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-
-        fasync::spawn(fs.for_each_concurrent(None, move |connection| {
-            let switchboard_handle = switchboard_handle.clone();
-            async move {
-                match connection {
-                    Services::Intl(stream) => {
-                        IntlFidlHandler::spawn(switchboard_handle.clone(), stream);
-                    }
-                    _ => {
-                        panic!("Unexpected service");
-                    }
-                }
-            }
-        }));
+        fasync::spawn(fs.collect());
 
         let intl_service = env.connect_to_service::<IntlMarker>().unwrap();
         let settings =
