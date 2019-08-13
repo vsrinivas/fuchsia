@@ -5,10 +5,10 @@
 #include "test_library.h"
 
 #define BORINGSSL_NO_CXX
+#include <regex>
+
 #include <openssl/sha.h>
 #include <unittest/unittest.h>
-
-#include <regex>
 
 namespace {
 
@@ -94,14 +94,39 @@ protocol b {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
+  EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(1, errors.size());
+
+  EXPECT_EQ(1, errors.size());
+
+  // TODO(FLK-435): Print some basic diagnostic info if this test flakes, so that we can try to
+  // track down the root cause.
+  if (errors.size() != 1) {
+    fprintf(stderr, "=== BEGIN DEBUG INFO FOR FLK-435 ===\n");
+
+    auto b = library.LookupProtocol("b");
+
+    fprintf(stderr, "b->methods.size() = %zu\n", b->methods.size());
+
+    for (size_t i = 0; i < b->methods.size(); i++) {
+      const auto& method = b->methods.at(i);
+      fprintf(stderr, "[%zu] name=%s ordinal32=%x, ordinal64=%lx\n", i,
+              std::string(method.name.data()).c_str(), method.generated_ordinal32->value,
+              method.generated_ordinal64->value);
+    }
+
+    fprintf(stderr, "errors.size() = %zu\n", errors.size());
+    for (size_t i = 0; i < errors.size(); i++) {
+      fprintf(stderr, "error[%zu] = %s\n", i, errors.at(i).c_str());
+    }
+
+    fprintf(stderr, "=== END DEBUG INFO FOR FLK-435 ===\n");
+  }
 
   // The FTP requires the error message as follows
   const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
   std::smatch sm;
-  ASSERT_TRUE(std::regex_search(errors[0], sm, pattern),
+  EXPECT_TRUE(std::regex_search(errors[0], sm, pattern),
               ("Selector pattern not found in error: " + errors[0]).c_str());
 
   END_TEST;
