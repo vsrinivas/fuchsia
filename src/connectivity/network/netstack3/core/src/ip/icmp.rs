@@ -4,10 +4,8 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
-use std::mem;
-
 use byteorder::{ByteOrder, NetworkEndian};
-use log::trace;
+use log::{debug, trace};
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::MulticastAddress;
 use packet::{BufferMut, Serializer, TruncateDirection, TruncatingSerializer};
@@ -230,17 +228,14 @@ pub(crate) fn receive_icmpv4_packet<B: BufferMut, C: Icmpv4Context<B> + PmtuHand
 
     match packet {
         Icmpv4Packet::EchoRequest(echo_request) => {
-            let req = *echo_request.message();
-            let code = echo_request.code();
-            // drop packet so we can re-use the underlying buffer
-            mem::drop(echo_request);
-
             ctx.increment_counter("receive_icmpv4_packet::echo_request");
 
+            let req = *echo_request.message();
+            let code = echo_request.code();
             let (local_ip, remote_ip) = (dst_ip, src_ip);
             // TODO(joshlf): Do something if send_ip_packet returns an
             // error?
-            ctx.send_icmp_reply(device, remote_ip, dst_ip, |src_ip| {
+            ctx.send_icmp_reply(device, remote_ip, local_ip, |src_ip| {
                 buffer.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                     src_ip,
                     remote_ip,
@@ -256,15 +251,53 @@ pub(crate) fn receive_icmpv4_packet<B: BufferMut, C: Icmpv4Context<B> + PmtuHand
             let seq = echo_reply.message().seq();
             receive_icmp_echo_reply::<_, _, Icmpv4State, _>(ctx, src_ip, dst_ip, id, seq, buffer);
         }
-        Icmpv4Packet::TimestampRequest(_timestamp_request) => {
+        Icmpv4Packet::TimestampRequest(timestamp_request) => {
+            ctx.increment_counter("receive_icmpv4_packet::timestamp_request");
             if StateContext::<(), Icmpv4State>::get_state(ctx, ()).send_timestamp_reply {
-                log_unimplemented!(
-                    (),
-                    "ip::icmp::receive_icmpv4_packet: Not implemented for sending Timestamp Reply"
-                );
+                trace!("receive_icmpv4_packet: Responding to Timestamp Request message");
+                // We're supposed to respond with the time that we processed
+                // this message as measured in milliseconds since midnight UT.
+                // However, that would require that we knew the local time zone
+                // and had a way to convert `InstantContext::Instant` to a `u32`
+                // value. We can't do that, and probably don't want to introduce
+                // all of the machinery necessary just to support this one use
+                // case. Luckily, RFC 792 page 17 provides us with an out:
+                //
+                //   If the time is not available in miliseconds [sic] or cannot
+                //   be provided with respect to midnight UT then any time can
+                //   be inserted in a timestamp provided the high order bit of
+                //   the timestamp is also set to indicate this non-standard
+                //   value.
+                //
+                // Thus, we provide a zero timestamp with the high order bit
+                // set.
+                const NOW: u32 = 0x80000000;
+                let reply = timestamp_request.message().reply(NOW, NOW);
+                let (local_ip, remote_ip) = (dst_ip, src_ip);
+                // We don't actually want to use any of the _contents_ of the
+                // buffer, but we would like to reuse it as scratch space.
+                // Eventually, `IcmpPacketBuilder` will implement
+                // `InnerPacketBuilder` for messages without bodies, but until
+                // that happens, we need to give it an empty buffer.
+                buffer.shrink_front_to(0);
+                // TODO(joshlf): Do something if send_icmp_reply returns an
+                // error?
+                ctx.send_icmp_reply(device, remote_ip, local_ip, |src_ip| {
+                    buffer.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                        src_ip,
+                        remote_ip,
+                        IcmpUnusedCode,
+                        reply,
+                    ))
+                });
             } else {
-                trace!("receive_icmpv4_packet: Silently ignoring Timestamp message");
+                trace!("receive_icmpv4_packet: Silently ignoring Timestamp Request message");
             }
+        }
+        Icmpv4Packet::TimestampReply(_) => {
+            // TODO(joshlf): Support sending Timestamp Requests and receiving
+            // Timestamp Replies?
+            debug!("receive_icmpv4_packet: Received unsolicited Timestamp Reply message");
         }
         Icmpv4Packet::DestUnreachable(dest_unreachable) => {
             ctx.increment_counter("receive_icmpv4_packet::dest_unreachable");
@@ -353,16 +386,13 @@ pub(crate) fn receive_icmpv6_packet<
 
     match packet {
         Icmpv6Packet::EchoRequest(echo_request) => {
-            let req = *echo_request.message();
-            let code = echo_request.code();
-            // Drop packet so we can re-use the underlying buffer.
-            mem::drop(echo_request);
-
             ctx.increment_counter("receive_icmpv6_packet::echo_request");
 
+            let req = *echo_request.message();
+            let code = echo_request.code();
             let (local_ip, remote_ip) = (dst_ip, src_ip);
             // TODO(joshlf): Do something if send_ip_packet returns an error?
-            ctx.send_icmp_reply(device, remote_ip, dst_ip, |src_ip| {
+            ctx.send_icmp_reply(device, remote_ip, local_ip, |src_ip| {
                 buffer.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                     src_ip,
                     remote_ip,
@@ -1174,7 +1204,8 @@ mod tests {
         DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
     };
     use crate::wire::icmp::{
-        IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode, MessageBody,
+        IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode, Icmpv4TimestampRequest,
+        MessageBody,
     };
     #[cfg(feature = "udp-icmp-port-unreachable")]
     use crate::wire::udp::UdpPacketBuilder;
@@ -1217,6 +1248,8 @@ mod tests {
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
             .build::<DummyEventDispatcher>();
+        // currently only used by test_receive_timestamp
+        ctx.state_mut().ip.icmp.v4.send_timestamp_reply = true;
         // currently only used by test_ttl_exceeded
         ctx.state_mut().ip.v4.forward = true;
         receive_ip_packet::<_, _, Ipv4>(
@@ -1270,6 +1303,32 @@ mod tests {
             req.reply(),
             IcmpUnusedCode,
             |packet| assert_eq!(packet.original_packet().bytes(), req_body),
+        );
+    }
+
+    #[test]
+    fn test_receive_timestamp() {
+        crate::testutil::set_logger_for_test();
+
+        let req = Icmpv4TimestampRequest::new(1, 2, 3);
+        let mut buffer = Buf::new(vec![], ..)
+            .encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                DUMMY_CONFIG_V4.remote_ip,
+                DUMMY_CONFIG_V4.local_ip,
+                IcmpUnusedCode,
+                req,
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+        test_receive_ip_packet(
+            buffer.as_mut(),
+            DUMMY_CONFIG_V4.local_ip,
+            64,
+            IpProto::Icmp,
+            &["receive_icmpv4_packet::timestamp_request", "send_ip_packet"],
+            req.reply(0x80000000, 0x80000000),
+            IcmpUnusedCode,
+            |_| {},
         );
     }
 
