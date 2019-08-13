@@ -51,6 +51,9 @@ fn spawn_log_error(fut: impl Future<Output = Result<()>> + 'static) {
 
 #[fasync::run_singlethreaded]
 async fn main() {
+    fuchsia_syslog::init_with_tags(&["mediasession"]).expect("Initializing syslogger");
+    fuchsia_syslog::fx_log_info!("Initializing Fuchsia Media Session Service");
+
     let session_list = Ref::default();
     let active_session_queue = Ref::default();
     let active_session_sink = mpmc::Sender::default();

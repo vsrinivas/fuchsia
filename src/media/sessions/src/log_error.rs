@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_syslog::fx_log_info;
 use std::fmt::Debug;
 
 #[macro_export]
@@ -10,7 +11,7 @@ macro_rules! trylog {
         match $elem {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("{:?}", e);
+                fx_log_info!("{:?}", e);
                 return;
             }
         }
@@ -23,7 +24,7 @@ macro_rules! trylogbreak {
         match $elem {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("{:?}", e);
+                fx_log_info!("{:?}", e);
                 break;
             }
         }
@@ -31,5 +32,5 @@ macro_rules! trylogbreak {
 }
 
 pub fn log_error_discard_result<T, E: Debug>(r: Result<T, E>) {
-    r.map(|_| ()).unwrap_or_else(|e| eprintln!("{:?}", e))
+    r.map(|_| ()).unwrap_or_else(|e| fx_log_info!("{:?}", e))
 }

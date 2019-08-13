@@ -14,6 +14,7 @@ use fidl::encoding::Decodable;
 use fidl::endpoints::{create_endpoints, ServerEnd};
 use fidl_fuchsia_media_sessions as sesh;
 use fidl_fuchsia_media_sessions2 as sesh2;
+use fuchsia_syslog::fx_log_info;
 use futures::{channel::mpsc, future, prelude::*};
 use std::collections::HashMap;
 
@@ -139,8 +140,8 @@ async fn migrate_session_to_player(
                     }
                     sesh2::PlayerRequest::WatchInfoChange { responder } => {
                         if hanging_get.is_some() {
-                            fuchsia_syslog::fx_log_info!(
-                                tag: "mediasession",
+                            fx_log_info!(
+                                tag: "migrator",
                                 "Illegal concurrent watch");
                             return Ok(());
                         }

@@ -13,6 +13,7 @@ use crate::{
     spawn_log_error, Ref, Result,
 };
 use fidl_fuchsia_media_sessions2::*;
+use fuchsia_syslog::fx_log_info;
 use futures::{self, channel::mpsc, prelude::*, stream::FuturesUnordered};
 use rand::prelude::*;
 use std::collections::hash_map::*;
@@ -121,8 +122,8 @@ impl Discovery {
                             }
                         }
                         Err(e) => {
-                            fuchsia_syslog::fx_log_info!(
-                                tag: "mediasession",
+                            fx_log_info!(
+                                tag: "discovery",
                                 "Disconnecting player: {:#?}", e);
                             if let Some(mut player) = self.players.lock().await.remove(&id) {
                                 player.player.disconnect_proxied_clients().await;
