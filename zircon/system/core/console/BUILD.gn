@@ -13,6 +13,7 @@ executable("console") {
     "$zx/system/fidl/fuchsia-boot:llcpp",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/fs-pty",
     "$zx/system/ulib/svc",
   ]
 }
@@ -20,12 +21,10 @@ executable("console") {
 source_set("common") {
   visibility = [ ":*" ]
   sources = [
-    "connection.h",
-    "console.h",
-    "fifo.h",
-    "connection.cc",
     "console.cc",
+    "console.h",
     "fifo.cc",
+    "fifo.h",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-pty:llcpp",

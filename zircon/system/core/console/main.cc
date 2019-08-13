@@ -4,69 +4,16 @@
 
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/vfs.h>
+#include <lib/fs-pty/service.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/resource.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include "connection.h"
 #include "console.h"
 
 namespace {
-
-// This is roughly the same as fs::Service, but GetNodeInfo returns a TTY type
-class VfsTty : public fs::Vnode {
- public:
-  explicit VfsTty(fbl::RefPtr<Console> console) : console_(console) {}
-
-  ~VfsTty() override = default;
-
-  VfsTty(const VfsTty&) = delete;
-  VfsTty(VfsTty&&) = delete;
-  VfsTty& operator=(const VfsTty&) = delete;
-  VfsTty& operator=(VfsTty&&) = delete;
-
-  // |Vnode| implementation:
-  zx_status_t ValidateFlags(uint32_t flags) final { return ZX_OK; }
-
-  zx_status_t Getattr(vnattr_t* attr) final {
-    memset(attr, 0, sizeof(vnattr_t));
-    attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-    attr->nlink = 1;
-    return ZX_OK;
-  }
-
-  zx_status_t Serve(fs::Vfs* vfs, zx::channel svc_request, uint32_t flags) final {
-    return vfs->ServeConnection(std::make_unique<Connection>(console_, vfs, fbl::WrapRefPtr(this),
-                                                             std::move(svc_request), flags));
-  }
-
-  bool IsDirectory() const final { return false; }
-
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final {
-    ::llcpp::fuchsia::io::NodeInfo llcpp_info;
-    zx_status_t status = console_->GetNodeInfo(&llcpp_info);
-    if (status != ZX_OK) {
-      return status;
-    }
-    info->tag = static_cast<fidl_union_tag_t>(::llcpp::fuchsia::io::NodeInfo::Tag::kTty);
-    info->tty.event = llcpp_info.mutable_tty().event.release();
-    return ZX_OK;
-  }
-
-  zx_status_t Read(void* data, size_t len, size_t offset, size_t* out_actual) final {
-    return console_->Read(data, len, offset, out_actual);
-  }
-
-  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final {
-    return console_->Write(data, len, offset, out_actual);
-  }
-
- private:
-  fbl::RefPtr<Console> console_;
-};
 
 zx::resource GetRootResource() {
   zx::channel local, remote;
@@ -135,8 +82,10 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
+  using Vnode =
+      fs_pty::TtyService<fs_pty::SimpleConsoleOps<fbl::RefPtr<Console>>, fbl::RefPtr<Console>>;
   outgoing.svc_dir()->AddEntry("fuchsia.hardware.pty.Device",
-                               fbl::AdoptRef(new VfsTty(std::move(console))));
+                               fbl::AdoptRef(new Vnode(std::move(console))));
 
   status = loop.Run();
   ZX_ASSERT(status == ZX_OK);

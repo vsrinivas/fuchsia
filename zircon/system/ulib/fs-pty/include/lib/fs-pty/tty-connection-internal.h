@@ -2,26 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FS_PTY_TTY_CONNECTION_INTERNAL_H_
+#define LIB_FS_PTY_TTY_CONNECTION_INTERNAL_H_
 
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/fit/function.h>
 
-#include <fbl/ref_ptr.h>
 #include <fs/connection.h>
+#include <fs/vfs.h>
 
-#include "console.h"
+namespace fs_pty::internal {
 
-class Connection final : public ::llcpp::fuchsia::hardware::pty::Device::Interface,
-                         public fs::Connection {
+// This class exists so that we don't need to templatize all of the
+// implementation, just the ctor.  The extra argument to the ctor is discarded.
+class TtyConnectionImpl : public ::llcpp::fuchsia::hardware::pty::Device::Interface,
+                          public fs::Connection {
  public:
-  Connection(fbl::RefPtr<Console> console, fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
-             zx::channel channel, uint32_t flags)
-      : fs::Connection(vfs, std::move(vnode), std::move(channel), flags),
-        console_(std::move(console)) {}
+  TtyConnectionImpl(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel, uint32_t flags)
+      : fs::Connection(vfs, std::move(vnode), std::move(channel), flags) {}
 
-  ~Connection() final = default;
+  ~TtyConnectionImpl() override = default;
 
   // From fs::Connection
   zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final;
@@ -59,7 +58,18 @@ class Connection final : public ::llcpp::fuchsia::hardware::pty::Device::Interfa
                SetAttrCompleter::Sync completer) final;
   void Ioctl(uint32_t opcode, uint64_t max_out, fidl::VectorView<zx::handle> handles,
              fidl::VectorView<uint8_t> in, IoctlCompleter::Sync completer) final;
-
- private:
-  const fbl::RefPtr<Console> console_;
 };
+
+template <typename Console>
+class TtyConnection final : public TtyConnectionImpl {
+ public:
+  TtyConnection(Console, fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
+                uint32_t flags)
+      : TtyConnectionImpl(vfs, std::move(vnode), std::move(channel), flags) {}
+
+  ~TtyConnection() override = default;
+};
+
+}  // namespace fs_pty::internal
+
+#endif  // LIB_FS_PTY_TTY_CONNECTION_INTERNAL_H_

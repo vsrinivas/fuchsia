@@ -8,7 +8,6 @@
 #include <lib/fdio/vfs.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/eventpair.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,13 +43,13 @@ Console::Console(async_dispatcher_t* dispatcher, zx::eventpair event1, zx::event
 
 Console::~Console() { rx_thread_.join(); }
 
-zx_status_t Console::Read(void* data, size_t len, size_t offset, size_t* out_actual) {
+zx_status_t Console::Read(void* data, size_t len, size_t* out_actual) {
   // Don't try to read more than the FIFO can hold.
   uint64_t to_read = fbl::min<uint64_t>(len, Fifo::kFifoSize);
   return rx_fifo_.Read(reinterpret_cast<uint8_t*>(data), to_read, out_actual);
 }
 
-zx_status_t Console::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
+zx_status_t Console::Write(const void* data, size_t len, size_t* out_actual) {
   zx_status_t status = ZX_OK;
   size_t total_written = 0;
 
@@ -72,9 +71,8 @@ zx_status_t Console::Write(const void* data, size_t len, size_t offset, size_t* 
   return status;
 }
 
-zx_status_t Console::GetNodeInfo(::llcpp::fuchsia::io::NodeInfo* info) const {
-  auto& tty = info->mutable_tty();
-  return rx_event_.duplicate(ZX_RIGHTS_BASIC, &tty.event);
+zx_status_t Console::GetEvent(zx::eventpair* event) const {
+  return rx_event_.duplicate(ZX_RIGHTS_BASIC, event);
 }
 
 void Console::DebugReaderThread() {

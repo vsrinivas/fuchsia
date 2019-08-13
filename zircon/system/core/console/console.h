@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
+#include <lib/zx/eventpair.h>
 
 #include <thread>
 
@@ -35,13 +36,13 @@ class Console : public fbl::RefCounted<Console> {
                             fbl::RefPtr<Console>* console);
 
   // Used to implement fuchsia.io.File/{Read,Write}
-  zx_status_t Read(void* data, size_t len, size_t offset, size_t* out_actual);
-  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual);
+  zx_status_t Read(void* data, size_t len, size_t* out_actual);
+  zx_status_t Write(const void* data, size_t len, size_t* out_actual);
 
   async_dispatcher_t* dispatcher() { return dispatcher_; }
 
-  // Return the NodeInfo for a connection to this console
-  zx_status_t GetNodeInfo(::llcpp::fuchsia::io::NodeInfo* info) const;
+  // Return the event for a connection to this console
+  zx_status_t GetEvent(zx::eventpair* event) const;
 
  private:
   // Maximum amount of data that will be written to tx_sink_() per call.

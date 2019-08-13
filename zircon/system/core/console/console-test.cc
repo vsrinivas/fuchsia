@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "console.h"
+
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fit/function.h>
@@ -9,8 +11,6 @@
 #include <lib/zx/channel.h>
 
 #include <zxtest/zxtest.h>
-
-#include "connection.h"
 
 namespace {
 
@@ -42,7 +42,7 @@ TEST(ConsoleTestCase, Read) {
 
   uint8_t data[kReadSize] = {};
   size_t actual;
-  ASSERT_OK(console->Read(reinterpret_cast<void*>(data), kReadSize, 0, &actual));
+  ASSERT_OK(console->Read(reinterpret_cast<void*>(data), kReadSize, &actual));
   ASSERT_EQ(actual, kWriteCount);
   for (size_t i = 0; i < actual; ++i) {
     ASSERT_EQ(data[i], kWrittenByte);
@@ -68,7 +68,7 @@ TEST(ConsoleTestCase, Write) {
 
   size_t actual;
   ASSERT_OK(
-      console->Write(reinterpret_cast<const void*>(kExpectedBuffer), kExpectedLength, 0, &actual));
+      console->Write(reinterpret_cast<const void*>(kExpectedBuffer), kExpectedLength, &actual));
   ASSERT_EQ(actual, kExpectedLength);
 }
 
