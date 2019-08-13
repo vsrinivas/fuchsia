@@ -25,6 +25,14 @@ use fuchsia_zircon::{Duration, DurationNum};
 mod backlight;
 mod sensor;
 
+// Delay between sensor reads
+const SCAN_TIMEOUT_MS: i64 = 500;
+// Delay if we have made a large change in auto brightness
+const QUICK_SCAN_TIMEOUT_MS: i64 = 10;
+// What constitutes a large change in brightness?
+// This seems small but it is significant and works nicely.
+const LARGE_CHANGE_THRESHOLD_NITS: i16 = 2;
+
 async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), Error> {
     // TODO(kpt): "Consider adding additional tests against the resulting FIDL service itself so
     // that you can ensure it continues serving clients correctly."
@@ -89,7 +97,7 @@ fn start_auto_brightness_task(
         Abortable::new(
             async move {
                 loop {
-                    // TODO(kpt): Pull main body without timer function for testing.
+                    // TODO(b/139153875): Pull loop body, without timer into function for testing.
                     let lux = {
                         // Get the sensor reading in its own mutex block
                         let sensor = sensor.lock().await;
@@ -101,12 +109,13 @@ fn start_auto_brightness_task(
                     };
                     let nits = brightness_curve_lux_to_nits(lux);
                     let backlight_clone = backlight.clone();
-                    set_brightness(nits, backlight_clone)
+                    let large_change = set_brightness(nits, backlight_clone)
                         .await
                         .expect("Could not set the brightness");
-                    // Check every half second
-                    let timeout: i64 = 500;
-                    fuchsia_async::Timer::new(timeout.millis().after_now()).await;
+                    let delay_timeout =
+                        if large_change { QUICK_SCAN_TIMEOUT_MS } else { SCAN_TIMEOUT_MS };
+                    fuchsia_async::Timer::new(Duration::from_millis(delay_timeout).after_now())
+                        .await;
                 }
             },
             abort_registration,
@@ -138,7 +147,9 @@ fn brightness_curve_lux_to_nits(mut lux: u16) -> u16 {
     num_traits::clamp(nits, 1, max_nits)
 }
 
-async fn set_brightness(nits: u16, backlight: Arc<Mutex<BacklightProxy>>) -> Result<(), Error> {
+/// Sets the brightness of the backlight to a specific value.
+/// Returns true if the change is considered to be large.
+async fn set_brightness(nits: u16, backlight: Arc<Mutex<BacklightProxy>>) -> Result<bool, Error> {
     let backlight = backlight.lock().await;
     let current_nits = backlight::get_brightness(&backlight).await.unwrap_or_else(|e| {
         fx_log_err!("Failed to get backlight: {}. assuming 200", e);
@@ -149,7 +160,7 @@ async fn set_brightness(nits: u16, backlight: Arc<Mutex<BacklightProxy>>) -> Res
             .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
     };
     set_brightness_slowly(current_nits, nits, &set_brightness, 10.millis()).await?;
-    Ok(())
+    Ok((nits as i16 - current_nits as i16).abs() > LARGE_CHANGE_THRESHOLD_NITS)
 }
 
 /// Change the brightness of the screen slowly to `nits` nits. We don't want to change the screen
