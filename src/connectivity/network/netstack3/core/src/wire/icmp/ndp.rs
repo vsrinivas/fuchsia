@@ -155,6 +155,21 @@ impl NeighborAdvertisement {
     pub(crate) fn target_address(&self) -> &Ipv6Addr {
         &self.target_address
     }
+
+    /// Returns the router flag.
+    pub(crate) fn router_flag(&self) -> bool {
+        ((self.flags_rso & Self::FLAG_ROUTER) != 0)
+    }
+
+    /// Returns the solicited flag.
+    pub(crate) fn solicited_flag(&self) -> bool {
+        ((self.flags_rso & Self::FLAG_SOLICITED) != 0)
+    }
+
+    /// Returns the override flag.
+    pub(crate) fn override_flag(&self) -> bool {
+        ((self.flags_rso & Self::FLAG_OVERRIDE) != 0)
+    }
 }
 
 /// An ICMPv6 Redirect Message.

@@ -73,7 +73,7 @@ const RETRANS_TIMER_DEFAULT: Duration = Duration::from_secs(1);
 /// [RFC 4861 section 10].
 ///
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
-const MAX_MULTICAST_SOLICIT: usize = 3;
+const MAX_MULTICAST_SOLICIT: u8 = 3;
 
 //
 // Host Constants
@@ -111,7 +111,7 @@ const RTR_SOLICITATION_INTERVAL: Duration = Duration::from_secs(4);
 const MAX_RTR_SOLICITATION_DELAY: Duration = Duration::from_secs(1);
 
 /// A link layer address that can be discovered using NDP.
-pub(crate) trait LinkLayerAddress: Copy + Clone + Debug {
+pub(crate) trait LinkLayerAddress: Copy + Clone + Debug + PartialEq {
     /// The length, in bytes, expected for the `LinkLayerAddress`
     const BYTES_LENGTH: usize;
 
@@ -722,34 +722,34 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
     match inner_id {
         InnerNdpTimerId::LinkAddressResolution { neighbor_addr } => {
             let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
-            match ndp_state.neighbors.get_neighbor_state_mut(&neighbor_addr) {
-                Some(NeighborState {
-                    link_address: LinkAddressResolutionValue::Waiting { ref mut transmit_counter },
-                    ..
-                }) => {
-                    if *transmit_counter < MAX_MULTICAST_SOLICIT {
-                        let retrans_timer = ndp_state.retrans_timer;
+            if let Some(NeighborState {
+                state: NeighborEntryState::Incomplete { transmit_counter },
+                ..
+            }) = ndp_state.neighbors.get_neighbor_state_mut(&neighbor_addr)
+            {
+                if *transmit_counter < MAX_MULTICAST_SOLICIT {
+                    let retrans_timer = ndp_state.retrans_timer;
 
-                        // Increase the transmit counter and send the solicitation again
-                        *transmit_counter += 1;
-                        send_neighbor_solicitation::<_, ND>(ctx, device_id, neighbor_addr);
-                        ctx.dispatcher.schedule_timeout(
-                            retrans_timer,
-                            NdpTimerId::new_link_address_resolution_timer_id::<ND>(
-                                device_id,
-                                neighbor_addr,
-                            ),
-                        );
-                    } else {
-                        // To make sure we don't get stuck in this neighbor unreachable
-                        // state forever, remove the neighbor from the database:
-                        ndp_state.neighbors.delete_neighbor_state(&neighbor_addr);
-                        increment_counter!(ctx, "ndp::neighbor_solicitation_timeout");
+                    // Increase the transmit counter and send the solicitation again
+                    *transmit_counter += 1;
+                    send_neighbor_solicitation::<_, ND>(ctx, device_id, neighbor_addr);
+                    ctx.dispatcher.schedule_timeout(
+                        retrans_timer,
+                        NdpTimerId::new_link_address_resolution_timer_id::<ND>(
+                            device_id,
+                            neighbor_addr,
+                        ),
+                    );
+                } else {
+                    // To make sure we don't get stuck in this neighbor unreachable
+                    // state forever, remove the neighbor from the database:
+                    ndp_state.neighbors.delete_neighbor_state(&neighbor_addr);
+                    increment_counter!(ctx, "ndp::neighbor_solicitation_timeout");
 
-                        ND::address_resolution_failed(ctx, device_id, &neighbor_addr);
-                    }
+                    ND::address_resolution_failed(ctx, device_id, &neighbor_addr);
                 }
-                _ => debug!("ndp timeout fired for invalid neighbor state"),
+            } else {
+                unreachable!("handle_timeout_inner: timer for neighbor {:?} address resolution should not exist if no entry exists", neighbor_addr);
             }
         }
         InnerNdpTimerId::DadNsTransmit { addr } => {
@@ -802,7 +802,10 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
     }
 }
 
-/// Look up the link layer address
+/// Look up the link layer address.
+///
+/// Begins the address resolution process if the link layer address
+/// for `lookup_addr` is not already known.
 pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
@@ -817,69 +820,168 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
         //  MAC multicast from the lookup address conforming to RFC 2464.
         return Some(ND::BROADCAST);
     }
+
     // TODO(brunodalbo): Figure out what to do if a frame can't be sent
     let ndpstate = ND::get_ndp_state(ctx.state_mut(), device_id);
     let result = ndpstate.neighbors.get_neighbor_state(&lookup_addr);
 
     match result {
-        Some(NeighborState {
-            link_address: LinkAddressResolutionValue::Known { address }, ..
-        }) => Some(*address),
+        // TODO(ghanan): As long as have ever received a link layer address for
+        //               `lookup_addr` from any NDP packet with the source link
+        //               layer option, we would have stored that address. Here
+        //               we simply return that address without checking the
+        //               actual state of the neighbor entry. We should make sure
+        //               that the entry is not Stale before returning the address.
+        //               If it is stale, we should make sure it is reachable first.
+        //               See RFC 4861 section 7.3.2 for more information.
+        Some(NeighborState { link_address: Some(address), .. }) => Some(*address),
+
+        // We do not know about the neighbor and need to start address resolution.
         None => {
+            trace!("ndp::lookup: starting address resolution process for {:?}", lookup_addr);
+
             let retrans_timer = ndpstate.retrans_timer;
 
-            // if we're not already waiting for a neighbor solicitation
-            // response, mark it as waiting and send a neighbor solicitation,
+            // If we're not already waiting for a neighbor solicitation
+            // response, mark it as Incomplete and send a neighbor solicitation,
             // also setting the transmission count to 1.
-            ndpstate.neighbors.set_waiting_link_address(lookup_addr, 1);
+            ndpstate.neighbors.add_incomplete_neighbor_state(lookup_addr);
+
             send_neighbor_solicitation::<_, ND>(ctx, device_id, lookup_addr);
-            // also schedule a timer to retransmit in case we don't get
+
+            // Also schedule a timer to retransmit in case we don't get
             // neighbor advertisements back.
             ctx.dispatcher.schedule_timeout(
                 retrans_timer,
                 NdpTimerId::new_link_address_resolution_timer_id::<ND>(device_id, lookup_addr),
             );
+
+            // Returning `None` as we do not have a link-layer address
+            // to give yet.
             None
         }
-        _ => None,
+
+        // Address resolution is currently in progress.
+        Some(NeighborState { state: NeighborEntryState::Incomplete { .. }, .. }) => {
+            trace!(
+                "ndp::lookup: still waiting for address resolution to complete for {:?}",
+                lookup_addr
+            );
+            None
+        }
+
+        // TODO(ghanan): Handle case where a neighbor entry exists for a `link_addr`
+        //               but no link address as been discovered.
+        _ => unimplemented!("A neighbor entry exists but no link address is discovered"),
     }
 }
 
 /// Insert a neighbor to the known neighbors table.
+///
+/// This method only gets called when testing to force a neighbor
+/// so link address lookups completes immediately without doing
+/// address resolution.
+#[cfg(test)]
 pub(crate) fn insert_neighbor<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
     net: Ipv6Addr,
     hw: ND::LinkAddress,
 ) {
-    ND::get_ndp_state(ctx.state_mut(), device_id).neighbors.set_link_address(net, hw)
+    // Neighbor `net` should be marked as reachable.
+    ND::get_ndp_state(ctx.state_mut(), device_id).neighbors.set_link_address(net, hw, true)
 }
 
 /// `NeighborState` keeps all state that NDP may want to keep about neighbors,
 /// like link address resolution and reachability information, for example.
 struct NeighborState<H> {
-    link_address: LinkAddressResolutionValue<H>,
     is_router: bool,
+    state: NeighborEntryState,
+    link_address: Option<H>,
 }
 
 impl<H> NeighborState<H> {
     fn new() -> Self {
-        Self { link_address: LinkAddressResolutionValue::Unknown, is_router: false }
+        Self {
+            is_router: false,
+            state: NeighborEntryState::Incomplete { transmit_counter: 0 },
+            link_address: None,
+        }
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
-enum LinkAddressResolutionValue<H> {
-    Unknown,
-    Known { address: H },
-    Waiting { transmit_counter: usize },
+/// The various states a Neighbor cache entry can be in.
+///
+/// See [RFC 4861 section 7.3.2].
+///
+/// [RFC 4861 section 7.3.2]: https://tools.ietf.org/html/rfc4861#section-7.3.2
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum NeighborEntryState {
+    /// Address resolution is being performed on the entry.
+    /// Specifically, a Neighbor Solicitation has been sent to
+    /// the solicited-node multicast address of the target,
+    /// but the corresponding Neighbor Advertisement has not
+    /// yet been received.
+    ///
+    /// `transmit_counter` is the count of Neighbor Solicitation
+    /// messages sent as part of the Address resolution process.
+    Incomplete { transmit_counter: u8 },
+
+    /// Positive confirmation was received within the last
+    /// ReachableTime milliseconds that the forward path to
+    /// the neighbor was functioning properly.  While
+    /// `Reachable`, no special action takes place as packets
+    /// are sent.
+    Reachable,
+
+    /// More than ReachableTime milliseconds have elapsed
+    /// since the last positive confirmation was received that
+    /// the forward path was functioning properly.  While
+    /// stale, no action takes place until a packet is sent.
+    ///
+    /// The `Stale` state is entered upon receiving an
+    /// unsolicited Neighbor Discovery message that updates
+    /// the cached link-layer address.  Receipt of such a
+    /// message does not confirm reachability, and entering
+    /// the `Stale` state ensures reachability is verified
+    /// quickly if the entry is actually being used.  However,
+    /// reachability is not actually verified until the entry
+    /// is actually used.
+    Stale,
+
+    /// More than ReachableTime milliseconds have elapsed
+    /// since the last positive confirmation was received that
+    /// the forward path was functioning properly, and a
+    /// packet was sent within the last DELAY_FIRST_PROBE_TIME
+    /// seconds.  If no reachability confirmation is received
+    /// within DELAY_FIRST_PROBE_TIME seconds of entering the
+    /// DELAY state, send a Neighbor Solicitation and change
+    /// the state to PROBE.
+    ///
+    /// The DELAY state is an optimization that gives upper-
+    /// layer protocols additional time to provide
+    /// reachability confirmation in those cases where
+    /// ReachableTime milliseconds have passed since the last
+    /// confirmation due to lack of recent traffic.  Without
+    /// this optimization, the opening of a TCP connection
+    /// after a traffic lull would initiate probes even though
+    /// the subsequent three-way handshake would provide a
+    /// reachability confirmation almost immediately.
+    Delay,
+
+    /// A reachability confirmation is actively sought by
+    /// retransmitting Neighbor Solicitations every
+    /// RetransTimer milliseconds until a reachability
+    /// confirmation is received.
+    Probe,
 }
 
-impl<H> LinkAddressResolutionValue<H> {
-    fn is_waiting(&self) -> bool {
-        match self {
-            LinkAddressResolutionValue::Waiting { .. } => true,
-            _ => false,
+impl NeighborEntryState {
+    fn is_incomplete(self) -> bool {
+        if let NeighborEntryState::Incomplete { .. } = self {
+            true
+        } else {
+            false
         }
     }
 }
@@ -888,25 +990,55 @@ struct NeighborTable<H> {
     table: HashMap<Ipv6Addr, NeighborState<H>>,
 }
 
+impl<H: PartialEq + Debug> NeighborTable<H> {
+    /// Sets the link address for a neighbor.
+    ///
+    /// If `is_reachable` is `true`, the state of the neighbor will be
+    /// set to `NeighborEntryState::Reachable`. Otherwise, it will be
+    /// set to `NeighborEntryState::Stale` if the address was updated.
+    /// A `false` value for `is_reachable` does not mean that the
+    /// neighbor is unreachable, it just means that we do not know if it
+    /// is reachable.
+    fn set_link_address(&mut self, neighbor: Ipv6Addr, address: H, is_reachable: bool) {
+        let address = Some(address);
+        let neighbor_state = self.table.entry(neighbor).or_insert_with(NeighborState::new);
+
+        trace!("set_link_address: setting link address for neighbor {:?} to address", address);
+
+        if is_reachable {
+            trace!("set_link_address: reachability is known, so setting state for neighbor {:?} to Reachable", neighbor);
+
+            neighbor_state.state = NeighborEntryState::Reachable;
+        } else if neighbor_state.link_address != address {
+            trace!("set_link_address: new link addr different from old and reachability is unknown, so setting state for neighbor {:?} to Stale", neighbor);
+
+            neighbor_state.state = NeighborEntryState::Stale;
+        }
+
+        neighbor_state.link_address = address;
+    }
+}
+
 impl<H> NeighborTable<H> {
-    fn set_link_address(&mut self, neighbor: Ipv6Addr, address: H) {
-        self.table.entry(neighbor).or_insert_with(NeighborState::new).link_address =
-            LinkAddressResolutionValue::Known { address };
+    /// Create a new incomplete state of a neighbor, setting the transmit counter to 1.
+    fn add_incomplete_neighbor_state(&mut self, neighbor: Ipv6Addr) {
+        let mut state = NeighborState::new();
+        state.state = NeighborEntryState::Incomplete { transmit_counter: 1 };
+
+        self.table.insert(neighbor, state);
     }
 
-    fn set_waiting_link_address(&mut self, neighbor: Ipv6Addr, transmit_counter: usize) {
-        self.table.entry(neighbor).or_insert_with(NeighborState::new).link_address =
-            LinkAddressResolutionValue::Waiting { transmit_counter };
-    }
-
+    /// Get the neighbor's state, if it exists.
     fn get_neighbor_state(&self, neighbor: &Ipv6Addr) -> Option<&NeighborState<H>> {
         self.table.get(neighbor)
     }
 
+    /// Get a  the neighbor's mutable state, if it exists.
     fn get_neighbor_state_mut(&mut self, neighbor: &Ipv6Addr) -> Option<&mut NeighborState<H>> {
         self.table.get_mut(neighbor)
     }
 
+    /// Delete the neighbor's state, if it exists.
     fn delete_neighbor_state(&mut self, neighbor: &Ipv6Addr) {
         self.table.remove(neighbor);
     }
@@ -1465,7 +1597,9 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
                         trace!("receive_ndp_packet_inner: NDP RA: setting link address for router {:?} to {:?}", src_ip, link_addr);
 
-                        ndp_state.neighbors.set_link_address(src_ip.get(), link_addr);
+                        // Set the link address and mark it as stale if we either created
+                        // the neighbor entry, or updated an existing one.
+                        ndp_state.neighbors.set_link_address(src_ip.get(), link_addr, false);
                     }
                     NdpOption::MTU(mtu) => {
                         trace!("receive_ndp_packet_inner: mtu option with mtu = {:?}", mtu);
@@ -1576,11 +1710,14 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                 return;
             }
 
-            // this solicitation message is used for DAD
+            // This solicitation message is used for DAD.
             if let Some(my_addr) = ND::get_ipv6_addr(ctx.state_mut(), device_id) {
                 if my_addr.is_tentative() {
                     // we are not allowed to respond to the solicitation
                     if src_ip.is_unspecified() {
+                        trace!(
+                            "receive_ndp_packet_inner: Received NDP NS: duplicate address detected"
+                        );
                         // If the source address of the packet is the unspecified address,
                         // the source of the packet is performing DAD for the same target
                         // address as our `my_addr`. A duplicate address has been detected.
@@ -1588,19 +1725,23 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                     }
                 } else {
                     increment_counter!(ctx, "ndp::rx_neighbor_solicitation");
-                    // if we have a source link layer address option, we take it and
-                    // save to our cache:
+                    // If we have a source link layer address option, we take it and
+                    // save to our cache.
                     if !src_ip.is_unspecified() {
-                        // we only update the cache if it is not from an unspecified address,
+                        // We only update the cache if it is not from an unspecified address,
                         // i.e., it is not a DAD message. (RFC 4861)
                         if let Some(ll) = get_source_link_layer_option::<ND, _>(p.body()) {
-                            // TODO(brunodalbo) the reachability state of the neighbor
-                            //  that is added to the cache by this route must be set to
-                            //  STALE.
+                            trace!("receive_ndp_packet_inner: Received NDP NS from {:?} has source link layer option w/ link address {:?}", src_ip, ll);
+
+                            // Set the link address and mark it as stale if we either created
+                            // the neighbor entry, or updated an existing one, as per RFC 4861
+                            // section 7.2.3.
                             ND::get_ndp_state(ctx.state_mut(), device_id)
                                 .neighbors
-                                .set_link_address(src_ip, ll);
+                                .set_link_address(src_ip, ll, false);
                         }
+
+                        trace!("receive_ndp_packet_inner: Received NDP NS: sending NA to source of NS {:?}", src_ip);
 
                         // Finally we ought to reply to the Neighbor Solicitation with a
                         // Neighbor Advertisement.
@@ -1612,6 +1753,8 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                             src_ip,
                         );
                     } else {
+                        trace!("receive_ndp_packet_inner: Received NDP NS: sending NA to all nodes multicast");
+
                         // Send out Unsolicited Advertisement in response to neighbor who's
                         // performing DAD, as described in RFC 4861 and 4862
                         send_neighbor_advertisement::<_, ND>(
@@ -1628,7 +1771,8 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
         Icmpv6Packet::NeighborAdvertisement(p) => {
             trace!("receive_ndp_packet_inner: Received NDP NA");
 
-            let target_address = p.message().target_address();
+            let message = p.message();
+            let target_address = message.target_address();
             match ND::ipv6_addr_state(ctx.state(), device_id, target_address) {
                 AddressState::Tentative => {
                     duplicate_address_detected::<_, ND>(ctx, device_id, *target_address);
@@ -1653,17 +1797,34 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                     // If the neighbor is not in the cache, we just ignore the
                     // advertisement, as we're not interested in communicating
                     // with it.
+                    trace!("receive_ndp_packet_inner: Ignoring NDP NA from {:?} does not already exist in our list of neighbors, so discarding", src_ip);
                 }
-                Some(NeighborState { link_address, .. }) if link_address.is_waiting() => {
+                Some(NeighborState { state, link_address, is_router }) if state.is_incomplete() => {
                     if let Some(address) = get_target_link_layer_option::<ND, _>(p.body()) {
-                        *link_address = LinkAddressResolutionValue::Known { address };
+                        *link_address = Some(address);
+
+                        // If the advertisement's Solicited flag is set, the state of the
+                        // entry is set to REACHABLE; otherwise, it is set to STALE, as
+                        // per RFC 4861 section 7.2.5.
+                        if message.solicited_flag() {
+                            *state = NeighborEntryState::Reachable;
+                        } else {
+                            *state = NeighborEntryState::Stale;
+                        }
+
+                        // Set ths IsRouter flag as per RFC 4861 section 7.2.5.
+                        *is_router = message.router_flag();
+
                         // Cancel the resolution timeout.
                         ctx.dispatcher.cancel_timeout(
                             NdpTimerId::new_link_address_resolution_timer_id::<ND>(
                                 device_id, src_ip,
                             ),
                         );
+
                         ND::address_resolved(ctx, device_id, &src_ip, address);
+                    } else {
+                        trace!("receive_ndp_packet_inner: Performing address resolution but the NDP NA from {:?} does not have a target link layer address option, so discarding", src_ip);
                     }
                 }
                 _ => {
@@ -1815,7 +1976,7 @@ mod tests {
 
         // Check that we send the original neighbor solicitation,
         // then resend a few times if we don't receive a response.
-        for packet_num in 0..MAX_MULTICAST_SOLICIT {
+        for packet_num in 0..usize::from(MAX_MULTICAST_SOLICIT) {
             assert_eq!(ctx.dispatcher.frames_sent().len(), packet_num + 1);
 
             testutil::trigger_next_timer(&mut ctx);
@@ -1884,6 +2045,15 @@ mod tests {
         assert_eq!(net.context("local").dispatcher.timer_events().count(), 1);
 
         net.step();
+        // Neighbor entry for remote should be marked as Incomplete.
+        assert_eq!(
+            EthernetNdpDevice::get_ndp_state::<_>(net.context("local").state_mut(), device_id.id())
+                .neighbors
+                .get_neighbor_state(&remote_ip())
+                .unwrap()
+                .state,
+            NeighborEntryState::Incomplete { transmit_counter: 1 }
+        );
 
         assert_eq!(
             *net.context("remote").state().test_counters.get("ndp::rx_neighbor_solicitation"),
@@ -1903,25 +2073,29 @@ mod tests {
 
         // at the end of the exchange, both sides should have each other on
         // their ndp tables:
-        assert_eq!(
+        let local_neighbor =
             EthernetNdpDevice::get_ndp_state::<_>(net.context("local").state_mut(), device_id.id())
                 .neighbors
                 .get_neighbor_state(&remote_ip())
-                .unwrap()
-                .link_address,
-            LinkAddressResolutionValue::<Mac>::Known { address: TEST_REMOTE_MAC }
-        );
-        assert_eq!(
-            EthernetNdpDevice::get_ndp_state::<_>(
-                net.context("remote").state_mut(),
-                device_id.id()
-            )
-            .neighbors
-            .get_neighbor_state(&local_ip())
-            .unwrap()
-            .link_address,
-            LinkAddressResolutionValue::<Mac>::Known { address: TEST_LOCAL_MAC }
-        );
+                .unwrap();
+        assert_eq!(local_neighbor.link_address.unwrap(), TEST_REMOTE_MAC,);
+        // Remote must be reachable from local since it responded with
+        // an NA message with the solicited flag set.
+        assert_eq!(local_neighbor.state, NeighborEntryState::Reachable,);
+
+        let remote_neighbor = EthernetNdpDevice::get_ndp_state::<_>(
+            net.context("remote").state_mut(),
+            device_id.id(),
+        )
+        .neighbors
+        .get_neighbor_state(&local_ip())
+        .unwrap();
+        assert_eq!(remote_neighbor.link_address.unwrap(), TEST_LOCAL_MAC,);
+        // Local must be marked as stale because remote got an NS from it
+        // but has not itself sent any packets to it and confirmed that
+        // local actually received it.
+        assert_eq!(remote_neighbor.state, NeighborEntryState::Stale);
+
         // and the local timer should've been unscheduled:
         assert_eq!(net.context("local").dispatcher.timer_events().count(), 0);
 
@@ -2609,8 +2783,10 @@ mod tests {
         let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
         assert!(ndp_state.has_default_router(&src_ip));
         let neighbor = ndp_state.neighbors.get_neighbor_state(&src_ip).unwrap();
-        assert_eq!(neighbor.link_address, LinkAddressResolutionValue::Known { address: src_mac });
+        assert_eq!(neighbor.link_address.unwrap(), src_mac);
         assert!(neighbor.is_router);
+        // Router should be marked stale as a neighbor.
+        assert_eq!(neighbor.state, NeighborEntryState::Stale);
     }
 
     #[test]

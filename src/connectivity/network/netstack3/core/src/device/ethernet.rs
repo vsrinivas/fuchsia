@@ -522,6 +522,11 @@ pub(crate) fn insert_static_arp_table_entry<D: EventDispatcher>(
 }
 
 /// Insert an entry into this device's NDP table.
+///
+/// This method only gets called when testing to force set a neighbor's
+/// link address so that lookups succeed immediately, without doing
+/// address resolution.
+#[cfg(test)]
 pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device_id: usize,
