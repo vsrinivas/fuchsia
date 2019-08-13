@@ -29,6 +29,11 @@ zbi_test_success_string =
 # the ZBIs together (so a zbi_test() target can be thrown together with
 # individual test() targets populating a full system image).
 #
+# The $target_name target is a group() that holds the metadata and is what
+# should be used in deps.  The actual zbi() target is defined as
+# "$target_name.zbi" so that e.g. get_target_outputs(":$target_name.zbi")
+# can be used.
+#
 # Parameters
 #
 #   * args
@@ -45,7 +50,7 @@ zbi_test_success_string =
 template("zbi_test") {
   test_target = target_name
   cmdline_target = "_zbi_test.$target_name.cmdline"
-  zbi_target = "_zbi_test.$target_name.zbi"
+  zbi_target = "$target_name.zbi"
 
   zbi_input(cmdline_target) {
     visibility = [ ":*" ]
@@ -58,7 +63,6 @@ template("zbi_test") {
   }
 
   zbi(zbi_target) {
-    visibility = [ ":$test_target" ]
     testonly = true
     forward_variables_from(invoker,
                            [
@@ -68,7 +72,11 @@ template("zbi_test") {
                              "output_extension",
                              "output_name",
                              "tags",
+                             "visibility",
                            ])
+    if (defined(visibility)) {
+      visibility += [ ":$test_target" ]
+    }
     if (!defined(output_name)) {
       output_name = test_target
     }
