@@ -5,6 +5,8 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_PROXY_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_PROXY_H_
 
+#include <lib/zx/channel.h>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -21,7 +23,6 @@
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/sysmem.h>
 #include <ddktl/protocol/usb/modeswitch.h>
-#include <lib/zx/channel.h>
 
 #include "proxy-protocol.h"
 
@@ -107,6 +108,7 @@ class ComponentProxy : public ComponentProxyBase,
   zx_status_t PowerGetPowerDomainStatus(power_domain_status_t* out_status);
   zx_status_t PowerGetSupportedVoltageRange(uint32_t* min_voltage, uint32_t* max_voltage);
   zx_status_t PowerRequestVoltage(uint32_t _voltage, uint32_t* actual_voltage);
+  zx_status_t PowerGetCurrentVoltage(uint32_t index, uint32_t* current_voltage);
   zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
   zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
   zx_status_t SysmemConnect(zx::channel allocator2_request);

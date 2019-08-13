@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "msm8x53-power.h"
+
+#include <lib/device-protocol/pdev.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
-#include <lib/device-protocol/pdev.h>
 #include <fbl/unique_ptr.h>
 #include <soc/msm8x53/msm8x53-power-regs.h>
 #include <soc/msm8x53/msm8x53-power.h>
-
-#include "msm8x53-power.h"
 
 namespace power {
 
@@ -220,6 +221,13 @@ zx_status_t Msm8x53Power::PowerImplGetSupportedVoltageRange(uint32_t index, uint
 
 zx_status_t Msm8x53Power::PowerImplRequestVoltage(uint32_t index, uint32_t voltage,
                                                   uint32_t* actual_voltage) {
+  if (index >= fbl::count_of(kMsm8x53PowerDomains)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Msm8x53Power::PowerImplGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
   if (index >= fbl::count_of(kMsm8x53PowerDomains)) {
     return ZX_ERR_OUT_OF_RANGE;
   }

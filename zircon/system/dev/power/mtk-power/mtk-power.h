@@ -4,15 +4,17 @@
 
 #pragma once
 
+#include <lib/mmio/mmio.h>
+#include <threads.h>
+
 #include <array>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/powerimpl.h>
 #include <fbl/vector.h>
-#include <lib/mmio/mmio.h>
 #include <soc/mt8167/mt8167-power-regs.h>
 #include <soc/mt8167/mt8167-power.h>
-#include <threads.h>
 
 namespace power {
 
@@ -173,6 +175,7 @@ class MtkPower : public MtkPowerType, public ddk::PowerImplProtocol<MtkPower, dd
   zx_status_t PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t* min_voltage,
                                                 uint32_t* max_voltage);
   zx_status_t PowerImplRequestVoltage(uint32_t index, uint32_t voltage, uint32_t* actual_voltage);
+  zx_status_t PowerImplGetCurrentVoltage(uint32_t index, uint32_t* current_voltage);
   zx_status_t PowerImplWritePmicCtrlReg(uint32_t index, uint32_t addr, uint32_t value);
   zx_status_t PowerImplReadPmicCtrlReg(uint32_t index, uint32_t addr, uint32_t* value);
 

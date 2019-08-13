@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "power.h"
+
+#include <zircon/types.h>
+
 #include <memory>
 
 #include <ddk/binding.h>
@@ -12,9 +16,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/types.h>
-
-#include "power.h"
 
 namespace power {
 
@@ -33,6 +34,10 @@ zx_status_t PowerDevice::PowerGetSupportedVoltageRange(uint32_t* min_voltage,
 
 zx_status_t PowerDevice::PowerRequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
   return power_.RequestVoltage(index_, voltage, actual_voltage);
+}
+
+zx_status_t PowerDevice::PowerGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
+  return power_.GetCurrentVoltage(index_, current_voltage);
 }
 
 zx_status_t PowerDevice::PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value) {
@@ -112,5 +117,8 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace power
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(power, power::driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL), ZIRCON_DRIVER_END(power)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
+ZIRCON_DRIVER_END(power)
+//clang-format on

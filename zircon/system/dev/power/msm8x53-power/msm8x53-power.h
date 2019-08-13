@@ -4,14 +4,13 @@
 
 #pragma once
 
+#include <lib/device-protocol/pdev.h>
+#include <lib/mmio/mmio.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/powerimpl.h>
-#include <lib/mmio/mmio.h>
-
 #include <soc/msm8x53/msm8x53-power-regs.h>
 
 namespace power {
@@ -56,6 +55,7 @@ class Msm8x53Power : public Msm8x53PowerType,
   zx_status_t PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t* min_voltage,
                                                 uint32_t* max_voltage);
   zx_status_t PowerImplRequestVoltage(uint32_t index, uint32_t voltage, uint32_t* actual_voltage);
+  zx_status_t PowerImplGetCurrentVoltage(uint32_t index, uint32_t* current_voltage);
   zx_status_t PowerImplWritePmicCtrlReg(uint32_t index, uint32_t addr, uint32_t value);
   zx_status_t PowerImplReadPmicCtrlReg(uint32_t index, uint32_t addr, uint32_t* value);
 

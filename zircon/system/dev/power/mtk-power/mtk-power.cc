@@ -225,6 +225,14 @@ zx_status_t MtkLdoRegulator::RequestVoltage(uint32_t voltage, uint32_t* actual_v
   return ZX_OK;
 }
 
+zx_status_t MtkPower::PowerImplGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
+  if (index >= kMt8167NumPowerDomains) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  *current_voltage = power_domains_[index]->cur_voltage();
+  return ZX_OK;
+}
+
 zx_status_t MtkPower::PowerImplDisablePowerDomain(uint32_t index) {
   if (index >= kMt8167NumPowerDomains) {
     return ZX_ERR_OUT_OF_RANGE;

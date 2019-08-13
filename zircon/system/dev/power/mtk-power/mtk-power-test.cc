@@ -230,4 +230,66 @@ TEST(PowerTest, RequestVoltage) {
   ASSERT_OK(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage));
 }
 
+TEST(PowerTest, GetCurrentVoltage) {
+  ddk_mock::MockMmioReg pmic_reg_array[kPmicMmioRegCount];
+  ddk_mock::MockMmioRegRegion pmic_regs(pmic_reg_array, sizeof(uint32_t), kPmicMmioRegCount);
+  MtkPowerTest power_test(pmic_regs);
+
+  InitPowerRegulatorsHelper(pmic_regs);
+  power_test.InitPowerRegulators();
+  pmic_regs.VerifyAll();
+
+  uint32_t out_voltage;
+  uint32_t test_index = 0;
+
+  // Fixed Regulator tests
+  test_index = 3;
+  MtkFixedRegulator& fixed_domain =
+      static_cast<MtkFixedRegulator&>(power_test.GetPowerDomain(test_index));
+  ASSERT_OK(power_test.PowerImplGetCurrentVoltage(test_index, &out_voltage));
+  ASSERT_EQ(fixed_domain.default_voltage(), out_voltage);
+
+  // BUCK Regulator tests
+  test_index = 0;
+  MtkBuckRegulator& buck_domain =
+      static_cast<MtkBuckRegulator&>(power_test.GetPowerDomain(test_index));
+  ASSERT_OK(power_test.PowerImplGetCurrentVoltage(test_index, &out_voltage));
+  ASSERT_EQ(buck_domain.default_voltage(), out_voltage);
+
+  // change current voltage
+  uint32_t test_voltage = 706251;
+  uint16_t expected_selector = 1;
+  uint32_t expected_out_voltage = 706250;
+
+  uint32_t expected_write_value =
+      ((expected_selector << buck_domain.voltage_sel_shift()) & buck_domain.voltage_sel_mask());
+  ReadPmicRegHelper(pmic_regs, buck_domain.voltage_sel_reg(), 0);
+  WritePmicRegHelper(pmic_regs, buck_domain.voltage_sel_reg(), expected_write_value);
+
+  ASSERT_OK(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage));
+  ASSERT_EQ(out_voltage, expected_out_voltage);
+  ASSERT_OK(power_test.PowerImplGetCurrentVoltage(test_index, &out_voltage));
+  ASSERT_EQ(buck_domain.cur_voltage(), out_voltage);
+
+  // LDO Regulator tests
+  test_index = 4;
+  MtkLdoRegulator& ldo_domain =
+      static_cast<MtkLdoRegulator&>(power_test.GetPowerDomain(test_index));
+  ASSERT_OK(power_test.PowerImplGetCurrentVoltage(test_index, &out_voltage));
+  ASSERT_EQ(ldo_domain.default_voltage(), out_voltage);
+
+  // change current voltage
+  test_voltage = 1800500;
+  expected_selector = 0;
+  expected_out_voltage = 1800000;
+  expected_write_value =
+      ((expected_selector << ldo_domain.voltage_sel_shift()) & ldo_domain.voltage_sel_mask());
+  ReadPmicRegHelper(pmic_regs, ldo_domain.voltage_sel_reg(), 0);
+  WritePmicRegHelper(pmic_regs, ldo_domain.voltage_sel_reg(), expected_write_value);
+  ASSERT_OK(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage));
+  ASSERT_EQ(out_voltage, expected_out_voltage);
+  ASSERT_OK(power_test.PowerImplGetCurrentVoltage(test_index, &out_voltage));
+  ASSERT_EQ(ldo_domain.cur_voltage(), out_voltage);
+}
+
 }  // namespace power

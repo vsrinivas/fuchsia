@@ -236,6 +236,7 @@ enum class PowerOp {
   GET_STATUS,
   GET_SUPPORTED_VOLTAGE_RANGE,
   REQUEST_VOLTAGE,
+  GET_CURRENT_VOLTAGE,
   WRITE_PMIC_CTRL_REG,
   READ_PMIC_CTRL_REG,
 };
@@ -254,6 +255,7 @@ struct PowerProxyResponse {
   uint32_t min_voltage;
   uint32_t max_voltage;
   uint32_t actual_voltage;
+  uint32_t current_voltage;
   uint32_t reg_value;
 };
 

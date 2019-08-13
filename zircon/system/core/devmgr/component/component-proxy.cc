@@ -4,10 +4,11 @@
 
 #include "component-proxy.h"
 
+#include <lib/sync/completion.h>
+
 #include <memory>
 
 #include <ddk/debug.h>
-#include <lib/sync/completion.h>
 
 namespace component {
 
@@ -818,6 +819,20 @@ zx_status_t ComponentProxy::PowerRequestVoltage(uint32_t voltage, uint32_t* actu
     return status;
   }
   *actual_voltage = resp.actual_voltage;
+  return status;
+}
+
+zx_status_t ComponentProxy::PowerGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
+  PowerProxyRequest req = {};
+  PowerProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_POWER;
+  req.op = PowerOp::GET_CURRENT_VOLTAGE;
+
+  auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+  if (status != ZX_OK) {
+    return status;
+  }
+  *current_voltage = resp.current_voltage;
   return status;
 }
 

@@ -41,6 +41,7 @@ class TestPowerDevice : public DeviceType,
                                                 uint32_t* max_voltage);
 
   zx_status_t PowerImplRequestVoltage(uint32_t index, uint32_t voltage, uint32_t* actual_voltage);
+  zx_status_t PowerImplGetCurrentVoltage(uint32_t index, uint32_t* current_voltage);
   zx_status_t PowerImplReadPmicCtrlReg(uint32_t index, uint32_t addr, uint32_t* value);
   zx_status_t PowerImplWritePmicCtrlReg(uint32_t index, uint32_t addr, uint32_t value);
 
@@ -123,6 +124,11 @@ zx_status_t TestPowerDevice::PowerImplGetSupportedVoltageRange(uint32_t index,
 
 zx_status_t TestPowerDevice::PowerImplRequestVoltage(uint32_t index, uint32_t voltage,
                                                      uint32_t* actual_voltage) {
+  // TODO(ravoorir): to be implemented
+  return ZX_OK;
+}
+
+zx_status_t TestPowerDevice::PowerImplGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
   // TODO(ravoorir): to be implemented
   return ZX_OK;
 }

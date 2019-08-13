@@ -30,6 +30,7 @@ class PowerDevice : public PowerDeviceType,
   zx_status_t PowerGetPowerDomainStatus(power_domain_status_t* out_status);
   zx_status_t PowerGetSupportedVoltageRange(uint32_t* min_voltage, uint32_t* max_voltage);
   zx_status_t PowerRequestVoltage(uint32_t voltage, uint32_t* actual_voltage);
+  zx_status_t PowerGetCurrentVoltage(uint32_t index, uint32_t* current_voltage);
   zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
   zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
 
