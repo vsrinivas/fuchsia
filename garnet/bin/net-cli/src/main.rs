@@ -11,9 +11,10 @@ use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_filter::{self as filter, FilterMarker, FilterProxy};
 use fidl_fuchsia_net_stack::{self as netstack, InterfaceInfo, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext as pretty;
-use fuchsia_component::client::connect_to_service;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
+use prettytable::{cell, format, row, Table};
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
 use structopt::StructOpt;
@@ -38,19 +39,65 @@ fn main() -> Result<(), Error> {
     exec.run_singlethreaded(fut)
 }
 
-fn shortlist_interfaces(name_pattern: &str, ifaces: Vec<InterfaceInfo>) -> Vec<InterfaceInfo> {
-    ifaces.into_iter().filter(|i| i.properties.name.contains(name_pattern)).collect::<Vec<_>>()
+fn shortlist_interfaces(name_pattern: &str, ifaces: &mut Vec<InterfaceInfo>) {
+    ifaces.retain(|i| i.properties.name.contains(name_pattern))
+}
+
+fn tabulate_ifaces_info(ifaces: Vec<InterfaceInfo>) -> String {
+    let mut t = Table::new();
+    t.set_format(format::FormatBuilder::new().padding(2, 2).build());
+
+    for (i, info) in ifaces.into_iter().enumerate() {
+        if i > 0 {
+            t.add_row(row![]);
+        }
+
+        let pretty::InterfaceInfo {
+            id,
+            properties:
+                pretty::InterfaceProperties {
+                    name,
+                    topopath,
+                    filepath,
+                    mac,
+                    mtu,
+                    features,
+                    administrative_status,
+                    physical_status,
+                    addresses,
+                },
+        } = info.into();
+
+        t.add_row(row!["nicid", id]);
+        t.add_row(row!["name", name]);
+        t.add_row(row!["topopath", topopath]);
+        t.add_row(row!["filepath", filepath]);
+
+        if let Some(mac) = mac {
+            t.add_row(row!["mac", mac]);
+        } else {
+            t.add_row(row!["mac", "-"]);
+        }
+
+        t.add_row(row!["mtu", mtu]);
+        t.add_row(row!["features", format!("{:?}", features)]);
+        t.add_row(row!["status", format!("{} | {}", administrative_status, physical_status)]);
+        for addr in addresses {
+            t.add_row(row!["addr", addr]);
+        }
+    }
+    t.to_string()
 }
 
 async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
     match cmd {
         IfCmd::List { name_pattern } => {
-            let response = stack.list_interfaces().await.context("error getting response")?;
-            let pattern = name_pattern.unwrap_or("".to_string());
-            let ifaces_to_show = shortlist_interfaces(pattern.as_str(), response);
-            for info in ifaces_to_show {
-                println!("{}\n", pretty::InterfaceInfo::from(info));
+            let mut response = stack.list_interfaces().await.context("error getting response")?;
+            if let Some(name_pattern) = name_pattern {
+                let () = shortlist_interfaces(&name_pattern, &mut response);
             }
+            let result = tabulate_ifaces_info(response);
+            println!("{}", result);
         }
         IfCmd::Add { path } => {
             let dev = File::open(&path).context("failed to open device")?;
@@ -64,7 +111,9 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
                 // Safe because we checked the return status above.
                 zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),
             );
-            let (err, id) = stack.add_ethernet_interface(&topological_path, dev).await
+            let (err, id) = stack
+                .add_ethernet_interface(&topological_path, dev)
+                .await
                 .context("error adding device")?;
             if let Some(e) = err {
                 println!("Error adding interface {}: {:?}", path, e)
@@ -80,8 +129,7 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
             }
         }
         IfCmd::Get { id } => {
-            let response =
-                stack.get_interface_info(id).await.context("error getting response")?;
+            let response = stack.get_interface_info(id).await.context("error getting response")?;
             if let Some(e) = response.1 {
                 println!("Error getting interface {}: {:?}", id, e)
             } else {
@@ -108,7 +156,9 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
             let parsed_addr = parse_ip_addr(&addr)?;
             let mut fidl_addr =
                 netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len: prefix };
-            let response = stack.add_interface_address(id, &mut fidl_addr).await
+            let response = stack
+                .add_interface_address(id, &mut fidl_addr)
+                .await
                 .context("error setting interface address")?;
             if let Some(e) = response {
                 println!("Error adding interface address {}: {:?}", id, e)
@@ -130,18 +180,19 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
 async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
     match cmd {
         FwdCmd::List => {
-            let response = stack.get_forwarding_table().await
-                .context("error retrieving forwarding table")?;
+            let response =
+                stack.get_forwarding_table().await.context("error retrieving forwarding table")?;
             for entry in response {
                 println!("{}", pretty::ForwardingEntry::from(entry));
             }
         }
         FwdCmd::AddDevice { id, addr, prefix } => {
-            let response =
-                stack.add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+            let response = stack
+                .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
                     subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
                     destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
-                }).await
+                })
+                .await
                 .context("error adding forwarding entry")?;
             if let Some(e) = response {
                 println!("Error adding forwarding entry: {:?}", e);
@@ -150,13 +201,14 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
             }
         }
         FwdCmd::AddHop { next_hop, addr, prefix } => {
-            let response =
-                stack.add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+            let response = stack
+                .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
                     subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
                     destination: fidl_fuchsia_net_stack::ForwardingDestination::NextHop(
-                        parse_ip_addr(&next_hop)?
+                        parse_ip_addr(&next_hop)?,
                     ),
-                }).await
+                })
+                .await
                 .context("error adding forwarding entry")?;
             if let Some(e) = response {
                 println!("Error adding forwarding entry: {:?}", e);
@@ -165,11 +217,13 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
             }
         }
         FwdCmd::Del { addr, prefix } => {
-            let response = stack.del_forwarding_entry(&mut net::Subnet {
-                addr: parse_ip_addr(&addr)?,
-                prefix_len: prefix,
-            }).await
-            .context("error removing forwarding entry")?;
+            let response = stack
+                .del_forwarding_entry(&mut net::Subnet {
+                    addr: parse_ip_addr(&addr)?,
+                    prefix_len: prefix,
+                })
+                .await
+                .context("error removing forwarding entry")?;
             if let Some(e) = response {
                 println!("Error removing forwarding entry: {:?}", e);
             } else {
@@ -223,7 +277,9 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
             }
             match netfilter::parser::parse_str_to_rules(&rules) {
                 Ok(mut rules) => {
-                    let status = filter.update_rules(&mut rules.iter_mut(), generation).await
+                    let status = filter
+                        .update_rules(&mut rules.iter_mut(), generation)
+                        .await
                         .context("error getting response")?;
                     println!("{:?}", status);
                 }
@@ -248,7 +304,9 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
             }
             match netfilter::parser::parse_str_to_nat_rules(&rules) {
                 Ok(mut rules) => {
-                    let status = filter.update_nat_rules(&mut rules.iter_mut(), generation).await
+                    let status = filter
+                        .update_nat_rules(&mut rules.iter_mut(), generation)
+                        .await
                         .context("error getting response")?;
                     println!("{:?}", status);
                 }
@@ -273,7 +331,9 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
             }
             match netfilter::parser::parse_str_to_rdr_rules(&rules) {
                 Ok(mut rules) => {
-                    let status = filter.update_rdr_rules(&mut rules.iter_mut(), generation).await
+                    let status = filter
+                        .update_rdr_rules(&mut rules.iter_mut(), generation)
+                        .await
                         .context("error getting response")?;
                     println!("{:?}", status);
                 }
@@ -286,10 +346,7 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        fidl_fuchsia_net_stack::*,
-    };
+    use {super::*, fidl_fuchsia_net_stack::*};
 
     fn get_fake_interface(id: u64, name: &str) -> InterfaceInfo {
         InterfaceInfo {
@@ -304,7 +361,7 @@ mod tests {
                 administrative_status: AdministrativeStatus::Enabled,
                 physical_status: PhysicalStatus::Up,
                 addresses: vec![],
-            }
+            },
         }
     }
 
@@ -321,12 +378,13 @@ mod tests {
     }
 
     fn shortlist_ifaces_by_nicid(name_pattern: &str) -> Vec<u64> {
-        shortlist_interfaces(name_pattern, get_fake_interfaces()).iter().map(|i| i.id).collect::<Vec<_>>()
+        let mut ifaces = get_fake_interfaces();
+        let () = shortlist_interfaces(name_pattern, &mut ifaces);
+        ifaces.into_iter().map(|i| i.id).collect()
     }
 
     #[test]
     fn test_shortlist_interfaces() {
-
         assert_eq!(vec![1, 10, 20, 30, 100, 200, 300], shortlist_ifaces_by_nicid(""));
         assert_eq!(vec![0_u64; 0], shortlist_ifaces_by_nicid("no such thing"));
 

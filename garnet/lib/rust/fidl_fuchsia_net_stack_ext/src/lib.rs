@@ -119,15 +119,15 @@ impl std::fmt::Display for PhysicalStatus {
 }
 
 pub struct InterfaceProperties {
-    name: String,
-    topopath: String,
-    filepath: String,
-    mac: Option<fidl_fuchsia_hardware_ethernet_ext::MacAddress>,
-    mtu: u32,
-    features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures,
-    administrative_status: AdministrativeStatus,
-    physical_status: PhysicalStatus,
-    addresses: Vec<InterfaceAddress>,
+    pub name: String,
+    pub topopath: String,
+    pub filepath: String,
+    pub mac: Option<fidl_fuchsia_hardware_ethernet_ext::MacAddress>,
+    pub mtu: u32,
+    pub features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures,
+    pub administrative_status: AdministrativeStatus,
+    pub physical_status: PhysicalStatus,
+    pub addresses: Vec<InterfaceAddress>,
 }
 
 impl From<fidl::InterfaceProperties> for InterfaceProperties {
@@ -198,8 +198,8 @@ impl std::fmt::Display for InterfaceProperties {
     }
 }
 pub struct InterfaceInfo {
-    id: u64,
-    properties: InterfaceProperties,
+    pub id: u64,
+    pub properties: InterfaceProperties,
 }
 
 impl From<fidl::InterfaceInfo> for InterfaceInfo {

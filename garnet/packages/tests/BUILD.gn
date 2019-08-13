@@ -174,7 +174,7 @@ group("netcfg_tests") {
   ]
 }
 
-group("net-cli-tests") {
+group("net-cli") {
   testonly = true
   public_deps = [
     "//garnet/bin/net-cli:net-cli-tests",
@@ -394,6 +394,7 @@ group("all") {
     ":magma",
     ":media",
     ":memory_metrics",
+    ":net-cli",
     ":netcfg_tests",
     ":netemul",
     ":netfilter",
