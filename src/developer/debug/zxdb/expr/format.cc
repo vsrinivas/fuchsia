@@ -443,7 +443,7 @@ void FormatReference(FormatNode* node, const FormatOptions& options,
       std::string(),
       [ref = node->value()](fxl::RefPtr<EvalContext> context,
                             fit::callback<void(const Err& err, ExprValue value)> cb) {
-        EnsureResolveReference(context, ref, std::move(cb));
+        EnsureResolveReference(context, ref, ErrOrValue::FromPairCallback(std::move(cb)));
       });
   deref_node->set_child_kind(FormatNode::kPointerExpansion);
   node->children().push_back(std::move(deref_node));
@@ -916,7 +916,7 @@ void FormatPointerNode(FormatNode* node, const ExprValue& value, const FormatOpt
         "*" + node->name(),
         [ptr_value = value](fxl::RefPtr<EvalContext> context,
                             fit::callback<void(const Err& err, ExprValue value)> cb) {
-          ResolvePointer(context, ptr_value, std::move(cb));
+          ResolvePointer(context, ptr_value, ErrOrValue::FromPairCallback(std::move(cb)));
         });
     deref_node->set_child_kind(FormatNode::kPointerExpansion);
     node->children().push_back(std::move(deref_node));

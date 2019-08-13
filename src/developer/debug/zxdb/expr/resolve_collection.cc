@@ -98,7 +98,7 @@ void DoResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue&
   TargetPointer base_address = base_ptr.GetAs<TargetPointer>();
 
   ResolvePointer(context, base_address + member.data_member_offset(), std::move(member_type),
-                 ErrOrValue::ToPairCallback(std::move(cb)));
+                 std::move(cb));
 }
 
 // Extracts an embedded type inside of a base. This can be used for finding collection data members

@@ -333,12 +333,12 @@ void EvalContextImpl::OnDwarfEvalComplete(const Err& err,
     state->callback(Err(), state->symbol, ExprValue(state->type, std::move(data)));
   } else {
     // The DWARF result is a pointer to the value.
-    ResolvePointer(
-        RefPtrTo(this), result_int, state->type,
-        [state, weak_this = weak_factory_.GetWeakPtr()](const Err& err, ExprValue value) {
-          if (weak_this)
-            state->callback(err, state->symbol, std::move(value));
-        });
+    ResolvePointer(RefPtrTo(this), result_int, state->type,
+                   [state, weak_this = weak_factory_.GetWeakPtr()](ErrOrValue value) {
+                     if (weak_this)
+                       state->callback(value.err_or_empty(), state->symbol,
+                                       value.take_value_or_empty());
+                   });
   }
 }
 

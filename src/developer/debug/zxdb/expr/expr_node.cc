@@ -47,7 +47,8 @@ void ExprNode::EvalFollowReferences(fxl::RefPtr<EvalContext> context, EvalCallba
     if (err.has_error())
       cb(err, ExprValue());
     else
-      EnsureResolveReference(context, std::move(value), std::move(cb));
+      EnsureResolveReference(context, std::move(value),
+                             ErrOrValue::FromPairCallback(std::move(cb)));
   });
 }
 
@@ -167,7 +168,8 @@ void CastExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const
     if (err.has_error() || !CastShouldFollowReferences(context, cast_type, value, to_type)) {
       exec_cast(err, value);  // Also handles the error cases.
     } else {
-      EnsureResolveReference(context, std::move(value), std::move(exec_cast));
+      EnsureResolveReference(context, std::move(value),
+                             ErrOrValue::FromPairCallback(std::move(exec_cast)));
     }
   });
 }
@@ -190,7 +192,7 @@ void DereferenceExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb
         }
 
         // Normal dereferencing operation.
-        ResolvePointer(context, value, std::move(cb));
+        ResolvePointer(context, value, ErrOrValue::FromPairCallback(std::move(cb)));
       });
 }
 
@@ -297,7 +299,7 @@ void FunctionCallExprNode::EvalMemberPtrCall(fxl::RefPtr<EvalContext> context,
   }
 
   // Regular, assume the base is a pointer.
-  ResolvePointer(context, object_ptr, std::move(on_pointer_resolved));
+  ResolvePointer(context, object_ptr, ErrOrValue::FromPairCallback(std::move(on_pointer_resolved)));
 }
 
 void IdentifierExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {

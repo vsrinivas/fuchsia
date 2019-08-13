@@ -30,15 +30,13 @@ Err GetPointerValue(const ExprValue& value, TargetPointer* pointer_value) {
 }  // namespace
 
 void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address, fxl::RefPtr<Type> type,
-                    fit::callback<void(const Err&, ExprValue)> cb) {
+                    fit::callback<void(ErrOrValue)> cb) {
   // We need to be careful to construct the return type with the original type given since it may
   // have const qualifiers, etc., but to use the concrete one (no const, with forward-definitions
   // resolved) for size computation.
   fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(type.get());
-  if (!concrete) {
-    cb(Err("Missing pointer type."), ExprValue());
-    return;
-  }
+  if (!concrete)
+    return cb(Err("Missing pointer type."));
 
   uint32_t type_size = concrete->byte_size();
   eval_context->GetDataProvider()->GetMemoryAsync(
@@ -48,37 +46,35 @@ void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address, fxl
         // Watch out, "type" may be non-concrete (we need to preserve "const", etc.). Use
         // "type_size" for the concrete size.
         if (err.has_error()) {
-          cb(err, ExprValue());
+          cb(err);
         } else if (data.size() != type_size) {
           // Short read, memory is invalid.
-          cb(Err(fxl::StringPrintf("Invalid pointer 0x%" PRIx64, address)), ExprValue());
+          cb(Err(fxl::StringPrintf("Invalid pointer 0x%" PRIx64, address)));
         } else {
-          cb(Err(), ExprValue(std::move(type), std::move(data), ExprValueSource(address)));
+          cb(ExprValue(std::move(type), std::move(data), ExprValueSource(address)));
         }
       });
 }
 
 void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& pointer,
-                    fit::callback<void(const Err&, ExprValue)> cb) {
+                    fit::callback<void(ErrOrValue)> cb) {
   fxl::RefPtr<Type> pointed_to;
   if (Err err = GetPointedToType(eval_context, pointer.type(), &pointed_to); err.has_error())
-    return cb(err, ExprValue());
+    return cb(err);
 
   TargetPointer pointer_value = 0;
   if (Err err = GetPointerValue(pointer, &pointer_value); err.has_error())
-    return cb(err, ExprValue());
+    return cb(err);
 
   ResolvePointer(std::move(eval_context), pointer_value, std::move(pointed_to), std::move(cb));
 }
 
 void EnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprValue value,
-                            fit::callback<void(const Err&, ExprValue)> cb) {
+                            fit::callback<void(ErrOrValue)> cb) {
   Type* type = value.type();
   if (!type) {
-    // Untyped input, pass the value forward and let the callback handle the
-    // problem.
-    cb(Err(), std::move(value));
-    return;
+    // Untyped input, pass the value forward and let the callback handle the problem.
+    return cb(std::move(value));
   }
 
   // Strip "const", etc. and check type.
@@ -86,8 +82,7 @@ void EnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprVa
   if (concrete->tag() != DwarfTag::kReferenceType &&
       concrete->tag() != DwarfTag::kRvalueReferenceType) {
     // Not a reference, nothing to do.
-    cb(Err(), std::move(value));
-    return;
+    return cb(std::move(value));
   }
   // The symbol provider should have created the right object type.
   const ModifiedType* reference = concrete->AsModifiedType();
@@ -98,7 +93,7 @@ void EnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprVa
   TargetPointer pointer_value = 0;
   Err err = GetPointerValue(value, &pointer_value);
   if (err.has_error()) {
-    cb(err, ExprValue());
+    cb(err);
   } else {
     ResolvePointer(std::move(eval_context), pointer_value, RefPtrTo(underlying_type),
                    std::move(cb));

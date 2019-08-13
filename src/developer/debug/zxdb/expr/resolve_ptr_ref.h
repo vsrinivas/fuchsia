@@ -6,13 +6,13 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_PTR_REF_H_
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 
 class Err;
 class EvalContext;
-class ExprValue;
 class Type;
 
 // Creates an ExprValue of the given type from the data at the given address. Issues the callback on
@@ -20,12 +20,12 @@ class Type;
 //
 // It's assumed the type is already concrete (so it has a size).
 void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address, fxl::RefPtr<Type> type,
-                    fit::callback<void(const Err&, ExprValue)> cb);
+                    fit::callback<void(ErrOrValue)> cb);
 
 // Similar to the above but the pointer and type comes from the given ExprValue, which is assumed to
 // be a pointer type. If it's not a pointer type, the callback will be issued with an error.
 void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& pointer,
-                    fit::callback<void(const Err&, ExprValue)> cb);
+                    fit::callback<void(ErrOrValue)> cb);
 
 // Ensures that the value is not a reference type (rvalue or regular). The result will be an
 // ExprValue passed to the callback that has any reference types stripped.
@@ -36,7 +36,7 @@ void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& poin
 // If the value is a reference type, it will be resolved and the value will be the value of the
 // referenced data.
 void EnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprValue value,
-                            fit::callback<void(const Err&, ExprValue)> cb);
+                            fit::callback<void(ErrOrValue)> cb);
 
 // Verifies that |input| type is a pointer and fills the pointed-to type into |*pointed_to|. In
 // other cases, returns an error. The input type can be null (which will produce an error) or
