@@ -13,44 +13,6 @@
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
 
 namespace media_player {
-namespace {
-
-static const char kAacAdtsMimeType[] = "audio/aac-adts";
-
-// Creates oob_bytes from a packet payload of at least 4 bytes.
-std::vector<uint8_t> MakeOobBytesFromAdtsHeader(const uint8_t* adts_header) {
-  std::vector<uint8_t> asc(2);
-
-  // TODO(dustingreen): Remove this function, as we don't need to be
-  // synthesizing oob_bytes from ADTS header data.
-
-  uint8_t profile_ObjectType;        // name in AAC spec in adts_fixed_header
-  uint8_t sampling_frequency_index;  // name in AAC spec in adts_fixed_header
-  uint8_t channel_configuration;     // name in AAC spec in adts_fixed_header
-  profile_ObjectType = (adts_header[2] >> 6) & 0x3;
-  sampling_frequency_index = (adts_header[2] >> 2) & 0xf;
-  FXL_DCHECK(sampling_frequency_index < 11);
-  channel_configuration = (adts_header[2] & 0x1) << 2 | (adts_header[3] >> 6);
-
-  // Now let's convert these to the forms needed by AudioSpecificConfig.
-  uint8_t audioObjectType = profile_ObjectType + 1;  // see near Table 1.A.11, for AAC not MPEG-2
-  uint8_t samplingFrequencyIndex = sampling_frequency_index;  // no conversion needed
-  uint8_t channelConfiguration = channel_configuration;       // no conversion needed
-  uint8_t frameLengthFlag = 0;
-  uint8_t dependsOnCoreCoder = 0;
-  uint8_t extensionFlag = 0;
-
-  // Now we are ready to build a two-byte AudioSpecificConfig.  Not an
-  // AudioSpecificInfo as stated in avc_utils.cpp (AOSP) mind you, but an
-  // AudioSpecificConfig.
-  asc[0] = (audioObjectType << 3) | (samplingFrequencyIndex >> 1);
-  asc[1] = (samplingFrequencyIndex << 7) | (channelConfiguration << 3) | (frameLengthFlag << 2) |
-           (dependsOnCoreCoder << 1) | (extensionFlag << 0);
-
-  return asc;
-}
-
-}  // namespace
 
 // static
 void FidlDecoder::Create(const StreamType& stream_type,
@@ -68,7 +30,6 @@ FidlDecoder::FidlDecoder(const StreamType& stream_type,
                          fuchsia::media::FormatDetails input_format_details)
     : medium_(stream_type.medium()), input_format_details_(std::move(input_format_details)) {
   FXL_DCHECK(input_format_details_.has_mime_type());
-  update_oob_bytes_ = (input_format_details_.mime_type() == kAacAdtsMimeType);
 
   switch (medium_) {
     case StreamType::Medium::kAudio:
@@ -152,8 +113,6 @@ void FidlDecoder::FlushInput(bool hold_frame, size_t input_index, fit::closure c
   outboard_decoder_->CloseCurrentStream(stream_lifetime_ordinal_, false, false);
   stream_lifetime_ordinal_ += 2;
   end_of_input_stream_ = false;
-  // has_mime_type() known to be true, and asserted above
-  update_oob_bytes_ = input_format_details_.mime_type() == kAacAdtsMimeType;
   flushing_ = true;
 
   callback();
@@ -180,19 +139,6 @@ void FidlDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
     // |input_buffers_|.
 
     BufferSet& current_set = input_buffers_.current_set();
-
-    // TODO(dalesat): Remove when the aac/adts decoder no longer needs this
-    // help.
-    if (update_oob_bytes_ && packet->size() >= 4) {
-      FXL_DCHECK(packet->payload());
-
-      input_format_details_.set_oob_bytes(
-          MakeOobBytesFromAdtsHeader(static_cast<const uint8_t*>(packet->payload())));
-
-      outboard_decoder_->QueueInputFormatDetails(stream_lifetime_ordinal_,
-                                                 fidl::Clone(input_format_details_));
-      update_oob_bytes_ = false;
-    }
 
     FXL_DCHECK(packet->payload_buffer()->id() < current_set.buffer_count())
         << "Buffer ID " << packet->payload_buffer()->id()

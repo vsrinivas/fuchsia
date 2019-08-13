@@ -133,7 +133,6 @@ class FidlDecoder : public Decoder {
   bool end_of_input_stream_ = false;
   BufferSetManager input_buffers_;
   BufferSetManager output_buffers_;
-  bool update_oob_bytes_ = false;
   media::TimelineRate pts_rate_;
   int64_t next_pts_ = 0;
   bool flushing_ = true;
