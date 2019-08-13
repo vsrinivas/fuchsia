@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/line_input.h"
+#include "src/lib/line_input/line_input.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -18,7 +18,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
-namespace zxdb {
+namespace line_input {
 
 const char* SpecialCharacters::kTermBeginningOfLine = "\r";
 const char* SpecialCharacters::kTermClearToEnd = "\x1b[0K";
@@ -515,4 +515,4 @@ std::string LineInputBlockingStdio::ReadLine() {
   return line();
 }
 
-}  // namespace zxdb
+}  // namespace line_input

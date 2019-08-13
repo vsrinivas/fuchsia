@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_LINE_INPUT_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_LINE_INPUT_H_
+#ifndef SRC_LIB_LINE_INPUT_LINE_INPUT_H_
+#define SRC_LIB_LINE_INPUT_LINE_INPUT_H_
 
 #include <deque>
 #include <string>
@@ -15,7 +15,7 @@
 struct termios;
 #endif
 
-namespace zxdb {
+namespace line_input {
 
 struct SpecialCharacters {
   static constexpr char kKeyControlA = 1;
@@ -231,6 +231,6 @@ class LineInputBlockingStdio : public LineInputStdout {
   std::string ReadLine();
 };
 
-}  // namespace zxdb
+}  // namespace line_input
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_LINE_INPUT_H_
+#endif  // SRC_LIB_LINE_INPUT_LINE_INPUT_H_

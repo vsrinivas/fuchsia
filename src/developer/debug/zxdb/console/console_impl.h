@@ -10,8 +10,8 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
-#include "src/developer/debug/zxdb/console/line_input.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/line_input/line_input.h"
 
 namespace zxdb {
 
@@ -44,7 +44,7 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
 
   debug_ipc::MessageLoop::WatchHandle stdio_watch_;
 
-  LineInputStdout line_input_;
+  line_input::LineInputStdout line_input_;
 
   // Saves the last nonempty input line for re-running when the user just
   // presses "Enter" with no parameters. This must be re-parsed each time

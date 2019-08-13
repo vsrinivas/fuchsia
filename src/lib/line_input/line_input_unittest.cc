@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/line_input.h"
+#include "src/lib/line_input/line_input.h"
 
 #include "gtest/gtest.h"
 
-namespace zxdb {
+namespace line_input {
 
 namespace {
 
@@ -307,7 +307,7 @@ TEST(LineInput, NegAck) {
 }
 
 TEST(LineInput, EndOfTransimission) {
-  TestLineInput input("[zxdb] ");
+  TestLineInput input("[prompt] ");
   input.BeginReadLine();
 
   //             v
@@ -352,4 +352,4 @@ TEST(LineInput, EndOfTransimission) {
   EXPECT_EQ(input.line(), "First Second ");
 }
 
-}  // namespace zxdb
+}  // namespace line_input

@@ -32,6 +32,7 @@ group("tests") {
     "fidl_table_validation:tests",
     "fuzzing:tests",
     "isolated_devmgr:tests",
+    "line_input:tests",
     "process_builder:tests",
     "rust_backtrace:tests",
     "test_util:tests",
