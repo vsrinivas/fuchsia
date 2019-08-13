@@ -29,7 +29,7 @@ pub struct ServerConfig {
     pub default_lease_time: u32,
     /// The number of bits to mask the subnet address from the host address in an IPv4Addr.
     pub subnet_mask: SubnetMask,
-    /// The IPv4 addresses which the server is reponsible for managing and leasing to
+    /// The IPv4 addresses which the server is responsible for managing and leasing to
     /// clients.
     pub managed_addrs: Vec<Ipv4Addr>,
     /// The IPv4 addresses, in order of priority, for the default gateway/router of the local

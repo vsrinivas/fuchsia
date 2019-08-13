@@ -9,11 +9,11 @@ use {
     dhcp::{
         configuration,
         protocol::{Message, SERVER_PORT},
-        server::{Server, DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX},
+        server::{Server, ServerAction, DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX},
     },
     failure::{Error, Fail, ResultExt},
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
-    fuchsia_syslog::{self as fx_syslog, fx_log_info},
+    fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{future::try_join, Future, StreamExt, TryFutureExt, TryStreamExt},
     getopts::Options,
@@ -93,19 +93,26 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
             .ok_or_else(|| failure::err_msg("unable to parse buffer"))?;
         fx_log_info!("parsed message: {:?}", msg);
         // This call should not block because the server is single-threaded.
-        let response =
-            server.borrow_mut().dispatch(msg).ok_or_else(|| failure::err_msg("invalid message"))?;
-        fx_log_info!("generated response: {:?}", response);
-        let response_buffer = response.serialize();
-        // A new DHCP client sending a DHCPDISCOVER message will send
-        // it from 0.0.0.0. In order to respond with a DHCPOFFER, the server
-        // must broadcast the response. See RFC 2131 Section 4.4.1 for further
-        // details.
-        if sender.ip() == IpAddr::V4(Ipv4Addr::UNSPECIFIED) {
-            sender.set_ip(IpAddr::V4(Ipv4Addr::BROADCAST));
+        let result = server.borrow_mut().dispatch(msg);
+        match result {
+            Err(e) => fx_log_err!("error processing client message: {}", e),
+            Ok(ServerAction::AddressRelease(addr)) => fx_log_info!("released address: {}", addr),
+            Ok(ServerAction::AddressDecline(addr)) => fx_log_info!("allocated address: {}", addr),
+            Ok(ServerAction::SendResponse(message)) => {
+                fx_log_info!("generated response: {:?}", message);
+
+                let response_buffer = message.serialize();
+                // A new DHCP client sending a DHCPDISCOVER message will send
+                // it from 0.0.0.0. In order to respond with a DHCPOFFER, the server
+                // must broadcast the response. See RFC 2131 Section 4.4.1 for further
+                // details.
+                if sender.ip() == IpAddr::V4(Ipv4Addr::UNSPECIFIED) {
+                    sender.set_ip(IpAddr::V4(Ipv4Addr::BROADCAST));
+                }
+                sock.send_to(&response_buffer, sender).await.context("unable to send response")?;
+                fx_log_info!("response sent to: {}", sender);
+            }
         }
-        sock.send_to(&response_buffer, sender).await.context("unable to send response")?;
-        fx_log_info!("response sent to: {:?}", sender);
     }
 }
 

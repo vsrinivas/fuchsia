@@ -7,6 +7,7 @@ use byteorder::{BigEndian, ByteOrder};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
+use std::fmt;
 use std::iter::Iterator;
 use std::net::Ipv4Addr;
 
@@ -177,14 +178,14 @@ impl Message {
         None
     }
 
-    /// Returns the value's DHCP `MessageType` or `None` if unassigned.
-    pub fn get_dhcp_type(&self) -> Option<MessageType> {
-        let dhcp_type_option = self.get_config_option(OptionCode::DhcpMessageType)?;
-        let maybe_dhcp_type_value = dhcp_type_option.value.get(0)?;
-        match MessageType::try_from(*maybe_dhcp_type_value) {
-            Ok(dhcp_type) => Some(dhcp_type),
-            Err(MessageTypeError::UnknownMessageType(_typ)) => None,
-        }
+    /// Returns the value's DHCP `MessageType` or appropriate `MessageTypeError` in case of failure.
+    pub fn get_dhcp_type(&self) -> Result<MessageType, MessageTypeError> {
+        let dhcp_type_option = self
+            .get_config_option(OptionCode::DhcpMessageType)
+            .ok_or(MessageTypeError::MissingMessageTypeOption)?;
+        let maybe_dhcp_type_value =
+            dhcp_type_option.value.get(0).ok_or(MessageTypeError::MissingMessageTypeValue)?;
+        MessageType::try_from(*maybe_dhcp_type_value)
     }
 
     pub fn parse_to_config(&self) -> RequestedConfig {
@@ -275,6 +276,7 @@ pub enum OptionCode {
     IpAddrLeaseTime,
     DhcpMessageType,
     ServerId,
+    Message,
     RenewalTime,
     RebindingTime,
 }
@@ -291,6 +293,7 @@ impl Into<u8> for OptionCode {
             OptionCode::IpAddrLeaseTime => 51,
             OptionCode::DhcpMessageType => 53,
             OptionCode::ServerId => 54,
+            OptionCode::Message => 56,
             OptionCode::RenewalTime => 58,
             OptionCode::RebindingTime => 59,
         }
@@ -315,6 +318,7 @@ impl TryFrom<u8> for OptionCode {
             51 => Ok(OptionCode::IpAddrLeaseTime),
             53 => Ok(OptionCode::DhcpMessageType),
             54 => Ok(OptionCode::ServerId),
+            56 => Ok(OptionCode::Message),
             58 => Ok(OptionCode::RenewalTime),
             59 => Ok(OptionCode::RebindingTime),
             code => Err(OptionCodeError::UnknownCode(code)),
@@ -353,7 +357,23 @@ impl Into<u8> for MessageType {
     }
 }
 
+/// Instead of reusing the implementation of `Debug::fmt` here, a cleaner way
+/// is to derive the 'Display' trait for enums using `enum-display-derive` crate
+///
+/// https://docs.rs/enum-display-derive/0.1.0/enum_display_derive/
+///
+/// Since addition of this in third_party/rust_crates needs OSRB approval
+/// it should be done if there is a stronger need for more complex enums.
+impl fmt::Display for MessageType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self, f)
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MessageTypeError {
+    MissingMessageTypeOption,
+    MissingMessageTypeValue,
     UnknownMessageType(u8),
 }
 
@@ -392,9 +412,9 @@ impl<'a> Iterator for OptionBuffer<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let (&raw_opt_code, buf) = self.buf.split_first()?;
+            let (raw_opt_code, buf) = self.buf.split_first()?;
             self.buf = buf;
-            match OptionCode::try_from(raw_opt_code) {
+            match OptionCode::try_from(*raw_opt_code) {
                 Ok(OptionCode::End) | Ok(OptionCode::Pad) => {
                     // End and Pad have neither runtime meaning nor a payload.
                 }
@@ -691,24 +711,38 @@ mod tests {
             value: vec![MessageType::DHCPDISCOVER.into()],
         });
 
-        assert_eq!(msg.get_dhcp_type(), Some(MessageType::DHCPDISCOVER));
+        assert_eq!(msg.get_dhcp_type(), Ok(MessageType::DHCPDISCOVER));
     }
 
     #[test]
-    fn test_get_dhcp_type_without_dhcp_type_option_returns_none() {
+    fn test_get_dhcp_type_without_dhcp_type_option_returns_err() {
+        let msg = Message::new();
+
+        assert_eq!(msg.get_dhcp_type(), Err(MessageTypeError::MissingMessageTypeOption));
+    }
+
+    #[test]
+    fn test_get_dhcp_type_without_dhcp_type_option_value_returns_err() {
         let mut msg = Message::new();
         msg.options.push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![] });
 
-        assert_eq!(msg.get_dhcp_type(), None);
+        assert_eq!(msg.get_dhcp_type(), Err(MessageTypeError::MissingMessageTypeValue));
     }
 
     #[test]
-    fn test_get_dhcp_type_with_invalid_dhcp_type_value_returns_none() {
+    fn test_get_dhcp_type_with_invalid_dhcp_type_value_returns_err() {
         let mut msg = Message::new();
-        msg.options
-            .push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![224, 223, 222] });
 
-        assert_eq!(msg.get_dhcp_type(), None);
+        let invalid_message_type_value = 224;
+        msg.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![invalid_message_type_value],
+        });
+
+        assert_eq!(
+            msg.get_dhcp_type(),
+            Err(MessageTypeError::UnknownMessageType(invalid_message_type_value))
+        );
     }
 
     #[test]

@@ -3,14 +3,17 @@
 // found in the LICENSE file.
 
 use crate::configuration::{ClientConfig, ServerConfig};
-use crate::protocol::{self, ConfigOption, Message, MessageType, OpCode, OptionCode};
+use crate::protocol::{
+    self, ConfigOption, Message, MessageType, MessageTypeError, OpCode, OptionCode,
+};
 use crate::stash::Stash;
 use byteorder::{BigEndian, ByteOrder};
-use failure::{Error, ResultExt};
+use failure::{Error, Fail, ResultExt};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use serde_derive::{Deserialize, Serialize};
 use std::cmp;
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::fmt;
 use std::net::Ipv4Addr;
 use std::ops::Fn;
 
@@ -33,6 +36,96 @@ where
 pub const DEFAULT_STASH_ID: &str = "dhcpd";
 /// The default prefix used by the Server in the keys for values stored in the Stash service.
 pub const DEFAULT_STASH_PREFIX: &str = "";
+
+/// This enumerates the actions a DHCP server can take in response to a
+/// received client message. A `SendResponse(Message)` indicates that a
+/// `Message` needs to be sent back to the client. The other two variants
+/// indicate a successful processing of a client `Decline` or `Release`.
+/// Implements `PartialEq` for test assertions.
+#[derive(Debug, PartialEq)]
+pub enum ServerAction {
+    SendResponse(Message),
+    AddressDecline(Ipv4Addr),
+    AddressRelease(Ipv4Addr),
+}
+
+/// A wrapper around the error types which can be returned by DHCP Server
+/// in response to client requests.
+/// Implements `PartialEq` for test assertions.
+#[derive(Debug, Fail, PartialEq)]
+pub enum ServerError {
+    #[fail(display = "unexpected client message type: {}", _0)]
+    UnexpectedClientMessageType(MessageType),
+
+    #[fail(display = "requested ip parsing failure: {}", _0)]
+    BadRequestedIpv4Addr(String),
+
+    #[fail(display = "local address pool manipulation error: {}", _0)]
+    ServerAddressPoolFailure(AddressPoolError),
+
+    #[fail(display = "incorrect server ip in client message: {}", _0)]
+    IncorrectDHCPServer(Ipv4Addr),
+
+    #[fail(display = "requested ip mismatch with offered ip: {} {}", _0, _1)]
+    RequestedIpOfferIpMismatch(Ipv4Addr, Ipv4Addr),
+
+    #[fail(display = "expired client config")]
+    ExpiredClientConfig,
+
+    #[fail(display = "requested ip absent from server pool: {}", _0)]
+    UnidentifiedRequestedIp(Ipv4Addr),
+
+    #[fail(display = "unknown client mac: {}", _0)]
+    UnknownClientMac(MacAddr),
+
+    #[fail(display = "init reboot request did not include ip")]
+    NoRequestedAddrAtInitReboot,
+
+    #[fail(display = "unidentified client state during request")]
+    UnknownClientStateDuringRequest,
+
+    #[fail(display = "decline request did not include ip")]
+    NoRequestedAddrForDecline,
+
+    #[fail(display = "unknown client message type: {}", _0)]
+    UnidentifiedClientMessageType(u8),
+
+    #[fail(display = "client request did not include required message type option")]
+    MissingMessageTypeOption,
+
+    #[fail(display = "client request did not include required message type")]
+    MissingMessageTypeValue,
+
+    #[fail(display = "error manipulating server cache: {}", _0)]
+    ServerCacheUpdateFailure(StashError),
+}
+
+impl From<AddressPoolError> for ServerError {
+    fn from(e: AddressPoolError) -> Self {
+        ServerError::ServerAddressPoolFailure(e)
+    }
+}
+
+/// This struct is used to hold the `failure::Error` returned by the server's
+/// Stash manipulation methods. We manually implement `PartialEq` so this
+/// struct could be included in the `ServerError` enum,
+/// which are asserted for equality in tests.
+#[derive(Debug)]
+pub struct StashError {
+    error: Error,
+}
+
+impl PartialEq for StashError {
+    fn eq(&self, _other: &Self) -> bool {
+        false
+    }
+}
+
+impl fmt::Display for StashError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self, f)
+    }
+}
 
 impl<F> Server<F>
 where
@@ -78,23 +171,39 @@ where
     ///
     /// If the incoming message is a valid client DHCP message, then the server will attempt to
     /// take appropriate action to serve the client's request, update the internal server state,
-    /// and return a response message. If the incoming message is invalid, or the server is
-    /// unable to serve the request, then `dispatch()` will return `None`.
-    pub fn dispatch(&mut self, msg: Message) -> Option<Message> {
+    /// and return the suitable response.
+    /// If the incoming message is invalid, or the server is unable to serve the request,
+    /// or the processing of the client's request resulted in an error, then `dispatch()`
+    /// will return the fitting `Err` indicating what went wrong.
+    pub fn dispatch(&mut self, msg: Message) -> Result<ServerAction, ServerError> {
         match msg.get_dhcp_type() {
-            Some(MessageType::DHCPDISCOVER) => self.handle_discover(msg),
-            Some(MessageType::DHCPOFFER) => None,
-            Some(MessageType::DHCPREQUEST) => self.handle_request(msg),
-            Some(MessageType::DHCPDECLINE) => self.handle_decline(msg),
-            Some(MessageType::DHCPACK) => None,
-            Some(MessageType::DHCPNAK) => None,
-            Some(MessageType::DHCPRELEASE) => self.handle_release(msg),
-            Some(MessageType::DHCPINFORM) => self.handle_inform(msg),
-            None => None,
+            Ok(MessageType::DHCPDISCOVER) => self.handle_discover(msg),
+            Ok(MessageType::DHCPOFFER) => {
+                Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPOFFER))
+            }
+            Ok(MessageType::DHCPREQUEST) => self.handle_request(msg),
+            Ok(MessageType::DHCPDECLINE) => self.handle_decline(msg),
+            Ok(MessageType::DHCPACK) => {
+                Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPACK))
+            }
+            Ok(MessageType::DHCPNAK) => {
+                Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPNAK))
+            }
+            Ok(MessageType::DHCPRELEASE) => self.handle_release(msg),
+            Ok(MessageType::DHCPINFORM) => self.handle_inform(msg),
+            Err(MessageTypeError::MissingMessageTypeOption) => {
+                Err(ServerError::MissingMessageTypeOption)
+            }
+            Err(MessageTypeError::MissingMessageTypeValue) => {
+                Err(ServerError::MissingMessageTypeValue)
+            }
+            Err(MessageTypeError::UnknownMessageType(typ)) => {
+                Err(ServerError::UnidentifiedClientMessageType(typ))
+            }
         }
     }
 
-    fn handle_discover(&mut self, disc: Message) -> Option<Message> {
+    fn handle_discover(&mut self, disc: Message) -> Result<ServerAction, ServerError> {
         let client_config = self.client_config(&disc);
         let offered_ip = self.get_addr(&disc)?;
         let mut offer = build_offer(disc, &self.config, &client_config);
@@ -105,34 +214,41 @@ where
             vec![],
             &client_config,
         ) {
-            Ok(()) => Some(offer),
-            Err(e) => {
-                log::warn!("failed to store client config: {}", e);
-                None
-            }
+            Ok(()) => Ok(ServerAction::SendResponse(offer)),
+            Err(e) => Err(ServerError::ServerCacheUpdateFailure(StashError { error: e })),
         }
     }
 
-    fn get_addr(&mut self, client: &Message) -> Option<Ipv4Addr> {
+    fn get_addr(&mut self, client: &Message) -> Result<Ipv4Addr, ServerError> {
         if let Some(config) = self.cache.get(&client.chaddr) {
             if !config.expired((self.time_provider)()) {
-                // Free cached address so that it can be reallocated to same client.
-                self.pool.free_addr(config.client_addr);
-                return Some(config.client_addr);
+                // Release cached address so that it can be reallocated to same client.
+                // This should NEVER return an `Err`. If it does it indicates
+                // the server's notion of client bindings is wrong.
+                // Its non-recoverable and we therefore panic.
+                if let Err(AddressPoolError::UnallocatedIpv4AddrRelease(addr)) =
+                    self.pool.release_addr(config.client_addr)
+                {
+                    panic!("server tried to release unallocated ip {}", addr)
+                }
+                return Ok(config.client_addr);
             } else if self.pool.addr_is_available(config.client_addr) {
-                return Some(config.client_addr);
+                return Ok(config.client_addr);
             }
         }
         if let Some(opt) = client.get_config_option(OptionCode::RequestedIpAddr) {
             if opt.value.len() >= 4 {
-                let requested_addr = protocol::ip_addr_from_buf_at(&opt.value, 0)
-                    .expect("out of range indexing on opt.value");
+                let requested_addr = protocol::ip_addr_from_buf_at(&opt.value, 0).ok_or(
+                    ServerError::BadRequestedIpv4Addr(
+                        "out of range indexing on opt.value".to_owned(),
+                    ),
+                )?;
                 if self.pool.addr_is_available(requested_addr) {
-                    return Some(requested_addr);
+                    return Ok(requested_addr);
                 }
             }
         }
-        self.pool.get_next_available_addr()
+        self.pool.get_next_available_addr().map_err(AddressPoolError::into)
     }
 
     fn store_client_config(
@@ -149,82 +265,123 @@ where
         };
         self.stash.store(&client_mac, &config).context("failed to store client in stash")?;
         self.cache.insert(client_mac, config);
-        self.pool.allocate_addr(client_addr);
+        // This should NEVER return an `Err`. If it does it indicates
+        // server's state has changed in the middle of request handling.
+        // This is non-recoverable and we therefore panic.
+        if let Err(AddressPoolError::UnavailableIpv4AddrAllocation(addr)) =
+            self.pool.allocate_addr(client_addr)
+        {
+            panic!("server tried to allocate unavailable ip {}", addr)
+        }
         Ok(())
     }
 
-    fn handle_request(&mut self, req: Message) -> Option<Message> {
+    fn handle_request(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         match get_client_state(&req) {
             ClientState::Selecting => self.handle_request_selecting(req),
             ClientState::InitReboot => self.handle_request_init_reboot(req),
             ClientState::Renewing => self.handle_request_renewing(req),
-            ClientState::Unknown => None,
+            ClientState::Unknown => Err(ServerError::UnknownClientStateDuringRequest),
         }
     }
 
-    fn handle_request_selecting(&mut self, req: Message) -> Option<Message> {
+    fn handle_request_selecting(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         let requested_ip = req.ciaddr;
-        if !is_recipient(self.config.server_ip, &req) || !self.is_assigned(&req, requested_ip) {
-            return None;
-        }
-        Some(build_ack(req, requested_ip, &self.config))
-    }
-
-    fn is_assigned(&self, req: &Message, requested_ip: Ipv4Addr) -> bool {
-        if let Some(client_config) = self.cache.get(&req.chaddr) {
-            client_config.client_addr == requested_ip
-                && !client_config.expired((self.time_provider)())
-                && self.pool.addr_is_allocated(requested_ip)
+        if !is_recipient(self.config.server_ip, &req) {
+            Err(ServerError::IncorrectDHCPServer(self.config.server_ip))
         } else {
-            false
+            let () = self.validate_requested_addr_with_client(&req, requested_ip)?;
+            Ok(ServerAction::SendResponse(build_ack(req, requested_ip, &self.config)))
         }
     }
 
-    fn handle_request_init_reboot(&mut self, req: Message) -> Option<Message> {
-        let requested_ip = get_requested_ip_addr(&req)?;
+    /// The function below validates if the `requested_ip` is correctly
+    /// associated with the client whose request `req` is being processed.
+    ///
+    /// It first checks if the client bindings can be found in server cache.
+    /// If not, the association is wrong and it returns an `Err()`.
+    ///
+    /// If the server can correctly locate the client bindings in its cache,
+    /// it further verifies if the `requested_ip` is the same as the ip address
+    /// represented in the bindings and the binding is not expired and that the
+    /// `requested_ip` is no longer available in the server address pool. If
+    /// all the above conditions are met, it returns an `Ok(())` else the
+    /// appropriate `Err()` value is returned.
+    fn validate_requested_addr_with_client(
+        &self,
+        req: &Message,
+        requested_ip: Ipv4Addr,
+    ) -> Result<(), ServerError> {
+        if let Some(client_config) = self.cache.get(&req.chaddr) {
+            if client_config.client_addr != requested_ip {
+                Err(ServerError::RequestedIpOfferIpMismatch(
+                    requested_ip,
+                    client_config.client_addr,
+                ))
+            } else if client_config.expired((self.time_provider)()) {
+                Err(ServerError::ExpiredClientConfig)
+            } else if !self.pool.addr_is_allocated(requested_ip) {
+                Err(ServerError::UnidentifiedRequestedIp(requested_ip))
+            } else {
+                Ok(())
+            }
+        } else {
+            Err(ServerError::UnknownClientMac(req.chaddr))
+        }
+    }
+
+    fn handle_request_init_reboot(&mut self, req: Message) -> Result<ServerAction, ServerError> {
+        let requested_ip =
+            get_requested_ip_addr(&req).ok_or(ServerError::NoRequestedAddrAtInitReboot)?;
         if !is_in_subnet(requested_ip, &self.config) {
-            return Some(build_nak(req, &self.config));
+            let error_msg = String::from("client and server are in different subnets");
+            return Ok(ServerAction::SendResponse(build_nak(req, &self.config, error_msg)));
         }
         if !is_client_mac_known(req.chaddr, &self.cache) {
-            return None;
+            return Err(ServerError::UnknownClientMac(req.chaddr));
         }
-        if !self.is_assigned(&req, requested_ip) {
-            return Some(build_nak(req, &self.config));
+        if self.validate_requested_addr_with_client(&req, requested_ip).is_err() {
+            let error_msg = String::from("requested ip is not assigned to client");
+            return Ok(ServerAction::SendResponse(build_nak(req, &self.config, error_msg)));
         }
-        Some(build_ack(req, requested_ip, &self.config))
+        Ok(ServerAction::SendResponse(build_ack(req, requested_ip, &self.config)))
     }
 
-    fn handle_request_renewing(&mut self, req: Message) -> Option<Message> {
+    fn handle_request_renewing(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         let client_ip = req.ciaddr;
-        if !self.is_assigned(&req, client_ip) {
-            return None;
-        }
-        Some(build_ack(req, client_ip, &self.config))
+        self.validate_requested_addr_with_client(&req, client_ip)
+            .and(Ok(ServerAction::SendResponse(build_ack(req, client_ip, &self.config))))
     }
 
-    fn handle_decline(&mut self, dec: Message) -> Option<Message> {
-        let declined_ip = get_requested_ip_addr(&dec)?;
-        if is_recipient(self.config.server_ip, &dec) && !self.is_assigned(&dec, declined_ip) {
-            self.pool.allocate_addr(declined_ip);
+    /// TODO(NET-2445) Ensure server behavior is as intended.
+    fn handle_decline(&mut self, dec: Message) -> Result<ServerAction, ServerError> {
+        let declined_ip =
+            get_requested_ip_addr(&dec).ok_or_else(|| ServerError::NoRequestedAddrForDecline)?;
+        if is_recipient(self.config.server_ip, &dec)
+            && self.validate_requested_addr_with_client(&dec, declined_ip).is_err()
+        {
+            let () = self.pool.allocate_addr(declined_ip)?;
         }
         self.cache.remove(&dec.chaddr);
-        None
+        Ok(ServerAction::AddressDecline(declined_ip))
     }
 
-    fn handle_release(&mut self, rel: Message) -> Option<Message> {
+    fn handle_release(&mut self, rel: Message) -> Result<ServerAction, ServerError> {
         if self.cache.contains_key(&rel.chaddr) {
-            self.pool.free_addr(rel.ciaddr);
+            let () = self.pool.release_addr(rel.ciaddr)?;
+            Ok(ServerAction::AddressRelease(rel.ciaddr))
+        } else {
+            Err(ServerError::UnknownClientMac(rel.chaddr))
         }
-        None
     }
 
-    fn handle_inform(&mut self, inf: Message) -> Option<Message> {
+    fn handle_inform(&mut self, inf: Message) -> Result<ServerAction, ServerError> {
         // When responding to an INFORM, the server must leave yiaddr zeroed.
         let yiaddr = Ipv4Addr::new(0, 0, 0, 0);
         let mut ack = build_ack(inf, yiaddr, &self.config);
         ack.options.clear();
         add_inform_ack_options(&mut ack, &self.config);
-        Some(ack)
+        Ok(ServerAction::SendResponse(ack))
     }
 
     /// Releases all allocated IP addresses whose leases have expired back to
@@ -240,7 +397,9 @@ where
         // Expired client entries must be removed in a separate statement because otherwise we
         // would be attempting to change a cache as we iterate over it.
         for (mac, ip) in expired_clients.iter() {
-            self.pool.free_addr(*ip);
+            //  We ignore the `Result` here since a failed release of the `ip`
+            // in this iteration will be reattempted in the next.
+            let _release_result = self.pool.release_addr(*ip);
             self.cache.remove(mac);
             // The call to delete will immediately be committed to the Stash. Since DHCP lease
             // acquisitions occur on a human timescale, e.g. a cellphone is brought in range of an
@@ -334,6 +493,20 @@ struct AddressPool {
     allocated_addrs: HashSet<Ipv4Addr>,
 }
 
+//This is a wrapper around different errors that could be returned by
+// the DHCP server address pool during address allocation/de-allocation.
+#[derive(Debug, Fail, PartialEq)]
+pub enum AddressPoolError {
+    #[fail(display = "address pool does not have any available ip to hand out")]
+    Ipv4AddrExhaustion,
+
+    #[fail(display = "attempted to allocate unavailable ip: {}", _0)]
+    UnavailableIpv4AddrAllocation(Ipv4Addr),
+
+    #[fail(display = " attempted to release unallocated ip: {}", _0)]
+    UnallocatedIpv4AddrRelease(Ipv4Addr),
+}
+
 impl AddressPool {
     fn new() -> Self {
         AddressPool { available_addrs: BTreeSet::new(), allocated_addrs: HashSet::new() }
@@ -347,27 +520,39 @@ impl AddressPool {
         }
     }
 
-    fn get_next_available_addr(&self) -> Option<Ipv4Addr> {
+    /// TODO(NET-2446): The ip should be handed out based on client subnet
+    /// Currently, the server blindly hands out the next available ip
+    /// from its available ip pool, without any subnet analysis.
+    ///
+    /// RFC2131#section-4.3.1
+    ///
+    /// A new address allocated from the server's pool of available
+    /// addresses; the address is selected based on the subnet from which
+    /// the message was received (if `giaddr` is 0) or on the address of
+    /// the relay agent that forwarded the message (`giaddr` when not 0).
+    fn get_next_available_addr(&self) -> Result<Ipv4Addr, AddressPoolError> {
         let mut iter = self.available_addrs.iter();
         match iter.next() {
-            Some(addr) => Some(*addr),
-            None => None,
+            Some(addr) => Ok(*addr),
+            None => Err(AddressPoolError::Ipv4AddrExhaustion),
         }
     }
 
-    fn allocate_addr(&mut self, addr: Ipv4Addr) {
+    fn allocate_addr(&mut self, addr: Ipv4Addr) -> Result<(), AddressPoolError> {
         if self.available_addrs.remove(&addr) {
             self.allocated_addrs.insert(addr);
+            Ok(())
         } else {
-            panic!("Invalid Server State: attempted to allocate unavailable address");
+            Err(AddressPoolError::UnavailableIpv4AddrAllocation(addr))
         }
     }
 
-    fn free_addr(&mut self, addr: Ipv4Addr) {
+    fn release_addr(&mut self, addr: Ipv4Addr) -> Result<(), AddressPoolError> {
         if self.allocated_addrs.remove(&addr) {
             self.available_addrs.insert(addr);
+            Ok(())
         } else {
-            panic!("Invalid Server State: attempted to free unallocated address");
+            Err(AddressPoolError::UnallocatedIpv4AddrRelease(addr))
         }
     }
 
@@ -442,7 +627,7 @@ fn add_recommended_options(msg: &mut Message, config: &ServerConfig) {
 fn add_inform_ack_options(msg: &mut Message, config: &ServerConfig) {
     msg.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
-        value: vec![MessageType::DHCPINFORM.into()],
+        value: vec![MessageType::DHCPACK.into()],
     });
     msg.options.push(ConfigOption {
         code: OptionCode::ServerId,
@@ -495,7 +680,7 @@ fn is_client_mac_known(mac: MacAddr, cache: &CachedClients) -> bool {
     cache.get(&mac).is_some()
 }
 
-fn build_nak(req: Message, config: &ServerConfig) -> Message {
+fn build_nak(req: Message, config: &ServerConfig, error: String) -> Message {
     let mut nak = req;
     nak.op = OpCode::BOOTREPLY;
     nak.secs = 0;
@@ -513,6 +698,7 @@ fn build_nak(req: Message, config: &ServerConfig) -> Message {
         code: OptionCode::ServerId,
         value: config.server_ip.octets().to_vec(),
     });
+    nak.options.push(ConfigOption { code: OptionCode::Message, value: error.into_bytes() });
 
     nak
 }
@@ -554,6 +740,7 @@ pub mod tests {
     use rand::Rng;
     use std::convert::TryFrom;
     use std::net::Ipv4Addr;
+    use std::panic::{self, AssertUnwindSafe};
 
     pub fn random_ipv4_generator() -> Ipv4Addr {
         let octet1: u8 = rand::thread_rng().gen();
@@ -571,6 +758,14 @@ pub mod tests {
         let octet5: u8 = rand::thread_rng().gen();
         let octet6: u8 = rand::thread_rng().gen();
         MacAddr { octets: [octet1, octet2, octet3, octet4, octet5, octet6] }
+    }
+
+    fn extract_message(server_response: ServerAction) -> Message {
+        if let ServerAction::SendResponse(message) = server_response {
+            message
+        } else {
+            panic!("expected a message in server response, received {:?}", server_response)
+        }
     }
 
     fn server_time_provider() -> i64 {
@@ -706,7 +901,7 @@ pub mod tests {
         ack
     }
 
-    fn new_test_nak<F>(req: &Message, server: &Server<F>) -> Message
+    fn new_test_nak<F>(req: &Message, server: &Server<F>, error: String) -> Message
     where
         F: Fn() -> i64,
     {
@@ -722,6 +917,7 @@ pub mod tests {
             code: OptionCode::ServerId,
             value: server.config.server_ip.octets().to_vec(),
         });
+        nak.options.push(ConfigOption { code: OptionCode::Message, value: error.into_bytes() });
         nak
     }
 
@@ -757,7 +953,7 @@ pub mod tests {
         ack.chaddr = req.chaddr;
         ack.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPINFORM.into()],
+            value: vec![MessageType::DHCPACK.into()],
         });
         ack.options.push(ConfigOption {
             code: OptionCode::ServerId,
@@ -804,7 +1000,7 @@ pub mod tests {
         let mut expected_offer = new_test_offer(&disc, &server);
         expected_offer.yiaddr = offer_ip;
 
-        assert_eq!(server.dispatch(disc), Some(expected_offer));
+        assert_eq!(server.dispatch(disc), Ok(ServerAction::SendResponse(expected_offer)));
         Ok(())
     }
 
@@ -843,7 +1039,7 @@ pub mod tests {
 
         server.pool.available_addrs.insert(offer_ip);
 
-        let offer = server.dispatch(disc).unwrap();
+        let offer = extract_message(server.dispatch(disc).unwrap());
 
         let accessor = server.stash.clone_proxy();
         let maybe_value = accessor
@@ -882,7 +1078,32 @@ pub mod tests {
 
         let response = server.dispatch(disc).unwrap();
 
-        assert_eq!(response.yiaddr, bound_client_ip);
+        assert_eq!(extract_message(response).yiaddr, bound_client_ip);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_client_binding_panics_when_addr_previously_not_allocated(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let disc = new_test_discover();
+
+        let bound_client_ip = random_ipv4_generator();
+
+        server.cache.insert(
+            disc.chaddr,
+            CachedConfig {
+                client_addr: bound_client_ip,
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
+
+        // Make `server` explicitly unwind safe for `cacth_unwind`.
+        // https://doc.rust-lang.org/std/panic/struct.AssertUnwindSafe.html
+        let mut unwind_safe_server = AssertUnwindSafe(server);
+        let result = panic::catch_unwind(move || unwind_safe_server.dispatch(disc));
+        assert!(result.is_err());
         Ok(())
     }
 
@@ -903,7 +1124,7 @@ pub mod tests {
 
         let response = server.dispatch(disc).unwrap();
 
-        assert_eq!(response.yiaddr, bound_client_ip);
+        assert_eq!(extract_message(response).yiaddr, bound_client_ip);
         Ok(())
     }
 
@@ -926,7 +1147,65 @@ pub mod tests {
 
         let response = server.dispatch(disc).unwrap();
 
-        assert_eq!(response.yiaddr, free_ip);
+        assert_eq!(extract_message(response).yiaddr, free_ip);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_expired_client_binding_returns_available_requested_addr(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut disc = new_test_discover();
+
+        let bound_client_ip = random_ipv4_generator();
+        let requested_ip = random_ipv4_generator();
+
+        server.pool.allocated_addrs.insert(bound_client_ip);
+        server.pool.available_addrs.insert(requested_ip);
+
+        disc.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: requested_ip.octets().to_vec(),
+        });
+
+        server.cache.insert(
+            disc.chaddr,
+            CachedConfig { client_addr: bound_client_ip, options: vec![], expiration: 0 },
+        );
+
+        let response = server.dispatch(disc).unwrap();
+
+        assert_eq!(extract_message(response).yiaddr, requested_ip);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_expired_client_binding_returns_next_addr_for_unavailable_requested_addr(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut disc = new_test_discover();
+
+        let bound_client_ip = random_ipv4_generator();
+        let requested_ip = random_ipv4_generator();
+        let free_ip = random_ipv4_generator();
+
+        server.pool.allocated_addrs.insert(bound_client_ip);
+        server.pool.allocated_addrs.insert(requested_ip);
+        server.pool.available_addrs.insert(free_ip);
+
+        disc.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: requested_ip.octets().to_vec(),
+        });
+
+        server.cache.insert(
+            disc.chaddr,
+            CachedConfig { client_addr: bound_client_ip, options: vec![], expiration: 0 },
+        );
+
+        let response = server.dispatch(disc).unwrap();
+
+        assert_eq!(extract_message(response).yiaddr, free_ip);
         Ok(())
     }
 
@@ -953,7 +1232,7 @@ pub mod tests {
 
         let response = server.dispatch(disc).unwrap();
 
-        assert_eq!(response.yiaddr, requested_ip);
+        assert_eq!(extract_message(response).yiaddr, requested_ip);
         Ok(())
     }
 
@@ -963,16 +1242,12 @@ pub mod tests {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         let mut disc = new_test_discover();
 
-        let requested_ip = Ipv4Addr::new(192, 1, 1, 5);
-        let free_ip_1 = Ipv4Addr::new(192, 168, 10, 24);
-        let free_ip_2 = Ipv4Addr::new(192, 168, 20, 72);
+        let requested_ip = random_ipv4_generator();
+        let free_ip_1 = random_ipv4_generator();
 
         server.pool.allocated_addrs.insert(requested_ip);
         server.pool.available_addrs.insert(free_ip_1);
-        server.pool.available_addrs.insert(free_ip_2);
 
-        // Update discover message to request for a specific ip
-        // which is not available in server pool.
         disc.options.push(ConfigOption {
             code: OptionCode::RequestedIpAddr,
             value: requested_ip.octets().to_vec(),
@@ -980,7 +1255,125 @@ pub mod tests {
 
         let response = server.dispatch(disc).unwrap();
 
-        assert_eq!(response.yiaddr, free_ip_1);
+        assert_eq!(extract_message(response).yiaddr, free_ip_1);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_expired_client_binding_returns_next_addr_for_bad_requested_addr(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut disc = new_test_discover();
+
+        let bound_client_ip = random_ipv4_generator();
+        let free_ip = random_ipv4_generator();
+
+        server.pool.available_addrs.insert(free_ip);
+
+        // Update `discover` to have bad requested ip.
+        disc.options
+            .push(ConfigOption { code: OptionCode::RequestedIpAddr, value: vec![100, 200, 1] });
+
+        server.cache.insert(
+            disc.chaddr,
+            CachedConfig { client_addr: bound_client_ip, options: vec![], expiration: 0 },
+        );
+
+        let response = server.dispatch(disc).unwrap();
+
+        assert_eq!(extract_message(response).yiaddr, free_ip);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_unavailable_requested_addr_no_available_addr_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut disc = new_test_discover();
+
+        let requested_ip = random_ipv4_generator();
+
+        server.pool.allocated_addrs.insert(requested_ip);
+
+        disc.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: requested_ip.octets().to_vec(),
+        });
+
+        assert_eq!(
+            server.dispatch(disc),
+            Err(ServerError::ServerAddressPoolFailure(AddressPoolError::Ipv4AddrExhaustion))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_no_requested_addr_no_available_addr_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let disc = new_test_discover();
+
+        assert_eq!(
+            server.dispatch(disc),
+            Err(ServerError::ServerAddressPoolFailure(AddressPoolError::Ipv4AddrExhaustion))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_client_offer_message_returns_error() -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+
+        // Construct a simple offer sent by client.
+        let mut client_offer = Message::new();
+        client_offer.op = OpCode::BOOTREQUEST;
+        client_offer.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPOFFER.into()],
+        });
+
+        assert_eq!(
+            server.dispatch(client_offer),
+            Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPOFFER))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_client_ack_message_returns_error() -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+
+        // Construct a simple ack sent by client.
+        let mut client_ack = Message::new();
+        client_ack.op = OpCode::BOOTREQUEST;
+        client_ack.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPACK.into()],
+        });
+
+        assert_eq!(
+            server.dispatch(client_ack),
+            Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPACK))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_client_nak_message_returns_error() -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+
+        // Construct a simple nak sent by client.
+        let mut client_nak = Message::new();
+        client_nak.op = OpCode::BOOTREQUEST;
+        client_nak.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPNAK.into()],
+        });
+
+        assert_eq!(
+            server.dispatch(client_nak),
+            Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPNAK))
+        );
         Ok(())
     }
 
@@ -989,42 +1382,50 @@ pub mod tests {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         let mut req = new_test_request_selecting_state(&server);
 
-        let offered_ip = random_ipv4_generator();
+        let requested_ip = random_ipv4_generator();
 
-        server.pool.allocated_addrs.insert(offered_ip);
+        server.pool.allocated_addrs.insert(requested_ip);
 
         // Update message to request for ip previously offered by server.
-        req.ciaddr = offered_ip;
+        req.ciaddr = requested_ip;
 
         server.cache.insert(
             req.chaddr,
-            CachedConfig { client_addr: offered_ip, options: vec![], expiration: std::i64::MAX },
+            CachedConfig { client_addr: requested_ip, options: vec![], expiration: std::i64::MAX },
         );
 
         let mut expected_ack = new_test_ack(&req, &server);
-        expected_ack.ciaddr = offered_ip;
-        expected_ack.yiaddr = offered_ip;
+        expected_ack.ciaddr = requested_ip;
+        expected_ack.yiaddr = requested_ip;
 
-        assert_eq!(server.dispatch(req), Some(expected_ack));
+        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_ack)));
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_no_address_allocation_to_client_returns_none(
-    ) -> Result<(), Error> {
+    async fn test_dispatch_with_selecting_request_maintains_server_invariants() -> Result<(), Error>
+    {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         let mut req = new_test_request_selecting_state(&server);
 
-        // Update message to request for ip which is unknown by server.
-        req.ciaddr = random_ipv4_generator();
+        let requested_ip = random_ipv4_generator();
+        let client_mac = req.chaddr;
 
-        assert_eq!(server.dispatch(req), None);
+        server.pool.allocated_addrs.insert(requested_ip);
+        req.ciaddr = requested_ip;
+        server.cache.insert(
+            client_mac,
+            CachedConfig { client_addr: requested_ip, options: vec![], expiration: std::i64::MAX },
+        );
+        let _response = server.dispatch(req).unwrap();
+        assert!(server.cache.contains_key(&client_mac));
+        assert!(server.pool.addr_is_allocated(requested_ip));
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_wrong_server_ip_returns_none() -> Result<(), Error>
-    {
+    async fn test_dispatch_with_selecting_request_wrong_server_ip_returns_error(
+    ) -> Result<(), Error> {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         let mut req = new_test_request_selecting_state(&server);
 
@@ -1038,49 +1439,95 @@ pub mod tests {
             value: random_ipv4_generator().octets().to_vec(),
         });
 
-        assert_eq!(server.dispatch(req), None);
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_maintains_server_invariants() -> Result<(), Error>
-    {
-        let mut server = new_test_minimal_server(server_time_provider).await?;
-        let mut req = new_test_request_selecting_state(&server);
-
-        let offered_ip = random_ipv4_generator();
-        let client_mac = req.chaddr;
-
-        server.pool.allocated_addrs.insert(offered_ip);
-
-        req.ciaddr = offered_ip;
-
-        server.cache.insert(
-            client_mac,
-            CachedConfig { client_addr: offered_ip, options: vec![], expiration: std::i64::MAX },
+        assert_eq!(
+            server.dispatch(req),
+            Err(ServerError::IncorrectDHCPServer(server.config.server_ip))
         );
-
-        let _ack: Message = server.dispatch(req).unwrap();
-
-        assert!(server.cache.contains_key(&client_mac));
-        assert!(server.pool.addr_is_allocated(offered_ip));
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_no_client_cache_maintains_server_invariants(
+    async fn test_dispatch_with_selecting_request_unknown_client_mac_returns_error_maintains_server_invariants(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         let mut req = new_test_request_selecting_state(&server);
 
-        let offered_ip = random_ipv4_generator();
+        let requested_ip = random_ipv4_generator();
         let client_mac = req.chaddr;
 
-        req.ciaddr = offered_ip;
+        req.ciaddr = requested_ip;
 
-        assert_eq!(server.dispatch(req), None);
+        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientMac(client_mac)));
         assert!(!server.cache.contains_key(&client_mac));
-        assert!(!server.pool.addr_is_allocated(offered_ip));
+        assert!(!server.pool.addr_is_allocated(requested_ip));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_selecting_request_mismatched_requested_addr_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut req = new_test_request_selecting_state(&server);
+
+        let client_requested_ip = random_ipv4_generator();
+        let server_offered_ip = random_ipv4_generator();
+
+        server.pool.allocated_addrs.insert(server_offered_ip);
+        req.ciaddr = client_requested_ip;
+
+        server.cache.insert(
+            req.chaddr,
+            CachedConfig {
+                client_addr: server_offered_ip,
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
+
+        assert_eq!(
+            server.dispatch(req),
+            Err(ServerError::RequestedIpOfferIpMismatch(client_requested_ip, server_offered_ip,),)
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_selecting_request_expired_client_binding_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut req = new_test_request_selecting_state(&server);
+
+        let requested_ip = random_ipv4_generator();
+
+        server.pool.allocated_addrs.insert(requested_ip);
+
+        req.ciaddr = requested_ip;
+
+        server.cache.insert(
+            req.chaddr,
+            CachedConfig { client_addr: requested_ip, options: vec![], expiration: 0 },
+        );
+
+        assert_eq!(server.dispatch(req), Err(ServerError::ExpiredClientConfig));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_selecting_request_no_reserved_addr_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut req = new_test_request_selecting_state(&server);
+
+        let requested_ip = random_ipv4_generator();
+
+        req.ciaddr = requested_ip;
+
+        server.cache.insert(
+            req.chaddr,
+            CachedConfig { client_addr: requested_ip, options: vec![], expiration: std::i64::MAX },
+        );
+
+        assert_eq!(server.dispatch(req), Err(ServerError::UnidentifiedRequestedIp(requested_ip)));
         Ok(())
     }
 
@@ -1114,7 +1561,7 @@ pub mod tests {
         let mut expected_ack = new_test_ack(&req, &server);
         expected_ack.yiaddr = init_reboot_client_ip;
 
-        assert_eq!(server.dispatch(req), Some(expected_ack));
+        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_ack)));
         Ok(())
     }
 
@@ -1131,17 +1578,19 @@ pub mod tests {
         });
 
         // The returned nak should be from this recipient server.
-        let expected_nak = new_test_nak(&req, &server);
-
-        assert_eq!(server.dispatch(req), Some(expected_nak));
+        let expected_nak =
+            new_test_nak(&req, &server, "client and server are in different subnets".to_owned());
+        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_nak)));
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_init_boot_request_unknown_client_mac_returns_none(
+    async fn test_dispatch_with_init_boot_request_unknown_client_mac_returns_error(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         let mut req = new_test_request();
+
+        let client_mac = req.chaddr;
 
         // Update requested ip and server ip to be on the same subnet.
         req.options.push(ConfigOption {
@@ -1150,12 +1599,12 @@ pub mod tests {
         });
         server.config.server_ip = Ipv4Addr::new(192, 165, 30, 1);
 
-        assert_eq!(server.dispatch(req), None);
+        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientMac(client_mac)));
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_init_boot_request_invalid_client_binding_returns_nak(
+    async fn test_dispatch_with_init_boot_request_mismatched_requested_addr_returns_nak(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         let mut req = new_test_request();
@@ -1168,17 +1617,76 @@ pub mod tests {
         });
         server.config.server_ip = Ipv4Addr::new(192, 165, 25, 1);
 
-        server.pool.allocated_addrs.insert(init_reboot_client_ip);
+        let server_cached_ip = Ipv4Addr::new(192, 165, 25, 10);
+        server.pool.allocated_addrs.insert(server_cached_ip);
+        server.cache.insert(
+            req.chaddr,
+            CachedConfig {
+                client_addr: server_cached_ip,
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
 
+        let expected_nak =
+            new_test_nak(&req, &server, "requested ip is not assigned to client".to_owned());
+        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_nak)));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_init_boot_request_expired_client_binding_returns_nak(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut req = new_test_request();
+
+        let init_reboot_client_ip = Ipv4Addr::new(192, 165, 25, 4);
+        req.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: init_reboot_client_ip.octets().to_vec(),
+        });
+        server.config.server_ip = Ipv4Addr::new(192, 165, 25, 1);
+
+        server.pool.allocated_addrs.insert(init_reboot_client_ip);
         // Expire client binding to make it invalid.
         server.cache.insert(
             req.chaddr,
             CachedConfig { client_addr: init_reboot_client_ip, options: vec![], expiration: 0 },
         );
 
-        let expected_nak = new_test_nak(&req, &server);
+        let expected_nak =
+            new_test_nak(&req, &server, "requested ip is not assigned to client".to_owned());
 
-        assert_eq!(server.dispatch(req), Some(expected_nak));
+        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_nak)));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_init_boot_request_no_reserved_addr_returns_nak() -> Result<(), Error>
+    {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut req = new_test_request();
+
+        let init_reboot_client_ip = Ipv4Addr::new(192, 165, 25, 4);
+        req.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: init_reboot_client_ip.octets().to_vec(),
+        });
+        server.config.server_ip = Ipv4Addr::new(192, 165, 25, 1);
+
+        server.cache.insert(
+            req.chaddr,
+            CachedConfig {
+                client_addr: init_reboot_client_ip,
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
+
+        let expected_nak =
+            new_test_nak(&req, &server, "requested ip is not assigned to client".to_owned());
+
+        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_nak)));
         Ok(())
     }
 
@@ -1205,19 +1713,105 @@ pub mod tests {
         expected_ack.yiaddr = bound_client_ip;
         expected_ack.ciaddr = bound_client_ip;
 
-        assert_eq!(server.dispatch(req), Some(expected_ack));
+        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_ack)));
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_renewing_request_unknown_client_returns_none() -> Result<(), Error>
-    {
+    async fn test_dispatch_with_renewing_request_unknown_client_mac_returns_error(
+    ) -> Result<(), Error> {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         let mut req = new_test_request();
 
-        req.ciaddr = random_ipv4_generator();
+        let bound_client_ip = random_ipv4_generator();
+        let client_mac = req.chaddr;
 
-        assert_eq!(server.dispatch(req), None);
+        req.ciaddr = bound_client_ip;
+
+        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientMac(client_mac)));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_renewing_request_mismatched_requested_addr_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut req = new_test_request();
+
+        let client_renewal_ip = random_ipv4_generator();
+        let bound_client_ip = random_ipv4_generator();
+
+        server.pool.allocated_addrs.insert(bound_client_ip);
+        req.ciaddr = client_renewal_ip;
+
+        server.cache.insert(
+            req.chaddr,
+            CachedConfig {
+                client_addr: bound_client_ip,
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
+
+        assert_eq!(
+            server.dispatch(req),
+            Err(ServerError::RequestedIpOfferIpMismatch(client_renewal_ip, bound_client_ip))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_renewing_request_expired_client_binding_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut req = new_test_request();
+
+        let bound_client_ip = random_ipv4_generator();
+
+        server.pool.allocated_addrs.insert(bound_client_ip);
+        req.ciaddr = bound_client_ip;
+
+        server.cache.insert(
+            req.chaddr,
+            CachedConfig { client_addr: bound_client_ip, options: vec![], expiration: 0 },
+        );
+
+        assert_eq!(server.dispatch(req), Err(ServerError::ExpiredClientConfig));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_renewing_request_no_reserved_addr_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut req = new_test_request();
+
+        let bound_client_ip = random_ipv4_generator();
+        req.ciaddr = bound_client_ip;
+
+        server.cache.insert(
+            req.chaddr,
+            CachedConfig {
+                client_addr: bound_client_ip,
+                options: vec![],
+                expiration: std::i64::MAX,
+            },
+        );
+
+        assert_eq!(
+            server.dispatch(req),
+            Err(ServerError::UnidentifiedRequestedIp(bound_client_ip))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_unknown_client_state_returns_error() -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+
+        let req = new_test_request();
+
+        assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientStateDuringRequest));
         Ok(())
     }
 
@@ -1266,6 +1860,49 @@ pub mod tests {
         let msg = new_test_request();
 
         assert_eq!(get_client_state(&msg), ClientState::Unknown);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_client_msg_missing_message_type_option_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut msg = new_test_request();
+        msg.options.clear();
+
+        assert_eq!(server.dispatch(msg), Err(ServerError::MissingMessageTypeOption));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_client_msg_missing_message_type_value_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut msg = new_test_request();
+        msg.options.clear();
+
+        msg.options.push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![] });
+
+        assert_eq!(server.dispatch(msg), Err(ServerError::MissingMessageTypeValue));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_client_msg_with_unknown_type_returns_error() -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut msg = new_test_request();
+        msg.options.clear();
+
+        let invalid_message_type = 123;
+        msg.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![invalid_message_type],
+        });
+
+        assert_eq!(
+            server.dispatch(msg),
+            Err(ServerError::UnidentifiedClientMessageType(invalid_message_type))
+        );
         Ok(())
     }
 
@@ -1319,7 +1956,6 @@ pub mod tests {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         server.pool.available_addrs.clear();
 
-        // Insert client 1 bindings.
         let client_1_ip = random_ipv4_generator();
         server.pool.available_addrs.insert(client_1_ip);
         let () = server.store_client_config(
@@ -1329,7 +1965,6 @@ pub mod tests {
             &ClientConfig { lease_time_s: 0 },
         )?;
 
-        // Insert client 2 bindings.
         let client_2_ip = random_ipv4_generator();
         server.pool.available_addrs.insert(client_2_ip);
         let () = server.store_client_config(
@@ -1339,7 +1974,6 @@ pub mod tests {
             &ClientConfig { lease_time_s: 0 },
         )?;
 
-        // Insert client 3 bindings.
         let client_3_ip = random_ipv4_generator();
         server.pool.available_addrs.insert(client_3_ip);
         let () = server.store_client_config(
@@ -1379,7 +2013,6 @@ pub mod tests {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         server.pool.available_addrs.clear();
 
-        // Insert client 1 bindings.
         let client_1_mac = random_mac_generator();
         let client_1_ip = random_ipv4_generator();
         server.pool.available_addrs.insert(client_1_ip);
@@ -1390,7 +2023,6 @@ pub mod tests {
             &ClientConfig { lease_time_s: std::u32::MAX },
         )?;
 
-        // Insert client 2 bindings.
         let client_2_mac = random_mac_generator();
         let client_2_ip = random_ipv4_generator();
         server.pool.available_addrs.insert(client_2_ip);
@@ -1401,7 +2033,6 @@ pub mod tests {
             &ClientConfig { lease_time_s: 0 },
         )?;
 
-        // Insert client 3 bindings.
         let client_3_mac = random_mac_generator();
         let client_3_ip = random_ipv4_generator();
         server.pool.available_addrs.insert(client_3_ip);
@@ -1440,8 +2071,7 @@ pub mod tests {
 
         server.cache.insert(client_mac, test_client_config.clone());
 
-        // Server must not send response for `DHCPRELEASE` messages.
-        assert_eq!(server.dispatch(release), None);
+        assert_eq!(server.dispatch(release), Ok(ServerAction::AddressRelease(release_ip)));
 
         assert!(!server.pool.addr_is_allocated(release_ip), "addr marked allocated");
         assert!(server.pool.addr_is_available(release_ip), "addr not marked available");
@@ -1455,17 +2085,18 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_unknown_release_maintains_server_state() -> Result<(), Error> {
+    async fn test_dispatch_with_unknown_release_maintains_server_state_returns_unknown_mac_error(
+    ) -> Result<(), Error> {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         let mut release = new_test_release();
 
         let release_ip = random_ipv4_generator();
+        let client_mac = release.chaddr;
 
         server.pool.allocated_addrs.insert(release_ip);
         release.ciaddr = release_ip;
 
-        // Server must not send response for `DHCPRELEASE` messages.
-        assert_eq!(server.dispatch(release), None);
+        assert_eq!(server.dispatch(release), Err(ServerError::UnknownClientMac(client_mac,)));
 
         assert!(server.pool.addr_is_allocated(release_ip), "addr not marked allocated");
         assert!(!server.pool.addr_is_available(release_ip), "addr still marked available");
@@ -1484,7 +2115,7 @@ pub mod tests {
         let mut expected_ack = new_test_inform_ack(&inform, &server);
         expected_ack.ciaddr = inform_client_ip;
 
-        assert_eq!(server.dispatch(inform), Some(expected_ack));
+        assert_eq!(server.dispatch(inform), Ok(ServerAction::SendResponse(expected_ack)));
         Ok(())
     }
 
@@ -1509,8 +2140,7 @@ pub mod tests {
             CachedConfig { client_addr: declined_ip, options: vec![], expiration: std::i64::MAX },
         );
 
-        // Server must not send response for `DHCPDECLINE` messages.
-        assert_eq!(server.dispatch(decline), None);
+        assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
 
         assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
@@ -1551,8 +2181,7 @@ pub mod tests {
             },
         );
 
-        // Server must not send response for `DHCPDECLINE` messages.
-        assert_eq!(server.dispatch(decline), None);
+        assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
 
         assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
@@ -1581,8 +2210,7 @@ pub mod tests {
             CachedConfig { client_addr: declined_ip, options: vec![], expiration: 0 },
         );
 
-        // Server must not send response for `DHCPDECLINE` messages.
-        assert_eq!(server.dispatch(decline), None);
+        assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
 
         assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
@@ -1591,15 +2219,9 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    #[should_panic]
-    //TODO(NET_2445) Revisit when decline behavior is verified.
-    // Currently if a decline is sent by a known client for an address which is
-    // not available in server pool, the code panics.
-    async fn test_dispatch_with_decline_known_client_for_address_not_in_server_pool_panics() {
-        let mut server = match new_test_minimal_server(server_time_provider).await {
-            Ok(s) => s,
-            Err(e) => panic!("{}", e),
-        };
+    async fn test_dispatch_with_decline_known_client_for_address_not_in_server_pool_returns_error(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
@@ -1621,7 +2243,13 @@ pub mod tests {
             },
         );
 
-        server.dispatch(decline);
+        assert_eq!(
+            server.dispatch(decline),
+            Err(ServerError::ServerAddressPoolFailure(
+                AddressPoolError::UnavailableIpv4AddrAllocation(declined_ip)
+            ))
+        );
+        Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1638,8 +2266,7 @@ pub mod tests {
 
         server.pool.available_addrs.insert(declined_ip);
 
-        // Server must not send a response for `DHCPDECLINE` messages.
-        assert_eq!(server.dispatch(decline), None);
+        assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
 
         assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
@@ -1676,12 +2303,21 @@ pub mod tests {
             CachedConfig { client_addr: declined_ip, options: vec![], expiration: std::i64::MAX },
         );
 
-        // Server must not send a response for `DHCPDECLINE` messages.
-        assert_eq!(server.dispatch(decline), None);
+        assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
 
         assert!(!server.pool.addr_is_available(declined_ip), "addr still marked available");
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(!server.cache.contains_key(&client_mac), "client config incorrectly retained");
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_decline_without_requested_addr_returns_error() -> Result<(), Error>
+    {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let decline = new_test_decline(&server);
+
+        assert_eq!(server.dispatch(decline), Err(ServerError::NoRequestedAddrForDecline));
         Ok(())
     }
 
@@ -1703,7 +2339,10 @@ pub mod tests {
         let response = server.dispatch(disc).unwrap();
         assert_eq!(
             BigEndian::read_u32(
-                &response.get_config_option(OptionCode::IpAddrLeaseTime).unwrap().value
+                &extract_message(response)
+                    .get_config_option(OptionCode::IpAddrLeaseTime)
+                    .unwrap()
+                    .value
             ),
             client_requested_time as u32
         );
@@ -1735,7 +2374,10 @@ pub mod tests {
         let response = server.dispatch(disc).unwrap();
         assert_eq!(
             BigEndian::read_u32(
-                &response.get_config_option(OptionCode::IpAddrLeaseTime).unwrap().value
+                &extract_message(response)
+                    .get_config_option(OptionCode::IpAddrLeaseTime)
+                    .unwrap()
+                    .value
             ),
             server_max_lease_time
         );
