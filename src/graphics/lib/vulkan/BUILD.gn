@@ -2,44 +2,51 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Centralizing the GN points of entry into Vulkan ecosystem repositories here is helpful
+# for grasping the full scope.  Note, there are also entry points in //sdk/BUILD.gn.
+
+# Provides the Vulkan headers and entry points via the Vulkan loader.
 group("vulkan") {
   public_deps = [
-    "//third_party/vulkan_loader_and_validation_layers:vulkan",
+    ":headers",
+    "//third_party/Vulkan-Loader:libvulkan",
   ]
 }
 
+# Provides only the Vulkan headers without the loader.
 group("headers") {
-  public_configs = [ ":headers_config" ]
+  public_deps = [
+    "//third_party/Vulkan-Headers:vulkan_headers",
+  ]
 }
 
-# Depend on the loadable modules that are validation layers
+# Vulkan validation layers are a set of loadable modules.
 group("validation_layers") {
   public_deps = [
-    "//third_party/vulkan_loader_and_validation_layers/layers",
+    "//third_party/Vulkan-ValidationLayers:vulkan_gen_json_files",
+    "//third_party/Vulkan-ValidationLayers:vulkan_validation_layers",
   ]
 }
 
-# Support code for building layers
+# Support code for building layers without bloat.
 group("micro_layer_common") {
   public_deps = [
-    "//third_party/vulkan_loader_and_validation_layers/layers:micro_layer_common",
+    "//third_party/Vulkan-ValidationLayers:micro_layer_common",
   ]
 }
 
+# Tests for the Vulkan loader and validation layers.
 group("loader_and_validation_tests") {
   testonly = true
   public_deps = [
-    "//third_party/vulkan_loader_and_validation_layers/layers:vulkan_loader_and_layers_tests",
+    "//third_party/Vulkan-Loader:tests",
+    "//third_party/Vulkan-ValidationLayers:tests",
   ]
 }
 
+# The vulkaninfo application.
 group("vulkaninfo") {
   public_deps = [
-    "//third_party/vulkan_loader_and_validation_layers/demos:vulkaninfo_bin",
+    "//third_party/Vulkan-Tools:vulkaninfo",
   ]
-}
-
-config("headers_config") {
-  visibility = [ ":*" ]
-  include_dirs = [ "//third_party/vulkan_loader_and_validation_layers/include" ]
 }

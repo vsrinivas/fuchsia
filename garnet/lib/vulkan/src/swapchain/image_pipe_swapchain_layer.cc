@@ -13,10 +13,12 @@
 #include <vk_dispatch_table_helper.h>
 #include <vk_layer_data.h>
 #include <vk_layer_extension_utils.h>
-#include <vulkan/vk_layer.h>
+#include <vk_layer_utils_minimal.h>
 
 #include <thread>
 #include <vector>
+
+#include <vulkan/vk_layer.h>
 
 #define VK_LAYER_API_VERSION VK_MAKE_VERSION(1, 1, VK_HEADER_VERSION)
 

@@ -8,7 +8,7 @@ source_set("surface_header") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.images",
-    "//src/graphics/lib/vulkan",
+    "//src/graphics/lib/vulkan:headers",
   ]
 }
 
