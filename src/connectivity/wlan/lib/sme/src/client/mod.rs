@@ -4,7 +4,7 @@
 
 mod bss;
 mod event;
-mod info;
+pub mod info;
 mod inspect;
 mod rsn;
 mod scan;
@@ -111,6 +111,25 @@ pub enum ConnectFailure {
     AssociationFailure(fidl_mlme::AssociateResultCodes),
     RsnaTimeout,
     EstablishRsna,
+}
+
+impl ConnectFailure {
+    pub fn is_timeout(&self) -> bool {
+        // Note: we don't return true for JoinFailureTimeout because it's the only join failure
+        //       type, so in practice it's returned whether there's a timeout or not.
+        //       For association, we don't have a failure type for timeout, so cannot deduce
+        //       whether an association failure is due to timeout.
+        //
+        // TODO(WLAN-1286): Change JOIN_FAILURE_TIMEOUT -> JOIN_FAILURE
+        match self {
+            ConnectFailure::AuthenticationFailure(failure) => match failure {
+                fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout => true,
+                _ => false,
+            },
+            ConnectFailure::RsnaTimeout => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -112,7 +112,7 @@ pub struct ConnectStats {
     ///
     /// Note that this only tracks consecutive attempts to the same SSID. This means that
     /// connection attempt to another SSID would clear out previous history.
-    pub last_ten_failures: VecDeque<ConnectFailure>,
+    pub last_ten_failures: Vec<ConnectFailure>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -133,6 +133,19 @@ pub struct ScanEndStats {
 impl ConnectStats {
     pub fn connect_time(&self) -> zx::Duration {
         self.connect_end_at - self.connect_start_at
+    }
+
+    /// Time from when SME receives connect request to when it starts servicing that request
+    /// (i.e. when join scan starts). This can happen when SME waits for existing scan to
+    /// finish before it can start a join scan.
+    ///
+    /// If connect request is canceled before it's serviced, return None.
+    pub fn connect_queued_time(&self) -> Option<zx::Duration> {
+        self.scan_start_stats.as_ref().map(|stats| stats.scan_start_at - self.connect_start_at)
+    }
+
+    pub fn connect_time_without_scan(&self) -> Option<zx::Duration> {
+        self.scan_end_stats.as_ref().map(|stats| self.connect_end_at - stats.scan_end_at)
     }
 
     pub fn join_scan_stats(&self) -> Option<ScanStats> {
@@ -242,6 +255,7 @@ impl ConnectionMilestone {
 pub struct ConnectionLostInfo {
     pub connected_duration: zx::Duration,
     pub last_rssi: i8,
+    pub bssid: [u8; 6],
 }
 
 macro_rules! warn_if_err {
@@ -252,7 +266,7 @@ macro_rules! warn_if_err {
     }};
 }
 
-pub struct InfoReporter {
+pub(crate) struct InfoReporter {
     info_sink: InfoSink,
     stats_collector: StatsCollector,
 }
@@ -357,14 +371,22 @@ impl InfoReporter {
         self.info_sink.send(InfoEvent::ConnectionMilestone(milestone));
     }
 
-    pub fn report_connection_lost(&mut self, connected_duration: zx::Duration, last_rssi: i8) {
-        self.info_sink
-            .send(InfoEvent::ConnectionLost(ConnectionLostInfo { connected_duration, last_rssi }));
+    pub fn report_connection_lost(
+        &mut self,
+        connected_duration: zx::Duration,
+        last_rssi: i8,
+        bssid: [u8; 6],
+    ) {
+        self.info_sink.send(InfoEvent::ConnectionLost(ConnectionLostInfo {
+            connected_duration,
+            last_rssi,
+            bssid,
+        }));
     }
 }
 
 #[derive(Debug, Fail)]
-pub enum StatsError {
+pub(crate) enum StatsError {
     #[fail(display = "no current pending connect")]
     NoPendingConnect,
     #[fail(display = "no current pending scan")]
@@ -372,7 +394,7 @@ pub enum StatsError {
 }
 
 #[derive(Default)]
-pub struct StatsCollector {
+pub(crate) struct StatsCollector {
     discovery_scan_stats: Option<PendingScanStats>,
     /// Track successive connect attempts to the same SSID. This resets when attempt succeeds
     /// or when attempting to connect to a different SSID from a previous attempt.
@@ -433,7 +455,11 @@ impl StatsCollector {
         Ok((scan_stats, discovery_stats))
     }
 
-    pub fn report_join_scan_ended(&mut self, result: ScanResult, bss_count: usize) -> Result<(), StatsError> {
+    pub fn report_join_scan_ended(
+        &mut self,
+        result: ScanResult,
+        bss_count: usize,
+    ) -> Result<(), StatsError> {
         let stats = ScanEndStats { scan_end_at: now(), result, bss_count };
         self.connect_stats()?.scan_end_stats.replace(stats);
         Ok(())
@@ -535,7 +561,7 @@ impl StatsCollector {
             result,
             candidate_network: pending_stats.candidate_network,
             attempts: connect_attempts.attempts,
-            last_ten_failures: connect_attempts.last_ten_failures.clone(),
+            last_ten_failures: connect_attempts.last_ten_failures.iter().cloned().collect(),
         })
     }
 }

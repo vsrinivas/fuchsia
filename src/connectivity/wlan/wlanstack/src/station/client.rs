@@ -113,9 +113,11 @@ async fn serve_fidl_endpoint(sme: &Mutex<Sme>, endpoint: Endpoint) {
         }
     };
     const MAX_CONCURRENT_REQUESTS: usize = 1000;
-    let r = stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
-        handle_fidl_request(sme, request)
-    }).await;
+    let r = stream
+        .try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
+            handle_fidl_request(sme, request)
+        })
+        .await;
     if let Err(e) = r {
         error!("Error serving FIDL: {}", e);
         return;
@@ -127,9 +129,11 @@ async fn handle_fidl_request(
     request: fidl_sme::ClientSmeRequest,
 ) -> Result<(), fidl::Error> {
     match request {
-        ClientSmeRequest::Scan { req, txn, .. } => Ok(scan(sme, txn, req.scan_type).await
+        ClientSmeRequest::Scan { req, txn, .. } => Ok(scan(sme, txn, req.scan_type)
+            .await
             .unwrap_or_else(|e| error!("Error handling a scan transaction: {:?}", e))),
-        ClientSmeRequest::Connect { req, txn, .. } => Ok(connect(sme, txn, req).await
+        ClientSmeRequest::Connect { req, txn, .. } => Ok(connect(sme, txn, req)
+            .await
             .unwrap_or_else(|e| error!("Error handling a connect transaction: {:?}", e))),
         ClientSmeRequest::Disconnect { responder } => {
             disconnect(sme);
@@ -276,13 +280,16 @@ fn handle_info_event(
                 telemetry::report_standards(cobalt_sender, s.num_bss_by_standard);
                 telemetry::report_channels(cobalt_sender, s.num_bss_by_channel);
             }
-            // TODO(WLAN-1162) - Log health metrics
+            let is_join_scan = false;
+            telemetry::log_scan_stats(cobalt_sender, &scan_stats, is_join_scan);
         }
-        InfoEvent::ConnectStats(..)
-        | InfoEvent::ConnectionMilestone(..)
-        | InfoEvent::ConnectionLost(..) => {
-            // TODO(WLAN-1162) - Log health metrics
+        InfoEvent::ConnectStats(connect_stats) => {
+            telemetry::log_connect_stats(cobalt_sender, &connect_stats)
         }
+        InfoEvent::ConnectionMilestone(milestone) => {
+            telemetry::log_connection_milestone(cobalt_sender, &milestone)
+        }
+        InfoEvent::ConnectionLost(info) => telemetry::log_connection_lost(cobalt_sender, &info),
     }
 }
 

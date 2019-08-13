@@ -213,7 +213,11 @@ impl State {
                     let (responder, mut protection) = match link_state {
                         LinkState::LinkUp { protection, since, .. } => {
                             let connected_duration = now() - since;
-                            context.info.report_connection_lost(connected_duration, last_rssi);
+                            context.info.report_connection_lost(
+                                connected_duration,
+                                last_rssi,
+                                bss.bssid,
+                            );
                             (None, protection)
                         }
                         LinkState::EstablishingRsna { responder, rsna, .. } => {
@@ -239,7 +243,11 @@ impl State {
                         }
                         LinkState::LinkUp { since, .. } => {
                             let connected_duration = now() - since;
-                            context.info.report_connection_lost(connected_duration, last_rssi);
+                            context.info.report_connection_lost(
+                                connected_duration,
+                                last_rssi,
+                                bss.bssid,
+                            );
                         }
                     }
                     state_change_msg.replace(format!(
