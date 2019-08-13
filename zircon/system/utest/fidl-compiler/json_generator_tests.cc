@@ -2505,7 +2505,7 @@ struct Struct {
             "kind": "literal",
             "literal": {
               "kind": "numeric",
-              "value": "007",
+              "value": "7",
               "expression": "007"
             }
           },

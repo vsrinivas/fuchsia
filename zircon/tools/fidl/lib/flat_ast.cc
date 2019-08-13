@@ -95,13 +95,13 @@ TypeShape AlignTypeshape(TypeShape shape, std::vector<FieldShape*>* fields, uint
   uint32_t new_size = AlignTo(shape.InlineSize(), new_alignment);
   auto typeshape = TypeShape({
       .inline_size = new_size,
-      .alignment = new_alignment,
-      .recursive = {
-          .depth = shape.Depth(),
-          .max_handles = shape.MaxHandles(),
-          .max_out_of_line = shape.MaxOutOfLine(),
-          // If alignment happened, we've got padding
-          .has_padding = shape.HasPadding() || (new_size != shape.InlineSize()),
+                 .alignment = new_alignment,
+                 .recursive = {
+                     .depth = shape.Depth(),
+                     .max_handles = shape.MaxHandles(),
+                     .max_out_of_line = shape.MaxOutOfLine(),
+                     // If alignment happened, we've got padding
+                     .has_padding = shape.HasPadding() || (new_size != shape.InlineSize()),
           .has_flexible_envelope = shape.HasFlexibleEnvelope(),
       }
   });
@@ -225,7 +225,7 @@ TypeShape PointerTypeShape(const TypeShape& element, uint32_t max_element_count 
 
   // Out-of-line objects in FIDL are always padded to |kMessageAlign| alignment.
   // Therefore, if the element size do not end on an alignment boundary, there is padding.
-  bool trailing_padding = max_element_count == 1
+ bool trailing_padding = max_element_count == 1
       ? elements_size != aligned_elements_size
       : element.InlineSize() % kMessageAlign != 0;
 
@@ -274,7 +274,7 @@ TypeShape Table::Shape(std::vector<TypeShape*>* fields,
 
 TypeShape XUnion::Shape(std::vector<FieldShape*>* fields,
                         types::Strictness strictness,
-                        uint32_t extra_handles) {
+                        uint32_t extra_handles) {  
   TypeShapeBuilder builder{.inline_size = 24, .alignment = 8};
   for (auto& field : *fields) {
     const auto& envelope = CEnvelopeTypeShape(field->Typeshape());
@@ -2214,7 +2214,8 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       }
       if (decl->name != identifier_type->type_decl->name) {
         std::ostringstream msg;
-        msg << "mismatched named type assignment: cannot define a constant of type "
+        msg << "mismatched named type assignment: cannot define a constant or default value of "
+               "type "
             << decl->name.name_full() << " using a value of type "
             << identifier_type->type_decl->name.name_full();
         return Fail(msg.str());
@@ -3179,8 +3180,18 @@ bool Library::CompileStruct(Struct* struct_declaration) {
                                    name_result.previous_occurrence().position_str());
     if (!CompileTypeConstructor(member.type_ctor.get(), &member.fieldshape.Typeshape()))
       return false;
-    // TODO(FIDL-486): When a default value is present, we must resolve the
-    // constant properly.
+    if (member.maybe_default_value) {
+      const auto* default_value_type = member.type_ctor.get()->type;
+      if (!TypeCanBeConst(default_value_type)) {
+        std::ostringstream msg_stream;
+        msg_stream << "struct field  " << member.name.data() << " has an invalid default type"
+                   << NameFlatType(default_value_type);
+        return Fail(*struct_declaration, msg_stream.str());
+      }
+      if (!ResolveConstant(member.maybe_default_value.get(), default_value_type)) {
+        return false;
+      }
+    }
     fidl_struct.push_back(&member.fieldshape);
   }
 
