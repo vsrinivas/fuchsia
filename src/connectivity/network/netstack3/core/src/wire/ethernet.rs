@@ -101,7 +101,6 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
         };
 
         let frame = EthernetFrame { hdr_prefix, tag, ethertype, body };
-
         let et = frame.ethertype.get();
         if (et >= ETHERNET_MIN_ILLEGAL_ETHERTYPE && et <= ETHERNET_MAX_ILLEGAL_ETHERTYPE)
             || (et < ETHERNET_MIN_ILLEGAL_ETHERTYPE && et as usize != frame.body.len())

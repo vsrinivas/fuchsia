@@ -13,9 +13,10 @@ use std::num::NonZeroU8;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, IpAddress, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr};
 use packet::{BufferMut, Serializer};
+use specialize_ip_macro::specialize_ip;
 
 use crate::data_structures::{IdMap, IdMapCollectionKey};
 use crate::device::ethernet::{EthernetDeviceState, EthernetDeviceStateBuilder};
@@ -299,7 +300,7 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
 
     // RFC 4861 section 6.3.7, it implies only a host sends router
     // solicitation messages, so if this node is a router, do nothing.
-    if crate::ip::is_router::<_, Ipv6>(ctx) {
+    if self::can_forward::<_, Ipv6>(ctx, device) {
         trace!("intialize_device: node is a router so not starting router solicitations");
         return;
     }
@@ -565,6 +566,121 @@ fn get_common_device_state_mut<D: EventDispatcher>(
             .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id))
             .common_mut(),
     }
+}
+
+/// Is IP packet forwarding enabled on `device`?
+///
+/// Note, `true` does not necessarily mean that `device` is currently forwarding IP packets. It
+/// only means that `device` is allowed to forward packets. To forward packets, this netstack must
+/// be configured to allow IP packets to be forwarded if it was not destined for this node.
+pub(crate) fn is_forwarding_enabled<D: EventDispatcher, I: Ip>(
+    ctx: &Context<D>,
+    device: DeviceId,
+) -> bool {
+    match device.protocol {
+        DeviceProtocol::Ethernet => self::ethernet::is_forwarding_enabled::<_, I>(ctx, device.id),
+    }
+}
+
+/// Enables or disables IP packet forwarding on `device`.
+///
+/// `set_forwarding_enabled` does nothing if the new forwarding status, `enabled`, is the same as
+/// the current forwarding status.
+///
+/// Note, enabling forwarding does not mean that `device` will immediately start forwarding IP
+/// packets. It only means that `device` is allowed to forward packets. To forward packets, this
+/// netstack must be configured to allow IP packets to be forwarded if it was not destined for this
+/// node.
+#[specialize_ip]
+pub(crate) fn set_forwarding_enabled<D: EventDispatcher, I: Ip>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    enabled: bool,
+) {
+    /// Sets the IP packet forwarding flag on `device`.
+    fn set_forwarding_enabled_inner<D: EventDispatcher, I: Ip>(
+        ctx: &mut Context<D>,
+        device: DeviceId,
+        enabled: bool,
+    ) {
+        match device.protocol {
+            DeviceProtocol::Ethernet => {
+                self::ethernet::set_forwarding_enabled_inner::<_, I>(ctx, device.id, enabled)
+            }
+        }
+    }
+
+    // TODO(ghanan): We cannot directly do `I::VERSION` in the `trace!` calls because of a bug in
+    //               specialize_ip_macro where it does not properly replace `I` with `Self`. Once
+    //               this is fixed, change this.
+    let version = I::VERSION;
+
+    if crate::device::is_forwarding_enabled::<_, I>(ctx, device) == enabled {
+        trace!(
+            "set_forwarding_enabled: {:?} forwarding status unchanged for device {:?}",
+            version,
+            device
+        );
+        return;
+    }
+
+    if enabled {
+        trace!("set_forwarding_enabled: enabling {:?} forwarding for device {:?}", version, device);
+
+        #[ipv6]
+        {
+            // Make sure that the netstack is configured to forward packets before considering this
+            // device a router and stopping router solicitations.
+            if crate::ip::is_forwarding_enabled::<_, Ipv6>(ctx) {
+                // TODO(ghanan): Handle transition from disabled to enabled:
+                //               - start periodic router advertisements (if configured to do so)
+
+                match device.protocol {
+                    DeviceProtocol::Ethernet => ndp::stop_soliciting_routers::<
+                        _,
+                        ethernet::EthernetNdpDevice,
+                    >(ctx, device.id),
+                }
+            }
+        }
+
+        set_forwarding_enabled_inner::<_, I>(ctx, device, true);
+    } else {
+        trace!(
+            "set_forwarding_enabled: disabling {:?} forwarding for device {:?}",
+            version,
+            device
+        );
+
+        set_forwarding_enabled_inner::<_, I>(ctx, device, false);
+
+        #[ipv6]
+        {
+            // We only need to start soliciting routers if we were not soliciting them before. We
+            // would only reach this point if there was a change in forwarding status for `device`.
+            // However, if the nestatck does not currently have forwarding enabled, the device would
+            // not have been considered a router before this forwarding change on the device, so it
+            // would have already solicited routers.
+            if crate::ip::is_forwarding_enabled::<_, Ipv6>(ctx) {
+                // On transition from router -> host, start soliciting router information.
+                match device.protocol {
+                    DeviceProtocol::Ethernet => ndp::start_soliciting_routers::<
+                        _,
+                        ethernet::EthernetNdpDevice,
+                    >(ctx, device.id),
+                }
+            }
+        }
+    }
+}
+
+/// Can `device` forward IP packets?
+///
+/// Returns `true` if both the `device` has forwarding enabled AND the netstack is configured to
+/// forward packets not destined for it; returns `false` otherwise.
+pub(crate) fn can_forward<D: EventDispatcher, I: Ip>(ctx: &Context<D>, device: DeviceId) -> bool {
+    (crate::ip::is_forwarding_enabled::<_, I>(ctx)
+        && crate::device::is_forwarding_enabled::<_, I>(ctx, device))
 }
 
 /// An address that may be "tentative" in that it has not yet passed

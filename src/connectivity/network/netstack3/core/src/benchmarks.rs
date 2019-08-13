@@ -96,6 +96,13 @@ impl EventDispatcher for BenchmarkEventDispatcher {
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let mut state_builder = StackStateBuilder::default();
     state_builder.ip_builder().forward(true);
+
+    // Most tests do not need NDP's DAD or router solicitation so disable it here.
+    let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
+    ndp_configs.set_dup_addr_detect_transmits(None);
+    ndp_configs.set_max_router_solicitations(None);
+    state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+
     let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
         .build_with::<BenchmarkEventDispatcher>(state_builder, BenchmarkEventDispatcher);
 

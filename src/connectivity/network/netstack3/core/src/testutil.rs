@@ -517,6 +517,21 @@ pub(crate) fn get_counter_val(ctx: &mut Context<DummyEventDispatcher>, key: &str
     *ctx.state.test_counters.get(key)
 }
 
+/// Get a IP address in the same subnet as [`DUMMY_CONFIG_V4`] (for IPv4 addresses) or
+/// [`DUMMY_CONFIG_V6`] (for IPv6 addresses).
+///
+/// `last` is the value to be put in the last octet of the IP address.
+#[specialize_ip_address]
+pub(crate) fn get_other_ip_address<A: IpAddress>(last: u8) -> A {
+    #[ipv4addr]
+    let ret = Ipv4Addr::new([192, 168, 0, last]);
+
+    #[ipv6addr]
+    let ret = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, last]);
+
+    ret
+}
+
 /// A configuration for a simple network.
 ///
 /// `DummyEventDispatcherConfig` describes a simple network with two IP hosts
@@ -743,6 +758,21 @@ impl DummyEventDispatcherBuilder {
 
         ctx
     }
+}
+
+/// Add either an NDP entry (if IPv6) or ARP entry (if IPv4) to a `DummyEventDispatcherBuilder`.
+#[specialize_ip_address]
+pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
+    builder: &mut DummyEventDispatcherBuilder,
+    device: usize,
+    ip: A,
+    mac: Mac,
+) {
+    #[ipv4addr]
+    builder.add_arp_table_entry(device, ip, mac);
+
+    #[ipv6addr]
+    builder.add_ndp_table_entry(device, ip, mac);
 }
 
 /// A dummy implementation of `Instant` for use in testing.

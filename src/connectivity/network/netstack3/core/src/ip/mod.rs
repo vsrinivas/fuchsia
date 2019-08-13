@@ -870,7 +870,7 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
                 }
             }
         }
-    } else if let Some(dest) = forward(ctx, packet.dst_ip()) {
+    } else if let Some(dest) = forward(ctx, device, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
             trace!("receive_ip_packet: forwarding");
@@ -943,6 +943,8 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
                 );
             }
         } else {
+            debug!("received IP packet dropped due to expired TTL");
+
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
             // https://tools.ietf.org/html/rfc791#page-14
             let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
@@ -968,10 +970,11 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
                 buffer,
                 meta.header_len(),
             );
-            debug!("received IP packet dropped due to expired TTL");
         }
     } else {
         let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+        debug!("received IP packet with no known route to destination {}", dst_ip);
+
         #[ipv4]
         icmp::send_icmpv4_net_unreachable(
             ctx,
@@ -995,7 +998,6 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
             buffer,
             meta.header_len(),
         );
-        debug!("received IP packet with no known route to destination {}", dst_ip);
     }
 }
 
@@ -1138,12 +1140,32 @@ fn deliver<D: EventDispatcher, A: IpAddress>(
 // Should we forward this packet, and if so, to whom?
 fn forward<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
+    device_id: DeviceId,
     dst_ip: A,
 ) -> Option<Destination<A>> {
-    if get_state_inner::<A::Version, _>(ctx.state()).forward {
-        lookup_route(ctx, dst_ip)
-    } else {
-        None
+    trace!("ip::forward: destination ip = {:?}", dst_ip);
+
+    // Is this netstack configured to foward packets not destined for it?
+    if !crate::ip::is_forwarding_enabled::<_, A::Version>(ctx) {
+        trace!("ip::forward: can't forward because netstack not configured to do so");
+        return None;
+    }
+
+    // Does the interface the packet arrived on have routing enabled?
+    if !crate::device::is_forwarding_enabled::<_, A::Version>(ctx, device_id) {
+        trace!("ip::forward: can't forward because packet arrived on an interface without routing enabled; device = {:?}", device_id);
+        return None;
+    }
+
+    match lookup_route(ctx, dst_ip) {
+        Some(dest) => {
+            trace!("ip::forward: found a valid route to {:?} -> {:?}", dst_ip, dest);
+            Some(dest)
+        }
+        _ => {
+            trace!("ip::forward: can't forward because no valid route exists to {:?}", dst_ip);
+            None
+        }
     }
 }
 
@@ -1525,8 +1547,9 @@ impl<I: IcmpIpExt, B: BufferMut, D: BufferDispatcher<B>> IcmpContext<I, B> for C
     }
 }
 
-/// Is `ctx` configured for a router?
-pub(crate) fn is_router<D: EventDispatcher, I: Ip>(ctx: &Context<D>) -> bool {
+/// Is `ctx` configured to forward packets?
+#[specialize_ip]
+pub(crate) fn is_forwarding_enabled<D: EventDispatcher, I: Ip>(ctx: &Context<D>) -> bool {
     get_state_inner::<I, _>(ctx.state()).forward
 }
 
@@ -1559,7 +1582,7 @@ mod tests {
     use packet::{Buf, ParseBuffer};
     use rand::Rng;
 
-    use crate::device::FrameDestination;
+    use crate::device::{set_forwarding_enabled, FrameDestination};
     use crate::ip::path_mtu::{get_pmtu, min_mtu};
     use crate::testutil::*;
     use crate::wire::ethernet::EthernetFrame;
@@ -2138,19 +2161,21 @@ mod tests {
         state_builder.ip_builder().forward(true);
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
+        ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        let alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap())
+        let device = DeviceId::new_ethernet(0);
+        let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap())
             .build_with(state_builder, DummyEventDispatcher::default());
+        set_forwarding_enabled::<_, I>(&mut alice, device, true);
         let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
         let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
         let mut net = DummyNetwork::new(contexts, move |net, device_id| {
             if *net == a {
-                (b.clone(), DeviceId::new_ethernet(0), None)
+                (b.clone(), device, None)
             } else {
-                (a.clone(), DeviceId::new_ethernet(0), None)
+                (a.clone(), device, None)
             }
         });
-        let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
         //
@@ -2208,6 +2233,7 @@ mod tests {
         state_builder.ip_builder().forward(true);
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
+        ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut dispatcher_builder = DummyEventDispatcherBuilder::from_config(dummy_config.clone());
         let extra_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100]);
@@ -2216,6 +2242,7 @@ mod tests {
         dispatcher_builder.add_ndp_table_entry(0, extra_mac.to_ipv6_link_local().get(), extra_mac);
         let mut ctx = dispatcher_builder.build_with(state_builder, DummyEventDispatcher::default());
         let device = DeviceId::new_ethernet(0);
+        set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, true);
         let frame_dst = FrameDestination::Unicast;
 
         // Construct an IPv6 packet that is too big for our MTU (MTU = 1280; body itself is 5000).

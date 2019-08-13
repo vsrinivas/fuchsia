@@ -405,7 +405,7 @@ fn create_maintenance_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
 mod tests {
     use super::*;
 
-    use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use net_types::ip::{Ipv4, Ipv6};
     use specialize_ip_macro::specialize_ip_address;
 
     use crate::testutil::{
@@ -636,15 +636,10 @@ mod tests {
         test_ip_path_mtu_cache_ctx::<Ipv6>();
     }
 
-    #[specialize_ip_address]
-    fn get_other_ip<A: IpAddress>() -> A {
-        #[ipv4addr]
-        let ret = Ipv4Addr::new([192, 168, 0, 3]);
-
-        #[ipv6addr]
-        let ret = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3]);
-
-        ret
+    /// Get an IPv4 or IPv6 address within the same subnet as that of `DUMMY_CONFIG_*`,
+    /// but with the last octet set to `3`.
+    fn get_other_ip_address<A: IpAddress>() -> A {
+        crate::testutil::get_other_ip_address::<A>(3)
     }
 
     fn test_ip_pmtu_task<I: Ip>() {
@@ -695,7 +690,7 @@ mod tests {
         // Update pmtu from local to another remote.
         // PMTU should be updated to `new_mtu1` and last updated instant
         // should be updated to the start of the test + 1s.
-        let other_ip = get_other_ip::<I::Addr>();
+        let other_ip = get_other_ip_address::<I::Addr>();
         let new_mtu2 = min_mtu::<I>() + 100;
         assert_eq!(update_pmtu(&mut ctx, dummy_config.local_ip, other_ip, new_mtu2).unwrap(), None);
 

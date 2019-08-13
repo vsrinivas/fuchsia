@@ -33,10 +33,10 @@ use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
 use crate::device::{DeviceId, DeviceLayerTimerId, DeviceProtocol, Tentative};
-use crate::ip::{is_router, IpDeviceIdContext, IpProto};
+use crate::ip::{IpDeviceIdContext, IpProto};
+use crate::wire::icmp::ndp::options::NdpOption;
 use crate::wire::icmp::ndp::{
-    self, options::NdpOption, NeighborAdvertisement, NeighborSolicitation, Options,
-    RouterSolicitation,
+    self, NeighborAdvertisement, NeighborSolicitation, Options, RouterSolicitation,
 };
 use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
 use crate::wire::ipv6::Ipv6PacketBuilder;
@@ -297,6 +297,13 @@ pub(crate) trait NdpDevice: Sized {
         device_id: usize,
         hop_limit: NonZeroU8,
     );
+
+    /// Can `device_id` route IP packets not destined for it?
+    ///
+    /// If `is_router` returns `true`, we know that both the `device_id` and the netstack (`ctx`)
+    /// have forwarding enabled; if `is_router` returns false, either `device_id` or the netstack
+    /// (`ctx`) has forwarding disabled.
+    fn is_router<D: EventDispatcher>(ctx: &Context<D>, device_id: usize) -> bool;
 }
 
 /// Cleans up state associated with the device.
@@ -377,7 +384,6 @@ impl NdpConfigurations {
     }
 }
 
-/// The state associated with an instance of the Neighbor Discovery Protocol
 /// (NDP).
 ///
 /// Each device will contain an `NdpState` object to keep track of discovery
@@ -1063,12 +1069,17 @@ pub(crate) fn start_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
     device_id: usize,
 ) {
     // MUST NOT be a router.
-    assert!(!is_router::<_, Ipv6>(ctx));
+    assert!(!ND::is_router(ctx, device_id));
 
     let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
 
     // MUST NOT already be performing router solicitation.
     assert_eq!(ndp_state.router_solicitations_remaining, 0);
+
+    trace!(
+        "ndp::start_soliciting_routers: start soliciting routers for device: {:?}",
+        ND::get_device_id(device_id)
+    );
 
     if let Some(v) = ndp_state.configs.max_router_solicitations {
         ndp_state.router_solicitations_remaining = v.get();
@@ -1087,7 +1098,33 @@ pub(crate) fn start_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
     }
 }
 
-/// Solicit routers once and schedule next message.
+/// Stop soliciting routers.
+///
+/// Does nothing if the device is not soliciting routers.
+///
+/// # Panics
+///
+/// Panics if we attempt to stop router solicitations on a router (this should never happen
+/// as routers should not be soliciting other routers).
+pub(crate) fn stop_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+) {
+    trace!(
+        "ndp::stop_soliciting_routers: stop soliciting routers for device: {:?}",
+        ND::get_device_id(device_id)
+    );
+
+    assert!(!ND::is_router(ctx, device_id));
+
+    ctx.dispatcher_mut()
+        .cancel_timeout(NdpTimerId::new_router_solicitation_timer_id::<ND>(device_id));
+
+    // No more router solicitations remaining since we are cancelling.
+    ND::get_ndp_state(ctx.state_mut(), device_id).router_solicitations_remaining = 0;
+}
+
+/// Solicit routers once amd schedule next message.
 ///
 /// # Panics
 ///
@@ -1097,7 +1134,7 @@ fn do_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
 ) {
-    assert!(!is_router::<_, Ipv6>(ctx));
+    assert!(!ND::is_router(ctx, device_id));
 
     let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
     let remaining = &mut ndp_state.router_solicitations_remaining;
@@ -1143,7 +1180,7 @@ fn send_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
     device_id: usize,
     src_ip: Option<Ipv6Addr>,
 ) {
-    assert!(!is_router::<_, Ipv6>(ctx));
+    assert!(!ND::is_router(ctx, device_id));
 
     let src_ip = src_ip.unwrap_or(Ipv6::UNSPECIFIED_ADDRESS);
 
@@ -1187,10 +1224,14 @@ pub(crate) fn start_duplicate_address_detection<D: EventDispatcher, ND: NdpDevic
     let transmits = ND::get_ndp_state(ctx.state_mut(), device_id).configs.dup_addr_detect_transmits;
 
     if let Some(transmits) = transmits {
+        trace!("ndp::start_duplicate_address_detection: starting duplicate address detection for address {:?} on device {:?}", tentative_addr, ND::get_device_id(device_id));
+
         do_duplicate_address_detection::<D, ND>(ctx, device_id, tentative_addr, transmits.get());
     } else {
         // DAD is turned off since the interface's DUP_ADDR_DETECT_TRANSMIT parameter
         // is `None`.
+        trace!("ndp::start_duplicate_address_detection: assigning address {:?} on device {:?} immediately because duplicate address detection is disabled", tentative_addr, ND::get_device_id(device_id));
+
         ND::unique_address_determined(ctx.state_mut(), device_id, tentative_addr);
     }
 }
@@ -1211,6 +1252,8 @@ pub(crate) fn cancel_duplicate_address_detection<D: EventDispatcher, ND: NdpDevi
     device_id: usize,
     tentative_addr: Ipv6Addr,
 ) {
+    trace!("ndp::cancel_duplicate_address_detection: cancelling duplicate address detection for address {:?} on device {:?}", tentative_addr, ND::get_device_id(device_id));
+
     ctx.dispatcher_mut().cancel_timeout(NdpTimerId::new_dad_ns_transmission_timer_id::<ND>(
         device_id,
         tentative_addr,
@@ -1433,7 +1476,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
         Icmpv6Packet::RouterSolicitation(p) => {
             trace!("receive_ndp_packet_inner: Received NDP RS");
 
-            if !is_router::<_, Ipv6>(ctx) {
+            if !ND::is_router(ctx, device_id) {
                 // Hosts MUST silently discard Router Solicitation messages
                 // as per RFC 4861 section 6.1.1.
                 trace!("receive_ndp_packet_inner: not a router, discarding NDP RS");
@@ -1474,7 +1517,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
             increment_counter!(ctx, "ndp::rx_router_advertisement");
 
-            if is_router::<_, Ipv6>(ctx) {
+            if ND::is_router(ctx, device_id) {
                 // TODO(ghanan): Handle receiving Router Advertisements when this node is a router.
                 trace!("receive_ndp_packet_inner: received NDP RA as a router, discarding NDP RA");
                 return;
@@ -1883,19 +1926,19 @@ mod tests {
 
     use crate::device::{
         ethernet::EthernetNdpDevice, get_ip_addr_subnet, get_ipv6_hop_limit, get_mtu,
-        is_in_ip_multicast, set_ip_addr_subnet,
+        is_forwarding_enabled, is_in_ip_multicast, set_forwarding_enabled, set_ip_addr_subnet,
     };
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
         self, get_counter_val, get_dummy_config, parse_ethernet_frame,
         parse_icmp_packet_in_ip_packet_in_ethernet_frame, set_logger_for_test, trigger_next_timer,
-        DummyEventDispatcher, DummyEventDispatcherBuilder, DummyNetwork,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant, DummyNetwork,
     };
     use crate::wire::icmp::ndp::{
         options::PrefixInformation, OptionsSerializer, RouterAdvertisement, RouterSolicitation,
     };
     use crate::wire::icmp::{IcmpEchoRequest, IcmpParseArgs, Icmpv6Packet};
-    use crate::{Instant, StackStateBuilder};
+    use crate::{Instant, StackStateBuilder, TimerId};
 
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
@@ -2417,6 +2460,7 @@ mod tests {
         state_builder.ip_builder().forward(true);
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build_with(state_builder, DummyEventDispatcher::default());
+        set_forwarding_enabled::<_, Ipv6>(&mut ctx, DeviceId::new_ethernet(0), true);
         icmpv6_packet_buf.reset();
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
@@ -3135,20 +3179,134 @@ mod tests {
     }
 
     #[test]
-    fn test_router_shouldnt_send_router_solicitations() {
+    fn test_router_solicitation_on_routing_enabled_changes() {
+        //
+        // Make sure that when an interface goes from host -> router, it stops sending Router
+        // Solicitations, and starts sending them when it goes form router -> host as routers
+        // should not send Router Solicitation messages, but hosts should.
+        //
+
         let dummy_config = get_dummy_config::<Ipv6Addr>();
-        let mut stack_builder = StackStateBuilder::default();
-        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
+
+        //
+        // If netstack is not set to forward packets, make sure router solicitations do not get
+        // cancelled when we enable forwading on the device.
+        //
+
+        let mut state_builder = StackStateBuilder::default();
+        state_builder.ip_builder().forward(false);
+        let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
-        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        stack_builder.ip_builder().forward(true);
-        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ctx = DummyEventDispatcherBuilder::default()
+            .build_with(state_builder, DummyEventDispatcher::default());
 
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        ctx.state.add_ethernet_device(dummy_config.local_mac, IPV6_MIN_MTU);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
-        // Should not have sent any messages or set any timers.
+        let device = ctx.state.add_ethernet_device(dummy_config.local_mac, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+        let timer_id =
+            NdpTimerId::new_router_solicitation_timer_id::<EthernetNdpDevice>(device.id());
+
+        // Send the first router solicitation.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert!(!trigger_next_timer(&mut ctx));
+        let timers: Vec<(&DummyInstant, &TimerId)> =
+            ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
+        assert_eq!(timers.len(), 1);
+        assert!(trigger_next_timer(&mut ctx));
+
+        // Should have sent a router solicitation and still have the timer setup.
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
+                &ctx.dispatcher().frames_sent()[0].1,
+                |_| {},
+            )
+            .unwrap();
+        let timers: Vec<(&DummyInstant, &TimerId)> =
+            ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
+        assert_eq!(timers.len(), 1);
+        // Capture the instant when the timer was supposed to fire so we can make sure that a new
+        // timer doesn't replace the current one.
+        let instant = timers[0].0.clone();
+
+        // Enable forwarding on device.
+        set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, true);
+        assert!(is_forwarding_enabled::<_, Ipv6>(&ctx, device));
+
+        // Should have not send any new packets and still have the original router solicitation
+        // timer set.
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        let timers: Vec<(&DummyInstant, &TimerId)> =
+            ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
+        assert_eq!(timers.len(), 1);
+        assert_eq!(*timers[0].0, instant);
+
+        //
+        // Now make the netstack and a device actually forwarding capable.
+        //
+
+        let mut state_builder = StackStateBuilder::default();
+        state_builder.ip_builder().forward(true);
+        let mut ndp_configs = NdpConfigurations::default();
+        ndp_configs.set_dup_addr_detect_transmits(None);
+        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        let mut ctx = DummyEventDispatcherBuilder::default()
+            .build_with(state_builder, DummyEventDispatcher::default());
+
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+
+        let device = ctx.state.add_ethernet_device(dummy_config.local_mac, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+        let timer_id =
+            NdpTimerId::new_router_solicitation_timer_id::<EthernetNdpDevice>(device.id());
+
+        // Send the first router solicitation.
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        let timers: Vec<(&DummyInstant, &TimerId)> =
+            ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
+        assert_eq!(timers.len(), 1);
+        assert!(trigger_next_timer(&mut ctx));
+
+        // Should have sent a frame and have a router solicitation timer setup.
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
+                &ctx.dispatcher().frames_sent()[0].1,
+                |_| {},
+            )
+            .unwrap();
+        assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 1);
+
+        // Enable forwarding on the device.
+        set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, true);
+        assert!(is_forwarding_enabled::<_, Ipv6>(&ctx, device));
+
+        // Should have not sent any new packets, but unset the router solicitation timer.
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 0);
+
+        // Unsetting routing should succeed.
+        set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, false);
+        assert!(!is_forwarding_enabled::<_, Ipv6>(&ctx, device));
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        let timers: Vec<(&DummyInstant, &TimerId)> =
+            ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
+        assert_eq!(timers.len(), 1);
+
+        // Send the first router solicitation after being turned into a host.
+        assert!(trigger_next_timer(&mut ctx));
+
+        // Should have sent a router solicitation.
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
+        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
+                &ctx.dispatcher().frames_sent()[1].1,
+                |_| {},
+            )
+            .unwrap();
+        assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 1);
     }
 }
