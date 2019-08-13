@@ -47,6 +47,18 @@ void MessageLoop::Run() {
   RunImpl();
 }
 
+void MessageLoop::RunUntilNoTasks() {
+  // Check if there are no tasks right now. If so, we exit immediately.
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (task_queue_.empty())
+      return;
+  }
+
+  should_quit_on_no_more_tasks_ = true;
+  Run();
+}
+
 void MessageLoop::PostTask(FileLineFunction file_line, fit::function<void()> fn) {
   PostTaskInternal(std::move(file_line), std::move(fn));
 }
@@ -281,6 +293,10 @@ void MessageLoop::QuitNow() { should_quit_ = true; }
 bool MessageLoop::ProcessPendingTask() {
   // This function will be called with the mutex held.
   if (task_queue_.empty() && DelayNS() > 0) {
+    if (should_quit_on_no_more_tasks_) {
+      should_quit_on_no_more_tasks_ = false;
+      QuitNow();
+    }
     return false;
   }
 

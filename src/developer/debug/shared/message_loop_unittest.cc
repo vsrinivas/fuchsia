@@ -412,6 +412,68 @@ TEST(MessageLoop, WatchPipeFD) {
   loop.Cleanup();
 }
 
+TEST(MessageLoop, RunUntilNoTasks) {
+  PlatformMessageLoop loop;
+
+  static constexpr int kCallCount = 5;
+  struct Calls {
+    int called[kCallCount];
+  };
+
+  Calls calls;
+  for (int i = 0; i < kCallCount; i++) {
+    calls.called[i] = -1;
+  }
+
+  loop.Init();
+  {
+    loop.PostTask(FROM_HERE, [&calls]() mutable { calls.called[0] = 0; });
+    loop.PostTask(FROM_HERE, [&calls]() mutable { calls.called[1] = 1; });
+
+    // Nested calles should work.
+    loop.PostTask(FROM_HERE, [&calls, &loop]() mutable {
+      loop.PostTask(FROM_HERE, [&calls, &loop]() {
+        loop.PostTask(FROM_HERE, [&calls]() { calls.called[4] = 4; });
+        calls.called[3] = 3;
+      });
+      calls.called[2] = 2;
+    });
+
+    loop.RunUntilNoTasks();
+
+    // All should've been called in the expected order.
+    EXPECT_EQ(calls.called[0], 0);
+    EXPECT_EQ(calls.called[1], 1);
+    EXPECT_EQ(calls.called[2], 2);
+    EXPECT_EQ(calls.called[3], 3);
+    EXPECT_EQ(calls.called[4], 4);
+
+  }
+
+  loop.Cleanup();
+}
+
+TEST(MessageLoop, RunUntilNoTasks_EmptyQueue) {
+  PlatformMessageLoop loop;
+
+  static constexpr int kCallCount = 5;
+  struct Calls {
+    int called[kCallCount];
+  };
+
+  Calls calls;
+  for (int i = 0; i < kCallCount; i++) {
+    calls.called[i] = -1;
+  }
+
+  loop.Init();
+  {
+    loop.RunUntilNoTasks();
+  }
+
+  loop.Cleanup();
+}
+
 #if defined(__Fuchsia__)
 TEST(MessageLoop, ZirconSocket) {
   zx::socket sender, receiver;

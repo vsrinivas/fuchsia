@@ -90,6 +90,14 @@ class MessageLoop : public fit::executor, public fit::suspended_task::resolver {
   // Runs the message loop.
   void Run();
 
+  // Run until no more tasks are posted. This is not really meant for normal functioning of the
+  // debugger. Rather this is geared towards test environments that control what gets inserted into
+  // the message loop. This Useful for tests in which tasks post additional tasks.
+  //
+  // NOTE: OS events (file handles, sockets, signals) are not considered as non-idle tasks.
+  //       Basically they're ignored when checking for "idleness".
+  void RunUntilNoTasks();
+
   // Posts the given work to the message loop. It will be added to the end of the work queue.
   void PostTask(FileLineFunction file_line, fit::function<void()> fn);
   void PostTask(FileLineFunction file_line, fit::pending_task task);
@@ -237,6 +245,7 @@ class MessageLoop : public fit::executor, public fit::suspended_task::resolver {
                         fit::pending_task task);
 
   bool should_quit_ = false;
+  bool should_quit_on_no_more_tasks_ = false;
 
   MessageLoopContext context_;
 
