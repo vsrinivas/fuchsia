@@ -192,7 +192,6 @@ zx_status_t Heap::Extend(size_t new_size) {
   do {
     cur_index -= IndexForOffset(kMaxOrderSize);
     auto* block = GetBlock(cur_index);
-    *block = {};
     block->header = BlockFields::Order::Make(kNumOrders - 1) |
                     BlockFields::Type::Make(BlockType::kFree) |
                     FreeBlockFields::NextFreeBlock::Make(last_index);

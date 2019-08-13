@@ -9,6 +9,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string_printf.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/vmo/heap.h>
 #include <perftest/perftest.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
@@ -211,6 +212,47 @@ bool TestProperty(perftest::RepeatState* state, int size) {
   return true;
 }
 
+// Measure how long it takes to allocate and extend a heap.
+bool TestHeapExtend(perftest::RepeatState *state) {
+  zx::vmo vmo;
+
+  state->DeclareStep("Create 1MB VMO");
+  state->DeclareStep("Allocate 512K");
+  state->DeclareStep("Extend");
+  state->DeclareStep("Free");
+  state->DeclareStep("Destroy");
+
+  while (state->KeepRunning()) {
+    inspect::BlockIndex index[513];
+    if (zx::vmo::create(1<<21, 0, &vmo) != ZX_OK) {
+      return false;
+    }
+
+    auto heap = inspect::Heap(std::move(vmo));
+    state->NextStep();
+
+    for (int i = 0; i < 512; i++) {
+      if (heap.Allocate(2048, &index[i]) != ZX_OK) {
+        return false;
+      }
+    }
+    state->NextStep();
+
+    if (heap.Allocate(2048, &index[512]) != ZX_OK) {
+      return false;
+    }
+
+    state->NextStep();
+
+    for (int i = 512; i >= 0; i--) {
+      heap.Free(index[i]);
+    }
+    state->NextStep();
+  }
+
+  return true;
+}
+
 void RegisterTests() {
   perftest::RegisterTest("Inspect/IntMetric/Lifecycle", TestMetricLifecycle<int64_t>);
   perftest::RegisterTest("Inspect/IntMetric/Modify", TestMetricModify<int64_t>);
@@ -277,6 +319,7 @@ void RegisterTests() {
     perftest::RegisterTest(fxl::StringPrintf("Inspect/Property/%d", size).c_str(), TestProperty,
                            size);
   }
+  perftest::RegisterTest("Inspect/Heap/Extend", TestHeapExtend);
 }
 PERFTEST_CTOR(RegisterTests);
 
