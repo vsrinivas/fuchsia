@@ -7,9 +7,15 @@
 use {
     crate::package::Package,
     failure::{bail, format_err, Error, ResultExt},
+    fidl_fuchsia_pkg_ext::{
+        MirrorConfigBuilder, RepositoryBlobKey, RepositoryConfig, RepositoryConfigBuilder,
+        RepositoryKey,
+    },
+    fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component::client::{launcher, App, AppBuilder},
     fuchsia_merkle::Hash,
+    fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::DurationNum,
     futures::{
         compat::{Future01CompatExt, Stream01CompatExt},
@@ -19,7 +25,7 @@ use {
     rand::{thread_rng, Rng},
     serde_derive::Deserialize,
     std::{
-        collections::BTreeMap,
+        collections::{BTreeMap, BTreeSet},
         fmt,
         fs::{self, File},
         io::{self, Cursor, Read, Write},
@@ -29,20 +35,20 @@ use {
 
 /// A builder to simplify construction of TUF repositories containing Fuchsia packages.
 #[derive(Debug)]
-pub struct RepositoryBuilder {
-    packages: Vec<Package>,
+pub struct RepositoryBuilder<'a> {
+    packages: Vec<PackageRef<'a>>,
     encryption_key: Option<BlobEncryptionKey>,
 }
 
-impl RepositoryBuilder {
+impl<'a> RepositoryBuilder<'a> {
     /// Creates a new `RepositoryBuilder`.
     pub fn new() -> Self {
         Self { packages: vec![], encryption_key: None }
     }
 
-    /// Adds a package to the repository.
-    pub fn add_package(mut self, package: Package) -> Self {
-        self.packages.push(package);
+    /// Adds a package (or a reference to one) to the repository.
+    pub fn add_package(mut self, package: impl Into<PackageRef<'a>>) -> Self {
+        self.packages.push(package.into());
         self
     }
 
@@ -60,7 +66,7 @@ impl RepositoryBuilder {
         {
             let mut manifest = File::create(indir.path().join("manifests.list"))?;
             for package in &self.packages {
-                writeln!(manifest, "/packages/{}/manifest.json", package.name())?;
+                writeln!(manifest, "/packages/{}/manifest.json", package.get().name())?;
             }
         }
 
@@ -81,6 +87,7 @@ impl RepositoryBuilder {
         }
 
         for package in &self.packages {
+            let package = package.get();
             pm = pm.add_dir_to_namespace(
                 format!("/packages/{}", package.name()),
                 File::open(package.artifacts()).context("open package dir")?,
@@ -90,6 +97,34 @@ impl RepositoryBuilder {
         pm.output(&launcher()?)?.await?.ok()?;
 
         Ok(Repository { dir: repodir, encryption_key: self.encryption_key })
+    }
+}
+
+/// An owned [`Package`] or a reference to one.
+#[derive(Debug)]
+pub enum PackageRef<'a> {
+    Owned(Package),
+    Ref(&'a Package),
+}
+
+impl PackageRef<'_> {
+    fn get(&self) -> &Package {
+        match *self {
+            PackageRef::Owned(ref p) => p,
+            PackageRef::Ref(p) => p,
+        }
+    }
+}
+
+impl From<Package> for PackageRef<'_> {
+    fn from(p: Package) -> Self {
+        PackageRef::Owned(p)
+    }
+}
+
+impl<'a> From<&'a Package> for PackageRef<'a> {
+    fn from(p: &'a Package) -> Self {
+        PackageRef::Ref(p)
     }
 }
 
@@ -169,6 +204,13 @@ impl Repository {
         }))
     }
 
+    /// Returns a sorted vector of all blobs contained in this repository.
+    pub fn list_blobs(&self) -> Result<Vec<Hash>, Error> {
+        let mut blobs = self.iter_blobs()?.collect::<Result<Vec<_>, _>>()?;
+        blobs.sort_unstable();
+        Ok(blobs)
+    }
+
     /// Reads the contents of requested blob from the repository.
     pub fn read_blob(&self, merkle_root: &Hash) -> Result<Vec<u8>, io::Error> {
         fs::read(self.dir.path().join(format!("repository/blobs/{}", merkle_root)))
@@ -188,8 +230,50 @@ impl Repository {
         Ok(packages)
     }
 
+    fn root_keys(&self) -> BTreeSet<RepositoryKey> {
+        // TODO when metadata is compatible, use rust-tuf instead.
+        #[derive(Debug, Deserialize)]
+        struct RootJson {
+            signed: Root,
+        }
+        #[derive(Debug, Deserialize)]
+        struct Root {
+            roles: BTreeMap<String, Role>,
+            keys: BTreeMap<String, Key>,
+        }
+        #[derive(Debug, Deserialize)]
+        struct Role {
+            keyids: Vec<String>,
+        }
+        #[derive(Debug, Deserialize)]
+        struct Key {
+            keyval: KeyVal,
+        }
+        #[derive(Debug, Deserialize)]
+        struct KeyVal {
+            public: String,
+        }
+
+        let root_json: RootJson = serde_json::from_reader(
+            File::open(self.dir.path().join("repository/root.json")).unwrap(),
+        )
+        .unwrap();
+        let root = root_json.signed;
+
+        root.roles["root"]
+            .keyids
+            .iter()
+            .map(|keyid| {
+                RepositoryKey::Ed25519(hex::decode(root.keys[keyid].keyval.public.clone()).unwrap())
+            })
+            .collect()
+    }
+
     /// Serves the repository over HTTP.
-    pub async fn serve(&self) -> Result<ServedRepository, Error> {
+    pub async fn serve<'a>(
+        &'a self,
+        launcher: &'a LauncherProxy,
+    ) -> Result<ServedRepository<'a>, Error> {
         let indir = tempfile::tempdir().context("create /in")?;
         let port = thread_rng().gen_range(1025, 65535);
         println!("using port={}", port);
@@ -211,8 +295,8 @@ impl Repository {
             )?;
         }
 
-        let pm = pm.spawn(&launcher()?)?;
-        let repo = ServedRepository { _repo: self, port, _indir: indir, pm };
+        let pm = pm.spawn(launcher)?;
+        let repo = ServedRepository { repo: self, port, _indir: indir, pm };
 
         // Wait for "pm serve" to either respond to HTTP requests (giving up after RETRY_COUNT) or
         // exit, whichever happens first.
@@ -256,7 +340,7 @@ impl Repository {
 
 /// A repository that is being served over HTTP. When dropped, the server will be stopped.
 pub struct ServedRepository<'a> {
-    _repo: &'a Repository,
+    repo: &'a Repository,
     port: u16,
     _indir: TempDir,
     pm: App,
@@ -293,6 +377,27 @@ impl<'a> ServedRepository<'a> {
             iter_packages(Cursor::new(targets_json))?.collect::<Result<Vec<_>, _>>()?;
         packages.sort_unstable();
         Ok(packages)
+    }
+
+    /// Returns the URL that can be used to connect to this repository from this device.
+    pub fn local_url(&self) -> String {
+        format!("http://127.0.0.1:{}", self.port)
+    }
+
+    /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
+    /// served repository.
+    pub fn make_repo_config(&self, url: RepoUrl) -> RepositoryConfig {
+        let mut builder = RepositoryConfigBuilder::new(url);
+
+        for key in self.repo.root_keys() {
+            builder = builder.add_root_key(key);
+        }
+
+        let mut mirror = MirrorConfigBuilder::new(self.local_url()).subscribe(false);
+        if let Some(ref key) = self.repo.encryption_key {
+            mirror = mirror.blob_key(RepositoryBlobKey::Aes(key.0.to_vec()))
+        }
+        builder.add_mirror(mirror.build()).build()
     }
 }
 
@@ -333,7 +438,7 @@ mod tests {
             .build()
             .await?;
 
-        let blobs = repo.iter_blobs()?.collect::<Result<Vec<_>, _>>()?;
+        let blobs = repo.list_blobs()?;
         // 2 meta FARs, 2 binaries, and 1 duplicated resource
         assert_eq!(blobs.len(), 5);
 
@@ -381,7 +486,8 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_serve_empty() -> Result<(), Error> {
         let repo = RepositoryBuilder::new().build().await?;
-        let served_repo = repo.serve().await?;
+        let launcher = launcher().unwrap();
+        let served_repo = repo.serve(&launcher).await?;
 
         let packages = served_repo.list_packages().await?;
         assert_eq!(packages, vec![]);
@@ -422,7 +528,8 @@ mod tests {
             .build()
             .await?;
 
-        let served_repository = repo.serve().await?;
+        let launcher = launcher().unwrap();
+        let served_repository = repo.serve(&launcher).await?;
 
         let local_packages = repo.list_packages()?;
 

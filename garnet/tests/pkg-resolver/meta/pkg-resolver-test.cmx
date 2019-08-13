@@ -1,0 +1,28 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.posix.socket.Provider"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/pkg-resolver-test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ],
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

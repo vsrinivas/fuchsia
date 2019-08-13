@@ -28,3 +28,7 @@ fn as_dir(dir: fidl::endpoints::ClientEnd<fidl_fuchsia_io::DirectoryMarker>) -> 
     let f = fdio::create_fd(dir.into()).expect("into file");
     unsafe { Dir::from_raw_fd(f.into_raw_fd()) }
 }
+
+fn as_file(dir: fidl::endpoints::ClientEnd<fidl_fuchsia_io::DirectoryMarker>) -> std::fs::File {
+    fdio::create_fd(dir.into_channel().into()).expect("into file")
+}

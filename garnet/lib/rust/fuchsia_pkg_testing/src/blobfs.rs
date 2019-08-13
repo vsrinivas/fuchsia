@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    failure::{bail, Error, ResultExt},
+    crate::{as_dir, as_file},
+    failure::{bail, format_err, Error, ResultExt},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::{DirectoryAdminMarker, DirectoryAdminProxy, DirectoryMarker, NodeProxy},
     fuchsia_async as fasync,
+    fuchsia_merkle::Hash,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon as zx,
+    openat::Dir,
     ramdevice_client::RamdiskClient,
-    std::ffi::CString,
+    std::{ffi::CString, fs::File},
     zx::prelude::*,
 };
 
@@ -62,7 +65,7 @@ fn mkblobfs(ramdisk: &TestRamDisk) -> Result<(), Error> {
     mkblobfs_block(ramdisk.clone_channel().context("cloning ramdisk channel")?.into())
 }
 
-pub(crate) struct TestBlobFs {
+pub struct TestBlobFs {
     backing_ramdisk: TestRamDisk,
     process: zx::Process,
     proxy: DirectoryAdminProxy,
@@ -121,6 +124,36 @@ impl TestBlobFs {
 
         self.backing_ramdisk.stop()
     }
+
+    /// Opens the root of this blobfs instance as a directory.
+    pub fn as_dir(&self) -> Result<Dir, Error> {
+        Ok(as_dir(self.root_dir_handle()?))
+    }
+
+    /// Opens the root of this blobfs instance as a file.
+    ///
+    /// TODO: remove once there is an equivalent API to `add_dir_to_namespace` that doesn't
+    /// accept a File.
+    pub fn as_file(&self) -> Result<File, Error> {
+        Ok(as_file(self.root_dir_handle()?))
+    }
+
+    /// Returns a sorted list of all blobs present in this blobfs instance.
+    pub fn list_blobs(&self) -> Result<Vec<Hash>, Error> {
+        let mut blobs = self
+            .as_dir()?
+            .list_dir(".")?
+            .map(|entry| {
+                Ok(entry?
+                    .file_name()
+                    .to_str()
+                    .ok_or_else(|| format_err!("expected valid utf-8"))?
+                    .parse()?)
+            })
+            .collect::<Result<Vec<Hash>, Error>>()?;
+        blobs.sort_unstable();
+        Ok(blobs)
+    }
 }
 
 #[cfg(test)]
@@ -171,6 +204,12 @@ mod tests {
         assert_eq!(
             ls_simple(d.list_dir(".").expect("list dir")).expect("list dir contents"),
             vec!["e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3".to_string()],
+        );
+        assert_eq!(
+            blobfs_server.list_blobs().expect("list blobs"),
+            vec!["e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"
+                .parse()
+                .unwrap()],
         );
 
         blobfs_server.stop().await?;

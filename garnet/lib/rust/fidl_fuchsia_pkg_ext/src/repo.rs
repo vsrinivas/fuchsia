@@ -12,14 +12,14 @@ use {
 };
 
 /// Convenience wrapper for the FIDL RepositoryKeyConfig type
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type", content = "value", deny_unknown_fields)]
 pub enum RepositoryKey {
     Ed25519(#[serde(with = "hex_serde")] Vec<u8>),
 }
 
 /// Convenience wrapper for the FIDL RepositoryBlobConfig type
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type", content = "value", deny_unknown_fields)]
 pub enum RepositoryBlobKey {
     Aes(#[serde(with = "hex_serde")] Vec<u8>),
@@ -117,6 +117,7 @@ impl RepositoryConfig {
         &self.repo_url
     }
 
+    /// Insert the provided mirror, returning any previous mirror with the same URL.
     pub fn insert_mirror(&mut self, mut mirror: MirrorConfig) -> Option<MirrorConfig> {
         if let Some(m) = self.mirrors.iter_mut().find(|m| m.mirror_url == mirror.mirror_url) {
             mem::swap(m, &mut mirror);
@@ -127,12 +128,18 @@ impl RepositoryConfig {
         }
     }
 
+    /// Remove the requested mirror by url, returning the removed mirror, if it existed.
     pub fn remove_mirror(&mut self, mirror_url: &str) -> Option<MirrorConfig> {
         if let Some(pos) = self.mirrors.iter().position(|m| m.mirror_url == mirror_url) {
             Some(self.mirrors.remove(pos))
         } else {
             None
         }
+    }
+
+    /// Returns a slice of all mirrors.
+    pub fn mirrors(&self) -> &[MirrorConfig] {
+        &self.mirrors
     }
 }
 

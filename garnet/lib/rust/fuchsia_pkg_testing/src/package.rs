@@ -5,12 +5,16 @@
 //! Test tools for building Fuchsia packages.
 
 use {
-    failure::{Error, ResultExt},
+    failure::{format_err, Error, ResultExt},
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{DirectoryProxy, FileMarker},
     fuchsia_component::client::{launcher, AppBuilder},
-    fuchsia_merkle::Hash,
-    fuchsia_pkg::MetaPackage,
+    fuchsia_merkle::{Hash, MerkleTree},
+    fuchsia_pkg::{MetaContents, MetaPackage},
+    fuchsia_zircon::Status,
+    futures::{join, prelude::*},
     std::{
-        collections::BTreeMap,
+        collections::{BTreeMap, HashSet},
         fs::{self, File},
         io::{self, Write},
         path::{Path, PathBuf},
@@ -60,6 +64,94 @@ impl Package {
     /// The directory containing the blobs contained in the package, including the meta.far.
     pub fn artifacts(&self) -> &Path {
         self.artifacts.path()
+    }
+
+    /// Verifies that the given directory serves the contents of this package.
+    pub async fn verify_contents(&self, dir: &DirectoryProxy) -> Result<(), VerificationError> {
+        let mut raw_meta_far = self.meta_far()?;
+        let mut meta_far = fuchsia_archive::Reader::new(&mut raw_meta_far)?;
+        let mut expected_paths = HashSet::new();
+
+        // Verify all entries referenced by meta/contents exist and have the correct merkle root.
+        let raw_meta_contents = meta_far.read_file("meta/contents")?;
+        let meta_contents = MetaContents::deserialize(raw_meta_contents.as_slice())?;
+        for (path, merkle) in meta_contents.contents() {
+            let actual_merkle =
+                MerkleTree::from_reader(read_file(dir, path).await?.as_slice())?.root();
+            if merkle != &actual_merkle {
+                return Err(VerificationError::DifferentFileData { path: path.to_owned() });
+            }
+            expected_paths.insert(path.clone());
+        }
+
+        // Verify all entries in the meta FAR exist and have the correct contents.
+        for path in meta_far.list().map(|s| s.to_owned()).collect::<Vec<_>>() {
+            if read_file(dir, path.as_str()).await? != meta_far.read_file(path.as_str())? {
+                return Err(VerificationError::DifferentFileData { path });
+            }
+            expected_paths.insert(path);
+        }
+
+        // Verify no other entries exist in the served directory.
+        for path in files_async::readdir_recursive(dir).await?.into_iter().map(|entry| entry.name) {
+            if !expected_paths.contains(path.as_str()) {
+                return Err(VerificationError::ExtraFile { path });
+            }
+        }
+
+        Ok(())
+    }
+}
+
+async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, VerificationError> {
+    let (file, server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+    let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE | fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+    let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
+    dir.open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
+        .expect("open request to send");
+
+    let mut events = file.take_event_stream();
+    let open = async move {
+        let fidl_fuchsia_io::FileEvent::OnOpen_ { s, info: _ } =
+            events.next().await.expect("Some(event)").expect("no fidl error");
+        match Status::ok(s) {
+            Err(Status::NOT_FOUND) => Err(VerificationError::MissingFile { path: path.to_owned() }),
+            Err(status) => Err(format_err!("unable to open {:?}: {:?}", path, status).into()),
+            Ok(()) => Ok(()),
+        }
+    };
+
+    let mut buf = vec![];
+    let read = async move {
+        loop {
+            let (status, chunk) =
+                file.read(fidl_fuchsia_io::MAX_BUF).await.context("file read to respond")?;
+            Status::ok(status).context("file read to succeed")?;
+
+            if chunk.is_empty() {
+                return Ok(buf);
+            }
+
+            buf.extend(chunk);
+        }
+    };
+
+    let (open, read) = join!(open, read);
+    open.and(read)
+}
+
+#[derive(Debug)]
+pub enum VerificationError {
+    ExtraFile { path: String },
+    MissingFile { path: String },
+    DifferentFileData { path: String },
+    Other(Error),
+}
+
+impl<T: Into<Error>> From<T> for VerificationError {
+    fn from(x: T) -> Self {
+        VerificationError::Other(x.into())
     }
 }
 
@@ -233,7 +325,7 @@ impl PackageDir {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_merkle::MerkleTree, walkdir::WalkDir};
+    use {super::*, fuchsia_merkle::MerkleTree, matches::assert_matches, walkdir::WalkDir};
 
     #[test]
     #[should_panic(expected = r#""data" is not a directory"#)]
@@ -318,6 +410,28 @@ mod tests {
         Ok(())
     }
 
+    fn make_this_package_dir() -> Result<tempfile::TempDir, Error> {
+        let dir = tempfile::tempdir()?;
+
+        let this_package_root = Path::new("/pkg");
+
+        for entry in WalkDir::new(this_package_root) {
+            let entry = entry?;
+            let path = entry.path();
+
+            let relative_path = path.strip_prefix(this_package_root).unwrap();
+            let rebased_path = dir.path().join(relative_path);
+
+            if entry.file_type().is_dir() {
+                fs::create_dir_all(rebased_path)?;
+            } else if entry.file_type().is_file() {
+                fs::copy(path, rebased_path)?;
+            }
+        }
+
+        Ok(dir)
+    }
+
     fn is_generated_file(path: &Path) -> bool {
         match path.to_str() {
             Some("meta/contents") => true,
@@ -326,8 +440,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_identity() -> Result<(), Error> {
+    async fn build_this_package() -> Result<Package, Error> {
         let mut pkg = PackageBuilder::new("fuchsia_pkg_testing_tests");
 
         // Add all non-generated files from this package into `pkg`.
@@ -345,12 +458,106 @@ mod tests {
             pkg = pkg.add_resource_at(relative_path.to_str().unwrap(), f)?;
         }
 
-        let pkg = pkg.build().await?;
+        Ok(pkg.build().await?)
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_identity() -> Result<(), Error> {
+        let pkg = build_this_package().await?;
 
         assert_eq!(pkg.meta_far_merkle, MerkleTree::from_reader(pkg.meta_far()?)?.root());
 
         // Verify the generated package's merkle root is the same as this test package's merkle root.
         assert_eq!(pkg.meta_far_merkle, fs::read_to_string("/pkg/meta")?.parse()?);
+
+        let this_pkg_dir =
+            io_util::open_directory_in_namespace("/pkg", io_util::OPEN_RIGHT_READABLE)?;
+        pkg.verify_contents(&this_pkg_dir).await.expect("contents to be equivalent");
+
+        let pkg_dir = make_this_package_dir()?;
+
+        let this_pkg_dir = io_util::open_directory_in_namespace(
+            pkg_dir.path().to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE,
+        )?;
+
+        assert_matches!(pkg.verify_contents(&this_pkg_dir).await, Ok(()));
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_verify_contents_rejects_extra_blob() -> Result<(), Error> {
+        let pkg = build_this_package().await?;
+        let pkg_dir = make_this_package_dir()?;
+
+        fs::write(pkg_dir.path().join("unexpected"), "unexpected file".as_bytes())?;
+
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
+            pkg_dir.path().to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE,
+        )?;
+
+        assert_matches!(
+            pkg.verify_contents(&pkg_dir_proxy).await,
+            Err(VerificationError::ExtraFile{ref path}) if path == "unexpected");
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_verify_contents_rejects_extra_meta_file() -> Result<(), Error> {
+        let pkg = build_this_package().await?;
+        let pkg_dir = make_this_package_dir()?;
+
+        fs::write(pkg_dir.path().join("meta/unexpected"), "unexpected file".as_bytes())?;
+
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
+            pkg_dir.path().to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE,
+        )?;
+
+        assert_matches!(
+            pkg.verify_contents(&pkg_dir_proxy).await,
+            Err(VerificationError::ExtraFile{ref path}) if path == "meta/unexpected");
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_verify_contents_rejects_missing_blob() -> Result<(), Error> {
+        let pkg = build_this_package().await?;
+        let pkg_dir = make_this_package_dir()?;
+
+        fs::remove_file(pkg_dir.path().join("bin/pkgsvr"))?;
+
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
+            pkg_dir.path().to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE,
+        )?;
+
+        assert_matches!(
+            pkg.verify_contents(&pkg_dir_proxy).await,
+            Err(VerificationError::MissingFile{ref path}) if path == "bin/pkgsvr");
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_verify_contents_rejects_different_contents() -> Result<(), Error> {
+        let pkg = build_this_package().await?;
+        let pkg_dir = make_this_package_dir()?;
+
+        fs::write(pkg_dir.path().join("bin/pkgsvr"), "broken".as_bytes())?;
+
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
+            pkg_dir.path().to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE,
+        )?;
+
+        assert_matches!(
+            pkg.verify_contents(&pkg_dir_proxy).await,
+            Err(VerificationError::DifferentFileData{ref path}) if path == "bin/pkgsvr");
 
         Ok(())
     }

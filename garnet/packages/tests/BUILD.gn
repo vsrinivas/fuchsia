@@ -1043,6 +1043,7 @@ group("amber") {
     "//garnet/go/src/amber/system_updater:system_updater_tests",
     "//garnet/packages/prod:amber",
     "//garnet/tests/amberctl:amberctl-tests",
+    "//garnet/tests/pkg-resolver:tests",
     "//garnet/tests/system_updater:systemupdater-tests",
   ]
 }

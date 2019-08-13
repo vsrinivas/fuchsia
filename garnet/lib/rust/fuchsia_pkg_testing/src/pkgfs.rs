@@ -5,7 +5,7 @@
 //! Test utilities for starting a pkgfs server.
 
 use {
-    crate::{as_dir, blobfs::TestBlobFs},
+    crate::{as_dir, as_file, blobfs::TestBlobFs},
     failure::{Error, ResultExt},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::ClientEnd,
@@ -14,7 +14,7 @@ use {
     fuchsia_zircon as zx,
     fuchsia_zircon::Task,
     openat::Dir,
-    std::ffi::CString,
+    std::{ffi::CString, fs::File},
     tempfile::TempDir,
 };
 
@@ -86,14 +86,22 @@ impl TestPkgFs {
         Ok(root_clone.into())
     }
 
+    /// Returns a reference to the [`TestBlobFs`] backing this pkgfs.
+    pub fn blobfs(&self) -> &TestBlobFs {
+        &self.blobfs
+    }
+
     /// Opens the root of pkgfs as a directory.
     pub fn root_dir(&self) -> Result<Dir, Error> {
         Ok(as_dir(self.root_dir_handle()?))
     }
 
-    /// Opens the root of the backing blobfs as a directory.
-    pub fn blobfs_root_dir(&self) -> Result<Dir, Error> {
-        Ok(as_dir(self.blobfs.root_dir_handle()?))
+    /// Opens the root of pkgfs as a file.
+    ///
+    /// TODO: remove once there is an equivalent API to `add_dir_to_namespace` that doesn't
+    /// accept a File.
+    pub fn root_dir_file(&self) -> Result<File, Error> {
+        Ok(as_file(self.root_dir_handle()?))
     }
 
     /// Restarts PkgFs with the same backing blobfs and dynamic index.
@@ -130,7 +138,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_pkgfs() -> Result<(), Error> {
         let pkgfs = TestPkgFs::start(None).context("starting pkgfs")?;
-        let blobfs_root_dir = pkgfs.blobfs_root_dir()?;
+        let blobfs_root_dir = pkgfs.blobfs().as_dir()?;
         let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
         let pkg = PackageBuilder::new("example")
@@ -226,7 +234,7 @@ mod tests {
         let index = TempDir::new().expect("create tempdir");
         let index_path = index.path().to_owned();
         let pkgfs = TestPkgFs::start(index).context("starting pkgfs")?;
-        let blobfs_root_dir = pkgfs.blobfs_root_dir()?;
+        let blobfs_root_dir = pkgfs.blobfs().as_dir()?;
         let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
         let pkg = PackageBuilder::new("example")
