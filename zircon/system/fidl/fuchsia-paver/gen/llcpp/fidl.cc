@@ -93,7 +93,7 @@ extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
 }  // namespace
 template <>
 PayloadStream::ResultOf::RegisterVmo_Impl<PayloadStream::RegisterVmoResponse>::RegisterVmo_Impl(zx::unowned_channel _client_end, ::zx::vmo vmo) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -142,7 +142,7 @@ zx_status_t PayloadStream::SyncClient::RegisterVmo_Deprecated(::zx::vmo vmo, int
 }
 
 zx_status_t PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel _client_end, ::zx::vmo vmo, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<RegisterVmoRequest*>(_write_bytes);
   _request._hdr.ordinal = kPayloadStream_RegisterVmo_GenOrdinal;
@@ -153,7 +153,7 @@ zx_status_t PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel _cli
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<RegisterVmoRequest, RegisterVmoResponse>(
@@ -220,7 +220,7 @@ zx_status_t PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel _cli
 
 template <>
 PayloadStream::ResultOf::ReadData_Impl<PayloadStream::ReadDataResponse>::ReadData_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -263,7 +263,7 @@ zx_status_t PayloadStream::SyncClient::ReadData_Deprecated(ReadResult* out_resul
 }
 
 zx_status_t PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel _client_end, ReadResult* out_result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ReadDataRequest*>(_write_bytes);
   _request._hdr.ordinal = kPayloadStream_ReadData_GenOrdinal;
@@ -273,7 +273,7 @@ zx_status_t PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel _client
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ReadDataRequest, ReadDataResponse>(
@@ -390,7 +390,7 @@ bool PayloadStream::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
 
 
 void PayloadStream::Interface::RegisterVmoCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RegisterVmoResponse*>(_write_bytes);
   _response._hdr.ordinal = kPayloadStream_RegisterVmo_GenOrdinal;
@@ -419,7 +419,7 @@ void PayloadStream::Interface::RegisterVmoCompleterBase::Reply(::fidl::DecodedMe
 
 
 void PayloadStream::Interface::ReadDataCompleterBase::Reply(ReadResult result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ReadDataResponse*>(_write_bytes);
   _response._hdr.ordinal = kPayloadStream_ReadData_GenOrdinal;
@@ -543,7 +543,7 @@ extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesResponseTable;
 }  // namespace
 template <>
 Paver::ResultOf::QueryActiveConfiguration_Impl<Paver::QueryActiveConfigurationResponse>::QueryActiveConfiguration_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -586,7 +586,7 @@ zx_status_t Paver::SyncClient::QueryActiveConfiguration_Deprecated(Paver_QueryAc
 }
 
 zx_status_t Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel _client_end, Paver_QueryActiveConfiguration_Result* out_result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<QueryActiveConfigurationRequest*>(_write_bytes);
   _request._hdr.ordinal = kPaver_QueryActiveConfiguration_GenOrdinal;
@@ -596,7 +596,7 @@ zx_status_t Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<QueryActiveConfigurationRequest, QueryActiveConfigurationResponse>(
@@ -666,7 +666,7 @@ zx_status_t Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel
 
 template <>
 Paver::ResultOf::SetActiveConfiguration_Impl<Paver::SetActiveConfigurationResponse>::SetActiveConfiguration_Impl(zx::unowned_channel _client_end, Configuration configuration) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -715,7 +715,7 @@ zx_status_t Paver::SyncClient::SetActiveConfiguration_Deprecated(Configuration c
 }
 
 zx_status_t Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel _client_end, Configuration configuration, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SetActiveConfigurationRequest*>(_write_bytes);
   _request._hdr.ordinal = kPaver_SetActiveConfiguration_GenOrdinal;
@@ -726,7 +726,7 @@ zx_status_t Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel _
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<SetActiveConfigurationRequest, SetActiveConfigurationResponse>(
@@ -793,7 +793,7 @@ zx_status_t Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel _
 
 template <>
 Paver::ResultOf::MarkActiveConfigurationSuccessful_Impl<Paver::MarkActiveConfigurationSuccessfulResponse>::MarkActiveConfigurationSuccessful_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -836,7 +836,7 @@ zx_status_t Paver::SyncClient::MarkActiveConfigurationSuccessful_Deprecated(int3
 }
 
 zx_status_t Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MarkActiveConfigurationSuccessfulRequest*>(_write_bytes);
   _request._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_GenOrdinal;
@@ -846,7 +846,7 @@ zx_status_t Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowne
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MarkActiveConfigurationSuccessfulRequest, MarkActiveConfigurationSuccessfulResponse>(
@@ -916,7 +916,7 @@ zx_status_t Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowne
 
 template <>
 Paver::ResultOf::ForceRecoveryConfiguration_Impl<Paver::ForceRecoveryConfigurationResponse>::ForceRecoveryConfiguration_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -959,7 +959,7 @@ zx_status_t Paver::SyncClient::ForceRecoveryConfiguration_Deprecated(int32_t* ou
 }
 
 zx_status_t Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ForceRecoveryConfigurationRequest*>(_write_bytes);
   _request._hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
@@ -969,7 +969,7 @@ zx_status_t Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_chann
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ForceRecoveryConfigurationRequest, ForceRecoveryConfigurationResponse>(
@@ -1039,7 +1039,7 @@ zx_status_t Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_chann
 
 template <>
 Paver::ResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_Impl(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1092,7 +1092,7 @@ zx_status_t Paver::SyncClient::WriteAsset_Deprecated(Configuration configuration
 }
 
 zx_status_t Paver::Call::WriteAsset_Deprecated(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteAssetRequest*>(_write_bytes);
   _request._hdr.ordinal = kPaver_WriteAsset_GenOrdinal;
@@ -1105,7 +1105,7 @@ zx_status_t Paver::Call::WriteAsset_Deprecated(zx::unowned_channel _client_end, 
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<WriteAssetRequest, WriteAssetResponse>(
@@ -1174,7 +1174,7 @@ zx_status_t Paver::Call::WriteAsset_Deprecated(zx::unowned_channel _client_end, 
 
 template <>
 Paver::ResultOf::WriteVolumes_Impl<Paver::WriteVolumesResponse>::WriteVolumes_Impl(zx::unowned_channel _client_end, ::zx::channel payload) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1223,7 +1223,7 @@ zx_status_t Paver::SyncClient::WriteVolumes_Deprecated(::zx::channel payload, in
 }
 
 zx_status_t Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel _client_end, ::zx::channel payload, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteVolumesRequest*>(_write_bytes);
   _request._hdr.ordinal = kPaver_WriteVolumes_GenOrdinal;
@@ -1234,7 +1234,7 @@ zx_status_t Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel _client_end
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<WriteVolumesRequest, WriteVolumesResponse>(
@@ -1301,7 +1301,7 @@ zx_status_t Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel _client_end
 
 template <>
 Paver::ResultOf::WriteBootloader_Impl<Paver::WriteBootloaderResponse>::WriteBootloader_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1350,7 +1350,7 @@ zx_status_t Paver::SyncClient::WriteBootloader_Deprecated(::llcpp::fuchsia::mem:
 }
 
 zx_status_t Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteBootloaderRequest*>(_write_bytes);
   _request._hdr.ordinal = kPaver_WriteBootloader_GenOrdinal;
@@ -1361,7 +1361,7 @@ zx_status_t Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel _client_
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<WriteBootloaderRequest, WriteBootloaderResponse>(
@@ -1428,7 +1428,7 @@ zx_status_t Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel _client_
 
 template <>
 Paver::ResultOf::WriteDataFile_Impl<Paver::WriteDataFileResponse>::WriteDataFile_Impl(zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   WriteDataFileRequest _request = {};
@@ -1484,7 +1484,7 @@ zx_status_t Paver::SyncClient::WriteDataFile_Deprecated(::fidl::StringView filen
 }
 
 zx_status_t Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   WriteDataFileRequest _request = {};
@@ -1501,7 +1501,7 @@ zx_status_t Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel _client_en
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<WriteDataFileRequest, WriteDataFileResponse>(
@@ -1572,7 +1572,7 @@ zx_status_t Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel _client_en
 
 template <>
 Paver::ResultOf::WipeVolumes_Impl<Paver::WipeVolumesResponse>::WipeVolumes_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1615,7 +1615,7 @@ zx_status_t Paver::SyncClient::WipeVolumes_Deprecated(int32_t* out_status) {
 }
 
 zx_status_t Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WipeVolumesRequest*>(_write_bytes);
   _request._hdr.ordinal = kPaver_WipeVolumes_GenOrdinal;
@@ -1625,7 +1625,7 @@ zx_status_t Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel _client_end,
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<WipeVolumesRequest, WipeVolumesResponse>(
@@ -1823,7 +1823,7 @@ bool Paver::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn)
 
 
 void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(Paver_QueryActiveConfiguration_Result result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<QueryActiveConfigurationResponse*>(_write_bytes);
   _response._hdr.ordinal = kPaver_QueryActiveConfiguration_GenOrdinal;
@@ -1852,7 +1852,7 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::Deco
 
 
 void Paver::Interface::SetActiveConfigurationCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetActiveConfigurationResponse*>(_write_bytes);
   _response._hdr.ordinal = kPaver_SetActiveConfiguration_GenOrdinal;
@@ -1881,7 +1881,7 @@ void Paver::Interface::SetActiveConfigurationCompleterBase::Reply(::fidl::Decode
 
 
 void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MarkActiveConfigurationSuccessfulResponse*>(_write_bytes);
   _response._hdr.ordinal = kPaver_MarkActiveConfigurationSuccessful_GenOrdinal;
@@ -1910,7 +1910,7 @@ void Paver::Interface::MarkActiveConfigurationSuccessfulCompleterBase::Reply(::f
 
 
 void Paver::Interface::ForceRecoveryConfigurationCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ForceRecoveryConfigurationResponse*>(_write_bytes);
   _response._hdr.ordinal = kPaver_ForceRecoveryConfiguration_GenOrdinal;
@@ -1939,7 +1939,7 @@ void Paver::Interface::ForceRecoveryConfigurationCompleterBase::Reply(::fidl::De
 
 
 void Paver::Interface::WriteAssetCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteAssetResponse*>(_write_bytes);
   _response._hdr.ordinal = kPaver_WriteAsset_GenOrdinal;
@@ -1968,7 +1968,7 @@ void Paver::Interface::WriteAssetCompleterBase::Reply(::fidl::DecodedMessage<Wri
 
 
 void Paver::Interface::WriteVolumesCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteVolumesResponse*>(_write_bytes);
   _response._hdr.ordinal = kPaver_WriteVolumes_GenOrdinal;
@@ -1997,7 +1997,7 @@ void Paver::Interface::WriteVolumesCompleterBase::Reply(::fidl::DecodedMessage<W
 
 
 void Paver::Interface::WriteBootloaderCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteBootloaderResponse*>(_write_bytes);
   _response._hdr.ordinal = kPaver_WriteBootloader_GenOrdinal;
@@ -2026,7 +2026,7 @@ void Paver::Interface::WriteBootloaderCompleterBase::Reply(::fidl::DecodedMessag
 
 
 void Paver::Interface::WriteDataFileCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteDataFileResponse*>(_write_bytes);
   _response._hdr.ordinal = kPaver_WriteDataFile_GenOrdinal;
@@ -2055,7 +2055,7 @@ void Paver::Interface::WriteDataFileCompleterBase::Reply(::fidl::DecodedMessage<
 
 
 void Paver::Interface::WipeVolumesCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WipeVolumesResponse*>(_write_bytes);
   _response._hdr.ordinal = kPaver_WipeVolumes_GenOrdinal;

@@ -23,7 +23,7 @@ extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAcce
 }  // namespace
 
 ControlFlow::ResultOf::Shutdown_Impl::Shutdown_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ShutdownRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ShutdownRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -47,7 +47,7 @@ zx_status_t ControlFlow::SyncClient::Shutdown_Deprecated() {
 }
 
 zx_status_t ControlFlow::Call::Shutdown_Deprecated(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ShutdownRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ShutdownRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ShutdownRequest*>(_write_bytes);
   _request._hdr.ordinal = kControlFlow_Shutdown_GenOrdinal;
@@ -84,7 +84,7 @@ zx_status_t ControlFlow::Call::Shutdown_Deprecated(zx::unowned_channel _client_e
 
 
 ControlFlow::ResultOf::NoReplyMustSendAccessDeniedEpitaph_Impl::NoReplyMustSendAccessDeniedEpitaph_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoReplyMustSendAccessDeniedEpitaphRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoReplyMustSendAccessDeniedEpitaphRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -108,7 +108,7 @@ zx_status_t ControlFlow::SyncClient::NoReplyMustSendAccessDeniedEpitaph_Deprecat
 }
 
 zx_status_t ControlFlow::Call::NoReplyMustSendAccessDeniedEpitaph_Deprecated(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoReplyMustSendAccessDeniedEpitaphRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoReplyMustSendAccessDeniedEpitaphRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<NoReplyMustSendAccessDeniedEpitaphRequest*>(_write_bytes);
   _request._hdr.ordinal = kControlFlow_NoReplyMustSendAccessDeniedEpitaph_GenOrdinal;
@@ -145,7 +145,7 @@ zx_status_t ControlFlow::Call::NoReplyMustSendAccessDeniedEpitaph_Deprecated(zx:
 
 template <>
 ControlFlow::ResultOf::MustSendAccessDeniedEpitaph_Impl<ControlFlow::MustSendAccessDeniedEpitaphResponse>::MustSendAccessDeniedEpitaph_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -188,7 +188,7 @@ zx_status_t ControlFlow::SyncClient::MustSendAccessDeniedEpitaph_Deprecated(int3
 }
 
 zx_status_t ControlFlow::Call::MustSendAccessDeniedEpitaph_Deprecated(zx::unowned_channel _client_end, int32_t* out_reply) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MustSendAccessDeniedEpitaphRequest*>(_write_bytes);
   _request._hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_GenOrdinal;
@@ -198,7 +198,7 @@ zx_status_t ControlFlow::Call::MustSendAccessDeniedEpitaph_Deprecated(zx::unowne
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MustSendAccessDeniedEpitaphRequest, MustSendAccessDeniedEpitaphResponse>(
@@ -325,7 +325,7 @@ bool ControlFlow::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
 
 
 void ControlFlow::Interface::MustSendAccessDeniedEpitaphCompleterBase::Reply(int32_t reply) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MustSendAccessDeniedEpitaphResponse*>(_write_bytes);
   _response._hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_GenOrdinal;

@@ -27,7 +27,7 @@ namespace fidl {
 
 namespace internal {
 
-// When |MaxNumHandles| is zero, |handle_storage| is always NULL.
+// When |NumHandles| is zero, |handle_storage| is always NULL.
 // This way we avoid declaring a C array with zero number of elements.
 template <uint32_t MaxNumHandles, typename Enabled = void>
 class EncodedMessageHandleHolder;
@@ -64,12 +64,19 @@ class EncodedMessageHandleHolder<MaxNumHandles, std::enable_if_t<(MaxNumHandles 
 //
 // Because this class does not own the underlying message buffer, the caller
 // must make sure the lifetime of this class does not extend over that of the buffer.
+//
+// TODO(FIDL-771): Right now we assume EncodedMessage is always used in a |kReceiving| context,
+// which over-allocates bytes and handles for flexible messages. To be more frugal with allocation,
+// we should plumb the context through EncodedMessage.
 template <typename FidlType>
-class EncodedMessage final : public internal::EncodedMessageHandleHolder<FidlType::MaxNumHandles> {
+class EncodedMessage final
+    : public internal::EncodedMessageHandleHolder<
+          internal::ClampedHandleCount<FidlType, MessageDirection::kReceiving>()> {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
   static_assert(FidlType::PrimarySize > 0, "Positive message size");
 
-  using Super = internal::EncodedMessageHandleHolder<FidlType::MaxNumHandles>;
+  using Super = internal::EncodedMessageHandleHolder<
+      internal::ClampedHandleCount<FidlType, MessageDirection::kReceiving>()>;
 
  public:
   // The maximum number of handles allowed in a message of this type, given the constraints

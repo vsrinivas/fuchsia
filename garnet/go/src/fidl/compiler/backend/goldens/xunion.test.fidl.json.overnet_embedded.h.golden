@@ -11,6 +11,7 @@ namespace name {
 namespace embedded {
 
 class StrictSimpleXUnion;
+class StrictBoundedXUnion;
 class OlderSimpleUnion;
 class NewerSimpleUnion;
 
@@ -107,6 +108,76 @@ inline zx_status_t Clone(const ::test::name::embedded::StrictSimpleXUnion& value
 }
 
 using StrictSimpleXUnionPtr = ::std::unique_ptr<StrictSimpleXUnion>;
+
+class StrictBoundedXUnion {
+ public:
+ static const fidl_type_t* FidlType;
+
+  StrictBoundedXUnion();
+  ~StrictBoundedXUnion();
+
+  StrictBoundedXUnion(StrictBoundedXUnion&&);
+  StrictBoundedXUnion& operator=(StrictBoundedXUnion&&);
+
+  enum : fidl_xunion_tag_t {
+      kEmpty = kFidlXUnionEmptyTag,
+    };
+
+    enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    
+    kV = 2024555624,  // 0x78ac4468
+  };
+
+  static inline ::std::unique_ptr<StrictBoundedXUnion> New() { return ::std::make_unique<StrictBoundedXUnion>(); }
+
+  void Encode(::overnet::internal::Encoder* encoder, size_t offset);
+  static void Decode(::overnet::internal::Decoder* decoder, StrictBoundedXUnion* value, size_t offset);
+  zx_status_t Clone(StrictBoundedXUnion* result) const;
+
+  bool is_v() const { return tag_ == Tag::kV; }
+  
+  ::std::vector<uint8_t>& v() {
+    EnsureStorageInitialized(Tag::kV);
+    return v_;
+  }
+  
+  const ::std::vector<uint8_t>& v() const { return v_; }
+  StrictBoundedXUnion& set_v(::std::vector<uint8_t> value);
+
+  Tag Which() const {
+    
+    return Tag(tag_);
+    
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    return nullptr;
+  }
+
+  friend ::fidl::Equality<::test::name::embedded::StrictBoundedXUnion>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = kEmpty;
+  union {
+    ::std::vector<uint8_t> v_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::name::embedded::StrictBoundedXUnion& value,
+                         ::test::name::embedded::StrictBoundedXUnion* result) {
+  return value.Clone(result);
+}
+
+using StrictBoundedXUnionPtr = ::std::unique_ptr<StrictBoundedXUnion>;
 
 class OlderSimpleUnion {
  public:
@@ -385,6 +456,71 @@ struct Equality<::test::name::embedded::StrictSimpleXUnion> {
         return ::fidl::Equals(_lhs.f_, _rhs.f_);
       case ::test::name::embedded::StrictSimpleXUnion::Tag::kS:
         return ::fidl::Equals(_lhs.s_, _rhs.s_);
+      
+      default:
+        return false;
+      }
+    }
+};
+template <>
+struct CodingTraits<::test::name::embedded::StrictBoundedXUnion>
+    : public EncodableCodingTraits<::test::name::embedded::StrictBoundedXUnion, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::embedded::StrictBoundedXUnion>> {
+  static constexpr size_t encoded_size = 24;
+
+  static void Encode(::overnet::internal::Encoder* encoder, std::unique_ptr<::test::name::embedded::StrictBoundedXUnion>* value, size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(::overnet::internal::Decoder* decoder, std::unique_ptr<::test::name::embedded::StrictBoundedXUnion>* value, size_t offset) {
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::name::embedded::StrictBoundedXUnion);
+
+    ::test::name::embedded::StrictBoundedXUnion::Decode(decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::name::embedded::StrictBoundedXUnion& value,
+                         ::test::name::embedded::StrictBoundedXUnion* result) {
+  return ::test::name::embedded::Clone(value, result);
+}
+
+template <>
+struct ToEmbeddedTraits<::test::name::StrictBoundedXUnion> {
+  static ::test::name::embedded::StrictBoundedXUnion Lift(const ::test::name::StrictBoundedXUnion& _value) {
+    ::test::name::embedded::StrictBoundedXUnion _out;
+    switch (_value.Which()) {
+      case ::test::name::StrictBoundedXUnion::Tag::kV:
+        _out.set_v(ToEmbedded(_value.v()));
+        break;
+      
+    }
+    return _out;
+  }
+};
+
+template<>
+struct Equality<::test::name::embedded::StrictBoundedXUnion> {
+  static inline bool Equals(const ::test::name::embedded::StrictBoundedXUnion& _lhs, const ::test::name::embedded::StrictBoundedXUnion& _rhs) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case ::test::name::StrictBoundedXUnion::kEmpty:
+        return true;
+      case ::test::name::embedded::StrictBoundedXUnion::Tag::kV:
+        return ::fidl::Equals(_lhs.v_, _rhs.v_);
       
       default:
         return false;

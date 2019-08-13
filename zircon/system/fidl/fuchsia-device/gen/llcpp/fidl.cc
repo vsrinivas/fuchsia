@@ -47,7 +47,7 @@ extern "C" const fidl_type_t fuchsia_device_ControllerRunCompatibilityTestsRespo
 }  // namespace
 template <>
 Controller::ResultOf::Bind_Impl<Controller::BindResponse>::Bind_Impl(zx::unowned_channel _client_end, ::fidl::StringView driver) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   BindRequest _request = {};
@@ -101,7 +101,7 @@ zx_status_t Controller::SyncClient::Bind_Deprecated(::fidl::StringView driver, i
 }
 
 zx_status_t Controller::Call::Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView driver, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   BindRequest _request = {};
@@ -117,7 +117,7 @@ zx_status_t Controller::Call::Bind_Deprecated(zx::unowned_channel _client_end, :
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<BindResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<BindResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<BindRequest, BindResponse>(
@@ -187,7 +187,7 @@ zx_status_t Controller::Call::Bind_Deprecated(zx::unowned_channel _client_end, :
 
 template <>
 Controller::ResultOf::ScheduleUnbind_Impl<Controller::ScheduleUnbindResponse>::ScheduleUnbind_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -230,7 +230,7 @@ zx_status_t Controller::SyncClient::ScheduleUnbind_Deprecated(int32_t* out_statu
 }
 
 zx_status_t Controller::Call::ScheduleUnbind_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ScheduleUnbindRequest*>(_write_bytes);
   _request._hdr.ordinal = kController_ScheduleUnbind_GenOrdinal;
@@ -240,7 +240,7 @@ zx_status_t Controller::Call::ScheduleUnbind_Deprecated(zx::unowned_channel _cli
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ScheduleUnbindRequest, ScheduleUnbindResponse>(
@@ -310,7 +310,7 @@ zx_status_t Controller::Call::ScheduleUnbind_Deprecated(zx::unowned_channel _cli
 
 template <>
 Controller::ResultOf::GetDriverName_Impl<Controller::GetDriverNameResponse>::GetDriverName_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverNameRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -402,7 +402,7 @@ Controller::UnownedResultOf::GetDriverName Controller::Call::GetDriverName(zx::u
 
 template <>
 Controller::ResultOf::GetDeviceName_Impl<Controller::GetDeviceNameResponse>::GetDeviceName_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -493,7 +493,7 @@ Controller::UnownedResultOf::GetDeviceName Controller::Call::GetDeviceName(zx::u
 
 template <>
 Controller::ResultOf::GetTopologicalPath_Impl<Controller::GetTopologicalPathResponse>::GetTopologicalPath_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTopologicalPathRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTopologicalPathRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -585,7 +585,7 @@ Controller::UnownedResultOf::GetTopologicalPath Controller::Call::GetTopological
 
 template <>
 Controller::ResultOf::GetEventHandle_Impl<Controller::GetEventHandleResponse>::GetEventHandle_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetEventHandleRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetEventHandleRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -628,7 +628,7 @@ zx_status_t Controller::SyncClient::GetEventHandle_Deprecated(int32_t* out_statu
 }
 
 zx_status_t Controller::Call::GetEventHandle_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::event* out_event) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetEventHandleRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetEventHandleRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetEventHandleRequest*>(_write_bytes);
   _request._hdr.ordinal = kController_GetEventHandle_GenOrdinal;
@@ -638,7 +638,7 @@ zx_status_t Controller::Call::GetEventHandle_Deprecated(zx::unowned_channel _cli
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetEventHandleResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetEventHandleResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetEventHandleRequest, GetEventHandleResponse>(
@@ -710,7 +710,7 @@ zx_status_t Controller::Call::GetEventHandle_Deprecated(zx::unowned_channel _cli
 
 template <>
 Controller::ResultOf::GetDriverLogFlags_Impl<Controller::GetDriverLogFlagsResponse>::GetDriverLogFlags_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverLogFlagsRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverLogFlagsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -753,7 +753,7 @@ zx_status_t Controller::SyncClient::GetDriverLogFlags_Deprecated(int32_t* out_st
 }
 
 zx_status_t Controller::Call::GetDriverLogFlags_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, uint32_t* out_flags) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverLogFlagsRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverLogFlagsRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetDriverLogFlagsRequest*>(_write_bytes);
   _request._hdr.ordinal = kController_GetDriverLogFlags_GenOrdinal;
@@ -763,7 +763,7 @@ zx_status_t Controller::Call::GetDriverLogFlags_Deprecated(zx::unowned_channel _
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverLogFlagsResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverLogFlagsResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetDriverLogFlagsRequest, GetDriverLogFlagsResponse>(
@@ -835,7 +835,7 @@ zx_status_t Controller::Call::GetDriverLogFlags_Deprecated(zx::unowned_channel _
 
 template <>
 Controller::ResultOf::SetDriverLogFlags_Impl<Controller::SetDriverLogFlagsResponse>::SetDriverLogFlags_Impl(zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDriverLogFlagsRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDriverLogFlagsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -886,7 +886,7 @@ zx_status_t Controller::SyncClient::SetDriverLogFlags_Deprecated(uint32_t clear_
 }
 
 zx_status_t Controller::Call::SetDriverLogFlags_Deprecated(zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDriverLogFlagsRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDriverLogFlagsRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SetDriverLogFlagsRequest*>(_write_bytes);
   _request._hdr.ordinal = kController_SetDriverLogFlags_GenOrdinal;
@@ -898,7 +898,7 @@ zx_status_t Controller::Call::SetDriverLogFlags_Deprecated(zx::unowned_channel _
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetDriverLogFlagsResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetDriverLogFlagsResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<SetDriverLogFlagsRequest, SetDriverLogFlagsResponse>(
@@ -966,7 +966,7 @@ zx_status_t Controller::Call::SetDriverLogFlags_Deprecated(zx::unowned_channel _
 
 template <>
 Controller::ResultOf::DebugSuspend_Impl<Controller::DebugSuspendResponse>::DebugSuspend_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1009,7 +1009,7 @@ zx_status_t Controller::SyncClient::DebugSuspend_Deprecated(int32_t* out_status)
 }
 
 zx_status_t Controller::Call::DebugSuspend_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DebugSuspendRequest*>(_write_bytes);
   _request._hdr.ordinal = kController_DebugSuspend_GenOrdinal;
@@ -1019,7 +1019,7 @@ zx_status_t Controller::Call::DebugSuspend_Deprecated(zx::unowned_channel _clien
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<DebugSuspendRequest, DebugSuspendResponse>(
@@ -1089,7 +1089,7 @@ zx_status_t Controller::Call::DebugSuspend_Deprecated(zx::unowned_channel _clien
 
 template <>
 Controller::ResultOf::DebugResume_Impl<Controller::DebugResumeResponse>::DebugResume_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugResumeRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugResumeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1132,7 +1132,7 @@ zx_status_t Controller::SyncClient::DebugResume_Deprecated(int32_t* out_status) 
 }
 
 zx_status_t Controller::Call::DebugResume_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugResumeRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugResumeRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DebugResumeRequest*>(_write_bytes);
   _request._hdr.ordinal = kController_DebugResume_GenOrdinal;
@@ -1142,7 +1142,7 @@ zx_status_t Controller::Call::DebugResume_Deprecated(zx::unowned_channel _client
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DebugResumeResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DebugResumeResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<DebugResumeRequest, DebugResumeResponse>(
@@ -1212,7 +1212,7 @@ zx_status_t Controller::Call::DebugResume_Deprecated(zx::unowned_channel _client
 
 template <>
 Controller::ResultOf::RunCompatibilityTests_Impl<Controller::RunCompatibilityTestsResponse>::RunCompatibilityTests_Impl(zx::unowned_channel _client_end, int64_t hook_wait_time) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1261,7 +1261,7 @@ zx_status_t Controller::SyncClient::RunCompatibilityTests_Deprecated(int64_t hoo
 }
 
 zx_status_t Controller::Call::RunCompatibilityTests_Deprecated(zx::unowned_channel _client_end, int64_t hook_wait_time, uint32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<RunCompatibilityTestsRequest*>(_write_bytes);
   _request._hdr.ordinal = kController_RunCompatibilityTests_GenOrdinal;
@@ -1272,7 +1272,7 @@ zx_status_t Controller::Call::RunCompatibilityTests_Deprecated(zx::unowned_chann
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<RunCompatibilityTestsRequest, RunCompatibilityTestsResponse>(
@@ -1487,7 +1487,7 @@ bool Controller::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
 
 
 void Controller::Interface::BindCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<BindResponse*>(_write_bytes);
   _response._hdr.ordinal = kController_Bind_GenOrdinal;
@@ -1516,7 +1516,7 @@ void Controller::Interface::BindCompleterBase::Reply(::fidl::DecodedMessage<Bind
 
 
 void Controller::Interface::ScheduleUnbindCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ScheduleUnbindResponse*>(_write_bytes);
   _response._hdr.ordinal = kController_ScheduleUnbind_GenOrdinal;
@@ -1545,7 +1545,7 @@ void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::fidl::DecodedMe
 
 
 void Controller::Interface::GetDriverNameCompleterBase::Reply(int32_t status, ::fidl::StringView name) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverNameResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverNameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetDriverNameResponse _response = {};
   _response._hdr.ordinal = kController_GetDriverName_GenOrdinal;
@@ -1585,7 +1585,7 @@ void Controller::Interface::GetDriverNameCompleterBase::Reply(::fidl::DecodedMes
 
 
 void Controller::Interface::GetDeviceNameCompleterBase::Reply(::fidl::StringView name) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetDeviceNameResponse _response = {};
   _response._hdr.ordinal = kController_GetDeviceName_GenOrdinal;
@@ -1623,7 +1623,7 @@ void Controller::Interface::GetDeviceNameCompleterBase::Reply(::fidl::DecodedMes
 
 
 void Controller::Interface::GetTopologicalPathCompleterBase::Reply(int32_t status, ::fidl::StringView path) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTopologicalPathResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTopologicalPathResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetTopologicalPathResponse _response = {};
@@ -1664,7 +1664,7 @@ void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::Decod
 
 
 void Controller::Interface::GetEventHandleCompleterBase::Reply(int32_t status, ::zx::event event) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetEventHandleResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetEventHandleResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetEventHandleResponse*>(_write_bytes);
   _response._hdr.ordinal = kController_GetEventHandle_GenOrdinal;
@@ -1695,7 +1695,7 @@ void Controller::Interface::GetEventHandleCompleterBase::Reply(::fidl::DecodedMe
 
 
 void Controller::Interface::GetDriverLogFlagsCompleterBase::Reply(int32_t status, uint32_t flags) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverLogFlagsResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverLogFlagsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetDriverLogFlagsResponse*>(_write_bytes);
   _response._hdr.ordinal = kController_GetDriverLogFlags_GenOrdinal;
@@ -1726,7 +1726,7 @@ void Controller::Interface::GetDriverLogFlagsCompleterBase::Reply(::fidl::Decode
 
 
 void Controller::Interface::SetDriverLogFlagsCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDriverLogFlagsResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDriverLogFlagsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetDriverLogFlagsResponse*>(_write_bytes);
   _response._hdr.ordinal = kController_SetDriverLogFlags_GenOrdinal;
@@ -1755,7 +1755,7 @@ void Controller::Interface::SetDriverLogFlagsCompleterBase::Reply(::fidl::Decode
 
 
 void Controller::Interface::DebugSuspendCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DebugSuspendResponse*>(_write_bytes);
   _response._hdr.ordinal = kController_DebugSuspend_GenOrdinal;
@@ -1784,7 +1784,7 @@ void Controller::Interface::DebugSuspendCompleterBase::Reply(::fidl::DecodedMess
 
 
 void Controller::Interface::DebugResumeCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugResumeResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugResumeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DebugResumeResponse*>(_write_bytes);
   _response._hdr.ordinal = kController_DebugResume_GenOrdinal;
@@ -1813,7 +1813,7 @@ void Controller::Interface::DebugResumeCompleterBase::Reply(::fidl::DecodedMessa
 
 
 void Controller::Interface::RunCompatibilityTestsCompleterBase::Reply(uint32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RunCompatibilityTestsResponse*>(_write_bytes);
   _response._hdr.ordinal = kController_RunCompatibilityTests_GenOrdinal;
@@ -1909,7 +1909,7 @@ extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameResponseTab
 }  // namespace
 template <>
 NameProvider::ResultOf::GetDeviceName_Impl<NameProvider::GetDeviceNameResponse>::GetDeviceName_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -2035,7 +2035,7 @@ bool NameProvider::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
 
 
 void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(NameProvider_GetDeviceName_Result result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetDeviceNameResponse _response = {};

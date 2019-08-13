@@ -44,6 +44,7 @@ struct AnyZeroArgMessage final {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = sizeof(fidl_message_header_t);
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
 };
 
 template <>
@@ -319,9 +320,10 @@ EncodeResult<ResponseType> Call(zx::channel& chan, EncodedMessage<RequestType> r
 
 // Calculates the maximum possible message size for a FIDL type,
 // clamped at the Zircon channel packet size.
-template <typename FidlType>
+// TODO(FIDL-771): Always request the message context.
+template <typename FidlType, const MessageDirection Direction = MessageDirection::kReceiving>
 constexpr uint32_t MaxSizeInChannel() {
-  return internal::ClampedMessageSize<FidlType>();
+  return internal::ClampedMessageSize<FidlType, Direction>();
 }
 
 #endif

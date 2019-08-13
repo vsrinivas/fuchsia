@@ -77,7 +77,7 @@ constexpr uint64_t kTestInterface_ConsumeSimpleUnion_GenOrdinal = 0x2e46f9710000
 }  // namespace
 template <>
 TestInterface::ResultOf::ConsumeSimpleStruct_Impl<TestInterface::ConsumeSimpleStructResponse>::ConsumeSimpleStruct_Impl(zx::unowned_channel _client_end, SimpleStruct arg) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleStructRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleStructRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -126,7 +126,7 @@ zx_status_t TestInterface::SyncClient::ConsumeSimpleStruct_Deprecated(SimpleStru
 }
 
 zx_status_t TestInterface::Call::ConsumeSimpleStruct_Deprecated(zx::unowned_channel _client_end, SimpleStruct arg, int32_t* out_status, int32_t* out_field) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleStructRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleStructRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ConsumeSimpleStructRequest*>(_write_bytes);
   _request._hdr.ordinal = kTestInterface_ConsumeSimpleStruct_GenOrdinal;
@@ -137,7 +137,7 @@ zx_status_t TestInterface::Call::ConsumeSimpleStruct_Deprecated(zx::unowned_chan
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleStructResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleStructResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ConsumeSimpleStructRequest, ConsumeSimpleStructResponse>(
@@ -206,7 +206,7 @@ zx_status_t TestInterface::Call::ConsumeSimpleStruct_Deprecated(zx::unowned_chan
 
 template <>
 TestInterface::ResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSimpleUnionResponse>::ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, SimpleUnion arg) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -255,7 +255,7 @@ zx_status_t TestInterface::SyncClient::ConsumeSimpleUnion_Deprecated(SimpleUnion
 }
 
 zx_status_t TestInterface::Call::ConsumeSimpleUnion_Deprecated(zx::unowned_channel _client_end, SimpleUnion arg, uint32_t* out_index, int32_t* out_field) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ConsumeSimpleUnionRequest*>(_write_bytes);
   _request._hdr.ordinal = kTestInterface_ConsumeSimpleUnion_GenOrdinal;
@@ -266,7 +266,7 @@ zx_status_t TestInterface::Call::ConsumeSimpleUnion_Deprecated(zx::unowned_chann
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ConsumeSimpleUnionRequest, ConsumeSimpleUnionResponse>(
@@ -383,7 +383,7 @@ bool TestInterface::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
 
 
 void TestInterface::Interface::ConsumeSimpleStructCompleterBase::Reply(int32_t status, int32_t field) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleStructResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleStructResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConsumeSimpleStructResponse*>(_write_bytes);
   _response._hdr.ordinal = kTestInterface_ConsumeSimpleStruct_GenOrdinal;
@@ -414,7 +414,7 @@ void TestInterface::Interface::ConsumeSimpleStructCompleterBase::Reply(::fidl::D
 
 
 void TestInterface::Interface::ConsumeSimpleUnionCompleterBase::Reply(uint32_t index, int32_t field) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConsumeSimpleUnionResponse*>(_write_bytes);
   _response._hdr.ordinal = kTestInterface_ConsumeSimpleUnion_GenOrdinal;

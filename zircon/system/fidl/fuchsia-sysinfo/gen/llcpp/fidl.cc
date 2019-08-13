@@ -26,7 +26,7 @@ extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoRes
 }  // namespace
 template <>
 Device::ResultOf::GetRootJob_Impl<Device::GetRootJobResponse>::GetRootJob_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -69,7 +69,7 @@ zx_status_t Device::SyncClient::GetRootJob_Deprecated(int32_t* out_status, ::zx:
 }
 
 zx_status_t Device::Call::GetRootJob_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::job* out_job) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRootJobRequest*>(_write_bytes);
   _request._hdr.ordinal = kDevice_GetRootJob_GenOrdinal;
@@ -79,7 +79,7 @@ zx_status_t Device::Call::GetRootJob_Deprecated(zx::unowned_channel _client_end,
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetRootJobRequest, GetRootJobResponse>(
@@ -151,7 +151,7 @@ zx_status_t Device::Call::GetRootJob_Deprecated(zx::unowned_channel _client_end,
 
 template <>
 Device::ResultOf::GetHypervisorResource_Impl<Device::GetHypervisorResourceResponse>::GetHypervisorResource_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -194,7 +194,7 @@ zx_status_t Device::SyncClient::GetHypervisorResource_Deprecated(int32_t* out_st
 }
 
 zx_status_t Device::Call::GetHypervisorResource_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetHypervisorResourceRequest*>(_write_bytes);
   _request._hdr.ordinal = kDevice_GetHypervisorResource_GenOrdinal;
@@ -204,7 +204,7 @@ zx_status_t Device::Call::GetHypervisorResource_Deprecated(zx::unowned_channel _
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetHypervisorResourceRequest, GetHypervisorResourceResponse>(
@@ -276,7 +276,7 @@ zx_status_t Device::Call::GetHypervisorResource_Deprecated(zx::unowned_channel _
 
 template <>
 Device::ResultOf::GetBoardName_Impl<Device::GetBoardNameResponse>::GetBoardName_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBoardNameRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBoardNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -368,7 +368,7 @@ Device::UnownedResultOf::GetBoardName Device::Call::GetBoardName(zx::unowned_cha
 
 template <>
 Device::ResultOf::GetInterruptControllerInfo_Impl<Device::GetInterruptControllerInfoResponse>::GetInterruptControllerInfo_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInterruptControllerInfoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInterruptControllerInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -528,7 +528,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 
 
 void Device::Interface::GetRootJobCompleterBase::Reply(int32_t status, ::zx::job job) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetRootJobResponse*>(_write_bytes);
   _response._hdr.ordinal = kDevice_GetRootJob_GenOrdinal;
@@ -559,7 +559,7 @@ void Device::Interface::GetRootJobCompleterBase::Reply(::fidl::DecodedMessage<Ge
 
 
 void Device::Interface::GetHypervisorResourceCompleterBase::Reply(int32_t status, ::zx::resource resource) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetHypervisorResourceResponse*>(_write_bytes);
   _response._hdr.ordinal = kDevice_GetHypervisorResource_GenOrdinal;
@@ -590,7 +590,7 @@ void Device::Interface::GetHypervisorResourceCompleterBase::Reply(::fidl::Decode
 
 
 void Device::Interface::GetBoardNameCompleterBase::Reply(int32_t status, ::fidl::StringView name) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBoardNameResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBoardNameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetBoardNameResponse _response = {};
   _response._hdr.ordinal = kDevice_GetBoardName_GenOrdinal;
@@ -630,7 +630,7 @@ void Device::Interface::GetBoardNameCompleterBase::Reply(::fidl::DecodedMessage<
 
 
 void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(int32_t status, InterruptControllerInfo* info) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInterruptControllerInfoResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInterruptControllerInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInterruptControllerInfoResponse _response = {};
   _response._hdr.ordinal = kDevice_GetInterruptControllerInfo_GenOrdinal;

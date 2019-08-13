@@ -83,7 +83,7 @@ extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 }  // namespace
 
 KitchenSink::ResultOf::MethodA_Impl::MethodA_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -135,7 +135,7 @@ zx_status_t KitchenSink::SyncClient::MethodA_Deprecated(int64_t a, int64_t b) {
 }
 
 zx_status_t KitchenSink::Call::MethodA_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodARequest*>(_write_bytes);
   _request._hdr.ordinal = kKitchenSink_MethodA_GenOrdinal;
@@ -190,7 +190,7 @@ zx_status_t KitchenSink::Call::MethodA_Deprecated(zx::unowned_channel _client_en
 
 template <>
 KitchenSink::ResultOf::MethodB_Impl<KitchenSink::MethodBResponse>::MethodB_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -241,7 +241,7 @@ zx_status_t KitchenSink::SyncClient::MethodB_Deprecated(int64_t a, int64_t b, in
 }
 
 zx_status_t KitchenSink::Call::MethodB_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodBRequest*>(_write_bytes);
   _request._hdr.ordinal = kKitchenSink_MethodB_GenOrdinal;
@@ -253,7 +253,7 @@ zx_status_t KitchenSink::Call::MethodB_Deprecated(zx::unowned_channel _client_en
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
@@ -321,7 +321,7 @@ zx_status_t KitchenSink::Call::MethodB_Deprecated(zx::unowned_channel _client_en
 
 template <>
 KitchenSink::ResultOf::MutateSocket_Impl<KitchenSink::MutateSocketResponse>::MutateSocket_Impl(zx::unowned_channel _client_end, ::zx::socket a) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -370,7 +370,7 @@ zx_status_t KitchenSink::SyncClient::MutateSocket_Deprecated(::zx::socket a, ::z
 }
 
 zx_status_t KitchenSink::Call::MutateSocket_Deprecated(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
   _request._hdr.ordinal = kKitchenSink_MutateSocket_GenOrdinal;
@@ -381,7 +381,7 @@ zx_status_t KitchenSink::Call::MutateSocket_Deprecated(zx::unowned_channel _clie
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
@@ -460,8 +460,8 @@ zx_status_t KitchenSink::Call::HandleEvents(zx::unowned_channel client_end,
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<EventAResponse>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<EventAResponse>();
+    if (::fidl::internal::ClampedMessageSize<EventAResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<EventAResponse, ::fidl::MessageDirection::kReceiving>();
     }
     return x;
   })();
@@ -580,7 +580,7 @@ bool KitchenSink::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
 
 
 zx_status_t KitchenSink::SendEventAEvent(::zx::unowned_channel _chan, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EventAResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EventAResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<EventAResponse*>(_write_bytes);
   _response._hdr = {};
@@ -612,7 +612,7 @@ zx_status_t KitchenSink::SendEventAEvent(::zx::unowned_channel _chan, ::fidl::De
 
 
 void KitchenSink::Interface::MethodBCompleterBase::Reply(int64_t result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MethodBResponse*>(_write_bytes);
   _response._hdr.ordinal = kKitchenSink_MethodB_GenOrdinal;
@@ -641,7 +641,7 @@ void KitchenSink::Interface::MethodBCompleterBase::Reply(::fidl::DecodedMessage<
 
 
 void KitchenSink::Interface::MutateSocketCompleterBase::Reply(::zx::socket b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MutateSocketResponse*>(_write_bytes);
   _response._hdr.ordinal = kKitchenSink_MutateSocket_GenOrdinal;
@@ -685,7 +685,7 @@ extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 }  // namespace
 
 ChannelProtocol::ResultOf::MethodA_Impl::MethodA_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -737,7 +737,7 @@ zx_status_t ChannelProtocol::SyncClient::MethodA_Deprecated(int64_t a, int64_t b
 }
 
 zx_status_t ChannelProtocol::Call::MethodA_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodARequest*>(_write_bytes);
   _request._hdr.ordinal = kChannelProtocol_MethodA_GenOrdinal;
@@ -792,7 +792,7 @@ zx_status_t ChannelProtocol::Call::MethodA_Deprecated(zx::unowned_channel _clien
 
 template <>
 ChannelProtocol::ResultOf::MethodB_Impl<ChannelProtocol::MethodBResponse>::MethodB_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -843,7 +843,7 @@ zx_status_t ChannelProtocol::SyncClient::MethodB_Deprecated(int64_t a, int64_t b
 }
 
 zx_status_t ChannelProtocol::Call::MethodB_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodBRequest*>(_write_bytes);
   _request._hdr.ordinal = kChannelProtocol_MethodB_GenOrdinal;
@@ -855,7 +855,7 @@ zx_status_t ChannelProtocol::Call::MethodB_Deprecated(zx::unowned_channel _clien
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
@@ -923,7 +923,7 @@ zx_status_t ChannelProtocol::Call::MethodB_Deprecated(zx::unowned_channel _clien
 
 template <>
 ChannelProtocol::ResultOf::MutateSocket_Impl<ChannelProtocol::MutateSocketResponse>::MutateSocket_Impl(zx::unowned_channel _client_end, ::zx::socket a) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -972,7 +972,7 @@ zx_status_t ChannelProtocol::SyncClient::MutateSocket_Deprecated(::zx::socket a,
 }
 
 zx_status_t ChannelProtocol::Call::MutateSocket_Deprecated(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
   _request._hdr.ordinal = kChannelProtocol_MutateSocket_GenOrdinal;
@@ -983,7 +983,7 @@ zx_status_t ChannelProtocol::Call::MutateSocket_Deprecated(zx::unowned_channel _
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
@@ -1062,8 +1062,8 @@ zx_status_t ChannelProtocol::Call::HandleEvents(zx::unowned_channel client_end,
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<EventAResponse>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<EventAResponse>();
+    if (::fidl::internal::ClampedMessageSize<EventAResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<EventAResponse, ::fidl::MessageDirection::kReceiving>();
     }
     return x;
   })();
@@ -1182,7 +1182,7 @@ bool ChannelProtocol::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
 
 
 zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EventAResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EventAResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<EventAResponse*>(_write_bytes);
   _response._hdr = {};
@@ -1214,7 +1214,7 @@ zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan, ::fidl
 
 
 void ChannelProtocol::Interface::MethodBCompleterBase::Reply(int64_t result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MethodBResponse*>(_write_bytes);
   _response._hdr.ordinal = kChannelProtocol_MethodB_GenOrdinal;
@@ -1243,7 +1243,7 @@ void ChannelProtocol::Interface::MethodBCompleterBase::Reply(::fidl::DecodedMess
 
 
 void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::zx::socket b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MutateSocketResponse*>(_write_bytes);
   _response._hdr.ordinal = kChannelProtocol_MutateSocket_GenOrdinal;
@@ -1287,7 +1287,7 @@ extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketRespon
 }  // namespace
 
 OvernetInternalProtocol::ResultOf::MethodA_Impl::MethodA_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1339,7 +1339,7 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodA_Deprecated(int64_t a, i
 }
 
 zx_status_t OvernetInternalProtocol::Call::MethodA_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodARequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodARequest*>(_write_bytes);
   _request._hdr.ordinal = kOvernetInternalProtocol_MethodA_GenOrdinal;
@@ -1394,7 +1394,7 @@ zx_status_t OvernetInternalProtocol::Call::MethodA_Deprecated(zx::unowned_channe
 
 template <>
 OvernetInternalProtocol::ResultOf::MethodB_Impl<OvernetInternalProtocol::MethodBResponse>::MethodB_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1445,7 +1445,7 @@ zx_status_t OvernetInternalProtocol::SyncClient::MethodB_Deprecated(int64_t a, i
 }
 
 zx_status_t OvernetInternalProtocol::Call::MethodB_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodBRequest*>(_write_bytes);
   _request._hdr.ordinal = kOvernetInternalProtocol_MethodB_GenOrdinal;
@@ -1457,7 +1457,7 @@ zx_status_t OvernetInternalProtocol::Call::MethodB_Deprecated(zx::unowned_channe
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
@@ -1525,7 +1525,7 @@ zx_status_t OvernetInternalProtocol::Call::MethodB_Deprecated(zx::unowned_channe
 
 template <>
 OvernetInternalProtocol::ResultOf::MutateSocket_Impl<OvernetInternalProtocol::MutateSocketResponse>::MutateSocket_Impl(zx::unowned_channel _client_end, ::zx::socket a) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1574,7 +1574,7 @@ zx_status_t OvernetInternalProtocol::SyncClient::MutateSocket_Deprecated(::zx::s
 }
 
 zx_status_t OvernetInternalProtocol::Call::MutateSocket_Deprecated(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MutateSocketRequest*>(_write_bytes);
   _request._hdr.ordinal = kOvernetInternalProtocol_MutateSocket_GenOrdinal;
@@ -1585,7 +1585,7 @@ zx_status_t OvernetInternalProtocol::Call::MutateSocket_Deprecated(zx::unowned_c
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
@@ -1664,8 +1664,8 @@ zx_status_t OvernetInternalProtocol::Call::HandleEvents(zx::unowned_channel clie
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<EventAResponse>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<EventAResponse>();
+    if (::fidl::internal::ClampedMessageSize<EventAResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<EventAResponse, ::fidl::MessageDirection::kReceiving>();
     }
     return x;
   })();
@@ -1784,7 +1784,7 @@ bool OvernetInternalProtocol::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl:
 
 
 zx_status_t OvernetInternalProtocol::SendEventAEvent(::zx::unowned_channel _chan, int64_t a, int64_t b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EventAResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EventAResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<EventAResponse*>(_write_bytes);
   _response._hdr = {};
@@ -1816,7 +1816,7 @@ zx_status_t OvernetInternalProtocol::SendEventAEvent(::zx::unowned_channel _chan
 
 
 void OvernetInternalProtocol::Interface::MethodBCompleterBase::Reply(int64_t result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MethodBResponse*>(_write_bytes);
   _response._hdr.ordinal = kOvernetInternalProtocol_MethodB_GenOrdinal;
@@ -1845,7 +1845,7 @@ void OvernetInternalProtocol::Interface::MethodBCompleterBase::Reply(::fidl::Dec
 
 
 void OvernetInternalProtocol::Interface::MutateSocketCompleterBase::Reply(::zx::socket b) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MutateSocketResponse*>(_write_bytes);
   _response._hdr.ordinal = kOvernetInternalProtocol_MutateSocket_GenOrdinal;
@@ -1901,7 +1901,7 @@ extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithRespon
 }  // namespace
 
 WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse_Impl::NoRequestNoResponse_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestNoResponseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestNoResponseRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1925,7 +1925,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestNoResponse_Depre
 }
 
 zx_status_t WithAndWithoutRequestResponse::Call::NoRequestNoResponse_Deprecated(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestNoResponseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestNoResponseRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<NoRequestNoResponseRequest*>(_write_bytes);
   _request._hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal;
@@ -1962,7 +1962,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::NoRequestNoResponse_Deprecated(
 
 template <>
 WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse_Impl<WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>::NoRequestEmptyResponse_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1986,7 +1986,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::NoRequestEmptyResponse_De
 }
 
 zx_status_t WithAndWithoutRequestResponse::Call::NoRequestEmptyResponse_Deprecated(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<NoRequestEmptyResponseRequest*>(_write_bytes);
   _request._hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal;
@@ -1996,7 +1996,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::NoRequestEmptyResponse_Deprecat
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<NoRequestEmptyResponseRequest, NoRequestEmptyResponseResponse>(
@@ -2035,7 +2035,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::NoRequestEmptyResponse_Deprecat
 
 template <>
 WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse_Impl<WithAndWithoutRequestResponse::NoRequestWithResponseResponse>::NoRequestWithResponse_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestWithResponseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestWithResponseRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -2126,7 +2126,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse WithAndWit
 
 
 WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse_Impl::WithRequestNoResponse_Impl(zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestNoResponseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestNoResponseRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   WithRequestNoResponseRequest _request = {};
@@ -2181,7 +2181,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestNoResponse_Dep
 }
 
 zx_status_t WithAndWithoutRequestResponse::Call::WithRequestNoResponse_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestNoResponseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestNoResponseRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   WithRequestNoResponseRequest _request = {};
@@ -2242,7 +2242,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::WithRequestNoResponse_Deprecate
 
 template <>
 WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse_Impl<WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>::WithRequestEmptyResponse_Impl(zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   WithRequestEmptyResponseRequest _request = {};
@@ -2296,7 +2296,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse_
 }
 
 zx_status_t WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   WithRequestEmptyResponseRequest _request = {};
@@ -2312,7 +2312,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse_Deprec
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<WithRequestEmptyResponseRequest, WithRequestEmptyResponseResponse>(
@@ -2347,7 +2347,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse_Deprec
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithRequestEmptyResponseResponse>(_encode_request_result.status, _encode_request_result.error);
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_buffer(_read_bytes, sizeof(_read_bytes));
   auto _call_result = ::fidl::Call<WithRequestEmptyResponseRequest, WithRequestEmptyResponseResponse>(
@@ -2381,7 +2381,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse_Deprec
 
 template <>
 WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse_Impl<WithAndWithoutRequestResponse::WithRequestWithResponseResponse>::WithRequestWithResponse_Impl(zx::unowned_channel _client_end, ::fidl::StringView arg) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestWithResponseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestWithResponseRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   WithRequestWithResponseRequest _request = {};
@@ -2495,11 +2495,11 @@ zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(zx::unowned_channe
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<OnEmptyResponseResponse>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<OnEmptyResponseResponse>();
+    if (::fidl::internal::ClampedMessageSize<OnEmptyResponseResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnEmptyResponseResponse, ::fidl::MessageDirection::kReceiving>();
     }
-    if (::fidl::internal::ClampedMessageSize<OnWithResponseResponse>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<OnWithResponseResponse>();
+    if (::fidl::internal::ClampedMessageSize<OnWithResponseResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnWithResponseResponse, ::fidl::MessageDirection::kReceiving>();
     }
     return x;
   })();
@@ -2663,7 +2663,7 @@ bool WithAndWithoutRequestResponse::Dispatch(Interface* impl, fidl_msg_t* msg, :
 
 
 void WithAndWithoutRequestResponse::Interface::NoRequestEmptyResponseCompleterBase::Reply() {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<NoRequestEmptyResponseResponse*>(_write_bytes);
   _response._hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal;
@@ -2673,7 +2673,7 @@ void WithAndWithoutRequestResponse::Interface::NoRequestEmptyResponseCompleterBa
 
 
 void WithAndWithoutRequestResponse::Interface::NoRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestWithResponseResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestWithResponseResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   NoRequestWithResponseResponse _response = {};
@@ -2712,7 +2712,7 @@ void WithAndWithoutRequestResponse::Interface::NoRequestWithResponseCompleterBas
 
 
 void WithAndWithoutRequestResponse::Interface::WithRequestEmptyResponseCompleterBase::Reply() {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WithRequestEmptyResponseResponse*>(_write_bytes);
   _response._hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal;
@@ -2722,7 +2722,7 @@ void WithAndWithoutRequestResponse::Interface::WithRequestEmptyResponseCompleter
 
 
 void WithAndWithoutRequestResponse::Interface::WithRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestWithResponseResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestWithResponseResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   WithRequestWithResponseResponse _response = {};
@@ -2761,7 +2761,7 @@ void WithAndWithoutRequestResponse::Interface::WithRequestWithResponseCompleterB
 
 
 zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(::zx::unowned_channel _chan) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnEmptyResponseResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnEmptyResponseResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnEmptyResponseResponse*>(_write_bytes);
   _response._hdr = {};
@@ -2772,7 +2772,7 @@ zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(::zx::unowne
 
 
 zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(::zx::unowned_channel _chan, ::fidl::StringView ret) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnWithResponseResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnWithResponseResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   OnWithResponseResponse _response = {};
@@ -2883,7 +2883,7 @@ extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 }  // namespace
 template <>
 WithErrorSyntax::ResultOf::ErrorAsPrimitive_Impl<WithErrorSyntax::ErrorAsPrimitiveResponse>::ErrorAsPrimitive_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -2926,7 +2926,7 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive_Deprecated(WithErrorSy
 }
 
 zx_status_t WithErrorSyntax::Call::ErrorAsPrimitive_Deprecated(zx::unowned_channel _client_end, WithErrorSyntax_ErrorAsPrimitive_Result* out_result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ErrorAsPrimitiveRequest*>(_write_bytes);
   _request._hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal;
@@ -2936,7 +2936,7 @@ zx_status_t WithErrorSyntax::Call::ErrorAsPrimitive_Deprecated(zx::unowned_chann
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ErrorAsPrimitiveRequest, ErrorAsPrimitiveResponse>(
@@ -3006,7 +3006,7 @@ zx_status_t WithErrorSyntax::Call::ErrorAsPrimitive_Deprecated(zx::unowned_chann
 
 template <>
 WithErrorSyntax::ResultOf::ErrorAsEnum_Impl<WithErrorSyntax::ErrorAsEnumResponse>::ErrorAsEnum_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -3049,7 +3049,7 @@ zx_status_t WithErrorSyntax::SyncClient::ErrorAsEnum_Deprecated(WithErrorSyntax_
 }
 
 zx_status_t WithErrorSyntax::Call::ErrorAsEnum_Deprecated(zx::unowned_channel _client_end, WithErrorSyntax_ErrorAsEnum_Result* out_result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ErrorAsEnumRequest*>(_write_bytes);
   _request._hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_GenOrdinal;
@@ -3059,7 +3059,7 @@ zx_status_t WithErrorSyntax::Call::ErrorAsEnum_Deprecated(zx::unowned_channel _c
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ErrorAsEnumRequest, ErrorAsEnumResponse>(
@@ -3175,7 +3175,7 @@ bool WithErrorSyntax::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
 
 
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(WithErrorSyntax_ErrorAsPrimitive_Result result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ErrorAsPrimitiveResponse*>(_write_bytes);
   _response._hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal;
@@ -3204,7 +3204,7 @@ void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::De
 
 
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(WithErrorSyntax_ErrorAsEnum_Result result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ErrorAsEnumResponse*>(_write_bytes);
   _response._hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_GenOrdinal;

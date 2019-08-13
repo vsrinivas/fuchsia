@@ -1,23 +1,32 @@
 library test.name;
 
 xunion OlderSimpleUnion {
-  int64 i;
-  float32 f;
+    int64 i;
+    float32 f;
 };
 
 xunion NewerSimpleUnion {
-  // float f;  // removed
+    // float f;  // removed
 
-  int64 i;  // unchanged
+    int64 i; // unchanged
 
-  string s;  // added
-  vector<string> v;  // added
+    string s; // added
+    vector<string> v; // added
 };
 
 // 1. This xunion is currently unused by code, and for tracking changes in the goldens only.
 // 2. There's no FlexibleSimpleXUnion, since that's covered by OlderSimpleUnion above.
 strict xunion StrictSimpleXUnion {
-  int32 i;
-  float32 f;
-  string s;
+    int32 i;
+    float32 f;
+    string s;
+};
+
+strict xunion StrictBoundedXUnion {
+    vector<uint8>:10 v;
+};
+
+protocol TestProtocol {
+    StrictXUnionHenceResponseMayBeStackAllocated() -> (StrictBoundedXUnion xu);
+    FlexibleXUnionHenceResponseMustBeHeapAllocated() -> (OlderSimpleUnion xu);
 };

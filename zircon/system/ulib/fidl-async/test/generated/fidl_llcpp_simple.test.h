@@ -37,6 +37,9 @@ class Simple final {
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
   };
   using CloseRequest = ::fidl::AnyZeroArgMessage;
 
@@ -58,6 +61,8 @@ class Simple final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:
@@ -82,6 +87,8 @@ class Simple final {
       using Super::ok;
       using Super::Unwrap;
       using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
 
    public:

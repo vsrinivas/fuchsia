@@ -12,13 +12,13 @@ namespace simple {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kSimple_Close_Ordinal = 0x48270ef100000000lu;
+constexpr uint64_t kSimple_Close_GenOrdinal = 0x48270ef100000000lu;
 extern "C" const fidl_type_t fidl_test_simple_SimpleCloseResponseTable;
 
 }  // namespace
 template <>
 Simple::ResultOf::Close_Impl<Simple::CloseResponse>::Close_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -61,17 +61,17 @@ zx_status_t Simple::SyncClient::Close_Deprecated(int32_t* out_v) {
 }
 
 zx_status_t Simple::Call::Close_Deprecated(zx::unowned_channel _client_end, int32_t* out_v) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CloseRequest*>(_write_bytes);
-  _request._hdr.ordinal = kSimple_Close_Ordinal;
+  _request._hdr.ordinal = kSimple_Close_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseRequest));
   ::fidl::DecodedMessage<CloseRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<CloseResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<CloseResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<CloseRequest, CloseResponse>(
@@ -96,7 +96,7 @@ zx_status_t Simple::Call::Close_Deprecated(zx::unowned_channel _client_end, int3
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<CloseRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kSimple_Close_Ordinal;
+  _request._hdr.ordinal = kSimple_Close_GenOrdinal;
   _request_buffer.set_actual(sizeof(CloseRequest));
   ::fidl::DecodedMessage<CloseRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -124,7 +124,7 @@ zx_status_t Simple::Call::Close_Deprecated(zx::unowned_channel _client_end, int3
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CloseRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSimple_Close_Ordinal;
+  params.message()->_hdr.ordinal = kSimple_Close_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Simple::CloseResponse>::FromFailure(
@@ -148,7 +148,7 @@ bool Simple::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kSimple_Close_Ordinal:
+    case kSimple_Close_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -176,10 +176,10 @@ bool Simple::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 
 
 void Simple::Interface::CloseCompleterBase::Reply(int32_t v) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CloseResponse*>(_write_bytes);
-  _response._hdr.ordinal = kSimple_Close_Ordinal;
+  _response._hdr.ordinal = kSimple_Close_GenOrdinal;
   _response.v = std::move(v);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloseResponse>(std::move(_response_bytes)));
@@ -191,7 +191,7 @@ void Simple::Interface::CloseCompleterBase::Reply(::fidl::BytePart _buffer, int3
     return;
   }
   auto& _response = *reinterpret_cast<CloseResponse*>(_buffer.data());
-  _response._hdr.ordinal = kSimple_Close_Ordinal;
+  _response._hdr.ordinal = kSimple_Close_GenOrdinal;
   _response.v = std::move(v);
   _buffer.set_actual(sizeof(CloseResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloseResponse>(std::move(_buffer)));
@@ -199,7 +199,7 @@ void Simple::Interface::CloseCompleterBase::Reply(::fidl::BytePart _buffer, int3
 
 void Simple::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<CloseResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSimple_Close_Ordinal;
+  params.message()->_hdr.ordinal = kSimple_Close_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

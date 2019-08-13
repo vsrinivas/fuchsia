@@ -16,15 +16,24 @@
 //
 // The contracts of a FIDL type |T| are as follows:
 //
-// |IsFidlType<T>| resolves to std::true_type.
+// |IsFidlType<T>|    resolves to std::true_type.
 // |IsFidlMessage<T>| resolves to std::true_type iff |T| is a transactional message.
-// |T::MaxNumHandles| is an uint32_t specifying the upper bound on the number of contained handles.
-// |T::PrimarySize| is an uint32_t specifying the size in bytes of the inline part of the message.
-// |T::MaxOutOfLine| is an uint32_t specifying the upper bound on the out-of-line message size.
-//                   It is std::numeric_limits<uint32_t>::max() if |T| is unbounded.
-// |T::Type| is a fidl_type_t* pointing to the corresponding coding table, if any.
-//           If the encoding/decoding of |T| can be elided, |T::Type| is NULL.
-// If |T| is a non-empty request message of a FIDL transaction:
+// |T::MaxNumHandles| is a uint32_t specifying the upper bound on the number of contained handles.
+// |T::PrimarySize|   is a uint32_t specifying the size in bytes of the inline part of the message.
+// |T::MaxOutOfLine|  is a uint32_t specifying the upper bound on the out-of-line message size.
+//                    It is std::numeric_limits<uint32_t>::max() if |T| is unbounded.
+// |T::Type|          is a fidl_type_t* pointing to the corresponding coding table, if any.
+//                    If the encoding/decoding of |T| can be elided, |T::Type| is NULL.
+//
+// Additionally, if |T| is a transactional message:
+//
+// |T::HasFlexibleEnvelope| is a bool specifying if this message contains a flexible xunion or
+//                          a flexible table.
+// |T::MessageKind|         identifies if this message is a request or a response. If undefined,
+//                          the type may be used either as a request or a response.
+//
+// Additionally, if |T| is a non-empty request message of a FIDL transaction:
+//
 // |T::ResponseType| resolves to the corresponding response message type, if the FIDL method calls
 //                   for a response. Otherwise, the definition does not exist.
 //
@@ -84,8 +93,24 @@ struct NeedsEncodeDecode {
 #pragma GCC diagnostic pop
 };
 
-// Utility templates used internally by the llcpp binding.
+// The direction where a message is going.
+// This has implications on the allocated buffer and handle size.
+enum class MessageDirection {
+  // Receiving the message from another end.
+  kReceiving,
+
+  // Sending the message to the other end.
+  kSending
+};
+
+// Utilities used internally by the llcpp binding.
 namespace internal {
+
+// Whether a FIDL transactional message is used as a request or a response.
+enum class TransactionalMessageKind {
+  kRequest,
+  kResponse
+};
 
 // C++ 14 compatible implementation of std::void_t.
 #if defined(__cplusplus) && __cplusplus >= 201703L
@@ -100,6 +125,13 @@ template <typename... T>
 using void_t = typename make_void<T...>::type;
 #endif
 
+// IsResponseType<FidlType>() is true when FidlType is a FIDL response message type.
+template <typename FidlType, typename = void_t<>>
+struct IsResponseType : std::false_type {};
+template <typename FidlType>
+struct IsResponseType<FidlType, void_t<decltype(FidlType::MessageKind)>>
+    : std::integral_constant<bool, FidlType::MessageKind == TransactionalMessageKind::kResponse> {};
+
 // A type trait that indicates if the given FidlType is a request message type that also
 // unambiguously declare a corresponding response message type.
 template <typename, typename = void_t<>>
@@ -108,10 +140,16 @@ template <typename FidlType>
 struct HasResponseType<FidlType, void_t<typename FidlType::ResponseType>> : std::true_type {};
 
 // Calculates the maximum possible message size for a FIDL type,
-// clamped at the Zircon channel packet size.
-template <typename FidlType>
+// clamped at the Zircon channel transport packet size.
+// TODO(FIDL-771): users of this API should always specify a meaningful direction.
+template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedMessageSize() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
+  if constexpr (IsResponseType<FidlType>()) {
+    if (FidlType::HasFlexibleEnvelope && Direction == MessageDirection::kReceiving) {
+      return ZX_CHANNEL_MAX_MSG_BYTES;
+    }
+  }
   uint64_t primary = ::fidl::FidlAlign(FidlType::PrimarySize);
   uint64_t out_of_line = ::fidl::FidlAlign(FidlType::MaxOutOfLine);
   uint64_t sum = primary + out_of_line;
@@ -119,6 +157,25 @@ constexpr uint32_t ClampedMessageSize() {
     return ZX_CHANNEL_MAX_MSG_BYTES;
   } else {
     return static_cast<uint32_t>(sum);
+  }
+}
+
+// Calculates the maximum possible handle count for a FIDL type,
+// clamped at the Zircon channel transport handle limit.
+// TODO(FIDL-771): users of this API should always specify a meaningful direction.
+template <typename FidlType, const MessageDirection Direction>
+constexpr uint32_t ClampedHandleCount() {
+  static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
+  if constexpr (IsResponseType<FidlType>()) {
+    if (FidlType::HasFlexibleEnvelope && Direction == MessageDirection::kReceiving) {
+      return ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+  }
+  uint32_t raw_max_handles = FidlType::MaxNumHandles;
+  if (raw_max_handles > ZX_CHANNEL_MAX_MSG_HANDLES) {
+    return ZX_CHANNEL_MAX_MSG_HANDLES;
+  } else {
+    return raw_max_handles;
   }
 }
 

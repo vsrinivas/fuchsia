@@ -24,7 +24,7 @@ constexpr uint64_t kStream_OnFrameAvailable_GenOrdinal = 0x69926e9500000000lu;
 }  // namespace
 
 Stream::ResultOf::Start_Impl::Start_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -48,7 +48,7 @@ zx_status_t Stream::SyncClient::Start_Deprecated() {
 }
 
 zx_status_t Stream::Call::Start_Deprecated(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<StartRequest*>(_write_bytes);
   _request._hdr.ordinal = kStream_Start_GenOrdinal;
@@ -85,7 +85,7 @@ zx_status_t Stream::Call::Start_Deprecated(zx::unowned_channel _client_end) {
 
 
 Stream::ResultOf::Stop_Impl::Stop_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StopRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StopRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -109,7 +109,7 @@ zx_status_t Stream::SyncClient::Stop_Deprecated() {
 }
 
 zx_status_t Stream::Call::Stop_Deprecated(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StopRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StopRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<StopRequest*>(_write_bytes);
   _request._hdr.ordinal = kStream_Stop_GenOrdinal;
@@ -146,7 +146,7 @@ zx_status_t Stream::Call::Stop_Deprecated(zx::unowned_channel _client_end) {
 
 
 Stream::ResultOf::ReleaseFrame_Impl::ReleaseFrame_Impl(zx::unowned_channel _client_end, uint32_t buffer_id) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseFrameRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseFrameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -196,7 +196,7 @@ zx_status_t Stream::SyncClient::ReleaseFrame_Deprecated(uint32_t buffer_id) {
 }
 
 zx_status_t Stream::Call::ReleaseFrame_Deprecated(zx::unowned_channel _client_end, uint32_t buffer_id) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseFrameRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseFrameRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ReleaseFrameRequest*>(_write_bytes);
   _request._hdr.ordinal = kStream_ReleaseFrame_GenOrdinal;
@@ -261,8 +261,8 @@ zx_status_t Stream::Call::HandleEvents(zx::unowned_channel client_end,
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<OnFrameAvailableResponse>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<OnFrameAvailableResponse>();
+    if (::fidl::internal::ClampedMessageSize<OnFrameAvailableResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnFrameAvailableResponse, ::fidl::MessageDirection::kReceiving>();
     }
     return x;
   })();
@@ -379,7 +379,7 @@ bool Stream::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 
 
 zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, FrameAvailableEvent frame) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnFrameAvailableResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnFrameAvailableResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnFrameAvailableResponse*>(_write_bytes);
   _response._hdr = {};
@@ -433,7 +433,7 @@ extern "C" const fidl_type_t fuchsia_camera_common_VirtualCameraFactoryCreateDev
 }  // namespace
 
 VirtualCameraFactory::ResultOf::CreateDevice_Impl::CreateDevice_Impl(zx::unowned_channel _client_end, VirtualCameraConfig config) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateDeviceRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateDeviceRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   CreateDeviceRequest _request = {};
@@ -488,7 +488,7 @@ zx_status_t VirtualCameraFactory::SyncClient::CreateDevice_Deprecated(VirtualCam
 }
 
 zx_status_t VirtualCameraFactory::Call::CreateDevice_Deprecated(zx::unowned_channel _client_end, VirtualCameraConfig config) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateDeviceRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateDeviceRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   CreateDeviceRequest _request = {};

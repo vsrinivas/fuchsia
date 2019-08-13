@@ -186,6 +186,137 @@ void StrictSimpleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+extern "C" const fidl_type_t test_name_StrictBoundedXUnionTable;
+const fidl_type_t* StrictBoundedXUnion::FidlType = &test_name_StrictBoundedXUnionTable;
+
+StrictBoundedXUnion::StrictBoundedXUnion() {}
+
+StrictBoundedXUnion::~StrictBoundedXUnion() {
+  Destroy();
+}
+
+StrictBoundedXUnion::StrictBoundedXUnion(StrictBoundedXUnion&& other) : tag_(other.tag_) {
+  switch (tag_) {
+   case Tag::kV:
+    new (&v_) ::std::vector<uint8_t>();
+    v_ = std::move(other.v_);
+    break;
+    case kEmpty:
+      break;
+  }
+}
+
+StrictBoundedXUnion& StrictBoundedXUnion::operator=(StrictBoundedXUnion&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case Tag::kV:
+        new (&v_) ::std::vector<uint8_t>();
+        v_ = std::move(other.v_);
+        break;
+      case kEmpty:
+        break;
+    }
+  }
+  return *this;
+}
+
+void StrictBoundedXUnion::Encode(::overnet::internal::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (tag_) {
+    case Tag::kV: {
+      envelope_offset = encoder->Alloc(::fidl::CodingTraits<::std::vector<uint8_t>>::encoded_size);
+      ::fidl::Encode(encoder, &v_, envelope_offset);
+      break;
+    }
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+  }
+}
+
+void StrictBoundedXUnion::Decode(::overnet::internal::Decoder* decoder, StrictBoundedXUnion* value, size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(kEmpty);
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
+   case Tag::kV:
+    new (&value->v_) ::std::vector<uint8_t>();
+    ::fidl::Decode(decoder, &value->v_, envelope_offset);
+    break;
+  }
+
+}
+
+zx_status_t StrictBoundedXUnion::Clone(StrictBoundedXUnion* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::kV:
+      new (&result->v_) ::std::vector<uint8_t>();
+      return ::fidl::Clone(v_, &result->v_);
+    default:
+      return ZX_OK;
+  }
+}
+
+StrictBoundedXUnion& StrictBoundedXUnion::set_v(::std::vector<uint8_t> value) {
+  EnsureStorageInitialized(Tag::kV);
+  v_ = std::move(value);
+  return *this;
+}
+
+void StrictBoundedXUnion::Destroy() {
+  switch (tag_) {
+    case Tag::kV:
+      v_.~vector();
+      break;
+    
+    default:
+      break;
+    
+  }
+  tag_ = kEmpty;
+}
+
+void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case kEmpty:
+        break;
+      case Tag::kV:
+        new (&v_) ::std::vector<uint8_t>();
+        break;
+      default:
+        break;
+    }
+  }
+}
 extern "C" const fidl_type_t test_name_OlderSimpleUnionTable;
 const fidl_type_t* OlderSimpleUnion::FidlType = &test_name_OlderSimpleUnionTable;
 

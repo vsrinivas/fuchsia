@@ -45,7 +45,7 @@ extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetNameRe
 }  // namespace
 template <>
 Partition::ResultOf::GetInfo_Impl<Partition::GetInfoResponse>::GetInfo_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -137,7 +137,7 @@ Partition::UnownedResultOf::GetInfo Partition::Call::GetInfo(zx::unowned_channel
 
 template <>
 Partition::ResultOf::GetStats_Impl<Partition::GetStatsResponse>::GetStats_Impl(zx::unowned_channel _client_end, bool clear) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStatsRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStatsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -232,7 +232,7 @@ Partition::UnownedResultOf::GetStats Partition::Call::GetStats(zx::unowned_chann
 
 template <>
 Partition::ResultOf::GetFifo_Impl<Partition::GetFifoResponse>::GetFifo_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -275,7 +275,7 @@ zx_status_t Partition::SyncClient::GetFifo_Deprecated(int32_t* out_status, ::zx:
 }
 
 zx_status_t Partition::Call::GetFifo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::fifo* out_fifo) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetFifoRequest*>(_write_bytes);
   _request._hdr.ordinal = kPartition_GetFifo_GenOrdinal;
@@ -285,7 +285,7 @@ zx_status_t Partition::Call::GetFifo_Deprecated(zx::unowned_channel _client_end,
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetFifoRequest, GetFifoResponse>(
@@ -357,7 +357,7 @@ zx_status_t Partition::Call::GetFifo_Deprecated(zx::unowned_channel _client_end,
 
 template <>
 Partition::ResultOf::AttachVmo_Impl<Partition::AttachVmoResponse>::AttachVmo_Impl(zx::unowned_channel _client_end, ::zx::vmo vmo) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AttachVmoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AttachVmoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -452,7 +452,7 @@ Partition::UnownedResultOf::AttachVmo Partition::Call::AttachVmo(zx::unowned_cha
 
 template <>
 Partition::ResultOf::CloseFifo_Impl<Partition::CloseFifoResponse>::CloseFifo_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -495,7 +495,7 @@ zx_status_t Partition::SyncClient::CloseFifo_Deprecated(int32_t* out_status) {
 }
 
 zx_status_t Partition::Call::CloseFifo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CloseFifoRequest*>(_write_bytes);
   _request._hdr.ordinal = kPartition_CloseFifo_GenOrdinal;
@@ -505,7 +505,7 @@ zx_status_t Partition::Call::CloseFifo_Deprecated(zx::unowned_channel _client_en
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<CloseFifoRequest, CloseFifoResponse>(
@@ -575,7 +575,7 @@ zx_status_t Partition::Call::CloseFifo_Deprecated(zx::unowned_channel _client_en
 
 template <>
 Partition::ResultOf::RebindDevice_Impl<Partition::RebindDeviceResponse>::RebindDevice_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -618,7 +618,7 @@ zx_status_t Partition::SyncClient::RebindDevice_Deprecated(int32_t* out_status) 
 }
 
 zx_status_t Partition::Call::RebindDevice_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<RebindDeviceRequest*>(_write_bytes);
   _request._hdr.ordinal = kPartition_RebindDevice_GenOrdinal;
@@ -628,7 +628,7 @@ zx_status_t Partition::Call::RebindDevice_Deprecated(zx::unowned_channel _client
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<RebindDeviceRequest, RebindDeviceResponse>(
@@ -698,7 +698,7 @@ zx_status_t Partition::Call::RebindDevice_Deprecated(zx::unowned_channel _client
 
 template <>
 Partition::ResultOf::GetTypeGuid_Impl<Partition::GetTypeGuidResponse>::GetTypeGuid_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTypeGuidRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTypeGuidRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -790,7 +790,7 @@ Partition::UnownedResultOf::GetTypeGuid Partition::Call::GetTypeGuid(zx::unowned
 
 template <>
 Partition::ResultOf::GetInstanceGuid_Impl<Partition::GetInstanceGuidResponse>::GetInstanceGuid_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInstanceGuidRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInstanceGuidRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -882,7 +882,7 @@ Partition::UnownedResultOf::GetInstanceGuid Partition::Call::GetInstanceGuid(zx:
 
 template <>
 Partition::ResultOf::GetName_Impl<Partition::GetNameResponse>::GetName_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1099,7 +1099,7 @@ bool Partition::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 
 
 void Partition::Interface::GetInfoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::BlockInfo* info) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInfoResponse _response = {};
   _response._hdr.ordinal = kPartition_GetInfo_GenOrdinal;
@@ -1139,7 +1139,7 @@ void Partition::Interface::GetInfoCompleterBase::Reply(::fidl::DecodedMessage<Ge
 
 
 void Partition::Interface::GetStatsCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::BlockStats* stats) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStatsResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStatsResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetStatsResponse _response = {};
@@ -1180,7 +1180,7 @@ void Partition::Interface::GetStatsCompleterBase::Reply(::fidl::DecodedMessage<G
 
 
 void Partition::Interface::GetFifoCompleterBase::Reply(int32_t status, ::zx::fifo fifo) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetFifoResponse*>(_write_bytes);
   _response._hdr.ordinal = kPartition_GetFifo_GenOrdinal;
@@ -1211,7 +1211,7 @@ void Partition::Interface::GetFifoCompleterBase::Reply(::fidl::DecodedMessage<Ge
 
 
 void Partition::Interface::AttachVmoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::VmoID* vmoid) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AttachVmoResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AttachVmoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   AttachVmoResponse _response = {};
   _response._hdr.ordinal = kPartition_AttachVmo_GenOrdinal;
@@ -1251,7 +1251,7 @@ void Partition::Interface::AttachVmoCompleterBase::Reply(::fidl::DecodedMessage<
 
 
 void Partition::Interface::CloseFifoCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CloseFifoResponse*>(_write_bytes);
   _response._hdr.ordinal = kPartition_CloseFifo_GenOrdinal;
@@ -1280,7 +1280,7 @@ void Partition::Interface::CloseFifoCompleterBase::Reply(::fidl::DecodedMessage<
 
 
 void Partition::Interface::RebindDeviceCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RebindDeviceResponse*>(_write_bytes);
   _response._hdr.ordinal = kPartition_RebindDevice_GenOrdinal;
@@ -1309,7 +1309,7 @@ void Partition::Interface::RebindDeviceCompleterBase::Reply(::fidl::DecodedMessa
 
 
 void Partition::Interface::GetTypeGuidCompleterBase::Reply(int32_t status, GUID* guid) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTypeGuidResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTypeGuidResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetTypeGuidResponse _response = {};
   _response._hdr.ordinal = kPartition_GetTypeGuid_GenOrdinal;
@@ -1349,7 +1349,7 @@ void Partition::Interface::GetTypeGuidCompleterBase::Reply(::fidl::DecodedMessag
 
 
 void Partition::Interface::GetInstanceGuidCompleterBase::Reply(int32_t status, GUID* guid) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInstanceGuidResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInstanceGuidResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInstanceGuidResponse _response = {};
   _response._hdr.ordinal = kPartition_GetInstanceGuid_GenOrdinal;
@@ -1389,7 +1389,7 @@ void Partition::Interface::GetInstanceGuidCompleterBase::Reply(::fidl::DecodedMe
 
 
 void Partition::Interface::GetNameCompleterBase::Reply(int32_t status, ::fidl::StringView name) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetNameResponse _response = {};
   _response._hdr.ordinal = kPartition_GetName_GenOrdinal;

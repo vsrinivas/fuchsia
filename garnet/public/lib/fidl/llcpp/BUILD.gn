@@ -43,6 +43,12 @@ fidl("fidl.llcpp.types.test") {
   ]
 }
 
+fidl("llcpptest.flexible.test") {
+  sources = [
+    "flexible.test.fidl",
+  ]
+}
+
 executable("fidl_llcpp_types_test_bin") {
   testonly = true
 
@@ -50,13 +56,16 @@ executable("fidl_llcpp_types_test_bin") {
 
   sources = [
     "bits_test.cc",
+    "flexible_test.cc",
     "union_test.cc",
   ]
 
   deps = [
     ":fidl.llcpp.types.test_llcpp",
+    ":llcpptest.flexible.test_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",
   ]
 }

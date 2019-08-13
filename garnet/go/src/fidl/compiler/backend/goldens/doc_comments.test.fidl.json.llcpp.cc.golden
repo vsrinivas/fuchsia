@@ -61,7 +61,7 @@ constexpr uint64_t kInterface_OnEvent_GenOrdinal = 0x136d200d00000000lu;
 }  // namespace
 
 Interface::ResultOf::Method_Impl::Method_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -85,7 +85,7 @@ zx_status_t Interface::SyncClient::Method_Deprecated() {
 }
 
 zx_status_t Interface::Call::Method_Deprecated(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MethodRequest*>(_write_bytes);
   _request._hdr.ordinal = kInterface_Method_GenOrdinal;
@@ -134,8 +134,8 @@ zx_status_t Interface::Call::HandleEvents(zx::unowned_channel client_end,
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<OnEventResponse>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<OnEventResponse>();
+    if (::fidl::internal::ClampedMessageSize<OnEventResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnEventResponse, ::fidl::MessageDirection::kReceiving>();
     }
     return x;
   })();
@@ -228,7 +228,7 @@ bool Interface::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 
 
 zx_status_t Interface::SendOnEventEvent(::zx::unowned_channel _chan) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnEventResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnEventResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnEventResponse*>(_write_bytes);
   _response._hdr = {};

@@ -3,6 +3,11 @@
 package name
 
 
+import (
+	_zx "syscall/zx"
+	_bindings "syscall/zx/fidl"
+)
+
 
 
 
@@ -135,5 +140,127 @@ func (_m *StrictSimpleXUnion) SetS(s string) {
 	_m.StrictSimpleXUnionTag = StrictSimpleXUnionS
 	_m.S = s
 }
+
+
+type StrictBoundedXUnionTag uint32
+const (
+	StrictBoundedXUnionV = 2024555624 // 0x78ac4468
+)
+
+
+type StrictBoundedXUnion struct {
+	StrictBoundedXUnionTag `fidl2:"x!,24,8"`
+	I_unknownData []byte
+	V []uint8 `fidl:"10,2024555624" fidl2:"2024555624,10"`
+}
+
+func (_m *StrictBoundedXUnion) Which() StrictBoundedXUnionTag {
+	return _m.StrictBoundedXUnionTag
+}
+
+func (_m *StrictBoundedXUnion) Ordinal() uint32 {
+	return uint32(_m.StrictBoundedXUnionTag)
+}
+
+func (_m *StrictBoundedXUnion) SetV(v []uint8) {
+	_m.StrictBoundedXUnionTag = StrictBoundedXUnionV
+	_m.V = v
+}
+
+
+const (
+	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal uint64 = 0x71a1b4b700000000
+	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal uint64 = 0x3959ff0900000000
+)
+
+type testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
+	_ struct{} `fidl2:"s,24,0"`
+	Xu StrictBoundedXUnion
+}
+
+var _mtestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{})
+
+func (msg *testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse) Marshaler() _bindings.Marshaler {
+	return _mtestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse
+}
+
+type testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse struct {
+	_ struct{} `fidl2:"s,24,0"`
+	Xu OlderSimpleUnion
+}
+
+var _mtestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{})
+
+func (msg *testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse) Marshaler() _bindings.Marshaler {
+	return _mtestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
+}
+
+type TestProtocolInterface _bindings.ChannelProxy
+
+
+func (p *TestProtocolInterface) StrictXUnionHenceResponseMayBeStackAllocated() (StrictBoundedXUnion, error) {
+	var req_ _bindings.Message
+	resp_ := &testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal, req_, resp_)
+	return resp_.Xu, err
+}
+
+func (p *TestProtocolInterface) FlexibleXUnionHenceResponseMustBeHeapAllocated() (OlderSimpleUnion, error) {
+	var req_ _bindings.Message
+	resp_ := &testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal, req_, resp_)
+	return resp_.Xu, err
+}
+
+
+type TestProtocol interface {
+	StrictXUnionHenceResponseMayBeStackAllocated() (StrictBoundedXUnion, error)
+	FlexibleXUnionHenceResponseMustBeHeapAllocated() (OlderSimpleUnion, error)
+}
+
+type TestProtocolTransitionalBase struct {}
+
+
+type TestProtocolInterfaceRequest _bindings.InterfaceRequest
+
+func NewTestProtocolInterfaceRequest() (TestProtocolInterfaceRequest, *TestProtocolInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return TestProtocolInterfaceRequest(req), (*TestProtocolInterface)(cli), err
+}
+
+type TestProtocolStub struct {
+	Impl TestProtocol
+}
+
+func (s_ *TestProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
+	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal:
+		xu, err_ := s_.Impl.StrictXUnionHenceResponseMayBeStackAllocated()
+		out_ := testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
+		out_.Xu = xu
+		return &out_, err_
+	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal:
+		xu, err_ := s_.Impl.FlexibleXUnionHenceResponseMustBeHeapAllocated()
+		out_ := testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
+		out_.Xu = xu
+		return &out_, err_
+	}
+	return nil, _bindings.ErrUnknownOrdinal
+}
+type TestProtocolService struct {
+	_bindings.BindingSet
+}
+
+func (s *TestProtocolService) Add(impl TestProtocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&TestProtocolStub{Impl: impl}, c, onError)
+}
+
+func (s *TestProtocolService) EventProxyFor(key _bindings.BindingKey) (*TestProtocolEventProxy, bool) {
+	pxy, err := s.BindingSet.ProxyFor(key)
+	return (*TestProtocolEventProxy)(pxy), err
+}
+
+type TestProtocolEventProxy _bindings.ChannelProxy
+
 
 

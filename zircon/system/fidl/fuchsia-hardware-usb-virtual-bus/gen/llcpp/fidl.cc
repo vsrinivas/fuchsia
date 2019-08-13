@@ -29,7 +29,7 @@ extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectRespo
 }  // namespace
 template <>
 Bus::ResultOf::Enable_Impl<Bus::EnableResponse>::Enable_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -72,7 +72,7 @@ zx_status_t Bus::SyncClient::Enable_Deprecated(int32_t* out_status) {
 }
 
 zx_status_t Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<EnableRequest*>(_write_bytes);
   _request._hdr.ordinal = kBus_Enable_GenOrdinal;
@@ -82,7 +82,7 @@ zx_status_t Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, int32_
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<EnableResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<EnableResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<EnableRequest, EnableResponse>(
@@ -152,7 +152,7 @@ zx_status_t Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, int32_
 
 template <>
 Bus::ResultOf::Disable_Impl<Bus::DisableResponse>::Disable_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -195,7 +195,7 @@ zx_status_t Bus::SyncClient::Disable_Deprecated(int32_t* out_status) {
 }
 
 zx_status_t Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DisableRequest*>(_write_bytes);
   _request._hdr.ordinal = kBus_Disable_GenOrdinal;
@@ -205,7 +205,7 @@ zx_status_t Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, int32
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DisableResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DisableResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<DisableRequest, DisableResponse>(
@@ -275,7 +275,7 @@ zx_status_t Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, int32
 
 template <>
 Bus::ResultOf::Connect_Impl<Bus::ConnectResponse>::Connect_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -318,7 +318,7 @@ zx_status_t Bus::SyncClient::Connect_Deprecated(int32_t* out_status) {
 }
 
 zx_status_t Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ConnectRequest*>(_write_bytes);
   _request._hdr.ordinal = kBus_Connect_GenOrdinal;
@@ -328,7 +328,7 @@ zx_status_t Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, int32
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ConnectResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ConnectResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ConnectRequest, ConnectResponse>(
@@ -398,7 +398,7 @@ zx_status_t Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, int32
 
 template <>
 Bus::ResultOf::Disconnect_Impl<Bus::DisconnectResponse>::Disconnect_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -441,7 +441,7 @@ zx_status_t Bus::SyncClient::Disconnect_Deprecated(int32_t* out_status) {
 }
 
 zx_status_t Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DisconnectRequest*>(_write_bytes);
   _request._hdr.ordinal = kBus_Disconnect_GenOrdinal;
@@ -451,7 +451,7 @@ zx_status_t Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, in
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<DisconnectRequest, DisconnectResponse>(
@@ -589,7 +589,7 @@ bool Bus::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
 
 
 void Bus::Interface::EnableCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<EnableResponse*>(_write_bytes);
   _response._hdr.ordinal = kBus_Enable_GenOrdinal;
@@ -618,7 +618,7 @@ void Bus::Interface::EnableCompleterBase::Reply(::fidl::DecodedMessage<EnableRes
 
 
 void Bus::Interface::DisableCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DisableResponse*>(_write_bytes);
   _response._hdr.ordinal = kBus_Disable_GenOrdinal;
@@ -647,7 +647,7 @@ void Bus::Interface::DisableCompleterBase::Reply(::fidl::DecodedMessage<DisableR
 
 
 void Bus::Interface::ConnectCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConnectResponse*>(_write_bytes);
   _response._hdr.ordinal = kBus_Connect_GenOrdinal;
@@ -676,7 +676,7 @@ void Bus::Interface::ConnectCompleterBase::Reply(::fidl::DecodedMessage<ConnectR
 
 
 void Bus::Interface::DisconnectCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DisconnectResponse*>(_write_bytes);
   _response._hdr.ordinal = kBus_Disconnect_GenOrdinal;

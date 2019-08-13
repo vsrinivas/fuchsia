@@ -29,8 +29,8 @@ zx_status_t Connectivity::Call::HandleEvents(zx::unowned_channel client_end,
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<OnNetworkReachableResponse>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<OnNetworkReachableResponse>();
+    if (::fidl::internal::ClampedMessageSize<OnNetworkReachableResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnNetworkReachableResponse, ::fidl::MessageDirection::kReceiving>();
     }
     return x;
   })();
@@ -113,7 +113,7 @@ bool Connectivity::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
 
 
 zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _chan, bool reachable) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnNetworkReachableResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnNetworkReachableResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnNetworkReachableResponse*>(_write_bytes);
   _response._hdr = {};
@@ -342,7 +342,7 @@ extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameResponseTable;
 }  // namespace
 template <>
 NameLookup::ResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::StringView hostname, LookupIpOptions options) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupIpRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupIpRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   LookupIpRequest _request = {};
@@ -447,7 +447,7 @@ NameLookup::UnownedResultOf::LookupIp NameLookup::Call::LookupIp(zx::unowned_cha
 
 template <>
 NameLookup::ResultOf::LookupHostname_Impl<NameLookup::LookupHostnameResponse>::LookupHostname_Impl(zx::unowned_channel _client_end, IpAddress addr) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupHostnameRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupHostnameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -589,7 +589,7 @@ bool NameLookup::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
 
 
 void NameLookup::Interface::LookupIpCompleterBase::Reply(NameLookup_LookupIp_Result result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupIpResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupIpResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   LookupIpResponse _response = {};
@@ -628,7 +628,7 @@ void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::DecodedMessage<
 
 
 void NameLookup::Interface::LookupHostnameCompleterBase::Reply(NameLookup_LookupHostname_Result result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupHostnameResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupHostnameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   LookupHostnameResponse _response = {};
   _response._hdr.ordinal = kNameLookup_LookupHostname_GenOrdinal;
@@ -675,7 +675,7 @@ extern "C" const fidl_type_t fuchsia_net_SocketProviderGetAddrInfoResponseTable;
 }  // namespace
 template <>
 SocketProvider::ResultOf::GetAddrInfo_Impl<SocketProvider::GetAddrInfoResponse>::GetAddrInfo_Impl(zx::unowned_channel _client_end, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAddrInfoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAddrInfoRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   GetAddrInfoRequest _request = {};
@@ -733,7 +733,7 @@ zx_status_t SocketProvider::SyncClient::GetAddrInfo_Deprecated(::fidl::StringVie
 }
 
 zx_status_t SocketProvider::Call::GetAddrInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, AddrInfoStatus* out_status, uint32_t* out_nres, ::fidl::Array<AddrInfo, 4>* out_res) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAddrInfoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAddrInfoRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetAddrInfoRequest _request = {};
@@ -751,7 +751,7 @@ zx_status_t SocketProvider::Call::GetAddrInfo_Deprecated(zx::unowned_channel _cl
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetAddrInfoResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetAddrInfoResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetAddrInfoRequest, GetAddrInfoResponse>(
@@ -863,7 +863,7 @@ bool SocketProvider::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
 
 
 void SocketProvider::Interface::GetAddrInfoCompleterBase::Reply(AddrInfoStatus status, uint32_t nres, ::fidl::Array<AddrInfo, 4> res) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAddrInfoResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAddrInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetAddrInfoResponse*>(_write_bytes);
   _response._hdr.ordinal = kSocketProvider_GetAddrInfo_GenOrdinal;

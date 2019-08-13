@@ -17,7 +17,7 @@ extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionRequestTable;
 }  // namespace
 template <>
 Handler::ResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_Impl(zx::unowned_channel _client_end, ::zx::exception exception, ExceptionInfo info) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -68,7 +68,7 @@ zx_status_t Handler::SyncClient::OnException_Deprecated(::zx::exception exceptio
 }
 
 zx_status_t Handler::Call::OnException_Deprecated(zx::unowned_channel _client_end, ::zx::exception exception, ExceptionInfo info) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<OnExceptionRequest*>(_write_bytes);
   _request._hdr.ordinal = kHandler_OnException_GenOrdinal;
@@ -80,7 +80,7 @@ zx_status_t Handler::Call::OnException_Deprecated(zx::unowned_channel _client_en
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<OnExceptionRequest, OnExceptionResponse>(
@@ -113,7 +113,7 @@ zx_status_t Handler::Call::OnException_Deprecated(zx::unowned_channel _client_en
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<OnExceptionResponse>(_encode_request_result.status, _encode_request_result.error);
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_buffer(_read_bytes, sizeof(_read_bytes));
   auto _call_result = ::fidl::Call<OnExceptionRequest, OnExceptionResponse>(
@@ -183,7 +183,7 @@ bool Handler::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
 
 
 void Handler::Interface::OnExceptionCompleterBase::Reply() {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnExceptionResponse*>(_write_bytes);
   _response._hdr.ordinal = kHandler_OnException_GenOrdinal;

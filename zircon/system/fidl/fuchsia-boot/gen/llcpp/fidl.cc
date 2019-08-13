@@ -17,7 +17,7 @@ extern "C" const fidl_type_t fuchsia_boot_RootJobGetResponseTable;
 }  // namespace
 template <>
 RootJob::ResultOf::Get_Impl<RootJob::GetResponse>::Get_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -60,7 +60,7 @@ zx_status_t RootJob::SyncClient::Get_Deprecated(::zx::job* out_job) {
 }
 
 zx_status_t RootJob::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx::job* out_job) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
   _request._hdr.ordinal = kRootJob_Get_GenOrdinal;
@@ -70,7 +70,7 @@ zx_status_t RootJob::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx:
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetRequest, GetResponse>(
@@ -175,7 +175,7 @@ bool RootJob::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
 
 
 void RootJob::Interface::GetCompleterBase::Reply(::zx::job job) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
   _response._hdr.ordinal = kRootJob_Get_GenOrdinal;
@@ -212,7 +212,7 @@ extern "C" const fidl_type_t fuchsia_boot_LogGetResponseTable;
 }  // namespace
 template <>
 Log::ResultOf::Get_Impl<Log::GetResponse>::Get_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -255,7 +255,7 @@ zx_status_t Log::SyncClient::Get_Deprecated(::zx::debuglog* out_log) {
 }
 
 zx_status_t Log::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx::debuglog* out_log) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
   _request._hdr.ordinal = kLog_Get_GenOrdinal;
@@ -265,7 +265,7 @@ zx_status_t Log::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx::deb
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetRequest, GetResponse>(
@@ -370,7 +370,7 @@ bool Log::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
 
 
 void Log::Interface::GetCompleterBase::Reply(::zx::debuglog log) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
   _response._hdr.ordinal = kLog_Get_GenOrdinal;
@@ -407,7 +407,7 @@ extern "C" const fidl_type_t fuchsia_boot_ItemsGetResponseTable;
 }  // namespace
 template <>
 Items::ResultOf::Get_Impl<Items::GetResponse>::Get_Impl(zx::unowned_channel _client_end, uint32_t type, uint32_t extra) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -458,7 +458,7 @@ zx_status_t Items::SyncClient::Get_Deprecated(uint32_t type, uint32_t extra, ::z
 }
 
 zx_status_t Items::Call::Get_Deprecated(zx::unowned_channel _client_end, uint32_t type, uint32_t extra, ::zx::vmo* out_payload, uint32_t* out_length) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
   _request._hdr.ordinal = kItems_Get_GenOrdinal;
@@ -470,7 +470,7 @@ zx_status_t Items::Call::Get_Deprecated(zx::unowned_channel _client_end, uint32_
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetRequest, GetResponse>(
@@ -576,7 +576,7 @@ bool Items::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn)
 
 
 void Items::Interface::GetCompleterBase::Reply(::zx::vmo payload, uint32_t length) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
   _response._hdr.ordinal = kItems_Get_GenOrdinal;
@@ -616,7 +616,7 @@ extern "C" const fidl_type_t fuchsia_boot_FactoryItemsGetResponseTable;
 }  // namespace
 template <>
 FactoryItems::ResultOf::Get_Impl<FactoryItems::GetResponse>::Get_Impl(zx::unowned_channel _client_end, uint32_t extra) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -665,7 +665,7 @@ zx_status_t FactoryItems::SyncClient::Get_Deprecated(uint32_t extra, ::zx::vmo* 
 }
 
 zx_status_t FactoryItems::Call::Get_Deprecated(zx::unowned_channel _client_end, uint32_t extra, ::zx::vmo* out_payload, uint32_t* out_length) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
   _request._hdr.ordinal = kFactoryItems_Get_GenOrdinal;
@@ -676,7 +676,7 @@ zx_status_t FactoryItems::Call::Get_Deprecated(zx::unowned_channel _client_end, 
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetRequest, GetResponse>(
@@ -781,7 +781,7 @@ bool FactoryItems::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
 
 
 void FactoryItems::Interface::GetCompleterBase::Reply(::zx::vmo payload, uint32_t length) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
   _response._hdr.ordinal = kFactoryItems_Get_GenOrdinal;
@@ -820,7 +820,7 @@ extern "C" const fidl_type_t fuchsia_boot_RootResourceGetResponseTable;
 }  // namespace
 template <>
 RootResource::ResultOf::Get_Impl<RootResource::GetResponse>::Get_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -863,7 +863,7 @@ zx_status_t RootResource::SyncClient::Get_Deprecated(::zx::resource* out_resourc
 }
 
 zx_status_t RootResource::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx::resource* out_resource) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
   _request._hdr.ordinal = kRootResource_Get_GenOrdinal;
@@ -873,7 +873,7 @@ zx_status_t RootResource::Call::Get_Deprecated(zx::unowned_channel _client_end, 
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetRequest, GetResponse>(
@@ -978,7 +978,7 @@ bool RootResource::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
 
 
 void RootResource::Interface::GetCompleterBase::Reply(::zx::resource resource) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
   _response._hdr.ordinal = kRootResource_Get_GenOrdinal;
@@ -1015,7 +1015,7 @@ extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetResponseTable;
 }  // namespace
 template <>
 Arguments::ResultOf::Get_Impl<Arguments::GetResponse>::Get_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -1058,7 +1058,7 @@ zx_status_t Arguments::SyncClient::Get_Deprecated(::zx::vmo* out_vmo, uint64_t* 
 }
 
 zx_status_t Arguments::Call::Get_Deprecated(zx::unowned_channel _client_end, ::zx::vmo* out_vmo, uint64_t* out_size) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRequest*>(_write_bytes);
   _request._hdr.ordinal = kArguments_Get_GenOrdinal;
@@ -1068,7 +1068,7 @@ zx_status_t Arguments::Call::Get_Deprecated(zx::unowned_channel _client_end, ::z
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetRequest, GetResponse>(
@@ -1175,7 +1175,7 @@ bool Arguments::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 
 
 void Arguments::Interface::GetCompleterBase::Reply(::zx::vmo vmo, uint64_t size) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
   _response._hdr.ordinal = kArguments_Get_GenOrdinal;

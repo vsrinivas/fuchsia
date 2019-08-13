@@ -1,0 +1,42 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library llcpptest.flexible.test;
+
+xunion FlexibleXUnion {
+    array<uint8>:30 want_more_than_30_bytes;
+    array<handle?>:4 want_more_than_4_handles;
+};
+
+/// The server will be implemented manually to purposefully return xunion/tables
+/// with an unknown ordinal.
+protocol ReceiveFlexibleEnvelope {
+    /// Receive a xunion with an unknown ordinal (suppose coming from a newer
+    /// server) which contains more bytes than the current max message size.
+    GetUnknownXUnionMoreBytes() -> (FlexibleXUnion xu);
+
+    /// Receive a xunion with an unknown ordinal (suppose coming from a newer
+    /// server) which contains more handles than the current max message handle
+    /// count.
+    GetUnknownXUnionMoreHandles() -> (FlexibleXUnion xu);
+
+    // TODO(yifeit): Test tables with unknown ordinals, once LLCPP supports
+    // tables.
+};
+
+strict xunion StrictBoundedXUnion {
+    vector<uint8>:200 v;
+};
+
+strict xunion StrictUnboundedXUnion {
+    vector<uint8> v;
+};
+
+/// Test that the response to GetBoundedXUnion could be allocated on the stack,
+/// while that to GetUnboundedXUnion is allocated on the heap, through
+/// compile-time assertions.
+protocol ReceiveStrictEnvelope {
+    GetBoundedXUnion() -> (StrictBoundedXUnion xu);
+    GetUnboundedXUnion() -> (StrictUnboundedXUnion xu);
+};

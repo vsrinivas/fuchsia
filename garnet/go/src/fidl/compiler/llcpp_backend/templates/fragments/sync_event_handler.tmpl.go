@@ -37,8 +37,8 @@ zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end,
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
     {{- range FilterMethodsWithReqs .Methods }}
-    if (::fidl::internal::ClampedMessageSize<{{ .Name }}Response>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response>();
+    if (::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>();
     }
     {{- end }}
     return x;

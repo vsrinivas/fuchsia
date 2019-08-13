@@ -62,9 +62,9 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCF
 
 {{- define "StaticCallSyncRequestCFlavorMethodDefinition" }}
 zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncRequestCFlavorMethodSignature" . }} {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Request>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Request, ::fidl::MessageDirection::kSending>();
 
-  {{- if .LLProps.StackAllocRequest }}
+  {{- if .LLProps.ClientContext.StackAllocRequest }}
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] {{- if not .LLProps.LinearizeRequest }} = {} {{- end }};
   {{- else }}
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
@@ -98,8 +98,8 @@ zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncReque
   {{- if .HasResponse }}
 
   {{- /* Has response */}}
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response>();
-  {{- if .LLProps.StackAllocResponse }}
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>();
+  {{- if .LLProps.ClientContext.StackAllocResponse }}
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   {{- else }}
   std::unique_ptr<uint8_t[]> _read_bytes_unique_ptr(new uint8_t[_kReadAllocSize]);
@@ -133,9 +133,9 @@ zx_status_t {{ .LLProps.InterfaceName }}::Call::{{ template "StaticCallSyncReque
 {{ if .HasResponse -}} template <> {{- end }}
 {{ .LLProps.InterfaceName }}::ResultOf::{{ .Name }}_Impl {{- if .HasResponse -}} <{{ .LLProps.InterfaceName }}::{{ .Name }}Response> {{- end }}::{{ .Name }}_Impl(
   {{- template "StaticCallSyncRequestCFlavorMethodArgumentsNew" . }}) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Request>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Request, ::fidl::MessageDirection::kSending>();
 
-  {{- if .LLProps.StackAllocRequest }}
+  {{- if .LLProps.ClientContext.StackAllocRequest }}
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   {{- else }}

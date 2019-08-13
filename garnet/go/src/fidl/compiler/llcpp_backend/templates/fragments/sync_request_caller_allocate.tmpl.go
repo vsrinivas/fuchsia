@@ -108,7 +108,7 @@ zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBu
   }
   {{- if .HasResponse }}
     {{- if not .Response }}
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_buffer(_read_bytes, sizeof(_read_bytes));
     {{- end }}

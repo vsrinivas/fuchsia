@@ -27,7 +27,7 @@ extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeResponseTable;
 }  // namespace
 template <>
 Device::ResultOf::Transmit_Impl<Device::TransmitResponse>::Transmit_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<TransmitRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<TransmitRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   TransmitRequest _request = {};
@@ -81,7 +81,7 @@ zx_status_t Device::SyncClient::Transmit_Deprecated(::fidl::VectorView<uint8_t> 
 }
 
 zx_status_t Device::Call::Transmit_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<TransmitRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<TransmitRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   TransmitRequest _request = {};
@@ -97,7 +97,7 @@ zx_status_t Device::Call::Transmit_Deprecated(zx::unowned_channel _client_end, :
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<TransmitResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<TransmitResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<TransmitRequest, TransmitResponse>(
@@ -167,7 +167,7 @@ zx_status_t Device::Call::Transmit_Deprecated(zx::unowned_channel _client_end, :
 
 template <>
 Device::ResultOf::Receive_Impl<Device::ReceiveResponse>::Receive_Impl(zx::unowned_channel _client_end, uint32_t size) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReceiveRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReceiveRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -262,7 +262,7 @@ Device::UnownedResultOf::Receive Device::Call::Receive(zx::unowned_channel _clie
 
 template <>
 Device::ResultOf::Exchange_Impl<Device::ExchangeResponse>::Exchange_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> txdata) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ExchangeRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ExchangeRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   ExchangeRequest _request = {};
@@ -425,7 +425,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 
 
 void Device::Interface::TransmitCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<TransmitResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<TransmitResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<TransmitResponse*>(_write_bytes);
   _response._hdr.ordinal = kDevice_Transmit_GenOrdinal;
@@ -454,7 +454,7 @@ void Device::Interface::TransmitCompleterBase::Reply(::fidl::DecodedMessage<Tran
 
 
 void Device::Interface::ReceiveCompleterBase::Reply(int32_t status, ::fidl::VectorView<uint8_t> data) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReceiveResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReceiveResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   ReceiveResponse _response = {};
@@ -495,7 +495,7 @@ void Device::Interface::ReceiveCompleterBase::Reply(::fidl::DecodedMessage<Recei
 
 
 void Device::Interface::ExchangeCompleterBase::Reply(int32_t status, ::fidl::VectorView<uint8_t> rxdata) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ExchangeResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ExchangeResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   ExchangeResponse _response = {};

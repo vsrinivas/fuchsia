@@ -31,15 +31,16 @@ nullptr
   {{- end -}}
 {{- end }}
 
-{{- define "AllocationComment" -}}
-{{- if .LLProps.StackUse }} Allocates {{ .LLProps.StackUse }} bytes of {{ "" }}
-{{- if not .LLProps.StackAllocRequest -}} response {{- else -}}
-  {{- if not .LLProps.StackAllocResponse -}} request {{- else -}} message {{- end -}}
+{{- define "ClientAllocationComment" -}}
+{{- $context := .LLProps.ClientContext }}
+{{- if $context.StackUse }} Allocates {{ $context.StackUse }} bytes of {{ "" }}
+{{- if not $context.StackAllocRequest -}} response {{- else -}}
+  {{- if not $context.StackAllocResponse -}} request {{- else -}} message {{- end -}}
 {{- end }} buffer on the stack. {{- end }}
-{{- if and .LLProps.StackAllocRequest .LLProps.StackAllocResponse }} No heap allocation necessary.
+{{- if and $context.StackAllocRequest $context.StackAllocResponse }} No heap allocation necessary.
 {{- else }}
-  {{- if not .LLProps.StackAllocRequest }} Request is heap-allocated. {{- end }}
-  {{- if not .LLProps.StackAllocResponse }} Response is heap-allocated. {{- end }}
+  {{- if not $context.StackAllocRequest }} Request is heap-allocated. {{- end }}
+  {{- if not $context.StackAllocResponse }} Response is heap-allocated. {{- end }}
 {{- end }}
 {{- end }}
 
@@ -87,6 +88,9 @@ class {{ .Name }} final {
     static constexpr uint32_t MaxNumHandles = {{ .ResponseMaxHandles }};
     static constexpr uint32_t PrimarySize = {{ .ResponseSize }};
     static constexpr uint32_t MaxOutOfLine = {{ .ResponseMaxOutOfLine }};
+    static constexpr bool HasFlexibleEnvelope = {{ .ResponseFlexible }};
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
   };
       {{- else }}
   using {{ .Name }}Response = ::fidl::AnyZeroArgMessage;
@@ -107,6 +111,9 @@ class {{ .Name }} final {
     static constexpr uint32_t MaxNumHandles = {{ .RequestMaxHandles }};
     static constexpr uint32_t PrimarySize = {{ .RequestSize }};
     static constexpr uint32_t MaxOutOfLine = {{ .RequestMaxOutOfLine }};
+    static constexpr bool HasFlexibleEnvelope = {{ .RequestFlexible }};
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
 
         {{- if and .HasResponse .Response }}
     using ResponseType = {{ .Name }}Response;
@@ -230,7 +237,7 @@ class {{ .Name }} final {
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
-    //{{ template "AllocationComment" . }}
+    //{{ template "ClientAllocationComment" . }}
     ResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCFlavorMethodArgumentsNew" . }});
 {{ "" }}
       {{- if or .Request .Response }}
@@ -285,7 +292,7 @@ class {{ .Name }} final {
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
-    //{{ template "AllocationComment" . }}
+    //{{ template "ClientAllocationComment" . }}
     static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCFlavorMethodArgumentsNew" . }});
 {{ "" }}
       {{- if or .Request .Response }}

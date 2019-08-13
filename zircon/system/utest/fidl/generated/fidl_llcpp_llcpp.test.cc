@@ -12,13 +12,13 @@ namespace coding {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kLlcpp_Action_Ordinal = 0x46bfc70900000000lu;
+constexpr uint64_t kLlcpp_Action_GenOrdinal = 0x46bfc70900000000lu;
 extern "C" const fidl_type_t fidl_test_coding_LlcppActionResponseTable;
 
 }  // namespace
 template <>
 Llcpp::ResultOf::Action_Impl<Llcpp::ActionResponse>::Action_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ActionRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ActionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -61,17 +61,17 @@ zx_status_t Llcpp::SyncClient::Action_Deprecated(int32_t* out_v) {
 }
 
 zx_status_t Llcpp::Call::Action_Deprecated(zx::unowned_channel _client_end, int32_t* out_v) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ActionRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ActionRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ActionRequest*>(_write_bytes);
-  _request._hdr.ordinal = kLlcpp_Action_Ordinal;
+  _request._hdr.ordinal = kLlcpp_Action_GenOrdinal;
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ActionRequest));
   ::fidl::DecodedMessage<ActionRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ActionResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ActionResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<ActionRequest, ActionResponse>(
@@ -96,7 +96,7 @@ zx_status_t Llcpp::Call::Action_Deprecated(zx::unowned_channel _client_end, int3
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ActionRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<ActionRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kLlcpp_Action_Ordinal;
+  _request._hdr.ordinal = kLlcpp_Action_GenOrdinal;
   _request_buffer.set_actual(sizeof(ActionRequest));
   ::fidl::DecodedMessage<ActionRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -124,7 +124,7 @@ zx_status_t Llcpp::Call::Action_Deprecated(zx::unowned_channel _client_end, int3
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ActionRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLlcpp_Action_Ordinal;
+  params.message()->_hdr.ordinal = kLlcpp_Action_GenOrdinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Llcpp::ActionResponse>::FromFailure(
@@ -148,7 +148,7 @@ bool Llcpp::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kLlcpp_Action_Ordinal:
+    case kLlcpp_Action_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ActionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -176,10 +176,10 @@ bool Llcpp::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn)
 
 
 void Llcpp::Interface::ActionCompleterBase::Reply(int32_t v) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ActionResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ActionResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ActionResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLlcpp_Action_Ordinal;
+  _response._hdr.ordinal = kLlcpp_Action_GenOrdinal;
   _response.v = std::move(v);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ActionResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ActionResponse>(std::move(_response_bytes)));
@@ -191,7 +191,7 @@ void Llcpp::Interface::ActionCompleterBase::Reply(::fidl::BytePart _buffer, int3
     return;
   }
   auto& _response = *reinterpret_cast<ActionResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLlcpp_Action_Ordinal;
+  _response._hdr.ordinal = kLlcpp_Action_GenOrdinal;
   _response.v = std::move(v);
   _buffer.set_actual(sizeof(ActionResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ActionResponse>(std::move(_buffer)));
@@ -199,7 +199,7 @@ void Llcpp::Interface::ActionCompleterBase::Reply(::fidl::BytePart _buffer, int3
 
 void Llcpp::Interface::ActionCompleterBase::Reply(::fidl::DecodedMessage<ActionResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLlcpp_Action_Ordinal;
+  params.message()->_hdr.ordinal = kLlcpp_Action_GenOrdinal;
   CompleterBase::SendReply(std::move(params));
 }
 

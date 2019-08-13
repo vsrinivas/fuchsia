@@ -21,7 +21,7 @@ extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigResponseTable;
 }  // namespace
 
 DebugData::ResultOf::Publish_Impl::Publish_Impl(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   PublishRequest _request = {};
@@ -78,7 +78,7 @@ zx_status_t DebugData::SyncClient::Publish_Deprecated(::fidl::StringView data_si
 }
 
 zx_status_t DebugData::Call::Publish_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   PublishRequest _request = {};
@@ -141,7 +141,7 @@ zx_status_t DebugData::Call::Publish_Deprecated(zx::unowned_channel _client_end,
 
 template <>
 DebugData::ResultOf::LoadConfig_Impl<DebugData::LoadConfigResponse>::LoadConfig_Impl(zx::unowned_channel _client_end, ::fidl::StringView config_name) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   LoadConfigRequest _request = {};
@@ -195,7 +195,7 @@ zx_status_t DebugData::SyncClient::LoadConfig_Deprecated(::fidl::StringView conf
 }
 
 zx_status_t DebugData::Call::LoadConfig_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView config_name, ::zx::vmo* out_config) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   LoadConfigRequest _request = {};
@@ -211,7 +211,7 @@ zx_status_t DebugData::Call::LoadConfig_Deprecated(zx::unowned_channel _client_e
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<LoadConfigRequest, LoadConfigResponse>(
@@ -329,7 +329,7 @@ bool DebugData::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 
 
 void DebugData::Interface::LoadConfigCompleterBase::Reply(::zx::vmo config) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LoadConfigResponse*>(_write_bytes);
   _response._hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;

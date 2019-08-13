@@ -41,7 +41,7 @@ extern "C" const fidl_type_t fuchsia_hardware_light_LightSetRgbValueResponseTabl
 }  // namespace
 template <>
 Light::ResultOf::GetName_Impl<Light::GetNameResponse>::GetName_Impl(zx::unowned_channel _client_end, uint32_t index) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -136,7 +136,7 @@ Light::UnownedResultOf::GetName Light::Call::GetName(zx::unowned_channel _client
 
 template <>
 Light::ResultOf::GetCount_Impl<Light::GetCountResponse>::GetCount_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCountRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCountRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -179,7 +179,7 @@ zx_status_t Light::SyncClient::GetCount_Deprecated(uint32_t* out_count) {
 }
 
 zx_status_t Light::Call::GetCount_Deprecated(zx::unowned_channel _client_end, uint32_t* out_count) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCountRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCountRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetCountRequest*>(_write_bytes);
   _request._hdr.ordinal = kLight_GetCount_GenOrdinal;
@@ -189,7 +189,7 @@ zx_status_t Light::Call::GetCount_Deprecated(zx::unowned_channel _client_end, ui
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetCountResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetCountResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetCountRequest, GetCountResponse>(
@@ -259,7 +259,7 @@ zx_status_t Light::Call::GetCount_Deprecated(zx::unowned_channel _client_end, ui
 
 template <>
 Light::ResultOf::HasCapability_Impl<Light::HasCapabilityResponse>::HasCapability_Impl(zx::unowned_channel _client_end, uint32_t index, Capability capability) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -310,7 +310,7 @@ zx_status_t Light::SyncClient::HasCapability_Deprecated(uint32_t index, Capabili
 }
 
 zx_status_t Light::Call::HasCapability_Deprecated(zx::unowned_channel _client_end, uint32_t index, Capability capability, int32_t* out_status, bool* out_has) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<HasCapabilityRequest*>(_write_bytes);
   _request._hdr.ordinal = kLight_HasCapability_GenOrdinal;
@@ -322,7 +322,7 @@ zx_status_t Light::Call::HasCapability_Deprecated(zx::unowned_channel _client_en
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<HasCapabilityRequest, HasCapabilityResponse>(
@@ -392,7 +392,7 @@ zx_status_t Light::Call::HasCapability_Deprecated(zx::unowned_channel _client_en
 
 template <>
 Light::ResultOf::GetSimpleValue_Impl<Light::GetSimpleValueResponse>::GetSimpleValue_Impl(zx::unowned_channel _client_end, uint32_t index) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -441,7 +441,7 @@ zx_status_t Light::SyncClient::GetSimpleValue_Deprecated(uint32_t index, int32_t
 }
 
 zx_status_t Light::Call::GetSimpleValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, int32_t* out_status, uint8_t* out_value) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetSimpleValueRequest*>(_write_bytes);
   _request._hdr.ordinal = kLight_GetSimpleValue_GenOrdinal;
@@ -452,7 +452,7 @@ zx_status_t Light::Call::GetSimpleValue_Deprecated(zx::unowned_channel _client_e
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetSimpleValueRequest, GetSimpleValueResponse>(
@@ -521,7 +521,7 @@ zx_status_t Light::Call::GetSimpleValue_Deprecated(zx::unowned_channel _client_e
 
 template <>
 Light::ResultOf::SetSimpleValue_Impl<Light::SetSimpleValueResponse>::SetSimpleValue_Impl(zx::unowned_channel _client_end, uint32_t index, uint8_t value) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -572,7 +572,7 @@ zx_status_t Light::SyncClient::SetSimpleValue_Deprecated(uint32_t index, uint8_t
 }
 
 zx_status_t Light::Call::SetSimpleValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, uint8_t value, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SetSimpleValueRequest*>(_write_bytes);
   _request._hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
@@ -584,7 +584,7 @@ zx_status_t Light::Call::SetSimpleValue_Deprecated(zx::unowned_channel _client_e
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<SetSimpleValueRequest, SetSimpleValueResponse>(
@@ -652,7 +652,7 @@ zx_status_t Light::Call::SetSimpleValue_Deprecated(zx::unowned_channel _client_e
 
 template <>
 Light::ResultOf::GetRgbValue_Impl<Light::GetRgbValueResponse>::GetRgbValue_Impl(zx::unowned_channel _client_end, uint32_t index) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -701,7 +701,7 @@ zx_status_t Light::SyncClient::GetRgbValue_Deprecated(uint32_t index, int32_t* o
 }
 
 zx_status_t Light::Call::GetRgbValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, int32_t* out_status, Rgb* out_value) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRgbValueRequest*>(_write_bytes);
   _request._hdr.ordinal = kLight_GetRgbValue_GenOrdinal;
@@ -712,7 +712,7 @@ zx_status_t Light::Call::GetRgbValue_Deprecated(zx::unowned_channel _client_end,
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetRgbValueRequest, GetRgbValueResponse>(
@@ -781,7 +781,7 @@ zx_status_t Light::Call::GetRgbValue_Deprecated(zx::unowned_channel _client_end,
 
 template <>
 Light::ResultOf::SetRgbValue_Impl<Light::SetRgbValueResponse>::SetRgbValue_Impl(zx::unowned_channel _client_end, uint32_t index, Rgb value) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -832,7 +832,7 @@ zx_status_t Light::SyncClient::SetRgbValue_Deprecated(uint32_t index, Rgb value,
 }
 
 zx_status_t Light::Call::SetRgbValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, Rgb value, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SetRgbValueRequest*>(_write_bytes);
   _request._hdr.ordinal = kLight_SetRgbValue_GenOrdinal;
@@ -844,7 +844,7 @@ zx_status_t Light::Call::SetRgbValue_Deprecated(zx::unowned_channel _client_end,
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<SetRgbValueRequest, SetRgbValueResponse>(
@@ -1019,7 +1019,7 @@ bool Light::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn)
 
 
 void Light::Interface::GetNameCompleterBase::Reply(int32_t status, ::fidl::StringView name) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetNameResponse _response = {};
   _response._hdr.ordinal = kLight_GetName_GenOrdinal;
@@ -1059,7 +1059,7 @@ void Light::Interface::GetNameCompleterBase::Reply(::fidl::DecodedMessage<GetNam
 
 
 void Light::Interface::GetCountCompleterBase::Reply(uint32_t count) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCountResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCountResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetCountResponse*>(_write_bytes);
   _response._hdr.ordinal = kLight_GetCount_GenOrdinal;
@@ -1088,7 +1088,7 @@ void Light::Interface::GetCountCompleterBase::Reply(::fidl::DecodedMessage<GetCo
 
 
 void Light::Interface::HasCapabilityCompleterBase::Reply(int32_t status, bool has) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<HasCapabilityResponse*>(_write_bytes);
   _response._hdr.ordinal = kLight_HasCapability_GenOrdinal;
@@ -1119,7 +1119,7 @@ void Light::Interface::HasCapabilityCompleterBase::Reply(::fidl::DecodedMessage<
 
 
 void Light::Interface::GetSimpleValueCompleterBase::Reply(int32_t status, uint8_t value) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetSimpleValueResponse*>(_write_bytes);
   _response._hdr.ordinal = kLight_GetSimpleValue_GenOrdinal;
@@ -1150,7 +1150,7 @@ void Light::Interface::GetSimpleValueCompleterBase::Reply(::fidl::DecodedMessage
 
 
 void Light::Interface::SetSimpleValueCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetSimpleValueResponse*>(_write_bytes);
   _response._hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
@@ -1179,7 +1179,7 @@ void Light::Interface::SetSimpleValueCompleterBase::Reply(::fidl::DecodedMessage
 
 
 void Light::Interface::GetRgbValueCompleterBase::Reply(int32_t status, Rgb value) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetRgbValueResponse*>(_write_bytes);
   _response._hdr.ordinal = kLight_GetRgbValue_GenOrdinal;
@@ -1210,7 +1210,7 @@ void Light::Interface::GetRgbValueCompleterBase::Reply(::fidl::DecodedMessage<Ge
 
 
 void Light::Interface::SetRgbValueCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetRgbValueResponse*>(_write_bytes);
   _response._hdr.ordinal = kLight_SetRgbValue_GenOrdinal;

@@ -27,7 +27,7 @@ extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_block_DeviceSetWrit
 }  // namespace
 template <>
 Device::ResultOf::EnableWritebackCache_Impl<Device::EnableWritebackCacheResponse>::EnableWritebackCache_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -70,7 +70,7 @@ zx_status_t Device::SyncClient::EnableWritebackCache_Deprecated(int32_t* out_sta
 }
 
 zx_status_t Device::Call::EnableWritebackCache_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<EnableWritebackCacheRequest*>(_write_bytes);
   _request._hdr.ordinal = kDevice_EnableWritebackCache_GenOrdinal;
@@ -80,7 +80,7 @@ zx_status_t Device::Call::EnableWritebackCache_Deprecated(zx::unowned_channel _c
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<EnableWritebackCacheRequest, EnableWritebackCacheResponse>(
@@ -150,7 +150,7 @@ zx_status_t Device::Call::EnableWritebackCache_Deprecated(zx::unowned_channel _c
 
 template <>
 Device::ResultOf::DisableWritebackCache_Impl<Device::DisableWritebackCacheResponse>::DisableWritebackCache_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -193,7 +193,7 @@ zx_status_t Device::SyncClient::DisableWritebackCache_Deprecated(int32_t* out_st
 }
 
 zx_status_t Device::Call::DisableWritebackCache_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DisableWritebackCacheRequest*>(_write_bytes);
   _request._hdr.ordinal = kDevice_DisableWritebackCache_GenOrdinal;
@@ -203,7 +203,7 @@ zx_status_t Device::Call::DisableWritebackCache_Deprecated(zx::unowned_channel _
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<DisableWritebackCacheRequest, DisableWritebackCacheResponse>(
@@ -273,7 +273,7 @@ zx_status_t Device::Call::DisableWritebackCache_Deprecated(zx::unowned_channel _
 
 template <>
 Device::ResultOf::SetWritebackCacheReported_Impl<Device::SetWritebackCacheReportedResponse>::SetWritebackCacheReported_Impl(zx::unowned_channel _client_end, bool report) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -322,7 +322,7 @@ zx_status_t Device::SyncClient::SetWritebackCacheReported_Deprecated(bool report
 }
 
 zx_status_t Device::Call::SetWritebackCacheReported_Deprecated(zx::unowned_channel _client_end, bool report, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SetWritebackCacheReportedRequest*>(_write_bytes);
   _request._hdr.ordinal = kDevice_SetWritebackCacheReported_GenOrdinal;
@@ -333,7 +333,7 @@ zx_status_t Device::Call::SetWritebackCacheReported_Deprecated(zx::unowned_chann
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<SetWritebackCacheReportedRequest, SetWritebackCacheReportedResponse>(
@@ -458,7 +458,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 
 
 void Device::Interface::EnableWritebackCacheCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<EnableWritebackCacheResponse*>(_write_bytes);
   _response._hdr.ordinal = kDevice_EnableWritebackCache_GenOrdinal;
@@ -487,7 +487,7 @@ void Device::Interface::EnableWritebackCacheCompleterBase::Reply(::fidl::Decoded
 
 
 void Device::Interface::DisableWritebackCacheCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DisableWritebackCacheResponse*>(_write_bytes);
   _response._hdr.ordinal = kDevice_DisableWritebackCache_GenOrdinal;
@@ -516,7 +516,7 @@ void Device::Interface::DisableWritebackCacheCompleterBase::Reply(::fidl::Decode
 
 
 void Device::Interface::SetWritebackCacheReportedCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetWritebackCacheReportedResponse*>(_write_bytes);
   _response._hdr.ordinal = kDevice_SetWritebackCacheReported_GenOrdinal;

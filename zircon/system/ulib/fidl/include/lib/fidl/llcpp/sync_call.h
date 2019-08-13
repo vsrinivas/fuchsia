@@ -49,10 +49,12 @@ struct ResponseStorage;
 
 // This definition is selected when the size is larger than |kMaxStackAllocSize|.
 template <typename FidlType>
-struct ResponseStorage<FidlType,
-                       std::enable_if_t<(ClampedMessageSize<FidlType>() > kMaxStackAllocSize)>> {
+struct ResponseStorage<
+    FidlType, std::enable_if_t<(ClampedMessageSize<FidlType, MessageDirection::kReceiving>() >
+                                kMaxStackAllocSize)>> {
   constexpr static bool kWillCopyBufferDuringMove = false;
-  constexpr static uint32_t kBufferSize = ClampedMessageSize<FidlType>();
+  constexpr static uint32_t kBufferSize =
+      ClampedMessageSize<FidlType, MessageDirection::kReceiving>();
 
   fidl::BytePart buffer() { return storage->view(); }
 
@@ -72,10 +74,12 @@ struct ResponseStorage<FidlType,
 
 // This definition is selected when the size is less than or equal to |kMaxStackAllocSize|.
 template <typename FidlType>
-struct ResponseStorage<FidlType,
-                       std::enable_if_t<(ClampedMessageSize<FidlType>() <= kMaxStackAllocSize)>> {
+struct ResponseStorage<
+    FidlType, std::enable_if_t<(ClampedMessageSize<FidlType, MessageDirection::kReceiving>() <=
+                                kMaxStackAllocSize)>> {
   constexpr static bool kWillCopyBufferDuringMove = true;
-  constexpr static uint32_t kBufferSize = ClampedMessageSize<FidlType>();
+  constexpr static uint32_t kBufferSize =
+      ClampedMessageSize<FidlType, MessageDirection::kReceiving>();
 
   fidl::BytePart buffer() { return storage.view(); }
 
@@ -314,8 +318,13 @@ using UnownedSyncCallBase = SyncCallBase<ResponseType>;
 //     fidl::Buffer<mylib::FooResponse> response_buffer;
 //     auto result = mylib::Call::Foo(channel, request_buffer.view(), args, response_buffer.view());
 //
+// Since the |Buffer| type is always used at client side, we can assume responses are processed in
+// the |kSending| context, and requests are processed in the |kReceiving| context.
 template <typename FidlType>
-using Buffer = internal::AlignedBuffer<MaxSizeInChannel<FidlType>()>;
+using Buffer =
+    internal::AlignedBuffer<internal::IsResponseType<FidlType>::value
+                                ? MaxSizeInChannel<FidlType, MessageDirection::kReceiving>()
+                                : MaxSizeInChannel<FidlType, MessageDirection::kSending>()>;
 
 }  // namespace fidl
 

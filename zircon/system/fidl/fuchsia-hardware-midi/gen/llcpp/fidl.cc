@@ -18,7 +18,7 @@ extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoResponseTable;
 }  // namespace
 template <>
 Device::ResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
@@ -61,7 +61,7 @@ zx_status_t Device::SyncClient::GetInfo_Deprecated(Info* out_info) {
 }
 
 zx_status_t Device::Call::GetInfo_Deprecated(zx::unowned_channel _client_end, Info* out_info) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetInfoRequest*>(_write_bytes);
   _request._hdr.ordinal = kDevice_GetInfo_GenOrdinal;
@@ -71,7 +71,7 @@ zx_status_t Device::Call::GetInfo_Deprecated(zx::unowned_channel _client_end, In
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse, ::fidl::MessageDirection::kReceiving>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
   auto _call_result = ::fidl::Call<GetInfoRequest, GetInfoResponse>(
@@ -176,7 +176,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 
 
 void Device::Interface::GetInfoCompleterBase::Reply(Info info) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse>();
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetInfoResponse*>(_write_bytes);
   _response._hdr.ordinal = kDevice_GetInfo_GenOrdinal;

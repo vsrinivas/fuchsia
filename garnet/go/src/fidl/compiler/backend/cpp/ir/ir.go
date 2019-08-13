@@ -219,6 +219,7 @@ type Method struct {
 	RequestMaxHandles    int
 	RequestMaxOutOfLine  int
 	RequestPadding       bool
+	RequestFlexible      bool
 	HasResponse          bool
 	Response             []Parameter
 	ResponseSize         int
@@ -226,11 +227,23 @@ type Method struct {
 	ResponseMaxHandles   int
 	ResponseMaxOutOfLine int
 	ResponsePadding      bool
+	ResponseFlexible     bool
 	CallbackType         string
 	ResponseHandlerType  string
 	ResponderType        string
 	Transitional         bool
 	LLProps              LLProps
+}
+
+// LLContextProps contain context-dependent properties of a method specific to llcpp.
+// Context is client (write request and read response) or server (read request and write response).
+type LLContextProps struct {
+	// Should the request be allocated on the stack, in the managed flavor.
+	StackAllocRequest bool
+	// Should the response be allocated on the stack, in the managed flavor.
+	StackAllocResponse bool
+	// Total number of bytes of stack used by storing the request and response.
+	StackUse int
 }
 
 // LLProps contain properties of a method specific to llcpp
@@ -239,11 +252,12 @@ type LLProps struct {
 	CBindingCompatible bool
 	LinearizeRequest   bool
 	LinearizeResponse  bool
-	StackAllocRequest  bool
-	StackAllocResponse bool
-	StackUse           int
-	EncodeRequest      bool
-	DecodeResponse     bool
+	ClientContext      LLContextProps
+	ServerContext      LLContextProps
+	// EncodeRequest is true if the request needs encoding before being written to the transport.
+	EncodeRequest bool
+	// DecodeResponse is true if the response needs decoding before being cast to LLCPP data type.
+	DecodeResponse bool
 }
 
 type Parameter struct {
@@ -771,9 +785,26 @@ func (c *compiler) maxOutOfLineFromParameterArray(val []types.Parameter) int {
 	}
 }
 
-func (m Method) NewLLProps(r Interface) LLProps {
-	stackAllocRequest := len(m.Request) == 0 || (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize
-	stackAllocResponse := len(m.Response) == 0 || (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize
+// LLContext indicates where the request/response is used.
+// The allocation strategies differ for client and server contexts.
+type LLContext int
+
+const (
+	clientContext LLContext = iota
+	serverContext LLContext = iota
+)
+
+func (m Method) NewLLContextProps(context LLContext) LLContextProps {
+	stackAllocRequest := false
+	stackAllocResponse := false
+	if context == clientContext {
+		stackAllocRequest = len(m.Request) == 0 || (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize
+		stackAllocResponse = len(m.Response) == 0 || (!m.ResponseFlexible && (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize)
+	} else {
+		stackAllocRequest = len(m.Request) == 0 || (!m.RequestFlexible && (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize)
+		stackAllocResponse = len(m.Response) == 0 || (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize
+	}
+
 	stackUse := 0
 	if stackAllocRequest {
 		stackUse += m.RequestSize + m.RequestMaxOutOfLine
@@ -781,6 +812,14 @@ func (m Method) NewLLProps(r Interface) LLProps {
 	if stackAllocResponse {
 		stackUse += m.ResponseSize + m.ResponseMaxOutOfLine
 	}
+	return LLContextProps{
+		StackAllocRequest:  stackAllocRequest,
+		StackAllocResponse: stackAllocResponse,
+		StackUse:           stackUse,
+	}
+}
+
+func (m Method) NewLLProps(r Interface) LLProps {
 	return LLProps{
 		InterfaceName: r.Name,
 		// If the response is not inline, then we cannot generate an out-parameter-style binding,
@@ -788,11 +827,10 @@ func (m Method) NewLLProps(r Interface) LLProps {
 		CBindingCompatible: m.ResponseMaxOutOfLine == 0,
 		LinearizeRequest:   len(m.Request) > 0 && m.RequestMaxOutOfLine > 0,
 		LinearizeResponse:  len(m.Response) > 0 && m.ResponseMaxOutOfLine > 0,
-		StackAllocRequest:  stackAllocRequest,
-		StackAllocResponse: stackAllocResponse,
-		StackUse:           stackUse,
-		EncodeRequest:      m.RequestMaxOutOfLine > 0 || m.RequestMaxHandles > 0 || m.RequestPadding,
-		DecodeResponse:     m.ResponseMaxOutOfLine > 0 || m.ResponseMaxHandles > 0 || m.ResponsePadding,
+		ClientContext:      m.NewLLContextProps(clientContext),
+		ServerContext:      m.NewLLContextProps(serverContext),
+		EncodeRequest:      m.RequestMaxOutOfLine > 0 || m.RequestMaxHandles > 0 || m.RequestPadding || m.RequestFlexible,
+		DecodeResponse:     m.ResponseMaxOutOfLine > 0 || m.ResponseMaxHandles > 0 || m.ResponsePadding || m.ResponseFlexible,
 	}
 }
 
@@ -844,6 +882,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			RequestMaxHandles:    c.maxHandlesFromParameterArray(v.Request),
 			RequestMaxOutOfLine:  c.maxOutOfLineFromParameterArray(v.Request),
 			RequestPadding:       v.RequestPadding,
+			RequestFlexible:      v.RequestFlexible,
 			HasResponse:          v.HasResponse,
 			Response:             c.compileParameterArray(v.Response),
 			ResponseSize:         v.ResponseSize,
@@ -851,6 +890,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			ResponseMaxHandles:   c.maxHandlesFromParameterArray(v.Response),
 			ResponseMaxOutOfLine: c.maxOutOfLineFromParameterArray(v.Response),
 			ResponsePadding:      v.ResponsePadding,
+			ResponseFlexible:     v.ResponseFlexible,
 			CallbackType:         callbackType,
 			ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			ResponderType:        fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
@@ -859,7 +899,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		m.LLProps = m.NewLLProps(r)
 		r.Methods = append(r.Methods, m)
 		if !v.HasRequest {
-			stackAllocEventBuffer = stackAllocEventBuffer && m.LLProps.StackAllocResponse
+			stackAllocEventBuffer = stackAllocEventBuffer && m.LLProps.ClientContext.StackAllocResponse
 		}
 	}
 	r.HasEvents = hasEvents
