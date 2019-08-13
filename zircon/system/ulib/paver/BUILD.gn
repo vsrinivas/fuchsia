@@ -57,6 +57,7 @@ test("paver-test") {
   include_dirs = [ "." ]
   deps = [
     ":paver",
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block:llcpp",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-paver:llcpp",

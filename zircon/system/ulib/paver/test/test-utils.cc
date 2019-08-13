@@ -50,6 +50,14 @@ void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
   device->reset(new BlockDevice(client));
 }
 
+void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
+                         uint64_t block_count, fbl::unique_ptr<BlockDevice>* device) {
+  ramdisk_client_t* client;
+  ASSERT_OK(ramdisk_create_at_with_guid(devfs_root.get(), kBlockSize, block_count, guid,
+                                        ZBI_PARTITION_GUID_LEN, &client));
+  device->reset(new BlockDevice(client));
+}
+
 void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
                              fbl::unique_ptr<SkipBlockDevice>* device) {
   fzl::VmoMapper mapper;

@@ -1329,12 +1329,73 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
   completer.Reply(ZX_OK);
 }
 
-void Paver::WipeVolumes(WipeVolumesCompleter::Sync completer) {
-  if (!InitializePartitioner()) {
-    completer.Reply(ZX_ERR_BAD_STATE);
-    return;
-  }
-  completer.Reply(partitioner_->WipeFvm());
+void Paver::WipeVolumes(zx::channel block_device, WipeVolumesCompleter::Sync completer) {
+    partitioner_.reset();
+    // Use global devfs if one wasn't injected via set_devfs_root.
+    if (!devfs_root_) {
+        devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
+    }
+#if defined(__x86_64__)
+    Arch arch = Arch::kX64;
+#elif defined(__aarch64__)
+    Arch arch = Arch::kArm64;
+#else
+#error "Unknown arch"
+#endif
+    auto partitioner = DevicePartitioner::Create(devfs_root_.duplicate(), arch,
+                                                 std::move(block_device));
+    if (!partitioner) {
+        ERROR("Unable to initialize a partitioner.\n");
+        completer.Reply(ZX_ERR_BAD_STATE);
+        return;
+    }
+
+    completer.Reply(partitioner->WipeFvm());
+}
+
+void Paver::InitializePartitionTables(zx::channel block_device,
+                                      InitializePartitionTablesCompleter::Sync completer) {
+    // Use global devfs if one wasn't injected via set_devfs_root.
+    if (!devfs_root_) {
+        devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
+    }
+#if defined(__x86_64__)
+    Arch arch = Arch::kX64;
+#elif defined(__aarch64__)
+    Arch arch = Arch::kArm64;
+#else
+#error "Unknown arch"
+#endif
+    auto partitioner = DevicePartitioner::Create(devfs_root_.duplicate(), arch,
+                                                 std::move(block_device));
+    if (!partitioner) {
+        ERROR("Unable to initialize a partitioner.\n");
+        completer.Reply(ZX_ERR_BAD_STATE);
+        return;
+    }
+
+    constexpr auto partition_type = Partition::kFuchsiaVolumeManager;
+    zx_status_t status;
+    fbl::unique_fd partition_fd;
+    if ((status = partitioner->FindPartition(partition_type, &partition_fd)) != ZX_OK) {
+        if (status != ZX_ERR_NOT_FOUND) {
+            ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
+            completer.Reply(status);
+            return;
+        }
+
+        LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
+            PartitionName(partition_type));
+
+        if ((status = partitioner->AddPartition(partition_type, &partition_fd)) != ZX_OK) {
+            ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
+            completer.Reply(status);
+            return;
+        }
+    }
+    partitioner_ = std::move(partitioner);
+    LOG("Successfully initialized gpt.\n");
+    completer.Reply(ZX_OK);
 }
 
 }  //  namespace paver

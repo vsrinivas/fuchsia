@@ -25,10 +25,13 @@ class BlockDevice {
   static void Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
                      fbl::unique_ptr<BlockDevice>* device);
 
+  static void Create(const fbl::unique_fd& devfs_root, const uint8_t* guid, uint64_t block_count,
+                     fbl::unique_ptr<BlockDevice>* device);
+
   ~BlockDevice() { ramdisk_destroy(client_); }
 
   // Does not transfer ownership of the file descriptor.
-  int fd() { return ramdisk_get_block_fd(client_); }
+  int fd() const { return ramdisk_get_block_fd(client_); }
 
  private:
   BlockDevice(ramdisk_client_t* client) : client_(client) {}

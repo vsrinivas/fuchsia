@@ -46,7 +46,11 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
                      WriteDataFileCompleter::Sync completer);
 
   // Wipes all volumes from the FVM partition.
-  void WipeVolumes(WipeVolumesCompleter::Sync completer);
+  void WipeVolumes(zx::channel gpt_block_device, WipeVolumesCompleter::Sync completer);
+
+  // Initializes GPT and add FVM entries on given block device.
+  void InitializePartitionTables(zx::channel gpt_block_device,
+                                 InitializePartitionTablesCompleter::Sync completer);
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
     ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;

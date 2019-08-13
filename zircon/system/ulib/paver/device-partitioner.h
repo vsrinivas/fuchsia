@@ -10,14 +10,15 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <gpt/gpt.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
+#include <optional>
 #include <utility>
+#include <vector>
 
 namespace paver {
 using gpt::GptDevice;
@@ -53,7 +54,10 @@ class DevicePartitioner {
  public:
   // Factory method which automatically returns the correct DevicePartitioner
   // implementation. Returns nullptr on failure.
-  static fbl::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, Arch arch);
+  // |block_device| is root block device whichs contains the logical partitions we wish to operate
+  // against. It's only meaningful for EFI and CROS devices which may have multiple storage devices.
+  static fbl::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, Arch arch,
+                                                   zx::channel block_device = zx::channel());
 
   virtual ~DevicePartitioner() = default;
 
@@ -86,7 +90,13 @@ class GptDevicePartitioner {
   using FilterCallback = fbl::Function<bool(const gpt_partition_t&)>;
 
   // Find and initialize a GPT based device.
+  //
+  // If block_device is provided, then search is skipped, and block_device is used
+  // directly. If it is not provided, we search for a device with a valid GPT,
+  // with an entry for an FVM. If multiple devices with valid GPT containing
+  // FVM entries are found, an error is returned.
   static zx_status_t InitializeGpt(fbl::unique_fd devfs_root, Arch arch,
+                                   std::optional<fbl::unique_fd> block_device,
                                    fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
 
   // Returns block info for a specified block device.
@@ -112,17 +122,23 @@ class GptDevicePartitioner {
 
   // Returns a file descriptor to a partition which can be paved,
   // if one exists.
-  zx_status_t FindPartition(FilterCallback filter, gpt_partition_t** out,
-                            fbl::unique_fd* out_fd) const;
-  zx_status_t FindPartition(FilterCallback filter, fbl::unique_fd* out_fd) const;
+  zx_status_t FindPartition(FilterCallback filter, fbl::unique_fd* out_fd,
+                            gpt_partition_t** out = nullptr) const;
 
   // Wipes a specified partition from the GPT, and overwrites first 8KiB with
   // nonsense.
   zx_status_t WipeFvm() const;
 
  private:
-  // Find and return the topological path of the GPT which we will pave.
-  static bool FindTargetGptPath(const fbl::unique_fd& devfs_root, std::string* out);
+  using GptDevices = std::vector<std::pair<std::string, fbl::unique_fd>>;
+  // Find all block devices which could contain a GPT.
+  static bool FindGptDevices(const fbl::unique_fd& devfs_root, GptDevices* out);
+
+  // Initializes GPT for a device which was explicitly provided. If |gpt_device| doesn't have a
+  // valid GPT, it will initialize it with a valid one.
+  static zx_status_t InitializeProvidedGptDevice(fbl::unique_fd devfs_root,
+                                                 fbl::unique_fd gpt_device,
+                                                 fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
 
   GptDevicePartitioner(fbl::unique_fd devfs_root, fbl::unique_fd fd, fbl::unique_ptr<GptDevice> gpt,
                        ::llcpp::fuchsia::hardware::block::BlockInfo block_info)
@@ -144,6 +160,7 @@ class GptDevicePartitioner {
 class EfiDevicePartitioner : public DevicePartitioner {
  public:
   static zx_status_t Initialize(fbl::unique_fd devfs_root, Arch arch,
+                                std::optional<fbl::unique_fd> block_device,
                                 fbl::unique_ptr<DevicePartitioner>* partitioner);
 
   bool UseSkipBlockInterface() const override { return false; }
@@ -168,6 +185,7 @@ class EfiDevicePartitioner : public DevicePartitioner {
 class CrosDevicePartitioner : public DevicePartitioner {
  public:
   static zx_status_t Initialize(fbl::unique_fd devfs_root, Arch arch,
+                                std::optional<fbl::unique_fd> block_device,
                                 fbl::unique_ptr<DevicePartitioner>* partitioner);
 
   bool UseSkipBlockInterface() const override { return false; }

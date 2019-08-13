@@ -20,6 +20,7 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
+#include <zircon/status.h>
 
 #include <cstdio>
 #include <utility>
@@ -43,16 +44,20 @@ void PrintUsage() {
   ERROR("  install-fvm        : Install a sparse FVM to the device\n");
   ERROR("  install-data-file  : Install a file to DATA (--path required)\n");
   ERROR("  wipe               : Remove the FVM partition\n");
+  ERROR("  init-partition-tables : Initialize block device with valid GPT and FVM\n");
   ERROR("Options:\n");
   ERROR("  --file <file>: Read from FILE instead of stdin\n");
   ERROR("  --force: Install partition even if inappropriate for the device\n");
   ERROR("  --path <path>: Install DATA file to path\n");
+  ERROR("  --block-device <path>: Block device to operate on. Only applies to wipe and "
+        "init-partition-tables\n");
 }
 
 // Refer to //zircon/system/fidl/fuchsia.paver/paver-fidl for a list of what
 // these commands translate to.
 enum class Command {
   kWipe,
+  kInitPartitionTables,
   kAsset,
   kBootloader,
   kDataFile,
@@ -65,6 +70,7 @@ struct Flags {
   ::llcpp::fuchsia::paver::Asset asset;
   fbl::unique_fd payload_fd;
   char* path = nullptr;
+  char* block_device = nullptr;
 };
 
 bool ParseFlags(int argc, char** argv, Flags* flags) {
@@ -119,6 +125,8 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     flags->cmd = Command::kFvm;
   } else if (!strcmp(argv[0], "wipe")) {
     flags->cmd = Command::kWipe;
+  } else if (!strcmp(argv[0], "init-partition-tables")) {
+    flags->cmd = Command::kInitPartitionTables;
   } else {
     ERROR("Invalid command: %s\n", argv[0]);
     return false;
@@ -146,6 +154,13 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
         return false;
       }
       flags->path = argv[0];
+    } else if (!strcmp(argv[0], "--block-device")) {
+      SHIFT_ARGS;
+      if (argc < 1) {
+        ERROR("'--block-device' argument requires a path\n");
+        return false;
+      }
+      flags->block_device = argv[0];
     } else if (!strcmp(argv[0], "--force")) {
       ERROR("Deprecated option \"--force\".");
     } else {
@@ -205,7 +220,6 @@ zx_status_t RealMain(Flags flags) {
   }
   ::llcpp::fuchsia::paver::Paver::SyncClient paver_client(std::move(paver_svc));
 
-  zx_status_t io_status = ZX_ERR_INTERNAL;
   switch (flags.cmd) {
     case Command::kFvm: {
       zx::channel client, server;
@@ -219,12 +233,48 @@ zx_status_t RealMain(Flags flags) {
       disk_pave::PayloadStreamer streamer(std::move(server), std::move(flags.payload_fd));
       loop.StartThread("payload-stream");
 
-      io_status = paver_client.WriteVolumes_Deprecated(std::move(client), &status);
-      return io_status == ZX_OK ? status : io_status;
+      auto result = paver_client.WriteVolumes(std::move(client));
+      return result.ok() ? result.value().status : result.status();
     }
-    case Command::kWipe:
-      io_status = paver_client.WipeVolumes_Deprecated(&status);
-      return io_status == ZX_OK ? status : io_status;
+    case Command::kWipe: {
+      zx::channel block_device, block_device_remote;
+      if (flags.block_device != nullptr) {
+        status = zx::channel::create(0, &block_device, &block_device_remote);
+        if (status != ZX_OK) {
+            ERROR("Unable create channel: %s\n", zx_status_get_string(status));
+            return status;
+        }
+        status = fdio_service_connect(flags.block_device, block_device_remote.release());
+        if (status != ZX_OK) {
+          ERROR("Unable to open block device: %s\n", flags.block_device);
+          PrintUsage();
+          block_device.reset();
+        }
+      }
+      auto result = paver_client.WipeVolumes(std::move(block_device));
+      return result.ok() ? result.value().status : result.status();
+    }
+    case Command::kInitPartitionTables: {
+      if (flags.block_device == nullptr) {
+        ERROR("init-partition-tables requires --block-device\n");
+        PrintUsage();
+        return ZX_ERR_INVALID_ARGS;
+      }
+      zx::channel block_device, block_device_remote;
+      status = zx::channel::create(0, &block_device, &block_device_remote);
+      if (status != ZX_OK) {
+          ERROR("Unable create channel: %s\n", zx_status_get_string(status));
+          return status;
+      }
+      status = fdio_service_connect(flags.block_device, block_device_remote.release());
+      if (status != ZX_OK) {
+        ERROR("Unable to open block device: %s\n", flags.block_device);
+        PrintUsage();
+        block_device.reset();
+      }
+      auto result = paver_client.InitializePartitionTables(std::move(block_device));
+      return result.ok() ? result.value().status : result.status();
+    }
     default:
       break;
   }
@@ -242,22 +292,26 @@ zx_status_t RealMain(Flags flags) {
         PrintUsage();
         return ZX_ERR_INVALID_ARGS;
       }
-      io_status = paver_client.WriteDataFile_Deprecated(
-          fidl::StringView(strlen(flags.path), flags.path), std::move(payload), &status);
+      auto result = paver_client.WriteDataFile(fidl::StringView(strlen(flags.path), flags.path),
+                                               std::move(payload));
+      status = result.ok() ? result.value().status : result.status();
       break;
     }
-    case Command::kBootloader:
-      io_status = paver_client.WriteBootloader_Deprecated(std::move(payload), &status);
+    case Command::kBootloader: {
+      auto result = paver_client.WriteBootloader(std::move(payload));
+      status = result.ok() ? result.value().status : result.status();
       break;
-    case Command::kAsset:
-      io_status = paver_client.WriteAsset_Deprecated(flags.configuration, flags.asset,
-                                                     std::move(payload), &status);
+    }
+    case Command::kAsset: {
+      auto result = paver_client.WriteAsset(flags.configuration, flags.asset, std::move(payload));
+      status = result.ok() ? result.value().status : result.status();
       break;
+    }
     default:
       return ZX_ERR_INTERNAL;
   }
 
-  return io_status == ZX_OK ? status : io_status;
+  return status;
 }
 
 }  // namespace

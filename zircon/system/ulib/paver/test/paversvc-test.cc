@@ -6,9 +6,11 @@
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fzl/fdio.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
 #include <lib/zx/vmo.h>
+#include <lib/fdio/directory.h>
 #include <zircon/hw/gpt.h>
 
 #include <optional>
@@ -22,6 +24,9 @@
 #include "test/test-utils.h"
 
 namespace {
+
+using devmgr_integration_test::IsolatedDevmgr;
+using devmgr_integration_test::RecursiveWaitForFile;
 
 constexpr fuchsia_hardware_nand_RamNandInfo
     kNandInfo =
@@ -164,6 +169,20 @@ class PaverServiceTest : public zxtest::Test {
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
   }
 
+  // Spawn an isolated devmgr without a skip-block device.
+  void SpawnIsolatedDevmgrBlock() {
+    devmgr_launcher::Args args;
+    args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+    args.driver_search_paths.push_back("/boot/driver");
+    args.use_system_svchost = true;
+    args.disable_block_watcher = true;
+    ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
+
+    fbl::unique_fd fd;
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());
+  }
+
   void CreatePayload(size_t num_blocks, ::llcpp::fuchsia::mem::Buffer* out) {
     zx::vmo vmo;
     fzl::VmoMapper mapper;
@@ -192,6 +211,7 @@ class PaverServiceTest : public zxtest::Test {
 
   void* provider_ctx_ = nullptr;
   fbl::unique_ptr<SkipBlockDevice> device_;
+  IsolatedDevmgr devmgr_;
   std::optional<::llcpp::fuchsia::paver::Paver::SyncClient> client_;
   async::Loop loop_;
 };
@@ -339,9 +359,45 @@ TEST_F(PaverServiceTest, WriteVolumes) {
 
 TEST_F(PaverServiceTest, WipeVolumes) {
   SpawnIsolatedDevmgr();
-  auto result = client_->WipeVolumes();
+  auto result = client_->WipeVolumes(zx::channel());
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
 }
+
+#if defined(__x86_64__)
+constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
+
+TEST_F(PaverServiceTest, InitializePartitionTables) {
+  ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgrBlock());
+  fbl::unique_ptr<BlockDevice> gpt_dev;
+  constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
+  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
+                                               &gpt_dev));
+
+  zx::channel gpt_chan;
+  ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
+
+  auto result = client_->InitializePartitionTables(std::move(gpt_chan));
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().status);
+}
+
+TEST_F(PaverServiceTest, InitializePartitionTablesMultipleDevices) {
+  ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgrBlock());
+  fbl::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
+  constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
+  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
+                                               &gpt_dev1));
+  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
+                                               &gpt_dev2));
+
+  zx::channel gpt_chan;
+  ASSERT_OK(fdio_fd_clone(gpt_dev1->fd(), gpt_chan.reset_and_get_address()));
+
+  auto result = client_->InitializePartitionTables(std::move(gpt_chan));
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().status);
+}
+#endif
 
 }  // namespace

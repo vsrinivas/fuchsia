@@ -9,6 +9,7 @@ fidl_library("fuchsia-paver") {
     "paver.fidl",
   ]
   public_deps = [
+    "$zx/system/fidl/fuchsia-hardware-block",
     "$zx/system/fidl/fuchsia-io",
     "$zx/system/fidl/fuchsia-mem",
   ]
