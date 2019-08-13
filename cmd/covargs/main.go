@@ -264,6 +264,17 @@ func process() error {
 				modSet[mod] = struct{}{}
 			}
 		}
+		// TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=34796): ideally this would
+		// be handled by llvm-profdata tool itself.
+		cmd := exec.Command(llvmProfdata, "show", entry.ProfileData)
+		if err := cmd.Run(); err != nil {
+			if _, ok := err.(*exec.ExitError); ok {
+				fmt.Fprintf(os.Stderr, "WARN: %q profile is corrupted\n", entry.ProfileData)
+				continue
+			} else {
+				return fmt.Errorf("llvm-profdata show %s failed: %v", entry.ProfileData, err)
+			}
+		}
 		covFiles = append(covFiles, entry.ProfileData)
 	}
 
