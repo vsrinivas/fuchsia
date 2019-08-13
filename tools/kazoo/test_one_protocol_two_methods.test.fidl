@@ -1,0 +1,16 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zz;
+
+using zx;
+
+[Transport="Syscall"]
+protocol Couple {
+    /// This does a single thing.
+    DoThing(int32 an_input) -> (zx.status status);
+
+    /// Does great stuff.
+    GetStuff(int32 an_input, int32 input2) -> (zx.status status);
+};

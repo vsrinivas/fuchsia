@@ -48,10 +48,13 @@ if (current_toolchain == host_toolchain) {
 
   test("kazoo_host_tests") {
     deps = [
+      ":generate_test_files",
       ":lib",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",
     ]
+
+    include_dirs = [ "$target_gen_dir" ]
 
     sources = [
       "asm_output_test.cc",
@@ -62,6 +65,48 @@ if (current_toolchain == host_toolchain) {
       "syscall_numbers_output_test.cc",
       "writer_test.cc",
     ]
+  }
+
+  compiled_action_foreach("test_files_fidl_to_json") {
+    tool = "//zircon/public/tool/fidlc"
+
+    args = [
+      "--json",
+      rebase_path("$target_gen_dir") + "/{{source_name_part}}.json",
+      "--files",
+      "{{source}}",
+    ]
+
+    outputs = [
+      "$target_gen_dir/{{source_name_part}}.json",
+    ]
+
+    sources = [
+      "test_no_methods.test.fidl",
+      "test_one_protocol_one_method.test.fidl",
+      "test_one_protocol_two_methods.test.fidl",
+      "test_one_protocol_two_methods_with_internal.test.fidl",
+    ]
+  }
+
+  action_foreach("generate_test_files") {
+    script = "fidl_to_h.py"
+
+    deps = [
+      ":test_files_fidl_to_json",
+    ]
+
+    args = [
+      "{{source}}",
+      rebase_path("$target_gen_dir") + "/test_ir_{{source_name_part}}.h",
+      "{{source_name_part}}",
+    ]
+
+    outputs = [
+      "$target_gen_dir/test_ir_{{source_name_part}}.h",
+    ]
+
+    sources = get_target_outputs(":test_files_fidl_to_json")
   }
 }
 

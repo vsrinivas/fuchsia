@@ -5,25 +5,26 @@
 #include "tools/kazoo/syscall_library.h"
 
 #include "gtest/gtest.h"
-#include "tools/kazoo/test_input_ir.h"
+#include "tools/kazoo/test_ir_test_no_methods.test.h"
+#include "tools/kazoo/test_ir_test_one_protocol_one_method.test.h"
 
 namespace {
 
 TEST(SyscallLibrary, LoaderSimpleEmpty) {
   SyscallLibrary library;
-  ASSERT_TRUE(SyscallLibraryLoader::FromJson(kOneProtocolNoMethods, &library));
-  EXPECT_EQ(library.name(), "zx");
+  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_no_methods, &library));
+  EXPECT_EQ(library.name(), "zz");
   EXPECT_TRUE(library.syscalls().empty());
 }
 
 TEST(SyscallLibrary, LoaderSingleMethod) {
   SyscallLibrary library;
-  ASSERT_TRUE(SyscallLibraryLoader::FromJson(kOneProtocolOneMethod, &library));
-  EXPECT_EQ(library.name(), "zx");
+  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_one_protocol_one_method, &library));
+  EXPECT_EQ(library.name(), "zz");
   ASSERT_EQ(library.syscalls().size(), 1u);
 
   const auto& sc = library.syscalls()[0];
-  EXPECT_EQ(sc->original_interface(), "zx/Single");
+  EXPECT_EQ(sc->original_interface(), "zz/Single");
   EXPECT_EQ(sc->original_name(), "DoThing");
   EXPECT_EQ(sc->category(), "single");
   EXPECT_EQ(sc->name(), "single_do_thing");

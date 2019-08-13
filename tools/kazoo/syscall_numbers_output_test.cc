@@ -5,13 +5,13 @@
 #include "gtest/gtest.h"
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/syscall_library.h"
-#include "tools/kazoo/test_input_ir.h"
+#include "tools/kazoo/test_ir_test_one_protocol_two_methods.test.h"
 
 namespace {
 
 TEST(SyscallNumbersOutput, Simple) {
   SyscallLibrary library;
-  ASSERT_TRUE(SyscallLibraryLoader::FromJson(kOneProtocolTwoMethods, &library));
+  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_one_protocol_two_methods, &library));
 
   StringWriter writer;
   ASSERT_TRUE(SyscallNumbersOutput(library, &writer));

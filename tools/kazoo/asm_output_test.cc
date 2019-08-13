@@ -5,13 +5,14 @@
 #include "gtest/gtest.h"
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/syscall_library.h"
-#include "tools/kazoo/test_input_ir.h"
+#include "tools/kazoo/test_ir_test_one_protocol_two_methods.test.h"
+#include "tools/kazoo/test_ir_test_one_protocol_two_methods_with_internal.test.h"
 
 namespace {
 
 TEST(AsmOutput, Simple) {
   SyscallLibrary library;
-  ASSERT_TRUE(SyscallLibraryLoader::FromJson(kOneProtocolTwoMethods, &library));
+  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_one_protocol_two_methods, &library));
 
   StringWriter writer;
   ASSERT_TRUE(AsmOutput(library, &writer));
@@ -31,7 +32,8 @@ m_syscall zx_couple_get_stuff 1 2 1
 
 TEST(AsmOutput, WithInternal) {
   SyscallLibrary library;
-  ASSERT_TRUE(SyscallLibraryLoader::FromJson(kOneProtocolTwoWithInternal, &library));
+  ASSERT_TRUE(
+      SyscallLibraryLoader::FromJson(k_test_one_protocol_two_methods_with_internal, &library));
 
   StringWriter writer;
   ASSERT_TRUE(AsmOutput(library, &writer));

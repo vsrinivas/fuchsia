@@ -5,13 +5,13 @@
 #include "gtest/gtest.h"
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/syscall_library.h"
-#include "tools/kazoo/test_input_ir.h"
+#include "tools/kazoo/test_ir_test_one_protocol_one_method.test.h"
 
 namespace {
 
 TEST(KernelBranchesOutput, Simple) {
   SyscallLibrary library;
-  ASSERT_TRUE(SyscallLibraryLoader::FromJson(kOneProtocolOneMethod, &library));
+  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_one_protocol_one_method, &library));
 
   StringWriter writer;
   ASSERT_TRUE(KernelBranchesOutput(library, &writer));
