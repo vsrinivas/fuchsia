@@ -13,7 +13,10 @@ use crate::oauth::{
     parse_response_without_refresh_token, parse_revocation_response, AccessToken, AuthCode,
     RefreshToken,
 };
-use crate::openid::{build_user_info_request, parse_user_info_response};
+use crate::openid::{
+    build_id_token_request, build_user_info_request, parse_id_token_response,
+    parse_user_info_response,
+};
 use crate::web::StandaloneWebFrame;
 use failure::Error;
 use fidl;
@@ -181,11 +184,19 @@ where
     /// interface.
     async fn get_app_id_token(
         &self,
-        _credential: String,
-        _audience: Option<String>,
+        credential: String,
+        audience: Option<String>,
     ) -> AuthProviderResult<AuthToken> {
-        // TODO(satsukiu): implement
-        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
+        // TODO(satsukiu): add a sanity check to disallow empty audience strings
+        // once callers stop passing empty string
+        if credential.is_empty() {
+            return Err(AuthProviderError::new(AuthProviderStatus::BadRequest));
+        }
+
+        let request = build_id_token_request(RefreshToken(credential), audience)?;
+        let (response_body, status) = self.http_client.request(request).await?;
+        let (id_token, expires_in) = parse_id_token_response(response_body, status)?;
+        Ok(AuthToken { token_type: TokenType::IdToken, token: id_token.0, expires_in })
     }
 
     /// Implementation of `GetAppFirebaseToken` method for the `AuthProvider`
@@ -806,10 +817,45 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_get_app_id_token() -> Result<(), Error> {
-        let auth_provider = get_auth_provider_proxy(None, None);
+    async fn test_get_app_id_token_success() -> Result<(), Error> {
+        let http_result = "{\"id_token\": \"test-id-token\", \"expires_in\": 3600}";
+        let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::OK);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+
+        let (status, result_token) = auth_provider.get_app_id_token("credential", None).await?;
+        assert_eq!(status, AuthProviderStatus::Ok);
+        assert_eq!(
+            result_token.unwrap(),
+            Box::new(AuthToken {
+                token_type: TokenType::IdToken,
+                token: "test-id-token".to_string(),
+                expires_in: 3600,
+            })
+        );
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_app_id_token_failures() -> Result<(), Error> {
+        // Invalid request
+        let mock_http = TestHttpClient::with_error(AuthProviderStatus::InternalError);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+        let result = auth_provider.get_app_id_token("", None).await?;
+        assert_eq!(result.0, AuthProviderStatus::BadRequest);
+
+        // Error response
+        let http_result = "{\"error\": \"invalid_client\"}";
+        let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::BAD_REQUEST);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
         let result = auth_provider.get_app_id_token("credential", None).await?;
-        assert_eq!(result.0, AuthProviderStatus::InternalError);
+        assert_eq!(result.0, AuthProviderStatus::OauthServerError);
+
+        // Network error
+        let mock_http = TestHttpClient::with_error(AuthProviderStatus::NetworkError);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+        let result = auth_provider.get_app_id_token("credential", None).await?;
+        assert_eq!(result.0, AuthProviderStatus::NetworkError);
+
         Ok(())
     }
 
