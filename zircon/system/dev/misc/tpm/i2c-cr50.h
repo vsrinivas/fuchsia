@@ -4,14 +4,16 @@
 
 #pragma once
 
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/handle.h>
+#include <stdint.h>
+#include <zircon/assert.h>
+#include <zircon/types.h>
+
+#include <memory>
+
 #include <ddk/device.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
-#include <stdint.h>
-#include <lib/zx/handle.h>
-#include <zircon/assert.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
 
 #include "tpm.h"
 
@@ -22,7 +24,7 @@ class I2cCr50Interface : public HardwareInterface {
   // Creates a new I2cCr50Interface from the given |i2c_dev|.  This will issue an
   // I2C transaction to determine support.
   static zx_status_t Create(zx_device_t* i2c_dev, zx::handle irq,
-                            fbl::unique_ptr<I2cCr50Interface>* out);
+                            std::unique_ptr<I2cCr50Interface>* out);
   virtual ~I2cCr50Interface();
 
   zx_status_t Validate() override;

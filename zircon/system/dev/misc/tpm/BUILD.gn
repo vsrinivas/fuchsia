@@ -9,17 +9,20 @@ driver("tpm") {
     "i2c-cr50.cc",
     "tpm-commands.cc",
     "tpm-proto.cc",
+    "tpm-tests.cc",
     "tpm.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver-unit-test",
     "$zx/system/ulib/explicit-memory",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

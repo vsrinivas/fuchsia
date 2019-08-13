@@ -4,13 +4,15 @@
 
 #include "i2c-cr50.h"
 
+#include <lib/zx/time.h>
+#include <string.h>
+
+#include <memory>
+#include <utility>
+
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <string.h>
-#include <lib/zx/time.h>
-
-#include <utility>
 
 namespace tpm {
 
@@ -24,9 +26,9 @@ I2cCr50Interface::I2cCr50Interface(zx_device_t* i2c_dev, zx::handle irq)
 I2cCr50Interface::~I2cCr50Interface() {}
 
 zx_status_t I2cCr50Interface::Create(zx_device_t* i2c_dev, zx::handle irq,
-                                     fbl::unique_ptr<I2cCr50Interface>* out) {
+                                     std::unique_ptr<I2cCr50Interface>* out) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<I2cCr50Interface> iface(new (&ac) I2cCr50Interface(i2c_dev, std::move(irq)));
+  std::unique_ptr<I2cCr50Interface> iface(new (&ac) I2cCr50Interface(i2c_dev, std::move(irq)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -184,7 +186,7 @@ zx_status_t I2cCr50Interface::RegisterWrite(const I2cRegister<uint8_t[]>& reg, c
 
   // TODO(teisenbe): Don't allocate here
   size_t msg_len = len + 1;
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[msg_len]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[msg_len]);
   buf[0] = reg.addr;
   memcpy(buf.get() + 1, val, len);
 

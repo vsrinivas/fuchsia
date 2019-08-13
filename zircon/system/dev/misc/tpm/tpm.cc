@@ -10,8 +10,19 @@
  *   already done so.
  */
 
+#include "tpm.h"
+
 #include <assert.h>
 #include <endian.h>
+#include <lib/driver-unit-test/utils.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
+#include <zircon/types.h>
+
+#include <utility>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -22,18 +33,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/unique_free_ptr.h>
-#include <zircon/types.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <threads.h>
-
-#include <utility>
 
 #include "i2c-cr50.h"
-#include "tpm.h"
 #include "tpm-commands.h"
 
 // This is arbitrary, we just want to limit the size of the response buffer
@@ -44,7 +45,7 @@ namespace tpm {
 
 // implement tpm protocol:
 
-static zx_status_t GetRandom(Device* dev, void* buf, uint16_t count, size_t* actual) {
+zx_status_t Device::GetRandom(void* buf, uint16_t count, size_t* actual) {
   static_assert(MAX_RAND_BYTES <= UINT32_MAX, "");
   if (count > MAX_RAND_BYTES) {
     count = MAX_RAND_BYTES;
@@ -52,19 +53,17 @@ static zx_status_t GetRandom(Device* dev, void* buf, uint16_t count, size_t* act
 
   struct tpm_getrandom_cmd cmd;
   uint32_t resp_len = tpm_init_getrandom(&cmd, count);
-  fbl::unique_free_ptr<tpm_getrandom_resp> resp(
-      reinterpret_cast<tpm_getrandom_resp*>(malloc(resp_len)));
+  std::unique_ptr<uint8_t[]> resp_buf(new uint8_t[resp_len]);
   size_t actual_read;
   uint16_t bytes_returned;
-  if (!resp) {
-    return ZX_ERR_NO_MEMORY;
-  }
 
   zx_status_t status =
-      dev->ExecuteCmd(0, (uint8_t*)&cmd, sizeof(cmd), (uint8_t*)resp.get(), resp_len, &actual_read);
+      ExecuteCmd(0, (uint8_t*)&cmd, sizeof(cmd), resp_buf.get(), resp_len, &actual_read);
   if (status != ZX_OK) {
     return status;
   }
+
+  auto resp = reinterpret_cast<tpm_getrandom_resp*>(resp_buf.get());
   if (actual_read < sizeof(*resp) || actual_read != betoh32(resp->hdr.total_len)) {
     return ZX_ERR_BAD_STATE;
   }
@@ -98,7 +97,7 @@ zx_status_t Device::ShutdownLocked(uint16_t type) {
   return ZX_OK;
 }
 
-zx_status_t Device::Create(void* ctx, zx_device_t* parent) {
+zx_status_t Device::Create(void* ctx, zx_device_t* parent, std::unique_ptr<Device>* out) {
   zx::handle irq;
   i2c_protocol_t i2c;
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
@@ -113,15 +112,20 @@ zx_status_t Device::Create(void* ctx, zx_device_t* parent) {
     zx_handle_t ignored __UNUSED = irq.release();
   }
 
-  fbl::unique_ptr<I2cCr50Interface> i2c_iface;
+  std::unique_ptr<I2cCr50Interface> i2c_iface;
   status = I2cCr50Interface::Create(parent, std::move(irq), &i2c_iface);
   if (status != ZX_OK) {
     return status;
   }
 
-  fbl::AllocChecker ac;
-  fbl::unique_ptr<Device> device(new (&ac) Device(parent, std::move(i2c_iface)));
-  if (!ac.check()) {
+  *out = std::make_unique<Device>(parent, std::move(i2c_iface));
+  return ZX_OK;
+}
+
+zx_status_t Device::CreateAndBind(void* ctx, zx_device_t* parent) {
+  std::unique_ptr<Device> device;
+  zx_status_t status = Create(ctx, parent, &device);
+  if (status != ZX_OK) {
     return status;
   }
 
@@ -151,6 +155,14 @@ zx_status_t Device::ExecuteCmdLocked(Locality loc, const uint8_t* cmd, size_t le
 
 void Device::DdkRelease() { delete this; }
 
+void Device::DdkUnbind() {
+  {
+    fbl::AutoLock guard(&lock_);
+    ReleaseLocalityLocked(0);
+  }
+  DdkRemove();
+}
+
 zx_status_t Device::DdkSuspend(uint32_t flags) {
   fbl::AutoLock guard(&lock_);
 
@@ -177,7 +189,7 @@ zx_status_t Device::Bind() {
   }
 
   thrd_t thread;
-  int ret = thrd_create_with_name(&thread, Init, this, "tpm:slow_bind");
+  int ret = thrd_create_with_name(&thread, InitThread, this, "tpm:slow_bind");
   if (ret != thrd_success) {
     DdkRemove();
     return ZX_ERR_INTERNAL;
@@ -187,11 +199,6 @@ zx_status_t Device::Bind() {
 }
 
 zx_status_t Device::Init() {
-  uint8_t buf[32] = {0};
-  size_t bytes_read;
-
-  auto cleanup = fbl::MakeAutoCall([&] { DdkRemove(); });
-
   zx_status_t status = iface_->Validate();
   if (status != ZX_OK) {
     zxlogf(TRACE, "tpm: did not pass driver validation\n");
@@ -217,12 +224,25 @@ zx_status_t Device::Init() {
       return status;
     }
   }
+  return ZX_OK;
+}
+
+zx_status_t Device::InitThread() {
+  uint8_t buf[32] = {0};
+  size_t bytes_read;
+
+  auto cleanup = fbl::MakeAutoCall([&] { DdkRemove(); });
+
+  zx_status_t status = Init();
+  if (status != ZX_OK) {
+    return status;
+  }
 
   DdkMakeVisible();
 
   // Make a best-effort attempt to give the kernel some more entropy
   // TODO(security): Perform a more recurring seeding
-  status = tpm::GetRandom(this, buf, static_cast<uint16_t>(sizeof(buf)), &bytes_read);
+  status = GetRandom(buf, static_cast<uint16_t>(sizeof(buf)), &bytes_read);
   if (status == ZX_OK) {
     zx_cprng_add_entropy(buf, bytes_read);
     mandatory_memset(buf, 0, sizeof(buf));
@@ -234,7 +254,11 @@ zx_status_t Device::Init() {
   return ZX_OK;
 }
 
-Device::Device(zx_device_t* parent, fbl::unique_ptr<HardwareInterface> iface)
+bool Device::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
+  return driver_unit_test::RunZxTests("TpmTests", parent, channel);
+}
+
+Device::Device(zx_device_t* parent, std::unique_ptr<HardwareInterface> iface)
     : DeviceType(parent), iface_(std::move(iface)) {
   ddk_proto_id_ = ZX_PROTOCOL_TPM;
 }
@@ -244,7 +268,8 @@ Device::~Device() {}
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = tpm::Device::Create;
+  ops.bind = tpm::Device::CreateAndBind;
+  ops.run_unit_tests = tpm::Device::RunUnitTests;
   return ops;
 }();
 

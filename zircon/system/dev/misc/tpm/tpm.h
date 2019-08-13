@@ -4,18 +4,20 @@
 
 #pragma once
 
-#include <ddk/device.h>
-#include <zircon/types.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/types.h>
+
+#include <ddk/device.h>
 
 #if __cplusplus
+
+#include <memory>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 namespace tpm {
 
@@ -52,33 +54,43 @@ class HardwareInterface {
 };
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::Suspendable>;
+using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::Suspendable>;
 
 class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TPM> {
  public:
-  Device(zx_device_t* parent, fbl::unique_ptr<HardwareInterface> iface);
+  Device(zx_device_t* parent, std::unique_ptr<HardwareInterface> iface);
   ~Device();
 
-  static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent, std::unique_ptr<Device>* out);
+  static zx_status_t CreateAndBind(void* ctx, zx_device_t* parent);
+  static bool RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel);
 
   // Send the given command packet to the TPM and wait for a response.
   // |actual| is the number of bytes written into |resp|.
   zx_status_t ExecuteCmd(Locality loc, const uint8_t* cmd, size_t len, uint8_t* resp,
                          size_t max_len, size_t* actual);
 
+  // Execute the GetRandom TPM command.
+  zx_status_t GetRandom(void* buf, uint16_t count, size_t* actual);
+
   // DDK methods
   void DdkRelease();
+  void DdkUnbind();
   zx_status_t DdkSuspend(uint32_t flags);
 
+  zx_status_t Init();
+
+ private:
   // Register this instance with devmgr and launch the deferred
   // initialization.
   zx_status_t Bind();
 
- private:
   // Deferred initialization of the device via a thread.  Once complete, this
   // marks the device as visible.
-  static zx_status_t Init(void* device) { return reinterpret_cast<Device*>(device)->Init(); }
-  zx_status_t Init();
+  static zx_status_t InitThread(void* device) {
+    return reinterpret_cast<Device*>(device)->InitThread();
+  }
+  zx_status_t InitThread();
 
   // Send the given command packet to the TPM and wait for a response.
   // |actual| is the number of bytes written into |resp|.
@@ -103,7 +115,7 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TPM> {
   zx_status_t ShutdownLocked(uint16_t type) TA_REQ(lock_);
 
   fbl::Mutex lock_;
-  const fbl::unique_ptr<HardwareInterface> iface_;
+  const std::unique_ptr<HardwareInterface> iface_;
 };
 
 enum tpm_result {
