@@ -84,12 +84,6 @@ bool IsIdentifierBody(char c) {
   }
 }
 
-// IsIdentifierValid disallows identifiers (escaped, and unescaped) from
-// starting or ending with underscore.
-bool IsIdentifierValid(std::string_view source_data) {
-  return source_data[0] != '_' && source_data[source_data.size() - 1] != '_';
-}
-
 bool IsNumericLiteralBody(char c) {
   switch (c) {
     case '0':
@@ -173,13 +167,6 @@ Token Lexer::LexIdentifier() {
   std::string_view previous(previous_end_, token_start_ - previous_end_);
   SourceLocation previous_end(previous, source_file_);
   std::string_view identifier_data = Reset(Token::Kind::kIdentifier);
-  if (!IsIdentifierValid(identifier_data)) {
-    SourceLocation location(std::string_view(token_start_, token_size_), source_file_);
-    std::string msg("invalid identifier '");
-    msg.append(identifier_data);
-    msg.append("'");
-    error_reporter_->ReportError(&location, msg);
-  }
   auto subkind = Token::Subkind::kNone;
   auto lookup = keyword_table_.find(identifier_data);
   if (lookup != keyword_table_.end())

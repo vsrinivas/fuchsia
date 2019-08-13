@@ -50,6 +50,15 @@ bool IsValidLibraryComponentName(const std::string& component) {
   return std::regex_match(component, kPattern);
 }
 
+// IsIdentifierValid disallows identifiers (escaped, and unescaped) from
+// starting or ending with underscore.
+bool IsIdentifierValid(const std::string& identifier) {
+  // this pattern comes from the FIDL language spec, available here:
+  // https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/languages/fidl/reference/language.md#identifiers
+  static const std::regex kPattern("^[A-Za-z0-9]([A-Za-z0-9_]*[A-Za-z0-9])?$");
+  return std::regex_match(identifier, kPattern);
+}
+
 }  // namespace
 
 Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
@@ -110,9 +119,12 @@ decltype(nullptr) Parser::Fail(Token token, std::string_view message) {
 
 std::unique_ptr<raw::Identifier> Parser::ParseIdentifier(bool is_discarded) {
   ASTScope scope(this, is_discarded);
-  ConsumeToken(OfKind(Token::Kind::kIdentifier));
+  Token token = ConsumeToken(OfKind(Token::Kind::kIdentifier));
   if (!Ok())
     return Fail();
+  std::string identifier(token.data());
+  if (!IsIdentifierValid(identifier))
+    return Fail("invalid identifier '" + identifier + "'");
 
   return std::make_unique<raw::Identifier>(scope.GetSourceElement());
 }
