@@ -79,6 +79,7 @@ This list tracks the reasons for which we disabled in particular [checks]:
  - `misc-non-private-member-variables-in-classes` - We don't allow classes/structs
    with a mix of private and public members, but all public is fine.
  - `modernize-deprecated-headers` - Fuchsia uses old-style C headers
+ - `modernize-use-nodiscard` - Not generally used in the Fuchsia codebase
  - `modernize-raw-string-literal` - the check was suggesting to convert `\xFF`
     literals, which we'd rather keep in the escaped form.
  - `modernize-return-braced-init-list` - concerns about readability of returning

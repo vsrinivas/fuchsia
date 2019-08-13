@@ -9,6 +9,7 @@ Checks: >
   -misc-noexcept*,
   modernize-*,
   -modernize-deprecated-headers,
+  -modernize-use-nodiscard,
   -modernize-raw-string-literal,
   -modernize-return-braced-init-list,
   -modernize-use-equals-delete,
