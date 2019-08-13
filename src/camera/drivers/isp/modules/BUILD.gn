@@ -30,6 +30,30 @@ source_set("modules") {
   ]
 }
 
+source_set("sensor-module") {
+  sources = [
+    "sensor.cc",
+  ]
+
+  deps = [
+    "//zircon/public/lib/mmio",
+  ]
+
+  public_deps = [
+    "//zircon/public/banjo/ddk.protocol.camerasensor",
+    "//zircon/public/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/syslog",
+    "//zircon/public/lib/zircon-internal",
+  ]
+}
+
 source_set("isp-blocks") {
   sources = [
     "isp-block-registers.h",
