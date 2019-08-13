@@ -283,6 +283,13 @@ mod cpp {
     );
 
     codegen_test!(
+        mock_pass_callback,
+        CppBackend,
+        ["../zx.banjo", "banjo/pass-callback.test.banjo"],
+        "cpp/mock-pass-callback.h",
+        CppSubtype::Mock
+    );
+    codegen_test!(
         mock_protocol_array,
         CppBackend,
         ["../zx.banjo", "banjo/protocol-array.test.banjo"],

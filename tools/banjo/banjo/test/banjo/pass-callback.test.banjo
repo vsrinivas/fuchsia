@@ -1,0 +1,22 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.pass.callback;
+using zx;
+
+enum Action : uint32 {
+    START = 0x1;
+    STOP = 0x2;
+};
+
+[Layout = "ddk-callback"]
+protocol ActionNotify {
+    Callback(Point p, Direction d) -> ();
+};
+
+[Layout = "ddk-protocol"]
+protocol ActionProtocol {
+    RegisterCallback(uint32 id, ActionNotify cb) -> (zx.status s);
+    GetCallback(uint32 id) -> (zx.status s, ActionNotify cb);
+};

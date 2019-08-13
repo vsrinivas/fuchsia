@@ -1166,13 +1166,15 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                         ast::Ty::Identifier { id, .. } => {
                             if id.is_base_type() {
                                 to_c_name(name)
-                            } else {
+                            } else if not_callback(ast, id) {
                                 match ast.id_to_type(id) {
                                     ast::Ty::Struct | ast::Ty::Union => {
                                         format!("*{}", to_c_name(name))
                                     }
                                     _ => to_c_name(name),
                                 }
+                            } else {
+                                format!("*{}", to_c_name(name))
                             }
                         }
                         _ => to_c_name(name),
