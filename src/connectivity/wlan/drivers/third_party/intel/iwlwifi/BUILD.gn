@@ -24,6 +24,7 @@ source_set("core") {
     "fw/paging.c",
     "fw/smem.c",
     "ieee80211.h",
+    "inspect.cc",
     "iwl-config.h",
     "iwl-csr.h",
     "iwl-drv.c",
