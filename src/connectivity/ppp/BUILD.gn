@@ -7,5 +7,6 @@ group("tests") {
   deps = [
     "//src/connectivity/ppp/lib:tests",
     "//src/connectivity/ppp/lib/ppp_packet:ppp-packet-tests",
+    "//src/connectivity/ppp/lib/ppp_protocol:ppp-protocol-tests",
   ]
 }
