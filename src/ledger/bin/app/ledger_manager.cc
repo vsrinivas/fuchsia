@@ -20,7 +20,6 @@
 
 #include "src/ledger/bin/app/active_page_manager_container.h"
 #include "src/ledger/bin/app/constants.h"
-#include "src/ledger/bin/app/page_connection_notifier.h"
 #include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"

@@ -17,7 +17,6 @@
 #include "src/ledger/bin/app/ledger_impl.h"
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 #include "src/ledger/bin/app/page_availability_manager.h"
-#include "src/ledger/bin/app/page_connection_notifier.h"
 #include "src/ledger/bin/app/page_impl.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/app/types.h"

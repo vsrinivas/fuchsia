@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 
 #include <string>
+#include <utility>
 
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
@@ -20,10 +21,11 @@ namespace ledger {
 ActivePageManagerContainer::ActivePageManagerContainer(
     std::string ledger_name, storage::PageId page_id,
     std::vector<PageUsageListener*> page_usage_listeners)
-    : page_id_(page_id),
-      connection_notifier_(std::move(ledger_name), std::move(page_id),
-                           std::move(page_usage_listeners)) {
-  connection_notifier_.set_on_empty([this] { CheckEmpty(); });
+    : ledger_name_(std::move(ledger_name)),
+      page_id_(std::move(page_id)),
+      page_usage_listeners_(std::move(page_usage_listeners)),
+      weak_factory_(this) {
+  token_manager_.set_on_empty([this] { OnInternallyUnused(); });
 }
 
 ActivePageManagerContainer::~ActivePageManagerContainer() = default;
@@ -34,7 +36,12 @@ void ActivePageManagerContainer::set_on_empty(fit::closure on_empty_callback) {
 
 void ActivePageManagerContainer::BindPage(fidl::InterfaceRequest<Page> page_request,
                                           fit::function<void(Status)> callback) {
-  connection_notifier_.RegisterExternalRequest();
+  if (!has_external_requests_) {
+    has_external_requests_ = true;
+    for (const auto& page_usage_listener : page_usage_listeners_) {
+      page_usage_listener->OnExternallyUsed(ledger_name_, page_id_);
+    }
+  }
 
   if (status_ != Status::OK) {
     callback(status_);
@@ -56,7 +63,12 @@ void ActivePageManagerContainer::NewInternalRequest(
   }
 
   if (active_page_manager_) {
-    callback(status_, connection_notifier_.NewInternalRequestToken(), active_page_manager_.get());
+    if (token_manager_.IsEmpty()) {
+      for (PageUsageListener* page_usage_listener : page_usage_listeners_) {
+        page_usage_listener->OnInternallyUsed(ledger_name_, page_id_);
+      }
+    }
+    callback(status_, token_manager_.CreateToken(), active_page_manager_.get());
     return;
   }
 
@@ -65,11 +77,11 @@ void ActivePageManagerContainer::NewInternalRequest(
 
 void ActivePageManagerContainer::SetActivePageManager(
     Status status, std::unique_ptr<ActivePageManager> active_page_manager) {
-  auto token = connection_notifier_.NewInternalRequestToken();
-  TRACE_DURATION("ledger", "page_manager_container_set_page_manager");
+  TRACE_DURATION("ledger", "active_page_manager_container_set_page_manager");
 
   FXL_DCHECK(!active_page_manager_is_set_);
   FXL_DCHECK((status != Status::OK) == !active_page_manager);
+  FXL_DCHECK(token_manager_.IsEmpty());
   status_ = status;
   active_page_manager_ = std::move(active_page_manager);
   active_page_manager_is_set_ = true;
@@ -83,33 +95,71 @@ void ActivePageManagerContainer::SetActivePageManager(
   }
   page_impls_.clear();
 
-  for (auto& callback : internal_request_callbacks_) {
+  if (!internal_request_callbacks_.empty()) {
     if (!active_page_manager_) {
-      callback(status_, fit::defer<fit::closure>([] {}), nullptr);
-      continue;
+      for (auto& internal_request_callback : internal_request_callbacks_) {
+        internal_request_callback(status_, ExpiringToken(), nullptr);
+      }
+    } else {
+      for (PageUsageListener* page_usage_listener : page_usage_listeners_) {
+        page_usage_listener->OnInternallyUsed(ledger_name_, page_id_);
+      }
+      for (auto& internal_request_callback : internal_request_callbacks_) {
+        internal_request_callback(status_, token_manager_.CreateToken(),
+                                  active_page_manager_.get());
+      }
     }
-    callback(status_, connection_notifier_.NewInternalRequestToken(), active_page_manager_.get());
+    internal_request_callbacks_.clear();
   }
-  internal_request_callbacks_.clear();
 
   if (active_page_manager_) {
     active_page_manager_->set_on_empty(
-        [this] { connection_notifier_.UnregisterExternalRequests(); });
+        [this] { OnExternallyUnused(/*conditionally_check_empty=*/true); });
   } else {
-    connection_notifier_.UnregisterExternalRequests();
+    OnExternallyUnused(/*conditionally_check_empty=*/false);
   }
-  // |CheckEmpty| called when |token| goes out of scope.
 }
 
 bool ActivePageManagerContainer::PageConnectionIsOpen() {
   return (active_page_manager_ && !active_page_manager_->IsEmpty()) || !page_impls_.empty();
 }
 
+void ActivePageManagerContainer::OnExternallyUnused(bool conditionally_check_empty) {
+  if (has_external_requests_) {
+    auto weak_this = weak_factory_.GetWeakPtr();
+    for (PageUsageListener* page_usage_listener : page_usage_listeners_) {
+      // This might delete the ActivePageManagerContainer object.
+      page_usage_listener->OnExternallyUnused(ledger_name_, page_id_);
+      if (!weak_this) {
+        return;
+      }
+    }
+    has_external_requests_ = false;
+    if (conditionally_check_empty) {
+      CheckEmpty();
+      return;
+    }
+  }
+  CheckEmpty();
+}
+
+void ActivePageManagerContainer::OnInternallyUnused() {
+  auto weak_this = weak_factory_.GetWeakPtr();
+  for (PageUsageListener* page_usage_listener : page_usage_listeners_) {
+    // This might delete the ActivePageManagerContainer object.
+    page_usage_listener->OnInternallyUnused(ledger_name_, page_id_);
+    if (!weak_this) {
+      return;
+    }
+  }
+  CheckEmpty();
+}
+
 void ActivePageManagerContainer::CheckEmpty() {
   // The ActivePageManagerContainer is not considered empty until
   // |SetActivePageManager| has been called.
-  if (on_empty_callback_ && connection_notifier_.IsEmpty() && active_page_manager_is_set_ &&
-      (!active_page_manager_ || active_page_manager_->IsEmpty())) {
+  if (on_empty_callback_ && !has_external_requests_ && token_manager_.IsEmpty() &&
+      active_page_manager_is_set_ && (!active_page_manager_ || active_page_manager_->IsEmpty())) {
     on_empty_callback_();
   }
 }

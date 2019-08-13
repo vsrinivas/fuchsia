@@ -11,9 +11,9 @@
 #include <string>
 
 #include "src/ledger/bin/app/active_page_manager.h"
-#include "src/ledger/bin/app/page_connection_notifier.h"
 #include "src/ledger/bin/app/page_impl.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
+#include "src/ledger/bin/app/token_manager.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/public/types.h"
 
@@ -45,11 +45,32 @@ class ActivePageManagerContainer {
   bool PageConnectionIsOpen();
 
  private:
+  // If |has_external_requests_| is true when called, calls the |OnExternallyUnused| method of each
+  // |PageUsageListener| in |page_usage_listeners_|. If |conditionally_check_empty| is true, calls
+  // |CheckEmpty| after calling the |PageUsageListeners| only if |has_external_requests_| was true
+  // when called, otherwise always calls |CheckEmpty| after (possibly) calling the
+  // |PageUsageListeners|. Any given call to a |PageUsageListener|'s |OnExternallyUnused| method may
+  // result in this |ActivePageManagerContainer| being deleted; if this |ActivePageManagerContainer|
+  // is deleted during any such call this method returns early without calling
+  // appearing-later-in-the-|page_usage_listeners_|-vector |PageUsageListeners| or calling
+  // |CheckEmpty|.
+  void OnExternallyUnused(bool conditionally_check_empty);
+
+  // Calls the |OnInternallyUnused| method of each |PageUsageListener| in |page_usage_listeners_|
+  // and then calls |CheckEmpty|. Any given call to a |PageUsageListener|'s |OnInternallyUnused|
+  // method may result in this |ActivePageManagerContainer| being deleted; if this
+  // |ActivePageManagerContainer| is deleted during any such call this method returns early without
+  // calling appearing-later-in-the-|page_usage_listeners_|-vector |PageUsageListeners| or calling
+  // |CheckEmpty|.
+  void OnInternallyUnused();
+
   // Checks whether this container is empty, and calls the |on_empty_callback_|
   // if it is.
   void CheckEmpty();
 
+  const std::string ledger_name_;
   const storage::PageId page_id_;
+  const std::vector<PageUsageListener*> page_usage_listeners_;
 
   std::unique_ptr<ActivePageManager> active_page_manager_;
   // |status_| holds the status given to |SetActivePageManager|. If
@@ -60,7 +81,11 @@ class ActivePageManagerContainer {
   // |active_page_manager_| may still be null.
   bool active_page_manager_is_set_ = false;
 
-  PageConnectionNotifier connection_notifier_;
+  // Stores whether the page is currently opened by an external request.
+  bool has_external_requests_ = false;
+
+  // Manages internal requests for the page.
+  TokenManager token_manager_;
   // page_impls_ is only populated before active_page_manager_ is set. Once the
   // ActivePageManager is created and assigned to active_page_manager_, the
   // PageImpls stored in page_impls_ are handed off to that ActivePageManager
@@ -69,6 +94,9 @@ class ActivePageManagerContainer {
   std::vector<fit::function<void(Status, ExpiringToken, ActivePageManager*)>>
       internal_request_callbacks_;
   fit::closure on_empty_callback_;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<ActivePageManagerContainer> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ActivePageManagerContainer);
 };
