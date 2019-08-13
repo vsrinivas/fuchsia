@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/pretty_std_string.h"
+#include "src/developer/debug/zxdb/expr/pretty_tree.h"
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 #include "src/lib/fxl/logging.h"
 
@@ -125,6 +126,18 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
                     std::make_unique<PrettyPointer>("__ptr_"));
   cpp_.emplace_back(InternalGlob("std::__2::weak_ptr<*>"),
                     std::make_unique<PrettyPointer>("__ptr_"));
+
+  // Trees (std::set and std::map).
+  cpp_.emplace_back(InternalGlob("std::__2::set<*>"), std::make_unique<PrettyTree>("std::set"));
+  cpp_.emplace_back(InternalGlob("std::__2::map<*>"), std::make_unique<PrettyTree>("std::map"));
+  cpp_.emplace_back(InternalGlob("std::__2::__tree_iterator<*>"),
+                    std::make_unique<PrettyTreeIterator>());
+  cpp_.emplace_back(InternalGlob("std::__2::__tree_const_iterator<*>"),
+                    std::make_unique<PrettyTreeIterator>());
+  cpp_.emplace_back(InternalGlob("std::__2::__map_iterator<*>"),
+                    std::make_unique<PrettyMapIterator>());
+  cpp_.emplace_back(InternalGlob("std::__2::__map_const_iterator<*>"),
+                    std::make_unique<PrettyMapIterator>());
 }
 
 void PrettyTypeManager::AddDefaultRustPrettyTypes() {

@@ -144,7 +144,7 @@ VisitResult FindPerIndexNode(const FindNameOptions& options, const ModuleSymbols
   if (!prefix_walker.WalkInto(looking_for_scope))
     return VisitResult::kContinue;
 
-  // Need to separate out prefix so we can take advantage of the template canonization of the
+  // Need to separate out prefix so we can take advantage of the template canonicalization of the
   // IndexWalker in the exact match case. This means that we can't currently do prefix matches of
   // templates that are canonicalized differently than DWARF represents them.
   if (options.how == FindNameOptions::kPrefix) {

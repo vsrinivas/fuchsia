@@ -48,6 +48,8 @@ static_library("expr") {
     "parsed_identifier.h",
     "pretty_std_string.cc",
     "pretty_std_string.h",
+    "pretty_tree.cc",
+    "pretty_tree.h",
     "pretty_type.cc",
     "pretty_type.h",
     "pretty_type_manager.cc",
