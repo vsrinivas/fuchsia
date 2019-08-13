@@ -96,6 +96,7 @@ dart_library("ermine_library") {
     "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.power",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",

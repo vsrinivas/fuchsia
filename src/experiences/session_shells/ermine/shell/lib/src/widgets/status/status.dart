@@ -54,7 +54,7 @@ class Status extends StatelessWidget {
             children: [
               // Buttons
               Container(
-                height: 43,
+                height: 30,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: <Widget>[
@@ -317,6 +317,15 @@ class Status extends StatelessWidget {
                   rowTitle: _packageTitleText('MEMORY'),
                   rowContent: StatusProgressBarVisualizer(
                     model: model.memoryModel,
+                    textAlignment: TextAlign.right,
+                    textStyle: _statusTextStyle,
+                  )),
+              // Battery
+              _RowItem(
+                  height: _listItemHeight,
+                  rowTitle: _packageTitleText('BATT'),
+                  rowContent: StatusProgressBarVisualizer(
+                    model: model.batteryModel,
                     textAlignment: TextAlign.right,
                     textStyle: _statusTextStyle,
                   )),

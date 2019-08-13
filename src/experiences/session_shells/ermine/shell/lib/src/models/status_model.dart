@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:fidl_fuchsia_memory/fidl_async.dart' as mem;
 import 'package:flutter/material.dart';
 import 'package:fuchsia_inspect/inspect.dart';
+import 'package:fidl_fuchsia_power/fidl_async.dart' as power;
 import 'package:fuchsia_services/services.dart';
 
 import '../utils/utils.dart';
@@ -25,21 +26,27 @@ class StatusModel extends ChangeNotifier implements Inspectable {
   String _memValue;
   double _memFill;
   double _memMax;
+  String _batteryText;
+  double _batteryLevel;
+  final double _batteryMax = 100;
   final String _tasksValue = '13, 1 THR';
   final String _tasksDescriptor = '1 RUNNING';
   final String _weatherValue = '16°';
   final String _weatherDescriptor = 'SUNNY';
-  final String _batteryValue = '99%';
-  final String _batteryDescriptor = '3:15 LEFT';
   final int _fpsValue = 120;
   // Service values
   StartupContext startupContext;
-  final mem.MonitorProxy statusMemoryService;
-  final _memoryServiceBinding = mem.WatcherBinding();
   static const Duration _systemInformationUpdatePeriod =
       Duration(milliseconds: 500);
+  // memory monitor
+  final mem.MonitorProxy statusMemoryService;
+  final _memoryServiceBinding = mem.WatcherBinding();
+  // battery manager
+  final power.BatteryManagerProxy statusBatteryManager;
+  final _batteryInfoWatcherBinding = power.BatteryInfoWatcherBinding();
   // Visualizer models
   StatusProgressBarVisualizerModel memoryModel;
+  StatusProgressBarVisualizerModel batteryModel;
   StatusProgressBarVisualizerModel dummyVolumeModel;
   StatusProgressBarVisualizerModel dummyBrightnessModel;
   StatusGraphVisualizerModel dummyCpuModel;
@@ -47,10 +54,18 @@ class StatusModel extends ChangeNotifier implements Inspectable {
   /// The [GlobalKey] associated with [Status] widget.
   final GlobalKey key = GlobalKey(debugLabel: 'ask');
 
-  StatusModel({this.statusMemoryService}) {
+  StatusModel({this.statusMemoryService, this.statusBatteryManager}) {
     statusMemoryService
         .watch(_memoryServiceBinding.wrap(_MonitorWatcherImpl(this)));
     memoryModel = StatusProgressBarVisualizerModel(
+      barFirst: true,
+      barHeight: 14,
+      barSize: .5,
+      offset: 0,
+    );
+    statusBatteryManager
+        .watch(_batteryInfoWatcherBinding.wrap(_BatteryInfoWatcherImpl(this)));
+    batteryModel = StatusProgressBarVisualizerModel(
       barFirst: true,
       barHeight: 14,
       barSize: .5,
@@ -89,7 +104,11 @@ class StatusModel extends ChangeNotifier implements Inspectable {
   factory StatusModel.fromStartupContext(StartupContext startupContext) {
     final statusMemoryService = mem.MonitorProxy();
     startupContext.incoming.connectToService(statusMemoryService);
-    return StatusModel(statusMemoryService: statusMemoryService);
+    final statusBatteryManager = power.BatteryManagerProxy();
+    startupContext.incoming.connectToService(statusBatteryManager);
+    return StatusModel(
+        statusMemoryService: statusMemoryService,
+        statusBatteryManager: statusBatteryManager);
   }
 
   // Date
@@ -114,6 +133,7 @@ class StatusModel extends ChangeNotifier implements Inspectable {
   @override
   void dispose() {
     statusMemoryService.ctrl.close();
+    statusBatteryManager.ctrl.close();
     super.dispose();
   }
 
@@ -122,9 +142,6 @@ class StatusModel extends ChangeNotifier implements Inspectable {
 
   // Weather
   String getWeather() => '$_weatherValue / $_weatherDescriptor';
-
-  // Battery
-  String getBattery() => '$_batteryValue - $_batteryDescriptor';
 
   // FPS
   String getFps() => _fpsValue.toString();
@@ -193,6 +210,31 @@ class StatusModel extends ChangeNotifier implements Inspectable {
     memoryModel.barMax = _memMax;
   }
 
+  String _bytesToGB(int bytes) {
+    return (bytes / pow(1024, 3)).toStringAsPrecision(3);
+  }
+
+  void _updateBattery(power.BatteryInfo info) {
+    _batteryLevel = info.levelPercent;
+    String chargeState = _chargeStatusToText(info.chargeStatus);
+    _batteryText = '${_batteryLevel.toStringAsFixed(0)}% $chargeState';
+    batteryModel
+      ..barValue = _batteryText
+      ..barFill = _batteryLevel
+      ..barMax = _batteryMax; // 100%
+  }
+
+  String _chargeStatusToText(power.ChargeStatus chargeStatus) {
+    switch (chargeStatus) {
+      case power.ChargeStatus.charging:
+        return ': charging';
+      case power.ChargeStatus.discharging:
+        return ': discharging';
+      default:
+        return '';
+    }
+  }
+
   void _updateCPU() {
     double newGraphData = getCpuData();
     dummyCpuModel.graphData = newGraphData;
@@ -200,9 +242,6 @@ class StatusModel extends ChangeNotifier implements Inspectable {
     dummyCpuModel.graphValue = '$dummyCpuValue%';
   }
 
-  String _bytesToGB(int bytes) {
-    return (bytes / pow(1024, 3)).toStringAsPrecision(3);
-  }
 
   @override
   void onInspect(Node node) {
@@ -224,5 +263,15 @@ class _MonitorWatcherImpl extends mem.Watcher {
   @override
   Future<void> onChange(mem.Stats stats) async {
     status._updateMem(stats);
+  }
+}
+
+class _BatteryInfoWatcherImpl extends power.BatteryInfoWatcher {
+  final StatusModel status;
+  _BatteryInfoWatcherImpl(this.status);
+
+  @override
+  Future<void> onChangeBatteryInfo(power.BatteryInfo info) async {
+    status._updateBattery(info);
   }
 }
