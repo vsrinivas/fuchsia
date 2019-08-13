@@ -53,13 +53,23 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len);
 /* This function is called at the beginning of mexec.  Interrupts are not yet
  * disabled, but only one CPU is running.
  */
-void platform_mexec_prep(uintptr_t new_bootimage_addr, size_t new_bootimage_len);
+void platform_mexec_prep(uintptr_t final_bootimage_addr, size_t final_bootimage_len);
 
 /* Ask the platform to mexec into the next kernel.
  * This function is called after platform_mexec_prep(), with interrupts disabled.
  */
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops, uintptr_t new_bootimage_addr,
                     size_t new_bootimage_len, uintptr_t entry64_addr);
+
+/* Allocate |count| pages where no page has a physical address less than
+ * |lower_bound|.
+ * Results are returned via the array pointed to by |paddrs| with the
+ * assumption there is enough storage to contain |count| results.
+ * |limit| defines the highest address to search before giving up.
+ */
+zx_status_t alloc_pages_greater_than(paddr_t lower_bound, size_t count, size_t limit,
+                                     paddr_t* paddrs);
+
 
 static_assert(__offsetof(memmov_ops_t, dst) == MEMMOV_OPS_DST_OFFSET, "");
 static_assert(__offsetof(memmov_ops_t, src) == MEMMOV_OPS_SRC_OFFSET, "");

@@ -620,37 +620,6 @@ constexpr size_t kNumL3PageTables = 1;
 constexpr size_t kNumL4PageTables = 1;
 constexpr size_t kTotalPageTableCount = kNumL2PageTables + kNumL3PageTables + kNumL4PageTables;
 
-// Allocate `count` pages where no page has a physical address less than
-// `lower_bound`
-static void alloc_pages_greater_than(paddr_t lower_bound, size_t count, paddr_t* paddrs) {
-  struct list_node list = LIST_INITIAL_VALUE(list);
-  while (count) {
-    // TODO: replace with pmm routine that can allocate not in a range
-    size_t actual = 0;
-    zx_status_t status = pmm_alloc_range(lower_bound, count, &list);
-    if (status == ZX_OK) {
-      actual = count;
-    }
-
-    for (size_t i = 0; i < actual; i++) {
-      paddrs[count - (i + 1)] = lower_bound + PAGE_SIZE * i;
-    }
-
-    count -= actual;
-    lower_bound += PAGE_SIZE * (actual + 1);
-
-    // If we're past the 8GiB mark and still trying to allocate, just give
-    // up.
-    if (lower_bound >= (kBytesToIdentityMap)) {
-      panic("failed to allocate page tables for mexec");
-    }
-  }
-
-  // mark all of the pages we allocated as WIRED
-  vm_page_t* p;
-  list_for_every_entry (&list, p, vm_page_t, queue_node) { p->set_state(VM_PAGE_STATE_WIRED); }
-}
-
 static fbl::RefPtr<VmAspace> mexec_identity_aspace;
 
 // Array of pages that are safe to use for the new kernel's page tables.  These must
@@ -658,7 +627,7 @@ static fbl::RefPtr<VmAspace> mexec_identity_aspace;
 // populated in platform_mexec_prep and used in platform_mexec.
 static paddr_t mexec_safe_pages[kTotalPageTableCount];
 
-void platform_mexec_prep(uintptr_t new_bootimage_addr, size_t new_bootimage_len) {
+void platform_mexec_prep(uintptr_t final_bootimage_addr, size_t final_bootimage_len) {
   DEBUG_ASSERT(!arch_ints_disabled());
   DEBUG_ASSERT(mp_get_online_mask() == cpu_num_to_mask(BOOT_CPU_ID));
 
@@ -695,7 +664,8 @@ void platform_mexec_prep(uintptr_t new_bootimage_addr, size_t new_bootimage_len)
     panic("failed to identity map low memory");
   }
 
-  alloc_pages_greater_than(new_bootimage_addr + new_bootimage_len + PAGE_SIZE, kTotalPageTableCount,
+  alloc_pages_greater_than(final_bootimage_addr + final_bootimage_len + PAGE_SIZE,
+                           kTotalPageTableCount, kBytesToIdentityMap,
                            mexec_safe_pages);
 }
 

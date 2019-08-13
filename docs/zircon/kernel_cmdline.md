@@ -235,6 +235,12 @@ This option tells the kernel to limit system memory to the MB value specified
 by 'num'. Using this effectively allows a user to simulate the system having
 less physical memory than physically present.
 
+## kernel.mexec-force-high-ramdisk=\<bool>
+
+This option is intended for test use only. When set to `true` it forces the
+mexec syscall to place the ramdisk for the following kernel in high memory
+(64-bit address space, >= 4GiB offset). The default value is `false`.
+
 ## kernel.oom.enable=\<bool>
 
 This option (true by default) turns on the out-of-memory (OOM) kernel thread,

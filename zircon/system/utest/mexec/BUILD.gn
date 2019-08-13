@@ -1,0 +1,92 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/resource.gni")
+import("$zx/public/gn/test/zbi_test.gni")
+
+# Pick out the tests.
+group("mexec") {
+  testonly = true
+  deps = [
+    ":zbi-child-image",
+    ":zbi-parent-image",
+  ]
+}
+
+### Defines the child.
+
+# A test binary that returns success unconditionally. This binary running at
+# all indicates that the system booted sufficiently to run a userspace process.
+test("zbi-child") {
+  test_group = "core"
+  sources = [
+    "success.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+# The parent binary mexecs into this child image. The parent image is booted
+# with kernel.mexec-force-high-ramdisk=true meaning that it will place the child
+# image's ramdisk in high (>4GiB) memory.
+zbi_test("zbi-child-image") {
+  assert(current_cpu != "")
+
+  args = [ "userboot=test/core/zbi-child-test" ]
+  deps = [
+    ":zbi-child",
+    "$zx/kernel",
+  ]
+}
+
+### Defines the parent.
+
+resource("zbi-child-image-resource") {
+  testonly = true
+  deps = [
+    ":zbi-child-image.zbi",
+  ]
+  sources = get_target_outputs(":zbi-child-image.zbi")
+  outputs = [
+    "testdata/zbi-bootfs/zbi-child-image.zbi",
+  ]
+}
+
+# Simple binary that mexecs into the child binary.
+test("zbi-parent") {
+  test_group = "core"
+  sources = [
+    "parent.cc",
+  ]
+
+  data_deps = [
+    ":zbi-child-image-resource",
+  ]
+
+  deps = [
+    "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/libzbi",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+zbi_test("zbi-parent-image") {
+  assert(current_cpu != "")
+  args = [
+    "bootsvc.next=test/core/zbi-parent-test",
+    "kernel.mexec-force-high-ramdisk=true",  # Force the child to put the RD in high memory
+  ]
+  deps = [
+    ":zbi-parent",
+    "$zx/kernel",
+    "$zx/system/core/bootsvc",
+  ]
+
+  assert_no_deps = [ "$zx/system/dev/*" ]
+}

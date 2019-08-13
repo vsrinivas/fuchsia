@@ -32,6 +32,7 @@
 #include <object/user_handles.h>
 #include <object/vm_object_dispatcher.h>
 #include <platform/halt_helper.h>
+#include <sys/types.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -90,15 +91,67 @@ zx_status_t IdentityPageAllocator::InitializeAspace() {
     return ZX_OK;
 }
 
+zx_status_t alloc_pages_greater_than(paddr_t lower_bound, size_t count, size_t limit,
+                                     paddr_t* paddrs) {
+  struct list_node list = LIST_INITIAL_VALUE(list);
+
+  // We don't support partially completed requests. This function will either
+  // allocate |count| pages or 0 pages. If we complete a partial allocation
+  // but are unable to fulfil the complete request, we'll clean up any pages
+  // that we may have allocated in the process.
+  auto pmm_cleanup = fbl::MakeAutoCall([&list]() { pmm_free(&list); });
+
+  while (count) {
+    // TODO: replace with pmm routine that can allocate while excluding a range.
+    size_t actual = 0;
+    zx_status_t status = pmm_alloc_range(lower_bound, count, &list);
+    if (status == ZX_OK) {
+      actual = count;
+    }
+
+    for (size_t i = 0; i < actual; i++) {
+      paddrs[count - (i + 1)] = lower_bound + PAGE_SIZE * i;
+    }
+
+    count -= actual;
+    lower_bound += PAGE_SIZE * (actual + 1);
+
+    // If we're past the limit and still trying to allocate, just give up.
+    if (lower_bound >= limit) {
+      return ZX_ERR_NO_RESOURCES;
+    }
+  }
+
+  // mark all of the pages we allocated as WIRED.
+  vm_page_t* p;
+  list_for_every_entry (&list, p, vm_page_t, queue_node) { p->set_state(VM_PAGE_STATE_WIRED); }
+
+  // Make sure we don't free the pages we just allocated.
+  pmm_cleanup.cancel();
+
+  return ZX_OK;
+}
+
 zx_status_t IdentityPageAllocator::Allocate(void** result) {
     zx_status_t st;
 
     // Start by obtaining an unused physical page. This address will eventually
     // be the physical/virtual address of our identity mapped page.
+    // TODO: when ZX-978 is completed, we should allocate low memory directly
+    //       from the pmm rather than using "alloc_pages_greater_than" which is
+    //       somewhat of a hack.
     paddr_t pa;
-    vm_page_t* page;
-    st = pmm_alloc_page(0, &page, &pa);
-    auto pmm_cleanup = fbl::MakeAutoCall([page]() { pmm_free_page(page); });
+    st = alloc_pages_greater_than(0, 1, 4 * GB, &pa);
+    if (st != ZX_OK) {
+      LTRACEF("mexec: failed to allocate page in low memory\n");
+      return st;
+    }
+
+    // Add this page to the list of allocated pages such that it gets freed when
+    // the object is destroyed.
+    vm_page_t* page = paddr_to_vm_page(pa);
+    DEBUG_ASSERT(page);
+    list_add_tail(&allocated_, &page->queue_node);
 
     // The kernel address space may be in high memory which cannot be identity
     // mapped since all Kernel Virtual Addresses might be out of range of the
@@ -128,12 +181,6 @@ zx_status_t IdentityPageAllocator::Allocate(void** result) {
     if (st != ZX_OK) {
         return st;
     }
-
-
-    // Add this to the list of allocated pages so that we can free them if the
-    // IdentityPageAllocator destructor.
-    list_add_tail(&allocated_, &page->queue_node);
-    pmm_cleanup.cancel();
 
     *result = addr;
     return st;
@@ -269,6 +316,8 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
   if (result != ZX_OK)
     return result;
 
+  const bool force_high_mem = gCmdline.GetBool("kernel.mexec-force-high-ramdisk", false);
+
   paddr_t new_kernel_addr;
   size_t new_kernel_len;
   result = vmo_coalesce_pages(kernel_vmo, 0, &new_kernel_addr, NULL, &new_kernel_len);
@@ -285,11 +334,29 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
 
   paddr_t new_bootimage_addr;
   uint8_t* bootimage_buffer;
-  size_t new_bootimage_len;
+  size_t bootimage_len;
   result = vmo_coalesce_pages(bootimage_vmo, kBootdataPlatformExtraBytes, &new_bootimage_addr,
-                              &bootimage_buffer, &new_bootimage_len);
+                              &bootimage_buffer, &bootimage_len);
   if (result != ZX_OK) {
     return result;
+  }
+
+  paddr_t final_bootimage_addr = new_bootimage_addr;
+  // For testing purposes, we may want the bootdata at a high address.
+  if (force_high_mem) {
+    const size_t page_count = bootimage_len / PAGE_SIZE + 1;
+    fbl::AllocChecker ac;
+    ktl::unique_ptr<paddr_t[]> paddrs(new (&ac) paddr_t[page_count]);
+    ASSERT(ac.check());
+
+    // Allocate pages greater than 4GiB to test that we're tolerant of booting
+    // with a ramdisk in high memory. This operation can be very expensive and
+    // should be replaced with a PMM API that supports allocating from a
+    // specific range of memory.
+    result = alloc_pages_greater_than(4 * GB, page_count, 8 * GB, paddrs.get());
+    ASSERT(result == ZX_OK);
+
+    final_bootimage_addr = paddrs.get()[0];
   }
 
   IdentityPageAllocator id_alloc;
@@ -309,7 +376,7 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
   // the new kernel so we attempt to migrate this thread to that cpu.
   platform_halt_secondary_cpus();
 
-  platform_mexec_prep(new_bootimage_addr, new_bootimage_len);
+  platform_mexec_prep(final_bootimage_addr, bootimage_len);
 
   dlog_shutdown();
 
@@ -338,22 +405,29 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
   DEBUG_ASSERT(result == ZX_OK);
   memmov_ops_t* ops = (memmov_ops_t*)(ops_ptr);
 
-  const size_t num_ops = 2;
-  // Make sure that we can also pack the arguments in the same page as the
-  // final mexec assembly shutdown code.
-  DEBUG_ASSERT(((sizeof(*ops) * num_ops)) < PAGE_SIZE);
+  uint32_t ops_idx = 0;
 
   // Op to move the new kernel into place.
-  ops[0].src = (void*)new_kernel_addr;
-  ops[0].dst = (void*)get_kernel_base_phys();
-  ops[0].len = new_kernel_len;
+  ops[ops_idx].src = (void*)new_kernel_addr;
+  ops[ops_idx].dst = (void*)get_kernel_base_phys();
+  ops[ops_idx].len = new_kernel_len;
+  ops_idx++;
+
+  // We can leave the bootimage in place unless we've been asked to move it to
+  // high memory.
+  if (force_high_mem) {
+    ops[ops_idx].src = (void*)new_bootimage_addr;
+    ops[ops_idx].dst = (void*)final_bootimage_addr;
+    ops[ops_idx].len = bootimage_len;
+    ops_idx++;
+  }
 
   // Null terminated list.
-  ops[1] = {0, 0, 0};
+  ops[ops_idx++] = {0, 0, 0};
 
   // Make sure that the kernel, when copied, will not overwrite the bootdata.
   DEBUG_ASSERT(!Intersects(reinterpret_cast<uintptr_t>(ops[0].dst), ops[0].len,
-                           reinterpret_cast<uintptr_t>(new_bootimage_addr), new_bootimage_len));
+                           reinterpret_cast<uintptr_t>(final_bootimage_addr), bootimage_len));
 
   // Sync because there is code in here that we intend to run.
   arch_sync_cache_range((addr_t)id_page_addr, PAGE_SIZE);
@@ -361,12 +435,13 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
   // Clean because we're going to turn the MMU/caches off and we want to make
   // sure that things are still available afterwards.
   arch_clean_cache_range((addr_t)id_page_addr, PAGE_SIZE);
+  arch_clean_cache_range((addr_t)ops_ptr, PAGE_SIZE);
 
   shutdown_interrupts();
 
   // Ask the platform to mexec into the next kernel.
   mexec_asm_func mexec_assembly = (mexec_asm_func)id_page_addr;
-  platform_mexec(mexec_assembly, ops, new_bootimage_addr, new_bootimage_len, entry64_addr);
+  platform_mexec(mexec_assembly, ops, final_bootimage_addr, bootimage_len, entry64_addr);
 
   panic("Execution should never reach here\n");
   return ZX_OK;
