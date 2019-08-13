@@ -18,6 +18,8 @@ class FakeDbFactory : public DbFactory {
   void GetOrCreateDb(ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
                      fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
 
+  void Close(fit::closure callback) override;
+
  private:
   void CreateInitializedDb(fit::function<void(Status, std::unique_ptr<Db>)> callback);
 

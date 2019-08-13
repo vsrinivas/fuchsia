@@ -10,6 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/svc/cpp/services.h>
@@ -42,7 +43,8 @@ Status GetLedger(sys::ComponentContext* context,
                  fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request,
                  cloud_provider::CloudProviderPtr cloud_provider, std::string user_id,
                  std::string ledger_name, const DetachedPath& ledger_repository_path,
-                 fit::function<void()> error_handler, LedgerPtr* ledger) {
+                 fit::function<void()> error_handler, LedgerPtr* ledger,
+                 fit::function<void(fit::closure)>* close_repository) {
   fbl::unique_fd dir(
       openat(ledger_repository_path.root_fd(), ledger_repository_path.path().c_str(), O_RDONLY));
   if (!dir.is_valid()) {
@@ -74,7 +76,20 @@ Status GetLedger(sys::ComponentContext* context,
     error_handler();
   });
   repository->GetLedger(convert::ToArray(ledger_name), ledger->NewRequest());
-  return ToLedgerStatus(repository->Sync());
+
+  Status status = ToLedgerStatus(repository->Sync());
+
+  fuchsia::ledger::internal::LedgerRepositoryPtr async_repository;
+  async_repository.Bind(repository.Unbind());
+
+  if (close_repository) {
+    *close_repository = [async_repository = std::move(async_repository)](fit::closure cb) mutable {
+      async_repository->Close();
+      async_repository.set_error_handler([cb = std::move(cb)](zx_status_t status) { cb(); });
+    };
+  }
+
+  return status;
 }
 
 void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller) {

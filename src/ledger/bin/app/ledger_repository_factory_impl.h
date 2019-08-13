@@ -46,6 +46,9 @@ class LedgerRepositoryFactoryImpl
                      fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
                      fit::function<void(Status)> callback) override;
 
+  // Close all repositories. Used for testing.
+  void Close(fit::closure callback);
+
  private:
   class LedgerRepositoryContainer;
   struct RepositoryInformation;
@@ -73,6 +76,8 @@ class LedgerRepositoryFactoryImpl
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer> repositories_;
 
   inspect_deprecated::Node inspect_node_;
+
+  fxl::WeakPtrFactory<LedgerRepositoryFactoryImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };

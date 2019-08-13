@@ -7,6 +7,7 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -22,11 +23,15 @@ namespace ledger {
 // Creates a new Ledger application instance and returns a LedgerPtr connection
 // to it. This method will call |Sync| on the Repository to ensure that the
 // Ledger is ready to be used for performance benchmark.
+// |close_repository|, if set, will be populated with a function that can be executed to safely
+// close the underlying LedgerRepository. Its parameter will be executed when the closing is
+// complete.
 Status GetLedger(sys::ComponentContext* context,
                  fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request,
                  cloud_provider::CloudProviderPtr cloud_provider, std::string user_id,
                  std::string ledger_name, const DetachedPath& ledger_repository_path,
-                 fit::function<void()> error_handler, LedgerPtr* ledger);
+                 fit::function<void()> error_handler, LedgerPtr* ledger,
+                 fit::function<void(fit::closure)>* close_repository = nullptr);
 
 // Kills the remote ledger process controlled by |controller|.
 void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller);

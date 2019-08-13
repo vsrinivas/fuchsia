@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/backoff/exponential_backoff.h>
+#include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/handles/object_info.h>
@@ -100,6 +101,8 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
           binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 
+    void Close(fit::closure callback) { factory_impl_.Close(std::move(callback)); }
+
    private:
     sys::testing::ComponentContextProvider component_context_provider_;
     Environment environment_;
@@ -112,6 +115,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
   std::string GetUserId() override;
 
+  LoopController* const loop_controller_;
   std::unique_ptr<SubLoop> loop_;
   std::unique_ptr<SubLoop> io_loop_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
@@ -133,6 +137,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory)
     : LedgerAppInstanceFactory::LedgerAppInstance(loop_controller, convert::ToArray(kLedgerName),
                                                   std::move(repository_factory_ptr)),
+      loop_controller_(loop_controller),
       loop_(loop_controller->StartNewLoop()),
       io_loop_(loop_controller->StartNewLoop()),
       services_dispatcher_(services_dispatcher),
@@ -165,6 +170,11 @@ cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
 std::string LedgerAppInstanceImpl::GetUserId() { return kUserId; }
 
 LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
+  auto waiter = loop_controller_->NewWaiter();
+  async::PostTask(loop_->dispatcher(), [this, cb = waiter->GetCallback()]() mutable {
+    factory_container_->Close(std::move(cb));
+  });
+  EXPECT_TRUE(waiter->RunUntilCalled());
   async::PostTask(loop_->dispatcher(), [this] { factory_container_.reset(); });
   loop_->DrainAndQuit();
   loop_.release();

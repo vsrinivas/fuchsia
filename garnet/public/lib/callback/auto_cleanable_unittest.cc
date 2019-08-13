@@ -192,5 +192,18 @@ TEST(AutoCleanableMap, ConstIteration) {
   }
 }
 
+TEST(AutoCleanableMap, Clear) {
+  AutoCleanableMap<int, Cleanable> map;
+  map.emplace(std::piecewise_construct, std::forward_as_tuple(0), std::forward_as_tuple());
+  map.emplace(std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple());
+  map.emplace(std::piecewise_construct, std::forward_as_tuple(2), std::forward_as_tuple());
+
+  EXPECT_FALSE(map.empty());
+
+  map.clear();
+
+  EXPECT_TRUE(map.empty());
+}
+
 }  // namespace
 }  // namespace callback

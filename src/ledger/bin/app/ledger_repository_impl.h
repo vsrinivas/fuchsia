@@ -90,6 +90,11 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
 
   const DetachedPath content_path_;
   Environment* const environment_;
+  // True if the LedgerRepository is currently shutting down.
+  bool closing_ = false;
+  callback::AutoCleanableSet<
+      SyncableBinding<fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
+      bindings_;
   std::unique_ptr<storage::DbFactory> db_factory_;
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;
@@ -99,9 +104,6 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
       ledger_managers_;
   // The DiskCleanupManager relies on the |ledger_managers_| being still alive.
   std::unique_ptr<DiskCleanupManager> disk_cleanup_manager_;
-  callback::AutoCleanableSet<
-      SyncableBinding<fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
-      bindings_;
   fit::closure on_empty_callback_;
 
   std::vector<fit::function<void(Status)>> cleanup_callbacks_;
@@ -113,6 +115,8 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   inspect_deprecated::UIntMetric requests_metric_;
   inspect_deprecated::Node ledgers_inspect_node_;
   fit::deferred_callback children_manager_retainer_;
+
+  fxl::WeakPtrFactory<LedgerRepositoryImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };

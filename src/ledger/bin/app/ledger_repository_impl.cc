@@ -5,6 +5,7 @@
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/callback/scoped_callback.h>
 #include <lib/inspect_deprecated/deprecated/expose.h>
 #include <lib/inspect_deprecated/deprecated/object_dir.h>
 
@@ -46,7 +47,8 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environmen
       inspect_node_(std::move(inspect_node)),
       requests_metric_(
           inspect_node_.CreateUIntMetric(kRequestsInspectPathComponent.ToString(), 0UL)),
-      ledgers_inspect_node_(inspect_node_.CreateChild(kLedgersInspectPathComponent.ToString())) {
+      ledgers_inspect_node_(inspect_node_.CreateChild(kLedgersInspectPathComponent.ToString())),
+      weak_factory_(this) {
   bindings_.set_on_empty([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });
@@ -260,14 +262,20 @@ void LedgerRepositoryImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher
 }
 
 void LedgerRepositoryImpl::CheckEmpty() {
-  if (ledger_managers_.empty() && (bindings_.empty() || close_callback_) &&
+  if (!closing_ && ledger_managers_.empty() && (bindings_.empty() || close_callback_) &&
       disk_cleanup_manager_->IsEmpty()) {
-    if (close_callback_) {
-      close_callback_(Status::OK);
-    }
-    if (on_empty_callback_) {
-      on_empty_callback_();
-    }
+    closing_ = true;
+    // Both DiskCleanupManager and DbFactory use the filesystem. We need to close them before we can
+    // close ourselves.
+    disk_cleanup_manager_.reset();
+    db_factory_->Close(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this]() {
+      if (close_callback_) {
+        close_callback_(Status::OK);
+      }
+      if (on_empty_callback_) {
+        on_empty_callback_();
+      }
+    }));
   }
 }
 
@@ -306,6 +314,7 @@ void LedgerRepositoryImpl::Close(fit::function<void(Status)> callback) {
     return;
   }
   close_callback_ = std::move(callback);
+  CheckEmpty();
 }
 
 }  // namespace ledger

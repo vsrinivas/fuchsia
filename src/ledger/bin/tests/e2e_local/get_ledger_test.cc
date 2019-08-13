@@ -22,12 +22,17 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
   fuchsia::sys::ComponentControllerPtr controller;
 
   LedgerPtr ledger;
+  fit::function<void(fit::closure)> close_repository;
   Status status = GetLedger(
       component_context.get(), controller.NewRequest(), nullptr, "", "ledger_name",
-      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger);
+      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger, &close_repository);
 
   // No need to |Sync| as |GetLedger| handles it.
   EXPECT_EQ(status, Status::OK);
+
+  ledger.Unbind();
+  close_repository([&] { loop.Quit(); });
+  loop.Run();
 
   KillLedgerProcess(&controller);
 }
@@ -40,9 +45,10 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   fuchsia::sys::ComponentControllerPtr controller;
 
   LedgerPtr ledger;
+  fit::function<void(fit::closure)> close_repository;
   Status status = GetLedger(
       component_context.get(), controller.NewRequest(), nullptr, "", "ledger_name",
-      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger);
+      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger, &close_repository);
 
   ASSERT_EQ(status, Status::OK);
 
@@ -56,6 +62,11 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   loop.Run();
 
   EXPECT_EQ(status, Status::OK);
+
+  page.Unbind();
+  ledger.Unbind();
+  close_repository([&] { loop.Quit(); });
+  loop.Run();
 
   KillLedgerProcess(&controller);
 }

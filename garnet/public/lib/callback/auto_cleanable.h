@@ -5,12 +5,12 @@
 #ifndef LIB_CALLBACK_AUTO_CLEANABLE_H_
 #define LIB_CALLBACK_AUTO_CLEANABLE_H_
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <map>
 #include <unordered_set>
 #include <utility>
-
-#include <lib/fit/function.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -167,6 +167,8 @@ class AutoCleanableMap {
   }
 
   size_t size() const { return map_.size(); }
+
+  void clear() { map_.clear(); }
 
  private:
   void CheckEmpty() {

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
-
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/callback/capture.h>
@@ -15,6 +13,7 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
+#include <string.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -130,13 +129,14 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
 
 TEST_F(LedgerEndToEndTest, PutAndGet) {
   Init({});
-  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository> ledger_repository;
+  ledger_internal::LedgerRepositoryPtr ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
   ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
                                             nullptr, "", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ASSERT_EQ(ledger_repository->Sync(), ZX_OK);
+  ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
+  RunLoop();
 
   fidl::SynchronousInterfacePtr<ledger::Page> page;
   ledger_->GetRootPage(page.NewRequest());
@@ -146,6 +146,13 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   fuchsia::ledger::PageSnapshot_Get_Result result;
   EXPECT_EQ(snapshot->Get(TestArray(), &result), ZX_OK);
   EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
+
+  snapshot.Unbind();
+  page.Unbind();
+  ledger_.Unbind();
+  ledger_repository->Close();
+  ledger_repository.set_error_handler([this](zx_status_t) { QuitLoop(); });
+  RunLoop();
 }
 
 TEST_F(LedgerEndToEndTest, Terminate) {
@@ -162,13 +169,14 @@ TEST_F(LedgerEndToEndTest, Terminate) {
 
 TEST_F(LedgerEndToEndTest, ClearPage) {
   Init({});
-  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository> ledger_repository;
+  ledger_internal::LedgerRepositoryPtr ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
   ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
                                             nullptr, "", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ASSERT_EQ(ledger_repository->Sync(), ZX_OK);
+  ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
+  RunLoop();
 
   int page_count = 5;
 
@@ -208,6 +216,11 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
     RunLoopUntil([&] { return !files::IsDirectoryAt(path.root_fd(), path.path()); });
     EXPECT_FALSE(files::IsDirectoryAt(tmpfs.root_fd(), path.path()));
   }
+
+  ledger_.Unbind();
+  ledger_repository->Close();
+  ledger_repository.set_error_handler([this](zx_status_t) { QuitLoop(); });
+  RunLoop();
 }
 
 // Verifies the cloud erase recovery in case of a cloud that was erased before
@@ -334,7 +347,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
-  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository> ledger_repository;
+  ledger_internal::LedgerRepositoryPtr ledger_repository;
   ledger::FakeCloudProvider cloud_provider;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
@@ -343,7 +356,8 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
                                             ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ASSERT_EQ(ledger_repository->Sync(), ZX_OK);
+  ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
+  RunLoop();
 
   // Close the cloud provider channel.
   cloud_provider_binding.Unbind();
@@ -362,6 +376,13 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   // Verify that the Ledger app didn't crash or shut down.
   EXPECT_TRUE(ledger_repository);
   EXPECT_FALSE(ledger_app_shut_down);
+
+  snapshot.Unbind();
+  page.Unbind();
+  ledger_.Unbind();
+  ledger_repository->Close();
+  ledger_repository.set_error_handler([this](zx_status_t) { QuitLoop(); });
+  RunLoop();
 }
 
 TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
@@ -372,7 +393,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
-  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository> ledger_repository;
+  ledger_internal::LedgerRepositoryPtr ledger_repository;
   ledger::FakeCloudProvider cloud_provider;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
@@ -381,7 +402,8 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
                                             ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ASSERT_EQ(ledger_repository->Sync(), ZX_OK);
+  ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
+  RunLoop();
 
   // Write some data.
   fidl::SynchronousInterfacePtr<ledger::Page> page;
@@ -404,6 +426,13 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   // Verify that the Ledger app didn't crash or shut down.
   EXPECT_TRUE(ledger_repository);
   EXPECT_FALSE(ledger_app_shut_down);
+
+  snapshot.Unbind();
+  page.Unbind();
+  ledger_.Unbind();
+  ledger_repository->Close();
+  ledger_repository.set_error_handler([this](zx_status_t) { QuitLoop(); });
+  RunLoop();
 }
 
 }  // namespace

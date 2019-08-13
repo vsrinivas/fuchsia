@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <lib/async/wait.h>
 #include <lib/backoff/exponential_backoff.h>
+#include <lib/callback/scoped_callback.h>
+#include <lib/callback/waiter.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -179,10 +181,11 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
   // Shuts down the repository impl (if already initialized) and detaches all
   // handles bound to it, moving their ownership to the container.
-  void Detach() {
+  void Detach(fit::closure callback) {
     if (ledger_repository_) {
       detached_handles_ = ledger_repository_->Unbind();
-      ledger_repository_.reset();
+      ledger_repository_->set_on_empty(std::move(callback));
+      ledger_repository_->Close([](Status status) { FXL_DCHECK(status == Status::OK); });
     }
     for (auto& request : requests_) {
       detached_handles_.push_back(std::move(request.first));
@@ -246,7 +249,8 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
     inspect_deprecated::Node inspect_node)
     : environment_(environment),
       user_communicator_factory_(std::move(user_communicator_factory)),
-      inspect_node_(std::move(inspect_node)) {}
+      inspect_node_(std::move(inspect_node)),
+      weak_factory_(this) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
@@ -365,9 +369,11 @@ void LedgerRepositoryFactoryImpl::OnVersionMismatch(RepositoryInformation reposi
   // not running.
   auto find_repository = repositories_.find(repository_information.name);
   FXL_DCHECK(find_repository != repositories_.end());
-  find_repository->second.Detach();
-  DeleteRepositoryDirectory(repository_information);
-  repositories_.erase(find_repository);
+  find_repository->second.Detach(
+      [this, repository_information = std::move(repository_information), find_repository]() {
+        DeleteRepositoryDirectory(repository_information);
+        repositories_.erase(find_repository);
+      });
 }
 
 void LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
@@ -389,6 +395,18 @@ void LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
     FXL_LOG(ERROR) << "Unable to delete repository staging storage at " << destination;
     return;
   }
+}
+
+void LedgerRepositoryFactoryImpl::Close(fit::closure callback) {
+  auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
+  for (auto& repository : repositories_) {
+    repository.second.Detach(waiter->NewCallback());
+  }
+  waiter->Finalize(
+      callback::MakeScoped(weak_factory_.GetWeakPtr(), [this, callback = std::move(callback)]() {
+        repositories_.clear();
+        callback();
+      }));
 }
 
 }  // namespace ledger

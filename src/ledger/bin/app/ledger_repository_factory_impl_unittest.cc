@@ -51,6 +51,13 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 
   ~LedgerRepositoryFactoryImplTest() override {}
 
+  void TearDown() override {
+    bool called = false;
+    repository_factory_->Close(callback::SetWhenCalled(&called));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+  }
+
  protected:
   ::testing::AssertionResult CreateDirectory(const std::string& name);
   ::testing::AssertionResult CallGetRepository(
@@ -191,39 +198,6 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPITwoRepositoriesOneAccessedTwic
   EXPECT_THAT(top_hierarchy, third_inspection_top_level_match);
 }
 
-// Verifies that closing the filesystem closes the LedgerRepository connection.
-// There may be errors, but this test should not crash the binary.
-TEST_F(LedgerRepositoryFactoryImplTest, CloseOnFilesystemUnavailableNoCrash) {
-  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
-  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
-
-  bool get_repository_called;
-  Status status;
-
-  repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmpfs->root_fd()), nullptr, "",
-      ledger_repository_ptr.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_repository_called), &status));
-
-  bool channel_closed;
-  zx_status_t zx_status;
-
-  ledger_repository_ptr.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&channel_closed), &zx_status));
-
-  RunLoopUntilIdle();
-
-  EXPECT_TRUE(get_repository_called);
-  EXPECT_EQ(status, Status::OK);
-  EXPECT_FALSE(channel_closed);
-
-  tmpfs.reset();
-
-  RunLoopUntilIdle();
-
-  EXPECT_TRUE(channel_closed);
-}
-
 // Verifies that closing a ledger repository closes the LedgerRepository
 // connections once all Ledger connections are themselves closed. This test is
 // reproduced here due to the interaction between |LedgerRepositoryImpl| and
@@ -272,6 +246,45 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseLedgerRepository) {
 
   EXPECT_EQ(ptr1_closed_status, ZX_OK);
   EXPECT_EQ(ptr2_closed_status, ZX_OK);
+}
+
+// Verifies that closing LedgerRepositoryFactoryImpl closes all the elements under it.
+TEST_F(LedgerRepositoryFactoryImplTest, CloseFactory) {
+  auto top_level_inspect_node = inspect_deprecated::Node(kTestTopLevelNodeName);
+  auto repository_factory = std::make_unique<LedgerRepositoryFactoryImpl>(
+      &environment_, nullptr,
+      top_level_inspect_node.CreateChild(kRepositoriesInspectPathComponent.ToString()));
+
+  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
+
+  bool get_repository_called;
+  Status status;
+
+  repository_factory->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmpfs->root_fd()), nullptr, "",
+      ledger_repository_ptr.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_repository_called), &status));
+
+  bool channel_closed;
+  zx_status_t zx_status;
+
+  ledger_repository_ptr.set_error_handler(
+      callback::Capture(callback::SetWhenCalled(&channel_closed), &zx_status));
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(get_repository_called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_FALSE(channel_closed);
+
+  bool factory_close_called;
+  repository_factory->Close(callback::SetWhenCalled(&factory_close_called));
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(factory_close_called);
+  EXPECT_TRUE(channel_closed);
 }
 
 }  // namespace

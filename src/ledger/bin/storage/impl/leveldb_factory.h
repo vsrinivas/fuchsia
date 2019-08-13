@@ -39,11 +39,19 @@ class LevelDbFactory : public DbFactory {
   // DbFactory:
   void GetOrCreateDb(ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
                      fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
+  void Close(fit::closure callback) override;
 
  private:
   // IOLevelDbFactory holds all operations happening on the IO thread.
   class IOLevelDbFactory;
+  enum class InternalState {
+    CREATED,
+    INITIALIZED,
+    CLOSING,
+    CLOSED,
+  };
 
+  InternalState state_;
   std::unique_ptr<IOLevelDbFactory> io_level_db_factory_;
   async::Executor main_executor_;
 

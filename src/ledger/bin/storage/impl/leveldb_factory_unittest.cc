@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 
-#include <memory>
-
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -40,6 +40,13 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
 
     db_factory_.Init();
     RunLoopUntilIdle();
+  }
+
+  void TearDown() override {
+    bool called = false;
+    db_factory_.Close(callback::SetWhenCalled(&called));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
   }
 
  private:
@@ -202,6 +209,11 @@ TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
   db_factory->Init();
   RunLoopUntilIdle();
 
+  bool close_called = false;
+  db_factory->Close(callback::SetWhenCalled(&close_called));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(close_called);
+
   // Close the factory. This will not affect the created cached instance, which
   // was created under |cached_db_path|.
   db_factory.reset();
@@ -212,6 +224,10 @@ TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
   db_factory = std::make_unique<LevelDbFactory>(&environment_, cache_path);
   db_factory->Init();
   RunLoopUntilIdle();
+
+  db_factory->Close(callback::SetWhenCalled(&close_called));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(close_called);
 }
 
 // Make sure we can destroy the factory while a request is in progress.
@@ -221,9 +237,9 @@ TEST_F(LevelDbFactoryTest, QuitWhenBusy) {
   db_factory_ptr->Init();
   RunLoopUntilIdle();
 
-  Status status_0;
+  Status status_0, status_1;
   std::unique_ptr<Db> db_0, db_1;
-  bool called_0;
+  bool called_0, called_1;
 
   // Post the initialization code to the I/O loop.
   db_factory_ptr->GetOrCreateDb(
@@ -231,14 +247,26 @@ TEST_F(LevelDbFactoryTest, QuitWhenBusy) {
       callback::Capture(callback::SetWhenCalled(&called_0), &status_0, &db_0));
 
   // Delete the factory before any code is run on the I/O loop.
-  db_factory_ptr.reset();
+  bool close_called = false;
+  db_factory_ptr->Close(callback::SetWhenCalled(&close_called));
+
+  db_factory_ptr->GetOrCreateDb(
+      db_path_.SubPath(fxl::NumberToString(1)), DbFactory::OnDbNotFound::CREATE,
+      callback::Capture(callback::SetWhenCalled(&called_1), &status_1, &db_1));
 
   // Pump all loops.
   RunLoopUntilIdle();
 
-  // The callback for the database should not be executed given that the factory
-  // has been deleted.
-  EXPECT_FALSE(called_0);
+  // The database is now closed;
+  EXPECT_TRUE(close_called);
+
+  EXPECT_TRUE(called_0);
+  EXPECT_TRUE(called_1);
+
+  EXPECT_EQ(status_1, Status::ILLEGAL_STATE);
+
+  // We can safely delete the database factory.
+  db_factory_ptr.reset();
 }
 
 }  // namespace

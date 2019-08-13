@@ -303,5 +303,26 @@ TEST_F(LedgerRepositoryImplTest, Close) {
   EXPECT_EQ(ptr2_closed_status, ZX_OK);
 }
 
+TEST_F(LedgerRepositoryImplTest, CloseEmpty) {
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr1;
+
+  repository_->BindRepository(ledger_repository_ptr1.NewRequest());
+
+  bool on_empty_called;
+  repository_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+
+  bool ptr1_closed;
+  zx_status_t ptr1_closed_status;
+  ledger_repository_ptr1.set_error_handler(
+      callback::Capture(callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+
+  ledger_repository_ptr1->Close();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_called);
+
+  // The connection is not closed by LedgerRepositoryImpl, but by its holder.
+  EXPECT_FALSE(ptr1_closed);
+}
+
 }  // namespace
 }  // namespace ledger
