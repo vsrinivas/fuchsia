@@ -1,0 +1,52 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.shareddma;
+using zx;
+
+enum DmaType : uint32 {
+    REGULAR = 0x1;
+    CYCLIC = 0x2;
+};
+
+enum DmaState : uint32 {
+    COMPLETED = 0x1;
+    FAILED = 0x2;
+};
+
+[Layout = "ddk-callback"]
+protocol DmaNotify {
+    Callback(DmaState state) -> ();
+};
+
+[Layout = "ddk-protocol"]
+protocol SharedDma {
+
+    /// Initializes and provides a VMO for memory source or destination.
+    /// Only supports device to memory and memory to device DMAs.
+    /// The provided id is opaque and HW specific.  The id implicitly defines the direction of the
+    /// DMA (biderectional DMAs are not supported yet).  Transfer sizes and alignment are
+    /// managed within the shared DMA driver.
+    InitializeAndGetBuffer(uint32 channel_id, DmaType type, uint32 size) ->
+        (zx.status s, handle<vmo> vmo);
+
+    /// Start DMA
+    Start(uint32 channel_id);
+
+    /// Stop DMA
+    Stop(uint32 channel_id);
+
+    /// Returns the current position within memory where is the DMA has written to or read from.
+    GetBufferPosition(uint32 channel_id) -> (uint32 position);
+
+    /// It must always be assumed that the DMA is in the process of transfering this amount
+    /// of data (accounting for warp around) into or from memory, hence for:
+    /// Device to memory DMAs, it is not safe to read this amount past the buffer position.
+    /// Memory to device DMAs, it is not safe to write this amount before the buffer position.
+    GetTransferSize(uint32 channel_id) -> (uint32 available_size);
+
+    /// Specifies a callback for notifications of state change.
+    SetNotifyCallback(uint32 channel_id, DmaNotify cb) -> (zx.status s);
+};
+

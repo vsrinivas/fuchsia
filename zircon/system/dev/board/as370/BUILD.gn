@@ -16,6 +16,7 @@ driver("as370") {
   deps = [
     "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.shareddma",
     "$zx/system/dev/lib/as370",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/usb",

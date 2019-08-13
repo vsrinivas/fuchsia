@@ -5,6 +5,13 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_AS370_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_AS370_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
 
+#include <lib/device-protocol/i2c-channel.h>
+#include <lib/device-protocol/pdev.h>
+#include <lib/fzl/pinned-vmo.h>
+#include <lib/simple-audio-stream/simple-audio-stream.h>
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
+
 #include <memory>
 #include <optional>
 
@@ -18,12 +25,6 @@
 #include <ddktl/protocol/platform/device.h>
 #include <dispatcher-pool/dispatcher-timer.h>
 #include <fbl/mutex.h>
-#include <lib/device-protocol/i2c-channel.h>
-#include <lib/device-protocol/pdev.h>
-#include <lib/fzl/pinned-vmo.h>
-#include <lib/simple-audio-stream/simple-audio-stream.h>
-#include <lib/sync/completion.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <soc/as370/syn-audio-out.h>
 
 #include "codec.h"
@@ -66,9 +67,7 @@ class As370AudioStreamOut : public SimpleAudioStream {
   fbl::RefPtr<dispatcher::Timer> notify_timer_;
   ddk::PDev pdev_ TA_GUARDED(domain_->token());
   zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
-  fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_->token());
   std::unique_ptr<SynAudioOutDevice> lib_;
-  zx::bti bti_ TA_GUARDED(domain_->token());
   ddk::ClockProtocolClient clks_[kClockCount] TA_GUARDED(domain_->token());
   Codec codec_ TA_GUARDED(domain_->token());
 };

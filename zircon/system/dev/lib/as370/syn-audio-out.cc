@@ -8,103 +8,41 @@
 #include <fbl/alloc_checker.h>
 #include <soc/as370/as370-audio-regs.h>
 #include <soc/as370/as370-clk-regs.h>
+#include <soc/as370/as370-dma.h>
 #include <soc/as370/syn-audio-out.h>
 
-namespace {
-constexpr uint64_t kPortKeyIrqMsg = 0x00;
-constexpr uint64_t kPortShutdown = 0x01;
-}  // namespace
-
 std::unique_ptr<SynAudioOutDevice> SynAudioOutDevice::Create(ddk::MmioBuffer mmio_global,
-                                                             ddk::MmioBuffer mmio_dhub,
                                                              ddk::MmioBuffer mmio_avio_global,
                                                              ddk::MmioBuffer mmio_i2s,
-                                                             zx::interrupt interrupt) {
+                                                             ddk::SharedDmaProtocolClient dma) {
   fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<SynAudioOutDevice>(
-      new (&ac) SynAudioOutDevice(std::move(mmio_global), std::move(mmio_avio_global),
-                                  std::move(mmio_i2s), std::move(interrupt)));
+  auto dev = std::unique_ptr<SynAudioOutDevice>(new (&ac) SynAudioOutDevice(
+      std::move(mmio_global), std::move(mmio_avio_global), std::move(mmio_i2s), dma));
   if (!ac.check()) {
     return nullptr;
   }
 
-  auto status = dev->Init(std::move(mmio_dhub));
-  if (status != ZX_OK) {
-    return nullptr;
-  }
   return dev;
 }
 
 SynAudioOutDevice::SynAudioOutDevice(ddk::MmioBuffer mmio_global, ddk::MmioBuffer mmio_avio_global,
-                                     ddk::MmioBuffer mmio_i2s, zx::interrupt interrupt)
+                                     ddk::MmioBuffer mmio_i2s, ddk::SharedDmaProtocolClient dma)
     : global_(std::move(mmio_global)),
       avio_global_(std::move(mmio_avio_global)),
       i2s_(std::move(mmio_i2s)),
-      interrupt_(std::move(interrupt)) {}
-
-int SynAudioOutDevice::Thread() {
-  while (1) {
-    zx_port_packet_t packet = {};
-    auto status = port_.wait(zx::time::infinite(), &packet);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s port wait failed: %d\n", __func__, status);
-      return thrd_error;
-    }
-    zxlogf(TRACE, "%s msg on port key %lu\n", __func__, packet.key);
-    if (packet.key == kPortShutdown) {
-      zxlogf(INFO, "audio: Synaptics audio out shutting down\n");
-      return thrd_success;
-    } else if (packet.key == kPortKeyIrqMsg) {
-      dhub_->Ack();
-      if (enabled_) {
-        dhub_->StartDma();
-      }
-      interrupt_.ack();
-    }
-  }
-}
-
-zx_status_t SynAudioOutDevice::Init(ddk::MmioBuffer mmio_dhub) {
-  dhub_ = SynDhub::Create(std::move(mmio_dhub), SynDhub::kChannelIdOut);
-  if (dhub_ == nullptr) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  auto status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s port create failed %d\n", __func__, status);
-    return status;
-  }
-
-  status = interrupt_.bind(port_, kPortKeyIrqMsg, 0 /*options*/);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s interrupt bind failed %d\n", __func__, status);
-    return status;
-  }
-
-  auto cb = [](void* arg) -> int { return reinterpret_cast<SynAudioOutDevice*>(arg)->Thread(); };
-  int rc = thrd_create_with_name(&thread_, cb, this, "synaptics-audio-out-thread");
-  if (rc != thrd_success) {
-    return ZX_ERR_INTERNAL;
-  }
-
+      dma_(dma) {
   AIO_PRI_TSD0_PRI_CTRL::Get().ReadFrom(&i2s_).set_ENABLE(0).WriteTo(&i2s_);  // Disable channel 0.
   AIO_IRQENABLE::Get().ReadFrom(&i2s_).set_PRIIRQ(1).WriteTo(&i2s_);
   AIO_PRI_PRIPORT::Get().ReadFrom(&i2s_).set_ENABLE(1).WriteTo(&i2s_);
-
-  return ZX_OK;
 }
 
-uint32_t SynAudioOutDevice::GetRingPosition() { return dhub_->GetBufferPosition(); }
+zx_status_t SynAudioOutDevice::Init() { return ZX_OK; }
 
-zx_status_t SynAudioOutDevice::SetBuffer(zx_paddr_t buf, size_t len) {
-  constexpr uint32_t kDmaMinAlignement = 16;
-  if ((buf % kDmaMinAlignement) || ((buf + len - 1) > std::numeric_limits<uint32_t>::max()) ||
-      (len < GetDmaGranularity()) || (len % GetDmaGranularity())) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  dhub_->SetBuffer(buf, len);
-  return ZX_OK;
+uint32_t SynAudioOutDevice::GetRingPosition() { return dma_.GetBufferPosition(DmaId::kDmaIdMa0); }
+
+zx_status_t SynAudioOutDevice::GetBuffer(size_t size, zx::vmo* buffer) {
+  return dma_.InitializeAndGetBuffer(DmaId::kDmaIdMa0, DMA_TYPE_CYCLIC, static_cast<uint32_t>(size),
+                                     buffer);
 }
 
 uint64_t SynAudioOutDevice::Start() {
@@ -136,8 +74,7 @@ uint64_t SynAudioOutDevice::Start() {
       .WriteTo(&i2s_);
 
   enabled_ = true;
-  dhub_->Enable(true);
-  dhub_->StartDma();
+  dma_.Start(DmaId::kDmaIdMa0);
 
   AIO_PRI_TSD0_PRI_CTRL::Get().FromValue(0).set_ENABLE(1).set_MUTE(0).WriteTo(&i2s_);
   return 0;
@@ -146,14 +83,10 @@ uint64_t SynAudioOutDevice::Start() {
 void SynAudioOutDevice::Stop() {
   AIO_PRI_TSD0_PRI_CTRL::Get().ReadFrom(&i2s_).set_MUTE(1).WriteTo(&i2s_);
   enabled_ = false;
+  dma_.Stop(DmaId::kDmaIdMa0);
 }
 
 void SynAudioOutDevice::Shutdown() {
   Stop();
   AIO_PRI_PRIPORT::Get().ReadFrom(&i2s_).set_ENABLE(0).WriteTo(&i2s_);
-  zx_port_packet packet = {kPortShutdown, ZX_PKT_TYPE_USER, ZX_OK, {}};
-  zx_status_t status = port_.queue(&packet);
-  ZX_ASSERT(status == ZX_OK);
-  thrd_join(thread_, NULL);
-  interrupt_.destroy();
 }

@@ -10,6 +10,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/shareddma.h>
 #include <ddktl/metadata/audio.h>
 #include <fbl/algorithm.h>
 #include <soc/as370/as370-clk.h>
@@ -34,6 +35,9 @@ static const zx_bind_inst_t ref_out_codec_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MAXIM),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MAXIM_MAX98373),
 };
+static const zx_bind_inst_t dma_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SHARED_DMA),
+};
 static const zx_bind_inst_t ref_out_clk0_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, as370::As370Clk::kClkAvpll0),
@@ -45,6 +49,10 @@ static const device_component_part_t ref_out_i2c_component[] = {
 static const device_component_part_t ref_out_codec_component[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(ref_out_codec_match), ref_out_codec_match},
+};
+static const device_component_part_t dma_component[] = {
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(dma_match), dma_match},
 };
 
 static const zx_bind_inst_t ref_out_enable_gpio_match[] = {
@@ -65,6 +73,7 @@ static const device_component_t codec_components[] = {
     {countof(ref_out_enable_gpio_component), ref_out_enable_gpio_component},
 };
 static const device_component_t controller_components[] = {
+    {countof(dma_component), dma_component},
     {countof(ref_out_codec_component), ref_out_codec_component},
     {countof(ref_out_clk0_component), ref_out_clk0_component},
 };
@@ -76,28 +85,12 @@ zx_status_t As370::AudioInit() {
           .length = as370::kGlobalSize,
       },
       {
-          .base = as370::kAudioDhubBase,
-          .length = as370::kAudioDhubSize,
-      },
-      {
           .base = as370::kAudioGlobalBase,
           .length = as370::kAudioGlobalSize,
       },
       {
           .base = as370::kAudioI2sBase,
           .length = as370::kAudioI2sSize,
-      },
-  };
-  constexpr pbus_irq_t irqs_out[] = {
-      {
-          .irq = as370::kDhubIrq,
-          .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-      },
-  };
-  static constexpr pbus_bti_t btis_out[] = {
-      {
-          .iommu_index = 0,
-          .bti_id = BTI_AUDIO_OUT,
       },
   };
 
@@ -108,34 +101,69 @@ zx_status_t As370::AudioInit() {
   controller_out.did = PDEV_DID_AS370_AUDIO_OUT;
   controller_out.mmio_list = mmios_out;
   controller_out.mmio_count = countof(mmios_out);
-  controller_out.irq_list = irqs_out;
-  controller_out.irq_count = countof(irqs_out);
-  controller_out.bti_list = btis_out;
-  controller_out.bti_count = countof(btis_out);
+
+  static constexpr pbus_mmio_t mmios_dhub[] = {
+      {
+          .base = as370::kAudioDhubBase,
+          .length = as370::kAudioDhubSize,
+      },
+  };
+
+  constexpr pbus_irq_t irqs_dhub[] = {
+      {
+          .irq = as370::kDhubIrq,
+          .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+      },
+  };
+  static constexpr pbus_bti_t btis_dhub[] = {
+      {
+          .iommu_index = 0,
+          .bti_id = BTI_AUDIO_DHUB,
+      },
+  };
+
+  pbus_dev_t dhub = {};
+  dhub.name = "as370-dhub";
+  dhub.vid = PDEV_VID_SYNAPTICS;
+  dhub.pid = PDEV_PID_SYNAPTICS_AS370;
+  dhub.did = PDEV_DID_AS370_DHUB;
+  dhub.mmio_list = mmios_dhub;
+  dhub.mmio_count = countof(mmios_dhub);
+  dhub.irq_list = irqs_dhub;
+  dhub.irq_count = countof(irqs_dhub);
+  dhub.bti_list = btis_dhub;
+  dhub.bti_count = countof(btis_dhub);
 
   // Output pin assignments.
   gpio_impl_.SetAltFunction(17, 0);  // AMP_EN, mode 0 to set as GPIO.
   gpio_impl_.ConfigOut(17, 0);
 
-  gpio_impl_.SetAltFunction(6, 1);  // mode 1 to set as I2S1_MCLK.
-  gpio_impl_.SetAltFunction(0, 1);  // mode 1 to set as I2S1_BCLKIO (TDM_BCLK).
-  gpio_impl_.SetAltFunction(1, 1);  // mode 1 to set as I2S1_LRLKIO (TDM_FSYNC).
-  gpio_impl_.SetAltFunction(2, 1);  // mode 1 to set as I2S1_DO[0] (TDM_MOSI).
+  // DMA device.
+  auto status = pbus_.DeviceAdd(&dhub);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s adding Dhub failed %d\n", __FILE__, status);
+    return status;
+  }
 
   // Output devices.
   constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
                                         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373}};
-  auto status = DdkAddComposite("audio-max98373", props, countof(props), codec_components,
-                                countof(codec_components), UINT32_MAX);
+  status = DdkAddComposite("audio-max98373", props, countof(props), codec_components,
+                           countof(codec_components), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddComposite failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s DdkAddComposite failed %d\n", __FILE__, status);
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&controller_out, controller_components,
-                                    countof(controller_components), UINT32_MAX);
+  // coresident_device_index = 1 to share devhost with DHub.
+  // When autoproxying (ZX-3478) or its replacement is in place,
+  // we can have these drivers in different devhosts.
+  constexpr uint32_t controller_coresident_device_index = 1;
+  status =
+      pbus_.CompositeDeviceAdd(&controller_out, controller_components,
+                               countof(controller_components), controller_coresident_device_index);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s adding audio controller out device failed %d\n", __FILE__, status);
     return status;
   }
 

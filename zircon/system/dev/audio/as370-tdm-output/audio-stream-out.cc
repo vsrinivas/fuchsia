@@ -26,6 +26,7 @@ namespace {
 
 enum {
   COMPONENT_PDEV,
+  COMPONENT_SHARED_DMA,
   COMPONENT_CODEC,
   COMPONENT_CLOCK,
   COMPONENT_COUNT,
@@ -61,6 +62,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
 
   pdev_ = components[COMPONENT_PDEV];
   if (!pdev_.is_valid()) {
+    zxlogf(ERROR, "%s could not get pdev\n", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
   clks_[kAvpll0Clk] = components[COMPONENT_CLOCK];
@@ -72,39 +74,29 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   clks_[kAvpll0Clk].SetRate(kWantedFrameRate * 64 * 8 * 8);
   clks_[kAvpll0Clk].Enable();
 
-  status = pdev_.GetBti(0, &bti_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain BTI %d\n", __FILE__, status);
-    return status;
+  ddk::SharedDmaProtocolClient dma;
+  dma = components[COMPONENT_SHARED_DMA];
+  if (!dma.is_valid()) {
+    zxlogf(ERROR, "%s could not get DMA\n", __FILE__);
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  std::optional<ddk::MmioBuffer> mmio_global, mmio_dhub, mmio_avio_global, mmio_i2s;
+  std::optional<ddk::MmioBuffer> mmio_global, mmio_avio_global, mmio_i2s;
   status = pdev_.MapMmio(0, &mmio_global);
   if (status != ZX_OK) {
     return status;
   }
-  status = pdev_.MapMmio(1, &mmio_dhub);
+  status = pdev_.MapMmio(1, &mmio_avio_global);
   if (status != ZX_OK) {
     return status;
   }
-  status = pdev_.MapMmio(2, &mmio_avio_global);
+  status = pdev_.MapMmio(2, &mmio_i2s);
   if (status != ZX_OK) {
-    return status;
-  }
-  status = pdev_.MapMmio(3, &mmio_i2s);
-  if (status != ZX_OK) {
-    return status;
-  }
-  zx::interrupt interrupt;
-  status = pdev_.GetInterrupt(0, &interrupt);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s GetInterrupt failed %d\n", __func__, status);
     return status;
   }
 
-  lib_ = SynAudioOutDevice::Create(*std::move(mmio_global), *std::move(mmio_dhub),
-                                   *std::move(mmio_avio_global), *std::move(mmio_i2s),
-                                   std::move(interrupt));
+  lib_ = SynAudioOutDevice::Create(*std::move(mmio_global), *std::move(mmio_avio_global),
+                                   *std::move(mmio_i2s), dma);
   if (lib_ == nullptr) {
     zxlogf(ERROR, "%s failed to create Syn audio device\n", __FILE__);
     return ZX_ERR_NO_MEMORY;
@@ -112,13 +104,12 @@ zx_status_t As370AudioStreamOut::InitPdev() {
 
   // Calculate ring buffer size for 1 second of 16-bit at kMaxRate.
   const size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
-      kWantedFrameRate * 2 * kNumberOfChannels, SynAudioOutDevice::GetDmaGranularity());
+      kWantedFrameRate * sizeof(uint16_t) * kNumberOfChannels, ZX_PAGE_SIZE);
   status = InitBuffer(kRingBufferSize);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to Init buffer %d\n", __FILE__, status);
     return status;
   }
-  lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, pinned_ring_buffer_.region(0).size);
 
   codec_.proto_client_ = components[COMPONENT_CODEC];
   if (!codec_.proto_client_.is_valid()) {
@@ -262,7 +253,9 @@ zx_status_t As370AudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
 
 zx_status_t As370AudioStreamOut::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
                                            uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
-  uint32_t rb_frames = static_cast<uint32_t>(pinned_ring_buffer_.region(0).size / frame_size_);
+  size_t size = 0;
+  ring_buffer_vmo_.get_size(&size);
+  uint32_t rb_frames = static_cast<uint32_t>(size / frame_size_);
 
   if (req.min_ring_buffer_frames > rb_frames) {
     return ZX_ERR_OUT_OF_RANGE;
@@ -276,8 +269,6 @@ zx_status_t As370AudioStreamOut::GetBuffer(const audio_proto::RingBufGetBufferRe
 
   *out_num_rb_frames = rb_frames;
 
-  lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, rb_frames * frame_size_);
-
   return ZX_OK;
 }
 
@@ -285,8 +276,9 @@ zx_status_t As370AudioStreamOut::Start(uint64_t* out_start_time) {
   *out_start_time = lib_->Start();
   uint32_t notifs = LoadNotificationsPerRing();
   if (notifs) {
-    us_per_notification_ = static_cast<uint32_t>(1000 * pinned_ring_buffer_.region(0).size /
-                                                 (frame_size_ * 48 * notifs));
+    size_t size = 0;
+    ring_buffer_vmo_.get_size(&size);
+    us_per_notification_ = static_cast<uint32_t>(1000 * size / (frame_size_ * 48 * notifs));
     notify_timer_->Arm(zx_deadline_after(ZX_USEC(us_per_notification_)));
   } else {
     us_per_notification_ = 0;
@@ -325,24 +317,11 @@ zx_status_t As370AudioStreamOut::AddFormats() {
 }
 
 zx_status_t As370AudioStreamOut::InitBuffer(size_t size) {
-  auto status =
-      zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
+  auto status = lib_->GetBuffer(size, &ring_buffer_vmo_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo %d\n", __FILE__, status);
-    return status;
+    zxlogf(ERROR, "%s could not get ring buffer\n", __FILE__);
   }
-
-  status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __FILE__, status);
-    return status;
-  }
-  if (pinned_ring_buffer_.region_count() != 1) {
-    zxlogf(ERROR, "%s buffer is not contiguous", __FILE__);
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  return ZX_OK;
+  return status;
 }
 
 }  // namespace as370

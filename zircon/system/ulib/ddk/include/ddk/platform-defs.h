@@ -256,6 +256,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AS370_AUDIO_OUT     3
 #define PDEV_DID_AS370_AUDIO_IN      4
 #define PDEV_DID_AS370_CLOCK         5
+#define PDEV_DID_AS370_DHUB          6
 
 // Maxim
 #define PDEV_VID_MAXIM              21

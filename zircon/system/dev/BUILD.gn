@@ -35,6 +35,7 @@ group("dev") {
     "sample",
     "scpi",
     "serial",
+    "shareddma",
     "spi",
     "sysmem",
     "tee",

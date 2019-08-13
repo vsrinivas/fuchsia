@@ -57,6 +57,7 @@ group("banjo") {
     "ddk.protocol.sdmmc",
     "ddk.protocol.serial",
     "ddk.protocol.serialimpl",
+    "ddk.protocol.shareddma",
     "ddk.protocol.spiimpl",
     "ddk.protocol.sysmem",
     "ddk.protocol.test",
