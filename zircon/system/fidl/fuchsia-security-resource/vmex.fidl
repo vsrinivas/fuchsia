@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.security.resource;
+
+/// Protocol for providing a `ZX_RSRC_KIND_VMEX` to programs that should be
+/// able to mark VMOs as executable.
+[Discoverable, Layout = "Simple"]
+protocol Vmex {
+    /// Get a VMEX resource handle as |resource|.
+    Get() -> (handle<resource> vmex);
+};

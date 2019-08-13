@@ -83,6 +83,7 @@ group("fidl") {
     "fuchsia-process",
     "fuchsia-process-init",
     "fuchsia-scheduler",
+    "fuchsia-security-resource",
     "fuchsia-storage-metrics",
     "fuchsia-sysinfo",
     "fuchsia-sysmem",
