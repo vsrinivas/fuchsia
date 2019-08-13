@@ -7,6 +7,7 @@ package outputs_test
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"go.fuchsia.dev/tools/cmd/testrunner/outputs"
 	"go.fuchsia.dev/tools/runtests"
@@ -14,9 +15,12 @@ import (
 )
 
 func TestSummaryOutput(t *testing.T) {
+	start := time.Now()
 	inputs := []testrunner.TestResult{{
-		Name:   "test_a",
-		Result: runtests.TestFailure,
+		Name:      "test_a",
+		Result:    runtests.TestFailure,
+		StartTime: start,
+		EndTime:   start.Add(10 * time.Millisecond),
 	}, {
 		Name:   "test_b",
 		Result: runtests.TestSuccess,
@@ -29,13 +33,16 @@ func TestSummaryOutput(t *testing.T) {
 
 	expectedSummary := runtests.TestSummary{
 		Tests: []runtests.TestDetails{{
-			Name:       "test_a",
-			OutputFile: "test_a/stdout-and-stderr.txt",
-			Result:     runtests.TestFailure,
+			Name:           "test_a",
+			OutputFile:     "test_a/stdout-and-stderr.txt",
+			Result:         runtests.TestFailure,
+			DurationMillis: 10,
 		}, {
 			Name:       "test_b",
 			OutputFile: "test_b/stdout-and-stderr.txt",
 			Result:     runtests.TestSuccess,
+			// Unspecified start and end times == 0
+			DurationMillis: 0,
 		}},
 	}
 

@@ -55,4 +55,7 @@ type TestDetails struct {
 
 	// DataSinks gives the data sinks attached to a test.
 	DataSinks map[string][]DataSink `json:"data_sinks,omitempty"`
+
+	// Duration is how long the test execution took.
+	DurationMillis int64 `json:"duration_milliseconds"`
 }
