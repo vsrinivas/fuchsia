@@ -248,6 +248,10 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 		return Config{}, fmt.Errorf("stack.NewEndpoint(): %s", err)
 	}
 	defer ep.Close()
+	// TODO(NET-2441): Use SO_BINDTODEVICE instead of SO_REUSEPORT.
+	if err := ep.SetSockOpt(tcpip.ReusePortOption(1)); err != nil {
+		return Config{}, fmt.Errorf("SetSockOpt(ReusePortOption): %s", err)
+	}
 	if writeOpts.To.Addr == tcpipHeader.IPv4Broadcast {
 		if err := ep.SetSockOpt(tcpip.BroadcastOption(1)); err != nil {
 			return Config{}, fmt.Errorf("SetSockOpt(BroadcastOption): %s", err)

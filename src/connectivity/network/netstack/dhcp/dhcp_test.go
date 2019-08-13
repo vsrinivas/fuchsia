@@ -62,6 +62,90 @@ func createTestStackWithChannel(t *testing.T) (*stack.Stack, *channel.Endpoint) 
 	return s, linkEP
 }
 
+// TestSimultaneousDHCPClients makes two clients that are trying to get DHCP
+// addresses at the same time.
+func TestSimultaneousDHCPClients(t *testing.T) {
+	const clientCount = 2
+	s, serverLinkEP := createTestStackWithChannel(t)
+	defer close(serverLinkEP.C)
+
+	// clientLinkEPs are the endpoints on which to inject packets to the client.
+	var clientLinkEPs []*channel.Endpoint
+
+	// errs is for reporting the success or failure out of the goroutine.
+	errs := make(chan error)
+	defer close(errs)
+
+	// Start the clients.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	for i := 0; i < clientCount; i++ {
+		const defaultMTU = 65536
+		id, clientLinkEP := channel.New(256, defaultMTU, "")
+		defer close(clientLinkEP.C)
+		clientLinkEPs = append(clientLinkEPs, clientLinkEP)
+		clientNicid := tcpip.NICID(100 + i)
+		if err := s.CreateNIC(clientNicid, id); err != nil {
+			t.Fatalf("could not create NIC: %s", err)
+		}
+		const clientLinkAddr = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
+		c := NewClient(s, clientNicid, clientLinkAddr, nil)
+		go func() {
+			// Packets from the clients get sent to the server.
+			for pkt := range clientLinkEP.C {
+				serverLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+			}
+		}()
+		go func() {
+			_, err := c.acquire(ctx, initSelecting)
+			errs <- err
+		}()
+	}
+
+	go func() {
+		// Hold the packets until the first clientCount packets are received and
+		// then deliver those packets to all the clients.  Each client below will
+		// send one packet as part of DHCP acquire so this makes sure that all are
+		// running before continuing the acquisition.
+		var pkts []channel.PacketInfo
+		for i := 0; i < clientCount; i++ {
+			pkts = append(pkts, <-serverLinkEP.C)
+		}
+		for _, pkt := range pkts {
+			for _, clientLinkEP := range clientLinkEPs {
+				clientLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+			}
+		}
+		for pkt := range serverLinkEP.C {
+			for _, clientLinkEP := range clientLinkEPs {
+				clientLinkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+			}
+		}
+	}()
+
+	// Start the server.
+	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
+	serverCfg := Config{
+		ServerAddress: serverAddr,
+		SubnetMask:    "\xff\xff\xff\x00",
+		Gateway:       "\xc0\xa8\x03\xF0",
+		DNS: []tcpip.Address{
+			"\x08\x08\x08\x08", "\x08\x08\x04\x04",
+		},
+		LeaseLength: 24 * time.Hour,
+	}
+	if _, err := newEPConnServer(ctx, s, clientAddrs, serverCfg); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for all clients to finish and collect results.
+	for i := 0; i < clientCount; i++ {
+		if err := <-errs; err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestDHCP(t *testing.T) {
 	s := createTestStack(t)
 	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
