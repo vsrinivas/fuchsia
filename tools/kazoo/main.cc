@@ -14,8 +14,9 @@
 namespace {
 
 struct CommandLineOptions {
-  std::optional<std::string> ktrace;
   std::optional<std::string> kernel_branches;
+  std::optional<std::string> ktrace;
+  std::optional<std::string> syscall_numbers;
 };
 
 constexpr const char kHelpIntro[] = R"(kazoo [ <options> ] <fidlc-ir.json>
@@ -27,11 +28,14 @@ Options:
 
 )";
 
+constexpr const char kKernelBranchesHelp[] = R"(  --kernel-branches=FILENAME
+    The output name for the .S file used for kernel syscall dispatch.)";
+
 constexpr const char kKtraceHelp[] = R"(  --ktrace=FILENAME
     The output name for the .inc file used for kernel tracing.)";
 
-constexpr const char kKernelBranchesHelp[] = R"(  --kernel-branches=FILENAME
-    The output name for the .S file used for kernel syscall dispatch.)";
+constexpr const char kSyscallNumbersHelp[] = R"(  --syscall-numbers=FILENAME
+    The output name for the .h file used for syscall numbers.)";
 
 const char kHelpHelp[] = R"(  --help
   -h
@@ -40,8 +44,9 @@ const char kHelpHelp[] = R"(  --help
 cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
                                  std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
-  parser.AddSwitch("ktrace", 0, kKtraceHelp, &CommandLineOptions::ktrace);
   parser.AddSwitch("kernel-branches", 0, kKernelBranchesHelp, &CommandLineOptions::kernel_branches);
+  parser.AddSwitch("ktrace", 0, kKtraceHelp, &CommandLineOptions::ktrace);
+  parser.AddSwitch("syscall-numbers", 0, kSyscallNumbersHelp, &CommandLineOptions::syscall_numbers);
   bool requested_help = false;
   parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
 
@@ -85,8 +90,9 @@ int main(int argc, const char* argv[]) {
     std::optional<std::string>* name;
     bool (*output)(const SyscallLibrary&, Writer*);
   } backends[] = {
-      {&options.ktrace, KtraceOutput},
       {&options.kernel_branches, KernelBranchesOutput},
+      {&options.ktrace, KtraceOutput},
+      {&options.syscall_numbers, SyscallNumbersOutput},
   };
 
   for (const auto& backend : backends) {

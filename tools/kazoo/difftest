@@ -25,14 +25,19 @@ out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
       --files zircon/experimental/syscalls/*.fidl
 
 out/default/host_x64/exe.unstripped/kazoo \
-  --ktrace=/tmp/ktrace.inc \
   --kernel-branches=/tmp/kernel-branches.S \
+  --ktrace=/tmp/ktrace.inc \
+  --syscall-numbers=/tmp/syscall-numbers.h \
   /tmp/syscalls.json
+
+compare "kernel-branches" \
+        "out/default.zircon/kernel-x64-clang/gen/kernel/syscalls/zircon/syscall-kernel-branches.S" \
+        "/tmp/kernel-branches.S"
 
 compare "ktrace" \
         "out/default.zircon/kernel-x64-clang/gen/kernel/lib/ktrace/zircon/syscall-ktrace-info.inc" \
         "/tmp/ktrace.inc"
 
-compare "kernel-branches" \
-        "out/default.zircon/kernel-x64-clang/gen/kernel/syscalls/zircon/syscall-kernel-branches.S" \
-        "/tmp/kernel-branches.S"
+compare "syscall-numbers" \
+        "out/default.zircon/kernel-x64-clang/gen/kernel/syscalls/zircon/zx-syscall-numbers.h" \
+        "/tmp/syscall-numbers.h"

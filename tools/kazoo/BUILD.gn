@@ -30,6 +30,7 @@ if (current_toolchain == host_toolchain) {
       "outputs.h",
       "syscall_library.cc",
       "syscall_library.h",
+      "syscall_numbers_output.cc",
       "writer.cc",
       "writer.h",
     ]
@@ -56,6 +57,7 @@ if (current_toolchain == host_toolchain) {
       "ktrace_output_test.cc",
       "output_util_test.cc",
       "syscall_library_test.cc",
+      "syscall_numbers_output_test.cc",
       "writer_test.cc",
     ]
   }
