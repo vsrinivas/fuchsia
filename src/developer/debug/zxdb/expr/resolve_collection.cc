@@ -65,11 +65,9 @@ Err GetErrorForInvalidMemberOf(const ExprValue& value) {
              value.type()->GetFullName().c_str());
 }
 
-// Validates the input member (it will null check) and extracts the type and size for the member.
-// The size is returned separately because the member_type might be a forward declaration and
-// we can't return a concrete type without breaking CV qualifiers.
-Err GetMemberType(fxl::RefPtr<EvalContext> context, const Collection* coll,
-                  const DataMember* member, fxl::RefPtr<Type>* member_type, uint32_t* member_size) {
+// Validates the input member (it will null check) and extracts the type for the member.
+Err GetMemberType(const Collection* coll, const DataMember* member,
+                  fxl::RefPtr<Type>* member_type) {
   if (!member)
     return GetErrorForInvalidMemberOf(coll);
 
@@ -78,7 +76,6 @@ Err GetMemberType(fxl::RefPtr<EvalContext> context, const Collection* coll,
     return Err("Bad type information for '%s.%s'.", coll->GetFullName().c_str(),
                member->GetAssignedName().c_str());
   }
-
   return Err();
 }
 
@@ -90,8 +87,7 @@ void DoResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue&
     return cb(err);
 
   fxl::RefPtr<Type> member_type;
-  uint32_t member_size = 0;
-  err = GetMemberType(context, pointed_to_type, member.data_member(), &member_type, &member_size);
+  err = GetMemberType(pointed_to_type, member.data_member(), &member_type);
   if (err.has_error())
     return cb(err);
 
@@ -103,16 +99,10 @@ void DoResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue&
 
 // Extracts an embedded type inside of a base. This can be used for finding collection data members
 // and inherited classes, both of which consist of a type and an offset.
-ErrOrValue ExtractSubType(fxl::RefPtr<EvalContext> context, const ExprValue& base,
-                          fxl::RefPtr<Type> sub_type, uint32_t offset) {
-  // Need a valid size for the inside type so it has to be concrete.
-  auto concrete = context->GetConcreteType(sub_type.get());
-  uint32_t size = concrete->byte_size();
-
-  if (offset + size > base.data().size()) {
-    return Err("Invalid data offset %" PRIu32 " in object of size %zu.", offset,
-               base.data().size());
-  }
+ErrOrValue ExtractSubType(const ExprValue& base, fxl::RefPtr<Type> sub_type, uint32_t offset) {
+  uint32_t size = sub_type->byte_size();
+  if (offset + size > base.data().size())
+    return GetErrorForInvalidMemberOf(base);
   std::vector<uint8_t> member_data(base.data().begin() + offset,
                                    base.data().begin() + (offset + size));
 
@@ -131,12 +121,11 @@ ErrOrValue DoResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& ba
     return Err("Can't resolve data member on non-struct/class value.");
 
   fxl::RefPtr<Type> member_type;
-  uint32_t member_size = 0;
-  Err err = GetMemberType(context, coll, member.data_member(), &member_type, &member_size);
+  Err err = GetMemberType(coll, member.data_member(), &member_type);
   if (err.has_error())
     return err;
 
-  return ExtractSubType(context, base, std::move(member_type), member.data_member_offset());
+  return ExtractSubType(base, std::move(member_type), member.data_member_offset());
 }
 
 }  // namespace
@@ -188,18 +177,16 @@ void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& b
           ErrOrValue value) mutable { cb(std::move(value), std::move(member_ref)); });
 }
 
-ErrOrValue ResolveInherited(fxl::RefPtr<EvalContext> context, const ExprValue& value,
-                            const InheritedFrom* from) {
+ErrOrValue ResolveInherited(const ExprValue& value, const InheritedFrom* from) {
   const Type* from_type = from->from().Get()->AsType();
   if (!from_type)
     return GetErrorForInvalidMemberOf(value);
 
-  return ExtractSubType(context, value, RefPtrTo(from_type), from->offset());
+  return ExtractSubType(value, RefPtrTo(from_type), from->offset());
 }
 
-ErrOrValue ResolveInherited(fxl::RefPtr<EvalContext> context, const ExprValue& value,
-                            fxl::RefPtr<Type> base_type, uint64_t offset) {
-  return ExtractSubType(context, value, std::move(base_type), offset);
+ErrOrValue ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type, uint64_t offset) {
+  return ExtractSubType(value, std::move(base_type), offset);
 }
 
 Err GetConcretePointedToCollection(const fxl::RefPtr<EvalContext>& eval_context, const Type* input,

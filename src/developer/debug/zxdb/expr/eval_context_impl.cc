@@ -193,12 +193,9 @@ fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(const Type* type) co
   }
   ParsedIdentifier parsed_ident = ToParsedIdentifier(ident);
 
-  // Search for the first match of a type definition. Note that "find_types" is not desirable here
-  // since we only want to resolve real definitions. Normally the index contains only definitions
-  // but if a module contains only declarations that module's index will list the symbol as a
-  // declaration which we don't want.
+  // Search for the first match of a type.
   FindNameOptions opts(FindNameOptions::kNoKinds);
-  opts.find_type_defs = true;
+  opts.find_types = true;
   opts.max_results = 1;
 
   // The type names will always be fully qualified. Mark the identifier as

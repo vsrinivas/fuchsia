@@ -274,10 +274,10 @@ enum CastPointer { kAllowBaseToDerived, kDisallowBaseToDerived };
 // static_cast rules.
 //
 // The source and dest types should already be concrete (from EvalContext::GetConcreteType()).
-ErrOrValue StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context,
-                                  const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
-                                  const Type* concrete_from, const Type* concrete_to,
-                                  const ExprValueSource& dest_source, CastPointer cast_pointer) {
+ErrOrValue StaticCastPointerOrRef(EvalContext* eval_context, const ExprValue& source,
+                                  const fxl::RefPtr<Type>& dest_type, const Type* concrete_from,
+                                  const Type* concrete_to, const ExprValueSource& dest_source,
+                                  CastPointer cast_pointer) {
   if (!DwarfTagIsPointerOrReference(concrete_from->tag()) ||
       !DwarfTagIsPointerOrReference(concrete_to->tag()))
     return MakeCastError(concrete_from, concrete_to);
@@ -351,7 +351,7 @@ ErrOrValue StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context,
              concrete_to->GetFullName().c_str());
 }
 
-ErrOrValue ImplicitCast(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& source,
+ErrOrValue ImplicitCast(EvalContext* eval_context, const ExprValue& source,
                         const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source) {
   // There are several fundamental types of things that can be casted:
   //  - Aggregate types: Can only convert if they're the same.
@@ -412,14 +412,14 @@ ErrOrValue ImplicitCast(const fxl::RefPtr<EvalContext>& eval_context, const Expr
     // Ignore the dest_source. ResolveInherited is extracting data from inside the source object
     // which has a well-defined source location (unlike for all other casts that change the data so
     // there isn't so clear a source).
-    return ResolveInherited(eval_context, source, dest_type, *found_offset);
+    return ResolveInherited(source, dest_type, *found_offset);
   }
 
   return Err("Can't cast from '%s' to '%s'.", source.type()->GetFullName().c_str(),
              dest_type->GetFullName().c_str());
 }
 
-ErrOrValue ReinterpretCast(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& source,
+ErrOrValue ReinterpretCast(EvalContext* eval_context, const ExprValue& source,
                            const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source) {
   if (!source.type())
     return Err("Can't cast from a null type.");
@@ -446,7 +446,7 @@ ErrOrValue ReinterpretCast(const fxl::RefPtr<EvalContext>& eval_context, const E
   return ExprValue(dest_type, std::move(new_data), dest_source);
 }
 
-ErrOrValue StaticCast(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& source,
+ErrOrValue StaticCast(EvalContext* eval_context, const ExprValue& source,
                       const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source) {
   // Our implicit cast is permissive enough to handle most cases including all number conversions,
   // and casts to base types.
@@ -479,9 +479,8 @@ const char* CastTypeToString(CastType type) {
   return "<invalid>";
 }
 
-ErrOrValue CastExprValue(const fxl::RefPtr<EvalContext>& eval_context, CastType cast_type,
-                         const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
-                         const ExprValueSource& dest_source) {
+ErrOrValue CastExprValue(EvalContext* eval_context, CastType cast_type, const ExprValue& source,
+                         const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source) {
   switch (cast_type) {
     case CastType::kImplicit:
       return ImplicitCast(eval_context, source, dest_type, dest_source);
@@ -508,7 +507,7 @@ ErrOrValue CastExprValue(const fxl::RefPtr<EvalContext>& eval_context, CastType 
   return Err("Internal error.");
 }
 
-bool CastShouldFollowReferences(const fxl::RefPtr<EvalContext>& eval_context, CastType cast_type,
+bool CastShouldFollowReferences(EvalContext* eval_context, CastType cast_type,
                                 const ExprValue& source, const fxl::RefPtr<Type>& dest_type) {
   // Implicit casts never follow references. If you have two references:
   //   A& a;
