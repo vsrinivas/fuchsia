@@ -43,13 +43,36 @@ var Kinds = struct {
 type Decl interface{}
 
 type Type struct {
+	// Use Type.Decl when you want to _declare_ a class/struct, e.g. "class Foo { … }". If you need
+	// to reference a class by its name (e.g. "new Foo"), use the Type.Identifier() method instead.
+	// Identifier() will add a type qualifier to the class name so that the compiler will resolve
+	// the class, even if any locally non-type declarations are present (e.g. "enum Foo"). Google
+	// for "C++ elaborated type specifier" for more details.
 	Decl                string
-	Dtor                string
 	LLDecl              string
-	LLDtor              string
 	OvernetEmbeddedDecl string
+
+	Dtor                string
+	LLDtor              string
 	OvernetEmbeddedDtor string
-	DeclType            types.DeclType
+
+	DeclType types.DeclType
+
+	IsPrimitive bool
+}
+
+func (t Type) Identifier() string {
+	// TODO(FIDL-762): The logic to determine whether the type qualifier is necessary in this method
+	// probably isn't correct in all cases due to the complexity of C++'s grammar rules, and could
+	// be improved.
+
+	// Don't prepend type qualifiers to fully-qualified class names, which will begin with "::"
+	// (e.g. "::fidl::namespace:ClassName"): they can't be hidden by local declarations.
+	if t.IsPrimitive || strings.HasPrefix(t.Decl, "::") {
+		return t.Decl
+	}
+
+	return "class " + t.Decl
 }
 
 type Const struct {
@@ -626,6 +649,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.LLDecl = r.Decl
 		r.OvernetEmbeddedDecl = r.Decl
+		r.IsPrimitive = true
 	case types.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier, "", "")
 		tEmbbeded := c.compileCompoundIdentifier(val.Identifier, "", "embedded")
@@ -636,9 +660,9 @@ func (c *compiler) compileType(val types.Type) Type {
 		switch declType {
 		case types.BitsDeclType:
 			fallthrough
-		case types.ConstDeclType:
-			fallthrough
 		case types.EnumDeclType:
+			fallthrough
+		case types.ConstDeclType:
 			fallthrough
 		case types.StructDeclType:
 			fallthrough
@@ -647,6 +671,10 @@ func (c *compiler) compileType(val types.Type) Type {
 		case types.UnionDeclType:
 			fallthrough
 		case types.XUnionDeclType:
+			if declType.IsPrimitive() {
+				r.IsPrimitive = true
+			}
+
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
 				if declType == types.XUnionDeclType {

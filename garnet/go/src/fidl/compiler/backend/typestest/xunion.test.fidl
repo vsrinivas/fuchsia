@@ -22,6 +22,15 @@ strict xunion StrictSimpleXUnion {
     string s;
 };
 
+struct Empty {
+};
+
+xunion XUnionContainingEmptyStruct {
+    // This is a test to prevent regressions for FIDL-762. Note that we need FIDL-758 to be resolved
+    // to ensure this actually works, since goldens aren't currently compiled.
+    Empty empty;
+};
+
 strict xunion StrictBoundedXUnion {
     vector<uint8>:10 v;
 };
@@ -30,3 +39,4 @@ protocol TestProtocol {
     StrictXUnionHenceResponseMayBeStackAllocated() -> (StrictBoundedXUnion xu);
     FlexibleXUnionHenceResponseMustBeHeapAllocated() -> (OlderSimpleUnion xu);
 };
+

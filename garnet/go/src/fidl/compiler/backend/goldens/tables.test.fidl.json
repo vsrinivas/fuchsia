@@ -20,7 +20,8 @@
       "size": 16,
       "max_out_of_line": 0,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "strict": false
     },
     {
       "name": "test.name/SimpleTable",
@@ -97,7 +98,8 @@
       "size": 16,
       "max_out_of_line": 48,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "strict": false
     },
     {
       "name": "test.name/OlderSimpleTable",
@@ -138,7 +140,8 @@
       "size": 16,
       "max_out_of_line": 24,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "strict": false
     },
     {
       "name": "test.name/NewerSimpleTable",
@@ -242,7 +245,8 @@
       "size": 16,
       "max_out_of_line": 72,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "strict": false
     }
   ],
   "union_declarations": [],

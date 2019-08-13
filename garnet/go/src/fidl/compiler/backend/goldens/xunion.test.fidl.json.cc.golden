@@ -927,6 +927,171 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+extern "C" const fidl_type_t test_name_EmptyTable;
+const fidl_type_t* Empty::FidlType = &test_name_EmptyTable;
+
+void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+}
+
+void Empty::Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset) {
+  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+}
+
+zx_status_t Empty::Clone(Empty* _result) const {
+  zx_status_t _status = ::fidl::Clone(__reserved, &_result->__reserved);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+extern "C" const fidl_type_t test_name_XUnionContainingEmptyStructTable;
+const fidl_type_t* XUnionContainingEmptyStruct::FidlType = &test_name_XUnionContainingEmptyStructTable;
+
+XUnionContainingEmptyStruct::XUnionContainingEmptyStruct() {}
+
+XUnionContainingEmptyStruct::~XUnionContainingEmptyStruct() {
+  Destroy();
+}
+
+XUnionContainingEmptyStruct::XUnionContainingEmptyStruct(XUnionContainingEmptyStruct&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case Tag::kEmpty:
+      new (&empty_) class Empty();
+      empty_ = std::move(other.empty_);
+      break;
+    case kEmpty:
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+  }
+}
+
+XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::operator=(XUnionContainingEmptyStruct&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case Tag::kEmpty:
+        new (&empty_) class Empty();
+        empty_ = std::move(other.empty_);
+        break;
+      case kEmpty:
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
+    }
+  }
+  return *this;
+}
+
+void XUnionContainingEmptyStruct::Encode(::fidl::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (tag_) {
+    case Tag::kEmpty: {
+      envelope_offset = encoder->Alloc(::fidl::CodingTraits<class Empty>::encoded_size);
+      ::fidl::Encode(encoder, &empty_, envelope_offset);
+      break;
+    }
+    case Tag::kUnknown:
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+  }
+}
+
+void XUnionContainingEmptyStruct::Decode(::fidl::Decoder* decoder, XUnionContainingEmptyStruct* value, size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(kEmpty);
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
+    case Tag::kEmpty:
+      new (&value->empty_) class Empty();
+      ::fidl::Decode(decoder, &value->empty_, envelope_offset);
+      break;
+  default:
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      memcpy(value->unknown_data_.data(), xunion->envelope.data, xunion->envelope.num_bytes);
+      break;
+  }
+
+}
+
+zx_status_t XUnionContainingEmptyStruct::Clone(XUnionContainingEmptyStruct* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::kEmpty:
+      new (&result->empty_) class Empty();
+      return ::fidl::Clone(empty_, &result->empty_);
+    default:
+      return ZX_OK;
+  }
+}
+
+XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::set_empty(class Empty value) {
+  EnsureStorageInitialized(Tag::kEmpty);
+  empty_ = std::move(value);
+  return *this;
+}
+
+void XUnionContainingEmptyStruct::Destroy() {
+  switch (tag_) {
+    case Tag::kEmpty:
+      empty_.~Empty();
+      break;
+  
+    case kEmpty:
+      break;
+    default:
+      unknown_data_.~vector();
+      break;
+  
+  }
+  tag_ = kEmpty;
+}
+
+void XUnionContainingEmptyStruct::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case kEmpty:
+        break;
+      case Tag::kEmpty:
+        new (&empty_) class Empty();
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        break;
+    }
+  }
+}
 }  // namespace name
 }  // namespace test
 

@@ -1,6 +1,12 @@
 {
   "version": "0.0.1",
   "name": "test.name",
+  "maybe_attributes": [
+    {
+      "name": "Doc",
+      "value": " library comment #1\n\n library comment #2\n"
+    }
+  ],
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [
@@ -189,7 +195,8 @@
       "size": 16,
       "max_out_of_line": 24,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "strict": false
     }
   ],
   "union_declarations": [

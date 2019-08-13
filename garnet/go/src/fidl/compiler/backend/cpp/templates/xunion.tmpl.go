@@ -75,15 +75,15 @@ class {{ .Name }} final {
   {{range .DocComments}}
   //{{ . }}
   {{- end}}
-  {{ .Type.Decl }}& {{ .Name }}() {
+  {{ .Type.Identifier }}& {{ .Name }}() {
     EnsureStorageInitialized(Tag::{{ .TagName }});
     return {{ .StorageName }};
   }
   {{range .DocComments}}
   //{{ . }}
   {{- end}}
-  const {{ .Type.Decl }}& {{ .Name }}() const { return {{ .StorageName }}; }
-  {{ $.Name }}& set_{{ .Name }}({{ .Type.Decl }} value);
+  const {{ .Type.Identifier }}& {{ .Name }}() const { return {{ .StorageName }}; }
+  {{ $.Name }}& set_{{ .Name }}({{ .Type.Identifier }} value);
   {{- end }}
 
   Tag Which() const {
@@ -128,7 +128,7 @@ class {{ .Name }} final {
   ::fidl_xunion_tag_t tag_ = kEmpty;
   union {
   {{- range .Members }}
-    {{ .Type.Decl }} {{ .StorageName }};
+    {{ .Type.Identifier }} {{ .StorageName }};
   {{- end }}
   {{- if .IsFlexible }}
     std::vector<uint8_t> unknown_data_;
@@ -159,7 +159,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
   {{- range .Members }}
     case Tag::{{ .TagName }}:
     {{- if .Type.Dtor }}
-      new (&{{ .StorageName }}) {{ .Type.Decl }}();
+      new (&{{ .StorageName }}) {{ .Type.Identifier }}();
     {{- end }}
       {{ .StorageName }} = std::move(other.{{ .StorageName }});
       break;
@@ -183,7 +183,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
     {{- range .Members }}
       case Tag::{{ .TagName }}:
         {{- if .Type.Dtor }}
-        new (&{{ .StorageName }}) {{ .Type.Decl }}();
+        new (&{{ .StorageName }}) {{ .Type.Identifier }}();
         {{- end }}
         {{ .StorageName }} = std::move(other.{{ .StorageName }});
         break;
@@ -210,7 +210,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   switch (tag_) {
     {{- range .Members }}
     case Tag::{{ .TagName }}: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<{{ .Type.Decl }}>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::CodingTraits<{{ .Type.Identifier }}>::encoded_size);
       ::fidl::Encode(encoder, &{{ .StorageName }}, envelope_offset);
       break;
     }
@@ -254,7 +254,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   {{- range .Members }}
     case Tag::{{ .TagName }}:
       {{- if .Type.Dtor }}
-      new (&value->{{ .StorageName }}) {{ .Type.Decl }}();
+      new (&value->{{ .StorageName }}) {{ .Type.Identifier }}();
       {{- end }}
       ::fidl::Decode(decoder, &value->{{ .StorageName }}, envelope_offset);
       break;
@@ -276,7 +276,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
     {{- range .Members }}
     case Tag::{{ .TagName }}:
       {{- if .Type.Dtor }}
-      new (&result->{{ .StorageName }}) {{ .Type.Decl }}();
+      new (&result->{{ .StorageName }}) {{ .Type.Identifier }}();
       {{- end }}
       return ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
     {{- end }}
@@ -287,7 +287,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 
 {{- range $member := .Members }}
 
-{{ $.Name }}& {{ $.Name }}::set_{{ .Name }}({{ .Type.Decl }} value) {
+{{ $.Name }}& {{ $.Name }}::set_{{ .Name }}({{ .Type.Identifier }} value) {
   EnsureStorageInitialized(Tag::{{ .TagName }});
   {{ .StorageName }} = std::move(value);
   return *this;
@@ -328,7 +328,7 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       {{- range .Members }}
       {{- if .Type.Dtor }}
       case Tag::{{ .TagName }}:
-        new (&{{ .StorageName }}) {{ .Type.Decl }}();
+        new (&{{ .StorageName }}) {{ .Type.Identifier }}();
         break;
       {{- end }}
       {{- end }}

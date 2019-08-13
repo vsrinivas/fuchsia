@@ -11,6 +11,16 @@ import (
 
 
 
+
+type Empty struct {
+	_ struct{} `fidl2:"s,1,1"`
+}
+
+var _mEmpty = _bindings.CreateLazyMarshaler(Empty{})
+
+func (msg *Empty) Marshaler() _bindings.Marshaler {
+	return _mEmpty
+}
 type OlderSimpleUnionTag uint32
 const (
 	OlderSimpleUnion_unknownData = 0  // 0x00000000
@@ -139,6 +149,38 @@ func (_m *StrictSimpleXUnion) SetF(f float32) {
 func (_m *StrictSimpleXUnion) SetS(s string) {
 	_m.StrictSimpleXUnionTag = StrictSimpleXUnionS
 	_m.S = s
+}
+
+
+type XUnionContainingEmptyStructTag uint32
+const (
+	XUnionContainingEmptyStruct_unknownData = 0  // 0x00000000
+	XUnionContainingEmptyStructEmpty = 424858069 // 0x1952d1d5
+)
+
+
+type XUnionContainingEmptyStruct struct {
+	XUnionContainingEmptyStructTag `fidl2:"x,24,8"`
+	I_unknownData []byte
+	Empty Empty `fidl:"424858069" fidl2:"424858069"`
+}
+
+func (_m *XUnionContainingEmptyStruct) Which() XUnionContainingEmptyStructTag {
+	switch _m.XUnionContainingEmptyStructTag {
+	case 424858069:
+		return XUnionContainingEmptyStructEmpty
+	default:
+		return XUnionContainingEmptyStruct_unknownData
+	}
+}
+
+func (_m *XUnionContainingEmptyStruct) Ordinal() uint32 {
+	return uint32(_m.XUnionContainingEmptyStructTag)
+}
+
+func (_m *XUnionContainingEmptyStruct) SetEmpty(empty Empty) {
+	_m.XUnionContainingEmptyStructTag = XUnionContainingEmptyStructEmpty
+	_m.Empty = empty
 }
 
 

@@ -331,6 +331,21 @@ void ::llcpp::test::name::NewerSimpleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(NewerSimpleUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
+auto ::llcpp::test::name::XUnionContainingEmptyStruct::which() const -> Tag {
+  switch (ordinal_) {
+  case Tag::kEmpty:
+    return ordinal_;
+  default:
+    return Tag::kUnknown;
+  }
+}
+
+void ::llcpp::test::name::XUnionContainingEmptyStruct::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(XUnionContainingEmptyStruct) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(XUnionContainingEmptyStruct, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(XUnionContainingEmptyStruct, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp

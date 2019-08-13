@@ -77,6 +77,17 @@ fidl_xunion! {
 
 fidl_xunion! {
 	#[derive(Debug, PartialEq)]
+	name: XUnionContainingEmptyStruct,
+	members: [
+		Empty {
+			ty: Empty,
+			ordinal: 424858069,
+		},
+	],
+}
+
+fidl_xunion! {
+	#[derive(Debug, PartialEq)]
 	name: StrictBoundedXUnion,
 	members: [
 		V {
@@ -85,6 +96,11 @@ fidl_xunion! {
 		},
 	],
 }
+
+
+fidl_empty_struct!(
+	Empty
+);
 
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

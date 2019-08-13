@@ -579,6 +579,15 @@ const (
 
 type DeclMap map[EncodedCompoundIdentifier]DeclType
 
+func (dt DeclType) IsPrimitive() bool {
+	switch dt {
+	case BitsDeclType, EnumDeclType:
+		return true
+	}
+
+	return false
+}
+
 // Library represents a FIDL dependency on a separate library.
 type Library struct {
 	Name  EncodedLibraryIdentifier `json:"name,omitempty"`

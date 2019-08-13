@@ -27,6 +27,8 @@ constexpr uint64_t kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_
 }  // namespace
 #endif // __Fuchsia__
 class NewerSimpleUnion;
+class Empty;
+class XUnionContainingEmptyStruct;
 
 class StrictSimpleXUnion final {
  public:
@@ -573,6 +575,108 @@ inline zx_status_t Clone(const ::test::name::NewerSimpleUnion& value,
 }
 
 using NewerSimpleUnionPtr = ::std::unique_ptr<NewerSimpleUnion>;
+
+class Empty final {
+ public:
+  static const fidl_type_t* FidlType;
+  
+  uint8_t __reserved = 0u;
+
+  static inline ::std::unique_ptr<Empty> New() { return ::std::make_unique<Empty>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset);
+  zx_status_t Clone(Empty* result) const;
+};
+
+inline zx_status_t Clone(const ::test::name::Empty& _value,
+                         ::test::name::Empty* _result) {
+  return _value.Clone(_result);
+}
+
+using EmptyPtr = ::std::unique_ptr<Empty>;
+
+class XUnionContainingEmptyStruct final {
+ public:
+ static const fidl_type_t* FidlType;
+
+  XUnionContainingEmptyStruct();
+  ~XUnionContainingEmptyStruct();
+
+  XUnionContainingEmptyStruct(XUnionContainingEmptyStruct&&);
+  XUnionContainingEmptyStruct& operator=(XUnionContainingEmptyStruct&&);
+
+  enum : fidl_xunion_tag_t {
+    kEmpty = kFidlXUnionEmptyTag,
+  };
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+  kUnknown = 0,
+    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+  
+    kEmpty = 424858069,  // 0x1952d1d5
+  };
+
+  static inline ::std::unique_ptr<XUnionContainingEmptyStruct> New() { return ::std::make_unique<XUnionContainingEmptyStruct>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, XUnionContainingEmptyStruct* value, size_t offset);
+  zx_status_t Clone(XUnionContainingEmptyStruct* result) const;
+
+  bool is_empty() const { return tag_ == Tag::kEmpty; }
+  
+  class Empty& empty() {
+    EnsureStorageInitialized(Tag::kEmpty);
+    return empty_;
+  }
+  
+  const class Empty& empty() const { return empty_; }
+  XUnionContainingEmptyStruct& set_empty(class Empty value);
+
+  Tag Which() const {
+    
+    switch (tag_) {
+      case Tag::kEmpty:
+        return Tag(tag_);
+      default:
+        return Tag::kUnknown;
+    }
+    
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    if (Which() != Tag::kUnknown) {
+      return nullptr;
+    }
+
+    return &unknown_data_;
+  }
+
+  friend ::fidl::Equality<::test::name::XUnionContainingEmptyStruct>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = kEmpty;
+  union {
+    class Empty empty_;
+    std::vector<uint8_t> unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::name::XUnionContainingEmptyStruct& value,
+                         ::test::name::XUnionContainingEmptyStruct* result) {
+  return value.Clone(result);
+}
+
+using XUnionContainingEmptyStructPtr = ::std::unique_ptr<XUnionContainingEmptyStruct>;
 }  // namespace name
 }  // namespace test
 namespace fidl {
@@ -784,6 +888,74 @@ struct Equality<::test::name::NewerSimpleUnion> {
         return ::fidl::Equals(_lhs.s_, _rhs.s_);
       case ::test::name::NewerSimpleUnion::Tag::kV:
         return ::fidl::Equals(_lhs.v_, _rhs.v_);
+      default:
+        return *_lhs.UnknownData() == *_rhs.UnknownData();
+      }
+    }
+};
+template <>
+struct CodingTraits<::test::name::Empty>
+    : public EncodableCodingTraits<::test::name::Empty, 1> {};
+
+inline zx_status_t Clone(const ::test::name::Empty& value,
+                         ::test::name::Empty* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::Empty> {
+  static inline bool Equals(const ::test::name::Empty& _lhs, const ::test::name::Empty& _rhs) {
+    if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::name::XUnionContainingEmptyStruct>
+    : public EncodableCodingTraits<::test::name::XUnionContainingEmptyStruct, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::XUnionContainingEmptyStruct>> {
+  static constexpr size_t encoded_size = 24;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::name::XUnionContainingEmptyStruct>* value, size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder, std::unique_ptr<::test::name::XUnionContainingEmptyStruct>* value, size_t offset) {
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::name::XUnionContainingEmptyStruct);
+
+    ::test::name::XUnionContainingEmptyStruct::Decode(decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::name::XUnionContainingEmptyStruct& value,
+                         ::test::name::XUnionContainingEmptyStruct* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::XUnionContainingEmptyStruct> {
+  static inline bool Equals(const ::test::name::XUnionContainingEmptyStruct& _lhs, const ::test::name::XUnionContainingEmptyStruct& _rhs) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case ::test::name::XUnionContainingEmptyStruct::kEmpty:
+        return true;
+      case ::test::name::XUnionContainingEmptyStruct::Tag::kEmpty:
+        return ::fidl::Equals(_lhs.empty_, _rhs.empty_);
       default:
         return *_lhs.UnknownData() == *_rhs.UnknownData();
       }

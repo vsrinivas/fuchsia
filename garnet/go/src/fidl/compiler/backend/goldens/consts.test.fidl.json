@@ -297,7 +297,8 @@
             }
           }
         }
-      ]
+      ],
+      "strict": false
     },
     {
       "name": "test.name/BitsType",
@@ -324,7 +325,8 @@
             }
           }
         }
-      ]
+      ],
+      "strict": false
     }
   ],
   "interface_declarations": [],

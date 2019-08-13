@@ -24,6 +24,8 @@ struct StrictBoundedXUnion;
 struct OlderSimpleUnion;
 class TestProtocol;
 struct NewerSimpleUnion;
+struct Empty;
+struct XUnionContainingEmptyStruct;
 
 extern "C" const fidl_type_t test_name_StrictSimpleXUnionTable;
 
@@ -477,6 +479,55 @@ struct NewerSimpleUnion {
   fidl_envelope_t envelope_;
 };
 
+
+
+struct Empty {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t test_name_XUnionContainingEmptyStructTable;
+
+struct XUnionContainingEmptyStruct {
+  XUnionContainingEmptyStruct() : ordinal_(Tag::kUnknown), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+    kEmpty = 424858069,  // 0x1952d1d5
+  };
+
+  bool is_empty() const { return ordinal_ == Tag::kEmpty; }
+
+  void set_empty(Empty* elem) {
+    ordinal_ = Tag::kEmpty;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  Empty& empty() const {
+    ZX_ASSERT(ordinal_ == Tag::kEmpty);
+    return *static_cast<Empty*>(envelope_.data);
+  }
+
+  Tag which() const;
+
+  static constexpr const fidl_type_t* Type = &test_name_XUnionContainingEmptyStructTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+
+ private:
+  static void SizeAndOffsetAssertionHelper();
+  Tag ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp
@@ -514,5 +565,15 @@ static_assert(offsetof(::llcpp::test::name::TestProtocol::FlexibleXUnionHenceRes
 template <>
 struct IsFidlType<::llcpp::test::name::NewerSimpleUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::NewerSimpleUnion>);
+
+template <>
+struct IsFidlType<::llcpp::test::name::Empty> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::Empty>);
+static_assert(offsetof(::llcpp::test::name::Empty, __reserved) == 0);
+static_assert(sizeof(::llcpp::test::name::Empty) == ::llcpp::test::name::Empty::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::test::name::XUnionContainingEmptyStruct> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::XUnionContainingEmptyStruct>);
 
 }  // namespace fidl

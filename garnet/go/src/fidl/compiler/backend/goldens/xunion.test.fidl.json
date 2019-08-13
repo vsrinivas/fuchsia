@@ -10,7 +10,7 @@
       "name": "test.name/TestProtocol",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
-        "line": 29,
+        "line": 38,
         "column": 10
       },
       "methods": [
@@ -20,7 +20,7 @@
           "name": "StrictXUnionHenceResponseMayBeStackAllocated",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
-            "line": 30,
+            "line": 39,
             "column": 5
           },
           "has_request": true,
@@ -40,7 +40,7 @@
               "name": "xu",
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
-                "line": 30,
+                "line": 39,
                 "column": 76
               },
               "size": 24,
@@ -62,7 +62,7 @@
           "name": "FlexibleXUnionHenceResponseMustBeHeapAllocated",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
-            "line": 31,
+            "line": 40,
             "column": 5
           },
           "has_request": true,
@@ -82,7 +82,7 @@
               "name": "xu",
               "location": {
                 "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
-                "line": 31,
+                "line": 40,
                 "column": 75
               },
               "size": 24,
@@ -102,7 +102,23 @@
     }
   ],
   "service_declarations": [],
-  "struct_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "test.name/Empty",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+        "line": 25,
+        "column": 8
+      },
+      "anonymous": false,
+      "members": [],
+      "size": 1,
+      "max_out_of_line": 0,
+      "alignment": 1,
+      "max_handles": 0,
+      "has_padding": false
+    }
+  ],
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [
@@ -292,10 +308,43 @@
       "strict": true
     },
     {
+      "name": "test.name/XUnionContainingEmptyStruct",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+        "line": 28,
+        "column": 8
+      },
+      "members": [
+        {
+          "ordinal": 424858069,
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.name/Empty",
+            "nullable": false
+          },
+          "name": "empty",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+            "line": 31,
+            "column": 11
+          },
+          "size": 1,
+          "max_out_of_line": 0,
+          "alignment": 1,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 8,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": false
+    },
+    {
       "name": "test.name/StrictBoundedXUnion",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
-        "line": 25,
+        "line": 34,
         "column": 15
       },
       "members": [
@@ -313,7 +362,7 @@
           "name": "v",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
-            "line": 26,
+            "line": 35,
             "column": 22
           },
           "size": 16,
@@ -335,13 +384,17 @@
     "test.name/StrictBoundedXUnion",
     "test.name/OlderSimpleUnion",
     "test.name/TestProtocol",
-    "test.name/NewerSimpleUnion"
+    "test.name/NewerSimpleUnion",
+    "test.name/Empty",
+    "test.name/XUnionContainingEmptyStruct"
   ],
   "declarations": {
     "test.name/TestProtocol": "interface",
+    "test.name/Empty": "struct",
     "test.name/OlderSimpleUnion": "xunion",
     "test.name/NewerSimpleUnion": "xunion",
     "test.name/StrictSimpleXUnion": "xunion",
+    "test.name/XUnionContainingEmptyStruct": "xunion",
     "test.name/StrictBoundedXUnion": "xunion"
   }
 }
