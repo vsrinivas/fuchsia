@@ -93,8 +93,8 @@ class Compiling {
 TypeShape AlignTypeshape(TypeShape shape, std::vector<FieldShape*>* fields, uint32_t alignment) {
   uint32_t new_alignment = std::max(shape.Alignment(), alignment);
   uint32_t new_size = AlignTo(shape.InlineSize(), new_alignment);
-  auto typeshape = TypeShape({
-      .inline_size = new_size,
+  auto typeshape =
+      TypeShape({.inline_size = new_size,
                  .alignment = new_alignment,
                  .recursive = {
                      .depth = shape.Depth(),
@@ -102,9 +102,8 @@ TypeShape AlignTypeshape(TypeShape shape, std::vector<FieldShape*>* fields, uint
                      .max_out_of_line = shape.MaxOutOfLine(),
                      // If alignment happened, we've got padding
                      .has_padding = shape.HasPadding() || (new_size != shape.InlineSize()),
-          .has_flexible_envelope = shape.HasFlexibleEnvelope(),
-      }
-  });
+                     .has_flexible_envelope = shape.HasFlexibleEnvelope(),
+                 }});
   // Fix-up padding in the last field according to the new typeshape.
   if (!fields->empty()) {
     auto& last = fields->back();
@@ -225,21 +224,18 @@ TypeShape PointerTypeShape(const TypeShape& element, uint32_t max_element_count 
 
   // Out-of-line objects in FIDL are always padded to |kMessageAlign| alignment.
   // Therefore, if the element size do not end on an alignment boundary, there is padding.
- bool trailing_padding = max_element_count == 1
-      ? elements_size != aligned_elements_size
-      : element.InlineSize() % kMessageAlign != 0;
+  bool trailing_padding = max_element_count == 1 ? elements_size != aligned_elements_size
+                                                 : element.InlineSize() % kMessageAlign != 0;
 
-  return TypeShape({
-      .inline_size = 8u,
-      .alignment = 8u,
-      .recursive = {
-          .depth = depth,
-          .max_handles = max_handles,
-          .max_out_of_line = max_out_of_line,
-          .has_padding = element.HasPadding() || trailing_padding,
-          .has_flexible_envelope = element.HasFlexibleEnvelope(),
-      }
-  });
+  return TypeShape({.inline_size = 8u,
+                    .alignment = 8u,
+                    .recursive = {
+                        .depth = depth,
+                        .max_handles = max_handles,
+                        .max_out_of_line = max_out_of_line,
+                        .has_padding = element.HasPadding() || trailing_padding,
+                        .has_flexible_envelope = element.HasFlexibleEnvelope(),
+                    }});
 }
 
 TypeShape CEnvelopeTypeShape(const TypeShape& contained_type) {
@@ -249,8 +245,7 @@ TypeShape CEnvelopeTypeShape(const TypeShape& contained_type) {
   return Struct::Shape(&header);
 }
 
-TypeShape Table::Shape(std::vector<TypeShape*>* fields,
-                       types::Strictness strictness,
+TypeShape Table::Shape(std::vector<TypeShape*>* fields, types::Strictness strictness,
                        uint32_t extra_handles) {
   TypeShapeBuilder builder{.alignment = 8};
   for (auto field : *fields) {
@@ -299,17 +294,15 @@ TypeShape XUnion::Shape(std::vector<FieldShape*>* fields,
 TypeShape ArrayType::Shape(TypeShape element, uint32_t count) {
   // TODO(FIDL-345): once TypeShape builders are done and methods can fail, do a
   // __builtin_mul_overflow and fail on overflow instead of ClampedMultiply(element.Size(), count)
-  return TypeShape({
-      .inline_size = ClampedMultiply(element.InlineSize(), count),
-      .alignment = element.Alignment(),
-      .recursive = {
-          .depth = element.Depth(),
-          .max_handles = ClampedMultiply(element.MaxHandles(), count),
-          .max_out_of_line = ClampedMultiply(element.MaxOutOfLine(), count),
-          .has_padding = element.HasPadding(),
-          .has_flexible_envelope = element.HasFlexibleEnvelope(),
-      }
-  });
+  return TypeShape({.inline_size = ClampedMultiply(element.InlineSize(), count),
+                    .alignment = element.Alignment(),
+                    .recursive = {
+                        .depth = element.Depth(),
+                        .max_handles = ClampedMultiply(element.MaxHandles(), count),
+                        .max_out_of_line = ClampedMultiply(element.MaxOutOfLine(), count),
+                        .has_padding = element.HasPadding(),
+                        .has_flexible_envelope = element.HasFlexibleEnvelope(),
+                    }});
 }
 
 TypeShape VectorType::Shape(TypeShape element, uint32_t max_element_count) {
@@ -328,13 +321,11 @@ TypeShape StringType::Shape(uint32_t max_length) {
 }
 
 TypeShape HandleType::Shape() {
-  return TypeShape({
-      .inline_size = 4,
-      .alignment = 4,
-      .recursive = {
-          .max_handles = 1,
-      }
-  });
+  return TypeShape({.inline_size = 4,
+                    .alignment = 4,
+                    .recursive = {
+                        .max_handles = 1,
+                    }});
 }
 
 uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
@@ -1671,9 +1662,9 @@ bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
         types::Nullability::kNonnullable);
   }
 
-  return RegisterDecl(std::make_unique<Bits>(std::move(bits_declaration->attributes),
-                                             Name(this, bits_declaration->identifier->location()),
-                                             std::move(type_ctor), std::move(members)));
+  return RegisterDecl(std::make_unique<Bits>(
+      std::move(bits_declaration->attributes), Name(this, bits_declaration->identifier->location()),
+      std::move(type_ctor), std::move(members), bits_declaration->strictness));
 }
 
 bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
@@ -1717,9 +1708,9 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         types::Nullability::kNonnullable);
   }
 
-  return RegisterDecl(std::make_unique<Enum>(std::move(enum_declaration->attributes),
-                                             Name(this, enum_declaration->identifier->location()),
-                                             std::move(type_ctor), std::move(members)));
+  return RegisterDecl(std::make_unique<Enum>(
+      std::move(enum_declaration->attributes), Name(this, enum_declaration->identifier->location()),
+      std::move(type_ctor), std::move(members), enum_declaration->strictness));
 }
 
 bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod* method,
@@ -1927,8 +1918,8 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
     }
   }
 
-  return RegisterDecl(
-      std::make_unique<Table>(std::move(attributes), std::move(name), std::move(members)));
+  return RegisterDecl(std::make_unique<Table>(std::move(attributes), std::move(name),
+                                              std::move(members), table_declaration->strictness));
 }
 
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
@@ -3253,9 +3244,8 @@ bool Library::CompileTable(Table* table_declaration) {
     }
   }
 
-  table_declaration->typeshape = Table::Shape(&fields,
-                                              table_declaration->strictness,
-                                              max_member_handles);
+  table_declaration->typeshape =
+      Table::Shape(&fields, table_declaration->strictness, max_member_handles);
 
   return true;
 }
@@ -3319,9 +3309,8 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
   for (auto& member : xunion_declaration->members) {
     fields.push_back(&member.fieldshape);
   }
-  xunion_declaration->typeshape = XUnion::Shape(&fields,
-                                                xunion_declaration->strictness,
-                                                max_member_handles);
+  xunion_declaration->typeshape =
+      XUnion::Shape(&fields, xunion_declaration->strictness, max_member_handles);
 
   return true;
 }

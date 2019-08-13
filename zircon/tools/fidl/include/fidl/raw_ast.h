@@ -265,12 +265,13 @@ class BitsDeclaration final : public SourceElement {
   BitsDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                   std::unique_ptr<Identifier> identifier,
                   std::unique_ptr<TypeConstructor> maybe_type_ctor,
-                  std::vector<std::unique_ptr<BitsMember>> members)
+                  std::vector<std::unique_ptr<BitsMember>> members, types::Strictness strictness)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
         maybe_type_ctor(std::move(maybe_type_ctor)),
-        members(std::move(members)) {}
+        members(std::move(members)),
+        strictness(strictness) {}
 
   void Accept(TreeVisitor* visitor) const;
 
@@ -278,6 +279,7 @@ class BitsDeclaration final : public SourceElement {
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<TypeConstructor> maybe_type_ctor;
   std::vector<std::unique_ptr<BitsMember>> members;
+  const types::Strictness strictness;
 };
 
 class Using final : public SourceElement {
@@ -341,12 +343,13 @@ class EnumDeclaration final : public SourceElement {
   EnumDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                   std::unique_ptr<Identifier> identifier,
                   std::unique_ptr<TypeConstructor> maybe_type_ctor,
-                  std::vector<std::unique_ptr<EnumMember>> members)
+                  std::vector<std::unique_ptr<EnumMember>> members, types::Strictness strictness)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
         maybe_type_ctor(std::move(maybe_type_ctor)),
-        members(std::move(members)) {}
+        members(std::move(members)),
+        strictness(strictness) {}
 
   void Accept(TreeVisitor* visitor) const;
 
@@ -354,6 +357,7 @@ class EnumDeclaration final : public SourceElement {
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<TypeConstructor> maybe_type_ctor;
   std::vector<std::unique_ptr<EnumMember>> members;
+  const types::Strictness strictness;
 };
 
 class Parameter final : public SourceElement {
@@ -540,17 +544,19 @@ struct TableMember final : public SourceElement {
 struct TableDeclaration final : public SourceElement {
   TableDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                    std::unique_ptr<Identifier> identifier,
-                   std::vector<std::unique_ptr<TableMember>> members)
+                   std::vector<std::unique_ptr<TableMember>> members, types::Strictness strictness)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
-        members(std::move(members)) {}
+        members(std::move(members)),
+        strictness(strictness) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<TableMember>> members;
+  const types::Strictness strictness;
 };
 
 class UnionMember final : public SourceElement {

@@ -28,27 +28,68 @@ bool invalid_strict(const std::string& type, const std::string& definition) {
   END_TEST;
 }
 
-bool invalid_strict_bits() {
-  return invalid_strict("bits", R"FIDL(
-strict bits Foo {
+bool bits_strictness() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+bits FlexibleFoo {
     BAR = 0x1;
 };
+
+strict bits StrictFoo {
+    BAR = 0x1;
+};
+
 )FIDL");
+  ASSERT_TRUE(library.Compile());
+  EXPECT_EQ(library.LookupBits("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(library.LookupBits("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
+
+  END_TEST;
 }
 
-bool invalid_strict_enum() {
-  return invalid_strict("enum", R"FIDL(
-strict enum Foo {
+bool enum_strictness() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum FlexibleFoo {
     BAR = 1;
 };
+
+strict enum StrictFoo {
+    BAR = 1;
+};
+
 )FIDL");
+  ASSERT_TRUE(library.Compile());
+  EXPECT_EQ(library.LookupEnum("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(library.LookupEnum("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
+
+  END_TEST;
 }
 
-bool invalid_strict_table() {
-  return invalid_strict("table", R"FIDL(
-strict table Foo {
+bool table_strictness() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+table FlexibleFoo {
 };
+
+strict table StrictFoo {
+};
+
 )FIDL");
+  ASSERT_TRUE(library.Compile());
+  EXPECT_EQ(library.LookupTable("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(library.LookupTable("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
+
+  END_TEST;
 }
 
 bool invalid_strict_union() {
@@ -92,9 +133,9 @@ strict xunion StrictFoo {
 }  // namespace
 
 BEGIN_TEST_CASE(strictness_tests)
-RUN_TEST(invalid_strict_bits);
-RUN_TEST(invalid_strict_enum);
-RUN_TEST(invalid_strict_table);
+RUN_TEST(bits_strictness);
+RUN_TEST(enum_strictness);
+RUN_TEST(table_strictness);
 RUN_TEST(invalid_strict_union);
 RUN_TEST(invalid_strict_struct);
 RUN_TEST(xunion_strictness);

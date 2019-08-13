@@ -11,6 +11,7 @@
 #include "error_reporter.h"
 #include "lexer.h"
 #include "raw_ast.h"
+#include "types.h"
 
 namespace fidl {
 
@@ -174,6 +175,8 @@ class Parser {
   decltype(nullptr) Fail(std::string_view message);
   decltype(nullptr) Fail(Token token, std::string_view message);
 
+  types::Strictness MaybeParseStrictness();
+
   std::unique_ptr<raw::Identifier> ParseIdentifier(bool is_discarded = false);
   std::unique_ptr<raw::CompoundIdentifier> ParseCompoundIdentifier();
   std::unique_ptr<raw::CompoundIdentifier> ParseLibraryName();
@@ -199,14 +202,14 @@ class Parser {
 
   std::unique_ptr<raw::BitsMember> ParseBitsMember();
   std::unique_ptr<raw::BitsDeclaration> ParseBitsDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness);
 
   std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration(
       std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
   std::unique_ptr<raw::EnumMember> ParseEnumMember();
   std::unique_ptr<raw::EnumDeclaration> ParseEnumDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness);
 
   std::unique_ptr<raw::Parameter> ParseParameter();
   std::unique_ptr<raw::ParameterList> ParseParameterList();
@@ -233,7 +236,7 @@ class Parser {
 
   std::unique_ptr<raw::TableMember> ParseTableMember();
   std::unique_ptr<raw::TableDeclaration> ParseTableDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness);
 
   std::unique_ptr<raw::UnionMember> ParseUnionMember();
   std::unique_ptr<raw::UnionDeclaration> ParseUnionDeclaration(

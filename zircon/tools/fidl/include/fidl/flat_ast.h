@@ -24,6 +24,7 @@
 #include "error_reporter.h"
 #include "raw_ast.h"
 #include "type_shape.h"
+#include "types.h"
 #include "virtual_source_file.h"
 
 // TODO(FIDL-487, ZX-3415): Decide if all cases of NumericConstantValue::Convert() are safe.
@@ -705,14 +706,17 @@ struct Enum final : public TypeDecl {
   };
 
   Enum(std::unique_ptr<raw::AttributeList> attributes, Name name,
-       std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Member> members)
+       std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Member> members,
+       types::Strictness strictness)
       : TypeDecl(Kind::kEnum, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
-        members(std::move(members)) {}
+        members(std::move(members)),
+        strictness(strictness) {}
 
   // Set during construction.
   std::unique_ptr<TypeConstructor> subtype_ctor;
   std::vector<Member> members;
+  const types::Strictness strictness;
 
   // Set during compilation.
   const PrimitiveType* type = nullptr;
@@ -729,14 +733,17 @@ struct Bits final : public TypeDecl {
   };
 
   Bits(std::unique_ptr<raw::AttributeList> attributes, Name name,
-       std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Member> members)
+       std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Member> members,
+       types::Strictness strictness)
       : TypeDecl(Kind::kBits, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
-        members(std::move(members)) {}
+        members(std::move(members)),
+        strictness(strictness) {}
 
   // Set during construction.
   std::unique_ptr<TypeConstructor> subtype_ctor;
   std::vector<Member> members;
+  const types::Strictness strictness;
 
   // Set during compilation.
   uint64_t mask = 0;
@@ -821,15 +828,16 @@ struct Table final : public TypeDecl {
     std::unique_ptr<Used> maybe_used;
   };
 
-  Table(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+  Table(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members,
+        types::Strictness strictness)
       : TypeDecl(Kind::kTable, std::move(attributes), std::move(name)),
-        members(std::move(members)) {}
+        members(std::move(members)),
+        strictness(strictness) {}
 
   std::vector<Member> members;
-  const types::Strictness strictness = types::Strictness::kFlexible;
+  const types::Strictness strictness;
 
-  static TypeShape Shape(std::vector<TypeShape*>* fields,
-                         types::Strictness strictness,
+  static TypeShape Shape(std::vector<TypeShape*>* fields, types::Strictness strictness,
                          uint32_t extra_handles = 0u);
 };
 
@@ -882,8 +890,7 @@ struct XUnion final : public TypeDecl {
   std::vector<Member> members;
   const types::Strictness strictness;
 
-  static TypeShape Shape(std::vector<FieldShape*>* fields,
-                         types::Strictness strictness,
+  static TypeShape Shape(std::vector<FieldShape*>* fields, types::Strictness strictness,
                          uint32_t extra_handles = 0u);
 };
 

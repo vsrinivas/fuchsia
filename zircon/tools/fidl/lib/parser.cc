@@ -117,6 +117,17 @@ decltype(nullptr) Parser::Fail(Token token, std::string_view message) {
   return nullptr;
 }
 
+types::Strictness Parser::MaybeParseStrictness() {
+  switch (Peek().combined()) {
+    case CASE_IDENTIFIER(Token::Subkind::kStrict):
+      ConsumeToken(IdentifierOfSubkind(Token::Subkind::kStrict));
+      assert(Ok() && "we should have just seen a strict token");
+      return types::Strictness::kStrict;
+    default:
+      return types::Strictness::kFlexible;
+  }
+}
+
 std::unique_ptr<raw::Identifier> Parser::ParseIdentifier(bool is_discarded) {
   ASTScope scope(this, is_discarded);
   Token token = ConsumeToken(OfKind(Token::Kind::kIdentifier));
@@ -462,7 +473,7 @@ std::unique_ptr<raw::BitsMember> Parser::ParseBitsMember() {
 }
 
 std::unique_ptr<raw::BitsDeclaration> Parser::ParseBitsDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness) {
   std::vector<std::unique_ptr<raw::BitsMember>> members;
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kBits));
   if (!Ok())
@@ -510,7 +521,7 @@ std::unique_ptr<raw::BitsDeclaration> Parser::ParseBitsDeclaration(
 
   return std::make_unique<raw::BitsDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                 std::move(identifier), std::move(maybe_type_ctor),
-                                                std::move(members));
+                                                std::move(members), strictness);
 }
 
 std::unique_ptr<raw::ConstDeclaration> Parser::ParseConstDeclaration(
@@ -559,7 +570,7 @@ std::unique_ptr<raw::EnumMember> Parser::ParseEnumMember() {
 }
 
 std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness) {
   std::vector<std::unique_ptr<raw::EnumMember>> members;
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kEnum));
   if (!Ok())
@@ -607,7 +618,7 @@ std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(
 
   return std::make_unique<raw::EnumDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                 std::move(identifier), std::move(maybe_type_ctor),
-                                                std::move(members));
+                                                std::move(members), strictness);
 }
 
 std::unique_ptr<raw::Parameter> Parser::ParseParameter() {
@@ -976,7 +987,7 @@ std::unique_ptr<raw::TableMember> Parser::ParseTableMember() {
 }
 
 std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness) {
   std::vector<std::unique_ptr<raw::TableMember>> members;
 
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kTable));
@@ -1019,7 +1030,8 @@ std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
     Fail();
 
   return std::make_unique<raw::TableDeclaration>(scope.GetSourceElement(), std::move(attributes),
-                                                 std::move(identifier), std::move(members));
+                                                 std::move(identifier), std::move(members),
+                                                 strictness);
 }
 
 std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
@@ -1182,13 +1194,31 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     if (!Ok())
       return More;
 
+    types::Strictness strictness = MaybeParseStrictness();
+    if (!Ok())
+      return More;
+    if (strictness == types::Strictness::kStrict) {
+      switch (Peek().combined()) {
+        case CASE_IDENTIFIER(Token::Subkind::kBits):
+        case CASE_IDENTIFIER(Token::Subkind::kEnum):
+        case CASE_IDENTIFIER(Token::Subkind::kTable):
+        case CASE_IDENTIFIER(Token::Subkind::kXUnion):
+          break;
+        default:
+          std::string msg = std::string(Token::Name(Peek())) + " cannot be strict";
+          Fail(msg);
+          return More;
+      }
+    }
+
     switch (Peek().combined()) {
       default:
         return Done;
 
       case CASE_IDENTIFIER(Token::Subkind::kBits):
         done_with_library_imports = true;
-        bits_declaration_list.emplace_back(ParseBitsDeclaration(std::move(attributes), scope));
+        bits_declaration_list.emplace_back(
+            ParseBitsDeclaration(std::move(attributes), scope, strictness));
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kConst):
@@ -1198,7 +1228,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kEnum):
         done_with_library_imports = true;
-        enum_declaration_list.emplace_back(ParseEnumDeclaration(std::move(attributes), scope));
+        enum_declaration_list.emplace_back(
+            ParseEnumDeclaration(std::move(attributes), scope, strictness));
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kProtocol):
@@ -1220,7 +1251,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kTable):
         done_with_library_imports = true;
-        table_declaration_list.emplace_back(ParseTableDeclaration(std::move(attributes), scope));
+        table_declaration_list.emplace_back(
+            ParseTableDeclaration(std::move(attributes), scope, strictness));
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kUsing): {
@@ -1245,25 +1277,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       case CASE_IDENTIFIER(Token::Subkind::kXUnion):
         done_with_library_imports = true;
         xunion_declaration_list.emplace_back(
-            ParseXUnionDeclaration(std::move(attributes), scope, types::Strictness::kFlexible));
+            ParseXUnionDeclaration(std::move(attributes), scope, strictness));
         return More;
-
-      case CASE_IDENTIFIER(Token::Subkind::kStrict):
-        done_with_library_imports = true;
-
-        ConsumeToken(IdentifierOfSubkind(Token::Subkind::kStrict));
-        assert(Ok() && "we should have just seen a strict token");
-
-        switch (Peek().combined()) {
-          case CASE_IDENTIFIER(Token::Subkind::kXUnion):
-            xunion_declaration_list.emplace_back(
-                ParseXUnionDeclaration(std::move(attributes), scope, types::Strictness::kStrict));
-            return More;
-          default:
-            std::string msg = std::string(Token::Name(Peek())) + " cannot be strict";
-            Fail(msg);
-            return Done;
-        }
     }
   };
 

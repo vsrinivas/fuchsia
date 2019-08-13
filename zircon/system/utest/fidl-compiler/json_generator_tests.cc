@@ -549,7 +549,8 @@ table Simple {
       "size": 16,
       "max_out_of_line": 48,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "strict": false
     }
   ],
   "union_declarations": [],
@@ -1901,7 +1902,12 @@ bool json_generator_test_bits() {
     EXPECT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
-bits Bits : uint64 {
+bits FlexibleBits : uint64 {
+    SMALLEST = 1;
+    BIGGEST = 0x8000000000000000;
+};
+
+strict bits StrictBits: uint64 {
     SMALLEST = 1;
     BIGGEST = 0x8000000000000000;
 };
@@ -1914,7 +1920,7 @@ bits Bits : uint64 {
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "fidl.test.json/Bits",
+      "name": "fidl.test.json/FlexibleBits",
       "location": {
         "filename": "json.fidl",
         "line": 4,
@@ -1958,7 +1964,56 @@ bits Bits : uint64 {
             }
           }
         }
-      ]
+      ],
+      "strict": false
+    },
+    {
+      "name": "fidl.test.json/StrictBits",
+      "location": {
+        "filename": "json.fidl",
+        "line": 9,
+        "column": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64"
+      },
+      "mask": "9223372036854775809",
+      "members": [
+        {
+          "name": "SMALLEST",
+          "location": {
+            "filename": "json.fidl",
+            "line": 10,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "BIGGEST",
+          "location": {
+            "filename": "json.fidl",
+            "line": 11,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "9223372036854775808",
+              "expression": "0x8000000000000000"
+            }
+          }
+        }
+      ],
+      "strict": true
     }
   ],
   "const_declarations": [],
@@ -1971,10 +2026,12 @@ bits Bits : uint64 {
   "xunion_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.json/Bits"
+    "fidl.test.json/StrictBits",
+    "fidl.test.json/FlexibleBits"
   ],
   "declarations": {
-    "fidl.test.json/Bits": "bits"
+    "fidl.test.json/FlexibleBits": "bits",
+    "fidl.test.json/StrictBits": "bits"
   }
 }
 )JSON"));
@@ -2084,7 +2141,8 @@ struct Struct {
             }
           }
         }
-      ]
+      ],
+      "strict": false
     }
   ],
   "const_declarations": [
@@ -2421,7 +2479,8 @@ struct Struct {
             }
           }
         }
-      ]
+      ],
+      "strict": false
     },
     {
       "name": "values/BitsType",
@@ -2448,7 +2507,8 @@ struct Struct {
             }
           }
         }
-      ]
+      ],
+      "strict": false
     },
     {
       "name": "values/Enum",
@@ -2475,7 +2535,8 @@ struct Struct {
             }
           }
         }
-      ]
+      ],
+      "strict": false
     }
   ],
   "interface_declarations": [],
@@ -3202,7 +3263,8 @@ xunion ExampleXUnion {
             }
           ]
         }
-      ]
+      ],
+      "strict": false
     }
   ],
   "const_declarations": [
@@ -3271,7 +3333,8 @@ xunion ExampleXUnion {
             }
           ]
         }
-      ]
+      ],
+      "strict": false
     }
   ],
   "interface_declarations": [
@@ -3426,7 +3489,8 @@ xunion ExampleXUnion {
       "size": 16,
       "max_out_of_line": 24,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "strict": false
     }
   ],
   "union_declarations": [

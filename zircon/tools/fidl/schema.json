@@ -129,7 +129,8 @@
                 "name",
                 "type",
                 "mask",
-                "members"
+                "members",
+                "strict"
             ],
             "properties": {
                 "maybe_attributes": {
@@ -154,6 +155,10 @@
                     "items": {
                         "$ref": "#/definitions/bits-member"
                     }
+                },
+                "strict": {
+                    "description": "Strictness of the bits",
+                    "type": "boolean"
                 }
             }
         },
@@ -216,7 +221,8 @@
             "required": [
                 "name",
                 "type",
-                "members"
+                "members",
+                "strict"
             ],
             "properties": {
                 "maybe_attributes": {
@@ -241,6 +247,10 @@
                     "items": {
                         "$ref": "#/definitions/enum-member"
                     }
+                },
+                "strict": {
+                    "description": "Strictness of the enum",
+                    "type": "boolean"
                 }
             }
         },
@@ -598,7 +608,8 @@
                 "name",
                 "members",
                 "size",
-                "max_out_of_line"
+                "max_out_of_line",
+                "strict"
             ],
             "properties": {
                 "max_handles": {
@@ -631,6 +642,10 @@
                 "max_out_of_line": {
                     "description": "Maximum size of the out-of-line payload for the entire table. Note that this value is computed without considering future member additions, otherwise it would always be pegged at the maximum. Bindings should take this into consideration when using max_out_of_line.",
                     "$ref": "#/definitions/count"
+                },
+                "strict": {
+                    "description": "Strictness of table",
+                    "type": "boolean"
                 }
             }
         },
@@ -786,7 +801,8 @@
                 "members",
                 "size",
                 "max_out_of_line",
-                "alignment"
+                "alignment",
+                "strict"
             ],
             "properties": {
                 "max_handles": {
@@ -823,6 +839,10 @@
                 "alignment": {
                     "description": "Alignment of extensible union",
                     "$ref": "#/definitions/count"
+                },
+                "strict": {
+                    "description": "Strictness of extensible union",
+                    "type": "boolean"
                 }
             }
         },

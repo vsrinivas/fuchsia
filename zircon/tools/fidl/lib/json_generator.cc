@@ -247,6 +247,7 @@ void JSONGenerator::Generate(const flat::Bits& value) {
     EmitObjectKey("mask");
     EmitNumeric(value.mask, kAsString);
     GenerateObjectMember("members", value.members);
+    GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
   });
 }
 
@@ -279,6 +280,7 @@ void JSONGenerator::Generate(const flat::Enum& value) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("type", value.type->name);
     GenerateObjectMember("members", value.members);
+    GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
   });
 }
 
@@ -331,7 +333,8 @@ void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struc
   GenerateObjectMember(prefix + "_size", value.typeshape.InlineSize());
   GenerateObjectMember(prefix + "_alignment", value.typeshape.Alignment());
   GenerateObjectMember(prefix + "_has_padding", value.typeshape.HasPadding());
-  GenerateObjectMember("experimental_" + prefix + "_has_flexible_envelope", value.typeshape.HasFlexibleEnvelope());
+  GenerateObjectMember("experimental_" + prefix + "_has_flexible_envelope",
+                       value.typeshape.HasFlexibleEnvelope());
 }
 
 void JSONGenerator::Generate(const flat::Service& value) {
@@ -398,6 +401,7 @@ void JSONGenerator::Generate(const flat::Table& value) {
     GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
     GenerateObjectMember("alignment", value.typeshape.Alignment());
     GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
+    GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
   });
 }
 
