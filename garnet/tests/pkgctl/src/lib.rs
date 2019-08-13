@@ -16,7 +16,7 @@ use {
     },
     fidl_fuchsia_pkg_rewrite::EngineRequestStream,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
-    fuchsia_async as fasync,
+    fidl_fuchsia_update as fidl_update, fuchsia_async as fasync,
     fuchsia_component::{
         client::{AppBuilder, Output},
         server::{NestedEnvironment, ServiceFs},
@@ -41,6 +41,7 @@ struct TestEnv {
     package_cache: Arc<MockPackageCacheService>,
     package_resolver: Arc<MockPackageResolverService>,
     rewrite_engine: Arc<MockRewriteEngineService>,
+    update_manager: Arc<MockUpdateManagerService>,
     _test_dir: TempDir,
     repo_config_arg_path: PathBuf,
 }
@@ -97,6 +98,17 @@ impl TestEnv {
             )
         });
 
+        let update_manager = Arc::new(MockUpdateManagerService::new());
+        let update_manager_clone = update_manager.clone();
+        fs.add_fidl_service(move |stream: fidl_update::ManagerRequestStream| {
+            let update_manager_clone = update_manager_clone.clone();
+            fasync::spawn(
+                update_manager_clone
+                    .run_service(stream)
+                    .unwrap_or_else(|e| panic!("error running update service: {:?}", e)),
+            )
+        });
+
         let _test_dir = TempDir::new().expect("create test tempdir");
 
         let repo_config_arg_path = _test_dir.path().join("repo_config");
@@ -113,6 +125,7 @@ impl TestEnv {
             package_cache,
             package_resolver,
             rewrite_engine,
+            update_manager,
             _test_dir,
             repo_config_arg_path,
         }
@@ -150,6 +163,18 @@ impl TestEnv {
         assert_eq!(*self.package_resolver.call_count.lock(), 0);
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
         assert_eq!(*self.repository_manager.captured_args.lock(), expected_args);
+        assert_eq!(self.update_manager.captured_args.lock().len(), 0);
+    }
+
+    fn assert_only_update_manager_called_with(
+        &self,
+        expected_args: Vec<CapturedUpdateManagerRequest>,
+    ) {
+        assert_eq!(*self.package_cache.call_count.lock(), 0);
+        assert_eq!(*self.package_resolver.call_count.lock(), 0);
+        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
+        assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
+        assert_eq!(*self.update_manager.captured_args.lock(), expected_args);
     }
 }
 
@@ -275,6 +300,55 @@ impl MockRewriteEngineService {
     }
 }
 
+#[derive(PartialEq, Debug)]
+enum CapturedUpdateManagerRequest {
+    CheckNow { options: fidl_update::Options },
+    GetState,
+    AddMonitor,
+}
+
+// fidl_update::Options is not Eq, but it contains only an Option of an Eq
+impl Eq for CapturedUpdateManagerRequest {}
+
+struct MockUpdateManagerService {
+    captured_args: Mutex<Vec<CapturedUpdateManagerRequest>>,
+    check_now_response: Mutex<fidl_update::CheckStartedResult>,
+}
+
+impl MockUpdateManagerService {
+    fn new() -> Self {
+        Self {
+            captured_args: Mutex::new(vec![]),
+            check_now_response: Mutex::new(fidl_update::CheckStartedResult::Started),
+        }
+    }
+    async fn run_service(
+        self: Arc<Self>,
+        mut stream: fidl_update::ManagerRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                fidl_update::ManagerRequest::CheckNow { options, monitor: _monitor, responder } => {
+                    self.captured_args
+                        .lock()
+                        .push(CapturedUpdateManagerRequest::CheckNow { options });
+                    responder.send(*self.check_now_response.lock())?;
+                }
+                fidl_update::ManagerRequest::GetState { responder: _responder } => {
+                    self.captured_args.lock().push(CapturedUpdateManagerRequest::GetState);
+                }
+                fidl_update::ManagerRequest::AddMonitor {
+                    monitor: _monitor,
+                    control_handle: _control_handler,
+                } => {
+                    self.captured_args.lock().push(CapturedUpdateManagerRequest::AddMonitor);
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 fn assert_no_errors(output: &Output) {
     assert_eq!(std::str::from_utf8(output.stderr.as_slice()).expect("stdout valid utf8"), "");
     assert!(output.exit_status.success());
@@ -283,6 +357,11 @@ fn assert_no_errors(output: &Output) {
 fn assert_stdout(output: &Output, expected: &str) {
     assert_no_errors(output);
     assert_eq!(std::str::from_utf8(output.stdout.as_slice()).expect("stdout utf8"), expected);
+}
+
+fn assert_stderr(output: &Output, expected: &str) {
+    assert!(!output.exit_status.success());
+    assert_eq!(std::str::from_utf8(output.stderr.as_slice()).expect("stderr valid utf8"), expected);
 }
 
 fn make_test_repo_config() -> RepositoryConfig {
@@ -391,4 +470,39 @@ macro_rules! repo_add_tests {
 repo_add_tests! {
     test_repo_add_short: "-f",
     test_repo_add_long: "--file",
+}
+
+async fn test_update_success_impl(check_now_response: fidl_update::CheckStartedResult) {
+    let env = TestEnv::new();
+    *env.update_manager.check_now_response.lock() = check_now_response;
+
+    let output = env.run_pkgctl(vec!["update"]).await;
+
+    assert_stdout(&output, "");
+    env.assert_only_update_manager_called_with(vec![CapturedUpdateManagerRequest::CheckNow {
+        options: fidl_update::Options { initiator: Some(fidl_update::Initiator::User) },
+    }]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_update_success_started() {
+    test_update_success_impl(fidl_update::CheckStartedResult::Started).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_update_success_in_progress() {
+    test_update_success_impl(fidl_update::CheckStartedResult::InProgress).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_update_throttled_is_error() {
+    let env = TestEnv::new();
+    *env.update_manager.check_now_response.lock() = fidl_update::CheckStartedResult::Throttled;
+
+    let output = env.run_pkgctl(vec!["update"]).await;
+
+    assert_stderr(&output, "Error: ErrorMessage { msg: \"Update check was throttled.\" }\n");
+    env.assert_only_update_manager_called_with(vec![CapturedUpdateManagerRequest::CheckNow {
+        options: fidl_update::Options { initiator: Some(fidl_update::Initiator::User) },
+    }]);
 }

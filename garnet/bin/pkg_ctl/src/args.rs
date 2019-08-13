@@ -20,6 +20,7 @@ SUBCOMMANDS:
     repo       repo subcommands
     resolve    resolve a package
     rule       manage URL rewrite rules
+    update     check for a system update and apply it if available
 ";
 
 const HELP_OPEN: &str = "\
@@ -141,12 +142,22 @@ ARGS:
     <config>    JSON encoded rewrite rule config
 ";
 
+const HELP_UPDATE: &str = "\
+The update command performs a system update check and triggers an OTA if present.
+
+The command is non-blocking. View the syslog for more detailed progress information.
+
+USAGE:
+    pkgctl update
+";
+
 #[derive(Debug, PartialEq)]
 pub enum Command {
     Resolve { pkg_url: String, selectors: Vec<String> },
     Open { meta_far_blob_id: BlobId, selectors: Vec<String> },
     Repo(RepoCommand),
     Rule(RuleCommand),
+    Update,
 }
 
 #[derive(Debug, PartialEq)]
@@ -232,6 +243,7 @@ where
                     Some(arg) => unrecognized!(arg),
                 },
                 Some("open") => done!(HELP_OPEN),
+                Some("update") => done!(HELP_UPDATE),
                 Some(arg) => unrecognized!(arg),
             };
 
@@ -285,6 +297,10 @@ where
             },
             Some(arg) => unrecognized!(arg),
         },
+        "update" => match iter.next() {
+            None => Ok(Command::Update),
+            Some(arg) => unrecognized!(arg),
+        },
         arg => unrecognized!(arg),
     }
 }
@@ -326,6 +342,7 @@ mod tests {
             &["help", "rule", "replace", "file"],
             &["help", "rule", "replace", "json"],
             &["help", "open"],
+            &["help", "update"],
             &["repo", "add"],
             &["repo", "add", "-f", "foo"],
             &["repo", "add", "--file", "foo"],
@@ -339,6 +356,7 @@ mod tests {
             &["rule", "replace", "file", "foo"],
             &["rule", "replace", "json", CONFIG_JSON],
             &["rule"],
+            &["update"],
         ];
 
         for case in cases {
@@ -362,6 +380,7 @@ mod tests {
         check(&["--help"], HELP);
         check(&["help"], HELP);
 
+        check(&["help", "update"], HELP_UPDATE);
         check(&["help", "open"], HELP_OPEN);
         check(&["help", "repo"], HELP_REPO);
         check(&["help", "repo", "add"], HELP_REPO_ADD);
@@ -476,6 +495,14 @@ mod tests {
     fn test_rule_replace_json_rejects_malformed_json() {
         match parse_args(["rule", "replace", "json", "{"].iter().map(|a| *a)) {
             Err(Error::Json(_)) => {}
+            result => panic!("unexpected result {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_update() {
+        match parse_args(["update"].iter().map(|a| *a)) {
+            Ok(Command::Update) => {}
             result => panic!("unexpected result {:?}", result),
         }
     }

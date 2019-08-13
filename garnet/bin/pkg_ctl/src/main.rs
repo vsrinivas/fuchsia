@@ -6,14 +6,14 @@
 
 use {
     crate::args::{Command, RepoCommand, RuleCommand, RuleConfigInputType},
-    failure::{self, Fail, ResultExt},
+    failure::{self, format_err, Fail, ResultExt},
     fidl_fuchsia_pkg::{
         PackageCacheMarker, PackageResolverMarker, RepositoryManagerMarker, RepositoryManagerProxy,
         UpdatePolicy,
     },
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
-    files_async, fuchsia_async as fasync,
+    fidl_fuchsia_update as fidl_update, files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_url_rewrite::{Rule as RewriteRule, RuleConfig},
     fuchsia_zircon as zx,
@@ -195,6 +195,23 @@ fn main() -> Result<(), failure::Error> {
                 }
 
                 Ok(())
+            }
+            Command::Update => {
+                let update = connect_to_service::<fidl_update::ManagerMarker>()
+                    .context("Failed to connect to update manager service")?;
+                match update
+                    .check_now(
+                        fidl_update::Options { initiator: Some(fidl_update::Initiator::User) },
+                        None,
+                    )
+                    .await?
+                {
+                    fidl_update::CheckStartedResult::Throttled => {
+                        Err(format_err!("Update check was throttled."))
+                    }
+                    fidl_update::CheckStartedResult::Started
+                    | fidl_update::CheckStartedResult::InProgress => Ok(()),
+                }
             }
         }
     };
