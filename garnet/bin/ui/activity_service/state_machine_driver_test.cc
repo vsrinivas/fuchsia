@@ -130,7 +130,6 @@ TEST_F(StateMachineDriverTest, RepeatedActivitiesResetTimer) {
   ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
 }
 
-
 TEST_F(StateMachineDriverTest, IgnoresTimeoutsIfActivityStarted) {
   ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, Now()), ZX_OK);
   RunLoopUntilIdle();

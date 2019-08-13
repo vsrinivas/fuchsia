@@ -9,6 +9,10 @@ import("//build/testing/environments.gni")
 
 source_set("lib") {
   sources = [
+    "activity_service_app.cc",
+    "activity_service_app.h",
+    "activity_service_tracker_connection.cc",
+    "activity_service_tracker_connection.h",
     "activity_state_machine.cc",
     "activity_state_machine.h",
     "state_machine_driver.cc",
@@ -24,11 +28,46 @@ source_set("lib") {
   ]
 }
 
-executable("activity_service_test") {
+executable("activity_service") {
+  output_name = "activity_service"
+
+  sources = [
+    "activity_service_main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/cpp",
+  ]
+}
+
+package("activity_service_pkg") {
+  deps = [
+    ":activity_service",
+  ]
+
+  binaries = [
+    {
+      name = "activity_service"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/activity_service.cmx")
+      dest = "activity_service.cmx"
+    },
+  ]
+}
+
+executable("tests") {
   testonly = true
   output_name = "activity_service_test"
 
   sources = [
+    "activity_service_app_test.cc",
+    "activity_service_tracker_connection_test.cc",
     "activity_state_machine_test.cc",
     "state_machine_driver_test.cc",
   ]
@@ -41,7 +80,7 @@ executable("activity_service_test") {
 
 test_package("activity_service_test_pkg") {
   deps = [
-    ":activity_service_test",
+    ":tests",
   ]
   tests = [
     {
