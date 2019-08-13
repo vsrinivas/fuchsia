@@ -235,51 +235,43 @@ for ahcifile in ${AHCI[@]}; do
 done
 
 if (( !$NET )); then
-  ARGS+=" -net none"
-fi
+  ARGS+=" -nic none"
+else
+  if [[ $NET == 1 ]]; then
+    ARGS+=" -nic user,hostname=$IFNAME"
+  fi
 
-if [[ $NET == 1 ]]; then
-    ARGS+=" -netdev type=user,hostname=$IFNAME,id=net0"
-fi
-
-if [[ $NET == 2 ]]; then
+  if [[ $NET == 2 ]]; then
     if [[ "$(uname -s)" == "Darwin" ]]; then
-        if [[ ! -c "/dev/$IFNAME" ]]; then
-          echo "To use qemu with networking on macOS, install the tun/tap driver:"
-          echo "http://tuntaposx.sourceforge.net/download.xhtml"
-          exit 1
-        fi
-        if [[ ! -w "/dev/$IFNAME" ]]; then
-          echo "For networking /dev/$IFNAME must be owned by $USER. Please run:"
-          echo "  sudo chown $USER /dev/$IFNAME"
-          exit 1
-        fi
-        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
+      if [[ ! -c "/dev/$IFNAME" ]]; then
+        echo "To use qemu with networking on macOS, install the tun/tap driver:"
+        echo "http://tuntaposx.sourceforge.net/download.xhtml"
+        exit 1
+      fi
+      if [[ ! -w "/dev/$IFNAME" ]]; then
+        echo "For networking /dev/$IFNAME must be owned by $USER. Please run:"
+        echo "  sudo chown $USER /dev/$IFNAME"
+        exit 1
+      fi
     else
-        TAP_IFS=$(ip tuntap show 2>/dev/null)
-        if [[ ! "$TAP_IFS" =~ "${IFNAME}:" ]]; then
-          echo "To use qemu with networking on Linux, configure tun/tap:"
-          echo
-          echo "sudo ip tuntap add dev $IFNAME mode tap user $USER && \\"
-          echo "sudo ip link set $IFNAME up"
-          exit 1
-        fi
-        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
+      TAP_IFS=$(ip tuntap show 2>/dev/null)
+      if [[ ! "$TAP_IFS" =~ "${IFNAME}:" ]]; then
+        echo "To use qemu with networking on Linux, configure tun/tap:"
+        echo
+        echo "sudo ip tuntap add dev $IFNAME mode tap user $USER && \\"
+        echo "sudo ip link set $IFNAME up"
+        exit 1
+      fi
     fi
-fi
-
-if (( $NET )); then
-    MAC=""
-    if [[ $NET == 2 ]]; then
-        HASH=$(echo $IFNAME | shasum)
-        SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
-        MAC=",mac=52:54:00$SUFFIX"
-    fi
-    if [[ "$ARCH" == "x64" ]] && [[ $VIRTIO == 0 ]]; then
-        ARGS+=" -device e1000,netdev=net0${MAC}"
-    else
-        ARGS+=" -device virtio-net-pci,netdev=net0${MAC}"
-    fi
+    HASH=$(echo $IFNAME | shasum)
+    SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
+    ARGS+=" -nic tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,mac=52:54:00$SUFFIX"
+  fi
+  if [[ "$ARCH" == "x64" ]] && [[ $VIRTIO == 0 ]]; then
+    ARGS+=",model=e1000"
+  else
+    ARGS+=",model=virtio-net-pci"
+  fi
 fi
 
 if [[ -n $AUDIO ]]; then
