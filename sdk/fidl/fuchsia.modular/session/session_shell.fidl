@@ -45,7 +45,6 @@ protocol SessionShell {
 /// field match those used in the `StoryProvider` interface, allowing
 /// identification of the same story across interfaces.
 ///
-
 /// This is a struct rather than a naked string to allow for future evolution of
 /// the identifier without changing the `SessionShell` API itself.
 struct ViewIdentifier {
@@ -78,7 +77,6 @@ protocol SessionShellContext {
 /// Session shell provides this service to the framework which may plumb it to
 /// different subscribers, such as story shell and intelligence provider.
 ///
-
 /// EXPERIMENTAL Service that allows consumers of a given story to get a
 /// connection to a Presentation, and visual state services provided by the user
 /// shell. This allows story shell implementations to coordinate event and focus

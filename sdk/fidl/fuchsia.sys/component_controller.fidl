@@ -46,8 +46,8 @@ protocol ComponentController {
     /// this interface is closed.
     Detach();
 
-    /// DEPRECATED: Use OnTerminated instead of Wait().
-    /// 3: Wait()
+    // DEPRECATED: Use OnTerminated instead of Wait().
+    // 3: Wait()
 
     /// Event that is triggered when the component is terminated.
     ///

@@ -29,4 +29,4 @@ const uint32 kMouseTertiaryButton = 4;
 const uint32 kStylusPrimaryButton = 1;
 const uint32 kStylusSecondaryButton = 2;
 
-/// end-no-format
+// end-no-format

@@ -4,8 +4,8 @@
 
 library fuchsia.ui.gfx;
 
-/// The shapes defined in this file can be used to define the rendered shape of
-/// an `ObjectNode`, and to define the clip region of a `ClipNode`.
+// The shapes defined in this file can be used to define the rendered shape of
+// an `ObjectNode`, and to define the clip region of a `ClipNode`.
 
 /// Rectangle centered at (0,0).
 struct RectangleArgs {

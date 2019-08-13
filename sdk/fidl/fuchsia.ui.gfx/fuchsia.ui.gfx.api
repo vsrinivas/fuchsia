@@ -1,13 +1,13 @@
 {
-  "fidl/fuchsia.ui.gfx/commands.fidl": "ec9985ce062b0619f623f6a576367b42",
+  "fidl/fuchsia.ui.gfx/commands.fidl": "8628ab151f1174e9a04ded87b43a89c5",
   "fidl/fuchsia.ui.gfx/display_info.fidl": "98775a96c8ad2db60ef005e87703a3f3",
   "fidl/fuchsia.ui.gfx/events.fidl": "92d5684951d8f1c80ae1c20c73d5357f",
   "fidl/fuchsia.ui.gfx/hit.fidl": "3fedfcf28fbab89dc35e051c21b0fe5f",
-  "fidl/fuchsia.ui.gfx/nodes.fidl": "4efe3a11f79230bf038d68b7ec254a5b",
+  "fidl/fuchsia.ui.gfx/nodes.fidl": "57caa0d7afc502e15fe6965fb60d3e2b",
   "fidl/fuchsia.ui.gfx/pose_buffer_provider.fidl": "9f60a6e12ba6b04aa1a0e26f5c02cc0b",
   "fidl/fuchsia.ui.gfx/renderer.fidl": "6b3272165b7ff944ae3031b5862a2606",
   "fidl/fuchsia.ui.gfx/resources.fidl": "3b2f08a638c74f83a2ac4b86d425b56c",
-  "fidl/fuchsia.ui.gfx/shapes.fidl": "23a5942211b2c222eb6b6ebeddee0695",
+  "fidl/fuchsia.ui.gfx/shapes.fidl": "5bdd1edc2d70898a5b7aa3e1a6bc969d",
   "fidl/fuchsia.ui.gfx/tokens.fidl": "00d93d452e0445cabe6bfe5455887bd0",
   "fidl/fuchsia.ui.gfx/types.fidl": "c8e835e014150c2db02f8526031f903a"
 }

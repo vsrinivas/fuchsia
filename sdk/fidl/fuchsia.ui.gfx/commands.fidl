@@ -298,6 +298,7 @@ struct DetachChildrenCmd {
     uint32 node_id;
 };
 
+// TODO: add "Shape/Material Compatibility section"
 /// Sets/clears a node's shape.
 ///
 /// Constraints:
@@ -306,7 +307,6 @@ struct DetachChildrenCmd {
 /// - if this command causes the target to have both a `Shape` and a `Material`,
 ///   then these must be compatible with each other (see README.md regarding
 ///   "Shape/Material Compatibility").
-// TODO: add "Shape/Material Compatibility section"
 ///
 /// Discussion:
 /// In order to be painted, a node requires both a `Shape` and a `Material`.
@@ -317,6 +317,7 @@ struct SetShapeCmd {
     uint32 shape_id;
 };
 
+// TODO: add "Shape/Material Compatibility section"
 /// Sets/clears a node's material.
 ///
 /// Constraints:
@@ -325,7 +326,6 @@ struct SetShapeCmd {
 /// - if this command causes the target to have both a `Shape` and a `Material`,
 ///   then these must be compatible with each other (see README.md regarding
 ///   "Shape/Material Compatibility").
-// TODO: add "Shape/Material Compatibility section"
 ///
 /// Discussion:
 /// In order to be painted, a node requires both a `Shape` and a `Material`.

@@ -38,14 +38,14 @@ struct ContextQueryEntry {
 };
 
 struct ContextSelector {
+    // TODO(thatguy): Find users of this and eliminate them if it becomes a
+    // scaling problem.
     /// A partial metadata struct. Any metadata value given in `meta` restricts
     /// the set of values in the eventual ContextUpdate to include only those
     /// whose metadata match values given.
     ///
     /// A null `meta` will match any value of the given `type`. Use this sparingly
     /// as a full update could become quite large.
-    // TODO(thatguy): Find users of this and eliminate them if it becomes a
-    // scaling problem.
     ///
     /// For example, to select all context values in a given story, one would
     /// specify:

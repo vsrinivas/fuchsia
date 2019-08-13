@@ -14,11 +14,10 @@ library fuchsia.modular;
 /// query and get updates on which story is in focus on which device
 /// and visible stories on this device.
 ///
+/// Implemented by sessionmgr. Given to session shell through its namespace.
 // NOTE(alhaad): The information about visible stories can be used by
 // sessionmgr to stop / pause stories that are not visible to the
 // user.
-
-/// Implemented by sessionmgr. Given to session shell through its namespace.
 protocol FocusController {
     // Sets the focus on this device.
     Set(string? focused_story_id);

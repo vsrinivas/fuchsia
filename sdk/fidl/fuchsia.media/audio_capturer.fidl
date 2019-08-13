@@ -6,6 +6,19 @@ library fuchsia.media;
 
 using fuchsia.media.audio;
 
+// TODO(mpuryear): Routing policy needs to become more capable than this.
+// Clients will need to be able to request sets of inputs/outputs/renderers,
+// make changes to theses sets, have their requests vetted by policy (do they
+// have the permission to capture this private stream, do they have the
+// permission to capture at this frame rate, etc...).  Eventually, this
+// TODO(mpuryear): can we come up with better names than these?  Both are
+// really async modes under the hood).
+// functionality will need to be expressed at the AudioPolicy level, not here.
+// TODO(mpuryear): Add a new method to replace `DiscardAllPackets`, which will
+// be removed from `StreamSource`.
+// TODO(mpuryear): Fix obsolete docs.
+// TODO(mpuryear): Specify the way in which timestamps relative to a different
+// clock (such as an audio domain clock) may be delivered to a client.
 /// AudioCapturer
 ///
 /// An AudioCapturer is an interface returned from an fuchsia.media.Audio's
@@ -13,13 +26,6 @@ using fuchsia.media.audio;
 /// from either the current default audio input device, or the current default
 /// audio output device depending on the flags passed during creation.
 ///
-// TODO(mpuryear): Routing policy needs to become more capable than this.
-// Clients will need to be able to request sets of inputs/outputs/renderers,
-// make changes to theses sets, have their requests vetted by policy (do they
-// have the permission to capture this private stream, do they have the
-// permission to capture at this frame rate, etc...).  Eventually, this
-// functionality will need to be expressed at the AudioPolicy level, not here.
-//
 /// ** Format support **
 ///
 /// See (Get|Set)StreamType below. By default, the captured stream type will be
@@ -59,9 +65,6 @@ using fuchsia.media.audio;
 /// modes: Synchronous and Asynchronous.  A description of each mode and their
 /// tradeoffs is given below.
 ///
-// (TODO(mpuryear): can we come up with better names than these?  Both are
-// really async modes under the hood).
-//
 /// ** Synchronous mode **
 ///
 /// By default, AudioCapturer instances are running in 'sync' mode.  They will
@@ -87,9 +90,6 @@ using fuchsia.media.audio;
 /// returned, it may overwrite the unfilled portions of a partially filled
 /// buffer which has been returned as a result of a DiscardAllPackets operation.
 ///
-// TODO(mpuryear): Add a new method to replace `DiscardAllPackets`, which will
-// be removed from `StreamSource`.
-//
 /// ** Asynchronous mode **
 ///
 /// While running in 'async' mode, clients do not need to explicitly supply
@@ -133,7 +133,6 @@ using fuchsia.media.audio;
 /// and that the AudioCapturer instance has returned to synchronous operation
 /// mode.
 ///
-// TODO(mpuryear): Fix obsolete docs.
 /// The second way to determine that a stop operation has completed is to use the
 /// flags on the packets which get delivered via the user-supplied
 /// AudioCapturerCallback interface after calling StopAsyncCapture.  When
@@ -158,9 +157,6 @@ using fuchsia.media.audio;
 /// AudioCapturer should be expected to be in the past relative to 'now' on the
 /// `CLOCK_MONOTONIC` timeline.
 ///
-// TODO(mpuryear): Specify the way in which timestamps relative to a different
-// clock (such as an audio domain clock) may be delivered to a client.
-//
 /// The one exception to the "everything has an explicit timestamp" rule is when
 /// discarding submitted regions while operating in synchronous mode. Discarded
 /// packets have no data in them, but FIDL demands that all pending

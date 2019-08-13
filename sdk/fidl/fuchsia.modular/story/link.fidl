@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// This file contains the definition of Link as well as the structure
-/// of the data it holds.
+// This file contains the definition of Link as well as the structure
+// of the data it holds.
 
 library fuchsia.modular;
 
@@ -91,7 +91,7 @@ protocol Link {
     /// value in the Link, even if it's empty.
     ///
     /// The LinkWatcher connection will be closed if the owning Link handle closed.
-
+    ///
     /// All connections to a Link and LinkWatcher are closed once the story the
     /// link belongs to is stopped.
     Watch(LinkWatcher watcher);
