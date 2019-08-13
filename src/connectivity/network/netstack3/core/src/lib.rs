@@ -493,7 +493,7 @@ pub fn del_device_route<D: EventDispatcher>(
 pub fn get_all_routes<'a, D: EventDispatcher>(
     ctx: &'a Context<D>,
 ) -> impl 'a + Iterator<Item = EntryEither> {
-    let v4_routes = ip::iter_routes::<_, Ipv4Addr>(ctx);
-    let v6_routes = ip::iter_routes::<_, Ipv6Addr>(ctx);
+    let v4_routes = ip::iter_all_routes::<_, Ipv4Addr>(ctx);
+    let v6_routes = ip::iter_all_routes::<_, Ipv6Addr>(ctx);
     v4_routes.cloned().map(From::from).chain(v6_routes.cloned().map(From::from))
 }

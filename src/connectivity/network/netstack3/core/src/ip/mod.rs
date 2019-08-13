@@ -1139,7 +1139,7 @@ fn deliver<D: EventDispatcher, A: IpAddress>(
 fn forward<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     dst_ip: A,
-) -> Option<Destination<A::Version>> {
+) -> Option<Destination<A>> {
     if get_state_inner::<A::Version, _>(ctx.state()).forward {
         lookup_route(ctx, dst_ip)
     } else {
@@ -1151,8 +1151,8 @@ fn forward<D: EventDispatcher, A: IpAddress>(
 pub(crate) fn lookup_route<A: IpAddress, D: EventDispatcher>(
     ctx: &Context<D>,
     dst_ip: A,
-) -> Option<Destination<A::Version>> {
-    get_state_inner(ctx.state()).table.lookup(dst_ip)
+) -> Option<Destination<A>> {
+    get_state_inner::<A::Version, _>(ctx.state()).table.lookup(dst_ip)
 }
 
 /// Add a route to the forwarding table, returning `Err` if the subnet
@@ -1184,11 +1184,11 @@ pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
     get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.del_route(subnet)
 }
 
-/// Return the routes for the provided `IpAddress` type
-pub(crate) fn iter_routes<D: EventDispatcher, A: IpAddress>(
+/// Return all the routes for the provided `IpAddress` type
+pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
 ) -> std::slice::Iter<Entry<A>> {
-    get_state_inner::<A::Version, _>(ctx.state()).table.iter_routes()
+    get_state_inner::<A::Version, _>(ctx.state()).table.iter_installed()
 }
 
 /// Is this one of our local addresses?
@@ -2712,7 +2712,7 @@ mod tests {
     fn test_lookup_table_address<A: IpAddress>(
         cfg: DummyEventDispatcherConfig<A>,
         ip_address: A,
-    ) -> Option<Destination<A::Version>> {
+    ) -> Option<Destination<A>> {
         let mut ctx =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
         lookup_route(&ctx, ip_address)
