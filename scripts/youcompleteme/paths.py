@@ -15,7 +15,6 @@ import sys
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 FUCHSIA_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, os.pardir, os.pardir))
-GN_PATH = os.path.join(FUCHSIA_ROOT, 'buildtools', 'gn')
 MKBOOTFS_PATH = os.path.join(FUCHSIA_ROOT, 'out', 'build-zircon', 'tools', 'mkbootfs')
 DEBUG_OUT_DIR = os.path.join(FUCHSIA_ROOT, 'out', 'debug-x64')
 RELEASE_OUT_DIR = os.path.join(FUCHSIA_ROOT, 'out', 'release-x64')
@@ -85,8 +84,22 @@ def search_clang_path(root):
 
   return clang_path
 
+def search_gn_path(root):
+  gn_dir = recursive_search(PREBUILT_PATH, 'gn/%s' % get_platform())
+  if not gn_dir:
+    return gn_dir
+  return os.path.join(gn_dir, 'gn')
+
+def search_ninja_path(root):
+  ninja_dir = recursive_search(PREBUILT_PATH, 'ninja/%s' % get_platform())
+  if not ninja_dir:
+    return ninja_dir
+  return os.path.join(ninja_dir, 'ninja')
+
 # We start seaching from the correct buildtools.
 CLANG_PATH = search_clang_path(PREBUILT_PATH)
+GN_PATH = search_gn_path(PREBUILT_PATH)
+NINJA_PATH = search_ninja_path(PREBUILT_PATH)
 
 def main():
   variable_re = re.compile('^[A-Z][A-Z_]*$')

@@ -41,7 +41,8 @@ fuchsia_sysroot = os.path.join(fuchsia_paths.PREBUILT_PATH,
 # Get the clang include paths.
 fuchsia_cpp_v1_includes = fuchsia_paths.recursive_search(fuchsia_clang, 'include/c++/v1')
 fuchsia_cpp_includes = glob.glob('%s/lib/clang/*/include' % fuchsia_clang)[0]
-ninja_path = os.path.join(fuchsia_root, 'buildtools', 'ninja')
+
+ninja_path = os.path.realpath(fuchsia_paths.NINJA_PATH)
 
 # Get the name of the zircon project from GN args.
 # Reading the args.gn is significantly faster than running `gn args` so we do
