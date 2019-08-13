@@ -7,7 +7,7 @@
             "system-temp"
         ],
         "services": [
-            "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.device.NameProvider",
             "fuchsia.sys.Loader",
             "fuchsia.logger.LogSink",
             "fuchsia.modular.EntityResolver",

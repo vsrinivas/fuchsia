@@ -2,13 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::models::Action,
-    failure::{bail, Error},
-    fidl_fuchsia_net_oldhttp as http, fuchsia_async as fasync, fuchsia_component as component,
-    fuchsia_syslog::macros::*,
-    fuchsia_zircon as zx,
-    futures::io::AsyncReadExt,
-    serde_derive::Deserialize,
+    crate::models::Action, failure::Error, fidl_fuchsia_net_oldhttp as http,
+    fuchsia_async as fasync, fuchsia_component as component, fuchsia_syslog::macros::*,
+    fuchsia_zircon as zx, futures::io::AsyncReadExt, serde_derive::Deserialize,
 };
 
 /// Returns a vec of HttpHeaders used for Discover Cloud API request.
@@ -20,21 +16,13 @@ use {
 /// is a hack and should be removed when we decide to use the
 /// logged in user for access authorization.
 ///
-async fn get_discover_cloud_http_headers() -> Result<Vec<http::HttpHeader>, Error> {
+async fn get_discover_cloud_http_headers(
+    device_name: &str,
+) -> Result<Vec<http::HttpHeader>, Error> {
     let mut http_headers = vec![http::HttpHeader {
         name: "Accept".to_string(),
         value: "application/json".to_string(),
     }];
-
-    // Connect to device setting manager service
-    let device_settings_manager = component::client::connect_to_service::<
-        fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker,
-    >()?;
-    let (device_name, status) = device_settings_manager.get_string("DeviceName").await?;
-
-    if status != fidl_fuchsia_devicesettings::Status::Ok {
-        bail!("Could not get DeviceName from DeviceSettingsManagerMarker");
-    }
 
     http_headers.push(http::HttpHeader {
         name: "Authorization".to_string(),
@@ -95,7 +83,10 @@ fn serde_from_str(json: &str) -> Result<Vec<Action>, Error> {
 /// Fetch actions from cloud.
 ///
 async fn get_actions_http(url: &str) -> Result<Vec<Action>, Error> {
-    let http_headers = get_discover_cloud_http_headers().await?;
+    let name_provider =
+        component::client::connect_to_service::<fidl_fuchsia_device::NameProviderMarker>()?;
+    let device_name = name_provider.get_device_name().await?.map_err(zx::Status::from_raw)?;
+    let http_headers = get_discover_cloud_http_headers(&device_name).await?;
     // Fetch the body and parse, returning error messages on failure
     http_get(url, http_headers).await
         .or_else(|_| {
@@ -140,15 +131,20 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_discover_cloud_http_headers() -> Result<(), Error> {
-        // Check that we can connect to DeviceSettingsManagerMarker service
-        // in get_discover_cloud_http_headers().
-        // When running in test, "DeviceName" isn't set yet in
-        // DeviceSettingsManagerMarker.
-        // Check that we return an appropriate error.
-        let response = get_discover_cloud_http_headers().await;
+        let fake_device_name = "four-word-node-name";
+        let response = get_discover_cloud_http_headers(&fake_device_name).await?;
         assert_eq!(
-            response.err().unwrap().to_string(),
-            "Could not get DeviceName from DeviceSettingsManagerMarker"
+            response,
+            vec![
+                http::HttpHeader {
+                    name: "Accept".to_string(),
+                    value: "application/json".to_string(),
+                },
+                http::HttpHeader {
+                    name: "Authorization".to_string(),
+                    value: format!("ApiKey {}", fake_device_name).to_string(),
+                },
+            ]
         );
 
         Ok(())

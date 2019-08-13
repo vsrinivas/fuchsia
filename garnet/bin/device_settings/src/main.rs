@@ -200,7 +200,7 @@ fn main_ds() -> Result<(), Error> {
 
         d.initialize_keys(
             DATA_DIR,
-            &["DeviceName", "TestSetting", "Display.Brightness", "Audio", "FactoryReset"],
+            &["TestSetting", "Display.Brightness", "Audio", "FactoryReset"],
         );
 
         spawn_device_settings_server(d, stream)
