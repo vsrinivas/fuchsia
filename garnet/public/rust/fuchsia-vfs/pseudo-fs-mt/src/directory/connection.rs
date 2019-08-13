@@ -9,7 +9,9 @@ use crate::{
             check_child_connection_flags, new_connection_validate_flags,
             POSIX_DIRECTORY_PROTECTION_ATTRIBUTES,
         },
+        dirents_sink,
         entry::DirectoryEntry,
+        read_dirents,
     },
     execution_scope::ExecutionScope,
     path::Path,
@@ -28,27 +30,20 @@ use {
         sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
         Status,
     },
-    futures::stream::StreamExt,
+    futures::{future::BoxFuture, stream::StreamExt},
     std::{default::Default, iter, iter::ExactSizeIterator, mem::replace, sync::Arc},
 };
 
-pub type ReadDirentsResult<TraversalPosition> =
-    Result<read_dirents::Done<TraversalPosition>, Status>;
+pub type ReadDirentsResult = Result<Box<dirents_sink::Sealed>, Status>;
 
-pub enum AsyncReadDirents<TraversalPosition>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    Immediate(ReadDirentsResult<TraversalPosition>),
-    // Stream(...)
+pub enum AsyncReadDirents {
+    Immediate(ReadDirentsResult),
+    #[allow(dead_code)]
+    Future(BoxFuture<'static, ReadDirentsResult>),
 }
 
-impl<TraversalPosition> From<read_dirents::Done<TraversalPosition>>
-    for AsyncReadDirents<TraversalPosition>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    fn from(done: read_dirents::Done<TraversalPosition>) -> AsyncReadDirents<TraversalPosition> {
+impl From<Box<dyn dirents_sink::Sealed>> for AsyncReadDirents {
+    fn from(done: Box<dyn dirents_sink::Sealed>) -> AsyncReadDirents {
         AsyncReadDirents::Immediate(Ok(done))
     }
 }
@@ -60,10 +55,15 @@ where
     fn read_dirents(
         self: Arc<Self>,
         pos: TraversalPosition,
-        sink: read_dirents::Sink<TraversalPosition>,
-    ) -> AsyncReadDirents<TraversalPosition>;
+        sink: Box<dirents_sink::Sink<TraversalPosition>>,
+    ) -> AsyncReadDirents;
 
-    fn register_watcher(self: Arc<Self>, scope: ExecutionScope, mask: u32, channel: Channel);
+    fn register_watcher(
+        self: Arc<Self>,
+        scope: ExecutionScope,
+        mask: u32,
+        channel: Channel,
+    ) -> Status;
 
     fn unregister_watcher(self: Arc<Self>, key: usize);
 }
@@ -341,15 +341,29 @@ where
                 read_dirents::Sink::<TraversalPosition>::new(max_bytes),
             ) {
                 AsyncReadDirents::Immediate(res) => res,
+                AsyncReadDirents::Future(fut) => fut.await,
             }
         };
 
-        match res {
-            Ok(read_dirents::Done { buf, pos, status }) => {
-                self.seek = pos;
-                responder(status, &mut buf.into_iter())
+        let done_or_err = match res {
+            Ok(sealed) => sealed.open().downcast::<read_dirents::Done<TraversalPosition>>(),
+            Err(status) => return responder(status, &mut iter::empty()),
+        };
+
+        match done_or_err {
+            Ok(done) => {
+                self.seek = done.pos;
+                responder(done.status, &mut done.buf.into_iter())
             }
-            Err(status) => responder(status, &mut iter::empty()),
+            Err(_) => {
+                debug_assert!(
+                    false,
+                    "`read_dirents()` returned a `dirents_sink::Sealed` instance that is not \
+                     an instance of the `read_dirents::Done`.  This is a bug in the \
+                     `read_dirents()` implementation."
+                );
+                responder(Status::NOT_SUPPORTED, &mut iter::empty())
+            }
         }
     }
 
@@ -363,91 +377,7 @@ where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
         let directory = self.directory.clone();
-        directory.register_watcher(self.scope.clone(), mask, channel);
-        responder(Status::OK)
-    }
-}
-
-pub mod read_dirents {
-    use crate::directory::{common::encode_dirent, entry::EntryInfo};
-
-    use {fuchsia_zircon::Status, std::marker::PhantomData};
-
-    pub struct Sink<TraversalPosition>
-    where
-        TraversalPosition: Default + Send + Sync + 'static,
-    {
-        buf: Vec<u8>,
-        max_bytes: u64,
-        state: SinkState,
-        phantom: PhantomData<TraversalPosition>,
-    }
-
-    pub struct Done<TraversalPosition>
-    where
-        TraversalPosition: Default + Send + Sync + 'static,
-    {
-        pub(super) buf: Vec<u8>,
-        pub(super) pos: TraversalPosition,
-        pub(super) status: Status,
-    }
-
-    pub enum SinkAppendResult<TraversalPosition>
-    where
-        TraversalPosition: Default + Send + Sync + 'static,
-    {
-        Ok(Sink<TraversalPosition>),
-        Done(Done<TraversalPosition>),
-    }
-
-    #[derive(PartialEq, Eq)]
-    enum SinkState {
-        NotCalled,
-        DidNotFit,
-        FitOne,
-    }
-
-    impl<TraversalPosition> Sink<TraversalPosition>
-    where
-        TraversalPosition: Default + Send + Sync + 'static,
-    {
-        pub(super) fn new(max_bytes: u64) -> Sink<TraversalPosition> {
-            Sink::<TraversalPosition> {
-                buf: vec![],
-                max_bytes,
-                state: SinkState::NotCalled,
-                phantom: PhantomData,
-            }
-        }
-
-        pub fn append(
-            mut self,
-            entry: &EntryInfo,
-            name: &str,
-            pos: impl FnOnce() -> TraversalPosition,
-        ) -> SinkAppendResult<TraversalPosition> {
-            if !encode_dirent(&mut self.buf, self.max_bytes, entry, name) {
-                if self.state == SinkState::NotCalled {
-                    self.state = SinkState::DidNotFit;
-                }
-                SinkAppendResult::Done(self.done(pos()))
-            } else {
-                if self.state == SinkState::NotCalled {
-                    self.state = SinkState::FitOne;
-                }
-                SinkAppendResult::Ok(self)
-            }
-        }
-
-        pub fn done(self, pos: TraversalPosition) -> Done<TraversalPosition> {
-            Done::<TraversalPosition> {
-                buf: self.buf,
-                pos,
-                status: match self.state {
-                    SinkState::NotCalled | SinkState::FitOne => Status::OK,
-                    SinkState::DidNotFit => Status::BUFFER_TOO_SMALL,
-                },
-            }
-        }
+        let status = directory.register_watcher(self.scope.clone(), mask, channel);
+        responder(status)
     }
 }

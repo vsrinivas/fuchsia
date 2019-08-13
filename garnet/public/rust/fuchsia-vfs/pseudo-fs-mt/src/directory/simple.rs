@@ -7,9 +7,8 @@
 use crate::{
     common::send_on_open_with_error,
     directory::{
-        connection::{
-            read_dirents, AsyncReadDirents, DirectoryConnection, DirectoryEntryContainer,
-        },
+        connection::{AsyncReadDirents, DirectoryConnection, DirectoryEntryContainer},
+        dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
         traversal_position::AlphabeticalTraversal,
         watchers::Watchers,
@@ -171,21 +170,21 @@ impl DirectoryEntryContainer<AlphabeticalTraversal> for Simple {
     fn read_dirents(
         self: Arc<Self>,
         pos: AlphabeticalTraversal,
-        sink: read_dirents::Sink<AlphabeticalTraversal>,
-    ) -> AsyncReadDirents<AlphabeticalTraversal> {
-        use read_dirents::SinkAppendResult;
+        sink: Box<dirents_sink::Sink<AlphabeticalTraversal>>,
+    ) -> AsyncReadDirents {
+        use dirents_sink::AppendResult;
 
         let this = self.inner.lock();
 
         let (mut sink, entries_iter) = match pos {
             AlphabeticalTraversal::Dot => {
                 // Lazy position retrieval.
-                let pos = || match this.entries.keys().next() {
+                let pos = &|| match this.entries.keys().next() {
                     None => AlphabeticalTraversal::End,
                     Some(first_name) => AlphabeticalTraversal::Name(first_name.clone()),
                 };
                 match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".", pos) {
-                    SinkAppendResult::Ok(sink) => {
+                    AppendResult::Ok(sink) => {
                         // I wonder why, but rustc can not infer T in
                         //
                         //   pub fn range<T, R>(&self, range: R) -> Range<K, V>
@@ -202,7 +201,7 @@ impl DirectoryEntryContainer<AlphabeticalTraversal> for Simple {
                         // below.
                         (sink, this.entries.range::<String, _>(..))
                     }
-                    SinkAppendResult::Done(done) => return done.into(),
+                    AppendResult::Sealed(sealed) => return sealed.into(),
                 }
             }
 
@@ -210,22 +209,27 @@ impl DirectoryEntryContainer<AlphabeticalTraversal> for Simple {
                 (sink, this.entries.range::<String, _>(next_name..))
             }
 
-            AlphabeticalTraversal::End => return sink.done(AlphabeticalTraversal::End).into(),
+            AlphabeticalTraversal::End => return sink.seal(AlphabeticalTraversal::End).into(),
         };
 
         for (name, entry) in entries_iter {
             match sink
-                .append(&entry.entry_info(), &name, || AlphabeticalTraversal::Name(name.clone()))
+                .append(&entry.entry_info(), &name, &|| AlphabeticalTraversal::Name(name.clone()))
             {
-                SinkAppendResult::Ok(new_sink) => sink = new_sink,
-                SinkAppendResult::Done(done) => return done.into(),
+                AppendResult::Ok(new_sink) => sink = new_sink,
+                AppendResult::Sealed(sealed) => return sealed.into(),
             }
         }
 
-        sink.done(AlphabeticalTraversal::End).into()
+        sink.seal(AlphabeticalTraversal::End).into()
     }
 
-    fn register_watcher(self: Arc<Self>, scope: ExecutionScope, mask: u32, channel: Channel) {
+    fn register_watcher(
+        self: Arc<Self>,
+        scope: ExecutionScope,
+        mask: u32,
+        channel: Channel,
+    ) -> Status {
         let mut this = self.inner.lock();
 
         let names = {
@@ -233,6 +237,8 @@ impl DirectoryEntryContainer<AlphabeticalTraversal> for Simple {
             iter::once(&".".to_string()).chain(entry_names).cloned().collect()
         };
         this.watchers.add(scope, self.clone(), names, mask, channel);
+
+        Status::OK
     }
 
     fn unregister_watcher(self: Arc<Self>, key: usize) {
