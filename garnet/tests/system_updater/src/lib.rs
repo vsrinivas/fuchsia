@@ -138,6 +138,9 @@ impl TestEnv {
         if let Some(update) = args.update {
             system_updater = system_updater.arg(format!("-update={}", update));
         }
+        if let Some(reboot) = args.reboot {
+            system_updater = system_updater.arg(format!("-reboot={}", reboot));
+        }
 
         let output = system_updater
             .output(launcher)
@@ -165,6 +168,7 @@ struct SystemUpdaterArgs<'a> {
     initiator: &'a str,
     target: &'a str,
     update: Option<&'a str>,
+    reboot: Option<bool>,
 }
 
 struct MockResolverService {
@@ -430,6 +434,7 @@ async fn test_system_update() {
         initiator: "manual",
         target: "m3rk13",
         update: None,
+        reboot: None,
     })
     .await
     .expect("run system_updater");
@@ -457,6 +462,46 @@ async fn test_system_update() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_system_update_no_reboot() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3").add_file(
+        "packages",
+        "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+    );
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: Some(false),
+    })
+    .await
+    .expect("run system_updater");
+
+    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
+        "fuchsia-pkg://fuchsia.com/update",
+        "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296",
+    ]);
+
+    let loggers = env.logger_factory.loggers.lock().clone();
+    assert_eq!(loggers.len(), 1);
+    let logger = loggers.into_iter().next().unwrap();
+    assert_eq!(
+        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
+            target: "m3rk13".into(),
+        }
+    );
+
+    assert_eq!(*env.reboot_service.called.lock(), 0);
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_broken_logger() {
     let mut env = TestEnv::new();
 
@@ -471,6 +516,7 @@ async fn test_broken_logger() {
         initiator: "manual",
         target: "m3rk13",
         update: None,
+        reboot: None,
     })
     .await
     .expect("run system_updater");
@@ -502,6 +548,7 @@ async fn test_failing_package_fetch() {
             initiator: "manual",
             target: "m3rk13",
             update: None,
+            reboot: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -543,6 +590,7 @@ async fn test_working_image_write() {
         initiator: "manual",
         target: "m3rk13",
         update: None,
+        reboot: None,
     })
     .await
     .expect("success");
@@ -583,6 +631,7 @@ async fn test_failing_image_write() {
             initiator: "manual",
             target: "m3rk13",
             update: None,
+            reboot: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -617,6 +666,7 @@ async fn test_uses_custom_update_package() {
         initiator: "manual",
         target: "m3rk13",
         update: Some("fuchsia-pkg://fuchsia.com/another-update/4"),
+        reboot: None,
     })
     .await
     .expect("run system_updater");
@@ -638,6 +688,7 @@ async fn test_requires_update_package() {
             initiator: "manual",
             target: "m3rk13",
             update: None,
+            reboot: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -659,6 +710,7 @@ async fn test_rejects_invalid_update_package_url() {
             initiator: "manual",
             target: "m3rk13",
             update: Some(bogus_url),
+            reboot: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");

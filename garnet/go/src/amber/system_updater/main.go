@@ -27,6 +27,7 @@ var (
 	sourceVersion string
 	targetVersion string
 	updateURL     string
+	reboot        bool
 )
 
 func run() (err error) {
@@ -162,9 +163,12 @@ func run() (err error) {
 		syslog.Errorf("error writing update history: %s", err)
 	}
 
-	syslog.Infof("system update complete, rebooting...")
-
-	SendReboot()
+	if reboot {
+		syslog.Infof("system update complete, rebooting...")
+		SendReboot()
+	} else {
+		syslog.Infof("system update complete, new version will run on next boot.")
+	}
 
 	return nil
 }
@@ -225,6 +229,7 @@ func Main() {
 	flag.StringVar(&sourceVersion, "source", "", "current OS version")
 	flag.StringVar(&targetVersion, "target", "", "target OS version")
 	flag.StringVar(&updateURL, "update", "fuchsia-pkg://fuchsia.com/update", "update package URL")
+	flag.BoolVar(&reboot, "reboot", true, "if true, reboot the system after successful OTA")
 	flag.Parse()
 
 	startTime = time.Unix(0, *start)
