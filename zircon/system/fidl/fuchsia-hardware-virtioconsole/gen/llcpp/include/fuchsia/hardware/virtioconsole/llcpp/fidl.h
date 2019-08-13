@@ -113,21 +113,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetChannel GetChannel(::fidl::BytePart _request_buffer, ::zx::channel req);
 
-    // This API is temporary.  It exists because devhost multiplexes
-    // fuchsia.io.File on top of the device connections, and
-    // fuchsia.hardware.pty.Device composes with that interface.  Once
-    // the devhost stops the behavior, we can remove this interface and
-    // have virtio-console just serve fuchsia.hardware.pty.Device directly.
-    zx_status_t GetChannel_Deprecated(::zx::channel req);
-
-    // This API is temporary.  It exists because devhost multiplexes
-    // fuchsia.io.File on top of the device connections, and
-    // fuchsia.hardware.pty.Device composes with that interface.  Once
-    // the devhost stops the behavior, we can remove this interface and
-    // have virtio-console just serve fuchsia.hardware.pty.Device directly.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetChannel_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel req);
-
    private:
     ::zx::channel channel_;
   };
@@ -152,21 +137,6 @@ class Device final {
     // have virtio-console just serve fuchsia.hardware.pty.Device directly.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
-
-    // This API is temporary.  It exists because devhost multiplexes
-    // fuchsia.io.File on top of the device connections, and
-    // fuchsia.hardware.pty.Device composes with that interface.  Once
-    // the devhost stops the behavior, we can remove this interface and
-    // have virtio-console just serve fuchsia.hardware.pty.Device directly.
-    static zx_status_t GetChannel_Deprecated(zx::unowned_channel _client_end, ::zx::channel req);
-
-    // This API is temporary.  It exists because devhost multiplexes
-    // fuchsia.io.File on top of the device connections, and
-    // fuchsia.hardware.pty.Device composes with that interface.  Once
-    // the devhost stops the behavior, we can remove this interface and
-    // have virtio-console just serve fuchsia.hardware.pty.Device directly.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetChannel_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
 
   };
 

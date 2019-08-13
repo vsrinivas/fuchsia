@@ -63,45 +63,6 @@ Device::UnownedResultOf::GetChannel Device::Call::GetChannel(zx::unowned_channel
   return UnownedResultOf::GetChannel(std::move(_client_end), std::move(_request_buffer), std::move(req));
 }
 
-zx_status_t Device::SyncClient::GetChannel_Deprecated(::zx::channel req) {
-  return Device::Call::GetChannel_Deprecated(zx::unowned_channel(this->channel_), std::move(req));
-}
-
-zx_status_t Device::Call::GetChannel_Deprecated(zx::unowned_channel _client_end, ::zx::channel req) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelRequest, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<GetChannelRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDevice_GetChannel_GenOrdinal;
-  _request.req = std::move(req);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChannelRequest));
-  ::fidl::DecodedMessage<GetChannelRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-}
-
-zx_status_t Device::SyncClient::GetChannel_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel req) {
-  return Device::Call::GetChannel_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(req));
-}
-
-zx_status_t Device::Call::GetChannel_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req) {
-  if (_request_buffer.capacity() < GetChannelRequest::PrimarySize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  auto& _request = *reinterpret_cast<GetChannelRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDevice_GetChannel_GenOrdinal;
-  _request.req = std::move(req);
-  _request_buffer.set_actual(sizeof(GetChannelRequest));
-  ::fidl::DecodedMessage<GetChannelRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-}
-
 ::fidl::internal::StatusAndError Device::InPlace::GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kDevice_GetChannel_GenOrdinal;
