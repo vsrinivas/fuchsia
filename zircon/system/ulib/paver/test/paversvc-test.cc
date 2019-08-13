@@ -364,6 +364,8 @@ TEST_F(PaverServiceTest, WipeVolumes) {
   ASSERT_OK(result.value().status);
 }
 
+// TODO(34771): Re-enable once bug in GPT is fixed.
+#if 0
 #if defined(__x86_64__)
 constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 
@@ -398,6 +400,7 @@ TEST_F(PaverServiceTest, InitializePartitionTablesMultipleDevices) {
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
 }
+#endif
 #endif
 
 }  // namespace

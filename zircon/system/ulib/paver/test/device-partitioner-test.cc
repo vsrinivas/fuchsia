@@ -31,7 +31,7 @@ namespace {
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
-constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
+//constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 constexpr uint8_t kZirconAType[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
 constexpr uint8_t kZirconBType[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
 constexpr uint8_t kZirconRType[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
@@ -144,6 +144,8 @@ constexpr fuchsia_hardware_nand_RamNandInfo
 
 }  // namespace
 
+// TODO(34771): Re-enable once bug in GPT is fixed.
+#if 0
 class EfiPartitionerTests : public zxtest::Test {
  protected:
   EfiPartitionerTests() {
@@ -325,6 +327,7 @@ TEST_F(EfiPartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWipingOne
       paver::EfiDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), paver::Arch::kX64,
                                               std::nullopt, &partitioner));
 }
+#endif
 
 class FixedDevicePartitionerTests : public zxtest::Test {
  protected:
