@@ -181,5 +181,29 @@ TEST_F(AppUnitTest, VerifyAppSettingsWatcher) {
   EXPECT_TRUE(settings->has_color_adjustment_matrix());
 }
 
+// Test to make sure App doesn't crash when Empty Settings are passed to A11y
+// Manager from Settings Manager.
+TEST_F(AppUnitTest, SetSettingsWithEmptyInput) {
+  a11y_manager::App app = a11y_manager::App(context_provider_.TakeContext());
+  RunLoopUntilIdle();
+
+  Settings provided_settings;
+  app.OnSettingsChange(std::move(provided_settings));
+
+  SettingsPtr settings = app.GetSettings();
+  float kExpectedZoomFactor = 1.0;
+  EXPECT_TRUE(settings->has_screen_reader_enabled());
+  EXPECT_FALSE(settings->screen_reader_enabled());
+  EXPECT_TRUE(settings->has_magnification_enabled());
+  EXPECT_FALSE(settings->magnification_enabled());
+  EXPECT_TRUE(settings->has_magnification_zoom_factor());
+  EXPECT_EQ(kExpectedZoomFactor, settings->magnification_zoom_factor());
+  EXPECT_TRUE(settings->has_color_inversion_enabled());
+  EXPECT_FALSE(settings->color_inversion_enabled());
+  EXPECT_TRUE(settings->has_color_correction());
+  EXPECT_EQ(fuchsia::accessibility::ColorCorrection::DISABLED, settings->color_correction());
+  EXPECT_TRUE(settings->has_color_adjustment_matrix());
+}
+
 }  // namespace
 }  // namespace accessibility_test
