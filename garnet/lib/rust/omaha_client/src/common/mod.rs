@@ -167,6 +167,17 @@ impl App {
         }
     }
 
+    /// Construct an App from an ID, version, and user counting.  From anything that can be
+    /// converted into a String and a Version.
+    pub fn with_user_counting<I: Into<String>, V: Into<Version>>(
+        id: I,
+        version: V,
+        cohort: Cohort,
+        user_counting: UserCounting,
+    ) -> Self {
+        App { id: id.into(), version: version.into(), fingerprint: None, cohort, user_counting }
+    }
+
     /// Load data from |storage|, only overwrite existing fields if data exists.
     pub async fn load<'a>(&'a mut self, storage: &'a impl Storage) {
         if let Some(app_json) = storage.get_string(&self.id).await {
@@ -286,7 +297,7 @@ impl AppSet {
         }
     }
 
-    /// Update the cohort for each app from Omaha app response.
+    /// Update the cohort and user counting for each app from Omaha app response.
     pub async fn update_from_omaha(&mut self, app_responses: Vec<AppResponse>) {
         let mut apps = self.apps.lock().await;
 
@@ -294,6 +305,7 @@ impl AppSet {
             for app in apps.iter_mut() {
                 if app.id == app_response.app_id {
                     app.cohort.update_from_omaha(app_response.cohort);
+                    app.user_counting = app_response.user_counting;
                     break;
                 }
             }
@@ -667,15 +679,18 @@ mod tests {
     fn test_appset_update_from_omaha() {
         let mut app_set = AppSet::new(vec![App::new("some_id", [0, 1], Cohort::default())]);
         let cohort = Cohort { name: Some("some-channel".to_string()), ..Cohort::default() };
+        let user_counting = UserCounting::ClientRegulatedByDate(Some(42));
         let app_responses = vec![AppResponse {
             app_id: "some_id".to_string(),
             cohort: cohort.clone(),
-            user_counting: UserCounting::ClientRegulatedByDate(None),
+            user_counting: user_counting.clone(),
             result: Action::Updated,
         }];
         block_on(async {
             app_set.update_from_omaha(app_responses).await;
-            assert_eq!(cohort, app_set.to_vec().await[0].cohort);
+            let apps = app_set.to_vec().await;
+            assert_eq!(cohort, apps[0].cohort);
+            assert_eq!(user_counting, apps[0].user_counting);
         });
     }
 

@@ -379,7 +379,7 @@ where
         // Construct a request for the app(s).
         let mut request_builder = RequestBuilder::new(&self.client_config, &request_params);
         for app in &apps {
-            request_builder = request_builder.add_update_check(app);
+            request_builder = request_builder.add_update_check(app).add_ping(app);
         }
 
         let update_check_start_time = Instant::now();
@@ -1100,11 +1100,15 @@ mod tests {
     }
 
     #[test]
-    fn test_update_cohort() {
+    fn test_update_cohort_and_user_counting() {
         let config = config_generator();
         let response = json!({"response":{
             "server": "prod",
             "protocol": "3.0",
+            "daystart": {
+              "elapsed_days": 1234567,
+              "elapsed_seconds": 3645
+            },
             "app": [{
               "appid": "{00000000-0000-0000-0000-000000000001}",
               "status": "ok",
@@ -1155,20 +1159,22 @@ mod tests {
             pool.run_until_stalled();
         }
 
-        let request_params = RequestParams::default();
-        let mut request_builder = RequestBuilder::new(&config, &request_params);
-        let mut apps = block_on(make_test_app_set().to_vec());
-        apps[0].cohort.id = Some("1".to_string());
-        apps[0].cohort.name = Some("stable-channel".to_string());
-        request_builder = request_builder.add_update_check(&apps[0]);
         // Move |state_machine| out of Rc and RefCell.
         let state_machine = Rc::try_unwrap(state_machine).unwrap().into_inner();
-        block_on(assert_request(state_machine.http, request_builder));
 
+        // Check that apps are updated based on Omaha response.
         let apps = block_on(state_machine.app_set.to_vec());
         assert_eq!(Some("1".to_string()), apps[0].cohort.id);
         assert_eq!(None, apps[0].cohort.hint);
         assert_eq!(Some("stable-channel".to_string()), apps[0].cohort.name);
+        assert_eq!(UserCounting::ClientRegulatedByDate(Some(1234567)), apps[0].user_counting);
+
+        // Check that the next update check uses the new app.
+        let request_params = RequestParams::default();
+        let mut request_builder = RequestBuilder::new(&config, &request_params);
+        request_builder = request_builder.add_update_check(&apps[0]);
+        request_builder = request_builder.add_ping(&apps[0]);
+        block_on(assert_request(state_machine.http, request_builder));
     }
 
     #[test]

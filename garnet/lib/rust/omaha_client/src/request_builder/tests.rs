@@ -139,10 +139,12 @@ fn test_simple_ping() {
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
-    .add_ping(
-        &App::new("ping app id", [6, 7, 8, 9], Cohort::new("ping-channel")),
-        &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) },
-    )
+    .add_ping(&App::with_user_counting(
+        "ping app id",
+        [6, 7, 8, 9],
+        Cohort::new("ping-channel"),
+        UserCounting::ClientRegulatedByDate(Some(34)),
+    ))
     .build_intermediate();
 
     // Validate that the App was added, with it's cohort
@@ -155,7 +157,7 @@ fn test_simple_ping() {
     // Builder.
     let ping = app.ping.as_ref().unwrap();
     assert_eq!(ping.date_last_active, Some(34));
-    assert_eq!(ping.date_last_roll_call, Some(45));
+    assert_eq!(ping.date_last_roll_call, Some(34));
 
     // Assert that the headers are set correctly
     let headers = intermediate.headers;
@@ -263,7 +265,12 @@ fn test_ping_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::new("first app id", [1, 2, 3, 4], Cohort::new("some-channel"));
+    let app_1 = App::with_user_counting(
+        "first app id",
+        [1, 2, 3, 4],
+        Cohort::new("some-channel"),
+        UserCounting::ClientRegulatedByDate(Some(34)),
+    );
 
     // Setup the second app and its cohort
     let app_2 = App::new("second app id", [5, 6, 7, 8], Cohort::new("some-other-channel"));
@@ -275,7 +282,7 @@ fn test_ping_added_to_first_app_update_entry() {
     )
     .add_update_check(&app_1)
     .add_update_check(&app_2)
-    .add_ping(&app_1, &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) })
+    .add_ping(&app_1)
     .build_intermediate()
     .body
     .request;
@@ -292,7 +299,7 @@ fn test_ping_added_to_first_app_update_entry() {
     assert_eq!(app.cohort, Some(Cohort::new("some-channel")));
     let ping = &app.ping.as_ref().unwrap();
     assert_eq!(ping.date_last_active, Some(34));
-    assert_eq!(ping.date_last_roll_call, Some(45));
+    assert_eq!(ping.date_last_roll_call, Some(34));
 
     // And the second app should not.
     let app = &request.apps[1];
@@ -312,7 +319,12 @@ fn test_ping_added_to_second_app_update_entry() {
     let app_1 = App::new("first app id", [1, 2, 3, 4], Cohort::new("some-channel"));
 
     // Setup the second app and its cohort
-    let app_2 = App::new("second app id", [5, 6, 7, 8], Cohort::new("some-other-channel"));
+    let app_2 = App::with_user_counting(
+        "second app id",
+        [5, 6, 7, 8],
+        Cohort::new("some-other-channel"),
+        UserCounting::ClientRegulatedByDate(Some(34)),
+    );
 
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(
@@ -321,7 +333,7 @@ fn test_ping_added_to_second_app_update_entry() {
     )
     .add_update_check(&app_1)
     .add_update_check(&app_2)
-    .add_ping(&app_2, &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) });
+    .add_ping(&app_2);
 
     let request = builder.build_intermediate().body.request;
 
@@ -344,7 +356,7 @@ fn test_ping_added_to_second_app_update_entry() {
 
     let ping = app.ping.as_ref().unwrap();
     assert_eq!(ping.date_last_active, Some(34));
-    assert_eq!(ping.date_last_roll_call, Some(45));
+    assert_eq!(ping.date_last_roll_call, Some(34));
 }
 
 /// This test ensures that if the matching app entry is the first one in the request, that the

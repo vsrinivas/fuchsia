@@ -6,7 +6,7 @@
 mod tests;
 
 use crate::{
-    common::App,
+    common::{App, UserCounting},
     configuration::Config,
     protocol::{
         request::{
@@ -76,8 +76,8 @@ struct AppEntry {
     /// Set to true if an update check should be performed.
     update_check: bool,
 
-    /// A ping, if that's being performed.
-    ping: Option<Ping>,
+    /// Set to true if a ping should be send.
+    ping: bool,
 
     /// Any events that need to be sent to the Omaha service.
     events: Vec<Event>,
@@ -87,7 +87,7 @@ impl AppEntry {
     /// Basic constructor for the AppEntry.  All AppEntries MUST have an App and a Cohort,
     /// everything else can be omitted.
     fn new(app: &App) -> AppEntry {
-        AppEntry { app: app.clone(), update_check: false, ping: None, events: Vec::new() }
+        AppEntry { app: app.clone(), update_check: false, ping: false, events: Vec::new() }
     }
 }
 
@@ -95,12 +95,20 @@ impl AppEntry {
 /// it's members into the generated ProtocolApp.
 impl From<AppEntry> for ProtocolApp {
     fn from(entry: AppEntry) -> ProtocolApp {
-        if !entry.update_check && entry.events.is_empty() && entry.ping == None {
+        if !entry.update_check && entry.events.is_empty() && !entry.ping {
             warn!(
                 "Generated protocol::request for {} has no update check, ping, or events",
                 entry.app.id
             );
         }
+        let ping = if entry.ping {
+            let days = match entry.app.user_counting {
+                UserCounting::ClientRegulatedByDate(days) => days,
+            };
+            Some(Ping { date_last_active: days, date_last_roll_call: days })
+        } else {
+            None
+        };
         ProtocolApp {
             id: entry.app.id,
             version: entry.app.version.to_string(),
@@ -108,7 +116,7 @@ impl From<AppEntry> for ProtocolApp {
             cohort: Some(entry.app.cohort),
             update_check: if entry.update_check { Some(UpdateCheck::default()) } else { None },
             events: entry.events,
-            ping: entry.ping,
+            ping,
         }
     }
 }
@@ -178,10 +186,10 @@ impl<'a> RequestBuilder<'a> {
 
     /// This function adds a Ping for the given App, in the given Cohort.  This function is an
     /// idempotent accumulator, in that it only once adds the App with it's associated Cohort to the
-    /// request.  Afterward, it just adds the Ping to the App.
-    pub fn add_ping(mut self, app: &App, ping: &Ping) -> Self {
+    /// request.  Afterward, it just marks the App as needing a Ping.
+    pub fn add_ping(mut self, app: &App) -> Self {
         self.insert_and_modify_entry(app, |entry| {
-            entry.ping = Some(ping.clone());
+            entry.ping = true;
         });
         self
     }
