@@ -16,7 +16,7 @@ namespace flat {
     const Type* the_type;                                                                         \
     ASSERT_TRUE(typespace.Create(the_type_name, nullptr /* maybe_arg_type */,                     \
                                  std::optional<types::HandleSubtype>(), nullptr /* maybe_size */, \
-                                 types::Nullability::kNonnullable, &the_type));                   \
+                                 types::Nullability::kNonnullable, &the_type, nullptr));          \
     ASSERT_NE(the_type, nullptr, N);                                                              \
     auto the_type_p = static_cast<const PrimitiveType*>(the_type);                                \
     ASSERT_EQ(the_type_p->subtype, S, N);                                                         \

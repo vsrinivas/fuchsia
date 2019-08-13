@@ -425,9 +425,11 @@ bool IsSimple(const Type* type, const FieldShape& fieldshape) {
 
 bool Typespace::Create(const flat::Name& name, const Type* arg_type,
                        const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
-                       types::Nullability nullability, const Type** out_type) {
+                       types::Nullability nullability, const Type** out_type,
+                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
   std::unique_ptr<Type> type;
-  if (!CreateNotOwned(name, arg_type, handle_subtype, size, nullability, &type))
+  if (!CreateNotOwned(name, arg_type, handle_subtype, size, nullability, &type,
+                      out_from_type_alias))
     return false;
   types_.push_back(std::move(type));
   *out_type = types_.back().get();
@@ -437,7 +439,8 @@ bool Typespace::Create(const flat::Name& name, const Type* arg_type,
 bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
                                const std::optional<types::HandleSubtype>& handle_subtype,
                                const Size* size, types::Nullability nullability,
-                               std::unique_ptr<Type>* out_type) {
+                               std::unique_ptr<Type>* out_type,
+                               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
   // TODO(pascallouis): lookup whether we've already created the type, and
   // return it rather than create a new one. Lookup must be by name,
   // arg_type, size, and nullability.
@@ -451,7 +454,7 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
     return false;
   }
   return type_template->Create(maybe_location, arg_type, handle_subtype, size, nullability,
-                               out_type);
+                               out_type, out_from_type_alias);
 }
 
 void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
@@ -487,7 +490,8 @@ class PrimitiveTypeTemplate : public TypeTemplate {
 
   bool Create(const SourceLocation* maybe_location, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type) const {
+              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (maybe_arg_type != nullptr)
@@ -505,14 +509,15 @@ class PrimitiveTypeTemplate : public TypeTemplate {
   const types::PrimitiveSubtype subtype_;
 };
 
-class BytesTypeTemplate : public TypeTemplate {
+class BytesTypeTemplate final : public TypeTemplate {
  public:
   BytesTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter), uint8_type_(kUint8Type) {}
 
   bool Create(const SourceLocation* maybe_location, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type) const {
+              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (maybe_arg_type != nullptr)
@@ -533,14 +538,15 @@ class BytesTypeTemplate : public TypeTemplate {
   Size max_size = Size::Max();
 };
 
-class ArrayTypeTemplate : public TypeTemplate {
+class ArrayTypeTemplate final : public TypeTemplate {
  public:
   ArrayTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "array"), typespace, error_reporter) {}
 
   bool Create(const SourceLocation* maybe_location, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type) const {
+              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type == nullptr)
@@ -555,14 +561,15 @@ class ArrayTypeTemplate : public TypeTemplate {
   }
 };
 
-class VectorTypeTemplate : public TypeTemplate {
+class VectorTypeTemplate final : public TypeTemplate {
  public:
   VectorTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter) {}
 
   bool Create(const SourceLocation* maybe_location, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type) const {
+              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type == nullptr)
@@ -578,14 +585,15 @@ class VectorTypeTemplate : public TypeTemplate {
   Size max_size = Size::Max();
 };
 
-class StringTypeTemplate : public TypeTemplate {
+class StringTypeTemplate final : public TypeTemplate {
  public:
   StringTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "string"), typespace, error_reporter) {}
 
   bool Create(const SourceLocation* maybe_location, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type) const {
+              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type != nullptr)
@@ -601,14 +609,15 @@ class StringTypeTemplate : public TypeTemplate {
   Size max_size = Size::Max();
 };
 
-class HandleTypeTemplate : public TypeTemplate {
+class HandleTypeTemplate final : public TypeTemplate {
  public:
   HandleTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter) {}
 
   bool Create(const SourceLocation* maybe_location, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& opt_handle_subtype, const Size* maybe_size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type) const {
+              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(maybe_arg_type == nullptr);
 
     if (maybe_size != nullptr)
@@ -621,14 +630,15 @@ class HandleTypeTemplate : public TypeTemplate {
   }
 };
 
-class RequestTypeTemplate : public TypeTemplate {
+class RequestTypeTemplate final : public TypeTemplate {
  public:
   RequestTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "request"), typespace, error_reporter) {}
 
   bool Create(const SourceLocation* maybe_location, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type) const {
+              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type == nullptr)
@@ -651,7 +661,7 @@ class RequestTypeTemplate : public TypeTemplate {
   Size max_size = Size::Max();
 };
 
-class TypeDeclTypeTemplate : public TypeTemplate {
+class TypeDeclTypeTemplate final : public TypeTemplate {
  public:
   TypeDeclTypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter,
                        Library* library, TypeDecl* type_decl)
@@ -661,7 +671,8 @@ class TypeDeclTypeTemplate : public TypeTemplate {
 
   bool Create(const SourceLocation* maybe_location, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type) const {
+              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kProtocol) {
@@ -709,7 +720,7 @@ class TypeDeclTypeTemplate : public TypeTemplate {
   TypeDecl* type_decl_;
 };
 
-class TypeAliasTypeTemplate : public TypeTemplate {
+class TypeAliasTypeTemplate final : public TypeTemplate {
  public:
   TypeAliasTypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter,
                         Library* library, TypeAlias* decl)
@@ -717,7 +728,8 @@ class TypeAliasTypeTemplate : public TypeTemplate {
 
   bool Create(const SourceLocation* maybe_location, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
-              types::Nullability maybe_nullability, std::unique_ptr<Type>* out_type) const {
+              types::Nullability maybe_nullability, std::unique_ptr<Type>* out_type,
+              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     const Type* arg_type = nullptr;
@@ -750,11 +762,16 @@ class TypeAliasTypeTemplate : public TypeTemplate {
       nullability = maybe_nullability;
     }
 
-    // TODO(FIDL-483): Track type instantiation back to the type alias in
-    // order to present this to backends.
-    return typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type,
-                                      std::optional<types::HandleSubtype>(), size, nullability,
-                                      out_type);
+    if (!typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type,
+                                    // TODO(pascallouis): Oops, that's wrong. Need to pass handle
+                                    // parametrization down.
+                                    std::optional<types::HandleSubtype>(), size, nullability,
+                                    out_type, nullptr))
+      return false;
+    if (out_from_type_alias)
+      *out_from_type_alias = TypeConstructor::FromTypeAlias(decl_, maybe_arg_type, maybe_size,
+                                                            maybe_nullability);
+    return true;
   }
 
  private:
@@ -3416,7 +3433,7 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_
     size = static_cast<const Size*>(&type_ctor->maybe_size->Value());
   }
   if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->handle_subtype, size,
-                          type_ctor->nullability, &type_ctor->type))
+                          type_ctor->nullability, &type_ctor->type, &type_ctor->from_type_alias))
     return false;
   if (out_typeshape)
     *out_typeshape = type_ctor->type->shape;

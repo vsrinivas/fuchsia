@@ -121,11 +121,14 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::Union::Member& value);
   void Generate(const flat::XUnion& value);
   void Generate(const flat::XUnion::Member& value);
+  void Generate(const flat::TypeConstructor::FromTypeAlias& value);
   void Generate(const flat::TypeConstructor& value);
   void Generate(const flat::TypeAlias& value);
   void Generate(const flat::Library* library);
 
  private:
+  void GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& value,
+                                    Position position = Position::kSubsequent);
   void GenerateRequest(const std::string& prefix, const flat::Struct& value);
   void GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl);
   void GenerateDeclarationsMember(const flat::Library* library,

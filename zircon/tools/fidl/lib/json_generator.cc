@@ -240,7 +240,7 @@ void JSONGenerator::Generate(const flat::Bits& value) {
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("type", value.subtype_ctor->type);
+    GenerateTypeAndFromTypeAlias(*value.subtype_ctor);
     // TODO(FIDL-324): When all numbers are wrapped as string, we can simply
     // call GenerateObjectMember directly.
     GenerateObjectPunctuation(Position::kSubsequent);
@@ -267,7 +267,7 @@ void JSONGenerator::Generate(const flat::Const& value) {
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("type", value.type_ctor->type);
+    GenerateTypeAndFromTypeAlias(*value.type_ctor);
     GenerateObjectMember("value", value.value);
   });
 }
@@ -278,7 +278,13 @@ void JSONGenerator::Generate(const flat::Enum& value) {
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
+    // TODO(FIDL-324): Due to legacy reasons, the 'type' of enums is actually
+    // the primitive subtype, and therefore cannot use
+    // GenerateTypeAndFromTypeAlias here.
     GenerateObjectMember("type", value.type->name);
+    if (value.subtype_ctor->from_type_alias)
+      GenerateObjectMember("experimental_maybe_from_type_alias",
+                           value.subtype_ctor->from_type_alias.value());
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
   });
@@ -328,6 +334,13 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
   });
 }
 
+void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& value,
+                                                 Position position) {
+  GenerateObjectMember("type", value.type, position);
+  if (value.from_type_alias)
+    GenerateObjectMember("experimental_maybe_from_type_alias", value.from_type_alias.value());
+}
+
 void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {
   GenerateObjectMember(prefix, value.members);
   GenerateObjectMember(prefix + "_size", value.typeshape.InlineSize());
@@ -349,7 +362,7 @@ void JSONGenerator::Generate(const flat::Service& value) {
 
 void JSONGenerator::Generate(const flat::Service::Member& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("type", value.type_ctor->type, Position::kFirst);
+    GenerateTypeAndFromTypeAlias(*value.type_ctor, Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
@@ -375,7 +388,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
 
 void JSONGenerator::Generate(const flat::Struct::Member& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("type", value.type_ctor->type, Position::kFirst);
+    GenerateTypeAndFromTypeAlias(*value.type_ctor, Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
@@ -411,7 +424,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
     if (value.maybe_used) {
       assert(!value.maybe_location);
       GenerateObjectMember("reserved", false);
-      GenerateObjectMember("type", value.maybe_used->type_ctor->type);
+      GenerateTypeAndFromTypeAlias(*value.maybe_used->type_ctor);
       GenerateObjectMember("name", value.maybe_used->name);
       GenerateObjectMember("location", NameLocation(value.maybe_used->name));
       if (value.maybe_used->attributes)
@@ -445,7 +458,7 @@ void JSONGenerator::Generate(const flat::Union& value) {
 
 void JSONGenerator::Generate(const flat::Union::Member& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("type", value.type_ctor->type, Position::kFirst);
+    GenerateTypeAndFromTypeAlias(*value.type_ctor, Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
@@ -475,7 +488,7 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
 void JSONGenerator::Generate(const flat::XUnion::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
-    GenerateObjectMember("type", value.type_ctor->type);
+    GenerateTypeAndFromTypeAlias(*value.type_ctor);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
@@ -484,6 +497,32 @@ void JSONGenerator::Generate(const flat::XUnion::Member& value) {
     GenerateObjectMember("max_out_of_line", value.fieldshape.MaxOutOfLine());
     GenerateObjectMember("alignment", value.fieldshape.Alignment());
     GenerateObjectMember("offset", value.fieldshape.Offset());
+  });
+}
+
+void JSONGenerator::Generate(const flat::TypeConstructor::FromTypeAlias& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("name", value.decl->name, Position::kFirst);
+    GenerateObjectPunctuation(Position::kSubsequent);
+    EmitObjectKey("args");
+
+    // In preparation of template support, it is better to expose a
+    // heterogenous argument list to backends, rather than the currently
+    // limited internal view.
+    EmitArrayBegin();
+    if (value.maybe_arg_type) {
+      Indent();
+      EmitNewlineWithIndent();
+      Generate(value.maybe_arg_type->name);
+      Outdent();
+      EmitNewlineWithIndent();
+    }
+    EmitArrayEnd();
+
+    GenerateObjectMember("nullable", value.nullability);
+
+    if (value.maybe_size)
+      GenerateObjectMember("maybe_size", *value.maybe_size);
   });
 }
 

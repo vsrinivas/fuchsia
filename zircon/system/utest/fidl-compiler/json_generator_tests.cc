@@ -3636,27 +3636,340 @@ bool json_generator_type_aliases() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    SharedAmongstLibraries shared;
+    TestLibrary dependency("someotherlibrary.fidl", R"FIDL(
+library someotherlibrary;
+
+struct ReferenceMe {};
+
+)FIDL",
+                           &shared);
+    ASSERT_TRUE(dependency.Compile());
+
+    TestLibrary library("example.fidl", R"FIDL(
 library example;
+
+using someotherlibrary;
 
 using u32 = uint32;
 using vec_at_most_five = vector:5;
 using vec_of_strings = vector<string>;
 using vec_of_strings_at_most_5 = vector<string>:5;
+using vec_at_most_5 = vector:5;
 using channel = handle<channel>;
+using client_end = channel;
+
+struct ExampleOfUseOfAliases {
+    u32 field_of_u32;
+    vec_at_most_five<string> field_of_vec_at_most_five_of_string;
+    vec_at_most_five<uint32> field_of_vec_at_most_five_of_uint32;
+    vec_of_strings field_of_vec_of_strings;
+    vec_of_strings:9 field_of_vec_of_strings_at_most_nine;
+    vec_of_strings_at_most_5 field_of_vec_of_strings_at_most_5;
+    vec_at_most_5<someotherlibrary.ReferenceMe> field_of_vec_at_most_5_of_reference_me;
+    channel field_of_channel;
+    client_end field_of_client_end;
+    client_end? field_of_nullable_client_end;
+};
 
 )FIDL",
-                                   R"JSON(
+                        &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+    EXPECT_TRUE(checkJSONGenerator(std::move(library), R"JSON(
 {
   "version": "0.0.1",
   "name": "example",
-  "library_dependencies": [],
+  "library_dependencies": [
+    {
+      "name": "someotherlibrary",
+      "declarations": {
+        "someotherlibrary/ReferenceMe": "struct"
+      }
+    }
+  ],
   "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
   "service_declarations": [],
-  "struct_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "example/ExampleOfUseOfAliases",
+      "location": {
+        "filename": "example.fidl",
+        "line": 14,
+        "column": 8
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "experimental_maybe_from_type_alias": {
+            "name": "example/u32",
+            "args": [],
+            "nullable": false
+          },
+          "name": "field_of_u32",
+          "location": {
+            "filename": "example.fidl",
+            "line": 15,
+            "column": 9
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "string",
+              "nullable": false
+            },
+            "maybe_element_count": 5,
+            "nullable": false
+          },
+          "experimental_maybe_from_type_alias": {
+            "name": "example/vec_at_most_five",
+            "args": [
+              "string"
+            ],
+            "nullable": false
+          },
+          "name": "field_of_vec_at_most_five_of_string",
+          "location": {
+            "filename": "example.fidl",
+            "line": 16,
+            "column": 30
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 8,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint32"
+            },
+            "maybe_element_count": 5,
+            "nullable": false
+          },
+          "experimental_maybe_from_type_alias": {
+            "name": "example/vec_at_most_five",
+            "args": [
+              "uint32"
+            ],
+            "nullable": false
+          },
+          "name": "field_of_vec_at_most_five_of_uint32",
+          "location": {
+            "filename": "example.fidl",
+            "line": 17,
+            "column": 30
+          },
+          "size": 16,
+          "max_out_of_line": 24,
+          "alignment": 8,
+          "offset": 24,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "string",
+              "nullable": false
+            },
+            "nullable": false
+          },
+          "experimental_maybe_from_type_alias": {
+            "name": "example/vec_of_strings",
+            "args": [],
+            "nullable": false
+          },
+          "name": "field_of_vec_of_strings",
+          "location": {
+            "filename": "example.fidl",
+            "line": 18,
+            "column": 20
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 40,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "string",
+              "nullable": false
+            },
+            "maybe_element_count": 9,
+            "nullable": false
+          },
+          "experimental_maybe_from_type_alias": {
+            "name": "example/vec_of_strings",
+            "args": [],
+            "nullable": false,
+            "maybe_size": "9"
+          },
+          "name": "field_of_vec_of_strings_at_most_nine",
+          "location": {
+            "filename": "example.fidl",
+            "line": 19,
+            "column": 22
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 56,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "string",
+              "nullable": false
+            },
+            "maybe_element_count": 5,
+            "nullable": false
+          },
+          "experimental_maybe_from_type_alias": {
+            "name": "example/vec_of_strings_at_most_5",
+            "args": [],
+            "nullable": false
+          },
+          "name": "field_of_vec_of_strings_at_most_5",
+          "location": {
+            "filename": "example.fidl",
+            "line": 20,
+            "column": 30
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 72,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "identifier",
+              "identifier": "someotherlibrary/ReferenceMe",
+              "nullable": false
+            },
+            "maybe_element_count": 5,
+            "nullable": false
+          },
+          "experimental_maybe_from_type_alias": {
+            "name": "example/vec_at_most_5",
+            "args": [
+              "someotherlibrary/ReferenceMe"
+            ],
+            "nullable": false
+          },
+          "name": "field_of_vec_at_most_5_of_reference_me",
+          "location": {
+            "filename": "example.fidl",
+            "line": 21,
+            "column": 49
+          },
+          "size": 16,
+          "max_out_of_line": 8,
+          "alignment": 8,
+          "offset": 88,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "handle",
+            "nullable": false
+          },
+          "experimental_maybe_from_type_alias": {
+            "name": "example/channel",
+            "args": [],
+            "nullable": false
+          },
+          "name": "field_of_channel",
+          "location": {
+            "filename": "example.fidl",
+            "line": 22,
+            "column": 13
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 104,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "handle",
+            "nullable": false
+          },
+          "experimental_maybe_from_type_alias": {
+            "name": "example/client_end",
+            "args": [],
+            "nullable": false
+          },
+          "name": "field_of_client_end",
+          "location": {
+            "filename": "example.fidl",
+            "line": 23,
+            "column": 16
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 108,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "handle",
+            "nullable": true
+          },
+          "experimental_maybe_from_type_alias": {
+            "name": "example/client_end",
+            "args": [],
+            "nullable": true
+          },
+          "name": "field_of_nullable_client_end",
+          "location": {
+            "filename": "example.fidl",
+            "line": 24,
+            "column": 17
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 112,
+          "max_handles": 1
+        }
+      ],
+      "size": 120,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 3,
+      "has_padding": true
+    }
+  ],
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],
@@ -3664,8 +3977,8 @@ using channel = handle<channel>;
     {
       "name": "example/u32",
       "location": {
-        "filename": "json.fidl",
-        "line": 4,
+        "filename": "example.fidl",
+        "line": 6,
         "column": 7
       },
       "partial_type_ctor": {
@@ -3677,8 +3990,8 @@ using channel = handle<channel>;
     {
       "name": "example/vec_at_most_five",
       "location": {
-        "filename": "json.fidl",
-        "line": 5,
+        "filename": "example.fidl",
+        "line": 7,
         "column": 7
       },
       "partial_type_ctor": {
@@ -3698,8 +4011,8 @@ using channel = handle<channel>;
     {
       "name": "example/vec_of_strings",
       "location": {
-        "filename": "json.fidl",
-        "line": 6,
+        "filename": "example.fidl",
+        "line": 8,
         "column": 7
       },
       "partial_type_ctor": {
@@ -3717,8 +4030,8 @@ using channel = handle<channel>;
     {
       "name": "example/vec_of_strings_at_most_5",
       "location": {
-        "filename": "json.fidl",
-        "line": 7,
+        "filename": "example.fidl",
+        "line": 9,
         "column": 7
       },
       "partial_type_ctor": {
@@ -3742,10 +4055,31 @@ using channel = handle<channel>;
       }
     },
     {
+      "name": "example/vec_at_most_5",
+      "location": {
+        "filename": "example.fidl",
+        "line": 10,
+        "column": 7
+      },
+      "partial_type_ctor": {
+        "name": "example/vector",
+        "args": [],
+        "nullable": false,
+        "maybe_size": {
+          "kind": "literal",
+          "literal": {
+            "kind": "numeric",
+            "value": "5",
+            "expression": "5"
+          }
+        }
+      }
+    },
+    {
       "name": "example/channel",
       "location": {
-        "filename": "json.fidl",
-        "line": 8,
+        "filename": "example.fidl",
+        "line": 11,
         "column": 7
       },
       "partial_type_ctor": {
@@ -3754,21 +4088,40 @@ using channel = handle<channel>;
         "nullable": false,
         "maybe_handle_subtype": "channel"
       }
+    },
+    {
+      "name": "example/client_end",
+      "location": {
+        "filename": "example.fidl",
+        "line": 12,
+        "column": 7
+      },
+      "partial_type_ctor": {
+        "name": "handle",
+        "args": [],
+        "nullable": false
+      }
     }
   ],
   "declaration_order": [
     "example/vec_of_strings_at_most_5",
     "example/vec_of_strings",
     "example/vec_at_most_five",
+    "example/vec_at_most_5",
     "example/u32",
-    "example/channel"
+    "example/channel",
+    "example/client_end",
+    "example/ExampleOfUseOfAliases"
   ],
   "declarations": {
+    "example/ExampleOfUseOfAliases": "struct",
     "example/u32": "type_alias",
     "example/vec_at_most_five": "type_alias",
     "example/vec_of_strings": "type_alias",
     "example/vec_of_strings_at_most_5": "type_alias",
-    "example/channel": "type_alias"
+    "example/vec_at_most_5": "type_alias",
+    "example/channel": "type_alias",
+    "example/client_end": "type_alias"
   }
 }
 )JSON"));

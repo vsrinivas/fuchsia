@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/names.h>
 #include <unittest/unittest.h>
 
 #include "test_library.h"
@@ -28,9 +29,16 @@ using alias_of_int16 = int16;
   auto type = msg->members[0].type_ctor->type;
   ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kPrimitive);
   ASSERT_EQ(type->nullability, fidl::types::Nullability::kNonnullable);
+  ASSERT_TRUE(msg->members[0].type_ctor->from_type_alias);
 
   auto primitive_type = static_cast<const fidl::flat::PrimitiveType*>(type);
   ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt16);
+
+  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
+  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(), "example/alias_of_int16");
+  EXPECT_NULL(from_type_alias.maybe_arg_type);
+  EXPECT_NULL(from_type_alias.maybe_size);
+  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 
   END_TEST;
 }
@@ -58,6 +66,12 @@ struct Message {
 
   auto primitive_type = static_cast<const fidl::flat::PrimitiveType*>(type);
   ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt16);
+
+  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
+  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(), "example/alias_of_int16");
+  EXPECT_NULL(from_type_alias.maybe_arg_type);
+  EXPECT_NULL(from_type_alias.maybe_size);
+  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 
   END_TEST;
 }
@@ -148,6 +162,13 @@ using alias_of_vector_of_string = vector<string>;
   ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count),
             static_cast<uint32_t>(fidl::flat::Size::Max()));
 
+  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
+  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(),
+                "example/alias_of_vector_of_string");
+  EXPECT_NULL(from_type_alias.maybe_arg_type);
+  EXPECT_NULL(from_type_alias.maybe_size);
+  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
+
   END_TEST;
 }
 
@@ -181,6 +202,17 @@ using alias_of_vector = vector;
       static_cast<const fidl::flat::PrimitiveType*>(vector_type->element_type);
   ASSERT_EQ(primitive_element_type->subtype, fidl::types::PrimitiveSubtype::kUint8);
 
+  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
+  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(), "example/alias_of_vector");
+  EXPECT_NONNULL(from_type_alias.maybe_arg_type);
+  auto from_type_alias_arg_type = from_type_alias.maybe_arg_type;
+  ASSERT_EQ(from_type_alias_arg_type->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto from_type_alias_arg_primitive_type =
+      static_cast<const fidl::flat::PrimitiveType*>(from_type_alias_arg_type);
+  ASSERT_EQ(from_type_alias_arg_primitive_type->subtype, fidl::types::PrimitiveSubtype::kUint8);
+  EXPECT_NULL(from_type_alias.maybe_size);
+  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
+
   END_TEST;
 }
 
@@ -209,6 +241,15 @@ using alias_of_vector_max_8 = vector:8;
   ASSERT_EQ(vector_type->element_type->kind, fidl::flat::Type::Kind::kString);
   ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count), 8u);
 
+  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
+  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(),
+                "example/alias_of_vector_max_8");
+  EXPECT_NONNULL(from_type_alias.maybe_arg_type);
+  auto from_type_alias_arg_type = from_type_alias.maybe_arg_type;
+  ASSERT_EQ(from_type_alias_arg_type->kind, fidl::flat::Type::Kind::kString);
+  EXPECT_NULL(from_type_alias.maybe_size);
+  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
+
   END_TEST;
 }
 
@@ -236,6 +277,14 @@ using alias_of_vector_of_string = vector<string>;
   auto vector_type = static_cast<const fidl::flat::VectorType*>(type);
   ASSERT_EQ(vector_type->element_type->kind, fidl::flat::Type::Kind::kString);
   ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count), 8u);
+
+  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
+  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(),
+                "example/alias_of_vector_of_string");
+  EXPECT_NULL(from_type_alias.maybe_arg_type);
+  EXPECT_NONNULL(from_type_alias.maybe_size);
+  EXPECT_EQ(static_cast<uint32_t>(*from_type_alias.maybe_size), 8u);
+  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 
   END_TEST;
 }
@@ -266,6 +315,13 @@ using alias_of_vector_of_string_nullable = vector<string>?;
   ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count),
             static_cast<uint32_t>(fidl::flat::Size::Max()));
 
+  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
+  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(),
+                "example/alias_of_vector_of_string_nullable");
+  EXPECT_NULL(from_type_alias.maybe_arg_type);
+  EXPECT_NULL(from_type_alias.maybe_size);
+  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
+
   END_TEST;
 }
 
@@ -294,6 +350,13 @@ using alias_of_vector_of_string = vector<string>;
   ASSERT_EQ(vector_type->element_type->kind, fidl::flat::Type::Kind::kString);
   ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count),
             static_cast<uint32_t>(fidl::flat::Size::Max()));
+
+  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
+  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(),
+                "example/alias_of_vector_of_string");
+  EXPECT_NULL(from_type_alias.maybe_arg_type);
+  EXPECT_NULL(from_type_alias.maybe_size);
+  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNullable);
 
   END_TEST;
 }
@@ -372,6 +435,11 @@ RUN_TEST(vector_bounded_on_decl)
 RUN_TEST(vector_bounded_on_use)
 RUN_TEST(vector_nullable_on_decl)
 RUN_TEST(vector_nullable_on_use)
+// TODO(pascallouis): Test various handle parametrization scenarios, and
+// capture maybe_handle_subtype into FromTypeAlias struct.
+// As noted in the TypeAliasTypeTemplate, there is a bug currently where
+// handle parametrization of a type template is not properly passed down,
+// and as a result gets lost.
 RUN_TEST(invalid_cannot_parametrize_twice)
 RUN_TEST(invalid_cannot_bound_twice)
 RUN_TEST(invalid_cannot_null_twice)

@@ -655,7 +655,21 @@ struct RequestHandleType final : public Type {
   }
 };
 
+struct TypeAlias;
+
 struct TypeConstructor final {
+  struct FromTypeAlias {
+    FromTypeAlias(const TypeAlias* decl, const Type* maybe_arg_type, const Size* maybe_size,
+                  types::Nullability nullability) noexcept
+        : decl(decl), maybe_arg_type(maybe_arg_type), maybe_size(maybe_size),
+          nullability(nullability) {}
+    const TypeAlias* decl;
+    const Type* maybe_arg_type;
+    const Size* maybe_size;
+    // TODO(pascallouis): Make this const.
+    types::Nullability nullability;
+  };
+
   TypeConstructor(Name name, std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
                   std::optional<types::HandleSubtype> handle_subtype,
                   std::unique_ptr<Constant> maybe_size, types::Nullability nullability)
@@ -676,6 +690,7 @@ struct TypeConstructor final {
   bool compiling = false;
   bool compiled = false;
   const Type* type = nullptr;
+  std::optional<FromTypeAlias> from_type_alias;
 };
 
 struct Using final {
@@ -971,7 +986,8 @@ class TypeTemplate {
 
   virtual bool Create(const SourceLocation* maybe_location, const Type* arg_type,
                       const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
-                      types::Nullability nullability, std::unique_ptr<Type>* out_type) const = 0;
+                      types::Nullability nullability, std::unique_ptr<Type>* out_type,
+                      std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const = 0;
 
  protected:
   bool MustBeParameterized(const SourceLocation* maybe_location) const {
@@ -1011,7 +1027,8 @@ class Typespace {
 
   bool Create(const flat::Name& name, const Type* arg_type,
               const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
-              types::Nullability nullability, const Type** out_type);
+              types::Nullability nullability, const Type** out_type,
+              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
 
   void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
 
@@ -1025,7 +1042,8 @@ class Typespace {
 
   bool CreateNotOwned(const flat::Name& name, const Type* arg_type,
                       const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
-                      types::Nullability nullability, std::unique_ptr<Type>* out_type);
+                      types::Nullability nullability, std::unique_ptr<Type>* out_type,
+                      std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
   const TypeTemplate* LookupTemplate(const flat::Name& name) const;
 
   struct cmpName {
