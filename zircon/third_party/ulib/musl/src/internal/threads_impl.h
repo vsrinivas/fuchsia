@@ -38,6 +38,18 @@ typedef struct {
 
 struct tls_dtor;
 
+// Note this is distinct from `__has_feature(shadow_call_stack)`!  That
+// indicates that the library code is currently being compiled to use the
+// shadow call stack.  This indicates that the library should support the
+// shadow call stack ABI so that other code might use it.  This is an
+// aspect of the Fuchsia ABI for the machine.  That is an implementation
+// detail of a particular build of the C library code.
+#ifdef __aarch64__
+# define HAVE_SHADOW_CALL_STACK 1
+#else
+# define HAVE_SHADOW_CALL_STACK 0
+#endif
+
 struct pthread {
 #ifndef TLS_ABOVE_TP
   // These must be the very first members.
@@ -54,6 +66,9 @@ struct pthread {
   struct iovec tcb_region;
   struct iovec safe_stack, safe_stack_region;
   struct iovec unsafe_stack, unsafe_stack_region;
+#if HAVE_SHADOW_CALL_STACK
+  struct iovec shadow_call_stack, shadow_call_stack_region;
+#endif
 
   struct tls_dtor* tls_dtors;
   void* tsd[PTHREAD_KEYS_MAX];

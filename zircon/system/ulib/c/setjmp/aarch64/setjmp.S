@@ -19,6 +19,7 @@ ENTRY(setjmp)
     add x0, x0, #:lo12:__setjmp_manglers
     ldp x1, x2, [x0, #8*JB_PC]
     ldp x3, x4, [x0, #8*JB_FP]
+    ldr x5, [x0, #8*JB_X(18)]
 
     // Get the thread pointer, where the unsafe SP is stored.
     mrs x0, TPIDR_EL0
@@ -35,6 +36,7 @@ ENTRY(setjmp)
     stp d12, d13, [x16, #8*JB_D(12)]
     stp d14, d15, [x16, #8*JB_D(14)]
 
+    eor x5, x5, x18      // Mangled shadow call stack pointer.
     eor x4, x4, x0       // Mangled unsafe SP.
     eor x1, x1, x30      // Mangled PC (LR).
     eor x3, x3, x29      // Mangled FP.
@@ -49,6 +51,7 @@ ENTRY(setjmp)
 .error "JB_USP expected to follow JB_FP immediately"
 .endif
     stp x3, x4, [x16, #8*JB_FP]
+    str x5, [x16, #8*JB_X(18)]
 
     mov w0, wzr
     ret

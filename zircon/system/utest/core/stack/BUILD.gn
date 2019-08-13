@@ -7,11 +7,16 @@ source_set("stack") {
   sources = [
     "stack-test.cc",
   ]
-  cflags = [ "-fstack-protector-all" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/runtime:headers",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
   ]
+
+  cflags = [ "-fstack-protector-all" ]
+
+  if (current_cpu == "arm64" && !is_gcc) {
+    cflags += [ "-fsanitize=shadow-call-stack" ]
+  }
 }

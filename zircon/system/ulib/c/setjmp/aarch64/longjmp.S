@@ -83,6 +83,7 @@ ENTRY(longjmp)
 .error "JB_USP expected to follow JB_FP immediately"
 .endif
     ldp x6, x7, [x16, #8*JB_FP]
+    ldr x8, [x16, #8*JB_X(18)]
 
     // The next instruction clobbers the state of longjmp's caller.
     // So from here on, we'll use CFI that unwinds to setjmp's caller instead.
@@ -118,6 +119,8 @@ ENTRY(longjmp)
     ldp x29, x2, [x0, #8*JB_FP]
     jb_cfi_mangled_reg 29, 6, 29        // x29 (FP) = x29 ^ x6
     //jb_cfi_mangled_reg ?, 7, 2        // unsafe_sp = x2 ^ x7
+    ldr x9, [x0, #8*JB_X(18)]
+    jb_cfi_mangled_reg 18, 8, 9        // x18 = x8 ^ x9
 
     // Get the thread pointer, where the unsafe SP is stored.
     // Reuse x0 so the address of __setjmp_manglers is not leaked.
@@ -132,6 +135,8 @@ ENTRY(longjmp)
     .cfi_same_value x29
     eor x2, x2, x7      // Unsafe SP
     //.cfi_register unsafe_sp, x2  -- No DWARF register number for it!
+    eor x18, x8, x9     // Shadow call stack pointer
+    .cfi_same_value x18
 
     // Restore all the vanilla callee-saves registers.
     restore_pair x19, x20, JB_X(19)

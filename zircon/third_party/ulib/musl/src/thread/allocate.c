@@ -7,6 +7,25 @@
 #include "threads_impl.h"
 #include "zircon_impl.h"
 
+#if HAVE_SHADOW_CALL_STACK
+// TODO(ZX-1947): Add some runtime configuration for the size?  Extra APIs
+// would be needed to specify it explicitly.  The only existing API for
+// choosing the stack is via pthread_attr_t, which is not something we
+// really want to extend since we'd prefer to go to pure C11/C++17 thread
+// interfaces rather than POSIX ones.  For SafeStack we didn't add an API
+// but just always use the same size for both stacks on the theory that
+// virtual memory is cheap if you never actually touch the pages and so
+// while you're "allocating" twice as much stack, you're not actually using
+// more than one additional page at most by splitting your use between the
+// two stacks.  We could do some similar calculation of the appropriate
+// ShadowCallStack size for a requested unitary stack size.  But it also
+// seems likely that a page is already a lot for the ShadowCallStack since
+// that's a call depth of 512 with 64-bit PCs and 4KB pages.
+static const size_t kShadowCallStackSize = ZX_PAGE_SIZE;
+#else
+static const size_t kShadowCallStackSize = 0;
+#endif
+
 static pthread_rwlock_t allocation_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 // Many threads could be reading the TLS state.
@@ -133,7 +152,7 @@ __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requ
   const size_t tls_size = libc.tls_size;
   const size_t tcb_size = round_up_to_page(tls_size);
 
-  const size_t vmo_size = tcb_size + stack_size * 2;
+  const size_t vmo_size = tcb_size + stack_size * 2 + kShadowCallStackSize;
   zx_handle_t vmo;
   zx_status_t status = _zx_vmo_create(vmo_size, 0, &vmo);
   if (status != ZX_OK) {
@@ -182,6 +201,23 @@ __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requ
     _zx_handle_close(vmo);
     return NULL;
   }
+
+#if HAVE_SHADOW_CALL_STACK
+  if (map_block(_zx_vmar_root_self(), vmo, tcb_size + stack_size * 2,
+                // Shadow call stack grows up, so a guard after is probably
+                // enough.  But be extra careful with guards on both sides.
+                kShadowCallStackSize, guard_size, guard_size,
+                //
+                &td->shadow_call_stack, &td->shadow_call_stack_region)) {
+    _zx_vmar_unmap(_zx_vmar_root_self(), (uintptr_t)td->unsafe_stack_region.iov_base,
+                   td->unsafe_stack_region.iov_len);
+    _zx_vmar_unmap(_zx_vmar_root_self(), (uintptr_t)td->safe_stack_region.iov_base,
+                   td->safe_stack_region.iov_len);
+    _zx_vmar_unmap(_zx_vmar_root_self(), (uintptr_t)tcb_region.iov_base, tcb_region.iov_len);
+    _zx_handle_close(vmo);
+    return NULL;
+  }
+#endif
 
   _zx_handle_close(vmo);
   td->tcb_region = tcb_region;

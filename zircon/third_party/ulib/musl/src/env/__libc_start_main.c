@@ -197,9 +197,12 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
   __asm__(
       "add sp, %[base], %[len]\n"
       "mov x0, %[arg]\n"
+      "mov x18, %[shadow_call_stack]\n"
       "b start_main"
       :
       : [ base ] "r"(p.td->safe_stack.iov_base), [ len ] "r"(p.td->safe_stack.iov_len),
+        // Shadow call stack grows up.
+        [ shadow_call_stack ] "r"(p.td->shadow_call_stack.iov_base),
         "m"(p),  // Tell the compiler p's fields are all still alive.
         [ arg ] "r"(&p));
 #else

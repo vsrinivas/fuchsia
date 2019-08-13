@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <limits.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <threads.h>
 #include <unistd.h>
-#include <pthread.h>
-
 #include <zircon/syscalls.h>
+
 #include <runtime/tls.h>
 #include <zxtest/zxtest.h>
 
@@ -26,6 +26,7 @@ struct StackTestInfo {
   const void* tp;
   const void* unsafe_start;
   const void* unsafe_ptr;
+  const void* scs_ptr;
 };
 
 void* DoStackTest(void* arg) {
@@ -48,12 +49,19 @@ void* DoStackTest(void* arg) {
   info->unsafe_stack = unsafe_stack;
   info->tls_buf = tls_buf;
 
-#ifdef __clang__
 #if __has_feature(safe_stack)
   info->unsafe_start = __builtin___get_unsafe_stack_start();
   info->unsafe_ptr = __builtin___get_unsafe_stack_ptr();
 #endif
+
+#if __has_feature(shadow_call_stack)
+#ifdef __aarch64__
+  __asm__("mov %0, x18" : "=r"(info->scs_ptr));
+#else
+#error "what shadow-call-stack ABI??"
 #endif
+#endif
+
   return nullptr;
 }
 
@@ -88,7 +96,6 @@ void CheckThreadStackInfo(StackTestInfo* info) {
   EXPECT_NE(PageOf(info->tp), PageOf(info->unsafe_stack),
             "thread pointer collides with unsafe stack");
 
-#ifdef __clang__
 #if __has_feature(safe_stack)
   if (info->is_pthread) {
     EXPECT_EQ(PageOf(info->unsafe_start), PageOf(info->unsafe_ptr),
@@ -101,6 +108,26 @@ void CheckThreadStackInfo(StackTestInfo* info) {
   EXPECT_NE(PageOf(info->unsafe_stack), PageOf(info->safe_stack),
             "unsafe stack collides with safe stack");
 #endif
+
+#if __has_feature(shadow_call_stack)
+  EXPECT_NOT_NULL(info->scs_ptr, "shadow call stack pointer not set");
+
+  EXPECT_NE(PageOf(info->scs_ptr), PageOf(info->environ),
+            "shadow call stack collides with environ");
+
+  EXPECT_NE(PageOf(info->scs_ptr), PageOf(info->tls_buf),
+            "shadow call stack collides with TLS");
+
+  EXPECT_NE(PageOf(info->scs_ptr), PageOf(info->safe_stack),
+            "shadow call stack collides with safe stack");
+
+  EXPECT_NE(PageOf(info->scs_ptr), PageOf(info->unsafe_stack),
+            "shadow call stack collides with unsafe stack");
+
+  EXPECT_NE(PageOf(info->scs_ptr), PageOf(info->tp),
+      "shadow call stack collides with thread pointer");
+#elif defined(__clang__) && defined(__aarch64__)
+#error "This test should always be built with -fsanitize=shadow-call-stack"
 #endif
 }
 

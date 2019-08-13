@@ -1,5 +1,7 @@
 # SafeStack in Zircon & Fuchsia
 
+[TOC]
+
 ## Introduction
 
 LLVM's [safe-stack feature](https://clang.llvm.org/docs/SafeStack.html)
@@ -27,6 +29,14 @@ Fuchsia).  In Zircon user-mode code (including all of Fuchsia), the
 runtime support for SafeStack is included directly in the standard C
 runtime library, and everything works fine in shared libraries (DSOs).
 
+The [safe-stack](https://clang.llvm.org/docs/SafeStack.html) and
+[shadow-call-stack](shadow_call_stack.md) instrumentation schemes and ABIs are
+related and similar but also orthogonal.  Each can be enabled or disabled
+independently for any function.  Fuchsia's compiler ABI and libc always
+interoperate with code built with or without either kind of instrumentation,
+regardless of what instrumentation was or wasn't used in the particular libc
+build.
+
 ## Interoperation and ABI Effects
 
 In general, safe-stack does not affect the ABI.  The machine-specific
@@ -51,9 +61,9 @@ safe-stack.
 ## Use in Zircon & Fuchsia
 
 This is enabled in the Clang compiler by the `-fsanitize=safe-stack`
-command-line option.  In the near future, this will be the default mode
-of the compiler for `*-fuchsia` targets, and to disable it for a
-specific compilation will require the `-fno-sanitize=safe-stack` option.
+command-line option.  This is the default mode of the compiler for `*-fuchsia`
+targets.  To disable it for a specific compilation, use the
+`-fno-sanitize=safe-stack` option.
 
 Zircon supports safe-stack for both user-mode and kernel code.
 In the Zircon build, safe-stack is always enabled when building

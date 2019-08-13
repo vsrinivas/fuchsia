@@ -18,6 +18,10 @@
 
 static inline pthread_t prestart(void* arg) {
   pthread_t self = arg;
+#ifdef __aarch64__
+  // Initialize the shadow call stack pointer, which grows up.
+  __asm__ volatile("ldr x18, %0" : : "m"(self->shadow_call_stack.iov_base));
+#endif
   zxr_tp_set(zxr_thread_get_handle(&self->zxr_thread), pthread_to_tp(self));
   __sanitizer_thread_start_hook(self->sanitizer_hook, (thrd_t)self);
   return self;
@@ -97,6 +101,9 @@ fail_after_alloc:
   deallocate_region(&new->safe_stack_region);
   deallocate_region(&new->unsafe_stack_region);
   deallocate_region(&new->tcb_region);
+#if HAVE_SHADOW_CALL_STACK
+  deallocate_region(&new->shadow_call_stack_region);
+#endif
   return status == ZX_ERR_ACCESS_DENIED ? EPERM : EAGAIN;
 }
 
@@ -105,6 +112,9 @@ static _Noreturn void final_exit(pthread_t self) __asm__("final_exit") __attribu
 static __NO_SAFESTACK NO_ASAN void final_exit(pthread_t self) {
   deallocate_region(&self->safe_stack_region);
   deallocate_region(&self->unsafe_stack_region);
+#if HAVE_SHADOW_CALL_STACK
+  deallocate_region(&self->shadow_call_stack_region);
+#endif
 
   // This deallocates the TCB region too for the detached case.
   // If not detached, pthread_join will deallocate it.
