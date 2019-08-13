@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <range/range.h>
 #include <zircon/assert.h>
+
+#include <range/range.h>
 #include <zxtest/zxtest.h>
 
 namespace range {
@@ -11,17 +12,17 @@ namespace {
 
 TEST(LengthTest, One) {
   auto x = Range<uint64_t>(5, 6);
-  EXPECT_EQ(x.length(), 1);
+  EXPECT_EQ(x.Length(), 1);
 }
 
 TEST(LengthTest, MoreThanOne) {
   auto x = Range<uint64_t>(5, 7);
-  EXPECT_EQ(x.length(), 2);
+  EXPECT_EQ(x.Length(), 2);
 }
 
 TEST(LengthTest, Zero) {
   auto x = Range<uint64_t>(2, 1);
-  EXPECT_EQ(x.length(), 0);
+  EXPECT_EQ(x.Length(), 0);
 }
 
 TEST(EqualToOperatorTest, EqualRanges) {
@@ -213,12 +214,12 @@ TEST(MergeTest, MergeAdjacentRanges) {
   ASSERT_TRUE(Mergable(x, y));
   ASSERT_TRUE(Mergable(y, x));
 
-  auto merged = Merge(x, y);
+  auto merged = x;
+  ASSERT_OK(merged.Merge(y));
 
-  EXPECT_EQ(fit::result_state::ok, merged.state());
-  EXPECT_EQ(merged.value().length(), x.length() + y.length());
-  EXPECT_EQ(merged.value().start(), std::min(x.start(), y.start()));
-  EXPECT_EQ(merged.value().end(), std::max(x.end(), y.end()));
+  EXPECT_EQ(merged.Length(), x.Length() + y.Length());
+  EXPECT_EQ(merged.Start(), std::min(x.Start(), y.Start()));
+  EXPECT_EQ(merged.End(), std::max(x.End(), y.End()));
 }
 
 TEST(MergeTest, TryMergeNonAdjacentNonOverlapingRanges) {
@@ -230,12 +231,12 @@ TEST(MergeTest, TryMergeNonAdjacentNonOverlapingRanges) {
   ASSERT_FALSE(Overlap(x, y));
   ASSERT_FALSE(Mergable(x, y));
 
-  auto merged = Merge(x, y);
-  EXPECT_EQ(fit::result_state::error, merged.state());
+  auto merged = x;
+  EXPECT_STATUS(ZX_ERR_OUT_OF_RANGE, merged.Merge(y));
 
   // Reverse the order
-  merged = Merge(y, x);
-  EXPECT_EQ(fit::result_state::error, merged.state());
+  merged = y;
+  EXPECT_STATUS(ZX_ERR_OUT_OF_RANGE, merged.Merge(x));
 }
 
 TEST(MergeTest, OverlapingRanges) {
@@ -247,14 +248,14 @@ TEST(MergeTest, OverlapingRanges) {
   ASSERT_TRUE(Overlap(y, x));
   ASSERT_TRUE(Overlap(x, y));
 
-  auto merged = Merge(x, y);
-  EXPECT_EQ(fit::result_state::ok, merged.state());
-  EXPECT_EQ(result, merged.value());
+  auto merged = x;
+  ASSERT_OK(merged.Merge(y));
+  EXPECT_EQ(result, merged);
 
   // Reverse the order
-  merged = Merge(y, x);
-  EXPECT_EQ(fit::result_state::ok, merged.state());
-  EXPECT_EQ(result, merged.value());
+  merged = y;
+  ASSERT_OK(merged.Merge(x));
+  EXPECT_EQ(result, merged);
 }
 
 TEST(MergeTest, OverlapingByOneNumber) {
@@ -269,14 +270,14 @@ TEST(MergeTest, OverlapingByOneNumber) {
   ASSERT_TRUE(Mergable(x, y));
   ASSERT_TRUE(Mergable(y, x));
 
-  auto merged = Merge(x, y);
-  EXPECT_EQ(fit::result_state::ok, merged.state());
-  EXPECT_EQ(merged.value(), result);
+  auto merged = x;
+  ASSERT_OK(merged.Merge(y));
+  EXPECT_EQ(merged, result);
 
   // Reverse the order
-  merged = Merge(y, x);
-  EXPECT_EQ(fit::result_state::ok, merged.state());
-  EXPECT_TRUE(merged.value() == result);
+  merged = y;
+  ASSERT_OK(merged.Merge(x));
+  EXPECT_TRUE(merged == result);
 }
 
 TEST(MergeTest, OverlapingByMultipleNumbers) {
@@ -291,13 +292,13 @@ TEST(MergeTest, OverlapingByMultipleNumbers) {
   ASSERT_TRUE(Mergable(x, y));
   ASSERT_TRUE(Mergable(y, x));
 
-  auto merged = Merge(x, y);
-  EXPECT_EQ(fit::result_state::ok, merged.state());
-  EXPECT_EQ(merged.value(), result);
+  auto merged = x;
+  ASSERT_OK(merged.Merge(y));
+  EXPECT_EQ(merged, result);
   // Reverse the order
-  merged = Merge(y, x);
-  EXPECT_EQ(fit::result_state::ok, merged.state());
-  EXPECT_EQ(merged.value(), result);
+  merged = y;
+  ASSERT_OK(merged.Merge(x));
+  EXPECT_EQ(merged, result);
 }
 
 TEST(MergeTest, OneRangeContainsTheOther) {
@@ -311,12 +312,14 @@ TEST(MergeTest, OneRangeContainsTheOther) {
   ASSERT_TRUE(Mergable(x, y));
   ASSERT_TRUE(Mergable(y, x));
 
-  auto merged = Merge(x, y);
+  auto merged = x;
+  ASSERT_OK(merged.Merge(y));
 
-  EXPECT_EQ(merged.value(), x);
+  EXPECT_EQ(merged, x);
   // Reverse the order
-  merged = Merge(y, x);
-  EXPECT_EQ(merged.value(), x);
+  merged = y;
+  ASSERT_OK(merged.Merge(x));
+  EXPECT_EQ(merged, x);
 }
 
 TEST(MergeTest, MergeWithItself) {
@@ -327,11 +330,114 @@ TEST(MergeTest, MergeWithItself) {
   ASSERT_TRUE(Mergable(x, x));
   ASSERT_TRUE(Mergable(x, x));
 
-  auto merged = Merge(x, x);
-  EXPECT_EQ(fit::result_state::ok, merged.state());
-  EXPECT_EQ(merged.value(), x);
+  auto merged = x;
+  ASSERT_OK(merged.Merge(x));
+  EXPECT_EQ(merged, x);
+}
+
+TEST(CustomRangeTest, CustomKey) {
+  Range<uint32_t> range(0, 10);
+  EXPECT_EQ(0, range.Start());
+  EXPECT_EQ(10, range.End());
+}
+
+TEST(CustomRangeTest, CustomContainer) {
+  struct Container {
+    uint64_t Start() const { return start_; }
+    uint64_t End() const { return end_; }
+
+    uint64_t other_data_ = 0;
+    uint64_t start_ = 0;
+    uint64_t end_ = 0;
+  };
+
+  Container c = {};
+  c.start_ = 5;
+  c.end_ = 10;
+
+  Range<uint64_t, Container> range(std::move(c));
+  EXPECT_EQ(5, range.Start());
+  EXPECT_EQ(10, range.End());
+
+  c = range.release();
+  EXPECT_EQ(5, c.start_);
+  EXPECT_EQ(10, c.end_);
+}
+
+TEST(CustomRangeTest, CustomContainerTraits) {
+  struct Container {
+    // Note: No "Start()" or "End()" methods.
+    uint64_t start_ = 0;
+    uint64_t end_ = 0;
+  };
+
+  struct Traits {
+    static uint64_t Start(const Container& obj) { return obj.start_; }
+    static uint64_t End(const Container& obj) { return obj.end_; }
+    static zx_status_t Update(const Container* other, uint64_t start, uint64_t end,
+                              Container* obj) {
+      obj->start_ = start;
+      obj->end_ = end;
+      return ZX_OK;
+    }
+  };
+  using RangeWithTraits = Range<uint64_t, Container, Traits>;
+
+  Container c = {};
+  c.start_ = 5;
+  c.end_ = 10;
+  RangeWithTraits range1(std::move(c));
+
+  EXPECT_EQ(5, range1.Start());
+  EXPECT_EQ(10, range1.End());
+
+  c = {};
+  c.start_ = 0;
+  c.end_ = 5;
+  RangeWithTraits range2(std::move(c));
+  EXPECT_TRUE(Adjacent(range1, range2));
+
+  ASSERT_OK(range1.Merge(range2));
+  c = range1.release();
+  // Observe that the ranges merged.
+  EXPECT_EQ(0, c.start_);
+  EXPECT_EQ(10, c.end_);
+}
+
+TEST(CustomRangeTest, RejectedMergesDoNotModifyRange) {
+  struct Container {
+    uint64_t start_ = 0;
+    uint64_t end_ = 0;
+  };
+
+  struct Traits {
+    static uint64_t Start(const Container& obj) { return obj.start_; }
+    static uint64_t End(const Container& obj) { return obj.end_; }
+    static zx_status_t Update(const Container* other, uint64_t start, uint64_t end,
+                              Container* obj) {
+      return ZX_ERR_INTERNAL;
+    }
+  };
+  using RangeWithTraits = Range<uint64_t, Container, Traits>;
+
+  Container c1, c2 = {};
+  c1.start_ = 0;
+  c1.end_ = 5;
+  c2.start_ = 5;
+  c2.end_ = 10;
+  RangeWithTraits range1(std::move(c1));
+  RangeWithTraits range2(std::move(c2));
+
+  EXPECT_TRUE(Adjacent(range1, range2));
+  EXPECT_TRUE(Mergable(range1, range2));
+
+  ASSERT_STATUS(ZX_ERR_INTERNAL, range1.Merge(range2));
+
+  EXPECT_EQ(0, range1.Start());
+  EXPECT_EQ(5, range1.End());
+  EXPECT_EQ(5, range2.Start());
+  EXPECT_EQ(10, range2.End());
 }
 
 }  // namespace
-
 }  // namespace range

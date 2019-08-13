@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <block-client/cpp/fake-device.h>
+#include <zircon/assert.h>
 
 #include <vector>
 
+#include <block-client/cpp/fake-device.h>
 #include <fbl/auto_lock.h>
 #include <fvm/format.h>
-#include <zircon/assert.h>
 #include <zxtest/zxtest.h>
 
 namespace block_client {
@@ -170,14 +170,14 @@ zx_status_t FakeFVMBlockDevice::FifoTransaction(block_fifo_request_t* requests, 
     uint64_t start_slice = dev_start / blocks_per_slice;
     uint64_t slice_length = fbl::round_up(length, blocks_per_slice) / blocks_per_slice;
     range::Range<uint64_t> range(start_slice, start_slice + slice_length);
-    auto extent = extents_.lower_bound(range.start());
-    if (extent == extents_.end() || extent->first != range.start()) {
+    auto extent = extents_.lower_bound(range.Start());
+    if (extent == extents_.end() || extent->first != range.Start()) {
       extent--;
     }
     EXPECT_NE(extent, extents_.end(), "Could not find matching slices for operation");
-    EXPECT_LE(extent->second.start(), range.start(),
+    EXPECT_LE(extent->second.Start(), range.Start(),
               "Operation does not start within allocated slice");
-    EXPECT_GE(extent->second.end(), range.end(), "Operation does not end within allocated slice");
+    EXPECT_GE(extent->second.End(), range.End(), "Operation does not end within allocated slice");
   }
 
   return FakeBlockDevice::FifoTransaction(requests, count);
@@ -210,10 +210,10 @@ zx_status_t FakeFVMBlockDevice::VolumeQuerySlices(
       extent--;
     }
     EXPECT_NE(extent, extents_.end());
-    if (extent->second.start() <= slice_start && slice_start < extent->second.end()) {
+    if (extent->second.Start() <= slice_start && slice_start < extent->second.End()) {
       // Allocated.
       out_ranges[*out_ranges_count].allocated = true;
-      out_ranges[*out_ranges_count].count = extent->second.end() - slice_start;
+      out_ranges[*out_ranges_count].count = extent->second.End() - slice_start;
     } else {
       // Not allocated.
       out_ranges[*out_ranges_count].allocated = false;
@@ -222,7 +222,7 @@ zx_status_t FakeFVMBlockDevice::VolumeQuerySlices(
       if (extent == extents_.end()) {
         out_ranges[*out_ranges_count].count = vslice_count_ - slice_start;
       } else {
-        out_ranges[*out_ranges_count].count = extent->second.start() - slice_start;
+        out_ranges[*out_ranges_count].count = extent->second.Start() - slice_start;
       }
     }
     (*out_ranges_count)++;
@@ -249,9 +249,9 @@ zx_status_t FakeFVMBlockDevice::VolumeExtend(uint64_t offset, uint64_t length) {
       //
       // Avoid removing it now in case we don't have enough space.
       merged_starts.push_back(range.first);
-      uint64_t total_length = extension.length() + range.second.length();
-      extension = Merge(extension, range.second).value();
-      uint64_t merged_length = extension.length();
+      uint64_t total_length = extension.Length() + range.second.Length();
+      extension.Merge(range.second);
+      uint64_t merged_length = extension.Length();
       uint64_t overlap_length = total_length - merged_length;
       EXPECT_GE(new_slices, overlap_length, "underflow");
       new_slices -= overlap_length;
@@ -266,9 +266,9 @@ zx_status_t FakeFVMBlockDevice::VolumeExtend(uint64_t offset, uint64_t length) {
   for (auto& start : merged_starts) {
     extents_.erase(start);
   }
-  extents_.emplace(extension.start(), extension);
+  extents_.emplace(extension.Start(), extension);
   pslice_allocated_count_ += new_slices;
-  ResizeDeviceToAtLeast(extension.end() * slice_size_);
+  ResizeDeviceToAtLeast(extension.End() * slice_size_);
   return ZX_OK;
 }
 
@@ -286,12 +286,12 @@ zx_status_t FakeFVMBlockDevice::VolumeShrink(uint64_t offset, uint64_t length) {
   auto iter = extents_.begin();
   while (iter != extents_.end()) {
     if (Overlap(range, iter->second)) {
-      bool start_overlap = range.start() <= iter->second.start();
-      bool end_overlap = iter->second.end() <= range.end();
+      bool start_overlap = range.Start() <= iter->second.Start();
+      bool end_overlap = iter->second.End() <= range.End();
 
       if (start_overlap && end_overlap) {
         // Case 1: The overlap is total. The extent should be entirely removed.
-        erased_blocks += iter->second.length();
+        erased_blocks += iter->second.Length();
         iter = extents_.erase(iter);
       } else if (start_overlap || end_overlap) {
         // Case 2: The overlap is partial. The extent should be updated; either
@@ -299,25 +299,25 @@ zx_status_t FakeFVMBlockDevice::VolumeShrink(uint64_t offset, uint64_t length) {
         uint64_t new_start;
         uint64_t new_end;
         if (start_overlap) {
-          new_start = range.end();
-          new_end = iter->second.end();
+          new_start = range.End();
+          new_end = iter->second.End();
         } else {
           EXPECT_TRUE(end_overlap);
-          new_start = iter->second.start();
-          new_end = range.start();
+          new_start = iter->second.Start();
+          new_end = range.Start();
         }
         range::Range<uint64_t> new_extent(new_start, new_end);
-        erased_blocks += iter->second.length() - new_extent.length();
+        erased_blocks += iter->second.Length() - new_extent.Length();
         iter = extents_.erase(iter);
         extents_.emplace(new_start, std::move(new_extent));
       } else {
         // Case 3: The overlap splits the extent in two.
-        range::Range<uint64_t> before(iter->second.start(), range.start());
-        range::Range<uint64_t> after(range.end(), iter->second.end());
-        erased_blocks += iter->second.length() - (before.length() + after.length());
+        range::Range<uint64_t> before(iter->second.Start(), range.Start());
+        range::Range<uint64_t> after(range.End(), iter->second.End());
+        erased_blocks += iter->second.Length() - (before.Length() + after.Length());
         iter = extents_.erase(iter);
-        extents_.emplace(before.start(), before);
-        extents_.emplace(after.start(), after);
+        extents_.emplace(before.Start(), before);
+        extents_.emplace(after.Start(), after);
       }
     } else {
       // Case 4: There is no overlap.

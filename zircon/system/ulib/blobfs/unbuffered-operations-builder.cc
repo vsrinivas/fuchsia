@@ -47,11 +47,11 @@ void UnbufferedOperationsBuilder::Add(const UnbufferedOperation& new_operation) 
 
     auto new_range = Range<uint64_t>(vmo_offset, vmo_offset + length);
     if (Mergable(old_range, new_range)) {
-      auto merged_op = Merge(old_range, new_range).value();
-      operation.op.vmo_offset = merged_op.start();
-      operation.op.length = merged_op.length();
+      new_range.Merge(old_range);
+      operation.op.vmo_offset = new_range.Start();
+      operation.op.length = new_range.Length();
       operation.op.dev_offset = std::min(dev_offset, operation.op.dev_offset);
-      block_count_ += (merged_op.length() - old_range.length());
+      block_count_ += (new_range.Length() - old_range.Length());
       return;
     }
   }
