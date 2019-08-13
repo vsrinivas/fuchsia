@@ -181,16 +181,6 @@ __EXPORT void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_
 
 __EXPORT zx_off_t device_get_size(zx_device_t* dev) { return dev->GetSizeOp(); }
 
-__EXPORT zx_status_t device_read(zx_device_t* dev, void* buf, size_t count, zx_off_t off,
-                                 size_t* actual) {
-  return dev->ReadOp(buf, count, off, actual);
-}
-
-__EXPORT zx_status_t device_write(zx_device_t* dev, const void* buf, size_t count, zx_off_t off,
-                                  size_t* actual) {
-  return dev->WriteOp(buf, count, off, actual);
-}
-
 // LibDriver Misc Interfaces
 
 namespace devmgr {

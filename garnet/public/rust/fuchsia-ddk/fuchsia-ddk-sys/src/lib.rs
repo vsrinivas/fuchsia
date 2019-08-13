@@ -395,8 +395,6 @@ extern "C" {
     pub fn device_get_name(dev: *mut zx_device_t) -> *const c_char;
     pub fn device_get_parent(dev: *mut zx_device_t) -> *mut zx_device_t;
     pub fn device_get_protocol(dev: *mut zx_device_t, proto_id: u32, protocol: *mut u8) -> sys::zx_status_t;
-    pub fn device_read(dev: *mut zx_device_t, buf: *mut u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t;
-    pub fn device_write(dev: *mut zx_device_t, buf: *const u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t;
     pub fn device_get_size(dev: *mut zx_device_t) -> sys::zx_off_t;
     pub fn device_state_clr_set(dev: *mut zx_device_t, clearflag: sys::zx_signals_t, setflag: sys::zx_signals_t);
 }

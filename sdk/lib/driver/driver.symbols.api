@@ -12,11 +12,9 @@ device_get_protocol
 device_get_size
 device_make_visible
 device_publish_metadata
-device_read
 device_rebind
 device_remove
 device_state_clr_set
-device_write
 devmgr_device_host_main
 driver_printf
 get_root_resource

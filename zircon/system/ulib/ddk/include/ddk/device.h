@@ -213,10 +213,6 @@ zx_device_t* device_get_parent(zx_device_t* dev) __DEPRECATE;
 zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_id, void* protocol);
 
 // Direct Device Ops Functions
-zx_status_t device_read(zx_device_t* dev, void* buf, size_t count, zx_off_t off, size_t* actual);
-
-zx_status_t device_write(zx_device_t* dev, const void* buf, size_t count, zx_off_t off,
-                         size_t* actual);
 
 zx_off_t device_get_size(zx_device_t* dev);
 

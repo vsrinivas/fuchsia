@@ -130,24 +130,6 @@ impl Device {
         unsafe { Self::wrap(sys::device_get_parent(self.device)) }
     }
 
-    pub fn read(&mut self, buf: &mut [u8], offset: u64) -> Result<usize, Status> {
-        let mut bytes_read = 0;
-        let status = unsafe {
-            sys::device_read(self.device, buf.as_mut_ptr(), buf.len(), offset, &mut bytes_read)
-        };
-        ok(status)?;
-        Ok(bytes_read)
-    }
-
-    pub fn write(&mut self, buf: &[u8], offset: u64) -> Result<usize, Status> {
-        let mut bytes_written = 0;
-        let status = unsafe {
-            sys::device_write(self.device, buf.as_ptr(), buf.len(), offset, &mut bytes_written)
-        };
-        ok(status)?;
-        Ok(bytes_written)
-    }
-
     pub fn get_size(&mut self) -> u64 {
         unsafe { sys::device_get_size(self.device) }
     }
