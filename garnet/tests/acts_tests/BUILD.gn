@@ -29,6 +29,13 @@ specs = [
     timeout_minutes = 15
   },
   {
+    name = "acts_bt2_test"
+    tags = [ "acts-connectivity-bt2" ]
+    testbed = "bt_rf_chamber_nuc_nuc"
+    tests = "BleFuchsiaTest FuchsiaBtMacAddressTest FuchsiaBtScanTest GattConnectionStressTest Sl4fSanityTest"
+    timeout_minutes = 15
+  },
+  {
     name = "acts_wifi_test"
     tags = [ "acts-connectivity-wifi" ]
     testbed = "wifi_rf_chamber_nuc"
