@@ -5,8 +5,9 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_BLOCK_DISPATCHER_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_BLOCK_DISPATCHER_H_
 
-#include <fbl/ref_counted.h>
 #include <fuchsia/io/cpp/fidl.h>
+
+#include <fbl/ref_counted.h>
 
 // An abstraction around a data source for a block device.
 struct BlockDispatcher {
@@ -49,7 +50,11 @@ using NestedBlockDispatcherCallback =
     fit::function<void(size_t size, std::unique_ptr<BlockDispatcher>)>;
 
 // Creates a BlockDispatcher based on a file.
-void CreateRawBlockDispatcher(fuchsia::io::FilePtr file, uint32_t vmo_flags,
+void CreateRawBlockDispatcher(fuchsia::io::FilePtr file, NestedBlockDispatcherCallback callback);
+
+// Creates a BlockDispatcher based on a file, by acquiring a vmo representing the file. Falls back
+// to CreateRawBlockDispatcher when failing to acquire a vmo.
+void CreateVmoBlockDispatcher(fuchsia::io::FilePtr file, uint32_t vmo_flags,
                               NestedBlockDispatcherCallback callback);
 
 // Creates a BlockDispatcher based on another BlockDispatcher, but stores writes

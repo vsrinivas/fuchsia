@@ -48,6 +48,10 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
   status = block_->Start(std::move(start_info), id, mode_, format, std::move(file), &size);
   if (status != ZX_OK) {
     return status;
+  } else if (size % kBlockSectorSize != 0) {
+    FXL_LOG(ERROR) << "Virtio block device must be aligned to block sector size: " << id
+                   << " has size " << size << ".";
+    return ZX_ERR_INVALID_ARGS;
   }
 
   std::lock_guard<std::mutex> lock(device_config_.mutex);

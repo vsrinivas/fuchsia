@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/ref_counted.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
+
+#include <fbl/ref_counted.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <virtio/block.h>
@@ -264,7 +265,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     if (mode == fuchsia::virtualization::BlockMode::READ_WRITE) {
       vmo_flags |= fuchsia::io::VMO_FLAG_WRITE;
     }
-    CreateRawBlockDispatcher(file.Bind(), vmo_flags, std::move(nested));
+    CreateVmoBlockDispatcher(file.Bind(), vmo_flags, std::move(nested));
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|

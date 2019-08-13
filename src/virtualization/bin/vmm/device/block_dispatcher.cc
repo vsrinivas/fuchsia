@@ -4,8 +4,9 @@
 
 #include "src/virtualization/bin/vmm/device/block_dispatcher.h"
 
-#include <bitmap/rle-bitmap.h>
 #include <lib/zx/vmo.h>
+
+#include <bitmap/rle-bitmap.h>
 #include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
@@ -69,6 +70,15 @@ class RawBlockDispatcher : public BlockDispatcher {
   }
 };
 
+void CreateRawBlockDispatcher(fuchsia::io::FilePtr file, NestedBlockDispatcherCallback callback) {
+  file->GetAttr([file = std::move(file), callback = std::move(callback)](
+                    zx_status_t status, fuchsia::io::NodeAttributes attrs) mutable {
+    FXL_CHECK(status == ZX_OK) << "Failed to get attributes " << status;
+    auto disp = std::make_unique<RawBlockDispatcher>(std::move(file));
+    callback(attrs.content_size, std::move(disp));
+  });
+}
+
 // Dispatcher that fulfills block requests using Fuchsia IO and a VMO.
 class VmoBlockDispatcher : public BlockDispatcher {
  public:
@@ -107,31 +117,22 @@ class VmoBlockDispatcher : public BlockDispatcher {
   }
 };
 
-void CreateRawBlockDispatcher(fuchsia::io::FilePtr file, uint32_t vmo_flags,
+void CreateVmoBlockDispatcher(fuchsia::io::FilePtr file, uint32_t vmo_flags,
                               NestedBlockDispatcherCallback callback) {
-  auto make_disp = [vmo_flags, callback = std::move(callback)](fuchsia::io::FilePtr file,
-                                                               size_t size) mutable {
-    file->GetBuffer(
-        vmo_flags, [file = std::move(file), vmo_flags, size, callback = std::move(callback)](
-                       zx_status_t status, fuchsia::mem::BufferPtr buffer) mutable {
-          if (status != ZX_OK) {
-            auto disp = std::make_unique<RawBlockDispatcher>(std::move(file));
-            callback(size, std::move(disp));
-            return;
-          }
-          uintptr_t addr;
-          // TODO: Use the |buffer->size| rather than calling |GetAttr|.
-          status = zx::vmar::root_self()->map(0, buffer->vmo, 0, size, vmo_flags, &addr);
-          FXL_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
-          auto disp = std::make_unique<VmoBlockDispatcher>(std::move(file), std::move(buffer->vmo),
-                                                           size, addr);
-          callback(size, std::move(disp));
-        });
-  };
-  file->GetAttr([file = std::move(file), make_disp = std::move(make_disp)](
-                    zx_status_t status, fuchsia::io::NodeAttributes attrs) mutable {
-    FXL_CHECK(status == ZX_OK) << "Failed to get attributes " << status;
-    make_disp(std::move(file), attrs.content_size);
+  file->GetBuffer(vmo_flags, [file = std::move(file), vmo_flags, callback = std::move(callback)](
+                                 zx_status_t status, fuchsia::mem::BufferPtr buffer) mutable {
+    // If the file is not backed by a vmo, or if we fail to get it, then fall back to a raw block
+    // dispatcher.
+    if (status != ZX_OK) {
+      CreateRawBlockDispatcher(std::move(file), std::move(callback));
+      return;
+    }
+    uintptr_t addr;
+    status = zx::vmar::root_self()->map(0, buffer->vmo, 0, buffer->size, vmo_flags, &addr);
+    FXL_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
+    auto disp = std::make_unique<VmoBlockDispatcher>(std::move(file), std::move(buffer->vmo),
+                                                     buffer->size, addr);
+    callback(buffer->size, std::move(disp));
   });
 }
 
