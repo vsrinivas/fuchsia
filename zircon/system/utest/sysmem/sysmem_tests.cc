@@ -10,6 +10,7 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
@@ -1274,10 +1275,7 @@ extern "C" bool test_sysmem_contiguous_system_ram_is_cached(void) {
   END_TEST;
 }
 
-// This test will just pass on anything other than an amlogic board with secure memory configured.
-// On amlogic with secure memory configured, it'll check that the cache policy for the resulting
-// VMO is UNCACHED.
-extern "C" bool test_sysmem_protected_ram_is_uncached(void) {
+extern "C" bool test_sysmem_contiguous_system_ram_is_recycled(void) {
   BEGIN_TEST;
 
   zx_status_t status;
@@ -1285,80 +1283,94 @@ extern "C" bool test_sysmem_protected_ram_is_uncached(void) {
   status = connect_to_sysmem_driver(&allocator_client);
   ASSERT_EQ(status, ZX_OK, "");
 
-  zx::channel token_client;
-  zx::channel token_server;
-  status = zx::channel::create(0, &token_client, &token_server);
-  ASSERT_EQ(status, ZX_OK, "");
-
-  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
-                                                            token_server.release());
-  ASSERT_EQ(status, ZX_OK, "");
-
-  zx::channel collection_client;
-  zx::channel collection_server;
-  status = zx::channel::create(0, &collection_client, &collection_server);
-  ASSERT_EQ(status, ZX_OK, "");
-
-  ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
-  status = fuchsia_sysmem_AllocatorBindSharedCollection(
-      allocator_client.get(), token_client.release(), collection_server.release());
-  ASSERT_EQ(status, ZX_OK, "");
-
-  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
-  constraints->usage.vulkan = fuchsia_sysmem_vulkanUsageTransferDst;
-  constraints->min_buffer_count_for_camping = 1;
-  constraints->has_buffer_memory_constraints = true;
-  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
-      .min_size_bytes = 4 * 1024,
-      .max_size_bytes = 4 * 1024,
-      .physically_contiguous_required = true,
-      .secure_required = true,
-      .ram_domain_supported = false,
-      .cpu_domain_supported = false,
-      .inaccessible_domain_supported = true,
-      .heap_permitted_count = 1,
-      .heap_permitted = {fuchsia_sysmem_HeapType_AMLOGIC_SECURE}};
-
-  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
-                                                         constraints.release());
-  ASSERT_EQ(status, ZX_OK, "");
-
-  zx_status_t allocation_status;
-  BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
-  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
-      collection_client.get(), &allocation_status, buffer_collection_info.get());
-
-  // If we couldn't allocate at all, just pass the test.
+  // This needs to be larger than RAM, to know that this test is really checking if the allocations
+  // are being recycled, regardless of what allocation strategy sysmem might be using.
   //
-  // TODO(dustingreen): Determine whether we're supposed to be able to
-  // allocate protected memory on the current board.
-  if (status != ZX_OK) {
-    printf("WARNING: Could not allocate protected memory; for now, assuming this is fine.\n");
-    END_TEST;
-    ASSERT_EQ(0, 1, "unreachable code; END_TEST was supposed to return...");
+  // Unfortunately, at least under QEMU, allocating zx_system_get_physmem() * 2 takes longer than
+  // the test watchdog, so instead of timing out, we early out with printf and fake "success" if
+  // that happens.
+  //
+  // This test currently relies on timeliness/ordering of the ZX_VMO_ZERO_CHILDREN signal and
+  // notification to sysmem of that signal vs. allocation of more BufferCollection(s), which to some
+  // extent could be viewed as an invalid thing to depend on, but on the other hand, if those
+  // mechanisms _are_ delayed too much, in practice we might have problems, so ... for now the test
+  // is not ashamed to be relying on that.
+  uint64_t total_bytes_to_allocate = zx_system_get_physmem() * 2;
+  uint64_t total_bytes_allocated = 0;
+  constexpr uint64_t kBytesToAllocatePerPass = 16 * 1024 * 1024;
+  zx::time deadline_time = zx::deadline_after(zx::sec(10));
+  while (total_bytes_allocated < total_bytes_to_allocate) {
+    if (zx::clock::get_monotonic() > deadline_time) {
+      // Otherwise, we'd potentially trigger the test watchdog.  So far we've only seen this happen
+      // in QEMU environments.
+      printf("\ntest_sysmem_contiguous_system_ram_is_recycled() internal timeout - fake success - "
+             "total_bytes_allocated so far: %zu\n",
+             total_bytes_allocated);
+      END_TEST;
+      ZX_PANIC("unreachable\n");
+    }
+
+    zx::channel token_client;
+    zx::channel token_server;
+    status = zx::channel::create(0, &token_client, &token_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                              token_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client;
+    zx::channel collection_server;
+    status = zx::channel::create(0, &collection_client, &collection_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator_client.get(), token_client.release(), collection_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+    constraints->usage.vulkan = fuchsia_sysmem_vulkanUsageTransferDst;
+    constraints->min_buffer_count_for_camping = 1;
+    constraints->has_buffer_memory_constraints = true;
+    constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+        .min_size_bytes = kBytesToAllocatePerPass,
+        .max_size_bytes = kBytesToAllocatePerPass,
+        .physically_contiguous_required = true,
+        .secure_required = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        // Constraining this to SYSTEM_RAM is redundant for now.
+        .heap_permitted_count = 1,
+        .heap_permitted = {fuchsia_sysmem_HeapType_SYSTEM_RAM}};
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                           constraints.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status, buffer_collection_info.get());
+    // This is the first round-trip to/from sysmem.  A failure here can be due
+    // to any step above failing async.
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(allocation_status, ZX_OK, "");
+    ASSERT_EQ(buffer_collection_info->buffer_count, 1, "");
+    ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+              fuchsia_sysmem_CoherencyDomain_CPU, "");
+    ASSERT_EQ(buffer_collection_info->settings.buffer_settings.heap,
+              fuchsia_sysmem_HeapType_SYSTEM_RAM, "");
+    ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
+
+    total_bytes_allocated += kBytesToAllocatePerPass;
+
+    // ~collection_client and ~buffer_collection_info should recycle the space used by the VMOs for
+    // re-use so that more can be allocated.
   }
-  printf("\nINFO: DID allocate protected memory\n");
 
-  // This is the first round-trip to/from sysmem.  A failure here can be due
-  // to any step above failing async.
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(allocation_status, ZX_OK, "");
-  ASSERT_EQ(buffer_collection_info->buffer_count, 1, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-            fuchsia_sysmem_CoherencyDomain_INACCESSIBLE, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.heap,
-            fuchsia_sysmem_HeapType_AMLOGIC_SECURE, "");
-  ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
-
-  // Directly check that the cache policy is UNCACHED, so that a mapping +
-  // speculative access won't happen, so that random faults won't happen (only
-  // faults if a mapping is actually touched).
-  zx::unowned_vmo the_vmo(buffer_collection_info->buffers[0].vmo);
-  zx_info_vmo_t vmo_info{};
-  status = the_vmo->get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(vmo_info.cache_policy, ZX_CACHE_POLICY_UNCACHED, "");
-
+  printf("\ntest_sysmem_contiguous_system_ram_is_recycled() real success\n");
   END_TEST;
 }
 
@@ -1758,7 +1770,7 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_required_size)
     RUN_TEST(test_sysmem_cpu_usage_and_no_buffer_memory_constraints)
     RUN_TEST(test_sysmem_contiguous_system_ram_is_cached)
-    RUN_TEST(test_sysmem_protected_ram_is_uncached)
+    RUN_TEST(test_sysmem_contiguous_system_ram_is_recycled)
     RUN_TEST(test_sysmem_only_none_usage_fails)
     RUN_TEST(test_sysmem_none_usage_and_other_usage_from_single_participant_fails)
     RUN_TEST(test_sysmem_none_usage_with_separate_other_usage_succeeds)

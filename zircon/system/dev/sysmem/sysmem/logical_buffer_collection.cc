@@ -24,6 +24,10 @@ const uint64_t kMaxTotalSizeBytesPerCollection = 1ull * 1024 * 1024 * 1024;
 // 256 MiB cap for now.
 const uint64_t kMaxSizeBytesPerBuffer = 256ull * 1024 * 1024;
 
+// Zero-initialized, so it shouldn't take up space on-disk.
+constexpr uint64_t kFlushThroughBytes = 8192;
+const uint8_t kZeroes[kFlushThroughBytes] = {};
+
 template <typename T>
 bool IsNonZeroPowerOf2(T value) {
   if (!value) {
@@ -174,10 +178,10 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
       // ability to detect unexpected closure of a token is a main reason
       // we use a channel for BufferCollectionToken instead of an
       // eventpair.
-      Fail(
-          "Token failure causing LogicalBufferCollection failure - "
-          "status: %d",
-          status);
+      //
+      // If a participant for some reason finds itself with an extra token it doesn't need, the
+      // participant should use Close() to avoid triggering this failure.
+      Fail("Token failure causing LogicalBufferCollection failure - status: %d", status);
       return;
     }
 
@@ -191,15 +195,15 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
     ZX_DEBUG_ASSERT(!(token_ptr->is_done() && buffer_collection_request));
 
     if (!buffer_collection_request) {
-      // This was a token::Close().  In this case we want to stop tracking
-      // the token now that we've processed all its previously-queued
-      // inbound messages.  This might be the last token, so we
-      // MaybeAllocate().  This path isn't a failure.
+      // This was a token::Close().  In this case we want to stop tracking the token now that we've
+      // processed all its previously-queued inbound messages.  This might be the last token, so we
+      // MaybeAllocate().  This path isn't a failure (unless there are also zero BufferCollection
+      // views in which case MaybeAllocate() calls Fail()).
       auto self = token_ptr->parent_shared();
       ZX_DEBUG_ASSERT(self.get() == this);
       token_views_.erase(token_ptr);
       MaybeAllocate();
-      // ~self - might delete this
+      // ~self may delete "this"
     }
 
     // At this point we know that this was a BindSharedCollection().  We
@@ -233,6 +237,11 @@ void LogicalBufferCollection::OnSetConstraints() {
 LogicalBufferCollection::AllocationResult LogicalBufferCollection::allocation_result() {
   ZX_DEBUG_ASSERT(has_allocation_result_ ||
                   (allocation_result_status_ == ZX_OK && !allocation_result_info_));
+  // If this assert fails, it mean we've already done ::Fail().  This should be impossible since
+  // Fail() clears all BufferCollection views so they shouldn't be able to call
+  // ::allocation_result().
+  ZX_DEBUG_ASSERT(
+      !(has_allocation_result_ && allocation_result_status_ == ZX_OK && !allocation_result_info_));
   return {
       .buffer_collection_info = allocation_result_info_.get(),
       .status = allocation_result_status_,
@@ -241,6 +250,7 @@ LogicalBufferCollection::AllocationResult LogicalBufferCollection::allocation_re
 
 LogicalBufferCollection::LogicalBufferCollection(Device* parent_device)
     : parent_device_(parent_device), constraints_(Constraints::Null) {
+  LogInfo("LogicalBufferCollection::LogicalBufferCollection()");
   // nothing else to do here
 }
 
@@ -271,9 +281,22 @@ void LogicalBufferCollection::Fail(const char* format, ...) {
   CollectionMap local_collection_views;
   collection_views_.swap(local_collection_views);
 
-  // |this| is very likely to be deleted during these calls to clear().  The
-  // only exception is if the caller of Fail() happens to have its own
-  // temporary fbl::RefPtr<LogicalBufferCollection> on the stack.
+  // Since all the token views and collection views will shortly be gone, there
+  // will be no way for any client to be sent the VMOs again, so we can close
+  // the handles to the VMOs here.  This is necessary in order to get
+  // ZX_VMO_ZERO_CHILDREN to happen in TrackedParentVmo, but not sufficient
+  // alone (clients must also close their VMO(s)).
+  allocation_result_info_.reset(nullptr);
+
+  // |this| can be deleted during these calls to clear(), unless parent_vmos_
+  // isn't empty yet, or unless the caller of Fail() has its own temporary
+  // fbl::RefPtr<LogicalBufferCollection> on the stack.
+  //
+  // These clear() calls will close the channels, which in turn will inform
+  // the participants to close their child VMO handles.  We don't revoke the
+  // child VMOs, so the LogicalBufferCollection will stick around until
+  // parent_vmo_map_ becomes empty thanks to participants closing their child
+  // VMOs.
   local_token_views.clear();
   local_collection_views.clear();
 }
@@ -293,18 +316,24 @@ void LogicalBufferCollection::LogError(const char* format, ...) {
 }
 
 void LogicalBufferCollection::MaybeAllocate() {
-  if (is_allocate_attempted_) {
-    // Allocate was already attempted.
-    return;
-  }
   if (!token_views_.empty()) {
     // All tokens must be converted into BufferCollection views or Close()ed
     // before allocation will happen.
     return;
   }
   if (collection_views_.empty()) {
-    // No point in allocating if there aren't any BufferCollection views
-    // left either.
+    // The LogicalBufferCollection should be failed because there are no clients left, despite only
+    // getting here if all of the clients did a clean Close().
+    if (is_allocate_attempted_) {
+      // A case could be made for making this a silent failure.
+      Fail("All clients called Close(), but now zero clients remain (after allocation).");
+    } else {
+      Fail("All clients called Close(), but now zero clients remain (before allocation).");
+    }
+    return;
+  }
+  if (is_allocate_attempted_) {
+    // Allocate was already attempted.
     return;
   }
   // Sweep looking for any views that haven't set constraints.
@@ -441,17 +470,38 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
     // the LogicalBufferCollection is out of here.
 
     if (!(status == ZX_ERR_PEER_CLOSED && collection_ptr->is_done())) {
-      // We don't have to explicitly remove collection from
-      // collection_views_ because Fail() will
+      // We don't have to explicitly remove collection from collection_views_ because Fail() will
       // collection_views_.clear().
       //
-      // A BufferCollection view whose error handler runs implies
-      // LogicalBufferCollection failure.
-      Fail(
-          "BufferCollection (view) failure (or closure without "
-          "Close()) causing "
-          "LogicalBufferCollection failure - status: %d",
-          status);
+      // A BufferCollection view whose error handler runs implies LogicalBufferCollection failure.
+      //
+      // A LogicalBufferCollection intentionally treats any error that might be triggered by a
+      // client failure as a LogicalBufferCollection failure, because a LogicalBufferCollection can
+      // use a lot of RAM and can tend to block creating a replacement LogicalBufferCollection.
+      //
+      // If a participant is cleanly told to be done with a BufferCollection, the participant can
+      // send Close() before BufferCollection channel close to avoid triggering this failure, in
+      // case the initiator might want to continue using the BufferCollection without the
+      // participant.
+      //
+      // TODO(ZX-3884): Provide a way to mark a BufferCollection view as expendable without implying
+      // that the channel is closing, so that the client can still detect when the BufferCollection
+      // VMOs need to be closed base don BufferCollection channel closure by sysmem.
+      //
+      // In rare cases, an initiator might choose to use Close() to avoid this failure, but more
+      // typically initiators will just close their BufferCollection view without Close() first, and
+      // this failure results.  This is considered acceptable partly because it helps exercise code
+      // in participants that may see BufferCollection channel closure before closure of related
+      // channels, and it helps get the VMO handles closed ASAP to avoid letting those continue to
+      // use space of a MemoryAllocator's pool of pre-reserved space (for example).
+      //
+      // TODO(dustingreen): Consider providing a way for the initiator to close its channel (first)
+      // such that the failure is silent, without silencing this failure on unclean close or
+      // participant close, and without letting participants pretend to be the initiator re.
+      // this failure's silence / non-silence.
+      Fail("BufferCollection (view) channel failure or closure causing LogicalBufferCollection "
+           "failure - status: %d",
+           status);
       return;
     }
 
@@ -462,6 +512,9 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
     // SetConstraints() followed by Close() followed by closing the
     // participant's BufferCollection channel, which is convenient for
     // some participants.
+    //
+    // If this causes collection_tokens_.empty() and collection_views_.empty(),
+    // MaybeAllocate() takes care of calling Fail().
 
     if (collection_ptr->is_set_constraints_seen()) {
       constraints_list_.emplace_back(collection_ptr->TakeConstraints());
@@ -471,6 +524,7 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
     ZX_DEBUG_ASSERT(self.get() == this);
     collection_views_.erase(collection_ptr);
     MaybeAllocate();
+    // ~self may delete "this"
     return;
   });
   auto collection_ptr = collection.get();
@@ -1405,24 +1459,147 @@ BufferCollection::BufferCollectionInfo LogicalBufferCollection::Allocate(
 }
 
 zx_status_t LogicalBufferCollection::AllocateVmo(
-    MemoryAllocator* allocator, const fuchsia_sysmem_SingleBufferSettings* settings, zx::vmo* vmo) {
-  zx::vmo raw_vmo;
-  zx_status_t status = allocator->Allocate(settings->buffer_settings.size_bytes, &raw_vmo);
+    MemoryAllocator* allocator, const fuchsia_sysmem_SingleBufferSettings* settings,
+    zx::vmo* child_vmo) {
+  // raw_vmo may itself be a child VMO of an allocator's overall contig VMO,
+  // but that's an internal detail of the allocator.  The ZERO_CHILDREN signal
+  // will only be set when all direct _and indirect_ child VMOs are fully
+  // gone (not just handles closed, but the kernel object is deleted, which
+  // avoids races with handle close, and means there also aren't any
+  // mappings left).
+  zx::vmo raw_parent_vmo;
+  zx_status_t status = allocator->Allocate(settings->buffer_settings.size_bytes, &raw_parent_vmo);
   if (status != ZX_OK) {
     LogError(
-        "Allocate failed - size_bytes: %u "
+        "allocator->Allocate failed - size_bytes: %u "
         "status: %d",
         settings->buffer_settings.size_bytes, status);
     // sanitize to ZX_ERR_NO_MEMORY regardless of why.
     status = ZX_ERR_NO_MEMORY;
     return status;
   }
-  status = raw_vmo.duplicate(kSysmemVmoRights, vmo);
+
+  zx_info_vmo_t info;
+  status = raw_parent_vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    LogError("raw_parent_vmo.get_info(ZX_INFO_VMO) failed - status %d", status);
+    return status;
+  }
+
+  // Write zeroes to the VMO, so that the allocator doesn't need to.  Also flush those zeroes to
+  // RAM so the newly-allocated VMO is fully zeroed in both RAM and CPU coherency domains.
+  //
+  // TODO(ZX-4817): Zero secure/protected VMOs.
+  if (!allocator->CoherencyDomainIsInaccessible()) {
+    uint64_t offset = 0;
+    while (offset < info.size_bytes) {
+      uint64_t bytes_to_write = std::min(sizeof(kZeroes), info.size_bytes - offset);
+      status = raw_parent_vmo.write(kZeroes, offset, bytes_to_write);
+      if (status != ZX_OK) {
+        LogError("raw_parent_vmo.write() failed - status: %d", status);
+        return status;
+      }
+      offset += bytes_to_write;
+    }
+    status = raw_parent_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, info.size_bytes, nullptr, 0);
+    if (status != ZX_OK) {
+      LogError("raw_parent_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN) failed - status: %d", status);
+      return status;
+    }
+  }
+
+  if (ZX_INFO_VMO_TYPE(info.flags) == ZX_INFO_VMO_TYPE_PHYSICAL) {
+    // TODO(ZX-4809): This case shouldn't need to exist.
+    //
+    // The allocator may have created a physical VMO, which isn't compatible with
+    // ZX_VMO_CHILD_SLICE.  In that case, the allocator is responsible for its own space reclamation
+    // mechanism.  The only allocator that currently does this is
+    // ContiguousPooledSpecialRamMemoryAllocator, which is only used for VDEC, which is in turn only
+    // handed out to the coordinator+decryptor+decoder participants (still not great).
+    //
+    // This isn't really a child_vmo, but this path shouldn't exist in the first place, so tolerate
+    // the incorrect name for now.  See TODO above.
+    //
+    // The allocator will notice eventually later after this handle has gone away.  Unlike the
+    // normal path, in this case the LogicalBufferCollection will never call
+    // allocator->SetupChildVmo() or allocator->Delete().
+    //
+    // This way of allocating only sorta works, in the sense that recycling the space isn't
+    // rigorous.  Complain to the log (for VDEC only) so the issue will remain visible until fixed.
+    LogError("ZX-4809 - sending raw_parent_vmo physical VMO to sysmem clients");
+    *child_vmo = std::move(raw_parent_vmo);
+    return ZX_OK;
+  }
+
+  // We immediately create the ParentVmo instance so it can take care of calling allocator->Delete()
+  // if this method returns early.  We intentionally don't emplace into parent_vmos_ until
+  // StartWait() has succeeded.  In turn, StartWait() requires a child VMO to have been created
+  // already (else ZX_VMO_ZERO_CHILDREN would trigger too soon).
+  //
+  // We need to keep the raw_parent_vmo around so we can wait for ZX_VMO_ZERO_CHILDREN, and so we
+  // can call allocator->Delete(raw_parent_vmo).
+  //
+  // Until that happens, we can't let LogicalBufferCollection itself go away, because it needs to
+  // stick around to tell allocator that the allocator's VMO can be deleted/reclaimed.
+  //
+  // We let cooked_parent_vmo go away before returning from this method, since it's only purpose
+  // was to attenuate the rights of local_child_vmo.  The local_child_vmo counts as a child of
+  // raw_parent_vmo for ZX_VMO_ZERO_CHILDREN.
+  //
+  // The fbl::WrapRefPtr(this) is fairly similar (in this usage) to shared_from_this().
+  auto tracked_parent_vmo = std::unique_ptr<TrackedParentVmo>(new TrackedParentVmo(
+    fbl::WrapRefPtr(this), std::move(raw_parent_vmo),
+    [this, allocator](TrackedParentVmo* tracked_parent_vmo) mutable {
+      auto node_handle = parent_vmos_.extract(tracked_parent_vmo->vmo().get());
+      ZX_DEBUG_ASSERT(!node_handle || node_handle.mapped().get() == tracked_parent_vmo);
+      allocator->Delete(tracked_parent_vmo->TakeVmo());
+      // ~node_handle may delete "this".
+    }
+  ));
+
+  zx::vmo cooked_parent_vmo;
+  status = tracked_parent_vmo->vmo().duplicate(kSysmemVmoRights, &cooked_parent_vmo);
   if (status != ZX_OK) {
     LogError("zx::object::duplicate() failed - status: %d", status);
     return status;
   }
-  // ~raw_vmo - *vmo is a duplicate with slightly-reduced rights.
+
+  zx::vmo local_child_vmo;
+  status = cooked_parent_vmo.create_child(ZX_VMO_CHILD_SLICE, 0,
+                                          settings->buffer_settings.size_bytes, &local_child_vmo);
+  if (status != ZX_OK) {
+    LogError("zx::vmo::create_child() failed - status: %d", status);
+    return status;
+  }
+
+  // Now that we know at least one child of raw_parent_vmo exists, we can StartWait() and add to
+  // map.  From this point, ZX_VMO_ZERO_CHILDREN is the only way that allocator->Delete() gets
+  // called.
+  status = tracked_parent_vmo->StartWait();
+  if (status != ZX_OK) {
+    LogError("tracked_parent->StartWait() failed - status: %d", status);
+    // ~tracked_parent_vmo calls allocator->Delete().
+    return status;
+  }
+  zx_handle_t raw_parent_vmo_handle = tracked_parent_vmo->vmo().get();
+  TrackedParentVmo& parent_vmo_ref = *tracked_parent_vmo;
+  auto emplace_result =
+      parent_vmos_.emplace(raw_parent_vmo_handle, std::move(tracked_parent_vmo));
+  ZX_DEBUG_ASSERT(emplace_result.second);
+
+  // Now inform the allocator about the child VMO before we return it.
+  status = allocator->SetupChildVmo(parent_vmo_ref.vmo(), local_child_vmo);
+  if (status != ZX_OK) {
+    LogError("allocator->SetupChildVmo() failed - status: %d", status);
+    // In this path, the ~local_child_vmo will async trigger parent_vmo_ref::OnZeroChildren()
+    // which will call allocator->Delete() via above do_delete lambda passed to
+    // ParentVmo::ParentVmo().
+    return status;
+  }
+
+  *child_vmo = std::move(local_child_vmo);
+  // ~cooked_parent_vmo is fine, since local_child_vmo counts as a child of raw_parent_vmo for
+  // ZX_VMO_ZERO_CHILDREN purposes.
   return ZX_OK;
 }
 
@@ -1490,4 +1667,66 @@ int32_t LogicalBufferCollection::CompareImageFormatConstraintsByIndex(uint32_t i
       CompareImageFormatConstraintsTieBreaker(&constraints_->image_format_constraints[index_a],
                                               &constraints_->image_format_constraints[index_b]);
   return tie_breaker_compare;
+}
+
+LogicalBufferCollection::TrackedParentVmo::TrackedParentVmo(
+    fbl::RefPtr<LogicalBufferCollection> buffer_collection,
+    zx::vmo vmo,
+    LogicalBufferCollection::TrackedParentVmo::DoDelete do_delete)
+  : buffer_collection_(std::move(buffer_collection)),
+    vmo_(std::move(vmo)),
+    do_delete_(std::move(do_delete)),
+    zero_children_wait_(this, vmo_.get(), ZX_VMO_ZERO_CHILDREN) {
+  ZX_DEBUG_ASSERT(buffer_collection_);
+  ZX_DEBUG_ASSERT(vmo_);
+  ZX_DEBUG_ASSERT(do_delete_);
+}
+
+LogicalBufferCollection::TrackedParentVmo::~TrackedParentVmo() {
+  ZX_DEBUG_ASSERT(!waiting_);
+  if (do_delete_) {
+    do_delete_(this);
+  }
+}
+
+zx_status_t LogicalBufferCollection::TrackedParentVmo::StartWait() {
+  LogInfo("LogicalBufferCollection::TrackedParentVmo::StartWait()");
+  // The current thread is the dispatcher thread.
+  ZX_DEBUG_ASSERT(!waiting_);
+  zx_status_t status = zero_children_wait_.Begin(async_get_default_dispatcher());
+  if (status != ZX_OK) {
+    LogError("zero_children_wait_.Begin() failed - status: %d", status);
+    return status;
+  }
+  waiting_ = true;
+  return ZX_OK;
+}
+
+zx::vmo LogicalBufferCollection::TrackedParentVmo::TakeVmo() {
+  ZX_DEBUG_ASSERT(!waiting_);
+  ZX_DEBUG_ASSERT(vmo_);
+  return std::move(vmo_);
+}
+
+const zx::vmo& LogicalBufferCollection::TrackedParentVmo::vmo() const {
+  ZX_DEBUG_ASSERT(vmo_);
+  return vmo_;
+}
+
+void LogicalBufferCollection::TrackedParentVmo::OnZeroChildren(
+    async_dispatcher_t* dispatcher,
+    async::WaitBase* wait,
+    zx_status_t status,
+    const zx_packet_signal_t* signal) {
+  LogInfo("LogicalBufferCollection::TrackedParentVmo::OnZeroChildren()");
+  ZX_DEBUG_ASSERT(waiting_);
+  waiting_ = false;
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+  ZX_DEBUG_ASSERT(signal->trigger & ZX_VMO_ZERO_CHILDREN);
+  ZX_DEBUG_ASSERT(do_delete_);
+  LogicalBufferCollection::TrackedParentVmo::DoDelete local_do_delete = std::move(do_delete_);
+  ZX_DEBUG_ASSERT(!do_delete_);
+  // will delete "this"
+  local_do_delete(this);
+  ZX_DEBUG_ASSERT(!local_do_delete);
 }

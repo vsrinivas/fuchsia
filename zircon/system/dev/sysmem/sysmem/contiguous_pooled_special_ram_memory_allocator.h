@@ -10,9 +10,13 @@
 
 #include "allocator.h"
 
-class ContiguousPooledSystemRamMemoryAllocator : public MemoryAllocator {
+// TODO(ZX-4809): This and ContiguousPooledSystemRamMemoryAllocator ideally would be the same
+// class, but for VDEC whose physical address is specified by the TEE, we don't yet have a way to
+// use ZX_VMO_CHILD_SLICE, so this implementation exists to preserve the old way of checking
+// handle count, .
+class ContiguousPooledSpecialRamMemoryAllocator : public MemoryAllocator {
  public:
-  ContiguousPooledSystemRamMemoryAllocator(Owner* parent_device, const char* allocation_name,
+  ContiguousPooledSpecialRamMemoryAllocator(Owner* parent_device, const char* allocation_name,
                                            uint64_t size, bool is_cpu_accessible);
 
   // Default to page alignment.
@@ -37,9 +41,12 @@ class ContiguousPooledSystemRamMemoryAllocator : public MemoryAllocator {
   Owner* const parent_device_{};
   const char* const allocation_name_{};
   zx::vmo contiguous_vmo_;
+  struct Region {
+    RegionAllocator::Region::UPtr region;
+    zx::vmo vmo;
+  };
   RegionAllocator region_allocator_;
-  // From parent_vmo handle to std::unique_ptr<>
-  std::map<zx_handle_t, RegionAllocator::Region::UPtr> regions_;
+  fbl::Vector<fbl::unique_ptr<Region>> regions_;
   uint64_t start_{};
   uint64_t size_{};
   bool is_cpu_accessible_{};

@@ -8,6 +8,7 @@ driver("sysmem") {
     "binding.cc",
     "buffer_collection.cc",
     "buffer_collection_token.cc",
+    "contiguous_pooled_special_ram_memory_allocator.cc",
     "contiguous_pooled_system_ram_memory_allocator.cc",
     "device.cc",
     "driver.cc",
@@ -44,8 +45,10 @@ driver("sysmem") {
 test("sysmem-unittest") {
   output_name = "sysmem-unittest"
   sources = [
+    "contiguous_pooled_special_ram_memory_allocator.cc",
     "contiguous_pooled_system_ram_memory_allocator.cc",
     "memory_allocator.cc",
+    "test/contiguous_pooled_special_ram_memory_allocator_test.cc",
     "test/contiguous_pooled_system_ram_memory_allocator_test.cc",
     "test/pixel_format_cost_test.cc",
     "usage_pixel_format_cost.cc",

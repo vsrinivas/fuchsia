@@ -9,7 +9,10 @@
 
 #include <vector>
 
-#include "contiguous_pooled_system_ram_memory_allocator.h"
+#include "contiguous_pooled_special_ram_memory_allocator.h"
+
+// TODO(ZX-4809): This file shouldn't exist, since ContiguousPooledSpecialRamMemoryAllocator
+// shouldn't exist.
 
 class FakeOwner : public MemoryAllocator::Owner {
  public:
@@ -27,13 +30,12 @@ class FakeOwner : public MemoryAllocator::Owner {
 };
 
 namespace {
-
-TEST(ContiguousPooledSystem, Full) {
+TEST(ContiguousPooledSpecial, Full) {
   FakeOwner owner;
   constexpr uint32_t kVmoSize = 4096;
   constexpr uint32_t kVmoCount = 1024;
   const char* kVmoName = "test-pool";
-  ContiguousPooledSystemRamMemoryAllocator allocator(&owner, kVmoName, kVmoSize * kVmoCount, true);
+  ContiguousPooledSpecialRamMemoryAllocator allocator(&owner, kVmoName, kVmoSize * kVmoCount, true);
 
   EXPECT_OK(allocator.Init());
 
@@ -53,14 +55,20 @@ TEST(ContiguousPooledSystem, Full) {
   zx::vmo vmo;
   EXPECT_NOT_OK(allocator.Allocate(kVmoSize, &vmo));
 
-  allocator.Delete(std::move(vmos[0]));
+  uintptr_t ptr;
+  EXPECT_OK(zx::vmar::root_self()->map(0u, vmos[0], 0u, kVmoSize, ZX_VM_PERM_READ, &ptr));
 
-  EXPECT_OK(allocator.Allocate(kVmoSize, &vmos[0]));
+  vmos[0].reset();
+
+  // The mapping should prevent the allocator from marking the memory as free.
+  EXPECT_NOT_OK(allocator.Allocate(kVmoSize, &vmo));
+  EXPECT_OK(zx::vmar::root_self()->unmap(ptr, kVmoSize));
+
+  EXPECT_OK(allocator.Allocate(kVmoSize, &vmo));
 
   // Destroy half of all vmos.
   for (uint32_t i = 0; i < kVmoCount; i += 2) {
-    ZX_DEBUG_ASSERT(vmos[i]);
-    allocator.Delete(std::move(vmos[i]));
+    vmos[i].reset();
   }
 
   // There shouldn't be enough contiguous address space for even 1 extra byte.
