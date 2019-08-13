@@ -235,6 +235,13 @@ TEST(GetVMOTest, Remote) {
   ASSERT_TRUE(vmo_starts_with(received, "abcd"));
   context.last_flags = 0;
 
+  ASSERT_OK(fdio_get_vmo_exec(fd.get(), received.reset_and_get_address()));
+  ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
+  ASSERT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXEC | fuchsia_io_VMO_FLAG_PRIVATE,
+            context.last_flags);
+  ASSERT_TRUE(vmo_starts_with(received, "abcd"));
+  context.last_flags = 0;
+
   context.supports_get_buffer = false;
   context.supports_read_at = true;
   ASSERT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
@@ -276,6 +283,10 @@ TEST(GetVMOTest, VMOFile) {
   ASSERT_TRUE(vmo_starts_with(received, "abcd"));
 
   ASSERT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
+  ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
+  ASSERT_TRUE(vmo_starts_with(received, "abcd"));
+
+  ASSERT_OK(fdio_get_vmo_exec(fd.get(), received.reset_and_get_address()));
   ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
   ASSERT_TRUE(vmo_starts_with(received, "abcd"));
 }

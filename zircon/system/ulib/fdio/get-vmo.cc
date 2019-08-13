@@ -161,3 +161,17 @@ zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo) {
   fdio_release(io);
   return status;
 }
+
+__EXPORT
+zx_status_t fdio_get_vmo_exec(int fd, zx_handle_t* out_vmo) {
+  fdio_t* io = fd_to_io(fd);
+  if (io == NULL) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  int flags = fuchsia::io::VMO_FLAG_READ | fuchsia::io::VMO_FLAG_EXEC |
+      fuchsia::io::VMO_FLAG_PRIVATE;
+  zx_status_t status = fdio_get_ops(io)->get_vmo(io, flags, out_vmo);
+  fdio_release(io);
+  return status;
+}

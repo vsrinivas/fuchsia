@@ -69,6 +69,10 @@ zx_status_t fdio_get_vmo_clone(int fd, zx_handle_t* out_vmo);
 // or clone data into a new VMO).
 zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo);
 
+// Get a read + execute VMO containing a clone of the underlying VMO.
+// This function will fail rather than copying the contents if it cannot clone.
+zx_status_t fdio_get_vmo_exec(int fd, zx_handle_t* out_vmo);
+
 __END_CDECLS
 
 #endif  // LIB_FDIO_IO_H_

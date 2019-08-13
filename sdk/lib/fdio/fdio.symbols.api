@@ -34,6 +34,7 @@ fdio_get_service_handle
 fdio_get_vmo_clone
 fdio_get_vmo_copy
 fdio_get_vmo_exact
+fdio_get_vmo_exec
 fdio_handle_fd
 fdio_ioctl
 fdio_ns_bind

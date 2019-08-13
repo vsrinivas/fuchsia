@@ -2,7 +2,7 @@
   "pkg/fdio/include/lib/fdio/directory.h": "9916cdf187af3314149a899cdfaae379",
   "pkg/fdio/include/lib/fdio/fd.h": "f5ea3105b3d7d00dac9cef5b34ac5283",
   "pkg/fdio/include/lib/fdio/fdio.h": "5b681e52ef4ea80d54a495b139f953bc",
-  "pkg/fdio/include/lib/fdio/io.h": "a7d53fccc62be7ebeee3fd728299a477",
+  "pkg/fdio/include/lib/fdio/io.h": "9502298f6e459b4f07faa6db1c48cdd4",
   "pkg/fdio/include/lib/fdio/limits.h": "54200515f953e603209fc34f57369c93",
   "pkg/fdio/include/lib/fdio/namespace.h": "33385c1f754baac2898daafe93a657be",
   "pkg/fdio/include/lib/fdio/private.h": "3f43307d5e467063c5fdfee187d3d53d",
