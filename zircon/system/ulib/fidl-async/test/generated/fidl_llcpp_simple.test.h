@@ -114,14 +114,6 @@ class Simple final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Close Close(::fidl::BytePart _response_buffer);
 
-    // Never actually replies.  Just closes instead.
-    zx_status_t Close_Deprecated(int32_t* out_v);
-
-    // Never actually replies.  Just closes instead.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_v);
-
    private:
     ::zx::channel channel_;
   };
@@ -138,14 +130,6 @@ class Simple final {
     // Never actually replies.  Just closes instead.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Close Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Never actually replies.  Just closes instead.
-    static zx_status_t Close_Deprecated(zx::unowned_channel _client_end, int32_t* out_v);
-
-    // Never actually replies.  Just closes instead.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_v);
 
   };
 

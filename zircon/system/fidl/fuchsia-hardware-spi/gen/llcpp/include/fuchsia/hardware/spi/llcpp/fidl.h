@@ -258,14 +258,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Transmit Transmit(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
 
-    // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
-    zx_status_t Transmit_Deprecated(::fidl::VectorView<uint8_t> data, int32_t* out_status);
-
-    // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<TransmitResponse> Transmit_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Half-duplex receive data from a SPI device; always reads the full size requested.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::Receive Receive(uint32_t size);
@@ -273,12 +265,6 @@ class Device final {
     // Half-duplex receive data from a SPI device; always reads the full size requested.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Receive Receive(::fidl::BytePart _request_buffer, uint32_t size, ::fidl::BytePart _response_buffer);
-
-
-    // Half-duplex receive data from a SPI device; always reads the full size requested.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ReceiveResponse> Receive_Deprecated(::fidl::BytePart _request_buffer, uint32_t size, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data);
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     // buffer.
@@ -289,13 +275,6 @@ class Device final {
     // buffer.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Exchange Exchange(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> txdata, ::fidl::BytePart _response_buffer);
-
-
-    // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
-    // buffer.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ExchangeResponse> Exchange_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> txdata, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_rxdata);
 
    private:
     ::zx::channel channel_;
@@ -314,14 +293,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Transmit Transmit(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
 
-    // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
-    static zx_status_t Transmit_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data, int32_t* out_status);
-
-    // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<TransmitResponse> Transmit_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Half-duplex receive data from a SPI device; always reads the full size requested.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::Receive Receive(zx::unowned_channel _client_end, uint32_t size);
@@ -329,12 +300,6 @@ class Device final {
     // Half-duplex receive data from a SPI device; always reads the full size requested.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Receive Receive(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t size, ::fidl::BytePart _response_buffer);
-
-
-    // Half-duplex receive data from a SPI device; always reads the full size requested.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ReceiveResponse> Receive_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t size, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data);
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     // buffer.
@@ -345,13 +310,6 @@ class Device final {
     // buffer.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Exchange Exchange(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> txdata, ::fidl::BytePart _response_buffer);
-
-
-    // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
-    // buffer.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ExchangeResponse> Exchange_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> txdata, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_rxdata);
 
   };
 

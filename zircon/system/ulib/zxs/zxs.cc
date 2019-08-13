@@ -14,12 +14,8 @@
 #include <memory>
 
 zx_status_t zxs_close(zxs_socket_t socket) {
-  zx_status_t status;
-  zx_status_t io_status = socket.control.Close_Deprecated(&status);
-  if (io_status != ZX_OK) {
-    return io_status;
-  }
-  return status;
+  auto result = socket.control.Close();
+  return result.ok() ? result->s : result.status();
 }
 
 static zx_status_t zxs_write(const zxs_socket_t* socket, const void* buffer, size_t capacity,

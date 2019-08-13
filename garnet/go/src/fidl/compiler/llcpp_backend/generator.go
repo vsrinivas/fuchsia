@@ -22,7 +22,7 @@ type generator struct {
 func newGenerator() *generator {
 	tmpls := template.New("LLCPPTemplates").Funcs(template.FuncMap{
 		"Kinds": func() interface{} { return ir.Kinds },
-		"Eq": func(a interface{}, b interface{}) bool { return a == b },
+		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
 		"MethodsHaveReqOrResp": func(ms []ir.Method) string {
 			for _, m := range ms {
 				if (m.HasRequest && len(m.Request) != 0) || (m.HasResponse && len(m.Response) != 0) {
@@ -31,7 +31,7 @@ func newGenerator() *generator {
 			}
 			return ""
 		},
-		"FilterMethodsWithReqs": func (ms []ir.Method) []ir.Method {
+		"FilterMethodsWithReqs": func(ms []ir.Method) []ir.Method {
 			var out []ir.Method
 			for _, m := range ms {
 				if !m.HasRequest {
@@ -40,7 +40,7 @@ func newGenerator() *generator {
 			}
 			return out
 		},
-		"FilterMethodsWithoutReqs": func (ms []ir.Method) []ir.Method {
+		"FilterMethodsWithoutReqs": func(ms []ir.Method) []ir.Method {
 			var out []ir.Method
 			for _, m := range ms {
 				if m.HasRequest {
@@ -49,7 +49,7 @@ func newGenerator() *generator {
 			}
 			return out
 		},
-		"FilterMethodsWithoutResps": func (ms []ir.Method) []ir.Method {
+		"FilterMethodsWithoutResps": func(ms []ir.Method) []ir.Method {
 			var out []ir.Method
 			for _, m := range ms {
 				if m.HasResponse {
@@ -59,7 +59,7 @@ func newGenerator() *generator {
 			return out
 		},
 	})
-	templates := []string {
+	templates := []string{
 		fragments.Bits,
 		fragments.Const,
 		fragments.Enum,
@@ -72,7 +72,7 @@ func newGenerator() *generator {
 		fragments.SendEventInPlace,
 		fragments.Struct,
 		fragments.SyncEventHandler,
-		fragments.SyncRequestCFlavor,
+		fragments.SyncRequestManaged,
 		fragments.SyncRequestCallerAllocate,
 		fragments.SyncRequestInPlace,
 		fragments.SyncServer,

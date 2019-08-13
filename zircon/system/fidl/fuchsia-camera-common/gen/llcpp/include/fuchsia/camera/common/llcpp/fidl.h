@@ -244,16 +244,10 @@ class Stream final {
     ResultOf::Start Start();
 
 
-    // Starts the streaming of frames.
-    zx_status_t Start_Deprecated();
-
     // Stops the streaming of frames.
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Stop Stop();
 
-
-    // Stops the streaming of frames.
-    zx_status_t Stop_Deprecated();
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
@@ -262,13 +256,6 @@ class Stream final {
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ReleaseFrame ReleaseFrame(::fidl::BytePart _request_buffer, uint32_t buffer_id);
-
-    // Unlocks the specified frame, allowing the driver to reuse the memory.
-    zx_status_t ReleaseFrame_Deprecated(uint32_t buffer_id);
-
-    // Unlocks the specified frame, allowing the driver to reuse the memory.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ReleaseFrame_Deprecated(::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -289,16 +276,10 @@ class Stream final {
     static ResultOf::Start Start(zx::unowned_channel _client_end);
 
 
-    // Starts the streaming of frames.
-    static zx_status_t Start_Deprecated(zx::unowned_channel _client_end);
-
     // Stops the streaming of frames.
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Stop Stop(zx::unowned_channel _client_end);
 
-
-    // Stops the streaming of frames.
-    static zx_status_t Stop_Deprecated(zx::unowned_channel _client_end);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
@@ -307,13 +288,6 @@ class Stream final {
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ReleaseFrame ReleaseFrame(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
-
-    // Unlocks the specified frame, allowing the driver to reuse the memory.
-    static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, uint32_t buffer_id);
-
-    // Unlocks the specified frame, allowing the driver to reuse the memory.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -639,15 +613,6 @@ class VirtualCameraFactory final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::CreateDevice CreateDevice(::fidl::BytePart _request_buffer, VirtualCameraConfig config);
 
-    // Creates a new VirtualCameraDevice based on the configuration passed in.
-    // `config`: a VirtualCameraConfig defining how the new device should behave.
-    zx_status_t CreateDevice_Deprecated(VirtualCameraConfig config);
-
-    // Creates a new VirtualCameraDevice based on the configuration passed in.
-    // `config`: a VirtualCameraConfig defining how the new device should behave.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t CreateDevice_Deprecated(::fidl::BytePart _request_buffer, VirtualCameraConfig config);
-
    private:
     ::zx::channel channel_;
   };
@@ -666,15 +631,6 @@ class VirtualCameraFactory final {
     // `config`: a VirtualCameraConfig defining how the new device should behave.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::CreateDevice CreateDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, VirtualCameraConfig config);
-
-    // Creates a new VirtualCameraDevice based on the configuration passed in.
-    // `config`: a VirtualCameraConfig defining how the new device should behave.
-    static zx_status_t CreateDevice_Deprecated(zx::unowned_channel _client_end, VirtualCameraConfig config);
-
-    // Creates a new VirtualCameraDevice based on the configuration passed in.
-    // `config`: a VirtualCameraConfig defining how the new device should behave.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t CreateDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, VirtualCameraConfig config);
 
   };
 

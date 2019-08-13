@@ -232,14 +232,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetClass GetClass(::fidl::BytePart _response_buffer);
 
-    // Lookup what type of serial device this is.
-    zx_status_t GetClass_Deprecated(Class* out_device_class);
-
-    // Lookup what type of serial device this is.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetClassResponse> GetClass_Deprecated(::fidl::BytePart _response_buffer, Class* out_device_class);
-
     // Set the configuration of this serial device.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetConfig SetConfig(Config config);
@@ -247,14 +239,6 @@ class Device final {
     // Set the configuration of this serial device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetConfig SetConfig(::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer);
-
-    // Set the configuration of this serial device.
-    zx_status_t SetConfig_Deprecated(Config config, int32_t* out_s);
-
-    // Set the configuration of this serial device.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<SetConfigResponse> SetConfig_Deprecated(::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
    private:
     ::zx::channel channel_;
@@ -273,14 +257,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetClass GetClass(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Lookup what type of serial device this is.
-    static zx_status_t GetClass_Deprecated(zx::unowned_channel _client_end, Class* out_device_class);
-
-    // Lookup what type of serial device this is.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetClassResponse> GetClass_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Class* out_device_class);
-
     // Set the configuration of this serial device.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, Config config);
@@ -288,14 +264,6 @@ class Device final {
     // Set the configuration of this serial device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer);
-
-    // Set the configuration of this serial device.
-    static zx_status_t SetConfig_Deprecated(zx::unowned_channel _client_end, Config config, int32_t* out_s);
-
-    // Set the configuration of this serial device.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<SetConfigResponse> SetConfig_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
   };
 

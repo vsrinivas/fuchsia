@@ -169,32 +169,6 @@ class Handler final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::OnException OnException(::fidl::BytePart _request_buffer, ::zx::exception exception, ExceptionInfo info, ::fidl::BytePart _response_buffer);
 
-    // This exception mirrors closely the information provided by exception
-    // channels. The design is to have clients of this API behave as closely as
-    // possible to native exception handlers that are listening to an exception
-    // channel.
-    //
-    // `exception` is an exception handle, which controls the exception's
-    // lifetime. See exception zircon docs for more information.
-    //
-    // `info` represents basic exception information as provided by the
-    // exception channel.
-    zx_status_t OnException_Deprecated(::zx::exception exception, ExceptionInfo info);
-
-    // This exception mirrors closely the information provided by exception
-    // channels. The design is to have clients of this API behave as closely as
-    // possible to native exception handlers that are listening to an exception
-    // channel.
-    //
-    // `exception` is an exception handle, which controls the exception's
-    // lifetime. See exception zircon docs for more information.
-    //
-    // `info` represents basic exception information as provided by the
-    // exception channel.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<OnExceptionResponse> OnException_Deprecated(::fidl::BytePart _request_buffer, ::zx::exception exception, ExceptionInfo info);
-
    private:
     ::zx::channel channel_;
   };
@@ -229,32 +203,6 @@ class Handler final {
     // exception channel.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::OnException OnException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ExceptionInfo info, ::fidl::BytePart _response_buffer);
-
-    // This exception mirrors closely the information provided by exception
-    // channels. The design is to have clients of this API behave as closely as
-    // possible to native exception handlers that are listening to an exception
-    // channel.
-    //
-    // `exception` is an exception handle, which controls the exception's
-    // lifetime. See exception zircon docs for more information.
-    //
-    // `info` represents basic exception information as provided by the
-    // exception channel.
-    static zx_status_t OnException_Deprecated(zx::unowned_channel _client_end, ::zx::exception exception, ExceptionInfo info);
-
-    // This exception mirrors closely the information provided by exception
-    // channels. The design is to have clients of this API behave as closely as
-    // possible to native exception handlers that are listening to an exception
-    // channel.
-    //
-    // `exception` is an exception handle, which controls the exception's
-    // lifetime. See exception zircon docs for more information.
-    //
-    // `info` represents basic exception information as provided by the
-    // exception channel.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<OnExceptionResponse> OnException_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ExceptionInfo info);
 
   };
 

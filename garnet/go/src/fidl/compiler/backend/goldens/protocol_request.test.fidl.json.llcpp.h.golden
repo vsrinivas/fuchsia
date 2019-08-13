@@ -240,23 +240,11 @@ class Parent final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetChild GetChild(::fidl::BytePart _response_buffer);
 
-    zx_status_t GetChild_Deprecated(::zx::channel* out_c);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetChildResponse> GetChild_Deprecated(::fidl::BytePart _response_buffer, ::zx::channel* out_c);
-
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetChildRequest GetChildRequest();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetChildRequest GetChildRequest(::fidl::BytePart _response_buffer);
-
-    zx_status_t GetChildRequest_Deprecated(::zx::channel* out_r);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest_Deprecated(::fidl::BytePart _response_buffer, ::zx::channel* out_r);
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::TakeChild TakeChild(::zx::channel c);
@@ -264,21 +252,11 @@ class Parent final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::TakeChild TakeChild(::fidl::BytePart _request_buffer, ::zx::channel c);
 
-    zx_status_t TakeChild_Deprecated(::zx::channel c);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t TakeChild_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel c);
-
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::TakeChildRequest TakeChildRequest(::zx::channel r);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::TakeChildRequest TakeChildRequest(::fidl::BytePart _request_buffer, ::zx::channel r);
-
-    zx_status_t TakeChildRequest_Deprecated(::zx::channel r);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t TakeChildRequest_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel r);
 
    private:
     ::zx::channel channel_;
@@ -295,23 +273,11 @@ class Parent final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetChild GetChild(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t GetChild_Deprecated(zx::unowned_channel _client_end, ::zx::channel* out_c);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetChildResponse> GetChild_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_c);
-
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetChildRequest GetChildRequest(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetChildRequest GetChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    static zx_status_t GetChildRequest_Deprecated(zx::unowned_channel _client_end, ::zx::channel* out_r);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_r);
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::TakeChild TakeChild(zx::unowned_channel _client_end, ::zx::channel c);
@@ -319,21 +285,11 @@ class Parent final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::TakeChild TakeChild(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel c);
 
-    static zx_status_t TakeChild_Deprecated(zx::unowned_channel _client_end, ::zx::channel c);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t TakeChild_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel c);
-
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::TakeChildRequest TakeChildRequest(zx::unowned_channel _client_end, ::zx::channel r);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::TakeChildRequest TakeChildRequest(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel r);
-
-    static zx_status_t TakeChildRequest_Deprecated(zx::unowned_channel _client_end, ::zx::channel r);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t TakeChildRequest_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel r);
 
   };
 

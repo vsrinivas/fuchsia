@@ -112,12 +112,6 @@ class Llcpp final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Action Action(::fidl::BytePart _response_buffer);
 
-    zx_status_t Action_Deprecated(int32_t* out_v);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ActionResponse> Action_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_v);
-
    private:
     ::zx::channel channel_;
   };
@@ -132,12 +126,6 @@ class Llcpp final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Action Action(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    static zx_status_t Action_Deprecated(zx::unowned_channel _client_end, int32_t* out_v);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ActionResponse> Action_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_v);
 
   };
 

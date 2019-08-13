@@ -43,8 +43,10 @@ TEST(DebugDataTest, PublishData) {
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
   ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
 
-  ASSERT_OK(::llcpp::fuchsia::debugdata::DebugData::Call::Publish_Deprecated(
-      zx::unowned_channel(client), fidl::StringView(strlen(kTestSink), kTestSink), std::move(vmo)));
+  ASSERT_OK(::llcpp::fuchsia::debugdata::DebugData::Call::Publish(
+                zx::unowned_channel(client), fidl::StringView(strlen(kTestSink), kTestSink),
+                std::move(vmo))
+                .status());
 
   ASSERT_OK(loop.RunUntilIdle());
   loop.Shutdown();
@@ -90,9 +92,10 @@ TEST(DebugDataTest, LoadConfig) {
 
   constexpr char kTestPath[] = "/dir/config";
 
-  zx::vmo vmo;
-  ASSERT_OK(::llcpp::fuchsia::debugdata::DebugData::Call::LoadConfig_Deprecated(
-      zx::unowned_channel(client), fidl::StringView(strlen(kTestPath), kTestPath), &vmo));
+  auto result = ::llcpp::fuchsia::debugdata::DebugData::Call::LoadConfig(
+      zx::unowned_channel(client), fidl::StringView(strlen(kTestPath), kTestPath));
+  ASSERT_OK(result.status());
+  zx::vmo vmo = std::move(result->config);
 
   loop.Shutdown();
   vfs.reset();

@@ -85,38 +85,6 @@ Light::UnownedResultOf::GetName Light::Call::GetName(zx::unowned_channel _client
   return UnownedResultOf::GetName(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Light::GetNameResponse> Light::SyncClient::GetName_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name) {
-  return Light::Call::GetName_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer), out_status, out_name);
-}
-
-::fidl::DecodeResult<Light::GetNameResponse> Light::Call::GetName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name) {
-  if (_request_buffer.capacity() < GetNameRequest::PrimarySize) {
-    return ::fidl::DecodeResult<GetNameResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
-  }
-  auto& _request = *reinterpret_cast<GetNameRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kLight_GetName_GenOrdinal;
-  _request.index = std::move(index);
-  _request_buffer.set_actual(sizeof(GetNameRequest));
-  ::fidl::DecodedMessage<GetNameRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<GetNameResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<GetNameRequest, GetNameResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<GetNameResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_name = std::move(_response.name);
-  return _decode_result;
-}
-
 ::fidl::DecodeResult<Light::GetNameResponse> Light::InPlace::GetName(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetNameRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kLight_GetName_GenOrdinal;
@@ -172,67 +140,6 @@ Light::UnownedResultOf::GetCount Light::SyncClient::GetCount(::fidl::BytePart _r
 
 Light::UnownedResultOf::GetCount Light::Call::GetCount(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetCount(std::move(_client_end), std::move(_response_buffer));
-}
-
-zx_status_t Light::SyncClient::GetCount_Deprecated(uint32_t* out_count) {
-  return Light::Call::GetCount_Deprecated(zx::unowned_channel(this->channel_), out_count);
-}
-
-zx_status_t Light::Call::GetCount_Deprecated(zx::unowned_channel _client_end, uint32_t* out_count) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCountRequest, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<GetCountRequest*>(_write_bytes);
-  _request._hdr.ordinal = kLight_GetCount_GenOrdinal;
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCountRequest));
-  ::fidl::DecodedMessage<GetCountRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetCountResponse, ::fidl::MessageDirection::kReceiving>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<GetCountRequest, GetCountResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_count = std::move(_response.count);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<Light::GetCountResponse> Light::SyncClient::GetCount_Deprecated(::fidl::BytePart _response_buffer, uint32_t* out_count) {
-  return Light::Call::GetCount_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_count);
-}
-
-::fidl::DecodeResult<Light::GetCountResponse> Light::Call::GetCount_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, uint32_t* out_count) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetCountRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  auto& _request = *reinterpret_cast<GetCountRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kLight_GetCount_GenOrdinal;
-  _request_buffer.set_actual(sizeof(GetCountRequest));
-  ::fidl::DecodedMessage<GetCountRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<GetCountResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<GetCountRequest, GetCountResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<GetCountResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_count = std::move(_response.count);
-  return _decode_result;
 }
 
 ::fidl::DecodeResult<Light::GetCountResponse> Light::InPlace::GetCount(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
@@ -305,74 +212,6 @@ Light::UnownedResultOf::HasCapability Light::Call::HasCapability(zx::unowned_cha
   return UnownedResultOf::HasCapability(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(capability), std::move(_response_buffer));
 }
 
-zx_status_t Light::SyncClient::HasCapability_Deprecated(uint32_t index, Capability capability, int32_t* out_status, bool* out_has) {
-  return Light::Call::HasCapability_Deprecated(zx::unowned_channel(this->channel_), std::move(index), std::move(capability), out_status, out_has);
-}
-
-zx_status_t Light::Call::HasCapability_Deprecated(zx::unowned_channel _client_end, uint32_t index, Capability capability, int32_t* out_status, bool* out_has) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityRequest, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<HasCapabilityRequest*>(_write_bytes);
-  _request._hdr.ordinal = kLight_HasCapability_GenOrdinal;
-  _request.index = std::move(index);
-  _request.capability = std::move(capability);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(HasCapabilityRequest));
-  ::fidl::DecodedMessage<HasCapabilityRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityResponse, ::fidl::MessageDirection::kReceiving>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<HasCapabilityRequest, HasCapabilityResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_has = std::move(_response.has);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<Light::HasCapabilityResponse> Light::SyncClient::HasCapability_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, Capability capability, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_has) {
-  return Light::Call::HasCapability_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(capability), std::move(_response_buffer), out_status, out_has);
-}
-
-::fidl::DecodeResult<Light::HasCapabilityResponse> Light::Call::HasCapability_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Capability capability, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_has) {
-  if (_request_buffer.capacity() < HasCapabilityRequest::PrimarySize) {
-    return ::fidl::DecodeResult<HasCapabilityResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
-  }
-  auto& _request = *reinterpret_cast<HasCapabilityRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kLight_HasCapability_GenOrdinal;
-  _request.index = std::move(index);
-  _request.capability = std::move(capability);
-  _request_buffer.set_actual(sizeof(HasCapabilityRequest));
-  ::fidl::DecodedMessage<HasCapabilityRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<HasCapabilityResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<HasCapabilityRequest, HasCapabilityResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<HasCapabilityResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_has = std::move(_response.has);
-  return _decode_result;
-}
-
 ::fidl::DecodeResult<Light::HasCapabilityResponse> Light::InPlace::HasCapability(zx::unowned_channel _client_end, ::fidl::DecodedMessage<HasCapabilityRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kLight_HasCapability_GenOrdinal;
@@ -434,72 +273,6 @@ Light::UnownedResultOf::GetSimpleValue Light::SyncClient::GetSimpleValue(::fidl:
 
 Light::UnownedResultOf::GetSimpleValue Light::Call::GetSimpleValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetSimpleValue(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
-}
-
-zx_status_t Light::SyncClient::GetSimpleValue_Deprecated(uint32_t index, int32_t* out_status, uint8_t* out_value) {
-  return Light::Call::GetSimpleValue_Deprecated(zx::unowned_channel(this->channel_), std::move(index), out_status, out_value);
-}
-
-zx_status_t Light::Call::GetSimpleValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, int32_t* out_status, uint8_t* out_value) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueRequest, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<GetSimpleValueRequest*>(_write_bytes);
-  _request._hdr.ordinal = kLight_GetSimpleValue_GenOrdinal;
-  _request.index = std::move(index);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetSimpleValueRequest));
-  ::fidl::DecodedMessage<GetSimpleValueRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueResponse, ::fidl::MessageDirection::kReceiving>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<GetSimpleValueRequest, GetSimpleValueResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_value = std::move(_response.value);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<Light::GetSimpleValueResponse> Light::SyncClient::GetSimpleValue_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, uint8_t* out_value) {
-  return Light::Call::GetSimpleValue_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer), out_status, out_value);
-}
-
-::fidl::DecodeResult<Light::GetSimpleValueResponse> Light::Call::GetSimpleValue_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, uint8_t* out_value) {
-  if (_request_buffer.capacity() < GetSimpleValueRequest::PrimarySize) {
-    return ::fidl::DecodeResult<GetSimpleValueResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
-  }
-  auto& _request = *reinterpret_cast<GetSimpleValueRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kLight_GetSimpleValue_GenOrdinal;
-  _request.index = std::move(index);
-  _request_buffer.set_actual(sizeof(GetSimpleValueRequest));
-  ::fidl::DecodedMessage<GetSimpleValueRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<GetSimpleValueResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<GetSimpleValueRequest, GetSimpleValueResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<GetSimpleValueResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_value = std::move(_response.value);
-  return _decode_result;
 }
 
 ::fidl::DecodeResult<Light::GetSimpleValueResponse> Light::InPlace::GetSimpleValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSimpleValueRequest> params, ::fidl::BytePart response_buffer) {
@@ -567,72 +340,6 @@ Light::UnownedResultOf::SetSimpleValue Light::Call::SetSimpleValue(zx::unowned_c
   return UnownedResultOf::SetSimpleValue(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(value), std::move(_response_buffer));
 }
 
-zx_status_t Light::SyncClient::SetSimpleValue_Deprecated(uint32_t index, uint8_t value, int32_t* out_status) {
-  return Light::Call::SetSimpleValue_Deprecated(zx::unowned_channel(this->channel_), std::move(index), std::move(value), out_status);
-}
-
-zx_status_t Light::Call::SetSimpleValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, uint8_t value, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueRequest, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<SetSimpleValueRequest*>(_write_bytes);
-  _request._hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
-  _request.index = std::move(index);
-  _request.value = std::move(value);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetSimpleValueRequest));
-  ::fidl::DecodedMessage<SetSimpleValueRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueResponse, ::fidl::MessageDirection::kReceiving>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<SetSimpleValueRequest, SetSimpleValueResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<Light::SetSimpleValueResponse> Light::SyncClient::SetSimpleValue_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Light::Call::SetSimpleValue_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(value), std::move(_response_buffer), out_status);
-}
-
-::fidl::DecodeResult<Light::SetSimpleValueResponse> Light::Call::SetSimpleValue_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  if (_request_buffer.capacity() < SetSimpleValueRequest::PrimarySize) {
-    return ::fidl::DecodeResult<SetSimpleValueResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
-  }
-  auto& _request = *reinterpret_cast<SetSimpleValueRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
-  _request.index = std::move(index);
-  _request.value = std::move(value);
-  _request_buffer.set_actual(sizeof(SetSimpleValueRequest));
-  ::fidl::DecodedMessage<SetSimpleValueRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<SetSimpleValueResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<SetSimpleValueRequest, SetSimpleValueResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<SetSimpleValueResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  return _decode_result;
-}
-
 ::fidl::DecodeResult<Light::SetSimpleValueResponse> Light::InPlace::SetSimpleValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSimpleValueRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
@@ -694,72 +401,6 @@ Light::UnownedResultOf::GetRgbValue Light::SyncClient::GetRgbValue(::fidl::ByteP
 
 Light::UnownedResultOf::GetRgbValue Light::Call::GetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetRgbValue(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
-}
-
-zx_status_t Light::SyncClient::GetRgbValue_Deprecated(uint32_t index, int32_t* out_status, Rgb* out_value) {
-  return Light::Call::GetRgbValue_Deprecated(zx::unowned_channel(this->channel_), std::move(index), out_status, out_value);
-}
-
-zx_status_t Light::Call::GetRgbValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, int32_t* out_status, Rgb* out_value) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueRequest, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<GetRgbValueRequest*>(_write_bytes);
-  _request._hdr.ordinal = kLight_GetRgbValue_GenOrdinal;
-  _request.index = std::move(index);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRgbValueRequest));
-  ::fidl::DecodedMessage<GetRgbValueRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueResponse, ::fidl::MessageDirection::kReceiving>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<GetRgbValueRequest, GetRgbValueResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_value = std::move(_response.value);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<Light::GetRgbValueResponse> Light::SyncClient::GetRgbValue_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, Rgb* out_value) {
-  return Light::Call::GetRgbValue_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer), out_status, out_value);
-}
-
-::fidl::DecodeResult<Light::GetRgbValueResponse> Light::Call::GetRgbValue_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, Rgb* out_value) {
-  if (_request_buffer.capacity() < GetRgbValueRequest::PrimarySize) {
-    return ::fidl::DecodeResult<GetRgbValueResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
-  }
-  auto& _request = *reinterpret_cast<GetRgbValueRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kLight_GetRgbValue_GenOrdinal;
-  _request.index = std::move(index);
-  _request_buffer.set_actual(sizeof(GetRgbValueRequest));
-  ::fidl::DecodedMessage<GetRgbValueRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<GetRgbValueResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<GetRgbValueRequest, GetRgbValueResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<GetRgbValueResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  *out_value = std::move(_response.value);
-  return _decode_result;
 }
 
 ::fidl::DecodeResult<Light::GetRgbValueResponse> Light::InPlace::GetRgbValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRgbValueRequest> params, ::fidl::BytePart response_buffer) {
@@ -825,72 +466,6 @@ Light::UnownedResultOf::SetRgbValue Light::SyncClient::SetRgbValue(::fidl::ByteP
 
 Light::UnownedResultOf::SetRgbValue Light::Call::SetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Rgb value, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetRgbValue(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(value), std::move(_response_buffer));
-}
-
-zx_status_t Light::SyncClient::SetRgbValue_Deprecated(uint32_t index, Rgb value, int32_t* out_status) {
-  return Light::Call::SetRgbValue_Deprecated(zx::unowned_channel(this->channel_), std::move(index), std::move(value), out_status);
-}
-
-zx_status_t Light::Call::SetRgbValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, Rgb value, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueRequest, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<SetRgbValueRequest*>(_write_bytes);
-  _request._hdr.ordinal = kLight_SetRgbValue_GenOrdinal;
-  _request.index = std::move(index);
-  _request.value = std::move(value);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetRgbValueRequest));
-  ::fidl::DecodedMessage<SetRgbValueRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueResponse, ::fidl::MessageDirection::kReceiving>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<SetRgbValueRequest, SetRgbValueResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<Light::SetRgbValueResponse> Light::SyncClient::SetRgbValue_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, Rgb value, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Light::Call::SetRgbValue_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(value), std::move(_response_buffer), out_status);
-}
-
-::fidl::DecodeResult<Light::SetRgbValueResponse> Light::Call::SetRgbValue_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Rgb value, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  if (_request_buffer.capacity() < SetRgbValueRequest::PrimarySize) {
-    return ::fidl::DecodeResult<SetRgbValueResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
-  }
-  auto& _request = *reinterpret_cast<SetRgbValueRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kLight_SetRgbValue_GenOrdinal;
-  _request.index = std::move(index);
-  _request.value = std::move(value);
-  _request_buffer.set_actual(sizeof(SetRgbValueRequest));
-  ::fidl::DecodedMessage<SetRgbValueRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<SetRgbValueResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<SetRgbValueRequest, SetRgbValueResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<SetRgbValueResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  return _decode_result;
 }
 
 ::fidl::DecodeResult<Light::SetRgbValueResponse> Light::InPlace::SetRgbValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetRgbValueRequest> params, ::fidl::BytePart response_buffer) {

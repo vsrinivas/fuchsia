@@ -527,22 +527,11 @@ class Light final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetName GetName(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetNameResponse> GetName_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
-
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetCount GetCount();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetCount GetCount(::fidl::BytePart _response_buffer);
-
-    zx_status_t GetCount_Deprecated(uint32_t* out_count);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetCountResponse> GetCount_Deprecated(::fidl::BytePart _response_buffer, uint32_t* out_count);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::HasCapability HasCapability(uint32_t index, Capability capability);
@@ -550,23 +539,11 @@ class Light final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::HasCapability HasCapability(::fidl::BytePart _request_buffer, uint32_t index, Capability capability, ::fidl::BytePart _response_buffer);
 
-    zx_status_t HasCapability_Deprecated(uint32_t index, Capability capability, int32_t* out_status, bool* out_has);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<HasCapabilityResponse> HasCapability_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, Capability capability, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_has);
-
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetSimpleValue GetSimpleValue(uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetSimpleValue GetSimpleValue(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
-
-    zx_status_t GetSimpleValue_Deprecated(uint32_t index, int32_t* out_status, uint8_t* out_value);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetSimpleValueResponse> GetSimpleValue_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, uint8_t* out_value);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetSimpleValue SetSimpleValue(uint32_t index, uint8_t value);
@@ -574,35 +551,17 @@ class Light final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetSimpleValue SetSimpleValue(::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer);
 
-    zx_status_t SetSimpleValue_Deprecated(uint32_t index, uint8_t value, int32_t* out_status);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<SetSimpleValueResponse> SetSimpleValue_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetRgbValue GetRgbValue(uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetRgbValue GetRgbValue(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
-    zx_status_t GetRgbValue_Deprecated(uint32_t index, int32_t* out_status, Rgb* out_value);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetRgbValueResponse> GetRgbValue_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, Rgb* out_value);
-
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetRgbValue SetRgbValue(uint32_t index, Rgb value);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetRgbValue SetRgbValue(::fidl::BytePart _request_buffer, uint32_t index, Rgb value, ::fidl::BytePart _response_buffer);
-
-    zx_status_t SetRgbValue_Deprecated(uint32_t index, Rgb value, int32_t* out_status);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<SetRgbValueResponse> SetRgbValue_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, Rgb value, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
    private:
     ::zx::channel channel_;
@@ -619,22 +578,11 @@ class Light final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetName GetName(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetNameResponse> GetName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
-
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetCount GetCount(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetCount GetCount(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    static zx_status_t GetCount_Deprecated(zx::unowned_channel _client_end, uint32_t* out_count);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetCountResponse> GetCount_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, uint32_t* out_count);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::HasCapability HasCapability(zx::unowned_channel _client_end, uint32_t index, Capability capability);
@@ -642,23 +590,11 @@ class Light final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::HasCapability HasCapability(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Capability capability, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t HasCapability_Deprecated(zx::unowned_channel _client_end, uint32_t index, Capability capability, int32_t* out_status, bool* out_has);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<HasCapabilityResponse> HasCapability_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Capability capability, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_has);
-
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetSimpleValue GetSimpleValue(zx::unowned_channel _client_end, uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetSimpleValue GetSimpleValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
-
-    static zx_status_t GetSimpleValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, int32_t* out_status, uint8_t* out_value);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetSimpleValueResponse> GetSimpleValue_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, uint8_t* out_value);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetSimpleValue SetSimpleValue(zx::unowned_channel _client_end, uint32_t index, uint8_t value);
@@ -666,35 +602,17 @@ class Light final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetSimpleValue SetSimpleValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t SetSimpleValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, uint8_t value, int32_t* out_status);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<SetSimpleValueResponse> SetSimpleValue_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetRgbValue GetRgbValue(zx::unowned_channel _client_end, uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetRgbValue GetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
-    static zx_status_t GetRgbValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, int32_t* out_status, Rgb* out_value);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetRgbValueResponse> GetRgbValue_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, int32_t* out_status, Rgb* out_value);
-
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetRgbValue SetRgbValue(zx::unowned_channel _client_end, uint32_t index, Rgb value);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetRgbValue SetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Rgb value, ::fidl::BytePart _response_buffer);
-
-    static zx_status_t SetRgbValue_Deprecated(zx::unowned_channel _client_end, uint32_t index, Rgb value, int32_t* out_status);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<SetRgbValueResponse> SetRgbValue_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, Rgb value, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
   };
 

@@ -662,14 +662,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Bind Bind(::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
 
-    // Attempt to bind the requested driver to this device
-    zx_status_t Bind_Deprecated(::fidl::StringView driver, int32_t* out_status);
-
-    // Attempt to bind the requested driver to this device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<BindResponse> Bind_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -680,16 +672,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ScheduleUnbind ScheduleUnbind(::fidl::BytePart _response_buffer);
 
-    // Disconnect this device and allow its parent to be bound again.
-    // This may not complete before it returns.
-    zx_status_t ScheduleUnbind_Deprecated(int32_t* out_status);
-
-    // Disconnect this device and allow its parent to be bound again.
-    // This may not complete before it returns.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ScheduleUnbindResponse> ScheduleUnbind_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Return the name of the driver managing this the device
     // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDriverName GetDriverName();
@@ -697,12 +679,6 @@ class Controller final {
     // Return the name of the driver managing this the device
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetDriverName GetDriverName(::fidl::BytePart _response_buffer);
-
-
-    // Return the name of the driver managing this the device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetDriverNameResponse> GetDriverName_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
 
     // Return the name of the device
     // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
@@ -712,12 +688,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetDeviceName GetDeviceName(::fidl::BytePart _response_buffer);
 
-
-    // Return the name of the device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName_Deprecated(::fidl::BytePart _response_buffer, ::fidl::StringView* out_name);
-
     // Return the topological path for this device
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetTopologicalPath GetTopologicalPath();
@@ -725,12 +695,6 @@ class Controller final {
     // Return the topological path for this device
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetTopologicalPath GetTopologicalPath(::fidl::BytePart _response_buffer);
-
-
-    // Return the topological path for this device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path);
 
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -740,14 +704,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetEventHandle GetEventHandle(::fidl::BytePart _response_buffer);
 
-    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
-    zx_status_t GetEventHandle_Deprecated(int32_t* out_status, ::zx::event* out_event);
-
-    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::event* out_event);
-
     // Return the current logging flags for this device's driver
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDriverLogFlags GetDriverLogFlags();
@@ -755,14 +711,6 @@ class Controller final {
     // Return the current logging flags for this device's driver
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetDriverLogFlags GetDriverLogFlags(::fidl::BytePart _response_buffer);
-
-    // Return the current logging flags for this device's driver
-    zx_status_t GetDriverLogFlags_Deprecated(int32_t* out_status, uint32_t* out_flags);
-
-    // Return the current logging flags for this device's driver
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetDriverLogFlagsResponse> GetDriverLogFlags_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, uint32_t* out_flags);
 
     // Set the logging flags for this device's driver.
     // Each set bit in `clear_flags` will be cleared in the log flags state.
@@ -776,18 +724,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetDriverLogFlags SetDriverLogFlags(::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer);
 
-    // Set the logging flags for this device's driver.
-    // Each set bit in `clear_flags` will be cleared in the log flags state.
-    // Each set bit in `set_flags` will then be set in the log flags state.
-    zx_status_t SetDriverLogFlags_Deprecated(uint32_t clear_flags, uint32_t set_flags, int32_t* out_status);
-
-    // Set the logging flags for this device's driver.
-    // Each set bit in `clear_flags` will be cleared in the log flags state.
-    // Each set bit in `set_flags` will then be set in the log flags state.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<SetDriverLogFlagsResponse> SetDriverLogFlags_Deprecated(::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Debug command: execute the device's suspend hook
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::DebugSuspend DebugSuspend();
@@ -796,14 +732,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::DebugSuspend DebugSuspend(::fidl::BytePart _response_buffer);
 
-    // Debug command: execute the device's suspend hook
-    zx_status_t DebugSuspend_Deprecated(int32_t* out_status);
-
-    // Debug command: execute the device's suspend hook
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<DebugSuspendResponse> DebugSuspend_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Debug command: execute the device's resume hook
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::DebugResume DebugResume();
@@ -811,14 +739,6 @@ class Controller final {
     // Debug command: execute the device's resume hook
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::DebugResume DebugResume(::fidl::BytePart _response_buffer);
-
-    // Debug command: execute the device's resume hook
-    zx_status_t DebugResume_Deprecated(int32_t* out_status);
-
-    // Debug command: execute the device's resume hook
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<DebugResumeResponse> DebugResume_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
     // The |hook_wait_time| is the time that the driver expects to take for each device hook in
@@ -833,20 +753,6 @@ class Controller final {
     // Returns whether the driver passed the compatibility check.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::RunCompatibilityTests RunCompatibilityTests(::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer);
-
-    // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
-    // The |hook_wait_time| is the time that the driver expects to take for each device hook in
-    // nanoseconds.
-    // Returns whether the driver passed the compatibility check.
-    zx_status_t RunCompatibilityTests_Deprecated(int64_t hook_wait_time, uint32_t* out_status);
-
-    // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
-    // The |hook_wait_time| is the time that the driver expects to take for each device hook in
-    // nanoseconds.
-    // Returns whether the driver passed the compatibility check.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<RunCompatibilityTestsResponse> RunCompatibilityTests_Deprecated(::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer, uint32_t* out_status);
 
    private:
     ::zx::channel channel_;
@@ -865,14 +771,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
 
-    // Attempt to bind the requested driver to this device
-    static zx_status_t Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView driver, int32_t* out_status);
-
-    // Attempt to bind the requested driver to this device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<BindResponse> Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -883,16 +781,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ScheduleUnbind ScheduleUnbind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Disconnect this device and allow its parent to be bound again.
-    // This may not complete before it returns.
-    static zx_status_t ScheduleUnbind_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
-
-    // Disconnect this device and allow its parent to be bound again.
-    // This may not complete before it returns.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ScheduleUnbindResponse> ScheduleUnbind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Return the name of the driver managing this the device
     // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDriverName GetDriverName(zx::unowned_channel _client_end);
@@ -900,12 +788,6 @@ class Controller final {
     // Return the name of the driver managing this the device
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetDriverName GetDriverName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-
-    // Return the name of the driver managing this the device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetDriverNameResponse> GetDriverName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
 
     // Return the name of the device
     // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
@@ -915,12 +797,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-
-    // Return the name of the device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_name);
-
     // Return the topological path for this device
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetTopologicalPath GetTopologicalPath(zx::unowned_channel _client_end);
@@ -928,12 +804,6 @@ class Controller final {
     // Return the topological path for this device
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetTopologicalPath GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-
-    // Return the topological path for this device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path);
 
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -943,14 +813,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetEventHandle GetEventHandle(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
-    static zx_status_t GetEventHandle_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::event* out_event);
-
-    // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::event* out_event);
-
     // Return the current logging flags for this device's driver
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDriverLogFlags GetDriverLogFlags(zx::unowned_channel _client_end);
@@ -958,14 +820,6 @@ class Controller final {
     // Return the current logging flags for this device's driver
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetDriverLogFlags GetDriverLogFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Return the current logging flags for this device's driver
-    static zx_status_t GetDriverLogFlags_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, uint32_t* out_flags);
-
-    // Return the current logging flags for this device's driver
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetDriverLogFlagsResponse> GetDriverLogFlags_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, uint32_t* out_flags);
 
     // Set the logging flags for this device's driver.
     // Each set bit in `clear_flags` will be cleared in the log flags state.
@@ -979,18 +833,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetDriverLogFlags SetDriverLogFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer);
 
-    // Set the logging flags for this device's driver.
-    // Each set bit in `clear_flags` will be cleared in the log flags state.
-    // Each set bit in `set_flags` will then be set in the log flags state.
-    static zx_status_t SetDriverLogFlags_Deprecated(zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags, int32_t* out_status);
-
-    // Set the logging flags for this device's driver.
-    // Each set bit in `clear_flags` will be cleared in the log flags state.
-    // Each set bit in `set_flags` will then be set in the log flags state.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<SetDriverLogFlagsResponse> SetDriverLogFlags_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Debug command: execute the device's suspend hook
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::DebugSuspend DebugSuspend(zx::unowned_channel _client_end);
@@ -999,14 +841,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::DebugSuspend DebugSuspend(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Debug command: execute the device's suspend hook
-    static zx_status_t DebugSuspend_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
-
-    // Debug command: execute the device's suspend hook
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<DebugSuspendResponse> DebugSuspend_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Debug command: execute the device's resume hook
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::DebugResume DebugResume(zx::unowned_channel _client_end);
@@ -1014,14 +848,6 @@ class Controller final {
     // Debug command: execute the device's resume hook
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::DebugResume DebugResume(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Debug command: execute the device's resume hook
-    static zx_status_t DebugResume_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
-
-    // Debug command: execute the device's resume hook
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<DebugResumeResponse> DebugResume_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
     // The |hook_wait_time| is the time that the driver expects to take for each device hook in
@@ -1036,20 +862,6 @@ class Controller final {
     // Returns whether the driver passed the compatibility check.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::RunCompatibilityTests RunCompatibilityTests(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer);
-
-    // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
-    // The |hook_wait_time| is the time that the driver expects to take for each device hook in
-    // nanoseconds.
-    // Returns whether the driver passed the compatibility check.
-    static zx_status_t RunCompatibilityTests_Deprecated(zx::unowned_channel _client_end, int64_t hook_wait_time, uint32_t* out_status);
-
-    // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
-    // The |hook_wait_time| is the time that the driver expects to take for each device hook in
-    // nanoseconds.
-    // Returns whether the driver passed the compatibility check.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<RunCompatibilityTestsResponse> RunCompatibilityTests_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer, uint32_t* out_status);
 
   };
 
@@ -1473,12 +1285,6 @@ class NameProvider final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetDeviceName GetDeviceName(::fidl::BytePart _response_buffer);
 
-
-    // Return the name of this Fuchsia device.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName_Deprecated(::fidl::BytePart _response_buffer, NameProvider_GetDeviceName_Result* out_result);
-
    private:
     ::zx::channel channel_;
   };
@@ -1495,12 +1301,6 @@ class NameProvider final {
     // Return the name of this Fuchsia device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-
-    // Return the name of this Fuchsia device.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NameProvider_GetDeviceName_Result* out_result);
 
   };
 

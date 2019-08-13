@@ -266,14 +266,6 @@ class Bus final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Enable Enable(::fidl::BytePart _response_buffer);
 
-    // Enables the virtual bus.
-    zx_status_t Enable_Deprecated(int32_t* out_status);
-
-    // Enables the virtual bus.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Disables the virtual bus.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Disable Disable();
@@ -281,14 +273,6 @@ class Bus final {
     // Disables the virtual bus.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Disable Disable(::fidl::BytePart _response_buffer);
-
-    // Disables the virtual bus.
-    zx_status_t Disable_Deprecated(int32_t* out_status);
-
-    // Disables the virtual bus.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Simulates a USB connected event.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -299,28 +283,12 @@ class Bus final {
     UnownedResultOf::Connect Connect(::fidl::BytePart _response_buffer);
 
     // Simulates a USB connected event.
-    zx_status_t Connect_Deprecated(int32_t* out_status);
-
-    // Simulates a USB connected event.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Simulates a USB connected event.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Disconnect Disconnect();
 
     // Simulates a USB connected event.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Disconnect Disconnect(::fidl::BytePart _response_buffer);
-
-    // Simulates a USB connected event.
-    zx_status_t Disconnect_Deprecated(int32_t* out_status);
-
-    // Simulates a USB connected event.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<DisconnectResponse> Disconnect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
    private:
     ::zx::channel channel_;
@@ -339,14 +307,6 @@ class Bus final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Enable Enable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Enables the virtual bus.
-    static zx_status_t Enable_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
-
-    // Enables the virtual bus.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Disables the virtual bus.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Disable Disable(zx::unowned_channel _client_end);
@@ -354,14 +314,6 @@ class Bus final {
     // Disables the virtual bus.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Disable Disable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Disables the virtual bus.
-    static zx_status_t Disable_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
-
-    // Disables the virtual bus.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Simulates a USB connected event.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -372,28 +324,12 @@ class Bus final {
     static UnownedResultOf::Connect Connect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Simulates a USB connected event.
-    static zx_status_t Connect_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
-
-    // Simulates a USB connected event.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
-    // Simulates a USB connected event.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Disconnect Disconnect(zx::unowned_channel _client_end);
 
     // Simulates a USB connected event.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Disconnect Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Simulates a USB connected event.
-    static zx_status_t Disconnect_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
-
-    // Simulates a USB connected event.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<DisconnectResponse> Disconnect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
   };
 

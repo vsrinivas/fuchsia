@@ -265,11 +265,6 @@ class Interface final {
     ResultOf::Method Method();
 
 
-    // method comment #1
-    //
-    // method comment #3
-    zx_status_t Method_Deprecated();
-
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
@@ -290,11 +285,6 @@ class Interface final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Method Method(zx::unowned_channel _client_end);
 
-
-    // method comment #1
-    //
-    // method comment #3
-    static zx_status_t Method_Deprecated(zx::unowned_channel _client_end);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler

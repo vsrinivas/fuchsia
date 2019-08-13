@@ -112,12 +112,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetChannel GetChannel(::fidl::BytePart _response_buffer);
 
-    zx_status_t GetChannel_Deprecated(::zx::channel* out_ch);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetChannelResponse> GetChannel_Deprecated(::fidl::BytePart _response_buffer, ::zx::channel* out_ch);
-
    private:
     ::zx::channel channel_;
   };
@@ -132,12 +126,6 @@ class Device final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    static zx_status_t GetChannel_Deprecated(zx::unowned_channel _client_end, ::zx::channel* out_ch);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetChannelResponse> GetChannel_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::channel* out_ch);
 
   };
 

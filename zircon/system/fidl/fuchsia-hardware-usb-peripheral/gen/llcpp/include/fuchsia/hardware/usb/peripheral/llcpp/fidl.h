@@ -109,9 +109,6 @@ class Events final {
     ResultOf::FunctionRegistered FunctionRegistered();
 
 
-    // Invoked when a function registers
-    zx_status_t FunctionRegistered_Deprecated();
-
    private:
     ::zx::channel channel_;
   };
@@ -125,9 +122,6 @@ class Events final {
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::FunctionRegistered FunctionRegistered(zx::unowned_channel _client_end);
 
-
-    // Invoked when a function registers
-    static zx_status_t FunctionRegistered_Deprecated(zx::unowned_channel _client_end);
 
   };
 
@@ -632,18 +626,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetConfiguration SetConfiguration(::fidl::BytePart _request_buffer, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
 
-    // Sets the device's descriptors, adds the functions and creates the child devices for the
-    // configuration's interfaces.
-    // At least one function descriptor must be provided.
-    zx_status_t SetConfiguration_Deprecated(DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, Device_SetConfiguration_Result* out_result);
-
-    // Sets the device's descriptors, adds the functions and creates the child devices for the
-    // configuration's interfaces.
-    // At least one function descriptor must be provided.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<SetConfigurationResponse> SetConfiguration_Deprecated(::fidl::BytePart _request_buffer, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer, Device_SetConfiguration_Result* out_result);
-
     // Tells the device to remove the child devices for the configuration's interfaces
     // and reset the list of functions to empty.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -654,16 +636,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ClearFunctions ClearFunctions(::fidl::BytePart _response_buffer);
 
-    // Tells the device to remove the child devices for the configuration's interfaces
-    // and reset the list of functions to empty.
-    zx_status_t ClearFunctions_Deprecated(Device_ClearFunctions_Result* out_result);
-
-    // Tells the device to remove the child devices for the configuration's interfaces
-    // and reset the list of functions to empty.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(::fidl::BytePart _response_buffer, Device_ClearFunctions_Result* out_result);
-
     // Adds a state change listener that is invoked when a state change completes.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetStateChangeListener SetStateChangeListener(::zx::channel listener);
@@ -671,13 +643,6 @@ class Device final {
     // Adds a state change listener that is invoked when a state change completes.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetStateChangeListener SetStateChangeListener(::fidl::BytePart _request_buffer, ::zx::channel listener);
-
-    // Adds a state change listener that is invoked when a state change completes.
-    zx_status_t SetStateChangeListener_Deprecated(::zx::channel listener);
-
-    // Adds a state change listener that is invoked when a state change completes.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t SetStateChangeListener_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel listener);
 
    private:
     ::zx::channel channel_;
@@ -700,18 +665,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetConfiguration SetConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
 
-    // Sets the device's descriptors, adds the functions and creates the child devices for the
-    // configuration's interfaces.
-    // At least one function descriptor must be provided.
-    static zx_status_t SetConfiguration_Deprecated(zx::unowned_channel _client_end, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, Device_SetConfiguration_Result* out_result);
-
-    // Sets the device's descriptors, adds the functions and creates the child devices for the
-    // configuration's interfaces.
-    // At least one function descriptor must be provided.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<SetConfigurationResponse> SetConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor device_desc, ::fidl::VectorView<FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer, Device_SetConfiguration_Result* out_result);
-
     // Tells the device to remove the child devices for the configuration's interfaces
     // and reset the list of functions to empty.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -722,16 +675,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ClearFunctions ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Tells the device to remove the child devices for the configuration's interfaces
-    // and reset the list of functions to empty.
-    static zx_status_t ClearFunctions_Deprecated(zx::unowned_channel _client_end, Device_ClearFunctions_Result* out_result);
-
-    // Tells the device to remove the child devices for the configuration's interfaces
-    // and reset the list of functions to empty.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Device_ClearFunctions_Result* out_result);
-
     // Adds a state change listener that is invoked when a state change completes.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetStateChangeListener SetStateChangeListener(zx::unowned_channel _client_end, ::zx::channel listener);
@@ -739,13 +682,6 @@ class Device final {
     // Adds a state change listener that is invoked when a state change completes.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetStateChangeListener SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
-
-    // Adds a state change listener that is invoked when a state change completes.
-    static zx_status_t SetStateChangeListener_Deprecated(zx::unowned_channel _client_end, ::zx::channel listener);
-
-    // Adds a state change listener that is invoked when a state change completes.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t SetStateChangeListener_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
 
   };
 

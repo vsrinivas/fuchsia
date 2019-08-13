@@ -239,20 +239,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::EnableWritebackCache EnableWritebackCache(::fidl::BytePart _response_buffer);
 
-    // Enables writeback caching. This requires the device
-    // to be disconnected at the time of the call. Calling it when the device is connected
-    // will result in undefined behavior.
-    // All writes will be buffered until a BLOCK_OP_FLUSH is received.
-    zx_status_t EnableWritebackCache_Deprecated(int32_t* out_status);
-
-    // Enables writeback caching. This requires the device
-    // to be disconnected at the time of the call. Calling it when the device is connected
-    // will result in undefined behavior.
-    // All writes will be buffered until a BLOCK_OP_FLUSH is received.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<EnableWritebackCacheResponse> EnableWritebackCache_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Disables writeback caching. This requires the device to be disconnected at the time
     // of the call. Calling it when the device is connected will result in undefined behavior.
     // Disabling this cache will cause any writes to be written immediately to non-volatile storage
@@ -266,20 +252,6 @@ class Device final {
     // before returning to the caller.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::DisableWritebackCache DisableWritebackCache(::fidl::BytePart _response_buffer);
-
-    // Disables writeback caching. This requires the device to be disconnected at the time
-    // of the call. Calling it when the device is connected will result in undefined behavior.
-    // Disabling this cache will cause any writes to be written immediately to non-volatile storage
-    // before returning to the caller.
-    zx_status_t DisableWritebackCache_Deprecated(int32_t* out_status);
-
-    // Disables writeback caching. This requires the device to be disconnected at the time
-    // of the call. Calling it when the device is connected will result in undefined behavior.
-    // Disabling this cache will cause any writes to be written immediately to non-volatile storage
-    // before returning to the caller.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<DisableWritebackCacheResponse> DisableWritebackCache_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Sets writeback cache reporting behavior. This requires the device
     // to be disconnected at the time of the call. Calling it when the device is connected
@@ -300,26 +272,6 @@ class Device final {
     // when the device does not report its caching capabilities.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetWritebackCacheReported SetWritebackCacheReported(::fidl::BytePart _request_buffer, bool report, ::fidl::BytePart _response_buffer);
-
-    // Sets writeback cache reporting behavior. This requires the device
-    // to be disconnected at the time of the call. Calling it when the device is connected
-    // will result in undefined behavior.
-    // If report is set to true, the device will report its cache capability correctly to the
-    // host. If set to false, the writeback caching capabilities will NOT be reported.
-    // This can be used to test host drivers to ensure that they respond properly
-    // when the device does not report its caching capabilities.
-    zx_status_t SetWritebackCacheReported_Deprecated(bool report, int32_t* out_status);
-
-    // Sets writeback cache reporting behavior. This requires the device
-    // to be disconnected at the time of the call. Calling it when the device is connected
-    // will result in undefined behavior.
-    // If report is set to true, the device will report its cache capability correctly to the
-    // host. If set to false, the writeback caching capabilities will NOT be reported.
-    // This can be used to test host drivers to ensure that they respond properly
-    // when the device does not report its caching capabilities.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<SetWritebackCacheReportedResponse> SetWritebackCacheReported_Deprecated(::fidl::BytePart _request_buffer, bool report, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
    private:
     ::zx::channel channel_;
@@ -344,20 +296,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::EnableWritebackCache EnableWritebackCache(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Enables writeback caching. This requires the device
-    // to be disconnected at the time of the call. Calling it when the device is connected
-    // will result in undefined behavior.
-    // All writes will be buffered until a BLOCK_OP_FLUSH is received.
-    static zx_status_t EnableWritebackCache_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
-
-    // Enables writeback caching. This requires the device
-    // to be disconnected at the time of the call. Calling it when the device is connected
-    // will result in undefined behavior.
-    // All writes will be buffered until a BLOCK_OP_FLUSH is received.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<EnableWritebackCacheResponse> EnableWritebackCache_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
-
     // Disables writeback caching. This requires the device to be disconnected at the time
     // of the call. Calling it when the device is connected will result in undefined behavior.
     // Disabling this cache will cause any writes to be written immediately to non-volatile storage
@@ -371,20 +309,6 @@ class Device final {
     // before returning to the caller.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::DisableWritebackCache DisableWritebackCache(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Disables writeback caching. This requires the device to be disconnected at the time
-    // of the call. Calling it when the device is connected will result in undefined behavior.
-    // Disabling this cache will cause any writes to be written immediately to non-volatile storage
-    // before returning to the caller.
-    static zx_status_t DisableWritebackCache_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
-
-    // Disables writeback caching. This requires the device to be disconnected at the time
-    // of the call. Calling it when the device is connected will result in undefined behavior.
-    // Disabling this cache will cause any writes to be written immediately to non-volatile storage
-    // before returning to the caller.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<DisableWritebackCacheResponse> DisableWritebackCache_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Sets writeback cache reporting behavior. This requires the device
     // to be disconnected at the time of the call. Calling it when the device is connected
@@ -405,26 +329,6 @@ class Device final {
     // when the device does not report its caching capabilities.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetWritebackCacheReported SetWritebackCacheReported(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool report, ::fidl::BytePart _response_buffer);
-
-    // Sets writeback cache reporting behavior. This requires the device
-    // to be disconnected at the time of the call. Calling it when the device is connected
-    // will result in undefined behavior.
-    // If report is set to true, the device will report its cache capability correctly to the
-    // host. If set to false, the writeback caching capabilities will NOT be reported.
-    // This can be used to test host drivers to ensure that they respond properly
-    // when the device does not report its caching capabilities.
-    static zx_status_t SetWritebackCacheReported_Deprecated(zx::unowned_channel _client_end, bool report, int32_t* out_status);
-
-    // Sets writeback cache reporting behavior. This requires the device
-    // to be disconnected at the time of the call. Calling it when the device is connected
-    // will result in undefined behavior.
-    // If report is set to true, the device will report its cache capability correctly to the
-    // host. If set to false, the writeback caching capabilities will NOT be reported.
-    // This can be used to test host drivers to ensure that they respond properly
-    // when the device does not report its caching capabilities.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<SetWritebackCacheReportedResponse> SetWritebackCacheReported_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool report, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
   };
 

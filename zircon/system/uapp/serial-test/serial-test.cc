@@ -44,12 +44,12 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    fuchsia::hardware::serial::Class device_class;
     fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
-    zx_status_t status = fuchsia::hardware::serial::Device::Call::GetClass_Deprecated(
-        zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)), &device_class);
+    auto result = fuchsia::hardware::serial::Device::Call::GetClass(
+        zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)));
+    fuchsia::hardware::serial::Class device_class = result->device_class;
     fdio_unsafe_release(fdio);
-    if (status != ZX_OK || device_class != fuchsia::hardware::serial::Class::GENERIC) {
+    if (!result.ok() || device_class != fuchsia::hardware::serial::Class::GENERIC) {
       close(fd);
       continue;
     } else {

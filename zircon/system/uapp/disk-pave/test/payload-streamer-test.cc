@@ -50,19 +50,19 @@ class PayloadStreamerTest : public zxtest::Test {
 TEST_F(PayloadStreamerTest, RegisterVmo) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
-  zx_status_t status;
-  ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
-  EXPECT_OK(status);
+  auto result = client_->RegisterVmo(std::move(vmo));
+  ASSERT_OK(result.status());
+  EXPECT_OK(result.value().status);
 }
 
 TEST_F(PayloadStreamerTest, RegisterInvalidVmo) {
-  zx_status_t status;
-  EXPECT_NE(client_->RegisterVmo_Deprecated(zx::vmo(), &status), ZX_OK);
+  EXPECT_FALSE(client_->RegisterVmo(zx::vmo()).ok());
 }
 
 TEST_F(PayloadStreamerTest, ReadNoVmoRegistered) {
-  ::llcpp::fuchsia::paver::ReadResult result;
-  ASSERT_OK(client_->ReadData_Deprecated(&result));
+  auto call_result = client_->ReadData();
+  ASSERT_OK(call_result.status());
+  const ::llcpp::fuchsia::paver::ReadResult& result = call_result.value().result;
   ASSERT_TRUE(result.is_err());
   EXPECT_NE(result.err(), ZX_OK);
 }
@@ -71,36 +71,38 @@ TEST_F(PayloadStreamerTest, ReadData) {
   zx::vmo vmo, dup;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
   ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  zx_status_t status;
-  ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(dup), &status));
-  EXPECT_OK(status);
+  auto register_result = client_->RegisterVmo(std::move(dup));
+  ASSERT_OK(register_result.status());
+  EXPECT_OK(register_result.value().status);
 
-  ::llcpp::fuchsia::paver::ReadResult result;
-  ASSERT_OK(client_->ReadData_Deprecated(&result));
-  ASSERT_TRUE(result.is_info());
+  auto read_result = client_->ReadData();
+  ASSERT_OK(read_result.status());
+  ASSERT_TRUE(read_result->result.is_info());
 
   char buffer[sizeof(kFileData)] = {};
-  ASSERT_EQ(result.info().size, sizeof(buffer));
-  ASSERT_OK(vmo.read(buffer, result.info().offset, result.info().size));
+  ASSERT_EQ(read_result->result.info().size, sizeof(buffer));
+  ASSERT_OK(vmo.read(buffer, read_result->result.info().offset, read_result->result.info().size));
   ASSERT_EQ(memcmp(kFileData, buffer, sizeof(buffer)), 0);
 }
 
 TEST_F(PayloadStreamerTest, ReadEof) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
-  zx_status_t status;
-  ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
-  EXPECT_OK(status);
+  auto register_result = client_->RegisterVmo(std::move(vmo));
+  ASSERT_OK(register_result.status());
+  EXPECT_OK(register_result.value().status);
 
-  ::llcpp::fuchsia::paver::ReadResult result;
-  ASSERT_OK(client_->ReadData_Deprecated(&result));
-  ASSERT_TRUE(result.is_info());
+  ::llcpp::fuchsia::paver::PayloadStream::ResultOf::ReadData call_result = client_->ReadData();
+  ASSERT_OK(call_result.status());
+  ASSERT_TRUE(call_result->result.is_info());
 
-  ASSERT_OK(client_->ReadData_Deprecated(&result));
-  ASSERT_TRUE(result.is_eof());
+  call_result = client_->ReadData();
+  ASSERT_OK(call_result.status());
+  ASSERT_TRUE(call_result->result.is_eof());
 
-  ASSERT_OK(client_->ReadData_Deprecated(&result));
-  ASSERT_TRUE(result.is_eof());
+  call_result = client_->ReadData();
+  ASSERT_OK(call_result.status());
+  ASSERT_TRUE(call_result->result.is_eof());
 }
 
 }  // namespace

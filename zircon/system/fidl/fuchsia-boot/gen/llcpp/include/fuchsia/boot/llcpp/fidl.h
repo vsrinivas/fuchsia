@@ -126,14 +126,6 @@ class RootJob final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Get Get(::fidl::BytePart _response_buffer);
 
-    // Get the root `job`.
-    zx_status_t Get_Deprecated(::zx::job* out_job);
-
-    // Get the root `job`.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetResponse> Get_Deprecated(::fidl::BytePart _response_buffer, ::zx::job* out_job);
-
    private:
     ::zx::channel channel_;
   };
@@ -150,14 +142,6 @@ class RootJob final {
     // Get the root `job`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Get the root `job`.
-    static zx_status_t Get_Deprecated(zx::unowned_channel _client_end, ::zx::job* out_job);
-
-    // Get the root `job`.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetResponse> Get_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::job* out_job);
 
   };
 
@@ -310,14 +294,6 @@ class Log final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Get Get(::fidl::BytePart _response_buffer);
 
-    // Get the kernel `log`.
-    zx_status_t Get_Deprecated(::zx::debuglog* out_log);
-
-    // Get the kernel `log`.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetResponse> Get_Deprecated(::fidl::BytePart _response_buffer, ::zx::debuglog* out_log);
-
    private:
     ::zx::channel channel_;
   };
@@ -334,14 +310,6 @@ class Log final {
     // Get the kernel `log`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Get the kernel `log`.
-    static zx_status_t Get_Deprecated(zx::unowned_channel _client_end, ::zx::debuglog* out_log);
-
-    // Get the kernel `log`.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetResponse> Get_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::debuglog* out_log);
 
   };
 
@@ -517,22 +485,6 @@ class Items final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Get Get(::fidl::BytePart _request_buffer, uint32_t type, uint32_t extra, ::fidl::BytePart _response_buffer);
 
-    // Get a `payload` for a boot item of `type` and `extra`.
-    // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    //
-    // For a list of `type`s, refer to <zircon/boot/image.h>.
-    // For a list of `extra`s, refer to <zircon/boot/driver-config.h>.
-    zx_status_t Get_Deprecated(uint32_t type, uint32_t extra, ::zx::vmo* out_payload, uint32_t* out_length);
-
-    // Get a `payload` for a boot item of `type` and `extra`.
-    // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    //
-    // For a list of `type`s, refer to <zircon/boot/image.h>.
-    // For a list of `extra`s, refer to <zircon/boot/driver-config.h>.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetResponse> Get_Deprecated(::fidl::BytePart _request_buffer, uint32_t type, uint32_t extra, ::fidl::BytePart _response_buffer, ::zx::vmo* out_payload, uint32_t* out_length);
-
    private:
     ::zx::channel channel_;
   };
@@ -557,22 +509,6 @@ class Items final {
     // For a list of `extra`s, refer to <zircon/boot/driver-config.h>.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t type, uint32_t extra, ::fidl::BytePart _response_buffer);
-
-    // Get a `payload` for a boot item of `type` and `extra`.
-    // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    //
-    // For a list of `type`s, refer to <zircon/boot/image.h>.
-    // For a list of `extra`s, refer to <zircon/boot/driver-config.h>.
-    static zx_status_t Get_Deprecated(zx::unowned_channel _client_end, uint32_t type, uint32_t extra, ::zx::vmo* out_payload, uint32_t* out_length);
-
-    // Get a `payload` for a boot item of `type` and `extra`.
-    // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    //
-    // For a list of `type`s, refer to <zircon/boot/image.h>.
-    // For a list of `extra`s, refer to <zircon/boot/driver-config.h>.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetResponse> Get_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t type, uint32_t extra, ::fidl::BytePart _response_buffer, ::zx::vmo* out_payload, uint32_t* out_length);
 
   };
 
@@ -750,20 +686,6 @@ class FactoryItems final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Get Get(::fidl::BytePart _request_buffer, uint32_t extra, ::fidl::BytePart _response_buffer);
 
-    // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
-    // extra field set to `extra`.
-    //
-    // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    zx_status_t Get_Deprecated(uint32_t extra, ::zx::vmo* out_payload, uint32_t* out_length);
-
-    // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
-    // extra field set to `extra`.
-    //
-    // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetResponse> Get_Deprecated(::fidl::BytePart _request_buffer, uint32_t extra, ::fidl::BytePart _response_buffer, ::zx::vmo* out_payload, uint32_t* out_length);
-
    private:
     ::zx::channel channel_;
   };
@@ -786,20 +708,6 @@ class FactoryItems final {
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t extra, ::fidl::BytePart _response_buffer);
-
-    // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
-    // extra field set to `extra`.
-    //
-    // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    static zx_status_t Get_Deprecated(zx::unowned_channel _client_end, uint32_t extra, ::zx::vmo* out_payload, uint32_t* out_length);
-
-    // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
-    // extra field set to `extra`.
-    //
-    // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetResponse> Get_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t extra, ::fidl::BytePart _response_buffer, ::zx::vmo* out_payload, uint32_t* out_length);
 
   };
 
@@ -955,14 +863,6 @@ class RootResource final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Get Get(::fidl::BytePart _response_buffer);
 
-    // Get the root |resource|.
-    zx_status_t Get_Deprecated(::zx::resource* out_resource);
-
-    // Get the root |resource|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetResponse> Get_Deprecated(::fidl::BytePart _response_buffer, ::zx::resource* out_resource);
-
    private:
     ::zx::channel channel_;
   };
@@ -979,14 +879,6 @@ class RootResource final {
     // Get the root |resource|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Get the root |resource|.
-    static zx_status_t Get_Deprecated(zx::unowned_channel _client_end, ::zx::resource* out_resource);
-
-    // Get the root |resource|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetResponse> Get_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::resource* out_resource);
 
   };
 
@@ -1142,16 +1034,6 @@ class Arguments final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Get Get(::fidl::BytePart _response_buffer);
 
-    // Get a `vmo` containing boot arguments, along with the `size` of the boot
-    // arguments contained within.
-    zx_status_t Get_Deprecated(::zx::vmo* out_vmo, uint64_t* out_size);
-
-    // Get a `vmo` containing boot arguments, along with the `size` of the boot
-    // arguments contained within.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetResponse> Get_Deprecated(::fidl::BytePart _response_buffer, ::zx::vmo* out_vmo, uint64_t* out_size);
-
    private:
     ::zx::channel channel_;
   };
@@ -1170,16 +1052,6 @@ class Arguments final {
     // arguments contained within.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Get a `vmo` containing boot arguments, along with the `size` of the boot
-    // arguments contained within.
-    static zx_status_t Get_Deprecated(zx::unowned_channel _client_end, ::zx::vmo* out_vmo, uint64_t* out_size);
-
-    // Get a `vmo` containing boot arguments, along with the `size` of the boot
-    // arguments contained within.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetResponse> Get_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::zx::vmo* out_vmo, uint64_t* out_size);
 
   };
 

@@ -132,14 +132,6 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetInfo GetInfo(::fidl::BytePart _response_buffer);
 
-    // Get information about the type of MIDI device
-    zx_status_t GetInfo_Deprecated(Info* out_info);
-
-    // Get information about the type of MIDI device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetInfoResponse> GetInfo_Deprecated(::fidl::BytePart _response_buffer, Info* out_info);
-
    private:
     ::zx::channel channel_;
   };
@@ -156,14 +148,6 @@ class Device final {
     // Get information about the type of MIDI device
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetInfo GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Get information about the type of MIDI device
-    static zx_status_t GetInfo_Deprecated(zx::unowned_channel _client_end, Info* out_info);
-
-    // Get information about the type of MIDI device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetInfoResponse> GetInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Info* out_info);
 
   };
 

@@ -65,67 +65,6 @@ Device::UnownedResultOf::EnableWritebackCache Device::Call::EnableWritebackCache
   return UnownedResultOf::EnableWritebackCache(std::move(_client_end), std::move(_response_buffer));
 }
 
-zx_status_t Device::SyncClient::EnableWritebackCache_Deprecated(int32_t* out_status) {
-  return Device::Call::EnableWritebackCache_Deprecated(zx::unowned_channel(this->channel_), out_status);
-}
-
-zx_status_t Device::Call::EnableWritebackCache_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheRequest, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<EnableWritebackCacheRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDevice_EnableWritebackCache_GenOrdinal;
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(EnableWritebackCacheRequest));
-  ::fidl::DecodedMessage<EnableWritebackCacheRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<EnableWritebackCacheResponse, ::fidl::MessageDirection::kReceiving>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<EnableWritebackCacheRequest, EnableWritebackCacheResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<Device::EnableWritebackCacheResponse> Device::SyncClient::EnableWritebackCache_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Device::Call::EnableWritebackCache_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
-}
-
-::fidl::DecodeResult<Device::EnableWritebackCacheResponse> Device::Call::EnableWritebackCache_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(EnableWritebackCacheRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  auto& _request = *reinterpret_cast<EnableWritebackCacheRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDevice_EnableWritebackCache_GenOrdinal;
-  _request_buffer.set_actual(sizeof(EnableWritebackCacheRequest));
-  ::fidl::DecodedMessage<EnableWritebackCacheRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<EnableWritebackCacheResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<EnableWritebackCacheRequest, EnableWritebackCacheResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<EnableWritebackCacheResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  return _decode_result;
-}
-
 ::fidl::DecodeResult<Device::EnableWritebackCacheResponse> Device::InPlace::EnableWritebackCache(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(EnableWritebackCacheRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
@@ -186,67 +125,6 @@ Device::UnownedResultOf::DisableWritebackCache Device::SyncClient::DisableWriteb
 
 Device::UnownedResultOf::DisableWritebackCache Device::Call::DisableWritebackCache(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::DisableWritebackCache(std::move(_client_end), std::move(_response_buffer));
-}
-
-zx_status_t Device::SyncClient::DisableWritebackCache_Deprecated(int32_t* out_status) {
-  return Device::Call::DisableWritebackCache_Deprecated(zx::unowned_channel(this->channel_), out_status);
-}
-
-zx_status_t Device::Call::DisableWritebackCache_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheRequest, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<DisableWritebackCacheRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDevice_DisableWritebackCache_GenOrdinal;
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DisableWritebackCacheRequest));
-  ::fidl::DecodedMessage<DisableWritebackCacheRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<DisableWritebackCacheResponse, ::fidl::MessageDirection::kReceiving>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<DisableWritebackCacheRequest, DisableWritebackCacheResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<Device::DisableWritebackCacheResponse> Device::SyncClient::DisableWritebackCache_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Device::Call::DisableWritebackCache_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
-}
-
-::fidl::DecodeResult<Device::DisableWritebackCacheResponse> Device::Call::DisableWritebackCache_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisableWritebackCacheRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  auto& _request = *reinterpret_cast<DisableWritebackCacheRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDevice_DisableWritebackCache_GenOrdinal;
-  _request_buffer.set_actual(sizeof(DisableWritebackCacheRequest));
-  ::fidl::DecodedMessage<DisableWritebackCacheRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<DisableWritebackCacheResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<DisableWritebackCacheRequest, DisableWritebackCacheResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<DisableWritebackCacheResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  return _decode_result;
 }
 
 ::fidl::DecodeResult<Device::DisableWritebackCacheResponse> Device::InPlace::DisableWritebackCache(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
@@ -315,70 +193,6 @@ Device::UnownedResultOf::SetWritebackCacheReported Device::SyncClient::SetWriteb
 
 Device::UnownedResultOf::SetWritebackCacheReported Device::Call::SetWritebackCacheReported(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool report, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetWritebackCacheReported(std::move(_client_end), std::move(_request_buffer), std::move(report), std::move(_response_buffer));
-}
-
-zx_status_t Device::SyncClient::SetWritebackCacheReported_Deprecated(bool report, int32_t* out_status) {
-  return Device::Call::SetWritebackCacheReported_Deprecated(zx::unowned_channel(this->channel_), std::move(report), out_status);
-}
-
-zx_status_t Device::Call::SetWritebackCacheReported_Deprecated(zx::unowned_channel _client_end, bool report, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedRequest, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<SetWritebackCacheReportedRequest*>(_write_bytes);
-  _request._hdr.ordinal = kDevice_SetWritebackCacheReported_GenOrdinal;
-  _request.report = std::move(report);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetWritebackCacheReportedRequest));
-  ::fidl::DecodedMessage<SetWritebackCacheReportedRequest> _decoded_request(std::move(_request_bytes));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<SetWritebackCacheReportedResponse, ::fidl::MessageDirection::kReceiving>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<SetWritebackCacheReportedRequest, SetWritebackCacheReportedResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<Device::SetWritebackCacheReportedResponse> Device::SyncClient::SetWritebackCacheReported_Deprecated(::fidl::BytePart _request_buffer, bool report, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Device::Call::SetWritebackCacheReported_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(report), std::move(_response_buffer), out_status);
-}
-
-::fidl::DecodeResult<Device::SetWritebackCacheReportedResponse> Device::Call::SetWritebackCacheReported_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool report, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  if (_request_buffer.capacity() < SetWritebackCacheReportedRequest::PrimarySize) {
-    return ::fidl::DecodeResult<SetWritebackCacheReportedResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
-  }
-  auto& _request = *reinterpret_cast<SetWritebackCacheReportedRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kDevice_SetWritebackCacheReported_GenOrdinal;
-  _request.report = std::move(report);
-  _request_buffer.set_actual(sizeof(SetWritebackCacheReportedRequest));
-  ::fidl::DecodedMessage<SetWritebackCacheReportedRequest> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<SetWritebackCacheReportedResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<SetWritebackCacheReportedRequest, SetWritebackCacheReportedResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<SetWritebackCacheReportedResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_status = std::move(_response.status);
-  return _decode_result;
 }
 
 ::fidl::DecodeResult<Device::SetWritebackCacheReportedResponse> Device::InPlace::SetWritebackCacheReported(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetWritebackCacheReportedRequest> params, ::fidl::BytePart response_buffer) {

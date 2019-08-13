@@ -297,16 +297,6 @@ class TestInterface final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer);
 
-    // Verifies that all the handles are valid channels, then returns
-    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
-    zx_status_t ConsumeSimpleStruct_Deprecated(SimpleStruct arg, int32_t* out_status, int32_t* out_field);
-
-    // Verifies that all the handles are valid channels, then returns
-    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
-
     // Loops back the field which is set, along with its index.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(SimpleUnion arg);
@@ -314,14 +304,6 @@ class TestInterface final {
     // Loops back the field which is set, along with its index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer);
-
-    // Loops back the field which is set, along with its index.
-    zx_status_t ConsumeSimpleUnion_Deprecated(SimpleUnion arg, uint32_t* out_index, int32_t* out_field);
-
-    // Loops back the field which is set, along with its index.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion_Deprecated(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
 
    private:
     ::zx::channel channel_;
@@ -342,16 +324,6 @@ class TestInterface final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer);
 
-    // Verifies that all the handles are valid channels, then returns
-    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
-    static zx_status_t ConsumeSimpleStruct_Deprecated(zx::unowned_channel _client_end, SimpleStruct arg, int32_t* out_status, int32_t* out_field);
-
-    // Verifies that all the handles are valid channels, then returns
-    // `ZX_OK` and loops back the field member. Otherwise, returns an error.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
-
     // Loops back the field which is set, along with its index.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(zx::unowned_channel _client_end, SimpleUnion arg);
@@ -359,14 +331,6 @@ class TestInterface final {
     // Loops back the field which is set, along with its index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer);
-
-    // Loops back the field which is set, along with its index.
-    static zx_status_t ConsumeSimpleUnion_Deprecated(zx::unowned_channel _client_end, SimpleUnion arg, uint32_t* out_index, int32_t* out_field);
-
-    // Loops back the field which is set, along with its index.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
 
   };
 

@@ -316,14 +316,6 @@ class DirEntTestInterface final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::CountNumDirectories CountNumDirectories(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer);
 
-    // Iterate over the dirents and return the number of directories within them.
-    zx_status_t CountNumDirectories_Deprecated(::fidl::VectorView<DirEnt> dirents, int64_t* out_num_dir);
-
-    // Iterate over the dirents and return the number of directories within them.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<CountNumDirectoriesResponse> CountNumDirectories_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir);
-
     // Return a vector of dirents. Empty request. Response may stack-allocate.
     // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReadDir ReadDir();
@@ -332,12 +324,6 @@ class DirEntTestInterface final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ReadDir ReadDir(::fidl::BytePart _response_buffer);
 
-
-    // Return a vector of dirents. Empty request. Response may stack-allocate.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ReadDirResponse> ReadDir_Deprecated(::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents);
-
     // Consume dirents. Empty response. Request may stack-allocate.
     // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ConsumeDirectories ConsumeDirectories(::fidl::VectorView<DirEnt> dirents);
@@ -345,14 +331,6 @@ class DirEntTestInterface final {
     // Consume dirents. Empty response. Request may stack-allocate.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ConsumeDirectories ConsumeDirectories(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer);
-
-    // Consume dirents. Empty response. Request may stack-allocate.
-    zx_status_t ConsumeDirectories_Deprecated(::fidl::VectorView<DirEnt> dirents);
-
-    // Consume dirents. Empty response. Request may stack-allocate.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ConsumeDirectoriesResponse> ConsumeDirectories_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents);
 
     // Binding will not wait for response.
     // But here we send an eventpair which the server will signal upon receipt of message.
@@ -363,15 +341,6 @@ class DirEntTestInterface final {
     // But here we send an eventpair which the server will signal upon receipt of message.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::OneWayDirents OneWayDirents(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep);
-
-    // Binding will not wait for response.
-    // But here we send an eventpair which the server will signal upon receipt of message.
-    zx_status_t OneWayDirents_Deprecated(::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep);
-
-    // Binding will not wait for response.
-    // But here we send an eventpair which the server will signal upon receipt of message.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t OneWayDirents_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -395,14 +364,6 @@ class DirEntTestInterface final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::CountNumDirectories CountNumDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer);
 
-    // Iterate over the dirents and return the number of directories within them.
-    static zx_status_t CountNumDirectories_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents, int64_t* out_num_dir);
-
-    // Iterate over the dirents and return the number of directories within them.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<CountNumDirectoriesResponse> CountNumDirectories_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir);
-
     // Return a vector of dirents. Empty request. Response may stack-allocate.
     // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReadDir ReadDir(zx::unowned_channel _client_end);
@@ -411,12 +372,6 @@ class DirEntTestInterface final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ReadDir ReadDir(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-
-    // Return a vector of dirents. Empty request. Response may stack-allocate.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ReadDirResponse> ReadDir_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents);
-
     // Consume dirents. Empty response. Request may stack-allocate.
     // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ConsumeDirectories ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents);
@@ -424,14 +379,6 @@ class DirEntTestInterface final {
     // Consume dirents. Empty response. Request may stack-allocate.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ConsumeDirectories ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer);
-
-    // Consume dirents. Empty response. Request may stack-allocate.
-    static zx_status_t ConsumeDirectories_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents);
-
-    // Consume dirents. Empty response. Request may stack-allocate.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ConsumeDirectoriesResponse> ConsumeDirectories_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents);
 
     // Binding will not wait for response.
     // But here we send an eventpair which the server will signal upon receipt of message.
@@ -442,15 +389,6 @@ class DirEntTestInterface final {
     // But here we send an eventpair which the server will signal upon receipt of message.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::OneWayDirents OneWayDirents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep);
-
-    // Binding will not wait for response.
-    // But here we send an eventpair which the server will signal upon receipt of message.
-    static zx_status_t OneWayDirents_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep);
-
-    // Binding will not wait for response.
-    // But here we send an eventpair which the server will signal upon receipt of message.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t OneWayDirents_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler

@@ -122,13 +122,9 @@ class SwitchingOrdinals final {
     ResultOf::OrdinalFive OrdinalFive();
 
 
-    zx_status_t OrdinalFive_Deprecated();
-
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::OnlyGeneratedOrdinal OnlyGeneratedOrdinal();
 
-
-    zx_status_t OnlyGeneratedOrdinal_Deprecated();
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -148,13 +144,9 @@ class SwitchingOrdinals final {
     static ResultOf::OrdinalFive OrdinalFive(zx::unowned_channel _client_end);
 
 
-    static zx_status_t OrdinalFive_Deprecated(zx::unowned_channel _client_end);
-
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::OnlyGeneratedOrdinal OnlyGeneratedOrdinal(zx::unowned_channel _client_end);
 
-
-    static zx_status_t OnlyGeneratedOrdinal_Deprecated(zx::unowned_channel _client_end);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler

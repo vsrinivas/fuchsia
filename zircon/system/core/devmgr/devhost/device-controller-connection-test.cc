@@ -97,13 +97,10 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
       return;
     }
 
-    zx_status_t call_status;
-    zx::channel test_output;
-    status = ::llcpp::fuchsia::device::manager::DeviceController::Call::BindDriver_Deprecated(
-        std::move(unowned_channel), ::fidl::StringView(1, ""), std::move(vmo), &call_status,
-        &test_output);
+    auto result = ::llcpp::fuchsia::device::manager::DeviceController::Call::BindDriver(
+        std::move(unowned_channel), ::fidl::StringView(1, ""), std::move(vmo));
 
-    if (status != ZX_ERR_CANCELED) {
+    if (result.status() != ZX_ERR_CANCELED) {
       thread_status = WRONG_CALL_STATUS;
       return;
     }
@@ -181,10 +178,10 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   } thread_status = INITIAL;
   std::thread synchronous_call_thread([channel = device_local.get(), &thread_status]() {
     auto unowned_channel = zx::unowned_channel(channel);
-    zx_status_t status =
-        ::llcpp::fuchsia::device::manager::DeviceController::Call::Unbind_Deprecated(
+    auto result =
+        ::llcpp::fuchsia::device::manager::DeviceController::Call::Unbind(
             std::move(unowned_channel));
-    if (status != ZX_OK) {
+    if (!result.ok()) {
       thread_status = WRITE_FAILED;
       return;
     }

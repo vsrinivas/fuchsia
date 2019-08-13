@@ -156,7 +156,7 @@ class {{ .Name }} final {
     class {{ .Name }}_Impl final : private ::fidl::internal::{{ if .HasResponse -}} OwnedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }} {
       using Super = ::fidl::internal::{{ if .HasResponse -}} OwnedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }};
      public:
-      {{ .Name }}_Impl({{ template "StaticCallSyncRequestCFlavorMethodArgumentsNew" . }});
+      {{ .Name }}_Impl({{ template "StaticCallSyncRequestManagedMethodArguments" . }});
       ~{{ .Name }}_Impl() = default;
       {{ .Name }}_Impl({{ .Name }}_Impl&& other) = default;
       {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;
@@ -195,7 +195,7 @@ class {{ .Name }} final {
     class {{ .Name }}_Impl final : private ::fidl::internal::{{ if .HasResponse -}} UnownedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }} {
       using Super = ::fidl::internal::{{ if .HasResponse -}} UnownedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }};
      public:
-      {{ .Name }}_Impl({{ template "StaticCallSyncRequestCallerAllocateMethodArgumentsNew" . }});
+      {{ .Name }}_Impl({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }});
       ~{{ .Name }}_Impl() = default;
       {{ .Name }}_Impl({{ .Name }}_Impl&& other) = default;
       {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;
@@ -238,38 +238,16 @@ class {{ .Name }} final {
     //{{ . }}
       {{- end }}
     //{{ template "ClientAllocationComment" . }}
-    ResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCFlavorMethodArgumentsNew" . }});
+    ResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestManagedMethodArguments" . }});
 {{ "" }}
       {{- if or .Request .Response }}
         {{- range .DocComments }}
     //{{ . }}
         {{- end }}
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArgumentsNew" . }});
+    UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }});
       {{- end }}
 {{ "" }}
-      {{- if .LLProps.CBindingCompatible }}
-        {{- range .DocComments }}
-    //{{ . }}
-        {{- end }}
-    zx_status_t {{ template "SyncRequestCFlavorMethodSignature" . }};
-      {{- end }}
-{{ "" }}
-      {{- if or .Request .Response }}
-        {{- range .DocComments }}
-    //{{ . }}
-        {{- end }}
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    {{- if .HasResponse }}
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    {{- end }}
-    {{ if .HasResponse -}}
-    ::fidl::DecodeResult<{{ .Name }}Response>
-    {{- else -}}
-    zx_status_t
-    {{- end }} {{ template "SyncRequestCallerAllocateMethodSignature" . }};
-{{ "" }}
-      {{- end }}
     {{- end }}
     {{- if .HasEvents }}
     // Handle all possible events defined in this protocol.
@@ -293,38 +271,16 @@ class {{ .Name }} final {
     //{{ . }}
       {{- end }}
     //{{ template "ClientAllocationComment" . }}
-    static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCFlavorMethodArgumentsNew" . }});
+    static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestManagedMethodArguments" . }});
 {{ "" }}
       {{- if or .Request .Response }}
         {{- range .DocComments }}
     //{{ . }}
         {{- end }}
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArgumentsNew" . }});
+    static UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }});
       {{- end }}
 {{ "" }}
-      {{- if .LLProps.CBindingCompatible }}
-        {{- range .DocComments }}
-    //{{ . }}
-        {{- end }}
-    static zx_status_t {{ template "StaticCallSyncRequestCFlavorMethodSignature" . }};
-      {{- end }}
-{{ "" }}
-      {{- if or .Request .Response }}
-        {{- range .DocComments }}
-    //{{ . }}
-        {{- end }}
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    {{- if .HasResponse }}
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    {{- end }}
-    static {{ if .HasResponse -}}
-    ::fidl::DecodeResult<{{ .Name }}Response>
-    {{- else -}}
-    zx_status_t
-    {{- end }} {{ template "StaticCallSyncRequestCallerAllocateMethodSignature" . }};
-{{ "" }}
-      {{- end }}
     {{- end }}
     {{- if .HasEvents }}
     // Handle all possible events defined in this protocol.
@@ -515,21 +471,9 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{- /* Client-calling functions do not apply to events. */}}
 {{- range FilterMethodsWithoutReqs .Methods -}}
 {{ "" }}
-    {{- template "SyncRequestCFlavorMethodDefinitionNew" . }}
+    {{- template "SyncRequestManagedMethodDefinition" . }}
 {{ "" }}
-  {{- template "StaticCallSyncRequestCFlavorMethodDefinitionNew" . }}
-  {{- if or .Request .Response }}
-{{ "" }}
-    {{- template "SyncRequestCallerAllocateMethodDefinitionNew" . }}
-{{ "" }}
-    {{- template "StaticCallSyncRequestCallerAllocateMethodDefinitionNew" . }}
-  {{- end }}
-  {{- if .LLProps.CBindingCompatible }}
-{{ "" }}
-    {{- template "SyncRequestCFlavorMethodDefinition" . }}
-{{ "" }}
-    {{- template "StaticCallSyncRequestCFlavorMethodDefinition" . }}
-  {{- end }}
+  {{- template "StaticCallSyncRequestManagedMethodDefinition" . }}
   {{- if or .Request .Response }}
 {{ "" }}
     {{- template "SyncRequestCallerAllocateMethodDefinition" . }}

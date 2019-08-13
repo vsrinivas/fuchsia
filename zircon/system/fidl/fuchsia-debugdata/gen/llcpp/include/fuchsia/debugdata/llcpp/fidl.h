@@ -182,25 +182,6 @@ class DebugData final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Publish Publish(::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data);
 
-    // The program runtime sends a string naming a `data_sink` and transfers the sole handle to
-    // a VMO containing the `data` it wants published there.  The `data_sink` string identifies
-    // a type of data, and the VMO's object name can specifically identify the data set in this
-    // VMO.  The client must transfer the only handle to the VMO (which prevents the VMO being
-    // resized without the receiver's knowledge), but it might still have the VMO mapped in and
-    // continue to write data to it.  Code instrumentation runtimes use this to deliver large
-    // binary trace results.
-    zx_status_t Publish_Deprecated(::fidl::StringView data_sink, ::zx::vmo data);
-
-    // The program runtime sends a string naming a `data_sink` and transfers the sole handle to
-    // a VMO containing the `data` it wants published there.  The `data_sink` string identifies
-    // a type of data, and the VMO's object name can specifically identify the data set in this
-    // VMO.  The client must transfer the only handle to the VMO (which prevents the VMO being
-    // resized without the receiver's knowledge), but it might still have the VMO mapped in and
-    // continue to write data to it.  Code instrumentation runtimes use this to deliver large
-    // binary trace results.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Publish_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data);
-
     // The program runtime names a `config_name` referring to a debug configuration of some kind
     // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
     // allow large options text to be stored in a file rather than passed directly in environment
@@ -214,20 +195,6 @@ class DebugData final {
     // strings.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::LoadConfig LoadConfig(::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer);
-
-    // The program runtime names a `config_name` referring to a debug configuration of some kind
-    // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
-    // allow large options text to be stored in a file rather than passed directly in environment
-    // strings.
-    zx_status_t LoadConfig_Deprecated(::fidl::StringView config_name, ::zx::vmo* out_config);
-
-    // The program runtime names a `config_name` referring to a debug configuration of some kind
-    // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
-    // allow large options text to be stored in a file rather than passed directly in environment
-    // strings.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<LoadConfigResponse> LoadConfig_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer, ::zx::vmo* out_config);
 
    private:
     ::zx::channel channel_;
@@ -258,25 +225,6 @@ class DebugData final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Publish Publish(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data);
 
-    // The program runtime sends a string naming a `data_sink` and transfers the sole handle to
-    // a VMO containing the `data` it wants published there.  The `data_sink` string identifies
-    // a type of data, and the VMO's object name can specifically identify the data set in this
-    // VMO.  The client must transfer the only handle to the VMO (which prevents the VMO being
-    // resized without the receiver's knowledge), but it might still have the VMO mapped in and
-    // continue to write data to it.  Code instrumentation runtimes use this to deliver large
-    // binary trace results.
-    static zx_status_t Publish_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data);
-
-    // The program runtime sends a string naming a `data_sink` and transfers the sole handle to
-    // a VMO containing the `data` it wants published there.  The `data_sink` string identifies
-    // a type of data, and the VMO's object name can specifically identify the data set in this
-    // VMO.  The client must transfer the only handle to the VMO (which prevents the VMO being
-    // resized without the receiver's knowledge), but it might still have the VMO mapped in and
-    // continue to write data to it.  Code instrumentation runtimes use this to deliver large
-    // binary trace results.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Publish_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data);
-
     // The program runtime names a `config_name` referring to a debug configuration of some kind
     // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
     // allow large options text to be stored in a file rather than passed directly in environment
@@ -290,20 +238,6 @@ class DebugData final {
     // strings.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::LoadConfig LoadConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer);
-
-    // The program runtime names a `config_name` referring to a debug configuration of some kind
-    // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
-    // allow large options text to be stored in a file rather than passed directly in environment
-    // strings.
-    static zx_status_t LoadConfig_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView config_name, ::zx::vmo* out_config);
-
-    // The program runtime names a `config_name` referring to a debug configuration of some kind
-    // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
-    // allow large options text to be stored in a file rather than passed directly in environment
-    // strings.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<LoadConfigResponse> LoadConfig_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer, ::zx::vmo* out_config);
 
   };
 

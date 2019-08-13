@@ -73,55 +73,6 @@ DebugData::UnownedResultOf::Publish DebugData::Call::Publish(zx::unowned_channel
   return UnownedResultOf::Publish(std::move(_client_end), std::move(_request_buffer), std::move(data_sink), std::move(data));
 }
 
-zx_status_t DebugData::SyncClient::Publish_Deprecated(::fidl::StringView data_sink, ::zx::vmo data) {
-  return DebugData::Call::Publish_Deprecated(zx::unowned_channel(this->channel_), std::move(data_sink), std::move(data));
-}
-
-zx_status_t DebugData::Call::Publish_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  PublishRequest _request = {};
-  _request._hdr.ordinal = kDebugData_Publish_GenOrdinal;
-  _request.data_sink = std::move(data_sink);
-  _request.data = std::move(data);
-  auto _linearize_result = ::fidl::Linearize(&_request, ::fidl::BytePart(_write_bytes,
-                                                                         _kWriteAllocSize));
-  if (_linearize_result.status != ZX_OK) {
-    return _linearize_result.status;
-  }
-  ::fidl::DecodedMessage<PublishRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-}
-
-zx_status_t DebugData::SyncClient::Publish_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data) {
-  return DebugData::Call::Publish_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(data_sink), std::move(data));
-}
-
-zx_status_t DebugData::Call::Publish_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data) {
-  if (_request_buffer.capacity() < PublishRequest::PrimarySize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  PublishRequest _request = {};
-  _request._hdr.ordinal = kDebugData_Publish_GenOrdinal;
-  _request.data_sink = std::move(data_sink);
-  _request.data = std::move(data);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    return _linearize_result.status;
-  }
-  ::fidl::DecodedMessage<PublishRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
-}
-
 ::fidl::internal::StatusAndError DebugData::InPlace::Publish(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PublishRequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kDebugData_Publish_GenOrdinal;
@@ -188,78 +139,6 @@ DebugData::UnownedResultOf::LoadConfig DebugData::SyncClient::LoadConfig(::fidl:
 
 DebugData::UnownedResultOf::LoadConfig DebugData::Call::LoadConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LoadConfig(std::move(_client_end), std::move(_request_buffer), std::move(config_name), std::move(_response_buffer));
-}
-
-zx_status_t DebugData::SyncClient::LoadConfig_Deprecated(::fidl::StringView config_name, ::zx::vmo* out_config) {
-  return DebugData::Call::LoadConfig_Deprecated(zx::unowned_channel(this->channel_), std::move(config_name), out_config);
-}
-
-zx_status_t DebugData::Call::LoadConfig_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView config_name, ::zx::vmo* out_config) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  LoadConfigRequest _request = {};
-  _request._hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;
-  _request.config_name = std::move(config_name);
-  auto _linearize_result = ::fidl::Linearize(&_request, ::fidl::BytePart(_write_bytes,
-                                                                         _kWriteAllocSize));
-  if (_linearize_result.status != ZX_OK) {
-    return _linearize_result.status;
-  }
-  ::fidl::DecodedMessage<LoadConfigRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return _encode_request_result.status;
-  }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigResponse, ::fidl::MessageDirection::kReceiving>();
-  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
-  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<LoadConfigRequest, LoadConfigResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
-  if (_call_result.status != ZX_OK) {
-    return _call_result.status;
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result.status;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_config = std::move(_response.config);
-  return ZX_OK;
-}
-
-::fidl::DecodeResult<DebugData::LoadConfigResponse> DebugData::SyncClient::LoadConfig_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer, ::zx::vmo* out_config) {
-  return DebugData::Call::LoadConfig_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config_name), std::move(_response_buffer), out_config);
-}
-
-::fidl::DecodeResult<DebugData::LoadConfigResponse> DebugData::Call::LoadConfig_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer, ::zx::vmo* out_config) {
-  if (_request_buffer.capacity() < LoadConfigRequest::PrimarySize) {
-    return ::fidl::DecodeResult<LoadConfigResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
-  }
-  LoadConfigRequest _request = {};
-  _request._hdr.ordinal = kDebugData_LoadConfig_GenOrdinal;
-  _request.config_name = std::move(config_name);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoadConfigResponse>(_linearize_result.status, _linearize_result.error);
-  }
-  ::fidl::DecodedMessage<LoadConfigRequest> _decoded_request = std::move(_linearize_result.message);
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoadConfigResponse>(_encode_request_result.status, _encode_request_result.error);
-  }
-  auto _call_result = ::fidl::Call<LoadConfigRequest, LoadConfigResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoadConfigResponse>(_call_result.status, _call_result.error);
-  }
-  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
-  if (_decode_result.status != ZX_OK) {
-    return _decode_result;
-  }
-  auto& _response = *_decode_result.message.message();
-  *out_config = std::move(_response.config);
-  return _decode_result;
 }
 
 ::fidl::DecodeResult<DebugData::LoadConfigResponse> DebugData::InPlace::LoadConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadConfigRequest> params, ::fidl::BytePart response_buffer) {
