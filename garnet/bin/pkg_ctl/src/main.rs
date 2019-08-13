@@ -65,7 +65,7 @@ fn main() -> Result<(), failure::Error> {
                 let entries = files_async::readdir_recursive(&dir).await?;
                 println!("package contents:");
                 for entry in entries {
-                    println!("/{:?}", entry);
+                    println!("/{}", entry.name);
                 }
 
                 Ok(())
@@ -89,7 +89,7 @@ fn main() -> Result<(), failure::Error> {
                 let entries = files_async::readdir_recursive(&dir).await?;
                 println!("package contents:");
                 for entry in entries {
-                    println!("/{:?}", entry);
+                    println!("/{}", entry.name);
                 }
 
                 Ok(())

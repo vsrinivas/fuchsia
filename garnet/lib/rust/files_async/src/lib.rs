@@ -8,10 +8,9 @@ use failure::Error;
 use fidl_fuchsia_io::{DirectoryProxy, MAX_BUF};
 use fuchsia_zircon as zx;
 use std::collections::VecDeque;
-use std::fmt;
 use std::mem;
 
-#[derive(Eq, Ord, PartialOrd, PartialEq, Clone, Copy)]
+#[derive(Eq, Ord, PartialOrd, PartialEq, Clone, Copy, Debug)]
 pub enum DirentType {
     Unknown,
     Directory,
@@ -34,7 +33,7 @@ impl From<u8> for DirentType {
     }
 }
 
-#[derive(Eq, Ord, PartialOrd, PartialEq)]
+#[derive(Eq, Ord, PartialOrd, PartialEq, Debug)]
 pub struct DirEntry {
     pub name: String,
     pub dir_type: DirentType,
@@ -46,16 +45,7 @@ impl DirEntry {
     }
 
     fn chain(&self, subentry: &DirEntry) -> DirEntry {
-        DirEntry {
-            name: format!("{}/{}", self.name, subentry.name),
-            dir_type: subentry.dir_type,
-        }
-    }
-}
-
-impl fmt::Debug for DirEntry {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.name)
+        DirEntry { name: format!("{}/{}", self.name, subentry.name), dir_type: subentry.dir_type }
     }
 }
 
@@ -155,5 +145,35 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     Ok(entries)
 }
 
-// TODO: Add tests
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+    fn build_direntry(name: &str, dir_type: DirentType) -> DirEntry {
+        DirEntry { name: name.to_string(), dir_type }
+    }
+
+    #[test]
+    fn test_direntry() {
+        assert!(build_direntry("foo", DirentType::Directory).is_dir());
+
+        // Negative test
+        assert!(!build_direntry("foo", DirentType::File).is_dir());
+        assert!(!build_direntry("foo", DirentType::Unknown).is_dir());
+    }
+
+    #[test]
+    fn test_direntry_chaining() {
+        let parent = build_direntry("foo", DirentType::Directory);
+
+        let child1 = build_direntry("bar", DirentType::Directory);
+        let chained1 = parent.chain(&child1);
+        assert_eq!(&chained1.name, "foo/bar");
+        assert_eq!(chained1.dir_type, DirentType::Directory);
+
+        let child2 = build_direntry("baz", DirentType::File);
+        let chained2 = parent.chain(&child2);
+        assert_eq!(&chained2.name, "foo/baz");
+        assert_eq!(chained2.dir_type, DirentType::File);
+    }
+}

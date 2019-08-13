@@ -365,6 +365,7 @@ group("all") {
     ":fidl_llcpp_conformance_test",
     ":fidl_llcpp_types_test",
     ":fidlext_tests",
+    ":files_async",
     ":fonts",
     ":forced_fdr",
     ":fostr",
@@ -1335,5 +1336,12 @@ group("forced_fdr") {
   testonly = true
   public_deps = [
     "//garnet/lib/rust/forced_fdr:forced_fdr_tests",
+  ]
+}
+
+group("files_async") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/rust/files_async:files_async_tests",
   ]
 }

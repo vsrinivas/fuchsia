@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("files_async") {
   with_unit_tests = true
@@ -13,5 +15,18 @@ rustc_library("files_async") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+test_package("files_async_tests") {
+  deps = [
+    ":files_async_test",
+  ]
+
+  tests = [
+    {
+      name = "files_async_lib_test"
+      environments = [ qemu_env ]
+    },
   ]
 }
