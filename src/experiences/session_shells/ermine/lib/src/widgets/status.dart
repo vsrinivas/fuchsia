@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../models/status_model.dart';
 import '../utils/elevations.dart';
 import '../widgets/status_graph_visualizer.dart';
+import '../widgets/status_grid_visualizer.dart';
 import '../widgets/status_progress_bar_visualizer.dart';
 
 const _listItemHeight = 28.0;
@@ -302,34 +303,11 @@ class Status extends StatelessWidget {
                     ]),
               ),
               // Processes
-              _RowItem(
-                height: _listItemHeight,
-                rowTitle: _packageTitleText('TOP PROCESSES'),
-                rowContent: _packageContentText(''),
-              ),
-              // TODO: Add grid visualizer.
-              Container(
-                height: 84 - _listItemHeight,
-                child: Row(
-                  children: <Widget>[
-                    SizedBox(
-                      width: 17,
-                    ),
-                    _packageTitleText('Name\n  IDE\n  Chrome\n  Music'),
-                    SizedBox(
-                      width: 148,
-                    ),
-                    _packageTitleText('PID\n6007\n9646\n5782'),
-                    SizedBox(
-                      width: 30,
-                    ),
-                    _packageTitleText('CPU%\n2.49\n1.00\n0.50'),
-                    SizedBox(
-                      width: 30,
-                    ),
-                    _packageTitleText('MEM%\n1.56\n3.08\n0.46'),
-                  ],
-                ),
+              StatusGridVisualizer(
+                model: StatusGridVisualizerModel(),
+                textStyle: _statusTextStyle,
+                title: _packageTitleText('TOP PROCESSES'),
+                titleHeight: _listItemHeight,
               ),
               // Memory
               _RowItem(

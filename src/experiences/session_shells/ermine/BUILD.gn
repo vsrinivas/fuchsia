@@ -66,6 +66,7 @@ dart_library("ermine_library") {
     "src/widgets/remove_button_target_widget.dart",
     "src/widgets/status.dart",
     "src/widgets/status_graph_visualizer.dart",
+    "src/widgets/status_grid_visualizer.dart",
     "src/widgets/status_progress_bar_visualizer.dart",
     "src/widgets/status_tick_bar_visualizer.dart",
     "src/widgets/story_widget.dart",
