@@ -29,6 +29,7 @@ base_package_labels += [
   "//garnet/bin/netcfg:filter_config",
   "//garnet/bin/network_time_service",
   "//garnet/bin/pkg_cache",
+  "//garnet/bin/pkg_cache:config",
   "//garnet/bin/pkg_resolver",
   "//garnet/bin/scpi",
   "//garnet/bin/setui:setui_service",

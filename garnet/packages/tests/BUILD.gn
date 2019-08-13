@@ -856,6 +856,7 @@ group("pkg_cache") {
   public_deps = [
     "//garnet/bin/pkg_cache:pkg_cache_tests",
     "//garnet/packages/prod:pkg_cache",
+    "//garnet/tests/pkg-cache:pkg-cache-integration-tests",
   ]
 }
 

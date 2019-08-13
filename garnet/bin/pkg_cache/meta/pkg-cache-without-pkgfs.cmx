@@ -3,10 +3,6 @@
         "binary": "bin/pkg_cache"
     },
     "sandbox": {
-        "pkgfs": [
-            "ctl",
-            "versions"
-        ],
         "services": [
             "fuchsia.amber.Control",
             "fuchsia.logger.LogSink"

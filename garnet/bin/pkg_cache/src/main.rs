@@ -15,6 +15,7 @@ use {
 };
 
 mod cache_service;
+mod gc_service;
 
 const SERVER_THREADS: usize = 2;
 
@@ -24,24 +25,33 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
-    let pkgfs = connect_to_pkgfs_versions().context("error connecting to pkgfs")?;
-
     let mut fs = ServiceFs::new();
+
+    let pkgfs_versions =
+        connect_to_pkgfs("versions").context("error connecting to pkgfs/versions")?;
     fs.dir("svc").add_fidl_service(move |stream| {
-        fx_log_info!("spawning package cache service");
         fasync::spawn(
-            cache_service::serve(Clone::clone(&pkgfs), stream)
-                .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
+            cache_service::serve(Clone::clone(&pkgfs_versions), stream)
+                .unwrap_or_else(|e| fx_log_err!("error handling PackageCache connection {:?}", e)),
         )
     });
+
+    let pkgfs_ctl = connect_to_pkgfs("ctl").context("error connecting to pkgfs/ctl")?;
+    fs.dir("svc").add_fidl_service(move |stream| {
+        fasync::spawn(
+            gc_service::serve(Clone::clone(&pkgfs_ctl), stream)
+                .unwrap_or_else(|e| fx_log_err!("error handling SpaceManager connection {:?}", e)),
+        )
+    });
+
     fs.take_and_serve_directory_handle()?;
 
     let () = executor.run(fs.collect(), SERVER_THREADS);
     Ok(())
 }
 
-fn connect_to_pkgfs_versions() -> Result<DirectoryProxy, Error> {
-    let f = File::open("/pkgfs/versions")?;
+fn connect_to_pkgfs(sub_dir: &str) -> Result<DirectoryProxy, Error> {
+    let f = File::open(&format!("/pkgfs/{}", sub_dir))?;
     let chan = fasync::Channel::from_channel(fdio::clone_channel(&f)?)?;
     Ok(DirectoryProxy::new(chan))
 }
