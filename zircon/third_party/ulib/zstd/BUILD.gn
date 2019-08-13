@@ -5,13 +5,6 @@
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
 zstd = "$zx/../third_party/zstd"
 
-# TODO(ZX-4771): Soft transition for roll to v1.4.2 in integration.
-# Remove this all the conditionals when the transition is complete.
-zstd_log = read_file("$zstd/CHANGELOG", "list lines")
-zstd_version = zstd_log[0]
-zstd_new = zstd_version == "v1.4.2"
-assert(zstd_new || zstd_version == "v1.3.8")
-
 config("zstd-config") {
   visibility = [ ":*" ]
 
@@ -50,6 +43,8 @@ library("zstd") {
     "$zstd/lib/compress/hist.c",
     "$zstd/lib/compress/huf_compress.c",
     "$zstd/lib/compress/zstd_compress.c",
+    "$zstd/lib/compress/zstd_compress_literals.c",
+    "$zstd/lib/compress/zstd_compress_sequences.c",
     "$zstd/lib/compress/zstd_double_fast.c",
     "$zstd/lib/compress/zstd_fast.c",
     "$zstd/lib/compress/zstd_lazy.c",
@@ -65,12 +60,6 @@ library("zstd") {
     "$zstd/lib/dictBuilder/fastcover.c",
     "$zstd/lib/dictBuilder/zdict.c",
   ]
-  if (zstd_new) {
-    sources += [
-      "$zstd/lib/compress/zstd_compress_literals.c",
-      "$zstd/lib/compress/zstd_compress_sequences.c",
-    ]
-  }
 
   configs += [ ":zstd-config" ]
 }
@@ -83,12 +72,10 @@ host_tool("zstdcli") {
     "$zstd/programs/datagen.c",
     "$zstd/programs/dibio.c",
     "$zstd/programs/fileio.c",
+    "$zstd/programs/timefn.c",
     "$zstd/programs/util.c",
     "$zstd/programs/zstdcli.c",
   ]
-  if (zstd_new) {
-    sources += [ "$zstd/programs/timefn.c" ]
-  }
   deps = [
     ":zstd",
   ]
