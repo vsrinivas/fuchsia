@@ -745,7 +745,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
 
   ASSERT_EQ(kJournalLength,
             2 * kEntryMetadataBlocks + operations[0].op.length + operations[1].op.length,
-            "Operations should just not fill the journal (no early info writeback)");
+            "Operations should just fill the journal (no early info writeback)");
 
   constexpr uint64_t kJournalStartBlock = 55;
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
@@ -773,6 +773,92 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         uint64_t sequence_number = 2;
+        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        registry()->VerifyReplay({}, sequence_number);
+        return ZX_OK;
+      },
+  };
+  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  {
+    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                     kJournalStartBlock);
+    journal.schedule_task(journal.WriteMetadata({operations[0]}));
+    journal.schedule_task(journal.WriteMetadata({operations[1]}));
+  }
+}
+
+// Tests that the info block is updated after the journal is completely full.
+//
+// This acts as a regression test against a bug where "the journal was exactly full"
+// appeared the same as "the journal is exactly empty" when making the decision
+// to write back the info block.
+//
+// Operation 0: [ H, 1, 2, 3, 4, 5, 6, 7, 8, C ]
+// Operation 1: [ H, 1, C, _, _, _, _, _, _, _ ]
+//            : Info block update promted by operation 1.
+TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperationArrives) {
+  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+
+  const std::vector<UnbufferedOperation> operations = {
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 20,
+              .length = 8,
+          },
+      },
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 1234,
+              .length = 1,
+          },
+      },
+  };
+
+  ASSERT_EQ(kJournalLength, kEntryMetadataBlocks + operations[0].op.length,
+            "Operations should just fill the journal (no early info writeback)");
+
+  constexpr uint64_t kJournalStartBlock = 55;
+  JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
+                                  registry()->writeback(), kJournalStartBlock);
+  uint64_t sequence_number = 0;
+  MockTransactionHandler::TransactionCallback callbacks[] = {
+      // Operation 0 written.
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyJournalWrite(operations[0], requests, count);
+        sequence_number++;
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyMetadataWrite(operations[0], requests, count);
+        verifier.ExtendJournalOffset(operations[0].op.length);
+        registry()->VerifyReplay({ operations[0] }, sequence_number);
+        return ZX_OK;
+      },
+      // Operation 1 written. This prompts the info block to be updated.
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        registry()->VerifyReplay({}, sequence_number);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyJournalWrite(operations[1], requests, count);
+        sequence_number++;
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyMetadataWrite(operations[1], requests, count);
+        verifier.ExtendJournalOffset(operations[1].op.length);
+        registry()->VerifyReplay({ operations[1] }, sequence_number);
+        return ZX_OK;
+      },
+      // Info block written on journal termination.
+      [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;

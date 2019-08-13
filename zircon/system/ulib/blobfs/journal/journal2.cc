@@ -178,19 +178,33 @@ zx_status_t JournalWriter::WriteInfoBlockIfIntersect(uint64_t block_count) {
   const uint64_t tail = next_entry_start_block_;
   const uint64_t capacity = EntriesLength();
 
-  const uint64_t journal_used = (head <= tail) ? (tail - head) : ((capacity - head) + tail);
-  const uint64_t journal_free = capacity - journal_used;
-  if (journal_free < block_count) {
-    FS_TRACE_DEBUG("WriteInfoBlockIfIntersect: Writing info block (can't write %zu blocks)\n",
-                   block_count);
+  // It's a little tricky to distinguish between an "empty" and "full" journal, so we observe
+  // that case explicitly first, using the sequence number to make the distinction.
+  //
+  // We require an info block update if the journal is full, but not if it's empty.
+  bool write_info = (head == tail) &&
+                    (next_sequence_number_ != journal_superblock_.sequence_number());
+
+  if (!write_info) {
+    const uint64_t journal_used = (head <= tail) ? (tail - head) : ((capacity - head) + tail);
+    const uint64_t journal_free = capacity - journal_used;
+    if (journal_free < block_count) {
+      FS_TRACE_DEBUG("WriteInfoBlockIfIntersect: Writing info block (can't write %zu blocks)\n",
+                    block_count);
+      write_info = true;
+    } else {
+      FS_TRACE_DEBUG("WriteInfoBlockIfIntersect: Not writing info (have %zu, need %zu blocks)\n",
+                     journal_free, block_count);
+    }
+  }
+
+  if (write_info) {
     zx_status_t status = WriteInfoBlock();
     if (status != ZX_OK) {
       FS_TRACE_ERROR("WriteInfoBlockIfIntersect: Failed to write info block\n");
       return status;
     }
   }
-  FS_TRACE_DEBUG("WriteInfoBlockIfIntersect: Not writing info (have %zu, need %zu blocks)\n",
-                 journal_free, block_count);
   return ZX_OK;
 }
 
