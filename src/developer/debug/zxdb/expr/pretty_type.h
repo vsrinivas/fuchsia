@@ -33,8 +33,8 @@ struct FormatOptions;
 // implementations of these functions.
 class PrettyType {
  public:
-  using EvalFunction = fit::function<void(fxl::RefPtr<EvalContext>, const ExprValue& object_value,
-                                          fit::callback<void(const Err&, ExprValue)>)>;
+  using EvalFunction =
+      fit::function<void(fxl::RefPtr<EvalContext>, const ExprValue& object_value, EvalCallback)>;
   using EvalArrayFunction = fit::function<void(
       fxl::RefPtr<EvalContext>, const ExprValue& object_value, int64_t index, EvalCallback)>;
 
@@ -86,8 +86,7 @@ class PrettyType {
   // Evaluates the given expression in the context of the given object. The object's members will
   // be injected into the active scope.
   static void EvalExpressionOn(fxl::RefPtr<EvalContext> context, const ExprValue& object,
-                               const std::string& expression,
-                               fit::callback<void(const Err&, ExprValue result)>);
+                               const std::string& expression, EvalCallback cb);
 
   // Extracts a structure member with the given name. Pass one name to extract a single
   // member, pass a sequence of names to recursively extract values from nested structs.

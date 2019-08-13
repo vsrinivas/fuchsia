@@ -106,13 +106,13 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCal
         DoResolve(std::move(found), std::move(cb));
         return;
       case FoundName::kNamespace:
-        cb(Err("Can not evaluate a namespace."), nullptr, ExprValue());
+        cb(Err("Can not evaluate a namespace."), nullptr);
         return;
       case FoundName::kTemplate:
-        cb(Err("Can not evaluate a template with no parameters."), nullptr, ExprValue());
+        cb(Err("Can not evaluate a template with no parameters."), nullptr);
         return;
       case FoundName::kType:
-        cb(Err("Can not evaluate a type."), nullptr, ExprValue());
+        cb(Err("Can not evaluate a type."), nullptr);
         return;
       case FoundName::kFunction:
         break;  // Function pointers not supported yet.
@@ -124,35 +124,31 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCal
   auto reg = GetRegister(identifier);
 
   if (reg == debug_ipc::RegisterID::kUnknown ||
-      GetArchForRegisterID(reg) != data_provider_->GetArch()) {
-    cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()), nullptr, ExprValue());
-    return;
-  }
+      GetArchForRegisterID(reg) != data_provider_->GetArch())
+    return cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()), nullptr);
 
   // Fall back to matching registers when no symbol is found.
   data_provider_->GetRegisterAsync(reg,
                                    [cb = std::move(cb)](const Err& err, uint64_t value) mutable {
-                                     cb(err, fxl::RefPtr<zxdb::Symbol>(), ExprValue(value));
+                                     if (err.has_error())
+                                       cb(err, fxl::RefPtr<zxdb::Symbol>());
+                                     else
+                                       cb(ExprValue(value), fxl::RefPtr<zxdb::Symbol>());
                                    });
 }
 
 void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var, ValueCallback cb) const {
   // Need to explicitly take a reference to the type.
   fxl::RefPtr<Type> type = RefPtrTo(var->type().Get()->AsType());
-  if (!type) {
-    cb(Err("Missing type information."), var, ExprValue());
-    return;
-  }
+  if (!type)
+    return cb(Err("Missing type information."), var);
 
   std::optional<uint64_t> ip;
   data_provider_->GetRegister(debug_ipc::GetSpecialRegisterID(data_provider_->GetArch(),
                                                               debug_ipc::SpecialRegisterType::kIP),
                               &ip);
-  if (!ip) {
-    // The IP should never require an async call.
-    cb(Err("No location available."), var, ExprValue());
-    return;
-  }
+  if (!ip)  // The IP should never require an async call.
+    return cb(Err("No location available."), var);
 
   const VariableLocation::Entry* loc_entry = var->location().EntryForIP(symbol_context_, *ip);
   if (!loc_entry) {
@@ -165,8 +161,7 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var, ValueCallback 
       // There are locations but none of them match the current IP.
       err_str = "Unavailable";
     }
-    cb(Err(ErrType::kOptimizedOut, err_str), var, ExprValue());
-    return;
+    return cb(Err(ErrType::kOptimizedOut, err_str), var);
   }
 
   // Schedule the expression to be evaluated.
@@ -275,38 +270,31 @@ void EvalContextImpl::DoResolve(FoundName found, ValueCallback cb) const {
 
   // Object variable resolution: Get the value of of the |this| variable.
   FXL_DCHECK(found.kind() == FoundName::kMemberVariable);
-  GetVariableValue(found.object_ptr_ref(),
-                   [weak_this = weak_factory_.GetWeakPtr(), found, cb = std::move(cb)](
-                       const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) mutable {
-                     if (!weak_this)
-                       return;  // Don't issue callbacks if we've been destroyed.
+  GetVariableValue(
+      found.object_ptr_ref(), [weak_this = weak_factory_.GetWeakPtr(), found, cb = std::move(cb)](
+                                  ErrOrValue value, fxl::RefPtr<Symbol> symbol) mutable {
+        if (!weak_this)
+          return;  // Don't issue callbacks if we've been destroyed.
 
-                     if (err.has_error()) {
-                       // |this| not available, probably optimized out.
-                       cb(err, symbol, ExprValue());
-                       return;
-                     }
+        if (value.has_error())  // |this| not available, probably optimized out.
+          return cb(value, symbol);
 
-                     // Got |this|, resolve |this-><DataMember>|.
-                     ResolveMemberByPointer(
-                         fxl::RefPtr<EvalContextImpl>(weak_this.get()), value, found.member(),
-                         [weak_this, found, cb = std::move(cb)](ErrOrValue value) mutable {
-                           if (weak_this) {
-                             // Only issue callbacks if we're still alive.
-                             cb(value.err_or_empty(), found.member().data_member_ref(),
-                                std::move(value.take_value_or_empty()));
-                           }
-                         });
-                   });
+        // Got |this|, resolve |this-><DataMember>|.
+        ResolveMemberByPointer(fxl::RefPtr<EvalContextImpl>(weak_this.get()), value.value(),
+                               found.member(),
+                               [weak_this, found, cb = std::move(cb)](ErrOrValue value) mutable {
+                                 if (weak_this) {
+                                   // Only issue callbacks if we're still alive.
+                                   cb(std::move(value), found.member().data_member_ref());
+                                 }
+                               });
+      });
 }
 
 void EvalContextImpl::OnDwarfEvalComplete(const Err& err,
                                           fxl::RefPtr<ResolutionState> state) const {
-  if (err.has_error()) {
-    // Error decoding.
-    state->callback(err, state->symbol, ExprValue());
-    return;
-  }
+  if (err.has_error())  // Error decoding.
+    return state->callback(err, state->symbol);
 
   uint64_t result_int = state->dwarf_eval.GetResult();
 
@@ -324,20 +312,19 @@ void EvalContextImpl::OnDwarfEvalComplete(const Err& err,
       state->callback(Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
                                             "Please file a bug with a repro case.",
                                             type_size)),
-                      state->symbol, ExprValue());
+                      state->symbol);
       return;
     }
     std::vector<uint8_t> data;
     data.resize(type_size);
     memcpy(&data[0], &result_int, type_size);
-    state->callback(Err(), state->symbol, ExprValue(state->type, std::move(data)));
+    state->callback(ExprValue(state->type, std::move(data)), state->symbol);
   } else {
     // The DWARF result is a pointer to the value.
     ResolvePointer(RefPtrTo(this), result_int, state->type,
                    [state, weak_this = weak_factory_.GetWeakPtr()](ErrOrValue value) {
                      if (weak_this)
-                       state->callback(value.err_or_empty(), state->symbol,
-                                       value.take_value_or_empty());
+                       state->callback(std::move(value), state->symbol);
                    });
   }
 }

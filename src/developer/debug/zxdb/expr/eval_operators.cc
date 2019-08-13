@@ -619,17 +619,14 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_
 
 void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<ExprNode>& left,
                         const ExprToken& op, const fxl::RefPtr<ExprNode>& right, EvalCallback cb) {
-  left->Eval(context, [context, op, right, cb = std::move(cb)](const Err& err,
-                                                               ExprValue left_value) mutable {
-    if (err.has_error()) {
-      cb(err);
-      return;
-    }
+  left->Eval(context, [context, op, right, cb = std::move(cb)](ErrOrValue left_value) mutable {
+    if (left_value.has_error())
+      return cb(left_value);
 
     if (op.type() == ExprTokenType::kLogicalOr || op.type() == ExprTokenType::kDoubleAnd) {
       // Short-circuit for || and &&.
       ErrOrValue left_as_bool =
-          CastExprValue(context, CastType::kImplicit, left_value, MakeBoolType());
+          CastExprValue(context, CastType::kImplicit, left_value.value(), MakeBoolType());
       if (left_as_bool.has_error())
         return cb(left_as_bool.err());
 
@@ -648,12 +645,12 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<Expr
       }
     }
 
-    right->Eval(context, [context, left_value = std::move(left_value), op, cb = std::move(cb)](
-                             const Err& err, ExprValue right_value) mutable {
-      if (err.has_error())
-        cb(err);
+    right->Eval(context, [context, left_value = left_value.take_value(), op,
+                          cb = std::move(cb)](ErrOrValue right_value) mutable {
+      if (right_value.has_error())
+        cb(right_value);
       else
-        EvalBinaryOperator(std::move(context), left_value, op, right_value, std::move(cb));
+        EvalBinaryOperator(std::move(context), left_value, op, right_value.value(), std::move(cb));
     });
   });
 }

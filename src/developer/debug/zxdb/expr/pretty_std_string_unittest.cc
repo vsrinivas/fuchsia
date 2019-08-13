@@ -44,14 +44,14 @@ class PrettyStringTest : public TestWithLoop {
 
     bool should_quit = false;
     bool called = false;
-    getter(context(), input, [&called, &should_quit, expected](const Err& err, ExprValue v) {
+    getter(context(), input, [&called, &should_quit, expected](ErrOrValue v) {
       called = true;
 
-      ASSERT_TRUE(err.ok()) << err.msg();
+      ASSERT_TRUE(v.ok()) << v.err().msg();
 
       uint64_t actual = 0;
-      Err err2 = v.PromoteTo64(&actual);
-      ASSERT_TRUE(err2.ok());
+      Err err = v.value().PromoteTo64(&actual);
+      ASSERT_TRUE(err.ok());
       EXPECT_EQ(expected, actual);
 
       if (should_quit)

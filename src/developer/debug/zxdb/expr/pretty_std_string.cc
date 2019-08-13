@@ -170,45 +170,43 @@ void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
 // This function calls the callback with a populated ExprValue if it can be made to have the correct
 // size.
 void EnsureStdStringMemory(fxl::RefPtr<EvalContext> context, const ExprValue& value,
-                           fit::callback<void(const Err&, ExprValue)> cb) {
+                           EvalCallback cb) {
   if (value.data().size() != 0) {
     if (value.data().size() == kStdStringSize)
-      return cb(Err(), value);
-    return cb(Err("Invalid std::string type size."), ExprValue());
+      return cb(value);
+    return cb(Err("Invalid std::string type size."));
   }
 
   // Don't have the data, see if we can fetch it.
   if (value.source().type() != ExprValueSource::Type::kMemory || value.source().address() == 0)
-    return cb(Err("Can't handle a temporary std::string."), ExprValue());
+    return cb(Err("Can't handle a temporary std::string."));
 
   context->GetDataProvider()->GetMemoryAsync(
       value.source().address(), kStdStringSize,
       [value, cb = std::move(cb)](const Err& err, std::vector<uint8_t> data) mutable {
         if (err.has_error())
-          cb(err, ExprValue());
+          cb(err);
         else if (data.size() != kStdStringSize)
-          cb(Err("Invalid memory."), ExprValue());
+          cb(Err("Invalid memory."));
         else
-          cb(Err(), ExprValue(value.type_ref(), std::move(data), value.source()));
+          cb(ExprValue(value.type_ref(), std::move(data), value.source()));
       });
 }
 
 // Getters all need to do the same thing: ensure memory, error check, and then run on the result.
 // This returns a callback that does that stuff, with the given "getter" implementation taking
 // a complete string of a known correct size.
-PrettyStdString::EvalFunction MakeGetter(
-    fit::function<void(ExprValue, fit::callback<void(const Err&, ExprValue)>)> getter) {
-  return
-      [getter = std::move(getter)](fxl::RefPtr<EvalContext> context, const ExprValue& object_value,
-                                   fit::callback<void(const Err&, ExprValue)> cb) mutable {
-        EnsureStdStringMemory(context, object_value,
-                              [context, cb = std::move(cb), getter = std::move(getter)](
-                                  const Err& err, ExprValue value) mutable {
-                                if (err.has_error())
-                                  return cb(err, ExprValue());
-                                getter(std::move(value), std::move(cb));
-                              });
-      };
+PrettyStdString::EvalFunction MakeGetter(fit::function<void(ExprValue, EvalCallback)> getter) {
+  return [getter = std::move(getter)](fxl::RefPtr<EvalContext> context,
+                                      const ExprValue& object_value, EvalCallback cb) mutable {
+    EnsureStdStringMemory(
+        context, object_value,
+        [context, cb = std::move(cb), getter = std::move(getter)](ErrOrValue value) mutable {
+          if (value.has_error())
+            return cb(value);
+          getter(value.value(), std::move(cb));
+        });
+  };
 }
 
 }  // namespace
@@ -216,54 +214,54 @@ PrettyStdString::EvalFunction MakeGetter(
 void PrettyStdString::Format(FormatNode* node, const FormatOptions& options,
                              fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
   EnsureStdStringMemory(context, node->value(),
-                        [weak_node = node->GetWeakPtr(), options, context, cb = std::move(cb)](
-                            const Err& err, ExprValue value) mutable {
+                        [weak_node = node->GetWeakPtr(), options, context,
+                         cb = std::move(cb)](ErrOrValue value) mutable {
                           if (!weak_node)
                             return;
-                          if (err.has_error()) {
-                            weak_node->set_err(err);
+                          if (value.has_error()) {
+                            weak_node->set_err(value.err());
                             weak_node->set_state(FormatNode::kDescribed);
                           } else {
-                            FormatStdStringMemory(value.data(), weak_node.get(), options, context,
-                                                  std::move(cb));
+                            FormatStdStringMemory(value.value().data(), weak_node.get(), options,
+                                                  context, std::move(cb));
                           }
                         });
 }
 
 PrettyStdString::EvalFunction PrettyStdString::GetGetter(const std::string& getter_name) const {
   if (getter_name == "data" || getter_name == "c_str") {
-    return MakeGetter([](ExprValue value, fit::callback<void(const Err&, ExprValue)> cb) {
+    return MakeGetter([](ExprValue value, EvalCallback cb) {
       uint64_t ptr = 0;
       if (Err err = GetStringPtr(value, &ptr); err.has_error())
-        return cb(err, ExprValue());
+        return cb(err);
 
       auto char_ptr =
           fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, GetStdStringCharType());
-      cb(Err(), ExprValue(ptr, char_ptr));
+      cb(ExprValue(ptr, char_ptr));
     });
   }
   if (getter_name == "size" || getter_name == "length") {
-    return MakeGetter([](ExprValue value, fit::callback<void(const Err&, ExprValue)> cb) {
+    return MakeGetter([](ExprValue value, EvalCallback cb) {
       uint64_t string_size = 0;
       if (Err err = GetStringSize(value.data(), &string_size); err.has_error())
-        cb(err, ExprValue());
-      cb(Err(), ExprValue(string_size, GetSizeTType()));
+        cb(err);
+      cb(ExprValue(string_size, GetSizeTType()));
     });
   }
   if (getter_name == "capacity") {
-    return MakeGetter([](ExprValue value, fit::callback<void(const Err&, ExprValue)> cb) {
+    return MakeGetter([](ExprValue value, EvalCallback cb) {
       uint64_t cap = 0;
       if (Err err = GetStringCapacity(value.data(), &cap); err.has_error())
-        return cb(err, ExprValue());
-      cb(Err(), ExprValue(cap, GetSizeTType()));
+        return cb(err);
+      cb(ExprValue(cap, GetSizeTType()));
     });
   }
   if (getter_name == "empty") {
-    return MakeGetter([](ExprValue value, fit::callback<void(const Err&, ExprValue)> cb) {
+    return MakeGetter([](ExprValue value, EvalCallback cb) {
       uint64_t string_size = 0;
       if (Err err = GetStringSize(value.data(), &string_size); err.has_error())
-        return cb(err, ExprValue());
-      cb(Err(), ExprValue(string_size == 0));
+        return cb(err);
+      cb(ExprValue(string_size == 0));
     });
   }
 
@@ -274,22 +272,21 @@ PrettyStdString::EvalArrayFunction PrettyStdString::GetArrayAccess() const {
   return [](fxl::RefPtr<EvalContext> context, const ExprValue& object_value, int64_t index,
             fit::callback<void(ErrOrValue)> cb) {
     EnsureStdStringMemory(
-        context, object_value,
-        [context, cb = std::move(cb), index](const Err& err, ExprValue value) mutable {
-          if (err.has_error())
-            return cb(err);
-          if (IsInlineString(value.data())) {
+        context, object_value, [context, cb = std::move(cb), index](ErrOrValue value) mutable {
+          if (value.has_error())
+            return cb(value.err());
+          if (IsInlineString(value.value().data())) {
             // Use the inline data. Need to range check since we're indexing into our local
             // address space.
             if (index >= static_cast<int64_t>(kShortSizeOffset) || index < 0)
               return cb(Err("String index out of range."));
 
             // Inline array starts from the beginning of the string.
-            return cb(ExprValue(GetStdStringCharType(), {value.data()[index]},
-                                value.source().GetOffsetInto(index)));
+            return cb(ExprValue(GetStdStringCharType(), {value.value().data()[index]},
+                                value.value().source().GetOffsetInto(index)));
           } else {
             uint64_t ptr = 0;
-            if (Err err = GetStringPtr(value, &ptr); err.has_error())
+            if (Err err = GetStringPtr(value.value(), &ptr); err.has_error())
               return cb(err);
 
             context->GetDataProvider()->GetMemoryAsync(

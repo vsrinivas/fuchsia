@@ -43,32 +43,30 @@ bool BaseTypeCanBeArrayIndex(const BaseType* type) {
 }  // namespace
 
 void ExprNode::EvalFollowReferences(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
-    if (err.has_error())
-      cb(err, ExprValue());
-    else
-      EnsureResolveReference(context, std::move(value),
-                             ErrOrValue::FromPairCallback(std::move(cb)));
+  Eval(context, [context, cb = std::move(cb)](ErrOrValue value) mutable {
+    if (value.has_error())
+      return cb(value);
+    EnsureResolveReference(context, std::move(value.value()), std::move(cb));
   });
 }
 
 void AddressOfExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  expr_->EvalFollowReferences(context, [cb = std::move(cb)](const Err& err,
-                                                            ExprValue value) mutable {
-    if (err.has_error()) {
-      cb(err, ExprValue());
-    } else if (value.source().type() != ExprValueSource::Type::kMemory) {
-      cb(Err("Can't take the address of a temporary."), ExprValue());
+  expr_->EvalFollowReferences(context, [cb = std::move(cb)](ErrOrValue value) mutable {
+    if (value.has_error()) {
+      cb(value);
+    } else if (value.value().source().type() != ExprValueSource::Type::kMemory) {
+      cb(Err("Can't take the address of a temporary."));
     } else {
       // Construct a pointer type to the variable.
-      auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, value.type_ref());
+      auto ptr_type =
+          fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, value.value().type_ref());
 
       std::vector<uint8_t> contents;
       contents.resize(kTargetPointerSize);
-      TargetPointer address = value.source().address();
+      TargetPointer address = value.value().source().address();
       memcpy(&contents[0], &address, sizeof(kTargetPointerSize));
 
-      cb(Err(), ExprValue(std::move(ptr_type), std::move(contents)));
+      cb(ExprValue(std::move(ptr_type), std::move(contents)));
     }
   });
 }
@@ -79,29 +77,25 @@ void AddressOfExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void ArrayAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  left_->EvalFollowReferences(context, [inner = inner_, context, cb = std::move(cb)](
-                                           const Err& err, ExprValue left_value) mutable {
-    if (err.has_error()) {
-      cb(err, ExprValue());
+  left_->EvalFollowReferences(context, [inner = inner_, context,
+                                        cb = std::move(cb)](ErrOrValue left_value) mutable {
+    if (left_value.has_error()) {
+      cb(left_value);
     } else {
       // "left" has been evaluated, now do "inner".
-      inner->EvalFollowReferences(
-          context, [context, left_value = std::move(left_value), cb = std::move(cb)](
-                       const Err& err, ExprValue inner_value) mutable {
-            if (err.has_error()) {
-              cb(err, ExprValue());
-            } else {
-              // Both "left" and "inner" has been evaluated.
-              int64_t offset = 0;
-              Err offset_err = InnerValueToOffset(context, inner_value, &offset);
-              if (offset_err.has_error()) {
-                cb(offset_err, ExprValue());
-              } else {
-                ResolveArrayItem(std::move(context), std::move(left_value), offset,
-                                 ErrOrValue::FromPairCallback(std::move(cb)));
-              }
-            }
-          });
+      inner->EvalFollowReferences(context, [context, left_value = left_value.take_value(),
+                                            cb = std::move(cb)](ErrOrValue inner_value) mutable {
+        if (inner_value.has_error()) {
+          cb(inner_value);
+        } else {
+          // Both "left" and "inner" has been evaluated.
+          int64_t offset = 0;
+          if (Err err = InnerValueToOffset(context, inner_value.value(), &offset); err.has_error())
+            cb(err);
+          else
+            ResolveArrayItem(std::move(context), std::move(left_value), offset, std::move(cb));
+        }
+      });
     }
   });
 }
@@ -136,8 +130,7 @@ void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void BinaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  EvalBinaryOperator(std::move(context), left_, op_, right_,
-                     ErrOrValue::FromPairCallback(std::move(cb)));
+  EvalBinaryOperator(std::move(context), left_, op_, right_, std::move(cb));
 }
 
 void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
@@ -149,27 +142,22 @@ void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
 void CastExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   // Callback that does the cast given the right type of value.
   auto exec_cast = [context, cast_type = cast_type_, to_type = to_type_->type(),
-                    cb = std::move(cb)](const Err& err, ExprValue value) mutable {
-    if (err.has_error()) {
-      cb(err, value);
-    } else {
-      ErrOrValue result = CastExprValue(context, cast_type, value, to_type);
-      if (result.has_error())
-        cb(result.err(), ExprValue());
-      else
-        cb(Err(), result.take_value());
-    }
+                    cb = std::move(cb)](ErrOrValue value) mutable {
+    if (value.has_error())
+      cb(value);
+    else
+      cb(CastExprValue(context, cast_type, value.value(), to_type));
   };
 
   from_->Eval(context, [context, cast_type = cast_type_, to_type = to_type_->type(),
-                        exec_cast = std::move(exec_cast)](const Err& err, ExprValue value) mutable {
+                        exec_cast = std::move(exec_cast)](ErrOrValue value) mutable {
     // This lambda optionally follows the reference on the value according to the requirements of
     // the cast.
-    if (err.has_error() || !CastShouldFollowReferences(context, cast_type, value, to_type)) {
-      exec_cast(err, value);  // Also handles the error cases.
+    if (value.has_error() ||
+        !CastShouldFollowReferences(context, cast_type, value.value(), to_type)) {
+      exec_cast(value);  // Also handles the error cases.
     } else {
-      EnsureResolveReference(context, std::move(value),
-                             ErrOrValue::FromPairCallback(std::move(exec_cast)));
+      EnsureResolveReference(context, value.take_value(), std::move(exec_cast));
     }
   });
 }
@@ -181,19 +169,18 @@ void CastExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void DereferenceExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  expr_->EvalFollowReferences(
-      context, [context, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
-        // First check for pretty-printers for this type.
-        if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(value.type())) {
-          if (auto derefer = pretty->GetDereferencer()) {
-            // The pretty type supplies dereference function.
-            return derefer(context, value, std::move(cb));
-          }
-        }
+  expr_->EvalFollowReferences(context, [context, cb = std::move(cb)](ErrOrValue value) mutable {
+    // First check for pretty-printers for this type.
+    if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(value.value().type())) {
+      if (auto derefer = pretty->GetDereferencer()) {
+        // The pretty type supplies dereference function.
+        return derefer(context, value.value(), std::move(cb));
+      }
+    }
 
-        // Normal dereferencing operation.
-        ResolvePointer(context, value, ErrOrValue::FromPairCallback(std::move(cb)));
-      });
+    // Normal dereferencing operation.
+    ResolvePointer(context, value.value(), std::move(cb));
+  });
 }
 
 void DereferenceExprNode::Print(std::ostream& out, int indent) const {
@@ -206,26 +193,26 @@ void FunctionCallExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback c
   const char kNotSupportedMsg[] =
       "Arbitrary function calls are not supported. Only certain built-in getters will work.";
   if (!args_.empty())
-    return cb(Err(kNotSupportedMsg), ExprValue());
+    return cb(Err(kNotSupportedMsg));
 
   if (const MemberAccessExprNode* access = call_->AsMemberAccess()) {
     // Object member calls, check for getters provided by pretty-printers.
     std::string fn_name = access->member().GetFullName();
     access->left()->EvalFollowReferences(
-        context, [context, cb = std::move(cb), op = access->accessor(), fn_name](
-                     const Err& err, ExprValue value) mutable {
-          if (err.has_error())
-            return cb(err, ExprValue());
+        context,
+        [context, cb = std::move(cb), op = access->accessor(), fn_name](ErrOrValue value) mutable {
+          if (value.has_error())
+            return cb(value);
 
           if (op.type() == ExprTokenType::kArrow)
-            EvalMemberPtrCall(context, value, fn_name, std::move(cb));
+            EvalMemberPtrCall(context, value.value(), fn_name, std::move(cb));
           else  // Assume ".".
-            EvalMemberCall(context, value, fn_name, std::move(cb));
+            EvalMemberCall(context, value.value(), fn_name, std::move(cb));
         });
     return;
   }
 
-  cb(Err(kNotSupportedMsg), ExprValue());
+  cb(Err(kNotSupportedMsg));
 }
 
 void FunctionCallExprNode::Print(std::ostream& out, int indent) const {
@@ -244,32 +231,31 @@ bool FunctionCallExprNode::IsValidCall(const fxl::RefPtr<ExprNode>& call) {
 void FunctionCallExprNode::EvalMemberCall(fxl::RefPtr<EvalContext> context, const ExprValue& object,
                                           const std::string& fn_name, EvalCallback cb) {
   if (!object.type())
-    return cb(Err("No type information."), ExprValue());
+    return cb(Err("No type information."));
 
   if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(object.type())) {
     // Have a PrettyType for the object type.
     if (auto getter = pretty->GetGetter(fn_name)) {
       return getter(context, object,
-                    [type_name = object.type()->GetFullName(), fn_name, cb = std::move(cb)](
-                        const Err& err, ExprValue value) mutable {
+                    [type_name = object.type()->GetFullName(), fn_name,
+                     cb = std::move(cb)](ErrOrValue value) mutable {
                       // This lambda exists just to rewrite the error message so it's clear the
                       // error is coming from the PrettyType and not the users's input. Otherwise
                       // it can look quite confusing.
-                      if (err.has_error()) {
-                        cb(Err("When evaluating the internal pretty getter '%s()' on the type:\n  "
-                               "%s\nGot the error:\n  %s\nPlease file a bug.",
-                               fn_name.c_str(), type_name.c_str(), err.msg().c_str()),
-                           ExprValue());
+                      if (value.has_error()) {
+                        cb(
+                            Err("When evaluating the internal pretty getter '%s()' on the type:\n  "
+                                "%s\nGot the error:\n  %s\nPlease file a bug.",
+                                fn_name.c_str(), type_name.c_str(), value.err().msg().c_str()));
                       } else {
-                        cb(Err(), std::move(value));
+                        cb(std::move(value));
                       }
                     });
     }
   }
 
   cb(Err("No built-in getter '%s()' for the type\n  %s", fn_name.c_str(),
-         object.type()->GetFullName().c_str()),
-     ExprValue());
+         object.type()->GetFullName().c_str()));
 }
 
 // static
@@ -277,12 +263,11 @@ void FunctionCallExprNode::EvalMemberPtrCall(fxl::RefPtr<EvalContext> context,
                                              const ExprValue& object_ptr,
                                              const std::string& fn_name, EvalCallback cb) {
   // Callback executed on the object once the pointer has been dereferenced.
-  auto on_pointer_resolved = [context, fn_name, cb = std::move(cb)](const Err& err,
-                                                                    ExprValue value) mutable {
-    if (err.has_error())
-      cb(err, ExprValue());
+  auto on_pointer_resolved = [context, fn_name, cb = std::move(cb)](ErrOrValue value) mutable {
+    if (value.has_error())
+      cb(value);
     else
-      EvalMemberCall(std::move(context), value, fn_name, std::move(cb));
+      EvalMemberCall(std::move(context), value.value(), fn_name, std::move(cb));
   };
 
   // The base object could itself have a dereference operator. For example, if you have a:
@@ -299,15 +284,15 @@ void FunctionCallExprNode::EvalMemberPtrCall(fxl::RefPtr<EvalContext> context,
   }
 
   // Regular, assume the base is a pointer.
-  ResolvePointer(context, object_ptr, ErrOrValue::FromPairCallback(std::move(on_pointer_resolved)));
+  ResolvePointer(context, object_ptr, std::move(on_pointer_resolved));
 }
 
 void IdentifierExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  context->GetNamedValue(
-      ident_, [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>, ExprValue value) mutable {
-        // Discard resolved symbol, we only need the value.
-        cb(err, std::move(value));
-      });
+  context->GetNamedValue(ident_,
+                         [cb = std::move(cb)](ErrOrValue value, fxl::RefPtr<Symbol>) mutable {
+                           // Discard resolved symbol, we only need the value.
+                           cb(std::move(value));
+                         });
 }
 
 void IdentifierExprNode::Print(std::ostream& out, int indent) const {
@@ -317,17 +302,15 @@ void IdentifierExprNode::Print(std::ostream& out, int indent) const {
 void LiteralExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   switch (token_.type()) {
     case ExprTokenType::kInteger: {
-      ExprValue value;
-      Err err = StringToNumber(token_.value(), &value);
-      cb(err, std::move(value));
+      cb(StringToNumber(token_.value()));
       break;
     }
     case ExprTokenType::kTrue: {
-      cb(Err(), ExprValue(true));
+      cb(ExprValue(true));
       break;
     }
     case ExprTokenType::kFalse: {
-      cb(Err(), ExprValue(false));
+      cb(ExprValue(false));
       break;
     }
     default:
@@ -341,34 +324,33 @@ void LiteralExprNode::Print(std::ostream& out, int indent) const {
 
 void MemberAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   bool is_arrow = accessor_.type() == ExprTokenType::kArrow;
-  left_->EvalFollowReferences(context, [context, is_arrow, member = member_, cb = std::move(cb)](
-                                           const Err& err, ExprValue base) mutable {
-    if (!is_arrow) {
-      // "." operator.
-      ErrOrValue result = ResolveMember(context, base, member);
-      cb(result.err_or_empty(), std::move(result.take_value_or_empty()));
-      return;
-    }
+  left_->EvalFollowReferences(context, [context, is_arrow, member = member_,
+                                        cb = std::move(cb)](ErrOrValue base) mutable {
+    if (base.has_error())
+      return cb(base);
+
+    if (!is_arrow)  // "." operator.
+      return cb(ResolveMember(context, base.value(), member));
 
     // Everything else should be a -> operator.
 
-    if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(base.type())) {
+    if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(base.value().type())) {
       if (auto derefer = pretty->GetDereferencer()) {
         // The pretty type supplies dereference function. This turns foo->bar into deref(foo).bar.
-        return derefer(
-            context, base,
-            [context, member, cb = std::move(cb)](const Err& err, ExprValue non_ptr_base) mutable {
-              ErrOrValue result = ResolveMember(context, non_ptr_base, member);
-              cb(result.err_or_empty(), std::move(result.take_value_or_empty()));
-            });
+        return derefer(context, base.value(),
+                       [context, member, cb = std::move(cb)](ErrOrValue non_ptr_base) mutable {
+                         if (non_ptr_base.has_error())
+                           return cb(non_ptr_base);
+                         cb(ResolveMember(context, non_ptr_base.value(), member));
+                       });
       }
     }
 
     // Normal collection resolution.
-    ResolveMemberByPointer(context, base, member,
+    ResolveMemberByPointer(context, base.value(), member,
                            [cb = std::move(cb)](ErrOrValue result, fxl::RefPtr<Symbol>) mutable {
                              // Discard resolved symbol, we only need the value.
-                             cb(result.err_or_empty(), std::move(result.take_value_or_empty()));
+                             cb(std::move(result));
                            });
   });
 }
@@ -387,11 +369,10 @@ void SizeofExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) con
     // Everything else gets evaluated. Strictly C++ won't do this because it's statically typed, but
     // our expression system is not. This doesn't need to follow references because we only need the
     // type and the
-    expr_->Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
-      if (err.has_error())
-        cb(err, ExprValue());
-      else
-        SizeofType(context, value.type(), std::move(cb));
+    expr_->Eval(context, [context, cb = std::move(cb)](ErrOrValue value) mutable {
+      if (value.has_error())
+        return cb(value);
+      SizeofType(context, value.value().type(), std::move(cb));
     });
   }
 }
@@ -405,32 +386,25 @@ void SizeofExprNode::Print(std::ostream& out, int indent) const {
 void SizeofExprNode::SizeofType(fxl::RefPtr<EvalContext> context, const Type* in_type,
                                 EvalCallback cb) {
   // References should get stripped (sizeof(char&) = 1).
-  if (!in_type) {
-    cb(Err("Can't do sizeof on a null type."), ExprValue());
-    return;
-  }
+  if (!in_type)
+    return cb(Err("Can't do sizeof on a null type."));
 
   fxl::RefPtr<Type> type = context->GetConcreteType(in_type);
-  if (type->is_declaration()) {
-    cb(Err("Can't resolve forward declaration for '%s'.", in_type->GetFullName().c_str()),
-       ExprValue());
-    return;
-  }
+  if (type->is_declaration())
+    return cb(Err("Can't resolve forward declaration for '%s'.", in_type->GetFullName().c_str()));
 
   if (DwarfTagIsEitherReference(type->tag()))
     type = RefPtrTo(type->AsModifiedType()->modified().Get()->AsType());
-  if (!type) {
-    cb(Err("Symbol error for '%s'.", in_type->GetFullName().c_str()), ExprValue());
-    return;
-  }
+  if (!type)
+    return cb(Err("Symbol error for '%s'.", in_type->GetFullName().c_str()));
 
-  cb(Err(), ExprValue(type->byte_size()));
+  cb(ExprValue(type->byte_size()));
 }
 
 void TypeExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   // Doesn't make sense to evaluate a type, callers like casts that expect a type name will look
   // into the node themselves.
-  cb(Err("Can not evaluate a type name."), ExprValue());
+  cb(Err("Can not evaluate a type name."));
 }
 
 void TypeExprNode::Print(std::ostream& out, int indent) const {
@@ -441,13 +415,12 @@ void TypeExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void UnaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  expr_->EvalFollowReferences(
-      context, [cb = std::move(cb), op = op_](const Err& err, ExprValue value) mutable {
-        if (err.has_error())
-          cb(err, std::move(value));
-        else
-          EvalUnaryOperator(op, value, ErrOrValue::FromPairCallback(std::move(cb)));
-      });
+  expr_->EvalFollowReferences(context, [cb = std::move(cb), op = op_](ErrOrValue value) mutable {
+    if (value.has_error())
+      cb(value);
+    else
+      EvalUnaryOperator(op, value.value(), std::move(cb));
+  });
 }
 
 void UnaryOpExprNode::Print(std::ostream& out, int indent) const {

@@ -16,23 +16,22 @@ namespace {
 
 class MultiEvalTracking {
  public:
-  using OutputVector = std::vector<std::pair<Err, ExprValue>>;
+  using OutputVector = std::vector<ErrOrValue>;
   using Completion = fit::callback<void(OutputVector)>;
 
   MultiEvalTracking(size_t count, Completion cb) : remaining_(count), completion_(std::move(cb)) {
-    data_.resize(count);
+    data_.resize(count, ErrOrValue(ExprValue()));
   }
 
-  void SetResult(size_t index, const Err& err, ExprValue val) {
+  void SetResult(size_t index, ErrOrValue value) {
     FXL_DCHECK(index < data_.size());
     FXL_DCHECK(remaining_ > 0);
 
     // Nothing should be set on this slot yet.
-    FXL_DCHECK(!data_[index].first.has_error());
-    FXL_DCHECK(data_[index].second == ExprValue());
+    FXL_DCHECK(!data_[index].has_error());
+    FXL_DCHECK(data_[index].value() == ExprValue());
 
-    data_[index].first = err;
-    data_[index].second = std::move(val);
+    data_[index] = std::move(value);
 
     remaining_--;
     if (remaining_ == 0)
@@ -48,13 +47,10 @@ class MultiEvalTracking {
 }  // namespace
 
 void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
-                    bool follow_references,
-                    fit::callback<void(const Err& err, ExprValue value)> cb) {
+                    bool follow_references, EvalCallback cb) {
   ExprTokenizer tokenizer(input, context->GetLanguage());
-  if (!tokenizer.Tokenize()) {
-    cb(tokenizer.err(), ExprValue());
-    return;
-  }
+  if (!tokenizer.Tokenize())
+    return cb(tokenizer.err());
 
   ExprParser parser(tokenizer.TakeTokens(), context->GetSymbolNameLookupCallback());
   auto node = parser.Parse();
@@ -66,9 +62,9 @@ void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
       Err context_err(parser.err().type(),
                       parser.err().msg() + "\n" +
                           ExprTokenizer::GetErrorContext(input, error_token.byte_offset()));
-      cb(context_err, ExprValue());
+      cb(context_err);
     } else {
-      cb(parser.err(), ExprValue());
+      cb(parser.err());
     }
     return;
   }
@@ -80,16 +76,13 @@ void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
 }
 
 void EvalExpressions(const std::vector<std::string>& inputs, fxl::RefPtr<EvalContext> context,
-                     bool follow_references,
-                     fit::callback<void(std::vector<std::pair<Err, ExprValue>>)> cb) {
+                     bool follow_references, fit::callback<void(std::vector<ErrOrValue>)> cb) {
   FXL_DCHECK(!inputs.empty());
 
   auto tracking = std::make_shared<MultiEvalTracking>(inputs.size(), std::move(cb));
   for (size_t i = 0; i < inputs.size(); i++) {
     EvalExpression(inputs[i], context, follow_references,
-                   [tracking, i](const Err& err, ExprValue value) {
-                     tracking->SetResult(i, err, std::move(value));
-                   });
+                   [tracking, i](ErrOrValue value) { tracking->SetResult(i, std::move(value)); });
   }
 }
 

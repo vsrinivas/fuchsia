@@ -10,6 +10,7 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
+#include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
@@ -39,8 +40,6 @@ class UnaryOpExprNode;
 // Represents one node in the abstract syntax tree.
 class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
  public:
-  using EvalCallback = fit::callback<void(const Err& err, ExprValue value)>;
-
   ExprNode() = default;
   virtual ~ExprNode() = default;
 

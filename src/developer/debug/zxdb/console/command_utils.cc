@@ -85,9 +85,10 @@ Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context, const Command& 
     return err;
 
   if (!cmd.frame()) {
-    return Err("\"%s\" requires a stack frame but none is available.\n"
-               "You may need to \"pause\" the thread or sync the frames with \"frame\".",
-               command_name);
+    return Err(
+        "\"%s\" requires a stack frame but none is available.\n"
+        "You may need to \"pause\" the thread or sync the frames with \"frame\".",
+        command_name);
   }
 
   return cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
@@ -120,15 +121,14 @@ Err StringToInt64(const std::string& s, int64_t* out) {
   // StringToNumber expects pre-trimmed input.
   std::string trimmed = fxl::TrimString(s, " ").ToString();
 
-  ExprValue number_value;
-  Err err = StringToNumber(trimmed, &number_value);
-  if (err.has_error())
-    return err;
+  ErrOrValue number_value = StringToNumber(trimmed);
+  if (number_value.has_error())
+    return number_value.err();
 
   // Be careful to read the number out in its original sign-edness.
-  if (number_value.GetBaseType() == BaseType::kBaseTypeUnsigned) {
+  if (number_value.value().GetBaseType() == BaseType::kBaseTypeUnsigned) {
     uint64_t u64;
-    err = number_value.PromoteTo64(&u64);
+    Err err = number_value.value().PromoteTo64(&u64);
     if (err.has_error())
       return err;
 
@@ -140,9 +140,9 @@ Err StringToInt64(const std::string& s, int64_t* out) {
   }
 
   // Expect everything else to be a signed number.
-  if (number_value.GetBaseType() != BaseType::kBaseTypeSigned)
+  if (number_value.value().GetBaseType() != BaseType::kBaseTypeSigned)
     return Err("This value is not the correct type.");
-  return number_value.PromoteTo64(out);
+  return number_value.value().PromoteTo64(out);
 }
 
 Err StringToUint32(const std::string& s, uint32_t* out) {
@@ -165,15 +165,14 @@ Err StringToUint64(const std::string& s, uint64_t* out) {
   // StringToNumber expects pre-trimmed input.
   std::string trimmed = fxl::TrimString(s, " ").ToString();
 
-  ExprValue number_value;
-  Err err = StringToNumber(trimmed, &number_value);
-  if (err.has_error())
-    return err;
+  ErrOrValue number_value = StringToNumber(trimmed);
+  if (number_value.has_error())
+    return number_value.err();
 
   // Be careful to read the number out in its original sign-edness.
-  if (number_value.GetBaseType() == BaseType::kBaseTypeSigned) {
+  if (number_value.value().GetBaseType() == BaseType::kBaseTypeSigned) {
     int64_t s64;
-    err = number_value.PromoteTo64(&s64);
+    Err err = number_value.value().PromoteTo64(&s64);
     if (err.has_error())
       return err;
 
@@ -185,9 +184,9 @@ Err StringToUint64(const std::string& s, uint64_t* out) {
   }
 
   // Expect everything else to be an unsigned number.
-  if (number_value.GetBaseType() != BaseType::kBaseTypeUnsigned)
+  if (number_value.value().GetBaseType() != BaseType::kBaseTypeUnsigned)
     return Err("This value is not the correct type.");
-  return number_value.PromoteTo64(out);
+  return number_value.value().PromoteTo64(out);
 }
 
 Err ReadUint64Arg(const Command& cmd, size_t arg_index, const char* param_desc, uint64_t* out) {
@@ -504,7 +503,7 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd) {
 
 Err EvalCommandExpression(const Command& cmd, const char* verb,
                           fxl::RefPtr<EvalContext> eval_context, bool follow_references,
-                          fit::callback<void(const Err& err, ExprValue value)> cb) {
+                          EvalCallback cb) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
   if (err.has_error())
     return err;
@@ -532,20 +531,16 @@ Err EvalCommandAddressExpression(
     const Command& cmd, const char* verb, fxl::RefPtr<EvalContext> eval_context,
     fit::callback<void(const Err& err, uint64_t address, std::optional<uint32_t> size)> cb) {
   return EvalCommandExpression(
-      cmd, verb, eval_context, true,
-      [eval_context, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
-        if (err.has_error()) {
-          cb(err, 0, std::nullopt);
-          return;
-        }
+      cmd, verb, eval_context, true, [eval_context, cb = std::move(cb)](ErrOrValue value) mutable {
+        if (value.has_error())
+          return cb(value.err(), 0, std::nullopt);
 
-        fxl::RefPtr<Type> concrete_type = value.GetConcreteType(eval_context.get());
+        fxl::RefPtr<Type> concrete_type = value.value().GetConcreteType(eval_context.get());
         if (concrete_type->AsCollection()) {
           // Don't allow structs and classes that are <= 64 bits to be converted
           // to addresses.
-          cb(Err("Can't convert '%s' to an address.", concrete_type->GetFullName().c_str()), 0,
-             std::nullopt);
-          return;
+          return cb(Err("Can't convert '%s' to an address.", concrete_type->GetFullName().c_str()),
+                    0, std::nullopt);
         }
 
         // See if there's an intrinsic size to the object being pointed to. This
@@ -560,7 +555,7 @@ Err EvalCommandAddressExpression(
 
         // Convert anything else <= 64 bits to a number.
         uint64_t address = 0;
-        Err conversion_err = value.PromoteTo64(&address);
+        Err conversion_err = value.value().PromoteTo64(&address);
         cb(conversion_err, address, size);
       });
 }

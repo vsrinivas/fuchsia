@@ -68,7 +68,7 @@ class PrettyTreeIterator : public PrettyType {
 
   // Computes the pointed-to value for the given iterator and calls the callback with it.
   static void GetIteratorValue(fxl::RefPtr<EvalContext> context, const ExprValue& iter,
-                               fit::callback<void(const Err&, ExprValue)> cb);
+                               EvalCallback cb);
 };
 
 // std::map<*>::iterator
@@ -82,7 +82,7 @@ class PrettyMapIterator : public PrettyType {
 
   // Computes the pointed-to value for the given iterator and calls the callback with it.
   static void GetIteratorValue(fxl::RefPtr<EvalContext> context, const ExprValue& iter,
-                               fit::callback<void(const Err&, ExprValue)> cb);
+                               EvalCallback cb);
 };
 
 // std::set and std::map.

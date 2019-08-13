@@ -477,10 +477,10 @@ TEST_F(EvalOperators, LogicalShortCircuit) {
 
   // Should evalutate to true and not error.
   bool called = false;
-  or_node->Eval(eval_context(), [&called](const Err& e, ExprValue v) {
+  or_node->Eval(eval_context(), [&called](ErrOrValue v) {
     called = true;
-    EXPECT_FALSE(e.has_error());
-    EXPECT_EQ(1, v.GetAs<uint8_t>());
+    EXPECT_FALSE(v.has_error());
+    EXPECT_EQ(1, v.value().GetAs<uint8_t>());
   });
   EXPECT_TRUE(called);  // Should eval synchronously.
 
@@ -492,10 +492,10 @@ TEST_F(EvalOperators, LogicalShortCircuit) {
 
   // Should evalutate to true and not error.
   called = false;
-  and_node->Eval(eval_context(), [&called](const Err& e, ExprValue v) {
+  and_node->Eval(eval_context(), [&called](ErrOrValue v) {
     called = true;
-    EXPECT_FALSE(e.has_error());
-    EXPECT_EQ(0, v.GetAs<uint8_t>());
+    EXPECT_FALSE(v.has_error());
+    EXPECT_EQ(0, v.value().GetAs<uint8_t>());
   });
   EXPECT_TRUE(called);  // Should eval synchronously.
 }

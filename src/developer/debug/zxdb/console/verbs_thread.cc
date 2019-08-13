@@ -893,11 +893,11 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
 
   auto data_provider = eval_context->GetDataProvider();
   return EvalCommandExpression(
-      cmd, "print", eval_context, false, [options, eval_context](const Err& err, ExprValue value) {
-        if (err.has_error())
-          Console::get()->Output(err);
+      cmd, "print", eval_context, false, [options, eval_context](ErrOrValue value) {
+        if (value.has_error())
+          Console::get()->Output(value.err());
         else
-          Console::get()->Output(FormatValueForConsole(value, options, eval_context));
+          Console::get()->Output(FormatValueForConsole(value.value(), options, eval_context));
       });
 }
 

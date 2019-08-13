@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_H_
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 
 namespace zxdb {
@@ -23,14 +24,12 @@ class EvalContext;
 // The callback may get issued asynchronously in the future or it may get called synchronously in a
 // reentrant fashion from this function.
 void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
-                    bool follow_references,
-                    fit::callback<void(const Err& err, ExprValue value)> cb);
+                    bool follow_references, EvalCallback cb);
 
 // Like EvalExpressions but evaluates a sequence of expressions, issuing the callback when they're
 // all complete. The size order of the results in the callback vector will correspond to the inputs.
 void EvalExpressions(const std::vector<std::string>& inputs, fxl::RefPtr<EvalContext> context,
-                     bool follow_references,
-                     fit::callback<void(std::vector<std::pair<Err, ExprValue>>)> cb);
+                     bool follow_references, fit::callback<void(std::vector<ErrOrValue>)> cb);
 
 }  // namespace zxdb
 

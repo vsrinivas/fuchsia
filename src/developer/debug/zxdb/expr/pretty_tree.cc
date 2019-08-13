@@ -17,9 +17,9 @@ namespace {
 // Fills the given node for a set/map iterator. The "value" is the referenced value. The container
 // type will be either "map" or "set" to make the description.
 void FillTreeIteratorNode(const char* container_type, FormatNode* node,
-                          fxl::RefPtr<EvalContext> context, const Err& err, ExprValue value) {
-  if (err.has_error())
-    return node->SetDescribedError(err);
+                          fxl::RefPtr<EvalContext> context, ErrOrValue value) {
+  if (value.has_error())
+    return node->SetDescribedError(value.err());
 
   // Declare it as a pointer with the value as the pointed-to thing.
   node->set_description_kind(FormatNode::kPointer);
@@ -29,7 +29,7 @@ void FillTreeIteratorNode(const char* container_type, FormatNode* node,
   node->set_description(std::string(container_type) + "::iterator");
 
   // Make the dereference child node the value.
-  auto deref_node = std::make_unique<FormatNode>("*", std::move(value));
+  auto deref_node = std::make_unique<FormatNode>("*", value.take_value());
   deref_node->set_child_kind(FormatNode::kPointerExpansion);
   node->children().push_back(std::move(deref_node));
 }
@@ -41,24 +41,22 @@ void FillTreeIteratorNode(const char* container_type, FormatNode* node,
 void PrettyTreeIterator::Format(FormatNode* node, const FormatOptions& options,
                                 fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
   GetIteratorValue(context, node->value(),
-                   [context, weak_node = node->GetWeakPtr(), cb = std::move(cb)](const Err& err,
-                                                                                 ExprValue value) {
+                   [context, weak_node = node->GetWeakPtr(), cb = std::move(cb)](ErrOrValue value) {
                      if (weak_node) {
-                       FillTreeIteratorNode("std::set", weak_node.get(), std::move(context), err,
+                       FillTreeIteratorNode("std::set", weak_node.get(), std::move(context),
                                             std::move(value));
                      }
                    });
 }
 
 PrettyTreeIterator::EvalFunction PrettyTreeIterator::GetDereferencer() const {
-  return [](fxl::RefPtr<EvalContext> context, const ExprValue& iter,
-            fit::callback<void(const Err&, ExprValue)> cb) {
+  return [](fxl::RefPtr<EvalContext> context, const ExprValue& iter, EvalCallback cb) {
     GetIteratorValue(std::move(context), iter, std::move(cb));
   };
 }
 
 void PrettyTreeIterator::GetIteratorValue(fxl::RefPtr<EvalContext> context, const ExprValue& iter,
-                                          fit::callback<void(const Err&, ExprValue)> cb) {
+                                          EvalCallback cb) {
   // Evaluate "static_cast<ITER_TYPE::__node_pointer>(iter.__ptr_)->__value_"
   //
   // Unfortunately, there is no way with the implementation to know when an iterator points to
@@ -77,29 +75,27 @@ void PrettyTreeIterator::GetIteratorValue(fxl::RefPtr<EvalContext> context, cons
 void PrettyMapIterator::Format(FormatNode* node, const FormatOptions& options,
                                fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
   GetIteratorValue(context, node->value(),
-                   [context, weak_node = node->GetWeakPtr(), cb = std::move(cb)](const Err& err,
-                                                                                 ExprValue value) {
+                   [context, weak_node = node->GetWeakPtr(), cb = std::move(cb)](ErrOrValue value) {
                      if (weak_node) {
-                       FillTreeIteratorNode("std::map", weak_node.get(), std::move(context), err,
+                       FillTreeIteratorNode("std::map", weak_node.get(), std::move(context),
                                             std::move(value));
                      }
                    });
 }
 
 PrettyMapIterator::EvalFunction PrettyMapIterator::GetDereferencer() const {
-  return [](fxl::RefPtr<EvalContext> context, const ExprValue& iter,
-            fit::callback<void(const Err&, ExprValue)> cb) {
+  return [](fxl::RefPtr<EvalContext> context, const ExprValue& iter, EvalCallback cb) {
     GetIteratorValue(std::move(context), iter, std::move(cb));
   };
 }
 
 void PrettyMapIterator::GetIteratorValue(fxl::RefPtr<EvalContext> context, const ExprValue& iter,
-                                         fit::callback<void(const Err&, ExprValue)> cb) {
+                                         EvalCallback cb) {
   // Evaluate "static_cast<ITER_TYPE::__node_pointer>(iter.__i_.__ptr_)->__value_.__cc"
   // Where ITER_TYPE is actually the type of "iter.__i_".
   ErrOrValue i_value = ResolveMember(context, iter, ParsedIdentifier("__i_"));
   if (i_value.has_error())
-    return cb(i_value.err(), ExprValue());
+    return cb(i_value);
 
   // See PrettyTreeIterator above.
   EvalExpressionOn(context, i_value.value(),
@@ -126,15 +122,15 @@ void PrettyTree::Format(FormatNode* node, const FormatOptions& options,
   // For now, just show the size as the description.
   EvalExpressionOn(context, node->value(), TREE_SIZE_EXPRESSION,
                    [container_name = container_name_, weak_node = node->GetWeakPtr(),
-                    cb = std::move(cb)](const Err& err, ExprValue size_value) mutable {
+                    cb = std::move(cb)](ErrOrValue size_value) mutable {
                      if (!weak_node)
                        return;
-                     if (err.has_error())
-                       return weak_node->SetDescribedError(err);
+                     if (size_value.has_error())
+                       return weak_node->SetDescribedError(size_value.err());
 
                      uint64_t size = 0;
-                     if (Err e = size_value.PromoteTo64(&size); e.has_error())
-                       return weak_node->SetDescribedError(err);
+                     if (Err e = size_value.value().PromoteTo64(&size); e.has_error())
+                       return weak_node->SetDescribedError(e);
 
                      weak_node->set_description(
                          fxl::StringPrintf("%s{size = %" PRIu64 "}", container_name.c_str(), size));

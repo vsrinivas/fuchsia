@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 
@@ -145,7 +146,7 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd);
 // The |verb| string is used to format error messages showing command examples.
 Err EvalCommandExpression(const Command& cmd, const char* verb,
                           fxl::RefPtr<EvalContext> eval_context, bool follow_references,
-                          fit::callback<void(const Err& err, ExprValue value)> cb);
+                          EvalCallback cb);
 
 // Like EvalCommandExpression but attempts to convert the result to an address.
 // This is used for commands that want to support expressions to compute

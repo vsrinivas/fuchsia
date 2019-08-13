@@ -7,6 +7,7 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/expr/expr_language.h"
+#include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -16,7 +17,6 @@
 namespace zxdb {
 
 class Err;
-class ExprValue;
 class PrettyTypeManager;
 class Symbol;
 class SymbolDataProvider;
@@ -26,7 +26,7 @@ class Variable;
 // access to the variables currently in scope.
 class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
  public:
-  using ValueCallback = fit::callback<void(const Err&, fxl::RefPtr<Symbol>, ExprValue)>;
+  using ValueCallback = fit::callback<void(ErrOrValue, fxl::RefPtr<Symbol>)>;
 
   virtual ~EvalContext() = default;
 

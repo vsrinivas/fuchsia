@@ -72,9 +72,10 @@ class EvalContextImplTest : public TestWithLoop {
 };
 
 struct ValueResult {
+  ValueResult() : value(ExprValue()) {}
+
   bool called = false;  // Set when the callback is issued.
-  Err err;
-  ExprValue value;
+  ErrOrValue value;
   fxl::RefPtr<Symbol> symbol;
 };
 
@@ -90,29 +91,26 @@ void GetNamedValue(const fxl::RefPtr<EvalContext>& eval_context, const std::stri
   Err err = ExprParser::ParseIdentifier(name, &ident);
   ASSERT_FALSE(err.has_error());
 
-  eval_context->GetNamedValue(
-      ident, [result, async](const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
-        result->called = true;
-        result->err = err;
-        result->value = std::move(value);
-        result->symbol = std::move(symbol);
-        if (async == kQuitLoop)
-          debug_ipc::MessageLoop::Current()->QuitNow();
-      });
+  eval_context->GetNamedValue(ident, [result, async](ErrOrValue value, fxl::RefPtr<Symbol> symbol) {
+    result->called = true;
+    result->value = std::move(value);
+    result->symbol = std::move(symbol);
+    if (async == kQuitLoop)
+      debug_ipc::MessageLoop::Current()->QuitNow();
+  });
 }
 
 // Sync wrapper around GetVariableValue().
 void GetVariableValue(const fxl::RefPtr<EvalContext>& eval_context, fxl::RefPtr<Variable> variable,
                       GetValueAsync async, ValueResult* result) {
-  eval_context->GetVariableValue(
-      variable, [result, async](const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
-        result->called = true;
-        result->err = err;
-        result->value = std::move(value);
-        result->symbol = std::move(symbol);
-        if (async == kQuitLoop)
-          debug_ipc::MessageLoop::Current()->QuitNow();
-      });
+  eval_context->GetVariableValue(variable,
+                                 [result, async](ErrOrValue value, fxl::RefPtr<Symbol> symbol) {
+                                   result->called = true;
+                                   result->value = std::move(value);
+                                   result->symbol = std::move(symbol);
+                                   if (async == kQuitLoop)
+                                     debug_ipc::MessageLoop::Current()->QuitNow();
+                                 });
 }
 
 const debug_ipc::RegisterID kDWARFReg0ID = debug_ipc::RegisterID::kARMv8_x0;
@@ -129,8 +127,7 @@ TEST_F(EvalContextImplTest, NotFoundSynchronous) {
   GetNamedValue(context, "not_present", kSynchronous, &result);
 
   EXPECT_TRUE(result.called);
-  EXPECT_TRUE(result.err.has_error());
-  EXPECT_EQ(ExprValue(), result.value);
+  EXPECT_TRUE(result.value.has_error());
   EXPECT_FALSE(result.symbol);
 }
 
@@ -145,8 +142,8 @@ TEST_F(EvalContextImplTest, FoundSynchronous) {
   GetNamedValue(context, kPresentVarName, kSynchronous, &result);
 
   EXPECT_TRUE(result.called);
-  EXPECT_FALSE(result.err.has_error()) << result.err.msg();
-  EXPECT_EQ(ExprValue(kValue), result.value);
+  EXPECT_FALSE(result.value.has_error()) << result.value.err().msg();
+  EXPECT_EQ(ExprValue(kValue), result.value.value());
 
   // Symbol should match.
   ASSERT_TRUE(result.symbol);
@@ -171,8 +168,8 @@ TEST_F(EvalContextImplTest, FoundAsynchronous) {
   // Running the message loop should complete the callback.
   loop().Run();
   EXPECT_TRUE(result.called);
-  EXPECT_FALSE(result.err.has_error()) << result.err.msg();
-  EXPECT_EQ(ExprValue(kValue), result.value);
+  EXPECT_FALSE(result.value.has_error()) << result.value.err().msg();
+  EXPECT_EQ(ExprValue(kValue), result.value.value());
 
   // Symbol should match.
   ASSERT_TRUE(result.symbol);
@@ -193,8 +190,7 @@ TEST_F(EvalContextImplTest, FoundButNotEvaluatable) {
 
   // The value should be not found and this should be known synchronously.
   EXPECT_TRUE(result.called);
-  EXPECT_TRUE(result.err.has_error());
-  EXPECT_EQ(ExprValue(), result.value);
+  EXPECT_TRUE(result.value.has_error());
 
   // The symbol should still have been found even though the value could not be computed.
   ASSERT_TRUE(result.symbol);
@@ -252,8 +248,8 @@ TEST_F(EvalContextImplTest, FoundThis) {
   // Running the message loop should complete the callback.
   loop().Run();
   EXPECT_TRUE(result_d2.called);
-  EXPECT_FALSE(result_d2.err.has_error()) << result_d2.err.msg();
-  EXPECT_EQ(ExprValue(static_cast<uint32_t>(kD2)), result_d2.value);
+  EXPECT_FALSE(result_d2.value.has_error()) << result_d2.value.err().msg();
+  EXPECT_EQ(ExprValue(static_cast<uint32_t>(kD2)), result_d2.value.value());
 
   // Now get b2 on the base class, it should implicitly find it on "this" and then check the base
   // class.
@@ -263,8 +259,8 @@ TEST_F(EvalContextImplTest, FoundThis) {
   EXPECT_FALSE(result_b2.called);
   loop().Run();
   EXPECT_TRUE(result_b2.called);
-  EXPECT_FALSE(result_b2.err.has_error()) << result_b2.err.msg();
-  EXPECT_EQ(ExprValue(static_cast<uint32_t>(kB2)), result_b2.value);
+  EXPECT_FALSE(result_b2.value.has_error()) << result_b2.value.err().msg();
+  EXPECT_EQ(ExprValue(static_cast<uint32_t>(kB2)), result_b2.value.value());
 
   // Symbol should match.
   ASSERT_TRUE(result_b2.symbol);
@@ -284,9 +280,8 @@ TEST_F(EvalContextImplTest, RangeMiss) {
   ValueResult result;
   GetNamedValue(MakeEvalContext(), kPresentVarName, kSynchronous, &result);
   EXPECT_TRUE(result.called);
-  EXPECT_TRUE(result.err.has_error());
-  EXPECT_EQ(ErrType::kOptimizedOut, result.err.type());
-  EXPECT_EQ(ExprValue(), result.value);
+  EXPECT_TRUE(result.value.has_error());
+  EXPECT_EQ(ErrType::kOptimizedOut, result.value.err().type());
 }
 
 // Tests the DWARF expression evaluation failing (empty expression).
@@ -302,9 +297,8 @@ TEST_F(EvalContextImplTest, DwarfEvalFailure) {
   ValueResult result;
   GetNamedValue(MakeEvalContext(block), kEmptyExprVarName, kSynchronous, &result);
   EXPECT_TRUE(result.called);
-  EXPECT_TRUE(result.err.has_error());
-  EXPECT_EQ("DWARF expression produced no results.", result.err.msg());
-  EXPECT_EQ(ExprValue(), result.value);
+  ASSERT_TRUE(result.value.has_error());
+  EXPECT_EQ("DWARF expression produced no results.", result.value.err().msg());
 }
 
 // Tests asynchronously reading an integer from memory. This also tests interleaved execution of
@@ -331,7 +325,7 @@ TEST_F(EvalContextImplTest, IntOnStack) {
 
   // Should be run async since it requests memory.
   EXPECT_FALSE(result1.called);
-  EXPECT_FALSE(result1.err.has_error()) << result1.err.msg();
+  EXPECT_FALSE(result1.value.has_error()) << result1.value.err().msg();
 
   // Before running the loop and receiving the memory, start a new request, this one will fail
   // synchronously due to a range miss.
@@ -340,15 +334,14 @@ TEST_F(EvalContextImplTest, IntOnStack) {
   ValueResult result2;
   GetVariableValue(context, rangemiss, kSynchronous, &result2);
   EXPECT_TRUE(result2.called);
-  EXPECT_TRUE(result2.err.has_error());
-  EXPECT_EQ(ErrType::kOptimizedOut, result2.err.type());
-  EXPECT_EQ(ExprValue(), result2.value);
+  EXPECT_TRUE(result2.value.err().has_error());
+  EXPECT_EQ(ErrType::kOptimizedOut, result2.value.err().type());
 
   // Now let the first request complete.
   loop().Run();
   EXPECT_TRUE(result1.called);
-  EXPECT_FALSE(result1.err.has_error()) << result1.err.msg();
-  EXPECT_EQ(ExprValue(kValue), result1.value);
+  ASSERT_FALSE(result1.value.has_error()) << result1.value.err().msg();
+  EXPECT_EQ(ExprValue(kValue), result1.value.value());
 }
 
 // This is a larger test that runs the EvalContext through ExprNode.Eval.
@@ -362,12 +355,11 @@ TEST_F(EvalContextImplTest, NodeIntegation) {
   // Look up an identifier that's not present.
   auto present = fxl::MakeRefCounted<IdentifierExprNode>(kPresentVarName);
   bool called = false;
-  Err out_err;
   ExprValue out_value;
-  present->Eval(context, [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+  present->Eval(context, [&called, &out_value](ErrOrValue value) {
     called = true;
-    out_err = err;
-    out_value = value;
+    EXPECT_FALSE(value.has_error());
+    out_value = value.take_value();
     debug_ipc::MessageLoop::Current()->QuitNow();
   });
   // Should not have been called yet since retrieving the register is asynchronous.
@@ -375,7 +367,6 @@ TEST_F(EvalContextImplTest, NodeIntegation) {
 
   loop().Run();
   EXPECT_TRUE(called);
-  EXPECT_FALSE(out_err.has_error());
   EXPECT_EQ(ExprValue(kValue), out_value);
 }
 
@@ -397,8 +388,8 @@ TEST_F(EvalContextImplTest, RegisterByName) {
   // Running the message loop should complete the callback.
   loop().Run();
   EXPECT_TRUE(reg.called);
-  EXPECT_FALSE(reg.err.has_error()) << reg.err.msg();
-  EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), reg.value);
+  EXPECT_FALSE(reg.value.has_error()) << reg.value.err().msg();
+  EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), reg.value.value());
 }
 
 TEST_F(EvalContextImplTest, RegisterShadowed) {
@@ -428,8 +419,8 @@ TEST_F(EvalContextImplTest, RegisterShadowed) {
   // Running the message loop should complete the callback.
   loop().Run();
   EXPECT_TRUE(val.called);
-  EXPECT_FALSE(val.err.has_error()) << val.err.msg();
-  EXPECT_EQ(ExprValue(static_cast<uint64_t>(kVarValue)), val.value);
+  ASSERT_FALSE(val.value.has_error()) << val.value.err().msg();
+  EXPECT_EQ(ExprValue(static_cast<uint64_t>(kVarValue)), val.value.value());
 }
 
 // Also tests ResolveForwardDefinition().

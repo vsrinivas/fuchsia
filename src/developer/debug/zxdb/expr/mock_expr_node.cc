@@ -16,12 +16,10 @@ MockExprNode::~MockExprNode() = default;
 
 void MockExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   if (is_synchronous_) {
-    cb(value_.err_or_empty(), value_.value_or_empty());
+    cb(value_);
   } else {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                [value = value_, cb = std::move(cb)]() mutable {
-                                                  cb(value.err_or_empty(), value.value_or_empty());
-                                                });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [value = value_, cb = std::move(cb)]() mutable { cb(value); });
   }
 }
 

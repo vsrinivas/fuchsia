@@ -426,12 +426,12 @@ TEST_F(StackTest, InlineVars) {
   // Evaluate "var + 1" which should be "4" given var evaluates to 3.
   auto eval_context = stack[0]->GetEvalContext();
   bool called = false;
-  EvalExpression("var + 1", eval_context, true, [&called](const Err& err, ExprValue value) mutable {
+  EvalExpression("var + 1", eval_context, true, [&called](ErrOrValue value) mutable {
     called = true;
-    EXPECT_FALSE(err.has_error());
+    EXPECT_FALSE(value.has_error());
 
     int64_t result = 0;
-    Err e = value.PromoteTo64(&result);
+    Err e = value.value().PromoteTo64(&result);
     EXPECT_FALSE(e.has_error());
     EXPECT_EQ(4, result);
   });

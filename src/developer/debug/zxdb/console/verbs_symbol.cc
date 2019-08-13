@@ -399,22 +399,23 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
   if (cmd.frame()) {
     const Location& location = cmd.frame()->GetLocation();
     fxl::RefPtr<EvalContext> eval_context = cmd.frame()->GetEvalContext();
-    eval_context->GetNamedValue(
-        identifier, [location](const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
-          // Expression evaluation could fail but there still could be a symbol.
-          OutputBuffer out;
-          if (!symbol) {
-            FXL_DCHECK(err.has_error());
-            out.Append(err);
-          } else if (auto variable = symbol->AsVariable()) {
-            DumpVariableInfo(location.symbol_context(), variable, &out);
-          } else if (auto data_member = symbol->AsDataMember()) {
-            DumpDataMemberInfo(data_member, &out);
-          } else {
-            out.Append("TODO: support this command for non-Variables.");
-          }
-          Console::get()->Output(out);
-        });
+    eval_context->GetNamedValue(identifier,
+                                [location](ErrOrValue value, fxl::RefPtr<Symbol> symbol) {
+                                  // Expression evaluation could fail but there still could be a
+                                  // symbol.
+                                  OutputBuffer out;
+                                  if (!symbol) {
+                                    FXL_DCHECK(value.has_error());
+                                    out.Append(value.err());
+                                  } else if (auto variable = symbol->AsVariable()) {
+                                    DumpVariableInfo(location.symbol_context(), variable, &out);
+                                  } else if (auto data_member = symbol->AsDataMember()) {
+                                    DumpDataMemberInfo(data_member, &out);
+                                  } else {
+                                    out.Append("TODO: support this command for non-Variables.");
+                                  }
+                                  Console::get()->Output(out);
+                                });
     return Err();  // Will complete asynchronously.
   }
 

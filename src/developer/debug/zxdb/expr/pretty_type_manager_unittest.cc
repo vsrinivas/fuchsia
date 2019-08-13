@@ -100,18 +100,20 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
   auto size_getter = pretty_vector->GetGetter("size");
   ASSERT_TRUE(size_getter);
   called = false;
-  size_getter(context, vec_value, [&called](const Err& err, ExprValue value) {
+  size_getter(context, vec_value, [&called](ErrOrValue value) {
     called = true;
-    EXPECT_EQ(2, value.GetAs<int64_t>());
+    EXPECT_TRUE(value.ok());
+    EXPECT_EQ(2, value.value().GetAs<int64_t>());
   });
   EXPECT_TRUE(called);  // Should by synchronous.
 
   auto capacity_getter = pretty_vector->GetGetter("capacity");
   ASSERT_TRUE(capacity_getter);
   called = false;
-  capacity_getter(context, vec_value, [&called](const Err& err, ExprValue value) {
+  capacity_getter(context, vec_value, [&called](ErrOrValue value) {
     called = true;
-    EXPECT_EQ(4, value.GetAs<int64_t>());
+    EXPECT_TRUE(value.ok());
+    EXPECT_EQ(4, value.value().GetAs<int64_t>());
   });
   EXPECT_TRUE(called);  // Should by synchronous.
 

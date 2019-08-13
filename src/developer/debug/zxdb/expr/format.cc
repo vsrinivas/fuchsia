@@ -702,14 +702,14 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
       // TODO(brettw) remove this make_shared when EvalExpression takes a fit::callback.
       auto shared_cb = std::make_shared<fit::deferred_callback>(std::move(cb));
       EvalExpression(node->expression(), context, true,
-                     [weak_node = node->GetWeakPtr(), shared_cb](const Err& err, ExprValue value) {
+                     [weak_node = node->GetWeakPtr(), shared_cb](ErrOrValue value) {
                        if (!weak_node)
                          return;
-                       if (err.has_error()) {
-                         weak_node->set_err(err);
+                       if (value.has_error()) {
+                         weak_node->set_err(value.err());
                          weak_node->SetValue(ExprValue());
                        } else {
-                         weak_node->SetValue(std::move(value));
+                         weak_node->SetValue(value.take_value());
                        }
                      });
       return;
