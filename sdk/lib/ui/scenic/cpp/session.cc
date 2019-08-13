@@ -105,6 +105,10 @@ void Session::Present(uint64_t presentation_time, PresentCallback callback) {
                     std::move(callback));
 }
 
+void Session::Present(zx::time presentation_time, PresentCallback callback) {
+  Present(presentation_time.get(), std::move(callback));
+}
+
 void Session::Unbind() {
   ZX_DEBUG_ASSERT(session_);
   ZX_DEBUG_ASSERT(!session_handle_);

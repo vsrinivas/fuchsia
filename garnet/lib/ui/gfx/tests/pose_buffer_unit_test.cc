@@ -68,9 +68,18 @@ VK_TEST_F(PoseBufferTest, Validation) {
   EXPECT_TRUE(Apply(scenic::NewSetCameraPoseBufferCmd(camera_id, buffer_id, num_entries, base_time,
                                                       time_interval)));
 
+  // Basic case: using zx::time and zx::duration
+  EXPECT_TRUE(Apply(scenic::NewSetCameraPoseBufferCmd(
+      camera_id, buffer_id, num_entries, zx::time(base_time), zx::duration(time_interval))));
+
   // Invalid base time 1 second in the future
   EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
       camera_id, buffer_id, num_entries, base_time + 1024 * 1024 * 1024, time_interval)));
+
+  // Invalid case: using zx::time and zx::duration
+  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(camera_id, buffer_id, num_entries,
+                                                       zx::time(base_time + 1024 * 1024 * 1024),
+                                                       zx::duration(time_interval))));
 
   // Invalid buffer id
   EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(camera_id, invalid_id, num_entries,

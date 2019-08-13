@@ -10,6 +10,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/zx/eventpair.h>
+#include <lib/zx/time.h>
 
 #include <string>
 
@@ -176,6 +177,11 @@ fuchsia::ui::gfx::Command NewSetCameraProjectionCmd(uint32_t camera_id, const fl
 fuchsia::ui::gfx::Command NewSetCameraPoseBufferCmd(uint32_t camera_id, uint32_t buffer_id,
                                                     uint32_t num_entries, int64_t base_time,
                                                     uint64_t time_interval);
+
+// Overloaded |NewSetCameraPoseBufferCmd()| to support `zx::time` and `zx::duration`.
+fuchsia::ui::gfx::Command NewSetCameraPoseBufferCmd(uint32_t camera_id, uint32_t buffer_id,
+                                                    uint32_t num_entries, zx::time base_time,
+                                                    zx::duration time_interval);
 
 fuchsia::ui::gfx::Command NewSetStereoCameraProjectionCmd(uint32_t camera_id,
                                                           const float left_projection[16],

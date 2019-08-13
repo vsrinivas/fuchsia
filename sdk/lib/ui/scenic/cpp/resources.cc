@@ -414,6 +414,11 @@ void CameraBase::SetPoseBuffer(const Buffer& buffer, uint32_t num_entries, int64
       NewSetCameraPoseBufferCmd(id(), buffer.id(), num_entries, base_time, time_interval));
 }
 
+void CameraBase::SetPoseBuffer(const Buffer& buffer, uint32_t num_entries, zx::time base_time,
+                               zx::duration time_interval) {
+  SetPoseBuffer(buffer, num_entries, base_time.get(), time_interval.get());
+}
+
 Camera::Camera(const Scene& scene) : Camera(scene.session(), scene.id()) {}
 
 Camera::Camera(Session* session, uint32_t scene_id) : CameraBase(session) {

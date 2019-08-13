@@ -204,7 +204,7 @@ class ScenicPixelTest : public sys::testing::TestWithEnvironment {
   }
 
   // Blocking call to |scenic::Session::Present|.
-  void Present(scenic::Session* session, uint64_t present_time = 0) {
+  void Present(scenic::Session* session, zx::time present_time = zx::time(0)) {
     session->Present(present_time, [this](auto) { QuitLoop(); });
     ASSERT_FALSE(RunLoopWithTimeout(zx::sec(10)));
   }
@@ -552,14 +552,14 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   // Normally the time interval is the period of time between each entry in the
   // pose buffer. In this example we only use one entry so the time interval is
   // pretty meaningless. Set to 1 for simplicity (see ARGO-21).
-  zx::time time_interval(1);
+  zx::duration time_interval(1);
   uint32_t num_entries = 1;
 
   scenic::Memory mem(session, std::move(remote_vmo), kVmoSize,
                      fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   scenic::Buffer pose_buffer(mem, 0, kVmoSize);
 
-  camera.SetPoseBuffer(pose_buffer, num_entries, base_time.get(), time_interval.get());
+  camera.SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
 
   // Set up scene.
 
@@ -1057,7 +1057,7 @@ TEST_F(ScenicPixelTest, DISABLED_Compositor) {
   test_session->compositor.SetColorConversion(preoffsets, matrix, postoffsets);
 
   // Display color corrected version.
-  Present(session, 1000000);
+  Present(session, zx::time(1000000));
   scenic::Screenshot post_screenshot = TakeScreenshot();
 
   for (uint32_t i = 0; i < 5; i++) {
@@ -1109,7 +1109,7 @@ TEST_F(ScenicPixelTest, RotationTest) {
   test_session->compositor.SetLayoutRotation(90);
 
   // Display rotated version.
-  Present(session, 1000000);
+  Present(session, zx::time(1000000));
   scenic::Screenshot post_screenshot = TakeScreenshot();
 
   // The pre and post width and height should be the reverse of each other.

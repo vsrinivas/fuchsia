@@ -9,6 +9,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/ui/scenic/cpp/session.h>
+#include <lib/zx/time.h>
 #include <zircon/assert.h>
 
 #include <array>
@@ -499,6 +500,9 @@ class CameraBase : public Resource {
   // Sets the camera pose buffer
   void SetPoseBuffer(const Buffer& buffer, uint32_t num_entries, int64_t base_time,
                      uint64_t time_interval);
+  // Overloaded version of |SetPoseBuffer()| using `zx::time` and `zx::duration`.
+  void SetPoseBuffer(const Buffer& buffer, uint32_t num_entries, zx::time base_time,
+                     zx::duration time_interval);
 };
 
 // Represents a camera resource in a session.

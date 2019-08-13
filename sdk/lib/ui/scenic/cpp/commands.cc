@@ -1073,6 +1073,13 @@ fuchsia::ui::gfx::Command NewSetCameraPoseBufferCmd(uint32_t camera_id, uint32_t
   return command;
 }
 
+fuchsia::ui::gfx::Command NewSetCameraPoseBufferCmd(uint32_t camera_id, uint32_t buffer_id,
+                                                    uint32_t num_entries, zx::time base_time,
+                                                    zx::duration time_interval) {
+  return NewSetCameraPoseBufferCmd(camera_id, buffer_id, num_entries, base_time.get(),
+                                   time_interval.get());
+}
+
 fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, const float rgb[3]) {
   fuchsia::ui::gfx::SetLightColorCmd set_command;
   set_command.light_id = light_id;

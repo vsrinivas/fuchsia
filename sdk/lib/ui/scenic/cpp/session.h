@@ -12,6 +12,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
+#include <lib/zx/time.h>
 
 #include <utility>
 
@@ -98,6 +99,9 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   // Implicitly flushes all queued operations to the session.
   // Invokes the callback when the scene manager applies the presentation.
   void Present(uint64_t presentation_time, PresentCallback callback);
+
+  // Overloaded |Present()| using zx::time.
+  void Present(zx::time presentation_time, PresentCallback callback);
 
   // Unbinds the internal SessionPtr; this allows moving this across threads.
   void Unbind();
