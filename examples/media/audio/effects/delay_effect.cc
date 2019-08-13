@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "examples/media/audio/effects/dfx_delay.h"
+#include "examples/media/audio/effects/delay_effect.h"
 
 #include <cmath>
 #include <optional>
@@ -12,7 +12,7 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace media::audio_dfx_test {
+namespace media::audio_effects_example {
 namespace {
 struct DelayConfig {
   uint32_t delay_frames;
@@ -32,7 +32,7 @@ std::optional<DelayConfig> ParseConfig(std::string_view config_json) {
     return {};
   }
   auto delay_frames = it->value.GetUint();
-  if (delay_frames > DfxDelay::kMaxDelayFrames || delay_frames < DfxDelay::kMinDelayFrames) {
+  if (delay_frames > DelayEffect::kMaxDelayFrames || delay_frames < DelayEffect::kMinDelayFrames) {
     return {};
   }
 
@@ -46,19 +46,19 @@ constexpr uint32_t ComputeDelaySamples(uint16_t channels_in, uint16_t delay_fram
 }  // namespace
 
 //
-// DfxDelay: static member functions
+// DelayEffect: static member functions
 //
 
-// static -- called from static DfxBase::GetInfo; uses DfxDelay classwide consts
-bool DfxDelay::GetInfo(fuchsia_audio_effects_description* dfx_desc) {
-  strlcpy(dfx_desc->name, "Delay effect", sizeof(dfx_desc->name));
-  dfx_desc->incoming_channels = kNumChannelsIn;
-  dfx_desc->outgoing_channels = kNumChannelsOut;
+// static -- called from static EffectBase::GetInfo; uses DelayEffect classwide consts
+bool DelayEffect::GetInfo(fuchsia_audio_effects_description* desc) {
+  strlcpy(desc->name, "Delay effect", sizeof(desc->name));
+  desc->incoming_channels = kNumChannelsIn;
+  desc->outgoing_channels = kNumChannelsOut;
   return true;
 }
 
-// static -- called from static DfxBase::Create
-DfxDelay* DfxDelay::Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
+// static -- called from static EffectBase::Create
+DelayEffect* DelayEffect::Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
                            std::string_view config_json) {
   if (channels_in != channels_out) {
     return nullptr;
@@ -69,14 +69,14 @@ DfxDelay* DfxDelay::Create(uint32_t frame_rate, uint16_t channels_in, uint16_t c
     return nullptr;
   }
 
-  return new DfxDelay(frame_rate, channels_in, config->delay_frames);
+  return new DelayEffect(frame_rate, channels_in, config->delay_frames);
 }
 
 //
-// DfxDelay: instance member functions
+// DelayEffect: instance member functions
 //
-DfxDelay::DfxDelay(uint32_t frame_rate, uint16_t channels, uint32_t delay_frames)
-    : DfxBase(Effect::Delay, frame_rate, channels, channels, kLatencyFrames, kLatencyFrames) {
+DelayEffect::DelayEffect(uint32_t frame_rate, uint16_t channels, uint32_t delay_frames)
+    : EffectBase(Effect::Delay, frame_rate, channels, channels, kLatencyFrames, kLatencyFrames) {
   // This buff must accommodate our maximum delay, plus the largest 'num_frames'
   // required by process_inplace -- which can be as large as frame_rate.
   delay_buff_ = std::make_unique<float[]>((kMaxDelayFrames + frame_rate) * channels);
@@ -85,7 +85,7 @@ DfxDelay::DfxDelay(uint32_t frame_rate, uint16_t channels, uint32_t delay_frames
   ::memset(delay_buff_.get(), 0, delay_samples_ * sizeof(float));
 }
 
-bool DfxDelay::UpdateConfiguration(std::string_view config_json) {
+bool DelayEffect::UpdateConfiguration(std::string_view config_json) {
   auto config = ParseConfig(config_json);
   if (!config) {
     return false;
@@ -104,11 +104,11 @@ bool DfxDelay::UpdateConfiguration(std::string_view config_json) {
 // TODO: with circular buffer, optimize 2N+D to N+min(N,D), where N=num_frames;
 // D=delay. Suggested algorithm: 1.copy min(N,D) from aud_buf to cache;
 // 2.shift max(N-D,0) within aud_buf; 3.copy min(N,D) from cache to aud_buf.
-bool DfxDelay::ProcessInplace(uint32_t num_frames, float* audio_buff) {
+bool DelayEffect::ProcessInplace(uint32_t num_frames, float* audio_buff) {
   if (delay_samples_ > 0) {
     uint32_t audio_buff_bytes = num_frames * channels_in_ * sizeof(float);
 
-    // DfxDelay maintains a "delay cache" containing the next samples to emit.
+    // DelayEffect maintains a "delay cache" containing the next samples to emit.
     // 1) Copy all samples from audio_buff to delay cache (after previous ones).
     ::memcpy(delay_buff_.get() + delay_samples_, audio_buff, audio_buff_bytes);
     // 2) Fill audio_buff, from front of the delay cache.
@@ -121,10 +121,10 @@ bool DfxDelay::ProcessInplace(uint32_t num_frames, float* audio_buff) {
   return true;
 }
 // Retain control settings but drop any accumulated state or history.
-bool DfxDelay::Flush() {
+bool DelayEffect::Flush() {
   ::memset(delay_buff_.get(), 0, delay_samples_ * sizeof(float));
 
   return true;
 }
 
-}  // namespace media::audio_dfx_test
+}  // namespace media::audio_effects_example

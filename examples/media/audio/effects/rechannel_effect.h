@@ -5,42 +5,42 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_RECHANNEL_H_
-#define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_RECHANNEL_H_
+#ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_RECHANNEL_EFFECT_H_
+#define EXAMPLES_MEDIA_AUDIO_EFFECTS_RECHANNEL_EFFECT_H_
 
 #include <lib/media/audio/effects/audio_effects.h>
 #include <stdint.h>
 
-#include "examples/media/audio/effects/dfx_base.h"
+#include "examples/media/audio/effects/effect_base.h"
 
-namespace media::audio_dfx_test {
+namespace media::audio_effects_example {
 
-// DfxRechannel: an example of non-in-place effect with no controls. Being non-
+// RechannelEffect: an example of non-in-place effect with no controls. Being non-
 // inplace, it has channel restrictions: specifically it must take in six
 // channels and produce two channels. It does so while adding no latency.
-class DfxRechannel : public DfxBase {
+class RechannelEffect : public EffectBase {
  public:
   static constexpr uint16_t kNumChannelsIn = 6;
   static constexpr uint16_t kNumChannelsOut = 2;
   static constexpr uint32_t kLatencyFrames = 0;
 
-  static bool GetInfo(fuchsia_audio_effects_description* dfx_desc) {
-    std::strcpy(dfx_desc->name, "5.1 to Stereo");
-    dfx_desc->incoming_channels = kNumChannelsIn;
-    dfx_desc->outgoing_channels = kNumChannelsOut;
+  static bool GetInfo(fuchsia_audio_effects_description* desc) {
+    std::strcpy(desc->name, "5.1 to Stereo");
+    desc->incoming_channels = kNumChannelsIn;
+    desc->outgoing_channels = kNumChannelsOut;
     return true;
   }
 
-  static DfxRechannel* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
+  static RechannelEffect* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
                               std::string_view) {
     return (channels_in == kNumChannelsIn && channels_out == kNumChannelsOut
-                ? new DfxRechannel(frame_rate)
+                ? new RechannelEffect(frame_rate)
                 : nullptr);
   }
 
-  DfxRechannel(uint32_t frame_rate)
-      : DfxBase(Effect::Rechannel, frame_rate, kNumChannelsIn, kNumChannelsOut, kLatencyFrames,
-                kLatencyFrames) {}
+  RechannelEffect(uint32_t frame_rate)
+      : EffectBase(Effect::Rechannel, frame_rate, kNumChannelsIn, kNumChannelsOut, kLatencyFrames,
+                   kLatencyFrames) {}
 
   // Effect converts a 5.1 mix into stereo.
   // Left  = FL + FC*sqr(.5) + BL  -and-  Right = FR + FC*sqr(.5) + BR
@@ -75,6 +75,6 @@ class DfxRechannel : public DfxBase {
   bool encode_ = false;
 };
 
-}  // namespace media::audio_dfx_test
+}  // namespace media::audio_effects_example
 
-#endif  // EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_RECHANNEL_H_
+#endif  // EXAMPLES_MEDIA_AUDIO_EFFECTS_RECHANNEL_EFFECT_H_

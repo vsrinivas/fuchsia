@@ -23,6 +23,6 @@ group("audio") {
 group("tests") {
   testonly = true
   deps = [
-    "effects:audio_dfx_tests",
+    "effects:tests",
   ]
 }

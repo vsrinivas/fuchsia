@@ -84,17 +84,17 @@ TEST(EffectsLoaderTest, GetNumEffectsModuleNotLoaded) {
 }
 
 TEST(EffectsLoaderTest, GetFxInfo) {
-  fuchsia_audio_effects_description dfx_desc;
+  fuchsia_audio_effects_description effect_desc;
   AutoEffectsLoader loader(kPassthroughModuleName);
-  EXPECT_EQ(loader->GetFxInfo(kPassthroughEffectId, &dfx_desc), ZX_OK);
-  EXPECT_TRUE(dfx_desc.incoming_channels == FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY);
-  EXPECT_TRUE(dfx_desc.outgoing_channels == FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN);
+  EXPECT_EQ(loader->GetFxInfo(kPassthroughEffectId, &effect_desc), ZX_OK);
+  EXPECT_TRUE(effect_desc.incoming_channels == FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY);
+  EXPECT_TRUE(effect_desc.outgoing_channels == FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN);
 }
 
 TEST(EffectsLoaderTest, GetFxInfoModuleNotLoaded) {
-  fuchsia_audio_effects_description dfx_desc;
+  fuchsia_audio_effects_description effect_desc;
   EffectsLoader loader(kPassthroughModuleName);
-  EXPECT_EQ(loader.GetFxInfo(kPassthroughEffectId, &dfx_desc), ZX_ERR_NOT_FOUND);
+  EXPECT_EQ(loader.GetFxInfo(kPassthroughEffectId, &effect_desc), ZX_ERR_NOT_FOUND);
 }
 
 TEST(EffectsLoaderTest, GetFxInfoNullInfoPointer) {
@@ -103,9 +103,9 @@ TEST(EffectsLoaderTest, GetFxInfoNullInfoPointer) {
 }
 
 TEST(EffectsLoaderTest, GetFxInfoInvalidEffextId) {
-  fuchsia_audio_effects_description dfx_desc;
+  fuchsia_audio_effects_description effect_desc;
   AutoEffectsLoader loader(kPassthroughModuleName);
-  EXPECT_EQ(loader->GetFxInfo(kInvalidEffectId, &dfx_desc), ZX_ERR_OUT_OF_RANGE);
+  EXPECT_EQ(loader->GetFxInfo(kInvalidEffectId, &effect_desc), ZX_ERR_OUT_OF_RANGE);
 }
 
 TEST(EffectsLoaderTest, CreateFx) {

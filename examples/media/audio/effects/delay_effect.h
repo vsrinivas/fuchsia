@@ -5,25 +5,25 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_DELAY_H_
-#define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_DELAY_H_
+#ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DELAY_EFFECT_H_
+#define EXAMPLES_MEDIA_AUDIO_EFFECTS_DELAY_EFFECT_H_
 
 #include <lib/media/audio/effects/audio_effects.h>
 #include <stdint.h>
 
 #include <memory>
 
-#include "examples/media/audio/effects/dfx_base.h"
+#include "examples/media/audio/effects/effect_base.h"
 
-namespace media::audio_dfx_test {
+namespace media::audio_effects_example {
 
-// DfxDelay: example of inplace effect with one control. Channels_in must always
+// DelayEffect: example of inplace effect with one control. Channels_in must always
 // equal channels_out, but it has no further restriction. This effect delays all
 // channels by a constant number of frames (specified by the control setting).
 //
 // This effect INTENTIONALLY adds a delay which clock-synchronization mechanisms
 // should NOT try to compensate for; in fact it adds zero "unwanted" latency.
-class DfxDelay : public DfxBase {
+class DelayEffect : public EffectBase {
  public:
   static constexpr uint16_t kNumChannelsIn = FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY;
   static constexpr uint16_t kNumChannelsOut = FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN;
@@ -32,13 +32,13 @@ class DfxDelay : public DfxBase {
   static constexpr uint32_t kMaxDelayFrames = 64000;
   static constexpr uint32_t kMinDelayFrames = 0;
 
-  static bool GetInfo(fuchsia_audio_effects_description* dfx_desc);
+  static bool GetInfo(fuchsia_audio_effects_description* desc);
 
-  static DfxDelay* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
+  static DelayEffect* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
                           std::string_view config);
 
-  DfxDelay(uint32_t frame_rate, uint16_t channels, uint32_t delay_frames);
-  ~DfxDelay() = default;
+  DelayEffect(uint32_t frame_rate, uint16_t channels, uint32_t delay_frames);
+  ~DelayEffect() = default;
 
   bool UpdateConfiguration(std::string_view config) override;
 
@@ -52,6 +52,6 @@ class DfxDelay : public DfxBase {
   std::unique_ptr<float[]> delay_buff_;
 };
 
-}  // namespace media::audio_dfx_test
+}  // namespace media::audio_effects_example
 
-#endif  // EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_DELAY_H_
+#endif  // EXAMPLES_MEDIA_AUDIO_EFFECTS_DELAY_EFFECT_H_

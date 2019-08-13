@@ -5,24 +5,37 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-source_set("headers") {
+group("effects") {
   testonly = true
-  sources = [
-    "dfx_base.h",
-    "dfx_delay.h",
-    "dfx_rechannel.h",
-    "dfx_swap.h",
+  deps = [
+    ":audio_effects_example",
   ]
 }
 
-loadable_module("effects") {
+group("tests") {
   testonly = true
-  output_name = "example_audio_effects"
+  deps = [
+    ":audio_effects_example_tests",
+  ]
+}
+
+source_set("headers") {
+  testonly = true
+  sources = [
+    "delay_effect.h",
+    "effect_base.h",
+    "rechannel_effect.h",
+    "swap_effect.h",
+  ]
+}
+
+loadable_module("audio_effects_example") {
+  testonly = true
 
   sources = [
-    "dfx_base.cc",
-    "dfx_delay.cc",
-    "lib_dfx.cc",
+    "delay_effect.cc",
+    "effect_base.cc",
+    "lib_audio_effects.cc",
   ]
 
   deps = [
@@ -36,10 +49,10 @@ loadable_module("effects") {
 
 executable("test_bin") {
   testonly = true
-  output_name = "audio_dfx_tests"
+  output_name = "audio_effects_example_tests"
 
   sources = [
-    "test/audio_dfx_tests.cc",
+    "test/audio_effects_example_tests.cc",
   ]
 
   libs = [ "zircon" ]
@@ -55,21 +68,21 @@ executable("test_bin") {
   ]
 }
 
-unittest_package("audio_dfx_tests") {
+unittest_package("audio_effects_example_tests") {
   deps = [
-    ":effects",
+    ":audio_effects_example",
     ":test_bin",
   ]
 
   loadable_modules = [
     {
-      name = "example_audio_effects.so"
+      name = "audio_effects_example.so"
     },
   ]
 
   tests = [
     {
-      name = "audio_dfx_tests"
+      name = "audio_effects_example_tests"
       environments = basic_envs
     },
   ]

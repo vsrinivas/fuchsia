@@ -5,41 +5,41 @@
 // Refer to the accompanying README.md file for detailed API documentation
 // (functions, structs and constants).
 
-#ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_SWAP_H_
-#define EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_SWAP_H_
+#ifndef EXAMPLES_MEDIA_AUDIO_EFFECTS_SWAP_EFFECT_H_
+#define EXAMPLES_MEDIA_AUDIO_EFFECTS_SWAP_EFFECT_H_
 
 #include <lib/media/audio/effects/audio_effects.h>
 #include <stdint.h>
 
-#include "examples/media/audio/effects/dfx_base.h"
+#include "examples/media/audio/effects/effect_base.h"
 
-namespace media::audio_dfx_test {
+namespace media::audio_effects_example {
 
-// DfxSwap: an example of an in-place effect with no controls. It has a channel
+// SwapEffect: an example of an in-place effect with no controls. It has a channel
 // restriction: it must be stereo-in and stereo-out. This effect swaps the left
 // and right channels, and does so without adding latency.
-class DfxSwap : public DfxBase {
+class SwapEffect : public EffectBase {
  public:
   static constexpr uint16_t kNumChannelsIn = 2;
   static constexpr uint16_t kNumChannelsOut = 2;
   static constexpr uint32_t kLatencyFrames = 0;
 
-  static bool GetInfo(fuchsia_audio_effects_description* dfx_desc) {
-    std::strcpy(dfx_desc->name, "Left-Right Swap");
-    dfx_desc->incoming_channels = kNumChannelsIn;
-    dfx_desc->outgoing_channels = kNumChannelsOut;
+  static bool GetInfo(fuchsia_audio_effects_description* desc) {
+    std::strcpy(desc->name, "Left-Right Swap");
+    desc->incoming_channels = kNumChannelsIn;
+    desc->outgoing_channels = kNumChannelsOut;
     return true;
   }
 
-  static DfxSwap* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
+  static SwapEffect* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
                          std::string_view) {
     return (channels_in == kNumChannelsIn && channels_out == kNumChannelsOut
-                ? new DfxSwap(frame_rate, channels_in)
+                ? new SwapEffect(frame_rate, channels_in)
                 : nullptr);
   }
 
-  DfxSwap(uint32_t frame_rate, uint16_t channels)
-      : DfxBase(Effect::Swap, frame_rate, channels, channels, kLatencyFrames, kLatencyFrames) {}
+  SwapEffect(uint32_t frame_rate, uint16_t channels)
+      : EffectBase(Effect::Swap, frame_rate, channels, channels, kLatencyFrames, kLatencyFrames) {}
 
   bool ProcessInplace(uint32_t num_frames, float* audio_buff) {
     for (uint32_t sample = 0; sample < num_frames * channels_in_; sample += channels_in_) {
@@ -51,6 +51,6 @@ class DfxSwap : public DfxBase {
   }
 };
 
-}  // namespace media::audio_dfx_test
+}  // namespace media::audio_effects_example
 
-#endif  // EXAMPLES_MEDIA_AUDIO_EFFECTS_DFX_SWAP_H_
+#endif  // EXAMPLES_MEDIA_AUDIO_EFFECTS_SWAP_EFFECT_H_
