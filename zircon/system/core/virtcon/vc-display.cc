@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "vc-display.h"
+
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/fd.h>
@@ -24,48 +26,34 @@
 #include "fuchsia/hardware/display/c/fidl.h"
 #include "vc.h"
 
-static constexpr const char* kDisplayControllerDir = "/dev/class/display-controller";
-
-static int dc_dir_fd;
-static zx_handle_t dc_device;
-
 // At any point, |dc_ph| will either be waiting on the display controller device directory
 // for a display controller instance or it will be waiting on a display controller interface
 // for messages.
 static port_handler_t dc_ph;
 
-typedef struct display_info {
-  uint64_t id;
-  uint32_t width;
-  uint32_t height;
-  uint32_t stride;
-  zx_pixel_format_t format;
-
-  uint64_t image_id;
-  uint64_t layer_id;
-
-  bool bound;
-
-  // Only valid when |bound| is true.
-  zx_handle_t image_vmo;
-  fuchsia_hardware_display_ImageConfig image_config;
-
-  vc_gfx_t* graphics;
-
-  struct list_node node;
-  // If the display is not a main display, then this is the log vc for the
-  // display.
-  vc_t* log_vc;
-} display_info_t;
-
 static struct list_node display_list = LIST_INITIAL_VALUE(display_list);
-
 static bool primary_bound = false;
 
 // remember whether the virtual console controls the display
 bool g_vc_owns_display = false;
 
 static void vc_find_display_controller();
+
+#if BUILD_FOR_DISPLAY_TEST
+
+bool is_primary_bound() { return primary_bound; }
+
+struct list_node* get_display_list() {
+  return &display_list;
+}
+
+#else
+
+static constexpr const char* kDisplayControllerDir = "/dev/class/display-controller";
+static int dc_dir_fd;
+static zx_handle_t dc_device;
+
+#endif  // BUILD_FOR_DISPLAY_TEST
 
 static zx_status_t vc_set_mode(uint8_t mode) {
   fuchsia_hardware_display_ControllerSetVirtconModeRequest request;
@@ -129,6 +117,7 @@ static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
   return res;
 }
 
+#if !BUILD_FOR_DISPLAY_TEST
 static void handle_ownership_change(
     fuchsia_hardware_display_ControllerClientOwnershipChangeEvent* evt) {
   g_vc_owns_display = evt->has_ownership;
@@ -140,7 +129,7 @@ static void handle_ownership_change(
   }
 }
 
-static zx_status_t create_layer(uint64_t display_id, uint64_t* layer_id) {
+zx_status_t create_layer(uint64_t display_id, uint64_t* layer_id) {
   fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg;
   create_layer_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCreateLayerOrdinal;
 
@@ -166,7 +155,7 @@ static zx_status_t create_layer(uint64_t display_id, uint64_t* layer_id) {
   return ZX_OK;
 }
 
-static void destroy_layer(uint64_t layer_id) {
+void destroy_layer(uint64_t layer_id) {
   fuchsia_hardware_display_ControllerDestroyLayerRequest destroy_msg;
   destroy_msg.hdr.ordinal = fuchsia_hardware_display_ControllerDestroyLayerOrdinal;
   destroy_msg.layer_id = layer_id;
@@ -176,7 +165,7 @@ static void destroy_layer(uint64_t layer_id) {
   }
 }
 
-static void release_image(uint64_t image_id) {
+void release_image(uint64_t image_id) {
   fuchsia_hardware_display_ControllerReleaseImageRequest release_msg;
   release_msg.hdr.ordinal = fuchsia_hardware_display_ControllerReleaseImageOrdinal;
   release_msg.image_id = image_id;
@@ -186,8 +175,10 @@ static void release_image(uint64_t image_id) {
   }
 }
 
-static zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
-                                        fuchsia_hardware_display_Mode* mode, int32_t pixel_format) {
+#endif  // !BUILD_FOR_DISPLAY_TEST
+
+zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
+                                 fuchsia_hardware_display_Mode* mode, int32_t pixel_format) {
   display_info_t* display_info =
       reinterpret_cast<display_info_t*>(calloc(1, sizeof(display_info_t)));
   if (!display_info) {
@@ -217,7 +208,7 @@ static zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
   return ZX_OK;
 }
 
-static void handle_display_removed(uint64_t id) {
+void handle_display_removed(uint64_t id) {
   if (list_is_empty(&display_list)) {
     printf("vc: No displays when removing %ld\n", id);
     return;
@@ -311,8 +302,9 @@ static zx_status_t allocate_vmo(uint32_t size, zx_handle_t* vmo_out) {
   return actual_handles == 1 ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
-static zx_status_t import_vmo(zx_handle_t vmo, fuchsia_hardware_display_ImageConfig* config,
-                              uint64_t* id) {
+#if !BUILD_FOR_DISPLAY_TEST
+zx_status_t import_vmo(zx_handle_t vmo, fuchsia_hardware_display_ImageConfig* config,
+                       uint64_t* id) {
   zx_handle_t vmo_dup;
   zx_status_t status;
   if ((status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &vmo_dup)) != ZX_OK) {
@@ -350,7 +342,7 @@ static zx_status_t import_vmo(zx_handle_t vmo, fuchsia_hardware_display_ImageCon
   return ZX_OK;
 }
 
-static zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
+zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
   zx_status_t status;
   // Put the layer on the display
   uint8_t fidl_bytes[sizeof(fuchsia_hardware_display_ControllerSetDisplayLayersRequest) +
@@ -380,8 +372,8 @@ static zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
   return ZX_OK;
 }
 
-static zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t image_id,
-                                   fuchsia_hardware_display_ImageConfig* config) {
+zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t image_id,
+                            fuchsia_hardware_display_ImageConfig* config) {
   zx_status_t status;
   fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg;
   layer_cfg_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryConfigOrdinal;
@@ -419,7 +411,7 @@ static zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, u
   return ZX_OK;
 }
 
-static zx_status_t apply_configuration() {
+zx_status_t apply_configuration() {
   // Validate and then apply the new configuration
   zx_status_t status;
   fuchsia_hardware_display_ControllerCheckConfigRequest check_msg;
@@ -457,7 +449,7 @@ static zx_status_t apply_configuration() {
   return ZX_OK;
 }
 
-static zx_status_t alloc_display_info_vmo(display_info_t* display) {
+zx_status_t alloc_display_info_vmo(display_info_t* display) {
   if (get_single_framebuffer(&display->image_vmo, &display->stride) != ZX_OK) {
     fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest stride_msg;
     stride_msg.hdr.ordinal = fuchsia_hardware_display_ControllerComputeLinearImageStrideOrdinal;
@@ -495,8 +487,9 @@ static zx_status_t alloc_display_info_vmo(display_info_t* display) {
   display->image_config.type = IMAGE_TYPE_SIMPLE;
   return ZX_OK;
 }
+#endif  // !BUILD_FOR_DISPLAY_TEST
 
-static zx_status_t rebind_display(bool use_all) {
+zx_status_t rebind_display(bool use_all) {
   // Arbitrarily pick the oldest display as the primary dispay
   display_info* primary = list_peek_head_type(&display_list, display_info, node);
   if (primary == nullptr) {
@@ -621,6 +614,7 @@ static zx_status_t handle_display_changed(
   return rebind_display(true);
 }
 
+#if !BUILD_FOR_DISPLAY_TEST
 static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
   if (signals & ZX_CHANNEL_PEER_CLOSED) {
     printf("vc: Displays lost\n");
@@ -770,3 +764,4 @@ bool vc_display_init() {
 
   return true;
 }
+#endif  // !BUILD_FOR_DISPLAY_TEST

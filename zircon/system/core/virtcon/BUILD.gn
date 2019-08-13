@@ -7,6 +7,7 @@ group("virtcon") {
   deps = [
     ":virtual-console",
     ":virtual-console-test",
+    ":virtual-display-test",
   ]
 }
 
@@ -52,6 +53,18 @@ executable("virtual-console") {
             ]
   deps = [
     ":common",
+  ]
+}
+
+test("virtual-console-display-test") {
+  defines = [ "BUILD_FOR_DISPLAY_TEST" ]
+  sources = [
+    "vc-display-test.cc",
+    "vc-display.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/ulib/zxtest",
   ]
 }
 
