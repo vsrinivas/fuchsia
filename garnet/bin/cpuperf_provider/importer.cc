@@ -47,8 +47,9 @@ Importer::Importer(trace_context_t* context, const TraceConfig* trace_config,
     if (cpu == 0) {
       cpu_name_refs_[0] = trace_context_make_registered_string_literal(context, "system");
     } else {
-      const char* name = fxl::StringPrintf("cpu%u", cpu - 1).c_str();
-      cpu_name_refs_[cpu] = trace_context_make_registered_string_copy(context, name, strlen(name));
+      std::string name = fxl::StringPrintf("cpu%u", cpu - 1);
+      cpu_name_refs_[cpu] =
+          trace_context_make_registered_string_copy(context, name.c_str(), name.size());
     }
     // TODO(dje): In time emit "cpuN" for thread names, but it won't do any
     // good at the moment as we use "Count" records which ignore the thread.
