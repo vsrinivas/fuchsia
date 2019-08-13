@@ -4,8 +4,9 @@
 
 #include "peridot/lib/util/pseudo_dir_utils.h"
 
-#include <gtest/gtest.h>
 #include <lib/gtest/real_loop_fixture.h>
+
+#include <gtest/gtest.h>
 #include <peridot/lib/util/pseudo_dir_server.h>
 #include <src/lib/files/directory.h>
 #include <src/lib/files/file.h>
@@ -33,11 +34,11 @@ class PseudoDirUtilsTest : public gtest::RealLoopFixture {
   }
 };
 
-TEST_F(PseudoDirUtilsTest, DISABLED_FileSmallerThanDefaultBuffer) {
+TEST_F(PseudoDirUtilsTest, FileSmallerThanDefaultBuffer) {
   test_make_file_with_contents_sizes(kDefaultBufferSize - 10);
 }
 
-TEST_F(PseudoDirUtilsTest, DISABLED_FileLargerThanDefaultBuffer) {
+TEST_F(PseudoDirUtilsTest, FileLargerThanDefaultBuffer) {
   test_make_file_with_contents_sizes(kDefaultBufferSize + 10);
 }
 
