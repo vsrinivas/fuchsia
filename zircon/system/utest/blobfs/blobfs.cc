@@ -3,34 +3,20 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <atomic>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/blobfs/c/fidl.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/ramdisk/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/unsafe.h>
-#include <lib/fzl/fdio.h>
-#include <lib/memfs/memfs.h>
-#include <lib/zx/vmo.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <threads.h>
-#include <utime.h>
-#include <zircon/device/vfs.h>
-#include <zircon/syscalls.h>
-
-#include <atomic>
 #include <type_traits>
 #include <utility>
+#include <utime.h>
 
-#include <blobfs/common.h>
 #include <blobfs/format.h>
+#include <blobfs/journal.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>
@@ -45,9 +31,20 @@
 #include <fs-management/mount.h>
 #include <fs-test-utils/blobfs/blobfs.h>
 #include <fs-test-utils/blobfs/bloblist.h>
+#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
 #include <fvm/format.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/unsafe.h>
+#include <lib/fzl/fdio.h>
+#include <lib/memfs/memfs.h>
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
 
 #include "blobfs-test.h"
 
@@ -2430,6 +2427,7 @@ static bool TestFailedWrite(BlobfsTest* blobfsTest) {
   // Since the write operation ultimately failed when going out to disk,
   // syncfs will return a failed response.
   ASSERT_LT(syncfs(fd.get()), 0);
+  ASSERT_EQ(errno, EPIPE);
 
   ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, blobfs::kBlobfsBlockSize, &info));
   fd.reset(open(info->path, O_CREAT | O_RDWR));
@@ -2443,6 +2441,10 @@ static bool TestFailedWrite(BlobfsTest* blobfsTest) {
     // Since truncate is done entirely in memory, a non-FVM truncate should always pass.
     ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
   }
+
+  // Since the ramdisk is asleep and our blobfs is aware of it due to the sync, write should fail.
+  ASSERT_LT(write(fd.get(), info->data.get(), blobfs::kBlobfsBlockSize), 0);
+  ASSERT_EQ(errno, EPIPE);
 
   // Wake the ramdisk and forcibly remount the BlobfsTest, forcing the journal to replay
   // and restore blobfs to a consistent state.

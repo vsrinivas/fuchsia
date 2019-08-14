@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/cksum.h>
+#include <blobfs/blobfs.h>
 
 #include <utility>
 
-#include <blobfs/blobfs.h>
 #include <blobfs/fsck.h>
 #include <blobfs/writeback.h>
 #include <fbl/ref_ptr.h>
@@ -157,7 +156,6 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
   memset(block, 0, sizeof(block));
   JournalInfo* journal_info = reinterpret_cast<JournalInfo*>(block);
   journal_info->magic = kJournalMagic;
-  journal_info->checksum = crc32(0, reinterpret_cast<const uint8_t*>(block), sizeof(JournalInfo));
   for (uint64_t n = 0; n < journal_blocks; n++) {
     uint64_t offset = kBlobfsBlockSize * (superblock_blocks + blockmap_blocks + nodemap_blocks + n);
     uint64_t length = kBlobfsBlockSize;

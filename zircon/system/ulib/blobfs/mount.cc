@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <blobfs/blobfs.h>
+
 #include <utility>
 
-#include <blobfs/blobfs.h>
 #include <blobfs/fsck.h>
 #include <fbl/ref_ptr.h>
 
@@ -15,6 +16,13 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> d
   zx_status_t status;
   fbl::unique_ptr<Blobfs> fs;
   if ((status = Blobfs::Create(std::move(device), options, &fs)) != ZX_OK) {
+    return status;
+  }
+
+  // Attempt to initialize writeback and journal.
+  // The journal must be replayed before the FVM check, in case changes to slice counts have
+  // been written to the journal but not persisted to the super block.
+  if ((status = fs->InitializeWriteback(options->writability, options->journal)) != ZX_OK) {
     return status;
   }
 

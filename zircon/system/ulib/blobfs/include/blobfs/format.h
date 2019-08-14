@@ -29,7 +29,7 @@
 namespace blobfs {
 constexpr uint64_t kBlobfsMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
-constexpr uint32_t kBlobfsVersion = 0x00000008;
+constexpr uint32_t kBlobfsVersion = 0x00000007;
 
 constexpr uint32_t kBlobFlagClean        = 1;
 constexpr uint32_t kBlobFlagDirty        = 2;
@@ -74,7 +74,7 @@ constexpr size_t kMinimumDataBlocks = 2;
 
 #ifdef __Fuchsia__
 // Use a heuristics-based approach based on physical RAM size to
-// determine the size of the writeback buffer in filesystem blocks.
+// determine the size of the writeback buffer.
 //
 // Currently, we set the writeback buffer size to 2% of physical
 // memory.
@@ -82,8 +82,7 @@ constexpr size_t kMinimumDataBlocks = 2;
 // Should be invoked with caution; the size of the system's total
 // memory may eventually change after boot.
 inline size_t WriteBufferSize() {
-    return fbl::round_up((zx_system_get_physmem() * 2) / 100, kBlobfsBlockSize)
-            / kBlobfsBlockSize;
+    return fbl::round_up((zx_system_get_physmem() * 2) / 100, kBlobfsBlockSize);
 }
 #endif
 

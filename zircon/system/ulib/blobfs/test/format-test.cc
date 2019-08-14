@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <blobfs/blobfs.h>
+
 #include <blobfs/format.h>
 #include <block-client/cpp/fake-device.h>
 #include <zxtest/zxtest.h>
@@ -207,7 +208,7 @@ TEST(FormatFilesystemTest, FormatFVMDeviceWithTooLargeBlockSize) {
 
 // Validates that a formatted filesystem, mounted as writable, is converted
 // to read-only on a device that is not writable.
-TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
+TEST(FormatFilesystemTest, FormatDeviceAutoConvertReadonly) {
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = kBlobfsBlockSize;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
@@ -217,7 +218,7 @@ TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
   MountOptions options = {};
   options.writability = Writability::Writable;
   options.metrics = false;
-  options.journal = false;
+  options.journal = true;
   std::unique_ptr<Blobfs> blobfs = nullptr;
   ASSERT_OK(Blobfs::Create(std::move(device), &options, &blobfs));
   fbl::RefPtr<Directory> root = nullptr;
@@ -230,24 +231,6 @@ TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
   fbl::StringPiece unused_outpath;
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, blobfs->Open(root, &unused_outvnode, "foo", &unused_outpath,
                                                ZX_FS_FLAG_CREATE | ZX_FS_RIGHT_WRITABLE, 0));
-}
-
-// Validates that a formatted filesystem mounted as writable with a journal cannot be mounted on a
-// read-only device. This "auto-conversion" is disabled because journal replay is necessary
-// to guarantee filesystem correctness, which involves writeback.
-TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
-  const uint64_t kBlockCount = 1 << 20;
-  const uint32_t kBlockSize = kBlobfsBlockSize;
-  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  ASSERT_OK(FormatFilesystem(device.get()));
-  device->SetInfoFlags(fuchsia_hardware_block_FLAG_READONLY);
-
-  MountOptions options = {};
-  options.writability = Writability::Writable;
-  options.metrics = false;
-  options.journal = true;
-  std::unique_ptr<Blobfs> blobfs = nullptr;
-  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, Blobfs::Create(std::move(device), &options, &blobfs));
 }
 
 // After formatting a filesystem with block size valid block size N, mounting on

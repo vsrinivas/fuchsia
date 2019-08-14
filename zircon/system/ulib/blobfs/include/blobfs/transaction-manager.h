@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_TRANSACTION_MANAGER_H_
-#define BLOBFS_TRANSACTION_MANAGER_H_
+#pragma once
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
@@ -11,7 +10,6 @@
 
 #include <blobfs/allocator.h>
 #include <blobfs/blob.h>
-#include <blobfs/journal/journal2.h>
 #include <blobfs/metrics.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
@@ -37,11 +35,7 @@ class TransactionManager : public fs::TransactionHandler, public SpaceManager {
   // Returns the capacity of the writeback buffer in blocks.
   virtual size_t WritebackCapacity() const = 0;
 
-  virtual Journal2* journal() = 0;
-
   // Initializes a new unit of WritebackWork associated with a Writebacktarget.
-  //
-  // DEPRECATED.
   virtual zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) = 0;
 
   // Enqueues |work| to the appropriate buffer.
@@ -49,11 +43,7 @@ class TransactionManager : public fs::TransactionHandler, public SpaceManager {
   // persisted only after consistency is ensured.
   // If the data is not journaled, |work| will be transmitted directly to the writeback buffer /
   // persistent storage.
-  //
-  // DEPRECATED.
   virtual zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) = 0;
 };
 
 }  // namespace blobfs
-
-#endif  // BLOBFS_TRANSACTION_MANAGER_H_

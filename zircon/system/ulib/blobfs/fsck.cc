@@ -2,21 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
-
 #include <blobfs/fsck.h>
 #include <blobfs/iterator/extent-iterator.h>
 #include <fs/trace.h>
+#include <inttypes.h>
 
 #ifdef __Fuchsia__
-
-#include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <zircon/status.h>
 
 #include <utility>
 
 #include <blobfs/blobfs.h>
-#include <blobfs/journal/replay.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <zircon/status.h>
 
 #else
 
@@ -127,14 +124,16 @@ BlobfsChecker::BlobfsChecker(fbl::unique_ptr<Blobfs> blobfs)
 
 zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
 #ifdef __Fuchsia__
-  zx_status_t status;
-  if (apply_journal) {
-    status = ReplayJournal(blobfs_.get(), blobfs_.get(), JournalStartBlock(blobfs_->info_),
-                           JournalBlocks(blobfs_->info_), nullptr);
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Unable to apply journal contents: %d\n", status);
-      return status;
-    }
+  // Writability is set to "read-only filesystem", since we may need to replay
+  // the journal, but won't need to modify the filesystem further.
+  Writability writability = Writability::ReadOnlyFilesystem;
+  // Attempt to replay the journal before actually checking the consistency of
+  // the filesystem. The "writeback" capabilities are not actually required
+  // for this use-case.
+  zx_status_t status = blobfs_->InitializeWriteback(writability, apply_journal);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Unable to apply journal contents: %d\n", status);
+    return status;
   }
 
   status = CheckFvmConsistency(&blobfs_->Info(), blobfs_->Device());

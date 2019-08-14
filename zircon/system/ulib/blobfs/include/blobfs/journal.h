@@ -2,28 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_JOURNAL_H_
-#define BLOBFS_JOURNAL_H_
+#pragma once
 
 #ifndef __Fuchsia__
 static_assert(false, "Fuchsia only header");
 #endif
 
-#include <stdint.h>
-#include <zircon/types.h>
-
 #include <atomic>
 #include <utility>
+
+#include <stdint.h>
 
 #include <blobfs/format.h>
 #include <blobfs/transaction-manager.h>
 #include <blobfs/vmo-buffer.h>
-#include <blobfs/writeback-queue.h>
-#include <blobfs/writeback-work.h>
 #include <blobfs/writeback.h>
+#include <blobfs/writeback-queue.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/types.h>
 
 namespace blobfs {
 
@@ -515,5 +513,3 @@ class JournalProcessor {
   EntryQueue sync_queue_;
 };
 }  // namespace blobfs
-
-#endif  // BLOBFS_JOURNAL_H_

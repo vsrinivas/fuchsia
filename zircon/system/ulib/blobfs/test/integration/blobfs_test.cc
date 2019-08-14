@@ -6,16 +6,16 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/fzl/fdio.h>
 #include <limits.h>
 #include <sys/stat.h>
 
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
+#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
 #include <fvm/format.h>
+#include <lib/fzl/fdio.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -94,11 +94,7 @@ void BlobfsTest::Unmount() {
   if (!mounted_) {
     return;
   }
-
-  // Unmount will propagate the result of sync; for cases where the filesystem is disconnected
-  // from the underlying device, ZX_ERR_IO_REFUSED is expected.
-  zx_status_t status = umount(kMountPath);
-  ASSERT_TRUE(status == ZX_OK || status == ZX_ERR_IO_REFUSED);
+  ASSERT_OK(umount(kMountPath));
   mounted_ = false;
 }
 

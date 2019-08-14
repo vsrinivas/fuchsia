@@ -5,12 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/blobfs/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/fzl/fdio.h>
-#include <lib/zx/vmo.h>
 #include <sys/mman.h>
-#include <zircon/device/vfs.h>
 
 #include <array>
 #include <atomic>
@@ -19,6 +14,11 @@
 
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
+#include <fuchsia/blobfs/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/vmo.h>
+#include <zircon/device/vfs.h>
 #include <zxtest/zxtest.h>
 
 #include "blobfs_test.h"
@@ -1190,8 +1190,8 @@ static bool TestHugeBlobRandom(BlobfsTest* blobfsTest) {
 
     // This blob is extremely large, and will remain large
     // on disk. It is not easily compressible.
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(
-            MOUNT_PATH, 2 * blobfs::WriteBufferSize() * kBlobfsBlockSize(), &info));
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 2 * blobfs::WriteBufferSize(),
+                                                  &info));
 
     fbl::unique_fd fd;
     ASSERT_TRUE(MakeBlob(info.get(), &fd));
@@ -1232,7 +1232,7 @@ static bool TestHugeBlobCompressible(BlobfsTest* blobfsTest) {
         fs_test_utils::RandomFill(data, length / 2);
         data = reinterpret_cast<char*>(reinterpret_cast<uintptr_t>(data) + length / 2);
         memset(data, 'a', length / 2);
-    }, MOUNT_PATH, 2 * blobfs::WriteBufferSize() * kBlobfsBlockSize, &info));
+    }, MOUNT_PATH, 2 * blobfs::WriteBufferSize(), &info));
 
     fbl::unique_fd fd;
     ASSERT_TRUE(MakeBlob(info.get(), &fd));
@@ -1984,9 +1984,7 @@ void RunFailedWriteTest(const RamDisk* disk) {
   ftruncate(fd.get(), info->size_data);
 
   // Since the ramdisk is asleep and our blobfs is aware of it due to the sync, write should fail.
-  // TODO(smklein): Implement support for "failed write propagates to the client before
-  // sync".
-  // ASSERT_LT(write(fd.get(), info->data.get(), blobfs::kBlobfsBlockSize), 0);
+  ASSERT_LT(write(fd.get(), info->data.get(), blobfs::kBlobfsBlockSize), 0);
 
   ASSERT_OK(disk->WakeUp());
 }

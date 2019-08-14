@@ -4,22 +4,12 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/vfs.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-
-#include <utility>
-#include <vector>
 
 #include <blobfs/blobfs.h>
 #include <blobfs/compression/lz4.h>
 #include <blobfs/compression/zstd.h>
-#include <blobfs/data-streamer.h>
 #include <blobfs/iterator/allocated-extent-iterator.h>
 #include <blobfs/iterator/block-iterator.h>
 #include <blobfs/iterator/extent-iterator.h>
@@ -33,6 +23,14 @@
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fs/metrics/events.h>
+#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/sync/completion.h>
+#include <zircon/device/vfs.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+
+#include <utility>
 
 namespace blobfs {
 namespace {
@@ -321,9 +319,10 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
       return status;
     }
     SetState(kBlobStateDataWrite);
-
-    blobfs_->journal()->schedule_task(
-        WriteMetadata().and_then([blob = fbl::WrapRefPtr(this)]() { blob->CompleteSync(); }));
+    if ((status = WriteMetadata()) != ZX_OK) {
+      FS_TRACE_ERROR("Null blob metadata fail: %d\n", status);
+      return status;
+    }
     return ZX_OK;
   }
 
@@ -386,9 +385,15 @@ void* Blob::GetData() const {
 
 void* Blob::GetMerkle() const { return mapping_.start(); }
 
-fit::promise<void, zx_status_t> Blob::WriteMetadata() {
+zx_status_t Blob::WriteMetadata() {
   TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
   assert(GetState() == kBlobStateDataWrite);
+
+  zx_status_t status;
+  fbl::unique_ptr<WritebackWork> wb;
+  if ((status = blobfs_->CreateWork(&wb, this)) != ZX_OK) {
+    return status;
+  }
 
   // Update the on-disk hash.
   memcpy(inode_.merkle_root_hash, GetKey(), Digest::kLength);
@@ -396,24 +401,23 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
   // All data has been written to the containing VMO.
   SetState(kBlobStateReadable);
   if (readable_event_.is_valid()) {
-    zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
+    status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     if (status != ZX_OK) {
       SetState(kBlobStateError);
-      return fit::make_error_promise(status);
+      return status;
     }
   }
 
   atomic_store(&syncing_, true);
 
-  UnbufferedOperationsBuilder operations;
   if (inode_.block_count) {
     // We utilize the NodePopulator class to take our reserved blocks and nodes and fill the
     // persistent map with an allocated inode / container.
 
     // If |on_node| is invoked on a node, it means that node was necessary to represent this
     // blob. Persist the node back to durable storge.
-    auto on_node = [this, &operations](const ReservedNode& node) {
-      blobfs_->PersistNode(node.index(), &operations);
+    auto on_node = [this, &wb](const ReservedNode& node) {
+      blobfs_->PersistNode(wb.get(), node.index());
     };
 
     // If |on_extent| is invoked on an extent, it was necessary to represent this blob. Persist
@@ -423,7 +427,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
     // more extents than this blob ended up using. Decrement |remaining_blocks| to track if we
     // should exit early.
     size_t remaining_blocks = inode_.block_count;
-    auto on_extent = [this, &operations, &remaining_blocks](ReservedExtent& extent) {
+    auto on_extent = [this, &wb, &remaining_blocks](ReservedExtent& extent) {
       ZX_DEBUG_ASSERT(remaining_blocks > 0);
       if (remaining_blocks >= extent.extent().Length()) {
         // Consume the entire extent.
@@ -433,7 +437,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
         extent.SplitAt(static_cast<BlockCountType>(remaining_blocks));
         remaining_blocks = 0;
       }
-      blobfs_->PersistBlocks(extent, &operations);
+      blobfs_->PersistBlocks(wb.get(), extent);
       if (remaining_blocks == 0) {
         return NodePopulator::IterationCommand::Stop;
       }
@@ -455,14 +459,21 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
     *(blobfs_->GetNode(map_index_)) = inode_;
     const ReservedNode& node = write_info_->node_indices[0];
     blobfs_->GetAllocator()->MarkInodeAllocated(node);
-    blobfs_->PersistNode(node.index(), &operations);
+    blobfs_->PersistNode(wb.get(), node.index());
   }
 
-  write_info_.reset();
+  wb->SetSyncCallback([blob = fbl::WrapRefPtr(this)](zx_status_t status) {
+    if (status == ZX_OK) {
+      blob->CompleteSync();
+    }
+  });
+  if ((status = blobfs_->EnqueueWork(std::move(wb), EnqueueType::kJournal)) != ZX_OK) {
+    return status;
+  }
 
-  return blobfs_->journal()
-      ->WriteMetadata(operations.TakeOperations())
-      .and_then([blob = fbl::WrapRefPtr(this)]() { blob->CompleteSync(); });
+  // Drop the write info, since we no longer need it.
+  write_info_.reset();
+  return status;
 }
 
 zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
@@ -498,10 +509,23 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       return ZX_OK;
     }
 
-    auto set_error = fbl::MakeAutoCall([this]() { SetState(kBlobStateError); });
-
     // Only write data to disk once we've buffered the file into memory.
     // This gives us a chance to try compressing the blob before we write it back.
+    fbl::unique_ptr<WritebackWork> wb;
+    if ((status = blobfs_->CreateWork(&wb, this)) != ZX_OK) {
+      return status;
+    }
+
+    // In case the operation fails, forcibly reset the WritebackWork
+    // to avoid asserting that no write requests exist on destruction.
+    auto set_error = fbl::MakeAutoCall([&]() {
+      if (wb != nullptr) {
+        wb->MarkCompleted(ZX_ERR_BAD_STATE);
+      }
+
+      SetState(kBlobStateError);
+    });
+
     if (write_info_->compressor) {
       if ((status = write_info_->compressor->End()) != ZX_OK) {
         return status;
@@ -519,10 +543,6 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     // waiting until the data is fully downloaded to create the tree.
     size_t merkle_size = MerkleTree::GetTreeLength(inode_.blob_size);
     fs::Duration generation_time;
-    std::vector<fit::promise<void, zx_status_t>> promises;
-    UnbufferedOperationsBuilder operations;
-    DataStreamer streamer(blobfs_->journal(), blobfs_->WritebackCapacity());
-
     if (merkle_size > 0) {
       Digest digest;
       void* merkle_data = GetMerkle();
@@ -538,19 +558,12 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
 
-      status = StreamBlocks(&block_iter, merkle_blocks,
-                            [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                              UnbufferedOperation op = {
-                                  .vmo = zx::unowned_vmo(mapping_.vmo().get()),
-                                  {
-                                      .type = OperationType::kWrite,
-                                      .vmo_offset = vmo_offset,
-                                      .dev_offset = dev_offset + blobfs_->DataStart(),
-                                      .length = length,
-                                  }};
-                              streamer.StreamData(std::move(op));
-                              return ZX_OK;
-                            });
+      status =
+          StreamBlocks(&block_iter, merkle_blocks,
+                       [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+                         return EnqueuePaginated(&wb, blobfs_, this, mapping_.vmo(), vmo_offset,
+                                                 dev_offset + blobfs_->DataStart(), length);
+                       });
 
       if (status != ZX_OK) {
         return status;
@@ -572,15 +585,9 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       ZX_DEBUG_ASSERT(block_iter.BlockIndex() + vmo_bias == 0);
       status = StreamBlocks(
           &block_iter, blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-            UnbufferedOperation op = {.vmo = zx::unowned_vmo(write_info_->compressor->Vmo().get()),
-                                      {
-                                          .type = OperationType::kWrite,
-                                          .vmo_offset = vmo_offset - merkle_blocks,
-                                          .dev_offset = dev_offset + blobfs_->DataStart(),
-                                          .length = length,
-                                      }};
-            streamer.StreamData(std::move(op));
-            return ZX_OK;
+            return EnqueuePaginated(&wb, blobfs_, this, write_info_->compressor->Vmo(),
+                                    vmo_offset - merkle_blocks, dev_offset + blobfs_->DataStart(),
+                                    length);
           });
 
       if (status != ZX_OK) {
@@ -598,15 +605,8 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       uint32_t blocks = static_cast<uint32_t>(blocks64);
       status = StreamBlocks(
           &block_iter, blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-            UnbufferedOperation op = {.vmo = zx::unowned_vmo(mapping_.vmo().get()),
-                                      {
-                                          .type = OperationType::kWrite,
-                                          .vmo_offset = vmo_offset,
-                                          .dev_offset = dev_offset + blobfs_->DataStart(),
-                                          .length = length,
-                                      }};
-            streamer.StreamData(std::move(op));
-            return ZX_OK;
+            return EnqueuePaginated(&wb, blobfs_, this, mapping_.vmo(), vmo_offset,
+                                    dev_offset + blobfs_->DataStart(), length);
           });
       if (status != ZX_OK) {
         return status;
@@ -614,19 +614,21 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     }
 
     // Enqueue the blob's final data work. Metadata must be enqueued separately.
-    Journal2::Promise write_all_data = streamer.Flush();
+    if ((status = blobfs_->EnqueueWork(std::move(wb), EnqueueType::kData)) != ZX_OK) {
+      return status;
+    }
 
     // No more data to write. Flush to disk.
     fs::Ticker ticker(blobfs_->Metrics().Collecting());  // Tracking enqueue time.
+    if ((status = WriteMetadata()) != ZX_OK) {
+      return status;
+    }
 
-    // Wrap all pending writes with a strong reference to this Blob, so that it stays
-    // alive while there are writes in progress acting on it.
-    auto task = wrap_reference(write_all_data.and_then(WriteMetadata()), fbl::WrapRefPtr(this));
-    blobfs_->journal()->schedule_task(std::move(task));
     blobfs_->Metrics().UpdateClientWrite(to_write, merkle_size, ticker.End(), generation_time);
     set_error.cancel();
     return ZX_OK;
   }
+
   return ZX_ERR_BAD_STATE;
 }
 
@@ -926,11 +928,7 @@ void Blob::Sync(SyncCallback closure) {
 
 bool Blob::IsDirectory() const { return false; }
 
-void Blob::CompleteSync() {
-  atomic_store(&syncing_, false);
-  // Drop the write info, since we no longer need it.
-  write_info_.reset();
-}
+void Blob::CompleteSync() { atomic_store(&syncing_, false); }
 
 fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
   if (clone_watcher_.is_pending()) {
@@ -968,12 +966,17 @@ zx_status_t Blob::Purge() {
   if (GetState() == kBlobStateReadable) {
     // A readable blob should only be purged if it has been unlinked.
     ZX_ASSERT(DeletionQueued());
-    UnbufferedOperationsBuilder operations;
-    blobfs_->FreeInode(GetMapIndex(), &operations);
+    fbl::unique_ptr<WritebackWork> wb;
+    zx_status_t status = blobfs_->CreateWork(&wb, this);
+    if (status != ZX_OK) {
+      return status;
+    }
 
-    auto task = wrap_reference(blobfs_->journal()->WriteMetadata(operations.TakeOperations()),
-                               fbl::WrapRefPtr(this));
-    blobfs_->journal()->schedule_task(std::move(task));
+    blobfs_->FreeInode(wb.get(), GetMapIndex());
+    status = blobfs_->EnqueueWork(std::move(wb), EnqueueType::kJournal);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
   ZX_ASSERT(Cache().Evict(fbl::WrapRefPtr(this)) == ZX_OK);
   SetState(kBlobStatePurged);
