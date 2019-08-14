@@ -7,9 +7,12 @@
 #[doc(hidden)]
 pub mod reexport {
     pub use {
+        crate::directory::test_utils::DirentsSameInodeBuilder,
         fidl_fuchsia_io::{
             DirectoryEvent, DirectoryMarker, DirectoryObject, FileEvent, FileMarker, FileObject,
-            NodeInfo, SeekOrigin, OPEN_RIGHT_READABLE,
+            NodeInfo, SeekOrigin, DIRENT_TYPE_BLOCK_DEVICE, DIRENT_TYPE_DIRECTORY,
+            DIRENT_TYPE_FILE, DIRENT_TYPE_SERVICE, DIRENT_TYPE_SOCKET, DIRENT_TYPE_UNKNOWN,
+            INO_UNKNOWN, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
         },
         fuchsia_zircon::Status,
         futures::stream::StreamExt,
@@ -568,6 +571,46 @@ macro_rules! assert_read_dirents {
 
         assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(entries, $expected);
+    }};
+}
+
+#[macro_export]
+macro_rules! assert_read_dirents_one_listing {
+    ($proxy:expr, $max_bytes:expr, $( { $type:tt, $name:expr $(,)* } ),* $(,)*) => {{
+        use $crate::test_utils::reexport::{DirentsSameInodeBuilder, INO_UNKNOWN};
+
+        #[allow(unused)]
+        use $crate::test_utils::reexport::{
+            DIRENT_TYPE_UNKNOWN, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_BLOCK_DEVICE, DIRENT_TYPE_FILE,
+            DIRENT_TYPE_SOCKET, DIRENT_TYPE_SERVICE,
+        };
+
+        let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+        expected
+            $(.add(assert_read_dirents_one_listing!(@expand_dirent_type $type), $name))*
+            ;
+
+        assert_read_dirents!($proxy, $max_bytes, expected.into_vec());
+    }};
+
+    (@expand_dirent_type UNKNOWN) => { DIRENT_TYPE_UNKNOWN };
+    (@expand_dirent_type DIRECTORY) => { DIRENT_TYPE_DIRECTORY };
+    (@expand_dirent_type BLOCK_DEVICE) => { DIRENT_TYPE_BLOCK_DEVICE };
+    (@expand_dirent_type FILE) => { DIRENT_TYPE_FILE };
+    (@expand_dirent_type SOCKET) => { DIRENT_TYPE_SOCKET };
+    (@expand_dirent_type SERVICE) => { DIRENT_TYPE_SERVICE };
+}
+
+#[macro_export]
+macro_rules! assert_read_dirents_path_one_listing {
+    ($proxy:expr, $path:expr, $max_bytes:expr, $( { $type:tt, $name:expr $(,)* } ),* $(,)*) => {{
+        use $crate::test_utils::reexport::OPEN_FLAG_DESCRIBE;
+
+        let flags = OPEN_FLAG_DESCRIBE;
+        let path = open_get_directory_proxy_assert_ok!($proxy, flags, $path);
+
+        assert_read_dirents_one_listing!(path, $max_bytes, $( { $type, $name }, )*);
+        assert_close!(path);
     }};
 }
 
