@@ -12,6 +12,7 @@ group("test") {
 test("range") {
   test_group = "sys"
   sources = [
+    "interval-tree-test.cc",
     "range.cc",
   ]
   deps = [
