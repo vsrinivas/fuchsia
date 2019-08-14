@@ -40,7 +40,7 @@ int parse_args(int argc, char** argv, mount_options_t* options, char** devicepat
         {"help", no_argument, NULL, 'h'},     {NULL, 0, NULL, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "rmvh", opts, &opt_index);
+    int c = getopt_long(argc, argv, "rmjvh", opts, &opt_index);
     if (c < 0) {
       break;
     }

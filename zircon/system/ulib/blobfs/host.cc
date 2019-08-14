@@ -4,13 +4,15 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
-#include <new>
-#include <optional>
+#include <lib/cksum.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <new>
+#include <optional>
 #include <utility>
 
 #include <digest/digest.h>
@@ -296,6 +298,7 @@ int Mkfs(int fd, uint64_t block_count) {
   // 2) Write the rest of the journal as zeros.
   JournalInfo* journal_info = reinterpret_cast<JournalInfo*>(block);
   journal_info->magic = kJournalMagic;
+  journal_info->checksum = crc32(0, reinterpret_cast<const uint8_t*>(block), sizeof(JournalInfo));
   if ((status = WriteBlock(fd, JournalStartBlock(info), block)) != ZX_OK) {
     FS_TRACE_ERROR("Failed to write journal block\n");
     return -1;

@@ -5,11 +5,23 @@
 // This file contains the global Blobfs structure used for constructing a Blobfs filesystem in
 // memory.
 
-#pragma once
+#ifndef BLOBFS_BLOBFS_H_
+#define BLOBFS_BLOBFS_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
 #endif
+
+#include <fuchsia/blobfs/c/fidl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
+#include <lib/zx/vmo.h>
 
 #include <atomic>
 #include <cstring>
@@ -17,6 +29,21 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
+#include <blobfs/allocator.h>
+#include <blobfs/blob-cache.h>
+#include <blobfs/blob.h>
+#include <blobfs/common.h>
+#include <blobfs/directory.h>
+#include <blobfs/extent-reserver.h>
+#include <blobfs/format.h>
+#include <blobfs/iterator/allocated-extent-iterator.h>
+#include <blobfs/iterator/extent-iterator.h>
+#include <blobfs/journal.h>  // Deprecated.
+#include <blobfs/journal/journal2.h>
+#include <blobfs/metrics.h>
+#include <blobfs/node-reserver.h>
+#include <blobfs/transaction-manager.h>
+#include <blobfs/writeback.h>
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
 #include <digest/digest.h>
@@ -33,31 +60,7 @@
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <fuchsia/blobfs/c/fidl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/fzl/resizeable-vmo-mapper.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/event.h>
-#include <lib/zx/vmo.h>
 #include <trace/event.h>
-
-#include <blobfs/allocator.h>
-#include <blobfs/blob-cache.h>
-#include <blobfs/blob.h>
-#include <blobfs/common.h>
-#include <blobfs/directory.h>
-#include <blobfs/extent-reserver.h>
-#include <blobfs/format.h>
-#include <blobfs/iterator/allocated-extent-iterator.h>
-#include <blobfs/iterator/extent-iterator.h>
-#include <blobfs/journal.h>
-#include <blobfs/metrics.h>
-#include <blobfs/node-reserver.h>
-#include <blobfs/writeback.h>
 
 namespace blobfs {
 
@@ -130,6 +133,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
 
   BlobfsMetrics& Metrics() final { return metrics_; }
   size_t WritebackCapacity() const final;
+  Journal2* journal() final;
   zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final;
   zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final;
 
@@ -176,7 +180,9 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // If the underlying block device is read-only, the journal may not be
   // replayed, and this function returns ZX_ERR_ACCESS_DENIED.
   // If the filesystem is to be mounted read-only or read + write, the journal may be replayed.
-  zx_status_t InitializeWriteback(Writability writability, bool journal_enabled);
+  //
+  // DEPRECATED.
+  zx_status_t ReplayOldJournal();
 
   virtual ~Blobfs();
 
@@ -199,7 +205,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // Frees an inode, from both the reserved map and the inode table. If the
   // inode was allocated in the inode table, write the deleted inode out to
   // disk.
-  void FreeInode(WritebackWork* wb, uint32_t node_index);
+  void FreeInode(uint32_t node_index, UnbufferedOperationsBuilder* operations);
 
   // Does a single pass of all blobs, creating uninitialized Vnode
   // objects for them all.
@@ -210,10 +216,10 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   zx_status_t InitializeVnodes();
 
   // Writes node data to the inode table and updates disk.
-  void PersistNode(WritebackWork* wb, uint32_t node_index);
+  void PersistNode(uint32_t node_index, UnbufferedOperationsBuilder* operations);
 
   // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
-  void PersistBlocks(WritebackWork* wb, const ReservedExtent& extent);
+  void PersistBlocks(const ReservedExtent& extent, UnbufferedOperationsBuilder* ops);
 
   // Record the location and size of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const { return allocator_->GetAllocatedRegions(); }
@@ -223,28 +229,34 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
 
   Blobfs(std::unique_ptr<BlockDevice> device, const Superblock* info);
 
+  // Migrates the journal format from blobfs v7 to blobfs v8.
+  //
+  // Implemented by replaying the old journal and overwriting it in-place.
+  // Returns an error if the journal cannot be replayed or overwritten.
+  zx_status_t JournalUpgrade(MountOptions* options);
+
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
   zx_status_t Reload();
 
   // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
-  void FreeExtent(WritebackWork* wb, const Extent& extent);
+  void FreeExtent(const Extent& extent, UnbufferedOperationsBuilder* operations);
 
   // Free a single node. Doesn't attempt to parse the type / traverse nodes;
   // this function just deletes a single node.
-  void FreeNode(WritebackWork* wb, uint32_t node_index);
+  void FreeNode(uint32_t node_index, UnbufferedOperationsBuilder* operations);
 
   // Given a contiguous number of blocks after a starting block,
   // write out the bitmap to disk for the corresponding blocks.
   // Should only be called by PersistBlocks and FreeExtent.
-  void WriteBitmap(WritebackWork* wb, uint64_t nblocks, uint64_t start_block);
+  void WriteBitmap(uint64_t nblocks, uint64_t start_block, UnbufferedOperationsBuilder* operations);
 
   // Given a node within the node map at an index, write it to disk.
   // Should only be called by AllocateNode and FreeNode.
-  void WriteNode(WritebackWork* wb, uint32_t map_index);
+  void WriteNode(uint32_t map_index, UnbufferedOperationsBuilder* operations);
 
   // Enqueues an update for allocated inode/block counts.
-  void WriteInfo(WritebackWork* wb);
+  void WriteInfo(UnbufferedOperationsBuilder* operations);
 
   // When will flush the metrics in the calling thread and will schedule itself
   // to flush again in the future.
@@ -257,8 +269,11 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // Verifies that the contents of a blob are valid.
   zx_status_t VerifyBlob(uint32_t node_index);
 
+  // Journal V1: Deprecated.
   fbl::unique_ptr<WritebackQueue> writeback_;
-  fbl::unique_ptr<Journal> journal_;
+  fbl::unique_ptr<Journal> old_journal_;
+  // Journal V2.
+  fbl::unique_ptr<Journal2> journal_;
   Superblock info_;
 
   BlobCache blob_cache_;
@@ -298,3 +313,5 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> d
 zx_status_t FormatFilesystem(BlockDevice* device);
 
 }  // namespace blobfs
+
+#endif  // BLOBFS_BLOBFS_H_

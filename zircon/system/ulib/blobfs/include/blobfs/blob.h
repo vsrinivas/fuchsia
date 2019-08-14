@@ -4,27 +4,21 @@
 
 // This file contains Vnodes which back a Blobfs filesystem.
 
-#pragma once
+#ifndef BLOBFS_BLOB_H_
+#define BLOBFS_BLOB_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
 #endif
 
-#include <string.h>
-
-#include <digest/digest.h>
-#include <fbl/algorithm.h>
-#include <fbl/intrusive_wavl_tree.h>
-#include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
-#include <fs/vfs.h>
-#include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/promise.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/event.h>
+#include <string.h>
+
+#include <atomic>
 
 #include <blobfs/allocator.h>
 #include <blobfs/blob-cache.h>
@@ -36,8 +30,15 @@
 #include <blobfs/format.h>
 #include <blobfs/metrics.h>
 #include <blobfs/node-reserver.h>
-
-#include <atomic>
+#include <digest/digest.h>
+#include <fbl/algorithm.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
+#include <fs/vfs.h>
+#include <fs/vnode.h>
 
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_
 static_assert(false, "blobfs/format-assertions.h not included");
@@ -229,7 +230,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Called by the Vnode once the last write has completed, updating the
   // on-disk metadata.
-  zx_status_t WriteMetadata();
+  fit::promise<void, zx_status_t> WriteMetadata();
 
   // Acquires a pointer to the mapped data or merkle tree
   void* GetData() const;
@@ -280,3 +281,5 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 };
 
 }  // namespace blobfs
+
+#endif  // BLOBFS_BLOB_H_
