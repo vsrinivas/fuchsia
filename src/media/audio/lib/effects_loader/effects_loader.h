@@ -10,6 +10,7 @@
 
 #include <string_view>
 
+#include "src/media/audio/lib/effects_loader/effect.h"
 #include "src/media/audio/lib/effects_loader/effects_module.h"
 
 namespace media::audio {
@@ -39,21 +40,11 @@ class EffectsLoader {
   // are released, the library will be closed.
   zx_status_t LoadLibrary();
 
-  // The following methods map directly to SO exports
+  Effect CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
+                      uint16_t channels_out, std::string_view config);
+
   zx_status_t GetNumFx(uint32_t* num_effects_out);
   zx_status_t GetFxInfo(uint32_t effect_id, fuchsia_audio_effects_description* fx_desc);
-  fuchsia_audio_effects_handle_t CreateFx(uint32_t effect_id, uint32_t frame_rate,
-                                          uint16_t channels_in, uint16_t channels_out,
-                                          std::string_view config);
-  zx_status_t FxUpdateConfiguration(fuchsia_audio_effects_handle_t handle, std::string_view config);
-  zx_status_t DeleteFx(fuchsia_audio_effects_handle_t handle);
-  zx_status_t FxGetParameters(fuchsia_audio_effects_handle_t handle,
-                              fuchsia_audio_effects_parameters* fx_params);
-  zx_status_t FxProcessInPlace(fuchsia_audio_effects_handle_t handle, uint32_t num_frames,
-                               float* audio_buff_in_out);
-  zx_status_t FxProcess(fuchsia_audio_effects_handle_t handle, uint32_t num_frames,
-                        const float* audio_buff_in, float* audio_buff_out);
-  zx_status_t FxFlush(fuchsia_audio_effects_handle_t handle);
 
  private:
   const char* lib_name_;

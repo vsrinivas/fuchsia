@@ -58,7 +58,7 @@ bool example_audio_effects_delete(fuchsia_audio_effects_handle_t effects_handle)
     return false;
   }
 
-  auto effect= reinterpret_cast<media::audio_effects_example::EffectBase*>(effects_handle);
+  auto effect = reinterpret_cast<media::audio_effects_example::EffectBase*>(effects_handle);
   delete effect;
 
   return true;

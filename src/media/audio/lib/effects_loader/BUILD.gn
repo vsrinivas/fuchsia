@@ -6,6 +6,8 @@ import("//build/test/test_package.gni")
 
 source_set("effects_loader") {
   sources = [
+    "effect.cc",
+    "effect.h",
     "effects_loader.cc",
     "effects_loader.h",
     "effects_module.cc",
@@ -31,6 +33,7 @@ executable("test") {
   output_name = "effects_loader_unittests"
 
   sources = [
+    "effect_unittest.cc",
     "effects_loader_test_base.cc",
     "effects_loader_test_base.h",
     "effects_loader_unittest.cc",

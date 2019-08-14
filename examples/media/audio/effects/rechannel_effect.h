@@ -32,7 +32,7 @@ class RechannelEffect : public EffectBase {
   }
 
   static RechannelEffect* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
-                              std::string_view) {
+                                 std::string_view) {
     return (channels_in == kNumChannelsIn && channels_out == kNumChannelsOut
                 ? new RechannelEffect(frame_rate)
                 : nullptr);

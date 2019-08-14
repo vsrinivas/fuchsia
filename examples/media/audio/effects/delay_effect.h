@@ -35,7 +35,7 @@ class DelayEffect : public EffectBase {
   static bool GetInfo(fuchsia_audio_effects_description* desc);
 
   static DelayEffect* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
-                          std::string_view config);
+                             std::string_view config);
 
   DelayEffect(uint32_t frame_rate, uint16_t channels, uint32_t delay_frames);
   ~DelayEffect() = default;

@@ -32,7 +32,7 @@ class SwapEffect : public EffectBase {
   }
 
   static SwapEffect* Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
-                         std::string_view) {
+                            std::string_view) {
     return (channels_in == kNumChannelsIn && channels_out == kNumChannelsOut
                 ? new SwapEffect(frame_rate, channels_in)
                 : nullptr);

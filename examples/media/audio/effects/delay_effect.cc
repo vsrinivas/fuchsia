@@ -59,7 +59,7 @@ bool DelayEffect::GetInfo(fuchsia_audio_effects_description* desc) {
 
 // static -- called from static EffectBase::Create
 DelayEffect* DelayEffect::Create(uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
-                           std::string_view config_json) {
+                                 std::string_view config_json) {
   if (channels_in != channels_out) {
     return nullptr;
   }

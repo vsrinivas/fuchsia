@@ -28,8 +28,8 @@ class EffectsModule {
   EffectsModule& operator=(EffectsModule&&) noexcept = default;
 
   // Provide access to the underlying module structure.
-  ModuleImpl& operator*() { return *module_; }
-  ModuleImpl* operator->() { return module_.get(); }
+  const ModuleImpl& operator*() const { return *module_; }
+  const ModuleImpl* operator->() const { return module_.get(); }
 
   [[nodiscard]] bool is_valid() const { return static_cast<bool>(module_); }
   explicit operator bool() const { return is_valid(); }
