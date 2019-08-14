@@ -10,22 +10,7 @@ executable("integration") {
   testonly = true
 
   sources = [
-    # TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12278): run inspect tests as
-    # end-to-end tests as well as integration tests.
     "inspect_tests.cc",
-  ]
-
-  deps = [
-    ":integration_tests",
-    "//src/ledger/bin/tests/integration/sync",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
-source_set("integration_tests") {
-  testonly = true
-
-  sources = [
     "integration_test_tests.cc",
     "ledger_app_instance_factory_integration.cc",
     "merging_tests.cc",
@@ -59,9 +44,11 @@ source_set("integration_tests") {
     "//src/ledger/bin/testing:ledger_instance_factory",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/bin/testing/overnet",
+    "//src/ledger/bin/tests/integration/sync",
     "//src/ledger/cloud_provider_in_memory/lib",
     "//src/ledger/lib/firebase_auth/testing",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
