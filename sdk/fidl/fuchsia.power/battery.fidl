@@ -1,0 +1,120 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.power;
+
+using zx;
+
+/// The overall status of the battery, informing its general availability.
+enum BatteryStatus {
+    /// uninitialized battery status
+    UNKNOWN = 0;
+    /// battery present and available
+    OK = 1;
+    /// battery present, but not available (e.g. disabled)
+    NOT_AVAILABLE = 2;
+    /// battery not present (e.g. removed)
+    NOT_PRESENT = 3;
+};
+
+/// The status of the battery with respect to charging.
+enum ChargeStatus {
+    UNKNOWN = 0;
+    NOT_CHARGING = 1;
+    CHARGING = 2;
+    DISCHARGING = 3;
+    FULL = 4;
+};
+
+/// The power source for an actively charging battery.
+enum ChargeSource {
+    UNKNOWN = 0;
+    NONE = 1;
+    AC_ADAPTER = 2;
+    USB = 3;
+    WIRELESS = 4;
+};
+
+/// The general status of the battery level.
+enum LevelStatus {
+    OK = 0;
+    WARNING = 1; // OEM defined signal for initial notification UI to charge
+    LOW = 2; // OEM defined at around 5% of capacity (sufficient for S1-S4)
+    CRITICAL = 3; // no longer capable of supplying power, emergency shutdown
+};
+
+/// The general status related to the overall health of the battery.
+enum HealthStatus {
+    UNKNOWN = 0;
+    GOOD = 1;
+    COLD = 2;
+    HOT = 3;
+    DEAD = 4;
+    OVER_VOLTAGE = 5;
+    UNSPECIFIED_FAILURE = 6;
+};
+
+/// The time remaining while actively charging or discharging.
+xunion TimeRemaining {
+    /// Representation of indeterminate state with zero duration.
+    zx.duration indeterminate;
+
+    /// Remaining battery life while discharging
+    zx.duration battery_life;
+
+    /// Remaining time until full while charging
+    zx.duration full_charge;
+};
+
+/// Current battery state information
+table BatteryInfo {
+    /// General battery status with respect to presence & availability
+    1: BatteryStatus status;
+
+    /// The current state of the battery with respect to charging
+    2: ChargeStatus charge_status;
+
+    /// The charge source while battery is actively charging.
+    /// When not actively charging, this will reflect that the source is
+    /// NONE (not charging) or UNKNOWN.
+    3: ChargeSource charge_source;
+
+    /// Battery level in percentage
+    4: float32 level_percent;
+
+    /// Battery level as a general status, including low and critical
+    5: LevelStatus level_status;
+
+    /// Overall battery health
+    6: HealthStatus health;
+
+    /// Time remaining relative to the current charge status
+    7: TimeRemaining time_remaining;
+
+    /// Timestamp to distinguish between latest and stale status
+    8: zx.time timestamp;
+};
+
+/// Provider interface used to obtain battery status details
+[FragileBase]
+protocol BatteryInfoProvider {
+    /// Gets battery info
+    GetBatteryInfo() -> (BatteryInfo info);
+
+    /// Registers a watcher for battery info changes
+    Watch(BatteryInfoWatcher watcher);
+};
+
+/// Watcher on battery info
+protocol BatteryInfoWatcher {
+    /// Callback triggered when battery info changes
+    OnChangeBatteryInfo(BatteryInfo info) -> ();
+};
+
+/// General manager interface for battery management
+[Discoverable]
+protocol BatteryManager {
+    // Provides battery status information
+    compose BatteryInfoProvider;
+};

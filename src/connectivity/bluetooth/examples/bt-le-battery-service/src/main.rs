@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,11 +6,7 @@
 
 use {
     failure::{bail, Error, ResultExt},
-    fidl_fuchsia_bluetooth_gatt as gatt,
-    fidl_fuchsia_power::{
-        PowerManagerMarker, PowerManagerWatcherMarker, PowerManagerWatcherRequest,
-        PowerManagerWatcherRequestStream,
-    },
+    fidl_fuchsia_bluetooth_gatt as gatt, fidl_fuchsia_power as fpower,
     fuchsia_async::{
         self as fasync,
         futures::{select, FutureExt, TryStreamExt},
@@ -121,17 +117,19 @@ async fn gatt_service_delegate(
     Ok(())
 }
 
-/// Handle a stream of incoming power notifications, updating state.
+/// Handle a stream of incoming battery notifications, updating state.
 /// Returns when the channel backing the stream closes or an error occurs while handling requests.
-async fn power_manager_watcher(
+async fn battery_manager_watcher(
     state: &BatteryState,
-    mut stream: PowerManagerWatcherRequestStream,
+    mut stream: fpower::BatteryInfoWatcherRequestStream,
 ) -> Result<(), Error> {
-    while let Some(PowerManagerWatcherRequest::OnChangeBatteryStatus { battery_status, .. }) =
-        stream.try_next().await.context("error running power manager watcher")?
+    while let Some(fpower::BatteryInfoWatcherRequest::OnChangeBatteryInfo { info, responder }) =
+        stream.try_next().await.context("error running battery manager info watcher")?
     {
-        let level = battery_status.level.round() as u8;
+        let level = info.level_percent.unwrap().round() as u8;
         state.set_level(level)?;
+        // acknowledge watch notification
+        responder.send()?;
     }
     Ok(())
 }
@@ -140,14 +138,14 @@ fn main() -> Result<(), Error> {
     let mut exec = fasync::Executor::new()?;
 
     // Create endpoints for the required services.
-    let (power_watcher_client, power_watcher_request_stream) =
-        fidl::endpoints::create_request_stream::<PowerManagerWatcherMarker>()?;
+    let (battery_info_watch_client, battery_info_request_stream) =
+        fidl::endpoints::create_request_stream::<fpower::BatteryInfoWatcherMarker>()?;
     let (delegate_client, delegate_request_stream) =
         fidl::endpoints::create_request_stream::<gatt::LocalServiceDelegateMarker>()?;
     let (service_proxy, service_server) = fidl::endpoints::create_proxy()?;
 
     let gatt_server = connect_to_service::<gatt::Server_Marker>()?;
-    let power_manager_server = connect_to_service::<PowerManagerMarker>()?;
+    let battery_manager_server = connect_to_service::<fpower::BatteryManagerMarker>()?;
 
     // Initialize internal state.
     let state = BatteryState::new(service_proxy);
@@ -184,8 +182,8 @@ fn main() -> Result<(), Error> {
         includes: None,
     };
 
-    // Register the local power watcher with the power manager service.
-    power_manager_server.watch(power_watcher_client)?;
+    // Register the local battery watcher with the battery manager service.
+    battery_manager_server.watch(battery_info_watch_client)?;
 
     let main_fut = async move {
         // Publish the local gatt service delegate with the gatt service.
@@ -196,14 +194,14 @@ fn main() -> Result<(), Error> {
         }
         println!("Published Battery Service to local device database.");
 
-        // Start the gatt service delegate and power watcher server.
+        // Start the gatt service delegate and battery watcher server.
         let service_delegate = gatt_service_delegate(&state, delegate_request_stream);
-        let power_watcher = power_manager_watcher(&state, power_watcher_request_stream);
+        let battery_watcher = battery_manager_watcher(&state, battery_info_request_stream);
         pin_mut!(service_delegate);
-        pin_mut!(power_watcher);
+        pin_mut!(battery_watcher);
         select! {
             res = service_delegate.fuse() => res?,
-            res = power_watcher.fuse() => res?,
+            res = battery_watcher.fuse() => res?,
         };
 
         Ok(())
