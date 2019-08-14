@@ -759,10 +759,16 @@ fn check_url(
     check_presence_and_length(MAX_URL_LENGTH, prop, decl_type, keyword, errors);
     if let Some(url) = prop {
         let mut chars_iter = url.chars();
+        let mut first_char = true;
         while let Some(c) = chars_iter.next() {
             match c {
-                '0'...'9' | 'a'...'z' | '+' | '-' | '.' => (),
+                '0'...'9' | 'a'...'z' | '+' | '-' | '.' => first_char = false,
                 ':' => {
+                    if first_char {
+                        // There must be at least one character in the schema
+                        errors.push(Error::invalid_field(decl_type, keyword));
+                        return false;
+                    }
                     // Once a `:` character is found, it must be followed by two `/` characters and
                     // then at least one more character. Note that these sequential calls to
                     // `.next()` without checking the result won't panic because `Chars` implements
