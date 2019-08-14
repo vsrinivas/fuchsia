@@ -76,6 +76,7 @@ group("fidl") {
     "fuchsia-minfs",
     "fuchsia-nand",
     "fuchsia-net",
+    "fuchsia-net-ppp",
     "fuchsia-net-stack",
     "fuchsia-paver",
     "fuchsia-perfmon-cpu",

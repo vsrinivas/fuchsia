@@ -8,8 +8,6 @@
 
 #include <vector>
 
-#include "fcs.h"
-
 namespace {
 
 TEST(FrameTestCase, SerializeFrameEmpty) {
