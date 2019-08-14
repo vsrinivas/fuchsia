@@ -1,0 +1,49 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("puppet_rust_bin") {
+  name = "puppet_rust"
+  edition = "2018"
+  testonly = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/diagnostics/inspect_validator/fidl:validate-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
+  ]
+}
+
+deprecated_fuchsia_component("puppet_rust_component") {
+  testonly = true
+  manifest = rebase_path("meta/inspect_validator_puppet.cmx")
+  manifest_dest = "meta/inspect_validator_puppet_rust.cmx"
+  deps = [
+    ":puppet_rust_bin",
+  ]
+
+  binary = "puppet_rust"
+  binary_dest = "bin/inspect_validator_puppet"
+}
+
+package("inspect_validator_puppet_rust") {
+  testonly = true
+  components = [ ":puppet_rust_component" ]
+}
+
+group("rust") {
+  testonly = true
+  deps = [
+    ":inspect_validator_puppet_rust",
+  ]
+}

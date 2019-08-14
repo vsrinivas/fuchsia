@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/inspect_validator"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
