@@ -51,12 +51,12 @@ zx_status_t AudioDeviceManager::Init() {
     return res;
   }
 
-  // Initialize the FxLoader and load the device effect library, if present.
+  // Initialize the EffectsLoader and load the device effect library, if present.
   res = effects_loader_.LoadLibrary();
   if (res == ZX_ERR_ALREADY_EXISTS) {
-    FXL_LOG(ERROR) << "FxLoader already started!";
+    FXL_LOG(ERROR) << "EffectsLoader already started!";
   } else if (res != ZX_OK) {
-    FXL_PLOG(WARNING, res) << "FxLoader::LoadLibrary failed";
+    FXL_PLOG(WARNING, res) << "EffectsLoader::LoadLibrary failed";
   }
 
   return res;
@@ -94,10 +94,7 @@ void AudioDeviceManager::Shutdown() {
     FinalizeDeviceSettings(*device);
   }
 
-  // Step #6: Close and unload the device effect library SO.
-  effects_loader_.UnloadLibrary();
-
-  // Step #7: Shut down the throttle output.
+  // Step #6: Shut down the throttle output.
   throttle_output_->Shutdown();
   throttle_output_ = nullptr;
 }
@@ -181,7 +178,7 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
   devices_.insert(devices_pending_init_.erase(*device));
   device->SetActivated();
 
-  // TODO(mpuryear): Create this device instance's FxProcessor here?
+  // TODO(mpuryear): Create this device instance's EffectsProcessor here?
 
   // Now that we have our gain settings (restored from disk, cloned from
   // others, or default), reapply them via the device itself.  We do this in
@@ -200,7 +197,7 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
   REP(SettingDeviceGainInfo(*device, gain_info, kAllSetFlags));
   device->SetGainInfo(gain_info, kAllSetFlags);
 
-  // TODO(mpuryear): Configure the FxProcessor based on settings, here?
+  // TODO(mpuryear): Configure the EffectsProcessor based on settings, here?
 
   // Notify interested users of this new device. Check whether this will become
   // the new default device, so we can set 'is_default' in the notification
@@ -247,7 +244,7 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   device->Shutdown();
   FinalizeDeviceSettings(*device);
 
-  // TODO(mpuryear): Delete this device instance's FxProcessor here?
+  // TODO(mpuryear): Delete this device instance's EffectsProcessor here?
 
   if (device->InContainer()) {
     auto& device_set = device->activated() ? devices_ : devices_pending_init_;

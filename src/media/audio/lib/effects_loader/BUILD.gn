@@ -8,6 +8,8 @@ source_set("effects_loader") {
   sources = [
     "effects_loader.cc",
     "effects_loader.h",
+    "effects_module.cc",
+    "effects_module.h",
     "effects_processor.cc",
     "effects_processor.h",
   ]
@@ -32,6 +34,7 @@ executable("test") {
     "effects_loader_test_base.cc",
     "effects_loader_test_base.h",
     "effects_loader_unittest.cc",
+    "effects_module_unittest.cc",
     "effects_processor_unittest.cc",
   ]
 

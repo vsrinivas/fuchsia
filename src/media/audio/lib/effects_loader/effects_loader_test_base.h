@@ -5,13 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECTS_LOADER_TEST_BASE_H_
 #define SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECTS_LOADER_TEST_BASE_H_
 
-#include <dlfcn.h>
-
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/effects/test_effects/test_effects.h"
-#include "src/media/audio/lib/effects_loader/effects_processor.h"
+#include "src/media/audio/lib/effects_loader/effects_loader.h"
 
 namespace media::audio::test {
 

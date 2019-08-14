@@ -9,65 +9,16 @@
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio {
-namespace {
-
-bool TryLoad(void* lib, const char* export_name, void** export_ptr) {
-  FXL_DCHECK(lib != nullptr);
-  FXL_DCHECK(export_name != nullptr);
-  FXL_DCHECK(export_ptr != nullptr);
-
-  *export_ptr = dlsym(lib, export_name);
-  if (*export_ptr == nullptr) {
-    FXL_LOG(ERROR) << "Failed to load .SO export [" << export_name << "]";
-    return false;
-  }
-
-  return true;
-}
-
-}  // namespace
-
-void* EffectsLoader::OpenLoadableModuleBinary() {
-  auto module = dlopen(lib_name_, RTLD_LAZY | RTLD_GLOBAL);
-  if (module == nullptr) {
-    FXL_LOG(ERROR) << "module '" << lib_name_ << "' did not load";
-  }
-  return module;
-}
 
 zx_status_t EffectsLoader::LoadLibrary() {
-  if (fx_lib_ != nullptr) {
+  if (module_) {
     return ZX_ERR_ALREADY_EXISTS;
   }
-
-  fx_lib_ = OpenLoadableModuleBinary();
-  if (fx_lib_ == nullptr) {
+  module_ = EffectsModuleV1::Open(lib_name_);
+  if (!module_) {
     return ZX_ERR_UNAVAILABLE;
   }
-  if (!TryLoad(fx_lib_, "fuchsia_audio_effects_module_v1_instance",
-               reinterpret_cast<void**>(&module_))) {
-    return ZX_ERR_NOT_FOUND;
-  }
   return ZX_OK;
-}
-
-// TODO(mpuryear): dlfcn doesn't actually unload anything currently. Should we
-// consider adding additional .SO entry points for Initialize and Deinitialize,
-// so we can better control when the library does its resource allocation?
-//
-// Related: once we add EffectsProcessor, we must make sure to release any remaining
-// EffectsProcessor instances here, before calling dlclose.
-zx_status_t EffectsLoader::UnloadLibrary() {
-  zx_status_t ret_val = ZX_OK;
-
-  if (fx_lib_ == nullptr || dlclose(fx_lib_) != 0) {
-    ret_val = ZX_ERR_UNAVAILABLE;
-  }
-
-  module_ = nullptr;
-  fx_lib_ = nullptr;
-
-  return ret_val;
 }
 
 zx_status_t EffectsLoader::GetNumFx(uint32_t* num_fx_out) {

@@ -38,7 +38,6 @@ void EffectsLoaderTestBase::TearDown() {
   ASSERT_TRUE(test_effects_ != nullptr);
   ASSERT_EQ(0u, test_effects_->num_instances());
   ASSERT_EQ(ZX_OK, test_effects_->clear_effects());
-  ASSERT_EQ(effects_loader_.UnloadLibrary(), ZX_OK);
   testing::Test::TearDown();
 }
 

@@ -17,20 +17,7 @@
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
 #include "src/media/audio/lib/effects_loader/effects_processor.h"
 
-namespace media {
-
-namespace audio {
-// We override this method so that we can name our test library differently than the hard-coded
-// "audio_effects.so" that effects_loader always loads into audio_core.
-class TestEffectsLoader : public EffectsLoader {
- public:
-  void* OpenLoadableModuleBinary() override {
-    return dlopen("audio_effects_example.so", RTLD_LAZY | RTLD_GLOBAL);
-  }
-};
-}  // namespace audio
-
-namespace audio_effects_example {
+namespace media::audio_effects_example {
 
 static constexpr const char* kDelayEffectConfig = "{\"delay_frames\": 0}";
 
@@ -39,10 +26,9 @@ static constexpr const char* kDelayEffectConfig = "{\"delay_frames\": 0}";
 //
 class EffectsLoaderTest : public testing::Test {
  protected:
-  audio::TestEffectsLoader effects_loader_;
+  audio::EffectsLoader effects_loader_{"audio_effects_example.so"};
 
   void SetUp() override { ASSERT_EQ(effects_loader_.LoadLibrary(), ZX_OK); }
-  void TearDown() override { effects_loader_.UnloadLibrary(); }
 };
 
 //
@@ -442,5 +428,4 @@ TEST_F(DelayEffectTest, ProcessInPlace_Bounds) {
   TestDelayBounds(2000, FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX, DelayEffect::kMaxDelayFrames);
 }
 
-}  // namespace audio_effects_example
-}  // namespace media
+}  // namespace media::audio_effects_example
