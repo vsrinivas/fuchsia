@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await)]
-#![recursion_limit = "1024"]
-#[macro_use]
-extern crate failure;
 
 use failure::Error;
 use fuchsia_async as fasync;
@@ -14,24 +11,10 @@ use parking_lot::RwLock;
 use std::sync::Arc;
 use std::thread;
 
-mod audio;
-mod auth;
-mod basemgr;
-mod bluetooth;
-mod file;
-mod logging;
-mod netstack;
-mod scenic;
-mod server;
-mod setui;
-mod traceutil;
-mod webdriver;
-mod wlan;
-
 use fuchsia_syslog::macros::*;
 
-use crate::server::sl4f::{serve, Sl4f};
-use crate::server::sl4f_executor::run_fidl_loop;
+use sl4f_lib::server::sl4f::{serve, Sl4f};
+use sl4f_lib::server::sl4f_executor::run_fidl_loop;
 
 // Config, flexible for any ip/port combination
 const SERVER_IP: &str = "[::]";

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/facade_tests_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

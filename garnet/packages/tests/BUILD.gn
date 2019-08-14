@@ -458,6 +458,7 @@ group("all") {
     ":zircon",
     ":zxdb",
     "//garnet/bin/perfcompare:tests",
+    "//garnet/bin/sl4f:tests",
     "//garnet/bin/sshd-host:sshd-host-tests",
     "//garnet/go/src/pm:host_tests",
     "//src/connectivity/network/dhcp:dhcp_tests",

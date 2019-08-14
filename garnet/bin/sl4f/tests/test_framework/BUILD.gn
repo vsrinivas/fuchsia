@@ -1,0 +1,61 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("facade_tests_bin") {
+  edition = "2018"
+  source_root = "facade_tests.rs"
+
+  deps = [
+    "//garnet/bin/sl4f:lib",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//third_party/rust_crates:serde_json",
+  ]
+}
+
+test_package("sl4f_test_integration_tests") {
+  deps = [
+    ":facade_tests_bin",
+    "//examples/tests:failing-test-example",
+    "//examples/tests:passing-test-example",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("//examples/tests/meta/passing-test-example.cmx")
+      dest = "passing-test-example.cmx"
+    },
+    {
+      path = rebase_path("//examples/tests/meta/failing-test-example.cmx")
+      dest = "failing-test-example.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "passing-test-example"
+    },
+    {
+      name = "failing-test-example"
+    },
+  ]
+
+  tests = [
+    {
+      name = "facade_tests_bin"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":sl4f_test_integration_tests",
+  ]
+}

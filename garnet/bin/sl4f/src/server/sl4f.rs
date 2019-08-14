@@ -54,6 +54,9 @@ use crate::scenic::facade::ScenicFacade;
 // SetUi related includes
 use crate::setui::facade::SetUiFacade;
 
+// Test related includes
+use crate::test::facade::TestFacade;
+
 // Traceutil related includes
 use crate::traceutil::facade::TraceutilFacade;
 
@@ -131,6 +134,9 @@ pub struct Sl4f {
     // setui_facade: thread safe object for state for SetUi functions.
     setui_facade: Arc<SetUiFacade>,
 
+    // test_facade: Thread safe object for state for Test functions.
+    test_facade: Arc<TestFacade>,
+
     // traceutil_facade: Thread safe object for state for Traceutil functions.
     traceutil_facade: Arc<TraceutilFacade>,
 
@@ -161,6 +167,7 @@ impl Sl4f {
         let profile_server_facade = Arc::new(ProfileServerFacade::new());
         let scenic_facade = Arc::new(ScenicFacade::new());
         let setui_facade = Arc::new(SetUiFacade::new()?);
+        let test_facade = Arc::new(TestFacade::new());
         let traceutil_facade = Arc::new(TraceutilFacade::new());
         let webdriver_facade = Arc::new(WebdriverFacade::new());
         let wlan_facade = Arc::new(WlanFacade::new()?);
@@ -179,6 +186,7 @@ impl Sl4f {
             profile_server_facade,
             scenic_facade,
             setui_facade,
+            test_facade,
             traceutil_facade,
             webdriver_facade,
             wlan_facade,
@@ -240,6 +248,10 @@ impl Sl4f {
 
     pub fn get_setui_facade(&self) -> Arc<SetUiFacade> {
         self.setui_facade.clone()
+    }
+
+    pub fn get_test_facade(&self) -> Arc<TestFacade> {
+        self.test_facade.clone()
     }
 
     pub fn get_traceutil_facade(&self) -> Arc<TraceutilFacade> {
