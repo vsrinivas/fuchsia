@@ -68,9 +68,12 @@ void TraceProviderImpl::Connection::Handle(async_dispatcher_t* dispatcher, async
             zx_status_get_string(status));
   } else if (signal->observed & ZX_CHANNEL_READABLE) {
     if (ReadMessage()) {
-      if (wait_.Begin(dispatcher) == ZX_OK) {
+      zx_status_t status = wait_.Begin(dispatcher);
+      if (status == ZX_OK) {
         return;
       }
+      fprintf(stderr, "TraceProvider: Error re-registering channel wait: status=%d(%s)\n",
+              status, zx_status_get_string(status));
     } else {
       fprintf(stderr, "TraceProvider: received invalid FIDL message or failed to send reply\n");
     }

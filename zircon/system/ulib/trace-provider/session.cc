@@ -168,15 +168,18 @@ void Session::HandleFifo(async_dispatcher_t* dispatcher, async::WaitBase* wait, 
     // program is exiting.
     return;
   }
+
   if (status != ZX_OK) {
     fprintf(stderr, "Session: FIFO wait failed: status=%d(%s)\n", status,
             zx_status_get_string(status));
   } else if (signal->observed & ZX_FIFO_READABLE) {
     if (ReadFifoMessage()) {
-      if (wait->Begin(dispatcher) == ZX_OK) {
+      zx_status_t status = wait->Begin(dispatcher);
+      if (status == ZX_OK) {
         return;
       }
-      fprintf(stderr, "Session: Error re-registering FIFO wait\n");
+      fprintf(stderr, "Session: Error re-registering FIFO wait: status=%d(%s)\n",
+              status, zx_status_get_string(status));
     }
   } else {
     ZX_DEBUG_ASSERT(signal->observed & ZX_FIFO_PEER_CLOSED);
