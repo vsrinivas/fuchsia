@@ -459,6 +459,21 @@ OutputBuffer DoFormatRustEnum(const FormatNode* node, const RecursiveState& stat
   return DoFormatNodeOneWay(node->children()[0].get(), child_state, 0);
 }
 
+// A generic node with one child for things like std::optional or std::atomic.
+OutputBuffer DoFormatWrapper(const FormatNode* node, const RecursiveState& state) {
+  if (node->children().empty())
+    return OutputBuffer(node->description() + node->wrapper_prefix() + node->wrapper_suffix());
+
+  RecursiveState child_state = state.AdvanceNoIndent();
+
+  OutputBuffer out;
+  out.Append(node->description());
+  out.Append(node->wrapper_prefix());
+  out.Append(DoFormatNodeOneWay(node->children()[0].get(), child_state, 0));
+  out.Append(node->wrapper_suffix());
+  return out;
+}
+
 // Appends the description for a normal node (number or whatever).
 OutputBuffer DoFormatStandardNode(const FormatNode* node, const RecursiveState& state) {
   return OutputBuffer(node->description());
@@ -512,6 +527,9 @@ OutputBuffer DoFormatNodeOneWay(const FormatNode* node, const RecursiveState& st
         break;
       case FormatNode::kRustEnum:
         out.Append(DoFormatRustEnum(node, state));
+        break;
+      case FormatNode::kWrapper:
+        out.Append(DoFormatWrapper(node, state));
         break;
     }
   }

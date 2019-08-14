@@ -156,6 +156,40 @@ class PrettyPointer : public PrettyType {
   const std::string expr_;
 };
 
+// Implements pretty-printing for "std::optional" and similar classes that can have a value or not.
+class PrettyOptional : public PrettyType {
+ public:
+  // Evaluates the |is_engaged_expr|. If engaged (nonempty), show the result of evaluating the
+  // |value_expr| which retrieves the value. If invalid the description of this item will be
+  // |name_when_disengaged|.
+  //
+  // The is_engaged_expr should evaluate to a boolean or integer that's either zero or nonzero.
+  PrettyOptional(const std::string& simple_type_name, const std::string& is_engaged_expr,
+                 const std::string& value_expr, const std::string& name_when_disengaged,
+                 std::initializer_list<std::pair<std::string, std::string>> getters)
+      : PrettyType(std::move(getters)),
+        simple_type_name_(simple_type_name),
+        is_engaged_expr_(is_engaged_expr),
+        value_expr_(value_expr),
+        name_when_disengaged_(name_when_disengaged) {}
+
+  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
+              fit::deferred_callback cb) override;
+  EvalFunction GetDereferencer() const override;
+
+ private:
+  // Executes the callback for the given optional struct. This takes the expression and executes the
+  // callback which can be an error, is_disengaged, or have a value.
+  static void EvalOptional(fxl::RefPtr<EvalContext>& context, ExprValue object,
+                           const std::string& is_engaged_expr, const std::string& value_expr,
+                           fit::callback<void(ErrOrValue, bool is_disengaged)> cb);
+
+  const std::string simple_type_name_;
+  const std::string is_engaged_expr_;
+  const std::string value_expr_;
+  const std::string name_when_disengaged_;
+};
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_TYPE_H_

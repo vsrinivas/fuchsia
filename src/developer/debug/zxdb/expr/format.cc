@@ -923,4 +923,17 @@ void FormatPointerNode(FormatNode* node, const ExprValue& value, const FormatOpt
   }
 }
 
+void FormatWrapper(FormatNode* node, const std::string& description, const std::string& prefix,
+                   const std::string& suffix, const std::string& contained_name,
+                   ErrOrValue contained_value) {
+  // Declare it as a pointer with the value as the pointed-to thing.
+  node->set_description_kind(FormatNode::kWrapper);
+  node->set_description(description);
+  node->set_wrapper_prefix(prefix);
+  node->set_wrapper_suffix(suffix);
+
+  node->children().push_back(
+      std::make_unique<FormatNode>(contained_name, std::move(contained_value)));
+}
+
 }  // namespace zxdb

@@ -147,6 +147,52 @@ TEST(FormatNodeConsole, Collection) {
       out.AsString());
 }
 
+TEST(FormatValueConsole, Wrapper) {
+  FormatNode node;
+  node.set_state(FormatNode::kDescribed);
+  node.set_type("std::optional<int>");
+  node.set_description_kind(FormatNode::kWrapper);
+  node.set_description("std::optional");
+  node.set_wrapper_prefix("(");
+  node.set_wrapper_suffix(")");
+
+  // Simple integer child.
+  auto int_node = std::make_unique<FormatNode>();
+  FillBaseTypeNode("int", "54", int_node.get());
+  node.children().push_back(std::move(int_node));
+
+  ConsoleFormatOptions options;
+  EXPECT_EQ("std::optional(54)", FormatNodeForConsole(node, options).AsString());
+
+  // With type info. This is a bit weird, it would be nice if the description expanded to the full
+  // type name to avoid duplication.
+  ConsoleFormatOptions type_options;
+  type_options.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
+  EXPECT_EQ("(std::optional<int>) std::optional((int) 54)",
+            FormatNodeForConsole(node, type_options).AsString());
+
+  // Test with a child that's a collection. This is the child of the collection.
+  auto collection_child = std::make_unique<FormatNode>("child");
+  collection_child->set_description_kind(FormatNode::kString);
+  collection_child->set_state(FormatNode::kDescribed);
+  collection_child->set_description("\"string value\"");
+
+  // The collection itself.
+  auto collection_node = std::make_unique<FormatNode>();
+  collection_node->set_description_kind(FormatNode::kCollection);
+  collection_node->set_state(FormatNode::kDescribed);
+  collection_node->children().push_back(std::move(collection_child));
+  node.children()[0] = std::move(collection_node);
+
+  ConsoleFormatOptions expanded_options;
+  expanded_options.wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
+  EXPECT_EQ(
+      "std::optional({\n"
+      "  child = \"string value\"\n"
+      "})",
+      FormatNodeForConsole(node, expanded_options).AsString());
+}
+
 TEST(FormatNodeConsole, Array) {
   FormatNode node;
   node.set_state(FormatNode::kDescribed);

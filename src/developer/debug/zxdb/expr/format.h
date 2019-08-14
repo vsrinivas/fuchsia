@@ -73,6 +73,15 @@ void FormatArrayNode(FormatNode* node, const ExprValue& value, int elt_count,
 // The value is given rather than taken from the node to support pretty-printing uses.
 void FormatPointerNode(FormatNode* node, const ExprValue& value, const FormatOptions& options);
 
+// Fills a format node for something that holds another value. This would be used for things like
+// atomics, optionals, and iterators where there's some indirection.
+//
+// The node will be given the description, and it will have one child with the given name and value.
+// For convenience, this allows an error for the dereference node which will be used instead.
+void FormatWrapper(FormatNode* node, const std::string& description, const std::string& prefix,
+                   const std::string& suffix, const std::string& contained_name,
+                   ErrOrValue contained_value);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FORMAT_H_

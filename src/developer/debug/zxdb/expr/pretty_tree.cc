@@ -16,8 +16,7 @@ namespace {
 
 // Fills the given node for a set/map iterator. The "value" is the referenced value. The container
 // type will be either "map" or "set" to make the description.
-void FillTreeIteratorNode(const char* container_type, FormatNode* node,
-                          fxl::RefPtr<EvalContext> context, ErrOrValue value) {
+void FillTreeIteratorNode(const char* container_type, FormatNode* node, ErrOrValue value) {
   if (value.has_error())
     return node->SetDescribedError(value.err());
 
@@ -41,11 +40,9 @@ void FillTreeIteratorNode(const char* container_type, FormatNode* node,
 void PrettyTreeIterator::Format(FormatNode* node, const FormatOptions& options,
                                 fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
   GetIteratorValue(context, node->value(),
-                   [context, weak_node = node->GetWeakPtr(), cb = std::move(cb)](ErrOrValue value) {
-                     if (weak_node) {
-                       FillTreeIteratorNode("std::set", weak_node.get(), std::move(context),
-                                            std::move(value));
-                     }
+                   [weak_node = node->GetWeakPtr(), cb = std::move(cb)](ErrOrValue value) {
+                     if (weak_node)
+                       FillTreeIteratorNode("std::set", weak_node.get(), std::move(value));
                    });
 }
 
@@ -75,11 +72,9 @@ void PrettyTreeIterator::GetIteratorValue(fxl::RefPtr<EvalContext> context, cons
 void PrettyMapIterator::Format(FormatNode* node, const FormatOptions& options,
                                fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
   GetIteratorValue(context, node->value(),
-                   [context, weak_node = node->GetWeakPtr(), cb = std::move(cb)](ErrOrValue value) {
-                     if (weak_node) {
-                       FillTreeIteratorNode("std::map", weak_node.get(), std::move(context),
-                                            std::move(value));
-                     }
+                   [weak_node = node->GetWeakPtr(), cb = std::move(cb)](ErrOrValue value) {
+                     if (weak_node)
+                       FillTreeIteratorNode("std::map", weak_node.get(), std::move(value));
                    });
 }
 

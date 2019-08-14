@@ -81,6 +81,7 @@ class FormatNode {
     kRustTuple,        // Unnamed tuple.
     kRustTupleStruct,  // Named tuple.
     kString,
+    kWrapper,  // Wrapper around some other value, like a std::optional. Has one child.
   };
 
   // What this node means to its parent. This is not based on the value in any way and can only
@@ -122,6 +123,7 @@ class FormatNode {
 
   // Constructor for a known value.
   FormatNode(const std::string& name, ExprValue value);
+  FormatNode(const std::string& name, ErrOrValue err_or_value);
 
   // Constructor for the error case.
   FormatNode(const std::string& name, Err err);
@@ -181,6 +183,19 @@ class FormatNode {
   DescriptionKind description_kind() const { return description_kind_; }
   void set_description_kind(DescriptionKind dk) { description_kind_ = dk; }
 
+  // When this is a "wrapper" node the formatter node will want to provide a begin and end string
+  // for expressing the contained object. For example prefix = "std::optional(", suffix = ")".
+  //
+  // NOTE FOR FUTURE: We may want to expand this to be usable for non-wrappers also. Currently the
+  // console frontend knows that Rust structs get a certain type prefix and that tuples get certain
+  // types of backets, but that information could be expressed here instead since it may be
+  // desirable for all situations, not just the console frontend. For that, we may also want to add
+  // a "verbose" prefix and a "regular" prefix.
+  const std::string& wrapper_prefix() const { return wrapper_prefix_; }
+  const std::string& wrapper_suffix() const { return wrapper_suffix_; }
+  void set_wrapper_prefix(const std::string& s) { wrapper_prefix_ = s; }
+  void set_wrapper_suffix(const std::string& s) { wrapper_suffix_ = s; }
+
   const ChildVector& children() const { return children_; }
   ChildVector& children() { return children_; }
 
@@ -217,6 +232,9 @@ class FormatNode {
   std::string description_;
   DescriptionKind description_kind_ = kNone;
   Err err_;
+
+  std::string wrapper_prefix_;
+  std::string wrapper_suffix_;
 
   ChildVector children_;
 

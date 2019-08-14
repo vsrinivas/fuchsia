@@ -237,4 +237,63 @@ PrettyPointer::EvalFunction PrettyPointer::GetDereferencer() const {
   };
 }
 
+void PrettyOptional::Format(FormatNode* node, const FormatOptions& options,
+                            fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+  EvalOptional(
+      context, node->value(), is_engaged_expr_, value_expr_,
+      [simple_type_name = simple_type_name_, name_when_disengaged = name_when_disengaged_,
+       cb = std::move(cb), weak_node = node->GetWeakPtr()](ErrOrValue value, bool is_empty) {
+        if (!weak_node)
+          return;
+
+        if (is_empty)
+          weak_node->set_description(name_when_disengaged);
+        else if (value.has_error())
+          weak_node->SetDescribedError(value.err());
+        else
+          FormatWrapper(weak_node.get(), simple_type_name, "(", ")", "", std::move(value));
+      });
+}
+
+PrettyOptional::EvalFunction PrettyOptional::GetDereferencer() const {
+  return [is_engaged_expr = is_engaged_expr_, value_expr = value_expr_,
+          name_when_disengaged = name_when_disengaged_](
+             fxl::RefPtr<EvalContext> context, const ExprValue& object_value, EvalCallback cb) {
+    EvalOptional(
+        context, object_value, is_engaged_expr, value_expr,
+        [cb = std::move(cb), name_when_disengaged](ErrOrValue value, bool is_empty) mutable {
+          if (is_empty)
+            return cb(Err("Attempting to dereference a " + name_when_disengaged));
+          cb(std::move(value));
+        });
+  };
+}
+
+// static
+void PrettyOptional::EvalOptional(fxl::RefPtr<EvalContext>& context, ExprValue object,
+                                  const std::string& is_engaged_expr, const std::string& value_expr,
+                                  fit::callback<void(ErrOrValue, bool is_empty)> cb) {
+  auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, object);
+  EvalExpression(
+      is_engaged_expr, pretty_context, true,
+      [pretty_context, cb = std::move(cb), value_expr](ErrOrValue is_engaged_value) mutable {
+        if (is_engaged_value.has_error())
+          return cb(is_engaged_value, false);
+
+        uint64_t is_engaged = 0;
+        if (Err e = is_engaged_value.value().PromoteTo64(&is_engaged); e.has_error())
+          return cb(e, false);
+
+        if (is_engaged) {
+          // Valid, extract the value.
+          EvalExpression(
+              value_expr, pretty_context, true,
+              [cb = std::move(cb)](ErrOrValue value) mutable { cb(std::move(value), false); });
+        } else {
+          // Not engaged, describe as "nullopt" or equivalent.
+          cb(ExprValue(), true);
+        }
+      });
+}
+
 }  // namespace zxdb

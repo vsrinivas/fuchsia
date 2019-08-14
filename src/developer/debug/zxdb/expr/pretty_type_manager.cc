@@ -35,6 +35,7 @@ TypeGlob InternalGlob(const char* glob) {
 PrettyTypeManager::PrettyTypeManager() {
   AddDefaultCppPrettyTypes();
   AddDefaultRustPrettyTypes();
+  AddDefaultFuchsiaCppPrettyTypes();
 }
 
 PrettyTypeManager::~PrettyTypeManager() = default;
@@ -127,6 +128,11 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
   cpp_.emplace_back(InternalGlob("std::__2::weak_ptr<*>"),
                     std::make_unique<PrettyPointer>("__ptr_"));
 
+  cpp_.emplace_back(InternalGlob("std::__2::optional<*>"),
+                    std::make_unique<PrettyOptional>(
+                        "std::optional", "__engaged_", "__val_", "std::nullopt",
+                        GetterList{{"value", "__val_"}, {"has_value", "__engaged_"}}));
+
   // Trees (std::set and std::map).
   cpp_.emplace_back(InternalGlob("std::__2::set<*>"), std::make_unique<PrettyTree>("std::set"));
   cpp_.emplace_back(InternalGlob("std::__2::map<*>"), std::make_unique<PrettyTree>("std::map"));
@@ -183,6 +189,14 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
       std::make_unique<PrettyPointer>("pointer", GetterList{{"as_ptr", "ptr.pointer"},
                                                             {"as_ref", "*ptr.pointer"},
                                                             {"as_mut", "*ptr.pointer"}}));
+}
+
+void PrettyTypeManager::AddDefaultFuchsiaCppPrettyTypes() {
+  cpp_.emplace_back(
+      InternalGlob("fit::optional<*>"),
+      std::make_unique<PrettyOptional>(
+          "fit::optional", "storage_.index_ == 0", "storage_.base_.value", "fit::nullopt",
+          GetterList{{"value", "storage_.base_.value"}, {"has_value", "storage_.index_ == 0"}}));
 }
 
 }  // namespace zxdb

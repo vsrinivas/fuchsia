@@ -48,6 +48,9 @@ class PrettyTypeManager {
   void AddDefaultCppPrettyTypes();
   void AddDefaultRustPrettyTypes();
 
+  // Fuchsia-specific libraries.
+  void AddDefaultFuchsiaCppPrettyTypes();
+
   // These map globs of full type names to a pretty-printer for that prefix. In the future it might
   // be nice to have some kind of trie structure that would allow faster prefix lookup for the
   // non-varying parts of the globs.
