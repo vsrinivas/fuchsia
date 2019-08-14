@@ -58,7 +58,14 @@ fn main() -> Result<(), Error> {
         let fidl = fidl::FidlServer::new(state_machine_ref.clone(), stash_ref, app_set);
         let mut fs = ServiceFs::new_local();
         fs.take_and_serve_directory_handle()?;
-        future::join3(StateMachine::start(state_machine_ref), fidl.start(fs), cobalt_fut).await;
+        // `.boxed_local()` was added to workaround stack overflow when we have too many levels of
+        // nested async functions. Remove them when the generator optimization lands.
+        future::join3(
+            fidl.start(fs).boxed_local(),
+            StateMachine::start(state_machine_ref).boxed_local(),
+            cobalt_fut,
+        )
+        .await;
         Ok(())
     })
 }

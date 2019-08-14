@@ -89,7 +89,27 @@ impl Plan for FuchsiaInstallPlan {
             warn!("Only 1 url is supported, found {}", urls.len());
         }
 
-        match PkgUrl::parse(&url.codebase) {
+        let manifest = if let Some(manifest) = &update_check.manifest {
+            manifest
+        } else {
+            error!("No manifest in Omaha response.");
+            return Err(InstallPlanErrors::Failed);
+        };
+
+        let (package, rest) = if let Some((package, rest)) = manifest.packages.package.split_first()
+        {
+            (package, rest)
+        } else {
+            error!("No package in Omaha response.");
+            return Err(InstallPlanErrors::Failed);
+        };
+
+        if !rest.is_empty() {
+            warn!("Only 1 package is supported, found {}", manifest.packages.package.len());
+        }
+
+        let full_url = url.codebase.clone() + &package.name;
+        match PkgUrl::parse(&full_url) {
             Ok(url) => {
                 Ok(FuchsiaInstallPlan { url, install_source: request_params.source.clone() })
             }
@@ -104,23 +124,31 @@ impl Plan for FuchsiaInstallPlan {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use omaha_client::protocol::response::{App, UpdateCheck};
+    use omaha_client::protocol::response::{App, Manifest, Package, Packages, UpdateCheck};
 
-    const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
+    const TEST_URL_BASE: &str = "fuchsia-pkg://fuchsia.com/";
+    const TEST_PACKAGE_NAME: &str = "update/0";
 
     #[test]
     fn test_simple_response() {
         let request_params = RequestParams::default();
+        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        update_check.manifest = Some(Manifest {
+            packages: Packages {
+                package: vec![Package {
+                    name: TEST_PACKAGE_NAME.to_string(),
+                    ..Package::default()
+                }],
+            },
+            ..Manifest::default()
+        });
         let response = Response {
-            apps: vec![App {
-                update_check: Some(UpdateCheck::ok(vec![TEST_URL.to_string()])),
-                ..App::default()
-            }],
+            apps: vec![App { update_check: Some(update_check), ..App::default() }],
             ..Response::default()
         };
 
         let install_plan = FuchsiaInstallPlan::try_create_from(&request_params, &response).unwrap();
-        assert_eq!(install_plan.url.to_string(), TEST_URL);
+        assert_eq!(install_plan.url.to_string(), TEST_URL_BASE.to_string() + TEST_PACKAGE_NAME);
         assert_eq!(install_plan.install_source, request_params.source);
     }
 
@@ -138,19 +166,23 @@ mod tests {
     #[test]
     fn test_multiple_app() {
         let request_params = RequestParams::default();
+        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        update_check.manifest = Some(Manifest {
+            packages: Packages {
+                package: vec![Package {
+                    name: TEST_PACKAGE_NAME.to_string(),
+                    ..Package::default()
+                }],
+            },
+            ..Manifest::default()
+        });
         let response = Response {
-            apps: vec![
-                App {
-                    update_check: Some(UpdateCheck::ok(vec![TEST_URL.to_string()])),
-                    ..App::default()
-                },
-                App::default(),
-            ],
+            apps: vec![App { update_check: Some(update_check), ..App::default() }],
             ..Response::default()
         };
 
         let install_plan = FuchsiaInstallPlan::try_create_from(&request_params, &response).unwrap();
-        assert_eq!(install_plan.url.to_string(), TEST_URL);
+        assert_eq!(install_plan.url.to_string(), TEST_URL_BASE.to_string() + TEST_PACKAGE_NAME);
         assert_eq!(install_plan.install_source, request_params.source);
     }
 
@@ -220,6 +252,23 @@ mod tests {
             }],
             ..Response::default()
         };
+        assert_eq!(
+            FuchsiaInstallPlan::try_create_from(&request_params, &response),
+            Err(InstallPlanErrors::Failed)
+        );
+    }
+
+    #[test]
+    fn test_no_manifest() {
+        let request_params = RequestParams::default();
+        let response = Response {
+            apps: vec![App {
+                update_check: Some(UpdateCheck::ok(vec![TEST_URL_BASE.to_string()])),
+                ..App::default()
+            }],
+            ..Response::default()
+        };
+
         assert_eq!(
             FuchsiaInstallPlan::try_create_from(&request_params, &response),
             Err(InstallPlanErrors::Failed)

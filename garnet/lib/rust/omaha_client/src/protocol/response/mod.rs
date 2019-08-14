@@ -149,7 +149,7 @@ pub struct URL {
     pub codebase: String,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct Manifest {
     pub version: String,
 
@@ -158,12 +158,12 @@ pub struct Manifest {
 }
 
 /// Wrapper for a list of Action.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct Actions {
     pub action: Vec<Action>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct Action {
     /// The name of the event.
     pub event: Option<String>,
@@ -176,17 +176,17 @@ pub struct Action {
 }
 
 /// Wrapper for a list of Package.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct Packages {
     pub package: Vec<Package>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct Package {
     /// Package name, append to the URL base to form a full URL.
     pub name: String,
     pub required: bool,
-    pub size: u64,
+    pub size: Option<u64>,
     /// SHA1 of the package file encoded in base64.
     pub hash: Option<String>,
     /// SHA256 of the package file encoded in hex string.

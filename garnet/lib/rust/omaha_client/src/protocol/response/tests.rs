@@ -199,7 +199,7 @@ fn test_all_fields() {
                         packages: Packages{package: vec![Package{
                             name: "update_package".to_string(),
                             required: true,
-                            size: 2000000,
+                            size: Some(2000000),
                             hash: Some("qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq".to_string()),
                             hash_sha256:
                                 Some("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_string()),
@@ -358,7 +358,7 @@ fn test_single_url() {
                         package: vec![Package {
                             name: "full.payload".to_string(),
                             required: true,
-                            size: 100000000,
+                            size: Some(100000000),
                             hash: None,
                             hash_sha256: Some(
                                 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
