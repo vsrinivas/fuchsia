@@ -10,10 +10,10 @@ pub mod fuchsia_handles {
 
     use fuchsia_zircon as zx;
 
-    pub use zx::MessageBuf;
+    pub use zx::AsHandleRef;
     pub use zx::Handle;
     pub use zx::HandleBased;
-    pub use zx::AsHandleRef;
+    pub use zx::MessageBuf;
 
     pub use zx::Channel;
     pub use zx::Event;
@@ -28,8 +28,8 @@ pub mod fuchsia_handles {
     pub use zx::Socket;
     pub use zx::Thread;
     pub use zx::Timer;
-    pub use zx::Vmo;
     pub use zx::Vmar;
+    pub use zx::Vmo;
 
 }
 
@@ -43,7 +43,7 @@ pub mod non_fuchsia_handles {
     pub trait AsHandleRef {}
 
     /// A trait implemented by all handle-based types.
-    pub trait HandleBased : AsHandleRef + From<Handle> + Into<Handle> {
+    pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
         /// Creates an instance of this type from a handle.
         ///
         /// This is a convenience function which simply forwards to the `From` trait.
@@ -78,6 +78,33 @@ pub mod non_fuchsia_handles {
             true
         }
     }
+
+    macro_rules! declare_fidl_handle {
+        ($name:ident) => {
+            /// A Zircon-like $name
+            #[derive(PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
+            pub struct $name {}
+
+            impl From<$crate::handle::Handle> for $name {
+                fn from(_: $crate::handle::Handle) -> $name {
+                    $name {}
+                }
+            }
+            impl From<$name> for Handle {
+                fn from(_: $name) -> $crate::handle::Handle {
+                    $crate::handle::Handle {}
+                }
+            }
+            impl HandleBased for $name {}
+            impl AsHandleRef for $name {}
+        };
+    }
+
+    declare_fidl_handle!(Channel);
+    declare_fidl_handle!(Event);
+    declare_fidl_handle!(EventPair);
+    declare_fidl_handle!(Socket);
+    declare_fidl_handle!(Vmo);
 
     /// A buffer for _receiving_ messages from a channel.
     ///

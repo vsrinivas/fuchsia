@@ -106,12 +106,14 @@ fidl_empty_struct!(
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct TestProtocolMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for TestProtocolMarker {
 	type Proxy = TestProtocolProxy;
 	type RequestStream = TestProtocolRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) TestProtocol";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait TestProtocolProxyInterface: Send + Sync {
 	type StrictXUnionHenceResponseMayBeStackAllocatedResponseFut: futures::Future<Output = Result<(StrictBoundedXUnion), fidl::Error>> + Send;
 	fn strict_x_union_hence_response_may_be_stack_allocated(&self,
@@ -122,10 +124,12 @@ pub trait TestProtocolProxyInterface: Send + Sync {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct TestProtocolSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl TestProtocolSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -144,11 +148,13 @@ impl TestProtocolSynchronousProxy {
 			)}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct TestProtocolProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for TestProtocolProxy {
 	type Service = TestProtocolMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -156,6 +162,7 @@ impl fidl::endpoints::Proxy for TestProtocolProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for TestProtocolProxy {
 	type Target = fidl::client::Client;
 
@@ -165,6 +172,7 @@ impl ::std::ops::Deref for TestProtocolProxy {
 }
 
 /// Proxy object for communicating with interface TestProtocol
+#[cfg(target_os = "fuchsia")]
 impl TestProtocolProxy {
 	/// Create a new Proxy for TestProtocol
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -198,6 +206,7 @@ impl TestProtocolProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl TestProtocolProxyInterface for TestProtocolProxy {
 	type StrictXUnionHenceResponseMayBeStackAllocatedResponseFut = fidl::client::QueryResponseFut<(StrictBoundedXUnion)>;
 	fn strict_x_union_hence_response_may_be_stack_allocated(&self,
@@ -210,18 +219,22 @@ impl TestProtocolProxyInterface for TestProtocolProxy {
 		self.client.send_query(&mut (), 0x3959ff0900000000)
 	}}
 
+#[cfg(target_os = "fuchsia")]
 pub struct TestProtocolEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for TestProtocolEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for TestProtocolEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for TestProtocolEventStream {
 	type Item = Result<TestProtocolEvent, fidl::Error>;
 
@@ -248,11 +261,13 @@ impl futures::Stream for TestProtocolEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum TestProtocolEvent {
 	
 	
 	}
 
+#[cfg(target_os = "fuchsia")]
 impl TestProtocolEvent {
 }
 
@@ -262,12 +277,14 @@ impl TestProtocolEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct TestProtocolEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> TestProtocolEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -275,19 +292,23 @@ impl <'a> TestProtocolEventSender<'a> {
 }
 
 /// A Stream of incoming requests for TestProtocol
+#[cfg(target_os = "fuchsia")]
 pub struct TestProtocolRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for TestProtocolRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for TestProtocolRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for TestProtocolRequestStream {
 	type Service = TestProtocolMarker;
 
@@ -318,6 +339,7 @@ impl fidl::endpoints::RequestStream for TestProtocolRequestStream {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for TestProtocolRequestStream {
 	type Item = Result<TestProtocolRequest, fidl::Error>;
 
@@ -383,6 +405,7 @@ impl futures::Stream for TestProtocolRequestStream {
 		})
 	}
 }
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum TestProtocolRequest {
 	StrictXUnionHenceResponseMayBeStackAllocated {
@@ -391,6 +414,7 @@ pub enum TestProtocolRequest {
 		responder: TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponder,},
 }
 
+#[cfg(target_os = "fuchsia")]
 impl TestProtocolRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_strict_x_union_hence_response_may_be_stack_allocated(self) -> Option<(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponder
@@ -424,11 +448,14 @@ impl TestProtocolRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct TestProtocolEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl TestProtocolEncoder {
 	pub fn encode_strict_x_union_hence_response_may_be_stack_allocated_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x71a1b4b700000000,
@@ -440,7 +467,7 @@ impl TestProtocolEncoder {
 	}
 	pub fn encode_strict_x_union_hence_response_may_be_stack_allocated_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_xu: &mut StrictBoundedXUnion,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x71a1b4b700000000,
@@ -452,7 +479,7 @@ impl TestProtocolEncoder {
 	}
 	pub fn encode_flexible_x_union_hence_response_must_be_heap_allocated_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x3959ff0900000000,
@@ -464,7 +491,7 @@ impl TestProtocolEncoder {
 	}
 	pub fn encode_flexible_x_union_hence_response_must_be_heap_allocated_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_xu: &mut OlderSimpleUnion,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x3959ff0900000000,
@@ -476,10 +503,12 @@ impl TestProtocolEncoder {
 	}}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct TestProtocolControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for TestProtocolControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -488,6 +517,7 @@ impl ::std::ops::Deref for TestProtocolControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl TestProtocolControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
@@ -495,6 +525,7 @@ impl TestProtocolControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponder {
 	control_handle: ::std::mem::ManuallyDrop<TestProtocolControlHandle>,
@@ -502,6 +533,7 @@ pub struct TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -513,6 +545,7 @@ impl ::std::ops::Drop for TestProtocolStrictXUnionHenceResponseMayBeStackAllocat
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponder {
 	pub fn control_handle(&self) -> &TestProtocolControlHandle {
 		&self.control_handle
@@ -571,6 +604,7 @@ impl TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponder {
 	control_handle: ::std::mem::ManuallyDrop<TestProtocolControlHandle>,
@@ -578,6 +612,7 @@ pub struct TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -589,6 +624,7 @@ impl ::std::ops::Drop for TestProtocolFlexibleXUnionHenceResponseMustBeHeapAlloc
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponder {
 	pub fn control_handle(&self) -> &TestProtocolControlHandle {
 		&self.control_handle

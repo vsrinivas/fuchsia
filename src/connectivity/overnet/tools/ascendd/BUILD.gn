@@ -2,18 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tools") {
-  testonly = true
+import("//build/rust/rustc_binary.gni")
+
+group("ascendd2") {
   deps = [
-    "ascendd:ascendd2",
-    "onet",
+    ":bin($host_toolchain)",
   ]
+}
+
+rustc_binary("bin") {
+  name = "ascendd2"
+  edition = "2018"
+
+  deps = []
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "ascendd:tests",
-    "onet:tests",
-  ]
+  deps = []
 }

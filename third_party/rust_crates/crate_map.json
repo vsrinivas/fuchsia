@@ -503,6 +503,11 @@
     ],
     "host_packages": [
         {
+            "crate_name": "ring",
+            "crate_type": "lib",
+            "package_name": "ring"
+        },
+        {
             "crate_name": "bitfield",
             "crate_type": "lib",
             "package_name": "bitfield"
@@ -721,6 +726,11 @@
             "crate_name": "tempfile",
             "crate_type": "lib",
             "package_name": "tempfile"
+        },
+        {
+            "crate_name": "timebomb",
+            "crate_type": "lib",
+            "package_name": "timebomb"
         },
         {
             "crate_name": "unic_char_range",

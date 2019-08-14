@@ -37,6 +37,19 @@ async fn exec_client(svc: OvernetProxy, text: Option<&str>) -> Result<(), Error>
         let (version, peers) = svc.list_peers(last_version).await?;
         last_version = version;
         for mut peer in peers {
+            if peer.description.services.is_none() {
+                continue;
+            }
+            if peer
+                .description
+                .services
+                .unwrap()
+                .iter()
+                .find(|name| *name == echo::EchoMarker::NAME)
+                .is_none()
+            {
+                continue;
+            }
             let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
             if let Err(e) = svc.connect_to_service(&mut peer.id, echo::EchoMarker::NAME, s) {
                 println!("{:?}", e);

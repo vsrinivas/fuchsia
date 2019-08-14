@@ -1449,6 +1449,22 @@ mod zx_encoding {
 #[cfg(target_os = "fuchsia")]
 pub use zx_encoding::*;
 
+#[cfg(not(target_os = "fuchsia"))]
+mod fidl_handle_encoding {
+
+    type FidlChannel = crate::handle::Channel;
+    type FidlEvent = crate::handle::Event;
+    type FidlEventPair = crate::handle::EventPair;
+    type FidlSocket = crate::handle::Socket;
+    type FidlVmo = crate::handle::Vmo;
+
+    handle_based_codable![FidlChannel, FidlEvent, FidlEventPair, FidlSocket, FidlVmo,];
+
+}
+
+#[cfg(not(target_os = "fuchsia"))]
+pub use fidl_handle_encoding::*;
+
 /// A trait that provides automatic `Encodable` and `Decodable`
 /// implementations for a container that has inline data to decode,
 /// and expects to find a presence indicator at the start of its

@@ -4,6 +4,8 @@
 
 //! Implements a slab-like data structure that uses a salted index
 
+#![deny(missing_docs)]
+
 use std::collections::BinaryHeap;
 use std::fmt;
 
@@ -29,14 +31,11 @@ impl fmt::Debug for SaltedID {
 impl SaltedID {
     /// Return an invalid ID.
     pub const fn invalid() -> Self {
-        Self {
-            id: std::u32::MAX,
-            salt: 0,
-        }
+        Self { id: std::u32::MAX, salt: 0 }
     }
 
     /// Return if this ID is valid.
-    /// Note: A valid ID is not guaranteed to refer to a live element, 
+    /// Note: A valid ID is not guaranteed to refer to a live element,
     /// but an invalid ID is guaranteed not to.
     pub fn is_valid(&self) -> bool {
         self.salt != 0
@@ -58,10 +57,17 @@ impl<T> Default for SaltSlab<T> {
 impl<T> SaltSlab<T> {
     /// Create a new (empty) slab.
     pub fn new() -> Self {
-        Self {
-            values: Vec::new(),
-            free: BinaryHeap::new(),
-        }
+        Self { values: Vec::new(), free: BinaryHeap::new() }
+    }
+
+    /// Returns an iterator over all currently set values
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a T> {
+        self.values.iter().filter_map(|wrapped| wrapped.value.as_ref())
+    }
+
+    /// Returns a mutable iterator over all currently set values
+    pub fn iter_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut T> {
+        self.values.iter_mut().filter_map(|wrapped| wrapped.value.as_mut())
     }
 
     /// Insert `new` into the slab, return the ID for where it was inserted.
@@ -69,27 +75,14 @@ impl<T> SaltSlab<T> {
         if let Some(index) = self.free.pop() {
             let value = &mut self.values[index as usize];
             assert!(value.value.is_none());
-            value.salt = if value.salt == std::u32::MAX {
-                1
-            } else {
-                value.salt + 1
-            };
+            value.salt = if value.salt == std::u32::MAX { 1 } else { value.salt + 1 };
             value.value = Some(new);
-            SaltedID {
-                id: index,
-                salt: value.salt,
-            }
+            SaltedID { id: index, salt: value.salt }
         } else {
             let index = self.values.len();
             assert!(index < (std::u32::MAX as usize));
-            self.values.push(SaltWrapped {
-                salt: 1,
-                value: Some(new),
-            });
-            SaltedID {
-                id: index as u32,
-                salt: 1,
-            }
+            self.values.push(SaltWrapped { salt: 1, value: Some(new) });
+            SaltedID { id: index as u32, salt: 1 }
         }
     }
 
@@ -129,6 +122,74 @@ impl<T> SaltSlab<T> {
         let r = value.value.is_some();
         value.value = None;
         self.free.push(id.id);
+        r
+    }
+}
+
+/// A slab-like data structure that shadows some other `SaltSlab`
+pub struct ShadowSlab<T> {
+    values: Vec<SaltWrapped<T>>,
+}
+
+impl<T> Default for ShadowSlab<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T> ShadowSlab<T> {
+    /// Create a new (empty) slab.
+    pub fn new() -> Self {
+        Self { values: Vec::new() }
+    }
+
+    /// Init id `id` with value `new`
+    pub fn init(&mut self, id: SaltedID, new: T) -> &mut T {
+        assert!(id.is_valid());
+        while self.values.len() <= id.id as usize {
+            self.values.push(SaltWrapped { salt: 0, value: None });
+        }
+        let v = &mut self.values[id.id as usize];
+        v.salt = id.salt;
+        v.value = Some(new);
+        v.value.as_mut().unwrap()
+    }
+
+    /// Retrieve the element with id `id`, or `None` if this element is not present.
+    pub fn get(&self, id: SaltedID) -> Option<&T> {
+        if id.id as usize >= self.values.len() {
+            return None;
+        }
+        let value = &self.values[id.id as usize];
+        if value.salt != id.salt {
+            return None;
+        }
+        return value.value.as_ref();
+    }
+
+    /// Retrieve mutable element with id `id`, or `None` if this element is not present.
+    pub fn get_mut(&mut self, id: SaltedID) -> Option<&mut T> {
+        if id.id as usize >= self.values.len() {
+            return None;
+        }
+        let value = &mut self.values[id.id as usize];
+        if value.salt != id.salt {
+            return None;
+        }
+        return value.value.as_mut();
+    }
+
+    /// Remove element with id `id`. Return true if there was such an element, false otherwise.
+    pub fn remove(&mut self, id: SaltedID) -> bool {
+        if id.id as usize >= self.values.len() {
+            return false;
+        }
+        let value = &mut self.values[id.id as usize];
+        if value.salt != id.salt {
+            return false;
+        }
+        let r = value.value.is_some();
+        value.value = None;
         r
     }
 }

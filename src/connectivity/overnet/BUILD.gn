@@ -8,6 +8,20 @@ group("overnet") {
     "deprecated",
     "examples",
     "lib",
+    "overnetstack:overnetstack2",
     "tools",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    "deprecated/lib:overnet_fuzzer_tests",
+    "deprecated/lib:overnet_tests",
+    "deprecated/overnetstack:overnetstack_tests",
+    "examples:tests",
+    "lib:tests",
+    "overnetstack:tests",
+    "tools:tests",
   ]
 }

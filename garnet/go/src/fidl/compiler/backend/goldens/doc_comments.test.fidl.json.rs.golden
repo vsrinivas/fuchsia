@@ -88,12 +88,14 @@ fidl_table! {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct InterfaceMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for InterfaceMarker {
 	type Proxy = InterfaceProxy;
 	type RequestStream = InterfaceRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) Interface";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait InterfaceProxyInterface: Send + Sync {
 	fn method(&self,
 	)-> Result<(), fidl::Error>;
@@ -101,10 +103,12 @@ pub trait InterfaceProxyInterface: Send + Sync {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct InterfaceSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl InterfaceSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -121,11 +125,13 @@ impl InterfaceSynchronousProxy {
 			)}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct InterfaceProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for InterfaceProxy {
 	type Service = InterfaceMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -133,6 +139,7 @@ impl fidl::endpoints::Proxy for InterfaceProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for InterfaceProxy {
 	type Target = fidl::client::Client;
 
@@ -142,6 +149,7 @@ impl ::std::ops::Deref for InterfaceProxy {
 }
 
 /// Proxy object for communicating with interface Interface
+#[cfg(target_os = "fuchsia")]
 impl InterfaceProxy {
 	/// Create a new Proxy for Interface
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -173,6 +181,7 @@ impl InterfaceProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl InterfaceProxyInterface for InterfaceProxy {
 	fn method(&self,
 	)-> Result<(), fidl::Error> {
@@ -180,18 +189,22 @@ impl InterfaceProxyInterface for InterfaceProxy {
 	}
 	type OnEventResponseFut = fidl::client::QueryResponseFut<()>;}
 
+#[cfg(target_os = "fuchsia")]
 pub struct InterfaceEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for InterfaceEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for InterfaceEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for InterfaceEventStream {
 	type Item = Result<InterfaceEvent, fidl::Error>;
 
@@ -225,6 +238,7 @@ impl futures::Stream for InterfaceEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum InterfaceEvent {
 	
 	
@@ -233,6 +247,7 @@ pub enum InterfaceEvent {
 		
 	},}
 
+#[cfg(target_os = "fuchsia")]
 impl InterfaceEvent {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_on_event(self) -> Option<(
@@ -253,12 +268,14 @@ impl InterfaceEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct InterfaceEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> InterfaceEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -275,19 +292,23 @@ impl <'a> InterfaceEventSender<'a> {
 }
 
 /// A Stream of incoming requests for Interface
+#[cfg(target_os = "fuchsia")]
 pub struct InterfaceRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for InterfaceRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for InterfaceRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for InterfaceRequestStream {
 	type Service = InterfaceMarker;
 
@@ -318,6 +339,7 @@ impl fidl::endpoints::RequestStream for InterfaceRequestStream {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for InterfaceRequestStream {
 	type Item = Result<InterfaceRequest, fidl::Error>;
 
@@ -369,6 +391,7 @@ impl futures::Stream for InterfaceRequestStream {
 /// interface comment #1
 ///
 /// interface comment #3
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum InterfaceRequest {
 	/// method comment #1
@@ -378,6 +401,7 @@ pub enum InterfaceRequest {
 		control_handle: InterfaceControlHandle,},
 }
 
+#[cfg(target_os = "fuchsia")]
 impl InterfaceRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_method(self) -> Option<(InterfaceControlHandle
@@ -399,11 +423,14 @@ impl InterfaceRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct InterfaceEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl InterfaceEncoder {
 	pub fn encode_method_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x3f43684c00000000,
 		};
 		let mut body = ();
@@ -413,7 +440,7 @@ impl InterfaceEncoder {
 	}
 	pub fn encode_on_event_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x136d200d00000000,
 		};
 		let mut body = ();
@@ -423,10 +450,12 @@ impl InterfaceEncoder {
 	}}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct InterfaceControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for InterfaceControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -435,6 +464,7 @@ impl ::std::ops::Deref for InterfaceControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl InterfaceControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()

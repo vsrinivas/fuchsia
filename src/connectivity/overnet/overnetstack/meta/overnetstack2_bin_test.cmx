@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/overnetstack2_bin_test"
+    }
+}

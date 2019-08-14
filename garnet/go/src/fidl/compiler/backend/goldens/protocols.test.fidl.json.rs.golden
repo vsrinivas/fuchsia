@@ -50,12 +50,14 @@ fidl_empty_struct!(
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WithAndWithoutRequestResponseMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for WithAndWithoutRequestResponseMarker {
 	type Proxy = WithAndWithoutRequestResponseProxy;
 	type RequestStream = WithAndWithoutRequestResponseRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) WithAndWithoutRequestResponse";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait WithAndWithoutRequestResponseProxyInterface: Send + Sync {
 	fn no_request_no_response(&self,
 	)-> Result<(), fidl::Error>;
@@ -81,10 +83,12 @@ pub trait WithAndWithoutRequestResponseProxyInterface: Send + Sync {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct WithAndWithoutRequestResponseSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -120,11 +124,13 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
 			)}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct WithAndWithoutRequestResponseProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for WithAndWithoutRequestResponseProxy {
 	type Service = WithAndWithoutRequestResponseMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -132,6 +138,7 @@ impl fidl::endpoints::Proxy for WithAndWithoutRequestResponseProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for WithAndWithoutRequestResponseProxy {
 	type Target = fidl::client::Client;
 
@@ -141,6 +148,7 @@ impl ::std::ops::Deref for WithAndWithoutRequestResponseProxy {
 }
 
 /// Proxy object for communicating with interface WithAndWithoutRequestResponse
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseProxy {
 	/// Create a new Proxy for WithAndWithoutRequestResponse
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -200,6 +208,7 @@ impl WithAndWithoutRequestResponseProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestResponseProxy {
 	fn no_request_no_response(&self,
 	)-> Result<(), fidl::Error> {
@@ -235,18 +244,22 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
 	type OnEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
 	type OnWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;}
 
+#[cfg(target_os = "fuchsia")]
 pub struct WithAndWithoutRequestResponseEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for WithAndWithoutRequestResponseEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for WithAndWithoutRequestResponseEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for WithAndWithoutRequestResponseEventStream {
 	type Item = Result<WithAndWithoutRequestResponseEvent, fidl::Error>;
 
@@ -287,6 +300,7 @@ impl futures::Stream for WithAndWithoutRequestResponseEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum WithAndWithoutRequestResponseEvent {
 	
 	
@@ -306,6 +320,7 @@ pub enum WithAndWithoutRequestResponseEvent {
 		
 	},}
 
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseEvent {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_on_empty_response(self) -> Option<(
@@ -339,12 +354,14 @@ impl WithAndWithoutRequestResponseEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct WithAndWithoutRequestResponseEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> WithAndWithoutRequestResponseEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -371,19 +388,23 @@ impl <'a> WithAndWithoutRequestResponseEventSender<'a> {
 }
 
 /// A Stream of incoming requests for WithAndWithoutRequestResponse
+#[cfg(target_os = "fuchsia")]
 pub struct WithAndWithoutRequestResponseRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for WithAndWithoutRequestResponseRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for WithAndWithoutRequestResponseRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for WithAndWithoutRequestResponseRequestStream {
 	type Service = WithAndWithoutRequestResponseMarker;
 
@@ -414,6 +435,7 @@ impl fidl::endpoints::RequestStream for WithAndWithoutRequestResponseRequestStre
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 	type Item = Result<WithAndWithoutRequestResponseRequest, fidl::Error>;
 
@@ -523,6 +545,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 		})
 	}
 }
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum WithAndWithoutRequestResponseRequest {
 	NoRequestNoResponse {
@@ -545,6 +568,7 @@ pub enum WithAndWithoutRequestResponseRequest {
 		responder: WithAndWithoutRequestResponseWithRequestWithResponseResponder,},
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_no_request_no_response(self) -> Option<(WithAndWithoutRequestResponseControlHandle
@@ -638,11 +662,14 @@ impl WithAndWithoutRequestResponseRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct WithAndWithoutRequestResponseEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseEncoder {
 	pub fn encode_no_request_no_response_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x1e03f87500000000,
 		};
 		let mut body = ();
@@ -652,7 +679,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_no_request_empty_response_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x4df6dbd500000000,
@@ -664,7 +691,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_no_request_empty_response_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x4df6dbd500000000,
@@ -676,7 +703,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_no_request_with_response_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x668d7f800000000,
@@ -688,7 +715,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_no_request_with_response_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_ret: &str,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x668d7f800000000,
@@ -700,7 +727,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_with_request_no_response_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,mut in_arg: &str,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,mut in_arg: &str,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x19c2137100000000,
 		};
 		let mut body = (in_arg,);
@@ -710,7 +737,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_with_request_empty_response_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_arg: &str,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x76f2397300000000,
@@ -722,7 +749,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_with_request_empty_response_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x76f2397300000000,
@@ -734,7 +761,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_with_request_with_response_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_arg: &str,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x1973292000000000,
@@ -746,7 +773,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_with_request_with_response_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_ret: &str,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x1973292000000000,
@@ -758,7 +785,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_on_empty_response_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x697fd73200000000,
 		};
 		let mut body = ();
@@ -768,7 +795,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	}
 	pub fn encode_on_with_response_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,mut in_ret: &str,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,mut in_ret: &str,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x7a47120700000000,
 		};
 		let mut body = (in_ret,);
@@ -778,10 +805,12 @@ impl WithAndWithoutRequestResponseEncoder {
 	}}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct WithAndWithoutRequestResponseControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for WithAndWithoutRequestResponseControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -790,6 +819,7 @@ impl ::std::ops::Deref for WithAndWithoutRequestResponseControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
@@ -838,6 +868,7 @@ impl WithAndWithoutRequestResponseControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
@@ -845,6 +876,7 @@ pub struct WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -856,6 +888,7 @@ impl ::std::ops::Drop for WithAndWithoutRequestResponseNoRequestEmptyResponseRes
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
 	pub fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
 		&self.control_handle
@@ -914,6 +947,7 @@ impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct WithAndWithoutRequestResponseNoRequestWithResponseResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
@@ -921,6 +955,7 @@ pub struct WithAndWithoutRequestResponseNoRequestWithResponseResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for WithAndWithoutRequestResponseNoRequestWithResponseResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -932,6 +967,7 @@ impl ::std::ops::Drop for WithAndWithoutRequestResponseNoRequestWithResponseResp
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
 	pub fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
 		&self.control_handle
@@ -990,6 +1026,7 @@ impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
@@ -997,6 +1034,7 @@ pub struct WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -1008,6 +1046,7 @@ impl ::std::ops::Drop for WithAndWithoutRequestResponseWithRequestEmptyResponseR
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 	pub fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
 		&self.control_handle
@@ -1066,6 +1105,7 @@ impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct WithAndWithoutRequestResponseWithRequestWithResponseResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
@@ -1073,6 +1113,7 @@ pub struct WithAndWithoutRequestResponseWithRequestWithResponseResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for WithAndWithoutRequestResponseWithRequestWithResponseResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -1084,6 +1125,7 @@ impl ::std::ops::Drop for WithAndWithoutRequestResponseWithRequestWithResponseRe
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
 	pub fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
 		&self.control_handle
@@ -1146,12 +1188,14 @@ impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WithErrorSyntaxMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for WithErrorSyntaxMarker {
 	type Proxy = WithErrorSyntaxProxy;
 	type RequestStream = WithErrorSyntaxRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) WithErrorSyntax";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait WithErrorSyntaxProxyInterface: Send + Sync {
 	type ErrorAsPrimitiveResponseFut: futures::Future<Output = Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error>> + Send;
 	fn error_as_primitive(&self,
@@ -1162,10 +1206,12 @@ pub trait WithErrorSyntaxProxyInterface: Send + Sync {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct WithErrorSyntaxSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -1184,11 +1230,13 @@ impl WithErrorSyntaxSynchronousProxy {
 			)}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct WithErrorSyntaxProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for WithErrorSyntaxProxy {
 	type Service = WithErrorSyntaxMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -1196,6 +1244,7 @@ impl fidl::endpoints::Proxy for WithErrorSyntaxProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for WithErrorSyntaxProxy {
 	type Target = fidl::client::Client;
 
@@ -1205,6 +1254,7 @@ impl ::std::ops::Deref for WithErrorSyntaxProxy {
 }
 
 /// Proxy object for communicating with interface WithErrorSyntax
+#[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxProxy {
 	/// Create a new Proxy for WithErrorSyntax
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -1238,6 +1288,7 @@ impl WithErrorSyntaxProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
 	type ErrorAsPrimitiveResponseFut = fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)>;
 	fn error_as_primitive(&self,
@@ -1250,18 +1301,22 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
 		self.client.send_query(&mut (), 0x4c95de1f00000000)
 	}}
 
+#[cfg(target_os = "fuchsia")]
 pub struct WithErrorSyntaxEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for WithErrorSyntaxEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for WithErrorSyntaxEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for WithErrorSyntaxEventStream {
 	type Item = Result<WithErrorSyntaxEvent, fidl::Error>;
 
@@ -1288,11 +1343,13 @@ impl futures::Stream for WithErrorSyntaxEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum WithErrorSyntaxEvent {
 	
 	
 	}
 
+#[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxEvent {
 }
 
@@ -1302,12 +1359,14 @@ impl WithErrorSyntaxEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct WithErrorSyntaxEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> WithErrorSyntaxEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -1315,19 +1374,23 @@ impl <'a> WithErrorSyntaxEventSender<'a> {
 }
 
 /// A Stream of incoming requests for WithErrorSyntax
+#[cfg(target_os = "fuchsia")]
 pub struct WithErrorSyntaxRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for WithErrorSyntaxRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for WithErrorSyntaxRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for WithErrorSyntaxRequestStream {
 	type Service = WithErrorSyntaxMarker;
 
@@ -1358,6 +1421,7 @@ impl fidl::endpoints::RequestStream for WithErrorSyntaxRequestStream {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for WithErrorSyntaxRequestStream {
 	type Item = Result<WithErrorSyntaxRequest, fidl::Error>;
 
@@ -1423,6 +1487,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 		})
 	}
 }
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum WithErrorSyntaxRequest {
 	ErrorAsPrimitive {
@@ -1431,6 +1496,7 @@ pub enum WithErrorSyntaxRequest {
 		responder: WithErrorSyntaxErrorAsEnumResponder,},
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_error_as_primitive(self) -> Option<(WithErrorSyntaxErrorAsPrimitiveResponder
@@ -1464,11 +1530,14 @@ impl WithErrorSyntaxRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct WithErrorSyntaxEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxEncoder {
 	pub fn encode_error_as_primitive_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x7b58113900000000,
@@ -1480,7 +1549,7 @@ impl WithErrorSyntaxEncoder {
 	}
 	pub fn encode_error_as_primitive_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: &mut WithErrorSyntaxErrorAsPrimitiveResult,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x7b58113900000000,
@@ -1492,7 +1561,7 @@ impl WithErrorSyntaxEncoder {
 	}
 	pub fn encode_error_as_enum_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x4c95de1f00000000,
@@ -1504,7 +1573,7 @@ impl WithErrorSyntaxEncoder {
 	}
 	pub fn encode_error_as_enum_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: &mut WithErrorSyntaxErrorAsEnumResult,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x4c95de1f00000000,
@@ -1516,10 +1585,12 @@ impl WithErrorSyntaxEncoder {
 	}}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct WithErrorSyntaxControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for WithErrorSyntaxControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -1528,6 +1599,7 @@ impl ::std::ops::Deref for WithErrorSyntaxControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
@@ -1535,6 +1607,7 @@ impl WithErrorSyntaxControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct WithErrorSyntaxErrorAsPrimitiveResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
@@ -1542,6 +1615,7 @@ pub struct WithErrorSyntaxErrorAsPrimitiveResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for WithErrorSyntaxErrorAsPrimitiveResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -1553,6 +1627,7 @@ impl ::std::ops::Drop for WithErrorSyntaxErrorAsPrimitiveResponder {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxErrorAsPrimitiveResponder {
 	pub fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
 		&self.control_handle
@@ -1611,6 +1686,7 @@ impl WithErrorSyntaxErrorAsPrimitiveResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct WithErrorSyntaxErrorAsEnumResponder {
 	control_handle: ::std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
@@ -1618,6 +1694,7 @@ pub struct WithErrorSyntaxErrorAsEnumResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for WithErrorSyntaxErrorAsEnumResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -1629,6 +1706,7 @@ impl ::std::ops::Drop for WithErrorSyntaxErrorAsEnumResponder {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxErrorAsEnumResponder {
 	pub fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
 		&self.control_handle
@@ -1692,12 +1770,14 @@ impl WithErrorSyntaxErrorAsEnumResponder {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ChannelProtocolMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for ChannelProtocolMarker {
 	type Proxy = ChannelProtocolProxy;
 	type RequestStream = ChannelProtocolRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) ChannelProtocol";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait ChannelProtocolProxyInterface: Send + Sync {
 	fn method_a(&self,
 		a: i64,
@@ -1716,10 +1796,12 @@ pub trait ChannelProtocolProxyInterface: Send + Sync {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct ChannelProtocolSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ChannelProtocolSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -1746,11 +1828,13 @@ impl ChannelProtocolSynchronousProxy {
 			)}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct ChannelProtocolProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for ChannelProtocolProxy {
 	type Service = ChannelProtocolMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -1758,6 +1842,7 @@ impl fidl::endpoints::Proxy for ChannelProtocolProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for ChannelProtocolProxy {
 	type Target = fidl::client::Client;
 
@@ -1767,6 +1852,7 @@ impl ::std::ops::Deref for ChannelProtocolProxy {
 }
 
 /// Proxy object for communicating with interface ChannelProtocol
+#[cfg(target_os = "fuchsia")]
 impl ChannelProtocolProxy {
 	/// Create a new Proxy for ChannelProtocol
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -1815,6 +1901,7 @@ impl ChannelProtocolProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
 	fn method_a(&self,
 		mut a: i64,
@@ -1837,18 +1924,22 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
 		self.client.send_query(&mut (a), 0x4b02e28600000000)
 	}}
 
+#[cfg(target_os = "fuchsia")]
 pub struct ChannelProtocolEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for ChannelProtocolEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for ChannelProtocolEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for ChannelProtocolEventStream {
 	type Item = Result<ChannelProtocolEvent, fidl::Error>;
 
@@ -1882,6 +1973,7 @@ impl futures::Stream for ChannelProtocolEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum ChannelProtocolEvent {
 	
 	
@@ -1896,6 +1988,7 @@ pub enum ChannelProtocolEvent {
 	
 	}
 
+#[cfg(target_os = "fuchsia")]
 impl ChannelProtocolEvent {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_event_a(self) -> Option<(i64, i64
@@ -1920,12 +2013,14 @@ impl ChannelProtocolEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct ChannelProtocolEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> ChannelProtocolEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -1944,19 +2039,23 @@ impl <'a> ChannelProtocolEventSender<'a> {
 }
 
 /// A Stream of incoming requests for ChannelProtocol
+#[cfg(target_os = "fuchsia")]
 pub struct ChannelProtocolRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for ChannelProtocolRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for ChannelProtocolRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for ChannelProtocolRequestStream {
 	type Service = ChannelProtocolMarker;
 
@@ -1987,6 +2086,7 @@ impl fidl::endpoints::RequestStream for ChannelProtocolRequestStream {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for ChannelProtocolRequestStream {
 	type Item = Result<ChannelProtocolRequest, fidl::Error>;
 
@@ -2061,6 +2161,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 		})
 	}
 }
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum ChannelProtocolRequest {
 	MethodA {
@@ -2081,6 +2182,7 @@ pub enum ChannelProtocolRequest {
 		responder: ChannelProtocolMutateSocketResponder,},
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ChannelProtocolRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_method_a(self) -> Option<(
@@ -2146,11 +2248,14 @@ impl ChannelProtocolRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct ChannelProtocolEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl ChannelProtocolEncoder {
 	pub fn encode_method_a_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x556693d200000000,
 		};
 		let mut body = (in_a,in_b,);
@@ -2160,7 +2265,7 @@ impl ChannelProtocolEncoder {
 	}
 	pub fn encode_event_a_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x1c78c20200000000,
 		};
 		let mut body = (in_a,in_b,);
@@ -2170,7 +2275,7 @@ impl ChannelProtocolEncoder {
 	}
 	pub fn encode_method_b_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0xac6551b00000000,
@@ -2182,7 +2287,7 @@ impl ChannelProtocolEncoder {
 	}
 	pub fn encode_method_b_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0xac6551b00000000,
@@ -2194,7 +2299,7 @@ impl ChannelProtocolEncoder {
 	}
 	pub fn encode_mutate_socket_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_a: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x4b02e28600000000,
@@ -2206,7 +2311,7 @@ impl ChannelProtocolEncoder {
 	}
 	pub fn encode_mutate_socket_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x4b02e28600000000,
@@ -2218,10 +2323,12 @@ impl ChannelProtocolEncoder {
 	}}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct ChannelProtocolControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for ChannelProtocolControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -2230,6 +2337,7 @@ impl ::std::ops::Deref for ChannelProtocolControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ChannelProtocolControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
@@ -2259,6 +2367,7 @@ impl ChannelProtocolControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct ChannelProtocolMethodBResponder {
 	control_handle: ::std::mem::ManuallyDrop<ChannelProtocolControlHandle>,
@@ -2266,6 +2375,7 @@ pub struct ChannelProtocolMethodBResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for ChannelProtocolMethodBResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -2277,6 +2387,7 @@ impl ::std::ops::Drop for ChannelProtocolMethodBResponder {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ChannelProtocolMethodBResponder {
 	pub fn control_handle(&self) -> &ChannelProtocolControlHandle {
 		&self.control_handle
@@ -2335,6 +2446,7 @@ impl ChannelProtocolMethodBResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct ChannelProtocolMutateSocketResponder {
 	control_handle: ::std::mem::ManuallyDrop<ChannelProtocolControlHandle>,
@@ -2342,6 +2454,7 @@ pub struct ChannelProtocolMutateSocketResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for ChannelProtocolMutateSocketResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -2353,6 +2466,7 @@ impl ::std::ops::Drop for ChannelProtocolMutateSocketResponder {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ChannelProtocolMutateSocketResponder {
 	pub fn control_handle(&self) -> &ChannelProtocolControlHandle {
 		&self.control_handle
@@ -2415,12 +2529,14 @@ impl ChannelProtocolMutateSocketResponder {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct KitchenSinkMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for KitchenSinkMarker {
 	type Proxy = KitchenSinkProxy;
 	type RequestStream = KitchenSinkRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) KitchenSink";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait KitchenSinkProxyInterface: Send + Sync {
 	fn method_a(&self,
 		a: i64,
@@ -2439,10 +2555,12 @@ pub trait KitchenSinkProxyInterface: Send + Sync {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct KitchenSinkSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl KitchenSinkSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -2469,11 +2587,13 @@ impl KitchenSinkSynchronousProxy {
 			)}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct KitchenSinkProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for KitchenSinkProxy {
 	type Service = KitchenSinkMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -2481,6 +2601,7 @@ impl fidl::endpoints::Proxy for KitchenSinkProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for KitchenSinkProxy {
 	type Target = fidl::client::Client;
 
@@ -2490,6 +2611,7 @@ impl ::std::ops::Deref for KitchenSinkProxy {
 }
 
 /// Proxy object for communicating with interface KitchenSink
+#[cfg(target_os = "fuchsia")]
 impl KitchenSinkProxy {
 	/// Create a new Proxy for KitchenSink
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -2538,6 +2660,7 @@ impl KitchenSinkProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl KitchenSinkProxyInterface for KitchenSinkProxy {
 	fn method_a(&self,
 		mut a: i64,
@@ -2560,18 +2683,22 @@ impl KitchenSinkProxyInterface for KitchenSinkProxy {
 		self.client.send_query(&mut (a), 0x6e7c00600000000)
 	}}
 
+#[cfg(target_os = "fuchsia")]
 pub struct KitchenSinkEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for KitchenSinkEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for KitchenSinkEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for KitchenSinkEventStream {
 	type Item = Result<KitchenSinkEvent, fidl::Error>;
 
@@ -2605,6 +2732,7 @@ impl futures::Stream for KitchenSinkEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum KitchenSinkEvent {
 	
 	
@@ -2619,6 +2747,7 @@ pub enum KitchenSinkEvent {
 	
 	}
 
+#[cfg(target_os = "fuchsia")]
 impl KitchenSinkEvent {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_event_a(self) -> Option<(i64, i64
@@ -2643,12 +2772,14 @@ impl KitchenSinkEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct KitchenSinkEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> KitchenSinkEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -2667,19 +2798,23 @@ impl <'a> KitchenSinkEventSender<'a> {
 }
 
 /// A Stream of incoming requests for KitchenSink
+#[cfg(target_os = "fuchsia")]
 pub struct KitchenSinkRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for KitchenSinkRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for KitchenSinkRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for KitchenSinkRequestStream {
 	type Service = KitchenSinkMarker;
 
@@ -2710,6 +2845,7 @@ impl fidl::endpoints::RequestStream for KitchenSinkRequestStream {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for KitchenSinkRequestStream {
 	type Item = Result<KitchenSinkRequest, fidl::Error>;
 
@@ -2784,6 +2920,7 @@ impl futures::Stream for KitchenSinkRequestStream {
 		})
 	}
 }
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum KitchenSinkRequest {
 	MethodA {
@@ -2804,6 +2941,7 @@ pub enum KitchenSinkRequest {
 		responder: KitchenSinkMutateSocketResponder,},
 }
 
+#[cfg(target_os = "fuchsia")]
 impl KitchenSinkRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_method_a(self) -> Option<(
@@ -2869,11 +3007,14 @@ impl KitchenSinkRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct KitchenSinkEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl KitchenSinkEncoder {
 	pub fn encode_method_a_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x1adb443000000000,
 		};
 		let mut body = (in_a,in_b,);
@@ -2883,7 +3024,7 @@ impl KitchenSinkEncoder {
 	}
 	pub fn encode_event_a_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x6b040a1100000000,
 		};
 		let mut body = (in_a,in_b,);
@@ -2893,7 +3034,7 @@ impl KitchenSinkEncoder {
 	}
 	pub fn encode_method_b_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x772dcaa400000000,
@@ -2905,7 +3046,7 @@ impl KitchenSinkEncoder {
 	}
 	pub fn encode_method_b_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x772dcaa400000000,
@@ -2917,7 +3058,7 @@ impl KitchenSinkEncoder {
 	}
 	pub fn encode_mutate_socket_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_a: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x6e7c00600000000,
@@ -2929,7 +3070,7 @@ impl KitchenSinkEncoder {
 	}
 	pub fn encode_mutate_socket_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x6e7c00600000000,
@@ -2941,10 +3082,12 @@ impl KitchenSinkEncoder {
 	}}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct KitchenSinkControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for KitchenSinkControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -2953,6 +3096,7 @@ impl ::std::ops::Deref for KitchenSinkControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl KitchenSinkControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
@@ -2982,6 +3126,7 @@ impl KitchenSinkControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct KitchenSinkMethodBResponder {
 	control_handle: ::std::mem::ManuallyDrop<KitchenSinkControlHandle>,
@@ -2989,6 +3134,7 @@ pub struct KitchenSinkMethodBResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for KitchenSinkMethodBResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -3000,6 +3146,7 @@ impl ::std::ops::Drop for KitchenSinkMethodBResponder {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl KitchenSinkMethodBResponder {
 	pub fn control_handle(&self) -> &KitchenSinkControlHandle {
 		&self.control_handle
@@ -3058,6 +3205,7 @@ impl KitchenSinkMethodBResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct KitchenSinkMutateSocketResponder {
 	control_handle: ::std::mem::ManuallyDrop<KitchenSinkControlHandle>,
@@ -3065,6 +3213,7 @@ pub struct KitchenSinkMutateSocketResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for KitchenSinkMutateSocketResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -3076,6 +3225,7 @@ impl ::std::ops::Drop for KitchenSinkMutateSocketResponder {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl KitchenSinkMutateSocketResponder {
 	pub fn control_handle(&self) -> &KitchenSinkControlHandle {
 		&self.control_handle

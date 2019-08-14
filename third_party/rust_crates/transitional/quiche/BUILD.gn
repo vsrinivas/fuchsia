@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("quiche") {
+  name = "quiche"
+  edition = "2018"
+  source_root = "../../../../third_party/rust-mirrors/quiche/src/lib.rs"
+  deps = [
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:ring",
+  ]
+  non_rust_deps = [ "//third_party/boringssl:ssl" ]
+}

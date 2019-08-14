@@ -26,20 +26,24 @@ use fidl::{
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ChildMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for ChildMarker {
 	type Proxy = ChildProxy;
 	type RequestStream = ChildRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) Child";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait ChildProxyInterface: Send + Sync {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct ChildSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ChildSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -50,11 +54,13 @@ impl ChildSynchronousProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct ChildProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for ChildProxy {
 	type Service = ChildMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -62,6 +68,7 @@ impl fidl::endpoints::Proxy for ChildProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for ChildProxy {
 	type Target = fidl::client::Client;
 
@@ -71,6 +78,7 @@ impl ::std::ops::Deref for ChildProxy {
 }
 
 /// Proxy object for communicating with interface Child
+#[cfg(target_os = "fuchsia")]
 impl ChildProxy {
 	/// Create a new Proxy for Child
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -94,20 +102,25 @@ impl ChildProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ChildProxyInterface for ChildProxy {}
 
+#[cfg(target_os = "fuchsia")]
 pub struct ChildEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for ChildEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for ChildEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for ChildEventStream {
 	type Item = Result<ChildEvent, fidl::Error>;
 
@@ -134,9 +147,11 @@ impl futures::Stream for ChildEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum ChildEvent {
 	}
 
+#[cfg(target_os = "fuchsia")]
 impl ChildEvent {
 }
 
@@ -146,12 +161,14 @@ impl ChildEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct ChildEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> ChildEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -159,19 +176,23 @@ impl <'a> ChildEventSender<'a> {
 }
 
 /// A Stream of incoming requests for Child
+#[cfg(target_os = "fuchsia")]
 pub struct ChildRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for ChildRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for ChildRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for ChildRequestStream {
 	type Service = ChildMarker;
 
@@ -202,6 +223,7 @@ impl fidl::endpoints::RequestStream for ChildRequestStream {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for ChildRequestStream {
 	type Item = Result<ChildRequest, fidl::Error>;
 
@@ -241,10 +263,12 @@ impl futures::Stream for ChildRequestStream {
 		})
 	}
 }
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum ChildRequest {
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ChildRequest {
 
         /// Name of the method defined in FIDL
@@ -254,14 +278,19 @@ impl ChildRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct ChildEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl ChildEncoder {}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct ChildControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for ChildControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -270,6 +299,7 @@ impl ::std::ops::Deref for ChildControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ChildControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
@@ -281,12 +311,14 @@ impl ChildControlHandle {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ParentMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for ParentMarker {
 	type Proxy = ParentProxy;
 	type RequestStream = ParentRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) Parent";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait ParentProxyInterface: Send + Sync {
 	type GetChildResponseFut: futures::Future<Output = Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error>> + Send;
 	fn get_child(&self,
@@ -303,10 +335,12 @@ pub trait ParentProxyInterface: Send + Sync {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct ParentSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ParentSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -333,11 +367,13 @@ impl ParentSynchronousProxy {
 			)}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct ParentProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for ParentProxy {
 	type Service = ParentMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -345,6 +381,7 @@ impl fidl::endpoints::Proxy for ParentProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for ParentProxy {
 	type Target = fidl::client::Client;
 
@@ -354,6 +391,7 @@ impl ::std::ops::Deref for ParentProxy {
 }
 
 /// Proxy object for communicating with interface Parent
+#[cfg(target_os = "fuchsia")]
 impl ParentProxy {
 	/// Create a new Proxy for Parent
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -401,6 +439,7 @@ impl ParentProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ParentProxyInterface for ParentProxy {
 	type GetChildResponseFut = fidl::client::QueryResponseFut<(fidl::endpoints::ClientEnd<ChildMarker>)>;
 	fn get_child(&self,
@@ -423,18 +462,22 @@ impl ParentProxyInterface for ParentProxy {
 		self.client.send(&mut (r), 0x5ec3867a00000000)
 	}}
 
+#[cfg(target_os = "fuchsia")]
 pub struct ParentEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for ParentEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for ParentEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for ParentEventStream {
 	type Item = Result<ParentEvent, fidl::Error>;
 
@@ -461,6 +504,7 @@ impl futures::Stream for ParentEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum ParentEvent {
 	
 	
@@ -468,6 +512,7 @@ pub enum ParentEvent {
 	
 	}
 
+#[cfg(target_os = "fuchsia")]
 impl ParentEvent {
 }
 
@@ -477,12 +522,14 @@ impl ParentEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct ParentEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> ParentEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -490,19 +537,23 @@ impl <'a> ParentEventSender<'a> {
 }
 
 /// A Stream of incoming requests for Parent
+#[cfg(target_os = "fuchsia")]
 pub struct ParentRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for ParentRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for ParentRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for ParentRequestStream {
 	type Service = ParentMarker;
 
@@ -533,6 +584,7 @@ impl fidl::endpoints::RequestStream for ParentRequestStream {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for ParentRequestStream {
 	type Item = Result<ParentRequest, fidl::Error>;
 
@@ -616,6 +668,7 @@ impl futures::Stream for ParentRequestStream {
 		})
 	}
 }
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum ParentRequest {
 	GetChild {
@@ -632,6 +685,7 @@ pub enum ParentRequest {
 		control_handle: ParentControlHandle,},
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ParentRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_get_child(self) -> Option<(ParentGetChildResponder
@@ -697,11 +751,14 @@ impl ParentRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct ParentEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl ParentEncoder {
 	pub fn encode_get_child_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x3692bc6900000000,
@@ -713,7 +770,7 @@ impl ParentEncoder {
 	}
 	pub fn encode_get_child_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x3692bc6900000000,
@@ -725,7 +782,7 @@ impl ParentEncoder {
 	}
 	pub fn encode_get_child_request_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x3faacc7e00000000,
@@ -737,7 +794,7 @@ impl ParentEncoder {
 	}
 	pub fn encode_get_child_request_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,
+		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,ordinal: 0x3faacc7e00000000,
@@ -749,7 +806,7 @@ impl ParentEncoder {
 	}
 	pub fn encode_take_child_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x4c0642f900000000,
 		};
 		let mut body = (in_c,);
@@ -759,7 +816,7 @@ impl ParentEncoder {
 	}
 	pub fn encode_take_child_request_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x5ec3867a00000000,
 		};
 		let mut body = (in_r,);
@@ -769,10 +826,12 @@ impl ParentEncoder {
 	}}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct ParentControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for ParentControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -781,6 +840,7 @@ impl ::std::ops::Deref for ParentControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ParentControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
@@ -788,6 +848,7 @@ impl ParentControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct ParentGetChildResponder {
 	control_handle: ::std::mem::ManuallyDrop<ParentControlHandle>,
@@ -795,6 +856,7 @@ pub struct ParentGetChildResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for ParentGetChildResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -806,6 +868,7 @@ impl ::std::ops::Drop for ParentGetChildResponder {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ParentGetChildResponder {
 	pub fn control_handle(&self) -> &ParentControlHandle {
 		&self.control_handle
@@ -864,6 +927,7 @@ impl ParentGetChildResponder {
 	}
 }
 #[must_use = "FIDL methods require a response to be sent"]
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub struct ParentGetChildRequestResponder {
 	control_handle: ::std::mem::ManuallyDrop<ParentControlHandle>,
@@ -871,6 +935,7 @@ pub struct ParentGetChildRequestResponder {
 	ordinal: u64,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Drop for ParentGetChildRequestResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
@@ -882,6 +947,7 @@ impl ::std::ops::Drop for ParentGetChildRequestResponder {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ParentGetChildRequestResponder {
 	pub fn control_handle(&self) -> &ParentControlHandle {
 		&self.control_handle

@@ -26,22 +26,26 @@ use fidl::{
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct FirstProtocolMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for FirstProtocolMarker {
 	type Proxy = FirstProtocolProxy;
 	type RequestStream = FirstProtocolRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) FirstProtocol";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait FirstProtocolProxyInterface: Send + Sync {
 	fn method_on_first(&self,
 	)-> Result<(), fidl::Error>;
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct FirstProtocolSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl FirstProtocolSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -55,11 +59,13 @@ impl FirstProtocolSynchronousProxy {
 			)}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct FirstProtocolProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for FirstProtocolProxy {
 	type Service = FirstProtocolMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -67,6 +73,7 @@ impl fidl::endpoints::Proxy for FirstProtocolProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for FirstProtocolProxy {
 	type Target = fidl::client::Client;
 
@@ -76,6 +83,7 @@ impl ::std::ops::Deref for FirstProtocolProxy {
 }
 
 /// Proxy object for communicating with interface FirstProtocol
+#[cfg(target_os = "fuchsia")]
 impl FirstProtocolProxy {
 	/// Create a new Proxy for FirstProtocol
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -104,24 +112,29 @@ impl FirstProtocolProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl FirstProtocolProxyInterface for FirstProtocolProxy {
 	fn method_on_first(&self,
 	)-> Result<(), fidl::Error> {
 		self.client.send(&mut (), 0x2838a83100000000)
 	}}
 
+#[cfg(target_os = "fuchsia")]
 pub struct FirstProtocolEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for FirstProtocolEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for FirstProtocolEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for FirstProtocolEventStream {
 	type Item = Result<FirstProtocolEvent, fidl::Error>;
 
@@ -148,10 +161,12 @@ impl futures::Stream for FirstProtocolEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum FirstProtocolEvent {
 	
 	}
 
+#[cfg(target_os = "fuchsia")]
 impl FirstProtocolEvent {
 }
 
@@ -161,12 +176,14 @@ impl FirstProtocolEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct FirstProtocolEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> FirstProtocolEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -174,19 +191,23 @@ impl <'a> FirstProtocolEventSender<'a> {
 }
 
 /// A Stream of incoming requests for FirstProtocol
+#[cfg(target_os = "fuchsia")]
 pub struct FirstProtocolRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for FirstProtocolRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for FirstProtocolRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for FirstProtocolRequestStream {
 	type Service = FirstProtocolMarker;
 
@@ -217,6 +238,7 @@ impl fidl::endpoints::RequestStream for FirstProtocolRequestStream {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for FirstProtocolRequestStream {
 	type Item = Result<FirstProtocolRequest, fidl::Error>;
 
@@ -265,12 +287,14 @@ impl futures::Stream for FirstProtocolRequestStream {
 		})
 	}
 }
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum FirstProtocolRequest {
 	MethodOnFirst {
 		control_handle: FirstProtocolControlHandle,},
 }
 
+#[cfg(target_os = "fuchsia")]
 impl FirstProtocolRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_method_on_first(self) -> Option<(FirstProtocolControlHandle
@@ -292,11 +316,14 @@ impl FirstProtocolRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct FirstProtocolEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl FirstProtocolEncoder {
 	pub fn encode_method_on_first_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x2838a83100000000,
 		};
 		let mut body = ();
@@ -306,10 +333,12 @@ impl FirstProtocolEncoder {
 	}}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct FirstProtocolControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for FirstProtocolControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -318,6 +347,7 @@ impl ::std::ops::Deref for FirstProtocolControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl FirstProtocolControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
@@ -329,22 +359,26 @@ impl FirstProtocolControlHandle {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SecondProtocolMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for SecondProtocolMarker {
 	type Proxy = SecondProtocolProxy;
 	type RequestStream = SecondProtocolRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) SecondProtocol";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait SecondProtocolProxyInterface: Send + Sync {
 	fn method_on_second(&self,
 	)-> Result<(), fidl::Error>;
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct SecondProtocolSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl SecondProtocolSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -358,11 +392,13 @@ impl SecondProtocolSynchronousProxy {
 			)}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct SecondProtocolProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for SecondProtocolProxy {
 	type Service = SecondProtocolMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -370,6 +406,7 @@ impl fidl::endpoints::Proxy for SecondProtocolProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for SecondProtocolProxy {
 	type Target = fidl::client::Client;
 
@@ -379,6 +416,7 @@ impl ::std::ops::Deref for SecondProtocolProxy {
 }
 
 /// Proxy object for communicating with interface SecondProtocol
+#[cfg(target_os = "fuchsia")]
 impl SecondProtocolProxy {
 	/// Create a new Proxy for SecondProtocol
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -407,24 +445,29 @@ impl SecondProtocolProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl SecondProtocolProxyInterface for SecondProtocolProxy {
 	fn method_on_second(&self,
 	)-> Result<(), fidl::Error> {
 		self.client.send(&mut (), 0xd09c00f00000000)
 	}}
 
+#[cfg(target_os = "fuchsia")]
 pub struct SecondProtocolEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for SecondProtocolEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for SecondProtocolEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for SecondProtocolEventStream {
 	type Item = Result<SecondProtocolEvent, fidl::Error>;
 
@@ -451,10 +494,12 @@ impl futures::Stream for SecondProtocolEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum SecondProtocolEvent {
 	
 	}
 
+#[cfg(target_os = "fuchsia")]
 impl SecondProtocolEvent {
 }
 
@@ -464,12 +509,14 @@ impl SecondProtocolEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct SecondProtocolEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> SecondProtocolEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -477,19 +524,23 @@ impl <'a> SecondProtocolEventSender<'a> {
 }
 
 /// A Stream of incoming requests for SecondProtocol
+#[cfg(target_os = "fuchsia")]
 pub struct SecondProtocolRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for SecondProtocolRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for SecondProtocolRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for SecondProtocolRequestStream {
 	type Service = SecondProtocolMarker;
 
@@ -520,6 +571,7 @@ impl fidl::endpoints::RequestStream for SecondProtocolRequestStream {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for SecondProtocolRequestStream {
 	type Item = Result<SecondProtocolRequest, fidl::Error>;
 
@@ -568,12 +620,14 @@ impl futures::Stream for SecondProtocolRequestStream {
 		})
 	}
 }
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum SecondProtocolRequest {
 	MethodOnSecond {
 		control_handle: SecondProtocolControlHandle,},
 }
 
+#[cfg(target_os = "fuchsia")]
 impl SecondProtocolRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_method_on_second(self) -> Option<(SecondProtocolControlHandle
@@ -595,11 +649,14 @@ impl SecondProtocolRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct SecondProtocolEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl SecondProtocolEncoder {
 	pub fn encode_method_on_second_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0xd09c00f00000000,
 		};
 		let mut body = ();
@@ -609,10 +666,12 @@ impl SecondProtocolEncoder {
 	}}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct SecondProtocolControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for SecondProtocolControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -621,6 +680,7 @@ impl ::std::ops::Deref for SecondProtocolControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl SecondProtocolControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()

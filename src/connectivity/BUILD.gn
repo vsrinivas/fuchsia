@@ -33,10 +33,7 @@ group("tests") {
     "//src/connectivity/network/mdns/service:mdns_tests",
     "//src/connectivity/network/netdump:tests",
     "//src/connectivity/network/testing/netemul:tests",
-    "//src/connectivity/overnet/deprecated/lib:overnet_fuzzer_tests",
-    "//src/connectivity/overnet/deprecated/lib:overnet_tests",
-    "//src/connectivity/overnet/deprecated/overnetstack:overnetstack_tests",
-    "//src/connectivity/overnet/examples:tests",
+    "//src/connectivity/overnet:tests",
     "//src/connectivity/telephony/lib/qmi-protocol:tests",
     "//src/connectivity/wlan:tests",
   ]

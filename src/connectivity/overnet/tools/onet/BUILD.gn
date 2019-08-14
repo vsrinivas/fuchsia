@@ -35,3 +35,8 @@ package("onet") {
 
   binary = "onet"
 }
+
+group("tests") {
+  testonly = true
+  deps = []
+}

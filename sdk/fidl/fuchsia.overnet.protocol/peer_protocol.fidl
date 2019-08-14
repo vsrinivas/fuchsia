@@ -6,9 +6,12 @@ library fuchsia.overnet.protocol;
 
 using zx;
 
-/// Peer-to-peer protocol between two Overnet nodes.
+// TODO(ctiller): make this fuchsia.io.MAX_FILENAME
+const uint64 MAX_SERVICE_NAME_LENGTH = 255;
+
+/// Older peer-to-peer protocol between two Overnet nodes.
 /// Each end of the Overnet connection stream implements this protocol.
-[Transport="OvernetInternal"]
+[Transport = "OvernetInternal"]
 protocol Peer {
     /// Create a new stream, labelled `stream_id`, to communicate with the
     /// advertised service `service_name`.
@@ -23,4 +26,31 @@ protocol Peer {
     UpdateNodeStatus(NodeStatus node);
     /// Gossip routing: update the status of a single link between nodes.
     UpdateLinkStatus(LinkStatus link);
+};
+
+/// Peer-to-peer protocol between two Overnet nodes.
+/// Client quic connections send this xunion to servers over quic stream 0.
+xunion PeerMessage {
+    /// Request to create a channel to a service exported by this peer.
+    ConnectToService connect_to_service;
+    /// Update this peers description on the server.
+    PeerDescription update_node_description;
+    /// Update information about a link that this peer knows about on the
+    /// remote peer.
+    LinkStatus update_link_status;
+};
+
+/// Create a new stream, labelled `stream_id`, to communicate with the
+/// advertised service `service_name`.
+struct ConnectToService {
+    /// Which service to connect to.
+    string:MAX_SERVICE_NAME_LENGTH service_name;
+    /// On which quic stream will this service connection be formed.
+    uint64 stream_id;
+    /// Ancillary options for this connection.
+    ConnectToServiceOptions options;
+};
+
+/// Options for service connection formation.
+table ConnectToServiceOptions {
 };

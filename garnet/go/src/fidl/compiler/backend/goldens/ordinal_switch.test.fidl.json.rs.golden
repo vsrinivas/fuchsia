@@ -26,12 +26,14 @@ use fidl::{
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SwitchingOrdinalsMarker;
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::ServiceMarker for SwitchingOrdinalsMarker {
 	type Proxy = SwitchingOrdinalsProxy;
 	type RequestStream = SwitchingOrdinalsRequestStream;
 	const DEBUG_NAME: &'static str = "(anonymous) SwitchingOrdinals";
 }
 
+#[cfg(target_os = "fuchsia")]
 pub trait SwitchingOrdinalsProxyInterface: Send + Sync {
 	fn ordinal_five(&self,
 	)-> Result<(), fidl::Error>;
@@ -42,10 +44,12 @@ pub trait SwitchingOrdinalsProxyInterface: Send + Sync {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub struct SwitchingOrdinalsSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl SwitchingOrdinalsSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
@@ -62,11 +66,13 @@ impl SwitchingOrdinalsSynchronousProxy {
 			)}
 }
 
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug, Clone)]
 pub struct SwitchingOrdinalsProxy {
 	client: fidl::client::Client,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::Proxy for SwitchingOrdinalsProxy {
 	type Service = SwitchingOrdinalsMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
@@ -74,6 +80,7 @@ impl fidl::endpoints::Proxy for SwitchingOrdinalsProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for SwitchingOrdinalsProxy {
 	type Target = fidl::client::Client;
 
@@ -83,6 +90,7 @@ impl ::std::ops::Deref for SwitchingOrdinalsProxy {
 }
 
 /// Proxy object for communicating with interface SwitchingOrdinals
+#[cfg(target_os = "fuchsia")]
 impl SwitchingOrdinalsProxy {
 	/// Create a new Proxy for SwitchingOrdinals
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
@@ -116,6 +124,7 @@ impl SwitchingOrdinalsProxy {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl SwitchingOrdinalsProxyInterface for SwitchingOrdinalsProxy {
 	fn ordinal_five(&self,
 	)-> Result<(), fidl::Error> {
@@ -128,18 +137,22 @@ impl SwitchingOrdinalsProxyInterface for SwitchingOrdinalsProxy {
 	type EventOrdinalFifteenResponseFut = fidl::client::QueryResponseFut<()>;
 	type EventOnlyGeneratedOrdinalResponseFut = fidl::client::QueryResponseFut<()>;}
 
+#[cfg(target_os = "fuchsia")]
 pub struct SwitchingOrdinalsEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for SwitchingOrdinalsEventStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for SwitchingOrdinalsEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for SwitchingOrdinalsEventStream {
 	type Item = Result<SwitchingOrdinalsEvent, fidl::Error>;
 
@@ -180,6 +193,7 @@ impl futures::Stream for SwitchingOrdinalsEventStream {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
 pub enum SwitchingOrdinalsEvent {
 	
 	
@@ -193,6 +207,7 @@ pub enum SwitchingOrdinalsEvent {
 		
 	},}
 
+#[cfg(target_os = "fuchsia")]
 impl SwitchingOrdinalsEvent {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_event_ordinal_fifteen(self) -> Option<(
@@ -224,12 +239,14 @@ impl SwitchingOrdinalsEvent {
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
+#[cfg(target_os = "fuchsia")]
 pub struct SwitchingOrdinalsEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a zx::Channel,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl <'a> SwitchingOrdinalsEventSender<'a> {
 	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
@@ -255,19 +272,23 @@ impl <'a> SwitchingOrdinalsEventSender<'a> {
 }
 
 /// A Stream of incoming requests for SwitchingOrdinals
+#[cfg(target_os = "fuchsia")]
 pub struct SwitchingOrdinalsRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::marker::Unpin for SwitchingOrdinalsRequestStream {}
 
+#[cfg(target_os = "fuchsia")]
 impl futures::stream::FusedStream for SwitchingOrdinalsRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.is_terminated
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl fidl::endpoints::RequestStream for SwitchingOrdinalsRequestStream {
 	type Service = SwitchingOrdinalsMarker;
 
@@ -298,6 +319,7 @@ impl fidl::endpoints::RequestStream for SwitchingOrdinalsRequestStream {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl futures::Stream for SwitchingOrdinalsRequestStream {
 	type Item = Result<SwitchingOrdinalsRequest, fidl::Error>;
 
@@ -355,6 +377,7 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 		})
 	}
 }
+#[cfg(target_os = "fuchsia")]
 #[derive(Debug)]
 pub enum SwitchingOrdinalsRequest {
 	OrdinalFive {
@@ -363,6 +386,7 @@ pub enum SwitchingOrdinalsRequest {
 		control_handle: SwitchingOrdinalsControlHandle,},
 }
 
+#[cfg(target_os = "fuchsia")]
 impl SwitchingOrdinalsRequest {
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_ordinal_five(self) -> Option<(SwitchingOrdinalsControlHandle
@@ -396,11 +420,14 @@ impl SwitchingOrdinalsRequest {
         }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub struct SwitchingOrdinalsEncoder;
+
+#[cfg(target_os = "fuchsia")]
 impl SwitchingOrdinalsEncoder {
 	pub fn encode_ordinal_five_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x7784636700000000,
 		};
 		let mut body = ();
@@ -410,7 +437,7 @@ impl SwitchingOrdinalsEncoder {
 	}
 	pub fn encode_only_generated_ordinal_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x27c9581f00000000,
 		};
 		let mut body = ();
@@ -420,7 +447,7 @@ impl SwitchingOrdinalsEncoder {
 	}
 	pub fn encode_event_ordinal_fifteen_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x577495a100000000,
 		};
 		let mut body = ();
@@ -430,7 +457,7 @@ impl SwitchingOrdinalsEncoder {
 	}
 	pub fn encode_event_only_generated_ordinal_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,ordinal: 0x7fec464e00000000,
 		};
 		let mut body = ();
@@ -440,10 +467,12 @@ impl SwitchingOrdinalsEncoder {
 	}}
 
 #[derive(Debug, Clone)]
+#[cfg(target_os = "fuchsia")]
 pub struct SwitchingOrdinalsControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl ::std::ops::Deref for SwitchingOrdinalsControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
@@ -452,6 +481,7 @@ impl ::std::ops::Deref for SwitchingOrdinalsControlHandle {
 	}
 }
 
+#[cfg(target_os = "fuchsia")]
 impl SwitchingOrdinalsControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
