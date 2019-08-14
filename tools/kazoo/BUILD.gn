@@ -23,6 +23,7 @@ if (current_toolchain == host_toolchain) {
 
   static_library("lib") {
     sources = [
+      "asm_output.cc",
       "kernel_branches_output.cc",
       "ktrace_output.cc",
       "output_util.cc",
@@ -53,6 +54,7 @@ if (current_toolchain == host_toolchain) {
     ]
 
     sources = [
+      "asm_output_test.cc",
       "kernel_branches_output_test.cc",
       "ktrace_output_test.cc",
       "output_util_test.cc",

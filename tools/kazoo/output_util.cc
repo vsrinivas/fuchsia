@@ -25,3 +25,31 @@ bool CopyrightHeaderWithHashComments(Writer* writer) {
 
 )");
 }
+
+void MapRequestResponseToCAbi(const Struct& request, const Struct& response, Type* return_type,
+                              std::vector<StructMember>* arguments) {
+  FXL_DCHECK(arguments->empty());
+  for (const auto& m : request.members()) {
+    StructMember copy = m;
+    if (std::holds_alternative<TypeHandle>(copy.type())) {
+      copy.set_handle_use("handle_use");
+    }
+    arguments->emplace_back(copy);
+  }
+  if (response.members().size() == 0) {
+    *return_type = Type(TypeVoid{});
+  } else {
+    *return_type = response.members()[0].type();
+    for (size_t i = 1; i < response.members().size(); ++i) {
+      const StructMember& m = response.members()[i];
+      StructMember copy = m.CopyAsPointerTo();
+      copy.set_optional(false);
+      if (std::holds_alternative<TypeHandle>(
+              m.type())) {  // Note, checking m, not copy as it's always TypePointer.
+        copy.set_handle_use("handle_acquire");
+      }
+      arguments->push_back(copy);
+    }
+  }
+}
+

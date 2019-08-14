@@ -89,6 +89,9 @@ class StructMember {
   bool optional() const { return optional_; }
   void set_optional(bool optional) { optional_ = optional; }
 
+  const std::string& handle_use() const { return handle_use_; }
+  void set_handle_use(const std::string& handle_use) { handle_use_ = handle_use; }
+
   StructMember CopyAsPointerTo() const {
     StructMember copy = *this;
     copy.type_ = Type(TypePointer(type_));
@@ -99,6 +102,7 @@ class StructMember {
   friend class SyscallLibraryLoader;
 
   std::string name_;
+  std::string handle_use_;
   Type type_;
   bool optional_{false};
 };
