@@ -2,15 +2,11 @@
 #Use of this source code is governed by a BSD - style license that can be
 #found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//build/rust/rustc_library.gni")
 
-rustc_binary("bin") {
+rustc_library("wlan-hw-sim") {
+  testonly = true
   name = "wlan_hw_sim"
-  with_unit_tests = true
-  with_lto = "fat"
   edition = "2018"
 
   deps = [
@@ -18,7 +14,6 @@ rustc_binary("bin") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:service-rustc",
-    "//garnet/lib/wlan/fidl:sme-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
@@ -39,36 +34,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:pin-utils",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-}
-
-package("wlan-hw-sim") {
-  deps = [
-    ":bin",
-  ]
-
-  binary = "wlan_hw_sim"
-
-  meta = [
-    {
-      path = rebase_path("meta/wlan-hw-sim.cmx")
-      dest = "wlan-hw-sim.cmx"
-    },
-  ]
-}
-
-test_package("wlan-hw-sim-tests") {
-  deps = [
-    ":bin_test",
-  ]
-
-  tests = [
-    {
-      name = "wlan_hw_sim_bin_test"
-      environments = [ nuc_env ]
-    },
   ]
 }

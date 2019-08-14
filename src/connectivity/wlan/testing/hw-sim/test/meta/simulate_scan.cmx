@@ -16,7 +16,7 @@
         }
     },
     "program": {
-        "binary": "test/wlan_hw_sim_bin_test"
+        "binary": "test/simulate_scan"
     },
     "sandbox": {
         "features": [

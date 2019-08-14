@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+
+rustc_test("rate_selection") {
+  edition = "2018"
+  deps = [
+    "//garnet/lib/rust/ethernet",
+    "//garnet/lib/wlan/fidl:wlantap-rustc",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
+    "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:pin-utils",
+  ]
+}

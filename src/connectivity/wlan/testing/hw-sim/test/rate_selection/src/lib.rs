@@ -2,18 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await)]
+
 use {
-    crate::{eth_helper::create_eth_client, simulation_tests::*, *},
-    fidl_fuchsia_wlan_service as fidl_wlan_service, fidl_fuchsia_wlan_tap as wlantap,
-    fuchsia_async as fasync,
+    failure::Error,
+    fidl_fuchsia_wlan_service::WlanMarker,
+    fidl_fuchsia_wlan_tap::{
+        WlanTxStatusEntry, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
+    },
+    fuchsia_async::{Executor, Interval},
     fuchsia_component::client::connect_to_service,
-    futures::{channel::mpsc, poll},
+    fuchsia_zircon::DurationNum,
+    futures::{channel::mpsc, poll, StreamExt},
     pin_utils::pin_mut,
     std::collections::HashMap,
     std::task::Poll,
     wlan_common::{appendable::Appendable, big_endian::BigEndianU16, mac},
+    wlan_hw_sim::*,
 };
-
 // Remedy for FLK-24 (DNO-389)
 // Refer to |KMinstrelUpdateIntervalForHwSim| in //src/connectivity/wlan/drivers/wlan/device.cpp
 const DATA_FRAME_INTERVAL_NANOS: i64 = 4_000_000;
@@ -21,13 +27,124 @@ const DATA_FRAME_INTERVAL_NANOS: i64 = 4_000_000;
 const BSS_MINSTL: [u8; 6] = [0x6d, 0x69, 0x6e, 0x73, 0x74, 0x0a];
 const SSID_MINSTREL: &[u8] = b"minstrel";
 
-pub fn test_rate_selection() {
-    let mut exec = fasync::Executor::new().expect("error creating executor");
-    let wlan_service = connect_to_service::<fidl_wlan_service::WlanMarker>()
-        .expect("Error connecting to wlan service");
+fn create_wlan_tx_status_entry(tx_vec_idx: u16) -> WlanTxStatusEntry {
+    fidl_fuchsia_wlan_tap::WlanTxStatusEntry { tx_vec_idx: tx_vec_idx, attempts: 1 }
+}
+
+fn send_tx_status_report(
+    bssid: [u8; 6],
+    tx_vec_idx: u16,
+    is_successful: bool,
+    proxy: &WlantapPhyProxy,
+) -> Result<(), Error> {
+    use fidl_fuchsia_wlan_tap::WlanTxStatus;
+
+    let mut ts = WlanTxStatus {
+        peer_addr: bssid,
+        success: is_successful,
+        tx_status_entries: [
+            create_wlan_tx_status_entry(tx_vec_idx),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+            create_wlan_tx_status_entry(0),
+        ],
+    };
+    proxy.report_tx_status(0, &mut ts)?;
+    Ok(())
+}
+
+fn handle_rate_selection_event<F, G>(
+    event: WlantapPhyEvent,
+    phy: &WlantapPhyProxy,
+    bssid: &[u8; 6],
+    hm: &mut HashMap<u16, u64>,
+    should_succeed: F,
+    is_converged: &mut G,
+    mut sender: mpsc::Sender<bool>,
+) where
+    F: Fn(u16) -> bool,
+    G: FnMut(&HashMap<u16, u64>) -> bool,
+{
+    match event {
+        WlantapPhyEvent::Tx { args } => {
+            if let Some(mac::MacFrame::Data { .. }) =
+                mac::MacFrame::parse(&args.packet.data[..], false)
+            {
+                let tx_vec_idx = args.packet.info.tx_vector_idx;
+                send_tx_status_report(*bssid, tx_vec_idx, should_succeed(tx_vec_idx), phy)
+                    .expect("Error sending tx_status report");
+                let count = hm.entry(tx_vec_idx).or_insert(0);
+                *count += 1;
+                if *count == 1 {
+                    println!("new tx_vec_idx: {} at #{}", tx_vec_idx, hm.values().sum::<u64>());
+                }
+                sender.try_send(is_converged(hm)).expect("sending message to ethernet sender");
+            }
+        }
+        _ => {}
+    }
+}
+
+async fn eth_and_beacon_sender<'a>(
+    receiver: &'a mut mpsc::Receiver<bool>,
+    phy: &'a WlantapPhyProxy,
+) -> Result<(), Error> {
+    let mut client = create_eth_client(&HW_MAC_ADDR)
+        .await
+        .expect("cannot create ethernet client")
+        .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
+
+    let mut buf: Vec<u8> = vec![];
+    buf.append_value(&mac::EthernetIIHdr {
+        da: ETH_DST_MAC,
+        sa: HW_MAC_ADDR,
+        ether_type: BigEndianU16::from_native(mac::ETHER_TYPE_IPV4),
+    })
+    .expect("error creating fake ethernet header");
+
+    let mut timer_stream = Interval::new(DATA_FRAME_INTERVAL_NANOS.nanos());
+    let mut intervals_since_last_beacon: i64 = i64::max_value() / DATA_FRAME_INTERVAL_NANOS;
+    let mut client_stream = client.get_stream();
+    loop {
+        timer_stream.next().await;
+
+        // auto-deauthentication timeout is 10.24 seconds.
+        // Send a beacon before that to stay connected.
+        if (intervals_since_last_beacon * DATA_FRAME_INTERVAL_NANOS).nanos() >= 8765.millis() {
+            intervals_since_last_beacon = 0;
+            send_beacon(&mut vec![], &CHANNEL, &BSS_MINSTL, SSID_MINSTREL, false, &phy).unwrap();
+        }
+        intervals_since_last_beacon += 1;
+
+        client.send(&buf);
+        if let Poll::Ready(Some(Ok(ethernet::Event::StatusChanged))) = poll!(client_stream.next()) {
+            println!("status changed to: {:?}", client.get_status().await?);
+            // There was an event waiting, ethernet frames have NOT been sent on the previous poll.
+            let _ = poll!(client_stream.next());
+        }
+        let converged = receiver.next().await.expect("error receiving channel message");
+        if converged {
+            break;
+        }
+    }
+    Ok(())
+}
+
+/// Test rate selection is working correctly by verifying data rate is reduced once the Minstrel
+/// algorithm detects transmission failures. Transmission failures are simulated by fake tx status
+/// report created by the test.
+#[test]
+fn rate_selection() {
+    let mut exec = Executor::new().expect("error creating executor");
+    let wlan_service =
+        connect_to_service::<WlanMarker>().expect("Error connecting to wlan service");
     let mut helper = test_utils::TestHelper::begin_test(
         &mut exec,
-        wlantap::WlantapPhyConfig { quiet: true, ..create_wlantap_config() },
+        WlantapPhyConfig { quiet: true, ..create_wlantap_config_client(HW_MAC_ADDR) },
     );
     loop_until_iface_is_found(&mut exec);
 
@@ -101,7 +218,7 @@ pub fn test_rate_selection() {
         is_converged
     };
     helper
-        .run(
+        .run_until_complete_or_timeout(
             &mut exec,
             30.seconds(),
             "verify rate selection converges to 130",
@@ -138,110 +255,4 @@ pub fn test_rate_selection() {
          DNO-389). Try increasing |DATA_FRAME_INTERVAL_NANOS| above."
     );
     assert_eq!(max_key_prev, MAX_SUCCESSFUL_IDX);
-}
-
-fn handle_rate_selection_event<F, G>(
-    event: wlantap::WlantapPhyEvent,
-    phy: &wlantap::WlantapPhyProxy,
-    bssid: &[u8; 6],
-    hm: &mut HashMap<u16, u64>,
-    should_succeed: F,
-    is_converged: &mut G,
-    mut sender: mpsc::Sender<bool>,
-) where
-    F: Fn(u16) -> bool,
-    G: FnMut(&HashMap<u16, u64>) -> bool,
-{
-    match event {
-        wlantap::WlantapPhyEvent::Tx { args } => {
-            if let Some(mac::MacFrame::Data { .. }) =
-                mac::MacFrame::parse(&args.packet.data[..], false)
-            {
-                let tx_vec_idx = args.packet.info.tx_vector_idx;
-                send_tx_status_report(*bssid, tx_vec_idx, should_succeed(tx_vec_idx), phy)
-                    .expect("Error sending tx_status report");
-                let count = hm.entry(tx_vec_idx).or_insert(0);
-                *count += 1;
-                if *count == 1 {
-                    println!("new tx_vec_idx: {} at #{}", tx_vec_idx, hm.values().sum::<u64>());
-                }
-                sender.try_send(is_converged(hm)).expect("sending message to ethernet sender");
-            }
-        }
-        _ => {}
-    }
-}
-
-async fn eth_and_beacon_sender<'a>(
-    receiver: &'a mut mpsc::Receiver<bool>,
-    phy: &'a wlantap::WlantapPhyProxy,
-) -> Result<(), failure::Error> {
-    let mut client = create_eth_client(&HW_MAC_ADDR).await
-        .expect("cannot create ethernet client")
-        .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
-
-    let mut buf: Vec<u8> = vec![];
-    buf.append_value(&mac::EthernetIIHdr {
-        da: BSSID,
-        sa: HW_MAC_ADDR,
-        ether_type: BigEndianU16::from_native(mac::ETHER_TYPE_IPV4),
-    })
-    .expect("error creating fake ethernet header");
-
-    let mut timer_stream = fasync::Interval::new(DATA_FRAME_INTERVAL_NANOS.nanos());
-    let mut intervals_since_last_beacon: i64 = i64::max_value() / DATA_FRAME_INTERVAL_NANOS;
-    let mut client_stream = client.get_stream();
-    loop {
-        timer_stream.next().await;
-
-        // auto-deauthentication timeout is 10.24 seconds.
-        // Send a beacon before that to stay connected.
-        if (intervals_since_last_beacon * DATA_FRAME_INTERVAL_NANOS).nanos() >= 8765.millis() {
-            intervals_since_last_beacon = 0;
-            send_beacon(&mut vec![], &CHANNEL, &BSS_MINSTL, SSID_MINSTREL, false, &phy).unwrap();
-        }
-        intervals_since_last_beacon += 1;
-
-        client.send(&buf);
-        if let Poll::Ready(Some(Ok(ethernet::Event::StatusChanged))) = poll!(client_stream.next()) {
-            println!("status changed to: {:?}", client.get_status().await?);
-            // There was an event waiting, ethernet frames have NOT been sent on the previous poll.
-            let _ = poll!(client_stream.next());
-        }
-        let converged = receiver.next().await.expect("error receiving channel message");
-        if converged {
-            break;
-        }
-    }
-    Ok(())
-}
-
-fn create_wlan_tx_status_entry(tx_vec_idx: u16) -> wlantap::WlanTxStatusEntry {
-    fidl_fuchsia_wlan_tap::WlanTxStatusEntry { tx_vec_idx: tx_vec_idx, attempts: 1 }
-}
-
-fn send_tx_status_report(
-    bssid: [u8; 6],
-    tx_vec_idx: u16,
-    is_successful: bool,
-    proxy: &wlantap::WlantapPhyProxy,
-) -> Result<(), failure::Error> {
-    use fidl_fuchsia_wlan_tap::WlanTxStatus;
-
-    let mut ts = WlanTxStatus {
-        peer_addr: bssid,
-        success: is_successful,
-        tx_status_entries: [
-            create_wlan_tx_status_entry(tx_vec_idx),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-            create_wlan_tx_status_entry(0),
-        ],
-    };
-    proxy.report_tx_status(0, &mut ts)?;
-    Ok(())
 }

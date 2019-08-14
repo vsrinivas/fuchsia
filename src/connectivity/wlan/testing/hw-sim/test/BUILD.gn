@@ -1,0 +1,55 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+test_package("wlan-hw-sim-test") {
+  deps = [
+    "connect_to_open_network",
+    "connect_to_wpa2_network",
+    "ethernet_tx_rx",
+    "open_ap_connect",
+    "rate_selection",
+    "set_country",
+    "simulate_scan",
+    "verify_ethernet",
+    "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
+  ]
+
+  tests = [
+    {
+      name = "connect_to_open_network"
+      environments = basic_envs
+    },
+    {
+      name = "connect_to_wpa2_network"
+      environments = basic_envs
+    },
+    {
+      name = "ethernet_tx_rx"
+      environments = basic_envs
+    },
+    {
+      name = "open_ap_connect"
+      environments = basic_envs
+    },
+    {
+      name = "rate_selection"
+      environments = basic_envs
+    },
+    {
+      name = "set_country"
+      environments = basic_envs
+    },
+    {
+      name = "simulate_scan"
+      environments = basic_envs
+    },
+    {
+      name = "verify_ethernet"
+      environments = basic_envs
+    },
+  ]
+}

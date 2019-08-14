@@ -79,7 +79,7 @@ impl TestHelper {
     fn wait_for_wlanmac_start(&mut self, exec: &mut fasync::Executor) {
         let (sender, receiver) = oneshot::channel::<()>();
         let mut sender = Some(sender);
-        self.run(
+        self.run_until_complete_or_timeout(
             exec,
             5.seconds(),
             "receive a WlanmacStart event",
@@ -98,7 +98,7 @@ impl TestHelper {
         self.proxy.clone()
     }
 
-    pub fn run<R, F, H>(
+    pub fn run_until_complete_or_timeout<R, F, H>(
         &mut self,
         exec: &mut fasync::Executor,
         timeout: zx::Duration,
