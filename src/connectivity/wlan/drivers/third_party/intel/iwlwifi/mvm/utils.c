@@ -41,7 +41,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
 /*
- * Will return 0 even if the cmd failed when ZX_ERR_BAD_STATE is asserted unless
+ * Will return ZX_OK even if the cmd failed when ZX_ERR_BAD_STATE is asserted unless
  * CMD_WANT_SKB is set in cmd->flags.
  */
 zx_status_t iwl_mvm_send_cmd(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd) {

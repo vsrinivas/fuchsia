@@ -19,7 +19,7 @@ class SimMvm : public SimulatedFirmware {
   SimMvm(SimulatedEnvironment* env) : SimulatedFirmware(env) {}
   ~SimMvm() {}
 
-  zx_status_t SendCmd(struct iwl_host_cmd* cmd) { return ZX_OK; }
+  zx_status_t SendCmd(struct iwl_host_cmd* cmd);
 };
 
 }  // namespace testing
