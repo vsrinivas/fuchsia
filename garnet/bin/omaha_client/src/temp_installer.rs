@@ -71,6 +71,7 @@ impl Installer for FuchsiaInstaller {
                 .arg(initiator)
                 .arg("-update")
                 .arg(url)
+                .arg("-reboot=false")
                 .status(&self.launcher)?
                 .await?
                 .ok()
@@ -112,7 +113,8 @@ mod tests {
                             "-initiator".to_string(),
                             "manual".to_string(),
                             "-update".to_string(),
-                            TEST_URL.to_string()
+                            TEST_URL.to_string(),
+                            "-reboot=false".to_string()
                         ])
                     );
                     let (_stream, handle) = controller.into_stream_and_control_handle().unwrap();
