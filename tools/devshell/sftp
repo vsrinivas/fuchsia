@@ -25,4 +25,5 @@ case $1 in
   ;;
 esac
 
-SSH_AUTH_SOCK="" sftp -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "$@"
+unset SSH_AUTH_SOCK
+sftp -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "$@"
