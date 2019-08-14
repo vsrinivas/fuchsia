@@ -71,6 +71,8 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 <br/><center><img width="50%" src="/docs/images/developing_on_nuc/bios.jpg"/></center><br/><br/>
 1. Press the X in the top right to leave the BIOS.  Ensure you save before exiting.
 
+In addition to enabling EFI, you may need to disable secure boot.
+
 -----
 
 ## 4. Build Fuchsia <a name="build"></a>
