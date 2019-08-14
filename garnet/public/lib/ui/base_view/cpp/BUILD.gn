@@ -9,12 +9,18 @@ source_set("cpp") {
   sources = [
     "base_view.cc",
     "base_view.h",
+    "base_view_transitional.cc",
+    "base_view_transitional.h",
     "embedded_view_utils.cc",
     "embedded_view_utils.h",
     "view_provider_component.cc",
     "view_provider_component.h",
+    "view_provider_component_transitional.cc",
+    "view_provider_component_transitional.h",
     "view_provider_service.cc",
     "view_provider_service.h",
+    "view_provider_service_transitional.cc",
+    "view_provider_service_transitional.h",
   ]
 
   public_deps = [
@@ -23,6 +29,7 @@ source_set("cpp") {
     "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -57,6 +64,36 @@ unittest_package("base_view_unittests") {
   tests = [
     {
       name = "base_view_unittests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("transitional_unittests") {
+  testonly = true
+  output_name = "base_view_transitional_unittests"
+
+  sources = [
+    "base_view_transitional_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+unittest_package("base_view_transitional_unittests") {
+  deps = [
+    ":transitional_unittests",
+  ]
+  tests = [
+    {
+      name = "base_view_transitional_unittests"
       environments = basic_envs
     },
   ]

@@ -251,6 +251,7 @@ group("ui") {
   testonly = true
   public_deps = [
     "//garnet/public/lib/ui/base_view/cpp:base_view_unittests",
+    "//garnet/public/lib/ui/base_view/cpp:base_view_transitional_unittests",
     "//garnet/public/lib/ui/gfx/cpp:math_unittests",
   ]
 }
