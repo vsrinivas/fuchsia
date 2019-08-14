@@ -87,14 +87,8 @@ pub enum ServerError {
     #[fail(display = "decline request did not include ip")]
     NoRequestedAddrForDecline,
 
-    #[fail(display = "unknown client message type: {}", _0)]
-    UnidentifiedClientMessageType(u8),
-
-    #[fail(display = "client request did not include required message type option")]
-    MissingMessageTypeOption,
-
-    #[fail(display = "client request did not include required message type")]
-    MissingMessageTypeValue,
+    #[fail(display = "client request error: {}", _0)]
+    ClientMessageError(MessageTypeError),
 
     #[fail(display = "error manipulating server cache: {}", _0)]
     ServerCacheUpdateFailure(StashError),
@@ -176,30 +170,21 @@ where
     /// or the processing of the client's request resulted in an error, then `dispatch()`
     /// will return the fitting `Err` indicating what went wrong.
     pub fn dispatch(&mut self, msg: Message) -> Result<ServerAction, ServerError> {
-        match msg.get_dhcp_type() {
-            Ok(MessageType::DHCPDISCOVER) => self.handle_discover(msg),
-            Ok(MessageType::DHCPOFFER) => {
+        match msg.get_dhcp_type().map_err(ServerError::ClientMessageError)? {
+            MessageType::DHCPDISCOVER => self.handle_discover(msg),
+            MessageType::DHCPOFFER => {
                 Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPOFFER))
             }
-            Ok(MessageType::DHCPREQUEST) => self.handle_request(msg),
-            Ok(MessageType::DHCPDECLINE) => self.handle_decline(msg),
-            Ok(MessageType::DHCPACK) => {
+            MessageType::DHCPREQUEST => self.handle_request(msg),
+            MessageType::DHCPDECLINE => self.handle_decline(msg),
+            MessageType::DHCPACK => {
                 Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPACK))
             }
-            Ok(MessageType::DHCPNAK) => {
+            MessageType::DHCPNAK => {
                 Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPNAK))
             }
-            Ok(MessageType::DHCPRELEASE) => self.handle_release(msg),
-            Ok(MessageType::DHCPINFORM) => self.handle_inform(msg),
-            Err(MessageTypeError::MissingMessageTypeOption) => {
-                Err(ServerError::MissingMessageTypeOption)
-            }
-            Err(MessageTypeError::MissingMessageTypeValue) => {
-                Err(ServerError::MissingMessageTypeValue)
-            }
-            Err(MessageTypeError::UnknownMessageType(typ)) => {
-                Err(ServerError::UnidentifiedClientMessageType(typ))
-            }
+            MessageType::DHCPRELEASE => self.handle_release(msg),
+            MessageType::DHCPINFORM => self.handle_inform(msg),
         }
     }
 
@@ -1870,7 +1855,10 @@ pub mod tests {
         let mut msg = new_test_request();
         msg.options.clear();
 
-        assert_eq!(server.dispatch(msg), Err(ServerError::MissingMessageTypeOption));
+        assert_eq!(
+            server.dispatch(msg),
+            Err(ServerError::ClientMessageError(MessageTypeError::MissingOption))
+        );
         Ok(())
     }
 
@@ -1883,7 +1871,10 @@ pub mod tests {
 
         msg.options.push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![] });
 
-        assert_eq!(server.dispatch(msg), Err(ServerError::MissingMessageTypeValue));
+        assert_eq!(
+            server.dispatch(msg),
+            Err(ServerError::ClientMessageError(MessageTypeError::MissingValue))
+        );
         Ok(())
     }
 
@@ -1901,7 +1892,9 @@ pub mod tests {
 
         assert_eq!(
             server.dispatch(msg),
-            Err(ServerError::UnidentifiedClientMessageType(invalid_message_type))
+            Err(ServerError::ClientMessageError(MessageTypeError::UnknownType(
+                invalid_message_type
+            )))
         );
         Ok(())
     }

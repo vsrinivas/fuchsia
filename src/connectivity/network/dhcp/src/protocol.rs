@@ -75,6 +75,23 @@ pub struct Message {
     pub options: Vec<ConfigOption>,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum MessageTypeError {
+    MissingOption,
+    MissingValue,
+    UnknownType(u8),
+}
+
+impl fmt::Display for MessageTypeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingOption => write!(f, "required message type option is missing"),
+            Self::MissingValue => write!(f, "required message type value is missing"),
+            Self::UnknownType(typ) => write!(f, "unknown message type {}", typ),
+        }
+    }
+}
+
 impl Message {
     /// Instantiates a new `Message` with default field values.
     pub fn new() -> Self {
@@ -183,10 +200,10 @@ impl Message {
     pub fn get_dhcp_type(&self) -> Result<MessageType, MessageTypeError> {
         let dhcp_type_option = self
             .get_config_option(OptionCode::DhcpMessageType)
-            .ok_or(MessageTypeError::MissingMessageTypeOption)?;
+            .ok_or(MessageTypeError::MissingOption)?;
         let maybe_dhcp_type_value =
-            dhcp_type_option.value.get(0).ok_or(MessageTypeError::MissingMessageTypeValue)?;
-        MessageType::try_from(*maybe_dhcp_type_value)
+            dhcp_type_option.value.get(0).ok_or(MessageTypeError::MissingValue)?;
+        MessageType::try_from(*maybe_dhcp_type_value).map_err(MessageTypeError::UnknownType)
     }
 
     pub fn parse_to_config(&self) -> RequestedConfig {
@@ -220,15 +237,11 @@ impl Into<u8> for OpCode {
     }
 }
 
-pub enum OpCodeError {
-    UnknownCode(u8),
-}
-
 impl TryFrom<u8> for OpCode {
-    type Error = OpCodeError;
+    type Error = u8;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(OpCodeError::UnknownCode(n))
+        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(n)
     }
 }
 
@@ -283,15 +296,11 @@ impl Into<u8> for OptionCode {
     }
 }
 
-pub enum OptionCodeError {
-    UnknownCode(u8),
-}
-
 impl TryFrom<u8> for OptionCode {
-    type Error = OptionCodeError;
+    type Error = u8;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(OptionCodeError::UnknownCode(n))
+        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(n)
     }
 }
 
@@ -331,19 +340,11 @@ impl fmt::Display for MessageType {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum MessageTypeError {
-    MissingMessageTypeOption,
-    MissingMessageTypeValue,
-    UnknownMessageType(u8),
-}
-
 impl TryFrom<u8> for MessageType {
-    type Error = MessageTypeError;
+    type Error = u8;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        <Self as num_traits::FromPrimitive>::from_u8(n)
-            .ok_or(MessageTypeError::UnknownMessageType(n))
+        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(n)
     }
 }
 
@@ -388,7 +389,7 @@ impl<'a> Iterator for OptionBuffer<'a> {
                             let value = val.to_vec();
                             break Some(ConfigOption { code, value });
                         }
-                        Err(OptionCodeError::UnknownCode(_code)) => {
+                        Err(_code) => {
                             // TODO(atait): signal to the caller that we got an unknown option?
                         }
                     }
@@ -670,7 +671,7 @@ mod tests {
     fn test_get_dhcp_type_without_dhcp_type_option_returns_err() {
         let msg = Message::new();
 
-        assert_eq!(msg.get_dhcp_type(), Err(MessageTypeError::MissingMessageTypeOption));
+        assert_eq!(msg.get_dhcp_type(), Err(MessageTypeError::MissingOption));
     }
 
     #[test]
@@ -678,7 +679,7 @@ mod tests {
         let mut msg = Message::new();
         msg.options.push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![] });
 
-        assert_eq!(msg.get_dhcp_type(), Err(MessageTypeError::MissingMessageTypeValue));
+        assert_eq!(msg.get_dhcp_type(), Err(MessageTypeError::MissingValue));
     }
 
     #[test]
@@ -693,7 +694,7 @@ mod tests {
 
         assert_eq!(
             msg.get_dhcp_type(),
-            Err(MessageTypeError::UnknownMessageType(invalid_message_type_value))
+            Err(MessageTypeError::UnknownType(invalid_message_type_value))
         );
     }
 
