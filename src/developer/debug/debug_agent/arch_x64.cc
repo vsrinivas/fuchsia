@@ -8,6 +8,7 @@
 #include "src/developer/debug/debug_agent/arch_x64_helpers.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
+#include "src/developer/debug/ipc/decode_exception.h"
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/developer/debug/shared/logging/logging.h"
@@ -102,6 +103,43 @@ inline zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc
 
   return ZX_OK;
 }
+
+class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
+ public:
+  ExceptionInfo(const DebuggedThread& thread) : thread_(thread) {}
+
+  bool AddrIsWatchpoint(uint64_t addr) override {
+    for (auto& [address, watchpoint] : thread_.process()->watchpoints()) {
+      if (address == addr)
+        return true;
+    }
+
+    return false;
+  }
+
+  std::optional<debug_ipc::X64ExceptionInfo::DebugRegs> FetchDebugRegs() override {
+    zx_thread_state_debug_regs_t debug_regs;
+    zx_status_t status =
+        thread_.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
+
+    if (status != ZX_OK) {
+      return std::nullopt;
+    }
+
+    debug_ipc::X64ExceptionInfo::DebugRegs ret;
+
+    ret.dr0 = debug_regs.dr[0];
+    ret.dr1 = debug_regs.dr[1];
+    ret.dr2 = debug_regs.dr[2];
+    ret.dr3 = debug_regs.dr[3];
+    ret.dr6 = debug_regs.dr6;
+
+    return ret;
+  }
+
+ private:
+  const DebuggedThread& thread_;
+};
 
 }  // namespace
 
@@ -233,46 +271,6 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cat,
 
 // Hardware Exceptions ---------------------------------------------------------
 
-namespace {
-
-debug_ipc::NotifyException::Type DetermineHWException(
-    const DebuggedThread& thread, const zx_thread_state_debug_regs_t& debug_regs) {
-  // TODO(DX-1445): This permits only one trigger per exception, when overlaps
-  //                could occur. For a first pass this is acceptable.
-  uint64_t exception_address = 0;
-  // HW breakpoints have priority over single-step.
-  if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0)) {
-    exception_address = debug_regs.dr[0];
-  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B1)) {
-    exception_address = debug_regs.dr[1];
-  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B2)) {
-    exception_address = debug_regs.dr[2];
-  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B3)) {
-    exception_address = debug_regs.dr[3];
-  } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6BS)) {
-    return debug_ipc::NotifyException::Type::kSingleStep;
-  } else {
-    FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
-  }
-
-  // Search for a hardware breakpoint.
-  for (auto& [address, breakpoint] : thread.process()->breakpoints()) {
-    if (address == exception_address)
-      return debug_ipc::NotifyException::Type::kHardware;
-  }
-
-  // Search for a watchpoint.
-  for (auto& [address, watchpoint] : thread.process()->watchpoints()) {
-    if (address == exception_address)
-      return debug_ipc::NotifyException::Type::kWatchpoint;
-  }
-
-  // This is a HW breakpoint not set by us.
-  return debug_ipc::NotifyException::Type::kHardware;
-}
-
-}  // namespace
-
 uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(uint64_t exception_addr) {
   // x86 returns the instruction *about* to be executed when hitting the hw
   // breakpoint.
@@ -281,25 +279,8 @@ uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(uint64_t
 
 debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(const DebuggedThread& thread,
                                                                    uint32_t exception_type) {
-  if (exception_type == ZX_EXCP_SW_BREAKPOINT) {
-    return debug_ipc::NotifyException::Type::kSoftware;
-  } else if (exception_type == ZX_EXCP_HW_BREAKPOINT) {
-    zx_thread_state_debug_regs_t debug_regs;
-    zx_status_t status =
-        thread.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
-
-    // Assume single step when in doubt.
-    if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Could not access debug registers for thread " << thread.koid();
-      return debug_ipc::NotifyException::Type::kSingleStep;
-    }
-
-    DEBUG_LOG(Archx64) << "Decoding HW exception. " << DR6ToString(debug_regs.dr6);
-
-    return DetermineHWException(thread, debug_regs);
-  } else {
-    return debug_ipc::NotifyException::Type::kGeneral;
-  }
+  ExceptionInfo info(thread);
+  return debug_ipc::DecodeException(exception_type, &info);
 }
 
 zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread* thread, uint64_t address) {

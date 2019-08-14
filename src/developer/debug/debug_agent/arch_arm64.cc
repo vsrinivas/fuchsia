@@ -10,6 +10,7 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/arch_arm64_helpers.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
+#include "src/developer/debug/ipc/decode_exception.h"
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
@@ -97,27 +98,23 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Regis
   return ZX_OK;
 }
 
-debug_ipc::NotifyException::Type DecodeHWException(const DebuggedThread& thread) {
-  zx_thread_state_debug_regs_t debug_regs;
-  zx_status_t status = thread.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                                                  sizeof(zx_thread_state_debug_regs_t));
-  if (status != ZX_OK)
-    return debug_ipc::NotifyException::Type::kNone;
+class ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
+ public:
+  ExceptionInfo(const DebuggedThread& thread) : thread_(thread) {}
 
-  auto decoded_type = DecodeESR(debug_regs.esr);
+  std::optional<uint32_t> FetchESR() override {
+    zx_thread_state_debug_regs_t debug_regs;
+    zx_status_t status = thread_.thread().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                                                     sizeof(zx_thread_state_debug_regs_t));
+    if (status != ZX_OK)
+      return std::nullopt;
 
-  DEBUG_LOG(ArchArm64) << "Decoded ESR 0x" << std::hex << debug_regs.esr << " (EC: 0x"
-                       << Arm64ExtractECFromESR(debug_regs.esr) << ") as "
-                       << debug_ipc::NotifyException::TypeToString(decoded_type);
-
-  if (decoded_type == debug_ipc::NotifyException::Type::kSingleStep ||
-      decoded_type == debug_ipc::NotifyException::Type::kHardware) {
-    return decoded_type;
+    return debug_regs.esr;
   }
 
-  FXL_NOTREACHED() << "Received invalid ESR value: 0x" << std::hex << debug_regs.esr;
-  return debug_ipc::NotifyException::Type::kNone;
-}
+ private:
+  const DebuggedThread& thread_;
+};
 
 }  // namespace
 
@@ -221,17 +218,8 @@ debug_ipc::NotifyException::Type HardwareNotificationType(const zx::thread&) {
 
 debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(const DebuggedThread& thread,
                                                                    uint32_t exception_type) {
-  switch (exception_type) {
-    case ZX_EXCP_SW_BREAKPOINT:
-      return debug_ipc::NotifyException::Type::kSoftware;
-    case ZX_EXCP_HW_BREAKPOINT:
-      return DecodeHWException(thread);
-    default:
-      return debug_ipc::NotifyException::Type::kGeneral;
-  }
-
-  FXL_NOTREACHED();
-  return debug_ipc::NotifyException::Type::kLast;
+  ExceptionInfo info(thread);
+  return debug_ipc::DecodeException(exception_type, &info);
 }
 
 // HW Breakpoints --------------------------------------------------------------

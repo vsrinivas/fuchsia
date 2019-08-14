@@ -62,25 +62,6 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* d
   return ZX_OK;
 }
 
-debug_ipc::NotifyException::Type DecodeESR(uint32_t esr) {
-  uint32_t ec = Arm64ExtractECFromESR(esr);
-  switch (ec) {
-    case 0b111000: /* BRK from arm32 */
-    case 0b111100: /* BRK from arm64 */
-      return debug_ipc::NotifyException::Type::kSoftware;
-    case 0b110000: /* HW breakpoint from a lower level */
-    case 0b110001: /* HW breakpoint from same level */
-      return debug_ipc::NotifyException::Type::kHardware;
-    case 0b110010: /* software step from lower level */
-    case 0b110011: /* software step from same level */
-      return debug_ipc::NotifyException::Type::kSingleStep;
-    default:
-      break;
-  }
-
-  return debug_ipc::NotifyException::Type::kGeneral;
-}
-
 std::string DebugRegistersToString(const zx_thread_state_debug_regs_t& regs) {
   std::stringstream ss;
   for (size_t i = 0; i < debug_ipc::kMaxArm64HWBreakpoints; i++) {
