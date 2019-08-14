@@ -27,11 +27,13 @@ class StoryWidget extends StatefulWidget {
   final TilePresenter presenter;
   final ValueNotifier<bool> confirmEdit;
   final bool editing;
+  final VoidCallback onTitleChange;
 
   const StoryWidget({
     @required this.presenter,
     this.confirmEdit,
     this.editing = false,
+    this.onTitleChange,
   });
 
   @override
@@ -45,6 +47,7 @@ class _StoryWidgetState extends State<StoryWidget> {
   BuiltMap<String, ChildViewConnection> _connections;
   StreamSubscription _tilerUpdateListener;
   bool _isEditing = false;
+  VoidCallback _onTitleChange;
   OverlayEntry _layoutSuggestionsOverlay;
   Map<String, Color> _parametersToColors;
   final ValueNotifier _focusedMod = ValueNotifier<String>(null);
@@ -53,6 +56,7 @@ class _StoryWidgetState extends State<StoryWidget> {
   void initState() {
     _resetTilerModel();
     _isEditing = widget.editing;
+    _onTitleChange = widget.onTitleChange;
     widget.confirmEdit.addListener(_confirmEditListener);
     _tilerUpdateListener = widget.presenter.update.listen((update) {
       setState(() {
@@ -140,6 +144,7 @@ class _StoryWidgetState extends State<StoryWidget> {
   }
 
   void _endEditing() {
+    _onTitleChange?.call();
     widget.presenter.requestLayout(_tilerModel);
   }
 

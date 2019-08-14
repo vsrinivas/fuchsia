@@ -25,6 +25,7 @@ class TileChrome extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onCancelEdit;
   final VoidCallback onConfirmEdit;
+  final TextEditingController titleFieldController;
 
   const TileChrome({
     @required this.name,
@@ -44,6 +45,7 @@ class TileChrome extends StatelessWidget {
     this.onEdit,
     this.onCancelEdit,
     this.onConfirmEdit,
+    this.titleFieldController,
   });
 
   @override
@@ -121,7 +123,12 @@ class TileChrome extends StatelessWidget {
 
           // Story name.
           Expanded(
-            child: _buildTitleBarTextButton(context, name ?? '<>', onEdit),
+            child: editing
+                ? TextField(
+                    controller: titleFieldController,
+                    autofocus: true,
+                  )
+                : _buildTitleBarTextButton(context, name ?? '<>', onEdit),
           ),
 
           // Maximize button.

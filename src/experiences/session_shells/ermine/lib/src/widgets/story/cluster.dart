@@ -50,6 +50,7 @@ class Cluster extends StatelessWidget {
       {bool custom = false}) {
     final story = tile.content;
     final confirmEditNotifier = ValueNotifier<bool>(null);
+    final titleFieldController = TextEditingController(text: story?.name);
     return AnimatedBuilder(
       animation: story.childViewConnectionNotifier,
       builder: (context, child) {
@@ -63,6 +64,7 @@ class Cluster extends StatelessWidget {
                 builder: (context, child) => TileChrome(
                   name: story.name,
                   showTitle: !custom,
+                  titleFieldController: titleFieldController,
                   editing: story.editStateNotifier.value &&
                       story.useInProcessStoryShell,
                   focused: story.focused,
@@ -75,6 +77,8 @@ class Cluster extends StatelessWidget {
                                 editing: story.editStateNotifier.value,
                                 confirmEdit: confirmEditNotifier,
                                 presenter: story.layoutManager.presenter,
+                                onTitleChange: () =>
+                                    story.title = titleFieldController.text,
                               )
                             : ChildView(
                                 connection: story.childViewConnection,

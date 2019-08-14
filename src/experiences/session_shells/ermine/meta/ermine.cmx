@@ -3,16 +3,18 @@
         "data": "data/ermine"
     },
     "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "pkgfs": [
             "packages"
         ],
-        "features": [ "isolated-persistent-storage" ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
-            "fuchsia.app.discover.Suggestions",
             "fuchsia.app.discover.SessionDiscoverContext",
+            "fuchsia.app.discover.Suggestions",
             "fuchsia.memory.Monitor",
             "fuchsia.modular.Clipboard",
             "fuchsia.modular.ComponentContext",

@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 import 'dart:collection';
+import 'dart:convert' show utf8;
 import 'package:flutter/foundation.dart';
+import 'package:fidl_fuchsia_app_discover/fidl_async.dart'
+    show StoryDiscoverContext, SurfaceData;
 
 import 'package:fidl_fuchsia_modular/fidl_async.dart'
     show
@@ -12,14 +15,14 @@ import 'package:fidl_fuchsia_modular/fidl_async.dart'
         StoryController,
         StoryState,
         StoryVisibilityState;
-import 'package:fidl_fuchsia_app_discover/fidl_async.dart'
-    show StoryDiscoverContext, SurfaceData;
+import 'package:fidl_fuchsia_mem/fidl_async.dart';
 import 'package:fuchsia_modular_flutter/session_shell.dart'
     show SessionShell, Story;
 import 'package:fuchsia_modular_flutter/story_shell.dart'
     show StoryShell, StoryShellTransitional, Surface;
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:story_shell_labs_lib/layout/deja_layout.dart';
+import 'package:zircon/zircon.dart';
 
 import 'cluster_model.dart';
 
@@ -166,6 +169,18 @@ class ErmineStory implements Story, StoryShell, StoryShellTransitional {
 
   @override
   StoryDiscoverContext discoverContext;
+
+  set title(String value) {
+    if (discoverContext != null && value.isNotEmpty) {
+      var data = utf8.encode(value);
+      discoverContext.setProperty(
+          'title',
+          Buffer(
+            vmo: SizedVmo.fromUint8List(data),
+            size: data.length,
+          ));
+    }
+  }
 }
 
 String _sanitizeSurfaceId(String surfaceId) => surfaceId.replaceAll('\\', '');
