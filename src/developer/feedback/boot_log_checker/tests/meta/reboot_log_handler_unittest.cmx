@@ -5,7 +5,7 @@
     "sandbox": {
         "features": [
             "deprecated-ambient-replace-as-executable",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.logger.LogSink",

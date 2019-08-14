@@ -34,7 +34,7 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
   fbl::unique_fd fd(open(filepath.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
     FX_LOGS(INFO) << "No reboot log found";
-    return fit::make_result_promise<void>(fit::error());
+    return fit::make_ok_promise();
   }
 
   if (!fsl::VmoFromFd(std::move(fd), &reboot_log_)) {

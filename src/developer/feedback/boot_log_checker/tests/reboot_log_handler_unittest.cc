@@ -76,7 +76,11 @@ class RebootLogHandlerTest : public gtest::TestLoopFixture {
   files::ScopedTempDir tmp_dir_;
 };
 
-TEST_F(RebootLogHandlerTest, Succeed) {
+TEST_F(RebootLogHandlerTest, Succeed_NoRebootLog) {
+  EXPECT_EQ(HandleRebootLog("non-existent/file").state(), kOk);
+}
+
+TEST_F(RebootLogHandlerTest, Succeed_RebootLogPresent) {
   const std::string reboot_log = "contents";
   WriteRebootLogContents(reboot_log);
   ResetNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
@@ -105,10 +109,6 @@ TEST_F(RebootLogHandlerTest, Pending_NetworkNotReachable) {
   stub_network_reachability_provider_->TriggerOnNetworkReachable(false);
   RunLoopUntilIdle();
   EXPECT_EQ(result.state(), kPending);
-}
-
-TEST_F(RebootLogHandlerTest, Fail_NoFile) {
-  EXPECT_EQ(HandleRebootLog("non-existent/file").state(), kError);
 }
 
 TEST_F(RebootLogHandlerTest, Fail_CallHandleTwice) {
