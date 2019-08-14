@@ -3,24 +3,26 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <atomic>
-#include <climits>
 #include <errno.h>
-#include <limits>
-#include <stdalign.h>
-#include <thread>
-#include <unistd.h>
-
-#include <fbl/algorithm.h>
-#include <lib/zx/vmo.h>
+#include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
+#include <stdalign.h>
 #include <sys/mman.h>
-#include <unittest/unittest.h>
+#include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
+
+#include <atomic>
+#include <climits>
+#include <limits>
+#include <thread>
+
+#include <fbl/algorithm.h>
+#include <unittest/unittest.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
@@ -667,6 +669,22 @@ bool alignment_vmar_allocate_test() {
 
   ASSERT_EQ(zx_vmar_destroy(vmar), ZX_OK);
   ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
+  END_TEST;
+}
+
+// Test to ensure we can map from a given VMO offset with MAP_RANGE enabled. This tests against
+// a bug found when creating MmioBuffer with a provided VMO and an offset.
+bool vmar_map_range_offset_test() {
+  BEGIN_TEST;
+  zx::vmar vmar;
+  zx::vmo vmo;
+  zx::process process;
+  ASSERT_EQ(zx::process::create(*zx::job::default_job(), kProcessName, sizeof(kProcessName) - 1, 0,
+                                &process, &vmar),
+            ZX_OK);
+  ASSERT_EQ(zx::vmo::create(PAGE_SIZE * 4, 0, &vmo), ZX_OK);
+  uintptr_t mapping;
+  EXPECT_EQ(vmar.map(0, vmo, 0x2000, 0x1000, ZX_VM_MAP_RANGE, &mapping), ZX_OK);
   END_TEST;
 }
 
@@ -2096,6 +2114,7 @@ RUN_TEST(map_over_destroyed_test);
 RUN_TEST(alignment_vmar_map_test);
 RUN_TEST(alignment_vmar_allocate_test);
 RUN_TEST(map_in_compact_test);
+RUN_TEST(vmar_map_range_offset_test);
 RUN_TEST(overmapping_test);
 RUN_TEST(invalid_args_test);
 RUN_TEST(unaligned_len_test);

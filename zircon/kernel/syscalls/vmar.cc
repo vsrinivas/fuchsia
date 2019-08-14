@@ -153,7 +153,7 @@ zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vm
   auto cleanup_handler = fbl::MakeAutoCall([vm_mapping]() { vm_mapping->Destroy(); });
 
   if (do_map_range) {
-    status = vm_mapping->MapRange(vmo_offset, len, false);
+    status = vm_mapping->MapRange(0, len, false);
     if (status != ZX_OK) {
       return status;
     }
