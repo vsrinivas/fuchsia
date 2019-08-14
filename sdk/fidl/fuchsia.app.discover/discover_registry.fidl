@@ -4,7 +4,11 @@
 
 library fuchsia.app.discover;
 
-using fuchsia.app;
+/// Maximum length of a story id.
+const uint32 STORY_ID_MAX_LENGTH = 1024;
+
+/// An ientifier for a story.
+using StoryId = string:STORY_ID_MAX_LENGTH;
 
 /// Interface between sessionmgr and discovermgr to route service connections
 /// requests that require module scoping.
@@ -16,7 +20,7 @@ protocol DiscoverRegistry {
 
 table ModuleIdentifier {
     /// The ID of the story to which the module belongs.
-    1: fuchsia.app.StoryId story_id;
+    1: string story_id;
 
     /// The named path leading up to this module instance. This path is a unique
     /// identifier of the module in the story.

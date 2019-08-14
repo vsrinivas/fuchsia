@@ -39,7 +39,6 @@ source_set("sessionmgr_lib") {
   ]
 
   public_deps = [
-    ":new_modular_apis",  # Compile the new APIs to validate them while they are under review.
     "//garnet/public/lib/component/cpp",
     "//peridot/bin/sessionmgr/agent_runner",
     "//peridot/lib/rapidjson",
@@ -98,16 +97,6 @@ source_set("sessionmgr_lib") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/ledger/bin/fidl",
     "//src/lib/fxl",
-  ]
-}
-
-# Collection of all new modular APIs while they undergo review.
-group("new_modular_apis") {
-  deps = [
-    "//sdk/fidl/fuchsia.app",
-    "//sdk/fidl/fuchsia.app.agent",
-    "//sdk/fidl/fuchsia.app.sessioncontrol",
-    "//sdk/fidl/fuchsia.app.sessionshell",
   ]
 }
 
