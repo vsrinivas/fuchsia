@@ -331,6 +331,16 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline, zx_port_packet_t* 
   canary_.Assert();
 
   while (true) {
+
+    // Wait until one of the queues has a packet.
+    {
+      ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PORT);
+      zx_status_t st = sema_.Wait(deadline);
+      if (st != ZX_OK)
+        return st;
+    }
+
+    // Interrupt packets are higher priority so service the interrupt packet queue first.
     if (options_ == ZX_PORT_BIND_TO_INTERRUPT) {
       Guard<SpinLock, IrqSave> guard{&spinlock_};
       PortInterruptPacket* port_interrupt_packet = interrupt_packets_.pop_front();
@@ -343,6 +353,8 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline, zx_port_packet_t* 
         return ZX_OK;
       }
     }
+
+    // No interrupt packets queued. Check the regular packets.
     {
       Guard<fbl::Mutex> guard{get_lock()};
       PortPacket* port_packet = packets_.pop_front();
@@ -369,12 +381,8 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline, zx_port_packet_t* 
       }
     }
 
-    {
-      ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PORT);
-      zx_status_t st = sema_.Wait(deadline);
-      if (st != ZX_OK)
-        return st;
-    }
+    // Both queues were empty. The packet must have been removed before we were able to
+    // dequeue. Loop back and wait again.
   }
 }
 
