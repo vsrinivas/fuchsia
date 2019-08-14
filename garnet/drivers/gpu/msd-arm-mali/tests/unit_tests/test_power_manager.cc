@@ -49,13 +49,17 @@ class TestPowerManager {
 
     for (int i = 0; i < 100; i++) {
       power_manager.UpdateGpuActive(true);
-      usleep(1000);
+      usleep(5000);
       power_manager.UpdateGpuActive(false);
-      usleep(1000);
+      usleep(5000);
     }
 
     auto time_periods = power_manager.time_periods();
-    EXPECT_GE(3u, time_periods.size());
+    // There can be 4 time periods containing the last 100ms - for example 45
+    // ms (oldest), 45 ms, 45 ms, 5 ms (most recent). More than that and either
+    // one ends more than 100ms ago or one could be combined with the one
+    // previous to make a chunk that's < 50 ms.
+    EXPECT_GE(4u, time_periods.size());
   }
 };
 
