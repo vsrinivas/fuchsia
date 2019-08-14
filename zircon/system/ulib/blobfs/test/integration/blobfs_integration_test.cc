@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include <array>
 #include <atomic>
 #include <thread>
 #include <vector>
@@ -137,31 +138,62 @@ TEST_F(BlobfsTest, UnallocatedBlob) { RunUnallocatedBlobTest(); }
 
 TEST_F(BlobfsTestWithFvm, UnallocatedBlob) { RunUnallocatedBlobTest(); }
 
-void RunNullBlobTest() {
+void RunNullBlobCreateUnlinkTest() {
   std::unique_ptr<fs_test_utils::BlobInfo> info;
   ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 0, &info));
 
   fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(ftruncate(fd.get(), 0), 0);
-  char buf[1];
+  std::array<char, 1> buf;
   ASSERT_EQ(read(fd.get(), &buf[0], 1), 0, "Null Blob should reach EOF immediately");
   ASSERT_EQ(close(fd.release()), 0);
 
   fd.reset(open(info->path, O_CREAT | O_EXCL | O_RDWR));
-  ASSERT_FALSE(fd, "Null Blob should already exist");
+  EXPECT_FALSE(fd, "Null Blob should already exist");
   fd.reset(open(info->path, O_CREAT | O_RDWR));
-  ASSERT_FALSE(fd, "Null Blob should not be openable as writable");
+  EXPECT_FALSE(fd, "Null Blob should not be openable as writable");
 
   fd.reset(open(info->path, O_RDONLY));
-  ASSERT_TRUE(fd);
+  ASSERT_TRUE(fd, "Null blob should be re-openable");
+
+  DIR* dir = opendir(kMountPath);
+  ASSERT_NOT_NULL(dir);
+  auto cleanup = fbl::MakeAutoCall([dir]() { closedir(dir); });
+  struct dirent* entry = readdir(dir);
+  ASSERT_NOT_NULL(entry);
+  const char* kEmptyBlobName = "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b";
+  EXPECT_STR_EQ(kEmptyBlobName, entry->d_name, "Unexpected name from readdir");
+  EXPECT_NULL(readdir(dir));
+
   ASSERT_EQ(close(fd.release()), 0);
   ASSERT_EQ(unlink(info->path), 0, "Null Blob should be unlinkable");
 }
 
-TEST_F(BlobfsTest, NullBlob) { RunNullBlobTest(); }
+TEST_F(BlobfsTest, NullBlobCreateUnlink) { RunNullBlobCreateUnlinkTest(); }
 
-TEST_F(BlobfsTestWithFvm, NullBlob) { RunNullBlobTest(); }
+TEST_F(BlobfsTestWithFvm, NullBlobCreateUnlink) { RunNullBlobCreateUnlinkTest(); }
+
+void RunNullBlobCreateRemountTest(BlobfsTest* test) {
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 0, &info));
+
+  // Create the null blob.
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(ftruncate(fd.get(), 0), 0);
+  ASSERT_EQ(close(fd.release()), 0);
+
+  ASSERT_NO_FAILURES(test->Remount());
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd, "Null blob lost after reboot");
+  ASSERT_EQ(close(fd.release()), 0);
+  ASSERT_EQ(unlink(info->path), 0, "Null Blob should be unlinkable");
+}
+
+TEST_F(BlobfsTest, NullBlobCreateRemount) { RunNullBlobCreateRemountTest(this); }
+
+TEST_F(BlobfsTestWithFvm, NullBlobCreateRemount) { RunNullBlobCreateRemountTest(this); }
 
 void RunExclusiveCreateTest() {
   std::unique_ptr<fs_test_utils::BlobInfo> info;

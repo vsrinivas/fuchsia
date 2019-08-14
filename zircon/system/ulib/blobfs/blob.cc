@@ -456,6 +456,7 @@ zx_status_t Blob::WriteMetadata() {
   } else {
     // Special case: Empty node.
     ZX_DEBUG_ASSERT(write_info_->node_indices.size() == 1);
+    *(blobfs_->GetNode(map_index_)) = inode_;
     const ReservedNode& node = write_info_->node_indices[0];
     blobfs_->GetAllocator()->MarkInodeAllocated(node);
     blobfs_->PersistNode(wb.get(), node.index());

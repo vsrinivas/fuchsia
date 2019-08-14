@@ -2,7 +2,7 @@
 
 *** note
 __WARNING:__ This test is deprecated (as in do not add new tests here). Please
-Add new tests to ulib/blobfs/integration instead.
+Add new tests to ulib/blobfs/test/integration instead.
 
 In any case, please continue running this test to verify proper functionality.
 
