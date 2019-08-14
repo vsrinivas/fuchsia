@@ -8,6 +8,8 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/syslog/cpp/logger.h>
 
+#include <vector>
+
 #include "src/lib/files/file.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
@@ -50,7 +52,7 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
   FX_LOGS(INFO) << "Found reboot log:\n" << reboot_log_str;
 
   // We then wait for the network to be reachable before handing it off to the
-  // crash analyzer.
+  // crash reporter.
   connectivity_ = services_->Connect<fuchsia::net::Connectivity>();
   connectivity_.set_error_handler([this](zx_status_t status) {
     if (!network_reachable_.completer) {
@@ -72,34 +74,45 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
     network_reachable_.completer.complete_ok();
   };
 
-  // We hand the reboot log off to the crash analyzer.
+  // We hand the reboot log off to the crash reporter.
   return network_reachable_.consumer.promise_or(fit::error()).and_then([this] {
-    crash_analyzer_ = services_->Connect<fuchsia::crash::Analyzer>();
-    crash_analyzer_.set_error_handler([this](zx_status_t status) {
-      if (!crash_analysis_done_.completer) {
+    crash_reporter_ = services_->Connect<fuchsia::feedback::CrashReporter>();
+    crash_reporter_.set_error_handler([this](zx_status_t status) {
+      if (!crash_reporting_done_.completer) {
         return;
       }
 
       FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.crash.Analyzer";
-      crash_analysis_done_.completer.complete_error();
+      crash_reporting_done_.completer.complete_error();
     });
-    crash_analyzer_->OnKernelPanicCrashLog(
-        std::move(reboot_log_).ToTransport(),
-        [this](fuchsia::crash::Analyzer_OnKernelPanicCrashLog_Result result) {
-          if (!crash_analysis_done_.completer) {
+
+    fuchsia::feedback::GenericCrashReport generic_report;
+    generic_report.set_program_name("kernel");
+    fuchsia::feedback::Attachment attachment;
+    attachment.key = "kernel_panic_crash_log";
+    attachment.value = std::move(reboot_log_).ToTransport();
+    std::vector<fuchsia::feedback::Attachment> attachments;
+    attachments.push_back(std::move(attachment));
+    generic_report.set_attachments(std::move(attachments));
+    fuchsia::feedback::CrashReport report;
+    report.set_generic(std::move(generic_report));
+
+    crash_reporter_->File(
+        std::move(report), [this](fuchsia::feedback::CrashReporter_File_Result result) {
+          if (!crash_reporting_done_.completer) {
             return;
           }
 
           if (result.is_err()) {
             FX_PLOGS(ERROR, result.err())
-                << "Failed to analyze kernel panic extracted from reboot log";
-            crash_analysis_done_.completer.complete_error();
+                << "Failed to file a crash report for kernel panic extracted from reboot log";
+            crash_reporting_done_.completer.complete_error();
           } else {
-            crash_analysis_done_.completer.complete_ok();
+            crash_reporting_done_.completer.complete_ok();
           }
         });
 
-    return crash_analysis_done_.consumer.promise_or(fit::error());
+    return crash_reporting_done_.consumer.promise_or(fit::error());
   });
 }
 

@@ -4,7 +4,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_REBOOT_LOG_HANDLER_H_
 #define SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_REBOOT_LOG_HANDLER_H_
 
-#include <fuchsia/crash/cpp/fidl.h>
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
@@ -45,8 +45,8 @@ class RebootLogHandler {
 
   fuchsia::net::ConnectivityPtr connectivity_;
   fit::bridge<void> network_reachable_;
-  fuchsia::crash::AnalyzerPtr crash_analyzer_;
-  fit::bridge<void> crash_analysis_done_;
+  fuchsia::feedback::CrashReporterPtr crash_reporter_;
+  fit::bridge<void> crash_reporting_done_;
 };
 
 }  // namespace feedback

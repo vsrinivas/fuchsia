@@ -28,8 +28,8 @@ executable("reboot_log_handler_unittest") {
 
   sources = [
     "reboot_log_handler_unittest.cc",
-    "stub_crash_analyzer.cc",
-    "stub_crash_analyzer.h",
+    "stub_crash_reporter.cc",
+    "stub_crash_reporter.h",
     "stub_network_reachability_provider.h",
   ]
 
@@ -37,6 +37,7 @@ executable("reboot_log_handler_unittest") {
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/boot_log_checker:src",
     "//src/lib/files",
@@ -44,7 +45,6 @@ executable("reboot_log_handler_unittest") {
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/lib/zx",
   ]

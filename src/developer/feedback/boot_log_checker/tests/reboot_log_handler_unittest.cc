@@ -13,7 +13,7 @@
 
 #include <memory>
 
-#include "src/developer/feedback/boot_log_checker/tests/stub_crash_analyzer.h"
+#include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
 #include "src/developer/feedback/boot_log_checker/tests/stub_network_reachability_provider.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
@@ -42,10 +42,10 @@ class RebootLogHandlerTest : public gtest::TestLoopFixture {
     }
   }
 
-  void ResetCrashAnalyzer(std::unique_ptr<StubCrashAnalyzer> stub_crash_analyzer) {
-    stub_crash_analyzer_ = std::move(stub_crash_analyzer);
-    if (stub_crash_analyzer_) {
-      FXL_CHECK(service_directory_provider_.AddService(stub_crash_analyzer_->GetHandler()) ==
+  void ResetCrashReporter(std::unique_ptr<StubCrashReporter> stub_crash_reporter) {
+    stub_crash_reporter_ = std::move(stub_crash_reporter);
+    if (stub_crash_reporter_) {
+      FXL_CHECK(service_directory_provider_.AddService(stub_crash_reporter_->GetHandler()) ==
                 ZX_OK);
     }
   }
@@ -69,7 +69,7 @@ class RebootLogHandlerTest : public gtest::TestLoopFixture {
  protected:
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::unique_ptr<StubConnectivity> stub_network_reachability_provider_;
-  std::unique_ptr<StubCrashAnalyzer> stub_crash_analyzer_;
+  std::unique_ptr<StubCrashReporter> stub_crash_reporter_;
   std::string reboot_log_path_;
 
  private:
@@ -84,7 +84,7 @@ TEST_F(RebootLogHandlerTest, Succeed_RebootLogPresent) {
   const std::string reboot_log = "contents";
   WriteRebootLogContents(reboot_log);
   ResetNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
-  ResetCrashAnalyzer(std::make_unique<StubCrashAnalyzer>());
+  ResetCrashReporter(std::make_unique<StubCrashReporter>());
 
   fit::result<void> result = HandleRebootLog(reboot_log_path_);
   EXPECT_EQ(result.state(), kPending);
@@ -92,7 +92,7 @@ TEST_F(RebootLogHandlerTest, Succeed_RebootLogPresent) {
   stub_network_reachability_provider_->TriggerOnNetworkReachable(true);
   RunLoopUntilIdle();
   EXPECT_EQ(result.state(), kOk);
-  EXPECT_STREQ(stub_crash_analyzer_->kernel_panic_crash_log().c_str(), reboot_log.c_str());
+  EXPECT_STREQ(stub_crash_reporter_->kernel_panic_crash_log().c_str(), reboot_log.c_str());
 }
 
 TEST_F(RebootLogHandlerTest, Pending_NetworkNotReachable) {
@@ -137,7 +137,7 @@ TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderClosesConnection) {
   EXPECT_EQ(result.state(), kError);
 }
 
-TEST_F(RebootLogHandlerTest, Fail_CrashAnalyzerNotAvailable) {
+TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
   WriteRebootLogContents();
   ResetNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
 
@@ -149,10 +149,10 @@ TEST_F(RebootLogHandlerTest, Fail_CrashAnalyzerNotAvailable) {
   EXPECT_EQ(result.state(), kError);
 }
 
-TEST_F(RebootLogHandlerTest, Fail_CrashAnalyzerClosesConnection) {
+TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
   WriteRebootLogContents();
   ResetNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
-  ResetCrashAnalyzer(std::make_unique<StubCrashAnalyzerClosesConnection>());
+  ResetCrashReporter(std::make_unique<StubCrashReporterClosesConnection>());
 
   fit::result<void> result = HandleRebootLog(reboot_log_path_);
   EXPECT_EQ(result.state(), kPending);
@@ -162,10 +162,10 @@ TEST_F(RebootLogHandlerTest, Fail_CrashAnalyzerClosesConnection) {
   EXPECT_EQ(result.state(), kError);
 }
 
-TEST_F(RebootLogHandlerTest, Fail_CrashAnalyzerFailsToAnalyze) {
+TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
   WriteRebootLogContents();
   ResetNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
-  ResetCrashAnalyzer(std::make_unique<StubCrashAnalyzerAlwaysReturnsError>());
+  ResetCrashReporter(std::make_unique<StubCrashReporterAlwaysReturnsError>());
 
   fit::result<void> result = HandleRebootLog(reboot_log_path_);
   EXPECT_EQ(result.state(), kPending);
