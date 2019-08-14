@@ -17,6 +17,7 @@ test("fidl-async-test") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl:fidl-llcpp",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zxtest",
   ]
 }

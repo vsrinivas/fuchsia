@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/sync/completion.h>
 
 #include <zxtest/zxtest.h>
 
@@ -13,23 +14,22 @@ namespace {
 
 class Server : public ::llcpp::fidl::test::simple::Simple::Interface {
  public:
-  explicit Server(std::atomic<size_t>* destroyed) : destroyed_(destroyed) {}
+  explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
   Server(Server&& other) = delete;
   Server(const Server& other) = delete;
   Server& operator=(Server&& other) = delete;
   Server& operator=(const Server& other) = delete;
 
-  ~Server() override { destroyed_->fetch_add(1); }
+  ~Server() override { sync_completion_signal(destroyed_); }
 
   void Close(CloseCompleter::Sync completer) override { completer.Close(ZX_OK); }
 
  private:
-  std::atomic<size_t>* destroyed_;
+  sync_completion_t* destroyed_;
 };
 
 TEST(BindTestCase, UniquePtrDestroyOnClientClose) {
-  return; // TODO(34858): Disabled until flake is fixed.
-  std::atomic<size_t> destroyed = 0;
+  sync_completion_t destroyed;
   auto server = std::make_unique<Server>(&destroyed);
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
@@ -38,15 +38,15 @@ TEST(BindTestCase, UniquePtrDestroyOnClientClose) {
 
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(remote), std::move(server)));
   loop.RunUntilIdle();
-  ASSERT_EQ(destroyed.load(), 0);
+  ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
   local.reset();
   loop.RunUntilIdle();
-  ASSERT_EQ(destroyed.load(), 1);
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 }
 
 TEST(BindTestCase, UniquePtrDestroyOnServerClose) {
-  std::atomic<size_t> destroyed = 0;
+  sync_completion_t destroyed;
   auto server = std::make_unique<Server>(&destroyed);
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   // Launch a thread so we can make a blocking client call
@@ -56,44 +56,37 @@ TEST(BindTestCase, UniquePtrDestroyOnServerClose) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(remote), std::move(server)));
-  ASSERT_EQ(destroyed.load(), 0);
+  ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
   auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
   ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
   // Make sure the other end closed
   ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));
-  ASSERT_EQ(destroyed.load(), 1);
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 }
 
 TEST(BindTestCase, CallbackDestroyOnClientClose) {
-  std::atomic<size_t> destroyed = 0;
-  std::atomic<size_t> callback_called = 0;
+  sync_completion_t destroyed;
   auto server = std::make_unique<Server>(&destroyed);
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  fidl::OnChannelClosedFn<Server> cb = [&callback_called](Server* server) {
-    callback_called.fetch_add(1);
-    delete server;
-  };
+  fidl::OnChannelClosedFn<Server> cb = [](Server* server) { delete server; };
 
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(remote), server.release(), std::move(cb)));
   loop.RunUntilIdle();
-  ASSERT_EQ(callback_called.load(), 0);
-  ASSERT_EQ(destroyed.load(), 0);
+  ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
   local.reset();
   loop.RunUntilIdle();
-  ASSERT_EQ(callback_called.load(), 1);
-  ASSERT_EQ(destroyed.load(), 1);
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 }
 
 TEST(BindTestCase, CallbackDestroyOnServerClose) {
-  std::atomic<size_t> destroyed = 0;
+  sync_completion_t destroyed;
   auto server = std::make_unique<Server>(&destroyed);
-  std::atomic<size_t> callback_called = 0;
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   // Launch a thread so we can make a blocking client call
   ASSERT_OK(loop.StartThread());
@@ -101,21 +94,17 @@ TEST(BindTestCase, CallbackDestroyOnServerClose) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  fidl::OnChannelClosedFn<Server> cb = [&callback_called](Server* server) {
-    callback_called.fetch_add(1);
-    delete server;
-  };
+  fidl::OnChannelClosedFn<Server> cb = [](Server* server) { delete server; };
 
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(remote), server.release(), std::move(cb)));
-  ASSERT_EQ(destroyed.load(), 0);
-  ASSERT_EQ(callback_called.load(), 0);
+  ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
   auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
   ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
+
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
   // Make sure the other end closed
   ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));
-  ASSERT_EQ(destroyed.load(), 1);
-  ASSERT_EQ(callback_called.load(), 1);
 }
 
 }  // namespace
