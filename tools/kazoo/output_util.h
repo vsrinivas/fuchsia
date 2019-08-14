@@ -5,6 +5,7 @@
 #ifndef TOOLS_KAZOO_OUTPUT_UTIL_H_
 #define TOOLS_KAZOO_OUTPUT_UTIL_H_
 
+#include "src/lib/fxl/strings/ascii.h"
 #include "tools/kazoo/syscall_library.h"
 #include "tools/kazoo/writer.h"
 
@@ -22,5 +23,11 @@ bool CopyrightHeaderWithHashComments(Writer* writer);
 // so on.
 void MapRequestResponseToCAbi(const Struct& request, const Struct& response, Type* return_type,
                               std::vector<StructMember>* arguments);
+
+// Converts |input| to lowercase, assuming it's entirely ASCII.
+std::string ToLowerAscii(const std::string& input);
+
+// Maps a name from typical FidlCamelStyle to zircon_snake_style.
+std::string CamelToSnake(const std::string& camel_fidl);
 
 #endif  // TOOLS_KAZOO_OUTPUT_UTIL_H_

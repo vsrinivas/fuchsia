@@ -7,17 +7,10 @@
 #include <zircon/compiler.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/ascii.h"
-#include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/trim.h"
+#include "tools/kazoo/output_util.h"
 
 namespace {
-
-std::string ToLowerAscii(const std::string& input) {
-  std::string ret = input;
-  std::transform(ret.begin(), ret.end(), ret.begin(), fxl::ToLowerASCII);
-  return ret;
-}
 
 bool ValidateTransport(const rapidjson::Value& interface) {
   if (!interface.HasMember("maybe_attributes")) {
@@ -62,53 +55,6 @@ std::string GetDocAttribute(const rapidjson::Value& method) {
 }
 
 }  // namespace
-
-std::string CamelToSnake(const std::string& camel_fidl) {
-  auto is_transition = [](char prev, char cur, char peek) {
-    enum { Upper, Lower, Other };
-    auto categorize = [](char c) {
-      if (c == 0)
-        return Other;
-      if (c >= 'a' && c <= 'z')
-        return Lower;
-      if (c >= 'A' && c <= 'Z')
-        return Upper;
-      if ((c >= '0' && c <= '9') || c == '_')
-        return Other;
-      FXL_DCHECK(false);
-      return Other;
-    };
-    auto prev_type = categorize(prev);
-    auto cur_type = categorize(cur);
-    auto peek_type = categorize(peek);
-
-    bool lower_to_upper = prev_type != Upper && cur_type == Upper;
-    bool multiple_caps_to_lower =
-        peek && (prev_type == Upper && cur_type == Upper && peek_type == Lower);
-
-    return lower_to_upper || multiple_caps_to_lower;
-  };
-  std::vector<std::string> parts;
-  char prev = 0;
-  std::string current_word;
-  for (size_t i = 0; i < camel_fidl.size(); ++i) {
-    char cur = camel_fidl[i];
-    char peek = i + 1 < camel_fidl.size() ? camel_fidl[i + 1] : 0;
-    if (current_word.size() > 1 && is_transition(prev, cur, peek)) {
-      parts.push_back(ToLowerAscii(current_word));
-      current_word = cur;
-    } else {
-      current_word += cur;
-    }
-    prev = cur;
-  }
-
-  if (!current_word.empty()) {
-    parts.push_back(ToLowerAscii(current_word));
-  }
-
-  return fxl::JoinStrings(parts, "_");
-}
 
 Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type) {
   if (!type.HasMember("kind")) {

@@ -26,6 +26,7 @@ out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
 
 out/default/host_x64/exe.unstripped/kazoo \
   --arm-asm=/tmp/arm-asm.S \
+  --category=/tmp/syscall-category.inc \
   --kernel-branches=/tmp/kernel-branches.S \
   --ktrace=/tmp/ktrace.inc \
   --syscall-numbers=/tmp/syscall-numbers.h \
@@ -35,6 +36,10 @@ out/default/host_x64/exe.unstripped/kazoo \
 compare "arm-asm" \
         "out/default.zircon/user-arm64-clang/gen/system/ulib/zircon/zircon/syscalls-arm64.S" \
         "/tmp/arm-asm.S"
+
+compare "category" \
+        "out/default.zircon/kernel-x64-clang/gen/kernel/lib/userabi/zircon/syscall-category.inc" \
+        "/tmp/syscall-category.inc"
 
 compare "kernel-branches" \
         "out/default.zircon/kernel-x64-clang/gen/kernel/syscalls/zircon/syscall-kernel-branches.S" \

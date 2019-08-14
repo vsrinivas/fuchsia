@@ -39,9 +39,6 @@ using Type = std::variant<std::monostate, TypeBool, TypeChar, TypeUint8, TypeUin
 
 Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type);
 
-// Maps a name from typical FidlCamelStyle to zircon_snake_style.
-std::string CamelToSnake(const std::string& camel_fidl);
-
 class TypeHandle {
  public:
   explicit TypeHandle(const std::string& handle_type) : handle_type_(handle_type) {}

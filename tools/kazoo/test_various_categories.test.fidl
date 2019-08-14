@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zz;
+
+[Transport="Syscall"]
+protocol Categories {
+    [Noreturn]
+    NoResponseNoReturn(int32 input);
+
+    [Blocking]
+    Looper(int32 a) -> (int32 b);
+
+    [Vdsocall]
+    Vdsoer(int32 a) -> (int32 b);
+
+    [Const, Vdsocall]
+    TwoCategories(int32 a) -> (int32 b);
+};
+

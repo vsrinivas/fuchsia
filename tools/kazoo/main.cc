@@ -15,6 +15,7 @@ namespace {
 
 struct CommandLineOptions {
   std::optional<std::string> arm_asm;
+  std::optional<std::string> category;
   std::optional<std::string> kernel_branches;
   std::optional<std::string> ktrace;
   std::optional<std::string> syscall_numbers;
@@ -32,6 +33,9 @@ Options:
 
 constexpr const char kArmAsmHelp[] = R"(  --arm-asm=FILENAME
     The output name for the .S file ARM syscalls.)";
+
+constexpr const char kCategoryHelp[] = R"(  --category=FILENAME
+    The output name for the .inc categories file.)";
 
 constexpr const char kKernelBranchesHelp[] = R"(  --kernel-branches=FILENAME
     The output name for the .S file used for kernel syscall dispatch.)";
@@ -53,6 +57,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
                                  std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
   parser.AddSwitch("arm-asm", 0, kArmAsmHelp, &CommandLineOptions::arm_asm);
+  parser.AddSwitch("category", 0, kCategoryHelp, &CommandLineOptions::category);
   parser.AddSwitch("kernel-branches", 0, kKernelBranchesHelp, &CommandLineOptions::kernel_branches);
   parser.AddSwitch("ktrace", 0, kKtraceHelp, &CommandLineOptions::ktrace);
   parser.AddSwitch("syscall-numbers", 0, kSyscallNumbersHelp, &CommandLineOptions::syscall_numbers);
@@ -101,6 +106,7 @@ int main(int argc, const char* argv[]) {
     bool (*output)(const SyscallLibrary&, Writer*);
   } backends[] = {
       {&options.arm_asm, AsmOutput},
+      {&options.category, CategoryOutput},
       {&options.kernel_branches, KernelBranchesOutput},
       {&options.ktrace, KtraceOutput},
       {&options.syscall_numbers, SyscallNumbersOutput},

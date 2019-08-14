@@ -24,6 +24,7 @@ if (current_toolchain == host_toolchain) {
   static_library("lib") {
     sources = [
       "asm_output.cc",
+      "category_output.cc",
       "kernel_branches_output.cc",
       "ktrace_output.cc",
       "output_util.cc",
@@ -58,6 +59,7 @@ if (current_toolchain == host_toolchain) {
 
     sources = [
       "asm_output_test.cc",
+      "category_output_test.cc",
       "kernel_branches_output_test.cc",
       "ktrace_output_test.cc",
       "output_util_test.cc",
@@ -86,6 +88,7 @@ if (current_toolchain == host_toolchain) {
       "test_one_protocol_one_method.test.fidl",
       "test_one_protocol_two_methods.test.fidl",
       "test_one_protocol_two_methods_with_internal.test.fidl",
+      "test_various_categories.test.fidl",
     ]
   }
 

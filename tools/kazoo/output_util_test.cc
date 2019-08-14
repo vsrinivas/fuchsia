@@ -38,4 +38,27 @@ TEST(OutputUtil, HashCopyrightHeader) {
   EXPECT_EQ(writer.data().back(), '\n');
 }
 
+TEST(OutputUtil, CamelToSnake) {
+  EXPECT_EQ(CamelToSnake(""), "");
+  EXPECT_EQ(CamelToSnake("A"), "a");
+  EXPECT_EQ(CamelToSnake("AA"), "aa");
+  EXPECT_EQ(CamelToSnake("Aa"), "aa");
+  EXPECT_EQ(CamelToSnake("Stuff"), "stuff");
+  EXPECT_EQ(CamelToSnake("SomeThing"), "some_thing");
+  EXPECT_EQ(CamelToSnake("SomeOtherThing"), "some_other_thing");
+  EXPECT_EQ(CamelToSnake("someThing"), "some_thing");
+  EXPECT_EQ(CamelToSnake("ThisIsASCII"), "this_is_ascii");
+  EXPECT_EQ(CamelToSnake("getHTTPResponseCode"), "get_http_response_code");
+  EXPECT_EQ(CamelToSnake("get2HTTPResponseCode"), "get2_http_response_code");
+  EXPECT_EQ(CamelToSnake("HTTPResponseCode"), "http_response_code");
+  EXPECT_EQ(CamelToSnake("HTTPResponseCodeNEW"), "http_response_code_new");
+  EXPECT_EQ(CamelToSnake("DoubleIEEE754"), "double_ieee754");
+  EXPECT_EQ(CamelToSnake("MemVTable"), "mem_vtable");
+  EXPECT_EQ(CamelToSnake("SList"), "slist");
+  EXPECT_EQ(CamelToSnake("ThisIsASCII"), "this_is_ascii");
+  EXPECT_EQ(CamelToSnake("ThisIsASCIIText"), "this_is_ascii_text");
+  EXPECT_EQ(CamelToSnake("WaCkYsTuFf"), "wa_ck_ys_tu_ff");
+  EXPECT_EQ(CamelToSnake("WAcK"), "wac_k");
+}
+
 }  // namespace
