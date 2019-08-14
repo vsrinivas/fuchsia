@@ -28,6 +28,7 @@ class Server : public ::llcpp::fidl::test::simple::Simple::Interface {
 };
 
 TEST(BindTestCase, UniquePtrDestroyOnClientClose) {
+  return; // TODO(34858): Disabled until flake is fixed.
   std::atomic<size_t> destroyed = 0;
   auto server = std::make_unique<Server>(&destroyed);
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
