@@ -120,6 +120,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   // |fuchsia::modular::StoryProvider|.
   void GetStoryInfo(std::string story_id, GetStoryInfoCallback callback) override;
 
+  // |fuchsia::modular::StoryProvider|.
+  void GetStoryInfo2(std::string story_id, GetStoryInfo2Callback callback) override;
+
   // Called by StoryControllerImpl. Sends request to
   // fuchsia::modular::FocusProvider
   void RequestStoryFocus(fidl::StringPtr story_id);
@@ -175,6 +178,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
       const std::string& story_id,
       fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request);
 
+  // Converts a StoryInfo to StoryInfo2.
+  static fuchsia::modular::StoryInfo2 StoryInfoToStoryInfo2(
+      const fuchsia::modular::StoryInfo& story_info);
+
  private:
   // |fuchsia::modular::StoryProvider|
   void GetController(std::string story_id,
@@ -182,10 +189,17 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   // |fuchsia::modular::StoryProvider|
   void GetStories(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
-                  PreviousStoriesCallback callback) override;
+                  GetStoriesCallback callback) override;
+
+  // |fuchsia::modular::StoryProvider|
+  void GetStories2(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
+                   GetStories2Callback callback) override;
 
   // |fuchsia::modular::StoryProvider|
   void PreviousStories(PreviousStoriesCallback callback) override;
+
+  // |fuchsia::modular::StoryProvider|
+  void PreviousStories2(PreviousStories2Callback callback) override;
 
   // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) override;

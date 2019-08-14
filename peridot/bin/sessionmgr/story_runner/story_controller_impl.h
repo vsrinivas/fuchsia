@@ -192,6 +192,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // |StoryController|
   void Stop(StopCallback done) override;
   void GetInfo(GetInfoCallback callback) override;
+  void GetInfo2(GetInfo2Callback callback) override;
   void RequestStart() override;
   void TakeAndLoadSnapshot(fuchsia::ui::views::ViewToken view_token,
                            TakeAndLoadSnapshotCallback done) override;

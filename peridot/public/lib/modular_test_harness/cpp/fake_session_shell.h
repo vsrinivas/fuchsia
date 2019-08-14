@@ -89,7 +89,13 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
       fit::function<void(fuchsia::modular::StoryInfo, fuchsia::modular::StoryState,
                          fuchsia::modular::StoryVisibilityState)>;
 
+  using OnChange2Function =
+      fit::function<void(fuchsia::modular::StoryInfo2, fuchsia::modular::StoryState,
+                         fuchsia::modular::StoryVisibilityState)>;
+
   void set_on_change(OnChangeFunction on_change) { on_change_ = std::move(on_change); }
+
+  void set_on_change_2(OnChange2Function on_change_2) { on_change_2_ = std::move(on_change_2); }
 
   // Start watching for story state changes in the given story_provider. Takes
   // a lambda that allows the caller to do something with the StoryInfo data
@@ -112,6 +118,12 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
   }
 
   // |fuchsia::modular::StoryProviderWatcher|
+  void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
+                 fuchsia::modular::StoryVisibilityState story_visibility_state) override {
+    on_change_2_(std::move(story_info), story_state, story_visibility_state);
+  }
+
+  // |fuchsia::modular::StoryProviderWatcher|
   void OnDelete(std::string story_id) override {}
 
   // Optional user-provided lambda that will run with each OnChange(). Defaults
@@ -119,6 +131,13 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
   OnChangeFunction on_change_ =
       [](fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState story_state,
          fuchsia::modular::StoryVisibilityState story_visibility_state) {};
+
+  // Optional user-provided lambda that will run with each OnChange(). Defaults
+  // to doing nothing.
+  OnChange2Function on_change_2_ =
+      [](fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
+         fuchsia::modular::StoryVisibilityState story_visibility_state) {};
+
   fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
 };
 
