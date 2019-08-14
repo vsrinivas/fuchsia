@@ -7,7 +7,7 @@ use serde_derive::Serialize;
 use serde_json::Map;
 use serde_json::Value;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::io;
@@ -18,12 +18,15 @@ use std::path::PathBuf;
 pub struct TableOfContentsItem {
     pub name: String,
     pub link: String,
+    pub description: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FidlJson {
     pub version: String,
     pub name: String,
+    #[serde(default)]
+    pub maybe_attributes: Vec<Value>,
     pub library_dependencies: Vec<Value>,
     pub bits_declarations: Vec<Value>,
     pub const_declarations: Vec<Value>,
@@ -60,6 +63,5 @@ impl FidlJson {
 
 pub struct FidlJsonPackageData {
     pub declarations: Vec<String>,
-    pub package_set: HashSet<String>,
     pub fidl_json_map: HashMap<String, FidlJson>,
 }

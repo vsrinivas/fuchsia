@@ -1,9 +1,12 @@
 {{> header }}
 
 <table>
-<tr><th>Name</th></tr>
+<tr><th>Name</th><th>Description</th></tr>
 {{#each table_of_contents ~}}
-<tr><td><a href="{{link}}">{{name}}</a></td></tr>
+<tr>
+    <td><a href="{{link}}">{{name}}</a></td>
+    <td>{{description}}</td>
+</tr>
 {{/each ~}}
 </table>
 

@@ -127,10 +127,7 @@ fn pl(name: &str, base: &str) -> String {
     }
 
     if package_base == base {
-        format!(
-            "<a class='link' href='#{anchor}'>{anchor}</a>",
-            anchor = package_name
-        )
+        format!("<a class='link' href='#{anchor}'>{anchor}</a>", anchor = package_name)
     } else {
         format!("<a class='link' href='../{b}/index.html'>{b}</a>/<a class='link' href='../{b}/index.html#{anchor}'>{anchor}</a>", b = package_base, anchor = package_name)
     }

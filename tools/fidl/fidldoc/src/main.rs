@@ -103,9 +103,8 @@ fn run(opt: Opt) -> Result<(), Error> {
     // Read in fidldoc.config.json
     let fidl_config_file = match opt.config {
         Some(filepath) => filepath,
-        None => get_fidldoc_config_default_path().with_context(|e|
-            format!("Unable to retrieve default config file location: {}", e)
-        )?
+        None => get_fidldoc_config_default_path()
+            .with_context(|e| format!("Unable to retrieve default config file location: {}", e))?,
     };
     info!("Using config file from {}", fidl_config_file.display());
     let fidl_config = read_fidldoc_config(&fidl_config_file)
@@ -116,11 +115,11 @@ fn run(opt: Opt) -> Result<(), Error> {
     })?;
 
     // Parse input files to get declarations, package set and fidl json map
-    let FidlJsonPackageData { declarations, package_set, fidl_json_map } =
+    let FidlJsonPackageData { declarations, fidl_json_map } =
         process_fidl_json_files(input_files.to_vec())?;
 
     // The table of contents lists all packages in alphabetical order.
-    let table_of_contents = create_toc(package_set);
+    let table_of_contents = create_toc(&fidl_json_map);
 
     // Modifications to the fidldoc object
     let main_fidl_doc = json!({
@@ -136,19 +135,22 @@ fn run(opt: Opt) -> Result<(), Error> {
 
     let tag = &opt.tag;
     let output_path_string = &output_path.display();
-    fidl_json_map.par_iter().try_for_each(|(package, package_fidl_json)| {
-        render_fidl_interface(
-            package,
-            package_fidl_json,
-            &table_of_contents,
-            &fidl_config,
-            &tag,
-            &declarations,
-            &url_path,
-            &template_type,
-            &output_path,
-        )
-    }).expect("Unable to write FIDL reference files");
+    fidl_json_map
+        .par_iter()
+        .try_for_each(|(package, package_fidl_json)| {
+            render_fidl_interface(
+                package,
+                package_fidl_json,
+                &table_of_contents,
+                &fidl_config,
+                &tag,
+                &declarations,
+                &url_path,
+                &template_type,
+                &output_path,
+            )
+        })
+        .expect("Unable to write FIDL reference files");
 
     println!("Generated documentation at {}", &output_path_string);
     Ok(())
@@ -169,6 +171,7 @@ fn render_fidl_interface(
     let fidl_doc = json!({
         "version": package_fidl_json.version,
         "name": package_fidl_json.name,
+        "maybe_attributes": package_fidl_json.maybe_attributes,
         "library_dependencies": package_fidl_json.library_dependencies,
         "bits_declarations": package_fidl_json.bits_declarations,
         "const_declarations": package_fidl_json.const_declarations,
@@ -274,6 +277,7 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> Result<FidlJsonPackageD
                 .get(&package_name)
                 .cloned()
                 .ok_or(format_err!("Package {} not found in FidlJson map", package_name))?;
+            package_fidl_json.maybe_attributes.append(&mut fidl_json.maybe_attributes);
             package_fidl_json.bits_declarations.append(&mut fidl_json.bits_declarations);
             package_fidl_json.const_declarations.append(&mut fidl_json.const_declarations);
             package_fidl_json.enum_declarations.append(&mut fidl_json.enum_declarations);
@@ -287,20 +291,33 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> Result<FidlJsonPackageD
         }
     }
 
-    Ok(FidlJsonPackageData { declarations, package_set, fidl_json_map })
+    Ok(FidlJsonPackageData { declarations, fidl_json_map })
 }
 
-fn create_toc(package_set: HashSet<String>) -> Vec<TableOfContentsItem> {
+fn create_toc(fidl_json_map: &HashMap<String, FidlJson>) -> Vec<TableOfContentsItem> {
     // The table of contents lists all packages in alphabetical order.
-    let mut table_of_contents: Vec<_> = package_set
+    let mut table_of_contents: Vec<_> = fidl_json_map
         .par_iter()
-        .map(|package_name| TableOfContentsItem {
+        .map(|(package_name, fidl_json)| TableOfContentsItem {
             name: package_name.clone(),
             link: format!("{name}/index", name = package_name),
+            description: get_library_description(&fidl_json.maybe_attributes),
         })
         .collect();
     table_of_contents.sort_unstable_by(|a, b| a.name.cmp(&b.name));
     table_of_contents
+}
+
+fn get_library_description(maybe_attributes: &Vec<Value>) -> String {
+    for attribute in maybe_attributes {
+        if attribute["name"] == "Doc" {
+            return attribute["value"]
+                .as_str()
+                .expect("Unable to retrieve string value for library description")
+                .to_string();
+        }
+    }
+    "".to_string()
 }
 
 fn create_output_dir(path: &PathBuf) -> Result<(), Error> {
@@ -328,8 +345,9 @@ mod test {
     use std::io::Write;
     use tempfile::{tempdir, NamedTempFile};
 
-    use std::collections::HashSet;
     use std::path::PathBuf;
+
+    use serde_json::Map;
 
     #[test]
     fn select_template_test() {
@@ -344,25 +362,92 @@ mod test {
 
     #[test]
     fn create_toc_test() {
-        let mut package_set: HashSet<String> = HashSet::new();
-        package_set.insert("fuchsia.media".to_string());
-        package_set.insert("fuchsia.auth".to_string());
-        package_set.insert("fuchsia.camera.common".to_string());
+        let mut fidl_json_map: HashMap<String, FidlJson> = HashMap::new();
+        fidl_json_map.insert(
+            "fuchsia.media".to_string(),
+            FidlJson {
+                name: "fuchsia.media".to_string(),
+                version: "0.0.1".to_string(),
+                maybe_attributes: Vec::new(),
+                library_dependencies: Vec::new(),
+                bits_declarations: Vec::new(),
+                const_declarations: Vec::new(),
+                enum_declarations: Vec::new(),
+                interface_declarations: Vec::new(),
+                table_declarations: Vec::new(),
+                struct_declarations: Vec::new(),
+                union_declarations: Vec::new(),
+                xunion_declarations: Vec::new(),
+                declaration_order: Vec::new(),
+                declarations: Map::new(),
+            },
+        );
+        fidl_json_map.insert(
+            "fuchsia.auth".to_string(),
+            FidlJson {
+                name: "fuchsia.auth".to_string(),
+                version: "0.0.1".to_string(),
+                maybe_attributes: vec![json!({"name": "Doc", "value": "Fuchsia Auth API"})],
+                library_dependencies: Vec::new(),
+                bits_declarations: Vec::new(),
+                const_declarations: Vec::new(),
+                enum_declarations: Vec::new(),
+                interface_declarations: Vec::new(),
+                table_declarations: Vec::new(),
+                struct_declarations: Vec::new(),
+                union_declarations: Vec::new(),
+                xunion_declarations: Vec::new(),
+                declaration_order: Vec::new(),
+                declarations: Map::new(),
+            },
+        );
+        fidl_json_map.insert(
+            "fuchsia.camera.common".to_string(),
+            FidlJson {
+                name: "fuchsia.camera.common".to_string(),
+                version: "0.0.1".to_string(),
+                maybe_attributes: vec![json!({"some_key": "key", "some_value": "not_description"})],
+                library_dependencies: Vec::new(),
+                bits_declarations: Vec::new(),
+                const_declarations: Vec::new(),
+                enum_declarations: Vec::new(),
+                interface_declarations: Vec::new(),
+                table_declarations: Vec::new(),
+                struct_declarations: Vec::new(),
+                union_declarations: Vec::new(),
+                xunion_declarations: Vec::new(),
+                declaration_order: Vec::new(),
+                declarations: Map::new(),
+            },
+        );
 
-        let toc = create_toc(package_set);
+        let toc = create_toc(&fidl_json_map);
         assert_eq!(toc.len(), 3);
 
         let item0 = toc.get(0).unwrap();
         assert_eq!(item0.name, "fuchsia.auth".to_string());
         assert_eq!(item0.link, "fuchsia.auth/index".to_string());
+        assert_eq!(item0.description, "Fuchsia Auth API".to_string());
 
         let item1 = toc.get(1).unwrap();
         assert_eq!(item1.name, "fuchsia.camera.common".to_string());
         assert_eq!(item1.link, "fuchsia.camera.common/index".to_string());
+        assert_eq!(item1.description, "".to_string());
 
         let item2 = toc.get(2).unwrap();
         assert_eq!(item2.name, "fuchsia.media".to_string());
         assert_eq!(item2.link, "fuchsia.media/index".to_string());
+        assert_eq!(item2.description, "".to_string());
+    }
+
+    #[test]
+    fn get_library_description_test() {
+        let maybe_attributes = vec![
+            json!({"name": "Not Doc", "value": "Not the description"}),
+            json!({"name": "Doc", "value": "Fuchsia Auth API"}),
+        ];
+        let description = get_library_description(&maybe_attributes);
+        assert_eq!(description, "Fuchsia Auth API".to_string());
     }
 
     #[test]
@@ -386,10 +471,7 @@ mod test {
     #[test]
     fn get_fidldoc_config_default_path_test() {
         // Ensure that I get a valid filepath
-        let default = std::env::current_exe().unwrap()
-            .parent()
-            .unwrap()
-            .join(FIDLDOC_CONFIG_PATH);
+        let default = std::env::current_exe().unwrap().parent().unwrap().join(FIDLDOC_CONFIG_PATH);
         assert_eq!(default, get_fidldoc_config_default_path().unwrap());
     }
 

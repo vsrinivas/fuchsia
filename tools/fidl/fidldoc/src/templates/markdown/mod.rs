@@ -184,10 +184,12 @@ mod test {
         table_of_contents.push(crate::TableOfContentsItem {
             name: "fuchsia.auth".to_string(),
             link: "fuchsia.auth/index".to_string(),
+            description: "Fuchsia Auth API".to_string(),
         });
         table_of_contents.push(crate::TableOfContentsItem {
             name: "fuchsia.media".to_string(),
             link: "fuchsia.media/index".to_string(),
+            description: "Fuchsia Media API".to_string(),
         });
 
         let fidl_config = json!(null);
