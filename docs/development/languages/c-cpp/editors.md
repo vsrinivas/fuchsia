@@ -104,9 +104,8 @@ the source files. Building should still be done with `fx build`.
 
 ## CMake
 
-The [fuchsia.cmake](fuchsia.cmake) file located in this directory can
-be used with IDEs that support CMake to include most of the fuchsia
-source files.
+The `fuchsia.cmake` file can be used with IDEs that support CMake to include
+most of the fuchsia source files.
 
 To use, create a CMakeLists.txt file in the fuchsia root
 directory with the following contents. Then use it normally with your

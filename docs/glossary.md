@@ -229,7 +229,7 @@ implementation. Includes a runtime as implemented by
 -   [Components v1](#components-v1)
 
 [fuchsia.sys2]: /sdk/fidl/fuchsia.sys2/
-[cmc]: /garnet/bin/cmc
+[cmc]: /src/sys/cmc
 
 #### **Concurrent Device Driver**
 

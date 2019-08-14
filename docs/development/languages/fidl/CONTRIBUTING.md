@@ -399,7 +399,7 @@ fidl fmt --library my_library.fidl -i
 [rtl-c]: /zircon/system/ulib/fidl/
 [rtl-cpp]: /garnet/public/lib/fidl/llcpp/
 [rtl-dart]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fidl/
-[rtl-go]: /third_party/go/src/syscall/zx/fidl/
+[rtl-go]: https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/
 [rtl-rust]: /garnet/public/lib/fidl/rust/fidl/
 [rtl-js]: https://chromium.googlesource.com/chromium/src/+/master/build/fuchsia/fidlgen_js/runtime/
 [getting_started]: /docs/getting_started.md

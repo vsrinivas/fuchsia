@@ -1,7 +1,9 @@
 # Lint
 
 We use clang-tidy to lint C++ code and aim to keep the repository warning-clean.
-The linter is configured in the [.clang-tidy](/.clang-tidy) file.
+The linter is configured in the root level `.clang-tidy` file. Developers
+should not create additional configuration files at a lower level, as
+this will cause disagreements in the tree.
 
 ## How to lint
 
@@ -54,7 +56,7 @@ fx lint --help
 Any warning can be suppressed by adding a `// NOLINT(<check_name>)` or a
 `// NOLINTNEXTLINE(<check_name>)` comment to the offending line. It is also
 possible to disable the check entirely within the repository by editing the
-[.clang-tidy](/.clang-tidy) file.
+root level `.clang-tidy` file.
 
 ## Checks
 
