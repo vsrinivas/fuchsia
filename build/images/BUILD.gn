@@ -827,8 +827,9 @@ if (use_vbmeta) {
         "$root_out_dir/fuchsia.vbmeta",
       ]
       json = {
-        name = "zircon-a.vbmeta"
+        name = "zircon-a"
         type = "vbmeta"
+        archive = true
 
         # TODO (dmitryya@) netsvc does not support correct
         # flashing vbmeta images to a device.
@@ -1247,7 +1248,8 @@ if (target_cpu != "arm64" && !use_vboot) {
     copy("bootloader_image") {
       testonly = true
       sources = [
-        rebase_path("$bootloader_prebuilt$bootloader_hw_revision", root_build_dir),
+        rebase_path("$bootloader_prebuilt$bootloader_hw_revision",
+                    root_build_dir),
       ]
       outputs = [
         "$root_out_dir/bootloader.img",

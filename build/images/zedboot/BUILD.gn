@@ -285,8 +285,9 @@ if (use_vbmeta) {
         "$root_out_dir/zedboot.vbmeta",
       ]
       json = {
-        name = "zircon-r.vbmeta"
+        name = "zircon-r"
         type = "vbmeta"
+        archive = true
 
         # TODO (dmitryya@) netsvc does not support correct
         # flashing vbmeta images to a device.
