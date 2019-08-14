@@ -9,3 +9,10 @@ group("lib") {
     "qmi-protocol",
   ]
 }
+
+group("testing") {
+  testonly = true
+  deps = [
+    "tel-devmgr:tel_devmgr",
+  ]
+}
