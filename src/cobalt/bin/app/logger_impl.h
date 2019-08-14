@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_APP_LOGGER_IMPL_H_
-#define GARNET_BIN_COBALT_APP_LOGGER_IMPL_H_
+#ifndef SRC_COBALT_BIN_APP_LOGGER_IMPL_H_
+#define SRC_COBALT_BIN_APP_LOGGER_IMPL_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
 #include "src/cobalt/bin/app/timer_manager.h"
-#include "third_party/cobalt/logger/logger.h"
+#include "third_party/cobalt/src/logger/logger.h"
 
 namespace cobalt {
 
@@ -80,4 +80,4 @@ class LoggerImpl : public fuchsia::cobalt::Logger, public fuchsia::cobalt::Logge
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_APP_LOGGER_IMPL_H_
+#endif  // SRC_COBALT_BIN_APP_LOGGER_IMPL_H_

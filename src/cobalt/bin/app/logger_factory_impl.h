@@ -11,13 +11,13 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
-#include "third_party/cobalt/encoder/observation_store.h"
-#include "third_party/cobalt/encoder/shipping_manager.h"
-#include "third_party/cobalt/logger/encoder.h"
-#include "third_party/cobalt/logger/event_aggregator.h"
-#include "third_party/cobalt/logger/observation_writer.h"
-#include "third_party/cobalt/logger/project_context_factory.h"
-#include "third_party/cobalt/util/encrypted_message_util.h"
+#include "third_party/cobalt/src/lib/util/encrypted_message_util.h"
+#include "third_party/cobalt/src/logger/encoder.h"
+#include "third_party/cobalt/src/logger/event_aggregator.h"
+#include "third_party/cobalt/src/logger/observation_writer.h"
+#include "third_party/cobalt/src/logger/project_context_factory.h"
+#include "third_party/cobalt/src/observation_store/observation_store.h"
+#include "third_party/cobalt/src/uploader/shipping_manager.h"
 
 namespace cobalt {
 

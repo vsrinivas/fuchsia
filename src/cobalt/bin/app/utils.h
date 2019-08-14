@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_APP_UTILS_H_
-#define GARNET_BIN_COBALT_APP_UTILS_H_
-
-#include <stdlib.h>
-#include <string>
+#ifndef SRC_COBALT_BIN_APP_UTILS_H_
+#define SRC_COBALT_BIN_APP_UTILS_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <stdlib.h>
 
-#include "third_party/cobalt/encoder/shipping_manager.h"
-#include "third_party/cobalt/logger/status.h"
-#include "third_party/cobalt/util/status.h"
+#include <string>
+
+#include "third_party/cobalt/src/lib/util/status.h"
+#include "third_party/cobalt/src/logger/status.h"
+#include "third_party/cobalt/src/uploader/shipping_manager.h"
 
 namespace cobalt {
 
@@ -29,4 +29,4 @@ std::string ReadPublicKeyPem(const std::string& pem_file_path);
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_APP_UTILS_H_
+#endif  // SRC_COBALT_BIN_APP_UTILS_H_

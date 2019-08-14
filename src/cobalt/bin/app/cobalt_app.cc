@@ -5,14 +5,14 @@
 #include "src/cobalt/bin/app/cobalt_app.h"
 
 #include "lib/backoff/exponential_backoff.h"
-#include "logger/internal_metrics_config.cb.h"
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
-#include "third_party/cobalt/encoder/file_observation_store.h"
-#include "third_party/cobalt/encoder/memory_observation_store.h"
-#include "third_party/cobalt/encoder/upload_scheduler.h"
-#include "third_party/cobalt/util/posix_file_system.h"
+#include "third_party/cobalt/src/lib/util/posix_file_system.h"
+#include "third_party/cobalt/src/logger/internal_metrics_config.cb.h"
+#include "third_party/cobalt/src/observation_store/file_observation_store.h"
+#include "third_party/cobalt/src/observation_store/memory_observation_store.h"
+#include "third_party/cobalt/src/uploader/upload_scheduler.h"
 
 namespace cobalt {
 

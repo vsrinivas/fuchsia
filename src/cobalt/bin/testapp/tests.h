@@ -18,7 +18,7 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
-#include "third_party/cobalt/util/clock.h"
+#include "third_party/cobalt/src/lib/util/clock.h"
 
 namespace cobalt {
 namespace testapp {

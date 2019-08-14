@@ -8,10 +8,10 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
-#include "third_party/cobalt/encoder/observation_store.h"
-#include "third_party/cobalt/encoder/shipping_manager.h"
-#include "third_party/cobalt/logger/event_aggregator.h"
-#include "third_party/cobalt/util/consistent_proto_store.h"
+#include "third_party/cobalt/src/lib/util/consistent_proto_store.h"
+#include "third_party/cobalt/src/logger/event_aggregator.h"
+#include "third_party/cobalt/src/observation_store/observation_store.h"
+#include "third_party/cobalt/src/uploader/shipping_manager.h"
 
 namespace cobalt {
 

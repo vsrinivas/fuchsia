@@ -4,7 +4,7 @@
 
 #include "src/cobalt/bin/app/utils.h"
 
-#include "third_party/cobalt/util/pem_util.h"
+#include "third_party/cobalt/src/lib/util/pem_util.h"
 
 namespace cobalt {
 

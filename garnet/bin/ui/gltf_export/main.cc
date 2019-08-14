@@ -22,7 +22,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
-#include "third_party/cobalt/util/crypto_util/base64.h"
+#include "third_party/cobalt/src/lib/crypto_util/base64.h"
 
 using cobalt::crypto::Base64Encode;
 using namespace rapidjson;

@@ -78,7 +78,7 @@ source_set("project_profile") {
   ]
   deps = [
     "//garnet/public/lib/fsl",
-    "//third_party/cobalt/util/crypto_util",
+    "//third_party/cobalt/src/lib/crypto_util",
   ]
 }
 

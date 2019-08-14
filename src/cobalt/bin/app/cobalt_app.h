@@ -20,14 +20,14 @@
 #include "src/cobalt/bin/app/logger_factory_impl.h"
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
-#include "third_party/cobalt/config/project_configs.h"
-#include "third_party/cobalt/encoder/client_secret.h"
-#include "third_party/cobalt/encoder/file_observation_store.h"
-#include "third_party/cobalt/encoder/shipping_manager.h"
-#include "third_party/cobalt/logger/encoder.h"
-#include "third_party/cobalt/logger/event_aggregator.h"
-#include "third_party/cobalt/logger/observation_writer.h"
-#include "third_party/cobalt/util/consistent_proto_store.h"
+#include "third_party/cobalt/src/lib/util/consistent_proto_store.h"
+#include "third_party/cobalt/src/logger/encoder.h"
+#include "third_party/cobalt/src/logger/event_aggregator.h"
+#include "third_party/cobalt/src/logger/observation_writer.h"
+#include "third_party/cobalt/src/observation_store/file_observation_store.h"
+#include "third_party/cobalt/src/registry/project_configs.h"
+#include "third_party/cobalt/src/system_data/client_secret.h"
+#include "third_party/cobalt/src/uploader/shipping_manager.h"
 
 namespace cobalt {
 

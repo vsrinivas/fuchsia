@@ -8,8 +8,8 @@
 #include "src/cobalt/bin/testapp/test_constants.h"
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
-#include "third_party/cobalt/util/crypto_util/base64.h"
-#include "third_party/cobalt/util/datetime_util.h"
+#include "third_party/cobalt/src/lib/crypto_util/base64.h"
+#include "third_party/cobalt/src/lib/util/datetime_util.h"
 
 namespace cobalt {
 

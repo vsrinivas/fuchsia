@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 #include "src/lib/fxl/macros.h"
-#include "third_party/cobalt/encoder/system_data.h"
+#include "third_party/cobalt/src/system_data/system_data.h"
 
 namespace cobalt {
 

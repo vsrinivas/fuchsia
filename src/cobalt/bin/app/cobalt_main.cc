@@ -30,9 +30,9 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
-#include "third_party/cobalt/encoder/file_observation_store.h"
-#include "third_party/cobalt/encoder/memory_observation_store.h"
-#include "third_party/cobalt/util/posix_file_system.h"
+#include "third_party/cobalt/src/lib/util/posix_file_system.h"
+#include "third_party/cobalt/src/observation_store/file_observation_store.h"
+#include "third_party/cobalt/src/observation_store/memory_observation_store.h"
 
 // Command-line flags
 
