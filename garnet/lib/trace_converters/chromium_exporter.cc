@@ -5,10 +5,11 @@
 #include "garnet/lib/trace_converters/chromium_exporter.h"
 
 #include <inttypes.h>
-#include <trace-engine/types.h>
-#include <trace-reader/reader.h>
 
 #include <utility>
+
+#include <trace-engine/types.h>
+#include <trace-reader/reader.h>
 
 #include "garnet/lib/perfmon/writer.h"
 #include "rapidjson/writer.h"
@@ -312,48 +313,7 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
   if (event.arguments.size() > 0) {
     writer_.Key("args");
     writer_.StartObject();
-    for (const auto& arg : event.arguments) {
-      switch (arg.value().type()) {
-        case trace::ArgumentType::kBool:
-          writer_.Key(CleanString(arg.name()));
-          writer_.Bool(arg.value().GetBool());
-          break;
-        case trace::ArgumentType::kInt32:
-          writer_.Key(CleanString(arg.name()));
-          writer_.Int(arg.value().GetInt32());
-          break;
-        case trace::ArgumentType::kUint32:
-          writer_.Key(CleanString(arg.name()));
-          writer_.Uint(arg.value().GetUint32());
-          break;
-        case trace::ArgumentType::kInt64:
-          writer_.Key(CleanString(arg.name()));
-          writer_.Int64(arg.value().GetInt64());
-          break;
-        case trace::ArgumentType::kUint64:
-          writer_.Key(CleanString(arg.name()));
-          writer_.Uint64(arg.value().GetUint64());
-          break;
-        case trace::ArgumentType::kDouble:
-          writer_.Key(CleanString(arg.name()));
-          writer_.Double(arg.value().GetDouble());
-          break;
-        case trace::ArgumentType::kString:
-          writer_.Key(CleanString(arg.name()));
-          writer_.String(CleanString(arg.value().GetString()));
-          break;
-        case trace::ArgumentType::kPointer:
-          writer_.Key(CleanString(arg.name()));
-          writer_.String(fxl::StringPrintf("0x%" PRIx64, arg.value().GetPointer()).c_str());
-          break;
-        case trace::ArgumentType::kKoid:
-          writer_.Key(CleanString(arg.name()));
-          writer_.String(fxl::StringPrintf("#%" PRIu64, arg.value().GetKoid()).c_str());
-          break;
-        default:
-          break;
-      }
-    }
+    WriteArgs(event.arguments);
     writer_.EndObject();
   }
 
@@ -493,6 +453,51 @@ void ChromiumExporter::ExportContextSwitch(const trace::Record::ContextSwitch& c
   writer_.Uint(static_cast<uint32_t>(context_switch.incoming_thread_priority));
   writer_.EndObject();
   writer_.EndObject();
+}
+
+void ChromiumExporter::WriteArgs(const fbl::Vector<trace::Argument>& arguments) {
+  for (const auto& arg : arguments) {
+    switch (arg.value().type()) {
+      case trace::ArgumentType::kBool:
+        writer_.Key(CleanString(arg.name()));
+        writer_.Bool(arg.value().GetBool());
+        break;
+      case trace::ArgumentType::kInt32:
+        writer_.Key(CleanString(arg.name()));
+        writer_.Int(arg.value().GetInt32());
+        break;
+      case trace::ArgumentType::kUint32:
+        writer_.Key(CleanString(arg.name()));
+        writer_.Uint(arg.value().GetUint32());
+        break;
+      case trace::ArgumentType::kInt64:
+        writer_.Key(CleanString(arg.name()));
+        writer_.Int64(arg.value().GetInt64());
+        break;
+      case trace::ArgumentType::kUint64:
+        writer_.Key(CleanString(arg.name()));
+        writer_.Uint64(arg.value().GetUint64());
+        break;
+      case trace::ArgumentType::kDouble:
+        writer_.Key(CleanString(arg.name()));
+        writer_.Double(arg.value().GetDouble());
+        break;
+      case trace::ArgumentType::kString:
+        writer_.Key(CleanString(arg.name()));
+        writer_.String(CleanString(arg.value().GetString()));
+        break;
+      case trace::ArgumentType::kPointer:
+        writer_.Key(CleanString(arg.name()));
+        writer_.String(fxl::StringPrintf("0x%" PRIx64, arg.value().GetPointer()).c_str());
+        break;
+      case trace::ArgumentType::kKoid:
+        writer_.Key(CleanString(arg.name()));
+        writer_.String(fxl::StringPrintf("#%" PRIu64, arg.value().GetKoid()).c_str());
+        break;
+      default:
+        break;
+    }
+  }
 }
 
 }  // namespace tracing

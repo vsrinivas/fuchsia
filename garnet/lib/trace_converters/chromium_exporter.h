@@ -37,6 +37,10 @@ class ChromiumExporter {
   void ExportMetadata(const trace::Record::Metadata& metadata);
   void ExportContextSwitch(const trace::Record::ContextSwitch& context_switch);
 
+  // Writes argument data. Assumes it is already within an
+  // "args" key object.
+  void WriteArgs(const fbl::Vector<trace::Argument>& arguments);
+
   std::unique_ptr<std::ostream> stream_out_;
   rapidjson::OStreamWrapper wrapper_;
   rapidjson::Writer<rapidjson::OStreamWrapper> writer_;
