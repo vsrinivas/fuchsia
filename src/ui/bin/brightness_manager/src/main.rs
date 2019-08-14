@@ -66,8 +66,9 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
                 fx_log_info!("Auto-brightness off, brightness set to {}", value);
                 // Stop the background auto-brightness task, if any
                 auto_brightness_abort_handle.abort();
-                // Lossy conversion but will change when brightness is set as an f32 (0.0..=1.0)
-                let nits = num_traits::clamp(value as u16, 0, 255);
+                // TODO(b/138455663): remove this when the driver changes.
+                let adjusted_value = convert_to_old_backlight_value(value);
+                let nits = num_traits::clamp(adjusted_value, 0, 255);
                 let backlight_clone = backlight.clone();
                 set_brightness(nits, backlight_clone).await?;
             }
@@ -78,12 +79,28 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
                 let backlight_clone = backlight.clone();
                 let backlight = backlight_clone.lock().await;
                 let brightness = backlight::get_brightness(&backlight).await?;
-                responder.send(brightness as f32).context("error sending response")?;
+                // TODO(b/138455663): remove this when the driver changes.
+                let brightness = convert_from_old_backlight_value(brightness);
+                responder.send(brightness).context("error sending response")?;
             }
             _ => fx_log_err!("received {:?}", request),
         }
     }
     Ok(())
+}
+
+/// Converts from our FIDL's 0.0-1.0 value to backlight's 0-255 value
+/// This will be removed when backlight uses 0.0-1.0
+fn convert_to_old_backlight_value(value : f32) -> u16 {
+    let value = num_traits::clamp(value, 0.0, 1.0);
+    (value * 255.0) as u16
+}
+
+/// Converts from backlight's 0-255 value to our FIDL's 0.0-1.0 value
+/// This will be removed when backlight uses 0.0-1.0
+fn convert_from_old_backlight_value(value : u8) -> f32 {
+    let value = num_traits::clamp(value, 0, 255);
+    value as f32 / 255.0
 }
 
 /// Runs the main auto-brightness code.
@@ -280,5 +297,26 @@ mod tests {
         assert_eq!(254, result[13]);
         assert_eq!(255, result[14]);
         assert_eq!(255, result[15]);
+    }
+
+    #[test]
+    fn test_to_old_backlight_value() {
+        assert_eq!(0, convert_to_old_backlight_value(0.0));
+        assert_eq!(127, convert_to_old_backlight_value(0.5));
+        assert_eq!(255, convert_to_old_backlight_value(1.0));
+        // Out of bounds
+        assert_eq!(0, convert_to_old_backlight_value(-0.5));
+        assert_eq!(255, convert_to_old_backlight_value(2.0));
+    }
+
+    #[test]
+    fn test_from_old_backlight_value() {
+        assert_eq!(0.0, approx(convert_from_old_backlight_value(0)));
+        assert_eq!(0.5, approx(convert_from_old_backlight_value(127)));
+        assert_eq!(1.0, approx(convert_from_old_backlight_value(255)));
+    }
+
+    fn approx(v: f32) -> f32 {
+        (v * 10.0).round() / 10.0
     }
 }
