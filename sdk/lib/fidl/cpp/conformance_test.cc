@@ -705,6 +705,45 @@ TEST(Conformance, XUnionInTableXUnionPresent_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
+TEST(Conformance, StrictXUnion_Encoding) {
+  conformance::TestStrictXUnionInStruct v1;
+
+  conformance::SampleStrictXUnion v2;
+
+  uint32_t v3 = 3735928559ull;
+  v2.set_u(std::move(v3));
+  v1.xu = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x72, 0xea, 0xe2, 0x08, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, StrictXUnion_Decoding) {
+  auto input = std::vector<uint8_t>{
+      0x72, 0xea, 0xe2, 0x08, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::TestStrictXUnionInStruct v1;
+
+  conformance::SampleStrictXUnion v2;
+
+  uint32_t v3 = 3735928559ull;
+  v2.set_u(std::move(v3));
+  v1.xu = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
 TEST(Conformance, AddEthernetDeviceRequest_Encoding) {
   conformance::TestAddEthernetDeviceRequest v1;
 

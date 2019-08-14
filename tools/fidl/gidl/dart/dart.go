@@ -233,6 +233,7 @@ func onUnion(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 		val := visit(field.Value, fieldDecl)
 		return fmt.Sprintf("%s.with%s(%s)", value.Name, strings.Title(field.Name), val)
 	}
+	// Not currently possible to construct a union/xunion in dart with an invalid value.
 	panic("unions must have a value set")
 }
 
@@ -248,9 +249,12 @@ func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 	return fmt.Sprintf("[%s]", strings.Join(elements, ", "))
 }
 
+// Dart error codes defined in: topaz/public/dart/fidl/lib/src/error.dart.
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:               "fidlStringTooLong",
 	gidlir.NullEmptyStringWithNullBody: "fidlNonNullableTypeWithNullValue",
+	gidlir.StrictXUnionFieldNotSet:     "fidlStrictXUnionFieldNotSet",
+	gidlir.StrictXUnionUnknownField:    "fidlStrictXUnionUnknownField",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

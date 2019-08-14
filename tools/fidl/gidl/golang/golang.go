@@ -327,9 +327,12 @@ func elemName(parent gidlmixer.ListDeclaration) string {
 	panic("missing element")
 }
 
+// Go errors are defined in third_party/go/src/syscall/zx/fidl/errors.go
 var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:               "ErrStringTooLong",
 	gidlir.NullEmptyStringWithNullBody: "ErrUnexpectedNullRef",
+	gidlir.StrictXUnionFieldNotSet:     "ErrStrictXUnionFieldNotSet",
+	gidlir.StrictXUnionUnknownField:    "ErrInvalidXUnionTag",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {

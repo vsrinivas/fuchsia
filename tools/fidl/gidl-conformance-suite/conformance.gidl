@@ -346,6 +346,43 @@ success("XUnionInTableXUnionPresent") {
 	}
 }
 
+success("StrictXUnion") {
+	value = TestStrictXUnionInStruct {
+		xu: SampleStrictXUnion {
+			u: 0xdeadbeef,
+		},
+	}
+	bytes = {
+		0x72,0xea,0xe2,0x08,0x00,0x00,0x00,0x00,
+		0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+		0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+		0xef,0xbe,0xad,0xde,0x00,0x00,0x00,0x00,
+	}
+}
+
+fails_to_encode("StrictXUnion Field Not Set") {
+	value = TestStrictXUnionInStruct {
+		xu: SampleStrictXUnion {},
+	}
+	err = STRICT_XUNION_FIELD_NOT_SET
+	// TODO(8047) Enable this. Currently no bindings support this error.
+	// Marked with "none" because the allowlist is a no-op if it is empty.
+	bindings_allowlist = [none,]
+}
+
+fails_to_decode("StrictXUnion Field Unknown") {
+	type = TestStrictXUnionInStruct
+	bytes = {
+      0x11, 0xba, 0x5e, 0xba, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
+      0xde, 0xad, 0xbe, 0xef, 0x5c, 0xa1, 0xab, 0x1e,  // fake out-of-line data
+	}
+	err = STRICT_XUNION_UNKNOWN_FIELD
+	// TODO(8047) Enable this. Currently only go supports this error.
+	bindings_allowlist = [go,]
+}
+
 success("AddEthernetDeviceRequest") {
 	value = TestAddEthernetDeviceRequest {
 		topological_path: "@/dev/sys/pci/00:03.0/e1000/ethernet",

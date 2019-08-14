@@ -24,6 +24,12 @@ xunion SampleXUnion {
     SimpleTable st;
 };
 
+strict xunion SampleStrictXUnion {
+    uint32 u;
+    SimpleUnion su;
+    SimpleTable st;
+};
+
 struct TestInlineXUnionInStruct {
     string before;
     SampleXUnion xu;
@@ -34,4 +40,8 @@ struct TestOptionalXUnionInStruct {
     string before;
     SampleXUnion? xu;
     string after;
+};
+
+struct TestStrictXUnionInStruct {
+    SampleStrictXUnion xu;
 };
