@@ -91,7 +91,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             let sme_proxy = wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface).await?;
             let status_response = match sme_proxy.status().await {
                 Ok(status) => status,
-                Err(_) => {
+                Err(e) => {
+                    fx_log_warn!("error getting iface {} status: {}", iface, e);
                     test_results.interface_status = false;
                     continue;
                 }
@@ -105,6 +106,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         // now that we have interfaces...  let's try to use them!
         for (iface_id, wlan_iface) in test_results.iface_objects.iter_mut() {
             // first check if we can get scan results
+            fx_log_info!("iface {}: scanning", iface_id);
             let scan_result = wlan_service_util::perform_scan(&wlan_iface.sme_proxy).await;
             match scan_result {
                 Ok(results) => {
@@ -125,6 +127,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 &opt.target_ssid,
                 &wlan_iface.initial_status,
             ) {
+                fx_log_info!("connecting");
                 let connect_result = wlan_service_util::connect_to_network(
                     &wlan_iface.sme_proxy,
                     opt.target_ssid.as_bytes().to_vec(),
@@ -148,11 +151,12 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     _ => continue,
                 };
             } else {
+                fx_log_info!("already connected. skipping connect");
                 // connection already established, mark as successful
                 wlan_iface.connection_success = true;
             }
 
-            let mut dhcp_check_attempts = 0;
+            fx_log_info!("checking mac address");
             let mac_addr = match wlan_service_util::get_wlan_mac_addr(&wlan_svc, *iface_id).await {
                 Ok(addr) => addr,
                 Err(e) => {
@@ -161,7 +165,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 }
             };
 
+            let mut dhcp_check_attempts = 0;
             while dhcp_check_attempts < 3 && !wlan_iface.dhcp_success {
+                fx_log_info!("checking dhcp attemp #{}", dhcp_check_attempts);
                 wlan_iface.dhcp_success = match netstack_did_get_dhcp(&network_svc, &mac_addr).await
                 {
                     Ok(result) => result,
@@ -180,20 +186,24 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             // if we got an ip addr, go ahead and check a download
             if wlan_iface.dhcp_success {
                 // TODO(NET-1095): add ping check to verify connectivity
-                for _ in 0..3 {
-                    wlan_iface.data_transfer =
-                        can_download_data(&http_svc).await || wlan_iface.data_transfer;
-                    thread::sleep(time::Duration::from_secs(1));
-                }
+                fx_log_info!("downloading file");
+                wlan_iface.data_transfer =
+                    can_download_data(&http_svc).await || wlan_iface.data_transfer;
             }
+            thread::sleep(time::Duration::from_secs(1));
 
             // after testing, check if we need to disconnect
             if requires_disconnect {
+                fx_log_info!("disconnecting");
                 match wlan_service_util::disconnect_from_network(&wlan_iface.sme_proxy).await {
-                    Err(_) => wlan_iface.disconnect_success = false,
+                    Err(e) => {
+                        fx_log_warn!("error disconnecting: {}", e);
+                        wlan_iface.disconnect_success = false
+                    }
                     _ => wlan_iface.disconnect_success = true,
                 };
             } else {
+                fx_log_info!("skipping disconnect");
                 wlan_iface.disconnect_success = true;
             }
 
