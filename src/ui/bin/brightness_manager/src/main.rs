@@ -129,18 +129,12 @@ fn start_auto_brightness_task(
 /// This will be a brightness curve but for the time being we know that the sensor
 /// goes from 0 to 800 for the office and the backlight takes 0-255 so we take a simple approach.
 /// TODO(kpt): Fix these values when the drivers change. (b/138455663)
-fn brightness_curve_lux_to_nits(mut lux: u16) -> u16 {
-    // Currently the sensor gives 900 at office brightness, this code will change when the
-    // driver changes to lux.
-    let max_lux = 900;
-    // We consider this to be dark, will change with true lux sensor readings.
-    let min_lux = 48;
+fn brightness_curve_lux_to_nits(lux: u16) -> u16 {
+    // Office brightness is about 240 lux, we want the screen full on at this level.
+    let max_lux = 240;
     // Currently the backlight takes only 0 to 255. This code will change when the driver changes.
     let max_nits = 255;
 
-    if lux >= min_lux {
-        lux = lux - min_lux;
-    }
     let lux = num_traits::clamp(lux, 0, max_lux);
     let nits = (max_nits as f32 * lux as f32 / max_lux as f32) as u16;
     // Minimum brightness of 1 for nighttime viewing.
@@ -230,14 +224,15 @@ mod tests {
     #[test]
     fn test_brightness_curve() {
         assert_eq!(1, brightness_curve_lux_to_nits(0));
-        assert_eq!(1, brightness_curve_lux_to_nits(48));
-        assert_eq!(3, brightness_curve_lux_to_nits(60));
-        assert_eq!(14, brightness_curve_lux_to_nits(100));
-        assert_eq!(99, brightness_curve_lux_to_nits(400));
-        assert_eq!(213, brightness_curve_lux_to_nits(800));
-        assert_eq!(241, brightness_curve_lux_to_nits(900));
-        assert_eq!(255, brightness_curve_lux_to_nits(1000));
-        assert_eq!(255, brightness_curve_lux_to_nits(2000));
+        assert_eq!(1, brightness_curve_lux_to_nits(1));
+        assert_eq!(2, brightness_curve_lux_to_nits(2));
+        assert_eq!(15, brightness_curve_lux_to_nits(15));
+        assert_eq!(17, brightness_curve_lux_to_nits(16));
+        assert_eq!(106, brightness_curve_lux_to_nits(100));
+        assert_eq!(159, brightness_curve_lux_to_nits(150));
+        assert_eq!(212, brightness_curve_lux_to_nits(200));
+        assert_eq!(255, brightness_curve_lux_to_nits(240));
+        assert_eq!(255, brightness_curve_lux_to_nits(300));
     }
 
     #[fasync::run_singlethreaded(test)]
