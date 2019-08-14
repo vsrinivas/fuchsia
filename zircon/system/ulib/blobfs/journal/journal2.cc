@@ -84,6 +84,43 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work
   return fit::ok();
 }
 
+zx_status_t JournalWriter::WriteOperationToJournal(
+    const BlockingRingBufferReservation& reservation) {
+  const uint64_t total_block_count = reservation.length();
+  const uint64_t max_reservation_size = EntriesLength();
+  uint64_t written_block_count = 0;
+  fbl::Vector<BufferedOperation> journal_operations;
+  BufferedOperation operation;
+  operation.vmoid = reservation.vmoid();
+  operation.op.type = OperationType::kWrite;
+
+  // Both the reservation and the on-disk location may wraparound.
+  while (written_block_count != total_block_count) {
+    operation.op.vmo_offset = (reservation.start() + written_block_count) % max_reservation_size;
+    operation.op.dev_offset = EntriesStartBlock() + next_entry_start_block_;
+
+    // The maximum number of blocks that can be written to the journal, on-disk, before needing to
+    // wrap around.
+    const uint64_t journal_block_max = EntriesLength() - next_entry_start_block_;
+    // The maximum number of blocks that can be written from the reservation, in-memory, before
+    // needing to wrap around.
+    const uint64_t reservation_block_max = max_reservation_size - operation.op.vmo_offset;
+    operation.op.length = std::min(total_block_count - written_block_count,
+                                   std::min(journal_block_max, reservation_block_max));
+    journal_operations.push_back(operation);
+    written_block_count += operation.op.length;
+    next_entry_start_block_ = (next_entry_start_block_ + operation.op.length) % EntriesLength();
+  }
+
+  zx_status_t status = WriteOperations(journal_operations);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("JournalWriter::WriteOperationToJournal: Failed to write: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+  return status;
+}
+
 fit::result<void, zx_status_t> JournalWriter::Sync() {
   if (!IsWritebackEnabled()) {
     return fit::error(ZX_ERR_IO_REFUSED);
@@ -106,39 +143,13 @@ fit::result<void, zx_status_t> JournalWriter::Sync() {
 
 zx_status_t JournalWriter::WriteMetadataToJournal(JournalWorkItem* work, uint64_t block_count) {
   FS_TRACE_DEBUG("WriteMetadataToJournal: Writing %zu blocks with sequence_number %zu\n",
-                 block_count, next_sequence_number_);
+                 work->reservation.length(), next_sequence_number_);
 
   // Set the header and commit blocks within the journal.
   JournalEntryView entry(work->reservation.buffer_view(), work->operations,
                          next_sequence_number_++);
 
-  // Create new operation(s) which target the on-disk journal, utilizing the buffer
-  // that was prepared by the |JournalEntryView|.
-  fbl::Vector<BufferedOperation> journal_operations;
-  BufferedOperation operation;
-  operation.vmoid = work->reservation.vmoid();
-  operation.op.type = OperationType::kWrite;
-  operation.op.vmo_offset = work->reservation.start();
-  operation.op.dev_offset = EntriesStartBlock() + next_entry_start_block_;
-  size_t block_count_max = EntriesLength() - next_entry_start_block_;
-  operation.op.length = std::min(block_count, block_count_max);
-  journal_operations.push_back(operation);
-  FS_TRACE_DEBUG("WriteMetadataToJournal: Write %zu blocks. VMO: %zu to dev: %zu\n",
-                 operation.op.length, operation.op.vmo_offset, operation.op.dev_offset);
-
-  // Journal wraparound case.
-  if (block_count > block_count_max) {
-    operation.op.vmo_offset = 0;
-    operation.op.dev_offset = EntriesStartBlock();
-    operation.op.length = block_count - block_count_max;
-    journal_operations.push_back(operation);
-
-    FS_TRACE_DEBUG("WriteMetadataToJournal: (wrap) Write %zu blocks. VMO: %zu to dev: %zu\n",
-                   operation.op.length, operation.op.vmo_offset, operation.op.dev_offset);
-  }
-  next_entry_start_block_ = (next_entry_start_block_ + block_count) % EntriesLength();
-  zx_status_t status = WriteOperations(journal_operations);
-
+  zx_status_t status = WriteOperationToJournal(work->reservation);
   // Although the payload may be encoded while written to the journal, it should be decoded
   // when written to the final on-disk location later.
   entry.DecodePayloadBlocks();

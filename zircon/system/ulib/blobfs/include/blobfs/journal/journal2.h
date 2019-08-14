@@ -120,6 +120,12 @@ class JournalWriter {
   // Blocks the calling thread on I/O until the operation completes.
   zx_status_t WriteInfoBlock();
 
+  // Writes an operation into the journal, creating a sequence of operations
+  // which deal with wraparound of the in-memory |reservation| buffer and the on-disk
+  // journal. Additionally, issues these operations to the underlying device and
+  // returns the result (see |WriteOperations|).
+  zx_status_t WriteOperationToJournal(const BlockingRingBufferReservation& reservation);
+
   // Writes operations directly through to disk.
   //
   // If any operations fail, this method will return the resulting error from the underlying

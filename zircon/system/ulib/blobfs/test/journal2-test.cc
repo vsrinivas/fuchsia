@@ -269,16 +269,6 @@ void CheckWriteRequest(const block_fifo_request_t& request, vmoid_t vmoid, uint6
   EXPECT_EQ(length, request.length);
 }
 
-// Convenience function which verifies the fields of a write operation.
-void CheckWriteOperation(const BufferedOperation& operation, vmoid_t vmoid, uint64_t vmo_offset,
-                         uint64_t dev_offset, uint64_t length) {
-  EXPECT_EQ(vmoid, operation.vmoid);
-  EXPECT_EQ(OperationType::kWrite, operation.op.type);
-  EXPECT_EQ(vmo_offset, operation.op.vmo_offset);
-  EXPECT_EQ(dev_offset, operation.op.dev_offset);
-  EXPECT_EQ(length, operation.op.length);
-}
-
 // A convenience verification class which holds:
 // - References to the info block, journal, and data writeback.
 // - Offsets within those structures.
@@ -312,6 +302,7 @@ class JournalRequestVerifier {
     journal_offset_ = (journal_offset_ + operation_length + kEntryMetadataBlocks) % kJournalLength;
   }
 
+  // Returns the on-disk journal offset, relative to |EntryStart()|.
   uint64_t JournalOffset() const { return journal_offset_; }
 
   void SetDataOffset(uint64_t offset) {
@@ -409,48 +400,51 @@ void JournalRequestVerifier::VerifyJournalWrite(const UnbufferedOperation& opera
                                                 size_t count) const {
   // Verify the operation is from the metadata buffer, targeting the journal.
   EXPECT_GE(count, 1, "Not enough operations");
-  EXPECT_LE(count, 2, "Too many operations");
 
-  uint64_t operation_journal_offset = JournalOffset();
-  uint64_t entry_length = operation.op.length + kEntryMetadataBlocks;
-  uint64_t pre_wrap_entry_length =
-      std::min(kJournalLength - operation_journal_offset, entry_length);
-  uint64_t post_wrap_entry_length = entry_length - pre_wrap_entry_length;
+  uint64_t journal_offset = JournalOffset();
+  const uint64_t entry_length = operation.op.length + kEntryMetadataBlocks;
 
-  // Check that the operation acts on the right requests.
-  ASSERT_NO_FAILURES(CheckWriteRequest(requests[0],
-                                       /* vmoid= */ kJournalVmoid,
-                                       /* vmo_offset= */ operation_journal_offset,
-                                       /* dev_offset= */ EntryStart() + operation_journal_offset,
-                                       /* length= */ pre_wrap_entry_length));
-  if (post_wrap_entry_length > 0) {
-    EXPECT_EQ(2, count);
-    ASSERT_NO_FAILURES(CheckWriteRequest(requests[1],
-                                         /* vmoid= */ kJournalVmoid,
-                                         /* vmo_offset= */ 0,
-                                         /* dev_offset= */ EntryStart(),
-                                         /* length= */ post_wrap_entry_length));
+  // Validate that all operations target the expected location within the on-disk journal.
+  uint64_t blocks_written = 0;
+  for (size_t i = 0; i < count; i++) {
+    // Requests may be split to wrap around the in-memory or on-disk buffer.
+    const uint64_t journal_dev_capacity = kJournalLength - journal_offset;
+    const uint64_t journal_vmo_capacity = kJournalLength - requests[i].vmo_offset;
+    EXPECT_LE(requests[i].length, journal_dev_capacity);
+    EXPECT_LE(requests[i].length, journal_vmo_capacity);
+
+    EXPECT_EQ(kJournalVmoid, requests[i].vmoid);
+    EXPECT_EQ(BLOCKIO_WRITE, requests[i].opcode);
+    EXPECT_EQ(EntryStart() + journal_offset, requests[i].dev_offset);
+
+    blocks_written += requests[i].length;
+    journal_offset = (journal_offset + requests[i].length) % kJournalLength;
   }
+  EXPECT_EQ(entry_length, blocks_written);
 
-  // Check that the operation uses the right data.
-  entry_length -= 2;
-  operation_journal_offset = (JournalOffset() + kJournalEntryHeaderBlocks) % kJournalLength;
-  pre_wrap_entry_length = std::min(kJournalLength - operation_journal_offset, entry_length);
-  post_wrap_entry_length = entry_length - pre_wrap_entry_length;
-  ASSERT_NO_FAILURES(CheckCircularBufferContents(*journal_, kJournalLength,
-                                                 /* journal_offset= */ operation_journal_offset,
-                                                 /* buffer= */ *operation.vmo,
-                                                 /* buffer_offset= */ operation.op.vmo_offset,
-                                                 /* length= */ pre_wrap_entry_length,
-                                                 EscapedBlocks::kVerified));
-  if (post_wrap_entry_length > 0) {
-    EXPECT_EQ(2, count);
-    ASSERT_NO_FAILURES(CheckCircularBufferContents(
-        *journal_, kJournalLength,
-        /* journal_offset= */ 0,
-        /* buffer= */ *operation.vmo,
-        /* buffer_offset= */ operation.op.vmo_offset + pre_wrap_entry_length,
-        /* length= */ post_wrap_entry_length, EscapedBlocks::kVerified));
+  // Validate that all operations exist within the journal buffer.
+  uint64_t buffer_offset = operation.op.vmo_offset;
+  for (size_t i = 0; i < count; i++) {
+    uint64_t vmo_offset = requests[i].vmo_offset;
+    uint64_t length = requests[i].length;
+    if (i == 0) {
+      // Skip over header block.
+      vmo_offset++;
+      length--;
+    }
+    if (i == count - 1) {
+      // Drop commit block.
+      length--;
+    }
+
+    ASSERT_NO_FAILURES(CheckCircularBufferContents(*journal_, kJournalLength,
+                                                   /* journal_offset= */ vmo_offset,
+                                                   /* buffer= */ *operation.vmo,
+                                                   /* buffer_offset= */ buffer_offset,
+                                                   /* length= */ length,
+                                                   EscapedBlocks::kVerified));
+
+    buffer_offset += length;
   }
 }
 
@@ -459,46 +453,29 @@ void JournalRequestVerifier::VerifyMetadataWrite(const UnbufferedOperation& oper
                                                  size_t count) const {
   // Verify the operation is from the metadata buffer, targeting the final location on disk.
   EXPECT_GE(count, 1, "Not enough operations");
-  EXPECT_LE(count, 2, "Too many operations");
 
-  uint64_t operation_journal_offset =
-      (JournalOffset() + kJournalEntryHeaderBlocks) % kJournalLength;
-  uint64_t pre_wrap_op_length =
-      std::min(kJournalLength - operation_journal_offset, operation.op.length);
-  uint64_t post_wrap_op_length = operation.op.length - pre_wrap_op_length;
+  uint64_t blocks_written = 0;
+  for (size_t i = 0; i < count; i++) {
+    // We only care about wraparound from the in-memory buffer here; any wraparound from the
+    // on-disk journal is not relevant to the metadata writeback.
+    const uint64_t journal_vmo_capacity = kJournalLength - requests[i].vmo_offset;
+    EXPECT_LE(requests[i].length, journal_vmo_capacity);
 
-  // Check that the operation acts on the right requests.
-  ASSERT_NO_FAILURES(CheckWriteRequest(requests[0],
-                                       /* vmoid= */ kJournalVmoid,
-                                       /* vmo_offset= */ operation_journal_offset,
-                                       /* dev_offset= */ operation.op.dev_offset,
-                                       /* length= */ pre_wrap_op_length));
-  if (post_wrap_op_length > 0) {
-    EXPECT_EQ(2, count);
-    ASSERT_NO_FAILURES(
-        CheckWriteRequest(requests[1],
-                          /* vmoid= */ kJournalVmoid,
-                          /* vmo_offset= */ 0,
-                          /* dev_offset= */ operation.op.dev_offset + pre_wrap_op_length,
-                          /* length= */ post_wrap_op_length));
+    EXPECT_EQ(kJournalVmoid, requests[i].vmoid);
+    EXPECT_EQ(BLOCKIO_WRITE, requests[i].opcode);
+    EXPECT_EQ(operation.op.dev_offset + blocks_written, requests[i].dev_offset);
+
+    const uint64_t buffer_offset = operation.op.vmo_offset + blocks_written;
+    ASSERT_NO_FAILURES(CheckCircularBufferContents(*journal_, kJournalLength,
+                                                   /* journal_offset= */ requests[i].vmo_offset,
+                                                   /* buffer= */ *operation.vmo,
+                                                   /* buffer_offset= */ buffer_offset,
+                                                   /* length= */ requests[i].length,
+                                                   EscapedBlocks::kIgnored));
+
+    blocks_written += requests[i].length;
   }
-
-  // Check that the operation uses the right data.
-  ASSERT_NO_FAILURES(CheckCircularBufferContents(*journal_, kJournalLength,
-                                                 /* journal_offset= */ operation_journal_offset,
-                                                 /* buffer= */ *operation.vmo,
-                                                 /* buffer_offset= */ operation.op.vmo_offset,
-                                                 /* length= */ pre_wrap_op_length,
-                                                 EscapedBlocks::kIgnored));
-  if (post_wrap_op_length > 0) {
-    EXPECT_EQ(2, count);
-    ASSERT_NO_FAILURES(CheckCircularBufferContents(
-        *journal_, kJournalLength,
-        /* journal_offset= */ 0,
-        /* buffer= */ *operation.vmo,
-        /* buffer_offset= */ operation.op.vmo_offset + pre_wrap_op_length,
-        /* length= */ post_wrap_op_length, EscapedBlocks::kIgnored));
-  }
+  EXPECT_EQ(operation.op.length, blocks_written);
 }
 
 void JournalRequestVerifier::VerifyInfoBlockWrite(uint64_t sequence_number,
@@ -1138,6 +1115,329 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
     // This write will block until the prevoius operation completes.
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
   }
+}
+
+// Writes operations where the in-memory and on-disk representation are not aligned.
+// - In-memory buffer ahead of on-disk buffer, and
+// - On-disk buffer ahead of in-memory buffer.
+//
+// Operation 0: [ _, _, _, H, 1, C, _, _, _, _ ] (In-memory)
+// Operation 0: [ H, 1, C, _, _, _, _, _, _, _ ] (On-disk)
+// Operation 1: [ H, 1, C, _, _, _, _, _, _, _ ] (In-memory)
+// Operation 1: [ _, _, _, H, 1, C, _, _, _, _ ] (On-disk)
+TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
+  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+
+  const std::vector<UnbufferedOperation> operations = {
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 1234,
+              .length = 1,
+          },
+      },
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 4567,
+              .length = 1,
+          },
+      },
+  };
+
+  constexpr uint64_t kJournalStartBlock = 55;
+  JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
+                                  registry()->writeback(), kJournalStartBlock);
+  MockTransactionHandler::TransactionCallback callbacks[] = {
+      [&](const block_fifo_request_t* requests, size_t count) {
+        EXPECT_EQ(1, count);
+        verifier.VerifyJournalWrite(operations[0], requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        EXPECT_EQ(1, count);
+        verifier.VerifyMetadataWrite(operations[0], requests, count);
+        verifier.ExtendJournalOffset(operations[0].op.length);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        EXPECT_EQ(1, count);
+        verifier.VerifyJournalWrite(operations[1], requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        EXPECT_EQ(1, count);
+        verifier.VerifyMetadataWrite(operations[1], requests, count);
+        verifier.ExtendJournalOffset(operations[1].op.length);
+        return ZX_OK;
+      },
+  };
+  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  std::unique_ptr<BlockingRingBuffer> journal_buffer = take_journal_buffer();
+  internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
+                                 journal_buffer->capacity());
+
+  // Reserve operations[1] in memory before operations[0].
+  //
+  // This means that in-memory, operations[1] wraps around the internal buffer.
+  BlockingRingBufferReservation reservation0, reservation1;
+  uint64_t block_count1 = operations[1].op.length + kEntryMetadataBlocks;
+  ASSERT_OK(journal_buffer->Reserve(block_count1, &reservation1));
+  uint64_t block_count0 = operations[0].op.length + kEntryMetadataBlocks;
+  ASSERT_OK(journal_buffer->Reserve(block_count0, &reservation0));
+
+  // Actually write operations[0] before operations[1].
+  fbl::Vector<BufferedOperation> buffered_operations0;
+  ASSERT_OK(reservation0.CopyRequests({ operations[0] }, kJournalEntryHeaderBlocks,
+                                      &buffered_operations0));
+  auto result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation0),
+                                                               std::move(buffered_operations0)),
+                                     block_count1);
+  ASSERT_TRUE(result.is_ok());
+
+  fbl::Vector<BufferedOperation> buffered_operations1;
+  ASSERT_OK(reservation1.CopyRequests({ operations[1] }, kJournalEntryHeaderBlocks,
+                                      &buffered_operations1));
+  result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation1),
+                                                          std::move(buffered_operations1)),
+                                block_count1);
+  ASSERT_TRUE(result.is_ok());
+}
+
+// Writes operations with:
+// - In-memory wraparound, but no on-disk wraparound, and
+// - On-disk wraparound, but no in-memory wraparound.
+//
+// Operation 0: [ H, 1, 2, 3, 4, 5, 6, 7, C, _ ]
+//            : Info block written by wraparound
+// Operation 1: [ _, _, H, 1, C, _, _, _, _, _ ] (In-memory)
+// Operation 1: [ 1, C, _, _, _, _, _, _, _, H ] (On-disk)
+// Operation 2: [ 1, C, _, _, _, _, _, _, _, H ] (In-memory)
+// Operation 2: [ _, _, H, 1, C, _, _, _, _, _ ] (On-disk)
+TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
+  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+
+  const std::vector<UnbufferedOperation> operations = {
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 20,
+              .length = 7,
+          },
+      },
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 1234,
+              .length = 1,
+          },
+      },
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 4567,
+              .length = 1,
+          },
+      },
+  };
+
+  constexpr uint64_t kJournalStartBlock = 55;
+  JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
+                                  registry()->writeback(), kJournalStartBlock);
+  MockTransactionHandler::TransactionCallback callbacks[] = {
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyJournalWrite(operations[0], requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyMetadataWrite(operations[0], requests, count);
+        verifier.ExtendJournalOffset(operations[0].op.length);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        uint64_t sequence_number = 1;
+        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        // Operation 1: [ _, _, H, 1, C, _, _, _, _, _ ] (In-memory)
+        // Operation 1: [ 1, C, _, _, _, _, _, _, _, H ] (On-disk)
+        //
+        // This operation writes "H", then "1, C".
+        EXPECT_EQ(2, count);
+        verifier.VerifyJournalWrite(operations[1], requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        EXPECT_EQ(1, count);
+        verifier.VerifyMetadataWrite(operations[1], requests, count);
+        verifier.ExtendJournalOffset(operations[1].op.length);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        // Operation 2: [ 1, C, _, _, _, _, _, _, _, H ] (In-memory)
+        // Operation 2: [ _, _, H, 1, C, _, _, _, _, _ ] (On-disk)
+        //
+        // This operation writes "H", then "1, C".
+        EXPECT_EQ(2, count);
+        verifier.VerifyJournalWrite(operations[2], requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        EXPECT_EQ(1, count);
+        verifier.VerifyMetadataWrite(operations[2], requests, count);
+        verifier.ExtendJournalOffset(operations[2].op.length);
+        return ZX_OK;
+      },
+  };
+  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  std::unique_ptr<BlockingRingBuffer> journal_buffer = take_journal_buffer();
+  internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
+                                 journal_buffer->capacity());
+
+  // Issue the first operation, so the next operation will wrap around.
+  BlockingRingBufferReservation reservation;
+  fbl::Vector<BufferedOperation> buffered_operations;
+  uint64_t block_count = operations[0].op.length + kEntryMetadataBlocks;
+  ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
+  ASSERT_OK(reservation.CopyRequests({ operations[0] }, kJournalEntryHeaderBlocks,
+                                     &buffered_operations));
+  auto result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation),
+                                                               std::move(buffered_operations)),
+                                     block_count);
+  ASSERT_TRUE(result.is_ok());
+
+  // Reserve operations[2] in memory before operations[1].
+  //
+  // This means that in-memory, operations[2] wraps around the internal buffer.
+  BlockingRingBufferReservation reservation1, reservation2;
+  uint64_t block_count2 = operations[2].op.length + kEntryMetadataBlocks;
+  ASSERT_OK(journal_buffer->Reserve(block_count2, &reservation2));
+  uint64_t block_count1 = operations[1].op.length + kEntryMetadataBlocks;
+  ASSERT_OK(journal_buffer->Reserve(block_count1, &reservation1));
+
+  // Actually write operations[1] before operations[2].
+  //
+  // This means that on-disk, operations[1] wraps around the journal.
+  fbl::Vector<BufferedOperation> buffered_operations1;
+  ASSERT_OK(reservation1.CopyRequests({ operations[1] }, kJournalEntryHeaderBlocks,
+                                      &buffered_operations1));
+  result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation1),
+                                                          std::move(buffered_operations1)),
+                                block_count1);
+  ASSERT_TRUE(result.is_ok());
+
+  fbl::Vector<BufferedOperation> buffered_operations2;
+  ASSERT_OK(reservation2.CopyRequests({ operations[2] }, kJournalEntryHeaderBlocks,
+                                      &buffered_operations2));
+  result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation2),
+                                                          std::move(buffered_operations2)),
+                                block_count2);
+  ASSERT_TRUE(result.is_ok());
+}
+
+// Tests that the in-memory writeback buffer for metadata and the on-disk buffer for
+// metadata can both wraparound at different offsets.
+//
+// Operation 0: [ H, 1, 2, 3, 4, C, _, _, _, _ ]
+// Operation _: [ _, _, _, _, _, _, X, X, X, _ ] (In-memory, reserved then released)
+//            : Info block written by wraparound
+// Operation 1: [ 1, 2, 3, 4, C, _, _, _, _, H ] (In-memory)
+// Operation 1: [ 4, C, _, _, _, _, H, 1, 2, 3 ] (On-disk)
+TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
+  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+
+  const std::vector<UnbufferedOperation> operations = {
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 20,
+              .length = 4,
+          },
+      },
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 1234,
+              .length = 4,
+          },
+      },
+  };
+
+  constexpr uint64_t kJournalStartBlock = 55;
+  JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
+                                  registry()->writeback(), kJournalStartBlock);
+  MockTransactionHandler::TransactionCallback callbacks[] = {
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyJournalWrite(operations[0], requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyMetadataWrite(operations[0], requests, count);
+        verifier.ExtendJournalOffset(operations[0].op.length);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        uint64_t sequence_number = 1;
+        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        // "H", then "1, 2, 3", then "4, C".
+        EXPECT_EQ(3, count);
+        verifier.VerifyJournalWrite(operations[1], requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        // "1, 2, 3, 4" are contiguous in the in-memory buffer.
+        EXPECT_EQ(1, count);
+        verifier.VerifyMetadataWrite(operations[1], requests, count);
+        verifier.ExtendJournalOffset(operations[1].op.length);
+        return ZX_OK;
+      },
+  };
+  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  std::unique_ptr<BlockingRingBuffer> journal_buffer = take_journal_buffer();
+  internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
+                                 journal_buffer->capacity());
+
+  // Issue the first operation, so the next operation will wrap around.
+  BlockingRingBufferReservation reservation;
+  fbl::Vector<BufferedOperation> buffered_operations;
+  uint64_t block_count = operations[0].op.length + kEntryMetadataBlocks;
+  ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
+  ASSERT_OK(reservation.CopyRequests({ operations[0] }, kJournalEntryHeaderBlocks,
+                                     &buffered_operations));
+  auto result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation),
+                                                               std::move(buffered_operations)),
+                                     block_count);
+  ASSERT_TRUE(result.is_ok());
+
+  BlockingRingBufferReservation reservation_unused;
+  ASSERT_OK(journal_buffer->Reserve(3, &reservation_unused));
+  block_count = operations[1].op.length + kEntryMetadataBlocks;
+  ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
+
+  ASSERT_OK(reservation.CopyRequests({ operations[1] }, kJournalEntryHeaderBlocks,
+                                     &buffered_operations));
+  result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation),
+                                                          std::move(buffered_operations)),
+                                block_count);
+  ASSERT_TRUE(result.is_ok());
 }
 
 // Tests that metadata updates still operate successfully if an entire entry wraps around the
