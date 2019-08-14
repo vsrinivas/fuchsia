@@ -26,10 +26,6 @@ group("magma-vulkan") {
   }
 }
 
-if (have_prebuilt_libvulkan_arm) {
-  libvulkan_gen_path = "$target_gen_dir/libvulkan"
-}
-
 if (have_libvulkan_mali) {
   icd_list = []
   if (build_libvulkan_arm_mali != []) {
@@ -44,7 +40,7 @@ if (have_libvulkan_mali) {
     icd_list += [
       {
         name = "libvulkan_arm"
-        library_path = "$libvulkan_gen_path/libvulkan_arm.so"
+        library_path = rebase_path(prebuilt_libvulkan_arm_path)
       },
     ]
   }
@@ -80,10 +76,6 @@ package("magma-arm-mali") {
     resources = []
     libraries = []
     deps += build_libvulkan_arm_mali
-    if (build_libvulkan_arm_mali == []) {
-      # Building libvulkan overrides using a prebuilt.
-      deps += [ ":prebuilt_libvulkan" ]
-    }
 
     foreach(entry, icd_list) {
       icd_name = entry.name
@@ -117,25 +109,6 @@ if (have_libvulkan_mali) {
         },
       ]
     }
-  }
-}
-
-if (have_prebuilt_libvulkan_arm) {
-  config("libvulkan_config") {
-    libs = [ "vulkan_arm" ]
-    lib_dirs = [ libvulkan_gen_path ]
-  }
-  copy("prebuilt_libvulkan") {
-    public_configs = [ ":libvulkan_config" ]
-    sources = [
-      prebuilt_libvulkan_arm_path,
-    ]
-    outputs = [
-      "$libvulkan_gen_path/libvulkan_arm.so",
-    ]
-    deps = [
-      "//third_party/zlib",
-    ]
   }
 }
 
