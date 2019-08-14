@@ -155,6 +155,9 @@ toc:
 - title: "Safe stack"
   path: /docs/zircon/safestack.md
 
+- title: "Shadow call stack"
+  path: /docs/zircon/shadow_call_stack.md
+
 - title: "Symbolizer markup format"
   path: /docs/zircon/symbolizer_markup.md
 
