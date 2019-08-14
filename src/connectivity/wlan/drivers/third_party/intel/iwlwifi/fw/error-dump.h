@@ -36,7 +36,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_ERROR_DUMP_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_ERROR_DUMP_H_
 
-#include "file.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"
 
 #define IWL_FW_ERROR_DUMP_BARKER 0x14789632
 

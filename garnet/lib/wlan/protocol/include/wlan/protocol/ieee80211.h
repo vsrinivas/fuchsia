@@ -6,7 +6,9 @@
 #define GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IEEE80211_H_
 
 #include <net/ethernet.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 
 // clang-format off
 // IEEE Std 802.11-2016, 9.2.3

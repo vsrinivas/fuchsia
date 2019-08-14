@@ -34,11 +34,6 @@
  *
  *****************************************************************************/
 
-// This file must be included before all header files.
-// clang-format off
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
-// clang-format on
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"

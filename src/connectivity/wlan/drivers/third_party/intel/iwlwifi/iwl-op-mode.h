@@ -36,6 +36,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_OP_MODE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_OP_MODE_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "fw/testmode.h"
 #endif

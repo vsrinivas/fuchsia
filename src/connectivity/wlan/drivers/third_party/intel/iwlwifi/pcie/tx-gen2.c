@@ -31,7 +31,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"

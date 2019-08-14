@@ -37,7 +37,6 @@
 
 #include <ddk/io-buffer.h>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-context-info-gen3.h"
 #endif

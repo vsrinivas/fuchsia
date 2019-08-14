@@ -33,7 +33,6 @@
  *
  *****************************************************************************/
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
 #if 0  // NEEDS_PORTING

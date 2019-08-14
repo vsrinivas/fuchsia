@@ -37,6 +37,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_ALIVE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_ALIVE_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 /* alive response is_valid values */
 #define ALIVE_RESP_UCODE_OK BIT(0)
 #define ALIVE_RESP_RFKILL BIT(1)
