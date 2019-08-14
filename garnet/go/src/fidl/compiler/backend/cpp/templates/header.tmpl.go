@@ -25,6 +25,7 @@ namespace {{ . }} {
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Interface }}{{ template "DispatchInterfaceForwardDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionForwardDeclaration" . }}{{- end }}
@@ -34,6 +35,7 @@ namespace {{ . }} {
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Interface }}{{ template "DispatchInterfaceDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDeclaration" . }}{{- end }}
@@ -76,4 +78,16 @@ namespace fidl {
 {{- if eq $transport "Channel" -}}{{ template "InterfaceTraits" $ }}{{- end }}
 {{- end }}
 {{- end -}}
+
+{{- define "DispatchServiceForwardDeclaration" -}}
+{{- range $transport, $_ := .Transports }}
+{{- if eq $transport "Channel" -}}{{ template "ServiceForwardDeclaration" $ }}{{- end }}
+{{- end }}
+{{- end }}
+
+{{- define "DispatchServiceDeclaration" -}}
+{{- range $transport, $_ := .Transports }}
+{{- if eq $transport "Channel" -}}{{ template "ServiceDeclaration" $ }}{{- end }}
+{{- end }}
+{{- end }}
 `

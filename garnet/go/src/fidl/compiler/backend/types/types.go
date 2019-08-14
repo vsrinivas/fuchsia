@@ -469,9 +469,33 @@ func (d *Interface) GetServiceName() string {
 			parts = append(parts, string(i))
 		}
 		parts = append(parts, string(ci.Name))
-		return "\"" + strings.Join(parts, ".") + "\""
+		return fmt.Sprintf("\"%s\"", strings.Join(parts, "."))
 	}
 	return ""
+}
+
+// Service represents the declaration of a FIDL service.
+type Service struct {
+	Attributes
+	Name    EncodedCompoundIdentifier `json:"name"`
+	Members []ServiceMember           `json:"members"`
+}
+
+func (s *Service) GetServiceName() string {
+	ci := ParseCompoundIdentifier(s.Name)
+	var parts []string
+	for _, i := range ci.Library {
+		parts = append(parts, string(i))
+	}
+	parts = append(parts, string(ci.Name))
+	return strings.Join(parts, ".")
+}
+
+// ServiceMember represents the declaration of a field in a FIDL service.
+type ServiceMember struct {
+	Attributes
+	Name Identifier `json:"name"`
+	Type Type       `json:"type"`
 }
 
 // Method represents the declaration of a FIDL method.
@@ -571,6 +595,7 @@ const (
 	BitsDeclType               = "bits"
 	EnumDeclType               = "enum"
 	InterfaceDeclType          = "interface"
+	ServiceDeclType            = "service"
 	StructDeclType             = "struct"
 	TableDeclType              = "table"
 	UnionDeclType              = "union"
@@ -602,6 +627,7 @@ type Root struct {
 	Bits       []Bits                      `json:"bits_declarations,omitempty"`
 	Enums      []Enum                      `json:"enum_declarations,omitempty"`
 	Interfaces []Interface                 `json:"interface_declarations,omitempty"`
+	Services   []Service                   `json:"service_declarations,omitempty"`
 	Structs    []Struct                    `json:"struct_declarations,omitempty"`
 	Tables     []Table                     `json:"table_declarations,omitempty"`
 	Unions     []Union                     `json:"union_declarations,omitempty"`

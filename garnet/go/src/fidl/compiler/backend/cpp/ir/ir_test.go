@@ -891,6 +891,119 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 	}
 }
 
+func TestCompileService(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    types.Service
+		expected Service
+	}{
+		{
+			name: "SingleMemberTest",
+			input: types.Service{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{
+							Name:  types.Identifier("ServiceLevelAttribute"),
+							Value: "TestValue",
+						},
+					},
+				},
+				Name: types.EncodedCompoundIdentifier("my.test/SingleMember"),
+				Members: []types.ServiceMember{
+					{
+						Name: types.Identifier("first_member"),
+						Type: types.Type{
+							Kind:       types.IdentifierType,
+							Identifier: types.EncodedCompoundIdentifier("my.test/Protocol"),
+						},
+					},
+				},
+			},
+			expected: Service{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{
+							Name:  types.Identifier("ServiceLevelAttribute"),
+							Value: "TestValue",
+						},
+					},
+				},
+				Namespace:   "::my::test",
+				Name:        "SingleMember",
+				ServiceName: "my.test.SingleMember",
+				Members: []ServiceMember{
+					{
+						InterfaceType: "Protocol",
+						Name:          "first_member",
+						MethodName:    "first_member",
+					},
+				},
+			},
+		},
+		{
+			name: "MultiMemberTest",
+			input: types.Service{
+				Name: types.EncodedCompoundIdentifier("my.test/MultiMember"),
+				Members: []types.ServiceMember{
+					{
+						Type: types.Type{
+							Kind:       types.IdentifierType,
+							Identifier: types.EncodedCompoundIdentifier("my.test/Protocol"),
+						},
+						Name: types.Identifier("first_member"),
+					},
+					{
+						Type: types.Type{
+							Kind:       types.IdentifierType,
+							Identifier: types.EncodedCompoundIdentifier("lib/Protocol"),
+						},
+						Name: types.Identifier("second_member"),
+					},
+				},
+			},
+			expected: Service{
+				Namespace:   "::my::test",
+				Name:        "MultiMember",
+				ServiceName: "my.test.MultiMember",
+				Members: []ServiceMember{
+					{
+						InterfaceType: "Protocol",
+						Name:          "first_member",
+						MethodName:    "first_member",
+					},
+					{
+						InterfaceType: "::lib::Protocol",
+						Name:          "second_member",
+						MethodName:    "second_member",
+					},
+				},
+			},
+		},
+	}
+
+	for _, ex := range cases {
+		t.Run(ex.name, func(t *testing.T) {
+			root := types.Root{
+				Name:      "my.test",
+				Services:  []types.Service{ex.input},
+				DeclOrder: []types.EncodedCompoundIdentifier{ex.input.Name},
+				Decls: types.DeclMap{
+					types.EncodedCompoundIdentifier("my.test/Protocol"): types.InterfaceDeclType,
+					types.EncodedCompoundIdentifier("lib/Protocol"):     types.InterfaceDeclType,
+				},
+			}
+			result := Compile(root)
+			actual, ok := result.Decls[0].(*Service)
+			if !ok || actual == nil {
+				t.Fatalf("decls[0] not a service, was instead %T", result.Decls[0])
+			}
+			if diff := cmp.Diff(ex.expected, *actual, cmp.AllowUnexported(types.Ordinals{})); diff != "" {
+				t.Errorf("expected != actual (-want +got)\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestCompileTable(t *testing.T) {
 	cases := []struct {
 		name     string

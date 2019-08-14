@@ -10,7 +10,7 @@ executable("unified_echo_server") {
   ]
 
   deps = [
-    "//examples/fidl/gen",
+    "//examples/fidl/fuchsia.examples",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

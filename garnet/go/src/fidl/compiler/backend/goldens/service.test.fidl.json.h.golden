@@ -37,6 +37,15 @@ constexpr uint64_t kFirstProtocol_MethodOnFirst_GenOrdinal = 0x2838a83100000000l
 }  // namespace
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
+class SingleMemberService;
+#endif // __Fuchsia
+#ifdef __Fuchsia__
+class MultiHomogeneousMemberService;
+#endif // __Fuchsia
+#ifdef __Fuchsia__
+class MultiHeterogeneousMemberService;
+#endif // __Fuchsia
+#ifdef __Fuchsia__
 
 class SecondProtocol {
  public:
@@ -308,6 +317,108 @@ class FirstProtocol_SyncProxy : public FirstProtocol_Sync {
   friend class ::fidl::SynchronousInterfacePtr<FirstProtocol>;
 };
 #endif // __Fuchsia__
+#ifdef __Fuchsia__
+class SingleMemberService final {
+ public:
+  class Handler;
+
+  static constexpr char Name[] = "test.name.SingleMemberService";
+
+  explicit SingleMemberService(std::unique_ptr<::fidl::ServiceConnector> service)
+      : service_(std::move(service)) {}
+
+  explicit operator bool() const { return !!service_; }
+  ::fidl::MemberConnector<FirstProtocol> single_member() const {
+    return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "single_member");
+  }
+
+ private:
+  std::unique_ptr<::fidl::ServiceConnector> service_;
+};
+
+class SingleMemberService::Handler final {
+ public:
+  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
+  zx_status_t add_single_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
+    return service_->AddMember("single_member", std::move(handler));
+  }
+
+ private:
+  ::fidl::ServiceHandlerBase* const service_;
+};
+#endif // __Fuchsia
+#ifdef __Fuchsia__
+class MultiHomogeneousMemberService final {
+ public:
+  class Handler;
+
+  static constexpr char Name[] = "test.name.MultiHomogeneousMemberService";
+
+  explicit MultiHomogeneousMemberService(std::unique_ptr<::fidl::ServiceConnector> service)
+      : service_(std::move(service)) {}
+
+  explicit operator bool() const { return !!service_; }
+  ::fidl::MemberConnector<FirstProtocol> first_member() const {
+    return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "first_member");
+  }
+  ::fidl::MemberConnector<FirstProtocol> second_member() const {
+    return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "second_member");
+  }
+
+ private:
+  std::unique_ptr<::fidl::ServiceConnector> service_;
+};
+
+class MultiHomogeneousMemberService::Handler final {
+ public:
+  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
+  zx_status_t add_first_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
+    return service_->AddMember("first_member", std::move(handler));
+  }
+  zx_status_t add_second_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
+    return service_->AddMember("second_member", std::move(handler));
+  }
+
+ private:
+  ::fidl::ServiceHandlerBase* const service_;
+};
+#endif // __Fuchsia
+#ifdef __Fuchsia__
+class MultiHeterogeneousMemberService final {
+ public:
+  class Handler;
+
+  static constexpr char Name[] = "test.name.MultiHeterogeneousMemberService";
+
+  explicit MultiHeterogeneousMemberService(std::unique_ptr<::fidl::ServiceConnector> service)
+      : service_(std::move(service)) {}
+
+  explicit operator bool() const { return !!service_; }
+  ::fidl::MemberConnector<FirstProtocol> first_member() const {
+    return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "first_member");
+  }
+  ::fidl::MemberConnector<SecondProtocol> second_member() const {
+    return ::fidl::MemberConnector<SecondProtocol>(service_.get(), "second_member");
+  }
+
+ private:
+  std::unique_ptr<::fidl::ServiceConnector> service_;
+};
+
+class MultiHeterogeneousMemberService::Handler final {
+ public:
+  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
+  zx_status_t add_first_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
+    return service_->AddMember("first_member", std::move(handler));
+  }
+  zx_status_t add_second_member(::fidl::InterfaceRequestHandler<SecondProtocol> handler) {
+    return service_->AddMember("second_member", std::move(handler));
+  }
+
+ private:
+  ::fidl::ServiceHandlerBase* const service_;
+};
+#endif // __Fuchsia
 }  // namespace name
 }  // namespace test
 namespace fidl {

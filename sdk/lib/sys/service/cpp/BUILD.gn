@@ -46,7 +46,7 @@ executable("sys_service_unittests") {
 
   deps = [
     ":cpp",
-    "//examples/fidl/gen",
+    "//examples/fidl/fuchsia.examples",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

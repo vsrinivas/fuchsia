@@ -24,6 +24,7 @@ type bitsKind struct{}
 type constKind struct{}
 type enumKind struct{}
 type interfaceKind struct{}
+type serviceKind struct{}
 type structKind struct{}
 type tableKind struct{}
 type unionKind struct{}
@@ -34,6 +35,7 @@ var Kinds = struct {
 	Bits      bitsKind
 	Enum      enumKind
 	Interface interfaceKind
+	Service   serviceKind
 	Struct    structKind
 	Table     tableKind
 	Union     unionKind
@@ -228,6 +230,22 @@ type Interface struct {
 	HasEvents             bool
 	StackAllocEventBuffer bool
 	Kind                  interfaceKind
+}
+
+type Service struct {
+	types.Attributes
+	Namespace   string
+	Name        string
+	ServiceName string
+	Members     []ServiceMember
+	Kind        serviceKind
+}
+
+type ServiceMember struct {
+	types.Attributes
+	InterfaceType string
+	Name          string
+	MethodName    string
 }
 
 type Method struct {
@@ -936,6 +954,29 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	return r
 }
 
+func (c *compiler) compileService(val types.Service) Service {
+	s := Service{
+		Attributes:  val.Attributes,
+		Namespace:   c.namespace,
+		Name:        c.compileCompoundIdentifier(val.Name, "", ""),
+		ServiceName: val.GetServiceName(),
+	}
+
+	for _, v := range val.Members {
+		s.Members = append(s.Members, c.compileServiceMember(v))
+	}
+	return s
+}
+
+func (c *compiler) compileServiceMember(val types.ServiceMember) ServiceMember {
+	return ServiceMember{
+		Attributes:    val.Attributes,
+		InterfaceType: c.compileCompoundIdentifier(val.Type.Identifier, "", ""),
+		Name:          string(val.Name),
+		MethodName:    changeIfReserved(val.Name, ""),
+	}
+}
+
 func (c *compiler) compileStructMember(val types.StructMember, appendNamespace string) StructMember {
 	t := c.compileType(val.Type)
 
@@ -1137,7 +1178,6 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 	root.LibraryReversed = libraryReversed
 
 	decls := map[types.EncodedCompoundIdentifier]Decl{}
-
 	for _, v := range r.Bits {
 		d := c.compileBits(v, "")
 		decls[v.Name] = &d
@@ -1155,6 +1195,11 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 
 	for _, v := range r.Interfaces {
 		d := c.compileInterface(v)
+		decls[v.Name] = &d
+	}
+
+	for _, v := range r.Services {
+		d := c.compileService(v)
 		decls[v.Name] = &d
 	}
 

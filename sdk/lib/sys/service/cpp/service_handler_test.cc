@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/examples/cpp/fidl.h>
 #include <lib/async-testing/test_loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 
-#include <examples/fidl/gen/my_service.h>
 #include <gtest/gtest.h>
 
 namespace fidl {
