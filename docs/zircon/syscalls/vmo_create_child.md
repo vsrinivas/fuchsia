@@ -37,13 +37,16 @@ will bring in a copy of the page at the offset the write occurred. The new page 
 the cloned vmo is now a copy and may diverge from the parent. Any reads from
 ranges outside of the parent vmo's size will contain zeros, and writes will
 allocate new zero filled pages. A vmo which has pinned regions cannot be cloned. See
-the NOTES section below for details on VMO syscall interactions with clones.
+the NOTES section below for details on VMO syscall interactions with clones. This flag
+may not be used for vmos created with [`zx_vmo_create_physical()`] or descendants of
+such a vmo.
 
 - **ZX_VMO_CHILD_SLICE** - Create a slice that has direct read/write access into
 a section of the parent. All operations on the slice vmo behave as if they were
 done on the parent. A slice differs from a duplicate handle to the parent by allowing
 access to only a subrange of the parent vmo, and allowing for the
-**ZX_VMO_ZERO_CHILDREN** signal to be used.
+**ZX_VMO_ZERO_CHILDREN** signal to be used. This flag may be used with vmos created with
+[`zx_vmo_create_physical()`] and their descendants.
 
 - **ZX_VMO_CHILD_PRIVATE_PAGER_COPY** - Create a private copy of a pager vmo. The child
 vmo will behave the same way the parent does, except that any write operation on the
