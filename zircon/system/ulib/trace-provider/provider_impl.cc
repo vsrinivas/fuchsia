@@ -63,6 +63,12 @@ TraceProviderImpl::Connection::~Connection() { Close(); }
 
 void TraceProviderImpl::Connection::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                            zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status == ZX_ERR_CANCELED) {
+    // The wait could be canceled if we're shutting down, e.g., the
+    // program is exiting.
+    return;
+  }
+
   if (status != ZX_OK) {
     fprintf(stderr, "TraceProvider: wait failed: status=%d(%s)\n", status,
             zx_status_get_string(status));
