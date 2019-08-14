@@ -49,6 +49,7 @@ enum class Command {
   kWriteDataFile,
   kWipeVolumes,
   kInitializePartitionTables,
+  kWipePartitionTables,
 };
 
 class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
@@ -151,6 +152,11 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
     last_command_ = Command::kInitializePartitionTables;
     auto status = ZX_ERR_NOT_SUPPORTED;
     return completer.Reply(status);
+  }
+
+  void WipePartitionTables(zx::channel block_device, WipePartitionTablesCompleter::Sync completer) {
+    last_command_ = Command::kWipePartitionTables;
+    completer.Reply(ZX_OK);
   }
 
   Command last_command() { return last_command_; }

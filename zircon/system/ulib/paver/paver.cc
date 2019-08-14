@@ -1398,4 +1398,29 @@ void Paver::InitializePartitionTables(zx::channel block_device,
     completer.Reply(ZX_OK);
 }
 
+void Paver::WipePartitionTables(zx::channel block_device,
+                                WipePartitionTablesCompleter::Sync completer) {
+  partitioner_.reset();
+  // Use global devfs if one wasn't injected via set_devfs_root.
+  if (!devfs_root_) {
+    devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
+  }
+#if defined(__x86_64__)
+  Arch arch = Arch::kX64;
+#elif defined(__aarch64__)
+  Arch arch = Arch::kArm64;
+#else
+#error "Unknown arch"
+#endif
+  auto partitioner =
+      DevicePartitioner::Create(devfs_root_.duplicate(), arch, std::move(block_device));
+  if (!partitioner) {
+    ERROR("Unable to initialize a partitioner.\n");
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  completer.Reply(partitioner->WipePartitionTables());
+}
+
 }  //  namespace paver

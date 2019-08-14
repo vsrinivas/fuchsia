@@ -45,18 +45,20 @@ void PrintUsage() {
   ERROR("  install-data-file  : Install a file to DATA (--path required)\n");
   ERROR("  wipe               : Remove the FVM partition\n");
   ERROR("  init-partition-tables : Initialize block device with valid GPT and FVM\n");
+  ERROR("  wipe-partition-tables : Remove all partitions for partition table\n");
   ERROR("Options:\n");
   ERROR("  --file <file>: Read from FILE instead of stdin\n");
   ERROR("  --force: Install partition even if inappropriate for the device\n");
   ERROR("  --path <path>: Install DATA file to path\n");
-  ERROR("  --block-device <path>: Block device to operate on. Only applies to wipe and "
-        "init-partition-tables\n");
+  ERROR("  --block-device <path>: Block device to operate on. Only applies to wipe, "
+        "init-partition-tables, and wipe-partition-tables\n");
 }
 
 // Refer to //zircon/system/fidl/fuchsia.paver/paver-fidl for a list of what
 // these commands translate to.
 enum class Command {
   kWipe,
+  kWipePartitionTables,
   kInitPartitionTables,
   kAsset,
   kBootloader,
@@ -127,6 +129,8 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     flags->cmd = Command::kWipe;
   } else if (!strcmp(argv[0], "init-partition-tables")) {
     flags->cmd = Command::kInitPartitionTables;
+  } else if (!strcmp(argv[0], "wipe-partition-tables")) {
+    flags->cmd = Command::kWipePartitionTables;
   } else {
     ERROR("Invalid command: %s\n", argv[0]);
     return false;
@@ -273,6 +277,27 @@ zx_status_t RealMain(Flags flags) {
         block_device.reset();
       }
       auto result = paver_client.InitializePartitionTables(std::move(block_device));
+      return result.ok() ? result.value().status : result.status();
+    }
+    case Command::kWipePartitionTables: {
+      if (flags.block_device == nullptr) {
+        ERROR("wipe-partition-tables requires --block-device\n");
+        PrintUsage();
+        return ZX_ERR_INVALID_ARGS;
+      }
+      zx::channel block_device, block_device_remote;
+      status = zx::channel::create(0, &block_device, &block_device_remote);
+      if (status != ZX_OK) {
+        ERROR("Unable create channel: %s\n", zx_status_get_string(status));
+        return status;
+      }
+      status = fdio_service_connect(flags.block_device, block_device_remote.release());
+      if (status != ZX_OK) {
+        ERROR("Unable to open block device: %s\n", flags.block_device);
+        PrintUsage();
+        block_device.reset();
+      }
+      auto result = paver_client.WipePartitionTables(std::move(block_device));
       return result.ok() ? result.value().status : result.status();
     }
     default:

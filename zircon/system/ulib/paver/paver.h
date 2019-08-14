@@ -52,6 +52,9 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
   void InitializePartitionTables(zx::channel gpt_block_device,
                                  InitializePartitionTablesCompleter::Sync completer);
 
+  // Wipes all entries from partition table.
+  void WipePartitionTables(zx::channel block_device, WipePartitionTablesCompleter::Sync completer);
+
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
     ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
     result.set_err(ZX_ERR_NOT_SUPPORTED);

@@ -368,7 +368,6 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
 zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
     fbl::unique_fd devfs_root, fbl::unique_fd gpt_device,
     fbl::unique_ptr<GptDevicePartitioner>* gpt_out) {
-
   fzl::UnownedFdioCaller caller(gpt_device.get());
   auto result = block::Block::Call::GetInfo(caller.channel());
   if (!result.ok()) {
@@ -416,8 +415,8 @@ zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
     }
   }
 
-  *gpt_out = WrapUnique(new GptDevicePartitioner(
-      devfs_root.duplicate(), std::move(gpt_device), std::move(gpt), *(response.info)));
+  *gpt_out = WrapUnique(new GptDevicePartitioner(devfs_root.duplicate(), std::move(gpt_device),
+                                                 std::move(gpt), *(response.info)));
   return ZX_OK;
 }
 
@@ -455,8 +454,8 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root, Arch 
     }
 
     fbl::unique_ptr<GptDevice> gpt;
-    if (GptDevice::Create(gpt_device.get(), response.info->block_size,
-                          response.info->block_count, &gpt) != ZX_OK) {
+    if (GptDevice::Create(gpt_device.get(), response.info->block_size, response.info->block_count,
+                          &gpt) != ZX_OK) {
       ERROR("Failed to get GPT info\n");
       return ZX_ERR_BAD_STATE;
     }
@@ -668,14 +667,14 @@ zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter, fbl::uniq
   return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t GptDevicePartitioner::WipeFvm() const {
+zx_status_t GptDevicePartitioner::WipePartitions(WipeCheck check_cb) const {
   bool modify = false;
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
     const gpt_partition_t* p = gpt_->GetPartition(i);
     if (!p) {
       continue;
     }
-    if (!IsFvmPartition(*p)) {
+    if (!check_cb(*p)) {
       continue;
     }
 
@@ -700,6 +699,12 @@ zx_status_t GptDevicePartitioner::WipeFvm() const {
   }
   block::Block::Call::RebindDevice(Channel());
   return ZX_OK;
+}
+
+zx_status_t GptDevicePartitioner::WipeFvm() const { return WipePartitions(IsFvmPartition); }
+
+zx_status_t GptDevicePartitioner::WipePartitionTables() const {
+  return WipePartitions([](const gpt_partition_t&) { return true; });
 }
 
 /*====================================================*
@@ -813,6 +818,10 @@ zx_status_t EfiDevicePartitioner::FindPartition(Partition partition_type,
 }
 
 zx_status_t EfiDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
+
+zx_status_t EfiDevicePartitioner::WipePartitionTables() const {
+  return gpt_->WipePartitionTables();
+}
 
 zx_status_t EfiDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
                                                uint32_t* block_size) const {
@@ -1000,6 +1009,10 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) c
 
 zx_status_t CrosDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
+zx_status_t CrosDevicePartitioner::WipePartitionTables() const {
+  return gpt_->WipePartitionTables();
+}
+
 zx_status_t CrosDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
                                                 uint32_t* block_size) const {
   block::BlockInfo info;
@@ -1089,6 +1102,8 @@ zx_status_t FixedDevicePartitioner::WipeFvm() const {
   LOG("Immediate reboot strongly recommended\n");
   return ZX_OK;
 }
+
+zx_status_t FixedDevicePartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t FixedDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
                                                  uint32_t* block_size) const {
@@ -1231,6 +1246,8 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
 
   return result2.status() == ZX_OK ? result2.value().status : result2.status();
 }
+
+zx_status_t SkipBlockDevicePartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t SkipBlockDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
                                                      uint32_t* block_size) const {

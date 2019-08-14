@@ -79,6 +79,9 @@ class DevicePartitioner {
   // Wipes Fuchsia Volume Manager partition.
   virtual zx_status_t WipeFvm() const = 0;
 
+  // Wipes partition tables.
+  virtual zx_status_t WipePartitionTables() const = 0;
+
   // Returns block size in bytes for specified device.
   virtual zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const = 0;
 };
@@ -129,8 +132,13 @@ class GptDevicePartitioner {
   // nonsense.
   zx_status_t WipeFvm() const;
 
+  // Removes all partitions from GPT.
+  zx_status_t WipePartitionTables() const;
+
  private:
   using GptDevices = std::vector<std::pair<std::string, fbl::unique_fd>>;
+  using WipeCheck = bool(const gpt_partition_t&);
+
   // Find all block devices which could contain a GPT.
   static bool FindGptDevices(const fbl::unique_fd& devfs_root, GptDevices* out);
 
@@ -149,6 +157,9 @@ class GptDevicePartitioner {
 
   zx_status_t CreateGptPartition(const char* name, uint8_t* type, uint64_t offset, uint64_t blocks,
                                  uint8_t* out_guid) const;
+
+  // Wipes all partitions meeting given criteria.
+  zx_status_t WipePartitions(WipeCheck check_cb) const;
 
   fbl::unique_fd devfs_root_;
   fzl::FdioCaller caller_;
@@ -172,6 +183,8 @@ class EfiDevicePartitioner : public DevicePartitioner {
   zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
 
   zx_status_t WipeFvm() const override;
+
+  zx_status_t WipePartitionTables() const override;
 
   zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -197,6 +210,8 @@ class CrosDevicePartitioner : public DevicePartitioner {
   zx_status_t FinalizePartition(Partition unused) const override;
 
   zx_status_t WipeFvm() const override;
+
+  zx_status_t WipePartitionTables() const override;
 
   zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
@@ -225,6 +240,8 @@ class FixedDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipeFvm() const override;
 
+  zx_status_t WipePartitionTables() const override;
+
   zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
  private:
@@ -252,6 +269,8 @@ class SkipBlockDevicePartitioner : public DevicePartitioner {
   zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
 
   zx_status_t WipeFvm() const override;
+
+  zx_status_t WipePartitionTables() const override;
 
   zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 

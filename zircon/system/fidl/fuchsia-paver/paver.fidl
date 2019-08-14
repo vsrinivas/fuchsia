@@ -107,4 +107,16 @@ protocol Paver {
     /// |gpt_block_device| specifies the block device to use. It assumed that channel
     /// backing |gpt_block_device| also implements `fuchsia.io.Node` for now.
     InitializePartitionTables(request<fuchsia.hardware.block.Block> gpt_block_device) -> (zx.status status);
+
+    /// Wipes all entries from the partition table of the specified block device.
+    /// Currently only supported on devices with a GPT.
+    ///
+    /// If |block_device| is not provided, the paver will perform a search for
+    /// the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
+    /// to specify which one to target. It assumed that channel backing
+    /// |block_device| also implements `fuchsia.io.Node` for now.
+    ///
+    /// *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    /// the block device.
+    WipePartitionTables(request<fuchsia.hardware.block.Block>? block_device) -> (zx.status status);
 };

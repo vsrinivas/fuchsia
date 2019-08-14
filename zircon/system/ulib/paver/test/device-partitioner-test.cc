@@ -327,6 +327,23 @@ TEST_F(EfiPartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWipingOne
       paver::EfiDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), paver::Arch::kX64,
                                               std::nullopt, &partitioner));
 }
+
+TEST_F(EfiPartitionerTests, AddedPartitionRemovedAfterWipePartitions) {
+  fbl::unique_ptr<BlockDevice> gpt_dev;
+  constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+
+  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_OK(paver::EfiDevicePartitioner::Initialize(
+      devmgr_.devfs_root().duplicate(), paver::Arch::kX64, std::move(gpt_fd), &partitioner));
+
+  ASSERT_OK(partitioner->AddPartition(paver::Partition::kZirconB, nullptr));
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconB, nullptr));
+  ASSERT_OK(partitioner->WipePartitionTables());
+  ASSERT_NOT_OK(partitioner->FindPartition(paver::Partition::kZirconB, nullptr));
+}
 #endif
 
 class FixedDevicePartitionerTests : public zxtest::Test {

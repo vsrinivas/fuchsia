@@ -394,6 +394,27 @@ TEST_F(PaverServiceTest, InitializePartitionTablesMultipleDevices) {
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
 }
+
+TEST_F(PaverServiceTest, WipePartitionTables) {
+  ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgrBlock());
+  fbl::unique_ptr<BlockDevice> gpt_dev;
+  constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
+  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
+                                               &gpt_dev));
+
+  zx::channel gpt_chan;
+  ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
+
+  auto result = client_->InitializePartitionTables(std::move(gpt_chan));
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().status);
+
+  ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
+
+  auto wipe_result = client_->WipePartitionTables(std::move(gpt_chan));
+  ASSERT_OK(wipe_result.status());
+  ASSERT_OK(wipe_result.value().status);
+}
 #endif
 #endif
 

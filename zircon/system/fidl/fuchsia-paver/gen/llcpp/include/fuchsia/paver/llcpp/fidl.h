@@ -549,6 +549,8 @@ extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializePartitionTablesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializePartitionTablesResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesResponseTable;
 
 // Protocol for managing boot partitions.
 //
@@ -791,6 +793,34 @@ class Paver final {
     using ResponseType = InitializePartitionTablesResponse;
   };
 
+  struct WipePartitionTablesResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWipePartitionTablesResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WipePartitionTablesRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::channel block_device;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWipePartitionTablesRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WipePartitionTablesResponse;
+  };
+
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -940,6 +970,22 @@ class Paver final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class WipePartitionTables_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      WipePartitionTables_Impl(zx::unowned_channel _client_end, ::zx::channel block_device);
+      ~WipePartitionTables_Impl() = default;
+      WipePartitionTables_Impl(WipePartitionTables_Impl&& other) = default;
+      WipePartitionTables_Impl& operator=(WipePartitionTables_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
@@ -951,6 +997,7 @@ class Paver final {
     using WriteDataFile = WriteDataFile_Impl<WriteDataFileResponse>;
     using WipeVolumes = WipeVolumes_Impl<WipeVolumesResponse>;
     using InitializePartitionTables = InitializePartitionTables_Impl<InitializePartitionTablesResponse>;
+    using WipePartitionTables = WipePartitionTables_Impl<WipePartitionTablesResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -1102,6 +1149,22 @@ class Paver final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class WipePartitionTables_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      WipePartitionTables_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer);
+      ~WipePartitionTables_Impl() = default;
+      WipePartitionTables_Impl(WipePartitionTables_Impl&& other) = default;
+      WipePartitionTables_Impl& operator=(WipePartitionTables_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
@@ -1113,6 +1176,7 @@ class Paver final {
     using WriteDataFile = WriteDataFile_Impl<WriteDataFileResponse>;
     using WipeVolumes = WipeVolumes_Impl<WipeVolumesResponse>;
     using InitializePartitionTables = InitializePartitionTables_Impl<InitializePartitionTablesResponse>;
+    using WipePartitionTables = WipePartitionTables_Impl<WipePartitionTablesResponse>;
   };
 
   class SyncClient final {
@@ -1240,6 +1304,32 @@ class Paver final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::InitializePartitionTables InitializePartitionTables(::fidl::BytePart _request_buffer, ::zx::channel gpt_block_device, ::fidl::BytePart _response_buffer);
 
+    // Wipes all entries from the partition table of the specified block device.
+    // Currently only supported on devices with a GPT.
+    //
+    // If |block_device| is not provided, the paver will perform a search for
+    // the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
+    // to specify which one to target. It assumed that channel backing
+    // |block_device| also implements `fuchsia.io.Node` for now.
+    //
+    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    // the block device.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::WipePartitionTables WipePartitionTables(::zx::channel block_device);
+
+    // Wipes all entries from the partition table of the specified block device.
+    // Currently only supported on devices with a GPT.
+    //
+    // If |block_device| is not provided, the paver will perform a search for
+    // the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
+    // to specify which one to target. It assumed that channel backing
+    // |block_device| also implements `fuchsia.io.Node` for now.
+    //
+    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    // the block device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WipePartitionTables WipePartitionTables(::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer);
+
    private:
     ::zx::channel channel_;
   };
@@ -1363,6 +1453,32 @@ class Paver final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::InitializePartitionTables InitializePartitionTables(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel gpt_block_device, ::fidl::BytePart _response_buffer);
 
+    // Wipes all entries from the partition table of the specified block device.
+    // Currently only supported on devices with a GPT.
+    //
+    // If |block_device| is not provided, the paver will perform a search for
+    // the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
+    // to specify which one to target. It assumed that channel backing
+    // |block_device| also implements `fuchsia.io.Node` for now.
+    //
+    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    // the block device.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::WipePartitionTables WipePartitionTables(zx::unowned_channel _client_end, ::zx::channel block_device);
+
+    // Wipes all entries from the partition table of the specified block device.
+    // Currently only supported on devices with a GPT.
+    //
+    // If |block_device| is not provided, the paver will perform a search for
+    // the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
+    // to specify which one to target. It assumed that channel backing
+    // |block_device| also implements `fuchsia.io.Node` for now.
+    //
+    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    // the block device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WipePartitionTables WipePartitionTables(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer);
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -1418,6 +1534,18 @@ class Paver final {
     // |gpt_block_device| specifies the block device to use. It assumed that channel
     // backing |gpt_block_device| also implements `fuchsia.io.Node` for now.
     static ::fidl::DecodeResult<InitializePartitionTablesResponse> InitializePartitionTables(zx::unowned_channel _client_end, ::fidl::DecodedMessage<InitializePartitionTablesRequest> params, ::fidl::BytePart response_buffer);
+
+    // Wipes all entries from the partition table of the specified block device.
+    // Currently only supported on devices with a GPT.
+    //
+    // If |block_device| is not provided, the paver will perform a search for
+    // the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
+    // to specify which one to target. It assumed that channel backing
+    // |block_device| also implements `fuchsia.io.Node` for now.
+    //
+    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    // the block device.
+    static ::fidl::DecodeResult<WipePartitionTablesResponse> WipePartitionTables(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WipePartitionTablesRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1554,6 +1682,20 @@ class Paver final {
     using InitializePartitionTablesCompleter = ::fidl::Completer<InitializePartitionTablesCompleterBase>;
 
     virtual void InitializePartitionTables(::zx::channel gpt_block_device, InitializePartitionTablesCompleter::Sync _completer) = 0;
+
+    class WipePartitionTablesCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<WipePartitionTablesResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using WipePartitionTablesCompleter = ::fidl::Completer<WipePartitionTablesCompleterBase>;
+
+    virtual void WipePartitionTables(::zx::channel block_device, WipePartitionTablesCompleter::Sync _completer) = 0;
 
   };
 
@@ -1758,5 +1900,21 @@ struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::InitializePartitionTablesRe
 static_assert(sizeof(::llcpp::fuchsia::paver::Paver::InitializePartitionTablesResponse)
     == ::llcpp::fuchsia::paver::Paver::InitializePartitionTablesResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::paver::Paver::InitializePartitionTablesResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::WipePartitionTablesRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WipePartitionTablesRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WipePartitionTablesRequest)
+    == ::llcpp::fuchsia::paver::Paver::WipePartitionTablesRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WipePartitionTablesRequest, block_device) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::WipePartitionTablesResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WipePartitionTablesResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WipePartitionTablesResponse)
+    == ::llcpp::fuchsia::paver::Paver::WipePartitionTablesResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WipePartitionTablesResponse, status) == 16);
 
 }  // namespace fidl
