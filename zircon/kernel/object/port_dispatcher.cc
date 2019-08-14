@@ -277,53 +277,55 @@ bool PortDispatcher::RemoveInterruptPacket(PortInterruptPacket* port_packet) {
 }
 
 bool PortDispatcher::QueueInterruptPacket(PortInterruptPacket* port_packet, zx_time_t timestamp) {
-  // Using AutoReschedDisable is necessary for correctness to prevent
-  // context-switching to the woken thread while holding spinlock_.
-  AutoReschedDisable resched_disable;
-  resched_disable.Disable();
-  Guard<SpinLock, IrqSave> guard{&spinlock_};
-  if (port_packet->InContainer()) {
-    return false;
-  } else {
+  {
+    Guard<SpinLock, IrqSave> guard{&spinlock_};
+    if (port_packet->InContainer()) {
+      return false;
+    }
+
     port_packet->timestamp = timestamp;
     interrupt_packets_.push_back(port_packet);
-    sema_.Post();
-    return true;
   }
+
+  // |Post| may unblock a waiting thread that will immediately acquire the spinlock. We drop the
+  // spinlock before posting to avoid unnecessary spinning.
+  sema_.Post();
+  return true;
 }
 
 zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count) {
   canary_.Assert();
 
-  AutoReschedDisable resched_disable;  // Must come before the lock guard.
-  Guard<fbl::Mutex> guard{get_lock()};
-  if (zero_handles_)
-    return ZX_ERR_BAD_HANDLE;
-
-  if (IsDefaultAllocatedEphemeral(*port_packet) &&
-      num_ephemeral_packets_ > kMaxAllocatedPacketCountPerPort) {
-    kcounter_add(port_full_count, 1);
-    return ZX_ERR_SHOULD_WAIT;
-  }
-
-  if (observed) {
-    if (port_packet->InContainer()) {
-      port_packet->packet.signal.observed |= observed;
-      // |count| is deliberately left as is.
-      return ZX_OK;
+  {
+    Guard<fbl::Mutex> guard{get_lock()};
+    if (zero_handles_) {
+      return ZX_ERR_BAD_HANDLE;
     }
-    port_packet->packet.signal.observed = observed;
-    port_packet->packet.signal.count = count;
-  }
-  packets_.push_back(port_packet);
-  if (IsDefaultAllocatedEphemeral(*port_packet)) {
-    ++num_ephemeral_packets_;
-  }
-  // This Disable() call must come before Post() to be useful, but doing
-  // it earlier would also be OK.
-  resched_disable.Disable();
-  sema_.Post();
 
+    if (IsDefaultAllocatedEphemeral(*port_packet) &&
+        num_ephemeral_packets_ > kMaxAllocatedPacketCountPerPort) {
+      kcounter_add(port_full_count, 1);
+      return ZX_ERR_SHOULD_WAIT;
+    }
+
+    if (observed) {
+      if (port_packet->InContainer()) {
+        port_packet->packet.signal.observed |= observed;
+        // |count| is deliberately left as is.
+        return ZX_OK;
+      }
+      port_packet->packet.signal.observed = observed;
+      port_packet->packet.signal.count = count;
+    }
+    packets_.push_back(port_packet);
+    if (IsDefaultAllocatedEphemeral(*port_packet)) {
+      ++num_ephemeral_packets_;
+    }
+  }
+
+  // If |Post| unblocks a thread, that thread will attempt to acquire the lock. We drop the lock
+  // before calling |Post| to allow the unblocked thread to acquire the lock without blocking.
+  sema_.Post();
   return ZX_OK;
 }
 
