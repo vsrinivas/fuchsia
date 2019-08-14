@@ -6,6 +6,7 @@ import("//build/test/test_package.gni")
 
 group("lib") {
   deps = [
+    "gesture_manager",
     "tts",
   ]
 }
@@ -20,12 +21,17 @@ group("tests") {
 
 test_package("a11y_lib_tests") {
   deps = [
+    "gesture_manager/tests",
     "tts/tests",
   ]
 
   tests = [
     {
       name = "tts_manager_tests"
+      environments = basic_envs
+    },
+    {
+      name = "gesture_manager_tests"
       environments = basic_envs
     },
   ]

@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("gesture_manager") {
+  sources = [
+    "gesture_handler.cc",
+    "gesture_handler.h",
+    "gesture_manager.cc",
+    "gesture_manager.h",
+    "interaction.cc",
+    "interaction.h",
+    "interaction_context.cc",
+    "interaction_context.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.math",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//src/lib/ui/input:gesture",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+  ]
+}

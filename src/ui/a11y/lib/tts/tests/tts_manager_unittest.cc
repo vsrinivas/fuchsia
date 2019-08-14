@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <vector>
-
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <memory>
+#include <vector>
 
 #include "src/ui/a11y/lib/tts/log_engine.h"
 #include "src/ui/a11y/lib/tts/tts_manager_impl.h"
