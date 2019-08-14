@@ -571,4 +571,48 @@ TEST(SdioControllerDeviceTest, ProcessFbr) {
   mock_sdmmc.VerifyAll();
 }
 
+TEST(SdioControllerDeviceTest, SmallHostTransferSize) {
+  MockSdmmcDevice mock_sdmmc({
+      .caps = 0,
+      .max_transfer_size = 32,
+      .max_transfer_size_non_dma = 64,
+      .prefs = 0,
+  });
+  SdioControllerDeviceTest dut(&mock_sdmmc, {});
+
+  dut.SetSdioFunctionInfo(3, {
+                                 .hw_info = {},
+                                 .cur_blk_size = 128,
+                                 .enabled = true,
+                                 .intr_enabled = false,
+                             });
+
+  mock_sdmmc.mock_SdioIoRwExtended().ExpectCall(ZX_OK, 0, true, 3, 0, false, 1, 64, 0);
+
+  sdio_rw_txn_t txn = {
+      .addr = 0,
+      .data_size = 64,
+      .incr = false,
+      .write = true,
+      .use_dma = true,
+      .dma_vmo = ZX_HANDLE_INVALID,
+      .virt_buffer = nullptr,
+      .virt_size = 0,
+      .buf_offset = 0,
+  };
+  EXPECT_NOT_OK(dut.SdioDoRwTxn(3, &txn));
+
+  txn.use_dma = false;
+  EXPECT_OK(dut.SdioDoRwTxn(3, &txn));
+
+  txn.data_size = 128;
+  EXPECT_NOT_OK(dut.SdioDoRwTxn(3, &txn));
+
+  txn.use_dma = true;
+  EXPECT_NOT_OK(dut.SdioDoRwTxn(3, &txn));
+
+  dut.VerifyAll();
+  mock_sdmmc.VerifyAll();
+}
+
 }  // namespace sdmmc

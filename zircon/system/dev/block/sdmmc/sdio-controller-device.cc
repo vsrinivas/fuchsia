@@ -493,6 +493,20 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
     zxlogf(ERROR, "sdio_rw_data: data size is not a multiple of 4\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
+
+  const uint64_t max_host_transfer_size =
+      fbl::max(1ul, use_dma ? sdmmc().host_info().max_transfer_size
+                            : sdmmc().host_info().max_transfer_size_non_dma);
+  const uint32_t func_blk_size = funcs_[fn_idx].cur_blk_size;
+
+  if (max_host_transfer_size < func_blk_size && max_host_transfer_size < data_size) {
+    zxlogf(ERROR, "sdio_rw_data: block size (%u) is greater than max host transfer size (%lu)\n",
+           func_blk_size, max_host_transfer_size);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  const uint32_t max_host_blocks = static_cast<uint32_t>(max_host_transfer_size / func_blk_size);
+
   bool dma_supported = sdmmc().UseDma();
   uint8_t* buf = use_dma ? nullptr : reinterpret_cast<uint8_t*>(txn->virt_buffer);
   zx_handle_t dma_vmo = use_dma ? txn->dma_vmo : ZX_HANDLE_INVALID;
@@ -514,16 +528,11 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
   }
 
   bool mbs = hw_info_.caps & SDIO_CARD_MULTI_BLOCK;
-  uint32_t func_blk_size = funcs_[fn_idx].cur_blk_size;
   uint32_t rem_blocks = (func_blk_size == 0) ? 0 : (data_size / func_blk_size);
   uint32_t data_processed = 0;
   while (rem_blocks > 0) {
     uint32_t num_blocks = 1;
     if (mbs) {
-      uint32_t max_host_blocks;
-      max_host_blocks = static_cast<uint32_t>(
-          use_dma ? (sdmmc().host_info().max_transfer_size / func_blk_size)
-                  : (sdmmc().host_info().max_transfer_size_non_dma / func_blk_size));
       // multiblock is supported, determine max number of blocks per cmd
       num_blocks =
           fbl::min(fbl::min(SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD, max_host_blocks), rem_blocks);
