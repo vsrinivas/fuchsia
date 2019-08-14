@@ -536,7 +536,7 @@ zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_re
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "broadcom-wlanif",  // TODO(cphoenix): Uniquify this?
+      .name = "brcmfmac-wlanif",  // TODO(cphoenix): Uniquify this?
       .ctx = ndev,
       .ops = &if_impl_device_ops,
       .proto_id = ZX_PROTOCOL_WLANIF_IMPL,
