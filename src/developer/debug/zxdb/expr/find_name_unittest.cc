@@ -220,6 +220,43 @@ TEST(FindName, FindMember) {
   EXPECT_EQ(d.kBase2Offset, results[1].member().data_member_offset());
 }
 
+TEST(FindName, FindAnonUnion) {
+  // Makes this type:
+  //   struct Outer {
+  //     union Union {
+  //       int inner;
+  //     };
+  //   }
+  // and makes sure that we can evaluate "outer.inner", transparently going into the anonymous
+  // union.
+
+  auto int_type = MakeInt32Type();
+  constexpr uint32_t kInnerOffset = 4;  // Offset of "inner" inside the union.
+
+  constexpr char kInnerName[] = "inner";
+  auto union_type = MakeCollectionTypeWithOffset(DwarfTag::kUnionType, "", kInnerOffset,
+                                                 {{kInnerName, int_type}});
+
+  constexpr uint32_t kUnionOffset = 2;  // Offset of the union inside "Outer".
+  auto outer_type = MakeCollectionTypeWithOffset(DwarfTag::kStructureType, "Outer", kUnionOffset,
+                                                 {{"", union_type}});
+
+  constexpr uint8_t kIntValue = 42;
+  ExprValue value(outer_type, {0, 0, 0, 0, 0, 0,      // Padding: kInnerOffset + kUnionOffset bytes.
+                               kIntValue, 0, 0, 0});  // 32-bit integer little-endian.
+
+  FindNameContext context;  // Empty context = local and object vars only.
+  FindNameOptions exact_var(FindNameOptions::kAllKinds);
+  std::vector<FoundName> result;
+  FindMember(context, exact_var, outer_type.get(), ParsedIdentifier(kInnerName), nullptr, &result);
+  ASSERT_EQ(1u, result.size());
+
+  // The found value should be at the correct offset, accounting for both the union and integer
+  // offsets.
+  EXPECT_EQ(kInnerOffset + kUnionOffset, result[0].member().data_member_offset());
+  EXPECT_EQ(kInnerName, result[0].member().data_member()->GetAssignedName());
+}
+
 // This only tests the ModuleSymbols and function naming integration, the
 // details of the index searching are tested by FindGlobalNameInModule()
 TEST(FindName, FindIndexedName) {

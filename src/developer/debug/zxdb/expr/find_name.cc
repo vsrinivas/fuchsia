@@ -200,6 +200,59 @@ VisitResult FindPerIndexNode(const FindNameOptions& options, const ModuleSymbols
   return VisitResult::kContinue;
 }
 
+// Searches a specific collection for a data member with the given |looking_for| name. This is
+// a helper for FindMember that searches one level.
+//
+// This takes one additional parameter over FindMember: the |cur_offset| which is the offset of
+// the current collection being iterated over in whatever contains it.
+VisitResult FindMemberOn(const FindNameContext& context, const FindNameOptions& options,
+                         const Collection* collection, uint64_t cur_offset,
+                         const ParsedIdentifier& looking_for, const Variable* optional_object_ptr,
+                         std::vector<FoundName>* result) {
+  // Data member iteration.
+  if (const std::string* looking_for_name = GetSingleComponentIdentifierName(looking_for);
+      looking_for_name && options.find_vars) {
+    for (const auto& lazy : collection->data_members()) {
+      if (const DataMember* data = lazy.Get()->AsDataMember()) {
+        // TODO(brettw) allow "BaseClass::foo" syntax for specifically naming a member of a base
+        // class. Watch out: the base class could be qualified (or not) in various ways:
+        // ns::BaseClass::foo, BaseClass::foo, etc.
+        if (NameMatches(options, data->GetAssignedName(), *looking_for_name)) {
+          result->emplace_back(optional_object_ptr, data, cur_offset + data->member_location());
+          if (result->size() >= options.max_results)
+            return VisitResult::kDone;
+        }
+
+        // Check for anonymous unions.
+        if (data->GetAssignedName().empty()) {
+          // Recursively search into anonymous unions. We assume this is C++ and anonymous
+          // collections can't have base classes so we don't need to VisitClassHierarchy().
+          if (const Collection* member_coll = data->type().Get()->AsCollection()) {
+            VisitResult visit_result =
+                FindMemberOn(context, options, member_coll, cur_offset + data->member_location(),
+                             looking_for, optional_object_ptr, result);
+            if (visit_result != VisitResult::kContinue)
+              return visit_result;
+          }
+        }
+      }
+    }  // for (data_members)
+  }
+
+  // Index node iteration for this class' scope.
+  if (OptionsRequiresIndex(options)) {
+    ParsedIdentifier container_name = ToParsedIdentifier(collection->GetIdentifier());
+
+    // Don't search previous scopes (pass |search_containing| = false). If a class derives from a
+    // class in another namespace, that doesn't bring the other namespace in the current scope.
+    VisitResult vr = FindIndexedName(context, options, container_name, looking_for, false, result);
+    if (vr != VisitResult::kContinue)
+      return vr;
+  }
+
+  return VisitResult::kContinue;
+}
+
 }  // namespace
 
 FindNameContext::FindNameContext(const ProcessSymbols* ps, const SymbolContext& symbol_context,
@@ -306,38 +359,9 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
                 const Variable* optional_object_ptr, std::vector<FoundName>* result) {
   VisitClassHierarchy(object, [&context, &options, &looking_for, optional_object_ptr, result](
                                   const Collection* cur_collection, uint64_t cur_offset) {
-    // Called for each collection in the hierarchy.
-
-    // Data member iteration.
-    if (const std::string* looking_for_name = GetSingleComponentIdentifierName(looking_for);
-        looking_for_name && options.find_vars) {
-      for (const auto& lazy : cur_collection->data_members()) {
-        if (const DataMember* data = lazy.Get()->AsDataMember()) {
-          // TODO(brettw) allow "BaseClass::foo" syntax for specifically naming a member of a base
-          // class. Watch out: the base class could be qualified (or not) in various ways:
-          // ns::BaseClass::foo, BaseClass::foo, etc.
-          if (NameMatches(options, data->GetAssignedName(), *looking_for_name)) {
-            result->emplace_back(optional_object_ptr, data, cur_offset + data->member_location());
-            if (result->size() >= options.max_results)
-              return VisitResult::kDone;
-          }
-        }
-      }
-    }
-
-    // Index node iteration for this class' scope.
-    if (OptionsRequiresIndex(options)) {
-      ParsedIdentifier container_name = ToParsedIdentifier(cur_collection->GetIdentifier());
-
-      // Don't search previous scopes (pass |search_containing| = false). If a class derives from a
-      // class in another namespace, that doesn't bring the other namespace in the current scope.
-      VisitResult vr =
-          FindIndexedName(context, options, container_name, looking_for, false, result);
-      if (vr != VisitResult::kContinue)
-        return vr;
-    }
-
-    return VisitResult::kContinue;
+    // Called for each collection in the class hierarchy.
+    return FindMemberOn(context, options, cur_collection, cur_offset, looking_for,
+                        optional_object_ptr, result);
   });
 }
 
