@@ -5,10 +5,9 @@
 group("overnet") {
   testonly = true
   deps = [
-    "deprecated",
     "examples",
     "lib",
-    "overnetstack:overnetstack2",
+    "overnetstack",
     "tools",
   ]
 }

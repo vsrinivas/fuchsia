@@ -365,8 +365,8 @@ group("netstack3") {
 group("overnetstack") {
   testonly = true
   public_deps = [
-    "//src/connectivity/overnet/deprecated/overnetstack",
-    "//src/connectivity/overnet/deprecated/tools/ascendd",
+    "//src/connectivity/overnet/overnetstack",
+    "//src/connectivity/overnet/tools/ascendd",
     "//src/connectivity/overnet/tools/onet",
   ]
 }

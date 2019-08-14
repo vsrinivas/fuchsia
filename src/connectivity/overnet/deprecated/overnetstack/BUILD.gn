@@ -30,7 +30,7 @@ executable("overnetstack_unittests") {
 }
 
 executable("bin") {
-  output_name = "overnetstack"
+  output_name = "overnetstack_deprecated"
 
   sources = [
     "bound_channel.cc",
@@ -74,7 +74,7 @@ package("overnetstack") {
     ":bin",
   ]
 
-  binary = "overnetstack"
+  binary = "overnetstack_deprecated"
 
   meta = [
     {

@@ -4,14 +4,14 @@
 
 import("//build/rust/rustc_binary.gni")
 
-group("ascendd2") {
+group("ascendd") {
   deps = [
     ":bin($host_toolchain)",
   ]
 }
 
 rustc_binary("bin") {
-  name = "ascendd2"
+  name = "ascendd"
   edition = "2018"
 
   deps = []
