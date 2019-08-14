@@ -6,7 +6,7 @@ library("test-utils") {
   testonly = true
   shared = true
   sources = [
-    "test-utils.c",
+    "test-utils.cc",
   ]
   public_deps = [
     "$zx/system/ulib/launchpad",

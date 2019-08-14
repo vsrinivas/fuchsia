@@ -41,7 +41,7 @@ void* tu_calloc(size_t nmemb, size_t size) {
 
 char* tu_strdup(const char* s) {
   size_t len = strlen(s) + 1;
-  char* r = tu_malloc(len);
+  char* r = static_cast<char*>(tu_malloc(len));
   strcpy(r, s);
   return r;
 }
@@ -234,7 +234,7 @@ int tu_process_get_return_code(zx_handle_t process) {
     unittest_printf_critical("attempt to read return code of non-exited process");
     exit(TU_FAIL_ERRCODE);
   }
-  return info.return_code;
+  return static_cast<int>(info.return_code);
 }
 
 int tu_process_wait_exit(zx_handle_t process) {
