@@ -262,11 +262,10 @@ where
     }
 
     fn handle_request(&mut self, req: Message) -> Result<ServerAction, ServerError> {
-        match get_client_state(&req) {
+        match get_client_state(&req).map_err(|()| ServerError::UnknownClientStateDuringRequest)? {
             ClientState::Selecting => self.handle_request_selecting(req),
             ClientState::InitReboot => self.handle_request_init_reboot(req),
             ClientState::Renewing => self.handle_request_renewing(req),
-            ClientState::Unknown => Err(ServerError::UnknownClientStateDuringRequest),
         }
     }
 
@@ -552,7 +551,6 @@ impl AddressPool {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum ClientState {
-    Unknown,
     Selecting,
     InitReboot,
     Renewing,
@@ -688,19 +686,22 @@ fn build_nak(req: Message, config: &ServerConfig, error: String) -> Message {
     nak
 }
 
-fn get_client_state(msg: &Message) -> ClientState {
-    let maybe_server_id = get_server_id_from(&msg);
-    let maybe_requested_ip = get_requested_ip_addr(&msg);
-    let zero_ciaddr = Ipv4Addr::new(0, 0, 0, 0);
+fn get_client_state(msg: &Message) -> Result<ClientState, ()> {
+    let have_server_id = get_server_id_from(&msg).is_some();
+    let have_requested_ip = get_requested_ip_addr(&msg).is_some();
 
-    if maybe_server_id.is_some() && maybe_requested_ip.is_none() && msg.ciaddr != zero_ciaddr {
-        return ClientState::Selecting;
-    } else if maybe_requested_ip.is_some() && msg.ciaddr == zero_ciaddr {
-        return ClientState::InitReboot;
-    } else if msg.ciaddr != zero_ciaddr {
-        return ClientState::Renewing;
+    if msg.ciaddr.is_unspecified() {
+        if have_requested_ip {
+            Ok(ClientState::InitReboot)
+        } else {
+            Err(())
+        }
     } else {
-        return ClientState::Unknown;
+        if have_server_id && !have_requested_ip {
+            Ok(ClientState::Selecting)
+        } else {
+            Ok(ClientState::Renewing)
+        }
     }
 }
 
@@ -1027,16 +1028,16 @@ pub mod tests {
         let offer = extract_message(server.dispatch(disc).unwrap());
 
         let accessor = server.stash.clone_proxy();
-        let maybe_value = accessor
+        let value = accessor
             .get_value(&format!("{}-{}", DEFAULT_STASH_PREFIX, client_mac))
             .await
             .context("failed to get value from stash")?;
-        let value = maybe_value.unwrap();
-        let serialized_config = match *value {
-            fidl_fuchsia_stash::Value::Stringval(s) => s,
-            _ => return Err(failure::err_msg("stash did not contain expected value")),
-        };
-        let deserialized_config = serde_json::from_str::<CachedConfig>(&serialized_config)
+        let value = value.ok_or(failure::err_msg("value not contained in stash"))?;
+        let serialized_config = match value.as_ref() {
+            fidl_fuchsia_stash::Value::Stringval(s) => Ok(s),
+            val => Err(failure::format_err!("unexpected value in stash: {:?}", val)),
+        }?;
+        let deserialized_config = serde_json::from_str::<CachedConfig>(serialized_config)
             .context("failed to deserialize config")?;
 
         assert_eq!(deserialized_config.client_addr, offer.yiaddr);
@@ -1811,7 +1812,7 @@ pub mod tests {
             value: random_ipv4_generator().octets().to_vec(),
         });
 
-        assert_eq!(get_client_state(&req), ClientState::Selecting);
+        assert_eq!(get_client_state(&req), Ok(ClientState::Selecting));
         Ok(())
     }
 
@@ -1825,7 +1826,7 @@ pub mod tests {
             value: random_ipv4_generator().octets().to_vec(),
         });
 
-        assert_eq!(get_client_state(&req), ClientState::InitReboot);
+        assert_eq!(get_client_state(&req), Ok(ClientState::InitReboot));
         Ok(())
     }
 
@@ -1836,7 +1837,7 @@ pub mod tests {
         // Renewing state request must have ciaddr populated.
         req.ciaddr = random_ipv4_generator();
 
-        assert_eq!(get_client_state(&req), ClientState::Renewing);
+        assert_eq!(get_client_state(&req), Ok(ClientState::Renewing));
         Ok(())
     }
 
@@ -1844,7 +1845,7 @@ pub mod tests {
     async fn test_get_client_state_with_unknown_returns_unknown() -> Result<(), Error> {
         let msg = new_test_request();
 
-        assert_eq!(get_client_state(&msg), ClientState::Unknown);
+        assert_eq!(get_client_state(&msg), Err(()));
         Ok(())
     }
 

@@ -198,12 +198,11 @@ impl Message {
 
     /// Returns the value's DHCP `MessageType` or appropriate `MessageTypeError` in case of failure.
     pub fn get_dhcp_type(&self) -> Result<MessageType, MessageTypeError> {
-        let dhcp_type_option = self
+        let type_option = self
             .get_config_option(OptionCode::DhcpMessageType)
             .ok_or(MessageTypeError::MissingOption)?;
-        let maybe_dhcp_type_value =
-            dhcp_type_option.value.get(0).ok_or(MessageTypeError::MissingValue)?;
-        MessageType::try_from(*maybe_dhcp_type_value).map_err(MessageTypeError::UnknownType)
+        let type_value = type_option.value.get(0).ok_or(MessageTypeError::MissingValue)?;
+        MessageType::try_from(*type_value).map_err(MessageTypeError::UnknownType)
     }
 
     pub fn parse_to_config(&self) -> RequestedConfig {
@@ -412,12 +411,7 @@ fn copy_buf_into_mac_addr(buf: &[u8], addr: &mut MacAddr) {
 }
 
 fn buf_to_msg_string(buf: &[u8]) -> Option<String> {
-    use std::str;
-    let maybe_string = str::from_utf8(buf);
-    match maybe_string.ok() {
-        Some(string) => Some(string.trim_end_matches('\x00').to_string()),
-        None => None,
-    }
+    std::str::from_utf8(buf).ok().map(|s| s.trim_end_matches('\x00').to_string())
 }
 
 fn buf_into_options(buf: &[u8], options: &mut Vec<ConfigOption>) {
