@@ -41,10 +41,41 @@ readonly \
     EXAMPLE_DIR="${FUCHSIA_DIR}/tools/fidl/gidl-conformance-suite"
 
 # TODO(FIDL-621): Support multiple .gidl sources.
-readonly gidl_path="${EXAMPLE_DIR}/conformance.gidl"
+readonly GIDL_PATH="${EXAMPLE_DIR}/conformance.gidl"
 
+readonly \
+    GO_IMPL="${FUCHSIA_DIR}/third_party/go/src/syscall/zx/fidl/conformance/impl.go"
+readonly \
+    GO_TEST_PATH="${FUCHSIA_DIR}/third_party/go/src/syscall/zx/fidl/fidl_test/conformance_test.go"
+readonly \
+    CPP_TEST_PATH="${FUCHSIA_DIR}/sdk/lib/fidl/cpp/conformance_test.cc"
+readonly \
+    DART_DEFINITION_PATH="${FUCHSIA_DIR}/topaz/bin/fidl_bindings_test/test/test/conformance_test_types.dart"
+readonly \
+    DART_TEST_PATH="${FUCHSIA_DIR}/topaz/bin/fidl_bindings_test/test/test/conformance_test.dart"
+
+readonly tmpbackup="$( mktemp -d 2>/dev/null || mktemp -d -t 'tmpbackup' )"
 readonly tmpout="$( mktemp -d 2>/dev/null || mktemp -d -t 'tmpout' )"
-trap "rm -rf ${tmpout}" EXIT
+
+cp ${GO_IMPL} ${tmpbackup}/impl.go
+cp ${GO_TEST_PATH} ${tmpbackup}/conformance_test.go
+cp ${CPP_TEST_PATH} ${tmpbackup}/conformance_test.cc
+cp ${DART_DEFINITION_PATH} ${tmpbackup}/conformance_test_types.dart
+cp ${DART_TEST_PATH} ${tmpbackup}/conformance_test.dart
+
+function cleanup {
+    readonly EXIT_CODE=$?
+    if [ $EXIT_CODE -ne 0 ]; then
+        cp ${tmpbackup}/impl.go ${GO_IMPL}
+        cp ${tmpbackup}/conformance_test.go ${GO_TEST_PATH}
+        cp ${tmpbackup}/conformance_test.cc ${CPP_TEST_PATH}
+        cp ${tmpbackup}/conformance_test_types.dart ${DART_DEFINITION_PATH}
+        cp ${tmpbackup}/conformance_test.dart ${DART_TEST_PATH}
+    fi
+    rm -rf ${tmpout}
+    rm -rf ${tmpbackup}
+}
+trap cleanup EXIT
 
 readonly json_path="$( mktemp ${tmpout}/tmp.XXXXXXXX )"
 fidlc_args="--json ${json_path} --files "
@@ -81,27 +112,21 @@ ${FIDLGEN} \
     -json "${json_path}" \
     -output-base "${tmpout}" \
     -include-base "${tmpout}"
-readonly \
-    GO_IMPL="${FUCHSIA_DIR}/third_party/go/src/syscall/zx/fidl/conformance/impl.go"
 echo "$go_generated_source_header" > "${GO_IMPL}"
 cat "${tmpout}/impl.go" >> "${GO_IMPL}"
 ${GOFMT} -s -w "${GO_IMPL}"
-readonly \
-    GO_TEST_PATH="${FUCHSIA_DIR}/third_party/go/src/syscall/zx/fidl/fidl_test/conformance_test.go"
 echo "$go_generated_source_header" > "${GO_TEST_PATH}"
 ${GIDL} \
     -language go \
     -json "${json_path}" \
-    -gidl "${gidl_path}" | ${GOFMT} >> "${GO_TEST_PATH}"
+    -gidl "${GIDL_PATH}" | ${GOFMT} >> "${GO_TEST_PATH}"
 
 # C++
-readonly \
-    CPP_TEST_PATH="${FUCHSIA_DIR}/sdk/lib/fidl/cpp/conformance_test.cc"
 echo "$generated_source_header" > "${CPP_TEST_PATH}"
 ${GIDL} \
     -language cpp \
     -json "${json_path}" \
-    -gidl "${gidl_path}" >> "${CPP_TEST_PATH}"
+    -gidl "${GIDL_PATH}" >> "${CPP_TEST_PATH}"
 fx format-code --files="$CPP_TEST_PATH"
 
 # Dart
@@ -109,15 +134,11 @@ ${FIDLGEN_DART} \
     -json "${json_path}" \
     -output-base "${tmpout}" \
     -include-base "${tmpout}"
-readonly \
-    DART_DEFINITION_PATH="${FUCHSIA_DIR}/topaz/bin/fidl_bindings_test/test/test/conformance_test_types.dart"
 echo "$generated_source_header" > "${DART_DEFINITION_PATH}"
 cat "${tmpout}/fidl_async.dart" >> ${DART_DEFINITION_PATH}
-readonly \
-    DART_TEST_PATH="${FUCHSIA_DIR}/topaz/bin/fidl_bindings_test/test/test/conformance_test.dart"
 echo "$generated_source_header" > "${DART_TEST_PATH}"
 ${GIDL} \
     -language dart \
     -json "${json_path}" \
-    -gidl "${gidl_path}" >> "${DART_TEST_PATH}"
+    -gidl "${GIDL_PATH}" >> "${DART_TEST_PATH}"
 ${FUCHSIA_DIR}/prebuilt/third_party/dart/linux-x64/bin/dartfmt -w ${DART_TEST_PATH} > /dev/null
