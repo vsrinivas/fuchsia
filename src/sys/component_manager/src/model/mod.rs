@@ -4,7 +4,6 @@
 
 mod addable_directory;
 mod capability;
-mod component;
 pub mod dir_tree;
 pub mod error;
 mod exposed_dir;
@@ -13,6 +12,7 @@ pub mod hub;
 mod model;
 mod moniker;
 mod namespace;
+mod realm;
 mod resolver;
 mod routing;
 pub mod routing_facade;
@@ -22,7 +22,7 @@ pub mod testing;
 pub(crate) mod tests;
 
 pub use self::{
-    capability::*, component::*, dir_tree::*, error::*, exposed_dir::*, framework_services::*,
+    capability::*, realm::*, dir_tree::*, error::*, exposed_dir::*, framework_services::*,
     hub::*, model::*, moniker::*, namespace::*, resolver::*, routing::*, routing_facade::*,
     runner::*,
 };

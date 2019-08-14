@@ -61,7 +61,8 @@ pub async fn route_use_capability<'a>(
             open_mode,
             abs_moniker,
             server_chan,
-        ).await;
+        )
+        .await;
     }
     let source = find_used_capability_source(model, use_decl, &abs_moniker).await?;
     open_capability_at_source(model, flags, open_mode, relative_path, source, server_chan).await
@@ -108,7 +109,8 @@ async fn open_capability_at_source<'a>(
                     open_mode,
                     path,
                     server_chan,
-                ).await?;
+                )
+                .await?;
             } else {
                 return Err(ModelError::capability_discovery_error(format_err!(
                     "invalid capability type to come from a component"
@@ -124,7 +126,8 @@ async fn open_capability_at_source<'a>(
                 realm,
                 &capability_decl,
                 server_chan,
-            ).await?;
+            )
+            .await?;
         }
         CapabilitySource::StorageDecl(..) => {
             panic!("storage capabilities must be separately routed and opened");
@@ -145,11 +148,8 @@ async fn open_framework_capability<'a>(
     let mut capability = None;
 
     for hook in model.hooks.iter() {
-        capability = hook.on_route_framework_capability(
-            realm.clone(),
-            &capability_decl,
-            capability,
-        ).await?;
+        capability =
+            hook.on_route_framework_capability(realm.clone(), &capability_decl, capability).await?;
     }
 
     if let Some(capability) = capability {
@@ -193,41 +193,42 @@ pub async fn route_and_open_storage_capability<'a>(
     };
 
     // Find the path and source of the directory consumed by the storage capability.
-    let (source_path, dir_source_realm) =
-        match storage_decl.source {
-            StorageDirectorySource::Self_ => (storage_decl.source_path, storage_decl_realm.clone()),
-            StorageDirectorySource::Realm => {
-                let capability = RoutedCapability::Storage(storage_decl);
-                let source = find_offered_capability_source(
-                    model,
-                    capability,
-                    &storage_decl_realm.abs_moniker,
-                ).await?;
-                match source {
-                    CapabilitySource::Component(source_capability, realm) => {
-                        (source_capability.source_path().unwrap().clone(), realm)
-                    }
-                    _ => return Err(ModelError::capability_discovery_error(format_err!(
+    let (source_path, dir_source_realm) = match storage_decl.source {
+        StorageDirectorySource::Self_ => (storage_decl.source_path, storage_decl_realm.clone()),
+        StorageDirectorySource::Realm => {
+            let capability = RoutedCapability::Storage(storage_decl);
+            let source =
+                find_offered_capability_source(model, capability, &storage_decl_realm.abs_moniker)
+                    .await?;
+            match source {
+                CapabilitySource::Component(source_capability, realm) => {
+                    (source_capability.source_path().unwrap().clone(), realm)
+                }
+                _ => {
+                    return Err(ModelError::capability_discovery_error(format_err!(
                         "storage capability backing directories must be provided by a component"
-                    ))),
+                    )))
                 }
             }
-            StorageDirectorySource::Child(ref name) => {
-                let moniker = Some(
-                    storage_decl_realm.abs_moniker.child(ChildMoniker::new(name.to_string(), None)),
-                );
-                let capability = RoutedCapability::Storage(storage_decl);
-                let mut pos = WalkPosition { capability, last_child_moniker: None, moniker };
-                match walk_expose_chain(model, &mut pos).await? {
-                    CapabilitySource::Component(source_capability, realm) => {
-                        (source_capability.source_path().unwrap().clone(), realm)
-                    }
-                    _ => return Err(ModelError::capability_discovery_error(format_err!(
+        }
+        StorageDirectorySource::Child(ref name) => {
+            let moniker = Some(
+                storage_decl_realm.abs_moniker.child(ChildMoniker::new(name.to_string(), None)),
+            );
+            let capability = RoutedCapability::Storage(storage_decl);
+            let mut pos = WalkPosition { capability, last_child_moniker: None, moniker };
+            match walk_expose_chain(model, &mut pos).await? {
+                CapabilitySource::Component(source_capability, realm) => {
+                    (source_capability.source_path().unwrap().clone(), realm)
+                }
+                _ => {
+                    return Err(ModelError::capability_discovery_error(format_err!(
                         "storage capability backing directories must be provided by a component"
-                    ))),
+                    )))
                 }
             }
-        };
+        }
+    };
 
     // Bind with a local proxy, so we can create and open the relevant sub-directory for
     // this component.
@@ -240,7 +241,8 @@ pub async fn route_and_open_storage_capability<'a>(
         open_mode,
         &source_path,
         local_server_end.into_channel(),
-    ).await?;
+    )
+    .await?;
 
     // Open each node individually, so it can be created if it doesn't exist
     let relative_moniker =
@@ -409,9 +411,10 @@ async fn walk_offer_chain<'a>(
             }
         }
         let current_realm = model.look_up_realm(&pos.moniker()).await?;
-        let realm_state = current_realm.state.lock().await;
-        // This get_decl() is safe because `look_up_realm` populates this field
-        let decl = realm_state.get_decl();
+        let realm_state = current_realm.lock_state().await;
+        let realm_state = realm_state.get();
+        // This `get()` is safe because `look_up_realm` populates this field
+        let decl = realm_state.decl();
         let last_child_moniker = pos.last_child_moniker.as_ref().unwrap();
         if let Some(offer) = pos.capability.find_offer_source(decl, last_child_moniker) {
             let source = match offer {
@@ -504,9 +507,10 @@ async fn walk_expose_chain<'a>(
     };
     loop {
         let current_realm = model.look_up_realm(&pos.moniker()).await?;
-        let realm_state = current_realm.state.lock().await;
-        // This get_decl() is safe because look_up_realm populates this field
-        let decl = realm_state.get_decl();
+        let realm_state = current_realm.lock_state().await;
+        let realm_state = realm_state.get();
+        // This `get()` is safe because look_up_realm populates this field.
+        let decl = realm_state.decl();
         let first_expose = first_expose.take();
         let expose = match first_expose {
             Some(_) => first_expose.as_ref(),

@@ -4,6 +4,7 @@
 
 use {
     crate::model::*,
+    cm_rust::ComponentDecl,
     fuchsia_async as fasync,
     fuchsia_vfs_pseudo_fs::directory,
     futures::future::{AbortHandle, Abortable},
@@ -27,7 +28,7 @@ impl ExposedDir {
     pub fn new(
         model: &Model,
         abs_moniker: &AbsoluteMoniker,
-        realm_state: &RealmState,
+        decl: ComponentDecl,
     ) -> Result<Self, ModelError> {
         let mut dir_abort_handles = vec![];
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
@@ -35,11 +36,7 @@ impl ExposedDir {
         let (controller, mut controlled) =
             directory::controlled::controlled(directory::simple::empty());
         let route_fn = RoutingFacade::new(model.clone()).route_expose_fn_factory();
-        let tree = DirTree::build_from_exposes(
-            route_fn,
-            abs_moniker,
-            realm_state.decl.clone().expect("no decl"),
-        );
+        let tree = DirTree::build_from_exposes(route_fn, abs_moniker, decl);
         tree.install(abs_moniker, &mut controlled)?;
         let future = Abortable::new(controlled, abort_registration);
         fasync::spawn(async move {

@@ -107,7 +107,7 @@ async fn bind_instance_child() {
     let echo_realm = get_child_realm(&*model.root_realm, "echo").await;
     let actual_children = get_children(&*system_realm).await;
     assert!(actual_children.is_empty());
-    assert!(echo_realm.state.lock().await.child_realms.is_none());
+    assert!(!echo_realm.lock_state().await.is_resolved());
     // bind to echo
     assert!(model.look_up_and_bind_instance(vec!["echo"].into()).await.is_ok());
     let expected_urls =

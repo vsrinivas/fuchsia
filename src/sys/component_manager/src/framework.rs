@@ -243,8 +243,9 @@ impl RealFrameworkServiceHost {
             }
         })?;
         let child_realm = {
-            let realm_state = realm.state.lock().await;
-            realm_state.get_child_realms().get(&child_moniker).map(|r| r.clone())
+            let realm_state = realm.lock_state().await;
+            let realm_state = realm_state.get();
+            realm_state.live_child_realms().get(&child_moniker).map(|r| r.clone())
         };
         if let Some(child_realm) = child_realm {
             model.bind_instance_open_exposed(child_realm, exposed_dir.into_channel()).await
@@ -295,15 +296,14 @@ impl RealFrameworkServiceHost {
             error!("resolve_decl() failed: {}", e);
             fsys::Error::Internal
         })?;
-        let state = realm.state.lock().await;
-        let decl = state.get_decl();
+        let state = realm.lock_state().await;
+        let state = state.get();
+        let decl = state.decl();
         let _ = decl
             .find_collection(&collection.name)
             .ok_or_else(|| fsys::Error::CollectionNotFound)?;
         let mut children: Vec<_> = state
-            .child_realms
-            .as_ref()
-            .unwrap()
+            .live_child_realms()
             .keys()
             .filter_map(|m| match m.collection() {
                 Some(c) => {

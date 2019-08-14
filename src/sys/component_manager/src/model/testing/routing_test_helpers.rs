@@ -40,18 +40,17 @@ use {
 
 /// Return the child of the given realm.
 pub async fn get_child<'a>(realm: &'a Realm, moniker: &'a str) -> Arc<Realm> {
-    let state = realm.state.lock().await;
-    state.get_child_realms()[&moniker.into()].clone()
+    realm.lock_state().await.get().live_child_realms()[&moniker.into()].clone()
 }
 
 /// Return all monikers of the children of the given `realm`.
 pub async fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
-    realm.state.lock().await.get_child_realms().keys().cloned().collect()
+    realm.lock_state().await.get().live_child_realms().keys().cloned().collect()
 }
 
 /// Return the child realm of the given `realm` with moniker `child`.
 pub async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> {
-    realm.state.lock().await.get_child_realms()[&child.into()].clone()
+    realm.lock_state().await.get().live_child_realms()[&child.into()].clone()
 }
 
 /// Construct a capability path for the hippo service.
@@ -713,8 +712,9 @@ mod capability_util {
         let realm = model.look_up_realm(abs_moniker).await
             .expect(&format!("realm not found {}", abs_moniker));
         model.bind_instance(realm.clone()).await.expect("failed to bind instance");
-        let state = realm.state.lock().await;
-        let execution = state.execution.as_ref().expect("no execution");
+        let state = realm.lock_state().await;
+        let state = state.get();
+        let execution = state.execution().expect("no execution");
         let flags = OPEN_RIGHT_READABLE;
         execution.exposed_dir.root_dir.open(flags, open_mode, path.split(), server_end).await
             .expect("failed to open exposed dir");

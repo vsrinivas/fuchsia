@@ -218,8 +218,8 @@ impl Hub {
         routing_facade: &model::RoutingFacade,
         abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let execution = realm_state.execution.as_ref().unwrap();
-        let decl = realm_state.get_decl();
+        let execution = realm_state.execution().expect("missing execution");
+        let decl = realm_state.decl();
         let tree = model::DirTree::build_from_uses(
             routing_facade.route_use_fn_factory(),
             &abs_moniker,
@@ -245,7 +245,7 @@ impl Hub {
         routing_facade: &model::RoutingFacade,
         abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let decl = realm_state.get_decl();
+        let decl = realm_state.decl();
         let tree = model::DirTree::build_from_exposes(
             routing_facade.route_expose_fn_factory(),
             &abs_moniker,
@@ -309,7 +309,7 @@ impl Hub {
 
         // If we haven't already created an execution directory, create one now.
         if instance.execution.is_none() {
-            if let Some(execution) = realm_state.execution.as_ref() {
+            if let Some(execution) = realm_state.execution() {
                 let (execution_controller, mut execution_controlled) =
                     directory::controlled::controlled(directory::simple::empty());
 
@@ -347,7 +347,8 @@ impl Hub {
             }
         }
 
-        for child_realm in realm_state.get_child_realms().values() {
+        // TODO: Loop over deleting realms also?
+        for child_realm in realm_state.live_child_realms().values() {
             Self::add_instance_to_parent_if_necessary(
                 &child_realm.abs_moniker,
                 child_realm.component_url.clone(),
