@@ -61,34 +61,34 @@ typedef struct {
   // was initially created.
   //
   // Returns `true` iff the new configuration was applied successfully.
-  bool (*update_effect_configuration)(fuchsia_audio_effects_handle_t handle, const char* config,
-                                      size_t config_length);
+  bool (*update_effect_configuration)(fuchsia_audio_effects_handle_t effects_handle,
+                                      const char* config, size_t config_length);
 
   // Deletes an active effect.
-  bool (*delete_effect)(fuchsia_audio_effects_handle_t handle);
+  bool (*delete_effect)(fuchsia_audio_effects_handle_t effects_handle);
 
   // Returns the operational parameters for this instance of the device effect. These parameters
   // are invariant for the lifetime of this effect, based on initial values provided when the
   // client created the effect.
-  bool (*get_parameters)(fuchsia_audio_effects_handle_t handle,
+  bool (*get_parameters)(fuchsia_audio_effects_handle_t effects_handle,
                          fuchsia_audio_effects_parameters* effect_params);
 
   // Synchronously process ‘num_frames’ of audio, in-place. The value of 'num_frames' cannot exceed
   // frame_rate: it must be <= 1 second of audio.
   //
   // `process_inplace` requires that `channels_in` == `channels_out`.
-  bool (*process_inplace)(fuchsia_audio_effects_handle_t handle, uint32_t num_frames,
+  bool (*process_inplace)(fuchsia_audio_effects_handle_t effects_handle, uint32_t num_frames,
                           float* audio_buff_in_out);
 
   // Synchronously process ‘num_frames’ from audio_buff_in to audio_buff_out. 'num_frames' cannot
   // exceed frame_rate: it must be <= 1 second of audio.
   //
   // `process` requires that `channels_in` != `channels_out`.
-  bool (*process)(fuchsia_audio_effects_handle_t handle, uint32_t num_frames,
+  bool (*process)(fuchsia_audio_effects_handle_t effects_handle, uint32_t num_frames,
                   const float* audio_buff_in, float* audio_buff_out);
 
-  // Flushes any cached state this effect identified by `handle`.
-  bool (*flush)(fuchsia_audio_effects_handle_t handle);
+  // Flushes any cached state this effect identified by `effects_handle`.
+  bool (*flush)(fuchsia_audio_effects_handle_t effects_handle);
 } fuchsia_audio_effects_module_v1;
 
 // Declare an exported module instance from a loadable plugin module:

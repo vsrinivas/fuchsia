@@ -117,52 +117,55 @@ fuchsia_audio_effects_handle_t create_effect(uint32_t effect_id, uint32_t frame_
       new TestEffect(effect_id, frame_rate, channels_in, channels_out, {config, config_length}));
 }
 
-bool delete_effect(fuchsia_audio_effects_handle_t token) {
-  if (token == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
+bool delete_effect(fuchsia_audio_effects_handle_t effects_handle) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return false;
   }
   --g_instance_count;
-  delete reinterpret_cast<TestEffect*>(token);
+  delete reinterpret_cast<TestEffect*>(effects_handle);
   return true;
 }
 
-bool update_effect_configuration(fuchsia_audio_effects_handle_t token, const char* config,
+bool update_effect_configuration(fuchsia_audio_effects_handle_t effects_handle, const char* config,
                                  size_t config_length) {
-  if (token == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return false;
   }
-  return reinterpret_cast<TestEffect*>(token)->UpdateConfiguration({config, config_length});
+  return reinterpret_cast<TestEffect*>(effects_handle)
+      ->UpdateConfiguration({config, config_length});
 }
 
-bool get_parameters(fuchsia_audio_effects_handle_t token,
+bool get_parameters(fuchsia_audio_effects_handle_t effects_handle,
                     fuchsia_audio_effects_parameters* params) {
-  if (token == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || params == nullptr) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || params == nullptr) {
     return false;
   }
-  return reinterpret_cast<TestEffect*>(token)->GetParameters(params);
+  return reinterpret_cast<TestEffect*>(effects_handle)->GetParameters(params);
 }
 
-bool process_inplace(fuchsia_audio_effects_handle_t token, uint32_t num_frames,
+bool process_inplace(fuchsia_audio_effects_handle_t effects_handle, uint32_t num_frames,
                      float* audio_buff_in_out) {
-  if (token == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || audio_buff_in_out == nullptr) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || audio_buff_in_out == nullptr) {
     return false;
   }
-  return reinterpret_cast<TestEffect*>(token)->ProcessInPlace(num_frames, audio_buff_in_out);
+  return reinterpret_cast<TestEffect*>(effects_handle)
+      ->ProcessInPlace(num_frames, audio_buff_in_out);
 }
 
-bool process(fuchsia_audio_effects_handle_t token, uint32_t num_frames, const float* audio_buff_in,
-             float* audio_buff_out) {
-  if (token == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || !audio_buff_in || !audio_buff_out) {
+bool process(fuchsia_audio_effects_handle_t effects_handle, uint32_t num_frames,
+             const float* audio_buff_in, float* audio_buff_out) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || !audio_buff_in || !audio_buff_out) {
     return false;
   }
-  return reinterpret_cast<TestEffect*>(token)->Process(num_frames, audio_buff_in, audio_buff_out);
+  return reinterpret_cast<TestEffect*>(effects_handle)
+      ->Process(num_frames, audio_buff_in, audio_buff_out);
 }
 
-bool flush(fuchsia_audio_effects_handle_t token) {
-  if (token == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
+bool flush(fuchsia_audio_effects_handle_t effects_handle) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return false;
   }
-  return reinterpret_cast<TestEffect*>(token)->Flush();
+  return reinterpret_cast<TestEffect*>(effects_handle)->Flush();
 }
 
 zx_status_t ext_add_effect(test_effect_spec effect) {
@@ -186,12 +189,12 @@ zx_status_t ext_clear_effects() {
   return ZX_OK;
 }
 
-zx_status_t ext_inspect_instance(fuchsia_audio_effects_handle_t token,
+zx_status_t ext_inspect_instance(fuchsia_audio_effects_handle_t effects_handle,
                                  test_effects_inspect_state* state) {
-  if (token == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return reinterpret_cast<TestEffect*>(token)->Inspect(state);
+  return reinterpret_cast<TestEffect*>(effects_handle)->Inspect(state);
 }
 
 uint32_t ext_num_instances() { return g_instance_count; }

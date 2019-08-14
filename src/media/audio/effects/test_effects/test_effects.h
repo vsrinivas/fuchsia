@@ -56,7 +56,7 @@ typedef struct {
   uint32_t (*num_instances)();
 
   // Provides detailed information about a single effect instance.
-  zx_status_t (*inspect_instance)(fuchsia_audio_effects_handle_t token,
+  zx_status_t (*inspect_instance)(fuchsia_audio_effects_handle_t effects_handle,
                                   test_effects_inspect_state* out);
 } test_effects_module_ext;
 

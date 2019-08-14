@@ -48,21 +48,21 @@ typedef struct {
                                                  uint16_t channels_in, uint16_t channels_out,
                                                  const char* config, size_t config_length);
 
-  bool (*update_effect_configuration)(fuchsia_audio_effects_handle_t handle, const char* config,
-                                      size_t config_length);
+  bool (*update_effect_configuration)(fuchsia_audio_effects_handle_t effects_handle,
+                                      const char* config, size_t config_length);
 
-  bool (*delete_effect)(fuchsia_audio_effects_handle_t handle);
+  bool (*delete_effect)(fuchsia_audio_effects_handle_t effects_handle);
 
-  bool (*get_parameters)(fuchsia_audio_effects_handle_t handle,
+  bool (*get_parameters)(fuchsia_audio_effects_handle_t effects_handle,
                          fuchsia_audio_effects_parameters* effect_params);
 
-  bool (*process_inplace)(fuchsia_audio_effects_handle_t handle, uint32_t num_frames,
+  bool (*process_inplace)(fuchsia_audio_effects_handle_t effects_handle, uint32_t num_frames,
                           float* audio_buff_in_out);
 
-  bool (*process)(fuchsia_audio_effects_handle_t handle, uint32_t num_frames,
+  bool (*process)(fuchsia_audio_effects_handle_t effects_handle, uint32_t num_frames,
                   const float* audio_buff_in, float* audio_buff_out);
 
-  bool (*flush)(fuchsia_audio_effects_handle_t handle);
+  bool (*flush)(fuchsia_audio_effects_handle_t effects_handle);
 } fuchsia_audio_effects_module_v1;
 
 ```
@@ -126,7 +126,7 @@ device effect to process audio in-place.
 ### **fuchsia_audio_effects_module_v1::delete_effect**
 ```
 bool (*delete_effect)(
-    fuchsia_audio_effects_handle_t handle
+    fuchsia_audio_effects_handle_t effects_handle
   );
 ```
 #### Inputs
@@ -139,12 +139,12 @@ bool (*delete_effect)(
 ### **fuchsia_audio_effects_module_v1::get_parameters**
 ```
 bool (*get_parameters)(
-    fuchsia_audio_effects_handle_t handle,
+    fuchsia_audio_effects_handle_t effects_handle,
     fuchsia_audio_effects_parameters* effect_params
   );
 ```
 #### Inputs
-- **handle**: a `fuchsia_audio_effects_handle_t` representing an active effect instance.
+- **effects_handle**: a `fuchsia_audio_effects_handle_t` representing an active effect instance.
 - **effect_params**: pointer to a *fuchsia_audio_effects_parameters* struct allocated by the
 system. The implementation should copy information about the specified active effect instance into
 this struct.
@@ -162,13 +162,13 @@ the client created the effect.
 ### **fuchsia_audio_effects_module_v1::process_inplace**
 ```
 bool (*process_inplace)(
-    fuchsia_audio_effects_handle_t handle,
+    fuchsia_audio_effects_handle_t effects_handle,
     uint32_t num_frames,
     float* audio_buff_in_out
   );
 ```
 #### Inputs
-- **handle**: a `fuchsia_audio_effects_handle_t` representing an active effect instance.
+- **effects_handle**: a `fuchsia_audio_effects_handle_t` representing an active effect instance.
 - **num_frames**: a `uint32_t` containing the number of frames that the specified effect instance
 must process. This value cannot exceed the previously-set frame rate for this effect instance.
 - **audio_buff_in_out**: a pointer to an audio buffer containing samples of type `float`.
@@ -194,14 +194,14 @@ audio.
 ### **fuchsia_audio_effects_module_v1::process**
 ```
 bool (*process)(
-    fuchsia_audio_effects_handle_t handle,
+    fuchsia_audio_effects_handle_t effects_handle,
     uint32_t num_frames,
     const float* audio_buff_in,
     float* audio_buff_out
   );
 ```
 #### Inputs
-- **handle**: a `fuchsia_audio_effects_handle_t` representing an active effect instance.
+- **effects_handle**: a `fuchsia_audio_effects_handle_t` representing an active effect instance.
 - **num_frames**: a `uint32_t` containing the number of frames that the specified effect instance
 must process. This value cannot exceed the previously-set frame rate for this effect instance.
 - **audio_buff_in**: a pointer to a buffer containing audio samples of type `float`, from which

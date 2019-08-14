@@ -20,14 +20,14 @@ struct FxPass {
 };
 
 // Returns information about this type of effect
-bool passthrough_get_info(uint32_t effect_id, fuchsia_audio_effects_description* fx_desc) {
-  if (effect_id != 0 || fx_desc == nullptr) {
+bool passthrough_get_info(uint32_t effect_id, fuchsia_audio_effects_description* effect_desc) {
+  if (effect_id != 0 || effect_desc == nullptr) {
     return false;
   }
 
-  strlcpy(fx_desc->name, "Pass-thru", sizeof(fx_desc->name));
-  fx_desc->incoming_channels = FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY;
-  fx_desc->outgoing_channels = FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN;
+  strlcpy(effect_desc->name, "Pass-thru", sizeof(effect_desc->name));
+  effect_desc->incoming_channels = FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY;
+  effect_desc->outgoing_channels = FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN;
   return true;
 }
 
@@ -44,18 +44,18 @@ fuchsia_audio_effects_handle_t passthrough_create(uint32_t effect_id, uint32_t f
   return reinterpret_cast<fuchsia_audio_effects_handle_t>(new FxPass(frame_rate, channels_in));
 }
 
-bool passthrough_update_configuration(fuchsia_audio_effects_handle_t handle, const char* config,
-                                      size_t config_length) {
+bool passthrough_update_configuration(fuchsia_audio_effects_handle_t effects_handle,
+                                      const char* config, size_t config_length) {
   return (config_length == 0);
 }
 
 // Deletes this active effect.
-bool passthrough_delete(fuchsia_audio_effects_handle_t handle) {
-  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
+bool passthrough_delete(fuchsia_audio_effects_handle_t effects_handle) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return false;
   }
 
-  auto effect = reinterpret_cast<FxPass*>(handle);
+  auto effect = reinterpret_cast<FxPass*>(effects_handle);
   delete effect;
 
   return true;
@@ -64,28 +64,28 @@ bool passthrough_delete(fuchsia_audio_effects_handle_t handle) {
 // Returns various parameters for this active effect instance: frame rate,
 // channelization, frames of group delay, and the ideal number of frames
 // provided by the system to the effect with each process[_inplace]() call.
-bool passthrough_get_parameters(fuchsia_audio_effects_handle_t handle,
-                                fuchsia_audio_effects_parameters* fx_params) {
-  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || fx_params == nullptr) {
+bool passthrough_get_parameters(fuchsia_audio_effects_handle_t effects_handle,
+                                fuchsia_audio_effects_parameters* effect_params) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || effect_params == nullptr) {
     return false;
   }
 
-  auto effect = reinterpret_cast<FxPass*>(handle);
+  auto effect = reinterpret_cast<FxPass*>(effects_handle);
 
-  fx_params->frame_rate = effect->frame_rate_;
-  fx_params->channels_in = effect->channels_;
-  fx_params->channels_out = effect->channels_;
-  fx_params->signal_latency_frames = 0;
-  fx_params->suggested_frames_per_buffer = 0;
+  effect_params->frame_rate = effect->frame_rate_;
+  effect_params->channels_in = effect->channels_;
+  effect_params->channels_out = effect->channels_;
+  effect_params->signal_latency_frames = 0;
+  effect_params->suggested_frames_per_buffer = 0;
 
   return true;
 }
 
 // Synchronously processes the buffer of ‘num_frames’ audio data, in-place.
 // This library effect performs no work, so this call immediately returns true.
-bool passthrough_process_inplace(fuchsia_audio_effects_handle_t handle, uint32_t,
+bool passthrough_process_inplace(fuchsia_audio_effects_handle_t effects_handle, uint32_t,
                                  float* audio_buff_in_out) {
-  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || audio_buff_in_out == nullptr) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || audio_buff_in_out == nullptr) {
     return false;
   }
 
@@ -100,8 +100,8 @@ bool passthrough_process(fuchsia_audio_effects_handle_t, uint32_t, const float*,
 
 // Flushes any cached state, but retains settings, on this active effect.
 // This lib has no effects with cached history, so this call performs no work.
-bool passthrough_flush(fuchsia_audio_effects_handle_t handle) {
-  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
+bool passthrough_flush(fuchsia_audio_effects_handle_t effects_handle) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return false;
   }
 

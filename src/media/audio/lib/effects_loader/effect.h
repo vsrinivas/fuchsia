@@ -17,7 +17,7 @@ namespace media::audio {
 
 class Effect {
  public:
-  Effect() : handle_(FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {}
+  Effect() : effects_handle_(FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {}
 
   // Creates a new `Effect` from a `fuchsia_audio_effects_handle_t` and an owning
   // `EffectsModuleV1`.
@@ -27,10 +27,11 @@ class Effect {
   // `FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE` while `module` is non-null. Likewise it is an error to
   // create an `Effect` with `handle` != `FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE` and a null
   // `module`.
-  Effect(fuchsia_audio_effects_handle_t handle, EffectsModuleV1 module)
-      : handle_(handle), module_(std::move(module)) {
-    // If handle_ is valid, module_ must be valid. If handle_ is invalid, module_ must be invalid.
-    FXL_DCHECK((handle_ != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) == (module_.is_valid()));
+  Effect(fuchsia_audio_effects_handle_t effects_handle, EffectsModuleV1 module)
+      : effects_handle_(effects_handle), module_(std::move(module)) {
+    // If handle_ is valid, module_ must be valid. If effects_handle_ is invalid, module_ must be
+    // invalid.
+    FXL_DCHECK((effects_handle_ != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) == (module_.is_valid()));
   }
 
   ~Effect();
@@ -47,7 +48,7 @@ class Effect {
   [[nodiscard]] bool is_valid() const { return static_cast<bool>(module_); }
   explicit operator bool() const { return is_valid(); }
 
-  [[nodiscard]] fuchsia_audio_effects_handle_t get() const { return handle_; }
+  [[nodiscard]] fuchsia_audio_effects_handle_t get() const { return effects_handle_; }
 
   // These methods are thin wrappers around the corresponding ABI calls that use the
   // fuchsia_audio_effects_handle_t and module used to create this effect. It is an error to call
@@ -68,7 +69,7 @@ class Effect {
   zx_status_t GetParameters(fuchsia_audio_effects_parameters* params) const;
 
  private:
-  fuchsia_audio_effects_handle_t handle_;
+  fuchsia_audio_effects_handle_t effects_handle_;
   EffectsModuleV1 module_;
 };
 

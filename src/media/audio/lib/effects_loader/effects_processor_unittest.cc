@@ -38,10 +38,10 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
               effect1.get() != effect4.get() && effect2.get() != effect3.get() &&
               effect2.get() != effect4.get() && effect3.get() != effect4.get());
 
-  fuchsia_audio_effects_handle_t handle1 = effect1.get();
-  fuchsia_audio_effects_handle_t handle2 = effect2.get();
-  fuchsia_audio_effects_handle_t handle3 = effect3.get();
-  fuchsia_audio_effects_handle_t handle4 = effect4.get();
+  fuchsia_audio_effects_handle_t effects_handle1 = effect1.get();
+  fuchsia_audio_effects_handle_t effects_handle2 = effect2.get();
+  fuchsia_audio_effects_handle_t effects_handle3 = effect3.get();
+  fuchsia_audio_effects_handle_t effects_handle4 = effect4.get();
 
   // Create processor
   {
@@ -52,10 +52,10 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
     processor.AddEffect(std::move(effect4));
     EXPECT_EQ(processor.size(), 4);
 
-    EXPECT_EQ(handle3, processor.GetEffectAt(0).get());
-    EXPECT_EQ(handle1, processor.GetEffectAt(1).get());
-    EXPECT_EQ(handle2, processor.GetEffectAt(2).get());
-    EXPECT_EQ(handle4, processor.GetEffectAt(3).get());
+    EXPECT_EQ(effects_handle3, processor.GetEffectAt(0).get());
+    EXPECT_EQ(effects_handle1, processor.GetEffectAt(1).get());
+    EXPECT_EQ(effects_handle2, processor.GetEffectAt(2).get());
+    EXPECT_EQ(effects_handle4, processor.GetEffectAt(3).get());
 
     EXPECT_EQ(4u, test_effects()->num_instances());
   }

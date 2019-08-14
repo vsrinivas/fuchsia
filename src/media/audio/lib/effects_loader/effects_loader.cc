@@ -61,12 +61,12 @@ Effect EffectsLoader::CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint
     return {};
   }
 
-  auto handle = module_->create_effect(effect_id, frame_rate, channels_in, channels_out,
-                                       config.data(), config.size());
-  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
+  auto effects_handle = module_->create_effect(effect_id, frame_rate, channels_in, channels_out,
+                                               config.data(), config.size());
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return {};
   }
-  return {handle, module_};
+  return {effects_handle, module_};
 }
 
 }  // namespace media::audio
