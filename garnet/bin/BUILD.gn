@@ -39,6 +39,7 @@ group("bin") {
     "pkg_cache",
     "pkg_ctl",
     "pkg_resolver",
+    "power_manager",
     "rolldice",
     "run",
     "run_test_component",
