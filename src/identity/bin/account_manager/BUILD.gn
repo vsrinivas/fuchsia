@@ -42,7 +42,7 @@ package("account_manager") {
     ":bin",
   ]
 
-  binary = "rust_crates/account_manager"
+  binary = "account_manager"
 
   meta = [
     {
