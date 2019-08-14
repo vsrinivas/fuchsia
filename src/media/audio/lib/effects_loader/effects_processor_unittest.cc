@@ -6,17 +6,16 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/fxl/logging.h"
+#include "src/media/audio/effects/test_effects/test_effects.h"
+#include "src/media/audio/lib/effects_loader/effects_loader_test_base.h"
+
 namespace media::audio {
 namespace {
 
-class EffectsProcessorTest : public testing::Test {
- public:
-  void SetUp() override { ASSERT_EQ(effects_loader_.LoadLibrary(), ZX_OK); }
-  void TearDown() override { ASSERT_EQ(effects_loader_.UnloadLibrary(), ZX_OK); }
-
+class EffectsProcessorTest : public test::EffectsLoaderTestBase {
  protected:
-  EffectsLoader effects_loader_{"audio_effects.so"};
-  EffectsProcessor effects_processor_{&effects_loader_, 48000};
+  EffectsProcessor effects_processor_{effects_loader(), 48000};
 };
 
 //
@@ -24,6 +23,11 @@ class EffectsProcessorTest : public testing::Test {
 //
 // Verify the creation, uniqueness, quantity and deletion of effect instances.
 TEST_F(EffectsProcessorTest, CreateDelete) {
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               TEST_EFFECTS_ACTION_ASSIGN,
+                                               1.0}));
+
   fuchsia_audio_effects_handle_t handle3 = effects_processor_.CreateFx(0, 1, 1, 0, {});
   fuchsia_audio_effects_handle_t handle1 = effects_processor_.CreateFx(0, 1, 1, 0, {});
   fuchsia_audio_effects_handle_t handle2 = effects_processor_.CreateFx(0, 1, 1, 1, {});
@@ -69,16 +73,15 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
   // This handle has already been removed -- also empty chain.
   EXPECT_NE(effects_processor_.DeleteFx(handle4), ZX_OK);
   EXPECT_EQ(effects_processor_.GetNumFx(), 0);
-
-  // Inserting an instance into a chain that has been populated, then emptied.
-  EXPECT_NE(effects_processor_.CreateFx(0, 1, 1, 0, {}), FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
-  EXPECT_EQ(effects_processor_.GetNumFx(), 1);
-
-  // Leave an active instance, to exercise the destructor cleanup.
 }
 
 // Verify the chain's positioning -- during insertion, reorder, deletion.
 TEST_F(EffectsProcessorTest, Reorder) {
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               TEST_EFFECTS_ACTION_ASSIGN,
+                                               1.0}));
+
   fuchsia_audio_effects_handle_t handle2 = effects_processor_.CreateFx(0, 1, 1, 0, {});
   fuchsia_audio_effects_handle_t handle1 = effects_processor_.CreateFx(0, 1, 1, 0, {});
   fuchsia_audio_effects_handle_t handle4 = effects_processor_.CreateFx(0, 1, 1, 2, {});
@@ -146,9 +149,28 @@ TEST_F(EffectsProcessorTest, Reorder) {
 
 // Verify (at a VERY Basic level) the methods that handle data flow.
 TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
-  // TODO(MTWN-405): Use a non-passthrough processor that mutates data in an observable way to
-  // ensure the effect chain is processing in the correct order.
-  float buff[4] = {0, 0, 0, 0};
+  ASSERT_EQ(ZX_OK,
+            test_effects()->add_effect({{"increment_by_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        TEST_EFFECTS_ACTION_ADD,
+                                        1.0}));
+  ASSERT_EQ(ZX_OK,
+            test_effects()->add_effect({{"increment_by_2.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        TEST_EFFECTS_ACTION_ADD,
+                                        2.0}));
+  ASSERT_EQ(ZX_OK,
+            test_effects()->add_effect({{"assign_to_12.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        TEST_EFFECTS_ACTION_ASSIGN,
+                                        12.0}));
+  ASSERT_EQ(ZX_OK,
+            test_effects()->add_effect({{"increment_by_4.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        TEST_EFFECTS_ACTION_ADD,
+                                        4.0}));
+
+  float buff[4] = {0, 1.0, 2.0, 3.0};
 
   // Before instances added, ProcessInPlace and Flush should succeed.
   EXPECT_EQ(effects_processor_.ProcessInPlace(4, buff), ZX_OK);
@@ -156,21 +178,61 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
 
   // Chaining four instances together, ProcessInPlace and flush should succeed.
   fuchsia_audio_effects_handle_t handle1 = effects_processor_.CreateFx(0, 1, 1, 0, {});
-  fuchsia_audio_effects_handle_t handle2 = effects_processor_.CreateFx(0, 1, 1, 1, {});
-  fuchsia_audio_effects_handle_t handle3 = effects_processor_.CreateFx(0, 1, 1, 2, {});
-  fuchsia_audio_effects_handle_t handle4 = effects_processor_.CreateFx(0, 1, 1, 3, {});
+  fuchsia_audio_effects_handle_t handle2 = effects_processor_.CreateFx(1, 1, 1, 1, {});
+  fuchsia_audio_effects_handle_t handle3 = effects_processor_.CreateFx(2, 1, 1, 2, {});
+  fuchsia_audio_effects_handle_t handle4 = effects_processor_.CreateFx(3, 1, 1, 3, {});
 
   ASSERT_TRUE(handle1 != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE &&
               handle2 != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE &&
               handle3 != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE &&
               handle4 != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
+  EXPECT_EQ(4u, test_effects()->num_instances());
 
+  // The first 2 processors will mutate data, but this will be clobbered by the 3rd processor which
+  // just sets every sample to 12.0. The final processor will increment by 4.0 resulting in the
+  // expected 16.0 values.
   EXPECT_EQ(effects_processor_.ProcessInPlace(4, buff), ZX_OK);
+  EXPECT_EQ(buff[0], 16.0);
+  EXPECT_EQ(buff[1], 16.0);
+  EXPECT_EQ(buff[2], 16.0);
+  EXPECT_EQ(buff[3], 16.0);
+
+  // All effects should have initial flush count 0.
+  test_effects_inspect_state inspect1 = {};
+  test_effects_inspect_state inspect2 = {};
+  test_effects_inspect_state inspect3 = {};
+  test_effects_inspect_state inspect4 = {};
+  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(handle1, &inspect1));
+  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(handle2, &inspect2));
+  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(handle3, &inspect3));
+  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(handle4, &inspect4));
+  EXPECT_EQ(0u, inspect1.flush_count);
+  EXPECT_EQ(0u, inspect2.flush_count);
+  EXPECT_EQ(0u, inspect3.flush_count);
+  EXPECT_EQ(0u, inspect4.flush_count);
+
+  // Flush, just sanity test the test_effects library has observed the flush call on each effect.
   EXPECT_EQ(effects_processor_.Flush(), ZX_OK);
-  EXPECT_EQ(effects_processor_.ProcessInPlace(4, buff), ZX_OK);
+  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(handle1, &inspect1));
+  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(handle2, &inspect2));
+  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(handle3, &inspect3));
+  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(handle4, &inspect4));
+  EXPECT_EQ(1u, inspect1.flush_count);
+  EXPECT_EQ(1u, inspect2.flush_count);
+  EXPECT_EQ(1u, inspect3.flush_count);
+  EXPECT_EQ(1u, inspect4.flush_count);
 
-  // Zero num_frames is valid and should succeed.
+  // Zero num_frames is valid and should succeed. We assign the buff to some random values here
+  // to ensure the processor does not clobber them.
+  buff[0] = 20.0;
+  buff[1] = 21.0;
+  buff[2] = 22.0;
+  buff[3] = 23.0;
   EXPECT_EQ(effects_processor_.ProcessInPlace(0, buff), ZX_OK);
+  EXPECT_EQ(buff[0], 20.0);
+  EXPECT_EQ(buff[1], 21.0);
+  EXPECT_EQ(buff[2], 22.0);
+  EXPECT_EQ(buff[3], 23.0);
 
   // If no buffer provided, ProcessInPlace should fail (even if 0 num_frames).
   EXPECT_NE(effects_processor_.ProcessInPlace(0, nullptr), ZX_OK);
@@ -180,7 +242,14 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   EXPECT_EQ(effects_processor_.DeleteFx(handle2), ZX_OK);
   EXPECT_EQ(effects_processor_.DeleteFx(handle3), ZX_OK);
   EXPECT_EQ(effects_processor_.DeleteFx(handle4), ZX_OK);
+
+  EXPECT_EQ(0u, test_effects()->num_instances());
   EXPECT_EQ(effects_processor_.ProcessInPlace(4, buff), ZX_OK);
+  EXPECT_EQ(buff[0], 20.0);
+  EXPECT_EQ(buff[1], 21.0);
+  EXPECT_EQ(buff[2], 22.0);
+  EXPECT_EQ(buff[3], 23.0);
+
   EXPECT_EQ(effects_processor_.Flush(), ZX_OK);
 }
 

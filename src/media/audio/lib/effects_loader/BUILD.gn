@@ -29,6 +29,8 @@ executable("test") {
   output_name = "effects_loader_unittests"
 
   sources = [
+    "effects_loader_test_base.cc",
+    "effects_loader_test_base.h",
     "effects_loader_unittest.cc",
     "effects_processor_unittest.cc",
   ]
@@ -42,12 +44,12 @@ executable("test") {
 unittest_package("effects_loader_unittests") {
   deps = [
     ":test",
-    "//src/media/audio/effects/passthrough:audio_effects",
+    "//src/media/audio/effects/test_effects",
   ]
 
   loadable_modules = [
     {
-      name = "audio_effects.so"
+      name = "test_effects.so"
     },
   ]
 
