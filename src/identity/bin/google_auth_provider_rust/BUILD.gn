@@ -40,7 +40,7 @@ package("google_auth_provider_rust") {
     ":bin",
   ]
 
-  binary = "google_auth_provider_rust"
+  binary = "rust_crates/google_auth_provider_rust"
 
   meta = [
     {

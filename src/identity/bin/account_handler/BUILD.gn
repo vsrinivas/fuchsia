@@ -43,7 +43,7 @@ package("account_handler") {
     ":bin",
   ]
 
-  binary = "account_handler"
+  binary = "rust_crates/account_handler"
 
   meta = [
     {

@@ -252,22 +252,13 @@ template("rustc_artifact") {
       "${root_out_dir}/rust_third_party_crates/deps_data.json"
   first_party_crate_root = "${root_out_dir}/rust_crates"
   third_party_crate_root = "${root_out_dir}/rust_third_party_crates"
-  unstripped_output_dir = "${root_out_dir}/exe.unstripped"
-  not_needed(["unstripped_output_dir"])
   if (defined(invoker.output_file_override)) {
     output_filename = invoker.output_file_override
   } else {
     output_filename = "${prefix}${crate_name}${extension}"
   }
-  if (type == "bin") {
-    output_dir = unstripped_output_dir
-  } else if (type == "staticlib") {
-    output_dir = root_out_dir
-  } else {
-    output_dir = first_party_crate_root
-  }
-  output_file = "${output_dir}/$output_filename"
-  output_depfile = "${output_dir}/${prefix}${crate_name}.d"
+  output_file = "${first_party_crate_root}/$output_filename"
+  output_depfile = "${first_party_crate_root}/${prefix}${crate_name}.d"
 
   build_target_name = "${target_name}_build"
   only_unit_tests = defined(invoker.only_unit_tests) && invoker.only_unit_tests
@@ -290,7 +281,7 @@ template("rustc_artifact") {
     } else {
       test_filename = "${crate_name}_${invoker.type}_test"
     }
-    test_output_file = "${unstripped_output_dir}/${test_filename}"
+    test_output_file = "${root_out_dir}/exe.unstripped/${test_filename}"
     test_depfile = "${test_output_file}.d"
 
     build_test_target_name = "${target_name}_test_build"
@@ -592,14 +583,15 @@ template("rustc_artifact") {
     }
   }
 
-  if (type == "bin" && !only_unit_tests) {
-    output_path_stripped = "${root_out_dir}/${output_filename}"
+  if (type == "staticlib" && !only_unit_tests) {
+    output_path = "${root_out_dir}/${output_filename}"
 
-    # strip staticlibs and binaries from "exe.unstripped" and put the results
-    # in the root_out_dir
-    strip_target_name = "${target_name}_strip"
-    group_deps += [ ":${strip_target_name}" ]
-    copy_with_build_id(strip_target_name) {
+    # Copy staticlibs out of rust_crates/* into the root dir
+    # TODO(cramertj) remove and replace with writing directly to the root
+    # dir once all existing build rules have moved off of using rust_crates/*
+    copy_target_name = "${target_name}_copy"
+    group_deps += [ ":${copy_target_name}" ]
+    copy(copy_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
       deps = [
@@ -609,7 +601,47 @@ template("rustc_artifact") {
         output_file,
       ]
       outputs = [
-        output_path_stripped,
+        output_path,
+      ]
+    }
+  }
+
+  if (type == "bin" && !only_unit_tests) {
+    output_path_unstripped = "${root_out_dir}/exe.unstripped/${output_filename}"
+    output_path = "${root_out_dir}/${output_filename}"
+
+    # Copy binaries out of rust_crates/* into the root dir
+    # TODO(cramertj) remove and replace with writing directly to the root
+    # dir once all existing build rules have moved off of using rust_crates/*
+    copy_target_name = "${target_name}_copy"  # depended upon below
+    group_deps += [ ":${copy_target_name}" ]
+    copy(copy_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      deps = [
+        ":${build_target_name}",
+      ]
+      sources = [
+        output_file,
+      ]
+      outputs = [
+        output_path_unstripped,
+      ]
+    }
+
+    strip_target_name = "${target_name}_strip"
+    group_deps += [ ":${strip_target_name}" ]
+    copy_with_build_id(strip_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      deps = [
+        ":${copy_target_name}",
+      ]
+      sources = [
+        output_path_unstripped,
+      ]
+      outputs = [
+        output_path,
       ]
     }
 
@@ -637,7 +669,7 @@ template("rustc_artifact") {
 
         files = [
           {
-            source = output_path_stripped
+            source = output_path
             dest = file_base
           },
         ]

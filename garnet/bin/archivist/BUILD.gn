@@ -46,7 +46,12 @@ package("archivist") {
     ":bin",
   ]
 
-  binary = "archivist"
+  binaries = [
+    {
+      name = "rust_crates/archivist"
+      dest = "archivist"
+    },
+  ]
 
   meta = [
     {
