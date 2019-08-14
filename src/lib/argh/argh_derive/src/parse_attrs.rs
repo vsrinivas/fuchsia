@@ -141,7 +141,7 @@ impl FieldAttrs {
         parse_attr_single_string(errors, m, "long", &mut self.long);
         let long = self.long.as_ref().unwrap();
         let value = long.value();
-        if value.is_ascii() {
+        if !value.is_ascii() {
             errors.err(long, "Long names must be ASCII");
         }
         if !value.chars().all(|c| c.is_lowercase()) {
@@ -411,8 +411,15 @@ fn check_option_description(
     desc: &str,
     span: Span,
 ) {
-    if !desc.trim().chars().next().map(|c| c.is_lowercase()).unwrap_or(false) {
-        errors.err_span(span, "Descriptions must begin with a lowercase letter");
+    let chars = &mut desc.trim().chars();
+    match (chars.next(), chars.next()) {
+        (Some(x), _) if x.is_lowercase() => {},
+        // If both the first and second letter are not lowercase,
+        // this is likely an initialism which should be allowed.
+        (Some(x), Some(y)) if !x.is_lowercase() && !y.is_lowercase() => {},
+        _ => {
+            errors.err_span(span, "Descriptions must begin with a lowercase letter");
+        }
     }
 }
 

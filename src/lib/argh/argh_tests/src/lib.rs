@@ -127,6 +127,30 @@ Options:
 }
 
 #[test]
+fn explicit_long_value_for_option() {
+    #[derive(FromArgs, Debug)]
+    /// Short description
+    struct Cmd {
+        #[argh(option, long = "foo")]
+        /// bar bar
+        x: u8,
+    }
+
+    let cmd = Cmd::from_args(&["cmdname"], &["--foo", "5"]).unwrap();
+    assert_eq!(cmd.x, 5);
+}
+
+/// Test that descriptions can start with an initialism despite
+/// usually being required to start with a lowercase letter.
+#[derive(FromArgs)]
+#[allow(unused)]
+struct DescriptionStartsWithInitialism {
+    /// URL fooey
+    #[argh(option)]
+    x: u8,
+}
+
+#[test]
 fn default_number() {
     #[derive(FromArgs)]
     /// Short description
