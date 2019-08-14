@@ -312,7 +312,7 @@ mod test {
     #[test]
     async fn it_works() -> Result<()> {
         let session_list = Ref::default();
-        let mut collection_event_sink = mpmc::Sender::default();
+        let collection_event_sink = mpmc::Sender::default();
         let (player_sink, mut player_stream) = mpsc::channel(1);
         let (session_client, session_server) = create_endpoints()?;
         let (mut session_requests, session_control) =

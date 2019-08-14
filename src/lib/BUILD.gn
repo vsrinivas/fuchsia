@@ -33,6 +33,7 @@ group("tests") {
     "fuzzing:tests",
     "isolated_devmgr:tests",
     "line_input:tests",
+    "mpmc:tests",
     "process_builder:tests",
     "rust_backtrace:tests",
     "test_util:tests",

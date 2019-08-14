@@ -56,6 +56,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.media.sessions:fuchsia.media.sessions-rustc",
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
     "//src/lib/fidl_table_validation",
+    "//src/lib/mpmc",
     "//third_party/rust_crates:crossbeam",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

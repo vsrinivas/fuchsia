@@ -41,7 +41,7 @@ impl Discovery {
         mut request_stream: mpsc::Receiver<DiscoveryRequest>,
     ) -> Result<()> {
         let mut player_updates = FuturesUnordered::new();
-        let mut sender = mpmc::Sender::default();
+        let sender = mpmc::Sender::default();
 
         // Loop forever. All input channels live the life of the service, so we will always have a
         // stream to poll.

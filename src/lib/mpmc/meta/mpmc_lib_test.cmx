@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/mpmc_lib_test"
+    }
+}

@@ -7,7 +7,6 @@
 use crate::{
     fidl_clones::*, log_error::log_error_discard_result, mpmc,
     state::active_session_queue::ActiveSessionQueue, state::session_list::SessionList, Ref, Result,
-    CHANNEL_BUFFER_SIZE,
 };
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::*;
@@ -50,13 +49,15 @@ impl Session {
         registration: SessionRegistration,
         active_session_queue: Ref<ActiveSessionQueue>,
         session_list: Ref<SessionList>,
-        mut collection_event_sink: mpmc::Sender<(SessionRegistration, SessionCollectionEvent)>,
-        mut active_session_sink: mpmc::Sender<Option<SessionRegistration>>,
+        collection_event_sink: mpmc::Sender<(SessionRegistration, SessionCollectionEvent)>,
+        active_session_sink: mpmc::Sender<Option<SessionRegistration>>,
     ) -> Result<Self> {
         let proxy = client_end.into_proxy()?;
         let mut event_stream = proxy.take_event_stream();
-        let (mut event_sender, event_receiver) = mpmc::channel(CHANNEL_BUFFER_SIZE);
-        let (mut cancel_signaller, cancel_signal) = mpmc::channel(1);
+        let event_sender = mpmc::Sender::default();
+        let event_receiver = event_sender.new_receiver();
+        let cancel_signaller = mpmc::Sender::with_buffer_size(1);
+        let cancel_signal = cancel_signaller.new_receiver();
         let state = Ref::default();
         let session = Session {
             proxy: Rc::new(proxy),

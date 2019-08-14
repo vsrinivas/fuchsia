@@ -8,7 +8,6 @@
 #[macro_use]
 mod log_error;
 mod fidl_clones;
-mod mpmc;
 mod proxies;
 mod services;
 mod state;
@@ -22,6 +21,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, prelude::*};
+use mpmc;
 use std::rc::Rc;
 use zx::AsHandleRef;
 
