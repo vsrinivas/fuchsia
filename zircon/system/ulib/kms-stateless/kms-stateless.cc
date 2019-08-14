@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "keysafe/keysafe.h"
 #include "tee-client-api/tee_client_api.h"
 
 namespace kms_stateless {
@@ -20,10 +21,7 @@ const char kDeviceClass[] = "/dev/class/tee";
 const size_t kMaxPathLen = 64;
 
 // UUID of the keysafe TA.
-const TEEC_UUID kKeysafeTaUuid = {
-    0x808032e0, 0xfd9e, 0x4e6f, {0x88, 0x96, 0x54, 0x47, 0x35, 0xc9, 0x84, 0x80}};
-// Command ID of the SignHash function of the TA.
-const uint32_t kKeysafeGetHardwareDerivedKeyCmdID = 5;
+const TEEC_UUID kKeysafeTaUuid = TA_KEYSAFE_UUID;
 
 // Wrapper around TEEC_Session to ensure correct deletion.
 class ScopedTeecSession {
@@ -110,7 +108,7 @@ bool GetKeyFromTeeDevice(const char* device_path, uint8_t* key_info, size_t key_
       TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE, TEEC_NONE, TEEC_MEMREF_TEMP_OUTPUT);
   op.imp = {0};
 
-  result = session_ptr->invokeCommand(kKeysafeGetHardwareDerivedKeyCmdID, &op);
+  result = session_ptr->invokeCommand(TA_KEYSAFE_CMD_GET_HARDWARE_DERIVED_KEY, &op);
 
   if (result == TEEC_ERROR_SHORT_BUFFER) {
     fprintf(stderr, "Output buffer for hardware derived key too small!\n");

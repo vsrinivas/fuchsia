@@ -5,6 +5,7 @@ library("kms-stateless") {
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/keysafe",
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/tee-client-api",
   ]
