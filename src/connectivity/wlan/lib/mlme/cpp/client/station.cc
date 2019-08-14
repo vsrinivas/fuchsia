@@ -159,9 +159,12 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (frame.View().rx_info()->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
-    auto rssi_dbm = frame.View().rx_info()->rssi_dbm;
+  auto rx_info = frame.View().rx_info();
+  if (rx_info->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
+    auto rssi_dbm = rx_info->rssi_dbm;
     WLAN_RSSI_HIST_INC(assoc_data_rssi, rssi_dbm);
+    // Take signal strength into account.
+    avg_rssi_dbm_.add(dBm(rssi_dbm));
   }
 
   if (data_frame.CheckBodyType<AmsduSubframeHeader>().CheckLength() &&
@@ -638,11 +641,6 @@ zx_status_t Station::HandleNullDataFrame(DataFrame<NullDataHdr>&& frame) {
   debugfn();
   ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
-  if (frame.View().rx_info()->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
-    // Take signal strength into account.
-    avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
-  }
-
   // Some AP's such as Netgear Routers send periodic NULL data frames to test
   // whether a client timed out. The client must respond with a NULL data frame
   // itself to not get deauthenticated.
@@ -657,17 +655,13 @@ zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
   auto data_llc_frame = frame.View();
   auto data_hdr = data_llc_frame.hdr();
 
-  if (frame.View().rx_info()->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
-    // Take signal strength into account.
-    avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
-  }
-
   // Forward EAPOL frames to SME.
   auto llc_frame = data_llc_frame.SkipHeader();
   if (auto eapol_frame = llc_frame.CheckBodyType<EapolHdr>().CheckLength().SkipHeader()) {
     if (eapol_frame.body_len() == eapol_frame.hdr()->get_packet_body_length()) {
-      return service::SendEapolIndication(device_, *eapol_frame.hdr(), data_hdr->addr3,
-                                          data_hdr->addr1);
+      return client_sta_send_eapol_indication(rust_client_.get(), &data_hdr->addr3.byte,
+                                              &data_hdr->addr1.byte, eapol_frame.data(),
+                                              eapol_frame.len());
     } else {
       errorf("received invalid EAPOL frame\n");
     }

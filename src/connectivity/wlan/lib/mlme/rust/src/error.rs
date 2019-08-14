@@ -19,6 +19,8 @@ pub enum Error {
     WritingFrame(#[cause] FrameWriteError),
     #[fail(display = "{}", _0)]
     Internal(#[cause] failure::Error),
+    #[fail(display = "{}", _0)]
+    Fidl(#[cause] fidl::Error),
     #[fail(display = "{}; {}", _0, _1)]
     Status(String, #[cause] zx::Status),
 }
@@ -30,6 +32,14 @@ impl From<Error> for zx::Status {
             Error::BufferTooSmall => zx::Status::BUFFER_TOO_SMALL,
             Error::Internal(_) => zx::Status::INTERNAL,
             Error::WritingFrame(_) => zx::Status::IO_REFUSED,
+            Error::Fidl(e) => match e {
+                fidl::Error::ClientRead(status)
+                | fidl::Error::ClientWrite(status)
+                | fidl::Error::ServerResponseWrite(status)
+                | fidl::Error::ServerRequestRead(status)
+                | fidl::Error::ChannelPairCreate(status) => status,
+                _ => zx::Status::IO,
+            },
             Error::Status(_, status) => status,
         }
     }
@@ -71,6 +81,12 @@ impl From<BufferTooSmall> for Error {
     }
 }
 
+impl From<fidl::Error> for Error {
+    fn from(e: fidl::Error) -> Self {
+        Error::Fidl(e)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {super::*, failure::format_err};
@@ -94,6 +110,10 @@ mod tests {
 
         let status = zx::Status::from(Error::NoResources(42));
         assert_eq!(status, zx::Status::NO_RESOURCES);
+
+        let status =
+            zx::Status::from(Error::Fidl(fidl::Error::ClientWrite(zx::Status::NOT_SUPPORTED)));
+        assert_eq!(status, zx::Status::NOT_SUPPORTED);
     }
 
     #[test]

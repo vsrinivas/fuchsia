@@ -108,6 +108,11 @@ extern "C" int32_t client_sta_send_data_frame(wlan_client_sta_t *sta, const uint
 
 extern "C" int32_t client_sta_send_deauth_frame(wlan_client_sta_t *sta, uint16_t reason_code);
 
+extern "C" int32_t client_sta_send_eapol_indication(wlan_client_sta_t *sta, const uint8_t (*src)[6],
+                                                    const uint8_t (*dest)[6],
+                                                    const uint8_t *eapol_frame,
+                                                    uintptr_t eapol_frame_len);
+
 extern "C" int32_t client_sta_send_keep_alive_resp_frame(wlan_client_sta_t *sta);
 
 extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta);

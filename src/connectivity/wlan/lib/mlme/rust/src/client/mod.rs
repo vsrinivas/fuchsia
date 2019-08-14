@@ -10,7 +10,8 @@ use {
         device::{Device, TxFlags},
         error::Error,
     },
-    fuchsia_zircon as zx,
+    failure::format_err,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::error,
     std::ffi::c_void,
     wlan_common::{
@@ -27,6 +28,9 @@ use {
 pub use utils::*;
 
 type MacAddr = [u8; 6];
+/// Maximum size of EAPOL frames forwarded to SME.
+/// TODO(34845): Evaluate whether EAPOL size restriction is needed.
+const MAX_EAPOL_FRAME_LEN: usize = 255;
 
 /// A STA running in Client mode.
 /// The Client STA is in its early development process and does not yet manage its internal state
@@ -171,6 +175,29 @@ impl ClientStation {
         self.device
             .send_wlan_frame(out_buf, tx_flags)
             .map_err(|s| Error::Status(format!("error sending data frame"), s))
+    }
+
+    /// Sends an MLME-EAPOL.indication to MLME's SME peer.
+    /// Note: MLME-EAPOL.indication is a custom Fuchsia primitive and not defined in IEEE 802.11.
+    pub fn send_eapol_indication(
+        &mut self,
+        src_addr: MacAddr,
+        dst_addr: MacAddr,
+        eapol_frame: &[u8],
+    ) -> Result<(), Error> {
+        if eapol_frame.len() > MAX_EAPOL_FRAME_LEN {
+            return Err(Error::Internal(format_err!(
+                "EAPOL frame too large: {}",
+                eapol_frame.len()
+            )));
+        }
+        self.device.access_sme_sender(|sender| {
+            sender.send_eapol_ind(&mut fidl_mlme::EapolIndication {
+                src_addr,
+                dst_addr,
+                data: eapol_frame.to_vec(),
+            })
+        })
     }
 }
 
@@ -329,12 +356,40 @@ mod tests {
         let queue = &fake_device.eth_queue;
         assert_eq!(queue.len(), 1);
         #[rustfmt::skip]
-        let mut expected_first_eth_frame = vec![
+            let mut expected_first_eth_frame = vec![
             0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, // dst_addr
             0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, // src_addr
             0x08, 0x00, // ether_type
         ];
         expected_first_eth_frame.extend_from_slice(MSDU_1_PAYLOAD);
         assert_eq!(queue[0], &expected_first_eth_frame[..]);
+    }
+
+    #[test]
+    fn send_eapol_ind_too_large() {
+        let mut fake_device = FakeDevice::new();
+        let mut client = make_client_station(fake_device.as_device());
+        client
+            .send_eapol_indication([1; 6], [2; 6], &[5; 256])
+            .expect_err("sending too large EAPOL frame should fail");
+        fake_device
+            .next_mlme_msg::<fidl_mlme::EapolIndication>()
+            .expect_err("expected empty channel");
+    }
+
+    #[test]
+    fn send_eapol_ind_success() {
+        let mut fake_device = FakeDevice::new();
+        let mut client = make_client_station(fake_device.as_device());
+        client
+            .send_eapol_indication([1; 6], [2; 6], &[5; 200])
+            .expect("expected EAPOL.indication to be sent");
+        let eapol_ind = fake_device
+            .next_mlme_msg::<fidl_mlme::EapolIndication>()
+            .expect("error reading EAPOL.indication");
+        assert_eq!(
+            eapol_ind,
+            fidl_mlme::EapolIndication { src_addr: [1; 6], dst_addr: [2; 6], data: vec![5; 200] }
+        );
     }
 }

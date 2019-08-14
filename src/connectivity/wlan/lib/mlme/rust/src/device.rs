@@ -104,6 +104,22 @@ impl FakeDevice {
         unsafe { (*(device as *mut Self)).sme_sap.0.as_handle_ref().raw_handle() }
     }
 
+    pub fn next_mlme_msg<T: fidl::encoding::Decodable>(&mut self) -> Result<T, Error> {
+        use fidl::encoding::{decode_transaction_header, Decodable, Decoder};
+
+        let mut buf = zx::MessageBuf::new();
+        let () = self
+            .sme_sap
+            .1
+            .read(&mut buf)
+            .map_err(|status| Error::Status(format!("error reading MLME message"), status))?;
+
+        let (_, tail): (_, &[u8]) = decode_transaction_header(buf.bytes())?;
+        let mut msg = Decodable::new_empty();
+        Decoder::decode_into(tail, &mut [], &mut msg);
+        Ok(msg)
+    }
+
     pub fn reset(&mut self) {
         self.eth_queue.clear();
     }
@@ -143,13 +159,9 @@ mod tests {
 
         // Read message from channel.
         let mut buf = zx::MessageBuf::new();
-        fake_device.sme_sap.1.read(&mut buf).expect("error reading message from channel");
-
-        // Decode and verify read message.
-        let (_, tail): (_, &[u8]) =
-            decode_transaction_header(buf.bytes()).expect("error decoding header");
-        let mut msg = fidl_mlme::AuthenticateConfirm::new_empty();
-        encoding::Decoder::decode_into(tail, &mut [], &mut msg);
+        let msg = fake_device
+            .next_mlme_msg::<fidl_mlme::AuthenticateConfirm>()
+            .expect("error reading message from channel");
         assert_eq!(msg, make_auth_confirm_msg());
     }
 
