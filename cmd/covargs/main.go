@@ -31,6 +31,7 @@ var (
 	llvmCov           string
 	llvmProfdata      string
 	outputFormat      string
+	jsonOutput        string
 )
 
 func init() {
@@ -43,6 +44,7 @@ func init() {
 	flag.StringVar(&llvmProfdata, "llvm-profdata", "llvm-profdata", "the location of llvm-profdata")
 	flag.StringVar(&llvmCov, "llvm-cov", "llvm-cov", "the location of llvm-cov")
 	flag.StringVar(&outputFormat, "format", "html", "the output format used for llvm-cov")
+	flag.StringVar(&jsonOutput, "json-output", "", "outputs profile information to the specified file")
 }
 
 const llvmProfileSinkType = "llvm-profile"
@@ -136,8 +138,8 @@ type indexedInfo struct {
 }
 
 type ProfileEntry struct {
-	ProfileData string
-	ModuleFiles []string
+	ProfileData string   `json:"profile"`
+	ModuleFiles []string `json:"modules"`
 }
 
 func readInfo(dumpFiles, summaryFiles []string, idsFile string) (*indexedInfo, error) {
@@ -251,6 +253,17 @@ func process() error {
 	entries, err := mergeInfo(info)
 	if err != nil {
 		return fmt.Errorf("merging info: %v", err)
+	}
+
+	if jsonOutput != "" {
+		file, err := os.Create(jsonOutput)
+		if err != nil {
+			return fmt.Errorf("creating profile output file: %v", err)
+		}
+		defer file.Close()
+		if err := json.NewEncoder(file).Encode(entries); err != nil {
+			return fmt.Errorf("writing profile information: %v", err)
+		}
 	}
 
 	// Gather the set of modules and coverage files
