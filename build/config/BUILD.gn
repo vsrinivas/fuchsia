@@ -241,6 +241,9 @@ config("default_warnings") {
     # introduced in https://reviews.llvm.org/D64666 until our source is clean.
     "-Wno-unknown-warning-option",
     "-Wno-implicit-int-float-conversion",
+
+    # TODO(34837): disable -Wdangling until we clear all instances.
+    "-Wno-dangling",
   ]
 }
 
