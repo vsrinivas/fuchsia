@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"debug/elf"
 	"encoding/json"
 	"flag"
@@ -15,18 +16,21 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"go.fuchsia.dev/tools/color"
 	"go.fuchsia.dev/tools/command"
 	"go.fuchsia.dev/tools/elflib"
+	"go.fuchsia.dev/tools/logger"
 	"go.fuchsia.dev/tools/runtests"
 	"go.fuchsia.dev/tools/symbolize"
 )
 
 var (
+	colors            color.EnableColor
+	level             logger.LogLevel
 	summaryFile       command.StringsFlag
 	idsFile           string
 	symbolizeDumpFile command.StringsFlag
 	dryRun            bool
-	verbose           bool
 	outputDir         string
 	llvmCov           string
 	llvmProfdata      string
@@ -35,11 +39,15 @@ var (
 )
 
 func init() {
+	colors = color.ColorAuto
+	level = logger.InfoLevel
+
+	flag.Var(&colors, "color", "can be never, auto, always")
+	flag.Var(&level, "level", "can be fatal, error, warning, info, debug or trace")
 	flag.Var(&summaryFile, "summary", "path to summary.json file")
 	flag.StringVar(&idsFile, "ids", "", "path to ids.txt")
 	flag.Var(&symbolizeDumpFile, "symbolize-dump", "path to the json emited from the symbolizer")
 	flag.BoolVar(&dryRun, "dry-run", false, "if set the system prints out commands that would be run instead of running them")
-	flag.BoolVar(&verbose, "v", false, "if set the all commands will be printed out before being run")
 	flag.StringVar(&outputDir, "output-dir", "", "the directory to output results to")
 	flag.StringVar(&llvmProfdata, "llvm-profdata", "llvm-profdata", "the location of llvm-profdata")
 	flag.StringVar(&llvmCov, "llvm-cov", "llvm-cov", "the location of llvm-cov")
@@ -162,13 +170,13 @@ func readInfo(dumpFiles, summaryFiles []string, idsFile string) (*indexedInfo, e
 	}, nil
 }
 
-func mergeInfo(info *indexedInfo) ([]ProfileEntry, error) {
+func mergeInfo(ctx context.Context, info *indexedInfo) ([]ProfileEntry, error) {
 	entries := []ProfileEntry{}
 
 	for _, sink := range info.summary[llvmProfileSinkType] {
 		dump, ok := info.dumps[sink.Name]
 		if !ok {
-			fmt.Fprintf(os.Stderr, "WARN: %s not found in summary file\n", sink.Name)
+			logger.Warningf(ctx, "%s not found in summary file\n", sink.Name)
 			continue
 		}
 
@@ -178,7 +186,7 @@ func mergeInfo(info *indexedInfo) ([]ProfileEntry, error) {
 			if ref, ok := info.ids[mod.Build]; ok {
 				moduleFiles = append(moduleFiles, ref.Filepath)
 			} else {
-				fmt.Fprintf(os.Stderr, "WARN: module with build id %s not found in ids.txt file\n", mod.Build)
+				logger.Warningf(ctx, "module with build id %s not found in ids.txt file\n", mod.Build)
 				continue
 			}
 		}
@@ -198,9 +206,9 @@ type Action struct {
 	Args []string `json:"args"`
 }
 
-func (a Action) Run() ([]byte, error) {
-	if dryRun || verbose {
-		fmt.Println(a.String())
+func (a Action) Run(ctx context.Context) ([]byte, error) {
+	if dryRun {
+		logger.Debugf(ctx, "%s\n", a.String())
 	}
 	if !dryRun {
 		return exec.Command(a.Path, a.Args...).CombinedOutput()
@@ -236,7 +244,7 @@ func isInstrumented(filepath string) bool {
 	return true
 }
 
-func process() error {
+func process(ctx context.Context) error {
 	// Make the output directory
 	err := os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
@@ -250,7 +258,7 @@ func process() error {
 	}
 
 	// Merge all the information
-	entries, err := mergeInfo(info)
+	entries, err := mergeInfo(ctx, info)
 	if err != nil {
 		return fmt.Errorf("merging info: %v", err)
 	}
@@ -282,7 +290,7 @@ func process() error {
 		cmd := exec.Command(llvmProfdata, "show", entry.ProfileData)
 		if err := cmd.Run(); err != nil {
 			if _, ok := err.(*exec.ExitError); ok {
-				fmt.Fprintf(os.Stderr, "WARN: %q profile is corrupted\n", entry.ProfileData)
+				logger.Warningf(ctx, "profile %q is corrupted\n", entry.ProfileData)
 				continue
 			} else {
 				return fmt.Errorf("llvm-profdata show %s failed: %v", entry.ProfileData, err)
@@ -314,7 +322,7 @@ func process() error {
 		"-o", mergedFile,
 		"@" + profdataFile.Name(),
 	}}
-	data, err := mergeCmd.Run()
+	data, err := mergeCmd.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("%v:\n%s", err, string(data))
 	}
@@ -337,7 +345,7 @@ func process() error {
 		"-output-dir", outputDir,
 		"@" + covFile.Name(),
 	}}
-	data, err = showCmd.Run()
+	data, err = showCmd.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("%v:\n%s", err, string(data))
 	}
@@ -346,8 +354,12 @@ func process() error {
 
 func main() {
 	flag.Parse()
-	if err := process(); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+
+	log := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "")
+	ctx := logger.WithLogger(context.Background(), log)
+
+	if err := process(ctx); err != nil {
+		log.Errorf("%v\n", err)
 		os.Exit(1)
 	}
 }
