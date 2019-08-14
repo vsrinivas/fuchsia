@@ -86,6 +86,17 @@ protocols.test.fidl.json.overnet_internal.h.golden
 protocols.test.fidl.json.rs.golden
 protocols.test.fidl.json.syz.txt.golden
 protocols.test.fidl.json_test_base.h.golden
+service.test.fidl.json
+service.test.fidl.json.cc.golden
+service.test.fidl.json.go.golden
+service.test.fidl.json.h.golden
+service.test.fidl.json.llcpp.cc.golden
+service.test.fidl.json.llcpp.h.golden
+service.test.fidl.json.overnet_internal.cc.golden
+service.test.fidl.json.overnet_internal.h.golden
+service.test.fidl.json.rs.golden
+service.test.fidl.json.syz.txt.golden
+service.test.fidl.json_test_base.h.golden
 tables.test.fidl.json
 tables.test.fidl.json.cc.golden
 tables.test.fidl.json.go.golden
