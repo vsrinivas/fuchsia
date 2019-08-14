@@ -5,6 +5,7 @@
 use crate::configuration::RequestedConfig;
 use byteorder::{BigEndian, ByteOrder};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
+use num_derive::FromPrimitive;
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
@@ -206,18 +207,16 @@ impl Message {
 /// `OpCode::BOOTREQUEST` should only appear in protocol messages from the
 /// client, and conversely `OpCode::BOOTREPLY` should only appear in messages
 /// from the server.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(FromPrimitive, Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum OpCode {
-    BOOTREQUEST,
-    BOOTREPLY,
+    BOOTREQUEST = 1,
+    BOOTREPLY = 2,
 }
 
 impl Into<u8> for OpCode {
     fn into(self) -> u8 {
-        match self {
-            OpCode::BOOTREQUEST => 1,
-            OpCode::BOOTREPLY => 2,
-        }
+        self as u8
     }
 }
 
@@ -229,11 +228,7 @@ impl TryFrom<u8> for OpCode {
     type Error = OpCodeError;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        match n {
-            1 => Ok(OpCode::BOOTREQUEST),
-            2 => Ok(OpCode::BOOTREPLY),
-            code => Err(OpCodeError::UnknownCode(code)),
-        }
+        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(OpCodeError::UnknownCode(n))
     }
 }
 
@@ -265,38 +260,26 @@ impl ConfigOption {
 /// RFC 1533. Note that not all options defined in the RFC are represented
 /// here; options which are not in this type are not currently supported. Supported
 /// options appear in this type in the order in which they are defined in the RFC.
-#[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(FromPrimitive, Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[repr(u8)]
 pub enum OptionCode {
-    Pad,
-    End,
-    SubnetMask,
-    Router,
-    NameServer,
-    RequestedIpAddr,
-    IpAddrLeaseTime,
-    DhcpMessageType,
-    ServerId,
-    Message,
-    RenewalTime,
-    RebindingTime,
+    Pad = 0,
+    SubnetMask = 1,
+    Router = 3,
+    NameServer = 5,
+    RequestedIpAddr = 50,
+    IpAddrLeaseTime = 51,
+    DhcpMessageType = 53,
+    ServerId = 54,
+    Message = 56,
+    RenewalTime = 58,
+    RebindingTime = 59,
+    End = 255,
 }
 
 impl Into<u8> for OptionCode {
     fn into(self) -> u8 {
-        match self {
-            OptionCode::Pad => 0,
-            OptionCode::End => 255,
-            OptionCode::SubnetMask => 1,
-            OptionCode::Router => 3,
-            OptionCode::NameServer => 5,
-            OptionCode::RequestedIpAddr => 50,
-            OptionCode::IpAddrLeaseTime => 51,
-            OptionCode::DhcpMessageType => 53,
-            OptionCode::ServerId => 54,
-            OptionCode::Message => 56,
-            OptionCode::RenewalTime => 58,
-            OptionCode::RebindingTime => 59,
-        }
+        self as u8
     }
 }
 
@@ -308,21 +291,7 @@ impl TryFrom<u8> for OptionCode {
     type Error = OptionCodeError;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        match n {
-            0 => Ok(OptionCode::Pad),
-            255 => Ok(OptionCode::End),
-            1 => Ok(OptionCode::SubnetMask),
-            3 => Ok(OptionCode::Router),
-            5 => Ok(OptionCode::NameServer),
-            50 => Ok(OptionCode::RequestedIpAddr),
-            51 => Ok(OptionCode::IpAddrLeaseTime),
-            53 => Ok(OptionCode::DhcpMessageType),
-            54 => Ok(OptionCode::ServerId),
-            56 => Ok(OptionCode::Message),
-            58 => Ok(OptionCode::RenewalTime),
-            59 => Ok(OptionCode::RebindingTime),
-            code => Err(OptionCodeError::UnknownCode(code)),
-        }
+        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(OptionCodeError::UnknownCode(n))
     }
 }
 
@@ -330,30 +299,22 @@ impl TryFrom<u8> for OptionCode {
 ///
 /// This enum corresponds to the DHCP Message Type option values
 /// defined in section 9.4 of RFC 1533.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(FromPrimitive, Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum MessageType {
-    DHCPDISCOVER,
-    DHCPOFFER,
-    DHCPREQUEST,
-    DHCPDECLINE,
-    DHCPACK,
-    DHCPNAK,
-    DHCPRELEASE,
-    DHCPINFORM,
+    DHCPDISCOVER = 1,
+    DHCPOFFER = 2,
+    DHCPREQUEST = 3,
+    DHCPDECLINE = 4,
+    DHCPACK = 5,
+    DHCPNAK = 6,
+    DHCPRELEASE = 7,
+    DHCPINFORM = 8,
 }
 
 impl Into<u8> for MessageType {
     fn into(self) -> u8 {
-        match self {
-            MessageType::DHCPDISCOVER => 1,
-            MessageType::DHCPOFFER => 2,
-            MessageType::DHCPREQUEST => 3,
-            MessageType::DHCPDECLINE => 4,
-            MessageType::DHCPACK => 5,
-            MessageType::DHCPNAK => 6,
-            MessageType::DHCPRELEASE => 7,
-            MessageType::DHCPINFORM => 8,
-        }
+        self as u8
     }
 }
 
@@ -381,17 +342,8 @@ impl TryFrom<u8> for MessageType {
     type Error = MessageTypeError;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        match n {
-            1 => Ok(MessageType::DHCPDISCOVER),
-            2 => Ok(MessageType::DHCPOFFER),
-            3 => Ok(MessageType::DHCPREQUEST),
-            4 => Ok(MessageType::DHCPDECLINE),
-            5 => Ok(MessageType::DHCPACK),
-            6 => Ok(MessageType::DHCPNAK),
-            7 => Ok(MessageType::DHCPRELEASE),
-            8 => Ok(MessageType::DHCPINFORM),
-            typ => Err(MessageTypeError::UnknownMessageType(typ)),
-        }
+        <Self as num_traits::FromPrimitive>::from_u8(n)
+            .ok_or(MessageTypeError::UnknownMessageType(n))
     }
 }
 
