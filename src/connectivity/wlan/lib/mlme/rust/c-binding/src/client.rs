@@ -53,11 +53,6 @@ pub extern "C" fn client_sta_send_deauth_frame(sta: &mut ClientStation, reason_c
 }
 
 #[no_mangle]
-pub extern "C" fn client_sta_send_keep_alive_resp_frame(sta: &mut ClientStation) -> i32 {
-    sta.send_keep_alive_resp_frame().into_raw_zx_status()
-}
-
-#[no_mangle]
 pub extern "C" fn client_sta_send_eapol_indication(
     sta: &mut ClientStation,
     src: &[u8; 6],

@@ -113,8 +113,6 @@ extern "C" int32_t client_sta_send_eapol_indication(wlan_client_sta_t *sta, cons
                                                     const uint8_t *eapol_frame,
                                                     uintptr_t eapol_frame_len);
 
-extern "C" int32_t client_sta_send_keep_alive_resp_frame(wlan_client_sta_t *sta);
-
 extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta);
 
 extern "C" mlme_sequence_manager_t *client_sta_seq_mgr(wlan_client_sta_t *sta);

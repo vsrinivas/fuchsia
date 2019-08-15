@@ -173,7 +173,7 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
   } else if (auto llc_frame = data_frame.CheckBodyType<LlcHeader>().CheckLength()) {
     HandleDataFrame(llc_frame.IntoOwned(frame.Take()));
   } else if (auto null_frame = data_frame.CheckBodyType<NullDataHdr>().CheckLength()) {
-    HandleNullDataFrame(null_frame.IntoOwned(frame.Take()));
+    HandleDataFrameInRust(rust_client_.get(), frame.Take());
   }
 
   return ZX_OK;
@@ -635,17 +635,6 @@ bool Station::ShouldDropDataFrame(const DataFrameView<>& frame) {
   }
 
   return join_ctx_->bssid() != frame.hdr()->addr2;
-}
-
-zx_status_t Station::HandleNullDataFrame(DataFrame<NullDataHdr>&& frame) {
-  debugfn();
-  ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
-
-  // Some AP's such as Netgear Routers send periodic NULL data frames to test
-  // whether a client timed out. The client must respond with a NULL data frame
-  // itself to not get deauthenticated.
-  client_sta_send_keep_alive_resp_frame(rust_client_.get());
-  return ZX_OK;
 }
 
 zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {

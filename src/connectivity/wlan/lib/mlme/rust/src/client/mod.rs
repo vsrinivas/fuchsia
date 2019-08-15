@@ -61,10 +61,16 @@ impl ClientStation {
     /// Extracts aggregated and non-aggregated MSDUs from the data frame,
     /// converts those into Ethernet II frames and delivers the resulting frames via the given
     /// device.
+    /// Handles NULL data frames by responding with NULL data frames (sometimes called Keep Alive
+    /// frames).
     pub fn handle_data_frame<B: ByteSlice>(&mut self, bytes: B, has_padding: bool) {
         if let Some(msdus) = mac::MsduIterator::from_raw_data_frame(bytes, has_padding) {
             match msdus {
-                mac::MsduIterator::Null => {}
+                mac::MsduIterator::Null => {
+                    if let Err(e) = self.send_keep_alive_resp_frame() {
+                        error!("error sending keep alive frame: {}", e);
+                    }
+                }
                 _ => {
                     for msdu in msdus {
                         if let Err(e) = self.deliver_msdu(msdu) {
@@ -114,7 +120,7 @@ impl ClientStation {
     // Note: This function was introduced to meet C++ MLME feature parity. However, there needs to
     // be some investigation, whether these "keep alive" frames are the right way of keeping a
     // client associated to legacy APs.
-    pub fn send_keep_alive_resp_frame(&mut self) -> Result<(), Error> {
+    fn send_keep_alive_resp_frame(&mut self) -> Result<(), Error> {
         const FRAME_LEN: usize = frame_len!(mac::FixedDataHdrFields);
         let mut buf = self.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
@@ -302,6 +308,33 @@ mod tests {
             6, 6, 6, 6, 6, 6, // addr3
             0x10, 0, // Sequence Control
             47, 0, // reason code
+        ][..]);
+    }
+
+    #[test]
+    fn respond_to_keep_alive_request() {
+        #[rustfmt::skip]
+        let data_frame = vec![
+            // Data header:
+            0b0100_10_00, 0b000000_1_0, // FC
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // addr1
+            7, 7, 7, 7, 7, 7, // addr2
+            7, 7, 7, 7, 7, 7, // addr3
+            0x10, 0, // Sequence Control
+        ];
+        let mut fake_device = FakeDevice::new();
+        let mut client = make_client_station(fake_device.as_device());
+        client.handle_data_frame(&data_frame[..], false);
+        #[rustfmt::skip]
+        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
+            // Data header:
+            0b0100_10_00, 0b0000000_1, // FC
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // addr1
+            7, 7, 7, 7, 7, 7, // addr2
+            6, 6, 6, 6, 6, 6, // addr3
+            0x10, 0, // Sequence Control
         ][..]);
     }
 

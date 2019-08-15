@@ -87,7 +87,6 @@ class Station : public ClientInterface {
   zx_status_t HandleDisassociation(MgmtFrame<Disassociation>&&);
   zx_status_t HandleActionFrame(MgmtFrame<ActionFrame>&&);
   bool ShouldDropDataFrame(const DataFrameView<>&);
-  zx_status_t HandleNullDataFrame(DataFrame<NullDataHdr>&& frame);
   zx_status_t HandleDataFrame(DataFrame<LlcHeader>&& frame);
   zx_status_t HandleAddBaRequest(const AddBaRequestFrame&);
 
