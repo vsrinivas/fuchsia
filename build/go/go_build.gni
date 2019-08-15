@@ -50,6 +50,10 @@ declare_args() {
 template("go_build") {
   assert(defined(invoker.gopackages),
          "gopackages must be defined for $target_name")
+  gopackages = invoker.gopackages
+  assert(
+      gopackages == [ gopackages[0] ],
+      "gopackages currently only supports one package because of http://crbug.com/fuchsia/8088")
 
   main_target_name = target_name
 
