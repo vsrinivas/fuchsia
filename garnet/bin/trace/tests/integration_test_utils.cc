@@ -39,7 +39,8 @@ const char kEventNameMemberName[] = "name";
 constexpr size_t kRecordSize = 64;
 
 bool CreateProviderSynchronously(async::Loop& loop, const char* name,
-                                 fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider) {
+                                 fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider,
+                                 bool* out_already_started) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
   fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
@@ -50,6 +51,25 @@ bool CreateProviderSynchronously(async::Loop& loop, const char* name,
     return false;
   }
 
+  *out_provider = std::move(provider);
+  *out_already_started = already_started;
+  return true;
+}
+
+bool CreateProviderSynchronouslyAndWait(
+    async::Loop& loop, const char* name,
+    fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider) {
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+
+  fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
+  bool already_started;
+  if (!trace::TraceProviderWithFdio::CreateSynchronously(dispatcher, name, &provider,
+                                                         &already_started)) {
+    FXL_LOG(ERROR) << "Failed to create provider " << name;
+    return false;
+  }
+
+  // The program may not be being run under tracing. If it is tracing should have already started.
   if (already_started) {
     // At this point we're registered with trace-manager, and we know tracing
     // has started. But we haven't received the Start() request yet, which
@@ -216,11 +236,7 @@ bool VerifyFullBuffer(const std::string& test_output_file, tracing::BufferingMod
 bool WaitForTracingToStart(async::Loop& loop, zx::duration timeout) {
   trace::TraceObserver trace_observer;
 
-  bool started = false;
-  auto on_trace_state_changed = [&loop, &started]() {
-    if (trace_state() == TRACE_STARTED) {
-      started = true;
-    }
+  auto on_trace_state_changed = [&loop]() {
     // Any state change is relevant to us. If we're not started then we must
     // have transitioned from STOPPED to STARTED to at least STOPPING.
     loop.Quit();
@@ -237,6 +253,8 @@ bool WaitForTracingToStart(async::Loop& loop, zx::duration timeout) {
   });
   timeout_task.PostDelayed(loop.dispatcher(), timeout);
   loop.Run();
+  zx_status_t status = loop.ResetQuit();
+  FXL_CHECK(status == ZX_OK);
 
-  return started;
+  return trace_state() == TRACE_STARTED;
 }

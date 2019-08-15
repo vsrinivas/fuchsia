@@ -37,10 +37,21 @@ constexpr zx::duration kStartTimeout{zx::sec(10)};
 // Given |test_name| return its |IntegrationTest| spec.
 const IntegrationTest* LookupTest(const std::string& test_name);
 
-// Create a provider and wait for tracing to start (if tracing is active).
-// |loop| must be idle.
+// Create a provider.
+// On success an indicator of whether tracing has already started is stored in
+// |*out_already_started|. This does not mean tracing has started in this provider; this provider
+// must still wait for the Start() request from trace-manager.
+// This is intended to be accompanied by a call to |WaitForTracingToStart()|.
+// The two are split out as the details of waiting depend on the loop being used (e.g., is it
+// running in a foreground thread or background thread?).
 bool CreateProviderSynchronously(async::Loop& loop, const char* name,
-                                 fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider);
+                                 fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider,
+                                 bool* out_already_started);
+
+// Simplified version that calls both |CreateProviderSynchronously(),WaitForTracingToStart()|.
+bool CreateProviderSynchronouslyAndWait(
+    async::Loop& loop, const char* name,
+    fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider);
 
 // Emit |num_iterations| records that |VerifyTestEvents()| knows how to test.
 void WriteTestEvents(size_t num_records);
@@ -60,8 +71,9 @@ bool VerifyFullBuffer(const std::string& test_output_file, tracing::BufferingMod
                       size_t buffer_size_in_mb);
 
 // Wait for tracing to start or |timeout|.
-// Basically this means waiting for the Start() request.
-// |loop| must be idle.
+// Basically this means waiting for the Start() request which contains the trace buffer (as a vmo)
+// and other things.
+// |loop| must be idle and not have any background threads.
 // Returns true if tracing has started.
 bool WaitForTracingToStart(async::Loop& loop, zx::duration timeout);
 

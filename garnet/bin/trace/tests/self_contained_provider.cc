@@ -23,7 +23,7 @@ static int SelfContainedProviderThread(void* arg) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
   fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
-  if (!CreateProviderSynchronously(loop, kName, &provider)) {
+  if (!CreateProviderSynchronouslyAndWait(loop, kName, &provider)) {
     return false;
   }
 
