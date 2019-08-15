@@ -120,6 +120,7 @@ impl Message {
         if buf.len() < OPTIONS_START_IDX {
             return None;
         }
+        let (buf, options) = buf.split_at(OPTIONS_START_IDX);
 
         let mut msg = Message::new();
         let op = buf.get(OP_IDX)?;
@@ -135,8 +136,19 @@ impl Message {
         msg.giaddr = ip_addr_from_buf_at(buf, GIADDR_IDX).expect("out of range indexing on buf");
         copy_buf_into_mac_addr(&buf[CHADDR_IDX..CHADDR_IDX + 6], &mut msg.chaddr);
         msg.sname = buf_to_msg_string(&buf[SNAME_IDX..FILE_IDX])?;
-        msg.file = buf_to_msg_string(&buf[FILE_IDX..OPTIONS_START_IDX])?;
-        buf_into_options(&buf[OPTIONS_START_IDX..], &mut msg.options);
+        msg.file = buf_to_msg_string(&buf[FILE_IDX..])?;
+        if options.len() >= MAGIC_COOKIE.len() {
+            let (magic_cookie, options) = options.split_at(MAGIC_COOKIE.len());
+            if magic_cookie == MAGIC_COOKIE {
+                msg.options.extend(OptionBuffer::new(options).into_iter().filter_map(|o| match o {
+                    Ok(o) => Some(o),
+                    Err(e) => {
+                        log::warn!("unable to deserialize option: {}", e);
+                        None
+                    }
+                }))
+            }
+        }
 
         Some(msg)
     }
@@ -283,6 +295,7 @@ pub enum OptionCode {
     IpAddrLeaseTime = 51,
     DhcpMessageType = 53,
     ServerId = 54,
+    ParameterRequestList = 55,
     Message = 56,
     RenewalTime = 58,
     RebindingTime = 59,
@@ -360,7 +373,7 @@ impl<'a> OptionBuffer<'a> {
 }
 
 impl<'a> Iterator for OptionBuffer<'a> {
-    type Item = ConfigOption;
+    type Item = Result<ConfigOption, <OptionCode as TryFrom<u8>>::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -383,15 +396,7 @@ impl<'a> Iterator for OptionBuffer<'a> {
                         })
                     }?;
                     self.buf = buf;
-                    match code {
-                        Ok(code) => {
-                            let value = val.to_vec();
-                            break Some(ConfigOption { code, value });
-                        }
-                        Err(_code) => {
-                            // TODO(atait): signal to the caller that we got an unknown option?
-                        }
-                    }
+                    break Some(code.map(|code| ConfigOption { code, value: val.to_vec() }));
                 }
             }
         }
@@ -412,16 +417,6 @@ fn copy_buf_into_mac_addr(buf: &[u8], addr: &mut MacAddr) {
 
 fn buf_to_msg_string(buf: &[u8]) -> Option<String> {
     std::str::from_utf8(buf).ok().map(|s| s.trim_end_matches('\x00').to_string())
-}
-
-fn buf_into_options(buf: &[u8], options: &mut Vec<ConfigOption>) {
-    if buf[0..MAGIC_COOKIE.len()] != MAGIC_COOKIE {
-        return;
-    }
-    let buf = OptionBuffer::new(&buf[MAGIC_COOKIE.len()..]);
-    for opt in buf {
-        options.push(opt);
-    }
 }
 
 fn trunc_string_to_n_and_push(s: &str, n: usize, buffer: &mut Vec<u8>) {
@@ -616,14 +611,10 @@ mod tests {
         let buf = vec![1, 4, 255, 255, 255, 0];
         let mut buf = OptionBuffer { buf: &buf };
         let result = buf.next();
-        match result {
-            Some(opt) => {
-                let code: u8 = opt.code.into();
-                assert_eq!(code, 1);
-                assert_eq!(opt.value, DEFAULT_SUBNET_MASK.to_vec());
-            }
-            None => assert!(false), // test failure
-        }
+        let opt = result.unwrap().unwrap();
+        let code: u8 = opt.code.into();
+        assert_eq!(code, 1);
+        assert_eq!(opt.value, DEFAULT_SUBNET_MASK.to_vec());
     }
 
     #[test]
@@ -635,11 +626,11 @@ mod tests {
     }
 
     #[test]
-    fn test_option_from_buffer_with_invalid_code_returns_none() {
+    fn test_option_from_buffer_with_invalid_code_returns_error() {
         let buf = vec![72, 2, 1, 2];
         let mut buf = OptionBuffer { buf: &buf };
         let result = buf.next();
-        assert_eq!(result, None);
+        assert_eq!(result, Some(Err(72)));
     }
 
     #[test]
