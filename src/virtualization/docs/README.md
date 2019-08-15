@@ -112,6 +112,16 @@ fx set workstation.x64 --with-base //src/virtualization
 After booting the guest packages can be launched from the system launcher as
 `linux_guest` and `zircon_guest`.
 
+## Integration tests
+
+Machina has a set of integration tests that launch Zircon and Debian guests to test the VMM,
+hypervisor, and each of the virtio devices. To run the tests:
+
+```sh
+fx set core.${ARCH} --with-base //src/virtualization
+fx run-test guest_integration_tests
+```
+
 # Guest Configuration
 
 Guest systems can be configured by including a config file inside the guest
