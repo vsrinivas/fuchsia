@@ -13,8 +13,8 @@ use std::time::Duration;
 
 use failure::Fail;
 use log::{debug, error};
-use net_types::ip::AddrSubnet;
-use net_types::{LinkLocalAddress, MulticastAddr};
+use net_types::ip::{AddrSubnet, Ip, Ipv6, Ipv6Addr};
+use net_types::{LinkLocalAddress, MulticastAddr, SpecifiedAddress};
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
 use rand::Rng;
@@ -25,7 +25,7 @@ use crate::context::{
     FrameContext, InstantContext, RngContext, RngContextExt, StateContext, TimerContext,
 };
 use crate::ip::gmp::{Action, Actions, GmpAction, GmpStateMachine, ProtocolSpecific};
-use crate::ip::{Ip, IpAddress, IpDeviceIdContext, IpProto, Ipv6, Ipv6Addr};
+use crate::ip::{IpDeviceIdContext, IpProto};
 use crate::wire::icmp::mld::{
     IcmpMldv1MessageType, Mldv1Body, Mldv1MessageBuilder, MulticastListenerDone,
     MulticastListenerReport,
@@ -141,7 +141,7 @@ where
     // correlate events generated during this one function call.
     let mut rng = ctx.new_xorshift_rng();
     let group_addr = body.group_addr;
-    if group_addr.is_unspecified() {
+    if !group_addr.is_specified() {
         let addr_and_actions = ctx
             .get_state_mut(device)
             .groups

@@ -5,6 +5,7 @@
 use std::collections::HashSet;
 
 use net_types::ip::{Ip, IpAddress, Subnet};
+use net_types::SpecifiedAddress;
 
 use crate::device::DeviceId;
 use crate::ip::*;
@@ -224,7 +225,7 @@ impl<I: Ip> ForwardingTable<I> {
             "loopback addresses should be handled before consulting the forwarding table"
         );
 
-        if address.is_unspecified() {
+        if !address.is_specified() {
             return None;
         }
 

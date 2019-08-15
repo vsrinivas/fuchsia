@@ -13,8 +13,8 @@ use std::time::Duration;
 
 use failure::Fail;
 use log::{debug, error};
-use net_types::ip::{AddrSubnet, IpAddress, Ipv4Addr};
-use net_types::MulticastAddr;
+use net_types::ip::{AddrSubnet, Ipv4Addr};
+use net_types::{MulticastAddr, SpecifiedAddress};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder};
 use rand::Rng;
 use rand_xorshift::XorShiftRng;
@@ -126,7 +126,7 @@ where
     // correlate events generated during this one function call.
     let mut rng = ctx.new_xorshift_rng();
     let group_addr = msg.group_addr();
-    if group_addr.is_unspecified() {
+    if !group_addr.is_specified() {
         let mut addr_and_actions = ctx
             .get_state_mut(device)
             .groups

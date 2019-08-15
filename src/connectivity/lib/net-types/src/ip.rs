@@ -57,7 +57,10 @@ use std::net;
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
-use crate::{sealed, LinkLocalAddress, MulticastAddr, MulticastAddress, UnicastAddress};
+use crate::{
+    sealed, LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress, SpecifiedAddr,
+    SpecifiedAddress, UnicastAddress,
+};
 
 // NOTE on passing by reference vs by value: Clippy advises us to pass IPv4
 // addresses by value, and IPv6 addresses by reference. For concrete types, we
@@ -73,11 +76,18 @@ pub enum IpVersion {
 }
 
 /// An IP address.
+///
+/// By default, the contained address types are `Ipv4Addr` and `Ipv6Addr`.
+/// However, any types can be provided. This is intended to support types like
+/// `IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>`. `From` is
+/// implemented to support conversions in both directions between
+/// `IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>` and
+/// `SpecifiedAddr<IpAddr>`, and similarly for other witness types.
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub enum IpAddr {
-    V4(Ipv4Addr),
-    V6(Ipv6Addr),
+pub enum IpAddr<V4 = Ipv4Addr, V6 = Ipv6Addr> {
+    V4(V4),
+    V6(V6),
 }
 
 impl<A: IpAddress> From<A> for IpAddr {
@@ -346,15 +356,6 @@ pub trait IpAddress:
     /// Converts a statically-typed IP address into a dynamically-typed one.
     fn into_ip_addr(self) -> IpAddr;
 
-    /// Is this the unspecified address?
-    ///
-    /// `is_unspecified` returns `true` if this address is equal to
-    /// `Self::Version::UNSPECIFIED_ADDRESS`.
-    #[inline]
-    fn is_unspecified(&self) -> bool {
-        *self == Self::Version::UNSPECIFIED_ADDRESS
-    }
-
     /// Is this a loopback address?
     ///
     /// `is_loopback` returns `true` if this address is a member of the loopback
@@ -370,11 +371,12 @@ pub trait IpAddress:
     /// - a multicast address
     /// - the IPv4 global broadcast address
     /// - the IPv4 subnet-specific broadcast address for the given `subnet`
+    /// - the unspecified address
     ///
     /// Note one exception to these rules: If `subnet` is an IPv4 /32, then the
     /// single unicast address in the subnet is also technically the subnet
-    /// broadcast address. In this case, `is_unicast_in_subnet` will return
-    /// `true`.
+    /// broadcast address. In this case, the "no subnet-specific broadcast" rule
+    /// doesn't apply.
     fn is_unicast_in_subnet(&self, subnet: &Subnet<Self>) -> bool;
 
     /// Invokes one function on this address if it is an [`Ipv4Addr`] and
@@ -398,6 +400,40 @@ pub trait IpAddress:
     fn into_subnet_either(subnet: Subnet<Self>) -> SubnetEither;
 }
 
+impl<A: IpAddress> SpecifiedAddress for A {
+    /// Is this an address other than the unspecified address?
+    ///
+    /// `is_specified` returns true if `self` is not equal to [`A::Version::UNSPECIFIED_ADDRESS`].
+    ///
+    /// [`A::Version::UNSPECIFIED_ADDRESS`]: crate::ip::Ip::UNSPECIFIED_ADDRESS
+    #[inline]
+    fn is_specified(&self) -> bool {
+        self != &A::Version::UNSPECIFIED_ADDRESS
+    }
+}
+
+/// Map a method over an `IpAddr`, calling it after matching on the type of IP
+/// address.
+macro_rules! map_ip_addr {
+    ($val:expr, $method:ident) => {
+        match $val {
+            IpAddr::V4(a) => a.$method(),
+            IpAddr::V6(a) => a.$method(),
+        }
+    };
+}
+
+impl SpecifiedAddress for IpAddr {
+    /// Is this an address other than the unspecified address?
+    ///
+    /// `is_specified` returns true if `self` is not equal to
+    /// [`Ip::UNSPECIFIED_ADDRESS`] for the IP version of this address.
+    #[inline]
+    fn is_specified(&self) -> bool {
+        map_ip_addr!(self, is_specified)
+    }
+}
+
 impl<A: IpAddress> MulticastAddress for A {
     /// Is this address in the multicast subnet?
     ///
@@ -408,6 +444,17 @@ impl<A: IpAddress> MulticastAddress for A {
     #[inline]
     fn is_multicast(&self) -> bool {
         <A as IpAddress>::Version::MULTICAST_SUBNET.contains(self)
+    }
+}
+
+impl MulticastAddress for IpAddr {
+    /// Is this an address in the multicast subnet?
+    ///
+    /// `is_multicast` returns true if `self` is in [`Ip::MULTICAST_SUBNET`] for
+    /// the IP version of this address.
+    #[inline]
+    fn is_multicast(&self) -> bool {
+        map_ip_addr!(self, is_multicast)
     }
 }
 
@@ -423,6 +470,66 @@ impl<A: IpAddress> LinkLocalAddress for A {
         <A as IpAddress>::Version::LINK_LOCAL_SUBNET.contains(self)
     }
 }
+
+impl LinkLocalAddress for IpAddr {
+    /// Is this address in the link-local subnet?
+    ///
+    /// `is_linklocal` returns true if `self` is in [`Ip::LINK_LOCAL_SUBNET`]
+    /// for the IP version of this address.
+    #[inline]
+    fn is_linklocal(&self) -> bool {
+        map_ip_addr!(self, is_linklocal)
+    }
+}
+
+/// The definition of each trait for `IpAddr` is equal to the definition of that
+/// trait for whichever of `Ipv4Addr` and `Ipv6Addr` is actually present in the
+/// enum. Thus, we can convert between `$witness<IpvXAddr>`, `$witness<IpAddr>`,
+/// and `IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>` arbitrarily.
+macro_rules! impl_from_witness {
+    ($witness:ident) => {
+        impl_from_witness!($witness, Ipv4Addr);
+        impl_from_witness!($witness, Ipv6Addr);
+
+        impl From<IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>> for $witness<IpAddr> {
+            fn from(addr: IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>) -> $witness<IpAddr> {
+                unsafe {
+                    $witness::new_unchecked(match addr {
+                        IpAddr::V4(addr) => IpAddr::V4(addr.into_addr()),
+                        IpAddr::V6(addr) => IpAddr::V6(addr.into_addr()),
+                    })
+                }
+            }
+        }
+        impl From<$witness<IpAddr>> for IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>> {
+            fn from(addr: $witness<IpAddr>) -> IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>> {
+                unsafe {
+                    match addr.into_addr() {
+                        IpAddr::V4(addr) => IpAddr::V4($witness::new_unchecked(addr)),
+                        IpAddr::V6(addr) => IpAddr::V6($witness::new_unchecked(addr)),
+                    }
+                }
+            }
+        }
+    };
+    ($witness:ident, $ipaddr:ident) => {
+        impl From<$witness<$ipaddr>> for $witness<IpAddr> {
+            fn from(addr: $witness<$ipaddr>) -> $witness<IpAddr> {
+                unsafe { $witness::new_unchecked(addr.get().into()) }
+            }
+        }
+
+        impl From<$witness<$ipaddr>> for $ipaddr {
+            fn from(addr: $witness<$ipaddr>) -> $ipaddr {
+                addr.into_addr()
+            }
+        }
+    };
+}
+
+impl_from_witness!(SpecifiedAddr);
+impl_from_witness!(MulticastAddr);
+impl_from_witness!(LinkLocalAddr);
 
 /// An IPv4 address.
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash, FromBytes, AsBytes, Unaligned)]
@@ -498,6 +605,7 @@ impl IpAddress for Ipv4Addr {
         !self.is_multicast()
             && !self.is_global_broadcast()
             && (subnet.prefix() == 32 || *self != subnet.broadcast())
+            && self.is_specified()
     }
 
     #[inline]
@@ -599,10 +707,10 @@ impl Ipv6Addr {
     /// Checks whether `self` is a valid unicast address.
     ///
     /// A valid unicast address is any unicast address that can be bound to an
-    /// interface (Not the unspecified or loopback addresses).
+    /// interface (not the unspecified or loopback addresses).
     #[inline]
     pub fn is_valid_unicast(&self) -> bool {
-        !(self.is_loopback() || self.is_unspecified() || self.is_multicast())
+        !(self.is_loopback() || !self.is_specified() || self.is_multicast())
     }
 }
 
@@ -640,7 +748,7 @@ impl IpAddress for Ipv6Addr {
 
     #[inline]
     fn is_unicast_in_subnet(&self, _subnet: &Subnet<Self>) -> bool {
-        !self.is_multicast()
+        !self.is_multicast() && self.is_specified()
     }
 
     #[inline]
@@ -666,7 +774,7 @@ impl IpAddress for Ipv6Addr {
 impl UnicastAddress for Ipv6Addr {
     #[inline]
     fn is_unicast(&self) -> bool {
-        !self.is_multicast()
+        !self.is_multicast() && self.is_specified()
     }
 }
 
@@ -682,12 +790,6 @@ impl From<net::Ipv6Addr> for Ipv6Addr {
     #[inline]
     fn from(ip: net::Ipv6Addr) -> Ipv6Addr {
         Ipv6Addr::new(ip.octets())
-    }
-}
-
-impl From<MulticastAddr<Ipv6Addr>> for Ipv6Addr {
-    fn from(m: MulticastAddr<Ipv6Addr>) -> Self {
-        m.get()
     }
 }
 
@@ -816,6 +918,9 @@ impl<A: IpAddress> Subnet<A> {
 }
 
 impl Subnet<Ipv4Addr> {
+    // TODO(joshlf): Introduce a `BroadcastAddr` witness type, and have
+    // `broadcast` return `BroadcastAddr<Ipv4Addr>`.
+
     /// Gets the broadcast address in this IPv4 subnet.
     #[inline]
     pub fn broadcast(self) -> Ipv4Addr {
@@ -902,7 +1007,7 @@ pub struct AddrSubnet<A: IpAddress> {
     // TODO(joshlf): Would it be more performant to store these as just an
     // address and subnet mask? It would make the object smaller and so cheaper
     // to pass around, but it would make certain operations more expensive.
-    addr: A,
+    addr: SpecifiedAddr<A>,
     subnet: Subnet<A>,
 }
 
@@ -924,13 +1029,14 @@ impl<A: IpAddress> AddrSubnet<A> {
         if !addr.is_unicast_in_subnet(&subnet) {
             return None;
         }
+        let addr = SpecifiedAddr::new(addr)?;
         Some(AddrSubnet { addr, subnet })
     }
 
     /// Gets the address.
     #[inline]
     pub fn addr(&self) -> A {
-        self.addr
+        self.addr.get()
     }
 
     /// Gets the subnet.
@@ -942,7 +1048,7 @@ impl<A: IpAddress> AddrSubnet<A> {
     /// Consumes the `AddrSubnet` and returns the address.
     #[inline]
     pub fn into_addr(self) -> A {
-        self.addr
+        self.addr.get()
     }
 
     /// Consumes the `AddrSubnet` and returns the subnet.
@@ -955,7 +1061,7 @@ impl<A: IpAddress> AddrSubnet<A> {
     /// individually.
     #[inline]
     pub fn into_addr_subnet(self) -> (A, Subnet<A>) {
-        (self.addr, self.subnet)
+        (self.addr.get(), self.subnet)
     }
 }
 
@@ -990,7 +1096,7 @@ impl AddrSubnetEither {
 
     /// Gets the contained IP address and prefix in this `AddrSubnetEither`.
     #[inline]
-    pub fn into_addr_prefix(self) -> (IpAddr, u8) {
+    pub fn into_addr_prefix(self) -> (SpecifiedAddr<IpAddr>, u8) {
         match self {
             AddrSubnetEither::V4(v4) => (v4.addr.into(), v4.subnet.prefix),
             AddrSubnetEither::V6(v6) => (v6.addr.into(), v6.subnet.prefix),
@@ -999,7 +1105,7 @@ impl AddrSubnetEither {
 
     /// Gets the IP address and subnet in this `AddrSubnetEither`.
     #[inline]
-    pub fn into_addr_subnet(self) -> (IpAddr, SubnetEither) {
+    pub fn into_addr_subnet(self) -> (SpecifiedAddr<IpAddr>, SubnetEither) {
         match self {
             AddrSubnetEither::V4(v4) => (v4.addr.into(), SubnetEither::V4(v4.subnet)),
             AddrSubnetEither::V6(v6) => (v6.addr.into(), SubnetEither::V6(v6.subnet)),
@@ -1012,6 +1118,50 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_specified() {
+        // For types that implement SpecifiedAddress,
+        // UnicastAddress::is_unicast, MulticastAddress::is_multicast, and
+        // LinkLocalAddress::is_linklocal all imply
+        // SpecifiedAddress::is_specified. Test that that's true for both IPv4
+        // and IPv6.
+
+        assert!(!Ipv6::UNSPECIFIED_ADDRESS.is_specified());
+        assert!(!Ipv4::UNSPECIFIED_ADDRESS.is_specified());
+
+        // Unicast
+
+        assert!(!Ipv6::UNSPECIFIED_ADDRESS.is_unicast());
+
+        let unicast = Ipv6Addr([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        assert!(unicast.is_unicast());
+        assert!(unicast.is_specified());
+
+        // Multicast
+
+        assert!(!Ipv4::UNSPECIFIED_ADDRESS.is_multicast());
+        assert!(!Ipv6::UNSPECIFIED_ADDRESS.is_multicast());
+
+        let multicast = Ipv4::MULTICAST_SUBNET.network;
+        assert!(multicast.is_multicast());
+        assert!(multicast.is_specified());
+        let multicast = Ipv6::MULTICAST_SUBNET.network;
+        assert!(multicast.is_multicast());
+        assert!(multicast.is_specified());
+
+        // Link-local
+
+        assert!(!Ipv4::UNSPECIFIED_ADDRESS.is_linklocal());
+        assert!(!Ipv6::UNSPECIFIED_ADDRESS.is_linklocal());
+
+        let link_local = Ipv4::LINK_LOCAL_SUBNET.network;
+        assert!(link_local.is_linklocal());
+        assert!(link_local.is_specified());
+        let link_local = Ipv6::LINK_LOCAL_SUBNET.network;
+        assert!(link_local.is_linklocal());
+        assert!(link_local.is_specified());
+    }
+
+    #[test]
     fn test_subnet_new() {
         Subnet::new(Ipv4Addr::new([255, 255, 255, 255]), 32).unwrap();
         // Prefix exceeds 32 bits
@@ -1020,15 +1170,29 @@ mod tests {
         assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 8), None);
 
         AddrSubnet::new(Ipv4Addr::new([1, 2, 3, 4]), 32).unwrap();
-        // Prefix exceeds 32 bits (use assert, not assert_eq, because
-        // AddrSubnet doesn't impl Debug)
+        // The unspecified address is not considered to be a unicast address in
+        // any subnet (use assert, not assert_eq, because AddrSubnet doesn't
+        // impl Debug)
+        assert!(AddrSubnet::new(Ipv4::UNSPECIFIED_ADDRESS, 16) == None);
+        assert!(AddrSubnet::new(Ipv6::UNSPECIFIED_ADDRESS, 64) == None);
+        // Prefix exceeds 32/128 bits
         assert!(AddrSubnet::new(Ipv4Addr::new([1, 2, 3, 4]), 33) == None);
+        assert!(
+            AddrSubnet::new(
+                Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+                129
+            ) == None
+        );
         // Global broadcast
         assert!(AddrSubnet::new(Ipv4::GLOBAL_BROADCAST_ADDRESS, 16) == None);
         // Subnet broadcast
         assert!(AddrSubnet::new(Ipv4Addr::new([192, 168, 255, 255]), 16) == None);
         // Multicast
         assert!(AddrSubnet::new(Ipv4Addr::new([224, 0, 0, 1]), 16) == None);
+        assert!(
+            AddrSubnet::new(Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]), 64)
+                == None
+        );
     }
 
     #[test]
@@ -1036,6 +1200,16 @@ mod tests {
         // Valid unicast in subnet
         assert!(Ipv4Addr::new([1, 2, 3, 4])
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 0, 0]), 16).unwrap()));
+        assert!(Ipv6Addr::new([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+            .is_unicast_in_subnet(
+                &Subnet::new(Ipv6Addr::new([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
+                    .unwrap()
+            ));
+        // Unspecified address
+        assert!(!Ipv4::UNSPECIFIED_ADDRESS
+            .is_unicast_in_subnet(&Subnet::new(Ipv4::UNSPECIFIED_ADDRESS, 16).unwrap()));
+        assert!(!Ipv6::UNSPECIFIED_ADDRESS
+            .is_unicast_in_subnet(&Subnet::new(Ipv6::UNSPECIFIED_ADDRESS, 64).unwrap()));
         // Global broadcast
         assert!(!Ipv4::GLOBAL_BROADCAST_ADDRESS
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 16).unwrap()));
@@ -1043,8 +1217,9 @@ mod tests {
         assert!(!Ipv4Addr::new([1, 2, 255, 255])
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 0, 0]), 16).unwrap()));
         // Multicast
-        assert!(!Ipv4Addr::new([224, 0, 0, 1])
-            .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([224, 0, 0, 0]), 8).unwrap()));
+        assert!(!Ipv4Addr::new([224, 0, 0, 1]).is_unicast_in_subnet(&Ipv4::MULTICAST_SUBNET));
+        assert!(!Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+            .is_unicast_in_subnet(&Ipv6::MULTICAST_SUBNET));
     }
 
     macro_rules! add_mask_test {
@@ -1103,7 +1278,7 @@ mod tests {
 
     #[test]
     fn test_ipv6_address_types() {
-        assert!(Ipv6Addr::new([0; 16]).is_unspecified());
+        assert!(!Ipv6Addr::new([0; 16]).is_specified());
         assert!(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]).is_loopback());
         let link_local = Ipv6Addr::new([
             0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x52, 0xe5, 0x49, 0xff, 0xfe, 0xb5, 0x5a, 0xa0,

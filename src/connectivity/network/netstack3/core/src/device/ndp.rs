@@ -26,8 +26,8 @@ use std::time::Duration;
 
 use log::{debug, error, trace};
 
-use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv6, Ipv6Addr};
-use net_types::{LinkLocalAddr, LinkLocalAddress, MulticastAddress};
+use net_types::ip::{AddrSubnet, Ip, Ipv6, Ipv6Addr};
+use net_types::{LinkLocalAddr, LinkLocalAddress, MulticastAddress, SpecifiedAddress};
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use rand::{thread_rng, Rng};
 use zerocopy::ByteSlice;
@@ -1657,7 +1657,7 @@ fn send_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
 
     trace!("send_router_solicitation: sending router solicitation from {:?}", src_ip);
 
-    if src_ip.is_unspecified() {
+    if !src_ip.is_specified() {
         // Must not include the source link layer address if the source address
         // is unspecified as per RFC 4861 section 4.1.
         send_ndp_packet::<_, ND, &[u8], _>(
@@ -2039,7 +2039,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
             let source_link_layer_option = get_source_link_layer_option::<ND, _>(p.body());
 
-            if src_ip.is_unspecified() && source_link_layer_option.is_some() {
+            if !src_ip.is_specified() && source_link_layer_option.is_some() {
                 // If the IP source address is the unspecified address and there is a
                 // source link-layer address option in the message, we MUST silently
                 // discard the Router Solicitation message as per RFC 4861 section 6.1.1.
@@ -2309,7 +2309,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
             if let Some(my_addr) = ND::get_ipv6_addr(ctx.state_mut(), device_id) {
                 if my_addr.is_tentative() {
                     // we are not allowed to respond to the solicitation
-                    if src_ip.is_unspecified() {
+                    if !src_ip.is_specified() {
                         trace!(
                             "receive_ndp_packet_inner: Received NDP NS: duplicate address detected"
                         );
@@ -2322,7 +2322,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                     increment_counter!(ctx, "ndp::rx_neighbor_solicitation");
                     // If we have a source link layer address option, we take it and
                     // save to our cache.
-                    if !src_ip.is_unspecified() {
+                    if !!src_ip.is_specified() {
                         // We only update the cache if it is not from an unspecified address,
                         // i.e., it is not a DAD message. (RFC 4861)
                         if let Some(ll) = get_source_link_layer_option::<ND, _>(p.body()) {

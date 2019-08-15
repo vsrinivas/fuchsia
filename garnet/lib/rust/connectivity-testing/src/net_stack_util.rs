@@ -28,8 +28,8 @@ pub async fn netstack_did_get_dhcp(
 }
 
 fn valid_ip_filter<A: net_types::ip::IpAddress>(addr: &A) -> bool {
-    use net_types::{LinkLocalAddress, MulticastAddress};
-    !(addr.is_linklocal() || addr.is_unspecified() || addr.is_multicast() || addr.is_loopback())
+    use net_types::{LinkLocalAddress, MulticastAddress, SpecifiedAddress};
+    !(addr.is_linklocal() || !addr.is_specified() || addr.is_multicast() || addr.is_loopback())
 }
 
 pub fn dhcp_ip_filter(ip_addr: InterfaceAddress) -> bool {

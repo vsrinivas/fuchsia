@@ -7,7 +7,7 @@
 use byteorder::{ByteOrder, NetworkEndian};
 use log::{debug, trace};
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::MulticastAddress;
+use net_types::{MulticastAddress, SpecifiedAddress};
 use packet::{BufferMut, Serializer, TruncateDirection, TruncatingSerializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
@@ -1039,7 +1039,7 @@ pub(crate) fn should_send_icmpv4_error(
     !(dst_ip.is_multicast()
         || dst_ip.is_global_broadcast()
         || frame_dst.is_broadcast()
-        || src_ip.is_unspecified()
+        || !src_ip.is_specified()
         || src_ip.is_loopback()
         || src_ip.is_global_broadcast()
         || src_ip.is_multicast()
@@ -1080,7 +1080,7 @@ pub(crate) fn should_send_icmpv6_error(
 ) -> bool {
     !((!allow_dst_multicast
         && (dst_ip.is_multicast() || frame_dst.is_multicast() || frame_dst.is_broadcast()))
-        || src_ip.is_unspecified()
+        || !src_ip.is_specified()
         || src_ip.is_loopback()
         || src_ip.is_multicast())
 }
