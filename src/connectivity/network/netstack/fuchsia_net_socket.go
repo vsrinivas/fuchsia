@@ -40,14 +40,17 @@ type providerImpl struct {
 
 var _ socket.Provider = (*providerImpl)(nil)
 
+// Highest two bits are used to modify the socket type.
+const sockTypesMask = 0x7fff &^ (C.SOCK_CLOEXEC | C.SOCK_NONBLOCK)
+
 func toTransProto(typ, protocol int16) (int16, tcpip.TransportProtocolNumber) {
-	switch {
-	case typ&C.SOCK_STREAM != 0:
+	switch typ & sockTypesMask {
+	case C.SOCK_STREAM:
 		switch protocol {
 		case C.IPPROTO_IP, C.IPPROTO_TCP:
 			return 0, tcp.ProtocolNumber
 		}
-	case typ&C.SOCK_DGRAM != 0:
+	case C.SOCK_DGRAM:
 		switch protocol {
 		case C.IPPROTO_IP, C.IPPROTO_UDP:
 			return 0, udp.ProtocolNumber

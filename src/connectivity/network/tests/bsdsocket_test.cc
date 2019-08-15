@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <netinet/if_ether.h>
 #include <netinet/tcp.h>
 #include <poll.h>
 #include <time.h>
@@ -19,6 +20,30 @@
 #include "util.h"
 
 namespace netstack {
+
+// Raw sockets are typically used for implementing custom protocols. We intend to support custom
+// protocols through structured FIDL APIs in the future, so this test ensures that raw sockets are
+// disabled to prevent them from accidentally becoming load-bearing.
+TEST(LocalhostTest, RawSocketsNotSupported) {
+  int s;
+
+  // No raw INET sockets.
+  ASSERT_EQ(s = socket(AF_INET, SOCK_RAW, 0), -1);
+  int expected = EPROTONOSUPPORT;
+  ASSERT_EQ(errno, expected) << strerror(errno);
+
+  // No packet sockets.
+  ASSERT_EQ(s = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)), -1);
+  expected =
+#if defined(__Fuchsia__)
+      EPFNOSUPPORT;
+#else
+      // Creating an AF_PACKET socket typically requires superuser privilege, so this should fail
+      // outside of Fuchsia with a different errno.
+      EPERM;
+#endif
+  ASSERT_EQ(errno, expected) << strerror(errno);
+}
 
 TEST(LocalhostTest, IP_ADD_MEMBERSHIP_INADDR_ANY) {
   int s;
