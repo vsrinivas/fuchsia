@@ -117,7 +117,7 @@ TEST_F(VirtioNetZirconGuestTest, ReceiveAndSend) {
 
 using VirtioNetDebianGuestTest = GuestTest<VirtioNetDebianGuest>;
 
-TEST_F(VirtioNetDebianGuestTest, ReceiveAndSend) {
+TEST_F(VirtioNetDebianGuestTest, DISABLED_ReceiveAndSend) {
   auto handle = std::async(std::launch::async, [this] {
     MockNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
     TestThread(*netstack, 0xab, 0xba, false /* use_raw_packets */);
