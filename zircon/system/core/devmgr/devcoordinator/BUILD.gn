@@ -67,7 +67,6 @@ source_set("common") {
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-device-manager:llcpp",
     "$zx/system/fidl/fuchsia-driver-test:c",
-    "$zx/system/fidl/fuchsia-ldsvc:llcpp",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-mem:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",

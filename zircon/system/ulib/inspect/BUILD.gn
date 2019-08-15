@@ -37,8 +37,8 @@ library("inspect") {
   ]
 
   deps = [
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",
+    "$zx/system/ulib/syslog",
     "$zx/system/ulib/zx",
   ]
 }

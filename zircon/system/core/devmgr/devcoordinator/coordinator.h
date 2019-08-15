@@ -114,8 +114,6 @@ struct CoordinatorConfig {
   bool suspend_fallback;
 };
 
-using LoaderServiceConnector = fit::function<zx_status_t(zx::channel*)>;
-
 class Coordinator {
  public:
   Coordinator(const Coordinator&) = delete;
@@ -207,9 +205,8 @@ class Coordinator {
   bool system_available() const { return system_available_; }
   void set_system_available(bool system_available) { system_available_ = system_available; }
   bool system_loaded() const { return system_loaded_; }
-
-  void set_loader_service_connector(LoaderServiceConnector loader_service_connector) {
-    loader_service_connector_ = std::move(loader_service_connector);
+  void set_loader_service(DevhostLoaderService* loader_service) {
+    loader_service_ = loader_service;
   }
 
   fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() { return drivers_; }
@@ -250,7 +247,7 @@ class Coordinator {
   bool launched_first_devhost_ = false;
   bool system_available_ = false;
   bool system_loaded_ = false;
-  LoaderServiceConnector loader_service_connector_;
+  DevhostLoaderService* loader_service_ = nullptr;
 
   // Services offered to the rest of the system.
   svc::Outgoing outgoing_services_;

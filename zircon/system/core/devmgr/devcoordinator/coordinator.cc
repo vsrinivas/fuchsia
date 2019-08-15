@@ -361,11 +361,21 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
   return ZX_OK;
 }
 
-static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector& loader_connector,
+static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader_service,
                                      const char* devhost_bin, const char* name,
                                      const char* const* env, zx_handle_t hrpc,
                                      const zx::resource& root_resource,
                                      zx::unowned_job devhost_job) {
+  zx::channel loader_connection;
+  if (loader_service != nullptr) {
+    zx_status_t status = loader_service->Connect(&loader_connection);
+    if (status != ZX_OK) {
+      log(ERROR, "devcoordinator: failed to use loader service: %s\n",
+          zx_status_get_string(status));
+      return status;
+    }
+  }
+
   // Give devhosts the root resource if we have it (in tests, we may not)
   // TODO: limit root resource to root devhost only
   zx::resource resource;
@@ -415,17 +425,15 @@ static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector
     };
   }
 
-  zx::channel loader_connection;
-  status = loader_connector(&loader_connection);
-  if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: failed to get devhost loader connection: %s\n",
-        zx_status_get_string(status));
-    return status;
+  uint32_t spawn_flags = FDIO_SPAWN_CLONE_ENVIRON;
+  if (loader_connection.is_valid()) {
+    actions[actions_count++] = fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+        .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release()},
+    };
+  } else {
+    spawn_flags |= FDIO_SPAWN_DEFAULT_LDSVC;
   }
-  actions[actions_count++] = fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release()},
-  };
   ZX_ASSERT(actions_count <= kMaxActions);
 
   zx::process proc;
@@ -435,8 +443,8 @@ static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector
       devhost_bin,
       nullptr,
   };
-  status = fdio_spawn_etc(devhost_job->get(), FDIO_SPAWN_CLONE_ENVIRON, argv[0], argv, env,
-                          actions_count, actions, proc.reset_and_get_address(), err_msg);
+  status = fdio_spawn_etc(devhost_job->get(), spawn_flags, argv[0], argv, env, actions_count,
+                          actions, proc.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: launch devhost '%s': failed: %s: %s\n", name,
         zx_status_get_string(status), err_msg);
@@ -470,9 +478,10 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
   fbl::Vector<const char*> env;
   boot_args().Collect("driver.", &env);
   env.push_back(nullptr);
-  status = dc_launch_devhost(dh.get(), loader_service_connector_,
-                             get_devhost_bin(config_.asan_drivers), name, env.get(), hrpc.release(),
-                             root_resource(), zx::unowned_job(config_.devhost_job));
+  status =
+      dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(config_.asan_drivers), name,
+                        env.get(), hrpc.release(), root_resource(),
+                        zx::unowned_job(config_.devhost_job));
   if (status != ZX_OK) {
     zx_handle_close(dh->hrpc());
     return status;

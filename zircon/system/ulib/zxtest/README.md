@@ -15,23 +15,6 @@ A fatal failure is triggered by macros starting with ``ASSERT_*`` and non fatal 
 * For feature requests, please describe the use case and the problems the missing feature is causing.
 
 
-## zxtest Dependencies
-
-zxtest requires some basic libc I/O functions. Typically, this is provided by
-including an fdio dependency in the test target that uses zxtest. However, the
-"core tests" in ``//zircon/system/utest/core`` provide their own libc I/O
-functions since the core tests can't use fdio. (This is why the zxtest library
-itself cannot depend on fdio.)
-
-Most other tests should ensure that they separately depend on fdio. If your test
-crashes and you see ``libc_io_functions_not_implemented_use_fdio_instead`` at
-the top of the stack trace, this is why.
-
-**TODO**: Consider splitting "zxtest" into "zxtest" and "zxtest-core", where the
-former includes fdio but the latter doesn't. This would help avoid the
-dependency weirdness where fdio has to be separately included by most users even
-though it's really needed by zxtest.
-
 ## Key Differences from 'Google Test'
 
 * Limited set of dependencies.
