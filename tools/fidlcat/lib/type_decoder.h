@@ -34,18 +34,20 @@ enum class SyscallReturnType {
 
 struct Colors {
   Colors(const char* new_reset, const char* new_red, const char* new_green, const char* new_blue,
-         const char* new_white_on_magenta)
+         const char* new_white_on_magenta, const char* new_yellow_background)
       : reset(new_reset),
         red(new_red),
         green(new_green),
         blue(new_blue),
-        white_on_magenta(new_white_on_magenta) {}
+        white_on_magenta(new_white_on_magenta),
+        yellow_background(new_yellow_background) {}
 
   const char* const reset;
   const char* const red;
   const char* const green;
   const char* const blue;
   const char* const white_on_magenta;
+  const char* const yellow_background;
 };
 
 void ClockName(zx_clock_t clock, std::ostream& os);

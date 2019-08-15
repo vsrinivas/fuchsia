@@ -160,11 +160,30 @@ void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
   notification.thread.thread_koid = thread_koid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
-  debug_ipc::StackFrame frame(kSyscallAddress, reinterpret_cast<uint64_t>(data_.sp()));
-  data_.PopulateRegisters(process_koid, &frame.regs);
-  notification.thread.frames.push_back(frame);
+
+  debug_ipc::StackFrame frame1(kSyscallAddress, reinterpret_cast<uint64_t>(data_.sp()));
+  debug_ipc::StackFrame frame2(kSyscallAddress, 0x126790);
+  debug_ipc::StackFrame frame3(kSyscallAddress, 0x346712);
+
+  data_.PopulateRegisters(process_koid, &frame1.regs);
+  notification.thread.frames.push_back(frame1);
+
   mock_remote_api().PopulateBreakpointIds(kSyscallAddress, notification);
-  InjectException(notification);
+
+  zxdb::SymbolContext context(0);
+  std::vector<std::unique_ptr<zxdb::Frame>> frames;
+  frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
+      threads_[thread_koid], frame1,
+      zxdb::Location(kSyscallAddress, zxdb::FileLine("fidlcat/foo.cc", 25), 8, context)));
+  frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
+      threads_[thread_koid], frame2,
+      zxdb::Location(kSyscallAddress, zxdb::FileLine("fidlcat/foo.cc", 50), 4, context)));
+  frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
+      threads_[thread_koid], frame2,
+      zxdb::Location(kSyscallAddress, zxdb::FileLine("fidlcat/main.cc", 10), 2, context)));
+
+  InjectExceptionWithStack(notification, std::move(frames), /*has_all_frames=*/true);
+
   debug_ipc::MessageLoop::Current()->Run();
 }
 
@@ -245,6 +264,7 @@ void ProcessController::Initialize(zxdb::Session& session,
     workflow_.AddObserver(target);
     workflow_.observer_.DidCreateProcess(target, process, false);
     workflow_.observer_.process_observer().DidCreateThread(process, the_thread);
+    remote_api_->AddThread(the_thread);
   }
 
   // Attach to processes.

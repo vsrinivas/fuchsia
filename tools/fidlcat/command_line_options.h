@@ -22,6 +22,7 @@ struct CommandLineOptions {
   std::vector<std::string> exclude_syscall_filters;
   bool pretty_print = false;
   bool with_process_info = false;
+  int stack_level = 0;
   std::string colors = "auto";
   int columns = 0;
 

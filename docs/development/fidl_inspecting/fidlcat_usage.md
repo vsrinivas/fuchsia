@@ -180,3 +180,46 @@ we just opened.
 
 When we receive **Node.OnOpen** on **0243b493** we know that it's a response to
 our **Directory.Open**. We also used the handle to call **Node.Close**.
+
+## Stack frames
+
+By default, only the system calls are displayed. However, it's sometime
+interesting to know where a system call has been called. Using the flag
+**--stack** we can display the stack frames for every system call.
+
+By default (**--stack=0**), the stack frames are not displayed.
+
+With **--statck=1** only the call site (1 to 4 frames) is displayed:
+
+<pre>echo_client_cpp <font color="#CC0000">5231515</font>:<font color="#CC0000">5231528</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/fidl/message.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">62</font></span> fidl::Message::Read
+echo_client_cpp <font color="#CC0000">5231515</font>:<font color="#CC0000">5231528</font> zx_channel_read(handle:<font color="#4E9A06">handle</font>: <font color="#CC0000">a0575917</font>, options:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>, num_bytes:<font color="#4E9A06">uint32</font>: <font color="#3465A4">65536</font>, num_handles:<font color="#4E9A06">uint32</font>: <font color="#3465A4">64</font>)
+  -&gt; <font color="#4E9A06">ZX_OK</font>
+    <span style="background-color:#75507B"><font color="#D3D7CF">received response</font></span> <font color="#4E9A06">fidl.examples.echo/Echo.EchoString</font> = {
+      response: <font color="#4E9A06">string</font> = <font color="#CC0000">&quot;hello world&quot;</font>
+    }
+</pre>
+
+This option doesn't add any overhead (except for the display).
+
+With **--stack=2** all the frames are displayed:
+
+<pre>echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/third_party/ulib/musl/src/env/__libc_start_main.c</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">74</font></span> start_main
+echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">garnet/examples/fidl/echo_client_cpp/echo_client.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">40</font></span> main
+echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/async-loop/loop_wrapper.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">25</font></span> async::Loop::Run
+echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/async-loop/loop.c</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">241</font></span> async_loop_run
+echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/async-loop/loop.c</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">284</font></span> async_loop_run_once
+echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/async-loop/loop.c</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">335</font></span> async_loop_dispatch_wait
+echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">sdk/lib/fidl/cpp/internal/message_reader.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">165</font></span> fidl::internal::MessageReader::CallHandler
+echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">sdk/lib/fidl/cpp/internal/message_reader.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">177</font></span> fidl::internal::MessageReader::OnHandleReady
+echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">sdk/lib/fidl/cpp/internal/message_reader.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">201</font></span> fidl::internal::MessageReader::ReadAndDispatchMessage
+echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/fidl/message.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">62</font></span> fidl::Message::Read
+echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">5234762</font> zx_channel_read(handle:<font color="#4E9A06">handle</font>: <font color="#CC0000">a95c4cdf</font>, options:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>, num_bytes:<font color="#4E9A06">uint32</font>: <font color="#3465A4">65536</font>, num_handles:<font color="#4E9A06">uint32</font>: <font color="#3465A4">64</font>)
+  -&gt; <font color="#4E9A06">ZX_OK</font>
+    <span style="background-color:#75507B"><font color="#D3D7CF">received response</font></span> <font color="#4E9A06">fidl.examples.echo/Echo.EchoString</font> = {
+      response: <font color="#4E9A06">string</font> = <font color="#CC0000">&quot;hello world&quot;</font>
+    }
+</pre>
+
+This option adds some overhead because we need to ask zxdb for the full stack
+for each system call (and fidlcat becomes even more verbose). You should use it
+only when you need to understand what part of your code called the system calls.

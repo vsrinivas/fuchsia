@@ -11,6 +11,7 @@ if (current_toolchain == host_toolchain) {
     sources = [
       "channel_test.cc",
       "clock_test.cc",
+      "display_stack_test.cc",
       "interception_workflow_test.cc",
       "ticks_test.cc",
     ]

@@ -26,7 +26,8 @@
 namespace fidlcat {
 
 const Colors FakeColors(/*reset=*/"#rst#", /*red=*/"#red#", /*green=*/"#gre#",
-                        /*blue=*/"#blu#", /*white_on_magenta=*/"#wom#");
+                        /*blue=*/"#blu#", /*white_on_magenta=*/"#wom#",
+                        /*yellow_background=*/"#yeb#");
 
 AsyncLoopForTest::AsyncLoopForTest() : impl_(std::make_unique<AsyncLoopForTestImpl>()) {}
 

@@ -91,6 +91,12 @@ const char kPrettyPrintHelp[] = R"(  --pretty-print
 const char kWithProcessInfoHelp[] = R"(  --with-process-info
       Display the process name, process id and thread id on each line.)";
 
+const char kStackHelp[] = R"(  --stack=<value>
+      The amount of stack frame to display:
+      - 0: no stack (default value)
+      - 1: call site (1 to 4 levels)
+      - 2: full stack frame (adds some overhead))";
+
 const char kColorsHelp[] = R"(  --colors=[never|auto|always]
       For pretty print, use colors:
       - never
@@ -173,6 +179,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("pretty-print", 0, kPrettyPrintHelp, &CommandLineOptions::pretty_print);
   parser.AddSwitch("with-process-info", 0, kWithProcessInfoHelp,
                    &CommandLineOptions::with_process_info);
+  parser.AddSwitch("stack", 0, kStackHelp, &CommandLineOptions::stack_level);
   parser.AddSwitch("colors", 0, kColorsHelp, &CommandLineOptions::colors);
   parser.AddSwitch("columns", 0, kColumnsHelp, &CommandLineOptions::columns);
   parser.AddSwitch("verbose", 'v', kVerbosityHelp, &CommandLineOptions::verbose);
@@ -200,6 +207,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
     return cmdline::Status::Error("Cannot specify both a remote pid and name.");
   }
 
+  decode_options->stack_level = options->stack_level;
   if (options->syscall_filters.empty()) {
     decode_options->syscall_filters.push_back(std::regex("zx_channel_.*"));
   } else if ((options->syscall_filters.size() != 1) || (options->syscall_filters[0] != ".*")) {

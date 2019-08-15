@@ -17,10 +17,11 @@
 
 namespace fidlcat {
 
-const Colors WithoutColors("", "", "", "", "");
+const Colors WithoutColors("", "", "", "", "", "");
 const Colors WithColors(/*reset=*/"\u001b[0m", /*red=*/"\u001b[31m",
                         /*green=*/"\u001b[32m", /*blue=*/"\u001b[34m",
-                        /*white_on_magenta=*/"\u001b[45m\u001b[37m");
+                        /*white_on_magenta=*/"\u001b[45m\u001b[37m",
+                        /*yellow_background=*/"\u001b[103m");
 
 void Field::ExtractJson(rapidjson::Document::AllocatorType& allocator,
                         rapidjson::Value& result) const {

@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/lib/fxl/logging.h"
 
 // TODO: Look into this.  Removing the hack that led to this (in
@@ -119,6 +120,19 @@ void SyscallDecoder::LoadBuffer(uint64_t address, size_t size) {
 }
 
 void SyscallDecoder::Decode() {
+  if (dispatcher_->decode_options().stack_level >= kFullStack) {
+    thread_->GetStack().SyncFrames([this](const zxdb::Err& err) { DoDecode(); });
+  } else {
+    DoDecode();
+  }
+}
+
+void SyscallDecoder::DoDecode() {
+  const zxdb::Stack& stack = thread_->GetStack();
+  for (size_t i = stack.size() - 1; i > 0; --i) {
+    const zxdb::Frame* caller = stack[i];
+    caller_locations_.push_back(caller->GetLocation());
+  }
   static std::vector<debug_ipc::RegisterCategory::Type> types = {
       debug_ipc::RegisterCategory::Type::kGeneral};
   const std::vector<zxdb::Register>& general_registers =
@@ -308,6 +322,71 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* syscall) {
     os_ << line_header_ << '\n';
   } else {
     os_ << '\n';
+  }
+
+  if (dispatcher_->decode_options().stack_level != kNoStack) {
+    // Display caller locations.
+    for (const auto& location : syscall->caller_locations()) {
+      if (location.is_valid()) {
+        const zxdb::LazySymbol& symbol = location.symbol();
+        const Colors& colors = dispatcher_->colors();
+        os_ << line_header_ << colors.yellow_background << "at " << colors.red;
+        if (location.is_symbolized()) {
+          const zxdb::FileLine& file_line = location.file_line();
+          // Split the file path.
+          std::vector<std::string_view> file;
+          int ignore_leading_dot_dot = 2;
+          size_t pos = 0;
+          for (;;) {
+            size_t start = pos;
+            pos = file_line.file().find('/', pos);
+            if (pos == std::string::npos) {
+              file.push_back(std::string_view(file_line.file().c_str() + start,
+                                              file_line.file().size() - start));
+              break;
+            }
+            std::string_view item(file_line.file().c_str() + start, pos - start);
+            if ((ignore_leading_dot_dot > 0) && (item.compare("..") == 0)) {
+              // The path returned by zxdb are not relative to the Fuchsia root directory.
+              // We must ignore the first two ".." to be relative to the root directory.
+              --ignore_leading_dot_dot;
+            } else {
+              file.push_back(item);
+              // Just in case the path didn't start with two "..".
+              ignore_leading_dot_dot = 0;
+            }
+            ++pos;
+          }
+          // Remove the ".." we can.
+          int destination = 0;
+          for (const auto& item : file) {
+            if (item.compare(".") != 0) {
+              if ((item.compare("..") == 0) && (destination > 0) &&
+                  (file[destination - 1].compare("..") != 0)) {
+                --destination;
+              } else {
+                file[destination++] = item;
+              }
+            }
+          }
+          file.resize(destination);
+          // Display the optimized path.
+          const char* separator = "";
+          for (const auto& item : file) {
+            os_ << separator << item;
+            separator = "/";
+          }
+          os_ << colors.reset << colors.yellow_background << ':' << colors.blue << file_line.line()
+              << colors.reset;
+        } else {
+          os_ << std::hex << location.address() << colors.reset << std::dec;
+        }
+        if (symbol.is_valid()) {
+          os_ << ' ' << symbol.Get()->GetFullName();
+        }
+        os_ << '\n';
+      }
+    }
   }
 
   // Displays the header and the inline input arguments.

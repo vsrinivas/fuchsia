@@ -18,6 +18,7 @@
 #include <zircon/fidl.h>
 
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/zxdb/client/frame_impl.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
@@ -315,6 +316,8 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 
   void set_with_process_info() { display_options_.with_process_info = true; }
 
+  void AddThread(zxdb::Thread* thread) { threads_[thread->GetKoid()] = thread; }
+
   void PerformCheckTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall1,
                         std::unique_ptr<SystemCallTest> syscall2);
 
@@ -339,6 +342,7 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   DecodeOptions decode_options_;
   DisplayOptions display_options_;
   std::stringstream result_;
+  std::map<uint64_t, zxdb::Thread*> threads_;
 };
 
 class InterceptionWorkflowTestX64 : public InterceptionWorkflowTest {

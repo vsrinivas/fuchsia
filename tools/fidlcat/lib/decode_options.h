@@ -7,7 +7,11 @@
 
 #include <regex>
 
+enum StackLevel { kNoStack = 0, kPartialStack = 1, kFullStack = 2 };
+
 struct DecodeOptions {
+  // Level of stack we want to decode/display.
+  int stack_level = kNoStack;
   // If a syscall satisfies one of these filters, it can be displayed.
   std::vector<std::regex> syscall_filters;
   // But it is only displayed if it doesn't satisfy any of these filters.

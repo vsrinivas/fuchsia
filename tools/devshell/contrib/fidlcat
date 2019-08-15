@@ -22,7 +22,7 @@
 ## - This scripts uses the tool "nc" for testing TCP connections. Check that it
 ##   is in $PATH and that it works.
 ##
-## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>] [--with-process-info]
+## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>] [--with-process-info] [--stack=<value>]
 ##                   [--syscalls=<regexp>] [--exclude-syscalls=<regexp>]
 ##                   [--verbose=<value> | --quiet=<value>] [--log-file <path>]
 ##                   [--remote-pid <pid> | --remote-name <names> | run <component specification>]
@@ -32,6 +32,10 @@
 ##    --debug-mode         Whether the debug agent's debug logs should be shown.
 ##    --with-process-info  Display the process name, process id and thread id on
 ##                         each line (useful for grep).
+##    --stack=<value>      Define the amount of stack frame to display
+##                         0: none (default value)
+##                         1: call site (1 to 4 levels)
+##                         2: full stack frame (adds some overhead)
 ##    --syscalls           A regular expression which selects the syscalls to decode and display.
 ##                         Can be passed multiple times.
 ##                         By default, only zx_channel_.* syscalls are displayed.
@@ -83,6 +87,7 @@ agent_out="/dev/null"
 action=
 debug_mode=
 with_process_info=
+stack=
 syscalls=()
 verbose=
 quiet=
@@ -104,6 +109,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --with-process-info)
       with_process_info="--with-process-info"
+      ;;
+    --stack=*)
+      stack="$1"
       ;;
     --syscalls=*)
       syscalls+="$1 "
@@ -196,6 +204,8 @@ if launch_debug_agent; then
     "-s" "${PREBUILT_CLANG_DIR}/lib/debug" \
     --pretty-print \
     ${with_process_info} \
+    ${stack} \
+    ${syscalls} \
     ${verbose} \
     ${quiet} \
     ${log_file} \

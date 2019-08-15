@@ -129,6 +129,8 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
                         connect.c_str(),
                         "--remote-pid",
                         remote_pid.c_str(),
+                        "--stack",
+                        "2",
                         "--syscalls",
                         "zx_handle_*",
                         "--syscalls",
@@ -151,6 +153,7 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   ASSERT_EQ(remote_pid, options.remote_pid[0]);
   ASSERT_EQ(symbol_path, options.symbol_paths[0]);
   ASSERT_EQ(fidl_ir_path, options.fidl_ir_paths[0]);
+  ASSERT_EQ(2, options.stack_level);
 
   ASSERT_EQ(2U, options.syscall_filters.size());
   ASSERT_EQ("zx_handle_*", options.syscall_filters[0]);

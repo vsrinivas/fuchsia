@@ -128,6 +128,7 @@ class SyscallDecoder {
   zxdb::Thread* thread() const { return thread_.get(); }
   uint64_t thread_id() const { return thread_id_; }
   const Syscall* syscall() const { return syscall_; }
+  const std::vector<zxdb::Location>& caller_locations() const { return caller_locations_; }
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
 
@@ -176,9 +177,12 @@ class SyscallDecoder {
   void Display(int argument_index, std::string_view name, SyscallType sub_type,
                std::ostream& os) const;
 
+  // Asks for the full statck then calls DoDecode.
+  void Decode();
+
   // Starts the syscall decoding. Gets the values of arguments which stay within
   // a register. Then calls LoadStack.
-  void Decode();
+  void DoDecode();
 
   // Loads the needed stacks. Then calls LoadInputs.
   void LoadStack();
@@ -225,6 +229,7 @@ class SyscallDecoder {
   const Syscall* const syscall_;
   const debug_ipc::Arch arch_;
   std::unique_ptr<SyscallUse> use_;
+  std::vector<zxdb::Location> caller_locations_;
   uint64_t entry_sp_ = 0;
   uint64_t return_address_ = 0;
   std::vector<SyscallDecoderArgument> decoded_arguments_;
