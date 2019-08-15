@@ -11,7 +11,6 @@ use fidl_fuchsia_bluetooth_gatt::{
     Server_Marker, Server_Proxy, ServiceInfo,
 };
 use fuchsia_async as fasync;
-use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_component as app;
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
@@ -25,6 +24,8 @@ use crate::bluetooth::constants::{
     PERMISSION_WRITE_ENCRYPTED, PERMISSION_WRITE_ENCRYPTED_MITM, PERMISSION_WRITE_SIGNED,
     PERMISSION_WRITE_SIGNED_MITM, PROPERTY_INDICATE, PROPERTY_NOTIFY,
 };
+
+use crate::common_utils::error::Sl4fError;
 
 #[derive(Debug)]
 struct Counter {
@@ -598,7 +599,7 @@ impl GattServerFacade {
                         "Successfully published GATT service with uuid {:?}",
                         service_uuid
                     ),
-                    Some(e) => bail!("Failed to create GATT Service: {}", BTError::from(*e)),
+                    Some(e) => bail!("Failed to create GATT Service: {}", Sl4fError::from(*e)),
                 }
             }
             None => bail!("No Server Proxy created."),

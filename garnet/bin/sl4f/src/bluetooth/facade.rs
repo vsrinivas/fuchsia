@@ -12,7 +12,6 @@ use fuchsia_async::{
     self as fasync,
     temp::Either::{Left, Right},
 };
-use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_component as app;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
@@ -20,6 +19,8 @@ use futures::future::{ready as fready, Future, TryFutureExt};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+use crate::common_utils::error::Sl4fError;
 
 // BluetoothFacade: Stores Central and Peripheral proxies used for
 // bluetooth scan and advertising requests.
@@ -117,7 +118,7 @@ impl BluetoothFacade {
         // If the unique service_proxy id already exists, reject publishing of service
         if bt_facade.read().service_proxies.contains_key(&local_service_id) {
             fx_log_err!(tag: "publish_service", "Attempted to create service proxy for existing key. {:?}", local_service_id.clone());
-            return Left(fready(Err(BTError::new("Proxy key already exists, aborting.").into())));
+            return Left(fready(Err(Sl4fError::new("Proxy key already exists, aborting.").into())));
         }
 
         // TODO(NET-1289): Ensure unwrap() safety
@@ -142,12 +143,12 @@ impl BluetoothFacade {
                     .map_err(|e| Error::from(e.context("Publishing service error")))
                     .and_then(|status| match status.error {
                         None => fready(Ok(())),
-                        Some(e) => fready(Err(BTError::from(*e).into())),
+                        Some(e) => fready(Err(Sl4fError::from(*e).into())),
                     });
 
                 Right(pub_fut)
             }
-            None => Left(fready(Err(BTError::new("No central proxy created.").into()))),
+            None => Left(fready(Err(Sl4fError::new("No central proxy created.").into()))),
         }
     }
 }

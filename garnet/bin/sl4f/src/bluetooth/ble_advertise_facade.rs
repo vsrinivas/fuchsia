@@ -4,7 +4,6 @@
 
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_bluetooth_le::{AdvertisingDataDeprecated, PeripheralMarker, PeripheralProxy};
-use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_component as app;
 use fuchsia_syslog::macros::*;
 use parking_lot::RwLock;
@@ -12,6 +11,8 @@ use parking_lot::RwLock;
 // Sl4f-Constants and Ble advertising related functionality
 use crate::bluetooth::constants::DEFAULT_BLE_ADV_INTERVAL_MS;
 use crate::bluetooth::types::BleAdvertiseResponse;
+
+use crate::common_utils::error::Sl4fError;
 
 #[derive(Debug)]
 struct InnerBleAdvertiseFacade {
@@ -117,7 +118,7 @@ impl BleAdvertiseFacade {
                         Ok(())
                     }
                     Some(e) => {
-                        let err = BTError::from(*e);
+                        let err = Sl4fError::from(*e);
                         fx_log_err!(tag: "start_adv", "Failed to start adveritising: {:?}", err);
                         Err(err.into())
                     }

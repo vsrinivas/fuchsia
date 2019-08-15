@@ -15,7 +15,7 @@ use futures::stream::StreamExt;
 use parking_lot::RwLock;
 use serde_json::value::Value;
 
-use crate::server::sl4f::macros::{fx_err_and_bail, with_line};
+use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 
 #[derive(Debug)]
 struct InnerProfileServerFacade {

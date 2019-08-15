@@ -5,7 +5,6 @@
 use failure::{bail, Error};
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_le::{AdvertisingDataDeprecated, ScanFilter};
-use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_syslog::macros::*;
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
@@ -22,17 +21,12 @@ use crate::bluetooth::types::{
     BleConnectPeripheralResponse, BluetoothMethod, GattcDiscoverCharacteristicResponse,
 };
 
-macro_rules! parse_arg {
-    ($args:ident, $func:ident, $name:expr) => {
-        match $args.get($name) {
-            Some(v) => match v.$func() {
-                Some(val) => Ok(val),
-                None => Err(BTError::new(format!("malformed {}", $name).as_str())),
-            },
-            None => Err(BTError::new(format!("{} missing", $name).as_str())),
-        }
-    };
-}
+use crate::common_utils::common::{
+    parse_identifier, parse_max_bytes, parse_offset, parse_service_identifier,
+    parse_u64_identifier, parse_write_value,
+};
+
+use crate::common_utils::common::macros::parse_arg;
 
 // Takes a serde_json::Value and converts it to arguments required for
 // a FIDL ble_advertise command
@@ -110,48 +104,6 @@ fn ble_stop_advertise_args_to_fidl(
         Some(aid) => Ok(aid.to_string()),
         None => bail!("No advertisement id outstanding."),
     }
-}
-
-fn parse_identifier(args_raw: Value) -> Result<String, Error> {
-    let id_raw = match args_raw.get("identifier") {
-        Some(id) => id,
-        None => bail!("Connect peripheral identifier missing"),
-    };
-
-    let id = id_raw.as_str().map(String::from);
-
-    match id {
-        Some(id) => Ok(id),
-        None => bail!("Identifier missing"),
-    }
-}
-
-fn parse_service_identifier(args_raw: Value) -> Result<u64, Error> {
-    parse_arg!(args_raw, as_u64, "service_identifier").map_err(Into::into)
-}
-
-fn parse_u64_identifier(args_raw: Value) -> Result<u64, Error> {
-    parse_arg!(args_raw, as_u64, "identifier").map_err(Into::into)
-}
-
-fn parse_offset(args_raw: Value) -> Result<u64, Error> {
-    parse_arg!(args_raw, as_u64, "offset").map_err(Into::into)
-}
-
-fn parse_max_bytes(args_raw: Value) -> Result<u64, Error> {
-    parse_arg!(args_raw, as_u64, "max_bytes").map_err(Into::into)
-}
-
-fn parse_write_value(args_raw: Value) -> Result<Vec<u8>, Error> {
-    let arr = parse_arg!(args_raw, as_array, "write_value")?;
-    let mut vector: Vec<u8> = Vec::new();
-    for value in arr.into_iter() {
-        match value.as_u64() {
-            Some(num) => vector.push(num as u8),
-            None => {}
-        };
-    }
-    Ok(vector)
 }
 
 fn ble_publish_service_to_fidl(args_raw: Value) -> Result<(ServiceInfo, String), Error> {

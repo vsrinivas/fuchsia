@@ -9,7 +9,6 @@ use fidl_fuchsia_bluetooth_control::{
     PairingDelegateRequestStream, PairingMethod,
 };
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
-use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_component as component;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon::{self as zx, DurationNum};
@@ -18,7 +17,8 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 
 use crate::bluetooth::types::CustomRemoteDevice;
-use crate::server::sl4f::macros::with_line;
+use crate::common_utils::common::macros::with_line;
+use crate::common_utils::error::Sl4fError;
 
 use futures::channel::mpsc;
 
@@ -288,7 +288,7 @@ impl BluetoothControlFacade {
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(BTError::from(*err))
+                        bail!(Sl4fError::from(*err))
                     }
                     None => Ok(()),
                 }
@@ -316,7 +316,7 @@ impl BluetoothControlFacade {
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(BTError::from(*err))
+                        bail!(Sl4fError::from(*err))
                     }
                     None => Ok(()),
                 }
@@ -344,7 +344,7 @@ impl BluetoothControlFacade {
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(BTError::from(*err))
+                        bail!(Sl4fError::from(*err))
                     }
                     None => Ok(()),
                 }
@@ -395,7 +395,7 @@ impl BluetoothControlFacade {
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(BTError::from(*err))
+                        bail!(Sl4fError::from(*err))
                     }
                     None => Ok(()),
                 }
@@ -423,7 +423,7 @@ impl BluetoothControlFacade {
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(BTError::from(*err))
+                        bail!(Sl4fError::from(*err))
                     }
                     None => Ok(()),
                 }
@@ -451,7 +451,7 @@ impl BluetoothControlFacade {
                 match resp.error {
                     Some(err) => {
                         fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(BTError::from(*err))
+                        bail!(Sl4fError::from(*err))
                     }
                     None => Ok(()),
                 }

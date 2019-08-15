@@ -11,7 +11,6 @@ use fidl_fuchsia_bluetooth_gatt::{ClientProxy, ServiceInfo};
 use fidl_fuchsia_bluetooth_le::RemoteDevice;
 use fidl_fuchsia_bluetooth_le::{CentralEvent, CentralMarker, CentralProxy, ScanFilter};
 use fuchsia_async as fasync;
-use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_component as app;
 use fuchsia_syslog::macros::*;
 use futures::future::{Future, TryFutureExt};
@@ -23,7 +22,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::bluetooth::types::BleScanResponse;
-use crate::server::sl4f::macros::{fx_err_and_bail, with_line};
+use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
+use crate::common_utils::error::Sl4fError;
 
 #[derive(Debug)]
 pub struct InnerGattClientFacade {
@@ -75,7 +75,7 @@ impl GattClientFacade {
             Some(c) => {
                 let status = c.start_scan(filter.as_mut().map(OutOfLine)).await?;
                 match status.error {
-                    Some(e) => bail!("Failed to start scan: {}", BTError::from(*e)),
+                    Some(e) => bail!("Failed to start scan: {}", Sl4fError::from(*e)),
                     None => Ok(()),
                 }
             }
@@ -117,9 +117,9 @@ impl GattClientFacade {
         };
 
         let (status, chrcs) =
-            discover_characteristics.await.map_err(|_| BTError::new("Failed to send message"))?;
+            discover_characteristics.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
         if let Some(e) = status.error {
-            let err_msg = format!("Failed to read characteristics: {}", BTError::from(*e));
+            let err_msg = format!("Failed to read characteristics: {}", Sl4fError::from(*e));
             fx_err_and_bail!(&with_line!(tag), err_msg)
         }
         Ok(chrcs)
@@ -134,11 +134,11 @@ impl GattClientFacade {
         };
 
         let status =
-            write_characteristic.await.map_err(|_| BTError::new("Failed to send message"))?;
+            write_characteristic.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
-                let err_msg = format!("Failed to write to characteristic: {}", BTError::from(*e));
+                let err_msg = format!("Failed to write to characteristic: {}", Sl4fError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(()),
@@ -160,12 +160,14 @@ impl GattClientFacade {
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
-        let status =
-            write_long_characteristic.await.map_err(|_| BTError::new("Failed to send message"))?;
+        let status = write_long_characteristic
+            .await
+            .map_err(|_| Sl4fError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
-                let err_msg = format!("Failed to write long characteristic: {}", BTError::from(*e));
+                let err_msg =
+                    format!("Failed to write long characteristic: {}", Sl4fError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(()),
@@ -182,7 +184,7 @@ impl GattClientFacade {
         match &self.inner.read().active_proxy {
             Some(proxy) => proxy
                 .write_characteristic_without_response(id, &mut write_value.into_iter())
-                .map_err(|_| BTError::new("Failed to send message").into()),
+                .map_err(|_| Sl4fError::new("Failed to send message").into()),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         }
     }
@@ -196,11 +198,11 @@ impl GattClientFacade {
         };
 
         let (status, value) =
-            read_characteristic.await.map_err(|_| BTError::new("Failed to send message"))?;
+            read_characteristic.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
-                let err_msg = format!("Failed to read characteristic: {}", BTError::from(*e));
+                let err_msg = format!("Failed to read characteristic: {}", Sl4fError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(value),
@@ -221,11 +223,12 @@ impl GattClientFacade {
         };
 
         let (status, value) =
-            read_long_characteristic.await.map_err(|_| BTError::new("Failed to send message"))?;
+            read_long_characteristic.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
-                let err_msg = format!("Failed to read long characteristic: {}", BTError::from(*e));
+                let err_msg =
+                    format!("Failed to read long characteristic: {}", Sl4fError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(value),
@@ -240,11 +243,11 @@ impl GattClientFacade {
         };
 
         let (status, value) =
-            read_descriptor.await.map_err(|_| BTError::new("Failed to send message"))?;
+            read_descriptor.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
-                let err_msg = format!("Failed to read descriptor: {}", BTError::from(*e));
+                let err_msg = format!("Failed to read descriptor: {}", Sl4fError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(value),
@@ -264,11 +267,11 @@ impl GattClientFacade {
         };
 
         let (status, value) =
-            read_long_descriptor.await.map_err(|_| BTError::new("Failed to send message"))?;
+            read_long_descriptor.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
-                let err_msg = format!("Failed to read long descriptor: {}", BTError::from(*e));
+                let err_msg = format!("Failed to read long descriptor: {}", Sl4fError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(value),
@@ -283,11 +286,12 @@ impl GattClientFacade {
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
-        let status = write_descriptor.await.map_err(|_| BTError::new("Failed to send message"))?;
+        let status =
+            write_descriptor.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
-                let err_msg = format!("Failed to write to descriptor: {}", BTError::from(*e));
+                let err_msg = format!("Failed to write to descriptor: {}", Sl4fError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(()),
@@ -308,11 +312,11 @@ impl GattClientFacade {
         };
 
         let status =
-            write_long_descriptor.await.map_err(|_| BTError::new("Failed to send message"))?;
+            write_long_descriptor.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
-                let err_msg = format!("Failed to write long descriptor: {}", BTError::from(*e));
+                let err_msg = format!("Failed to write long descriptor: {}", Sl4fError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(()),
@@ -332,11 +336,11 @@ impl GattClientFacade {
         };
 
         let status =
-            notify_characteristic.await.map_err(|_| BTError::new("Failed to send message"))?;
+            notify_characteristic.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {
-                let err_msg = format!("Failed to enable notifications: {}", BTError::from(*e));
+                let err_msg = format!("Failed to enable notifications: {}", Sl4fError::from(*e));
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => {}
@@ -357,8 +361,10 @@ impl GattClientFacade {
                         Ok(services)
                     }
                     Some(e) => {
-                        let err_msg =
-                            format!("Error found while listing services: {:?}", BTError::from(*e));
+                        let err_msg = format!(
+                            "Error found while listing services: {:?}",
+                            Sl4fError::from(*e)
+                        );
                         fx_err_and_bail!(&with_line!(tag), err_msg)
                     }
                 }
@@ -513,7 +519,7 @@ impl GattClientFacade {
                 match status.error {
                     Some(e) => {
                         let err_msg =
-                            format!("Failed to connect to peripheral: {:?}", BTError::from(*e));
+                            format!("Failed to connect to peripheral: {:?}", Sl4fError::from(*e));
                         fx_err_and_bail!(&with_line!(tag), err_msg)
                     }
                     None => {}

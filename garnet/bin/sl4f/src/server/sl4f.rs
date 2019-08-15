@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use failure::Error;
-use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_syslog::macros::*;
 use futures::channel::mpsc;
 use parking_lot::{Mutex, RwLock};
@@ -39,6 +38,8 @@ use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 
+use crate::common_utils::error::Sl4fError;
+
 // File related includes
 use crate::file::facade::FileFacade;
 
@@ -65,26 +66,6 @@ use crate::webdriver::facade::WebdriverFacade;
 
 // Wlan related includes
 use crate::wlan::facade::WlanFacade;
-
-pub mod macros {
-    pub use crate::fx_err_and_bail;
-    pub use crate::with_line;
-}
-
-#[macro_export]
-macro_rules! with_line {
-    ($tag:expr) => {
-        format!("{}:{}", $tag, line!())
-    };
-}
-
-#[macro_export]
-macro_rules! fx_err_and_bail {
-    ($tag:expr, $msg:expr) => {{
-        fx_log_err!(tag: $tag, "{}", $msg);
-        bail!($msg)
-    }};
-}
 
 /// Sl4f object. This stores all information about state for each connectivity stack.
 /// Every session will have a new Sl4f object.
@@ -450,22 +431,22 @@ fn split_string(method_name_raw: String) -> (String, String) {
 }
 
 // Given a request, grabs the method id, name, and parameters
-// Return BTError if fail
+// Return Sl4fError if fail
 fn parse_request(request: &Request) -> Result<(String, String, String, String, Value), Error> {
     let mut data = match request.data() {
         Some(d) => d,
-        None => return Err(BTError::new("Failed to parse request buffer.").into()),
+        None => return Err(Sl4fError::new("Failed to parse request buffer.").into()),
     };
 
     let mut buf: String = String::new();
     if data.read_to_string(&mut buf).is_err() {
-        return Err(BTError::new("Failed to read request buffer.").into());
+        return Err(Sl4fError::new("Failed to read request buffer.").into());
     }
 
     // Ignore the json_rpc field
     let request_data: CommandRequest = match serde_json::from_str(&buf) {
         Ok(tdata) => tdata,
-        Err(_) => return Err(BTError::new("Failed to unpack request data.").into()),
+        Err(_) => return Err(Sl4fError::new("Failed to unpack request data.").into()),
     };
 
     let method_id_raw = request_data.id.clone();

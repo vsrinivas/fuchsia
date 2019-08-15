@@ -12,6 +12,7 @@ pub mod audio;
 pub mod auth;
 pub mod basemgr;
 pub mod bluetooth;
+pub mod common_utils;
 pub mod file;
 pub mod logging;
 pub mod netstack;
