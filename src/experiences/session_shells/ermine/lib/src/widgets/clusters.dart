@@ -50,42 +50,9 @@ class Clusters extends StatelessWidget {
                 },
                 itemBuilder: (context, index) {
                   final cluster = model.clusters[index];
-                  return Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Cluster(model: cluster),
-                  );
+                  return Cluster(model: cluster);
                 },
               ),
-            ),
-            AnimatedBuilder(
-              animation: model.currentCluster,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: GestureDetector(
-                  child: Icon(
-                    Icons.chevron_left,
-                    size: 40,
-                    color: Colors.white,
-                  ),
-                  onTap: model.previousCluster,
-                ),
-              ),
-              builder: (context, child) => !model.isFirst ? child : Offstage(),
-            ),
-            AnimatedBuilder(
-              animation: model.currentCluster,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  child: Icon(
-                    Icons.chevron_right,
-                    size: 40,
-                    color: Colors.white,
-                  ),
-                  onTap: model.nextCluster,
-                ),
-              ),
-              builder: (context, child) => !model.isLast ? child : Offstage(),
             ),
           ],
         ),

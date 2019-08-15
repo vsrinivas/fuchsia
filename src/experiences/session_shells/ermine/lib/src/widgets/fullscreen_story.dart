@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
 
 import '../models/app_model.dart';
+import '../utils/styles.dart';
 import 'story_widget.dart';
 import 'tile_chrome.dart';
 
@@ -17,37 +18,28 @@ class FullscreenStory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showFullscreenTitle = ValueNotifier<bool>(false);
-
-    return AnimatedBuilder(
-      animation: model.clustersModel.fullscreenStoryNotifier,
-      builder: (context, child) {
-        final story = model.clustersModel.fullscreenStory;
-        final confirmEditNotifier = ValueNotifier<bool>(null);
-        return story != null
-            ? AnimatedBuilder(
-                animation: Listenable.merge([
-                  showFullscreenTitle,
-                  story.nameNotifier,
-                  story.editStateNotifier,
-                ]),
-                builder: (context, _) {
-                  return Listener(
-                    // ignore: deprecated_member_use
-                    onPointerHover: (event) {
-                      if (event.position.dy == 0) {
-                        showFullscreenTitle.value = true;
-                      } else if (event.position.dy > 120) {
-                        showFullscreenTitle.value = false;
-                      }
-                    },
-                    child: TileChrome(
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: -ErmineStyle.kTopBarHeight - ErmineStyle.kStoryTitleHeight,
+      child: AnimatedBuilder(
+        animation: model.clustersModel.fullscreenStoryNotifier,
+        builder: (context, child) {
+          final story = model.clustersModel.fullscreenStory;
+          final confirmEditNotifier = ValueNotifier<bool>(null);
+          return story != null
+              ? AnimatedBuilder(
+                  animation: Listenable.merge([
+                    story.nameNotifier,
+                    story.editStateNotifier,
+                  ]),
+                  builder: (context, _) {
+                    return TileChrome(
                       name: story.name,
                       focused: story.focused,
-                      showTitle: showFullscreenTitle.value,
                       editing: story.editStateNotifier.value &&
                           story.useInProcessStoryShell,
-                      fullscreen: true,
                       child: story.useInProcessStoryShell
                           ? StoryWidget(
                               editing: story.editStateNotifier.value,
@@ -62,11 +54,11 @@ class FullscreenStory extends StatelessWidget {
                       onEdit: story.edit,
                       onCancelEdit: () => confirmEditNotifier.value = false,
                       onConfirmEdit: () => confirmEditNotifier.value = true,
-                    ),
-                  );
-                })
-            : Offstage();
-      },
+                    );
+                  })
+              : Offstage();
+        },
+      ),
     );
   }
 }

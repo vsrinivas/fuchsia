@@ -19,16 +19,21 @@ class AskContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double bottom() => !model.isFullscreen || model.peekNotifier.value
+        ? model.topbarModel.askButtonRect.bottom
+        : MediaQuery.of(context).size.height -
+            ErmineStyle.kTopBarHeight -
+            ErmineStyle.kStoryTitleHeight;
     return AnimatedBuilder(
       animation: model.askVisibility,
       child: Ask(model: model.askModel),
       builder: (context, child) => model.askVisibility.value
           ? Positioned(
-              bottom: MediaQuery.of(context).size.height,
-              right: 0,
-              width: 500,
+              bottom: bottom(),
+              right: model.topbarModel.askButtonRect.right,
+              width: ErmineStyle.kAskBarWidth,
               child: AnimationDriver(
-                tween: Tween<Offset>(begin: Offset(0, 0), end: Offset(0, 1)),
+                tween: Tween<Offset>(begin: Offset.zero, end: Offset(0, 1)),
                 curve: ErmineStyle.kScreenAnimationCurve,
                 duration: ErmineStyle.kScreenAnimationDuration,
                 builder: (context, animation) => FractionalTranslation(

@@ -6,7 +6,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:ermine_library/src/widgets/status_grid_visualizer.dart';
+import 'package:ermine_library/src/widgets/status/status_grid_visualizer.dart';
 import 'package:test/test.dart';
 
 void main() {

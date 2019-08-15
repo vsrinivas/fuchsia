@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/ask_model.dart';
 import '../../utils/elevations.dart';
+import '../../utils/styles.dart';
 import 'ask_suggestion_list.dart';
 import 'ask_text_field.dart';
 
@@ -18,7 +19,7 @@ class Ask extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black,
+      color: ErmineStyle.kOverlayBorderColor,
       elevation: elevations.systemOverlayElevation,
       child: Column(
         children: <Widget>[

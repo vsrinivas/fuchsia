@@ -13,10 +13,23 @@ class ErmineStyle {
     brightness: Brightness.dark,
     fontFamily: 'Roboto Mono',
     textTheme: TextTheme(),
+    textSelectionColor: Colors.grey[400],
   );
 
   /// Background color.
   static Color kBackgroundColor = Colors.black;
+
+  /// Color used by overlays.
+  static Color kOverlayBackgroundColor = Color(0xFF0C0C0C);
+
+  /// Border color used by overlays.
+  static Color kOverlayBorderColor = Color(0xFF262626);
+
+  /// Border width used by overlays.
+  static const double kOverlayBorderWidth = 1;
+
+  /// Height of the topbar.
+  static const double kTopBarHeight = 40;
 
   /// Story title color.
   static Color kStoryTitleColor = Colors.white;
@@ -25,10 +38,10 @@ class ErmineStyle {
   static Color kStoryTitleBackgroundColor = kBackgroundColor;
 
   /// Story title height.
-  static double kStoryTitleHeight = 24;
+  static const double kStoryTitleHeight = 24;
 
   /// Story border width.
-  static double kBorderWidth = 0;
+  static const double kBorderWidth = 0;
 
   /// Screen animation duration in milliseconds. Applies to story fullscreen
   /// transitions, topbar and overview.
@@ -42,4 +55,7 @@ class ErmineStyle {
 
   /// Curve used for items in Ask suggestion list animation.
   static Curve kAskItemAnimationCurve = Curves.easeOutExpo;
+
+  /// Ask bar width.
+  static const double kAskBarWidth = 500;
 }

@@ -23,6 +23,7 @@ import '../utils/suggestions.dart';
 import 'ask_model.dart';
 import 'cluster_model.dart';
 import 'status_model.dart';
+import 'topbar_model.dart';
 
 /// Model that manages all the application state of this session shell.
 class AppModel {
@@ -44,9 +45,11 @@ class AppModel {
 
   ValueNotifier<bool> statusVisibility = ValueNotifier(false);
   ValueNotifier<bool> helpVisibility = ValueNotifier(false);
+  ValueNotifier<bool> peekNotifier = ValueNotifier(false);
   KeyChordListener _keyboardListener;
   StatusModel status;
   AskModel askModel;
+  TopbarModel topbarModel;
   String keyboardShortcuts = 'Help Me!';
 
   AppModel() {
@@ -68,6 +71,8 @@ class AppModel {
       );
     }
 
+    topbarModel = TopbarModel(appModel: this);
+
     status = StatusModel.fromStartupContext(_startupContext);
 
     final suggestions = SuggestionsProxy();
@@ -78,6 +83,8 @@ class AppModel {
       suggestionService: SuggestionService(suggestions),
     );
   }
+
+  bool get isFullscreen => clustersModel.fullscreenStory != null;
 
   /// Called after runApp which initializes flutter's gesture system.
   Future<void> onStarted() async {
@@ -124,6 +131,7 @@ class AppModel {
       clustersModel,
       clustersModel.currentCluster,
       clustersModel.fullscreenStoryNotifier,
+      peekNotifier,
     ]).addListener(onCancel);
   }
 

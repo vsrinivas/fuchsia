@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/ask_model.dart';
+import '../../utils/styles.dart';
 
 final _kTextBackground = Colors.grey[800];
 
@@ -23,15 +24,28 @@ class AskSuggestionList extends StatelessWidget {
     return RawKeyboardListener(
       onKey: model.handleKey,
       focusNode: model.focusNode,
-      child: Container(
-        color: Color(0xFF0C0C0C),
-        constraints: BoxConstraints(maxHeight: _kListViewHeight),
-        child: AnimatedList(
-          key: model.suggestionsListKey,
-          shrinkWrap: true,
-          itemBuilder: _buildItem,
-        ),
-      ),
+      child: AnimatedBuilder(
+          animation: model.suggestions,
+          builder: (context, child) {
+            return Container(
+              decoration: model.suggestions.value.isNotEmpty
+                  ? BoxDecoration(
+                      color: ErmineStyle.kOverlayBackgroundColor,
+                      border: Border.all(
+                        color: ErmineStyle.kOverlayBorderColor,
+                        width: ErmineStyle.kOverlayBorderWidth,
+                      ),
+                      borderRadius: BorderRadius.all(Radius.zero),
+                    )
+                  : null,
+              constraints: BoxConstraints(maxHeight: _kListViewHeight),
+              child: AnimatedList(
+                key: model.suggestionsListKey,
+                shrinkWrap: true,
+                itemBuilder: _buildItem,
+              ),
+            );
+          }),
     );
   }
 

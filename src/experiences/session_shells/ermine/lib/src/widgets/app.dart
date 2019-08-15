@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 
 import '../models/app_model.dart';
 import '../utils/styles.dart';
 
+import 'app_container.dart';
 import 'ask/ask_container.dart';
 import 'clusters.dart';
 import 'fullscreen_story.dart';
-import 'get_bounds.dart';
-import 'status.dart';
+import 'keyboard_help.dart';
+import 'scrim.dart';
+import 'status/status_container.dart';
+import 'topbar/topbar.dart';
 
 /// Builds the main display of this session shell.
 class App extends StatelessWidget {
@@ -21,118 +23,49 @@ class App extends StatelessWidget {
   const App({@required this.model});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: ErmineStyle.kErmineTheme,
-        home: Builder(
-          builder: (BuildContext context) {
-            return Material(
-              color: ErmineStyle.kBackgroundColor,
-              child: Stack(
-                fit: StackFit.expand,
-                overflow: Overflow.visible,
-                children: <Widget>[
-                  // Current Time.
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: AnimatedBuilder(
-                      animation: model.currentTime,
-                      builder: (_, __) => Padding(
-                        padding: EdgeInsets.only(bottom: 8),
-                        child: Text(DateFormat()
-                            .add_E()
-                            .add_jm()
-                            .format(model.currentTime.value)),
-                      ),
-                    ),
-                  ),
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ErmineStyle.kErmineTheme,
+      home: Material(
+        color: ErmineStyle.kBackgroundColor,
+        child: AppContainer(
+          model: model,
+          child: Column(
+            children: <Widget>[
+              // Topbar.
+              Topbar(model: model.topbarModel),
 
-                  // Story Clusters.
-                  Positioned.fill(
-                    child: Clusters(
-                      model: model.clustersModel,
-                    ),
-                  ),
+              // The rest.
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  overflow: Overflow.visible,
+                  children: <Widget>[
+                    // Story Clusters.
+                    Clusters(model: model.clustersModel),
 
-                  // Keyboard shortcuts help button.
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: Padding(
-                      padding: EdgeInsets.all(8),
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: model.onKeyboard,
-                        child: Icon(
-                          Icons.keyboard,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
+                    // Fullscreen story.
+                    FullscreenStory(model),
 
-                  // Fullscreen story.
-                  Positioned.fill(
-                    child: FullscreenStory(model),
-                  ),
+                    // Scrim to dismiss system overlays.
+                    Scrim(model: model),
 
-                  // Scrim to dismiss system overlays.
-                  Positioned.fill(
-                    child: Listener(
-                      behavior: HitTestBehavior.translucent,
-                      onPointerDown: (_) => model.onCancel(),
-                    ),
-                  ),
+                    // Keyboard shortcuts help.
+                    KeyboardHelp(model: model),
 
-                  // Keyboard shortcuts help.
-                  Center(
-                    child: AnimatedBuilder(
-                        animation: model.helpVisibility,
-                        builder: (context, child) {
-                          return model.helpVisibility.value
-                              ? Container(
-                                  padding: EdgeInsets.all(16),
-                                  width: 700,
-                                  height: 400,
-                                  color: Colors.black,
-                                  child: SingleChildScrollView(
-                                    child: Text(
-                                      model.keyboardShortcuts,
-                                      style: Theme.of(context)
-                                          .primaryTextTheme
-                                          .title
-                                          .merge(TextStyle(
-                                            fontFamily: 'RobotoMono',
-                                            fontSize: 16.0,
-                                          )),
-                                    ),
-                                  ),
-                                )
-                              : Offstage();
-                        }),
-                  ),
+                    // Ask.
+                    AskContainer(model: model),
 
-                  // Ask.
-                  AskContainer(model: model),
-
-                  // Status.
-                  Positioned(
-                    top: 0,
-                    height: 432,
-                    right: 0,
-                    width: 377,
-                    child: AnimatedBuilder(
-                      animation: model.statusVisibility,
-                      builder: (context, _) => model.statusVisibility.value
-                          ? GetBounds(
-                              child: Status(model: model.status),
-                            )
-                          : Offstage(),
-                    ),
-                  ),
-                ],
+                    // Status.
+                    StatusContainer(model: model),
+                  ],
+                ),
               ),
-            );
-          },
+            ],
+          ),
         ),
-      );
+      ),
+    );
+  }
 }

@@ -9,8 +9,8 @@ import 'package:fidl_fuchsia_memory/fidl_async.dart' as mem;
 import 'package:flutter/foundation.dart';
 import 'package:fuchsia_services/services.dart';
 
-import '../widgets/status_graph_visualizer.dart';
-import '../widgets/status_progress_bar_visualizer.dart';
+import '../widgets/status/status_graph_visualizer.dart';
+import '../widgets/status/status_progress_bar_visualizer.dart';
 
 // Model that manages the Status menu state of this session shell.
 class StatusModel extends ChangeNotifier {

@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/ask_model.dart';
+import '../../utils/styles.dart';
 
 /// Defines a [TextField] built to Ermine UX spec.
 class AskTextField extends StatelessWidget {
@@ -25,9 +26,12 @@ class AskTextField extends StatelessWidget {
             filled: true,
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: ErmineStyle.kOverlayBorderColor),
             ),
+            focusColor: ErmineStyle.kOverlayBorderColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: ErmineStyle.kOverlayBorderColor),
             ),
             contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           ),

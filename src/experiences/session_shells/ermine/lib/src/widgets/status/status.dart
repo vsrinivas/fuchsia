@@ -6,11 +6,12 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../models/status_model.dart';
-import '../utils/elevations.dart';
-import '../widgets/status_graph_visualizer.dart';
-import '../widgets/status_grid_visualizer.dart';
-import '../widgets/status_progress_bar_visualizer.dart';
+import '../../models/status_model.dart';
+import '../../utils/elevations.dart';
+import '../../utils/styles.dart';
+import 'status_graph_visualizer.dart';
+import 'status_grid_visualizer.dart';
+import 'status_progress_bar_visualizer.dart';
 
 const _listItemHeight = 28.0;
 const _statusTextStyle = TextStyle(
@@ -41,10 +42,10 @@ class Status extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.grey,
+      color: ErmineStyle.kOverlayBorderColor,
       elevation: elevations.systemOverlayElevation,
       child: Padding(
-        padding: const EdgeInsets.all(1.0),
+        padding: const EdgeInsets.all(ErmineStyle.kOverlayBorderWidth),
         child: Container(
           color: Colors.black,
           child: ListView(

@@ -7,7 +7,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-import 'package:ermine_library/src/widgets/status_progress_bar_visualizer.dart';
+import 'package:ermine_library/src/widgets/status/status_progress_bar_visualizer.dart';
 import 'package:test/test.dart';
 
 void main() {
