@@ -23,27 +23,31 @@ hierarchy::Node FidlObjectToNode(fuchsia::inspect::Object obj) {
   std::vector<hierarchy::Property> properties;
   std::vector<hierarchy::Metric> metrics;
 
-  for (auto& metric : *obj.metrics) {
-    if (metric.value.is_uint_value()) {
-      metrics.push_back(hierarchy::Metric(std::move(metric.key),
-                                          hierarchy::UIntMetric(metric.value.uint_value())));
-    } else if (metric.value.is_int_value()) {
-      metrics.push_back(
-          hierarchy::Metric(std::move(metric.key), hierarchy::IntMetric(metric.value.int_value())));
-    } else if (metric.value.is_double_value()) {
-      metrics.push_back(hierarchy::Metric(std::move(metric.key),
-                                          hierarchy::DoubleMetric(metric.value.double_value())));
+  if (obj.metrics.has_value()) {
+    for (auto& metric : *obj.metrics) {
+      if (metric.value.is_uint_value()) {
+        metrics.push_back(hierarchy::Metric(std::move(metric.key),
+                                            hierarchy::UIntMetric(metric.value.uint_value())));
+      } else if (metric.value.is_int_value()) {
+        metrics.push_back(
+            hierarchy::Metric(std::move(metric.key), hierarchy::IntMetric(metric.value.int_value())));
+      } else if (metric.value.is_double_value()) {
+        metrics.push_back(hierarchy::Metric(std::move(metric.key),
+                                            hierarchy::DoubleMetric(metric.value.double_value())));
+      }
     }
   }
 
-  for (auto& property : *obj.properties) {
-    if (property.value.is_str()) {
-      properties.push_back(hierarchy::Property(
-          std::move(property.key), hierarchy::StringProperty(std::move(property.value.str()))));
-    } else if (property.value.is_bytes()) {
-      properties.push_back(
-          hierarchy::Property(std::move(property.key),
-                              hierarchy::ByteVectorProperty(std::move(property.value.bytes()))));
+  if (obj.properties.has_value()) {
+    for (auto& property : *obj.properties) {
+      if (property.value.is_str()) {
+        properties.push_back(hierarchy::Property(
+            std::move(property.key), hierarchy::StringProperty(std::move(property.value.str()))));
+      } else if (property.value.is_bytes()) {
+        properties.push_back(
+            hierarchy::Property(std::move(property.key),
+                                hierarchy::ByteVectorProperty(std::move(property.value.bytes()))));
+      }
     }
   }
 

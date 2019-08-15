@@ -95,9 +95,8 @@ zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& 
   ind.ssid.emplace();
   ind.ssid->assign(ssid.begin(), ssid.end());
   if (rsn_body) {
+    ind.rsn.emplace({static_cast<uint8_t>(element_id::kRsn), static_cast<uint8_t>(rsn_body->size())});
     ind.rsn->reserve(2 + rsn_body->size());
-    ind.rsn->push_back(static_cast<uint8_t>(element_id::kRsn));
-    ind.rsn->push_back(rsn_body->size());
     ind.rsn->insert(ind.rsn->end(), rsn_body->begin(), rsn_body->end());
   }
   return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEAssociateIndOrdinal);

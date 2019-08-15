@@ -37,36 +37,37 @@ class FindModulesCall
 
     FXL_DCHECK(intent_->action) << intent_;
 
-    constraint_futs_.reserve(intent_->parameters->size());
-
     resolver_query_.action = intent_->action.value_or("");
     resolver_query_.handler = intent_->handler;
     resolver_query_.parameter_constraints.resize(0);
 
-    for (auto& param : *intent_->parameters) {
-      // TODO(MF-23): Deprecate parameter name nullability altogether.
-      if (!param.name.has_value() && !intent_->handler.has_value()) {
-        result_.error_message =
-            "A null-named module parameter is not allowed "
-            "when using fuchsia::modular::Intent.";
-        result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
-        return;
-        // Operation finishes since |flow| goes out of scope.
-      }
+    if (intent_->parameters.has_value()) {
+      constraint_futs_.reserve(intent_->parameters->size());
+      for (auto& param : *intent_->parameters) {
+        // TODO(MF-23): Deprecate parameter name nullability altogether.
+        if (!param.name.has_value() && !intent_->handler.has_value()) {
+          result_.error_message =
+              "A null-named module parameter is not allowed "
+              "when using fuchsia::modular::Intent.";
+          result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
+          return;
+          // Operation finishes since |flow| goes out of scope.
+        }
 
-      // Skip processing null intent parameter names (these are generally
-      // root/null link names).
-      if (!param.name.has_value()) {
-        param.name = "";
-      }
+        // Skip processing null intent parameter names (these are generally
+        // root/null link names).
+        if (!param.name.has_value()) {
+          param.name = "";
+        }
 
-      constraint_futs_.push_back(GetTypesFromIntentParameter(std::move(param.data), param.name)
-                                     ->Map([name = param.name](std::vector<std::string> types) {
-                                       fuchsia::modular::FindModulesParameterConstraint constraint;
-                                       constraint.param_name = name.value_or("");
-                                       constraint.param_types = std::move(types);
-                                       return constraint;
-                                     }));
+        constraint_futs_.push_back(GetTypesFromIntentParameter(std::move(param.data), param.name)
+                                       ->Map([name = param.name](std::vector<std::string> types) {
+                                         fuchsia::modular::FindModulesParameterConstraint constraint;
+                                         constraint.param_name = name.value_or("");
+                                         constraint.param_types = std::move(types);
+                                         return constraint;
+                                       }));
+      }
     }
 
     Wait("FindModulesCall.Run.Wait", constraint_futs_)

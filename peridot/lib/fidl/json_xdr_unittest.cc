@@ -699,22 +699,6 @@ TEST(Xdr, FidlOptionalRepeatedRequired) {
   EXPECT_FALSE(t2.struct_.has_value());
   EXPECT_FALSE(t2.enum_.has_value());
   EXPECT_FALSE(t2.union_.has_value());
-
-  EXPECT_EQ(0u, t2.string->size());
-  EXPECT_EQ(0u, t2.bool_->size());
-  EXPECT_EQ(0u, t2.int8->size());
-  EXPECT_EQ(0u, t2.int16->size());
-  EXPECT_EQ(0u, t2.int32->size());
-  EXPECT_EQ(0u, t2.int64->size());
-  EXPECT_EQ(0u, t2.uint8->size());
-  EXPECT_EQ(0u, t2.uint16->size());
-  EXPECT_EQ(0u, t2.uint32->size());
-  EXPECT_EQ(0u, t2.uint64->size());
-  EXPECT_EQ(0u, t2.float32->size());
-  EXPECT_EQ(0u, t2.float64->size());
-  EXPECT_EQ(0u, t2.struct_->size());
-  EXPECT_EQ(0u, t2.enum_->size());
-  EXPECT_EQ(0u, t2.union_->size());
 }
 
 constexpr XdrFilterType<json_xdr_unittest::OptionalRepeatedOptionalData>
@@ -804,10 +788,6 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   EXPECT_FALSE(t3.string.has_value());
   EXPECT_FALSE(t3.struct_.has_value());
   EXPECT_FALSE(t3.union_.has_value());
-
-  EXPECT_EQ(0u, t3.string->size());
-  EXPECT_EQ(0u, t3.struct_->size());
-  EXPECT_EQ(0u, t3.union_->size());
 }
 
 constexpr XdrFilterType<json_xdr_unittest::ArrayData> XdrArrayData[] = {

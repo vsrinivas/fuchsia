@@ -37,9 +37,9 @@ TEST(InspectFidl, EmptyObject) {
 
   auto output = obj.object();
   EXPECT_STREQ("", output.name.c_str());
-  EXPECT_EQ(0u, output.properties->size());
-  EXPECT_EQ(0u, output.metrics->size());
-  EXPECT_EQ(0u, obj.children()->size());
+  EXPECT_FALSE(output.properties.has_value());
+  EXPECT_FALSE(output.metrics.has_value());
+  EXPECT_FALSE(obj.children().has_value());
 }
 
 TEST(InspectFidl, Object) {

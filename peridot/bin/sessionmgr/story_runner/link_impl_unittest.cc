@@ -100,8 +100,8 @@ TEST_F(LinkImplTest, GetNull) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 
   get_done = false;
-  fidl::VectorPtr<std::string> path;
-  path->push_back("one");
+  std::vector<std::string> path;
+  path.push_back("one");
   link->Get(std::move(path), [&](std::unique_ptr<fuchsia::mem::Buffer> value) {
     std::string content_string;
     FXL_CHECK(fsl::StringFromVmo(*value, &content_string));

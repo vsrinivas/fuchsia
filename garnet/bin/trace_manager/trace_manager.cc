@@ -184,9 +184,11 @@ void TraceManager::LaunchConfiguredProviders() {
     FXL_VLOG(2) << "URL: " << pair.second->url;
     if (FXL_VLOG_IS_ON(2)) {
       std::string args;
-      for (const auto& arg : *pair.second->arguments) {
-        args += " ";
-        args += arg;
+      if (pair.second->arguments.has_value()) {
+        for (const auto& arg : *pair.second->arguments) {
+          args += " ";
+          args += arg;
+        }
       }
       FXL_VLOG(2) << "Args:" << args;
     }

@@ -171,7 +171,7 @@ ImagePipeUpdateResults ImagePipe::Update(escher::ReleaseFenceSignaller* release_
     FXL_DCHECK(next_image);
     next_image_id = next_image->id();
 
-    if (!next_release_fences->empty()) {
+    if (next_release_fences.has_value() && !next_release_fences->empty()) {
       // We're skipping a frame, so we can immediately signal its release
       // fences.
       for (auto& fence : *next_release_fences) {

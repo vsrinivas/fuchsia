@@ -115,51 +115,53 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
     parameter_info_ = fuchsia::modular::CreateModuleParameterMapInfo::New();
 
     std::vector<FuturePtr<fuchsia::modular::CreateModuleParameterMapEntry>> did_get_entries;
-    did_get_entries.reserve(add_mod_params_.intent.parameters->size());
+    if (add_mod_params_.intent.parameters.has_value()) {
+      did_get_entries.reserve(add_mod_params_.intent.parameters->size());
 
-    for (auto& param : *add_mod_params_.intent.parameters) {
-      fuchsia::modular::CreateModuleParameterMapEntry entry;
-      entry.key = param.name;
+      for (auto& param : *add_mod_params_.intent.parameters) {
+        fuchsia::modular::CreateModuleParameterMapEntry entry;
+        entry.key = param.name;
 
-      switch (param.data.Which()) {
-        case fuchsia::modular::IntentParameterData::Tag::kEntityReference: {
-          fuchsia::modular::CreateLinkInfo create_link;
-          fsl::SizedVmo vmo;
-          FXL_CHECK(fsl::VmoFromString(EntityReferenceToJson(param.data.entity_reference()), &vmo));
-          create_link.initial_data = std::move(vmo).ToTransport();
-          entry.value.set_create_link(std::move(create_link));
-          break;
+        switch (param.data.Which()) {
+          case fuchsia::modular::IntentParameterData::Tag::kEntityReference: {
+            fuchsia::modular::CreateLinkInfo create_link;
+            fsl::SizedVmo vmo;
+            FXL_CHECK(fsl::VmoFromString(EntityReferenceToJson(param.data.entity_reference()), &vmo));
+            create_link.initial_data = std::move(vmo).ToTransport();
+            entry.value.set_create_link(std::move(create_link));
+            break;
+          }
+          case fuchsia::modular::IntentParameterData::Tag::kEntityType: {
+            // Create a link, but don't populate it. This is useful in the event
+            // that the link is used as an 'output' link. Setting a valid JSON
+            // value for null in the vmo.
+            fsl::SizedVmo vmo;
+            FXL_CHECK(fsl::VmoFromString("null", &vmo));
+            fuchsia::modular::CreateLinkInfo create_link;
+            create_link.initial_data = std::move(vmo).ToTransport();
+            entry.value.set_create_link(std::move(create_link));
+            break;
+          }
+          case fuchsia::modular::IntentParameterData::Tag::kJson: {
+            fuchsia::modular::CreateLinkInfo create_link;
+            param.data.json().Clone(&create_link.initial_data);
+            entry.value.set_create_link(std::move(create_link));
+            break;
+          }
+          case fuchsia::modular::IntentParameterData::Tag::Invalid: {
+            out_result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
+            out_result_.error_message = fxl::StringPrintf("Invalid data for parameter with name: %s",
+                                                          param.name.value_or("").c_str());
+            done();
+            return;
+          }
         }
-        case fuchsia::modular::IntentParameterData::Tag::kEntityType: {
-          // Create a link, but don't populate it. This is useful in the event
-          // that the link is used as an 'output' link. Setting a valid JSON
-          // value for null in the vmo.
-          fsl::SizedVmo vmo;
-          FXL_CHECK(fsl::VmoFromString("null", &vmo));
-          fuchsia::modular::CreateLinkInfo create_link;
-          create_link.initial_data = std::move(vmo).ToTransport();
-          entry.value.set_create_link(std::move(create_link));
-          break;
-        }
-        case fuchsia::modular::IntentParameterData::Tag::kJson: {
-          fuchsia::modular::CreateLinkInfo create_link;
-          param.data.json().Clone(&create_link.initial_data);
-          entry.value.set_create_link(std::move(create_link));
-          break;
-        }
-        case fuchsia::modular::IntentParameterData::Tag::Invalid: {
-          out_result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
-          out_result_.error_message = fxl::StringPrintf("Invalid data for parameter with name: %s",
-                                                        param.name.value_or("").c_str());
-          done();
-          return;
-        }
+
+        auto did_create_entry =
+            Future<fuchsia::modular::CreateModuleParameterMapEntry>::CreateCompleted(
+                "AddModCommandRunner::FindModulesCall.did_create_entry", std::move(entry));
+        did_get_entries.emplace_back(std::move(did_create_entry));
       }
-
-      auto did_create_entry =
-          Future<fuchsia::modular::CreateModuleParameterMapEntry>::CreateCompleted(
-              "AddModCommandRunner::FindModulesCall.did_create_entry", std::move(entry));
-      did_get_entries.emplace_back(std::move(did_create_entry));
     }
 
     Wait("AddModCommandRunner::AddModCall::Wait", did_get_entries)

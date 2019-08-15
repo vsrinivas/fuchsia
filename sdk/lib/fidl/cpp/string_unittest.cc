@@ -13,9 +13,6 @@ TEST(StringPtr, Control) {
   StringPtr string;
   EXPECT_FALSE(string.has_value());
   EXPECT_FALSE(string);
-  string->append("abc");
-  EXPECT_TRUE(string.has_value());
-  EXPECT_TRUE(string);
 
   string = "hello, world";
   EXPECT_TRUE(string.has_value());
@@ -52,7 +49,6 @@ TEST(StringPtr, Conversions) {
 
   StringPtr null = nullptr;
   EXPECT_FALSE(null.has_value());
-  EXPECT_EQ("", *null);
 
   std::string helloStr = hello.value_or("");
   EXPECT_EQ("hello", helloStr);

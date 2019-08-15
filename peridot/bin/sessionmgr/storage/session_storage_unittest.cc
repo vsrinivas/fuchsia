@@ -47,15 +47,15 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   // correct.
   auto storage = CreateStorage("page");
 
-  fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_entries;
+  std::vector<fuchsia::modular::StoryInfoExtraEntry> extra_entries;
   fuchsia::modular::StoryInfoExtraEntry entry;
   entry.key = "key1";
   entry.value = "value1";
-  extra_entries->push_back(std::move(entry));
+  extra_entries.push_back(std::move(entry));
 
   entry.key = "key2";
   entry.value = "value2";
-  extra_entries->push_back(std::move(entry));
+  extra_entries.push_back(std::move(entry));
 
   fuchsia::modular::StoryOptions story_options;
   story_options.kind_of_proto_story = true;

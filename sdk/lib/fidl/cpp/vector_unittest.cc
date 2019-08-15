@@ -13,9 +13,6 @@ TEST(VectorPtr, Control) {
   VectorPtr<int> vector;
   EXPECT_FALSE(vector.has_value());
   EXPECT_FALSE(vector);
-  vector->push_back(1);
-  EXPECT_TRUE(vector.has_value());
-  EXPECT_TRUE(vector);
 
   std::vector<int> reference = {1, 2, 3};
 

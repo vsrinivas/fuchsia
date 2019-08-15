@@ -30,6 +30,7 @@ void XdrModuleManifest_v1(XdrContext* const xdr, fuchsia::modular::ModuleManifes
   // Version 2 supports multiple actions using the "intent_filters" field. This
   // version supports just one with "action" and "parameters" fields, so we
   // put those in "IntentFilter[0]".
+  data->intent_filters.emplace();
   data->intent_filters->resize(1);
   xdr->Field("action", &data->intent_filters->at(0).action);
   xdr->Field("parameters", &data->intent_filters->at(0).parameter_constraints,

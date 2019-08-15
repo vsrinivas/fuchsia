@@ -55,7 +55,7 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
     add_mod.mod_name_transitional = mod_name;
     add_mod.intent.handler = fake_module_url_;
     if (!parent_mod_name.empty()) {
-      add_mod.surface_parent_mod_name->push_back(parent_mod_name);
+      add_mod.surface_parent_mod_name = {parent_mod_name};
     }
 
     std::vector<fuchsia::modular::StoryCommand> commands(1);

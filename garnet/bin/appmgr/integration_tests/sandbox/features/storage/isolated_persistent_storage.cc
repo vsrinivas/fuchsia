@@ -63,7 +63,7 @@ class IsolatedPersistentStorageTest : virtual public sys::testing::TestWithEnvir
     // body, and ASSERT_* macros just 'return;' to exit the test.
     EXPECT_EQ(WriteFileSync(util1, kTestFileName, test_file_content_), ZX_OK);
     EXPECT_EQ(ReadFileSync(util1, kTestFileName).value(), test_file_content_);
-    EXPECT_NE(ReadFileSync(util2, kTestFileName).value(), test_file_content_);
+    EXPECT_FALSE(ReadFileSync(util2, kTestFileName).has_value());
   }
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> env1_;

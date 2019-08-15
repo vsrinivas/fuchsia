@@ -320,8 +320,7 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
     auto& ns = services->emplace_back();
     ns.name = svc.name();
     ns.url = svc.launch().GetUrlOrDefault(sandbox_env_->default_name());
-    ns.arguments->insert(ns.arguments->end(), svc.launch().arguments().begin(),
-                         svc.launch().arguments().end());
+    ns.arguments = svc.launch().arguments();
   }
 
   // Logger options
@@ -473,7 +472,7 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher, const std::
 
   fuchsia::sys::LaunchInfo linfo;
   linfo.url = url;
-  linfo.arguments->insert(linfo.arguments->end(), arguments.begin(), arguments.end());
+  linfo.arguments = arguments;
 
   auto ticket = procs_.size();
   auto& proc = procs_.emplace_back();
@@ -530,7 +529,7 @@ Sandbox::Promise Sandbox::LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
 
   fuchsia::sys::LaunchInfo linfo;
   linfo.url = url;
-  linfo.arguments->insert(linfo.arguments->end(), arguments.begin(), arguments.end());
+  linfo.arguments = arguments;
 
   auto ticket = procs_.size();
   auto& proc = procs_.emplace_back();

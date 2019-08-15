@@ -111,7 +111,7 @@ zx_status_t BeaconSender::BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* fr
       .ssid = req_.ssid.data(),
       .ssid_len = req_.ssid.size(),
       .rsne = req_.rsne.has_value() ? req_.rsne->data() : nullptr,
-      .rsne_len = req_.rsne->size(),
+      .rsne_len = req_.rsne.has_value() ? req_.rsne->size() : 0,
       .beacon_period = req_.beacon_period,
       .channel = bss_->Chan(),  // looks like we are ignoring 'channel' in
                                 // 'req'. Is that correct?
@@ -157,7 +157,7 @@ void BeaconSender::SendProbeResponse(const common::MacAddr& recv_addr,
       .ssid = req_.ssid.data(),
       .ssid_len = req_.ssid.size(),
       .rsne = req_.rsne.has_value() ? req_.rsne->data() : nullptr,
-      .rsne_len = req_.rsne->size(),
+      .rsne_len = req_.rsne.has_value() ? req_.rsne->size() : 0,
       .beacon_period = req_.beacon_period,
       .channel = bss_->Chan(),
       .ps_cfg = nullptr,  // no TIM element in probe response

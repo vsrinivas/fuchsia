@@ -96,11 +96,12 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data, const std::str
     return zx::process();
 
   std::string label = Util::GetLabelFromURL(launch_info.url);
-  std::vector<const char*> argv;
-  argv.reserve(launch_info.arguments->size() + 2);
-  argv.push_back(argv0.c_str());
-  for (const auto& arg : *launch_info.arguments) {
-    argv.push_back(arg.c_str());
+  std::vector<const char*> argv{argv0.c_str()};
+  if (launch_info.arguments.has_value()) {
+    argv.reserve(launch_info.arguments->size() + 2);
+    for (const auto& arg : *launch_info.arguments) {
+      argv.push_back(arg.c_str());
+    }
   }
   argv.push_back(nullptr);
 
@@ -744,8 +745,12 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     // shell script.
     const std::string bin_path = program.IsBinaryNull() ? kAppPath : program.binary();
 
-    launch_info.arguments->insert(launch_info.arguments->begin(), program.args().begin(),
-                                  program.args().end());
+    if (launch_info.arguments.has_value()) {
+      launch_info.arguments->insert(launch_info.arguments->begin(), program.args().begin(),
+                                    program.args().end());
+    } else {
+      launch_info.arguments = program.args();
+    }
 
     app_argv0 = fxl::Concatenate({kAppArgv0Prefix, bin_path});
     TRACE_DURATION_BEGIN("appmgr", "Realm::CreateComponentFromPackage:VmoFromFilenameAt",
