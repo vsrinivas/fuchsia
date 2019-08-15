@@ -8,10 +8,54 @@
 
 namespace media::audio {
 
+EffectsProcessor::EffectsProcessor(EffectsProcessor&& o) noexcept
+    : effects_chain_(std::move(o.effects_chain_)),
+      channels_in_(o.channels_in_),
+      channels_out_(o.channels_out_) {
+  o.channels_in_ = 0;
+  o.channels_out_ = 0;
+}
+
+EffectsProcessor& EffectsProcessor::operator=(EffectsProcessor&& o) noexcept {
+  effects_chain_ = std::move(o.effects_chain_);
+  channels_in_ = o.channels_in_;
+  channels_out_ = o.channels_out_;
+  o.channels_in_ = 0;
+  o.channels_out_ = 0;
+  return *this;
+}
+
 // Insert an effect instance at the end of the chain.
-void EffectsProcessor::AddEffect(Effect e) {
+zx_status_t EffectsProcessor::AddEffect(Effect e) {
   FXL_DCHECK(e);
+
+  fuchsia_audio_effects_parameters params;
+  zx_status_t status = e.GetParameters(&params);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // For now we only support in-place processors.
+  if (params.channels_in != params.channels_out) {
+    FXL_LOG(ERROR) << "Can't add effect; only in-place effects are currently supported.";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (effects_chain_.empty()) {
+    // This is the first effect; the processors input channels will be whatever this effect
+    // accepts.
+    channels_in_ = params.channels_in;
+  } else if (params.channels_in != channels_out_) {
+    // We have existing effects and this effect excepts different channelization than what we're
+    // currently producing.
+    FXL_LOG(ERROR) << "Can't add effect; needs " << params.channels_in << " channels but have "
+                   << channels_out_ << " channels";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  channels_out_ = params.channels_out;
   effects_chain_.emplace_back(std::move(e));
+  return ZX_OK;
 }
 
 // Aborts if position is out-of-range.

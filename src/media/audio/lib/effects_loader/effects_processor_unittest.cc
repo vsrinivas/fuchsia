@@ -46,10 +46,10 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
   // Create processor
   {
     EffectsProcessor processor;
-    processor.AddEffect(std::move(effect3));
-    processor.AddEffect(std::move(effect1));
-    processor.AddEffect(std::move(effect2));
-    processor.AddEffect(std::move(effect4));
+    EXPECT_EQ(processor.AddEffect(std::move(effect3)), ZX_OK);
+    EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
+    EXPECT_EQ(processor.AddEffect(std::move(effect2)), ZX_OK);
+    EXPECT_EQ(processor.AddEffect(std::move(effect4)), ZX_OK);
     EXPECT_EQ(processor.size(), 4);
 
     EXPECT_EQ(effects_handle3, processor.GetEffectAt(0).get());
@@ -63,6 +63,75 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
   // All instances should be deleted when the processor is destructed.
   EXPECT_EQ(0u, test_effects()->num_instances());
   test_effects()->clear_effects();
+}
+
+TEST_F(EffectsProcessorTest, AddEffectWithMismatchedChannelConfig) {
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               TEST_EFFECTS_ACTION_ASSIGN,
+                                               1.0}));
+  Effect single_channel_effect1 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
+  Effect single_channel_effect2 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
+  Effect two_channel_effect = effects_loader()->CreateEffect(0, 1, 2, 2, {});
+
+  EffectsProcessor processor;
+  EXPECT_EQ(processor.channels_in(), 0u);
+  EXPECT_EQ(processor.channels_out(), 0u);
+
+  // Add a single channel effect (chans in == chans out == 1).
+  EXPECT_EQ(processor.AddEffect(std::move(single_channel_effect1)), ZX_OK);
+  EXPECT_EQ(processor.channels_in(), 1u);
+  EXPECT_EQ(processor.channels_out(), 1u);
+
+  // Add a second single channel effect.
+  EXPECT_EQ(processor.AddEffect(std::move(single_channel_effect2)), ZX_OK);
+  EXPECT_EQ(processor.channels_in(), 1u);
+  EXPECT_EQ(processor.channels_out(), 1u);
+
+  // Add a two channel effect. This should fail as the processor is currently producing single
+  // channel audio out of the last effect.
+  EXPECT_EQ(processor.AddEffect(std::move(two_channel_effect)), ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(EffectsProcessorTest, MoveProcessor) {
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               TEST_EFFECTS_ACTION_ASSIGN,
+                                               1.0}));
+  EffectsProcessor p1;
+  p1.AddEffect(effects_loader()->CreateEffect(0, 1, 1, 1, {}));
+  p1.AddEffect(effects_loader()->CreateEffect(0, 1, 1, 1, {}));
+
+  EXPECT_EQ(p1.size(), 2u);
+  EXPECT_EQ(p1.channels_in(), 1u);
+  EXPECT_EQ(p1.channels_out(), 1u);
+
+  EffectsProcessor p2;
+  EXPECT_EQ(p2.size(), 0u);
+  EXPECT_EQ(p2.channels_in(), 0u);
+  EXPECT_EQ(p2.channels_out(), 0u);
+
+  // Move assignment.
+  p2 = std::move(p1);
+  // p1 is now empty.
+  EXPECT_EQ(p1.size(), 0u);
+  EXPECT_EQ(p1.channels_in(), 0u);
+  EXPECT_EQ(p1.channels_out(), 0u);
+  // p2 has effects.
+  EXPECT_EQ(p2.size(), 2u);
+  EXPECT_EQ(p2.channels_in(), 1u);
+  EXPECT_EQ(p2.channels_out(), 1u);
+
+  // Move construction.
+  EffectsProcessor p3(std::move(p2));
+  // p2 is now empty.
+  EXPECT_EQ(p2.size(), 0u);
+  EXPECT_EQ(p2.channels_in(), 0u);
+  EXPECT_EQ(p2.channels_out(), 0u);
+  // p3 has effects.
+  EXPECT_EQ(p3.size(), 2u);
+  EXPECT_EQ(p3.channels_in(), 1u);
+  EXPECT_EQ(p3.channels_out(), 1u);
 }
 
 // Verify (at a VERY Basic level) the methods that handle data flow.
@@ -106,10 +175,10 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   Effect effect4 = effects_loader()->CreateEffect(3, 1, 1, 1, {});
   ASSERT_TRUE(effect1 && effect2 && effect3 && effect4);
 
-  processor.AddEffect(std::move(effect1));
-  processor.AddEffect(std::move(effect2));
-  processor.AddEffect(std::move(effect3));
-  processor.AddEffect(std::move(effect4));
+  EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
+  EXPECT_EQ(processor.AddEffect(std::move(effect2)), ZX_OK);
+  EXPECT_EQ(processor.AddEffect(std::move(effect3)), ZX_OK);
+  EXPECT_EQ(processor.AddEffect(std::move(effect4)), ZX_OK);
   EXPECT_EQ(4u, test_effects()->num_instances());
 
   // The first 2 processors will mutate data, but this will be clobbered by the 3rd processor which
