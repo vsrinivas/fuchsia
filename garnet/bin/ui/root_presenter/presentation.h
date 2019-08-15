@@ -59,7 +59,9 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
                scenic::ResourceId compositor_id,
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-               fuchsia::ui::shortcut::Manager* shortcut_manager, RendererParams renderer_params,
+               fuchsia::ui::shortcut::Manager* shortcut_manager,
+               fuchsia::ui::input::ImeService* ime_service,
+               RendererParams renderer_params,
                int32_t display_startup_rotation_adjustment, YieldCallback yield_callback);
   ~Presentation();
 
@@ -143,6 +145,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   // Today, a DeviceState is owned by each Presentation, and we need to
   // connect the output of DeviceState to shortcut_manager_.
   fuchsia::ui::shortcut::Manager* shortcut_manager_;
+  fuchsia::ui::input::ImeService* ime_service_;
 
   scenic::Layer layer_;
   scenic::Renderer renderer_;

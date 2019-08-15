@@ -63,12 +63,15 @@ Presentation::Presentation(
     fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session, scenic::ResourceId compositor_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-    fuchsia::ui::shortcut::Manager* shortcut_manager, RendererParams renderer_params,
+    fuchsia::ui::shortcut::Manager* shortcut_manager,
+    fuchsia::ui::input::ImeService* ime_service,
+    RendererParams renderer_params,
     int32_t display_startup_rotation_adjustment, YieldCallback yield_callback)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
       shortcut_manager_(shortcut_manager),
+      ime_service_(ime_service),
       layer_(session_),
       renderer_(session_),
       scene_(session_),
@@ -690,10 +693,36 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
         }
       };
 
-      auto key_event = into_key_event(kbd);
-      if (shortcut_manager_ && key_event) {
-        // Send keyboard event to Shortcut manager for shortcut detection.
-        shortcut_manager_->HandleKeyEvent(std::move(*key_event), std::move(handled_callback));
+      // [Transitional]
+      // Current keyboard input dispatch strategy:
+      // For the user-facing keys (fuchsia::ui::input2::Key), events
+      // are delivered to services in the following order:
+      // 1. ime_service, to provide fuchsia.ui.input2.Keyboard FIDL
+      // 2. shortcuts, to provide fuchsia.ui.shortcut FIDL
+      //
+      // If this flow doesn't handle the event, events are passed to
+      // legacy flow (see handled_callback):
+      // 1. CaptureKeyboardEventHACK FIDL
+      // 2. session->Enqueue
+      if (auto key_event = into_key_event(kbd)) {
+        fuchsia::ui::input2::KeyEvent clone;
+        fidl::Clone(*key_event, &clone);
+        // Send keyboard event to IME manager for input2.KeyboardService
+        // interface.
+        ime_service_->DispatchKey(
+            std::move(*key_event),
+            [this, key_event = std::move(clone),
+             handled_callback =
+                 std::move(handled_callback)](bool was_handled) mutable {
+              if (was_handled || !shortcut_manager_) {
+                handled_callback(false);
+              } else {
+                // Send keyboard event to Shortcut manager for shortcut
+                // detection.
+                shortcut_manager_->HandleKeyEvent(std::move(key_event),
+                                                  std::move(handled_callback));
+              }
+            });
       } else {
         handled_callback(false);
       }

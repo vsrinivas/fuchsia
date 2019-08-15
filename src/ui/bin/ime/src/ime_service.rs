@@ -6,11 +6,11 @@ use crate::fidl_helpers::clone_keyboard_event;
 use crate::legacy_ime::ImeState;
 use crate::legacy_ime::LegacyIme;
 use crate::multiplex::TextFieldMultiplexer;
-use failure::ResultExt;
+use failure::{Error, ResultExt};
 use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_text as txt;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::lock::Mutex;
 use futures::prelude::*;
 use std::sync::{Arc, Weak};
@@ -43,17 +43,21 @@ impl ImeServiceState {
 /// Serves several public FIDL services: `ImeService`, `ImeVisibilityService`, and
 /// `TextInputContext`.
 #[derive(Clone)]
-pub struct ImeService(Arc<Mutex<ImeServiceState>>);
+pub struct ImeService {
+    state: Arc<Mutex<ImeServiceState>>,
+}
 
 impl ImeService {
     pub fn new() -> ImeService {
-        ImeService(Arc::new(Mutex::new(ImeServiceState {
-            keyboard_visible: false,
-            active_ime: None,
-            multiplexer: None,
-            visibility_listeners: Vec::new(),
-            text_input_context_clients: Vec::new(),
-        })))
+        ImeService {
+            state: Arc::new(Mutex::new(ImeServiceState {
+                keyboard_visible: false,
+                active_ime: None,
+                multiplexer: None,
+                visibility_listeners: Vec::new(),
+                text_input_context_clients: Vec::new(),
+            })),
+        }
     }
 
     /// Only updates the keyboard visibility if IME passed in is active
@@ -62,7 +66,7 @@ impl ImeService {
         check_ime: &'a Arc<Mutex<ImeState>>,
         visible: bool,
     ) {
-        let mut state = self.0.lock().await;
+        let mut state = self.state.lock().await;
         let active_ime_weak = match &state.active_ime {
             Some(val) => val,
             None => return,
@@ -89,7 +93,7 @@ impl ImeService {
             Err(_) => return,
         };
         let ime = LegacyIme::new(keyboard_type, action, initial_state, client_proxy, self.clone());
-        let mut state = self.0.lock().await;
+        let mut state = self.state.lock().await;
         let editor_stream = match editor.into_stream() {
             Ok(v) => v,
             Err(e) => {
@@ -117,11 +121,11 @@ impl ImeService {
     }
 
     pub async fn show_keyboard(&self) {
-        self.0.lock().await.update_keyboard_visibility(true);
+        self.state.lock().await.update_keyboard_visibility(true);
     }
 
     pub async fn hide_keyboard(&self) {
-        self.0.lock().await.update_keyboard_visibility(false);
+        self.state.lock().await.update_keyboard_visibility(false);
     }
 
     /// This is called by the operating system when input from the physical keyboard comes in.
@@ -131,7 +135,7 @@ impl ImeService {
             uii::InputEvent::Keyboard(e) => clone_keyboard_event(e),
             _ => return,
         };
-        let mut state = self.0.lock().await;
+        let mut state = self.state.lock().await;
         let ime = {
             let active_ime_weak = match state.active_ime {
                 Some(ref v) => v,
@@ -173,38 +177,10 @@ impl ImeService {
                     .await
                     .context("error reading value from IME service request stream")?
                 {
-                    match msg {
-                        uii::ImeServiceRequest::GetInputMethodEditor {
-                            keyboard_type,
-                            action,
-                            initial_state,
-                            client,
-                            editor,
-                            ..
-                        } => {
-                            self_clone
-                                .get_input_method_editor(
-                                    keyboard_type,
-                                    action,
-                                    initial_state,
-                                    client,
-                                    editor,
-                                )
-                                .await;
-                        }
-                        uii::ImeServiceRequest::ShowKeyboard { .. } => {
-                            self_clone.show_keyboard().await;
-                        }
-                        uii::ImeServiceRequest::HideKeyboard { .. } => {
-                            self_clone.hide_keyboard().await;
-                        }
-                        uii::ImeServiceRequest::InjectInput { event, .. } => {
-                            self_clone.inject_input(event).await;
-                        }
-                        uii::ImeServiceRequest::DispatchKey { responder, .. } => {
-                            responder.send(false).context("error responding to DispatchKey")?;
-                        }
-                    }
+                    self_clone
+                        .handle_ime_service_msg(msg)
+                        .await
+                        .context("Handle IME service messages")?
                 }
                 Ok(())
             }
@@ -212,12 +188,48 @@ impl ImeService {
         );
     }
 
+    pub async fn handle_ime_service_msg(
+        &mut self,
+        msg: uii::ImeServiceRequest,
+    ) -> Result<(), Error> {
+        match msg {
+            uii::ImeServiceRequest::GetInputMethodEditor {
+                keyboard_type,
+                action,
+                initial_state,
+                client,
+                editor,
+                ..
+            } => {
+                self.get_input_method_editor(keyboard_type, action, initial_state, client, editor)
+                    .await;
+            }
+            uii::ImeServiceRequest::ShowKeyboard { .. } => {
+                self.show_keyboard().await;
+            }
+            uii::ImeServiceRequest::HideKeyboard { .. } => {
+                self.hide_keyboard().await;
+            }
+            uii::ImeServiceRequest::InjectInput { event, .. } => {
+                fx_log_info!("InjectInput triggered: {:?}", event);
+                self.inject_input(event).await;
+            }
+            uii::ImeServiceRequest::DispatchKey { .. } => {
+                // Transitional: DispatchKey should be handled by keyboard/Service.
+                // See Service.spawn_ime_service() for handing DispatchKey.
+                // In future, Keyboard service will receive keys directly.
+                panic!("Should be handled by keyboard service");
+            }
+        }
+        Ok(())
+    }
+
     pub fn bind_ime_visibility_service(&self, stream: uii::ImeVisibilityServiceRequestStream) {
         let self_clone = self.clone();
         fuchsia_async::spawn(
             async move {
                 let control_handle = stream.control_handle();
-                let mut state = self_clone.0.lock().await;
+                let mut state = self_clone.state.lock().await;
                 if control_handle
                     .send_on_keyboard_visibility_changed(state.keyboard_visible)
                     .is_ok()
@@ -236,7 +248,7 @@ impl ImeService {
             async move {
                 let control_handle = stream.control_handle();
                 {
-                    let mut state = self_clone.0.lock().await;
+                    let mut state = self_clone.state.lock().await;
 
                     if let Some(multiplexer) = &state.multiplexer {
                         if let Err(e) = bind_new_text_field(multiplexer, &control_handle) {

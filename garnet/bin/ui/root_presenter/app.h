@@ -96,6 +96,7 @@ class App : public fuchsia::ui::policy::Presenter,
   // forwards the requests incoming from accessibility services to start
   // listening for pointer events.
   fuchsia::ui::policy::accessibility::PointerEventRegistryPtr pointer_event_registry_;
+  fuchsia::ui::input::ImeServicePtr ime_service_;
 
   // Today, we have a global, singleton compositor, and it is managed solely by
   // a root presenter. Hence, a single resource ID is sufficient to identify it.

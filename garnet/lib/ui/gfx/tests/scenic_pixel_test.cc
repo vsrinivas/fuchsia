@@ -64,6 +64,7 @@ constexpr uint32_t kYuvSize = 64;
 const std::map<std::string, std::string> kServices = {
     {"fuchsia.tracing.provider.Registry",
      "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
+    {"fuchsia.ui.input.ImeService", "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"},
     {"fuchsia.ui.policy.Presenter",
      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
     {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},

@@ -6,6 +6,7 @@ group("e2e_input_tests") {
   testonly = true
 
   deps = [
+    "keyboard:tests",
     "shortcut:tests",
   ]
 }
