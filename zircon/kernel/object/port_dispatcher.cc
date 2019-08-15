@@ -37,6 +37,8 @@ static_assert(sizeof(zx_packet_page_request_t) == 32,
 
 KCOUNTER(port_arena_count, "port.arena.count")
 KCOUNTER(port_full_count, "port.full.count")
+KCOUNTER(port_dequeue_count, "port.dequeue.count")
+KCOUNTER(port_dequeue_spurious_count, "port.dequeue.spurious.count")
 KCOUNTER(dispatcher_port_create_count, "dispatcher.port.create")
 KCOUNTER(dispatcher_port_destroy_count, "dispatcher.port.destroy")
 
@@ -352,7 +354,7 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline, zx_port_packet_t* 
         out_packet->type = ZX_PKT_TYPE_INTERRUPT;
         out_packet->status = ZX_OK;
         out_packet->interrupt.timestamp = port_interrupt_packet->timestamp;
-        return ZX_OK;
+        break;
       }
     }
 
@@ -379,13 +381,17 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline, zx_port_packet_t* 
         if (is_ephemeral) {
           port_packet->Free();
         }
-        return ZX_OK;
+        break;
       }
     }
 
     // Both queues were empty. The packet must have been removed before we were able to
     // dequeue. Loop back and wait again.
+    kcounter_add(port_dequeue_spurious_count, 1);
   }
+
+  kcounter_add(port_dequeue_count, 1);
+  return ZX_OK;
 }
 
 void PortDispatcher::MaybeReap(PortObserver* observer, PortPacket* port_packet) {
