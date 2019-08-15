@@ -20,12 +20,20 @@ TEST(CrashpadAgentIntegrationTest, CrashAnalyzer_SmokeTest) {
   auto environment_services = ::sys::ServiceDirectory::CreateFromNamespace();
   environment_services->Connect(crash_analyzer.NewRequest());
 
-  // We call OnKernelPanicCrashLog() to smoke test the service is up and running because it is the
-  // easiest to call.
-  ::fuchsia::mem::Buffer crash_log;
-  ASSERT_TRUE(::fsl::VmoFromString("ZIRCON KERNEL PANIC", &crash_log));
-  Analyzer_OnKernelPanicCrashLog_Result out_result;
-  ASSERT_EQ(crash_analyzer->OnKernelPanicCrashLog(std::move(crash_log), &out_result), ZX_OK);
+  // We call OnManagedRuntimeException() to smoke test the service is up and running because it is
+  // the easiest to call.
+  GenericException exception = {};
+  const std::string type = "FileSystemException";
+  std::copy(type.begin(), type.end(), exception.type.data());
+  const std::string message = "cannot open file";
+  std::copy(message.begin(), message.end(), exception.message.data());
+  ASSERT_TRUE(fsl::VmoFromString("#0", &exception.stack_trace));
+  ManagedRuntimeException dart_exception;
+  dart_exception.set_dart(std::move(exception));
+  Analyzer_OnManagedRuntimeException_Result out_result;
+  ASSERT_EQ(crash_analyzer->OnManagedRuntimeException("component_url", std::move(dart_exception),
+                                                      &out_result),
+            ZX_OK);
   EXPECT_TRUE(out_result.is_response());
 }
 

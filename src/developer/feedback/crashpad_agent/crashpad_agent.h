@@ -6,7 +6,6 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fidl/cpp/string.h>
@@ -54,8 +53,6 @@ class CrashpadAgent : public Analyzer, public fuchsia::feedback::CrashReporter {
                          OnNativeExceptionCallback callback) override;
   void OnManagedRuntimeException(std::string component_url, ManagedRuntimeException exception,
                                  OnManagedRuntimeExceptionCallback callback) override;
-  void OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log,
-                             OnKernelPanicCrashLogCallback callback) override;
 
   // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
@@ -68,7 +65,6 @@ class CrashpadAgent : public Analyzer, public fuchsia::feedback::CrashReporter {
   fit::promise<void> OnNativeException(zx::process process, zx::thread thread);
   fit::promise<void> OnManagedRuntimeException(std::string component_url,
                                                ManagedRuntimeException exception);
-  fit::promise<void> OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log);
   fit::promise<void> File(fuchsia::feedback::CrashReport report);
 
   // Uploads local crash report of ID |local_report_id|, attaching either the passed |annotations|

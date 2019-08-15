@@ -62,6 +62,11 @@ constexpr uint64_t kFeedbackDataCollectionTimeoutInMillisecondsKey = 1000u;
 constexpr bool alwaysReturnSuccess = true;
 constexpr bool alwaysReturnFailure = false;
 
+constexpr char kProgramNameGeneric[] = "crashing_program_generic";
+
+constexpr char kSingleAttachmentKey[] = "attachment.key";
+constexpr char kSingleAttachmentValue[] = "attachment.value";
+
 Annotation BuildAnnotation(const std::string& key) {
   Annotation annotation;
   annotation.key = key;
@@ -180,35 +185,6 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     return subdirs;
   }
 
-  // Runs one crash analysis. Useful to test shared logic among all crash analysis flows.
-  //
-  // |attachment| allows to control the lower bound of the size of the report.
-  //
-  // Today we use the kernel panic flow because it requires fewer arguments to set up.
-  //
-  // TODO(DX-1866): delete once transitioned to fuchsia.feedback.CrashReporter.
-  Analyzer_OnKernelPanicCrashLog_Result RunOneCrashAnalysis(const std::string& attachment) {
-    fuchsia::mem::Buffer crash_log;
-    FXL_CHECK(fsl::VmoFromString(attachment, &crash_log));
-
-    Analyzer_OnKernelPanicCrashLog_Result out_result;
-    agent_->OnKernelPanicCrashLog(std::move(crash_log),
-                                  [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
-                                    out_result = std::move(result);
-                                  });
-    FXL_CHECK(RunLoopUntilIdle());
-    return out_result;
-  }
-
-  // Runs one crash analysis. Useful to test shared logic among all crash analysis flows.
-  //
-  // Today we use the kernel panic flow because it requires fewer arguments to set up.
-  //
-  // TODO(DX-1866): delete once transitioned to fuchsia.feedback.CrashReporter.
-  Analyzer_OnKernelPanicCrashLog_Result RunOneCrashAnalysis() {
-    return RunOneCrashAnalysis("irrelevant, just not empty");
-  }
-
   // Files one crash report.
   CrashReporter_File_Result FileOneCrashReport(CrashReport report) {
     CrashReporter_File_Result out_result;
@@ -222,14 +198,10 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   // Files one generic crash report.
   //
   // Useful to test shared logic among all crash reporting flows.
-  //
-  // |attachments|, in addition to testing the attachment logic, is also useful to control the lower
-  // bound of the size of the report by controlling the size of some of the attachment(s). This
-  // comes in handy when testing the database size limit enforcement logic for instance.
   CrashReporter_File_Result FileOneGenericCrashReport(
       const std::vector<Annotation>& annotations = {}, std::vector<Attachment> attachments = {}) {
     GenericCrashReport generic_report;
-    generic_report.set_program_name("crashing_program_generic");
+    generic_report.set_program_name(kProgramNameGeneric);
     if (!annotations.empty()) {
       generic_report.set_annotations(annotations);
     }
@@ -240,6 +212,19 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     report.set_generic(std::move(generic_report));
 
     return FileOneCrashReport(std::move(report));
+  }
+
+  // Files one generic crash report.
+  //
+  // |attachment| is useful to control the lower bound of the size of the report by controlling the
+  // size of some of the attachment(s). This comes in handy when testing the database size limit
+  // enforcement logic for instance.
+  CrashReporter_File_Result FileOneGenericCrashReportWithSingleAttachment(
+      const std::string& attachment = kSingleAttachmentValue) {
+    std::vector<Attachment> attachments;
+    attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, attachment));
+    return FileOneGenericCrashReport(/*annotations=*/{},
+                                     /*attachments=*/std::move(attachments));
   }
 
   // Files one native crash report.
@@ -404,22 +389,6 @@ TEST_F(CrashpadAgentTest, Succeed_OnUnknownManagedRuntimeLanguageException) {
   CheckAttachments({"data"});
 }
 
-TEST_F(CrashpadAgentTest, Succeed_OnKernelPanicCrashLog) {
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  fuchsia::mem::Buffer crash_log;
-  ASSERT_TRUE(fsl::VmoFromString("ZIRCON KERNEL PANIC", &crash_log));
-
-  Analyzer_OnKernelPanicCrashLog_Result out_result;
-  agent_->OnKernelPanicCrashLog(std::move(crash_log),
-                                [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
-                                  out_result = std::move(result);
-                                });
-  ASSERT_TRUE(RunLoopUntilIdle());
-
-  EXPECT_TRUE(out_result.is_response());
-  CheckAttachments({"kernel_panic_crash_log"});
-}
-
 TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   // We reset the agent with a max database size of 0, meaning reports will get cleaned up before
@@ -438,7 +407,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
                     kFeedbackDataCollectionTimeoutInMillisecondsKey});
 
   // We generate a crash report.
-  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  EXPECT_TRUE(FileOneGenericCrashReport().is_response());
 
   // We check that all the attachments have been cleaned up.
   EXPECT_TRUE(GetAttachmentSubdirs().empty());
@@ -472,7 +441,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
                     kFeedbackDataCollectionTimeoutInMillisecondsKey});
 
   // We generate a first crash report.
-  EXPECT_TRUE(RunOneCrashAnalysis(large_string).is_response());
+  EXPECT_TRUE(FileOneGenericCrashReportWithSingleAttachment(large_string).is_response());
 
   // We check that only one set of attachments is there.
   const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirs();
@@ -482,7 +451,7 @@ TEST_F(CrashpadAgentTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSize
   zx::nanosleep(zx::deadline_after(zx::sec(1)));
 
   // We generate a new crash report.
-  EXPECT_TRUE(RunOneCrashAnalysis(large_string).is_response());
+  EXPECT_TRUE(FileOneGenericCrashReportWithSingleAttachment(large_string).is_response());
 
   // We check that only one set of attachments is there and that it is a different directory than
   // previously (the directory name is the local crash report ID).
@@ -509,7 +478,7 @@ TEST_F(CrashpadAgentTest, Fail_OnFailedUpload) {
              kFeedbackDataCollectionTimeoutInMillisecondsKey},
       std::make_unique<StubCrashServer>(alwaysReturnFailure));
 
-  EXPECT_TRUE(RunOneCrashAnalysis().is_err());
+  EXPECT_TRUE(FileOneGenericCrashReport().is_err());
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
@@ -527,37 +496,32 @@ TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
                     /*feedback_data_collection_timeout_in_milliseconds=*/
                     kFeedbackDataCollectionTimeoutInMillisecondsKey});
 
-  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  EXPECT_TRUE(FileOneGenericCrashReport().is_response());
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAttachments) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
-  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
-  // The only attachment should be the one from the crash analysis as no feedback data attachments
-  // will be retrieved.
-  CheckAttachments({"kernel_panic_crash_log"});
+  EXPECT_TRUE(FileOneGenericCrashReportWithSingleAttachment().is_response());
+  CheckAttachments({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAnnotations) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAnnotation>());
-  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  EXPECT_TRUE(FileOneGenericCrashReportWithSingleAttachment().is_response());
+  CheckAttachments({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackData) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
-  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
-  // The only attachment should be the one from the crash analysis as no feedback data will be
-  // retrieved.
-  CheckAttachments({"kernel_panic_crash_log"});
+  EXPECT_TRUE(FileOneGenericCrashReportWithSingleAttachment().is_response());
+  CheckAttachments({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
   ResetFeedbackDataProvider(nullptr);
-  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
-  // The only attachment should be the one from the crash analysis as no feedback data will be
-  // retrieved.
-  CheckAttachments({"kernel_panic_crash_log"});
+  EXPECT_TRUE(FileOneGenericCrashReportWithSingleAttachment().is_response());
+  CheckAttachments({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
@@ -580,12 +544,10 @@ TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
              static_cast<uint64_t>(feedback_data_collection_timeout.to_msecs())},
       std::make_unique<StubCrashServer>(alwaysReturnSuccess));
 
-  Analyzer_OnKernelPanicCrashLog_Result result = RunOneCrashAnalysis();
+  CrashReporter_File_Result result = FileOneGenericCrashReportWithSingleAttachment();
   RunLoopFor(feedback_data_collection_timeout);
   EXPECT_TRUE(result.is_response());
-  // The only attachment should be the one from the crash analysis as no feedback data will be
-  // retrieved.
-  CheckAttachments({"kernel_panic_crash_log"});
+  CheckAttachments({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Check_OneFeedbackDataProviderConnectionPerAnalysis) {
@@ -595,33 +557,29 @@ TEST_F(CrashpadAgentTest, Check_OneFeedbackDataProviderConnectionPerAnalysis) {
 
   const size_t num_calls = 5u;
   for (size_t i = 0; i < num_calls; i++) {
-    fuchsia::mem::Buffer crash_log;
-    FXL_CHECK(fsl::VmoFromString("irrelevant, just not empty", &crash_log));
-    agent_->OnKernelPanicCrashLog(std::move(crash_log),
-                                  [](Analyzer_OnKernelPanicCrashLog_Result result) {});
+    FileOneGenericCrashReportWithSingleAttachment();
   }
-  ASSERT_TRUE(RunLoopUntilIdle());
 
   EXPECT_EQ(total_num_feedback_data_provider_bindings(), num_calls);
   EXPECT_EQ(current_num_feedback_data_provider_bindings(), 0u);
 }
 
 TEST_F(CrashpadAgentTest, Check_InspectStateAfterSuccessfulUpload) {
-  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  EXPECT_TRUE(FileOneGenericCrashReport().is_response());
 
-  EXPECT_THAT(*inspect_node_.children(), testing::ElementsAre("kernel"));
+  EXPECT_THAT(*inspect_node_.children(), testing::ElementsAre(kProgramNameGeneric));
 
-  // Root contains a "kernel" node.
-  std::shared_ptr<component::Object> kernel =
-      inspect_node_.object_dir().object()->GetChild("kernel");
-  ASSERT_NE(nullptr, kernel);
-  EXPECT_EQ("kernel", kernel->name());
+  // Root contains a single node for the program that crashed.
+  std::shared_ptr<component::Object> program =
+      inspect_node_.object_dir().object()->GetChild(kProgramNameGeneric);
+  ASSERT_NE(nullptr, program);
+  EXPECT_EQ(kProgramNameGeneric, program->name());
 
-  // "kernel" node contains a node for the crash report, with a "creation_time" property.
-  component::Object::StringOutputVector report_ids = kernel->GetChildren();
+  // "program" node contains a node for the crash report, with a "creation_time" property.
+  component::Object::StringOutputVector report_ids = program->GetChildren();
   EXPECT_EQ(1u, report_ids->size());
   std::string report_id = report_ids->front();
-  std::shared_ptr<component::Object> report = kernel->GetChild(report_id);
+  std::shared_ptr<component::Object> report = program->GetChild(report_id);
   ASSERT_NE(nullptr, report);
   EXPECT_EQ(report_id, report->name());
 
@@ -659,7 +617,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithAdditionalData) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   std::vector<Attachment> attachments;
-  attachments.emplace_back(BuildAttachment("attachment.key", "attachment.value"));
+  attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, kSingleAttachmentValue));
   ASSERT_TRUE(FileOneGenericCrashReport(
                   /*annotations=*/
                   {
@@ -667,7 +625,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithAdditionalData) {
                   },
                   /*attachments=*/std::move(attachments))
                   .is_response());
-  CheckAttachments({"attachment.key"});
+  CheckAttachments({kSingleAttachmentKey});
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {

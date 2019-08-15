@@ -47,10 +47,6 @@ class StubAnalyzer : public fuchsia::crash::Analyzer {
                                  OnManagedRuntimeExceptionCallback callback) override {
     FXL_NOTIMPLEMENTED() << "Exception broker does not call this method.";
   }
-  void OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log,
-                             OnKernelPanicCrashLogCallback callback) override {
-    FXL_NOTIMPLEMENTED() << "Exception broker does not call this method.";
-  }
 
   fidl::InterfaceRequestHandler<fuchsia::crash::Analyzer> GetHandler() {
     return [this](fidl::InterfaceRequest<fuchsia::crash::Analyzer> request) {

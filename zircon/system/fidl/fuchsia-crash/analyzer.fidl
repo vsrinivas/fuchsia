@@ -32,12 +32,6 @@ protocol Analyzer {
     OnManagedRuntimeException(string:1024 component_url,
                               ManagedRuntimeException exception)
         -> () error zx.status;
-
-    /// Requests that the crash analyzer processes the kernel panic crash log.
-    ///
-    /// A typical implementation might print the crash log to the system log or
-    /// upload a crash report to a server with the log as attachment.
-    OnKernelPanicCrashLog(fuchsia.mem.Buffer crash_log) -> () error zx.status;
 };
 
 /// Represents a managed runtime exception.

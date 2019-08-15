@@ -60,8 +60,6 @@ using fuchsia::feedback::Data;
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] = "/config/data/override_config.json";
 
-const char kKernelProgramName[] = "kernel";
-
 }  // namespace
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
@@ -203,30 +201,6 @@ void CrashpadAgent::OnManagedRuntimeException(std::string component_url,
   executor_.schedule_task(std::move(promise));
 }
 
-void CrashpadAgent::OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log,
-                                          OnKernelPanicCrashLogCallback callback) {
-  auto promise = OnKernelPanicCrashLog(std::move(crash_log))
-                     .and_then([] {
-                       Analyzer_OnKernelPanicCrashLog_Result result;
-                       Analyzer_OnKernelPanicCrashLog_Response response;
-                       result.set_response(response);
-                       return fit::ok(std::move(result));
-                     })
-                     .or_else([] {
-                       FX_LOGS(ERROR) << "Failed to process kernel panic crash log. Won't retry.";
-                       Analyzer_OnKernelPanicCrashLog_Result result;
-                       result.set_err(ZX_ERR_INTERNAL);
-                       return fit::ok(std::move(result));
-                     })
-                     .and_then([callback = std::move(callback),
-                                this](Analyzer_OnKernelPanicCrashLog_Result& result) {
-                       callback(std::move(result));
-                       PruneDatabase();
-                     });
-
-  executor_.schedule_task(std::move(promise));
-}
-
 void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   if (!IsValid(report)) {
     FX_LOGS(ERROR) << "Invalid crash report. Won't file.";
@@ -354,49 +328,6 @@ fit::promise<void> CrashpadAgent::OnManagedRuntimeException(std::string componen
         }
 
         if (!UploadReport(local_report_id, component_url, &annotations,
-                          /*read_annotations_from_minidump=*/false)) {
-          return fit::error();
-        }
-        return fit::ok();
-      });
-}
-
-fit::promise<void> CrashpadAgent::OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log) {
-  FX_LOGS(INFO) << "generating crash report for previous kernel panic";
-
-  // Create local crash report.
-  std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
-  const crashpad::CrashReportDatabase::OperationStatus database_status =
-      database_->PrepareNewCrashReport(&report);
-  if (database_status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "error creating local crash report (" << database_status << ")";
-    return fit::make_error_promise();
-  }
-
-  // Prepare annotations and attachments.
-  return GetFeedbackData(dispatcher_, services_,
-                         zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
-      .then([this, crash_log = std::move(crash_log),
-             report = std::move(report)](fit::result<Data>& result) mutable -> fit::result<void> {
-        Data feedback_data;
-        if (result.is_ok()) {
-          feedback_data = result.take_value();
-        }
-        const std::map<std::string, std::string> annotations =
-            MakeDefaultAnnotations(feedback_data,
-                                   /*program_name=*/kKernelProgramName);
-        AddKernelPanicAttachments(report.get(), feedback_data, std::move(crash_log));
-
-        // Finish new local crash report.
-        crashpad::UUID local_report_id;
-        const crashpad::CrashReportDatabase::OperationStatus database_status =
-            database_->FinishedWritingCrashReport(std::move(report), &local_report_id);
-        if (database_status != crashpad::CrashReportDatabase::kNoError) {
-          FX_LOGS(ERROR) << "error writing local crash report (" << database_status << ")";
-          return fit::error();
-        }
-
-        if (!UploadReport(local_report_id, kKernelProgramName, &annotations,
                           /*read_annotations_from_minidump=*/false)) {
           return fit::error();
         }
