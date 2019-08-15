@@ -191,6 +191,10 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
       if (blob.type == TRACE_BLOB_TYPE_LAST_BRANCH) {
         auto lbr = reinterpret_cast<const perfmon::LastBranchRecordBlob*>(blob.blob);
         last_branch_records_.push_back(*lbr);
+      } else {
+        // Drop the record.
+        FXL_LOG(INFO) << "Dropping blob record: "
+                      << "name " << blob.name.c_str() << " of size " << blob.blob_size;
       }
       break;
     }
@@ -206,6 +210,14 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
       // We can ignore these, trace::TraceReader consumes them and maintains
       // tables for future lookup.
       break;
+    case trace::RecordType::kLargeRecord:
+      switch (record.GetLargeRecord().type()) {
+        case trace::LargeRecordType::kBlob:
+          ExportBlob(record.GetLargeRecord().GetBlob());
+          break;
+        default:
+          break;
+      }
     default:
       break;
   }
@@ -453,6 +465,23 @@ void ChromiumExporter::ExportContextSwitch(const trace::Record::ContextSwitch& c
   writer_.Uint(static_cast<uint32_t>(context_switch.incoming_thread_priority));
   writer_.EndObject();
   writer_.EndObject();
+}
+
+void ChromiumExporter::ExportBlob(const trace::LargeRecordData::Blob& data) {
+  using std::get;
+  if (fit::holds_alternative<trace::LargeRecordData::BlobEvent>(data)) {
+    const auto& blob = get<trace::LargeRecordData::BlobEvent>(data);
+
+    // Drop blob event record.
+    FXL_LOG(INFO) << "Dropping large blob event record: "
+                  << "name " << blob.name.c_str() << " of size " << blob.blob_size;
+  } else if (fit::holds_alternative<trace::LargeRecordData::BlobAttachment>(data)) {
+    const auto& blob = get<trace::LargeRecordData::BlobAttachment>(data);
+
+    // Drop blob attachment record.
+    FXL_LOG(INFO) << "Dropping large blob attachment record: "
+                  << "name " << blob.name.c_str() << " of size " << blob.blob_size;
+  }
 }
 
 void ChromiumExporter::WriteArgs(const fbl::Vector<trace::Argument>& arguments) {

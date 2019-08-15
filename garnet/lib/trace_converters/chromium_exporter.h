@@ -36,6 +36,7 @@ class ChromiumExporter {
   void ExportLog(const trace::Record::Log& log);
   void ExportMetadata(const trace::Record::Metadata& metadata);
   void ExportContextSwitch(const trace::Record::ContextSwitch& context_switch);
+  void ExportBlob(const trace::LargeRecordData::Blob& blob);
 
   // Writes argument data. Assumes it is already within an
   // "args" key object.
