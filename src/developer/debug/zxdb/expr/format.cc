@@ -290,17 +290,10 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
     if (enum_name.empty())
       enum_name = member->GetAssignedName();
 
-    // TODO(brettw) this will append a child unconditionally.
-    ErrOrValue member_value = ResolveNonstaticMember(eval_context, node->value(), member);
-    if (member_value.has_error()) {
-      // In the error case, still append a child so that the child can have
-      // the error associated with it.
-      node->children().push_back(
-          std::make_unique<FormatNode>(member->GetAssignedName(), member_value.err()));
-    } else {
-      node->children().push_back(
-          std::make_unique<FormatNode>(member->GetAssignedName(), std::move(member_value.value())));
-    }
+    // In the error case, still append a child so that the child can have the error associated with
+    // it.
+    node->children().push_back(std::make_unique<FormatNode>(
+        member->GetAssignedName(), ResolveNonstaticMember(eval_context, node->value(), member)));
   }
 
   // Name for the whole node.
@@ -323,15 +316,10 @@ void FormatRustTuple(FormatNode* node, const Collection* coll, FormatNode::Descr
     if (name.size() > 2 && name[0] == '_' && name[1] == '_')
       name.erase(name.begin(), name.begin() + 2);
 
-    // Rust tuples are never static.
-    ErrOrValue member_value = ResolveNonstaticMember(eval_context, node->value(), member);
-    if (member_value.has_error()) {
-      // In the error case, still append a child so that the child can have the error associated
-      // with it.
-      node->children().push_back(std::make_unique<FormatNode>(name, member_value.err()));
-    } else {
-      node->children().push_back(std::make_unique<FormatNode>(name, member_value.value()));
-    }
+    // In the error case, still append a child so that the child can have the error associated
+    // with it.
+    node->children().push_back(
+        std::make_unique<FormatNode>(name, ResolveNonstaticMember(eval_context, node->value(), member)));
   }
 
   // When we have a use for the short description, this should be set to: "(<0>, <1>, ...)"
@@ -382,16 +370,8 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
       continue;
 
     // Derived class nodes are named by the type of the base class.
-    std::string from_name = from->GetFullName();
-    std::unique_ptr<FormatNode> base_class_node;
-
-    ErrOrValue from_value = ResolveInherited(eval_context, node->value(), inherited);
-    // TODO(brettw) make FormatNode take a ErrOrValue constructor.
-    if (from_value.has_error())
-      base_class_node = std::make_unique<FormatNode>(from_name, from_value.err());
-    else
-      base_class_node = std::make_unique<FormatNode>(from_name, from_value.value());
-
+    std::unique_ptr<FormatNode> base_class_node = std::make_unique<FormatNode>(
+        from->GetFullName(), ResolveInherited(eval_context, node->value(), inherited));
     base_class_node->set_child_kind(FormatNode::kBaseClass);
     node->children().push_back(std::move(base_class_node));
   }
@@ -405,15 +385,8 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
     if (member->artificial())
       continue;  // Skip compiler-generated data.
 
-    std::string member_name = member->GetAssignedName();
-
-    // TODO(brettw) support static members here.
-    ErrOrValue member_value = ResolveNonstaticMember(eval_context, node->value(), member);
-    if (member_value.has_error()) {
-      node->children().push_back(std::make_unique<FormatNode>(member_name, member_value.err()));
-    } else {
-      node->children().push_back(std::make_unique<FormatNode>(member_name, member_value.value()));
-    }
+    node->children().push_back(std::make_unique<FormatNode>(
+        member->GetAssignedName(), ResolveNonstaticMember(eval_context, node->value(), member)));
   }
 
   node->set_description_kind(FormatNode::kCollection);
