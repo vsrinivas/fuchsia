@@ -183,6 +183,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[ignore = "Currently flaking: crbug.com/fuchsia/34762"]
     async fn load_clients_with_populated_stash_returns_cached_clients() -> Result<(), Error> {
         let stash = new_stash()?;
         let accessor = stash.proxy.clone();
@@ -209,6 +210,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[ignore = "Currently flaking: crbug.com/fuchsia/34762"]
     async fn load_clients_with_stash_containing_invalid_entries_returns_empty_cache(
     ) -> Result<(), Error> {
         let stash = new_stash()?;
