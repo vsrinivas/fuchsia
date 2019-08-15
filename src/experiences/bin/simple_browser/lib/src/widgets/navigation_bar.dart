@@ -32,6 +32,7 @@ class _NavigationBarState extends State<NavigationBar> {
     _focusNode = FocusNode();
     _controller = TextEditingController();
     widget.bloc.url.addListener(_onUrlChanged);
+    _updateFocus();
     super.initState();
   }
 
@@ -49,17 +50,22 @@ class _NavigationBarState extends State<NavigationBar> {
       oldWidget.bloc.url.removeListener(_onUrlChanged);
       widget.bloc.url.addListener(_onUrlChanged);
       _controller.text = widget.bloc.url.value;
+      _updateFocus();
     }
     super.didUpdateWidget(oldWidget);
   }
 
+  void _updateFocus() {
+    if (_controller.text.isEmpty) {
+      FocusScope.of(context).requestFocus(_focusNode);
+    } else {
+      _focusNode.unfocus();
+    }
+  }
+
   void _onUrlChanged() {
     _controller.text = widget.bloc.url.value;
-    // TODO: Should remove once system wide focus management works
-    //   This is a hack, focus should be removed because the user clicked anywhere in the page,
-    //   not because a new page has loaded. But we don't know the user clicked, because the
-    //   webpage is a separate process.
-    _focusNode.unfocus();
+    _updateFocus();
   }
 
   @override
