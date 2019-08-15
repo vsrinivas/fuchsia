@@ -37,7 +37,7 @@ test_package("wlan-hw-sim-test") {
     },
     {
       name = "rate_selection"
-      environments = basic_envs
+      environments = [ nuc_env ]
     },
     {
       name = "set_country"
