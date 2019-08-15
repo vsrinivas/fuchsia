@@ -280,7 +280,13 @@ int unittest_set_verbosity_level(int new_level);
 // purposes.
 // TODO(ZX-2104): An alternative is to machine generate timeouts for each
 // test via training runs. Taking that on will require more research.
+#if __has_feature(address_sanitizer)
+// With ASAN tests run slower and since none of the todos above have
+// happended, we need to imcrease the base timeout here.
+#define DEFAULT_BASE_TIMEOUT_SECONDS 40
+#else
 #define DEFAULT_BASE_TIMEOUT_SECONDS 20
+#endif
 
 // Timeout scale for each of the test classes, from the base timeout.
 #define TEST_TIMEOUT_FACTOR_SMALL 1
