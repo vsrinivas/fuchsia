@@ -91,7 +91,7 @@ impl BluetoothMethod {
             "GattcWriteCharacteristicByIdWithoutResponse" => {
                 BluetoothMethod::GattcWriteCharacteristicByIdWithoutResponse
             }
-            "GattcEnableNotifyCharactertistic" => BluetoothMethod::GattcEnableNotifyCharacteristic,
+            "GattcEnableNotifyCharacteristic" => BluetoothMethod::GattcEnableNotifyCharacteristic,
             "GattcDisableNotifyCharacteristic" => BluetoothMethod::GattcDisableNotifyCharacteristic,
             "GattcReadCharacteristicById" => BluetoothMethod::GattcReadCharacteristicById,
             "GattcReadLongCharacteristicById" => BluetoothMethod::GattcReadLongCharacteristicById,
