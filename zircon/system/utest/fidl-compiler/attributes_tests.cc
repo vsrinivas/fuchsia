@@ -360,7 +360,7 @@ bool multiple_transports() {
   TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
-[Transport = "Channel, OvernetInternal"]
+[Transport = "Channel, Syscall"]
 protocol A {
     MethodA();
 };
@@ -379,7 +379,7 @@ bool multiple_transports_with_bogus() {
   TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
-[Transport = "Channel, Bogus, OvernetInternal"]
+[Transport = "Channel, Bogus, Syscall"]
 protocol A {
     MethodA();
 };

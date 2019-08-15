@@ -56,7 +56,7 @@ go_library("fidlgen_test_lib") {
 }
 
 go_test("fidlgen_cpp_test") {
-  gopackages = ["fidl/compiler/backend/cpp"]
+  gopackages = [ "fidl/compiler/backend/cpp" ]
 
   deps = [
     ":fidlgen_test_lib",
@@ -64,7 +64,7 @@ go_test("fidlgen_cpp_test") {
 }
 
 go_test("fidlgen_cpp_ir_test") {
-  gopackages = ["fidl/compiler/backend/cpp/ir"]
+  gopackages = [ "fidl/compiler/backend/cpp/ir" ]
 
   deps = [
     ":fidlgen_test_lib",
@@ -72,15 +72,7 @@ go_test("fidlgen_cpp_ir_test") {
 }
 
 go_test("fidlgen_llcpp_test") {
-  gopackages = ["fidl/compiler/llcpp_backend"]
-
-  deps = [
-    ":fidlgen_test_lib",
-  ]
-}
-
-go_test("fidlgen_cpp_overnet_internal_test") {
-  gopackages = ["fidl/compiler/backend/cpp_overnet_internal"]
+  gopackages = [ "fidl/compiler/llcpp_backend" ]
 
   deps = [
     ":fidlgen_test_lib",
@@ -88,7 +80,7 @@ go_test("fidlgen_cpp_overnet_internal_test") {
 }
 
 go_test("fidlgen_golang_test") {
-  gopackages = ["fidl/compiler/backend/golang"]
+  gopackages = [ "fidl/compiler/backend/golang" ]
 
   deps = [
     ":fidlgen_test_lib",
@@ -96,7 +88,7 @@ go_test("fidlgen_golang_test") {
 }
 
 go_test("fidlgen_golang_ir_test") {
-  gopackages = ["fidl/compiler/backend/golang/ir"]
+  gopackages = [ "fidl/compiler/backend/golang/ir" ]
 
   deps = [
     ":fidlgen_test_lib",
@@ -104,7 +96,7 @@ go_test("fidlgen_golang_ir_test") {
 }
 
 go_test("fidlgen_rust_test") {
-  gopackages = ["fidl/compiler/backend/rust"]
+  gopackages = [ "fidl/compiler/backend/rust" ]
 
   deps = [
     ":fidlgen_test_lib",
@@ -112,7 +104,7 @@ go_test("fidlgen_rust_test") {
 }
 
 go_test("fidlgen_rust_ir_test") {
-  gopackages = ["fidl/compiler/backend/rust/ir"]
+  gopackages = [ "fidl/compiler/backend/rust/ir" ]
 
   deps = [
     ":fidlgen_test_lib",
@@ -120,7 +112,7 @@ go_test("fidlgen_rust_ir_test") {
 }
 
 go_test("fidlgen_syzkaller_test") {
-  gopackages = ["fidl/compiler/backend/syzkaller"]
+  gopackages = [ "fidl/compiler/backend/syzkaller" ]
 
   deps = [
     ":fidlgen_test_lib",
@@ -128,7 +120,7 @@ go_test("fidlgen_syzkaller_test") {
 }
 
 go_test("fidlgen_syzkaller_ir_test") {
-  gopackages = ["fidl/compiler/backend/syzkaller/ir"]
+  gopackages = [ "fidl/compiler/backend/syzkaller/ir" ]
 
   deps = [
     ":fidlgen_test_lib",
@@ -136,7 +128,7 @@ go_test("fidlgen_syzkaller_ir_test") {
 }
 
 go_test("fidlgen_common_test") {
-  gopackages = ["fidl/compiler/backend/common"]
+  gopackages = [ "fidl/compiler/backend/common" ]
 
   deps = [
     ":fidlgen_test_lib",
@@ -144,7 +136,7 @@ go_test("fidlgen_common_test") {
 }
 
 go_test("fidlgen_types_test") {
-  gopackages = ["fidl/compiler/backend/types"]
+  gopackages = [ "fidl/compiler/backend/types" ]
 
   deps = [
     ":fidlgen_test_lib",

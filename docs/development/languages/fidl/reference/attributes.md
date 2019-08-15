@@ -36,7 +36,7 @@ Attributes may include multiple values, and multiple attributes may be
 specified in the same element, for example:
 
 ```fidl
-[Layout = "Simple", Transport = "OvernetEmbedded"]
+[Layout = "Simple", Transport = "Channel"]
 ```
 
 Illustrates both aspects:
@@ -195,13 +195,6 @@ Allows you to select a transport.
 Provide a comma-separated list of values, selected from:
 
 * `Channel` &mdash; use a [Zircon channel][channel].
-* `OvernetEmbedded` &mdash; uses a transport that makes Overnet available on
-  a variety of operating systems by embedding the Overnet runtime as a C++
-  library and providing a C++ API for remotable handles.
-* `OvernetInternal` &mdash; transport that is used by Overnet internally to
-  communicate between peers.
-  Each end of the transport implements both client and server parts of the
-  protocol, and no handles can be transferred.
 * `Syscall` &mdash; transport used to specify that the protocol is used to
   define Zircon syscalls, rather than typical IPC.
 

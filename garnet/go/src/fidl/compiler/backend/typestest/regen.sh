@@ -36,10 +36,6 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     cpp_source_name=${json_name}.cc
     llcpp_header_name=${json_name}.llcpp.h
     llcpp_source_name=${json_name}.llcpp.cc
-    overnet_internal_header_name=${json_name}.overnet_internal.h
-    overnet_internal_source_name=${json_name}.overnet_internal.cc
-    overnet_embedded_header_name=${json_name}.overnet_embedded.h
-    overnet_embedded_source_name=${json_name}.overnet_embedded.cc
     go_impl_name=${json_name}.go
     rust_name=${json_name}.rs
     syzkaller_name=${json_name}.syz.txt
@@ -51,8 +47,6 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
       "${cpp_source_name}.golden",
       "${llcpp_header_name}.golden",
       "${llcpp_source_name}.golden",
-      "${overnet_internal_header_name}.golden",
-      "${overnet_internal_source_name}.golden",
       "${go_impl_name}.golden",
       "${rust_name}.golden",
       "${syzkaller_name}.golden",
@@ -83,24 +77,6 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
         -include-base "${GOLDENS_DIR}"
     mv "${GOLDENS_DIR}/${llcpp_header_name}" "${GOLDENS_DIR}/${llcpp_header_name}.golden"
     mv "${GOLDENS_DIR}/${llcpp_source_name}" "${GOLDENS_DIR}/${llcpp_source_name}.golden"
-
-    echo "  overnet_internal: ${json_name} > ${overnet_internal_header_name} and ${overnet_internal_source_name}"
-    ${FIDLGEN} \
-        -generators overnet_internal \
-        -json "${GOLDENS_DIR}/${json_name}" \
-        -output-base "${GOLDENS_DIR}/${json_name}.overnet_internal" \
-        -include-base "${GOLDENS_DIR}"
-    mv "${GOLDENS_DIR}/${overnet_internal_header_name}" "${GOLDENS_DIR}/${overnet_internal_header_name}.golden"
-    mv "${GOLDENS_DIR}/${overnet_internal_source_name}" "${GOLDENS_DIR}/${overnet_internal_source_name}.golden"
-
-    echo "  overnet_embedded: ${json_name} > ${overnet_embedded_header_name} and ${overnet_embedded_source_name}"
-    ${FIDLGEN} \
-        -generators overnet_embedded \
-        -json "${GOLDENS_DIR}/${json_name}" \
-        -output-base "${GOLDENS_DIR}/${json_name}.overnet_embedded" \
-        -include-base "${GOLDENS_DIR}"
-    mv "${GOLDENS_DIR}/${overnet_embedded_header_name}" "${GOLDENS_DIR}/${overnet_embedded_header_name}.golden"
-    mv "${GOLDENS_DIR}/${overnet_embedded_source_name}" "${GOLDENS_DIR}/${overnet_embedded_source_name}.golden"
 
     echo "  go: ${json_name} > ${go_impl_name}"
     ${FIDLGEN} \

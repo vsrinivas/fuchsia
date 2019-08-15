@@ -13,7 +13,6 @@ group("tools") {
 group("tests") {
   testonly = true
   deps = [
-    "ascendd:tests",
     "onet:tests",
   ]
 }

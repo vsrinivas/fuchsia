@@ -16,8 +16,3 @@ rustc_binary("bin") {
 
   deps = []
 }
-
-group("tests") {
-  testonly = true
-  deps = []
-}

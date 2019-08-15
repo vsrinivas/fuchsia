@@ -100,8 +100,6 @@ template("fidl") {
                 "_c_client",
                 "_c_server",
                 "_llcpp",
-                "_overnet_embedded",
-                "_overnet_internal",
               ]) {
         group(target_name + suffix) {
           forward_variables_from(invoker, [ "testonly" ])
@@ -168,27 +166,6 @@ template("fidl") {
           fidlgen_generator = "cpp"
           output_stem = "cpp/fidl"
           additional_public_deps = hlcpp_public_deps
-        },
-        {
-          target_suffix = "overnet_internal"
-          fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
-          fidlgen_generator = "overnet_internal"
-          output_stem = "cpp/overnet_internal"
-          additional_public_deps =
-              hlcpp_public_deps + [
-                "//src/connectivity/overnet/deprecated/lib/protocol:fidl_stream",
-                ":$target_name",
-              ]
-        },
-        {
-          target_suffix = "overnet_embedded"
-          fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
-          fidlgen_generator = "overnet_embedded"
-          output_stem = "cpp/overnet_embedded"
-          additional_public_deps = [
-            "//src/connectivity/overnet/deprecated/lib/embedded:runtime",
-            ":$target_name",
-          ]
         },
       ]
       llcpp_generators = _llcpp_generators

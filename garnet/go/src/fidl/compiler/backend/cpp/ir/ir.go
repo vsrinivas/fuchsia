@@ -50,13 +50,11 @@ type Type struct {
 	// Identifier() will add a type qualifier to the class name so that the compiler will resolve
 	// the class, even if any locally non-type declarations are present (e.g. "enum Foo"). Google
 	// for "C++ elaborated type specifier" for more details.
-	Decl                string
-	LLDecl              string
-	OvernetEmbeddedDecl string
+	Decl   string
+	LLDecl string
 
-	Dtor                string
-	LLDtor              string
-	OvernetEmbeddedDtor string
+	Dtor   string
+	LLDtor string
 
 	DeclType types.DeclType
 
@@ -308,14 +306,13 @@ type Parameter struct {
 }
 
 type Root struct {
-	PrimaryHeader          string
-	Headers                []string
-	LLHeaders              []string
-	OvernetEmbeddedHeaders []string
-	HandleTypes            []string
-	Library                types.LibraryIdentifier
-	LibraryReversed        types.LibraryIdentifier
-	Decls                  []Decl
+	PrimaryHeader   string
+	Headers         []string
+	LLHeaders       []string
+	HandleTypes     []string
+	Library         types.LibraryIdentifier
+	LibraryReversed types.LibraryIdentifier
+	Decls           []Decl
 }
 
 func (m *Method) CallbackWrapper() string {
@@ -616,8 +613,6 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
 		r.Dtor = fmt.Sprintf("~array")
 		r.LLDtor = fmt.Sprintf("~Array")
-		r.OvernetEmbeddedDecl = r.Decl
-		r.OvernetEmbeddedDtor = r.Dtor
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
@@ -628,8 +623,6 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Decl = fmt.Sprintf("::std::vector<%s>", t.Decl)
 			r.Dtor = fmt.Sprintf("~vector")
 		}
-		r.OvernetEmbeddedDecl = r.Decl
-		r.OvernetEmbeddedDtor = r.Dtor
 	case types.StringType:
 		r.LLDecl = "::fidl::StringView"
 		if val.Nullable {
@@ -639,8 +632,6 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Decl = "::std::string"
 			r.Dtor = "~basic_string"
 		}
-		r.OvernetEmbeddedDecl = r.Decl
-		r.OvernetEmbeddedDtor = r.Dtor
 	case types.HandleType:
 		c.handleTypes[val.HandleSubtype] = true
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
@@ -651,26 +642,18 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Dtor = fmt.Sprintf("~%s", val.HandleSubtype)
 		}
 		r.LLDtor = r.Dtor
-		r.OvernetEmbeddedDecl = fmt.Sprintf("::overnet::ClosedPtr<::overnet::Zx%s>",
-			strings.Title(fmt.Sprintf("%s", val.HandleSubtype)))
-		r.OvernetEmbeddedDtor = "~ClosedPtr"
 	case types.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", ""))
 		r.LLDecl = "::zx::channel"
 		r.Dtor = "~InterfaceRequest"
 		r.LLDtor = "~channel"
-		r.OvernetEmbeddedDecl = fmt.Sprintf("::std::unique_ptr<%s_Request>",
-			c.compileCompoundIdentifier(val.RequestSubtype, "", "embedded"))
-		r.OvernetEmbeddedDtor = "~unique_ptr"
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.LLDecl = r.Decl
-		r.OvernetEmbeddedDecl = r.Decl
 		r.IsPrimitive = true
 	case types.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier, "", "")
-		tEmbbeded := c.compileCompoundIdentifier(val.Identifier, "", "embedded")
 		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier: ", val.Identifier)
@@ -701,23 +684,17 @@ func (c *compiler) compileType(val types.Type) Type {
 					r.LLDecl = fmt.Sprintf("%s*", t)
 				}
 				r.Dtor = "~unique_ptr"
-				r.OvernetEmbeddedDecl = fmt.Sprintf("::std::unique_ptr<%s>", tEmbbeded)
-				r.OvernetEmbeddedDtor = "~unique_ptr"
 			} else {
 				r.Decl = t
 				r.LLDecl = r.Decl
 				r.Dtor = formatDestructor(val.Identifier)
 				r.LLDtor = r.Dtor
-				r.OvernetEmbeddedDecl = tEmbbeded
-				r.OvernetEmbeddedDtor = r.Dtor
 			}
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
 			r.Dtor = fmt.Sprintf("~InterfaceHandle")
 			r.LLDecl = "::zx::channel"
 			r.LLDtor = "~channel"
-			r.OvernetEmbeddedDecl = fmt.Sprintf("::std::unique_ptr<%s_Proxy>", tEmbbeded)
-			r.OvernetEmbeddedDtor = "~unique_ptr"
 		default:
 			log.Fatal("Unknown declaration type: ", declType)
 		}
@@ -1239,7 +1216,6 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 		libraryIdent := types.ParseLibraryName(l.Name)
 		root.Headers = append(root.Headers, fmt.Sprintf("%s/cpp/fidl.h", formatLibraryPath(libraryIdent)))
 		root.LLHeaders = append(root.LLHeaders, fmt.Sprintf("%s/llcpp/fidl.h", formatLibraryPath(libraryIdent)))
-		root.OvernetEmbeddedHeaders = append(root.OvernetEmbeddedHeaders, fmt.Sprintf("%s/cpp/overnet_embedded.h", formatLibraryPath(libraryIdent)))
 	}
 
 	// zx::channel is always referenced by the interfaces in llcpp bindings API

@@ -407,7 +407,6 @@ group("all") {
     ":odu_host_tests",
     ":odu_tests",
     ":omaha_client",
-    ":overnet",
     ":pkg_cache",
     ":pkg_ctl",
     ":pkg_resolver",
@@ -600,7 +599,6 @@ group("fidl") {
     "//garnet/examples/fidl/echo_server_cpp:echo_server_cpp_tests",
     "//garnet/go/src/fidl:fidlgen_common_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_cpp_ir_test($host_toolchain)",
-    "//garnet/go/src/fidl:fidlgen_cpp_overnet_internal_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_cpp_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_golang_ir_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_golang_test($host_toolchain)",
@@ -633,22 +631,6 @@ group("netemul") {
   testonly = true
   public_deps = [
     "//src/connectivity/network/testing/netemul:tests",
-  ]
-}
-
-group("overnet") {
-  testonly = true
-  public_deps = [
-    # FIXME(FLK-187, FLK-188): Disabled because of flakes.
-    # "//src/connectivity/overnet/examples:overnet_examples_tests",
-    "//src/connectivity/overnet/deprecated/lib:overnet_fuzzers",
-    "//src/connectivity/overnet/deprecated/lib:overnet_tests",
-    "//src/connectivity/overnet/deprecated/lib:overnet_unittests($host_toolchain)",
-    "//src/connectivity/overnet/deprecated/lib/endpoint/integration_tests:router_endpoint_integration_fuzzer_replay($host_toolchain)",
-    "//src/connectivity/overnet/deprecated/overnetstack:overnetstack_tests",
-    "//src/connectivity/overnet/examples:overnet_examples_tests",
-    "//src/connectivity/overnet/lib/core:overnet-core-tests",
-    "//src/connectivity/overnet/lib/salt_slab:salt_slab_test_build($host_toolchain)",
   ]
 }
 

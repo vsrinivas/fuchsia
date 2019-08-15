@@ -105,10 +105,9 @@ func TestCompileInterface(t *testing.T) {
 						Request: []Parameter{
 							{
 								Type: Type{
-									Decl:                "int16_t",
-									LLDecl:              "int16_t",
-									OvernetEmbeddedDecl: "int16_t",
-									IsPrimitive:         true,
+									Decl:        "int16_t",
+									LLDecl:      "int16_t",
+									IsPrimitive: true,
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -159,12 +158,10 @@ func TestCompileInterface(t *testing.T) {
 						Request: []Parameter{
 							{
 								Type: Type{
-									Decl:                "::fidl::StringPtr",
-									LLDecl:              "::fidl::StringView",
-									Dtor:                "~StringPtr",
-									OvernetEmbeddedDecl: "::fidl::StringPtr",
-									OvernetEmbeddedDtor: "~StringPtr",
-									IsPrimitive:         false,
+									Decl:        "::fidl::StringPtr",
+									LLDecl:      "::fidl::StringView",
+									Dtor:        "~StringPtr",
+									IsPrimitive: false,
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -177,10 +174,9 @@ func TestCompileInterface(t *testing.T) {
 						Response: []Parameter{
 							{
 								Type: Type{
-									Decl:                "uint32_t",
-									LLDecl:              "uint32_t",
-									OvernetEmbeddedDecl: "uint32_t",
-									IsPrimitive:         true,
+									Decl:        "uint32_t",
+									LLDecl:      "uint32_t",
+									IsPrimitive: true,
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -280,10 +276,9 @@ func TestCompileInterface(t *testing.T) {
 						Response: []Parameter{
 							{
 								Type: Type{
-									Decl:                "int16_t",
-									LLDecl:              "int16_t",
-									OvernetEmbeddedDecl: "int16_t",
-									IsPrimitive:         true,
+									Decl:        "int16_t",
+									LLDecl:      "int16_t",
+									IsPrimitive: true,
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -391,13 +386,11 @@ func TestCompileInterface(t *testing.T) {
 						Response: []Parameter{
 							{
 								Type: Type{
-									Decl:                "::std::array<int64_t, 8000>",
-									LLDecl:              "::fidl::Array<int64_t, 8000>",
-									Dtor:                "~array",
-									LLDtor:              "~Array",
-									OvernetEmbeddedDecl: "::std::array<int64_t, 8000>",
-									OvernetEmbeddedDtor: "~array",
-									IsPrimitive:         false,
+									Decl:        "::std::array<int64_t, 8000>",
+									LLDecl:      "::fidl::Array<int64_t, 8000>",
+									Dtor:        "~array",
+									LLDtor:      "~Array",
+									IsPrimitive: false,
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -544,10 +537,9 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						Request: []Parameter{
 							{
 								Type: Type{
-									Decl:                "int16_t",
-									LLDecl:              "int16_t",
-									OvernetEmbeddedDecl: "int16_t",
-									IsPrimitive:         true,
+									Decl:        "int16_t",
+									LLDecl:      "int16_t",
+									IsPrimitive: true,
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -598,12 +590,10 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						Request: []Parameter{
 							{
 								Type: Type{
-									Decl:                "::fidl::StringPtr",
-									LLDecl:              "::fidl::StringView",
-									Dtor:                "~StringPtr",
-									OvernetEmbeddedDecl: "::fidl::StringPtr",
-									OvernetEmbeddedDtor: "~StringPtr",
-									IsPrimitive:         false,
+									Decl:        "::fidl::StringPtr",
+									LLDecl:      "::fidl::StringView",
+									Dtor:        "~StringPtr",
+									IsPrimitive: false,
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -616,10 +606,9 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						Response: []Parameter{
 							{
 								Type: Type{
-									Decl:                "uint32_t",
-									LLDecl:              "uint32_t",
-									OvernetEmbeddedDecl: "uint32_t",
-									IsPrimitive:         true,
+									Decl:        "uint32_t",
+									LLDecl:      "uint32_t",
+									IsPrimitive: true,
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -719,10 +708,9 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						Response: []Parameter{
 							{
 								Type: Type{
-									Decl:                "int16_t",
-									LLDecl:              "int16_t",
-									OvernetEmbeddedDecl: "int16_t",
-									IsPrimitive:         true,
+									Decl:        "int16_t",
+									LLDecl:      "int16_t",
+									IsPrimitive: true,
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -830,13 +818,11 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						Response: []Parameter{
 							{
 								Type: Type{
-									Decl:                "::std::array<int64_t, 8000>",
-									LLDecl:              "::fidl::Array<int64_t, 8000>",
-									Dtor:                "~array",
-									LLDtor:              "~Array",
-									OvernetEmbeddedDecl: "::std::array<int64_t, 8000>",
-									OvernetEmbeddedDtor: "~array",
-									IsPrimitive:         false,
+									Decl:        "::std::array<int64_t, 8000>",
+									LLDecl:      "::fidl::Array<int64_t, 8000>",
+									Dtor:        "~array",
+									LLDtor:      "~Array",
+									IsPrimitive: false,
 								},
 								Name:   "Value",
 								Offset: 0,
@@ -1049,10 +1035,9 @@ func TestCompileTable(t *testing.T) {
 				Members: []TableMember{
 					{
 						Type: Type{
-							Decl:                "int64_t",
-							LLDecl:              "int64_t",
-							OvernetEmbeddedDecl: "int64_t",
-							IsPrimitive:         true,
+							Decl:        "int64_t",
+							LLDecl:      "int64_t",
+							IsPrimitive: true,
 						},
 						Name:              "second",
 						Ordinal:           2,
@@ -1132,10 +1117,9 @@ func TestCompileTableLlcppNamespaceShouldBeRenamed(t *testing.T) {
 				Members: []TableMember{
 					{
 						Type: Type{
-							Decl:                "int64_t",
-							LLDecl:              "int64_t",
-							OvernetEmbeddedDecl: "int64_t",
-							IsPrimitive:         true,
+							Decl:        "int64_t",
+							LLDecl:      "int64_t",
+							IsPrimitive: true,
 						},
 						Name:              "second",
 						Ordinal:           2,
@@ -1228,10 +1212,9 @@ func TestCompileXUnion(t *testing.T) {
 						Attributes: types.Attributes{},
 						Ordinal:    0xdeadbeef,
 						Type: Type{
-							Decl:                "int64_t",
-							LLDecl:              "int64_t",
-							OvernetEmbeddedDecl: "int64_t",
-							IsPrimitive:         true,
+							Decl:        "int64_t",
+							LLDecl:      "int64_t",
+							IsPrimitive: true,
 						},
 						Name:        "i",
 						StorageName: "i_",
@@ -1297,13 +1280,11 @@ func TestCompileXUnion(t *testing.T) {
 						Attributes: types.Attributes{},
 						Ordinal:    0x11111111,
 						Type: Type{
-							Decl:                "::std::array<int64_t, 10>",
-							LLDecl:              "::fidl::Array<int64_t, 10>",
-							Dtor:                "~array",
-							LLDtor:              "~Array",
-							OvernetEmbeddedDecl: "::std::array<int64_t, 10>",
-							OvernetEmbeddedDtor: "~array",
-							IsPrimitive:         false,
+							Decl:        "::std::array<int64_t, 10>",
+							LLDecl:      "::fidl::Array<int64_t, 10>",
+							Dtor:        "~array",
+							LLDtor:      "~Array",
+							IsPrimitive: false,
 						},
 						Name:        "i",
 						StorageName: "i_",
@@ -1314,13 +1295,11 @@ func TestCompileXUnion(t *testing.T) {
 						Attributes: types.Attributes{},
 						Ordinal:    0x22222222,
 						Type: Type{
-							Decl:                "::std::array<int64_t, 20>",
-							LLDecl:              "::fidl::Array<int64_t, 20>",
-							Dtor:                "~array",
-							LLDtor:              "~Array",
-							OvernetEmbeddedDecl: "::std::array<int64_t, 20>",
-							OvernetEmbeddedDtor: "~array",
-							IsPrimitive:         false,
+							Decl:        "::std::array<int64_t, 20>",
+							LLDecl:      "::fidl::Array<int64_t, 20>",
+							Dtor:        "~array",
+							LLDtor:      "~Array",
+							IsPrimitive: false,
 						},
 						Name:        "j",
 						StorageName: "j_",

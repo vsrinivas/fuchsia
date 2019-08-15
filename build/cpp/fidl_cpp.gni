@@ -86,8 +86,7 @@ template("fidl_llcpp_codegen") {
   }
 
   main_target_name = target_name
-  generation_target_name =
-      "${invoker.root_target}_llcpp_generate"
+  generation_target_name = "${invoker.root_target}_llcpp_generate"
 
   library_name = target_name
   if (defined(invoker.name)) {
@@ -199,10 +198,11 @@ template("fidl_cpp_library") {
 
 template("fidl_cpp") {
   assert(defined(invoker.generators), "Need a list of generator tuples")
-  not_needed(invoker, [
-    "generators",
-    "llcpp_generators"
-  ])
+  not_needed(invoker,
+             [
+               "generators",
+               "llcpp_generators",
+             ])
 
   if (current_toolchain == fidl_toolchain) {
     library_name = target_name
@@ -263,12 +263,11 @@ template("fidl_cpp") {
       }
 
       if (defined(generator_settings.target_suffix)) {
-        lib_name = "${target_name}_${generator_settings.target_suffix}"
         target_suffix = "_${generator_settings.target_suffix}"
       } else {
-        lib_name = target_name
         target_suffix = ""
       }
+      lib_name = "${target_name}${target_suffix}"
 
       fidl_cpp_library(lib_name) {
         forward_variables_from(invoker, "*")

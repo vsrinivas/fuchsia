@@ -4,8 +4,6 @@ bits.test.test.fidl.json.go.golden
 bits.test.test.fidl.json.h.golden
 bits.test.test.fidl.json.llcpp.cc.golden
 bits.test.test.fidl.json.llcpp.h.golden
-bits.test.test.fidl.json.overnet_internal.cc.golden
-bits.test.test.fidl.json.overnet_internal.h.golden
 bits.test.test.fidl.json.rs.golden
 bits.test.test.fidl.json.syz.txt.golden
 bits.test.test.fidl.json_test_base.h.golden
@@ -15,8 +13,6 @@ consts.test.fidl.json.go.golden
 consts.test.fidl.json.h.golden
 consts.test.fidl.json.llcpp.cc.golden
 consts.test.fidl.json.llcpp.h.golden
-consts.test.fidl.json.overnet_internal.cc.golden
-consts.test.fidl.json.overnet_internal.h.golden
 consts.test.fidl.json.rs.golden
 consts.test.fidl.json.syz.txt.golden
 consts.test.fidl.json_test_base.h.golden
@@ -26,8 +22,6 @@ doc_comments.test.fidl.json.go.golden
 doc_comments.test.fidl.json.h.golden
 doc_comments.test.fidl.json.llcpp.cc.golden
 doc_comments.test.fidl.json.llcpp.h.golden
-doc_comments.test.fidl.json.overnet_internal.cc.golden
-doc_comments.test.fidl.json.overnet_internal.h.golden
 doc_comments.test.fidl.json.rs.golden
 doc_comments.test.fidl.json.syz.txt.golden
 doc_comments.test.fidl.json_test_base.h.golden
@@ -37,8 +31,6 @@ empty_struct.test.fidl.json.go.golden
 empty_struct.test.fidl.json.h.golden
 empty_struct.test.fidl.json.llcpp.cc.golden
 empty_struct.test.fidl.json.llcpp.h.golden
-empty_struct.test.fidl.json.overnet_internal.cc.golden
-empty_struct.test.fidl.json.overnet_internal.h.golden
 empty_struct.test.fidl.json.rs.golden
 empty_struct.test.fidl.json.syz.txt.golden
 empty_struct.test.fidl.json_test_base.h.golden
@@ -48,8 +40,6 @@ handles.test.fidl.json.go.golden
 handles.test.fidl.json.h.golden
 handles.test.fidl.json.llcpp.cc.golden
 handles.test.fidl.json.llcpp.h.golden
-handles.test.fidl.json.overnet_internal.cc.golden
-handles.test.fidl.json.overnet_internal.h.golden
 handles.test.fidl.json.rs.golden
 handles.test.fidl.json.syz.txt.golden
 handles.test.fidl.json_test_base.h.golden
@@ -59,8 +49,6 @@ ordinal_switch.test.fidl.json.go.golden
 ordinal_switch.test.fidl.json.h.golden
 ordinal_switch.test.fidl.json.llcpp.cc.golden
 ordinal_switch.test.fidl.json.llcpp.h.golden
-ordinal_switch.test.fidl.json.overnet_internal.cc.golden
-ordinal_switch.test.fidl.json.overnet_internal.h.golden
 ordinal_switch.test.fidl.json.rs.golden
 ordinal_switch.test.fidl.json.syz.txt.golden
 ordinal_switch.test.fidl.json_test_base.h.golden
@@ -70,8 +58,6 @@ protocol_request.test.fidl.json.go.golden
 protocol_request.test.fidl.json.h.golden
 protocol_request.test.fidl.json.llcpp.cc.golden
 protocol_request.test.fidl.json.llcpp.h.golden
-protocol_request.test.fidl.json.overnet_internal.cc.golden
-protocol_request.test.fidl.json.overnet_internal.h.golden
 protocol_request.test.fidl.json.rs.golden
 protocol_request.test.fidl.json.syz.txt.golden
 protocol_request.test.fidl.json_test_base.h.golden
@@ -81,8 +67,6 @@ protocols.test.fidl.json.go.golden
 protocols.test.fidl.json.h.golden
 protocols.test.fidl.json.llcpp.cc.golden
 protocols.test.fidl.json.llcpp.h.golden
-protocols.test.fidl.json.overnet_internal.cc.golden
-protocols.test.fidl.json.overnet_internal.h.golden
 protocols.test.fidl.json.rs.golden
 protocols.test.fidl.json.syz.txt.golden
 protocols.test.fidl.json_test_base.h.golden
@@ -92,8 +76,6 @@ service.test.fidl.json.go.golden
 service.test.fidl.json.h.golden
 service.test.fidl.json.llcpp.cc.golden
 service.test.fidl.json.llcpp.h.golden
-service.test.fidl.json.overnet_internal.cc.golden
-service.test.fidl.json.overnet_internal.h.golden
 service.test.fidl.json.rs.golden
 service.test.fidl.json.syz.txt.golden
 service.test.fidl.json_test_base.h.golden
@@ -103,8 +85,6 @@ tables.test.fidl.json.go.golden
 tables.test.fidl.json.h.golden
 tables.test.fidl.json.llcpp.cc.golden
 tables.test.fidl.json.llcpp.h.golden
-tables.test.fidl.json.overnet_internal.cc.golden
-tables.test.fidl.json.overnet_internal.h.golden
 tables.test.fidl.json.rs.golden
 tables.test.fidl.json.syz.txt.golden
 tables.test.fidl.json_test_base.h.golden
@@ -114,8 +94,6 @@ union.test.fidl.json.go.golden
 union.test.fidl.json.h.golden
 union.test.fidl.json.llcpp.cc.golden
 union.test.fidl.json.llcpp.h.golden
-union.test.fidl.json.overnet_internal.cc.golden
-union.test.fidl.json.overnet_internal.h.golden
 union.test.fidl.json.rs.golden
 union.test.fidl.json.syz.txt.golden
 union.test.fidl.json_test_base.h.golden
@@ -125,8 +103,6 @@ xunion.test.fidl.json.go.golden
 xunion.test.fidl.json.h.golden
 xunion.test.fidl.json.llcpp.cc.golden
 xunion.test.fidl.json.llcpp.h.golden
-xunion.test.fidl.json.overnet_internal.cc.golden
-xunion.test.fidl.json.overnet_internal.h.golden
 xunion.test.fidl.json.rs.golden
 xunion.test.fidl.json.syz.txt.golden
 xunion.test.fidl.json_test_base.h.golden
