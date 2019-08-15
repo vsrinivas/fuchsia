@@ -3,6 +3,6 @@ open-source projects that provide a BUILD.gn file to be used
 within GN-based build environments, like the Chromium or
 Fuchsia one.
 
-See [BLD-503] for more information.
+See issue [3928] for more information.
 
-[BLD-503]: https://fuchsia.atlassian.net/projects/BLD/issues/BLD-503
+[3928]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=3298

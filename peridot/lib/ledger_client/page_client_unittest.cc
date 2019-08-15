@@ -112,7 +112,7 @@ class PageClientTest : public TestWithLedger {
   FXL_DISALLOW_COPY_AND_ASSIGN(PageClientTest);
 };
 
-// This test is flaky. https://fuchsia.atlassian.net/browse/MI4-797
+// This test is flaky. https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=17430
 TEST_F(PageClientTest, DISABLED_SimpleWriteObserve) {
   // Create a PageClient for a page, and write directly to it. We expect to see
   // the resulting change in the PageClient.

@@ -1,6 +1,6 @@
 # zxcrypt
 
-__<font color=red>ALERT: zxcrypt is not secure until [ZX-1130][zx1130] is resolved!</font>__
+__<font color=red>ALERT: zxcrypt is not secure until [31073][issue31073] is resolved!</font>__
 
 ## Overview
 zxcrypt is a block device filter driver that transparently encrypts data being written to and
@@ -138,12 +138,12 @@ device keys, e.g. those from a [TPM][tpm], in deriving their zxcrypt key._
 
 ## Future Work
 There are a number of areas where further work could, should, or must be done:
-* __Properly bind with keys__ ([bug][zx1130])
+* __Properly bind with keys__ ([bug][issue31073])
 
   Currently, there is __NO__ way to inject a key at binding.  This forces zxcrypt to currently use a
   __static key__, which catastrophically undermines its security.
 
-* __Unbind on-demand__ ([bug][zx1138])
+* __Unbind on-demand__ ([bug][issue31081])
 
   Currently, there is no way to ask a zxcrypt driver to unbind on demand.  The only way currently is
   to force the underlying device to unbind it, for example by issuing a `RebindDevice`
@@ -198,8 +198,8 @@ There are a number of areas where further work could, should, or must be done:
 [hmac]: https://www.ietf.org/rfc/rfc2104.txt
 [stretch]: https://en.wikipedia.org/wiki/Key_stretching
 [tpm]: https://trustedcomputinggroup.org/work-groups/trusted-platform-module/
-[zx1130]: https://fuchsia.atlassian.net/browse/ZX-1130
-[zx1138]: https://fuchsia.atlassian.net/browse/ZX-1138
+[issue31073]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=31073
+[issue31081]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=31081
 [aead]: https://tools.ietf.org/html/rfc5116
 [atomic]: https://en.wikipedia.org/wiki/Atomic_commit
 [escrow]: https://en.wikipedia.org/wiki/Key_escrow

@@ -16,7 +16,8 @@
 namespace ledger {
 namespace {
 
-// TODO(https://fuchsia.atlassian.net/browse/LE-760): Support unicode.
+// TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12294): Support
+// unicode.
 bool IsStringPrintable(const fxl::StringView& input) {
   // Just ASCII for the time being. Sorry unicode!
   return std::all_of(input.begin(), input.end(),

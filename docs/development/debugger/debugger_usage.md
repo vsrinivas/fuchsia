@@ -276,8 +276,8 @@ It's not currently possible to set up the debugger early enough in system
 startup to debug most driver initialization. And since zxdb itself uses the
 network, no drivers associated with network communication can be debugged.
 
-Driver debugging support is tracked in
-[DX-598](https://fuchsia.atlassian.net/browse/DX-598).
+Driver debugging support is tracked in issue
+[5456](<https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5456).
 
 You can debug running drivers by attaching like any other process (see
 “Attaching to an existing process” below). You can delay initialization to
@@ -471,7 +471,7 @@ Whenever you create or stop on a breakpoint, that breakpoint becomes the
 default automatically so clear always clears the one you just hit. Note that
 unlike GDB, “clear” takes a breakpoint context before the verb and there are
 never any arguments after it. Support for GDB-like “clear <location>” is
-[DX-594](https://fuchsia.atlassian.net/browse/DX-594).
+issue [5452](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5452).
 
 ### Programatic breakpoints
 
@@ -670,9 +670,9 @@ true
 
 Things that don’t currently work are:
 
-  * Math ([DX-600](https://fuchsia.atlassian.net/browse/DX-600))
-  * Function calls ([DX-599](https://fuchsia.atlassian.net/browse/DX-599))
-  * Pretty-printing (especially for STL) ([DX-601](https://fuchsia.atlassian.net/browse/DX-601))
+  * Math ([5458](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5458))
+  * Function calls ([5457](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5457))
+  * Pretty-printing (especially for STL) ([5459](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5459))
   * Various Rust-isms (please file feature requests!).
 
 ### Controlling execution (stepping, etc.)

@@ -134,9 +134,9 @@ class PageManager {
 
   std::optional<ActivePageManagerContainer> active_page_manager_container_;
 
-  // TODO(https://fuchsia.atlassian.net/browse/LE-769): Based on the way
-  // was_opened_ is used there may be opportunities to simplify the state that
-  // is maintained in the following fields.
+  // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12303): Based on
+  // the way was_opened_ is used there may be opportunities to simplify the
+  // state that is maintained in the following fields.
   // |was_opened_| is used to track whether the page was opened during a given
   // operation. When |IsClosedAndSatisfiesPredicate| is called, a unique
   // operation id is added to this vector. The operation id will be deleted from

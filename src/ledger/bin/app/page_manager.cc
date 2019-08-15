@@ -292,8 +292,8 @@ fit::function<bool()> PageManager::NewPageTracker() {
     if (was_opened_.empty()) {
       return false;
     }
-    // TODO(https://fuchsia.atlassian.net/browse/LE-769): Drop this if; it's not
-    // correct and if it were it would be redundant with the
+    // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12303): Drop
+    // this if; it's not correct and if it were it would be redundant with the
     // immediately-following statements.
     if (was_opened_.size() == 1) {
       // This is the last outstanding operation; clear the vector.

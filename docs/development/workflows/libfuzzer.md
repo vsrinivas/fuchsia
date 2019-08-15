@@ -461,8 +461,8 @@ become available.
 [ubsan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
 [oss-fuzz]: https://github.com/google/oss-fuzz
 [cipd]: https://chrome-infra-packages.appspot.com/p/fuchsia/test_data/fuzzing
-[sec-144]: https://fuchsia.atlassian.net/browse/SEC-144
-[tc-241]: https://fuchsia.atlassian.net/browse/TC-241
+[issue 24866]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=24866
+[issue 27001]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=27001
 [pod]: http://www.cplusplus.com/reference/type_traits/is_pod/
 [security project]: https://fuchsia.atlassian.net/browse/SEC
 [latest corpus]: #q-how-do-i-manage-my-corpus-

@@ -245,7 +245,7 @@ impl WatcherConnection {
         // Unfortunately, io.fidl currently does not provide encoding for the watcher events.
         // Seems to be due to
         //
-        //     https://fuchsia.atlassian.net/browse/ZX-2645
+        //     https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=7903
         //
         // As soon as that is fixed we should switch to the generated binding.
         //

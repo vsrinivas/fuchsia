@@ -355,7 +355,7 @@ func TestRefresh(t *testing.T) {
 	}
 }
 
-// Regression test for https://fuchsia.atlassian.net/browse/NET-17
+// Regression test for https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=20506
 func TestNoNullTerminator(t *testing.T) {
 	v := "\x02\x01\x06\x00" +
 		"\xc8\x37\xbe\x73\x00\x00\x80\x00\x00\x00\x00\x00\xc0\xa8\x2b\x92" +

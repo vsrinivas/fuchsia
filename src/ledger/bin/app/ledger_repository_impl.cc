@@ -120,8 +120,9 @@ void LedgerRepositoryImpl::DeletePageStorage(fxl::StringView ledger_name,
   return ledger_manager->DeletePageStorage(page_id, std::move(callback));
 }
 
-// TODO(https://fuchsia.atlassian.net/browse/LE-792): The disk scan should be
-// made to happen either asynchronously or not on the main thread.
+// TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12326): The disk
+// scan should be made to happen either asynchronously or not on the main
+// thread.
 void LedgerRepositoryImpl::GetNames(fit::function<void(std::vector<std::string>)> callback) {
   std::vector<std::string> child_names;
   ledger::GetDirectoryEntries(content_path_, [&child_names](fxl::StringView entry) {
@@ -144,10 +145,10 @@ void LedgerRepositoryImpl::GetNames(fit::function<void(std::vector<std::string>)
 void LedgerRepositoryImpl::Attach(std::string ledger_name,
                                   fit::function<void(fit::closure)> callback) {
   LedgerManager* ledger_manager;
-  // TODO(https://fuchsia.atlassian.net/browse/LE-793): This will create a new
-  // ledger on disk if no ledger with the given name is found - GetLedgerManager
-  // should be split into separate "GetOrCreateLedgerManager" and
-  // "GetButDoNotCreateLedgerManager" functions with the latter called here.
+  // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12327): This will
+  // create a new ledger on disk if no ledger with the given name is found -
+  // GetLedgerManager should be split into separate "GetOrCreateLedgerManager"
+  // and "GetButDoNotCreateLedgerManager" functions with the latter called here.
   storage::Status status = GetLedgerManager(ledger_name, &ledger_manager);
   if (status != storage::Status::OK) {
     callback([]() {});

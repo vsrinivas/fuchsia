@@ -14,7 +14,7 @@ The debugger runs remotely only (you can't do self-hosted debug).
 
 ### Bugs (Googlers only)
 
-  * [Open zxdb bugs](https://fuchsia.atlassian.net/browse/DX-80?jql=project%20%3D%20DX%20AND%20component%20%3D%20zxdb%20order%20by%20lastViewed%20DESC)
+  * [Open zxdb bugs](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5040)
 
   * [Report a new zxdb bug](https://fuchsia.atlassian.net/secure/CreateIssueDetails!init.jspa?pid=11718&issuetype=10006&priority=3&components=11886)
 
@@ -330,7 +330,7 @@ fx run-test debug_agent_tests
 
 ## Other Languages
 
-Rust mostly works but there [are issues](https://fuchsia.atlassian.net/browse/DX-604).
+Rust mostly works but there [are issues](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5462).
 Go currently is currently not supported.
 
 Please contact brettw@ if you’re interested in helping! Even if you don't know

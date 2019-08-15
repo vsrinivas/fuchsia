@@ -1,5 +1,5 @@
 This library is not long for this world.  Please do not add new things to it.
-Bug: https://fuchsia.atlassian.net/browse/ZX-2497
+Bug: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=32349
 
 The plan is to split this library up into several parts:
 1) Most of the headers in include/ddk/ should be moved to ulib/driver (which

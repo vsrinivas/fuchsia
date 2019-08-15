@@ -101,7 +101,7 @@ In order to land your change, you need to sign the [Google CLA](https://cla.deve
 ## [Googlers only] Issue actions
 
 Commit messages may reference issue IDs in Fuchsia's
-[issue tracker](https://fuchsia.atlassian.net/); such references will become
+[issue tracker](https://bugs.fuchsia.dev/); such references will become
 links in the Gerrit UI. Issue actions may also be specified, for example to
 automatically close an issue when a commit is landed:
 

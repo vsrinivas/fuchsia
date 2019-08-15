@@ -127,7 +127,8 @@ source_set("ledger_instance_factory") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
-# TODO(https://fuchsia.atlassian.net/projects/LE/issues/LE-607): Consider moving to benchmarks/.
+# TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12144): Consider
+# moving to benchmarks/.
 source_set("get_ledger") {
   testonly = true
 

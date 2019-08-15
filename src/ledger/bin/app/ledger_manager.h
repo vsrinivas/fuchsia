@@ -101,10 +101,10 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
   // Retrieves (if present in |page_managers_| when called) or creates and
   // places in |page_managers_| (if not present in |page_managers_| when called)
   // the |PageManager| for the given |page_id|.
-  // TODO(https://fuchsia.atlassian.net/browse/LE-789): This method's return
-  // value should be an interest-indication "retainer" object that when deleted
-  // indicates to the got-or-created |PageManager| that it should check its
-  // emptiness and possibly call its on_empty_callback.
+  // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12323): This
+  // method's return value should be an interest-indication "retainer" object
+  // that when deleted indicates to the got-or-created |PageManager| that it
+  // should check its emptiness and possibly call its on_empty_callback.
   PageManager* GetOrCreatePageManager(convert::ExtendedStringView page_id);
 
   void CheckEmpty();
