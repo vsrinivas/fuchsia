@@ -207,9 +207,7 @@ type Action struct {
 }
 
 func (a Action) Run(ctx context.Context) ([]byte, error) {
-	if dryRun {
-		logger.Debugf(ctx, "%s\n", a.String())
-	}
+	logger.Debugf(ctx, "%s\n", a.String())
 	if !dryRun {
 		return exec.Command(a.Path, a.Args...).CombinedOutput()
 	}
