@@ -6,91 +6,78 @@ library fuchsia.media;
 
 [Discoverable]
 protocol AudioCore {
-    // Create an AudioRenderer which is grouped and handled as part of the
-    // AudioRenderUsage specified.  An AudioRenderer will not be able to have
-    // its usage changed after creation.  The AudioRenderUsage is used by
-    // AudioPolicy to dictate how streams interact with each other.
+    /// Create an AudioRenderer which outputs audio to the default device.
     CreateAudioRenderer(request<AudioRenderer> audio_out_request);
 
-    // Create an AudioCapturer which either captures from the current default
-    // audio input device, or loops-back from the current default audio output
-    // device based on value passed for the loopback flag.
+    /// Create an AudioCapturer which either captures from the current default
+    /// audio input device, or loops-back from the current default audio output
+    /// device based on value passed for the loopback flag.
     //
-    // TODO(mpuryear): Get rid of the loopback flag ASAP. Routing decisions (and
-    // security surrounding routing decisions) should be much more sophisticated
-    // than this. This is just a placeholder until we have a design in place.
-    // Eventually, I suspect that all of this will move up into the audio policy
-    // manager and application clients will obtain AudioCapturers from and
-    // control through the policy manager.
+    // TODO(34915): Get rid of the loopback flag ASAP. Routing decisions (and
+    // security surrounding routing decisions) should be more sophisticated.
+    // This is a placeholder until we have a design in place. Eventually, this
+    // should move up to an audio policy layer, where application clients obtain
+    // and control AudioCapturers.
     CreateAudioCapturer(bool loopback, request<AudioCapturer> audio_in_request);
 
-    // System Gain and Mute
-    // TODO(mpuryear): remove this systemwide setting once device-centric
-    // settings are plumbed into the system UI. Also, device-centric (and
-    // certainly systemwide settings) should be moved out of the
-    // accessible-to-all public audio interface and relocated to a more
-    // restrictive interface that is only accessible by clients with the
-    // appropriate privileges (such as system configuration API, or the
-    // governor of audio policy).
+    /// System Gain and Mute
+    ///
+    /// Fuchsia clients control the volume of individual audio streams via the
+    /// fuchsia.media.audio.GainControl protocol. System Gain and Mute affect
+    /// all audio output, and are controlled with methods that use the same
+    /// concepts as GainControl, namely: independent gain and mute, with change
+    /// notifications. Setting System Mute to true leads to the same outcome as
+    /// setting System Gain to MUTED_GAIN_DB: all audio output across the system
+    /// is silenced.
     //
-    // Mirroring device-centric gain and mute stages, Fuchsia's systemwide Gain
-    // and Mute settings are fully independent. Changing the value of one does
-    // not change the value of the other. Both have the ability to silence a
-    // system (or a device, in the case of device Gain/Mute). If Mute is true,
-    // or if Gain is kMutedGain, the system is silenced regardless of the
-    // other. Similarly, one's value does not restrict the other's possible
-    // values in any way.
-    //
-    // Sets the system-wide gain in decibels. `db` values are clamped to the
-    // range -160db to 0db, inclusive. This setting is applied to all audio
-    // output devices. Audio input devices are unaffected. System Gain changes
-    // do not affect the System Mute state.
+    // TODO(34948): remove these systemwide settings, once device-centric
+    // settings are plumbed into the system UI. Also, device-centric and
+    // systemwide settings should be moved out of this accessible-to-all public
+    // audio interface and relocated to a more restrictive interface that is
+    // only accessible by clients with the appropriate privileges (such as
+    // system configuration API, or the governor of audio policy).
+
+    /// Sets the systemwide gain in decibels. `gain_db` values are clamped to
+    /// the range -160 db to 0 db, inclusive. This setting is applied to all
+    /// audio output devices. Audio input devices are unaffected.
+    /// Does not affect System Mute.
     SetSystemGain(float32 gain_db);
 
-    // Sets/clears the systemwide 'Mute' state for audio output devices. Audio
-    // input devices are unaffected. Changes to the System Mute state do not
-    // affect the value of System Gain.
+    /// Sets/clears the systemwide 'Mute' state for audio output devices.
+    /// Audio input devices are unaffected. Changes to the System Mute state do
+    /// not affect the value of System Gain.
     SetSystemMute(bool muted);
 
-    // Provides current values for the systemwide Gain and Mute.
-    // When a client connects to Audio, the system enqueues an action (to be
-    // executed once the system regains control) to send this newly-connected
-    // client a callback with the current systemwide Gain|Mute settings.
-    // Further, upon any change to the systemwide Gain|Mute values, the system
-    // will trigger all registered callbacks, notifying clients of the new
-    // values.
-    //
-    // Calls to SetSystemMute or SetSystemGain that do NOT result in a change to
-    // these values (e.g. calling SetSystemMute(false) when Mute is already
-    // false) will not cause the callbacks to be triggered.
-    //
-    // During and immediately following connecting to Audio, it is essential
-    // that clients keep in mind the fundamental single-threaded nature of FIDL.
-    // Specifically, if a newly-connected client registers a
-    // SystemGainMuteChanged callback before returning, that client will (once
-    // the system has subsequent opportunity) be notified via callback of the
-    // Gain|Mute settings at the time the connection was established. If
-    // however a newly-connected client returns from a FIDL message dispatch
-    // (returning control to the FIDL dispatcher), then that client
-    // subsequently registers this callback, the client has no way to learn the
-    // current Gain|Mute settings until they actually change.
+    /// Provides current values for systemwide Gain and Mute. When a client
+    /// connects to AudioCore, the system immediately sends that client a
+    /// SystemGainMuteChanged event with the current system Gain|Mute settings.
+    /// Subsequent events will be sent when these Gain|Mute values change.
     -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
+    // TODO(34922): Replace with flexible audio output routing.
     SetRoutingPolicy(AudioOutputRoutingPolicy policy);
 
     // By default, reading and writing device settings files is enabled. This
     // method (which has impact across the entire audio subsystem) allows a test
     // client to temporarily disable, then later enable, that reading/writing.
-    // TODO(mpuryear): Move this to the hub, instead of being a FIDL API.
+    // TODO(13578): Move this to the hub, instead of FIDL API. Alternately,
+    // simply remove; going forward, HermeticTestEnvironment accepts a
+    // parameter that disables device settings writeback during testing.
     EnableDeviceSettings(bool enabled);
 
-    // Set the Usage gain applied to Renderers and Capturers. By default the
-    // gain for all render and capture usages is set to Unity(0.0db).
+    /// Set the Usage gain applied to Renderers. By default, the gain for all
+    /// render usages is set to Unity (0 db).
     SetRenderUsageGain(AudioRenderUsage usage, float32 gain_db);
+
+    /// Set the Usage gain applied to Capturers. By default, the gain for all
+    /// capture usages is set to Unity (0 db).
     SetCaptureUsageGain(AudioCaptureUsage usage, float32 gain_db);
 };
 
 /// Usage annotating the purpose of the stream being used to render audio.
+/// An AudioRenderer's usage cannot be changed after creation.  The
+/// AudioRenderUsage is used by audio policy to dictate how audio streams
+/// interact with each other.
 enum AudioRenderUsage {
     /// Stream is intended to be used for ambient or background sound. Streams
     /// that can be interrupted without consequence should use this.
@@ -115,7 +102,9 @@ enum AudioRenderUsage {
 };
 const uint8 RENDER_USAGE_COUNT = 5;
 
-/// Usages annotating the purpose of the stream being used to capture audio.
+/// Usages annotating the purpose of the stream being used to capture audio. The
+/// AudioCaptureUsage is used by audio policy to dictate how audio streams
+/// interact with each other.
 enum AudioCaptureUsage {
     /// Stream is used to capture audio while in the background.  These streams
     /// may be active at any the time and are considered privileged.
@@ -145,8 +134,8 @@ union Usage {
     AudioCaptureUsage capture_usage;
 };
 
-// A placeholder for various types of simple routing policies. This should be
-// replaced when routing policy moves to a more centralized policy manager.
+// Placeholder for routing policies.
+// TODO(34922): Replace, when routing is handled by a central policy manager.
 enum AudioOutputRoutingPolicy {
     // AudioRenderers are always connected to all audio outputs which currently
     // in the plugged state (eg; have a connector attached to them)
@@ -157,6 +146,6 @@ enum AudioOutputRoutingPolicy {
     // output to output as streams are published/unpublished and become
     // plugged/unplugged.
     //
-    // This is the initial setting for audio output routing.
+    // This is the default initial setting for audio output routing.
     LAST_PLUGGED_OUTPUT = 1;
 };
