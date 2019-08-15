@@ -12,7 +12,6 @@
 #include <lib/zx/exception.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
-#include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vmar.h>
@@ -31,8 +30,6 @@
 #include <zxtest/zxtest.h>
 
 namespace {
-
-constexpr unsigned kExceptionPortKey = 42u;
 
 // Basic job operation is tested by core-tests.
 static zx::job MakeJob() {
@@ -306,15 +303,12 @@ uint64_t get_syscall_result(zx_thread_state_general_regs_t* regs) { return regs-
 #error Unsupported architecture
 #endif
 
-enum class ExceptionTestType { kPorts, kChannels };
-
 // Like CheckInvokingPolicy(), this tests that executing the given
 // mini-process.h command produces the given result when the given policy
-// is in force.  In addition, it tests that a debug port exception gets
+// is in force.  In addition, it tests that a debug channel exception gets
 // generated.
-void CheckInvokingPolicyWithException(ExceptionTestType test_type, const zx_policy_basic_t* policy,
-                                      uint32_t policy_count, uint32_t minip_cmd,
-                                      zx_status_t expected_syscall_result) {
+void CheckInvokingPolicyWithException(const zx_policy_basic_t* policy, uint32_t policy_count,
+                                      uint32_t minip_cmd, zx_status_t expected_syscall_result) {
   auto job = MakeJob();
   ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, policy, policy_count));
 
@@ -324,15 +318,8 @@ void CheckInvokingPolicyWithException(ExceptionTestType test_type, const zx_poli
   ASSERT_TRUE(proc.is_valid());
   ASSERT_NE(ctrl, ZX_HANDLE_INVALID);
 
-  zx_handle_t exc_port = ZX_HANDLE_INVALID;
   zx::channel exc_channel;
-  if (test_type == ExceptionTestType::kPorts) {
-    ASSERT_OK(zx_port_create(0, &exc_port));
-    ASSERT_OK(zx_task_bind_exception_port(proc.get(), exc_port, kExceptionPortKey,
-                                          ZX_EXCEPTION_PORT_DEBUGGER));
-  } else {
-    ASSERT_OK(proc.create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &exc_channel));
-  }
+  ASSERT_OK(proc.create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &exc_channel));
 
   EXPECT_OK(mini_process_cmd_send(ctrl, minip_cmd));
 
@@ -348,39 +335,28 @@ void CheckInvokingPolicyWithException(ExceptionTestType test_type, const zx_poli
 
   // Check that we receive an exception message.
   zx::exception exception;
-  if (test_type == ExceptionTestType::kPorts) {
-    zx_port_packet_t packet;
-    ASSERT_OK(zx_port_wait(exc_port, ZX_TIME_INFINITE, &packet));
+  zx_exception_info_t info;
+  ASSERT_OK(exc_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+  ASSERT_OK(exc_channel.read(0, &info, exception.reset_and_get_address(), sizeof(info), 1, nullptr,
+                             nullptr));
 
-    // Check the exception message contents.
-    ASSERT_EQ(packet.key, kExceptionPortKey);
-    ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_POLICY_ERROR);
-    ASSERT_EQ(packet.exception.pid, pid);
-    ASSERT_EQ(packet.exception.tid, tid);
-  } else {
-    zx_exception_info_t info;
-    ASSERT_OK(exc_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
-    ASSERT_OK(exc_channel.read(0, &info, exception.reset_and_get_address(), sizeof(info), 1,
-                               nullptr, nullptr));
+  ASSERT_EQ(info.type, ZX_EXCP_POLICY_ERROR);
+  ASSERT_EQ(info.tid, tid);
+  ASSERT_EQ(info.pid, pid);
 
-    ASSERT_EQ(info.type, ZX_EXCP_POLICY_ERROR);
-    ASSERT_EQ(info.tid, tid);
-    ASSERT_EQ(info.pid, pid);
+  // Make sure the exception has the correct task handles.
+  zx::thread exception_thread;
+  zx::process exception_process;
+  ASSERT_OK(exception.get_thread(&exception_thread));
+  ASSERT_OK(exception.get_process(&exception_process));
 
-    // Make sure the exception has the correct task handles.
-    zx::thread exception_thread;
-    zx::process exception_process;
-    ASSERT_OK(exception.get_thread(&exception_thread));
-    ASSERT_OK(exception.get_process(&exception_process));
+  zx_koid_t handle_tid = ZX_KOID_INVALID;
+  get_koid(exception_thread.get(), &handle_tid);
+  EXPECT_EQ(handle_tid, tid);
 
-    zx_koid_t handle_tid = ZX_KOID_INVALID;
-    get_koid(exception_thread.get(), &handle_tid);
-    EXPECT_EQ(handle_tid, tid);
-
-    zx_koid_t handle_pid = ZX_KOID_INVALID;
-    get_koid(exception_process.get(), &handle_pid);
-    EXPECT_EQ(handle_pid, pid);
-  }
+  zx_koid_t handle_pid = ZX_KOID_INVALID;
+  get_koid(exception_process.get(), &handle_pid);
+  EXPECT_EQ(handle_pid, pid);
 
   // Check that we can read the thread's register state.
   zx_thread_state_general_regs_t regs;
@@ -392,13 +368,9 @@ void CheckInvokingPolicyWithException(ExceptionTestType test_type, const zx_poli
   // using crashlogger gives a correct backtrace.
 
   // Resume the thread.
-  if (test_type == ExceptionTestType::kPorts) {
-    ASSERT_OK(zx_task_resume_from_exception(thread.get(), exc_port, 0));
-  } else {
-    uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
-    ASSERT_OK(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)));
-    exception.reset();
-  }
+  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+  ASSERT_OK(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)));
+  exception.reset();
 
   // Check that the read-ready state of the channel changed compared with
   // the earlier check.
@@ -414,15 +386,6 @@ void CheckInvokingPolicyWithException(ExceptionTestType test_type, const zx_poli
   EXPECT_EQ(mini_process_cmd(ctrl, MINIP_CMD_EXIT_NORMAL, nullptr), ZX_ERR_PEER_CLOSED);
 
   zx_handle_close(ctrl);
-}
-
-// Invokes a policy exception test using both port and channel exceptions.
-void CheckInvokingPolicyWithException(const zx_policy_basic_t* policy, uint32_t policy_count,
-                                      uint32_t minip_cmd, zx_status_t expected_syscall_result) {
-  CheckInvokingPolicyWithException(ExceptionTestType::kPorts, policy, policy_count, minip_cmd,
-                                   expected_syscall_result);
-  CheckInvokingPolicyWithException(ExceptionTestType::kChannels, policy, policy_count, minip_cmd,
-                                   expected_syscall_result);
 }
 
 TEST(JobPolicyTest, TestExceptionOnNewEventAndDeny) {
