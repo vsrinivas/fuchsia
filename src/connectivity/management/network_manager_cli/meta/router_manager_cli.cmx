@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/router_manager_cli"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.overnet.Overnet",
+            "fuchsia.router.config.RouterAdmin",
+            "fuchsia.router.config.RouterState"
+        ]
+    }
+}

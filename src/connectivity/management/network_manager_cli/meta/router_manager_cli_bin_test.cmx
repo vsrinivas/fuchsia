@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.netemul.sandbox.Sandbox": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/router_manager_cli_bin_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.netemul.sandbox.Sandbox"
+        ]
+    }
+}
