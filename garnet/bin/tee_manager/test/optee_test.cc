@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "common.h"
-
 #include <fuchsia/tee/cpp/fidl.h>
 #include <gtest/gtest.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -20,9 +18,10 @@
 #include <vector>
 
 namespace optee {
-namespace test {
-namespace {
 
+namespace test {
+
+namespace {
 constexpr uint32_t kPrivateStorage = 0x1;
 constexpr uint32_t kFlagRead = 0x1;
 constexpr uint32_t kFlagWrite = 0x2;
@@ -81,6 +80,50 @@ class OpteeFileHandleGuard {
   TEEC_Session* session_;
   std::optional<uint32_t> handle_;
 };
+
+struct OperationResult {
+  TEEC_Result result;
+  uint32_t return_origin;
+};
+
+// Helper class to print numeric values in hex for gtest
+template <typename NumericType>
+class Hex {
+ public:
+  constexpr explicit Hex(NumericType number) : number_(number) {}
+
+  friend std::ostream& operator<<(std::ostream& os, const Hex<NumericType>& obj) {
+    return os << "0x" << std::hex << obj.number_;
+  }
+
+ private:
+  NumericType number_;
+};
+
+::testing::AssertionResult IsTeecSuccess(TEEC_Result result) {
+  if (result == TEEC_SUCCESS) {
+    return ::testing::AssertionSuccess();
+  } else {
+    return ::testing::AssertionFailure() << "result: " << Hex(result);
+  }
+}
+
+::testing::AssertionResult IsTeecSuccess(const OperationResult& op_result) {
+  if (op_result.result == TEEC_SUCCESS) {
+    return ::testing::AssertionSuccess();
+  } else {
+    return ::testing::AssertionFailure() << "result: " << Hex(op_result.result)
+                                         << ", return origin: " << Hex(op_result.return_origin);
+  }
+}
+
+static std::vector<uint8_t> StringToBuffer(const std::string& s) {
+  return std::vector<uint8_t>(s.cbegin(), s.cend());
+}
+
+static std::string BufferToString(const std::vector<uint8_t>& buf) {
+  return std::string(buf.cbegin(), buf.cend());
+}
 
 enum class SeekFrom : uint32_t { kBeginning = 0x0, kCurrent = 0x1, kEnd = 0x2 };
 
@@ -258,6 +301,94 @@ void OpteeFileHandleGuard::Close() {
     handle_ = std::nullopt;
   }
 }
+
+class ContextGuard {
+ public:
+  ContextGuard() : context_(nullptr) {}
+
+  explicit ContextGuard(TEEC_Context* context) : context_(context) {}
+
+  ~ContextGuard() { Close(); }
+
+  ContextGuard(ContextGuard&& other) : context_(other.context_) { other.context_ = nullptr; }
+
+  ContextGuard& operator=(ContextGuard&& other) {
+    if (&other == this) {
+      return *this;
+    }
+
+    Close();
+    context_ = other.Release();
+    return *this;
+  }
+
+  ContextGuard(const ContextGuard&) = delete;
+  ContextGuard& operator=(const ContextGuard&) = delete;
+
+  constexpr bool IsValid() const { return context_ != nullptr; }
+
+  TEEC_Context* Get() const { return context_; }
+
+  void Close() {
+    if (IsValid()) {
+      TEEC_FinalizeContext(context_);
+      context_ = nullptr;
+    }
+  }
+
+  TEEC_Context* Release() {
+    TEEC_Context* released = context_;
+    context_ = nullptr;
+    return released;
+  }
+
+ private:
+  TEEC_Context* context_;
+};
+
+class SessionGuard {
+ public:
+  constexpr SessionGuard() : session_(nullptr) {}
+
+  constexpr explicit SessionGuard(TEEC_Session* session) : session_(session) {}
+
+  ~SessionGuard() { Close(); }
+
+  SessionGuard(SessionGuard&& other) : session_(other.session_) { other.session_ = nullptr; }
+
+  SessionGuard& operator=(SessionGuard&& other) {
+    if (&other == this) {
+      return *this;
+    }
+
+    Close();
+    session_ = other.Release();
+    return *this;
+  }
+
+  SessionGuard(const SessionGuard&) = delete;
+  SessionGuard& operator=(const SessionGuard&) = delete;
+
+  constexpr bool IsValid() const { return session_ != nullptr; }
+
+  TEEC_Session* Get() const { return session_; }
+
+  void Close() {
+    if (IsValid()) {
+      TEEC_CloseSession(session_);
+      session_ = nullptr;
+    }
+  }
+
+  TEEC_Session* Release() {
+    TEEC_Session* released = session_;
+    session_ = nullptr;
+    return released;
+  }
+
+ private:
+  TEEC_Session* session_;
+};
 
 }  // namespace
 

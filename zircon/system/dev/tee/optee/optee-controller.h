@@ -6,7 +6,6 @@
 
 #include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/function.h>
@@ -85,7 +84,6 @@ class OpteeController : public OpteeControllerBase, public OpteeControllerProtoc
   static fuchsia_hardware_tee_DeviceConnector_ops_t kFidlOps;
 
   pdev_protocol_t pdev_proto_ = {};
-  sysmem_protocol_t sysmem_proto_ = {};
   zx::resource secure_monitor_;
   uint32_t secure_world_capabilities_ = 0;
   fuchsia_tee_OsRevision os_revision_ = {};
