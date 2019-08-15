@@ -5,6 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
 
+#include <fuchsia/wlan/minstrel/cpp/fidl.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/port.h>
+#include <zircon/compiler.h>
+
 #include <mutex>
 #include <thread>
 #include <tuple>
@@ -16,16 +21,12 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/minstrel/cpp/fidl.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/port.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/dispatcher.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/compiler.h>
 
 #include "minstrel.h"
 #include "proxy_helpers.h"
@@ -66,6 +67,7 @@ class Device : public DeviceInterface {
                                    size_t data_size);
 
   // DeviceInterface methods
+  zx_handle_t GetSmeChannelRef() override final;
   zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final;
   zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) override final;
   zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) override final;

@@ -55,6 +55,11 @@ typedef struct {
    * Request to deliver a WLAN frame over the air.
    */
   int32_t (*send_wlan_frame)(void *device, mlme_out_buf_t buf, uint32_t flags);
+  /**
+   * Returns an unowned channel handle to MLME's SME peer, or ZX_HANDLE_INVALID
+   * if no SME channel is available.
+   */
+  uint32_t (*get_sme_channel)(void *device);
 } mlme_device_ops_t;
 
 /**

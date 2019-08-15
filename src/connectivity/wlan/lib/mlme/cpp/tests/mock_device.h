@@ -5,14 +5,15 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_MOCK_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_MOCK_DEVICE_H_
 
+#include <fuchsia/wlan/minstrel/cpp/fidl.h>
+#include <lib/timekeeper/test_clock.h>
+
 #include <algorithm>
 #include <vector>
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/timekeeper/test_clock.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
@@ -66,6 +67,8 @@ struct MockDevice : public DeviceInterface {
   fbl::unique_ptr<Timer> CreateTimer(uint64_t id) {
     return std::make_unique<TestTimer>(id, &clock_);
   }
+
+  zx_handle_t GetSmeChannelRef() override final { return ZX_HANDLE_INVALID; }
 
   zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) override final {
     eth_queue.push_back({eth_frame.cbegin(), eth_frame.cend()});

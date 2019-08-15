@@ -5,17 +5,18 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEVICE_INTERFACE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEVICE_INTERFACE_H_
 
+#include <fuchsia/wlan/minstrel/cpp/fidl.h>
+#include <zircon/types.h>
+
 #include <cstdint>
 #include <cstring>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/types.h>
 
 namespace wlan {
 
@@ -46,6 +47,9 @@ class DeviceState : public fbl::RefCounted<DeviceState> {
 class DeviceInterface {
  public:
   virtual ~DeviceInterface() {}
+
+  // Returns an unowned handle to the device's owned SME channel.
+  virtual zx_handle_t GetSmeChannelRef() = 0;
 
   virtual zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) = 0;
 

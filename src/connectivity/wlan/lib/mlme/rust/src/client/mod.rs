@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn client_send_open_auth_frame() {
-        let mut fake_device = FakeDevice::default();
+        let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
         client.send_open_auth_frame().expect("error delivering WLAN frame");
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn client_send_keep_alive_resp_frame() {
-        let mut fake_device = FakeDevice::default();
+        let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
         client.send_keep_alive_resp_frame().expect("error delivering WLAN frame");
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -233,7 +233,7 @@ mod tests {
     #[test]
     fn client_send_data_frame() {
         let payload = vec![5; 8];
-        let mut fake_device = FakeDevice::default();
+        let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
         client
             .send_data_frame([2; 6], [3; 6], false, false, 0x1234, &payload[..])
@@ -259,7 +259,7 @@ mod tests {
 
     #[test]
     fn client_send_deauthentication_notification() {
-        let mut fake_device = FakeDevice::default();
+        let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
         client
             .send_deauth_frame(mac::ReasonCode::AP_INITIATED)
@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn data_frame_to_ethernet_single_llc() {
         let data_frame = make_data_frame_single_llc(None, None);
-        let mut fake_device = FakeDevice::default();
+        let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
         client.handle_data_frame(&data_frame[..], false);
         assert_eq!(fake_device.eth_queue.len(), 1);
@@ -297,7 +297,7 @@ mod tests {
     #[test]
     fn data_frame_to_ethernet_amsdu() {
         let data_frame = make_data_frame_amsdu();
-        let mut fake_device = FakeDevice::default();
+        let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
         client.handle_data_frame(&data_frame[..], false);
         let queue = &fake_device.eth_queue;
@@ -323,7 +323,7 @@ mod tests {
     #[test]
     fn data_frame_to_ethernet_amsdu_padding_too_short() {
         let data_frame = make_data_frame_amsdu_padding_too_short();
-        let mut fake_device = FakeDevice::default();
+        let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
         client.handle_data_frame(&data_frame[..], false);
         let queue = &fake_device.eth_queue;

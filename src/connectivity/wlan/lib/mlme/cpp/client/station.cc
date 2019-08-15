@@ -38,6 +38,7 @@ using common::dBm;
 
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
+#define STA(c) static_cast<Station*>(c)
 Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelScheduler* chan_sched,
                  JoinContext* join_ctx)
     : device_(device),
@@ -48,16 +49,19 @@ Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelSch
   auto rust_device = mlme_device_ops_t{
       .device = static_cast<void*>(this),
       .deliver_eth_frame = [](void* sta, const uint8_t* data, size_t len) -> zx_status_t {
-        return static_cast<Station*>(sta)->device_->DeliverEthernet({data, len});
+        return STA(sta)->device_->DeliverEthernet({data, len});
       },
       .send_wlan_frame = [](void* sta, mlme_out_buf_t buf, uint32_t flags) -> zx_status_t {
         auto pkt = FromRustOutBuf(buf);
         if (MgmtFrameView<>::CheckType(pkt.get())) {
-          return static_cast<Station*>(sta)->SendMgmtFrame(std::move(pkt));
+          return STA(sta)->SendMgmtFrame(std::move(pkt));
         } else if (DataFrameView<>::CheckType(pkt.get())) {
-          return static_cast<Station*>(sta)->SendDataFrame(std::move(pkt), flags);
+          return STA(sta)->SendDataFrame(std::move(pkt), flags);
         }
-        return static_cast<Station*>(sta)->SendCtrlFrame(std::move(pkt));
+        return STA(sta)->SendCtrlFrame(std::move(pkt));
+      },
+      .get_sme_channel = [](void* sta) -> zx_handle_t {
+        return STA(sta)->device_->GetSmeChannelRef();
       },
   };
   rust_client_ =
@@ -65,6 +69,7 @@ Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelSch
 
   Reset();
 }
+#undef STA
 
 void Station::Reset() {
   debugfn();

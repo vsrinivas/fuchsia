@@ -4,6 +4,14 @@
 
 #include "device.h"
 
+#include <lib/zx/thread.h>
+#include <lib/zx/time.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
+
 #include <cinttypes>
 #include <cstdarg>
 #include <cstdint>
@@ -14,8 +22,6 @@
 
 #include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo.h>
-#include <lib/zx/thread.h>
-#include <lib/zx/time.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/ap/ap_mlme.h>
@@ -28,11 +34,6 @@
 #include <wlan/mlme/timer_manager.h>
 #include <wlan/mlme/validate_frame.h>
 #include <wlan/mlme/wlan.h>
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/port.h>
 
 #include "probe_sequence.h"
 
@@ -91,10 +92,10 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
     .start = [](void* ctx, const ethernet_ifc_protocol_t* ifc) -> zx_status_t {
       return DEV(ctx)->EthernetImplStart(ifc);
     },
-    .queue_tx = [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
-                   ethernet_impl_queue_tx_callback completion_cb, void* cookie)  {
-      DEV(ctx)->EthernetImplQueueTx(options, netbuf, completion_cb, cookie);
-    },
+    .queue_tx =
+        [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+           ethernet_impl_queue_tx_callback completion_cb,
+           void* cookie) { DEV(ctx)->EthernetImplQueueTx(options, netbuf, completion_cb, cookie); },
     .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data, size_t data_size)
         -> zx_status_t { return DEV(ctx)->EthernetImplSetParam(param, value, data, data_size); },
 };
@@ -509,6 +510,10 @@ void Device::WlanmacHwScanComplete(const wlan_hw_scan_result_t* result) {
     errorf("could not queue hw scan complete packet err=%d\n", status);
   }
 }
+
+// This function must only be called by the MLME.
+// MLME already holds the necessary lock to access the channel exclusively.
+zx_handle_t Device::GetSmeChannelRef() __TA_NO_THREAD_SAFETY_ANALYSIS { return channel_.get(); }
 
 zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
   ZX_DEBUG_ASSERT(timer != nullptr);
