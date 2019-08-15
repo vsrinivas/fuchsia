@@ -1,0 +1,25 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+protocol Privacy {
+    /// Notifies of a change in privacy settings.
+    ///
+    /// On a given connection, the first call will return the current `settings` value while
+    /// subsequent calls will only return the new `settings` value upon a value change. This
+    /// follows the hanging get pattern.
+    Watch() -> (PrivacySettings settings) error Error;
+
+    /// Sets the privacy settings.
+    ///
+    /// Any field not explicitly set in `settings` performs a no-op, and will not make any changes.
+    Set(PrivacySettings settings) -> () error Error;
+};
+
+table PrivacySettings {
+    /// Reflects the user consent to have their user data shared with the product owner, e.g., for
+    /// metrics collection and crash reporting.
+    1: bool user_data_sharing_consent;
+};

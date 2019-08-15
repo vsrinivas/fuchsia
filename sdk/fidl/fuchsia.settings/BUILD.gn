@@ -12,6 +12,7 @@ fidl("fuchsia.settings") {
     "display.fidl",
     "do_not_disturb.fidl",
     "intl.fidl",
+    "privacy.fidl",
     "settings.fidl",
     "system.fidl",
   ]
