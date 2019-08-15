@@ -8369,19 +8369,19 @@ constexpr uint8_t DIRENT_TYPE_DIRECTORY = 4u;
 constexpr uint8_t DIRENT_TYPE_BLOCK_DEVICE = 6u;
 
 // Indicates the device is ready for writing.
-constexpr uint32_t DEVICE_SIGNAL_WRITABLE = 33554432u;
+constexpr uint32_t DEVICE_SIGNAL_WRITABLE = 67108864u;
 
 // Indicates the device is ready for reading.
 constexpr uint32_t DEVICE_SIGNAL_READABLE = 16777216u;
 
 // Indicates an out-of-band state transition has occurred.
-constexpr uint32_t DEVICE_SIGNAL_OOB = 268435456u;
+constexpr uint32_t DEVICE_SIGNAL_OOB = 33554432u;
 
 // Indicates the device has hung up on the current connection.
-constexpr uint32_t DEVICE_SIGNAL_HANGUP = 134217728u;
+constexpr uint32_t DEVICE_SIGNAL_HANGUP = 268435456u;
 
 // Indicates the device has encountered an error state.
-constexpr uint32_t DEVICE_SIGNAL_ERROR = 67108864u;
+constexpr uint32_t DEVICE_SIGNAL_ERROR = 134217728u;
 
 // When used during clone, the new connection inherits the rights on the source connection,
 // regardless if it is a file or directory. Otherwise, clone attempts to use the requested rights.

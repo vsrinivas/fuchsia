@@ -41,6 +41,11 @@ static_assert((POLLPRI << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_OOB, "");
 static_assert((POLLOUT << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_WRITABLE, "");
 static_assert((POLLERR << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_ERROR, "");
 static_assert((POLLHUP << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_HANGUP, "");
+static_assert(fio::DEVICE_SIGNAL_READABLE == fdevice::DEVICE_SIGNAL_READABLE);
+static_assert(fio::DEVICE_SIGNAL_OOB == fdevice::DEVICE_SIGNAL_OOB);
+static_assert(fio::DEVICE_SIGNAL_WRITABLE == fdevice::DEVICE_SIGNAL_WRITABLE);
+static_assert(fio::DEVICE_SIGNAL_ERROR == fdevice::DEVICE_SIGNAL_ERROR);
+static_assert(fio::DEVICE_SIGNAL_HANGUP == fdevice::DEVICE_SIGNAL_HANGUP);
 
 // The |mode| argument used for |fuchsia.io.Directory/Open| calls.
 #define FDIO_CONNECT_MODE ((uint32_t)0755)
