@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+package("qmi-function") {
+  deprecated_system_image = true
+  testonly = true
+
+  deps = [
+    ":qmi_function",
+  ]
+
+  drivers = [
+    {
+      name = "qmi-function.so"
+    },
+  ]
+}
+
+driver_module("qmi_function") {
+  output_name = "qmi-function"
+  testonly = true
+
+  sources = [
+    "usb-qmi-function.cc",
+    "usb-qmi-function.h",
+  ]
+  deps = [
+    "//zircon/public/banjo/ddk.protocol.usb.function",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
+  ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
