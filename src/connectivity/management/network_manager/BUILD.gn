@@ -1,0 +1,72 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "router_manager"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "core:lib",
+    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//sdk/fidl/fuchsia.router.config:fuchsia.router.config-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
+  ]
+}
+
+package("router_manager") {
+  deps = [
+    ":bin",
+    "core:lib",
+  ]
+
+  binaries = [
+    {
+      name = "router_manager"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/router_manager.cmx")
+      dest = "router_manager.cmx"
+    },
+  ]
+}
+
+test_package("router_manager_tests") {
+  deps = [
+    ":bin_test",
+    "core:lib_test",
+  ]
+
+  tests = [
+    {
+      name = "router_manager_bin_test"
+      environments = basic_envs
+    },
+    {
+      name = "router_manager_core_lib_test"
+      environments = basic_envs
+    },
+  ]
+}

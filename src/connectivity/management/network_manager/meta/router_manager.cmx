@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/router_manager"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.filter.Filter",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.overnet.Overnet"
+        ]
+    }
+}
