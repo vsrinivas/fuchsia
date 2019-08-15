@@ -10,9 +10,9 @@ run them on the device.
 Open the [`examples/hello_world/BUILD.gn`](/examples/hello_world/BUILD.gn) file.
 
 If you aren't familiar with GN, take a look at the
-[introductory presentation](https://docs.google.com/presentation/d/15Zwb53JcncHfEwHpnG_PoIbbzQ3GQi_cpujYwbpcbZo/view#slide=id.g119d702868_0_12)
-or [docs](https://gn.googlesource.com/gn/+/master/docs/). In short, GN is a meta
-build system. Its output files serve as inputs to
+[introductory presentation](https://docs.google.com/presentation/d/15Zwb53JcncHfEwHpnG_PoIbbzQ3GQi_cpujYwbpcbZo/view#slide=id.g119d702868_0_12) (slides 5-16 cover the core concepts, and
+slides 17-21 describe debugging commands) or [docs](https://gn.googlesource.com/gn/+/master/docs/).
+In short, GN is a meta build system. Its output files serve as inputs to
 [Ninja](https://ninja-build.org/), the actual build system.
 
 In this file, the `hello_world` target is a group containing other dependencies,
