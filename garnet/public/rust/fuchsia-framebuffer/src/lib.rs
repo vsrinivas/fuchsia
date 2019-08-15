@@ -269,6 +269,12 @@ impl Frame {
     }
 }
 
+pub struct VSyncMessage {
+    pub display_id: u64,
+    pub timestamp: u64,
+    pub images: Vec<u64>,
+}
+
 pub struct FrameBuffer {
     display_controller: zx::Channel,
     controller: ControllerProxy,
@@ -279,10 +285,10 @@ pub struct FrameBuffer {
 impl FrameBuffer {
     fn create_config_from_event_stream(
         proxy: &ControllerProxy,
+        stream: &mut fidl_fuchsia_hardware_display::ControllerEventStream,
         executor: &mut fasync::Executor,
     ) -> Result<Config, Error> {
         let display_info: Rc<RefCell<Option<(u64, u32, u32, u32)>>> = Rc::new(RefCell::new(None));
-        let stream = proxy.take_event_stream();
         let mut event_listener = stream.filter(|event| {
             if let Ok(ControllerEvent::DisplaysChanged { added, .. }) = event {
                 if added.len() > 0 {
@@ -380,6 +386,7 @@ impl FrameBuffer {
     pub fn new(
         display_index: Option<usize>,
         executor: &mut fasync::Executor,
+        vsync_sender: Option<futures::channel::mpsc::UnboundedSender<VSyncMessage>>,
     ) -> Result<FrameBuffer, Error> {
         let device_path = if let Some(index) = display_index {
             format!("/dev/class/display-controller/{:03}", index)
@@ -407,8 +414,26 @@ impl FrameBuffer {
         }
 
         let proxy = dc_client.into_proxy()?;
-        let config = Self::create_config_from_event_stream(&proxy, executor)?;
+        proxy.enable_vsync(true).context("enable_vsync failed")?;
+        let mut stream = proxy.take_event_stream();
+        let config = Self::create_config_from_event_stream(&proxy, &mut stream, executor)?;
         let layer = Self::configure_layer(config, &proxy, executor)?;
+
+        if let Some(vsync_sender) = vsync_sender {
+            fasync::spawn_local(
+                stream
+                    .map_ok(move |request| match request {
+                        ControllerEvent::Vsync { display_id, timestamp, images } => {
+                            vsync_sender
+                                .unbounded_send(VSyncMessage { display_id, timestamp, images })
+                                .unwrap_or_else(|e| eprintln!("{:?}", e));
+                        }
+                        _ => (),
+                    })
+                    .try_collect::<()>()
+                    .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e)),
+            );
+        }
 
         Ok(FrameBuffer {
             display_controller: device_client,

@@ -15,11 +15,11 @@ use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy, SessionListenerRequest};
 use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_component::{self as component, client::connect_to_service};
-use fuchsia_framebuffer::{Frame, FrameBuffer};
+use fuchsia_framebuffer::{Frame, FrameBuffer, VSyncMessage};
 use fuchsia_scenic::{Session, SessionPtr, ViewTokenPair};
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::{
-    channel::oneshot,
+    channel::{mpsc::unbounded, oneshot},
     future::{self, FutureExt},
     StreamExt, TryFutureExt, TryStreamExt,
 };
@@ -151,13 +151,26 @@ impl AppStrategy for FrameBufferAppStrategy {
 
 // Tries to create a framebuffer. If that fails, assume Scenic is running.
 fn create_app_strategy(executor: &mut fasync::Executor) -> Result<AppStrategyPtr, Error> {
-    let fb = FrameBuffer::new(None, executor);
+    let (sender, mut receiver) = unbounded::<VSyncMessage>();
+    let fb = FrameBuffer::new(None, executor, Some(sender));
     if fb.is_err() {
         let scenic = connect_to_service::<ScenicMarker>()?;
         Ok(Box::new(ScenicAppStrategy { scenic }))
     } else {
         let fb = fb.unwrap();
         let frame = fb.new_frame(executor)?;
+        // TODO: improve scheduling of updates
+        fasync::spawn(
+            async move {
+                while let Some(vsync_message) = receiver.next().await {
+                    App::with(|app| app.update_all_views(&vsync_message));
+                }
+                Ok(())
+            }
+                .unwrap_or_else(|e: failure::Error| {
+                    println!("error {:#?}", e);
+                }),
+        );
         frame.present(&fb)?;
         Ok(Box::new(FrameBufferAppStrategy { frame_buffer: fb, frame }))
     }
@@ -375,6 +388,12 @@ impl App {
         self.assistant = Some(assistant);
     }
 
+    fn update_all_views(&mut self, _vsync_message: &VSyncMessage) {
+        for (_, view_controller) in &mut self.view_controllers {
+            view_controller.update();
+        }
+    }
+
     /// Send a message to a specific view controller. Messages not handled by the ViewController
     /// will be forwarded to the `ViewControllerAssistant`.
     pub fn queue_message(&mut self, target: ViewKey, msg: Message) {
@@ -466,7 +485,9 @@ impl App {
             view_assistant,
         )?;
 
-        view_controller.setup_animation_mode();
+        // For framebuffer apps, always use vsync to drive update
+        // TODO: limit update rate in update if the requested refresh
+        // rate does not require a draw on every vsync.
 
         view_controller.present();
         self.view_controllers.insert(self.next_key, view_controller);

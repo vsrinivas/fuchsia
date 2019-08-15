@@ -488,7 +488,7 @@ impl ViewController {
         self.strategy.present();
     }
 
-    fn update(&mut self) {
+    pub(crate) fn update(&mut self) {
         // Recompute our logical size based on the provided physical size and screen metrics.
         self.logical_size = Size::new(
             self.physical_size.width * self.metrics.width,

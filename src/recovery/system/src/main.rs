@@ -79,7 +79,7 @@ async fn run<'a>(ui: &'a mut RecoveryUI<'a, MappingPixelSink>) -> Result<(), Err
 fn main() -> Result<(), Error> {
     println!("recovery: started");
     let mut executor = fasync::Executor::new().context("Failed to create executor")?;
-    let fb = FrameBuffer::new(None, &mut executor).context("Failed to create framebuffer")?;
+    let fb = FrameBuffer::new(None, &mut executor, None).context("Failed to create framebuffer")?;
     let config = fb.get_config();
     if config.format != PixelFormat::Argb8888
         && config.format != PixelFormat::Rgb565
