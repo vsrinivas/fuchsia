@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mocks") {
+  testonly = true
+
+  sources = [
+    "mock_semantic_action_listener.cc",
+    "mock_semantic_action_listener.h",
+    "mock_semantic_provider.cc",
+    "mock_semantic_provider.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest",
+  ]
+}

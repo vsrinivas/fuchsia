@@ -2,6 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":screen_reader_tests",
+  ]
+}
+
 executable("screen_reader_tests") {
   testonly = true
 
@@ -11,5 +18,6 @@ executable("screen_reader_tests") {
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
+    "//src/ui/a11y/lib/screen_reader",
   ]
 }

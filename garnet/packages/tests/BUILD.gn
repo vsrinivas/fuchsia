@@ -1345,7 +1345,7 @@ group("whereiscl") {
 group("a11y") {
   testonly = true
   public_deps = [
-    "//src/ui/a11y/tests:tests",
+    "//src/ui/a11y/bundles:tests",
   ]
 }
 

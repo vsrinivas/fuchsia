@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("screen_reader_lib") {
+source_set("screen_reader") {
   sources = [
     "actions.h",
     "screen_reader.h",

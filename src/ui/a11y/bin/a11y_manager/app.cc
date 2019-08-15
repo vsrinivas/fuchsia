@@ -13,8 +13,8 @@ const float kDefaultMagnificationZoomFactor = 1.0;
 
 App::App(std::unique_ptr<sys::ComponentContext> context)
     : startup_context_(std::move(context)),
-      settings_manager_impl_(std::make_unique<SettingsManagerImpl>()),
-      semantics_manager_impl_(std::make_unique<SemanticsManagerImpl>()) {
+      settings_manager_impl_(std::make_unique<a11y::SettingsManagerImpl>()),
+      semantics_manager_impl_(std::make_unique<a11y::SemanticsManagerImpl>()) {
   Initialize();
 }
 

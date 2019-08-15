@@ -7,7 +7,11 @@ import("//build/test/test_package.gni")
 group("lib") {
   deps = [
     "gesture_manager",
+    "screen_reader",
+    "semantics",
+    "settings",
     "tts",
+    "util",
   ]
 }
 
@@ -22,10 +26,48 @@ group("tests") {
 test_package("a11y_lib_tests") {
   deps = [
     "gesture_manager/tests",
+    "screen_reader/tests",
+    "semantics/tests",
+    "settings/tests",
     "tts/tests",
+  ]
+  resources = [
+    # needed for semantics_manager_test
+    {
+      path = "semantics/tests/testdata/semantic_tree_single_node.json"
+      dest = "semantic_tree_single_node.json"
+    },
+    {
+      path = "semantics/tests/testdata/semantic_tree_even_nodes.json"
+      dest = "semantic_tree_even_nodes.json"
+    },
+    {
+      path = "semantics/tests/testdata/semantic_tree_odd_nodes.json"
+      dest = "semantic_tree_odd_nodes.json"
+    },
+    {
+      path = "semantics/tests/testdata/deleted_subtree_even_nodes.json"
+      dest = "deleted_subtree_even_nodes.json"
+    },
+    {
+      path = "semantics/tests/testdata/cyclic_semantic_tree.json"
+      dest = "cyclic_semantic_tree.json"
+    },
+    {
+      path = "semantics/tests/testdata/semantic_tree_not_parseable.json"
+      dest = "semantic_tree_not_parseable.json"
+    },
   ]
 
   tests = [
+    {
+      name = "semantics_manager_tests"
+      environments = basic_envs
+    },
+    {
+      name = "settings_manager_tests"
+      environments = basic_envs
+    },
     {
       name = "tts_manager_tests"
       environments = basic_envs

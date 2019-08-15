@@ -45,22 +45,15 @@ source_set("lib") {
   sources = [
     "app.cc",
     "app.h",
-    "semantics/semantic_tree_impl.cc",
-    "semantics/semantic_tree_impl.h",
-    "semantics/semantics_manager_impl.cc",
-    "semantics/semantics_manager_impl.h",
-    "settings/settings_manager_impl.cc",
-    "settings/settings_manager_impl.h",
-    "settings/settings_provider_impl.cc",
-    "settings/settings_provider_impl.h",
-    "util.cc",
-    "util.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.math",
+    "//src/ui/a11y/lib/screen_reader",
+    "//src/ui/a11y/lib/semantics",
+    "//src/ui/a11y/lib/settings",
   ]
 
   deps = [

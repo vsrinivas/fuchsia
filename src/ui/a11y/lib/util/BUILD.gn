@@ -2,9 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("a11y") {
+source_set("util") {
+  sources = [
+    "util.cc",
+    "util.h",
+  ]
+
+  public_deps = []
+
   deps = [
-    "bin/a11y_manager",
-    "lib",
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.ui.views",
   ]
 }

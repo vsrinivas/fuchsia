@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("semantics") {
+  sources = [
+    "semantic_tree_impl.cc",
+    "semantic_tree_impl.h",
+    "semantics_manager_impl.cc",
+    "semantics_manager_impl.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.math",
+    "//src/ui/a11y/lib/util",
+  ]
+
+  deps = [
+    "//garnet/lib/ui/gfx",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+  ]
+}

@@ -14,9 +14,9 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
-#include "src/ui/a11y/bin/a11y_manager/semantics/semantics_manager_impl.h"
-#include "src/ui/a11y/bin/a11y_manager/settings/settings_manager_impl.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
+#include "src/ui/a11y/lib/semantics/semantics_manager_impl.h"
+#include "src/ui/a11y/lib/settings/settings_manager_impl.h"
 
 namespace a11y_manager {
 
@@ -46,9 +46,9 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   std::unique_ptr<sys::ComponentContext> startup_context_;
 
   // Pointer to Settings Manager Implementation.
-  std::unique_ptr<SettingsManagerImpl> settings_manager_impl_;
+  std::unique_ptr<a11y::SettingsManagerImpl> settings_manager_impl_;
   // Pointer to Semantics Manager Implementation.
-  std::unique_ptr<SemanticsManagerImpl> semantics_manager_impl_;
+  std::unique_ptr<a11y::SemanticsManagerImpl> semantics_manager_impl_;
 
   fidl::BindingSet<fuchsia::accessibility::SettingsWatcher> settings_watcher_bindings_;
 
