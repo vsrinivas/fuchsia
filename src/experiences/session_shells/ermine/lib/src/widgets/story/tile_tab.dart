@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:tiler/tiler.dart';
 
-import '../models/ermine_story.dart';
+import '../../models/ermine_story.dart';
 
 const _kBorderSize = 16.0;
 

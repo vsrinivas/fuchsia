@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../models/cluster_model.dart';
+import '../../models/cluster_model.dart';
 import 'cluster.dart';
 
 /// Defines a [PageView] to hold a [Cluster] widget per screen.

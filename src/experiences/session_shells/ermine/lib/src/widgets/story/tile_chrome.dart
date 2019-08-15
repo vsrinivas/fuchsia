@@ -4,8 +4,8 @@
 
 import 'package:flutter/material.dart';
 
-import '../utils/elevations.dart';
-import '../utils/styles.dart';
+import '../../utils/elevations.dart';
+import '../../utils/styles.dart';
 
 /// Defines a widget that builds the tile chrome for a story.
 class TileChrome extends StatelessWidget {

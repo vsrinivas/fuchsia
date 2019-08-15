@@ -5,8 +5,8 @@
 import 'package:flutter/material.dart';
 import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
 
-import '../models/app_model.dart';
-import '../utils/styles.dart';
+import '../../models/app_model.dart';
+import '../../utils/styles.dart';
 import 'story_widget.dart';
 import 'tile_chrome.dart';
 

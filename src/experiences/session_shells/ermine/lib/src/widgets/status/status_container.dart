@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/app_model.dart';
-import '../animation_driver.dart';
+import '../support/animation_driver.dart';
 import 'status.dart';
 
 /// Defines a widget to manage the visibility of the [Status] widget.

@@ -5,9 +5,9 @@
 import 'package:flutter/material.dart';
 import 'package:tiler/tiler.dart' show Tiler, TileModel;
 import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
-import '../models/cluster_model.dart';
-import '../models/ermine_story.dart';
 
+import '../../models/cluster_model.dart';
+import '../../models/ermine_story.dart';
 import 'story_widget.dart';
 import 'tile_chrome.dart';
 import 'tile_sizer.dart';

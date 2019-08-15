@@ -4,8 +4,8 @@
 
 import 'package:flutter/material.dart';
 
-import '../models/app_model.dart';
-import '../utils/styles.dart';
+import '../../models/app_model.dart';
+import '../../utils/styles.dart';
 
 /// Defines a widget that works as a scrim i.e. a [Listener] that detects taps
 /// and when pointer is hovered at the edge of the screen in fullscreen mode.

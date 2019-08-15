@@ -4,9 +4,9 @@
 
 import 'package:flutter/material.dart';
 
-import '../models/app_model.dart';
-import '../utils/elevations.dart';
-import '../utils/styles.dart';
+import '../../models/app_model.dart';
+import '../../utils/elevations.dart';
+import '../../utils/styles.dart';
 import 'animation_driver.dart';
 
 /// Defines a widget to manage the visibility of the keyboard help panel.

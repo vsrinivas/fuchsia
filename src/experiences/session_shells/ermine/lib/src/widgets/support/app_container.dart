@@ -5,8 +5,8 @@
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../models/app_model.dart';
-import '../utils/styles.dart';
+import '../../models/app_model.dart';
+import '../../utils/styles.dart';
 
 /// Defines a widget to manage the fullscreen state of the [App] widget.
 class AppContainer extends StatelessWidget {

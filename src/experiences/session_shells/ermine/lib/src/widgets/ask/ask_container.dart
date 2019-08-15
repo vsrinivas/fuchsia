@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/app_model.dart';
 import '../../utils/styles.dart';
-import '../animation_driver.dart';
+import '../support/animation_driver.dart';
 import 'ask.dart';
 
 /// Defines a widget to manage the visibility of the [Ask] widget.

@@ -7,13 +7,13 @@ import 'package:flutter/material.dart';
 import '../models/app_model.dart';
 import '../utils/styles.dart';
 
-import 'app_container.dart';
 import 'ask/ask_container.dart';
-import 'clusters.dart';
-import 'fullscreen_story.dart';
-import 'keyboard_help.dart';
-import 'scrim.dart';
 import 'status/status_container.dart';
+import 'story/clusters.dart';
+import 'story/fullscreen_story.dart';
+import 'support/app_container.dart';
+import 'support/keyboard_help.dart';
+import 'support/scrim.dart';
 import 'topbar/topbar.dart';
 
 /// Builds the main display of this session shell.
