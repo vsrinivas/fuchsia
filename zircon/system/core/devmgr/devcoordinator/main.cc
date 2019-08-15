@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
+#include <fuchsia/ldsvc/llcpp/fidl.h>
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/devmgr-launcher/processargs.h>
@@ -17,6 +18,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/optional.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
@@ -31,7 +33,6 @@
 #include <unistd.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/vfs.h>
-#include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -63,7 +64,7 @@ constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
 constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
 constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
 
-struct {
+struct GlobalHandles {
   // The handle used to transmit messages to appmgr.
   zx::channel appmgr_client;
 
@@ -83,6 +84,12 @@ struct {
   // The handle used by device_name_provider to serve incoming requests.
   zx::channel device_name_provider_server;
 
+  // Handle to the loader service hosted in fshost, which allows loading from /boot and /system
+  // rather than specific packages.
+  // This isn't actually "optional", it's just initialized later.
+  // TODO(ZX-4860): Delete this once all dependencies have been removed.
+  fit::optional<llcpp::fuchsia::ldsvc::Loader::SyncClient> fshost_ldsvc;
+
   zx::job svc_job;
   zx::job fuchsia_job;
   zx::channel svchost_outgoing;
@@ -92,7 +99,28 @@ struct {
   // Used to bind the svchost to the virtual-console binary to provide fidl
   // services.
   zx::channel virtcon_fidl;
-} g_handles;
+
+  GlobalHandles() : fshost_ldsvc(zx::channel()) {}
+};
+
+static GlobalHandles g_handles;
+
+// TODO(ZX-4860): DEPRECATED. Do not add new dependencies on the fshost loader service!
+zx_status_t clone_fshost_ldsvc(zx::channel* loader) {
+  // Only valid to call this after fshost_ldsvc has been wired up.
+  ZX_ASSERT_MSG(g_handles.fshost_ldsvc.has_value(), "clone_fshost_ldsvc called too early");
+
+  zx::channel remote;
+  zx_status_t status = zx::channel::create(0, loader, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto result = g_handles.fshost_ldsvc->Clone(std::move(remote));
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  return result.Unwrap()->rv;
+}
 
 // Wait for the requested file.  Its parent directory must exist.
 zx_status_t wait_for_file(const char* path, zx::time deadline) {
@@ -138,8 +166,17 @@ void do_autorun(const char* name, const char* cmd) {
   if (cmd != nullptr) {
     auto args = devmgr::ArgumentVector::FromCmdline(cmd);
     args.Print("autorun");
-    devmgr::devmgr_launch(g_handles.svc_job, name, args.argv(), nullptr, -1, nullptr, nullptr, 0,
-                          nullptr, FS_ALL);
+
+    zx::channel ldsvc;
+    zx_status_t status = clone_fshost_ldsvc(&ldsvc);
+    if (status != ZX_OK) {
+      fprintf(stderr, "devcoordinator: failed to clone fshost loader for console: %d\n", status);
+      return;
+    }
+
+    devmgr::devmgr_launch_with_loader(g_handles.svc_job, name, zx::vmo(), std::move(ldsvc),
+                                      args.argv(), nullptr, -1, nullptr, nullptr, 0, nullptr,
+                                      FS_ALL);
   }
 }
 
@@ -251,17 +288,25 @@ int fuchsia_starter(void* arg) {
 
     struct stat s;
     if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {
+      zx::channel ldsvc;
+      zx_status_t status = clone_fshost_ldsvc(&ldsvc);
+      if (status != ZX_OK) {
+        fprintf(stderr, "devcoordinator: failed to clone fshost loader for appmgr: %d\n", status);
+        continue;
+      }
+
       unsigned int appmgr_hnd_count = 0;
       zx_handle_t appmgr_hnds[2] = {};
       uint32_t appmgr_ids[2] = {};
       if (g_handles.appmgr_server.is_valid()) {
-        assert(appmgr_hnd_count < fbl::count_of(appmgr_hnds));
+        ZX_ASSERT(appmgr_hnd_count < fbl::count_of(appmgr_hnds));
         appmgr_hnds[appmgr_hnd_count] = g_handles.appmgr_server.release();
         appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
         appmgr_hnd_count++;
       }
-      devmgr::devmgr_launch(g_handles.fuchsia_job, "appmgr", argv_appmgr, nullptr, -1, appmgr_hnds,
-                            appmgr_ids, appmgr_hnd_count, nullptr, FS_FOR_APPMGR);
+      devmgr::devmgr_launch_with_loader(g_handles.fuchsia_job, "appmgr", zx::vmo(),
+                                        std::move(ldsvc), argv_appmgr, nullptr, -1, appmgr_hnds,
+                                        appmgr_ids, appmgr_hnd_count, nullptr, FS_FOR_APPMGR);
       appmgr_started = true;
     }
     if (!autorun_started) {
@@ -348,10 +393,18 @@ int console_starter(void* arg) {
       }
     }
 
+    zx::channel ldsvc;
+    status = clone_fshost_ldsvc(&ldsvc);
+    if (status != ZX_OK) {
+      fprintf(stderr, "devcoordinator: failed to clone fshost loader for console: %d\n", status);
+      return 1;
+    }
+
     const char* argv_sh[] = {"/boot/bin/sh", nullptr};
     zx::process proc;
-    status = devmgr::devmgr_launch(g_handles.svc_job, "sh:console", argv_sh, envp, fd.release(),
-                                   nullptr, nullptr, 0, &proc, FS_ALL);
+    status = devmgr::devmgr_launch_with_loader(g_handles.svc_job, "sh:console", zx::vmo(),
+                                               std::move(ldsvc), argv_sh, envp, fd.release(),
+                                               nullptr, nullptr, 0, &proc, FS_ALL);
     if (status != ZX_OK) {
       printf("devcoordinator: failed to launch console shell (%s)\n", zx_status_get_string(status));
       return 1;
@@ -697,17 +750,19 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t types[fbl::count_of(handles)];
   size_t n = 0;
-  zx_handle_t ldsvc;
 
-  // Pass "fs_root", and ldsvc handles to fshost.
-  if (zx_channel_create(0, g_handles.fs_root.reset_and_get_address(), &handles[n]) == ZX_OK) {
+  // Pass server ends of fs_root and ldsvc handles to fshost.
+  zx::channel fs_root_server;
+  if (zx::channel::create(0, &g_handles.fs_root, &fs_root_server) == ZX_OK) {
+    handles[n] = fs_root_server.release();
     types[n++] = PA_HND(PA_USER0, 0);
   }
-  if (zx_channel_create(0, &ldsvc, &handles[n]) == ZX_OK) {
+  zx::channel ldsvc_client, ldsvc_server;
+  if (zx::channel::create(0, &ldsvc_client, &ldsvc_server) == ZX_OK) {
+    handles[n] = ldsvc_server.release();
     types[n++] = PA_HND(PA_USER0, 2);
-  } else {
-    ldsvc = ZX_HANDLE_INVALID;
   }
+  g_handles.fshost_ldsvc.emplace(std::move(ldsvc_client));
 
   // The "public directory" of the fshost service.
   handles[n] = fshost_server.release();
@@ -765,9 +820,6 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
 
   devmgr::devmgr_launch(g_handles.svc_job, "fshost", args.get(), env.get(), -1, handles, types, n,
                         nullptr, FS_BOOT | FS_DEV | FS_SVC);
-
-  // switch to system loader service provided by fshost
-  zx_handle_close(dl_set_loader_service(ldsvc));
 }
 
 void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
@@ -1226,7 +1278,23 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return 1;
     }
-    coordinator.set_loader_service(loader_service.get());
+    coordinator.set_loader_service_connector(
+        [loader_service = std::move(loader_service)](zx::channel* c) {
+          zx_status_t status = loader_service->Connect(c);
+          if (status != ZX_OK) {
+            log(ERROR, "devcoordinator: failed to add devhost loader connection: %s\n",
+                zx_status_get_string(status));
+          }
+          return status;
+        });
+  } else {
+    coordinator.set_loader_service_connector([](zx::channel* c) {
+      zx_status_t status = clone_fshost_ldsvc(c);
+      if (status != ZX_OK) {
+        fprintf(stderr, "devcoordinator: failed to clone fshost loader for devhost: %d\n", status);
+      }
+      return status;
+    });
   }
 
   for (const char* path : devmgr_args.driver_search_paths) {

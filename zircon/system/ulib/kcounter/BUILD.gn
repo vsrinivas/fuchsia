@@ -18,7 +18,6 @@ library("kcounter") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/inspect",
     "$zx/system/ulib/svc",
-    "$zx/system/ulib/syslog",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
