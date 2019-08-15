@@ -16,6 +16,11 @@ rustc_library("files_async") {
     "//third_party/rust_crates:futures-preview",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
+  test_deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//third_party/rust_crates:proptest",
+  ]
 }
 
 test_package("files_async_tests") {

@@ -247,8 +247,7 @@ impl ExtraDataCollector {
 
         for entry in files_async::readdir_recursive(&proxy).await?.into_iter() {
             // We are only currently interested in inspect files.
-            if !entry.name.ends_with(".inspect") || entry.dir_type != files_async::DirentType::File
-            {
+            if !entry.name.ends_with(".inspect") || entry.kind != files_async::DirentKind::File {
                 continue;
             }
 

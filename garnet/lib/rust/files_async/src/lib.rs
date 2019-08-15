@@ -4,14 +4,37 @@
 
 #![feature(async_await)]
 
-use failure::Error;
-use fidl_fuchsia_io::{DirectoryProxy, MAX_BUF};
-use fuchsia_zircon as zx;
-use std::collections::VecDeque;
-use std::mem;
+use {
+    failure::{Error, Fail},
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MAX_BUF},
+    fuchsia_zircon as zx,
+    std::{collections::VecDeque, mem, str::Utf8Error},
+};
+
+#[derive(Debug, Fail)]
+pub enum ReadDirError {
+    #[fail(display = "a directory entry could not be decoded: {:?}", _0)]
+    Decode(#[cause] DirentDecodeError),
+
+    #[fail(display = "fidl error during read_dirents: {:?}", _0)]
+    Fidl(#[cause] fidl::Error),
+
+    #[fail(display = "read_dirents failed with status {:?}", _0)]
+    ReadDir(#[cause] zx::Status),
+}
+
+#[derive(Debug, PartialEq, Eq, Fail)]
+pub enum DirentDecodeError {
+    #[fail(display = "an entry extended past the end of the buffer")]
+    BufferOverrun,
+
+    #[fail(display = "name is not valid utf-8")]
+    InvalidUtf8(#[cause] Utf8Error),
+}
 
 #[derive(Eq, Ord, PartialOrd, PartialEq, Clone, Copy, Debug)]
-pub enum DirentType {
+pub enum DirentKind {
     Unknown,
     Directory,
     BlockDevice,
@@ -20,15 +43,15 @@ pub enum DirentType {
     Service,
 }
 
-impl From<u8> for DirentType {
-    fn from(dir_type: u8) -> Self {
-        match dir_type {
-            fidl_fuchsia_io::DIRENT_TYPE_DIRECTORY => DirentType::Directory,
-            fidl_fuchsia_io::DIRENT_TYPE_BLOCK_DEVICE => DirentType::BlockDevice,
-            fidl_fuchsia_io::DIRENT_TYPE_FILE => DirentType::File,
-            fidl_fuchsia_io::DIRENT_TYPE_SOCKET => DirentType::Socket,
-            fidl_fuchsia_io::DIRENT_TYPE_SERVICE => DirentType::Service,
-            _ => DirentType::Unknown,
+impl From<u8> for DirentKind {
+    fn from(kind: u8) -> Self {
+        match kind {
+            fidl_fuchsia_io::DIRENT_TYPE_DIRECTORY => DirentKind::Directory,
+            fidl_fuchsia_io::DIRENT_TYPE_BLOCK_DEVICE => DirentKind::BlockDevice,
+            fidl_fuchsia_io::DIRENT_TYPE_FILE => DirentKind::File,
+            fidl_fuchsia_io::DIRENT_TYPE_SOCKET => DirentKind::Socket,
+            fidl_fuchsia_io::DIRENT_TYPE_SERVICE => DirentKind::Service,
+            _ => DirentKind::Unknown,
         }
     }
 }
@@ -36,16 +59,16 @@ impl From<u8> for DirentType {
 #[derive(Eq, Ord, PartialOrd, PartialEq, Debug)]
 pub struct DirEntry {
     pub name: String,
-    pub dir_type: DirentType,
+    pub kind: DirentKind,
 }
 
 impl DirEntry {
     fn is_dir(&self) -> bool {
-        self.dir_type == DirentType::Directory
+        self.kind == DirentKind::Directory
     }
 
     fn chain(&self, subentry: &DirEntry) -> DirEntry {
-        DirEntry { name: format!("{}/{}", self.name, subentry.name), dir_type: subentry.dir_type }
+        DirEntry { name: format!("{}/{}", self.name, subentry.name), kind: subentry.kind }
     }
 }
 
@@ -67,10 +90,9 @@ pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Er
     // Handle a single directory at a time, emitting leaf nodes and queueing up subdirectories for
     // later iterations.
     while let Some(entry) = directories.pop_front() {
-        let (subdir, subdir_server_end) = fidl::endpoints::create_proxy()?;
+        let (subdir, subdir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
         let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE;
-        dir.open(flags, 0, &entry.name, subdir_server_end)?;
-        let subdir = DirectoryProxy::new(subdir.into_channel().unwrap());
+        dir.open(flags, 0, &entry.name, ServerEnd::new(subdir_server_end.into_channel()))?;
 
         let subentries = readdir(&subdir).await?;
 
@@ -93,47 +115,19 @@ pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Er
     Ok(entries)
 }
 
-pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
-    #[repr(packed)]
-    struct Dirent {
-        _ino: u64,
-        size: u8,
-        _type: u8,
-    }
-
+pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, ReadDirError> {
     let mut entries = vec![];
+
     loop {
-        let (status, buf) = dir.read_dirents(MAX_BUF).await?;
-        zx::Status::ok(status)?;
+        let (status, buf) = dir.read_dirents(MAX_BUF).await.map_err(ReadDirError::Fidl)?;
+        zx::Status::ok(status).map_err(ReadDirError::ReadDir)?;
 
         if buf.is_empty() {
             break;
         }
 
-        // The buffer contains an arbitrary number of dirents.
-        let mut slice = buf.as_slice();
-        while !slice.is_empty() {
-            // Read the dirent, and figure out how long the name is.
-            let (head, rest) = slice.split_at(mem::size_of::<Dirent>());
-
-            let entry = {
-                // Cast the dirent bytes into a `Dirent`, and extract out the size of the name and
-                // the entry type.
-                let (size, _type) = unsafe {
-                    let dirent: &Dirent = mem::transmute(head.as_ptr());
-                    (dirent.size as usize, dirent._type)
-                };
-
-                // Advance to the next entry.
-                slice = &rest[size..];
-
-                DirEntry {
-                    // Package resolver paths are always utf8.
-                    name: String::from_utf8(rest[..size].to_vec())?,
-                    dir_type: _type.into(),
-                }
-            };
-
+        for entry in parse_dir_entries(&buf) {
+            let entry = entry.map_err(ReadDirError::Decode)?;
             if entry.name != "." {
                 entries.push(entry);
             }
@@ -145,35 +139,272 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     Ok(entries)
 }
 
+fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DirentDecodeError>> {
+    #[repr(C, packed)]
+    struct Dirent {
+        _ino: u64,
+        size: u8,
+        kind: u8,
+    }
+    const DIRENT_SIZE: usize = mem::size_of::<Dirent>();
+
+    let mut entries = vec![];
+
+    while !buf.is_empty() {
+        // Don't read past the end of the buffer.
+        if DIRENT_SIZE > buf.len() {
+            entries.push(Err(DirentDecodeError::BufferOverrun));
+            return entries;
+        }
+
+        // Read the dirent, and figure out how long the name is.
+        let (head, rest) = buf.split_at(DIRENT_SIZE);
+
+        let entry = {
+            // Cast the dirent bytes into a `Dirent`, and extract out the size of the name and the
+            // entry type.
+            let (size, kind) = unsafe {
+                let dirent: &Dirent = mem::transmute(head.as_ptr());
+                (dirent.size as usize, dirent.kind)
+            };
+
+            // Don't read past the end of the buffer.
+            if size > rest.len() {
+                entries.push(Err(DirentDecodeError::BufferOverrun));
+                return entries;
+            }
+
+            // Advance to the next entry.
+            buf = &rest[size..];
+            match String::from_utf8(rest[..size].to_vec()) {
+                Ok(name) => Ok(DirEntry { name, kind: kind.into() }),
+                Err(err) => Err(DirentDecodeError::InvalidUtf8(err.utf8_error())),
+            }
+        };
+
+        entries.push(entry);
+    }
+
+    entries
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        fuchsia_async as fasync,
+        fuchsia_vfs_pseudo_fs::{
+            directory::entry::DirectoryEntry, file::simple::read_only_str, pseudo_directory,
+        },
+        proptest::prelude::*,
+    };
 
-    fn build_direntry(name: &str, dir_type: DirentType) -> DirEntry {
-        DirEntry { name: name.to_string(), dir_type }
+    proptest! {
+        #[test]
+        fn test_parse_dir_entries_does_not_crash(buf in prop::collection::vec(any::<u8>(), 0..200)) {
+            parse_dir_entries(&buf);
+        }
     }
 
     #[test]
-    fn test_direntry() {
-        assert!(build_direntry("foo", DirentType::Directory).is_dir());
+    fn test_parse_dir_entries() {
+        let buf = &[
+            // ino
+            42,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            // name length
+            4,
+            // type
+            fidl_fuchsia_io::DIRENT_TYPE_FILE,
+            // name
+            't' as u8,
+            'e' as u8,
+            's' as u8,
+            't' as u8,
+        ];
+
+        assert_eq!(
+            parse_dir_entries(buf),
+            vec![Ok(DirEntry { name: "test".to_string(), kind: DirentKind::File })]
+        );
+    }
+
+    #[test]
+    fn test_parse_dir_entries_rejects_invalid_utf8() {
+        let buf = &[
+            // ino
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            // name length
+            1,
+            // type
+            fidl_fuchsia_io::DIRENT_TYPE_FILE,
+            // name (a lonely continuation byte)
+            0x80,
+            // ino
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            // name length
+            4,
+            // type
+            fidl_fuchsia_io::DIRENT_TYPE_FILE,
+            // name
+            'o' as u8,
+            'k' as u8,
+            'a' as u8,
+            'y' as u8,
+        ];
+
+        let expected_err = std::str::from_utf8(&[0x80]).unwrap_err();
+
+        assert_eq!(
+            parse_dir_entries(buf),
+            vec![
+                Err(DirentDecodeError::InvalidUtf8(expected_err)),
+                Ok(DirEntry { name: "okay".to_string(), kind: DirentKind::File })
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_dir_entries_overrun() {
+        let buf = &[
+            // ino
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            // name length
+            5,
+            // type
+            fidl_fuchsia_io::DIRENT_TYPE_FILE,
+            // name
+            't' as u8,
+            'e' as u8,
+            's' as u8,
+            't' as u8,
+        ];
+
+        assert_eq!(parse_dir_entries(buf), vec![Err(DirentDecodeError::BufferOverrun)]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_readdir() {
+        let (dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        fasync::spawn(async move {
+            let mut dir = pseudo_directory! {
+                "afile" => read_only_str(|| Ok("".into())),
+                "zzz" => read_only_str(|| Ok("".into())),
+                "subdir" => pseudo_directory! {
+                    "ignored" => read_only_str(|| Ok("".into())),
+                },
+            };
+            dir.open(
+                fidl_fuchsia_io::OPEN_FLAG_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                0,
+                &mut std::iter::empty(),
+                ServerEnd::new(server_end.into_channel()),
+            );
+            dir.await;
+            unreachable!();
+        });
+
+        let entries = readdir(&dir).await.expect("readdir to succeed");
+        assert_eq!(
+            entries,
+            vec![
+                build_direntry("afile", DirentKind::File),
+                build_direntry("subdir", DirentKind::Directory),
+                build_direntry("zzz", DirentKind::File),
+            ]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_readdir_recursive() {
+        let (dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        fasync::spawn(async move {
+            let mut dir = pseudo_directory! {
+                "a" => read_only_str(|| Ok("".into())),
+                "b" => read_only_str(|| Ok("".into())),
+                "emptydir" => pseudo_directory! { },
+                "subdir" => pseudo_directory! {
+                    "subsubdir" => pseudo_directory! {
+                        "a" => read_only_str(|| Ok("".into())),
+                        "emptydir" => pseudo_directory! { },
+                    },
+                },
+            };
+            dir.open(
+                fidl_fuchsia_io::OPEN_FLAG_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                0,
+                &mut std::iter::empty(),
+                ServerEnd::new(server_end.into_channel()),
+            );
+            dir.await;
+            unreachable!();
+        });
+
+        let entries = readdir_recursive(&dir).await.expect("readdir_recursive to succeed");
+        assert_eq!(
+            entries,
+            vec![
+                build_direntry("a", DirentKind::File),
+                build_direntry("b", DirentKind::File),
+                build_direntry("emptydir", DirentKind::Directory),
+                build_direntry("subdir/subsubdir/a", DirentKind::File),
+                build_direntry("subdir/subsubdir/emptydir", DirentKind::Directory),
+            ]
+        );
+    }
+
+    fn build_direntry(name: &str, kind: DirentKind) -> DirEntry {
+        DirEntry { name: name.to_string(), kind }
+    }
+
+    #[test]
+    fn test_direntry_is_dir() {
+        assert!(build_direntry("foo", DirentKind::Directory).is_dir());
 
         // Negative test
-        assert!(!build_direntry("foo", DirentType::File).is_dir());
-        assert!(!build_direntry("foo", DirentType::Unknown).is_dir());
+        assert!(!build_direntry("foo", DirentKind::File).is_dir());
+        assert!(!build_direntry("foo", DirentKind::Unknown).is_dir());
     }
 
     #[test]
     fn test_direntry_chaining() {
-        let parent = build_direntry("foo", DirentType::Directory);
+        let parent = build_direntry("foo", DirentKind::Directory);
 
-        let child1 = build_direntry("bar", DirentType::Directory);
+        let child1 = build_direntry("bar", DirentKind::Directory);
         let chained1 = parent.chain(&child1);
         assert_eq!(&chained1.name, "foo/bar");
-        assert_eq!(chained1.dir_type, DirentType::Directory);
+        assert_eq!(chained1.kind, DirentKind::Directory);
 
-        let child2 = build_direntry("baz", DirentType::File);
+        let child2 = build_direntry("baz", DirentKind::File);
         let chained2 = parent.chain(&child2);
         assert_eq!(&chained2.name, "foo/baz");
-        assert_eq!(chained2.dir_type, DirentType::File);
+        assert_eq!(chained2.kind, DirentKind::File);
     }
 }
