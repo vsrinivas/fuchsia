@@ -13,6 +13,7 @@ from host_mock import MockHost
 
 
 class MockDevice(Device):
+
     def __init__(self, port=22):
         super(MockDevice, self).__init__(MockHost(), '::1', port)
         self.history = []
@@ -20,8 +21,8 @@ class MockDevice(Device):
 
     def _ssh(self, cmdline, stdout=subprocess.PIPE):
         """ Overrides Device._ssh to provide canned responses."""
-        self.history.append(' '.join(
-            self.get_ssh_cmd(['ssh', self._addr] + cmdline)))
+        self.history.append(
+            ' '.join(self.get_ssh_cmd(['ssh', self._addr] + cmdline)))
         if cmdline[0] == 'cs' and self.toggle:
             response = """
   http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#m

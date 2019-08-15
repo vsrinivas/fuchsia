@@ -9,6 +9,7 @@ import sys
 
 from lib.args import Args
 from lib.cipd import Cipd
+from lib.corpus import Corpus
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
@@ -16,20 +17,21 @@ from lib.host import Host
 
 def main():
     parser = Args.make_parser(
-        'Transfers corpus for a named fuzzer to a device', label_present=True)
+        'Transfers corpus for a named fuzzer to a device. By default, copies ' +
+        'the latest corpus from CIPD. To copy a local directory instead, use ' +
+        'the --staging and --no-cipd options.',
+        label_present=True)
     args = parser.parse_args()
 
     host = Host.from_build()
     device = Device.from_args(host, args)
     fuzzer = Fuzzer.from_args(device, args)
 
-    if os.path.isdir(args.label):
-        device.store(os.path.join(args.label, '*'), fuzzer.data_path('corpus'))
-        return 0
-    with Cipd.from_args(fuzzer, args, label=args.label) as cipd:
-        if not cipd.install():
-            return 1
-        device.store(os.path.join(cipd.root, '*'), fuzzer.data_path('corpus'))
+    with Corpus.from_args(fuzzer, args) as corpus:
+        cipd = Cipd(corpus)
+        if not args.no_cipd:
+            cipd.install(args.label)
+        corpus.push()
     return 0
 
 

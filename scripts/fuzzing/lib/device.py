@@ -176,8 +176,8 @@ class Device(object):
     """
         results = {}
         try:
-            out, _ = self._ssh(
-                ['ls', '-l', path], stdout=subprocess.PIPE).communicate()
+            out, _ = self._ssh(['ls', '-l', path],
+                               stdout=subprocess.PIPE).communicate()
             for line in str(out).split('\n'):
                 # Line ~= '-rw-r--r-- 1 0 0 8192 Mar 18 22:02 some-name'
                 parts = line.split()
@@ -196,7 +196,6 @@ class Device(object):
       srcs: Local or remote paths to copy from.
       dst: Local or remote path to copy to.
     """
-        # Wild cards only work if shell=True and the whole line passed as a string.
         cmd = self.get_ssh_cmd(['scp'] + srcs + [dst])
         subprocess.check_call(cmd, stdout=None, stderr=None)
 
@@ -209,4 +208,7 @@ class Device(object):
     def store(self, host_src, data_dst):
         """Copies `host_src` on the host to `data_dst` on the target."""
         self.ssh(['mkdir', '-p', data_dst])
-        self._scp(glob.glob(host_src), '[{}]:{}'.format(self._addr, data_dst))
+        srcs = glob.glob(host_src)
+        if len(srcs) == 0:
+            return
+        self._scp(srcs, '[{}]:{}'.format(self._addr, data_dst))

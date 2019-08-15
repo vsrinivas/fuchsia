@@ -9,6 +9,7 @@ import sys
 
 from lib.args import Args
 from lib.cipd import Cipd
+from lib.corpus import Corpus
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
@@ -23,10 +24,11 @@ def main():
     device = Device.from_args(host, args)
     fuzzer = Fuzzer.from_args(device, args)
 
-    with Cipd.from_args(fuzzer, args) as cipd:
-        if cipd.install():
-            device.store(
-                os.path.join(cipd.root, '*'), fuzzer.data_path('corpus'))
+    with Corpus.from_args(fuzzer, args) as corpus:
+        cipd = Cipd(corpus)
+        if not args.no_cipd:
+            cipd.install('latest')
+        corpus.push()
 
     print('\n****************************************************************')
     print(' Starting ' + str(fuzzer) + '.')
@@ -34,8 +36,8 @@ def main():
     print('   ' + fuzzer.results())
     if not args.foreground:
         print(' You should be notified when the fuzzer stops.')
-        print(' To check its progress, use `fx fuzz check ' + str(fuzzer) +
-              '`.')
+        print(
+            ' To check its progress, use `fx fuzz check ' + str(fuzzer) + '`.')
         print(' To stop it manually, use `fx fuzz stop ' + str(fuzzer) + '`.')
     print('****************************************************************\n')
     fuzzer.start(fuzzer_args)

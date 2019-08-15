@@ -14,10 +14,9 @@ from lib.host import Host
 
 def main():
     parser = Args.make_parser(
-        description='Reports status for the fuzzer matching NAME if provided, '
-        +
-        'or for all running fuzzers.  Status includes execution state, corpus '
-        + 'size, and number of artifacts.',
+        description='Reports status for the fuzzer matching NAME if ' +
+        'provided, or for all running fuzzers.  Status includes execution ' +
+        'state, corpus size, and number of artifacts.',
         name_required=False)
     args = parser.parse_args()
 
@@ -48,8 +47,8 @@ def main():
                 print('                  ' + artifact)
     if silent:
         print(
-            'No fuzzers are running.  Include \'name\' to check specific fuzzers.'
-        )
+            'No fuzzers are running.  Include \'name\' to check specific ' +
+            'fuzzers.')
         return 1
     return 0
 

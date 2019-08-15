@@ -9,13 +9,14 @@ from host import Host
 
 
 class Args:
+
     @classmethod
     def make_parser(cls, description, name_required=True, label_present=False):
         parser = argparse.ArgumentParser(description=description)
         parser.add_argument(
             '--device',
-            help=
-            'Name of device, only needed when multiple devices are present.')
+            help='Name of device, only needed when multiple devices are present.'
+        )
         parser.add_argument(
             '--foreground',
             action='store_true',
@@ -23,18 +24,18 @@ class Args:
         parser.add_argument(
             '--no-cipd',
             action='store_true',
-            help=
-            'Skip steps which involve transferring packages to or from CIPD')
+            help='Skip steps which involve transferring packages to or from CIPD'
+        )
         parser.add_argument(
             '--output', help='Path under which to store results.')
         parser.add_argument(
             '--staging',
-            help='Host directory to use for un/packing corpus bundles.' +
-            ' Defaults to a temporary directory.')
+            help='Host directory to use for un/packing corpus bundles. Defaults '
+            + 'to a temporary directory.')
         name_help = (
-            'Fuzzer name to match.  This can be part of the package and/or' +
-            ' target name, e.g. "foo", "bar", and "foo/bar" all match' +
-            ' "foo_package/bar_target".')
+            'Fuzzer name to match.  This can be part of the package and/or ' +
+            'target name, e.g. "foo", "bar", and "foo/bar" all match ' +
+            '"foo_package/bar_target".')
         if name_required:
             parser.add_argument('name', help=name_help)
         else:
@@ -44,12 +45,10 @@ class Args:
                 'label',
                 nargs='?',
                 default='latest',
-                help='If a directory, installs a corpus from that location. ' +
-                'Otherwise installs the labeled version from CIPD. In this case, '
-                +
-                '"label" may be either a "ref" or a key:value "tag"  as described '
-                + 'in `cipd help`. By default, corpora are uploaded with the '
-                + '"latest" ref and a tag of "integration:<git-revision>" ' +
-                'corresponding to current revision of the //integration repository.'
-            )
+                help='Installs the labeled version from CIPD. "label" may be ' +
+                'either a "ref" or a key:value "tag"  as described in ' +
+                '`cipd help`. By default, corpora are uploaded with the ' +
+                '"latest" ref and a tag of "integration:<git-revision>" ' +
+                'corresponding to current revision of the //integration ' +
+                'repository.')
         return parser

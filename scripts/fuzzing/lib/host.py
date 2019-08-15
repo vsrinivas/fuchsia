@@ -48,7 +48,7 @@ class Host(object):
         self._ids = None
         self._llvm_symbolizer = None
         self._symbolizer_exec = None
-        self._platform = None
+        self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
         self._zxtools = None
         self.fuzzers = []
         self.build_dir = None
@@ -75,19 +75,11 @@ class Host(object):
             raise Host.ConfigError('Unable to find Zircon host tools.')
         self._zxtools = zxtools
 
-    def set_platform(self, platform):
-        """Sets the platform used for host OS-specific behavior."""
-        if not os.path.isdir(Host.join('buildtools', platform)):
-            raise Host.ConfigError('Unsupported host platform: ' + platform)
-        self._platform = platform
-
     def set_symbolizer(self, executable, symbolizer):
         """Sets the paths to both the wrapper and LLVM symbolizers."""
-        if not os.path.exists(executable) or not os.access(
-                executable, os.X_OK):
+        if not os.path.exists(executable) or not os.access(executable, os.X_OK):
             raise Host.ConfigError('Invalid symbolize binary: ' + executable)
-        if not os.path.exists(symbolizer) or not os.access(
-                symbolizer, os.X_OK):
+        if not os.path.exists(symbolizer) or not os.access(symbolizer, os.X_OK):
             raise Host.ConfigError('Invalid LLVM symbolizer: ' + symbolizer)
         self._symbolizer_exec = executable
         self._llvm_symbolizer = symbolizer
@@ -108,12 +100,12 @@ class Host(object):
         """Configure the host using data from a build directory."""
         self.set_build_ids(Host.join(build_dir, 'ids.txt'))
         self.set_zxtools(Host.join(build_dir + '.zircon', 'tools'))
-        platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-        self.set_platform(platform)
         self.set_symbolizer(
-            Host.join('prebuilt', 'tools', 'symbolize', platform, 'symbolize'),
-            Host.join('buildtools', platform, 'clang', 'bin',
-                      'llvm-symbolizer'))
+            Host.join(
+                'prebuilt', 'tools', 'symbolize', self._platform, 'symbolize'),
+            Host.join(
+                'prebuilt', 'third_party', 'clang', self._platform, 'bin',
+                'llvm-symbolizer'))
         json_file = Host.join(build_dir, 'fuzzers.json')
         # fuzzers.json isn't emitted in release builds
         if os.path.exists(json_file):
@@ -127,8 +119,7 @@ class Host(object):
         if not os.path.isabs(cmd[0]):
             cmd[0] = os.path.join(self._zxtools, cmd[0])
         if not os.path.exists(cmd[0]):
-            raise Host.ConfigError('Unable to find Zircon host tool: ' +
-                                   cmd[0])
+            raise Host.ConfigError('Unable to find Zircon host tool: ' + cmd[0])
         if logfile:
             subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.STDOUT)
         else:
@@ -160,13 +151,13 @@ class Host(object):
         if not self._platform:
             return
         elif self._platform == 'mac-x64':
-            subprocess.call([
-                'osascript', '-e', 'display notification "' + body +
-                '" with title "' + title + '"'
-            ])
-        elif subprocess.call(
-            ['which', 'notify-send'], stdout=Host.DEVNULL,
-                stderr=Host.DEVNULL) == 0:
+            subprocess.call(
+                [
+                    'osascript', '-e', 'display notification "' + body +
+                    '" with title "' + title + '"'
+                ])
+        elif subprocess.call(['which', 'notify-send'], stdout=Host.DEVNULL,
+                             stderr=Host.DEVNULL) == 0:
             subprocess.call(
                 ['notify-send', title, body],
                 stdout=Host.DEVNULL,

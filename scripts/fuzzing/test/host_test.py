@@ -15,6 +15,7 @@ from host_mock import MockHost
 
 
 class TestHost(unittest.TestCase):
+
     def test_join(self):
         fuchsia_dir = os.getenv('FUCHSIA_DIR')
         os.unsetenv('FUCHSIA_DIR')
@@ -65,16 +66,6 @@ class TestHost(unittest.TestCase):
         host.set_zxtools(zxtools)
         self.assertEqual(host._zxtools, zxtools)
 
-    def test_set_platform(self):
-        host = Host()
-        with self.assertRaises(Host.ConfigError):
-            host.set_platform('no_such_platform')
-        if not os.getenv('FUCHSIA_DIR'):
-            return
-        platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-        host.set_platform(platform)
-        self.assertEqual(host._platform, platform)
-
     def test_set_symbolizer(self):
         host = Host()
         with self.assertRaises(Host.ConfigError):
@@ -82,10 +73,11 @@ class TestHost(unittest.TestCase):
         if not os.getenv('FUCHSIA_DIR'):
             return
         platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-        executable = Host.join('prebuilt', 'tools', 'symbolize', platform,
-                               'symbolize')
-        symbolizer = Host.join('buildtools', platform, 'clang', 'bin',
-                               'llvm-symbolizer')
+        executable = Host.join(
+            'prebuilt', 'tools', 'symbolize', platform, 'symbolize')
+        symbolizer = Host.join(
+            'prebuilt', 'third_party', 'clang', platform, 'bin',
+            'llvm-symbolizer')
         with self.assertRaises(Host.ConfigError):
             host.set_symbolizer(executable, 'no_such_symbolizer')
         with self.assertRaises(Host.ConfigError):
@@ -137,10 +129,11 @@ class TestHost(unittest.TestCase):
         build_ids = Host.join(build_dir, 'ids.txt')
         zxtools = Host.join(build_dir + '.zircon', 'tools')
         platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-        executable = Host.join('prebuilt', 'tools', 'symbolize', platform,
-                               'symbolize')
-        symbolizer = Host.join('buildtools', platform, 'clang', 'bin',
-                               'llvm-symbolizer')
+        executable = Host.join(
+            'prebuilt', 'tools', 'symbolize', platform, 'symbolize')
+        symbolizer = Host.join(
+            'prebuilt', 'third_party', 'clang', platform, 'bin',
+            'llvm-symbolizer')
         if not os.path.exists(ssh_config) or not os.path.exists(
                 build_ids) or not os.path.isdir(zxtools):
             return
@@ -154,8 +147,8 @@ class TestHost(unittest.TestCase):
     def test_zircon_tool(self):
         mock = MockHost()
         mock.zircon_tool(['mock_tool', 'mock_arg'])
-        self.assertIn('mock/out/default.zircon/tools/mock_tool mock_arg',
-                      mock.history)
+        self.assertIn(
+            'mock/out/default.zircon/tools/mock_tool mock_arg', mock.history)
         # If a build tree is available, try using a zircon tool for "real".
         host = Host()
         try:
@@ -177,8 +170,8 @@ class TestHost(unittest.TestCase):
         mock = MockHost()
         mock.symbolize('mock_in', 'mock_out')
         self.assertIn(
-            'mock/symbolize-ids-rel -ids mock/ids.txt -llvm-symbolizer mock/llvm_symbolizer',
-            mock.history)
+            'mock/symbolize-ids-rel -ids mock/ids.txt -llvm-symbolizer ' +
+            'mock/llvm_symbolizer', mock.history)
         # If a build tree is available, try doing symbolize for "real".
         host = Host()
         try:

@@ -17,6 +17,7 @@ from host_mock import MockHost
 
 
 class TestFuzzer(unittest.TestCase):
+
     def test_filter(self):
         host = MockHost()
         fuzzers = host.fuzzers
@@ -86,21 +87,19 @@ class TestFuzzer(unittest.TestCase):
         fuzzer.run(['-some-lf-arg=value'])
         self.assertIn(
             ' '.join(
-                mock_device.get_ssh_cmd([
-                    'ssh', '::1', 'run',
-                    fuzzer.url(), '-artifact_prefix=data/',
-                    '-some-lf-arg=value'
-                ])), mock_device.history)
+                mock_device.get_ssh_cmd(
+                    [
+                        'ssh', '::1', 'run',
+                        fuzzer.url(), '-artifact_prefix=data/',
+                        '-some-lf-arg=value'
+                    ])), mock_device.history)
 
     def test_start(self):
         mock_device = MockDevice()
         base_dir = tempfile.mkdtemp()
         try:
             fuzzer = Fuzzer(
-                mock_device,
-                u'mock-package1',
-                u'mock-target2',
-                output=base_dir)
+                mock_device, u'mock-package1', u'mock-target2', output=base_dir)
             fuzzer.start(['-some-lf-arg=value'])
             self.assertTrue(os.path.exists(fuzzer.results('symbolized.log')))
         finally:
@@ -122,16 +121,16 @@ class TestFuzzer(unittest.TestCase):
     def test_repro(self):
         mock_device = MockDevice()
         fuzzer = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
-        artifacts = [
-            'data/' + artifact for artifact in fuzzer.list_artifacts()
-        ]
+        artifacts = ['data/' + artifact for artifact in fuzzer.list_artifacts()]
         fuzzer.repro(['-some-lf-arg=value'])
         self.assertIn(
             ' '.join(
-                mock_device.get_ssh_cmd([
-                    'ssh', '::1', 'run',
-                    fuzzer.url(), '-artifact_prefix=data/', '-some-lf-arg=value'
-                ] + artifacts)), mock_device.history)
+                mock_device.get_ssh_cmd(
+                    [
+                        'ssh', '::1', 'run',
+                        fuzzer.url(), '-artifact_prefix=data/',
+                        '-some-lf-arg=value'
+                    ] + artifacts)), mock_device.history)
 
     def test_merge(self):
         mock_device = MockDevice()
@@ -139,12 +138,13 @@ class TestFuzzer(unittest.TestCase):
         fuzzer.merge(['-some-lf-arg=value'])
         self.assertIn(
             ' '.join(
-                mock_device.get_ssh_cmd([
-                    'ssh', '::1', 'run',
-                    fuzzer.url(), '-artifact_prefix=data/', '-merge=1',
-                    '-merge_control_file=data/.mergefile',
-                    '-some-lf-arg=value data/corpus/', 'data/corpus.prev/'
-                ])), mock_device.history)
+                mock_device.get_ssh_cmd(
+                    [
+                        'ssh', '::1', 'run',
+                        fuzzer.url(), '-artifact_prefix=data/', '-merge=1',
+                        '-merge_control_file=data/.mergefile',
+                        '-some-lf-arg=value data/corpus/', 'data/corpus.prev/'
+                    ])), mock_device.history)
 
 
 if __name__ == '__main__':

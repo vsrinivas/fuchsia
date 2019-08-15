@@ -108,8 +108,8 @@ class TestDevice(unittest.TestCase):
                     ['ssh', '::1', 'ls', '-l', 'path-to-some-corpus'])),
             mock.history)
         self.assertTrue('feac37187e77ff60222325cf2829e2273e04f2ea' in files)
-        self.assertEqual(files['feac37187e77ff60222325cf2829e2273e04f2ea'],
-                         1796)
+        self.assertEqual(
+            files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
 
     def test_fetch(self):
         mock = MockDevice()
@@ -139,6 +139,13 @@ class TestDevice(unittest.TestCase):
             for cmd in mock.history:
                 if cmd.startswith('scp'):
                     self.assertIn(f.name, cmd)
+        # No copy if glob comes up empty
+        mock.store(os.path.join(tempfile.gettempdir(), '*'), 'remote-path')
+        self.assertNotIn(
+            ' '.join(
+                mock.get_ssh_cmd(
+                    ['scp', tempfile.gettempdir(), '[::1]:remote-path'])),
+            mock.history)
 
 
 if __name__ == '__main__':

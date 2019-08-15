@@ -9,6 +9,7 @@ import sys
 
 from lib.args import Args
 from lib.cipd import Cipd
+from lib.corpus import Corpus
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
@@ -26,10 +27,11 @@ def main():
     if fuzzer.measure_corpus()[0] == 0:
         print('Ignoring ' + str(fuzzer) + '; corpus is empty.')
         return 0
-    with Cipd.from_args(fuzzer, args) as cipd:
-        device.fetch(fuzzer.data_path('corpus/*'), cipd.root)
-        if not cipd.create():
-            return 1
+    with Corpus.from_args(fuzzer, args) as corpus:
+        corpus.pull()
+        cipd = Cipd(corpus)
+        if not args.no_cipd:
+            cipd.create()
     return 0
 
 

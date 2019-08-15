@@ -17,125 +17,70 @@ from lib.fuzzer import Fuzzer
 class Cipd(object):
     """Chrome Infra Package Deployer interface for Fuchsia fuzzing.
 
-    Fuzzers in Fuchsia use CIPD to store and manage their corpora, which are
-    sets of "interesting"
-    inputs as determined by the individual fuzzer.  For example, see
-    https://llvm.org/docs/LibFuzzer.html#corpus
-    for details on how libFuzzer uses corpora.
+    Fuzzers in Fuchsia use CIPD to store and manage their corpora. CIPD
+    organizes versioned, opaque blobs of data in a hierarchical namespace. For
+    fuzzing, the corpus are stored at:
+    https://chrome-infra-packages.appspot.com/p/fuchsia/test_data/fuzzing
 
-    This class acts as a context manager to ensure temporary root directories
-    are cleaned up.
 
     Attributes:
-        root: Local directory where CIPD packages can be assembled or unpacked.
-          If not specified by the command line arguments, this will be a
-          temporary directory.
+        corpus: The set of fuzzer inputs being managed by CIPD.
   """
 
-    @classmethod
-    def from_args(cls, fuzzer, args, label=None):
-        """Constructs a Cipd from command line arguments."""
-        return cls(fuzzer, args.no_cipd, args.staging, label)
+    def __init__(self, corpus):
+        fuzzer = corpus.fuzzer
+        host = fuzzer.device.host
+        self.corpus = corpus
+        self._bin = host.join('.jiri_root', 'bin', 'cipd')
+        self._pkg = 'fuchsia/test_data/fuzzing/' + str(fuzzer)
+        self._rev = host.snapshot()
 
-    def __init__(self, fuzzer, disabled=False, root=None, label=None):
-        self.disabled = disabled
-        self.device = fuzzer.device
-        self.host = fuzzer.host
-        self.fuzzer = fuzzer
-        self._bin = self.host.join('.jiri_root', 'bin', 'cipd')
-        if root:
-            self.root = root
-            self._is_tmp = False
+    def _cipd(self, cmd, cwd=None):
+        """Runs a CIPD command and returns its output. Sub-classed in tests."""
+        return subprocess.check_output([self._bin] + cmd, cwd=cwd)
+
+    def install(self, label):
+        # Look up version from tag.  Note if multiple versions of the package
+        # have the same tag (e.g. the same integration revision), this will
+        # select the most recent.
+        if ':' in label:
             try:
-                os.makedirs(root)
-            except OSError as e:
-                if e.errno == errno.EEXIST and os.path.isdir(root):
-                    pass
-                else:
-                    raise
-        else:
-            self.root = tempfile.mkdtemp()
-            self._is_tmp = True
-        self.label = label
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, e_type, e_value, traceback):
-        if not self.disabled and self._is_tmp:
-            shutil.rmtree(self.root)
-
-    def _pkg(self):
-        """Defines naming convention for Fuchsia fuzzing corpora in CIPD."""
-        return 'fuchsia/test_data/fuzzing/' + str(self.fuzzer)
-
-    def _exec(self, cmd, cwd=None, quiet=False):
-        """Executes a CIPD command."""
-        if quiet:
-            subprocess.check_call(
-                [self._bin] + cmd, stdout=Host.DEVNULL, cwd=cwd)
-        else:
-            subprocess.check_call([self._bin] + cmd, cwd=cwd)
-
-    def install(self):
-        """Downloads and unpacks a CIPD package for a Fuchsia fuzzer."""
-        if self.disabled:
-            return False
-        self.fuzzer.require_stopped()
-
-        # Default to latest
-        if not self.label:
-            self.label = 'latest'
-
-        # Look up version from tag.  Note if multiple versions of the package have
-        # the same tag (e.g. the same integration revision), this will select the
-        # most recent.
-        if ':' in self.label:
-            output = subprocess.check_output(
-                [self._bin, 'search',
-                 self._pkg(), '-tag', self.label])
-            if not output.startswith('Instances:'):
-                print 'Failed to find corpus with ' + self.label
+                output = self._cipd(['search', self._pkg, '-tag', label])
+            except subprocess.CalledProcessError:
                 return False
-            self.label = output.split(':')[-1].strip()
+            versions = [
+                x.split(':')[-1] for x in output.split('\n') if self._pkg in x
+            ]
+            if len(versions) == 0:
+                return False
+            version = versions[-1]
+        else:
+            version = label
 
-        # Check that the version or ref is valid
-        if subprocess.call(
-            [self._bin, 'describe',
-             self._pkg(), '-version', self.label],
-                stdout=Host.DEVNULL) != 0:
-            print 'Failed to find corpus with ' + self.label
+        # Check that the version or ref is valid before installing.
+        try:
+            self._cipd(['describe', self._pkg, '-version', version])
+        except subprocess.CalledProcessError:
             return False
-
-        self._exec(['install', self._pkg(), self.label], cwd=self.root)
-        subprocess.check_call(['chmod', '-R', '+w', self.root])
+        self._cipd(['install', self._pkg, version], cwd=self.corpus.root)
+        subprocess.check_call(['chmod', '-R', '+w', self.corpus.root])
         return True
 
     def create(self):
         """Bundles and uploads a CIPD package for a Fuchsia fuzzer corpus."""
-        if self.disabled:
-            return False
-        self.fuzzer.require_stopped()
-        self.device.fetch(self.fuzzer.data_path('corpus/*'), self.root)
-        pkg_def = os.path.join(self.root, 'cipd.yaml')
-        elems = os.listdir(self.root)
+        pkg_def = os.path.join(self.corpus.root, 'cipd.yaml')
         with open(pkg_def, 'w') as f:
-            f.write('package: ' + self._pkg() + '\n')
-            f.write('description: Auto-generated fuzzing corpus for ' +
-                    str(self.fuzzer) + '\n')
+            f.write('package: ' + self._pkg + '\n')
+            f.write(
+                'description: Auto-generated fuzzing corpus for %s\n' % str(
+                    self.corpus.fuzzer))
             f.write('install_mode: copy\n')
             f.write('data:\n')
-            for elem in elems:
+            for elem in os.listdir(self.corpus.root):
                 if 'cipd' not in elem:
                     f.write('  - file: ' + elem + '\n')
-        try:
-            # See the note in `install` above about duplicate tags.
-            self._exec([
+        return self._cipd(
+            [
                 'create', '--pkg-def', pkg_def, '--ref', 'latest', '--tag',
-                'integration:' + self.host.snapshot()
+                'integration:' + self._rev
             ])
-            return True
-        except subprocess.CalledProcessError:
-            print('Failed to upload corpus for ' + str(self.fuzzer) +
-                  '; have you run \'cipd auth-login\'?')
-            return False

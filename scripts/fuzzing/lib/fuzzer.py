@@ -67,8 +67,8 @@ class Fuzzer(object):
             return [(names[0], names[1])]
         if len(names) == 1:
             return list(
-                set(Fuzzer.filter(fuzzers, '/' + name))
-                | set(Fuzzer.filter(fuzzers, name + '/')))
+                set(Fuzzer.filter(fuzzers, '/' + name)) |
+                set(Fuzzer.filter(fuzzers, name + '/')))
         elif len(names) != 2:
             raise Fuzzer.NameError('Malformed fuzzer name: ' + name)
         filtered = []
@@ -85,8 +85,8 @@ class Fuzzer(object):
             raise Fuzzer.NameError(
                 'Name did not resolve to exactly one fuzzer: \'' + args.name +
                 '\'. Try using \'list-fuzzers\'.')
-        return cls(device, fuzzers[0][0], fuzzers[0][1], args.output,
-                   args.foreground)
+        return cls(
+            device, fuzzers[0][0], fuzzers[0][1], args.output, args.foreground)
 
     def __init__(self, device, pkg, tgt, output=None, foreground=False):
         self.device = device
@@ -96,8 +96,8 @@ class Fuzzer(object):
         if output:
             self._output = output
         else:
-            self._output = self.host.join('test_data', 'fuzzing', self.pkg,
-                                          self.tgt)
+            self._output = self.host.join(
+                'test_data', 'fuzzing', self.pkg, self.tgt)
         self._foreground = foreground
 
     def __str__(self):
@@ -147,8 +147,7 @@ class Fuzzer(object):
             return os.path.join(self._output, 'latest')
 
     def url(self):
-        return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (self.pkg,
-                                                             self.tgt)
+        return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (self.pkg, self.tgt)
 
     def run(self, fuzzer_args, logfile=None):
         fuzz_cmd = ['run', self.url(), '-artifact_prefix=data/'] + fuzzer_args
@@ -172,8 +171,9 @@ class Fuzzer(object):
         fuzzer_args: Command line arguments to pass to libFuzzer
     """
         self.require_stopped()
-        results = os.path.join(self._output,
-                               datetime.datetime.utcnow().isoformat())
+        results = os.path.join(
+            self._output,
+            datetime.datetime.utcnow().isoformat())
         try:
             os.unlink(self.results())
         except OSError as e:
@@ -249,8 +249,9 @@ class Fuzzer(object):
              self.data_path('corpus.prev')])
         self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
         # Save mergefile in case we are interrupted
-        fuzzer_args = ['-merge=1', '-merge_control_file=data/.mergefile'
-                       ] + fuzzer_args
+        fuzzer_args = [
+            '-merge=1', '-merge_control_file=data/.mergefile'
+        ] + fuzzer_args
         fuzzer_args.append('data/corpus/')
         fuzzer_args.append('data/corpus.prev/')
         self.run(fuzzer_args)
