@@ -24,7 +24,8 @@ class StatsManager {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(StatsManager);
   explicit StatsManager(fbl::unique_ptr<camera::Sensor> sensor) : sensor_(std::move(sensor)) {}
 
-  static fbl::unique_ptr<StatsManager> Create(ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
+  static fbl::unique_ptr<StatsManager> Create(const ddk::MmioView& isp_mmio,
+                                              const ddk::MmioView& isp_mmio_local,
                                               ddk::CameraSensorProtocolClient camera_sensor);
 
   void SensorStartStreaming() { sensor_->StartStreaming(); }

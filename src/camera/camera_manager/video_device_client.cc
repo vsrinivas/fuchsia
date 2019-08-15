@@ -61,7 +61,8 @@ std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(int dir_fd, const s
 }
 
 void VideoDeviceClient::OnGetFormatsResp(std::vector<fuchsia::camera::VideoFormat> formats,
-                                         uint32_t total_format_count, zx_status_t device_status) {
+                                         uint32_t total_format_count,
+                                         zx_status_t /*device_status*/) {
   auto& new_formats = formats;
   formats_.insert(formats_.end(), new_formats.begin(), new_formats.end());
   if (formats_.size() < total_format_count) {

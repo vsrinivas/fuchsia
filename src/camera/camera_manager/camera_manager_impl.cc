@@ -79,14 +79,14 @@ CameraManagerImpl::~CameraManagerImpl() {
   active_devices_.clear();
 }
 
-void CameraManagerImpl::OnDeviceFound(int dir_fd, std::string filename) {
-  auto video_device = VideoDeviceClient::Create(dir_fd, filename);
-  if (video_device) {
-    AddDevice(std::move(video_device));
-  } else {
-    // If we can't create the device, drop it.
+void CameraManagerImpl::OnDeviceFound(int dir_fd, const std::string& filename) {
+  auto device = VideoDeviceClient::Create(dir_fd, filename);
+  if (!device) {
     FXL_LOG(ERROR) << "Failed to create device " << filename;
+    return;
   }
+
+  AddDevice(std::move(device));
 }
 
 void CameraManagerImpl::AddDevice(std::unique_ptr<VideoDeviceClient> video_device) {
@@ -134,7 +134,7 @@ void CameraManagerImpl::GetFormats(uint64_t camera_id, uint32_t index,
     }
   }
 
-  size_t min_index = std::max((size_t)0, std::min((size_t)index, formats->size() - 1));
+  size_t min_index = std::max<size_t>(0, std::min<size_t>(index, formats->size() - 1));
   size_t max_index =
       std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1, formats->size() - 1);
 

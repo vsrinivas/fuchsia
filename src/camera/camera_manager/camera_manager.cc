@@ -6,7 +6,7 @@
 
 #include "src/camera/camera_manager/camera_manager_impl.h"
 
-int main(int argc, const char** argv) {
+int main() {
   FXL_LOG(INFO) << "Camera Manager Starting";
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   camera::CameraManagerImpl app(&loop);

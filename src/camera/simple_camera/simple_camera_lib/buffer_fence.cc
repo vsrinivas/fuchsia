@@ -49,7 +49,7 @@ BufferFence::BufferFence() = default;
 BufferFence::~BufferFence() { release_fence_waiter_.Cancel(); }
 
 void BufferFence::OnReleaseFenceSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                          zx_status_t status, const zx_packet_signal* signal) {
+                                          zx_status_t status, const zx_packet_signal* /*signal*/) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "AsyncWaiter received an error (" << zx_status_get_string(status)
                    << ").  Exiting.";

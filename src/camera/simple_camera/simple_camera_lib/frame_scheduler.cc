@@ -59,8 +59,9 @@ uint64_t SimpleFrameScheduler::GetPresentationTimeNs(uint64_t capture_time_ns) {
 // are not meeting our assumptions. It could be augmented to
 // keep an estimate of the lead time required by the compositor. See this
 // class's header file for more information.
-void SimpleFrameScheduler::OnFramePresented(uint64_t pres_time, uint64_t pres_interval,
-                                            uint64_t requested_pres_time) {
+void SimpleFrameScheduler::
+    OnFramePresented(  // NOLINT(readability-convert-member-functions-to-static)
+        uint64_t pres_time, uint64_t pres_interval, uint64_t requested_pres_time) {
   if (pres_time > requested_pres_time + pres_interval) {
     // This means we missed the frame we were targetting.
     // Eventually, we will use this information to update Dlead.

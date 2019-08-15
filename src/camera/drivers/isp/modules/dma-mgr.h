@@ -21,7 +21,7 @@ class DmaManager {
  public:
   enum class Stream : bool { FullResolution = false, Downscaled };
 
-  DmaManager(Stream stream_type, ddk::MmioView isp_mmio_local)
+  DmaManager(Stream stream_type, const ddk::MmioView& isp_mmio_local)
       : isp_mmio_local_(isp_mmio_local), stream_type_(stream_type) {}
 
   // Initialize the format and buffers of the DMA Writer.
@@ -47,8 +47,8 @@ class DmaManager {
       fuchsia_sysmem_BufferCollectionInfo buffer_collection,
       fit::function<void(fuchsia_camera_common_FrameAvailableEvent)> frame_available_callback);
 
-  static zx_status_t Create(const zx::bti& bti, ddk::MmioView isp_mmio_local, Stream stream_type,
-                            std::unique_ptr<DmaManager>* out);
+  static zx_status_t Create(const zx::bti& bti, const ddk::MmioView& isp_mmio_local,
+                            Stream stream_type, std::unique_ptr<DmaManager>* out);
 
   // Updates the dma writer with the address of a free buffer from the pool.
   void OnNewFrame();

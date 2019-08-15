@@ -6,7 +6,7 @@
 
 #include "simple_camera_server_app.h"
 
-int main(int argc, const char** argv) {
+int main() {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   simple_camera::SimpleCameraApp app;
   loop.Run();

@@ -148,8 +148,8 @@ zx_status_t Sensor::Init() {
   }
 
   size_t actual_modes;
-  status =
-      camera_sensor_.GetSupportedModes((sensor_mode_t*)(&sensor_modes_), kNumModes, &actual_modes);
+  status = camera_sensor_.GetSupportedModes(reinterpret_cast<sensor_mode_t*>(&sensor_modes_),
+                                            kNumModes, &actual_modes);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "", "%s: Sensor GetSupportedModes failed %d\n", __func__, status);
     return status;
@@ -227,7 +227,8 @@ zx_status_t Sensor::GetInfo(sensor_info_t* out_info) {
 }
 
 // static
-fbl::unique_ptr<Sensor> Sensor::Create(ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
+fbl::unique_ptr<Sensor> Sensor::Create(const ddk::MmioView& isp_mmio,
+                                       const ddk::MmioView& isp_mmio_local,
                                        ddk::CameraSensorProtocolClient camera_sensor) {
   fbl::AllocChecker ac;
   auto sensor = fbl::make_unique_checked<Sensor>(&ac, isp_mmio, isp_mmio_local, camera_sensor);

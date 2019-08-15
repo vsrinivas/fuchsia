@@ -5,6 +5,7 @@
 #include "src/camera/examples/video_display/simple_camera_view.h"
 
 // clang-format off
+#include "lib/zx/time.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
@@ -27,6 +28,7 @@ static const std::string kSimpleCameraServiceUrl =
     "simple_camera_server_cpp.cmx";
 
 static const uint32_t camera_id = 0;  // 0 -> fake camera, 1 -> real camera
+static const auto kRectSize = 80;
 
 SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
     : BaseView(std::move(view_context), "Video Display Example"), node_(session()) {
@@ -60,7 +62,8 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
   });
 
   // Create a rounded-rect shape to display the camera image on.
-  scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80, 80, 80, 80);
+  scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, kRectSize, kRectSize,
+                                 kRectSize, kRectSize);
 
   node_.SetShape(shape);
   node_.SetMaterial(material);
@@ -76,16 +79,19 @@ void SimpleCameraView::OnSceneInvalidated(fuchsia::images::PresentationInfo pres
   }
 
   // Compute the amount of time that has elapsed since the view was created.
-  double seconds = static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
-
-  const float kHalfWidth = logical_size().x * 0.5f;
-  const float kHalfHeight = logical_size().y * 0.5f;
+  auto seconds = zx::duration(presentation_info.presentation_time).to_secs();
 
   // Compute the translation for the window to swirl around the screen.
   // Why do this?  Well, this is an example of what a View can do, and it helps
   // debug the camera to know if scenic is still running.
-  node_.SetTranslation(kHalfWidth * (1. + .1 * sin(seconds * 0.8)),
-                       kHalfHeight * (1. + .1 * sin(seconds * 0.6)), -kDisplayHeight);
+
+  const double kHalfWidth = logical_size().x * 0.5f;
+  const double kHalfHeight = logical_size().y * 0.5f;
+  const double kXTranslation = kHalfWidth * (1. + .1 * sin(seconds * 0.8));
+  const double kYTranslation = kHalfHeight * (1. + .1 * sin(seconds * 0.6));
+
+  node_.SetTranslation(static_cast<float>(kXTranslation), static_cast<float>(kYTranslation),
+                       -kDisplayHeight);
 
   // The rounded-rectangles are constantly animating; invoke InvalidateScene()
   // to guarantee that OnSceneInvalidated() will be called again.

@@ -8,8 +8,8 @@
 
 namespace camera {
 
-fbl::unique_ptr<StatsManager> StatsManager::Create(ddk::MmioView isp_mmio,
-                                                   ddk::MmioView isp_mmio_local,
+fbl::unique_ptr<StatsManager> StatsManager::Create(const ddk::MmioView& isp_mmio,
+                                                   const ddk::MmioView& isp_mmio_local,
                                                    ddk::CameraSensorProtocolClient camera_sensor) {
   // First initialize all the modules
   fbl::AllocChecker ac;

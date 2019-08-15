@@ -274,7 +274,7 @@ zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffe
 
   // Put the task on queue.
   fbl::AutoLock lock(&lock_);
-  processing_queue_.push_front(std::move(info));
+  processing_queue_.push_front(info);
   frame_processing_signal_.Signal();
   return ZX_OK;
 }

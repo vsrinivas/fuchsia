@@ -18,8 +18,8 @@ zx_status_t CreateContiguousBufferCollectionInfo(
     fuchsia_sysmem_BufferCollectionInfo* buffer_collection, zx_handle_t bti_handle, uint32_t width,
     uint32_t height, uint32_t num_buffers) {
   // set all the vmo handles to invalid:
-  for (uint32_t i = 0; i < countof(buffer_collection->vmos); ++i) {
-    buffer_collection->vmos[i] = ZX_HANDLE_INVALID;
+  for (unsigned int& vmo : buffer_collection->vmos) {
+    vmo = ZX_HANDLE_INVALID;
   }
   buffer_collection->format.image = {.width = width,
                                      .height = height,

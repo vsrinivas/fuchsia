@@ -63,7 +63,7 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
       ROUNDUP(format.format.height * format.format.planes[0].bytes_per_row, PAGE_SIZE);
   buffer_collection->buffer_count = num_buffers;
   buffer_collection->vmo_size = buffer_size;
-  buffer_collection->format.set_image(std::move(format.format));
+  buffer_collection->format.set_image(format.format);
   zx_status_t status;
   for (uint32_t i = 0; i < num_buffers; ++i) {
     status = zx::vmo::create(buffer_size, 0, &buffer_collection->vmos[i]);
@@ -145,7 +145,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
   on_shut_down_callback_ = std::move(callback);
 
   image_pipe_ = image_pipe.Bind();
-  image_pipe_.set_error_handler([this](zx_status_t status) {
+  image_pipe_.set_error_handler([this](zx_status_t /*status*/) {
     // Deal with image_pipe_ issues
     on_shut_down_callback_();
   });
@@ -156,7 +156,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
   camera_client_->stream_.events().OnFrameAvailable =
       [this](fuchsia::camera::FrameAvailableEvent frame) { IncomingBufferFilled(frame); };
 
-  camera_client_->stream_.set_error_handler([this](zx_status_t status) {
+  camera_client_->stream_.set_error_handler([this](zx_status_t /*status*/) {
     DisconnectFromCamera();
     on_shut_down_callback_();
   });
@@ -187,7 +187,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
     } while (formats.size() < total_format_count);
 
     FXL_LOG(INFO) << "Available formats: " << formats.size();
-    for (int i = 0; i < (int)formats.size(); i++) {
+    for (size_t i = 0; i < formats.size(); i++) {
       FXL_LOG(INFO) << "format[" << i << "] - width: " << formats[i].format.width
                     << ", height: " << formats[i].format.height
                     << ", stride: " << formats[i].format.planes[0].bytes_per_row;

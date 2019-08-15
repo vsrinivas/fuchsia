@@ -63,7 +63,7 @@ uint32_t AmlMipiDevice::AdapGetDepth(const mipi_adap_info_t* info) {
   return depth;
 }
 
-zx_status_t AmlMipiDevice::InitBuffer(const mipi_adap_info_t* info, size_t size) {
+zx_status_t AmlMipiDevice::InitBuffer(const mipi_adap_info_t* /*info*/, size_t size) {
   // Create a VMO for the ring buffer.
   zx_status_t status =
       zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
@@ -249,13 +249,12 @@ zx_status_t AmlMipiDevice::AdapAlignInit(const mipi_adap_info_t* info) {
   if (info->mode == MIPI_MODES_DOL_MODE) {
     zxlogf(ERROR, "%s, unsupported mode.\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
-  } else {
-    // default width 1280, height 720
-    align_reg.Write32(0x02f80528,
-                      MIPI_ADAPT_ALIG_CNTL0);              // associate width and height
-    align_reg.Write32(0x05000000, MIPI_ADAPT_ALIG_CNTL1);  // associate width
-    align_reg.Write32(0x02d00000, MIPI_ADAPT_ALIG_CNTL2);  // associate height
   }
+  // default width 1280, height 720
+  align_reg.Write32(0x02f80528,
+                    MIPI_ADAPT_ALIG_CNTL0);              // associate width and height
+  align_reg.Write32(0x05000000, MIPI_ADAPT_ALIG_CNTL1);  // associate width
+  align_reg.Write32(0x02d00000, MIPI_ADAPT_ALIG_CNTL2);  // associate height
 
   if (info->mode == MIPI_MODES_DIR_MODE) {
     align_reg.Write32(0x00fff011, MIPI_ADAPT_ALIG_CNTL6);
@@ -300,7 +299,7 @@ int AmlMipiDevice::AdapterIrqHandler() {
   zx_status_t status = ZX_OK;
 
   while (running_.load()) {
-    status = adap_irq_.wait(NULL);
+    status = adap_irq_.wait(nullptr);
     if (status != ZX_OK) {
       return status;
     }

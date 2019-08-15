@@ -51,7 +51,7 @@ void AmlMipiDevice::InitMipiClock() {
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 }
 
-zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
+zx_status_t AmlMipiDevice::InitPdev(zx_device_t* /*parent*/) {
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
@@ -230,9 +230,8 @@ zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-mipi driver failed to get added\n");
     return status;
-  } else {
-    zxlogf(INFO, "aml-mipi driver added\n");
   }
+    zxlogf(INFO, "aml-mipi driver added\n");
 
   // mipi_device intentionally leaked as it is now held by DevMgr.
   __UNUSED auto ptr = mipi_device.release();
@@ -243,10 +242,10 @@ zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
 AmlMipiDevice::~AmlMipiDevice() {
   adap_irq_.destroy();
   running_.store(false);
-  thrd_join(irq_thread_, NULL);
+  thrd_join(irq_thread_, nullptr);
 }
 
-zx_status_t aml_mipi_bind(void* ctx, zx_device_t* device) {
+zx_status_t aml_mipi_bind(void* /*ctx*/, zx_device_t* device) {
   return camera::AmlMipiDevice::Create(device);
 }
 

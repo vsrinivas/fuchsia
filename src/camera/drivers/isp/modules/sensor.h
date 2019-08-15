@@ -21,11 +21,12 @@ constexpr uint32_t kNumModes = 3;
 class Sensor {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Sensor);
-  Sensor(ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
+  Sensor(const ddk::MmioView& isp_mmio, const ddk::MmioView& isp_mmio_local,
          ddk::CameraSensorProtocolClient camera_sensor)
       : isp_mmio_(isp_mmio), isp_mmio_local_(isp_mmio_local), camera_sensor_(camera_sensor) {}
 
-  static fbl::unique_ptr<Sensor> Create(ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
+  static fbl::unique_ptr<Sensor> Create(const ddk::MmioView& isp_mmio,
+                                        const ddk::MmioView& isp_mmio_local,
                                         ddk::CameraSensorProtocolClient camera_sensor);
   zx_status_t Init();
 

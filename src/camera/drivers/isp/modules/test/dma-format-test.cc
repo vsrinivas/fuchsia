@@ -18,8 +18,8 @@ namespace camera {
 
 namespace {
 
-static constexpr uint32_t kTestWidth = 640;
-static constexpr uint32_t kTestHeight = 480;
+constexpr uint32_t kTestWidth = 640;
+constexpr uint32_t kTestHeight = 480;
 
 void TestPixelType(DmaFormat::PixelType pixel_type) {
   DmaFormat format(kTestWidth, kTestHeight, pixel_type, false);

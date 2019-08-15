@@ -14,6 +14,8 @@
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
+const int kFramesToCount = 10;
+
 // This is a stand-in for some actual gralloc type service which would allocate
 // the right type of memory for the application and return it as a vmo.
 zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
@@ -99,7 +101,8 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
 
     if (frame.frame_status == fuchsia::camera::FrameStatus::OK) {
       stream->ReleaseFrame(frame.buffer_id);
-      if (frame_counter++ > 10) {
+
+      if (frame_counter++ > kFramesToCount) {
         FXL_LOG(INFO) << "Counted 10 frames, stopping stream and quitting loop";
         stream->Stop();
         loop.Quit();

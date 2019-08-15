@@ -54,15 +54,15 @@ void GammaRgbRegistersTest::ResetDefaults() {
 }
 
 void GammaRgbRegistersTest::SetExpectations() {
-  (*mock_registers_.get())[0x00].ExpectWrite(true).ExpectWrite(enable_val_);
-  (*mock_registers_.get())[0x04]
+  (*mock_registers_)[0x00].ExpectWrite(true).ExpectWrite(enable_val_);
+  (*mock_registers_)[0x04]
       .ExpectWrite((kDefaultGain << 16) + kDefaultGain)
       .ExpectWrite((gain_g_val_ << 16) + gain_r_val_);
-  (*mock_registers_.get())[0x08].ExpectWrite(kDefaultGain).ExpectWrite(gain_b_val_);
-  (*mock_registers_.get())[0x0c]
+  (*mock_registers_)[0x08].ExpectWrite(kDefaultGain).ExpectWrite(gain_b_val_);
+  (*mock_registers_)[0x0c]
       .ExpectWrite((kDefaultOffset << 16) + kDefaultOffset)
       .ExpectWrite((offset_g_val_ << 16) + offset_r_val_);
-  (*mock_registers_.get())[0x10].ExpectWrite(kDefaultOffset).ExpectWrite(offset_b_val_);
+  (*mock_registers_)[0x10].ExpectWrite(kDefaultOffset).ExpectWrite(offset_b_val_);
 }
 
 void GammaRgbRegistersTest::SetUp() { ResetDefaults(); }

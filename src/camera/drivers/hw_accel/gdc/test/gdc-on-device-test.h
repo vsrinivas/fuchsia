@@ -15,7 +15,7 @@ class GdcDevice;
 
 class GdcDeviceTester : public zxtest::Test {
  public:
-  static zx_status_t RunTests(GdcDevice* device);
+  static zx_status_t RunTests(GdcDevice* gdc);
 
  protected:
   // Setup & TearDown

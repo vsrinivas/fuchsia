@@ -77,7 +77,7 @@ zx_status_t Controller::Setup(zx_device_t* parent, std::unique_ptr<Controller>* 
   return ZX_OK;
 }
 
-zx_status_t ControllerBind(void* ctx, zx_device_t* device) {
+zx_status_t ControllerBind(void* /*ctx*/, zx_device_t* device) {
   std::unique_ptr<Controller> controller;
   auto status = camera::Controller::Setup(device, &controller);
   if (status != ZX_OK) {

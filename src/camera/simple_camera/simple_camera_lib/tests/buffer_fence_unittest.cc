@@ -7,12 +7,11 @@
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
 
-namespace simple_camera {
-namespace test {
+namespace simple_camera::test {
 
 using BufferFenceTest = ::gtest::TestLoopFixture;
 
-TEST_F(BufferFenceTest, buffer_fence_smoketest) {
+TEST_F(BufferFenceTest, SmokeTest) {
   uint32_t signalled_index = 0;
   static constexpr uint32_t kFenceIndex = 5;
 
@@ -40,5 +39,4 @@ TEST_F(BufferFenceTest, buffer_fence_smoketest) {
   EXPECT_EQ(kFenceIndex, signalled_index);
 }
 
-}  // namespace test
-}  // namespace simple_camera
+}  // namespace simple_camera::test

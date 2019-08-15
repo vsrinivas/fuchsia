@@ -48,7 +48,7 @@ zx_status_t IsBoardName(const char* requested_board_name) {
   }
   board_name[actual_size] = '\0';
   if (actual_size != strlen(requested_board_name) ||
-      strncmp(board_name, requested_board_name, actual_size)) {
+      strncmp(board_name, requested_board_name, actual_size) != 0) {
     printf("Wrong Board.  Expected %s, board name: %s.\n", requested_board_name, board_name);
     return kWrongBoard;
   }
@@ -57,9 +57,9 @@ zx_status_t IsBoardName(const char* requested_board_name) {
 
 // Integration test for the driver defined in zircon/system/dev/camera/arm-isp.
 class IspTest : public zxtest::Test {
+public:
   void SetUp() override;
 
- protected:
   fbl::unique_fd fd_;
   zx_handle_t handle_;
 };

@@ -55,7 +55,7 @@ class AmlMipiDevice : public DeviceType,
  private:
   zx_status_t InitBuffer(const mipi_adap_info_t* info, size_t size);
   zx_status_t InitPdev(zx_device_t* parent);
-  uint32_t AdapGetDepth(const mipi_adap_info_t* info);
+  static uint32_t AdapGetDepth(const mipi_adap_info_t* info);
   int AdapterIrqHandler();
 
   // MIPI Iternal APIs

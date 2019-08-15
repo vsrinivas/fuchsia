@@ -13,7 +13,7 @@
 
 namespace camera {
 
-zx_status_t DmaManager::Create(const zx::bti& bti, ddk::MmioView isp_mmio_local,
+zx_status_t DmaManager::Create(const zx::bti& bti, const ddk::MmioView& isp_mmio_local,
                                DmaManager::Stream stream_type, std::unique_ptr<DmaManager>* out) {
   *out = std::make_unique<DmaManager>(stream_type, isp_mmio_local);
 
@@ -29,97 +29,85 @@ zx_status_t DmaManager::Create(const zx::bti& bti, ddk::MmioView isp_mmio_local,
 auto DmaManager::GetPrimaryMisc() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Primary::DmaWriter_Misc::Get();
-  } else {
-    return ping::FullResolution::Primary::DmaWriter_Misc::Get();
   }
+  return ping::FullResolution::Primary::DmaWriter_Misc::Get();
 }
 
 auto DmaManager::GetUvMisc() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Uv::DmaWriter_Misc::Get();
-  } else {
-    return ping::FullResolution::Uv::DmaWriter_Misc::Get();
   }
+  return ping::FullResolution::Uv::DmaWriter_Misc::Get();
 }
 
 auto DmaManager::GetPrimaryBank0() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Primary::DmaWriter_Bank0Base::Get();
-  } else {
-    return ping::FullResolution::Primary::DmaWriter_Bank0Base::Get();
   }
+  return ping::FullResolution::Primary::DmaWriter_Bank0Base::Get();
 }
 
 auto DmaManager::GetUvBank0() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Uv::DmaWriter_Bank0Base::Get();
-  } else {
-    return ping::FullResolution::Uv::DmaWriter_Bank0Base::Get();
   }
+  return ping::FullResolution::Uv::DmaWriter_Bank0Base::Get();
 }
 
 auto DmaManager::GetPrimaryLineOffset() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Primary::DmaWriter_LineOffset::Get();
-  } else {
-    return ping::FullResolution::Primary::DmaWriter_LineOffset::Get();
   }
+  return ping::FullResolution::Primary::DmaWriter_LineOffset::Get();
 }
 
 auto DmaManager::GetUvLineOffset() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Uv::DmaWriter_LineOffset::Get();
-  } else {
-    return ping::FullResolution::Uv::DmaWriter_LineOffset::Get();
   }
+  return ping::FullResolution::Uv::DmaWriter_LineOffset::Get();
 }
 
 auto DmaManager::GetPrimaryActiveDim() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Primary::DmaWriter_ActiveDim::Get();
-  } else {
-    return ping::FullResolution::Primary::DmaWriter_ActiveDim::Get();
   }
+  return ping::FullResolution::Primary::DmaWriter_ActiveDim::Get();
 }
 
 auto DmaManager::GetUvActiveDim() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Uv::DmaWriter_ActiveDim::Get();
-  } else {
-    return ping::FullResolution::Uv::DmaWriter_ActiveDim::Get();
   }
+  return ping::FullResolution::Uv::DmaWriter_ActiveDim::Get();
 }
 
 auto DmaManager::GetPrimaryFrameCount() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Primary::DmaWriter_FrameCount::Get();
-  } else {
-    return ping::FullResolution::Primary::DmaWriter_FrameCount::Get();
   }
+  return ping::FullResolution::Primary::DmaWriter_FrameCount::Get();
 }
 
 auto DmaManager::GetUvFrameCount() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Uv::DmaWriter_FrameCount::Get();
-  } else {
-    return ping::FullResolution::Uv::DmaWriter_FrameCount::Get();
   }
+  return ping::FullResolution::Uv::DmaWriter_FrameCount::Get();
 }
 
 auto DmaManager::GetPrimaryFailures() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Primary::DmaWriter_Failures::Get();
-  } else {
-    return ping::FullResolution::Primary::DmaWriter_Failures::Get();
   }
+  return ping::FullResolution::Primary::DmaWriter_Failures::Get();
 }
 
 auto DmaManager::GetUvFailures() {
   if (stream_type_ == Stream::Downscaled) {
     return ping::DownScaled::Uv::DmaWriter_Failures::Get();
-  } else {
-    return ping::FullResolution::Uv::DmaWriter_Failures::Get();
   }
+  return ping::FullResolution::Uv::DmaWriter_Failures::Get();
 }
 
 void DmaManager::PrintStatus(ddk::MmioBuffer* mmio) {
@@ -191,7 +179,7 @@ void DmaManager::OnFrameWritten() {
     return;
   }
   ZX_ASSERT(frame_available_callback_ != nullptr);
-  ZX_ASSERT(write_locked_buffers_.size() > 0);
+  ZX_ASSERT(!write_locked_buffers_.empty());
   fuchsia_camera_common_FrameAvailableEvent event;
   event.buffer_id = write_locked_buffers_.back().ReleaseWriteLockAndGetIndex();
   event.frame_status = fuchsia_camera_common_FrameStatus_OK;
@@ -234,7 +222,7 @@ void DmaManager::OnNewFrame() {
   }
   // 2) Optional?  Set the DMA settings again... seems unnecessary
   // 3) Set the DMA address
-  uint32_t memory_address = static_cast<uint32_t>(buffer->physical_address());
+  auto memory_address = static_cast<uint32_t>(buffer->physical_address());
 
   // clang-format off
     GetPrimaryBank0().FromValue(0)
@@ -279,7 +267,6 @@ void DmaManager::WriteFormat() {
         .set_value(current_format_->GetLineOffset())
         .WriteTo(&isp_mmio_local_);
     if (current_format_->HasSecondaryChannel()) {
-        // TODO: should there be a format.WidthUv() ?
         GetUvMisc().ReadFrom(&isp_mmio_local_)
             .set_base_mode(current_format_->GetBaseMode())
             .set_plane_select(current_format_->GetPlaneSelectUv())

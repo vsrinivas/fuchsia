@@ -26,35 +26,35 @@ class CameraManagerImpl : public fuchsia::camera::Manager {
   // In addition to shuting down the camera::Manager service, this destructor
   // will attempt to cancel all video streams, even if they are connected
   // directly from the device driver to the application.
-  ~CameraManagerImpl();
+  ~CameraManagerImpl() override;
 
   // This initialization is passed the async::Loop because it will be stepping
   // the loop forward until all the devices are enumerated. |loop| should be
   // the async loop associated with the default dispatcher.
   // This constructor will not return until all existing camera devices have
   // been enumerated and set up.
-  CameraManagerImpl(async::Loop *loop);
+  explicit CameraManagerImpl(async::Loop* loop);
 
   // Returns a list of all the video devices that are currently plugged in
   // and enumerated.  The camera_id field of the DeviceInfo is used to specify
   // a device in GetFormats, GetStream and GetStreamAndBufferCollection.
-  void GetDevices(GetDevicesCallback callback);
+  void GetDevices(GetDevicesCallback callback) override;
 
   // Get all the available formats for a camera.
   // TODO(CAM-17): Add pagination to support cameras with over 16 formats.
-  void GetFormats(uint64_t camera_id, uint32_t index, GetFormatsCallback callback);
+  void GetFormats(uint64_t camera_id, uint32_t index, GetFormatsCallback callback) override;
 
   // Establish a camera stream connection, which allows camera image data
   // to be passed over a set of buffers.
   void CreateStream(fuchsia::camera::VideoStream request,
                     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
                     fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
-                    zx::eventpair client_token);
+                    zx::eventpair client_token) override;
 
  private:
   // Called when a device is enumerated, or when this class starts, and
   // discovers all the current devices in the system.
-  void OnDeviceFound(int dir_fd, std::string filename);
+  void OnDeviceFound(int dir_fd, const std::string& filename);
 
   void AddDevice(std::unique_ptr<VideoDeviceClient> device);
 
