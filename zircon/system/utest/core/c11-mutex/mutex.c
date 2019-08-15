@@ -224,6 +224,13 @@ static bool test_timeout_elapsed(void) {
     zx_time_t later = 0;
     ASSERT_EQ(ZX_OK, zx_clock_get(ZX_CLOCK_UTC, &later), "could not read clock");
     zx_duration_t elapsed = zx_time_sub_time(later, now);
+    // Since the wait is based on the UTC clock which can be adjusted while
+    // the wait proceeds, it is important to check that the mutex does not
+    // return early.
+    // TODO(34941): when the kernel UTC clock gets wired, the test framework should
+    // expose a way to do local modifications to the clock so we can properly
+    // test this behavior. Currently the UTC offset is global and mutating it here
+    // can create hard to diagnose flakes as seen with bug 34857.
     EXPECT_GE(elapsed, kRelativeDeadline, "wait returned early");
   }
 
