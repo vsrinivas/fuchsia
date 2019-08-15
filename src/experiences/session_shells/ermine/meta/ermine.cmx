@@ -6,6 +6,7 @@
         "pkgfs": [
             "packages"
         ],
+        "features": [ "isolated-persistent-storage" ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.fonts.Provider",

@@ -152,7 +152,7 @@ class _StoryWidgetState extends State<StoryWidget> {
   }
 
   void _confirmEditListener() {
-    if (_isEditing) {
+    if (!_isEditing) {
       return;
     }
     if (widget.confirmEdit.value) {
