@@ -330,7 +330,7 @@ void MemberAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback c
       return cb(base);
 
     if (!is_arrow)  // "." operator.
-      return cb(ResolveMember(context, base.value(), member));
+      return ResolveMember(context, base.value(), member, std::move(cb));
 
     // Everything else should be a -> operator.
 
@@ -341,7 +341,7 @@ void MemberAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback c
                        [context, member, cb = std::move(cb)](ErrOrValue non_ptr_base) mutable {
                          if (non_ptr_base.has_error())
                            return cb(non_ptr_base);
-                         cb(ResolveMember(context, non_ptr_base.value(), member));
+                         ResolveMember(context, non_ptr_base.value(), member, std::move(cb));
                        });
       }
     }

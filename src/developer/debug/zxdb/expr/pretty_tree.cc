@@ -88,7 +88,7 @@ void PrettyMapIterator::GetIteratorValue(fxl::RefPtr<EvalContext> context, const
                                          EvalCallback cb) {
   // Evaluate "static_cast<ITER_TYPE::__node_pointer>(iter.__i_.__ptr_)->__value_.__cc"
   // Where ITER_TYPE is actually the type of "iter.__i_".
-  ErrOrValue i_value = ResolveMember(context, iter, ParsedIdentifier("__i_"));
+  ErrOrValue i_value = ResolveNonstaticMember(context, iter, {"__i_"});
   if (i_value.has_error())
     return cb(i_value);
 

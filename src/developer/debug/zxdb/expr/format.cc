@@ -283,13 +283,15 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
     if (!member)
       continue;
 
+    // TODO(brettw) handle static data members here.
+
     // Save the first member's name to be the name of the whole enum, even if there are no data
     // members. Normally there will be exactly one.
     if (enum_name.empty())
       enum_name = member->GetAssignedName();
 
     // TODO(brettw) this will append a child unconditionally.
-    ErrOrValue member_value = ResolveMember(eval_context, node->value(), member);
+    ErrOrValue member_value = ResolveNonstaticMember(eval_context, node->value(), member);
     if (member_value.has_error()) {
       // In the error case, still append a child so that the child can have
       // the error associated with it.
@@ -321,7 +323,8 @@ void FormatRustTuple(FormatNode* node, const Collection* coll, FormatNode::Descr
     if (name.size() > 2 && name[0] == '_' && name[1] == '_')
       name.erase(name.begin(), name.begin() + 2);
 
-    ErrOrValue member_value = ResolveMember(eval_context, node->value(), member);
+    // Rust tuples are never static.
+    ErrOrValue member_value = ResolveNonstaticMember(eval_context, node->value(), member);
     if (member_value.has_error()) {
       // In the error case, still append a child so that the child can have the error associated
       // with it.
@@ -404,7 +407,8 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
 
     std::string member_name = member->GetAssignedName();
 
-    ErrOrValue member_value = ResolveMember(eval_context, node->value(), member);
+    // TODO(brettw) support static members here.
+    ErrOrValue member_value = ResolveNonstaticMember(eval_context, node->value(), member);
     if (member_value.has_error()) {
       node->children().push_back(std::make_unique<FormatNode>(member_name, member_value.err()));
     } else {

@@ -85,17 +85,8 @@ class PrettyType {
  protected:
   // Evaluates the given expression in the context of the given object. The object's members will
   // be injected into the active scope.
-  static void EvalExpressionOn(fxl::RefPtr<EvalContext> context, const ExprValue& object,
+  static void EvalExpressionOn(const fxl::RefPtr<EvalContext>& context, const ExprValue& object,
                                const std::string& expression, EvalCallback cb);
-
-  // Extracts a structure member with the given name. Pass one name to extract a single
-  // member, pass a sequence of names to recursively extract values from nested structs.
-  static Err ExtractMember(fxl::RefPtr<EvalContext> context, const ExprValue& value,
-                           std::initializer_list<std::string> names, ExprValue* extracted);
-
-  // Like ExtractMember but it attempts to convert the result to a 64-bit number.
-  static Err Extract64BitMember(fxl::RefPtr<EvalContext> context, const ExprValue& value,
-                                std::initializer_list<std::string> names, uint64_t* extracted);
 
  private:
   // Registered getter functions and the expressions they map to.

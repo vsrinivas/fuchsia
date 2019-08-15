@@ -10,6 +10,7 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/found_member.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
@@ -24,30 +25,41 @@ class EvalContext;
 class ExprValue;
 class InheritedFrom;
 
-// Resolves a DataMember given a collection (class/struct/union) and a record for a variable within
-// that collection. The data member must be on the class itself, not on a base class.
+// Resolves a DataMember given a collection (class/struct/union) and either a record for a variable
+// within that collection (in this case the data member must be on the class itself, not on a base
+// class), or a name of a member.
 //
-// Returns an error on failure, or puts the result in |out| on success.
+// These will be synchronous in most cases, but resolving static members may require requesting the
+// memory from the target which will force an asynchronous result.
 //
-// The DataMember may be null. If so, returns an error (this is so callers don't have to type check
-// the inputs).
-ErrOrValue ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
-                         const DataMember* member);
+// The DataMember may be null. If so, calls the callback with an error (this is so callers don't
+// have to type check the inputs).
+void ResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
+                   const DataMember* member, EvalCallback cb);
+void ResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
+                   const ParsedIdentifier& identifier, EvalCallback cb);
 
-// Resolves a DataMember by name. This variant searches base classes for name matches.
+// Synchronous versions of ResolveMember for cases where the value is known not to be an extern
+// (static) member. This is generally used when hardcoding support for known structures.
 //
-// Returns an error if the name isn't found.
-ErrOrValue ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
-                         const ParsedIdentifier& identifier);
+// The variant that takes an initializer list will interpret the strings as identifiers, parse
+// them, and resolve a nested series of members using those strings. For example, if the input
+// is {"a", "b"} this will resolve "base.a.b". This is used for hardcoding some printers.
+ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
+                                  const DataMember* member);
+ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
+                                  const ParsedIdentifier& identifier);
+ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
+                                  std::initializer_list<std::string> names);
 
 // The variant takes an ExprValue which is a pointer to the base/struct or class. Because it fetches
 // memory it is asynchronous.
-void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
+void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
                             const FoundMember& found_member, fit::callback<void(ErrOrValue)> cb);
 
 // Same as previous version but takes the name of the member to find. The callback also provides the
 // DataMember corresponding to what the name matched.
-void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
+void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
                             const ParsedIdentifier& identifier,
                             fit::callback<void(ErrOrValue, fxl::RefPtr<DataMember>)> cb);
 
@@ -60,9 +72,9 @@ void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& b
 // For the version that takes a type and an offset, the type must already have been computed as some
 // type of base class that lives at the given offset. It need not be a direct base and no type
 // checking is done as long as the offsets and sizes are valid.
-ErrOrValue ResolveInherited(fxl::RefPtr<EvalContext> context, const ExprValue& value,
+ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
                             const InheritedFrom* from);
-ErrOrValue ResolveInherited(fxl::RefPtr<EvalContext> context, const ExprValue& value,
+ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
                             fxl::RefPtr<Type> base_type, uint64_t offset);
 
 // Verifies that |input| type is a pointer to a collection and fills the pointed-to type into

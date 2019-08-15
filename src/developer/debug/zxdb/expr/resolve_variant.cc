@@ -23,7 +23,8 @@ Err ResolveVariant(fxl::RefPtr<EvalContext> context, const ExprValue& value,
   if (!discr_member)
     return Err("Missing discriminant for variant.");
 
-  ErrOrValue discr_value = ResolveMember(context, value, discr_member);
+  // Variants don't have static variant members.
+  ErrOrValue discr_value = ResolveNonstaticMember(context, value, discr_member);
   if (discr_value.has_error())
     return discr_value.err();
 

@@ -90,7 +90,7 @@ ErrOrValue ResolveMemberFromString(fxl::RefPtr<EvalContext> eval_context, const 
   if (err.has_error())
     return err;
 
-  return ResolveMember(eval_context, base, ident);
+  return ResolveNonstaticMember(eval_context, base, ident);
 }
 
 }  // namespace
@@ -110,7 +110,7 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
                  ExprValueSource(kBaseAddr));
 
   // Resolve A.
-  ErrOrValue out = ResolveMember(eval_context_, base, a_data);
+  ErrOrValue out = ResolveNonstaticMember(eval_context_, base, a_data);
   ASSERT_TRUE(out.ok()) << out.err().msg();
   EXPECT_EQ("int32_t", out.value().type()->GetAssignedName());
   EXPECT_EQ(4u, out.value().data().size());
@@ -123,7 +123,7 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
   EXPECT_EQ(out.value(), out_by_name.value());
 
   // Resolve B.
-  out = ResolveMember(eval_context_, base, b_data);
+  out = ResolveNonstaticMember(eval_context_, base, b_data);
   ASSERT_TRUE(out.ok()) << out.err().msg();
   EXPECT_EQ("int32_t", out.value().type()->GetAssignedName());
   EXPECT_EQ(4u, out.value().data().size());
@@ -213,7 +213,8 @@ TEST_F(ResolveCollectionTest, ForwardDefMember) {
   ExprValue containing_value(containing, {1, 0, 0, 0});
 
   // Now resolve the member.
-  auto result = ResolveMember(eval_context_, containing_value, ParsedIdentifier(kMemberName));
+  auto result =
+      ResolveNonstaticMember(eval_context_, containing_value, ParsedIdentifier(kMemberName));
   ASSERT_TRUE(result.ok());
 
   // The result should be the right size which it should have picked up from the index, but the
@@ -231,7 +232,7 @@ TEST_F(ResolveCollectionTest, BadMemberArgs) {
   auto sc = GetTestClassType(&a_data, &b_data);
 
   // Test null base class pointer.
-  ErrOrValue out = ResolveMember(eval_context_, ExprValue(), a_data);
+  ErrOrValue out = ResolveNonstaticMember(eval_context_, ExprValue(), a_data);
   ASSERT_TRUE(out.has_error());
   EXPECT_EQ("Can't resolve data member on non-struct/class value.", out.err().msg());
 
@@ -239,7 +240,7 @@ TEST_F(ResolveCollectionTest, BadMemberArgs) {
   ExprValue base(sc, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00}, ExprValueSource(kBaseAddr));
 
   // Null data member pointer.
-  out = ResolveMember(eval_context_, base, nullptr);
+  out = ResolveNonstaticMember(eval_context_, base, nullptr);
   EXPECT_TRUE(out.has_error());
   EXPECT_EQ("Invalid data member for struct 'Foo'.", out.err().msg());
 }
@@ -263,7 +264,7 @@ TEST_F(ResolveCollectionTest, BadMemberAccess) {
   bad_member->set_type(MakeInt32Type());
   bad_member->set_member_location(5);
 
-  out = ResolveMember(eval_context_, base, bad_member.get());
+  out = ResolveNonstaticMember(eval_context_, base, bad_member.get());
   ASSERT_TRUE(out.has_error());
   EXPECT_EQ("Invalid data offset 5 in object of size 8.", out.err().msg());
 }

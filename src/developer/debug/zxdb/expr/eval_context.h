@@ -24,6 +24,13 @@ class Variable;
 
 // Interface used by expression evaluation to communicate with the outside world. This provides
 // access to the variables currently in scope.
+//
+// PASSING CONVENTION
+//
+// Prefer to pass EvalContext function parameters as:
+//   const fxl::RefPtr<EvalContext>& context
+// The advantage is that this will avoid an atomic refcount in most cases, but still is
+// automatically ref-ed when bound in a lambda.
 class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
  public:
   using ValueCallback = fit::callback<void(ErrOrValue, fxl::RefPtr<Symbol>)>;

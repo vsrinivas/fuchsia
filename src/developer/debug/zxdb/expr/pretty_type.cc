@@ -60,11 +60,14 @@ class PrettyEvalContext : public EvalContext {
 
 void PrettyEvalContext::GetNamedValue(const ParsedIdentifier& name, ValueCallback cb) const {
   // First try to resolve all names on the object given.
-  if (ErrOrValue result = ResolveMember(impl_, value_, name); result.ok())
-    return cb(std::move(result), fxl::RefPtr<Symbol>());
+  ResolveMember(impl_, value_, name,
+                [impl = impl_, name, cb = std::move(cb)](ErrOrValue value) mutable {
+                  if (value.ok())
+                    return cb(std::move(value), fxl::RefPtr<Symbol>());
 
-  // Fall back on regular name lookup.
-  return impl_->GetNamedValue(name, std::move(cb));
+                  // Fall back on regular name lookup.
+                  impl->GetNamedValue(name, std::move(cb));
+                });
 }
 
 // When doing multi-evaluation, we'll have a vector of values, any of which could have generated an
@@ -99,37 +102,12 @@ PrettyType::EvalFunction PrettyType::GetGetter(const std::string& getter_name) c
   };
 }
 
-void PrettyType::EvalExpressionOn(fxl::RefPtr<EvalContext> context, const ExprValue& object,
+void PrettyType::EvalExpressionOn(const fxl::RefPtr<EvalContext>& context, const ExprValue& object,
                                   const std::string& expression, EvalCallback cb) {
   // Evaluates the expression in our magic wrapper context that promotes members to the active
   // context.
   EvalExpression(expression, fxl::MakeRefCounted<PrettyEvalContext>(context, object), true,
                  std::move(cb));
-}
-
-// static
-Err PrettyType::ExtractMember(fxl::RefPtr<EvalContext> context, const ExprValue& value,
-                              std::initializer_list<std::string> names, ExprValue* extracted) {
-  ExprValue cur = value;
-  for (const std::string& name : names) {
-    ParsedIdentifier id(IdentifierQualification::kRelative, ParsedIdentifierComponent(name));
-    ErrOrValue result = ResolveMember(context, cur, id);
-    if (result.has_error())
-      return result.err();
-
-    cur = std::move(result.take_value());
-  }
-  *extracted = std::move(cur);
-  return Err();
-}
-
-// static
-Err PrettyType::Extract64BitMember(fxl::RefPtr<EvalContext> context, const ExprValue& value,
-                                   std::initializer_list<std::string> names, uint64_t* extracted) {
-  ExprValue member;
-  if (Err err = ExtractMember(context, value, names, &member); err.has_error())
-    return err;
-  return member.PromoteTo64(extracted);
 }
 
 void PrettyArray::Format(FormatNode* node, const FormatOptions& options,
