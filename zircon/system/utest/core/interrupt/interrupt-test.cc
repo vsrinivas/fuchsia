@@ -8,6 +8,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vcpu.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -42,11 +43,43 @@ bool WaitThread(const zx::thread& thread, uint32_t reason) {
   return true;
 }
 
-void ThreadEntry(uintptr_t arg1, uintptr_t arg2) {
-  zx_handle_t interrupt = static_cast<zx_handle_t>(arg1);
-  while (zx_interrupt_wait(interrupt, nullptr) == ZX_OK) {
-  }
-}
+// This is not really a function, but an entry point for a thread that has
+// a tiny stack and no other setup. It's not really entered with the C ABI
+// as such.  Rather, it's entered with the first argument register set to
+// zx_handle_t and with the SP at the very top of the allocated stack.
+// It's defined in pure assembly so that there are no issues with
+// compiler-generated code's assumptions about the proper ABI setup,
+// instrumentation, etc.
+extern "C" void ThreadEntry(uintptr_t arg1, uintptr_t arg2);
+// while (zx_interrupt_wait(static_cast<zx_handle_t>(arg1), nullptr) == ZX_OK);
+// __builtin_trap();
+__asm__(
+    ".pushsection .text.ThreadEntry,\"ax\",%progbits\n"
+    ".balign 4\n"
+    ".type ThreadEntry,%function\n"
+    "ThreadEntry:\n"
+#ifdef __aarch64__
+    "  mov w20, w0\n"  // Save handle in callee-saves register.
+    "0:\n"
+    "  mov w0, w20\n"           // Load saved handle into argument register.
+    "  mov x1, xzr\n"           // Load nullptr into argument register.
+    "  bl zx_interrupt_wait\n"  // Call.
+    "  cbz w0, 0b\n"            // Loop if returned ZX_OK.
+    "  brk #0\n"                // Else crash.
+#elif defined(__x86_64__)
+    "  mov %edi, %ebx\n"  // Save handle in callee-saves register.
+    "0:\n"
+    "  mov %ebx, %edi\n"          // Load saved handle into argument register.
+    "  xor %edx, %edx\n"          // Load nullptr into argument register.
+    "  call zx_interrupt_wait\n"  // Call.
+    "  testl %eax, %eax\n"        // If returned ZX_OK...
+    "  jz 0b\n"                   // ...loop.
+    "  ud2\n"                     // Else crash.
+#else
+#error "what machine?"
+#endif
+    ".size ThreadEntry, . - ThreadEntry\n"
+    ".popsection");
 
 // Tests to bind interrupt to a non-bindable port
 TEST_F(InterruptTest, NonBindablePort) {
@@ -139,9 +172,8 @@ TEST_F(InterruptTest, WaitThreadFunctionsAfterSuspendResume) {
   // Create and start a thread which waits for an IRQ
   ASSERT_OK(zx::thread::create(*zx::process::self(), name, sizeof(name), 0, &thread));
 
-  ASSERT_OK(thread.start(reinterpret_cast<uintptr_t>(ThreadEntry),
-                         reinterpret_cast<uintptr_t>(stack) + sizeof(stack),
-                         static_cast<uintptr_t>(interrupt.get()), 0));
+  ASSERT_OK(
+      thread.start(ThreadEntry, &stack[sizeof(stack)], static_cast<uintptr_t>(interrupt.get()), 0));
 
   // Wait till the thread is in blocked state
   ASSERT_TRUE(WaitThread(thread, ZX_THREAD_STATE_BLOCKED_INTERRUPT));
