@@ -624,24 +624,18 @@ func TestDHCPAcquired(t *testing.T) {
 	const defaultLeaseLength = 60 * time.Second
 
 	tests := []struct {
-		name                 string
-		oldAddr, newAddr     tcpip.Address
-		oldSubnet, newSubnet tcpip.Subnet
-		config               dhcp.Config
-		expectedRouteTable   []routes.ExtendedRoute
+		name               string
+		oldAddr, newAddr   tcpip.AddressWithPrefix
+		config             dhcp.Config
+		expectedRouteTable []routes.ExtendedRoute
 	}{
 		{
-			name:      "subnet mask provided",
-			oldAddr:   "",
-			newAddr:   testV4Address,
-			oldSubnet: tcpip.Subnet{},
-			newSubnet: func() tcpip.Subnet {
-				subnet, err := tcpip.NewSubnet(util.ApplyMask(testV4Address, util.DefaultMask(testV4Address)), util.DefaultMask(testV4Address))
-				if err != nil {
-					t.Fatal(err)
-				}
-				return subnet
-			}(),
+			name:    "subnet mask provided",
+			oldAddr: tcpip.AddressWithPrefix{},
+			newAddr: tcpip.AddressWithPrefix{
+				Address:   testV4Address,
+				PrefixLen: util.PrefixLength(util.DefaultMask(testV4Address)),
+			},
 			config: dhcp.Config{
 				ServerAddress: tcpip.Address(serverAddress),
 				Gateway:       tcpip.Address(serverAddress),
@@ -690,7 +684,7 @@ func TestDHCPAcquired(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ifState.dhcpAcquired(test.oldAddr, test.newAddr, test.oldSubnet, test.newSubnet, test.config)
+			ifState.dhcpAcquired(test.oldAddr, test.newAddr, test.config)
 			ifState.mu.Lock()
 			hasDynamicAddr := ifState.mu.hasDynamicAddr
 			dnsServers := ifState.mu.dnsServers
@@ -708,8 +702,6 @@ func TestDHCPAcquired(t *testing.T) {
 				t.Errorf("GetExtendedRouteTable() mismatch (-want +got):\n%s", diff)
 			}
 
-			oldAddrWithPrefix := tcpip.AddressWithPrefix{test.oldAddr, test.oldSubnet.Prefix()}
-			newAddrWithPrefix := tcpip.AddressWithPrefix{test.newAddr, test.newSubnet.Prefix()}
 			ns.mu.Lock()
 			infoMap := ns.mu.stack.NICInfo()
 			ns.mu.Unlock()
@@ -718,16 +710,16 @@ func TestDHCPAcquired(t *testing.T) {
 				for _, address := range info.ProtocolAddresses {
 					if address.Protocol == ipv4.ProtocolNumber {
 						switch address.AddressWithPrefix {
-						case oldAddrWithPrefix:
-							t.Errorf("expired address %s was not removed from NIC addresses %v", test.oldAddr, info.ProtocolAddresses)
-						case newAddrWithPrefix:
+						case test.oldAddr:
+							t.Errorf("expired address %s/%d was not removed from NIC addresses %v", test.oldAddr.Address, test.oldAddr.PrefixLen, info.ProtocolAddresses)
+						case test.newAddr:
 							found = true
 						}
 					}
 				}
 
 				if !found {
-					t.Errorf("new address %s was not added to NIC addresses %v", test.newAddr, info.ProtocolAddresses)
+					t.Errorf("new address %s/%d was not added to NIC addresses %v", test.newAddr.Address, test.newAddr.PrefixLen, info.ProtocolAddresses)
 				}
 			} else {
 				t.Errorf("NIC %d not found in %v", ifState.nicid, infoMap)

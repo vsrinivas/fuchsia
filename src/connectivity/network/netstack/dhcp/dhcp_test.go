@@ -71,6 +71,11 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 
 	// clientLinkEPs are the endpoints on which to inject packets to the client.
 	var clientLinkEPs []*channel.Endpoint
+	defer func() {
+		for _, ep := range clientLinkEPs {
+			close(ep.C)
+		}
+	}()
 
 	// errs is for reporting the success or failure out of the goroutine.
 	errs := make(chan error)
@@ -82,7 +87,6 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	for i := 0; i < clientCount; i++ {
 		const defaultMTU = 65536
 		id, clientLinkEP := channel.New(256, defaultMTU, "")
-		defer close(clientLinkEP.C)
 		clientLinkEPs = append(clientLinkEPs, clientLinkEP)
 		clientNicid := tcpip.NICID(100 + i)
 		if err := s.CreateNIC(clientNicid, id); err != nil {
@@ -173,7 +177,7 @@ func TestDHCP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := c0.addr, clientAddrs[0]; got != want {
+			if got, want := c0.addr.Address, clientAddrs[0]; got != want {
 				t.Errorf("c.addr=%s, want=%s", got, want)
 			}
 			if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
@@ -185,7 +189,7 @@ func TestDHCP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := c0.addr, clientAddrs[0]; got != want {
+			if got, want := c0.addr.Address, clientAddrs[0]; got != want {
 				t.Errorf("c.addr=%s, want=%s", got, want)
 			}
 			if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
@@ -201,7 +205,7 @@ func TestDHCP(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := c1.addr, clientAddrs[1]; got != want {
+		if got, want := c1.addr.Address, clientAddrs[1]; got != want {
 			t.Errorf("c.addr=%s, want=%s", got, want)
 		}
 		if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
@@ -210,16 +214,19 @@ func TestDHCP(t *testing.T) {
 	}
 
 	{
-		if err := s.AddAddressWithOptions(nicid, ipv4.ProtocolNumber, c0.addr, stack.NeverPrimaryEndpoint); err != nil && err != tcpip.ErrDuplicateAddress {
+		if err := s.AddProtocolAddressWithOptions(nicid, tcpip.ProtocolAddress{
+			Protocol:          ipv4.ProtocolNumber,
+			AddressWithPrefix: c0.addr,
+		}, stack.NeverPrimaryEndpoint); err != nil {
 			t.Fatalf("failed to add address to stack: %s", err)
 		}
-		defer s.RemoveAddress(nicid, c0.addr)
+		defer s.RemoveAddress(nicid, c0.addr.Address)
 
 		cfg, err := c0.acquire(ctx, initSelecting)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := c0.addr, clientAddrs[0]; got != want {
+		if got, want := c0.addr.Address, clientAddrs[0]; got != want {
 			t.Errorf("c.addr=%s, want=%s", got, want)
 		}
 		if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
@@ -247,154 +254,104 @@ func equalConfig(c0, c1 Config) bool {
 	return true
 }
 
-func TestRenew(t *testing.T) {
-	s := createTestStack(t)
-	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02"}
-
-	serverCfg := Config{
-		ServerAddress: serverAddr,
-		SubnetMask:    "\xff\xff\xff\x00",
-		Gateway:       "\xc0\xa8\x03\xF0",
-		DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
-		LeaseLength:   3 * time.Second,
-		RebindingTime: 2 * time.Second,
-		RenewalTime:   1 * time.Second,
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if _, err := newEPConnServer(ctx, s, clientAddrs, serverCfg); err != nil {
-		t.Fatal(err)
-	}
-
-	count := 0
-	var curAddr tcpip.Address
-	addrCh := make(chan tcpip.Address)
-	acquiredFunc := func(oldAddr, newAddr tcpip.Address, oldSubnet, newSubnet tcpip.Subnet, cfg Config) {
-		if oldAddr != curAddr {
-			t.Fatalf("acquisition %d: curAddr=%v, oldAddr=%v", count, curAddr, oldAddr)
+func TestRefresh(t *testing.T) {
+	for _, rebind := range []bool{false, true} {
+		name := "Renew"
+		if rebind {
+			name = "Rebind"
 		}
-		if cfg.LeaseLength != serverCfg.LeaseLength {
-			t.Fatalf("acquisition %d: lease length: %v, want %v", count, cfg.LeaseLength, serverCfg.LeaseLength)
-		}
-		count++
-		curAddr = newAddr
-		// Any address acquired by the DHCP client must be added to the stack, because the DHCP client
-		// will need to send from that address when it tries to renew its lease.
-		if curAddr != oldAddr {
-			if err := s.AddAddress(nicid, ipv4.ProtocolNumber, curAddr); err != nil {
-				t.Fatalf("AddAddress() with %v failed", curAddr)
+		t.Run(name, func(t *testing.T) {
+			s, linkEP := createTestStackWithChannel(t)
+			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02"}
+
+			go func() {
+				for pkt := range linkEP.C {
+					if rebind {
+						// Only pass broadcast packets back into the stack. This simulates
+						// packet loss during the Client's unicast RENEWING state, forcing
+						// it into broadcast REBINDING state.
+						if tcpipHeader.IPv4(pkt.Header).DestinationAddress() != tcpipHeader.IPv4Broadcast {
+							continue
+						}
+					}
+					linkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+				}
+			}()
+
+			serverCfg := Config{
+				ServerAddress: serverAddr,
+				SubnetMask:    "\xff\xff\xff\x00",
+				Gateway:       "\xc0\xa8\x03\xF0",
+				DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
+				LeaseLength:   3 * time.Second,
+				RebindingTime: 2 * time.Second,
+				RenewalTime:   1 * time.Second,
 			}
-		}
-		if curAddr != oldAddr && oldAddr != "" {
-			if err := s.RemoveAddress(nicid, oldAddr); err != nil {
-				t.Fatalf("RemoveAddress() with %v failed", oldAddr)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			if _, err := newEPConnServer(ctx, s, clientAddrs, serverCfg); err != nil {
+				t.Fatal(err)
 			}
-		}
-		addrCh <- newAddr
-	}
 
-	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-	c := NewClient(s, nicid, clientLinkAddr0, acquiredFunc)
-
-	c.Run(ctx)
-
-	var addr tcpip.Address
-	select {
-	case addr = <-addrCh:
-		t.Logf("got first address: %v", addr)
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout acquiring initial address")
-	}
-
-	select {
-	case newAddr := <-addrCh:
-		t.Logf("got renewal: %v", newAddr)
-		if newAddr != addr {
-			t.Fatalf("renewal address is %v, want %v", newAddr, addr)
-		}
-	case <-time.After(5 * serverCfg.RenewalTime):
-		t.Fatal("timeout acquiring renewed address")
-	}
-}
-
-// TODO: Extract common functionality in TestRenew and TestRebind.
-func TestRebind(t *testing.T) {
-	s, linkEP := createTestStackWithChannel(t)
-	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02"}
-
-	go func() {
-		for pkt := range linkEP.C {
-			ipHeader := tcpipHeader.IPv4(pkt.Header)
-			// Only pass broadcast packets back into the stack. This simulates packet loss during the
-			// Client's unicast RENEWING state, forcing it into broadcast REBINDING state.
-			if ipHeader.DestinationAddress() == tcpipHeader.IPv4Broadcast {
-				linkEP.Inject(pkt.Proto, buffer.NewVectorisedView(len(pkt.Header)+len(pkt.Payload), []buffer.View{pkt.Header, pkt.Payload}))
+			count := 0
+			var curAddr tcpip.AddressWithPrefix
+			addrCh := make(chan tcpip.AddressWithPrefix)
+			acquiredFunc := func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
+				if oldAddr != curAddr {
+					t.Fatalf("aquisition %d: curAddr=%s/%d, oldAddr=%s/%d", count, curAddr.Address, curAddr.PrefixLen, oldAddr.Address, oldAddr.PrefixLen)
+				}
+				if cfg.LeaseLength != serverCfg.LeaseLength {
+					t.Fatalf("aquisition %d: lease length: %s, want %s", count, cfg.LeaseLength, serverCfg.LeaseLength)
+				}
+				count++
+				curAddr = newAddr
+				// Any address acquired by the DHCP client must be added to the stack, because the DHCP client
+				// will need to send from that address when it tries to renew its lease.
+				if curAddr != oldAddr {
+					if oldAddr != (tcpip.AddressWithPrefix{}) {
+						if err := s.RemoveAddress(nicid, oldAddr.Address); err != nil {
+							t.Fatalf("RemoveAddress(%s): %s", oldAddr.Address, err)
+						}
+					}
+					protocolAddress := tcpip.ProtocolAddress{
+						Protocol:          ipv4.ProtocolNumber,
+						AddressWithPrefix: curAddr,
+					}
+					if err := s.AddProtocolAddress(nicid, protocolAddress); err != nil {
+						t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+					}
+				}
+				addrCh <- newAddr
 			}
-		}
-	}()
 
-	serverCfg := Config{
-		ServerAddress: serverAddr,
-		SubnetMask:    "\xff\xff\xff\x00",
-		Gateway:       "\xc0\xa8\x03\xF0",
-		DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
-		LeaseLength:   3 * time.Second,
-		RebindingTime: 2 * time.Second,
-		RenewalTime:   1 * time.Second,
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if _, err := newEPConnServer(ctx, s, clientAddrs, serverCfg); err != nil {
-		t.Fatal(err)
-	}
+			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
+			c := NewClient(s, nicid, clientLinkAddr0, acquiredFunc)
 
-	count := 0
-	var curAddr tcpip.Address
-	addrCh := make(chan tcpip.Address)
-	acquiredFunc := func(oldAddr, newAddr tcpip.Address, oldSubnet, newSubnet tcpip.Subnet, cfg Config) {
-		if oldAddr != curAddr {
-			t.Fatalf("aquisition %d: curAddr=%v, oldAddr=%v", count, curAddr, oldAddr)
-		}
-		if cfg.LeaseLength != serverCfg.LeaseLength {
-			t.Fatalf("aquisition %d: lease length: %v, want %v", count, cfg.LeaseLength, serverCfg.LeaseLength)
-		}
-		count++
-		curAddr = newAddr
-		// Any address acquired by the DHCP client must be added to the stack, because the DHCP client
-		// will need to send from that address when it tries to renew its lease.
-		if curAddr != oldAddr {
-			if err := s.AddAddress(nicid, ipv4.ProtocolNumber, curAddr); err != nil {
-				t.Fatalf("AddAddress() with %v failed", curAddr)
+			c.Run(ctx)
+
+			var addr tcpip.AddressWithPrefix
+			select {
+			case addr = <-addrCh:
+				t.Logf("got first address: %s/%d", addr.Address, addr.PrefixLen)
+			case <-time.After(10 * time.Second):
+				t.Fatal("timeout acquiring initial address")
 			}
-		}
-		if curAddr != oldAddr && oldAddr != "" {
-			if err := s.RemoveAddress(nicid, oldAddr); err != nil {
-				t.Fatalf("RemoveAddress() with %v failed", oldAddr)
+
+			timeout := serverCfg.RenewalTime
+			if rebind {
+				timeout = serverCfg.RebindingTime
 			}
-		}
-		addrCh <- newAddr
-	}
 
-	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-	c := NewClient(s, nicid, clientLinkAddr0, acquiredFunc)
-	c.Run(ctx)
-
-	var addr tcpip.Address
-	select {
-	case addr = <-addrCh:
-		t.Logf("got first address: %v", addr)
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout acquiring initial address")
-	}
-
-	select {
-	case newAddr := <-addrCh:
-		t.Logf("got renewal: %v", newAddr)
-		if newAddr != addr {
-			t.Fatalf("renewal address is %v, want %v", newAddr, addr)
-		}
-	case <-time.After(5 * serverCfg.RebindingTime):
-		t.Fatal("timeout acquiring renewed address")
+			select {
+			case newAddr := <-addrCh:
+				t.Logf("got renewal: %s/%d", newAddr.Address, newAddr.PrefixLen)
+				if newAddr != addr {
+					t.Fatalf("renewal address is %s/%d, want %s/%d", newAddr.Address, newAddr.PrefixLen, addr.Address, addr.PrefixLen)
+				}
+			case <-time.After(5 * timeout):
+				t.Fatal("timeout acquiring renewed address")
+			}
+		})
 	}
 }
 
@@ -427,11 +384,11 @@ func TestNoNullTerminator(t *testing.T) {
 	}
 
 	if got, want := h.op(), opReply; got != want {
-		t.Errorf("h.op()=%v, want=%v", got, want)
+		t.Errorf("h.op()=%s, want=%s", got, want)
 	}
 
 	if _, err := h.options(); err != nil {
-		t.Errorf("bad options: %v", err)
+		t.Errorf("bad options: %s", err)
 	}
 }
 
@@ -482,13 +439,13 @@ func TestTwoServers(t *testing.T) {
 	wq := new(waiter.Queue)
 	ep, err := s.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
 	if err != nil {
-		t.Fatalf("dhcp: server endpoint: %v", err)
+		t.Fatalf("dhcp: server endpoint: %s", err)
 	}
 	if err = ep.Bind(tcpip.FullAddress{Port: ServerPort}); err != nil {
-		t.Fatalf("dhcp: server bind: %v", err)
+		t.Fatalf("dhcp: server bind: %s", err)
 	}
 	if err = ep.SetSockOpt(tcpip.BroadcastOption(1)); err != nil {
-		t.Fatalf("dhcp: setsockopt: %v", err)
+		t.Fatalf("dhcp: setsockopt: %s", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

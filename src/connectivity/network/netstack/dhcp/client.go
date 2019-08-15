@@ -26,7 +26,7 @@ const tag = "DHCP"
 
 const defaultLeaseTime = 12 * time.Hour
 
-type AcquiredFunc func(oldAddr, newAddr tcpip.Address, oldSubnet, newSubnet tcpip.Subnet, cfg Config)
+type AcquiredFunc func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config)
 
 // Client is a DHCP client.
 type Client struct {
@@ -37,7 +37,7 @@ type Client struct {
 
 	wq waiter.Queue
 
-	addr   tcpip.Address
+	addr   tcpip.AddressWithPrefix
 	server tcpip.Address
 
 	// Used to ensure that only one Run goroutine per interface may be
@@ -92,22 +92,16 @@ func (c *Client) Run(ctx context.Context) {
 		c.sem <- struct{}{}
 		defer func() { <-c.sem }()
 
-		var oldSubnet tcpip.Subnet
+		var oldAddr tcpip.AddressWithPrefix
 
 		for {
 			if err := func() error {
 				ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 				defer cancel()
 
-				oldAddr := c.addr
-
 				cfg, err := c.acquire(ctx, clientState)
 				if err != nil {
 					return err
-				}
-				subnet, err := tcpip.NewSubnet(util.ApplyMask(c.addr, cfg.SubnetMask), cfg.SubnetMask)
-				if err != nil {
-					return fmt.Errorf("NewSubnet(%s, %s): %s", c.addr, cfg.SubnetMask, err)
 				}
 
 				// Avoid races between lease acquisition and timers firing.
@@ -152,9 +146,9 @@ func (c *Client) Run(ctx context.Context) {
 				rebindTimer.Reset(cfg.RebindingTime)
 
 				if fn := c.acquiredFunc; fn != nil {
-					fn(oldAddr, c.addr, oldSubnet, subnet, cfg)
+					fn(oldAddr, c.addr, cfg)
 				}
-				oldSubnet = subnet
+				oldAddr = c.addr
 
 				return nil
 			}(); err != nil {
@@ -211,7 +205,7 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 	// |ciaddr        |zero         |zero         |IP address   |IP address|
 	// ---------------------------------------------------------------------
 	bindAddress := tcpip.FullAddress{
-		Addr: c.addr,
+		Addr: c.addr.Address,
 		Port: ClientPort,
 		NIC:  c.nicid,
 	}
@@ -283,8 +277,8 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 		discOpts := append(options{
 			{optDHCPMsgType, []byte{byte(dhcpDISCOVER)}},
 		}, commonOpts...)
-		if len(requestedAddr) != 0 {
-			discOpts = append(discOpts, option{optReqIPAddr, []byte(requestedAddr)})
+		if len(requestedAddr.Address) != 0 {
+			discOpts = append(discOpts, option{optReqIPAddr, []byte(requestedAddr.Address)})
 		}
 		if err := c.send(
 			ctx,
@@ -318,7 +312,6 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 			if err := cfg.decode(opts); err != nil {
 				return Config{}, fmt.Errorf("%s decode: %s", typ, err)
 			}
-			requestedAddr = addr
 
 			// We can overwrite the client's server notion, since there's no
 			// atomicity required for correctness.
@@ -328,12 +321,15 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 			c.server = cfg.ServerAddress
 
 			if len(cfg.SubnetMask) == 0 {
-				cfg.SubnetMask = util.DefaultMask(c.addr)
+				cfg.SubnetMask = util.DefaultMask(c.addr.Address)
 			}
 
-			prefixLen := util.PrefixLength(cfg.SubnetMask)
+			requestedAddr = tcpip.AddressWithPrefix{
+				Address:   addr,
+				PrefixLen: util.PrefixLength(cfg.SubnetMask),
+			}
 
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s/%d, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, prefixLen, c.server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
+			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s/%d, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr.Address, requestedAddr.PrefixLen, c.server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
 
 			break
 		}
@@ -346,7 +342,7 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 		reqOpts = append(reqOpts,
 			options{
 				{optDHCPServer, []byte(c.server)},
-				{optReqIPAddr, []byte(requestedAddr)},
+				{optReqIPAddr, []byte(requestedAddr.Address)},
 			}...)
 	}
 
@@ -375,9 +371,14 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 			if err := cfg.decode(opts); err != nil {
 				return Config{}, fmt.Errorf("%s decode: %s", typ, err)
 			}
-			if addr != requestedAddr {
-				return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", typ, addr, requestedAddr)
+			addr := tcpip.AddressWithPrefix{
+				Address:   addr,
+				PrefixLen: util.PrefixLength(cfg.SubnetMask),
 			}
+			if addr != requestedAddr {
+				return Config{}, fmt.Errorf("%s with unexpected address=%s/%d expected=%s/%d", typ, addr.Address, addr.PrefixLen, requestedAddr.Address, requestedAddr.PrefixLen)
+			}
+
 			// Now that we've successfully acquired the address, update the client state.
 			c.addr = requestedAddr
 
@@ -404,7 +405,7 @@ func (c *Client) send(ctx context.Context, ep tcpip.Endpoint, opts options, writ
 		h.setBroadcast()
 	}
 	if ciaddr {
-		copy(h.ciaddr(), c.addr)
+		copy(h.ciaddr(), c.addr.Address)
 	}
 
 	copy(h.chaddr(), c.linkAddr)

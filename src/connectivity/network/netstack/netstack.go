@@ -355,64 +355,69 @@ func (ifs *ifState) updateMetric(metric routes.Metric) {
 	ifs.mu.Unlock()
 }
 
-func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, oldSubnet, newSubnet tcpip.Subnet, config dhcp.Config) {
+func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, config dhcp.Config) {
 	ifs.ns.mu.Lock()
 
 	name := ifs.ns.nameLocked(ifs.nicid)
 
-	if oldAddr == newAddr && oldSubnet == newSubnet {
-		syslog.Infof("NIC %s: DHCP renewed address %s/%d for %s", name, newAddr, newSubnet.Prefix(), config.LeaseLength)
+	if oldAddr == newAddr {
+		syslog.Infof("NIC %s: DHCP renewed address %s/%d for %s", name, newAddr.Address, newAddr.PrefixLen, config.LeaseLength)
 	} else {
-		if len(oldAddr) != 0 {
-			if err := ifs.ns.mu.stack.RemoveAddress(ifs.nicid, oldAddr); err != nil {
-				syslog.Infof("NIC %s: failed to remove expired DHCP address %s: %s", name, oldAddr, err)
+		if oldAddr != (tcpip.AddressWithPrefix{}) {
+			if err := ifs.ns.mu.stack.RemoveAddress(ifs.nicid, oldAddr.Address); err != nil {
+				syslog.Infof("NIC %s: failed to remove expired DHCP address %s/%d: %s", name, oldAddr.Address, oldAddr.PrefixLen, err)
 			} else {
-				syslog.Infof("NIC %s: removed expired DHCP address %s", name, oldAddr)
+				syslog.Infof("NIC %s: removed expired DHCP address %s/%d", name, oldAddr.Address, oldAddr.PrefixLen)
 			}
+			// TODO(ckuiper): remove the routes.
 		}
-		if len(newAddr) != 0 {
+		if newAddr != (tcpip.AddressWithPrefix{}) {
 			if err := ifs.ns.mu.stack.AddProtocolAddressWithOptions(ifs.nicid, tcpip.ProtocolAddress{
-				Protocol: ipv4.ProtocolNumber,
-				AddressWithPrefix: tcpip.AddressWithPrefix{
-					Address:   newAddr,
-					PrefixLen: newSubnet.Prefix(),
-				},
+				Protocol:          ipv4.ProtocolNumber,
+				AddressWithPrefix: newAddr,
 			}, stack.FirstPrimaryEndpoint); err != nil {
-				syslog.Infof("NIC %s: failed to add DHCP acquired address %s: %s", name, newAddr, err)
+				syslog.Infof("NIC %s: failed to add DHCP acquired address %s/%d: %s", name, newAddr.Address, newAddr.PrefixLen, err)
 			} else {
-				syslog.Infof("NIC %s: DHCP acquired address %s/%d for %s", name, newAddr, newSubnet.Prefix(), config.LeaseLength)
+				syslog.Infof("NIC %s: DHCP acquired address %s/%d for %s", name, newAddr.Address, newAddr.PrefixLen, config.LeaseLength)
+
+				// Add a default route and a route for the local subnet.
+				rs := defaultRoutes(ifs.nicid, config.Gateway)
+				rs = append(rs, subnetRoute(newAddr.Address, config.SubnetMask, ifs.nicid))
+				syslog.Infof("adding routes %+v with metric=<not-set> dynamic=true", rs)
+
+				if err := ifs.ns.AddRoutesLocked(rs, metricNotSet, true /* dynamic */); err != nil {
+					syslog.Infof("error adding routes for DHCP address/gateway: %s", err)
+				}
 			}
 		} else {
 			syslog.Errorf("NIC %s: DHCP could not acquire address", name)
 		}
+		ifs.ns.OnInterfacesChanged(ifs.ns.getNetInterfaces2Locked())
 	}
 	ifs.ns.mu.Unlock()
-
-	if len(newAddr) == 0 {
-		return
-	}
-
-	syslog.Infof("NIC %s: Adding DNS servers: %v", name, config.DNS)
 
 	ifs.mu.Lock()
-	ifs.mu.hasDynamicAddr = true
-	ifs.mu.dnsServers = config.DNS
+	sameDNS := len(ifs.mu.dnsServers) == len(config.DNS)
+	if sameDNS {
+		for i := range ifs.mu.dnsServers {
+			sameDNS = ifs.mu.dnsServers[i] == config.DNS[i]
+			if !sameDNS {
+				break
+			}
+		}
+	}
+	if !sameDNS {
+		syslog.Infof("NIC %s: Adding DNS servers: %v", name, config.DNS)
+
+		ifs.mu.hasDynamicAddr = true
+		ifs.mu.dnsServers = config.DNS
+
+	}
 	ifs.mu.Unlock()
 
-	// Add a default route and a route for the local subnet.
-	rs := defaultRoutes(ifs.nicid, config.Gateway)
-	rs = append(rs, subnetRoute(newAddr, config.SubnetMask, ifs.nicid))
-	syslog.Infof("adding routes %+v with metric=<not-set> dynamic=true", rs)
-
-	ifs.ns.mu.Lock()
-	if err := ifs.ns.AddRoutesLocked(rs, metricNotSet, true /* dynamic */); err != nil {
-		syslog.Infof("error adding routes for DHCP address/gateway: %s", err)
+	if !sameDNS {
+		ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
 	}
-	interfaces := ifs.ns.getNetInterfaces2Locked()
-	ifs.ns.mu.Unlock()
-
-	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
-	ifs.ns.OnInterfacesChanged(interfaces)
 }
 
 func (ifs *ifState) setDHCPStatusLocked(name string, enabled bool) {
