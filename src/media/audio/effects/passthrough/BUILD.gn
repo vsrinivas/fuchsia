@@ -10,6 +10,5 @@ loadable_module("audio_effects") {
 
   deps = [
     "//sdk/lib/media/audio/effects",
-    "//src/lib/fxl",
   ]
 }

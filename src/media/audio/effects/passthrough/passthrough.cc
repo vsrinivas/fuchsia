@@ -6,17 +6,18 @@
 #include <string.h>
 
 //
-// This minimal library has such limited functionality that we implement it
-// right here in the library dispatcher .cc file without additional FX .h or .cc
+// This minimal library has such limited functionality that we implement it right here in the
+// library dispatcher .cc file without additional .h or .cc
 // files. Even the entities that represent effects are structs, not objects.
 //
 namespace {
-// FxPass: in-place effect with no controls, channel restrictions or latency.
-struct FxPass {
+// EffectPass: in-place effect with no controls, channel restrictions or latency.
+struct EffectPass {
   uint32_t frame_rate_;
   uint16_t channels_;
 
-  FxPass(uint32_t frame_rate, uint16_t channels) : frame_rate_(frame_rate), channels_(channels) {}
+  EffectPass(uint32_t frame_rate, uint16_t channels)
+      : frame_rate_(frame_rate), channels_(channels) {}
 };
 
 // Returns information about this type of effect
@@ -41,7 +42,7 @@ fuchsia_audio_effects_handle_t passthrough_create(uint32_t effect_id, uint32_t f
     return FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
   }
 
-  return reinterpret_cast<fuchsia_audio_effects_handle_t>(new FxPass(frame_rate, channels_in));
+  return reinterpret_cast<fuchsia_audio_effects_handle_t>(new EffectPass(frame_rate, channels_in));
 }
 
 bool passthrough_update_configuration(fuchsia_audio_effects_handle_t effects_handle,
@@ -55,7 +56,7 @@ bool passthrough_delete(fuchsia_audio_effects_handle_t effects_handle) {
     return false;
   }
 
-  auto effect = reinterpret_cast<FxPass*>(effects_handle);
+  auto effect = reinterpret_cast<EffectPass*>(effects_handle);
   delete effect;
 
   return true;
@@ -70,7 +71,7 @@ bool passthrough_get_parameters(fuchsia_audio_effects_handle_t effects_handle,
     return false;
   }
 
-  auto effect = reinterpret_cast<FxPass*>(effects_handle);
+  auto effect = reinterpret_cast<EffectPass*>(effects_handle);
 
   effect_params->frame_rate = effect->frame_rate_;
   effect_params->channels_in = effect->channels_;
