@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef IO_SCHEDULER_SCHEDULER_CLIENT_H_
+#define IO_SCHEDULER_SCHEDULER_CLIENT_H_
 
 #include <zircon/types.h>
 
@@ -86,3 +87,5 @@ class SchedulerClient {
 };
 
 }  // namespace ioscheduler
+
+#endif  // IO_SCHEDULER_SCHEDULER_CLIENT_H_

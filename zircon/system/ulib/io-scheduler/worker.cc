@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <io-scheduler/worker.h>
-
 #include <stdio.h>
-
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <io-scheduler/io-scheduler.h>
+#include <io-scheduler/worker.h>
 
 namespace ioscheduler {
 
@@ -110,10 +108,8 @@ void Worker::WorkerLoop() {
         stream->ReleaseOp(std::move(op), client);
       } else if (status == ZX_ERR_ASYNC) {
         // Op queued for async completion. Released when completed.
-
-        // Todo: transfer op to pending list to await async completion.
-        // sched_->AddAsync(std::move(op));
-        ZX_DEBUG_ASSERT(false);
+        // Op is retained in stream.
+        op.release();
       } else {
         fprintf(stderr, "Unexpected return status from Issue() %d\n", status);
         // Mark op as failed.

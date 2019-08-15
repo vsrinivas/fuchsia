@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef IO_SCHEDULER_IO_SCHEDULER_H_
+#define IO_SCHEDULER_IO_SCHEDULER_H_
+
+#include <stdint.h>
+#include <zircon/types.h>
 
 #include <memory>
-#include <stdint.h>
 #include <vector>
 
 #include <fbl/condition_variable.h>
@@ -13,12 +16,10 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <zircon/types.h>
-
 #include <io-scheduler/queue.h>
 #include <io-scheduler/scheduler-client.h>
-#include <io-scheduler/stream.h>
 #include <io-scheduler/stream-op.h>
+#include <io-scheduler/stream.h>
 #include <io-scheduler/worker.h>
 
 namespace ioscheduler {
@@ -161,3 +162,5 @@ class Scheduler {
 };
 
 }  // namespace ioscheduler
+
+#endif  // IO_SCHEDULER_IO_SCHEDULER_H_

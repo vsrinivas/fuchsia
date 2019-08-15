@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef IO_SCHEDULER_WORKER_H_
+#define IO_SCHEDULER_WORKER_H_
 
 #include <stdint.h>
 #include <threads.h>
+#include <zircon/types.h>
 
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/types.h>
 
 namespace ioscheduler {
 
@@ -39,3 +40,5 @@ class Worker {
 };
 
 }  // namespace ioscheduler
+
+#endif  // IO_SCHEDULER_WORKER_H_

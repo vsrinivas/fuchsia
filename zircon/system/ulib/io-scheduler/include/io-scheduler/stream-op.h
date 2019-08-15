@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef IO_SCHEDULER_STREAM_OP_H_
+#define IO_SCHEDULER_STREAM_OP_H_
 
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <fbl/intrusive_double_list.h>
-#include <zircon/types.h>
 
 namespace ioscheduler {
 
@@ -163,15 +164,8 @@ class StreamOp {
   };
   using ActiveList = fbl::DoublyLinkedList<StreamOp*, ActiveListTraits>;
 
-  using RetainedListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
-  struct RetainedListTraits {
-    static RetainedListNodeState& node_state(StreamOp& s) { return s.retained_node_; }
-  };
-  using RetainedList = fbl::DoublyLinkedList<StreamOp*, RetainedListTraits>;
-
  private:
   ActiveListNodeState active_node_;
-  RetainedListNodeState retained_node_;
 
   OpType type_;             // Type of operation.
   uint32_t stream_id_;      // Stream into which this op is queued.
@@ -188,3 +182,5 @@ class StreamOp {
 };
 
 }  // namespace ioscheduler
+
+#endif  // IO_SCHEDULER_STREAM_OP_H_

@@ -2,14 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <io-scheduler/io-scheduler.h>
 #include <zxtest/zxtest.h>
 
-#include <io-scheduler/io-scheduler.h>
-
-namespace {
-
-using StreamOp = ioscheduler::StreamOp;
-using UniqueOp = ioscheduler::UniqueOp;
+namespace ioscheduler {
 
 TEST(UniqueOpTest, CreateNull) {
   UniqueOp ref;  // Null object.
@@ -52,4 +48,4 @@ TEST(UniqueOpTest, CreateAllocated) {
   delete op;
 }
 
-}  // namespace
+}  // namespace ioscheduler

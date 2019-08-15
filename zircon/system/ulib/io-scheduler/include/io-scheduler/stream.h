@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef IO_SCHEDULER_STREAM_H_
+#define IO_SCHEDULER_STREAM_H_
+
+#include <zircon/types.h>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -10,8 +13,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <zircon/types.h>
-
 #include <io-scheduler/scheduler-client.h>
 #include <io-scheduler/stream-op.h>
 
@@ -77,6 +78,8 @@ class Stream : public fbl::RefCounted<Stream> {
   friend struct WAVLTreeNodeTraitsSortById;
   friend struct KeyTraitsSortById;
 
+  bool IsEmptyLocked() __TA_REQUIRES(lock_);
+
   uint32_t id_;
   uint32_t priority_;
 
@@ -91,9 +94,11 @@ class Stream : public fbl::RefCounted<Stream> {
   Scheduler* sched_ = nullptr;
 
   fbl::Mutex lock_;
-  bool open_ __TA_GUARDED(lock_) = true;  // Stream is open, can accept more ops.
-  StreamOp::ActiveList in_list_ __TA_GUARDED(lock_);
-  StreamOp::RetainedList retained_list_ __TA_GUARDED(lock_);
+  bool open_ __TA_GUARDED(lock_) = true;                  // Stream is open, can accept more ops.
+  StreamOp::ActiveList in_list_ __TA_GUARDED(lock_);      // Input list - ops yet to be issued.
+  StreamOp::ActiveList issued_list_ __TA_GUARDED(lock_);  // Issued ops.
 };
 
 }  // namespace ioscheduler
+
+#endif  // IO_SCHEDULER_STREAM_H_

@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <io-scheduler/io-scheduler.h>
+#include <stdio.h>
 
 #include <fbl/auto_lock.h>
-
-#include <stdio.h>
+#include <io-scheduler/io-scheduler.h>
 
 namespace ioscheduler {
 
@@ -110,7 +109,10 @@ zx_status_t Scheduler::Serve() {
 }
 
 void Scheduler::AsyncComplete(StreamOp* sop) {
-  ZX_DEBUG_ASSERT(false);  // Not yet implemented.
+  Stream* stream = sop->stream();
+  // TODO(ZX-4741): call async-friendly completion deferral instead of doing it in the
+  // caller context.
+  stream->ReleaseOp(UniqueOp(sop), client_);
 }
 
 Scheduler::~Scheduler() { Shutdown(); }

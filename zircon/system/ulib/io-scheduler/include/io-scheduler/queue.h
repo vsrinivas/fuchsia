@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef IO_SCHEDULER_QUEUE_H_
+#define IO_SCHEDULER_QUEUE_H_
+
+#include <zircon/types.h>
 
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <zircon/types.h>
-
 #include <io-scheduler/stream.h>
 
 namespace ioscheduler {
@@ -42,3 +43,5 @@ class Queue {
 };
 
 }  // namespace ioscheduler
+
+#endif  // IO_SCHEDULER_QUEUE_H_

@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 #include <fbl/auto_lock.h>
-
-#include <io-scheduler/queue.h>
 #include <io-scheduler/io-scheduler.h>
+#include <io-scheduler/queue.h>
 
 namespace ioscheduler {
 
