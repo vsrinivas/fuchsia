@@ -116,8 +116,9 @@ static int test_timeout_for_type(test_type_t type) {
  */
 bool watchdog_is_enabled() { return base_timeout_seconds > 0; }
 
-static __NO_RETURN void watchdog_signal_timeout(const char* name) {
-  unittest_printf_critical("\n\n*** WATCHDOG TIMER FIRED, test: %s ***\n", name);
+static __NO_RETURN void watchdog_signal_timeout(const char* name, int timeout_seconds) {
+  unittest_printf_critical(
+    "\n\n*** WATCHDOG TIMER FIRED (%d seconds), test: %s ***\n", timeout_seconds, name);
   exit(WATCHDOG_ERRCODE);
 }
 
@@ -162,8 +163,9 @@ static void* watchdog_thread_func(void* arg) {
     // the timeout has been reached.
     uint64_t timeout_nanos = active_timeout_seconds * NANOSECONDS_PER_SECOND;
     if (elapsed_nanos >= timeout_nanos) {
+      int timeout = active_timeout_seconds;
       pthread_mutex_unlock(&mutex);
-      watchdog_signal_timeout(test_name);
+      watchdog_signal_timeout(test_name, timeout);
       /* NOTREACHED */
     }
   }
