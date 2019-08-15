@@ -13,7 +13,6 @@ mod services;
 mod state;
 #[cfg(test)]
 mod test;
-mod wait_group;
 
 use self::services::{publisher::Publisher, registry::Registry};
 use failure::Error;

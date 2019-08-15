@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{wait_group::*, Result};
+use crate::Result;
 use failure::Error as FError;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
@@ -13,6 +13,7 @@ use futures::{
     prelude::*,
 };
 use std::convert::*;
+use waitgroup::*;
 
 #[derive(Debug, Clone, ValidFidlTable)]
 #[fidl_table_src(PlayerStatus)]

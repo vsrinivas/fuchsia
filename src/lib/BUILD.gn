@@ -38,5 +38,6 @@ group("tests") {
     "rust_backtrace:tests",
     "test_util:tests",
     "ui:tests",
+    "waitgroup:tests",
   ]
 }
