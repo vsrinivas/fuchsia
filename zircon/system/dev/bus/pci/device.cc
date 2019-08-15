@@ -3,23 +3,26 @@
 // found in the LICENSE file.
 
 #include "device.h"
-#include "bus.h"
-#include "common.h"
-#include "ref_counted.h"
-#include "upstream_node.h"
+
 #include <assert.h>
-#include <ddk/binding.h>
 #include <err.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <ddk/binding.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
+
+#include "bus.h"
+#include "common.h"
+#include "ref_counted.h"
+#include "upstream_node.h"
 
 namespace pci {
 
@@ -453,7 +456,7 @@ bool ReadCapability(Config& cfg, RegType offset, CapabilityHdr<RegType>* header)
 
 // |CapabilityBaseType| one of Capability, or ExtendedCapability
 template <class CapabilityBaseType>
-bool CapabilityCycleExists(Config& cfg,
+bool CapabilityCycleExists(const Config& cfg,
                            fbl::DoublyLinkedList<std::unique_ptr<CapabilityBaseType>>* list,
                            typename CapabilityBaseType::RegType offset) {
   auto found = list->find_if([&offset](const auto& c) { return c.base() == offset; });
@@ -478,7 +481,7 @@ bool CapabilityCycleExists(Config& cfg,
 // |CapabilityType| one of the values in Capability::Ids or ExtendedCapability::Ids
 template <class CapabilityType>
 zx_status_t AllocateCapability(
-    uint16_t offset, CapabilityType** out,
+    uint16_t offset, const Config& cfg, CapabilityType** out,
     fbl::DoublyLinkedList<std::unique_ptr<typename CapabilityType::BaseClass>>* list) {
   // If we find a duplicate of a singleton capability then either we've parsed incorrectly,
   // or the device configuration space is suspect.
@@ -487,7 +490,7 @@ zx_status_t AllocateCapability(
   }
 
   auto new_cap =
-      std::make_unique<CapabilityType>(static_cast<typename CapabilityType::RegType>(offset));
+      std::make_unique<CapabilityType>(cfg, static_cast<typename CapabilityType::RegType>(offset));
   *out = new_cap.get();
   list->push_back(std::move(new_cap));
   return ZX_OK;
@@ -522,9 +525,16 @@ zx_status_t Device::ParseCapabilities() {
     zx_status_t st;
     switch (static_cast<Capability::Id>(hdr.id)) {
       case Capability::Id::kPciExpress:
-        st = AllocateCapability<PciExpressCapability>(cap_offset, &caps_.pcie, &caps_.list);
+        st = AllocateCapability<PciExpressCapability>(cap_offset, *cfg_, &caps_.pcie, &caps_.list);
         if (st != ZX_OK) {
           pci_tracef("%s Error allocating PCIe capability: %d, %p\n", cfg_->addr(), st, caps_.pcie);
+          return st;
+        }
+        break;
+      case Capability::Id::kMsi:
+        st = AllocateCapability<MsiCapability>(cap_offset, *cfg_, &caps_.msi, &caps_.list);
+        if (st != ZX_OK) {
+          pci_tracef("%s Error allocating MSI capability: %d, %p\n", cfg_->addr(), st, caps_.msi);
           return st;
         }
         break;
@@ -533,7 +543,6 @@ zx_status_t Device::ParseCapabilities() {
       case Capability::Id::kAgp:
       case Capability::Id::kVpd:
       case Capability::Id::kSlotIdentification:
-      case Capability::Id::kMsi:
       case Capability::Id::kCompactPciHotSwap:
       case Capability::Id::kPciX:
       case Capability::Id::kHyperTransport:

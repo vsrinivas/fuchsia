@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include "fake_bus_driver.h"
+
+#include <ddk/binding.h>
+#include <ddk/platform-defs.h>
+
 #include "../../config.h"
 #include "../../device.h"
 #include "../fakes/test_device.h"
 #include "driver_tests.h"
-#include <ddk/binding.h>
-#include <ddk/platform-defs.h>
 
 namespace pci {
 
@@ -25,7 +27,8 @@ zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name) {
   }
 
   auto cleanup = fbl::MakeAutoCall([&bus] { bus->DdkRemove(); });
-  st = bus->CreateDevice(bus->test_bdf(), (uint8_t*)kTestDeviceConfig, sizeof(kTestDeviceConfig));
+  st = bus->CreateDevice(bus->test_bdf(), (uint8_t*)kFakeQuadroDeviceConfig,
+                         sizeof(kFakeQuadroDeviceConfig));
   if (st != ZX_OK) {
     return st;
   }

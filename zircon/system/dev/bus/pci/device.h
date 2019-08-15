@@ -1,14 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_DEVICE_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_DEVICE_H_
 
-#include "allocation.h"
-#include "capabilities.h"
-#include "config.h"
-#include "device_proxy.h"
-#include "ref_counted.h"
 #include <assert.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/channel.h>
+#include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/errors.h>
+#include <zircon/hw/pci.h>
+
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_double_list.h>
@@ -17,13 +20,13 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <hw/pci.h>
-#include <lib/zx/channel.h>
 #include <region-alloc/region-alloc.h>
-#include <sys/types.h>
-#include <zircon/compiler.h>
-#include <zircon/errors.h>
-#include <zircon/hw/pci.h>
-#include <lib/zircon-internal/thread_annotations.h>
+
+#include "allocation.h"
+#include "capabilities.h"
+#include "config.h"
+#include "device_proxy.h"
+#include "ref_counted.h"
 
 namespace pci {
 
@@ -79,6 +82,7 @@ class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
 
   struct Capabilities {
     CapabilityList list;
+    MsiCapability* msi;
     PciExpressCapability* pcie;
   };
 
@@ -164,7 +168,7 @@ class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
   uint8_t dev_id() const { return cfg_->bdf().device_id; }
   uint8_t func_id() const { return cfg_->bdf().function_id; }
   uint32_t bar_count() const { return bar_count_; }
-  const CapabilityList& capabilities() const { return caps_.list; }
+  const Capabilities& capabilities() const { return caps_; }
 
   // Dump some information about the device
   virtual void Dump() const;
@@ -274,3 +278,5 @@ class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
 };
 
 }  // namespace pci
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_DEVICE_H_

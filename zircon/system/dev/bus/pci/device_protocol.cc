@@ -250,7 +250,7 @@ zx_status_t Device::RpcGetNextCapability(const zx::unowned_channel& ch) {
   bool found_prev = (request_.cap.is_first) ? true : false;
   uint8_t scan_offset = static_cast<uint8_t>(request_.cap.offset);
 
-  for (auto& cap : capabilities()) {
+  for (auto& cap : capabilities().list) {
     if (found_prev) {
       if (cap.id() == request_.cap.id) {
         response_.cap.offset = cap.base();

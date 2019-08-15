@@ -2,18 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fake_ddk/fake_ddk.h>
+#include <zircon/limits.h>
+
+#include <ddktl/protocol/pciroot.h>
+#include <fbl/ref_ptr.h>
+#include <zxtest/zxtest.h>
+
 #include "../../config.h"
 #include "../../device.h"
 #include "../fakes/fake_bus.h"
 #include "../fakes/fake_pciroot.h"
 #include "../fakes/fake_upstream_node.h"
-#include <ddktl/protocol/pciroot.h>
-#include <fbl/ref_ptr.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <zircon/limits.h>
-#include <zxtest/zxtest.h>
+#include "../fakes/test_device.h"
 
 namespace pci {
+
+// Creates a test device with a given device config using test defaults)
 
 class PciDeviceTests : public zxtest::Test {
  public:
@@ -22,6 +27,16 @@ class PciDeviceTests : public zxtest::Test {
   FakeBus& bus() { return bus_; }
   FakeUpstreamNode& upstream() { return upstream_; }
   const pci_bdf_t default_bdf() { return default_bdf_; }
+  Device& CreateTestDevice(const uint8_t* cfg_buf, size_t cfg_size) {
+    // Copy the config dump into a device entry in the ecam.
+    memcpy(pciroot_proto().ecam().get(default_bdf()).config, cfg_buf, cfg_size);
+    // Create the config object for the device.
+    std::unique_ptr<Config> cfg;
+    EXPECT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
+    // Create and initialize the fake device.
+    EXPECT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
+    return bus().get_device(default_bdf());
+  }
 
  protected:
   PciDeviceTests() : upstream_(UpstreamNode::Type::ROOT, 0) {}
@@ -62,32 +77,11 @@ TEST_F(PciDeviceTests, CreationTest) {
 
 // Test a normal capability chain
 TEST_F(PciDeviceTests, BasicCapabilityTest) {
-  // This is the configuration space dump of a virtio-input device. It should
-  // contain an MSIX capability along with 5 Vendor capabilities.
-  uint8_t virtio_input[] = {
-      0xf4, 0x1a, 0x52, 0x10, 0x07, 0x01, 0x10, 0x00, 0x01, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0xbf, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x0c, 0xc0, 0x00, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf4,
-      0x1a, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x98, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x0a, 0x01, 0x00, 0x00, 0x09, 0x00, 0x10, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x10, 0x00, 0x00, 0x09, 0x40, 0x10, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x10,
-      0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x09, 0x50, 0x10, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00,
-      0x20, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x09, 0x60, 0x14, 0x02, 0x04, 0x00, 0x00, 0x00,
-      0x00, 0x30, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x09, 0x70, 0x14,
-      0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x11, 0x84, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00};
-  static_assert(sizeof(virtio_input) == 256);
   std::unique_ptr<Config> cfg;
 
   // Copy the config dump into a device entry in the ecam.
-  memcpy(pciroot_proto().ecam().get(default_bdf()).config, virtio_input, sizeof(virtio_input));
+  memcpy(pciroot_proto().ecam().get(default_bdf()).config, kFakeVirtioInputDeviceConfig,
+         sizeof(kFakeVirtioInputDeviceConfig));
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
   ASSERT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
   auto& dev = bus().get_device(default_bdf());
@@ -98,19 +92,19 @@ TEST_F(PciDeviceTests, BasicCapabilityTest) {
 
   // Since this is a dump of an emulated device we know it has a single MSI-X
   // capability followed by five Vendor capabilities.
-  auto cap_iter = dev.capabilities().begin();
+  auto cap_iter = dev.capabilities().list.begin();
   EXPECT_EQ(static_cast<Capability::Id>(cap_iter->id()), Capability::Id::kMsiX);
-  ASSERT_TRUE(cap_iter != dev.capabilities().end());
+  ASSERT_TRUE(cap_iter != dev.capabilities().list.end());
   EXPECT_EQ(static_cast<Capability::Id>((++cap_iter)->id()), Capability::Id::kVendor);
-  ASSERT_TRUE(cap_iter != dev.capabilities().end());
+  ASSERT_TRUE(cap_iter != dev.capabilities().list.end());
   EXPECT_EQ(static_cast<Capability::Id>((++cap_iter)->id()), Capability::Id::kVendor);
-  ASSERT_TRUE(cap_iter != dev.capabilities().end());
+  ASSERT_TRUE(cap_iter != dev.capabilities().list.end());
   EXPECT_EQ(static_cast<Capability::Id>((++cap_iter)->id()), Capability::Id::kVendor);
-  ASSERT_TRUE(cap_iter != dev.capabilities().end());
+  ASSERT_TRUE(cap_iter != dev.capabilities().list.end());
   EXPECT_EQ(static_cast<Capability::Id>((++cap_iter)->id()), Capability::Id::kVendor);
-  ASSERT_TRUE(cap_iter != dev.capabilities().end());
+  ASSERT_TRUE(cap_iter != dev.capabilities().list.end());
   EXPECT_EQ(static_cast<Capability::Id>((++cap_iter)->id()), Capability::Id::kVendor);
-  EXPECT_TRUE(++cap_iter == dev.capabilities().end());
+  EXPECT_TRUE(++cap_iter == dev.capabilities().list.end());
 }
 
 // This test checks for proper handling of capability pointers that are
@@ -210,6 +204,24 @@ TEST_F(PciDeviceTests, DuplicateFixedCapabilityTest) {
 
   // Ensure no device was added.
   EXPECT_TRUE(bus().device_list().is_empty());
+}
+
+// Ensure we parse MSI capabilities properly in the Quadro device.
+// lspci output: Capabilities: [68] MSI: Enable+ Count=1/1 Maskable- 64bit+
+TEST_F(PciDeviceTests, MsiCapabilityTest) {
+  auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig, sizeof(kFakeQuadroDeviceConfig));
+  ASSERT_EQ(false, CURRENT_TEST_HAS_FAILURES());
+  ASSERT_NE(nullptr, dev.capabilities().msi);
+
+  auto& msi = *dev.capabilities().msi;
+  EXPECT_EQ(0x68, msi.base());
+  EXPECT_EQ(static_cast<uint8_t>(Capability::Id::kMsi), msi.id());
+  EXPECT_EQ(true, msi.is_64bit());
+  EXPECT_EQ(1, msi.vectors_avail());
+  EXPECT_EQ(false, msi.supports_pvm());
+
+  MsiControlReg ctrl = {.value = dev.config()->Read(msi.ctrl())};
+  EXPECT_EQ(1, ctrl.enable());
 }
 
 }  // namespace pci
