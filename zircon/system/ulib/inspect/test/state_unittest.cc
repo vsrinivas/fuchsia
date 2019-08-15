@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 // TODO(CF-887): Use std::map instead of FBL in this file.
+#include <lib/inspect/cpp/vmo/block.h>
+#include <lib/inspect/cpp/vmo/scanner.h>
+#include <lib/inspect/cpp/vmo/snapshot.h>
+#include <lib/inspect/cpp/vmo/state.h>
 #include <threads.h>
 
 #include <iostream>
@@ -10,10 +14,6 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <lib/inspect/cpp/vmo/block.h>
-#include <lib/inspect/cpp/vmo/scanner.h>
-#include <lib/inspect/cpp/vmo/snapshot.h>
-#include <lib/inspect/cpp/vmo/state.h>
 #include <pretty/hexdump.h>
 #include <zxtest/zxtest.h>
 
@@ -33,6 +33,9 @@ using inspect::Heap;
 using inspect::IntArray;
 using inspect::IntProperty;
 using inspect::kNumOrders;
+using inspect::Link;
+using inspect::LinkBlockDisposition;
+using inspect::LinkBlockPayload;
 using inspect::NameBlockFields;
 using inspect::Node;
 using inspect::PropertyBlockFormat;
@@ -1180,6 +1183,98 @@ TEST(State, TombstoneCleanup) {
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
                 ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(4)));
   CompareBlock(blocks.find(4)->block, MakeBlock(NameBlockFields::Type::Make(BlockType::kName) |
+                                                    NameBlockFields::Length::Make(4),
+                                                "root\0\0\0\0"));
+}
+
+TEST(State, LinkTest) {
+  auto vmo = MakeVmo(4096);
+  ASSERT_TRUE(!!vmo);
+  auto heap = std::make_unique<Heap>(std::move(vmo));
+  auto state = State::Create(std::move(heap));
+
+  // root will be at block index 1
+  Node root = state->CreateNode("root", 0);
+  Link link = state->CreateLink("link", 1u /* root index */, "/test",
+                                inspect::LinkBlockDisposition::kChild);
+  Link link2 = state->CreateLink("link2", 1u /* root index */, "/test",
+                                 inspect::LinkBlockDisposition::kInline);
+
+  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  size_t free_blocks, allocated_blocks;
+  auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
+  ASSERT_TRUE(snapshot);
+
+  // Header (1), root (2), link (3), link2 (3)
+  EXPECT_EQ(1u + 2u + 3u + 3u, allocated_blocks);
+  EXPECT_EQ(7u, free_blocks);
+
+  CompareBlock(blocks.find(0)->block, MakeHeader(6));
+
+  // Root node has 2 children.
+  CompareBlock(
+      blocks.find(1)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
+                    ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
+                2));
+  CompareBlock(blocks.find(2)->block, MakeBlock(NameBlockFields::Type::Make(BlockType::kName) |
+                                                    NameBlockFields::Length::Make(4),
+                                                "root\0\0\0\0"));
+  CompareBlock(
+      blocks.find(3)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kLinkValue) |
+                    ValueBlockFields::ParentIndex::Make(1) | ValueBlockFields::NameIndex::Make(4),
+                LinkBlockPayload::ContentIndex::Make(5)));
+  CompareBlock(blocks.find(4)->block, MakeBlock(NameBlockFields::Type::Make(BlockType::kName) |
+                                                    NameBlockFields::Length::Make(4),
+                                                "link\0\0\0\0"));
+  CompareBlock(blocks.find(5)->block, MakeBlock(NameBlockFields::Type::Make(BlockType::kName) |
+                                                    NameBlockFields::Length::Make(5),
+                                                "/test\0\0\0"));
+  CompareBlock(
+      blocks.find(6)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kLinkValue) |
+                    ValueBlockFields::ParentIndex::Make(1) | ValueBlockFields::NameIndex::Make(7),
+                LinkBlockPayload::ContentIndex::Make(8) |
+                    LinkBlockPayload::Flags::Make(LinkBlockDisposition::kInline)));
+  CompareBlock(blocks.find(7)->block, MakeBlock(NameBlockFields::Type::Make(BlockType::kName) |
+                                                    NameBlockFields::Length::Make(5),
+                                                "link2\0\0\0"));
+  CompareBlock(blocks.find(8)->block, MakeBlock(NameBlockFields::Type::Make(BlockType::kName) |
+                                                    NameBlockFields::Length::Make(5),
+                                                "/test\0\0\0"));
+}
+
+TEST(State, LinkContentsAllocationFailure) {
+  auto vmo = MakeVmo(4096);
+  ASSERT_TRUE(!!vmo);
+  auto heap = std::make_unique<Heap>(std::move(vmo));
+  auto state = State::Create(std::move(heap));
+
+  // root will be at block index 1
+  Node root = state->CreateNode("root", 0);
+  std::string name(2000, 'a');
+  Link link =
+      state->CreateLink(name, 1u /* root index */, name, inspect::LinkBlockDisposition::kChild);
+
+  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  size_t free_blocks, allocated_blocks;
+  auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
+  ASSERT_TRUE(snapshot);
+
+  // Header (1), root (2).
+  EXPECT_EQ(1u + 2u, allocated_blocks);
+  EXPECT_EQ(7u, free_blocks);
+
+  CompareBlock(blocks.find(0)->block, MakeHeader(4));
+
+  // Root node has 0 children.
+  CompareBlock(
+      blocks.find(1)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
+                    ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
+                "\0\0\0\0\0\0\0\0"));
+  CompareBlock(blocks.find(2)->block, MakeBlock(NameBlockFields::Type::Make(BlockType::kName) |
                                                     NameBlockFields::Length::Make(4),
                                                 "root\0\0\0\0"));
 }

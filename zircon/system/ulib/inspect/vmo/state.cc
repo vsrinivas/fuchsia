@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <functional>
-
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/state.h>
+
+#include <functional>
 
 namespace inspect {
 
@@ -266,6 +266,34 @@ ByteVectorProperty State::CreateByteVectorProperty(const std::string& name, Bloc
   return InnerCreateProperty<ByteVectorProperty, std::vector<uint8_t>>(
       name, parent, reinterpret_cast<const char*>(value.data()), value.size(),
       PropertyBlockFormat::kBinary);
+}
+
+Link State::CreateLink(const std::string& name, BlockIndex parent, const std::string& content,
+                       LinkBlockDisposition disposition) {
+  std::lock_guard lock(mutex_);
+  auto gen = AutoGenerationIncrement(header_, heap_.get());
+
+  BlockIndex name_index, value_index, content_index;
+  zx_status_t status;
+  status = InnerCreateValue(name, BlockType::kLinkValue, parent, &name_index, &value_index);
+  if (status != ZX_OK) {
+    return Link();
+  }
+
+  status = CreateName(content, &content_index);
+  if (status != ZX_OK) {
+    DecrementParentRefcount(value_index);
+    heap_->Free(name_index);
+    heap_->Free(value_index);
+    return Link();
+  }
+
+  auto* block = heap_->GetBlock(value_index);
+
+  block->payload.u64 = LinkBlockPayload::ContentIndex::Make(content_index) |
+                       LinkBlockPayload::Flags::Make(disposition);
+
+  return Link(weak_self_ptr_.lock(), name_index, value_index, content_index);
 }
 
 Node State::CreateNode(const std::string& name, BlockIndex parent) {
@@ -560,6 +588,23 @@ void State::FreeStringProperty(StringProperty* property) { InnerFreePropertyWith
 
 void State::FreeByteVectorProperty(ByteVectorProperty* property) {
   InnerFreePropertyWithExtents(property);
+}
+
+void State::FreeLink(Link* link) {
+  ZX_DEBUG_ASSERT_MSG(link->state_.get() == this, "Link being freed from the wrong state");
+  if (link->state_.get() != this) {
+    return;
+  }
+
+  std::lock_guard lock(mutex_);
+  auto gen = AutoGenerationIncrement(header_, heap_.get());
+
+  DecrementParentRefcount(link->value_index_);
+
+  heap_->Free(link->name_index_);
+  heap_->Free(link->value_index_);
+  heap_->Free(link->content_index_);
+  link->state_ = nullptr;
 }
 
 void State::FreeNode(Node* object) {

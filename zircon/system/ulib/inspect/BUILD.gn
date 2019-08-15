@@ -6,17 +6,17 @@ library("inspect") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [
-    "lib/inspect/inspect.h",
-    "lib/inspect/hierarchy.h",
-    "lib/inspect/reader.h",
-    "lib/inspect/health.h",
-    "lib/inspect/vmo/state.h",
-    "lib/inspect/vmo/types.h",
-    "lib/inspect/vmo/block.h",
-    "lib/inspect/vmo/heap.h",
-    "lib/inspect/vmo/limits.h",
-    "lib/inspect/vmo/scanner.h",
-    "lib/inspect/vmo/snapshot.h",
+    "lib/inspect/cpp/inspect.h",
+    "lib/inspect/cpp/hierarchy.h",
+    "lib/inspect/cpp/reader.h",
+    "lib/inspect/cpp/health.h",
+    "lib/inspect/cpp/vmo/state.h",
+    "lib/inspect/cpp/vmo/types.h",
+    "lib/inspect/cpp/vmo/block.h",
+    "lib/inspect/cpp/vmo/heap.h",
+    "lib/inspect/cpp/vmo/limits.h",
+    "lib/inspect/cpp/vmo/scanner.h",
+    "lib/inspect/cpp/vmo/snapshot.h",
   ]
   sources = [
     "health.cc",

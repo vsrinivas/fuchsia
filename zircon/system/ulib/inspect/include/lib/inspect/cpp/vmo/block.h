@@ -5,11 +5,11 @@
 #ifndef LIB_INSPECT_CPP_VMO_BLOCK_H_
 #define LIB_INSPECT_CPP_VMO_BLOCK_H_
 
-#include <algorithm>
-#include <type_traits>
-
 #include <lib/inspect/cpp/vmo/limits.h>
 #include <zircon/types.h>
+
+#include <algorithm>
+#include <type_traits>
 
 namespace inspect {
 
@@ -25,7 +25,8 @@ enum class BlockType {
   kExtent = 8,
   kName = 9,
   kTombstone = 10,
-  kArrayValue = 11
+  kArrayValue = 11,
+  kLinkValue = 12,
 };
 
 enum class PropertyBlockFormat {
@@ -56,6 +57,14 @@ enum class ArrayBlockFormat {
   // - ...N buckets...
   // - overflow_bucket
   kExponentialHistogram = 2
+};
+
+enum class LinkBlockDisposition {
+  // The linked sub-hierarchy root is a child of the LINK_VALUE's parent.
+  kChild = 0,
+
+  // The linked sub-hierarchy root's properties and children belong to the LINK_VALUE's parent.
+  kInline = 1,
 };
 
 using BlockOrder = uint32_t;
@@ -151,6 +160,11 @@ struct ExtentBlockFields : public BlockFields {
 
 struct NameBlockFields : public BlockFields {
   using Length = Field<8, 19>;
+};
+
+struct LinkBlockPayload {
+  using ContentIndex = Field<0, 19>;
+  using Flags = Field<60, 63>;
 };
 
 constexpr BlockOrder GetOrder(const Block* block) {

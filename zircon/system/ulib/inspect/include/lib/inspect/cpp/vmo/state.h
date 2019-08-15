@@ -5,11 +5,12 @@
 #ifndef LIB_INSPECT_CPP_VMO_STATE_H_
 #define LIB_INSPECT_CPP_VMO_STATE_H_
 
-#include <mutex>
-
+#include <lib/fit/function.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/heap.h>
 #include <lib/inspect/cpp/vmo/types.h>
+
+#include <mutex>
 
 namespace inspect {
 
@@ -72,6 +73,10 @@ class State final {
   ByteVectorProperty CreateByteVectorProperty(const std::string& name, BlockIndex parent,
                                               const std::vector<uint8_t>& value);
 
+  // Create a new [Link] in the Inspect VMO. The returned node releases the link when destroyed.
+  Link CreateLink(const std::string& name, BlockIndex parent, const std::string& content,
+                  LinkBlockDisposition disposition);
+
   // Create a new |Node| in the Inspect VMO. Nodes are refcounted such that
   // Propertys and Properties nested under the node remain valid until all
   // entities using the Node are destroyed.
@@ -112,6 +117,7 @@ class State final {
   void FreeDoubleArray(DoubleArray* array);
   void FreeStringProperty(StringProperty* property);
   void FreeByteVectorProperty(ByteVectorProperty* property);
+  void FreeLink(Link* link);
   void FreeNode(Node* node);
 
  private:

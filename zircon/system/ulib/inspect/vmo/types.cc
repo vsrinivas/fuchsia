@@ -17,7 +17,7 @@ internal::NumericProperty<int64_t>::~NumericProperty<int64_t>() {
 
 template <>
 internal::NumericProperty<int64_t>& internal::NumericProperty<int64_t>::operator=(
-    internal::NumericProperty<int64_t>&& other) {
+    internal::NumericProperty<int64_t>&& other) noexcept {
   if (state_) {
     state_->FreeIntProperty(this);
   }
@@ -57,7 +57,7 @@ internal::NumericProperty<uint64_t>::~NumericProperty<uint64_t>() {
 
 template <>
 internal::NumericProperty<uint64_t>& internal::NumericProperty<uint64_t>::operator=(
-    internal::NumericProperty<uint64_t>&& other) {
+    internal::NumericProperty<uint64_t>&& other) noexcept {
   if (state_) {
     state_->FreeUintProperty(this);
   }
@@ -97,7 +97,7 @@ internal::NumericProperty<double>::~NumericProperty<double>() {
 
 template <>
 internal::NumericProperty<double>& internal::NumericProperty<double>::operator=(
-    internal::NumericProperty<double>&& other) {
+    internal::NumericProperty<double>&& other) noexcept {
   if (state_) {
     state_->FreeDoubleProperty(this);
   }
@@ -137,7 +137,7 @@ internal::ArrayValue<int64_t>::~ArrayValue<int64_t>() {
 
 template <>
 internal::ArrayValue<int64_t>& internal::ArrayValue<int64_t>::operator=(
-    internal::ArrayValue<int64_t>&& other) {
+    internal::ArrayValue<int64_t>&& other) noexcept {
   if (state_) {
     state_->FreeIntArray(this);
   }
@@ -177,7 +177,7 @@ internal::ArrayValue<uint64_t>::~ArrayValue<uint64_t>() {
 
 template <>
 internal::ArrayValue<uint64_t>& internal::ArrayValue<uint64_t>::operator=(
-    internal::ArrayValue<uint64_t>&& other) {
+    internal::ArrayValue<uint64_t>&& other) noexcept {
   if (state_) {
     state_->FreeUintArray(this);
   }
@@ -217,7 +217,7 @@ internal::ArrayValue<double>::~ArrayValue<double>() {
 
 template <>
 internal::ArrayValue<double>& internal::ArrayValue<double>::operator=(
-    internal::ArrayValue<double>&& other) {
+    internal::ArrayValue<double>&& other) noexcept {
   if (state_) {
     state_->FreeDoubleArray(this);
   }
@@ -248,30 +248,30 @@ void internal::ArrayValue<double>::Subtract(size_t index, double value) {
   }
 }
 
-#define PROPERTY_METHODS(NAME, TYPE)                                                \
-  template <>                                                                       \
-  internal::Property<TYPE>::~Property() {                                           \
-    if (state_) {                                                                   \
-      state_->Free##NAME##Property(this);                                           \
-    }                                                                               \
-  }                                                                                 \
-                                                                                    \
-  template <>                                                                       \
-  internal::Property<TYPE>& internal::Property<TYPE>::operator=(Property&& other) { \
-    if (state_) {                                                                   \
-      state_->Free##NAME##Property(this);                                           \
-    }                                                                               \
-    state_ = std::move(other.state_);                                               \
-    name_index_ = other.name_index_;                                                \
-    value_index_ = other.value_index_;                                              \
-    return *this;                                                                   \
-  }                                                                                 \
-                                                                                    \
-  template <>                                                                       \
-  void internal::Property<TYPE>::Set(const TYPE& value) {                           \
-    if (state_) {                                                                   \
-      state_->Set##NAME##Property(this, value);                                     \
-    }                                                                               \
+#define PROPERTY_METHODS(NAME, TYPE)                                                         \
+  template <>                                                                                \
+  internal::Property<TYPE>::~Property() {                                                    \
+    if (state_) {                                                                            \
+      state_->Free##NAME##Property(this);                                                    \
+    }                                                                                        \
+  }                                                                                          \
+                                                                                             \
+  template <>                                                                                \
+  internal::Property<TYPE>& internal::Property<TYPE>::operator=(Property&& other) noexcept { \
+    if (state_) {                                                                            \
+      state_->Free##NAME##Property(this);                                                    \
+    }                                                                                        \
+    state_ = std::move(other.state_);                                                        \
+    name_index_ = other.name_index_;                                                         \
+    value_index_ = other.value_index_;                                                       \
+    return *this;                                                                            \
+  }                                                                                          \
+                                                                                             \
+  template <>                                                                                \
+  void internal::Property<TYPE>::Set(const TYPE& value) {                                    \
+    if (state_) {                                                                            \
+      state_->Set##NAME##Property(this, value);                                              \
+    }                                                                                        \
   }
 
 PROPERTY_METHODS(String, std::string)
@@ -283,7 +283,7 @@ Node::~Node() {
   }
 }
 
-Node& Node::operator=(Node&& other) {
+Node& Node::operator=(Node&& other) noexcept {
   if (state_) {
     state_->FreeNode(this);
   }
@@ -433,6 +433,12 @@ ExponentialDoubleHistogram Node::CreateExponentialDoubleHistogram(const std::str
                                       std::move(array));
   }
   return ExponentialDoubleHistogram();
+}
+
+Link::~Link() {
+  if (state_) {
+    state_->FreeLink(this);
+  }
 }
 
 }  // namespace inspect

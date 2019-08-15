@@ -5,11 +5,11 @@
 #ifndef LIB_INSPECT_CPP_VMO_TYPES_H_
 #define LIB_INSPECT_CPP_VMO_TYPES_H_
 
-#include <string>
-#include <vector>
-
 #include <lib/inspect/cpp/vmo/block.h>
 #include <zircon/types.h>
+
+#include <string>
+#include <vector>
 
 namespace inspect {
 
@@ -32,7 +32,7 @@ class NumericProperty final {
   NumericProperty(const NumericProperty& other) = delete;
   NumericProperty(NumericProperty&& other) = default;
   NumericProperty& operator=(const NumericProperty& other) = delete;
-  NumericProperty& operator=(NumericProperty&& other);
+  NumericProperty& operator=(NumericProperty&& other) noexcept;
 
   // Set the value of this numeric metric to the given value.
   void Set(T value);
@@ -76,7 +76,7 @@ class ArrayValue final {
   ArrayValue(const ArrayValue& other) = delete;
   ArrayValue(ArrayValue&& other) = default;
   ArrayValue& operator=(const ArrayValue& other) = delete;
-  ArrayValue& operator=(ArrayValue&& other);
+  ArrayValue& operator=(ArrayValue&& other) noexcept;
 
   // Set the value of the given index of this array.
   void Set(size_t index, T value);
@@ -228,7 +228,7 @@ class Property final {
   Property(const Property& other) = delete;
   Property(Property&& other) = default;
   Property& operator=(const Property& other) = delete;
-  Property& operator=(Property&& other);
+  Property& operator=(Property&& other) noexcept;
 
   // Return true if this property is stored in a buffer. False otherwise.
   explicit operator bool() { return state_ != nullptr; }
@@ -272,7 +272,41 @@ using ExponentialDoubleHistogram = internal::ExponentialHistogram<double>;
 using StringProperty = internal::Property<std::string>;
 using ByteVectorProperty = internal::Property<std::vector<uint8_t>>;
 
-// An node under which properties, metrics, and other nodes may be nested.
+// Links specify a location that can be read as a continuation of an Inspect hierarchy.
+class Link final {
+ public:
+  // Construct a default link.
+  Link() = default;
+  ~Link();
+
+  // Allow moving, disallow copying.
+  Link(const Link& other) = delete;
+  Link(Link&& other) = default;
+  Link& operator=(const Link& other) = delete;
+  Link& operator=(Link&& other) noexcept;
+
+  // Return true if this node is stored in a buffer. False otherwise.
+  explicit operator bool() { return state_ != nullptr; }
+
+ private:
+  friend class ::inspect::State;
+  Link(std::shared_ptr<State> state, BlockIndex name, BlockIndex value, BlockIndex content)
+      : state_(std::move(state)), name_index_(name), value_index_(value), content_index_(content) {}
+
+  // Reference to the state containing this value.
+  std::shared_ptr<State> state_;
+
+  // Index of the name block in the state.
+  BlockIndex name_index_;
+
+  // Index of the value block in the state.
+  BlockIndex value_index_;
+
+  // Index of the content block in the state.
+  BlockIndex content_index_;
+};
+
+// A node under which properties, metrics, and other nodes may be nested.
 // All methods wrap the corresponding functionality on |State|.
 class Node final {
  public:
@@ -285,7 +319,7 @@ class Node final {
   Node(const Node& other) = delete;
   Node(Node&& other) = default;
   Node& operator=(const Node& other) = delete;
-  Node& operator=(Node&& other);
+  Node& operator=(Node&& other) noexcept;
 
   // Create a new |Node| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created node will
