@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <lib/fzl/memory-probe.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/vmar.h>
@@ -53,93 +54,6 @@ bool check_pages_mapped(zx_handle_t process, uintptr_t base, uint64_t bitmap, si
     bitmap >>= 1;
   }
   return true;
-}
-
-// Thread run by test_local_address, used to attempt an access to memory
-void TestWriteAddressThread(uintptr_t address, bool* success) {
-  auto p = reinterpret_cast<std::atomic_uint8_t*>(address);
-  p->store(5);
-  *success = true;
-
-  zx_thread_exit();
-}
-// Thread run by test_local_address, used to attempt an access to memory
-void TestReadAddressThread(uintptr_t address, bool* success) {
-  auto p = reinterpret_cast<std::atomic_uint8_t*>(address);
-  (void)p->load();
-  *success = true;
-
-  zx_thread_exit();
-}
-
-// Helper routine for testing via direct access whether or not an address in the
-// test process's address space is accessible.
-zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
-  *success = false;
-
-  alignas(16) static uint8_t thread_stack[PAGE_SIZE];
-
-  zx_handle_t thread = ZX_HANDLE_INVALID;
-  zx_handle_t exception_channel = ZX_HANDLE_INVALID;
-  zx_signals_t signals = 0;
-  uintptr_t entry =
-      reinterpret_cast<uintptr_t>(write ? TestWriteAddressThread : TestReadAddressThread);
-  uintptr_t stack = reinterpret_cast<uintptr_t>(thread_stack + sizeof(thread_stack));
-
-  zx_status_t status = zx_thread_create(zx_process_self(), "vmar_test_addr", 14, 0, &thread);
-  if (status != ZX_OK) {
-    goto err;
-  }
-
-  // Create an exception channel on the thread to prevent the thread's
-  // illegal access from killing the process.
-  status = zx_task_create_exception_channel(thread, 0, &exception_channel);
-  if (status != ZX_OK) {
-    goto err;
-  }
-
-  status = zx_thread_start(thread, entry, stack, address, reinterpret_cast<uintptr_t>(success));
-  if (status != ZX_OK) {
-    goto err;
-  }
-
-  status = zx_object_wait_one(exception_channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                              ZX_TIME_INFINITE, &signals);
-  if (status != ZX_OK) {
-    goto err;
-  }
-
-  if (signals & ZX_CHANNEL_READABLE) {
-    // Kill the task so the exception doesn't bubble up to the system
-    // crash handler.
-    status = zx_task_kill(thread);
-    if (status != ZX_OK) {
-      goto err;
-    }
-
-    zx_exception_info_t info;
-    zx_handle_t exception;
-    status =
-        zx_channel_read(exception_channel, 0, &info, &exception, sizeof(info), 1, nullptr, nullptr);
-    if (status != ZX_OK) {
-      goto err;
-    }
-
-    // We only expect a page fault exception here.
-    if (info.type != ZX_EXCP_FATAL_PAGE_FAULT) {
-      status = ZX_ERR_BAD_STATE;
-      goto err;
-    }
-  } else {
-    // The thread terminated without throwing any exceptions.
-    *success = true;
-  }
-
-  // fallthrough to cleanup
-err:
-  zx_handle_close(exception_channel);
-  zx_handle_close(thread);
-  return status;
 }
 
 bool destroy_root_test() {
@@ -1776,15 +1690,14 @@ bool protect_over_demand_paged_test() {
   ASSERT_EQ(zx_vmar_protect(zx_vmar_root_self(), ZX_VM_PERM_READ, mapping_addr, size), ZX_OK);
 
   // Attempt to write to the mapping again
-  bool success;
-  EXPECT_EQ(test_local_address(mapping_addr, true, &success), ZX_OK);
-  EXPECT_FALSE(success, "mapping should no longer be writeable");
-  EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), ZX_OK);
-  EXPECT_FALSE(success, "mapping should no longer be writeable");
-  EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), ZX_OK);
-  EXPECT_FALSE(success, "mapping should no longer be writeable");
-  EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), ZX_OK);
-  EXPECT_FALSE(success, "mapping should no longer be writeable");
+  EXPECT_FALSE(probe_for_write(reinterpret_cast<void*>(mapping_addr)),
+               "mapping should no longer be writeable");
+  EXPECT_FALSE(probe_for_write(reinterpret_cast<void*>(mapping_addr + size / 4)),
+               "mapping should no longer be writeable");
+  EXPECT_FALSE(probe_for_write(reinterpret_cast<void*>(mapping_addr + size / 2)),
+               "mapping should no longer be writeable");
+  EXPECT_FALSE(probe_for_write(reinterpret_cast<void*>(mapping_addr + size - 1)),
+               "mapping should no longer be writeable");
 
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, size), ZX_OK);
 
@@ -1821,15 +1734,14 @@ bool protect_large_uncommitted_test() {
   ASSERT_EQ(zx_vmar_protect(zx_vmar_root_self(), ZX_VM_PERM_READ, base, protect_size), ZX_OK);
 
   // Attempt to write to the mapping again
-  bool success;
-  EXPECT_EQ(test_local_address(mapping_addr, true, &success), ZX_OK);
-  EXPECT_TRUE(success, "mapping should still be writeable");
-  EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), ZX_OK);
-  EXPECT_FALSE(success, "mapping should no longer be writeable");
-  EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), ZX_OK);
-  EXPECT_FALSE(success, "mapping should no longer be writeable");
-  EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), ZX_OK);
-  EXPECT_FALSE(success, "mapping should no longer be writeable");
+  EXPECT_TRUE(probe_for_write(reinterpret_cast<void*>(mapping_addr)),
+              "mapping should still be writeable");
+  EXPECT_FALSE(probe_for_write(reinterpret_cast<void*>(mapping_addr + size / 4)),
+               "mapping should no longer be writeable");
+  EXPECT_FALSE(probe_for_write(reinterpret_cast<void*>(mapping_addr + size / 2)),
+               "mapping should no longer be writeable");
+  EXPECT_FALSE(probe_for_write(reinterpret_cast<void*>(mapping_addr + size - 1)),
+               "mapping should no longer be writeable");
 
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, size), ZX_OK);
 
@@ -1866,15 +1778,14 @@ bool unmap_large_uncommitted_test() {
   ASSERT_EQ(zx_vmar_unmap(zx_vmar_root_self(), base, unmap_size), ZX_OK);
 
   // Attempt to write to the mapping again
-  bool success;
-  EXPECT_EQ(test_local_address(mapping_addr, true, &success), ZX_OK);
-  EXPECT_TRUE(success, "mapping should still be writeable");
-  EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), ZX_OK);
-  EXPECT_FALSE(success, "mapping should no longer be writeable");
-  EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), ZX_OK);
-  EXPECT_FALSE(success, "mapping should no longer be writeable");
-  EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), ZX_OK);
-  EXPECT_FALSE(success, "mapping should no longer be writeable");
+  EXPECT_TRUE(probe_for_write(reinterpret_cast<void*>(mapping_addr)),
+              "mapping should still be writeable");
+  EXPECT_FALSE(probe_for_write(reinterpret_cast<void*>(mapping_addr + size / 4)),
+               "mapping should no longer be writeable");
+  EXPECT_FALSE(probe_for_write(reinterpret_cast<void*>(mapping_addr + size / 2)),
+               "mapping should no longer be writeable");
+  EXPECT_FALSE(probe_for_write(reinterpret_cast<void*>(mapping_addr + size - 1)),
+               "mapping should no longer be writeable");
 
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, size), ZX_OK);
 
