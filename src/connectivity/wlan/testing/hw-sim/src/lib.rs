@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_wlan_device::MacRole,
     fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, State, WlanMarker, WlanProxy, WlanStatus},
     fidl_fuchsia_wlan_tap::{WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy},
-    fuchsia_async::Executor,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::prelude::*,
     wlan_common::{appendable::Appendable, data_writer, ie, mac, mgmt_writer},
@@ -287,8 +286,7 @@ fn handle_connect_events(
     }
 }
 
-pub fn connect(
-    exec: &mut Executor,
+pub async fn connect(
     wlan_service: &WlanProxy,
     phy: &WlantapPhyProxy,
     helper: &mut test_utils::TestHelper,
@@ -301,14 +299,14 @@ pub fn connect(
     let connect_fut = wlan_service.connect(&mut connect_config);
     let error = helper
         .run_until_complete_or_timeout(
-            exec,
             10.seconds(),
-            &format!("connect to {}({:2x?})", String::from_utf8_lossy(ssid), bssid),
+            format!("connect to {}({:2x?})", String::from_utf8_lossy(ssid), bssid),
             |event| {
                 handle_connect_events(event, &phy, ssid, bssid, passphrase, &mut authenticator);
             },
             connect_fut,
         )
+        .await
         .unwrap();
     assert_eq!(error.code, ErrCode::Ok, "connect failed: {:?}", error);
 }
@@ -367,11 +365,11 @@ pub fn rx_wlan_data_frame(
     Ok(())
 }
 
-pub fn loop_until_iface_is_found(exec: &mut Executor) {
+pub async fn loop_until_iface_is_found() {
     let wlan_service = connect_to_service::<WlanMarker>().expect("connecting to wlan service");
     let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
     loop {
-        let status = status(exec, &wlan_service);
+        let status = wlan_service.status().await.expect("getting wlan status");
         if status.error.code != ErrCode::Ok {
             let slept = retry.sleep_unless_timed_out();
             assert!(slept, "Wlanstack did not recognize the interface in time");
@@ -379,8 +377,4 @@ pub fn loop_until_iface_is_found(exec: &mut Executor) {
             return;
         }
     }
-}
-
-pub fn status(exec: &mut Executor, wlan_service: &WlanProxy) -> WlanStatus {
-    exec.run_singlethreaded(wlan_service.status()).expect("status() should never fail")
 }

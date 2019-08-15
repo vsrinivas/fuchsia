@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_wlan_tap::{
         WlanTxStatusEntry, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
     },
-    fuchsia_async::{Executor, Interval},
+    fuchsia_async::Interval,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, poll, StreamExt},
@@ -137,19 +137,19 @@ async fn eth_and_beacon_sender<'a>(
 /// Test rate selection is working correctly by verifying data rate is reduced once the Minstrel
 /// algorithm detects transmission failures. Transmission failures are simulated by fake tx status
 /// report created by the test.
-#[test]
-fn rate_selection() {
-    let mut exec = Executor::new().expect("error creating executor");
+#[fuchsia_async::run_singlethreaded(test)]
+async fn rate_selection() {
     let wlan_service =
         connect_to_service::<WlanMarker>().expect("Error connecting to wlan service");
-    let mut helper = test_utils::TestHelper::begin_test(
-        &mut exec,
-        WlantapPhyConfig { quiet: true, ..create_wlantap_config_client(HW_MAC_ADDR) },
-    );
-    loop_until_iface_is_found(&mut exec);
+    let mut helper = test_utils::TestHelper::begin_test(WlantapPhyConfig {
+        quiet: true,
+        ..create_wlantap_config_client(HW_MAC_ADDR)
+    })
+    .await;
+    let () = loop_until_iface_is_found().await;
 
     let phy = helper.proxy();
-    connect(&mut exec, &wlan_service, &phy, &mut helper, SSID_MINSTREL, &BSS_MINSTL, None);
+    let () = connect(&wlan_service, &phy, &mut helper, SSID_MINSTREL, &BSS_MINSTL, None).await;
 
     let (sender, mut receiver) = mpsc::channel(1);
     let eth_and_beacon_sender_fut = eth_and_beacon_sender(&mut receiver, &phy);
@@ -219,7 +219,6 @@ fn rate_selection() {
     };
     helper
         .run_until_complete_or_timeout(
-            &mut exec,
             30.seconds(),
             "verify rate selection converges to 130",
             |event| {
@@ -235,6 +234,7 @@ fn rate_selection() {
             },
             eth_and_beacon_sender_fut,
         )
+        .await
         .expect("running main future");
 
     let total = tx_vec_count_map.values().sum::<u64>();

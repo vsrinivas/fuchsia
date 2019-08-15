@@ -9,7 +9,7 @@ use {
         DeviceServiceMarker, DeviceServiceProxy, SetCountryRequest,
     },
     fidl_fuchsia_wlan_tap::WlantapPhyEvent,
-    fuchsia_async::{DurationExt, Executor, TimeoutExt},
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     fuchsia_zircon_sys::ZX_OK,
@@ -32,22 +32,19 @@ async fn set_country_helper<'a>(
 /// Test two things:
 ///  - If wlantap PHY device received the specified test country code
 ///  - If the SetCountry() returned successfully (ZX_OK).
-#[test]
-fn set_country() {
+#[fuchsia_async::run_singlethreaded(test)]
+async fn set_country() {
     const ALPHA2: &[u8; 2] = b"RS";
 
-    let mut exec = Executor::new().expect("Failed to create an executor");
     let mut helper =
-        test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config_client(HW_MAC_ADDR));
+        test_utils::TestHelper::begin_test(create_wlantap_config_client(HW_MAC_ADDR)).await;
     let svc = connect_to_service::<DeviceServiceMarker>()
         .expect("Failed to connect to wlanstack_dev_svc");
 
-    let resp = exec
-        .run_singlethreaded(
-            svc.list_phys().on_timeout(1.seconds().after_now(), || {
-                panic!("list_phys did not complete in time")
-            }),
-        )
+    let resp = svc
+        .list_phys()
+        .on_timeout(1.seconds().after_now(), || panic!("list_phys did not complete in time"))
+        .await
         .unwrap();
 
     assert!(resp.phys.len() > 0, "WLAN PHY device is created but ListPhys returned empty.");
@@ -60,16 +57,17 @@ fn set_country() {
     pin_mut!(set_country_fut);
 
     let mut sender = Some(sender);
-    helper.run_until_complete_or_timeout(
-        &mut exec,
-        1.seconds(),
-        "wlanstack_dev_svc set_country",
-        |event| {
-            if let WlantapPhyEvent::SetCountry { args } = event {
-                assert_eq!(args.alpha2, *ALPHA2);
-                sender.take().map(|s| s.send(()));
-            }
-        },
-        set_country_fut,
-    );
+    helper
+        .run_until_complete_or_timeout(
+            1.seconds(),
+            "wlanstack_dev_svc set_country",
+            |event| {
+                if let WlantapPhyEvent::SetCountry { args } = event {
+                    assert_eq!(args.alpha2, *ALPHA2);
+                    sender.take().map(|s| s.send(()));
+                }
+            },
+            set_country_fut,
+        )
+        .await;
 }

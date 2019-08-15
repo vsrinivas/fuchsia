@@ -5,7 +5,7 @@
 use {
     fidl_fuchsia_wlan_service::WlanMarker,
     fidl_fuchsia_wlan_tap as wlantap,
-    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, ready, task::Context, Future, FutureExt, Poll, StreamExt},
@@ -63,7 +63,7 @@ where
 }
 
 impl TestHelper {
-    pub fn begin_test(exec: &mut fasync::Executor, config: wlantap::WlantapPhyConfig) -> Self {
+    pub async fn begin_test(config: wlantap::WlantapPhyConfig) -> Self {
         // If injected, wlancfg does not start automatically in a test component.
         // Connecting to the service to start wlancfg so that it can create new interfaces.
         let _wlan_proxy = connect_to_service::<WlanMarker>().expect("starting wlancfg");
@@ -72,15 +72,14 @@ impl TestHelper {
         let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");
         let event_stream = Some(proxy.take_event_stream());
         let mut helper = TestHelper { _wlantap: wlantap, proxy: Arc::new(proxy), event_stream };
-        helper.wait_for_wlanmac_start(exec);
+        helper.wait_for_wlanmac_start().await;
         helper
     }
 
-    fn wait_for_wlanmac_start(&mut self, exec: &mut fasync::Executor) {
+    async fn wait_for_wlanmac_start(&mut self) {
         let (sender, receiver) = oneshot::channel::<()>();
         let mut sender = Some(sender);
         self.run_until_complete_or_timeout(
-            exec,
             5.seconds(),
             "receive a WlanmacStart event",
             move |event| match event {
@@ -91,6 +90,7 @@ impl TestHelper {
             },
             receiver,
         )
+        .await
         .unwrap_or_else(|oneshot::Canceled| panic!());
     }
 
@@ -98,26 +98,27 @@ impl TestHelper {
         self.proxy.clone()
     }
 
-    pub fn run_until_complete_or_timeout<R, F, H>(
+    pub async fn run_until_complete_or_timeout<R, F, H, S>(
         &mut self,
-        exec: &mut fasync::Executor,
         timeout: zx::Duration,
-        context: &str,
+        context: S,
         event_handler: H,
         future: F,
     ) -> R
     where
         H: FnMut(wlantap::WlantapPhyEvent),
         F: Future<Output = R> + Unpin,
+        S: ToString,
     {
-        let (item, stream) = exec.run_singlethreaded(
-            TestHelperFuture {
-                event_stream: Some(self.event_stream.take().unwrap()),
-                event_handler,
-                main_future: future,
-            }
-            .on_timeout(timeout.after_now(), || panic!("Did not complete in time: {}", context)),
-        );
+        let (item, stream) = TestHelperFuture {
+            event_stream: Some(self.event_stream.take().unwrap()),
+            event_handler,
+            main_future: future,
+        }
+        .on_timeout(timeout.after_now(), || {
+            panic!("Did not complete in time: {}", context.to_string())
+        })
+        .await;
         self.event_stream = Some(stream);
         item
     }

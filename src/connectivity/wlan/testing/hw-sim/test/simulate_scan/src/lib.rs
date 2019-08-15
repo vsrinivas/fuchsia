@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await)]
+
 use {
     fidl_fuchsia_wlan_service::{ErrCode, ScanRequest, ScanResult, WlanMarker, WlanProxy},
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
-    fuchsia_async::Executor,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     wlan_hw_sim::*,
@@ -18,15 +19,13 @@ const SSID_BAR: &[u8] = b"bar";
 const BSS_BAZ: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x7a];
 const SSID_BAZ: &[u8] = b"baz";
 
-fn scan(
-    exec: &mut Executor,
+async fn scan(
     wlan_service: &WlanProxy,
     phy: &WlantapPhyProxy,
     helper: &mut test_utils::TestHelper,
 ) -> ScanResult {
     helper
         .run_until_complete_or_timeout(
-            exec,
             10.seconds(),
             "receive a scan response",
             |event| {
@@ -45,23 +44,23 @@ fn scan(
             },
             wlan_service.scan(&mut ScanRequest { timeout: 5 }),
         )
+        .await
         .unwrap()
 }
 
 /// Test scan is working by simulating some fake APs that sends out beacon frames on specific
 /// channel and verify all beacon frames are correctly reported as valid networks.
-#[test]
-fn simulate_scan() {
-    let mut exec = Executor::new().expect("Failed to create an executor");
+#[fuchsia_async::run_singlethreaded(test)]
+async fn simulate_scan() {
     let mut helper =
-        test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config_client(HW_MAC_ADDR));
+        test_utils::TestHelper::begin_test(create_wlantap_config_client(HW_MAC_ADDR)).await;
 
     let wlan_service =
         connect_to_service::<WlanMarker>().expect("Failed to connect to wlan service");
-    loop_until_iface_is_found(&mut exec);
+    let () = loop_until_iface_is_found().await;
 
     let proxy = helper.proxy();
-    let scan_result = scan(&mut exec, &wlan_service, &proxy, &mut helper);
+    let scan_result = scan(&wlan_service, &proxy, &mut helper).await;
 
     assert_eq!(
         ErrCode::Ok,

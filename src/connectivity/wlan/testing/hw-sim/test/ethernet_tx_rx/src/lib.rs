@@ -8,7 +8,6 @@ use {
     failure::ensure,
     fidl_fuchsia_wlan_service::WlanMarker,
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
-    fuchsia_async::Executor,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
@@ -74,11 +73,7 @@ async fn send_and_receive<'a>(
     }
 }
 
-fn verify_tx_and_rx(
-    client: &mut ethernet::Client,
-    exec: &mut Executor,
-    helper: &mut test_utils::TestHelper,
-) {
+async fn verify_tx_and_rx(client: &mut ethernet::Client, helper: &mut test_utils::TestHelper) {
     let mut buf: Vec<u8> = Vec::new();
     buf.append_value(&mac::EthernetIIHdr {
         da: ETH_DST_MAC,
@@ -95,7 +90,6 @@ fn verify_tx_and_rx(
     let mut actual = Vec::new();
     let (header, payload) = helper
         .run_until_complete_or_timeout(
-            exec,
             5.seconds(),
             "verify ethernet_tx_rx",
             |event| {
@@ -103,6 +97,7 @@ fn verify_tx_and_rx(
             },
             eth_tx_rx_fut,
         )
+        .await
         .expect("send and receive eth");
     assert_eq!(&actual[..], PAYLOAD);
     assert_eq!(header.da, HW_MAC_ADDR);
@@ -113,23 +108,22 @@ fn verify_tx_and_rx(
 
 /// Test an ethernet device backed by WLAN device and send and receive data frames by verifying
 /// frames are delivered without any change in both directions.
-#[test]
-fn ethernet_tx_rx() {
-    let mut exec = Executor::new().expect("Failed to create an executor");
+#[fuchsia_async::run_singlethreaded(test)]
+async fn ethernet_tx_rx() {
     let mut helper =
-        test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config_client(HW_MAC_ADDR));
-    loop_until_iface_is_found(&mut exec);
+        test_utils::TestHelper::begin_test(create_wlantap_config_client(HW_MAC_ADDR)).await;
+    let () = loop_until_iface_is_found().await;
 
     let wlan_service =
         connect_to_service::<WlanMarker>().expect("Failed to connect to wlan service");
 
     let proxy = helper.proxy();
-    connect(&mut exec, &wlan_service, &proxy, &mut helper, SSID, &BSS, None);
+    connect(&wlan_service, &proxy, &mut helper, SSID, &BSS, None).await;
 
-    let mut client = exec
-        .run_singlethreaded(create_eth_client(&HW_MAC_ADDR))
+    let mut client = create_eth_client(&HW_MAC_ADDR)
+        .await
         .expect("cannot create ethernet client")
         .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
 
-    verify_tx_and_rx(&mut client, &mut exec, &mut helper);
+    verify_tx_and_rx(&mut client, &mut helper).await;
 }

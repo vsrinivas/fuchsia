@@ -10,7 +10,7 @@ use {
     },
     fidl_fuchsia_wlan_sme::{ApConfig, ApSmeProxy, StartApResultCode},
     fidl_fuchsia_wlan_tap::WlantapPhyEvent,
-    fuchsia_async::{DurationExt, Executor, TimeoutExt},
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{sys::ZX_OK, DurationNum},
     futures::{channel::oneshot, StreamExt},
@@ -29,8 +29,8 @@ const HW_MAC_ADDR: [u8; 6] = [0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f];
 /// Test WLAN AP implementation by simulating a client that sends out authentication and
 /// association *request* frames. Verify AP responds correctly with authentication and
 /// association *response* frames, respectively.
-#[test]
-fn open_ap_connect() {
+#[fuchsia_async::run_singlethreaded(test)]
+async fn open_ap_connect() {
     // --- start test data block
 
     // frame 1 and 3 from ios12.1-connect-open-ap.pcapng
@@ -43,8 +43,6 @@ fn open_ap_connect() {
     let assoc_req = hex::decode(ASSOC_REQ_HEX).expect("fail to parse assoc req hex");
     // -- end test data block
 
-    let mut exec = Executor::new().expect("Failed to create an executor");
-
     // Connect to WLAN device service and start watching for new device
     let wlan_service =
         connect_to_service::<DeviceServiceMarker>().expect("Failed to connect to wlan service");
@@ -54,20 +52,20 @@ fn open_ap_connect() {
 
     // Create wlantap PHY
     let mut helper =
-        test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config_ap(HW_MAC_ADDR));
+        test_utils::TestHelper::begin_test(create_wlantap_config_ap(HW_MAC_ADDR)).await;
 
     // Wait until iface is created from wlantap PHY
     let mut watcher_event_stream = watcher_proxy.take_event_stream();
-    let fut = get_new_added_iface(&mut watcher_event_stream);
-    let iface_id = exec
-        .run_singlethreaded(fut.on_timeout(10.seconds().after_now(), || panic!("no iface added")));
+    let iface_id = get_new_added_iface(&mut watcher_event_stream)
+        .on_timeout(10.seconds().after_now(), || panic!("no iface added"))
+        .await;
 
-    let sme_fut = get_ap_sme(&wlan_service, iface_id)
-        .on_timeout(5.seconds().after_now(), || panic!("timeout retrieving ap sme"));
-    let sme = exec.run_singlethreaded(sme_fut);
+    let sme = get_ap_sme(&wlan_service, iface_id)
+        .on_timeout(5.seconds().after_now(), || panic!("timeout retrieving ap sme"))
+        .await;
 
     // Stop AP in case it was already started
-    let _ = exec.run_singlethreaded(sme.stop());
+    let () = sme.stop().await.expect("stopping any existing AP");
 
     // Start AP
     let mut config = ApConfig {
@@ -75,8 +73,7 @@ fn open_ap_connect() {
         password: vec![],
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, CHANNEL.primary).to_fidl(),
     };
-    let result_code =
-        exec.run_singlethreaded(sme.start(&mut config)).expect("expect start ap result code");
+    let result_code = sme.start(&mut config).await.expect("expect start ap result code");
     assert_eq!(result_code, StartApResultCode::Success);
 
     // (client->ap) send a mock auth req
@@ -86,7 +83,7 @@ fn open_ap_connect() {
         .expect("cannot send auth req frame");
 
     // (ap->client) verify auth response frame was sent
-    verify_auth_resp(&mut helper, &mut exec);
+    verify_auth_resp(&mut helper).await;
 
     // (client->ap) send a mock assoc req
     let proxy = helper.proxy();
@@ -95,10 +92,10 @@ fn open_ap_connect() {
         .expect("cannot send assoc req frame");
 
     // (ap->client) verify assoc response frame was sent
-    verify_assoc_resp(&mut helper, &mut exec);
+    verify_assoc_resp(&mut helper).await;
 }
 
-fn verify_auth_resp(helper: &mut test_utils::TestHelper, exec: &mut Executor) {
+async fn verify_auth_resp(helper: &mut test_utils::TestHelper) {
     let (sender, receiver) = oneshot::channel::<()>();
     let mut sender = Some(sender);
     let event_handler = move |event| match event {
@@ -120,16 +117,16 @@ fn verify_auth_resp(helper: &mut test_utils::TestHelper, exec: &mut Executor) {
     };
     helper
         .run_until_complete_or_timeout(
-            exec,
             5.seconds(),
             "waiting for authentication response",
             event_handler,
             receiver,
         )
+        .await
         .unwrap_or_else(|oneshot::Canceled| panic!());
 }
 
-fn verify_assoc_resp(helper: &mut test_utils::TestHelper, exec: &mut Executor) {
+async fn verify_assoc_resp(helper: &mut test_utils::TestHelper) {
     let (sender, receiver) = oneshot::channel::<()>();
     let mut sender = Some(sender);
     let event_handler = move |event| match event {
@@ -154,12 +151,12 @@ fn verify_assoc_resp(helper: &mut test_utils::TestHelper, exec: &mut Executor) {
     };
     helper
         .run_until_complete_or_timeout(
-            exec,
             5.seconds(),
             "waiting for association response",
             event_handler,
             receiver,
         )
+        .await
         .unwrap_or_else(|oneshot::Canceled| panic!());
 }
 

@@ -5,28 +5,27 @@
 #![feature(async_await)]
 
 use {
-    fidl_fuchsia_wlan_service::WlanMarker, fuchsia_async::Executor,
-    fuchsia_component::client::connect_to_service, wlan_hw_sim::*,
+    fidl_fuchsia_wlan_service::WlanMarker, fuchsia_component::client::connect_to_service,
+    wlan_hw_sim::*,
 };
 
 /// Test a client can connect to a network with no protection by simulating an AP that sends out
 /// hard coded authentication and association response frames.
-#[test]
-fn connect_to_open_network() {
+#[fuchsia_async::run_singlethreaded(test)]
+async fn connect_to_open_network() {
     const BSS: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
     const SSID: &[u8] = b"open";
 
-    let mut exec = Executor::new().expect("Failed to create an executor");
     let mut helper =
-        test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config_client(HW_MAC_ADDR));
-    loop_until_iface_is_found(&mut exec);
+        test_utils::TestHelper::begin_test(create_wlantap_config_client(HW_MAC_ADDR)).await;
+    let () = loop_until_iface_is_found().await;
 
     let wlan_service =
         connect_to_service::<WlanMarker>().expect("Failed to connect to wlan service");
     let proxy = helper.proxy();
 
     let (passphrase, is_protected) = (None, false);
-    connect(&mut exec, &wlan_service, &proxy, &mut helper, SSID, &BSS, passphrase);
-    let status = status(&mut exec, &wlan_service);
+    let () = connect(&wlan_service, &proxy, &mut helper, SSID, &BSS, passphrase).await;
+    let status = wlan_service.status().await.expect("getting wlan status");
     assert_associated_state(status, &BSS, SSID, &CHANNEL, is_protected);
 }
