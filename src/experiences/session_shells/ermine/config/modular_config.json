@@ -6,7 +6,7 @@
     "session_shells": [
       {
         "url": "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx",
-        "display_usage": "near"
+        "display_usage": "close"
       }
     ],
     "use_session_shell_for_story_shell_factory": true
