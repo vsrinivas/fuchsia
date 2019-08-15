@@ -6,6 +6,7 @@
 #define LIB_MODULAR_TEST_HARNESS_CPP_FAKE_SESSION_SHELL_H_
 
 #include <lib/modular_test_harness/cpp/fake_component.h>
+
 #include <sdk/lib/sys/cpp/component_context.h>
 
 #include "peridot/lib/testing/session_shell_impl.h"
@@ -73,9 +74,9 @@ class FakeSessionShell : public modular::testing::FakeComponent {
 // // Add a function that does something when a story state change is observed.
 // const char[] kStoryId = "my_story";
 // modular::testing::SimpleStoryProviderWatcher watcher;
-// watcher.set_on_change([kStoryId](StoryInfo story_info,
-//                                  StoryState story_state,
-//                                  StoryVisibilityState _) {
+// watcher.set_on_change_2([kStoryId](StoryInfo2 story_info,
+//                                    StoryState story_state,
+//                                    StoryVisibilityState _) {
 //   EXPECT_EQ(story_info.id, kStoryId);
 // });
 // watcher.Watch(fake_session_shell.story_provider(),
@@ -85,15 +86,9 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
   SimpleStoryProviderWatcher() : binding_(this) {}
   ~SimpleStoryProviderWatcher() override = default;
 
-  using OnChangeFunction =
-      fit::function<void(fuchsia::modular::StoryInfo, fuchsia::modular::StoryState,
-                         fuchsia::modular::StoryVisibilityState)>;
-
   using OnChange2Function =
       fit::function<void(fuchsia::modular::StoryInfo2, fuchsia::modular::StoryState,
                          fuchsia::modular::StoryVisibilityState)>;
-
-  void set_on_change(OnChangeFunction on_change) { on_change_ = std::move(on_change); }
 
   void set_on_change_2(OnChange2Function on_change_2) { on_change_2_ = std::move(on_change_2); }
 
@@ -103,20 +98,14 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
   // any existing stories when watching starts).
   void Watch(
       fuchsia::modular::StoryProvider* story_provider,
-      fit::function<void(std::vector<fuchsia::modular::StoryInfo> stories)>* on_get_stories) {
-    story_provider->GetStories(
+      fit::function<void(std::vector<fuchsia::modular::StoryInfo2> stories)>* on_get_stories) {
+    story_provider->GetStories2(
         binding_.NewBinding(), on_get_stories != nullptr
                                    ? std::move(*on_get_stories)
-                                   : [](std::vector<fuchsia::modular::StoryInfo>) {});
+                                   : [](std::vector<fuchsia::modular::StoryInfo2>) {});
   }
 
  private:
-  // |fuchsia::modular::StoryProviderWatcher|
-  void OnChange(fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState story_state,
-                fuchsia::modular::StoryVisibilityState story_visibility_state) override {
-    on_change_(std::move(story_info), story_state, story_visibility_state);
-  }
-
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
                  fuchsia::modular::StoryVisibilityState story_visibility_state) override {
@@ -126,13 +115,7 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
   // |fuchsia::modular::StoryProviderWatcher|
   void OnDelete(std::string story_id) override {}
 
-  // Optional user-provided lambda that will run with each OnChange(). Defaults
-  // to doing nothing.
-  OnChangeFunction on_change_ =
-      [](fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState story_state,
-         fuchsia::modular::StoryVisibilityState story_visibility_state) {};
-
-  // Optional user-provided lambda that will run with each OnChange(). Defaults
+  // Optional user-provided lambda that will run with each OnChange2(). Defaults
   // to doing nothing.
   OnChange2Function on_change_2_ =
       [](fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,

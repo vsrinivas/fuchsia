@@ -266,8 +266,8 @@ class StoryBenchmarkTest : public modular::testing::TestHarnessFixture {
     TRACE_ASYNC_BEGIN("benchmark", "story/info", 0);
 
     bool got_story_info{false};
-    story_controller_->GetInfo(
-        [&](fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState state) {
+    story_controller_->GetInfo2(
+        [&](fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState state) {
           TRACE_ASYNC_END("benchmark", "story/info", 0);
           got_story_info = true;
         });

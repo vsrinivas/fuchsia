@@ -52,8 +52,8 @@ class TestStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {
   TestStoryProviderWatcher() : binding_(this) {}
   ~TestStoryProviderWatcher() override = default;
 
-  void OnChange(fit::function<void(fuchsia::modular::StoryInfo)> on_change) {
-    on_change_ = std::move(on_change);
+  void OnChange2(fit::function<void(fuchsia::modular::StoryInfo2)> on_change) {
+    on_change_2_ = std::move(on_change);
   }
 
   void Watch(fuchsia::modular::StoryProvider* const story_provider) {
@@ -65,13 +65,13 @@ class TestStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {
   void OnDelete(::std::string story_id) override {}
 
   // |fuchsia::modular::StoryProviderWatcher|
-  void OnChange(fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState story_state,
-                fuchsia::modular::StoryVisibilityState story_visibility_state) override {
-    on_change_(std::move(story_info));
+  void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
+                 fuchsia::modular::StoryVisibilityState story_visibility_state) override {
+    on_change_2_(std::move(story_info));
     return;
   }
 
-  fit::function<void(fuchsia::modular::StoryInfo)> on_change_;
+  fit::function<void(fuchsia::modular::StoryInfo2)> on_change_2_;
   fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
 };
 
@@ -143,9 +143,11 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   // Keep track of the focus timestamps that we receive for the story created
   // below so we can assert that they make sense at the end of the test.
   std::vector<int64_t> last_focus_timestamps;
-  story_provider_watcher.OnChange([&](fuchsia::modular::StoryInfo story_info) {
-    ASSERT_EQ(kStoryName, story_info.id);
-    last_focus_timestamps.push_back(story_info.last_focus_time);
+  story_provider_watcher.OnChange2([&](fuchsia::modular::StoryInfo2 story_info) {
+    ASSERT_TRUE(story_info.has_id());
+    ASSERT_TRUE(story_info.has_last_focus_time());
+    ASSERT_EQ(kStoryName, story_info.id());
+    last_focus_timestamps.push_back(story_info.last_focus_time());
   });
 
   // Create a story so that we can signal the framework to focus it.

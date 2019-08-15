@@ -28,8 +28,8 @@ class TestSessionShellApp : public modular::ViewApp,
 
     component_context->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    story_provider_->GetStories(story_provider_watcher_.NewBinding(),
-                                [](std::vector<fuchsia::modular::StoryInfo>) {});
+    story_provider_->GetStories2(story_provider_watcher_.NewBinding(),
+                                 [](std::vector<fuchsia::modular::StoryInfo2>) {});
 
     startup_context_ = component::StartupContext::CreateFromStartupInfo();
   }
@@ -59,8 +59,8 @@ class TestSessionShellApp : public modular::ViewApp,
   }
 
   // |fuchsia::modular::StoryProviderWatcher|
-  void OnChange(fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState story_state,
-                fuchsia::modular::StoryVisibilityState story_visibility_state) override {}
+  void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
+                 fuchsia::modular::StoryVisibilityState story_visibility_state) override {}
 
   // |fuchsia::modular::StoryProviderWatcher|
   void OnDelete(std::string story_id) override {}

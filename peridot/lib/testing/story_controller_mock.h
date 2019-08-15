@@ -25,10 +25,9 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
 
  private:
   // |fuchsia::modular::StoryController|
-  void GetInfo(GetInfoCallback callback) override {
-    fuchsia::modular::StoryInfo info;
-    info.id = "wow";
-    info.url = "wow";
+  void GetInfo2(GetInfo2Callback callback) override {
+    fuchsia::modular::StoryInfo2 info;
+    info.set_id("wow");
     callback(std::move(info), fuchsia::modular::StoryState::STOPPED);
   }
 

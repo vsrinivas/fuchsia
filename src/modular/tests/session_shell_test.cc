@@ -74,11 +74,11 @@ TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
   ASSERT_TRUE(story_provider != nullptr);
 
   bool tried_get_story_info = false;
-  story_provider->GetStoryInfo("X",
-                               [&tried_get_story_info](fuchsia::modular::StoryInfoPtr story_info) {
-                                 EXPECT_THAT(story_info, IsNull());
-                                 tried_get_story_info = true;
-                               });
+  story_provider->GetStoryInfo2("X",
+                                [&tried_get_story_info](fuchsia::modular::StoryInfo2 story_info) {
+                                  EXPECT_TRUE(story_info.IsEmpty());
+                                  tried_get_story_info = true;
+                                });
 
   RunLoopUntil([&] { return tried_get_story_info; });
 }
@@ -107,8 +107,8 @@ TEST_F(SessionShellTest, GetStoriesEmpty) {
   ASSERT_TRUE(story_provider != nullptr);
 
   bool called_get_stories = false;
-  story_provider->GetStories(
-      nullptr, [&called_get_stories](std::vector<fuchsia::modular::StoryInfo> stories) {
+  story_provider->GetStories2(
+      nullptr, [&called_get_stories](const std::vector<fuchsia::modular::StoryInfo2>& stories) {
         EXPECT_THAT(stories, testing::IsEmpty());
         called_get_stories = true;
       });
@@ -136,9 +136,11 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
   // and confirm that it only sees the correct story id.
   std::vector<StoryState> sequence_of_story_states;
   modular::testing::SimpleStoryProviderWatcher watcher;
-  watcher.set_on_change([&sequence_of_story_states, kStoryId](
-                            StoryInfo story_info, StoryState story_state, StoryVisibilityState _) {
-    EXPECT_EQ(story_info.id, kStoryId);
+  watcher.set_on_change_2([&sequence_of_story_states, kStoryId](StoryInfo2 story_info,
+                                                                StoryState story_state,
+                                                                StoryVisibilityState _) {
+    ASSERT_TRUE(story_info.has_id());
+    EXPECT_EQ(story_info.id(), kStoryId);
     sequence_of_story_states.push_back(story_state);
   });
   watcher.Watch(story_provider, /*on_get_stories=*/nullptr);
@@ -218,10 +220,10 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
                          story_provider](fuchsia::modular::ExecuteResult result) {
     // Verify that the newly created story returns something for
     // GetStoryInfo().
-    story_provider->GetStoryInfo(kStoryId, [&execute_and_get_story_info_called,
-                                            kStoryId](fuchsia::modular::StoryInfoPtr story_info) {
-      ASSERT_THAT(story_info, Not(IsNull()));
-      EXPECT_EQ(story_info->id, kStoryId);
+    story_provider->GetStoryInfo2(kStoryId, [&execute_and_get_story_info_called,
+                                             kStoryId](fuchsia::modular::StoryInfo2 story_info) {
+      ASSERT_TRUE(story_info.has_id());
+      EXPECT_EQ(story_info.id(), kStoryId);
       execute_and_get_story_info_called = true;
     });
   });
@@ -230,8 +232,8 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
   // Delete the story and confirm that the story info is null now.
   bool delete_called = false;
   puppet_master->DeleteStory(kStoryId, [&delete_called, kStoryId, story_provider] {
-    story_provider->GetStoryInfo(kStoryId, [](fuchsia::modular::StoryInfoPtr story_info) {
-      EXPECT_THAT(story_info, IsNull());
+    story_provider->GetStoryInfo2(kStoryId, [](fuchsia::modular::StoryInfo2 story_info) {
+      EXPECT_TRUE(story_info.IsEmpty());
     });
     delete_called = true;
   });
@@ -261,16 +263,16 @@ TEST_F(SessionShellTest, KindOfProtoStoryNotInStoryList) {
   story_master->SetCreateOptions(std::move(story_options));
 
   bool called_get_stories = false;
-  story_master->Execute(
-      [&called_get_stories, story_provider](fuchsia::modular::ExecuteResult result) {
-        // Confirm that even after the story is created, GetStories() returns
-        // empty.
-        story_provider->GetStories(
-            nullptr, [&called_get_stories](std::vector<fuchsia::modular::StoryInfo> stories) {
-              EXPECT_THAT(stories, testing::IsEmpty());
-              called_get_stories = true;
-            });
-      });
+  story_master->Execute([&called_get_stories,
+                         story_provider](fuchsia::modular::ExecuteResult result) {
+    // Confirm that even after the story is created, GetStories() returns
+    // empty.
+    story_provider->GetStories2(
+        nullptr, [&called_get_stories](const std::vector<fuchsia::modular::StoryInfo2>& stories) {
+          EXPECT_THAT(stories, testing::IsEmpty());
+          called_get_stories = true;
+        });
+  });
 
   RunLoopUntil([&] { return called_get_stories; });
 }
@@ -295,9 +297,11 @@ TEST_F(SessionShellTest, AttachesAndDetachesView) {
   // and confirm that it only sees the correct story id.
   std::vector<StoryState> sequence_of_story_states;
   modular::testing::SimpleStoryProviderWatcher watcher;
-  watcher.set_on_change([&sequence_of_story_states, kStoryId](
-                            StoryInfo story_info, StoryState story_state, StoryVisibilityState _) {
-    EXPECT_EQ(story_info.id, kStoryId);
+  watcher.set_on_change_2([&sequence_of_story_states, kStoryId](StoryInfo2 story_info,
+                                                                StoryState story_state,
+                                                                StoryVisibilityState _) {
+    EXPECT_TRUE(story_info.has_id());
+    EXPECT_EQ(story_info.id(), kStoryId);
     sequence_of_story_states.push_back(story_state);
   });
   watcher.Watch(story_provider, /*on_get_stories=*/nullptr);
@@ -365,9 +369,11 @@ TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
   // and confirm that it only sees the correct story id.
   std::vector<StoryState> sequence_of_story_states;
   modular::testing::SimpleStoryProviderWatcher watcher;
-  watcher.set_on_change([&sequence_of_story_states, kStoryId](
-                            StoryInfo story_info, StoryState story_state, StoryVisibilityState _) {
-    EXPECT_EQ(story_info.id, kStoryId);
+  watcher.set_on_change_2([&sequence_of_story_states, kStoryId](StoryInfo2 story_info,
+                                                                StoryState story_state,
+                                                                StoryVisibilityState _) {
+    EXPECT_TRUE(story_info.has_id());
+    EXPECT_EQ(story_info.id(), kStoryId);
     sequence_of_story_states.push_back(story_state);
   });
   watcher.Watch(story_provider, /*on_get_stories=*/nullptr);

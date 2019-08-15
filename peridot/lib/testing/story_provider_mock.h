@@ -19,13 +19,13 @@ namespace modular {
 class StoryProviderMock : public fuchsia::modular::StoryProvider {
  public:
   // Allows notification of watchers.
-  void NotifyStoryChanged(fuchsia::modular::StoryInfo story_info,
+  void NotifyStoryChanged(fuchsia::modular::StoryInfo2 story_info,
                           fuchsia::modular::StoryState story_state,
                           fuchsia::modular::StoryVisibilityState story_visibility_state) {
     for (const auto& watcher : watchers_.ptrs()) {
-      fuchsia::modular::StoryInfo story_info_clone;
+      fuchsia::modular::StoryInfo2 story_info_clone;
       fidl::Clone(story_info, &story_info_clone);
-      (*watcher)->OnChange(std::move(story_info_clone), story_state, story_visibility_state);
+      (*watcher)->OnChange2(std::move(story_info_clone), story_state, story_visibility_state);
     }
   }
 
@@ -41,9 +41,9 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
 
  private:
   // |fuchsia::modular::StoryProvider|
-  void GetStories(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
-                  GetStoriesCallback callback) override {
-    std::vector<fuchsia::modular::StoryInfo> stories;
+  void GetStories2(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
+                   GetStories2Callback callback) override {
+    std::vector<fuchsia::modular::StoryInfo2> stories;
     callback(std::move(stories));
   }
 
@@ -59,8 +59,8 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   }
 
   // |fuchsia::modular::StoryProvider|
-  void GetStoryInfo(std::string story_id, GetStoryInfoCallback callback) override {
-    callback(nullptr);
+  void GetStoryInfo2(std::string story_id, GetStoryInfo2Callback callback) override {
+    callback(fuchsia::modular::StoryInfo2{});
   }
 
   // |fuchsia::modular::StoryProvider|
