@@ -1,10 +1,8 @@
 {{#if const_declarations}}
 ## **CONSTANTS**
 
-{{> doc}}
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Type</th></tr>
+    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr>
     {{~ #each const_declarations ~}}
         <tr>
             <td><a href="{{sl @root location}}">{{rpn name}}</a></td>
@@ -27,6 +25,7 @@
                     <td><code>String</code></td>
                 {{~ /if ~}}
             {{~ /if}}
+            <td>{{~> doc ~}}</td>
         </tr>
     {{/each}}
 </table>

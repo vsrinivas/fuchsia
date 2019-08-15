@@ -226,6 +226,27 @@ fn sl(fidl_json: &Value, location: &Value) -> String {
     }
 }
 
+pub fn one_line(
+    h: &Helper,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext,
+    out: &mut Output,
+) -> Result<(), RenderError> {
+    // get parameter from helper or throw an error
+    let param =
+        h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for oneline helper"))?;
+    debug!("oneline called on {}", param.value().render());
+    out.write(&ol(&param.value().render()))?;
+    Ok(())
+}
+
+fn ol(description: &str) -> String {
+    let lines: Vec<&str> = description.split("\n\n").collect();
+    // If no match for \n\n, lines will contain the description as is.
+    lines.first().unwrap().to_string()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -329,5 +350,17 @@ mod test {
             sl(&fidl_json, &location_with_folders_and_line),
             "https://example.com/master/sdk/fidl/fuchsia.bluetooth/address.fidl#9"
         );
+    }
+
+    #[test]
+    fn ol_test() {
+        let description = "some text\nmore text\n\nto be ignored\n";
+        assert_eq!(ol(description), "some text\nmore text");
+
+        let no_newlines = "some text";
+        assert_eq!(ol(no_newlines), "some text");
+
+        let multiple_newlines = "some text\n\nmore text\n\neven more text";
+        assert_eq!(ol(multiple_newlines), "some text");
     }
 }
