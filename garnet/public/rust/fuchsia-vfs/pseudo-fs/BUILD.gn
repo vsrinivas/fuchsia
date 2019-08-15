@@ -18,6 +18,7 @@ rustc_library("pseudo-fs") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:proc-macro-hack",
