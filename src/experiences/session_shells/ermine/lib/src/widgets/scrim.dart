@@ -19,6 +19,7 @@ class Scrim extends StatelessWidget {
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: (_) => model.onCancel(),
+      // ignore: deprecated_member_use
       onPointerHover: (event) {
         if (model.isFullscreen) {
           if (event.position.dy == 0) {
