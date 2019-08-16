@@ -14,6 +14,10 @@ pub enum Opt {
     /// commands for forwarding tables
     Fwd(FwdCmd),
 
+    #[structopt(name = "route")]
+    /// commands for routing tables
+    Route(RouteCmd),
+
     #[structopt(name = "filter")]
     /// commands for packet filter
     Filter(FilterCmd),
@@ -134,6 +138,12 @@ pub enum FwdCmd {
         /// routing prefix for this forwarding rule
         prefix: u8,
     },
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub enum RouteCmd {
+    #[structopt(name = "list")]
+    List,
 }
 
 #[derive(StructOpt, Clone, Debug)]

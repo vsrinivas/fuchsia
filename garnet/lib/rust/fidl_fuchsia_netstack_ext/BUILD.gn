@@ -12,6 +12,7 @@ rustc_library("fidl_fuchsia_netstack_ext") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

@@ -11,6 +11,7 @@ use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_filter::{self as filter, FilterMarker, FilterProxy};
 use fidl_fuchsia_net_stack::{self as netstack, InterfaceInfo, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext as pretty;
+use fidl_fuchsia_netstack::{NetstackMarker, NetstackProxy};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
@@ -27,12 +28,15 @@ fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let stack = connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
+    let netstack =
+        connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
     let filter = connect_to_service::<FilterMarker>().context("failed to connect to netfilter")?;
 
     let fut = async {
         match opt {
             Opt::If(cmd) => do_if(cmd, stack).await,
             Opt::Fwd(cmd) => do_fwd(cmd, stack).await,
+            Opt::Route(cmd) => do_route(cmd, netstack).await,
             Opt::Filter(cmd) => do_filter(cmd, filter).await,
         }
     };
@@ -229,6 +233,38 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
             } else {
                 println!("Removed forwarding entry for {}/{}", addr, prefix);
             }
+        }
+    }
+    Ok(())
+}
+
+async fn do_route(cmd: opts::RouteCmd, netstack: NetstackProxy) -> Result<(), Error> {
+    match cmd {
+        RouteCmd::List => {
+            let response =
+                netstack.get_route_table2().await.context("error retrieving routing table")?;
+
+            let mut t = Table::new();
+            t.set_format(format::FormatBuilder::new().padding(2, 2).build());
+
+            t.set_titles(row!["Destination", "Netmask", "Gateway", "NICID", "Metric"]);
+            for entry in response {
+                let route = fidl_fuchsia_netstack_ext::RouteTableEntry2::from(entry);
+                let gateway_str = match route.gateway {
+                    None => "-".to_string(),
+                    Some(g) => format!("{}", g),
+                };
+                t.add_row(row![
+                    route.destination,
+                    route.netmask,
+                    gateway_str,
+                    route.nicid,
+                    route.metric
+                ]);
+            }
+
+            t.printstd();
+            println!();
         }
     }
     Ok(())
