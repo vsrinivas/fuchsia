@@ -12,7 +12,9 @@ driver("optee") {
     "util.cc",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-tee:c",
@@ -72,6 +74,8 @@ test("optee-message-test") {
   ]
   include_dirs = [ "." ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-tee:c",

@@ -282,14 +282,11 @@ zx_status_t Device::Bind() {
   device_add_args.name = "sysmem";
   device_add_args.ctx = this;
   device_add_args.ops = &sysmem_device_ops;
-  device_add_args.proto_id = ZX_PROTOCOL_SYSMEM,
-  device_add_args.proto_ops = &in_proc_sysmem_protocol_,
-
   // ZX_PROTOCOL_SYSMEM causes /dev/class/sysmem to get created, and flags
   // support for the fuchsia.sysmem.DriverConnector protocol.  The .message
   // callback used is sysmem_device_ops.message, not
   // sysmem_protocol_ops.message.
-      device_add_args.proto_id = ZX_PROTOCOL_SYSMEM;
+  device_add_args.proto_id = ZX_PROTOCOL_SYSMEM;
   device_add_args.proto_ops = &in_proc_sysmem_protocol_ops;
   device_add_args.flags = DEVICE_ADD_ALLOW_MULTI_COMPOSITE;
 
