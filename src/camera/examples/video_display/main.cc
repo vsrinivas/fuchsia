@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
-
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
 
 #include "src/camera/examples/video_display/simple_camera_view.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 /*
   To run this code, log in and then run the following command:
@@ -25,8 +24,8 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  scenic::ViewProviderComponent component(
-      [](scenic::ViewContext view_context) {
+  scenic::ViewProviderComponentTransitional component(
+      [](scenic::ViewContextTransitional view_context) {
         return std::make_unique<video_display::SimpleCameraView>(std::move(view_context));
       },
       &loop);

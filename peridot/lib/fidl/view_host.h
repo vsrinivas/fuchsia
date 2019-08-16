@@ -5,16 +5,17 @@
 #ifndef PERIDOT_LIB_FIDL_VIEW_HOST_H_
 #define PERIDOT_LIB_FIDL_VIEW_HOST_H_
 
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/session.h>
+
 #include <map>
 #include <memory>
 
-#include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
-#include <lib/ui/scenic/cpp/resources.h>
-#include <lib/ui/scenic/cpp/session.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace modular {
 
@@ -23,9 +24,9 @@ namespace modular {
 // that play the role of a view controller (aka quarterback, recipe).
 // It supports to embed views of *multiple* children, which are laid
 // out horizontally.
-class ViewHost : public scenic::BaseView {
+class ViewHost : public scenic::BaseViewTransitional {
  public:
-  explicit ViewHost(scenic::ViewContext view_context);
+  explicit ViewHost(scenic::ViewContextTransitional view_context);
   ~ViewHost() override = default;
 
   // Connects one more view. Calling this method multiple times adds

@@ -7,27 +7,24 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/zx/eventpair.h>
-#include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
+#include "src/lib/fxl/logging.h"
 
 namespace modular_example {
 
-class ModuleView : public scenic::BaseView {
+class ModuleView : public scenic::BaseViewTransitional {
  public:
-  explicit ModuleView(scenic::ViewContext view_context, uint32_t color);
+  explicit ModuleView(scenic::ViewContextTransitional view_context, uint32_t color);
 
  private:
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(ERROR) << "Scenic Error " << error;
-  }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   // |scenic::BaseView|
-  void OnPropertiesChanged(
-      fuchsia::ui::gfx::ViewProperties old_properties) override;
+  void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override;
 
   scenic::ShapeNode background_node_;
 
@@ -37,22 +34,19 @@ class ModuleView : public scenic::BaseView {
 class ModuleApp : public modular::ViewApp {
  public:
   using CreateViewCallback =
-      fit::function<scenic::BaseView*(scenic::ViewContext view_context)>;
+      fit::function<scenic::BaseViewTransitional*(scenic::ViewContextTransitional view_context)>;
 
-  explicit ModuleApp(sys::ComponentContext* const component_context,
-                     CreateViewCallback create);
+  explicit ModuleApp(sys::ComponentContext* component_context, CreateViewCallback create);
 
  private:
   // |ViewApp|
-  void CreateView(
-      zx::eventpair view_token,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
-      override;
+  void CreateView(zx::eventpair view_token,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 
   CreateViewCallback create_;
-  std::unique_ptr<scenic::BaseView> view_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<scenic::BaseViewTransitional> view_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleApp);
 };

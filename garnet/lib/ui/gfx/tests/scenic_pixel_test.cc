@@ -22,7 +22,7 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/images/cpp/images.h>
 #include <lib/zx/clock.h>
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 #include <zircon/status.h>
 
 #include <map>
@@ -169,10 +169,10 @@ class ScenicPixelTest : public sys::testing::TestWithEnvironment {
 
   // Create a |ViewContext| that allows us to present a view via
   // |RootPresenter|. See also examples/ui/hello_base_view
-  scenic::ViewContext CreatePresentationContext() {
+  scenic::ViewContextTransitional CreatePresentationContext() {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-    scenic::ViewContext view_context = {
+    scenic::ViewContextTransitional view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
         .view_token = std::move(view_token),

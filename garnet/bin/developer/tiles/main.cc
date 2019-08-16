@@ -5,13 +5,13 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
-#include <trace-provider/provider.h>
 
 #include "garnet/bin/developer/tiles/tiles.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 void Usage() {
   printf(
@@ -44,23 +44,23 @@ int main(int argc, const char** argv) {
     FXL_LOG(ERROR) << "The --input_path= flag is DEPRECATED. Flag will be removed.";
   }
 
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
-  auto scenic = startup_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  auto component_context = sys::ComponentContext::Create();
+  auto scenic = component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
 
   // Create tiles with a token for its root view.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  scenic::ViewContext view_context = {
+  scenic::ViewContextTransitional view_context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
       .view_token = std::move(view_token),
       .incoming_services = {},
       .outgoing_services = {},
-      .startup_context = startup_context.get(),
+      .component_context = component_context.get(),
   };
   tiles::Tiles tiles(std::move(view_context), command_line.positional_args(), border);
 
   // Ask the presenter to display it.
-  auto presenter = startup_context->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+  auto presenter = component_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
   presenter->PresentView(std::move(view_holder_token), nullptr);
 
   loop.Run();

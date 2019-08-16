@@ -9,11 +9,13 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <gtest/gtest.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/component/cpp/testing/test_with_context.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -32,28 +34,27 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
 };
 
-class TilesTest : public component::testing::TestWithContext {
+class TilesTest : public gtest::TestLoopFixture {
  public:
   void SetUp() final {
     // Register the fake Scenic service with the environment.  This must
     // happen before calling |TakeContext|.
-    controller().AddService(fake_scenic_.GetHandler());
+    provider_.service_directory_provider()->AddService(fake_scenic_.GetHandler());
 
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-    auto startup_context = TakeContext();
-    auto scenic = startup_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-    scenic::ViewContext view_context = {
+    auto component_context = provider_.TakeContext();
+    auto scenic = component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+    scenic::ViewContextTransitional view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
         .incoming_services = {},
         .outgoing_services = {},
-        .startup_context = startup_context.get(),
+        .component_context = component_context.get(),
     };
 
     view_holder_token_ = std::move(view_holder_token);
-    startup_context_ = std::move(startup_context);
+    component_context_ = std::move(component_context);
     tiles_ =
         std::make_unique<tiles::Tiles>(std::move(view_context), std::vector<std::string>(), 10);
   }
@@ -62,8 +63,9 @@ class TilesTest : public component::testing::TestWithContext {
 
  private:
   FakeScenic fake_scenic_;
+  sys::testing::ComponentContextProvider provider_;
   fuchsia::ui::views::ViewHolderToken view_holder_token_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   std::unique_ptr<tiles::Tiles> tiles_;
 };
 

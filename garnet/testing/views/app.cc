@@ -2,32 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/eventpair.h>
+
 #include <functional>
 #include <map>
 #include <memory>
 #include <ostream>
 #include <sstream>
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <lib/zx/eventpair.h>
-
 #include "garnet/testing/views/background_view.h"
 #include "garnet/testing/views/coordinate_test_view.h"
 #include "garnet/testing/views/rotated_square_view.h"
 #include "garnet/testing/views/test_view.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 namespace {
 
-using ViewFactory = std::function<std::unique_ptr<scenic::TestView>(scenic::ViewContext)>;
+using ViewFactory =
+    std::function<std::unique_ptr<scenic::TestView>(scenic::ViewContextTransitional)>;
 
 template <class T>
 ViewFactory ViewFactoryImpl() {
-  return
-      [](scenic::ViewContext view_context) { return std::make_unique<T>(std::move(view_context)); };
+  return [](scenic::ViewContextTransitional view_context) {
+    return std::make_unique<T>(std::move(view_context));
+  };
 }
 
 const std::map<std::string, ViewFactory> kViews{
@@ -37,14 +39,14 @@ const std::map<std::string, ViewFactory> kViews{
 
 class App : public fuchsia::ui::views::View {
  public:
-  App(component::StartupContext* context, ViewFactory view_factory)
+  App(sys::ComponentContext* context, ViewFactory view_factory)
       : context_(context), view_factory_(std::move(view_factory)) {}
 
  private:
   // |fuchsia::ui::view::View|
   void Present(fuchsia::ui::views::ViewToken view_token) override {
-    auto scenic = context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-    scenic::ViewContext view_context = {
+    auto scenic = context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+    scenic::ViewContextTransitional view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
@@ -53,7 +55,7 @@ class App : public fuchsia::ui::views::View {
     view_ = view_factory_(std::move(view_context));
   }
 
-  component::StartupContext* context_;
+  sys::ComponentContext* context_;
   ViewFactory view_factory_;
   std::unique_ptr<scenic::TestView> view_;
 };
@@ -91,10 +93,10 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   App app(context.get(), view_factory_it->second);
   fidl::BindingSet<fuchsia::ui::views::View> view_bindings_;
-  context->outgoing().AddPublicService(view_bindings_.GetHandler(&app));
+  context->outgoing()->AddPublicService(view_bindings_.GetHandler(&app));
 
   loop.Run();
   return 0;

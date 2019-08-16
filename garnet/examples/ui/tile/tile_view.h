@@ -5,29 +5,30 @@
 #ifndef GARNET_EXAMPLES_UI_TILE_TILE_VIEW_H_
 #define GARNET_EXAMPLES_UI_TILE_TILE_VIEW_H_
 
-#include <fs/pseudo-dir.h>
-#include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/eventpair.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
 
 #include <map>
 #include <memory>
+
+#include <fs/pseudo-dir.h>
+#include <fs/synchronous-vfs.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 
 #include "garnet/examples/ui/tile/tile_params.h"
 
 namespace examples {
 
-class TileView : public scenic::BaseView, public fuchsia::ui::policy::Presenter {
+class TileView : public scenic::BaseViewTransitional, public fuchsia::ui::policy::Presenter {
  public:
-  TileView(scenic::ViewContext context, TileParams tile_params);
+  TileView(scenic::ViewContextTransitional context, TileParams tile_params);
 
   ~TileView() override = default;
 

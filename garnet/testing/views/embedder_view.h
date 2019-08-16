@@ -6,7 +6,7 @@
 #define GARNET_TESTING_VIEWS_EMBEDDER_VIEW_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 
@@ -17,7 +17,7 @@ namespace scenic {
 // See also lib/ui/base_view.
 class EmbedderView : public fuchsia::ui::scenic::SessionListener {
  public:
-  EmbedderView(ViewContext context, const std::string& debug_name = "EmbedderView");
+  EmbedderView(ViewContextTransitional context, const std::string& debug_name = "EmbedderView");
 
   // Sets the EmbeddedViewInfo and attaches the embedded View to the scene. Any
   // callbacks for the embedded View's ViewState are delivered to the supplied

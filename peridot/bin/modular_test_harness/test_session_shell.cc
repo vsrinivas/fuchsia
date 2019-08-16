@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <utility>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <memory>
+#include <utility>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
@@ -31,7 +31,7 @@ class TestSessionShellApp : public modular::ViewApp,
     story_provider_->GetStories2(story_provider_watcher_.NewBinding(),
                                  [](std::vector<fuchsia::modular::StoryInfo2>) {});
 
-    startup_context_ = component::StartupContext::CreateFromStartupInfo();
+    component_context_ = sys::ComponentContext::Create();
   }
 
   virtual ~TestSessionShellApp() override = default;
@@ -49,11 +49,11 @@ class TestSessionShellApp : public modular::ViewApp,
     fuchsia::ui::views::ViewToken view_token;
     view_token.value = std::move(view_event_pair);
     auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-    scenic::ViewContext context = {
+    scenic::ViewContextTransitional context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
-        .startup_context = startup_context_.get(),
+        .component_context = component_context_.get(),
     };
     view_ = std::make_unique<modular::ViewHost>(std::move(context));
   }
@@ -89,7 +89,7 @@ class TestSessionShellApp : public modular::ViewApp,
   std::unique_ptr<modular::ViewHost> view_;
   fidl::Binding<StoryProviderWatcher> story_provider_watcher_;
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 };
 
 }  // namespace

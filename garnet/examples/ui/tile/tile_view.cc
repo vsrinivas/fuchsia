@@ -13,13 +13,14 @@
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/base_view/cpp/embedded_view_utils.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/split_string.h>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/split_string.h"
 
 namespace examples {
 
-TileView::TileView(scenic::ViewContext context, TileParams params)
-    : BaseView(std::move(context), "Tile"),
+TileView::TileView(scenic::ViewContextTransitional context, TileParams params)
+    : BaseViewTransitional(std::move(context), "Tile"),
       vfs_(async_get_default_dispatcher()),
       services_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       params_(std::move(params)),
@@ -91,9 +92,11 @@ void TileView::CreateNestedEnvironment() {
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   service_list->names.push_back(fuchsia::ui::policy::Presenter::Name_);
   service_list->host_directory = OpenAsDirectory();
-  startup_context()->environment()->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(), "tile", std::move(service_list),
-      {.inherit_parent_services = true});
+
+  fuchsia::sys::EnvironmentPtr environment;
+  component_context()->svc()->Connect(environment.NewRequest());
+  environment->CreateNestedEnvironment(env_.NewRequest(), env_controller_.NewRequest(), "tile",
+                                       std::move(service_list), {.inherit_parent_services = true});
   env_->GetLauncher(env_launcher_.NewRequest());
 }
 

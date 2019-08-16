@@ -3,17 +3,17 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
 #include <zircon/system/ulib/zircon/include/zircon/status.h>
 
 #include <memory>
 
 #include "garnet/examples/ui/simplest_embedder/example_presenter.h"
 #include "garnet/examples/ui/simplest_embedder/view.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 using namespace simplest_embedder;
 
@@ -50,10 +50,9 @@ int main(int argc, const char** argv) {
 
     // Create a startup context for ourselves and use it to connect to
     // environment services.
-    std::unique_ptr<component::StartupContext> startup_context =
-        component::StartupContext::CreateFromStartupInfo();
+    auto component_context = sys::ComponentContext::Create();
     fuchsia::ui::scenic::ScenicPtr scenic =
-        startup_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+        component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic.set_error_handler([&loop](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Scenic with error " << zx_status_get_string(status)
                      << ".";
@@ -62,13 +61,13 @@ int main(int argc, const char** argv) {
 
     // Create a View which will launch shadertoy and attach shadertoy's View to
     // itself.
-    scenic::ViewContext view_context = {
+    scenic::ViewContextTransitional view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
         .incoming_services = nullptr,
         .outgoing_services = nullptr,
-        .startup_context = startup_context.get(),
+        .component_context = component_context.get(),
     };
     auto view = std::make_unique<ShadertoyEmbedderView>(std::move(view_context), &loop);
     view->LaunchShadertoyClient();
@@ -76,7 +75,7 @@ int main(int argc, const char** argv) {
     // Display the newly-created view using root_presenter.
     fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation;
     fuchsia::ui::policy::PresenterPtr root_presenter =
-        startup_context->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+        component_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
     root_presenter->PresentView(std::move(view_holder_token), presentation.NewRequest());
 
     fuchsia::ui::gfx::RendererParam param;
@@ -108,10 +107,9 @@ int main(int argc, const char** argv) {
 
     // Create a startup context for ourselves and use it to connect to
     // environment services.
-    std::unique_ptr<component::StartupContext> startup_context =
-        component::StartupContext::CreateFromStartupInfo();
-    fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic =
-        startup_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    auto component_context = sys::ComponentContext::Create();
+    fuchsia::ui::scenic::ScenicPtr scenic =
+        component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic.set_error_handler([&loop](zx_status_t status) {
       FXL_LOG(INFO) << "Lost connection to Scenic with error code " << status << ".";
       loop.Quit();
@@ -119,13 +117,13 @@ int main(int argc, const char** argv) {
 
     // Create a View which will launch shadertoy and attach shadertoy's View to
     // itself.
-    scenic::ViewContext view_context = {
+    scenic::ViewContextTransitional view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
         .incoming_services = nullptr,
         .outgoing_services = nullptr,
-        .startup_context = startup_context.get(),
+        .component_context = component_context.get(),
     };
     auto view = std::make_unique<ShadertoyEmbedderView>(std::move(view_context), &loop);
     view->LaunchShadertoyClient();
@@ -142,8 +140,8 @@ int main(int argc, const char** argv) {
     // Instead of creating a View directly, provide a component that will do so
     // when asked via FIDL.
     FXL_LOG(INFO) << "Launching view provider service.";
-    scenic::ViewProviderComponent component(
-        [&loop](scenic::ViewContext context) {
+    scenic::ViewProviderComponentTransitional component(
+        [&loop](scenic::ViewContextTransitional context) {
           // Create a View which will launch shadertoy and attach shadertoy's
           // View to itself.
           auto view = std::make_unique<ShadertoyEmbedderView>(std::move(context), &loop);

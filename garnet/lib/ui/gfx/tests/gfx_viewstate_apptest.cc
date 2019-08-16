@@ -8,20 +8,21 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/base_view/cpp/embedded_view_utils.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
 #include <map>
 #include <string>
 
+#include <gtest/gtest.h>
+
 #include "garnet/testing/views/embedder_view.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 
@@ -61,10 +62,10 @@ class ViewEmbedderTest : public sys::testing::TestWithEnvironment {
 
   // Create a |ViewContext| that allows us to present a view via
   // |RootPresenter|. See also examples/ui/simplest_embedder
-  scenic::ViewContext CreatePresentationContext() {
+  scenic::ViewContextTransitional CreatePresentationContext() {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-    scenic::ViewContext view_context = {
+    scenic::ViewContextTransitional view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
         .view_token = std::move(view_token),

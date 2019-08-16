@@ -5,13 +5,12 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -21,6 +20,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <gtest/gtest.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -35,7 +36,7 @@ using fuchsia::ui::input::MediaButtonsEvent;
 
 // Shared context for all tests in this process.
 // Set it up once, never delete it.
-component::StartupContext* g_context = nullptr;
+sys::ComponentContext* g_context = nullptr;
 
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.
@@ -80,10 +81,11 @@ class ButtonsListenerImpl : public fuchsia::ui::policy::MediaButtonsListener {
 };
 
 // A very small Scenic client. Puts up a fuchsia-colored rectangle.
-class MinimalClientView : public scenic::BaseView {
+class MinimalClientView : public scenic::BaseViewTransitional {
  public:
-  MinimalClientView(scenic::ViewContext context, async_dispatcher_t* dispatcher)
-      : scenic::BaseView(std::move(context), "MinimalClientView"), dispatcher_(dispatcher) {
+  MinimalClientView(scenic::ViewContextTransitional context, async_dispatcher_t* dispatcher)
+      : scenic::BaseViewTransitional(std::move(context), "MinimalClientView"),
+        dispatcher_(dispatcher) {
     FXL_CHECK(dispatcher_);
   }
 
@@ -118,28 +120,28 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
     // This fixture constructor may run multiple times, but we want the context
     // to be set up just once per process.
     if (g_context == nullptr) {
-      g_context = component::StartupContext::CreateFromStartupInfo().release();
+      g_context = sys::ComponentContext::Create().release();
     }
 
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
     // Connect to Scenic, create a View.
-    scenic_ = g_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    scenic_ = g_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([](zx_status_t status) {
       FXL_LOG(FATAL) << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
-    scenic::ViewContext view_context = {
+    scenic::ViewContextTransitional view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
         .view_token = std::move(view_token),
         .incoming_services = nullptr,
         .outgoing_services = nullptr,
-        .startup_context = g_context,
+        .component_context = g_context,
     };
     view_ = std::make_unique<MinimalClientView>(std::move(view_context), dispatcher());
 
     // Connect to RootPresenter, create a ViewHolder.
-    root_presenter_ = g_context->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+    root_presenter_ = g_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
     root_presenter_.set_error_handler([](zx_status_t status) {
       FXL_LOG(FATAL) << "Lost connection to RootPresenter: " << zx_status_get_string(status);
     });

@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_BENCHMARKS_IMAGE_GRID_CPP_IMAGE_GRID_VIEW_H_
 
 #include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
-#include "lib/ui/base_view/cpp/base_view.h"
+#include "lib/ui/base_view/cpp/base_view_transitional.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
@@ -17,9 +17,9 @@ namespace image_grid {
 class Frame;
 class Rasterizer;
 
-class ImageGridView : public scenic::BaseView {
+class ImageGridView : public scenic::BaseViewTransitional {
  public:
-  ImageGridView(scenic::ViewContext view_context);
+  explicit ImageGridView(scenic::ViewContextTransitional view_context);
 
   ~ImageGridView() override;
 

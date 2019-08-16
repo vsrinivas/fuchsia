@@ -7,17 +7,19 @@
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/gfx/cpp/math.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <src/lib/fxl/logging.h>
 
 #include <cmath>
+
+#include "src/lib/fxl/logging.h"
 
 constexpr float kTileElevation = 5.f;
 
 namespace tiles {
 
-Tiles::Tiles(scenic::ViewContext view_context, std::vector<std::string> urls, int border)
-    : scenic::BaseView(std::move(view_context), "Tiles"),
-      launcher_(startup_context()->ConnectToEnvironmentService<fuchsia::sys::Launcher>()),
+Tiles::Tiles(scenic::ViewContextTransitional view_context, std::vector<std::string> urls,
+             int border)
+    : scenic::BaseViewTransitional(std::move(view_context), "Tiles"),
+      launcher_(component_context()->svc()->Connect<fuchsia::sys::Launcher>()),
       background_node_(session()),
       container_node_(session()),
       border_(border) {
@@ -34,7 +36,7 @@ Tiles::Tiles(scenic::ViewContext view_context, std::vector<std::string> urls, in
   }
 
   // Make ourselves available as a |fuchsia.developer.TilesController|.
-  startup_context()->outgoing().AddPublicService(tiles_binding_.GetHandler(this));
+  component_context()->outgoing()->AddPublicService(tiles_binding_.GetHandler(this));
 }
 
 void Tiles::AddTileFromURL(std::string url, bool allow_focus, fidl::VectorPtr<std::string> args,
@@ -104,9 +106,7 @@ void Tiles::ListTiles(ListTilesCallback callback) {
                           it.second->view_properties.bounding_box.min);
     focusabilities.push_back(it.second->view_properties.focus_change);
   };
-  callback(std::move(child_keys),
-           std::move(child_urls),
-           std::move(child_sizes),
+  callback(std::move(child_keys), std::move(child_urls), std::move(child_sizes),
            std::move(focusabilities));
 }
 

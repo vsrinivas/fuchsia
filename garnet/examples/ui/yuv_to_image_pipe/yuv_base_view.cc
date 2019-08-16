@@ -5,12 +5,12 @@
 #include "garnet/examples/ui/yuv_to_image_pipe/yuv_base_view.h"
 
 #include <lib/images/cpp/images.h>
+#include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/commands.h>
-#include <src/lib/fxl/log_level.h>
-#include <trace/event.h>
 
 #include <iostream>
 
+#include "src/lib/fxl/log_level.h"
 #include "src/ui/lib/yuv/yuv.h"
 
 namespace yuv_to_image_pipe {
@@ -25,8 +25,9 @@ constexpr float kInitialWindowYPos = 240;
 
 }  // namespace
 
-YuvBaseView::YuvBaseView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format)
-    : BaseView(std::move(context), "YuvBaseView Example"),
+YuvBaseView::YuvBaseView(scenic::ViewContextTransitional context,
+                         fuchsia::images::PixelFormat pixel_format)
+    : BaseViewTransitional(std::move(context), "YuvBaseView Example"),
       node_(session()),
       pixel_format_(pixel_format),
       stride_(

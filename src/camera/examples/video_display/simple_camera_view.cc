@@ -11,7 +11,7 @@
 
 #include <lib/ui/scenic/cpp/commands.h>
 #include <glm/gtc/type_ptr.hpp>
-#include <src/lib/fxl/log_level.h>
+#include "src/lib/fxl/log_level.h"
 
 namespace video_display {
 
@@ -30,8 +30,8 @@ static const std::string kSimpleCameraServiceUrl =
 static const uint32_t camera_id = 0;  // 0 -> fake camera, 1 -> real camera
 static const auto kRectSize = 80;
 
-SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
-    : BaseView(std::move(view_context), "Video Display Example"), node_(session()) {
+SimpleCameraView::SimpleCameraView(scenic::ViewContextTransitional view_context)
+    : BaseViewTransitional(std::move(view_context), "Video Display Example"), node_(session()) {
   FXL_VLOG(4) << "Creating video_display View";
 
   // Create an ImagePipe and pass one end to the Session:
@@ -48,7 +48,10 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kSimpleCameraServiceUrl;
   launch_info.directory_request = simple_camera_provider_.NewRequest();
-  startup_context()->launcher()->CreateComponent(std::move(launch_info), controller_.NewRequest());
+
+  fuchsia::sys::LauncherPtr launcher;
+  component_context()->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
 
   simple_camera_provider_.ConnectToService(simple_camera_.NewRequest().TakeChannel(),
                                            fuchsia::simplecamera::SimpleCamera::Name_);

@@ -4,15 +4,16 @@
 
 #include "garnet/lib/vulkan/tests/vklatency/image_pipe_view.h"
 
-#include <hid/usages.h>
 #include <lib/ui/scenic/cpp/commands.h>
+
+#include <hid/usages.h>
 
 #include "src/lib/fxl/logging.h"
 
 namespace examples {
 
-ImagePipeView::ImagePipeView(scenic::ViewContext view_context, bool protected_output)
-    : BaseView(std::move(view_context), "vklatency_on_scenic"),
+ImagePipeView::ImagePipeView(scenic::ViewContextTransitional view_context, bool protected_output)
+    : BaseViewTransitional(std::move(view_context), "vklatency_on_scenic"),
       canvas_node_(session()),
       vk_swapchain_(protected_output) {
   zx::channel remote_endpoint;

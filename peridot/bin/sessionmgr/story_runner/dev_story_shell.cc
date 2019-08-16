@@ -26,9 +26,10 @@ namespace {
 class DevStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::StoryShell> {
  public:
   DevStoryShellApp(sys::ComponentContext* const component_context)
-      : SingleServiceApp(component_context) {
-    startup_context_ = component::StartupContext::CreateFromStartupInfo();
-  }
+      : SingleServiceApp(component_context),
+        component_context_(component_context
+                               ? std::unique_ptr<sys::ComponentContext>(component_context)
+                               : sys::ComponentContext::Create()) {}
   ~DevStoryShellApp() override = default;
 
  private:
@@ -114,11 +115,11 @@ class DevStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Stor
   void Connect() {
     if (story_shell_context_.is_bound() && view_token_.value) {
       auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-      scenic::ViewContext view_context = {
+      scenic::ViewContextTransitional view_context = {
           .session_and_listener_request =
               scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
           .view_token = std::move(view_token_),
-          .startup_context = startup_context_.get(),
+          .component_context = component_context_.get(),
       };
 
       view_ = std::make_unique<modular::ViewHost>(std::move(view_context));
@@ -136,7 +137,7 @@ class DevStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Stor
 
   fuchsia::modular::StoryShellContextPtr story_shell_context_;
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevStoryShellApp);
 };

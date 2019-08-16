@@ -11,27 +11,26 @@
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
-#include <src/lib/fxl/logging.h>
-#include <trace-provider/provider.h>
 
 #include <array>
 #include <memory>
 
 #include "peridot/lib/fidl/single_service_app.h"
+#include "src/lib/fxl/logging.h"
+#include "trace-provider/provider.h"
 
 namespace {
 
 constexpr int kSwapSeconds = 5;
-constexpr std::array<const char*, 2> kModuleQueries{
-    {"swap_module1", "swap_module2"}};
+constexpr std::array<const char*, 2> kModuleQueries{{"swap_module1", "swap_module2"}};
 
-class RecipeView : public scenic::BaseView {
+class RecipeView : public scenic::BaseViewTransitional {
  public:
-  explicit RecipeView(scenic::ViewContext view_context)
-      : BaseView(std::move(view_context), "RecipeView") {}
+  explicit RecipeView(scenic::ViewContextTransitional view_context)
+      : BaseViewTransitional(std::move(view_context), "RecipeView") {}
 
   ~RecipeView() override = default;
 
@@ -44,8 +43,8 @@ class RecipeView : public scenic::BaseView {
 
     if (view_holder_token.value) {
       host_node_ = std::make_unique<scenic::EntityNode>(session());
-      host_view_holder_ = std::make_unique<scenic::ViewHolder>(
-          session(), std::move(view_holder_token), "Swap");
+      host_view_holder_ =
+          std::make_unique<scenic::ViewHolder>(session(), std::move(view_holder_token), "Swap");
 
       host_node_->SetTranslation(0.f, 0.f, -0.1f);
       host_node_->Attach(*host_view_holder_);
@@ -55,9 +54,7 @@ class RecipeView : public scenic::BaseView {
 
  private:
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(ERROR) << "Scenic Error " << error;
-  }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   // |scenic::BaseView|
   void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties) override {
@@ -75,9 +72,9 @@ class RecipeView : public scenic::BaseView {
 class RecipeApp : public modular::ViewApp {
  public:
   RecipeApp(sys::ComponentContext* const component_context)
-      : ViewApp(component_context) {
+      : ViewApp(component_context),
+        component_context_(std::unique_ptr<sys::ComponentContext>(component_context)) {
     component_context->svc()->Connect(module_context_.NewRequest());
-    startup_context_ = component::StartupContext::CreateFromStartupInfo();
     SwapModule();
   }
 
@@ -85,20 +82,17 @@ class RecipeApp : public modular::ViewApp {
 
  private:
   // |ViewApp|
-  void CreateView(
-      zx::eventpair view_token,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
-      override {
-    auto scenic =
-        component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-    scenic::ViewContext view_context = {
+  void CreateView(zx::eventpair view_token,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override {
+    auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+    scenic::ViewContextTransitional view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = scenic::ToViewToken(std::move(view_token)),
         .incoming_services = std::move(incoming_services),
         .outgoing_services = std::move(outgoing_services),
-        .startup_context = startup_context_.get(),
+        .component_context = component_context_.get(),
     };
     view_ = std::make_unique<RecipeView>(std::move(view_context));
     SetChild();
@@ -108,8 +102,7 @@ class RecipeApp : public modular::ViewApp {
     StartModule(kModuleQueries[query_index_]);
     query_index_ = (query_index_ + 1) % kModuleQueries.size();
     async::PostDelayedTask(
-        async_get_default_dispatcher(), [this] { SwapModule(); },
-        zx::sec(kSwapSeconds));
+        async_get_default_dispatcher(), [this] { SwapModule(); }, zx::sec(kSwapSeconds));
   }
 
   void StartModule(const std::string& module_query) {
@@ -126,10 +119,9 @@ class RecipeApp : public modular::ViewApp {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     fuchsia::modular::Intent intent;
     intent.handler = module_query;
-    module_context_->EmbedModule2(
-        module_query, std::move(intent), module_.NewRequest(),
-        std::move(view_token),
-        [](const fuchsia::modular::StartModuleStatus&) {});
+    module_context_->EmbedModule2(module_query, std::move(intent), module_.NewRequest(),
+                                  std::move(view_token),
+                                  [](const fuchsia::modular::StartModuleStatus&) {});
     view_holder_token_ = std::move(view_holder_token);
     SetChild();
   }
@@ -143,7 +135,7 @@ class RecipeApp : public modular::ViewApp {
   fuchsia::modular::ModuleContextPtr module_context_;
   fuchsia::modular::ModuleControllerPtr module_;
   fuchsia::ui::views::ViewHolderToken view_holder_token_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   std::unique_ptr<RecipeView> view_;
 
   int query_index_ = 0;
@@ -157,8 +149,7 @@ int main(int /*argc*/, const char** /*argv*/) {
 
   auto context = sys::ComponentContext::Create();
   modular::AppDriver<RecipeApp> driver(
-      context->outgoing(), std::make_unique<RecipeApp>(context.get()),
-      [&loop] { loop.Quit(); });
+      context->outgoing(), std::make_unique<RecipeApp>(context.get()), [&loop] { loop.Quit(); });
 
   loop.Run();
   return 0;

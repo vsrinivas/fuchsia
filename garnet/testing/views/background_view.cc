@@ -5,12 +5,13 @@
 #include "garnet/testing/views/background_view.h"
 
 #include <lib/ui/gfx/cpp/math.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace scenic {
 
-BackgroundView::BackgroundView(ViewContext context, const std::string& debug_name)
+BackgroundView::BackgroundView(ViewContextTransitional context, const std::string& debug_name)
     : binding_(this, std::move(context.session_and_listener_request.second)),
       session_(std::move(context.session_and_listener_request.first)),
       view_(&session_, std::move(context.view_token), debug_name),

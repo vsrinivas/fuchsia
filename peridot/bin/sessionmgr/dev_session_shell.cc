@@ -57,7 +57,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
     component_context->outgoing()->AddPublicService(session_shell_bindings_.GetHandler(this));
 
-    startup_context_ = component::StartupContext::CreateFromStartupInfo();
+    component_context_ = sys::ComponentContext::Create();
   }
 
   ~DevSessionShellApp() override = default;
@@ -81,11 +81,11 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
                   << settings_.root_link;
 
     auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-    scenic::ViewContext context = {
+    scenic::ViewContextTransitional context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token_),
-        .startup_context = startup_context_.get(),
+        .component_context = component_context_.get(),
     };
 
     view_ = std::make_unique<modular::ViewHost>(std::move(context));
@@ -184,7 +184,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
   fidl::Binding<fuchsia::modular::StoryWatcher> story_watcher_binding_;
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevSessionShellApp);
 };

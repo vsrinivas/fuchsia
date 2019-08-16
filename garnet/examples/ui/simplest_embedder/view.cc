@@ -4,15 +4,16 @@
 
 #include "garnet/examples/ui/simplest_embedder/view.h"
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 namespace simplest_embedder {
 using ::fuchsia::ui::input::InputEvent;
 using ::fuchsia::ui::input::KeyboardEventPhase;
 using ::fuchsia::ui::input::PointerEventPhase;
 
-ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context, async::Loop* message_loop)
-    : scenic::BaseView(std::move(context), "simplest_embedder ShadertoyEmbedderView"),
+ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContextTransitional context,
+                                             async::Loop* message_loop)
+    : scenic::BaseViewTransitional(std::move(context), "simplest_embedder ShadertoyEmbedderView"),
       message_loop_(message_loop),
       background_(session()),
       focused_(false) {
@@ -35,9 +36,11 @@ ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context, async:
 void ShadertoyEmbedderView::LaunchShadertoyClient() {
   FXL_DCHECK(!view_holder_);
 
+  fuchsia::sys::LauncherPtr launcher;
+  component_context()->svc()->Connect(launcher.NewRequest());
+
   embedded_view_info_ = scenic::LaunchComponentAndCreateView(
-      startup_context()->launcher(),
-      "fuchsia-pkg://fuchsia.com/shadertoy_client#meta/shadertoy_client.cmx");
+      launcher, "fuchsia-pkg://fuchsia.com/shadertoy_client#meta/shadertoy_client.cmx");
 
   view_holder_ = std::make_unique<scenic::ViewHolder>(
       session(), std::move(embedded_view_info_.view_holder_token),

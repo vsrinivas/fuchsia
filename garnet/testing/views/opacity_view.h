@@ -6,7 +6,7 @@
 #define GARNET_TESTING_VIEWS_OPACITY_VIEW_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 
@@ -24,7 +24,8 @@ class OpacityView : public TestView, private fuchsia::ui::scenic::SessionListene
   static constexpr float kBackgroundElevation = 0.f;
   static constexpr float kForegroundElevation = 10.f;
 
-  explicit OpacityView(ViewContext context, const std::string& debug_name = "OpacityView");
+  explicit OpacityView(ViewContextTransitional context,
+                       const std::string& debug_name = "OpacityView");
 
   // |TestView|
   void set_present_callback(Session::PresentCallback present_callback) override;

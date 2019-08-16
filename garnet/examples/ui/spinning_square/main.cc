@@ -3,17 +3,17 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
 
 #include "garnet/examples/ui/spinning_square/spinning_square_view.h"
-#include "lib/ui/base_view/cpp/view_provider_component.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  scenic::ViewProviderComponent component(
-      [](scenic::ViewContext context) {
+  scenic::ViewProviderComponentTransitional component(
+      [](scenic::ViewContextTransitional context) {
         return std::make_unique<examples::SpinningSquareView>(std::move(context));
       },
       &loop);

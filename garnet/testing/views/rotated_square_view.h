@@ -16,7 +16,8 @@ class RotatedSquareView : public BackgroundView {
   static constexpr float kSquareElevation = 8.f;
   static constexpr float kSquareAngle = M_PI / 4;
 
-  RotatedSquareView(ViewContext context, const std::string& debug_name = "RotatedSquareView");
+  RotatedSquareView(ViewContextTransitional context,
+                    const std::string& debug_name = "RotatedSquareView");
 
  private:
   // |BackgroundView|

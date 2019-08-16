@@ -23,7 +23,8 @@ namespace scenic {
 //
 class CoordinateTestView : public BackgroundView {
  public:
-  CoordinateTestView(ViewContext context, const std::string& debug_name = "RotatedSquareView");
+  CoordinateTestView(ViewContextTransitional context,
+                     const std::string& debug_name = "RotatedSquareView");
 
  private:
   // |BackgroundView|

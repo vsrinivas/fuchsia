@@ -21,16 +21,15 @@ constexpr uint32_t kShapeWidth = 384;
 constexpr uint32_t kShapeHeight = 288;
 }  // namespace
 
-ViewImpl::ViewImpl(component::StartupContext* startup_context, scenic::Session* sess,
+ViewImpl::ViewImpl(sys::ComponentContext* component_context, scenic::Session* sess,
                    scenic::EntityNode* parent_node_in)
-    : startup_context_(startup_context),
+    : component_context_(component_context),
       session_(sess),
       parent_node_(parent_node_in),
       // TODO: we don't need to keep this around once we have used it to create a Shadertoy.  What
       // is the best way to achieve this?
       shadertoy_factory_(
-          startup_context_
-              ->ConnectToEnvironmentService<fuchsia::examples::shadertoy::ShadertoyFactory>()),
+          component_context_->svc()->Connect<fuchsia::examples::shadertoy::ShadertoyFactory>()),
       start_time_(zx_clock_get_monotonic()) {
   shadertoy_factory_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to ShadertoyFactory.";
@@ -172,9 +171,10 @@ void ViewImpl::QuitLoop() {
   async_loop_quit(async_loop_from_dispatcher(async_get_default_dispatcher()));
 }
 
-ShadertoyClientView::ShadertoyClientView(scenic::ViewContext context, const std::string& debug_name)
-    : scenic::BaseView(std::move(context), debug_name),
-      impl_(startup_context(), session(), &root_node()) {
+ShadertoyClientView::ShadertoyClientView(scenic::ViewContextTransitional context,
+                                         const std::string& debug_name)
+    : scenic::BaseViewTransitional(std::move(context), debug_name),
+      impl_(component_context(), session(), &root_node()) {
   InvalidateScene();
 }
 

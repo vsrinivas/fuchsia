@@ -5,7 +5,7 @@
 #include "garnet/examples/ui/yuv_to_image_pipe/yuv_input_view.h"
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 namespace yuv_to_image_pipe {
 
@@ -28,7 +28,8 @@ using ::fuchsia::ui::input::InputEvent;
 using ::fuchsia::ui::input::KeyboardEventPhase;
 using ::fuchsia::ui::input::PointerEventPhase;
 
-YuvInputView::YuvInputView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format)
+YuvInputView::YuvInputView(scenic::ViewContextTransitional context,
+                           fuchsia::images::PixelFormat pixel_format)
     : YuvBaseView(std::move(context), pixel_format) {
   for (int i = 0; i < kNumImages; ++i) {
     image_ids_.push_back(AddImage());

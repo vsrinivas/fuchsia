@@ -6,21 +6,22 @@
 #define SRC_CAMERA_EXAMPLES_VIDEO_DISPLAY_SIMPLE_CAMERA_VIEW_H_
 
 #include <fuchsia/simplecamera/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <deque>
 #include <list>
 
 #include <fbl/vector.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace video_display {
 
-class SimpleCameraView : public scenic::BaseView {
+class SimpleCameraView : public scenic::BaseViewTransitional {
  public:
-  SimpleCameraView(scenic::ViewContext view_context);
+  explicit SimpleCameraView(scenic::ViewContextTransitional view_context);
   ~SimpleCameraView() override = default;
 
  private:
