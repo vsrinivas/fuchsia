@@ -101,6 +101,9 @@ protocol StoryPuppetMaster {
     // Any subsequent calls (either on the same channel or on a new
     // StoryPuppetMaster for an existing story) are ignored.
     // See story_info.fidl for details.
+    //
+    // DEPRECATED. This method is a no-op and will never return an error.
+    [Transitional = "Deprecated, no-op"]
     SetStoryInfoExtra(vector<StoryInfoExtraEntry> story_info_extra)
         -> () error ConfigureStoryError;
 };

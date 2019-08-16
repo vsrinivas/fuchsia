@@ -359,10 +359,10 @@ void StoryProviderImpl::Watch(
   for (const auto& item : story_runtime_containers_) {
     const auto& container = item.second;
     FXL_CHECK(container.current_data->has_story_info());
-    watcher_ptr->OnChange(CloneStruct(container.current_data->story_info()),
+    watcher_ptr->OnChange(StoryInfo2ToStoryInfo(container.current_data->story_info()),
                           container.model_observer->model().runtime_state(),
                           container.model_observer->model().visibility_state());
-    watcher_ptr->OnChange2(StoryInfoToStoryInfo2(container.current_data->story_info()),
+    watcher_ptr->OnChange2(CloneStruct(container.current_data->story_info()),
                            container.model_observer->model().runtime_state(),
                            container.model_observer->model().visibility_state());
   }
@@ -455,7 +455,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
       user_environment_->GetLauncher(), CloneStruct(story_shell_config_));
 }
 
-fuchsia::modular::StoryInfoPtr StoryProviderImpl::GetCachedStoryInfo(std::string story_id) {
+fuchsia::modular::StoryInfo2Ptr StoryProviderImpl::GetCachedStoryInfo(std::string story_id) {
   auto it = story_runtime_containers_.find(story_id);
   if (it == story_runtime_containers_.end()) {
     return nullptr;
@@ -477,7 +477,7 @@ void StoryProviderImpl::GetStoryInfo(std::string story_id, GetStoryInfoCallback 
             if (!story_data->has_story_info()) {
               return nullptr;
             }
-            return fidl::MakeOptional(std::move(*story_data->mutable_story_info()));
+            return fidl::MakeOptional(StoryInfo2ToStoryInfo(story_data->story_info()));
           });
   operation_queue_.Add(
       WrapFutureAsOperation("StoryProviderImpl::GetStoryInfo", on_run, done, std::move(callback)));
@@ -496,8 +496,7 @@ void StoryProviderImpl::GetStoryInfo2(std::string story_id, GetStoryInfo2Callbac
             if (!story_data->has_story_info()) {
               return fuchsia::modular::StoryInfo2{};
             }
-
-            return StoryInfoToStoryInfo2(story_data->story_info());
+            return std::move(*story_data->mutable_story_info());
           });
   operation_queue_.Add(
       WrapFutureAsOperation("StoryProviderImpl::GetStoryInfo2", on_run, done, std::move(callback)));
@@ -577,7 +576,7 @@ void StoryProviderImpl::GetStories(
                 if (!story_data.has_story_info()) {
                   continue;
                 }
-                result.push_back(std::move(*story_data.mutable_story_info()));
+                result.push_back(StoryInfo2ToStoryInfo(story_data.story_info()));
               }
             }
 
@@ -608,7 +607,7 @@ void StoryProviderImpl::GetStories2(
                 if (!story_data.has_story_info()) {
                   continue;
                 }
-                result.push_back(StoryInfoToStoryInfo2(story_data.story_info()));
+                result.push_back(std::move(*story_data.mutable_story_info()));
               }
             }
 
@@ -634,7 +633,7 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
                         if (!story_data.has_story_info()) {
                           continue;
                         }
-                        result.push_back(std::move(*story_data.mutable_story_info()));
+                        result.push_back(StoryInfo2ToStoryInfo(story_data.story_info()));
                       }
                     }
                     return result;
@@ -655,7 +654,7 @@ void StoryProviderImpl::PreviousStories2(PreviousStories2Callback callback) {
                         if (!story_data.has_story_info()) {
                           continue;
                         }
-                        result.push_back(StoryInfoToStoryInfo2(story_data.story_info()));
+                        result.push_back(std::move(*story_data.mutable_story_info()));
                       }
                     }
                     return result;
@@ -674,7 +673,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(fidl::StringPtr story_id,
   fuchsia::modular::StoryState runtime_state = fuchsia::modular::StoryState::STOPPED;
   fuchsia::modular::StoryVisibilityState visibility_state =
       fuchsia::modular::StoryVisibilityState::DEFAULT;
-  auto i = story_runtime_containers_.find(story_data.story_info().id);
+  auto i = story_runtime_containers_.find(story_data.story_info().id());
   if (i != story_runtime_containers_.end()) {
     runtime_state = i->second.model_observer->model().runtime_state();
     visibility_state = i->second.model_observer->model().visibility_state();
@@ -739,9 +738,9 @@ void StoryProviderImpl::NotifyStoryWatchers(
     if (!story_data->has_story_info()) {
       continue;
     }
-    (*i)->OnChange(CloneStruct(story_data->story_info()), story_state, story_visibility_state);
-    (*i)->OnChange2(StoryInfoToStoryInfo2(story_data->story_info()), story_state,
-                    story_visibility_state);
+    (*i)->OnChange(StoryInfo2ToStoryInfo(story_data->story_info()), story_state,
+                   story_visibility_state);
+    (*i)->OnChange2(CloneStruct(story_data->story_info()), story_state, story_visibility_state);
   }
 }
 
@@ -834,14 +833,14 @@ void StoryProviderImpl::StartSnapshotLoader(
                                      loader_request.TakeChannel());
 }
 
-fuchsia::modular::StoryInfo2 StoryProviderImpl::StoryInfoToStoryInfo2(
-    const fuchsia::modular::StoryInfo& story_info) {
-  fuchsia::modular::StoryInfo2 story_info_2;
+fuchsia::modular::StoryInfo StoryProviderImpl::StoryInfo2ToStoryInfo(
+    const fuchsia::modular::StoryInfo2& story_info_2) {
+  fuchsia::modular::StoryInfo story_info;
 
-  story_info_2.set_id(story_info.id);
-  story_info_2.set_last_focus_time(story_info.last_focus_time);
+  story_info.id = story_info_2.id();
+  story_info.last_focus_time = story_info_2.last_focus_time();
 
-  return story_info_2;
+  return story_info;
 }
 
 }  // namespace modular

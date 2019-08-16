@@ -1223,18 +1223,18 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   // If this call enters a race with a StoryProvider.DeleteStory() call,
   // resulting in |this| being destroyed, |callback| will be dropped.
   operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)] {
-    auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_.value_or(""));
-    FXL_CHECK(story_info);
-    callback(std::move(*story_info), story_observer_->model().runtime_state());
+    auto story_info_2 = story_provider_impl_->GetCachedStoryInfo(story_id_.value_or(""));
+    FXL_CHECK(story_info_2);
+    auto story_info = modular::StoryProviderImpl::StoryInfo2ToStoryInfo(*story_info_2);
+    callback(std::move(story_info), story_observer_->model().runtime_state());
   }));
 }
 
 void StoryControllerImpl::GetInfo2(GetInfo2Callback callback) {
   operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)] {
-    auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_);
-    FXL_CHECK(story_info);
-    auto story_info_2 = story_provider_impl_->StoryInfoToStoryInfo2(*story_info);
-    callback(std::move(story_info_2), story_observer_->model().runtime_state());
+    auto story_info_2 = story_provider_impl_->GetCachedStoryInfo(story_id_);
+    FXL_CHECK(story_info_2);
+    callback(std::move(*story_info_2), story_observer_->model().runtime_state());
   }));
 }
 

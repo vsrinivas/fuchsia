@@ -8,9 +8,10 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include <memory>
+
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/bin/sessionmgr/puppet_master/story_command_executor.h"
 
@@ -53,11 +54,6 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   // by |SetCreateOptions|. This value is reset after the story is created
   // in the first call to |Execute|, and subsequent values are ignored.
   fuchsia::modular::StoryOptions story_options_;
-
-  // StoryInfo extra entries passed to |session_storage_.CreateStory|, set
-  // by |SetStoryInfoExtra|. This value is reset after the story is created
-  // in the first call to |Execute|, and subsequent values are ignored.
-  fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> story_info_extra_;
 
   fxl::WeakPtrFactory<StoryPuppetMasterImpl> weak_ptr_factory_;
 

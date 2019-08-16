@@ -57,20 +57,18 @@ std::unique_ptr<OperationBase> MakeWriteStoryDataCall(
     fuchsia::ledger::Page* const page, fuchsia::modular::internal::StoryDataPtr story_data,
     fit::function<void()> result_call) {
   return std::make_unique<WriteDataCall<fuchsia::modular::internal::StoryData>>(
-      page, StoryNameToStoryDataKey(story_data->story_info().id), XdrStoryData,
+      page, StoryNameToStoryDataKey(story_data->story_info().id()), XdrStoryData,
       std::move(story_data), std::move(result_call));
 };
 
 class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger::PageId> {
  public:
   CreateStoryCall(fuchsia::ledger::Ledger* const ledger, fuchsia::ledger::Page* const root_page,
-                  fidl::StringPtr story_name,
-                  fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-                  fuchsia::modular::StoryOptions story_options, ResultCall result_call)
+                  fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options,
+                  ResultCall result_call)
       : LedgerOperation("SessionStorage::CreateStoryCall", ledger, root_page,
                         std::move(result_call)),
         story_name_(std::move(story_name)),
-        extra_info_(std::move(extra_info)),
         story_options_(std::move(story_options)) {}
 
  private:
@@ -98,14 +96,12 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
     story_data_->set_story_name(story_name_.value_or(""));
     story_data_->set_story_options(std::move(story_options_));
     story_data_->set_story_page_id(std::move(story_page_id_));
-    story_data_->mutable_story_info()->id = story_name_.value_or("");
-    story_data_->mutable_story_info()->last_focus_time = 0;
-    story_data_->mutable_story_info()->extra = std::move(extra_info_);
+    story_data_->mutable_story_info()->set_id(story_name_.value_or(""));
+    story_data_->mutable_story_info()->set_last_focus_time(0);
     operation_queue_.Add(MakeWriteStoryDataCall(page(), std::move(story_data_), [flow] {}));
   }
 
   fidl::StringPtr story_name_;
-  fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info_;
   fuchsia::modular::StoryOptions story_options_;
 
   fuchsia::ledger::PagePtr story_page_;
@@ -120,20 +116,18 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
 }  // namespace
 
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
-    fidl::StringPtr story_name, fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-    fuchsia::modular::StoryOptions story_options) {
+    fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options) {
   auto ret =
       Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create("SessionStorage.CreateStory.ret");
-  operation_queue_.Add(std::make_unique<CreateStoryCall>(
-      ledger_client_->ledger(), page(), std::move(story_name), std::move(extra_info),
-      std::move(story_options), ret->Completer()));
+  operation_queue_.Add(
+      std::make_unique<CreateStoryCall>(ledger_client_->ledger(), page(), std::move(story_name),
+                                        std::move(story_options), ret->Completer()));
   return ret;
 }
 
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
-    fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
     fuchsia::modular::StoryOptions story_options) {
-  return CreateStory(nullptr /* story_name */, std::move(extra_info), std::move(story_options));
+  return CreateStory(/*story_name=*/nullptr, std::move(story_options));
 }
 
 namespace {
@@ -165,9 +159,9 @@ class DeleteStoryCall : public Operation<> {
         story_page_.NewRequest());
     story_page_->Clear();
     // Remove the story data in the session page.
-    session_page_->Delete(to_array(StoryNameToStoryDataKey(story_data_.story_info().id)));
+    session_page_->Delete(to_array(StoryNameToStoryDataKey(story_data_.story_info().id())));
     // Remove the story snapshot in the session page.
-    session_page_->Delete(to_array(StoryNameToStorySnapshotKey(story_data_.story_info().id)));
+    session_page_->Delete(to_array(StoryNameToStorySnapshotKey(story_data_.story_info().id())));
   }
 
   fuchsia::ledger::Ledger* const ledger_;      // not owned
@@ -230,10 +224,10 @@ class MutateStoryDataCall : public Operation<> {
 FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_name,
                                                        const int64_t ts) {
   auto mutate = [ts](fuchsia::modular::internal::StoryData* const story_data) {
-    if (story_data->story_info().last_focus_time == ts) {
+    if (story_data->story_info().last_focus_time() == ts) {
       return false;
     }
-    story_data->mutable_story_info()->last_focus_time = ts;
+    story_data->mutable_story_info()->set_last_focus_time(ts);
     return true;
   };
 
@@ -345,18 +339,19 @@ class ReadSnapshotCall : public Operation<fuchsia::mem::BufferPtr> {
     FlowToken flow{this, &snapshot_};
 
     page_snapshot_ = page_client_->NewSnapshot();
-    page_snapshot_->Get(to_array(key_.value_or("")), [this,
-                                         flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
-      if (result.is_response()) {
-        snapshot_ = fidl::MakeOptional(std::move(result.response().buffer));
-        return;
-      }
-      if (result.err() == fuchsia::ledger::Error::KEY_NOT_FOUND) {
-        return;
-      }
-      // TODO(MI4-1425): Handle NEEDS_FETCH status if using lazy priority.
-      FXL_LOG(ERROR) << trace_name() << " PageSnapshot.Get() " << fidl::ToUnderlying(result.err());
-    });
+    page_snapshot_->Get(to_array(key_.value_or("")),
+                        [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
+                          if (result.is_response()) {
+                            snapshot_ = fidl::MakeOptional(std::move(result.response().buffer));
+                            return;
+                          }
+                          if (result.err() == fuchsia::ledger::Error::KEY_NOT_FOUND) {
+                            return;
+                          }
+                          // TODO(MI4-1425): Handle NEEDS_FETCH status if using lazy priority.
+                          FXL_LOG(ERROR) << trace_name() << " PageSnapshot.Get() "
+                                         << fidl::ToUnderlying(result.err());
+                        });
   }
 
   // Input parameters.

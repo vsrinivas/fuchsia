@@ -282,70 +282,6 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
   RunLoopUntil([&] { return done; });
 }
 
-// Verifies that the StoryInfo extra field is set when calling SetStoryInfoExtra
-// prior to creating the story and executing story commands
-TEST_F(PuppetMasterTest, CreateStoryWithStoryInfoExtra) {
-  const auto story_name = "story_info_extra_1";
-  const auto extra_entry_key = "test_key";
-  const auto extra_entry_value = "test_value";
-
-  auto story = ControlStory(story_name);
-
-  std::vector<fuchsia::modular::StoryInfoExtraEntry> extra_info{
-      fuchsia::modular::StoryInfoExtraEntry{
-          .key = extra_entry_key,
-          .value = extra_entry_value,
-      }};
-  const auto extra_info_size = extra_info.size();  // For convenience, to avoid a wordy cast to
-                                                   // size_type in ASSERT_EQ below.
-
-  // Try to SetStoryInfoExtra. It should succeed because the story has not been
-  // created yet.
-  bool done{};
-  story->SetStoryInfoExtra(
-      std::move(extra_info),
-      [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
-        EXPECT_FALSE(result.is_err());
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
-
-  // Enqueue some commands.
-  std::vector<fuchsia::modular::StoryCommand> commands;
-  commands.push_back(MakeRemoveModCommand("one"));
-  story->Enqueue(std::move(commands));
-
-  // The story, and its StoryData, does not exist until the story is created,
-  // which is after the commands are executed.
-  done = false;
-  storage_->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    EXPECT_EQ(nullptr, data);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-
-  // Execute the commands, implicitly creating the story.
-  done = false;
-  story->Execute([&](fuchsia::modular::ExecuteResult result) {
-    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-
-  // StoryData should contain the StoryInfo extra value that was set previously
-  done = false;
-  storage_->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    ASSERT_NE(nullptr, data);
-    ASSERT_TRUE(data->story_info().extra.has_value());
-    auto extra_info = data->story_info().extra.value();
-    ASSERT_EQ(extra_info.size(), extra_info_size);
-    EXPECT_EQ(extra_info.at(0).key, extra_entry_key);
-    EXPECT_EQ(extra_info.at(0).value, extra_entry_value);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-}
-
 // Verifies that calls to SetStoryInfoExtra after the story is created
 // do not modify the original value.
 TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterCreateStory) {
@@ -384,40 +320,15 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterCreateStory) {
           .value = "ignored_value",
       }};
 
-  // Try to SetStoryInfoExtra. It should return an error because the story has
-  // already been created.
+  // Try to SetStoryInfoExtra. It should not return an error even though the story has
+  // already been created, since the method is a no-op.
   done = false;
   story->SetStoryInfoExtra(
       std::move(extra_info),
       [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
-        EXPECT_TRUE(result.is_err());
-        EXPECT_EQ(result.err(), fuchsia::modular::ConfigureStoryError::ERR_STORY_ALREADY_CREATED);
+        EXPECT_FALSE(result.is_err());
         done = true;
       });
-  RunLoopUntil([&] { return done; });
-
-  // Enqueue and execute some commands.
-  std::vector<fuchsia::modular::StoryCommand> commands2;
-  commands2.push_back(MakeRemoveModCommand("two"));
-  story->Enqueue(std::move(commands2));
-
-  done = false;
-  story->Execute([&](fuchsia::modular::ExecuteResult result) {
-    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-
-  // Ensure the commands have been executed on the story created earlier.
-  EXPECT_EQ(story_id, executor_.last_story_id());
-
-  // StoryInfo extra should be null because it was not set prior
-  // to creating the story.
-  done = false;
-  storage_->GetStoryData(story_name)->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    ASSERT_FALSE(data->story_info().extra.has_value());
-    done = true;
-  });
   RunLoopUntil([&] { return done; });
 }
 
@@ -427,7 +338,7 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
 
   // Create the story.
   bool done{};
-  storage_->CreateStory(story_name, /* extra_info= */ {}, /* story_options= */ {})
+  storage_->CreateStory(story_name, /*story_options=*/{})
       ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { done = true; });
   RunLoopUntil([&] { return done; });
 
@@ -439,13 +350,12 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
           .value = "ignored_value",
       }};
 
-  // Try to SetStoryInfoExtra. It should return an error because the story has
-  // already been created.
+  // Try to SetStoryInfoExtra. It should not return an error even though the story has
+  // already been created, since the method is a no-op.
   done = false;
   story->SetStoryInfoExtra(
       extra_info, [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
-        EXPECT_TRUE(result.is_err());
-        EXPECT_EQ(result.err(), fuchsia::modular::ConfigureStoryError::ERR_STORY_ALREADY_CREATED);
+        EXPECT_FALSE(result.is_err());
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -470,8 +380,9 @@ TEST_F(PuppetMasterTest, DeleteStory) {
   std::string story_id;
 
   // Create a story.
-  storage_->CreateStory("foo", {} /* extra_info */, {} /* story_options */)
-      ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { story_id = id.value_or(""); });
+  storage_->CreateStory("foo", /*story_options=*/{})
+      ->Then(
+          [&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { story_id = id.value_or(""); });
 
   // Delete it
   bool done{};
@@ -497,7 +408,7 @@ TEST_F(PuppetMasterTest, GetStories) {
   RunLoopUntil([&] { return done; });
 
   // Create a story.
-  storage_->CreateStory("foo", {} /* extra_info */, {} /* story_options */);
+  storage_->CreateStory("foo", /*story_options=*/{});
 
   // "foo" should be listed.
   done = false;

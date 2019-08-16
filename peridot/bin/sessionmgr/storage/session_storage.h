@@ -57,12 +57,9 @@ class SessionStorage : public PageClient {
   }
 
   // Creates a new story and returns a tuple of (story id, story ledger page
-  // id) on completion. |story_name| and |extra_info| may be null.
+  // id) on completion. |story_name| may be null.
   //
   // If |story_name| is not provided, a UUID will be generated as the name.
-  //
-  // If |extra_info| is set, populates StoryData.story_info.extra with the
-  // entries given.
   //
   // TODO(thatguy): Allowing for null story names is left in for backwards
   // compatibility with existing code. The intention is that all clients
@@ -71,12 +68,10 @@ class SessionStorage : public PageClient {
   // SessionStorage, or if they should be exposed to the story runtime
   // architecture.
   FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
-      fidl::StringPtr story_name, fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
-      fuchsia::modular::StoryOptions story_options);
+      fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options);
 
   // Same as above, but defaults |story_name| to nullptr.
   FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
-      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info,
       fuchsia::modular::StoryOptions story_options);
 
   // Deletes the |story_id| from the list of known stories and completes the

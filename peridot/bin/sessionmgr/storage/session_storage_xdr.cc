@@ -50,48 +50,27 @@ std::string PageIdToBase64(const fuchsia::ledger::PageId& page_id) {
 // Serialization and deserialization of fuchsia::modular::internal::StoryData
 // and fuchsia::modular::StoryInfo to and from JSON. We have different versions
 // for backwards compatibilty.
-//
+
+void XdrStoryInfo2_v0(XdrContext* const xdr, fuchsia::modular::StoryInfo2* const data) {
+  xdr->Field("id", data->mutable_id());
+  xdr->Field("last_focus_time", data->mutable_last_focus_time());
+}
+
 // Version 0: Before FIDL2 conversion. ExtraInfo fields are stored as "key"
 // and "value", page ids are stored as vector.
-void XdrStoryInfoExtraEntry_v0(XdrContext* const xdr,
-                               fuchsia::modular::StoryInfoExtraEntry* const data) {
-  xdr->Field("key", &data->key);
-  xdr->Field("value", &data->value);
-}
-
-void XdrStoryInfo_v0(XdrContext* const xdr, fuchsia::modular::StoryInfo* const data) {
-  xdr->Field("last_focus_time", &data->last_focus_time);
-  xdr->Field("url", &data->url);
-  xdr->Field("id", &data->id);
-  xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry_v0);
-}
-
 void XdrStoryData_v0(XdrContext* const xdr, fuchsia::modular::internal::StoryData* const data) {
   FXL_CHECK(xdr->op() == XdrOp::FROM_JSON) << "A back version is never used for writing.";
   data->set_story_page_id(fuchsia::ledger::PageId());
 
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo_v0);
+  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
   xdr->Field("story_page_id", &data->mutable_story_page_id()->id);
 }
 
 // Version 1: During FIDL2 conversion. ExtraInfo fields are stored as "key"
 // and "value", page ids are stored as base64 string.
-void XdrStoryInfoExtraEntry_v1(XdrContext* const xdr,
-                               fuchsia::modular::StoryInfoExtraEntry* const data) {
-  xdr->Field("key", &data->key);
-  xdr->Field("value", &data->value);
-}
-
-void XdrStoryInfo_v1(XdrContext* const xdr, fuchsia::modular::StoryInfo* const data) {
-  xdr->Field("last_focus_time", &data->last_focus_time);
-  xdr->Field("url", &data->url);
-  xdr->Field("id", &data->id);
-  xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry_v1);
-}
-
 void XdrStoryData_v1(XdrContext* const xdr, fuchsia::modular::internal::StoryData* const data) {
   static constexpr char kStoryPageId[] = "story_page_id";
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo_v1);
+  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
   switch (xdr->op()) {
     case XdrOp::FROM_JSON: {
       std::string page_id;
@@ -116,25 +95,12 @@ void XdrStoryData_v1(XdrContext* const xdr, fuchsia::modular::internal::StoryDat
 
 // Version 2: After FIDL2 conversion was complete. ExtraInfo fields are stored
 // as @k and @v, page ids are stored as array wrapped in a struct.
-void XdrStoryInfoExtraEntry_v2(XdrContext* const xdr,
-                               fuchsia::modular::StoryInfoExtraEntry* const data) {
-  xdr->Field("@k", &data->key);
-  xdr->Field("@v", &data->value);
-}
-
-void XdrStoryInfo_v2(XdrContext* const xdr, fuchsia::modular::StoryInfo* const data) {
-  xdr->Field("last_focus_time", &data->last_focus_time);
-  xdr->Field("url", &data->url);
-  xdr->Field("id", &data->id);
-  xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry_v2);
-}
-
 void XdrPageId_v2(XdrContext* const xdr, fuchsia::ledger::PageId* const data) {
   xdr->Field("id", &data->id);
 }
 
 void XdrStoryData_v2(XdrContext* const xdr, fuchsia::modular::internal::StoryData* const data) {
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo_v2);
+  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
   xdr->Field("story_page_id", data->mutable_story_page_id(), XdrPageId_v2);
 }
 
@@ -146,7 +112,7 @@ void XdrStoryData_v3(XdrContext* const xdr, fuchsia::modular::internal::StoryDat
   }
   // NOTE(mesch): We reuse subsidiary filters of previous versions as long as we
   // can. Only when they change too we create new versions of them.
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo_v2);
+  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
   xdr->Field("story_page_id", data->mutable_story_page_id(), XdrPageId_v2);
 }
 
@@ -157,7 +123,7 @@ void XdrStoryData_v4(XdrContext* const xdr, fuchsia::modular::internal::StoryDat
   }
   // NOTE(mesch): We reuse subsidiary filters of previous versions as long as we
   // can. Only when they change too we create new versions of them.
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo_v2);
+  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
   xdr->Field("story_page_id", data->mutable_story_page_id(), XdrPageId_v2);
 }
 
@@ -168,7 +134,7 @@ void XdrStoryData_v5(XdrContext* const xdr, fuchsia::modular::internal::StoryDat
   }
   // NOTE(mesch): We reuse subsidiary filters of previous versions as long as we
   // can. Only when they change too we create new versions of them.
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo_v2);
+  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
   xdr->Field("story_name", data->mutable_story_name());
   xdr->Field("story_page_id", data->mutable_story_page_id(), XdrPageId_v2);
 }
@@ -184,7 +150,7 @@ void XdrStoryData_v6(XdrContext* const xdr, fuchsia::modular::internal::StoryDat
   }
   // NOTE(mesch): We reuse subsidiary filters of previous versions as long as we
   // can. Only when they change too we create new versions of them.
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo_v2);
+  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
   xdr->Field("story_name", data->mutable_story_name());
   xdr->Field("story_options", data->mutable_story_options(), XdrStoryOptions_v1);
   xdr->Field("story_page_id", data->mutable_story_page_id(), XdrPageId_v2);
