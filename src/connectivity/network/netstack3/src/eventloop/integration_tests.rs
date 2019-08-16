@@ -128,7 +128,10 @@ impl TestStack {
             })
         });
         pin_mut!(rcv);
-        let () = self.event_loop.run_until(rcv.next()).await
+        let () = self
+            .event_loop
+            .run_until(rcv.next())
+            .await
             .expect("Wait for interface signal")
             .unwrap();
 
@@ -472,7 +475,9 @@ async fn configure_stack(
     addr: Option<AddrSubnetEither>,
 ) -> Result<u64, Error> {
     // add interface:
-    let if_id = cli.add_ethernet_interface("fake_topo_path", endpoint).await
+    let if_id = cli
+        .add_ethernet_interface("fake_topo_path", endpoint)
+        .await
         .squash_result()
         .context("Add ethernet interface")?;
 
@@ -482,7 +487,9 @@ async fn configure_stack(
     };
 
     // add address:
-    let () = cli.add_interface_address(if_id, &mut addr.into_fidl()).await
+    let () = cli
+        .add_interface_address(if_id, &mut addr.into_fidl())
+        .await
         .squash_result()
         .context("Add interface address")?;
 
@@ -491,10 +498,12 @@ async fn configure_stack(
         .expect("Invalid test subnet configuration")
         .into_addr_subnet();
 
-    let () = cli.add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
-        subnet: addr.into_addr_subnet().1.into_fidl(),
-        destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(if_id),
-    }).await
+    let () = cli
+        .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+            subnet: addr.into_addr_subnet().1.into_fidl(),
+            destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(if_id),
+        })
+        .await
         .squash_result()
         .context("Add forwarding entry")?;
 
@@ -582,7 +591,9 @@ async fn test_add_remove_interface() {
     let ep = t.get_endpoint("test-ep1").await.unwrap();
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
-    let if_id = test_stack.run_future(stack.add_ethernet_interface("fake_topo_path", ep)).await
+    let if_id = test_stack
+        .run_future(stack.add_ethernet_interface("fake_topo_path", ep))
+        .await
         .squash_result()
         .expect("Add interface succeeds");
     // check that the created ID matches the one saved in the event loop state:
@@ -591,14 +602,18 @@ async fn test_add_remove_interface() {
     assert_eq!(dev_info.path(), "fake_topo_path");
 
     // remove the interface:
-    let () = test_stack.run_future(stack.del_ethernet_interface(if_id)).await
+    let () = test_stack
+        .run_future(stack.del_ethernet_interface(if_id))
+        .await
         .squash_result()
         .expect("Remove interface");
     // ensure the interface disappeared from records:
     assert!(test_stack.event_loop.ctx.dispatcher().get_device_info(if_id).is_none());
 
     // if we try to remove it again, NotFound should be returned:
-    let res = test_stack.run_future(stack.del_ethernet_interface(if_id)).await
+    let res = test_stack
+        .run_future(stack.del_ethernet_interface(if_id))
+        .await
         .unwrap()
         .into_result()
         .expect_err("Failed to remove twice");
@@ -635,10 +650,16 @@ async fn test_list_interfaces() {
             .unwrap();
 
         let ep = t.get_endpoint(&ep_name).await.unwrap();
-        let if_id = t.get(0).run_future(stack.add_ethernet_interface("fake_topo_path", ep)).await
+        let if_id = t
+            .get(0)
+            .run_future(stack.add_ethernet_interface("fake_topo_path", ep))
+            .await
             .squash_result()
             .expect("Add interface succeeds");
-        let () = t.get(0).run_future(stack.add_interface_address(if_id, &mut if_ip)).await
+        let () = t
+            .get(0)
+            .run_future(stack.add_interface_address(if_id, &mut if_ip))
+            .await
             .squash_result()
             .expect("Add interface address succeeds");
         if_props.insert(if_id, (ep_info, vec![if_ip]));
@@ -718,18 +739,24 @@ async fn test_disable_enable_interface() {
     let if_id = test_stack.get_endpoint_id(1);
 
     // Get the interface info to confirm that it is enabled.
-    let if_info = test_stack.run_future(stack.get_interface_info(if_id)).await
+    let if_info = test_stack
+        .run_future(stack.get_interface_info(if_id))
+        .await
         .unwrap()
         .0
         .expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Disable the interface and test again.
-    let () = test_stack.run_future(stack.disable_interface(if_id)).await
+    let () = test_stack
+        .run_future(stack.disable_interface(if_id))
+        .await
         .squash_result()
         .expect("Disable interface succeeds");
 
-    let if_info = test_stack.run_future(stack.get_interface_info(if_id)).await
+    let if_info = test_stack
+        .run_future(stack.get_interface_info(if_id))
+        .await
         .unwrap()
         .0
         .expect("Get interface info");
@@ -738,23 +765,39 @@ async fn test_disable_enable_interface() {
     // is removed here and replaced after re-enabling.
 
     // Enable the interface and test again.
-    let () = test_stack.run_future(stack.enable_interface(if_id)).await
+    let () = test_stack
+        .run_future(stack.enable_interface(if_id))
+        .await
         .squash_result()
         .expect("Enable interface succeeds");
 
-    let if_info = test_stack.run_future(stack.get_interface_info(if_id)).await
+    // Ensure that the device is initialized after it was enabled. Adding a subnet checks
+    // that the device is initialized.
+    let mut if_ip = AddrSubnetEither::new(Ipv4Addr::from([192, 168, 0, 1]).into(), 24)
+        .unwrap()
+        .try_into_fidl()
+        .unwrap();
+    let () = test_stack
+        .run_future(stack.add_interface_address(if_id, &mut if_ip))
+        .await
+        .squash_result()
+        .expect("Add interface address succeeds");
+
+    let if_info = test_stack
+        .run_future(stack.get_interface_info(if_id))
+        .await
         .unwrap()
         .0
         .expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
-    // Check that we get the correct error for a non-existing interface id.
+    // Check that we get the correct error for enabling a non-existing interface id.
     assert_eq!(
         test_stack.run_future(stack.enable_interface(12345)).await.unwrap().unwrap().type_,
         fidl_net_stack::ErrorType::NotFound
     );
 
-    // Check that we get the correct error for a non-existing interface id.
+    // Check that we get the correct error for disabling a non-existing interface id.
     assert_eq!(
         test_stack.run_future(stack.disable_interface(12345)).await.unwrap().unwrap().type_,
         fidl_net_stack::ErrorType::NotFound
@@ -790,10 +833,14 @@ async fn test_add_device_routes() {
         destination: fidl_net_stack::ForwardingDestination::DeviceId(if_id),
     };
 
-    let () = test_stack.run_future(stack.add_forwarding_entry(&mut fwd_entry1)).await
+    let () = test_stack
+        .run_future(stack.add_forwarding_entry(&mut fwd_entry1))
+        .await
         .squash_result()
         .expect("Add forwarding entry succeeds");
-    let () = test_stack.run_future(stack.add_forwarding_entry(&mut fwd_entry2)).await
+    let () = test_stack
+        .run_future(stack.add_forwarding_entry(&mut fwd_entry2))
+        .await
         .squash_result()
         .expect("Add forwarding entry succeeds");
 
@@ -807,7 +854,9 @@ async fn test_add_device_routes() {
         destination: fidl_net_stack::ForwardingDestination::DeviceId(if_id),
     };
     assert_eq!(
-        test_stack.run_future(stack.add_forwarding_entry(&mut bad_entry)).await
+        test_stack
+            .run_future(stack.add_forwarding_entry(&mut bad_entry))
+            .await
             .unwrap()
             .unwrap()
             .type_,
@@ -822,7 +871,9 @@ async fn test_add_device_routes() {
         destination: fidl_net_stack::ForwardingDestination::DeviceId(if_id),
     };
     assert_eq!(
-        test_stack.run_future(stack.add_forwarding_entry(&mut bad_entry)).await
+        test_stack
+            .run_future(stack.add_forwarding_entry(&mut bad_entry))
+            .await
             .unwrap()
             .unwrap()
             .type_,
@@ -837,7 +888,9 @@ async fn test_add_device_routes() {
         destination: fidl_net_stack::ForwardingDestination::DeviceId(10),
     };
     assert_eq!(
-        test_stack.run_future(stack.add_forwarding_entry(&mut bad_entry)).await
+        test_stack
+            .run_future(stack.add_forwarding_entry(&mut bad_entry))
+            .await
             .unwrap()
             .unwrap()
             .type_,
@@ -877,7 +930,9 @@ async fn test_list_del_routes() {
     netstack3_core::add_route(&mut test_stack.event_loop.ctx, route1).unwrap();
     netstack3_core::add_route(&mut test_stack.event_loop.ctx, route2).unwrap();
 
-    let routes = test_stack.run_future(stack.get_forwarding_table()).await
+    let routes = test_stack
+        .run_future(stack.get_forwarding_table())
+        .await
         .expect("Can get forwarding table");
     assert_eq!(routes.len(), 2);
     let routes: Vec<_> = routes
@@ -891,16 +946,15 @@ async fn test_list_del_routes() {
 
     // delete route1:
     let mut fidl = route1.into_subnet_dest().0.into_fidl();
-    let () = test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await
+    let () = test_stack
+        .run_future(stack.del_forwarding_entry(&mut fidl))
+        .await
         .squash_result()
         .expect("can delete device forwarding entry");
     // can't delete again:
     let mut fidl = route1.into_subnet_dest().0.into_fidl();
     assert_eq!(
-        test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await
-            .unwrap()
-            .unwrap()
-            .type_,
+        test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await.unwrap().unwrap().type_,
         fidl_net_stack::ErrorType::NotFound
     );
 
@@ -912,16 +966,15 @@ async fn test_list_del_routes() {
 
     // delete route2:
     let mut fidl = route2.into_subnet_dest().0.into_fidl();
-    let () = test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await
+    let () = test_stack
+        .run_future(stack.del_forwarding_entry(&mut fidl))
+        .await
         .squash_result()
         .expect("can delete next-hop forwarding entry");
     // can't delete again:
     let mut fidl = route2.into_subnet_dest().0.into_fidl();
     assert_eq!(
-        test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await
-            .unwrap()
-            .unwrap()
-            .type_,
+        test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await.unwrap().unwrap().type_,
         fidl_net_stack::ErrorType::NotFound
     );
 
@@ -948,7 +1001,9 @@ async fn test_add_remote_routes() {
         )),
     };
 
-    let () = test_stack.run_future(stack.add_forwarding_entry(&mut fwd_entry)).await
+    let () = test_stack
+        .run_future(stack.add_forwarding_entry(&mut fwd_entry))
+        .await
         .squash_result()
         .expect("Add forwarding entry succeeds");
 
@@ -964,7 +1019,9 @@ async fn test_add_remote_routes() {
         )),
     };
     assert_eq!(
-        test_stack.run_future(stack.add_forwarding_entry(&mut bad_entry)).await
+        test_stack
+            .run_future(stack.add_forwarding_entry(&mut bad_entry))
+            .await
             .unwrap()
             .unwrap()
             .type_,
@@ -977,11 +1034,9 @@ async fn test_get_socket() {
     let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
     let test_stack = t.get(0);
     let socket_provider = test_stack.connect_socket_provider().unwrap();
-    let socket_response = test_stack.run_future(socket_provider.socket(
-        libc::AF_INET as i16,
-        libc::SOCK_DGRAM as i16,
-        0,
-    )).await
+    let socket_response = test_stack
+        .run_future(socket_provider.socket(libc::AF_INET as i16, libc::SOCK_DGRAM as i16, 0))
+        .await
         .expect("Socket call succeeds");
     assert_eq!(socket_response.0, 0);
 }
@@ -991,16 +1046,16 @@ async fn test_socket_describe() {
     let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
     let test_stack = t.get(0);
     let socket_provider = test_stack.connect_socket_provider().unwrap();
-    let socket_response = test_stack.run_future(socket_provider.socket(
-        libc::AF_INET as i16,
-        libc::SOCK_DGRAM as i16,
-        0,
-    )).await
+    let socket_response = test_stack
+        .run_future(socket_provider.socket(libc::AF_INET as i16, libc::SOCK_DGRAM as i16, 0))
+        .await
         .expect("Socket call succeeds");
     assert_eq!(socket_response.0, 0);
-    let info = test_stack.run_future(
-        socket_response.1.expect("Socket returns a channel").into_proxy().unwrap().describe(),
-    ).await
+    let info = test_stack
+        .run_future(
+            socket_response.1.expect("Socket returns a channel").into_proxy().unwrap().describe(),
+        )
+        .await
         .expect("Describe call succeeds");
     match info {
         fidl_io::NodeInfo::Socket(_) => (),

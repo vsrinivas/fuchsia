@@ -178,12 +178,9 @@ impl EthernetSetupWorker {
         fasync::spawn_local(
             async move {
                 let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
-                let eth_client = eth::Client::new(
-                    self.dev,
-                    vmo,
-                    eth::DEFAULT_BUFFER_SIZE,
-                    "recovery-ns",
-                ).await?;
+                let eth_client =
+                    eth::Client::new(self.dev, vmo, eth::DEFAULT_BUFFER_SIZE, "recovery-ns")
+                        .await?;
                 let info = eth_client.info().await?;
                 eth_client.start().await?;
                 let eth_device_event = Event::EthSetupEvent(EthernetDeviceReady {
@@ -458,7 +455,8 @@ impl EventLoop {
             }
             StackRequest::EnableInterface { id, responder } => {
                 responder.send(
-                    self.fidl_enable_interface(id).await
+                    self.fidl_enable_interface(id)
+                        .await
                         .err()
                         .as_mut()
                         .map(fidl::encoding::OutOfLine),
@@ -595,8 +593,7 @@ impl EventLoop {
             self.ctx.dispatcher().get_device_info(id).ok_or(stack_fidl_error!(NotFound))?;
         // TODO(wesleyac): Cache info and status
         let info = device.client().info().await.map_err(|_| stack_fidl_error!(Internal))?;
-        let status =
-            device.client().get_status().await.map_err(|_| stack_fidl_error!(Internal))?;
+        let status = device.client().get_status().await.map_err(|_| stack_fidl_error!(Internal))?;
         let is_active = device.is_active();
         let mut addresses = vec![];
         if let Some(core_id) = device.core_id() {
@@ -641,7 +638,11 @@ impl EventLoop {
         let generate_core_id =
             |dev_info: &DeviceInfo| state.add_ethernet_device(Mac::new(info.mac.octets), info.mtu);
         match disp.devices.activate_device(id, generate_core_id) {
-            Ok(_) => Ok(()),
+            Ok(device) => {
+                let core_id = device.core_id().ok_or(stack_fidl_error!(Internal))?;
+                initialize_device(&mut self.ctx, core_id);
+                Ok(())
+            }
             Err(toggle_error) => {
                 match toggle_error {
                     ToggleError::NoChange => Ok(()),

@@ -130,7 +130,7 @@ where
     /// - `id` exists.
     /// - `id` is not already attached to a `core_id`.
     ///
-    /// On success, returns a ref the updated [`DeviceInfo`] containing the
+    /// On success, returns a ref to the updated [`DeviceInfo`] containing the
     /// provided `core_id`.
     ///
     /// # Panics
