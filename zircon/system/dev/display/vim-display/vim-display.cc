@@ -1039,19 +1039,18 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
   display->color_depth = _gcolor_depth;
   init_hdmi_hardware(display);
 
-  device_add_args_t add_args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "vim2-display",
-      .ctx = display,
-      .ops = &main_device_proto,
-      .props = nullptr,
-      .prop_count = 0,
-      .proto_id = ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL,
-      .proto_ops = &display_controller_ops,
-      .proxy_args = nullptr,
-      .flags = 0,
-      .client_remote = ZX_HANDLE_INVALID,
-  };
+  device_add_args_t add_args = {};
+  add_args.version = DEVICE_ADD_ARGS_VERSION;
+  add_args.name = "vim2-display";
+  add_args.ctx = display;
+  add_args.ops = &main_device_proto;
+  add_args.props = nullptr;
+  add_args.prop_count = 0;
+  add_args.proto_id = ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL;
+  add_args.proto_ops = &display_controller_ops;
+  add_args.proxy_args = nullptr;
+  add_args.flags = 0;
+  add_args.client_remote = ZX_HANDLE_INVALID;
 
   status = device_add(display->parent, &add_args, &display->mydevice);
   if (status != ZX_OK) {

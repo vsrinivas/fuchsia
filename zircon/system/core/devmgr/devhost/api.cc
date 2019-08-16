@@ -78,6 +78,20 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       dev->flags |= DEV_FLAG_ALLOW_MULTI_COMPOSITE;
     }
 
+    if (!args->power_states) {
+      //TODO(fxb/34081): Remove when all drivers declare power states
+      //Temporarily allocate working and non-working power states
+      device_power_state_info_t power_states[2];
+      power_states[0].state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0;
+      power_states[1].state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3COLD;
+      r = dev->SetPowerStates(power_states, 2);
+    } else {
+      r = dev->SetPowerStates(args->power_states, args->power_state_count);
+    }
+    if (r != ZX_OK) {
+      return r;
+    }
+
     // out must be set before calling devhost_device_add().
     // devhost_device_add() may result in child devices being created before it returns,
     // and those children may call ops on the device before device_add() returns.

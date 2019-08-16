@@ -16,6 +16,7 @@ library("ddk") {
     "ddk/binding.h",
     "ddk/debug.h",
     "ddk/device.h",
+    "ddk/device-power-states.h",
     "ddk/driver.h",
     "ddk/io-buffer.h",
     "ddk/metadata.h",
@@ -46,6 +47,8 @@ library("ddk") {
 
     # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c.headers",
+
+    "$zx/system/fidl/fuchsia-device:c.headers",
 
     # TODO(BLD-353): Exporting this dependency causes problems in the legacy
     # build.  Instead, users of the ddk library that actually use this header

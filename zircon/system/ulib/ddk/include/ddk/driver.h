@@ -10,6 +10,8 @@
 #include <zircon/compiler.h>
 #include <stdint.h>
 
+#include <ddk/device-power-states.h>
+
 __BEGIN_CDECLS
 
 typedef struct zx_device zx_device_t;
@@ -75,6 +77,17 @@ enum {
 };
 
 // Device Manager API
+
+typedef struct device_power_state_info {
+  fuchsia_device_DevicePowerState state_id;
+  // Restore time for coming out of this state to working D0 state.
+  zx_duration_t restore_latency;
+  // Is this device wakeup_capable?
+  bool wakeup_capable;
+  // Deepest system system sleep state that the device can wake the system from.
+  int32_t system_wake_state;
+} device_power_state_info_t;
+
 typedef struct device_add_args {
   // DEVICE_ADD_ARGS_VERSION
   uint64_t version;
@@ -97,12 +110,18 @@ typedef struct device_add_args {
   // Number of device properties
   uint32_t prop_count;
 
+  // List of power_states that the device supports.
+  // List cannot be more than MAX_DEVICE_POWER_STATES size.
+  const device_power_state_info_t* power_states;
+
+  // Number of power states in the list
+  uint8_t power_state_count;
+
   // Optional custom protocol for this device
   uint32_t proto_id;
 
   // Optional custom protocol operations for this device
   void* proto_ops;
-
   // Arguments used with DEVICE_ADD_MUST_ISOLATE
   // these will be passed to the create() driver op of
   // the proxy device in the new devhost

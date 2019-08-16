@@ -66,6 +66,6 @@ static zx_driver_ops_t test_compatibility_hook_child_driver_ops = []() -> zx_dri
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(TestCompatibilityHookChild, test_compatibility_hook_child_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_CHILD),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_COMPAT_CHILD),
 ZIRCON_DRIVER_END(TestCompatibilityHookChild)
     // clang-format on

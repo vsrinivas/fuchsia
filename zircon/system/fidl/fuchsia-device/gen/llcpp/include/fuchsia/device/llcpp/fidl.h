@@ -24,6 +24,16 @@ class Controller;
 struct NameProvider_GetDeviceName_Response;
 struct NameProvider_GetDeviceName_Result;
 class NameProvider;
+enum class DevicePowerState : uint8_t {
+  DEVICE_POWER_STATE_D0 = 0u,
+  DEVICE_POWER_STATE_D1 = 1u,
+  DEVICE_POWER_STATE_D2 = 2u,
+  DEVICE_POWER_STATE_D3HOT = 3u,
+  DEVICE_POWER_STATE_D3COLD = 4u,
+};
+
+
+struct DevicePowerStateInfo;
 
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
@@ -740,16 +750,16 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::DebugResume DebugResume(::fidl::BytePart _response_buffer);
 
-    // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
-    // The |hook_wait_time| is the time that the driver expects to take for each device hook in
-    // nanoseconds.
+    // Runs compatibility tests for the driver that binds to this device.
+    // The |hook_wait_time| is the time that the driver expects to take for
+    // each device hook in nanoseconds.
     // Returns whether the driver passed the compatibility check.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RunCompatibilityTests RunCompatibilityTests(int64_t hook_wait_time);
 
-    // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
-    // The |hook_wait_time| is the time that the driver expects to take for each device hook in
-    // nanoseconds.
+    // Runs compatibility tests for the driver that binds to this device.
+    // The |hook_wait_time| is the time that the driver expects to take for
+    // each device hook in nanoseconds.
     // Returns whether the driver passed the compatibility check.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::RunCompatibilityTests RunCompatibilityTests(::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer);
@@ -849,16 +859,16 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::DebugResume DebugResume(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
-    // The |hook_wait_time| is the time that the driver expects to take for each device hook in
-    // nanoseconds.
+    // Runs compatibility tests for the driver that binds to this device.
+    // The |hook_wait_time| is the time that the driver expects to take for
+    // each device hook in nanoseconds.
     // Returns whether the driver passed the compatibility check.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RunCompatibilityTests RunCompatibilityTests(zx::unowned_channel _client_end, int64_t hook_wait_time);
 
-    // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
-    // The |hook_wait_time| is the time that the driver expects to take for each device hook in
-    // nanoseconds.
+    // Runs compatibility tests for the driver that binds to this device.
+    // The |hook_wait_time| is the time that the driver expects to take for
+    // each device hook in nanoseconds.
     // Returns whether the driver passed the compatibility check.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::RunCompatibilityTests RunCompatibilityTests(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer);
@@ -904,9 +914,9 @@ class Controller final {
     // Debug command: execute the device's resume hook
     static ::fidl::DecodeResult<DebugResumeResponse> DebugResume(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
-    // The |hook_wait_time| is the time that the driver expects to take for each device hook in
-    // nanoseconds.
+    // Runs compatibility tests for the driver that binds to this device.
+    // The |hook_wait_time| is the time that the driver expects to take for
+    // each device hook in nanoseconds.
     // Returns whether the driver passed the compatibility check.
     static ::fidl::DecodeResult<RunCompatibilityTestsResponse> RunCompatibilityTests(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RunCompatibilityTestsRequest> params, ::fidl::BytePart response_buffer);
 
@@ -1359,17 +1369,47 @@ class NameProvider final {
 
 };
 
+constexpr uint32_t MIN_DEVICE_POWER_STATES = 2u;
+
 // Maximum length for a driver path
 constexpr uint64_t MAX_DRIVER_PATH_LEN = 1024u;
 
 // Maxmium length for a driver name
 constexpr uint64_t MAX_DRIVER_NAME_LEN = 32u;
 
+// Maximum device power states. In future this should account
+// for performant states.
+constexpr uint32_t MAX_DEVICE_POWER_STATES = 5u;
+
 // Maximum length of a device path
 constexpr uint64_t MAX_DEVICE_PATH_LEN = 1024u;
 
 // Maxmium length for a device name
 constexpr uint64_t MAX_DEVICE_NAME_LEN = 32u;
+
+extern "C" const fidl_type_t fuchsia_device_DevicePowerStateInfoTable;
+
+struct DevicePowerStateInfo {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_DevicePowerStateInfoTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  DevicePowerState state_id = {};
+
+  // Is this state supported?
+  bool is_supported = {};
+
+  // Restore time for coming out of this state to working D0 state.
+  int64_t restore_latency = {};
+
+  // Is this device wakeup_capable?
+  bool wakeup_capable = {};
+
+  // Deepest system system sleep state that the device can wake the system from.
+  int32_t system_wake_state = {};
+};
 
 // Signal that will be active on a device event handle if the device's write() method
 // will accept data.
@@ -1534,5 +1574,15 @@ struct IsFidlMessage<::llcpp::fuchsia::device::NameProvider::GetDeviceNameRespon
 static_assert(sizeof(::llcpp::fuchsia::device::NameProvider::GetDeviceNameResponse)
     == ::llcpp::fuchsia::device::NameProvider::GetDeviceNameResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::NameProvider::GetDeviceNameResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::DevicePowerStateInfo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::DevicePowerStateInfo>);
+static_assert(offsetof(::llcpp::fuchsia::device::DevicePowerStateInfo, state_id) == 0);
+static_assert(offsetof(::llcpp::fuchsia::device::DevicePowerStateInfo, is_supported) == 1);
+static_assert(offsetof(::llcpp::fuchsia::device::DevicePowerStateInfo, restore_latency) == 8);
+static_assert(offsetof(::llcpp::fuchsia::device::DevicePowerStateInfo, wakeup_capable) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::DevicePowerStateInfo, system_wake_state) == 20);
+static_assert(sizeof(::llcpp::fuchsia::device::DevicePowerStateInfo) == ::llcpp::fuchsia::device::DevicePowerStateInfo::PrimarySize);
 
 }  // namespace fidl

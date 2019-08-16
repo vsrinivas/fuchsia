@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.device.power.test;
+
+using zx;
+using fuchsia.device;
+
+protocol TestDevice {
+    /// Add Test Device with some powerargs
+    AddDeviceWithPowerArgs(vector<fuchsia.device.DevicePowerStateInfo> info) -> () error zx.status;
+};

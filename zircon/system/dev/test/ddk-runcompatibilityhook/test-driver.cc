@@ -17,7 +17,7 @@
 class TestCompatibilityHookDriver;
 using DeviceType = ddk::Device<TestCompatibilityHookDriver, ddk::Unbindable>;
 class TestCompatibilityHookDriver : public DeviceType,
-                                    public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_CHILD> {
+                                    public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_COMPAT_CHILD> {
  public:
   TestCompatibilityHookDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();

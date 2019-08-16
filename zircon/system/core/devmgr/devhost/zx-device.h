@@ -6,6 +6,8 @@
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_ZX_DEVICE_H_
 
 #include <ddk/device.h>
+#include <ddk/device-power-states.h>
+#include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
@@ -153,6 +155,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   void set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite);
   fbl::RefPtr<devmgr::CompositeDevice> take_composite();
 
+  zx_status_t SetPowerStates(const device_power_state_info_t* power_states,
+                             uint8_t count);
  private:
   zx_device() = default;
 
@@ -191,6 +195,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   fbl::Mutex test_compatibility_conn_lock_;
   fbl::Vector<fs::FidlConnection> test_compatibility_conn_
       TA_GUARDED(test_compatibility_conn_lock_);
+
+  fuchsia_device_DevicePowerStateInfo power_states_[fuchsia_device_MAX_DEVICE_POWER_STATES];
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

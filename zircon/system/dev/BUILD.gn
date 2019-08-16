@@ -44,6 +44,8 @@ group("dev") {
     "$zx/system/utest/platform-bus:test",
     "test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test",
     "test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child",
+    "test/ddk-power:ddk-power-test",
+    "test/ddk-power:ddk-power-test-child",
     "test/fidl-llcpp-driver",
     "test/isolateddevmgr:isolateddevmgr-test",
     "test/mock-device",
