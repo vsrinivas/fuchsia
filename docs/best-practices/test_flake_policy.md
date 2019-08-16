@@ -12,7 +12,7 @@ Flaky tests are bad because they:
 
 -   Risk letting real bugs slip past our commit queue (CQ) infrastructure.
 -   Devalue otherwise useful tests.
--   Increase the failure rate of CQ, increasing latency for modifying code.
+-   Increase the failure rate of CQ, thereby increasing latency for modifying code.
 
 This document is specific to *test flakes*, not infrastructure flakes.
 
@@ -30,40 +30,37 @@ This document is specific to *test flakes*, not infrastructure flakes.
 
 ## Policy
 
-The process for identifying and fixing flake is intentionally decoupled from
-between two parties:
+The following provides the expected & recommended lifetime of a flake:
 
-**Observer**: An individual who has witnessed flake on bots.
+0.  A test flakes in CI or CQ.
+1.  Identify: The test is *automatically* identified as a flake.
+2.  Track: An issue is *automatically* filed for the identified flake under the Flake component.
+3.  Remove: The test is removed from CQ immediately.
+4.  Fix: The offending test is fixed offline and re-enabled.
 
-**Resolver**: An individual who has the ability to remove flake from the bots.
+#### Identify
 
-This separation satisfies requirement (3): if someone contributes to Fuchsia, it
-is their responsibility to act as an observer for the entire codebase, and their
-responsibility to act as a resolver for code they touch.
+A flake fetching tool is currently in use to identify the vast majority of flakes.
 
-We recommend the following four-step process for dealing with flakes:
+The tool looks for test failures in CQ where the same test succeeded when retried on the same
+patch set.
 
-1.  Observer: Identify the flake.
-2.  Observer: File a bug under the FLK project.
-3.  Resolver: Remove the offending test from CQ immediately.
-4.  Resolver: Fix the offending test offline, re-enable the test.
+(Googlers-Only) To see the source code for this tool, visit
+[http://go/fuchsia-flake-tool](http://go/fuchsia-flake-tool).
 
-#### Observer: Identify
+#### Track
 
-Flake can appear in many locations: CQ dry-runs, an actual CQ run, or in the
-roller into global integration. In any of these cases, flake can be identified
-as a test that sometimes passes and sometimes fails, with the same revision of
-the codebase. When a test is identified this way, a log should be captured,
-providing context and revealing which subtest failed.
+(Googlers-Only) After flakes are identified, tooling should automatically file an issue for the
+flake under the Flake component with label FlakeFetcher. These issues are currently being
+manually triaged and assigned. If you experience a test flake, please update existing issues
+rather than opening new ones.
 
-#### Observer: Bug
+To see a list of the currently outstanding flakes, visit
+[http://go/flakes-fuchsia](http://go/flakes-fuchsia).
 
-(Googlers-Only) File a bug under go/test-flake: Link to the failing bot, and
-include the name of the failing test.
+#### Remove
 
-#### Resolver: Remove from CQ
-
-A resolver should prioritize, above all else, removing the test from the commit
+One should prioritize, above all else, removing the test from the commit
 queue. This can be achieved in the following ways:
 
 -   If the flake has been prompted by a recent patch: Submitting a revert of a
@@ -76,36 +73,34 @@ queue. This can be achieved in the following ways:
     comment in the BUILD.gn file.
     [Example change](https://fuchsia-review.googlesource.com/c/topaz/+/296629/3/bin/flutter_screencap_test/BUILD.gn).
 
-The above mechanisms are recommended because they remove the faulty test, and
-prevent the commit queue becoming unreliable. The first option (reverting code)
+
+The above mechanisms are recommended because they remove the flaky test and
+prevent the commit queue from becoming unreliable. The first option (reverting code)
 is preferred, but it is not as easy as the second option (disabling test), which
 reduces test coverage. Importantly, neither of these options prevent diagnosis
 and fixing of the flake, but they allow it to be processed offline.
 
 It is **not** recommended to attempt to fix the test without first
-removing it from CQ. This causes the CQ to be unreliable for all other
+removing it from CQ. This causes CQ to be unreliable for all other
 contributors, which allows additional flakes to compound in the codebase.
 
-#### Resolver: Fix Offline
+#### Fix
 
-At this point, the resolver can take the bug filed by the observer, locally
-re-enable the test, and work on reproducing the failure. This will enable them
-to find the root cause, and fix the issue. Once the issue has been fixed, the
-bug can be closed, and the test can be re-enabled. If any reverted patches need
-to re-land, they can re-land safely.
+At this point, one can take the filed issue, locally re-enable the test, and work on
+reproducing the failure. This will enable them to find the root cause, and fix the
+issue. Once the issue has been fixed, the bug can be closed, and the test can be
+re-enabled. If any reverted patches need to re-land, they can re-land safely.
 
 ## Improvements and Tooling
 
-Ongoing efforts to improve tooling surrounding flake are currently in progress.
+Ongoing efforts to improve tooling surrounding flakes are actively underway.
 
 These include:
 
--   Automatically filing flake bugs, removing the "Observer" role from the path
-    to identify flakes. Tracked by IN-1118.
--   Automatically assigning flake bugs, based information present in OWNERs
-    files. Tracked by IN-1670.
+-   Automatically assigning issues for resolving flakes, based on information present in OWNERs
+    files. Tracked by 10435.
 -   "Deflaking" infrastructure, to re-run tests in high volume before they are
-    committed. Tracked by IN-1231.
+    committed. Tracked by 10011.
 
-When these improvements are available, this document will update to include the
-adjusted policy.
+As improvements are made, this document will be updated with the latest policy.
+
