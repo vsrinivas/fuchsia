@@ -107,6 +107,7 @@ def main():
         )
     env["RUSTC"] = rustc
     env["RUSTDOC"] = rustdoc
+    env["RUSTDOCFLAGS"] = "-Z unstable-options --enable-index-page"
     env["RUST_BACKTRACE"] = "1"
     env["CC"] = clang_c_compiler
     if "fuchsia" in args.target:
