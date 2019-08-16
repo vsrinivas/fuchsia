@@ -5,17 +5,18 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_VIDEO_RENDERER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_VIDEO_RENDERER_H_
 
-#include <fbl/array.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <queue>
 #include <unordered_map>
+
+#include <fbl/array.h>
 
 #include "src/media/playback/mediaplayer/metrics/packet_timing_tracker.h"
 #include "src/media/playback/mediaplayer/render/video_renderer.h"
@@ -25,9 +26,9 @@ namespace media_player {
 // VideoRenderer that renders video via FIDL services.
 class FidlVideoRenderer : public VideoRenderer {
  public:
-  static std::shared_ptr<FidlVideoRenderer> Create(component::StartupContext* startup_context);
+  static std::shared_ptr<FidlVideoRenderer> Create(sys::ComponentContext* component_context);
 
-  FidlVideoRenderer(component::StartupContext* startup_context);
+  FidlVideoRenderer(sys::ComponentContext* component_context);
 
   ~FidlVideoRenderer() override;
 
@@ -106,9 +107,9 @@ class FidlVideoRenderer : public VideoRenderer {
     async::WaitMethod<Image, &Image::WaitHandler> wait_;
   };
 
-  class View : public scenic::BaseView {
+  class View : public scenic::BaseViewTransitional {
    public:
-    View(scenic::ViewContext context, std::shared_ptr<FidlVideoRenderer> renderer);
+    View(scenic::ViewContextTransitional context, std::shared_ptr<FidlVideoRenderer> renderer);
 
     ~View() override;
 
@@ -187,7 +188,7 @@ class FidlVideoRenderer : public VideoRenderer {
 
   bool have_valid_image_info() { return image_info_.width != 0 && image_info_.height != 0; }
 
-  component::StartupContext* startup_context_;
+  sys::ComponentContext* component_context_;
   fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic_;
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;

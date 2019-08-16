@@ -4,22 +4,21 @@
 
 #include "in_stream.h"
 
+#include <fbl/auto_lock.h>
+
+#include "garnet/examples/media/use_media_decoder/util.h"
 #include "util.h"
 
-#include <fbl/auto_lock.h>
-#include "garnet/examples/media/use_media_decoder/util.h"
-
-InStream::InStream(async::Loop* fidl_loop,
-                   thrd_t fidl_thread,
-                   component::StartupContext* startup_context)
-  : fidl_loop_(fidl_loop),
-    fidl_dispatcher_(fidl_loop_->dispatcher()),
-    fidl_thread_(fidl_thread),
-    startup_context_(startup_context) {
+InStream::InStream(async::Loop* fidl_loop, thrd_t fidl_thread,
+                   sys::ComponentContext* component_context)
+    : fidl_loop_(fidl_loop),
+      fidl_dispatcher_(fidl_loop_->dispatcher()),
+      fidl_thread_(fidl_thread),
+      component_context_(component_context) {
   ZX_DEBUG_ASSERT(fidl_loop_);
   // Not necessarily portable, but should be valid on Zircon:
   ZX_DEBUG_ASSERT(fidl_thread_ != thrd_t{});
-  ZX_DEBUG_ASSERT(startup_context_);
+  ZX_DEBUG_ASSERT(component_context_);
 
   // For now, we don't allow construction on the fidl_thread.
   ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
@@ -48,14 +47,12 @@ uint64_t InStream::eos_position() {
   return eos_position_;
 }
 
-zx_status_t InStream::ReadBytesShort(uint32_t max_bytes_to_read,
-                                     uint32_t* bytes_read_out,
-                                     uint8_t* buffer_out,
-                                     zx::time just_fail_deadline) {
+zx_status_t InStream::ReadBytesShort(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
+                                     uint8_t* buffer_out, zx::time just_fail_deadline) {
   ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
   ZX_DEBUG_ASSERT(!failure_seen_);
-  zx_status_t status = ReadBytesInternal(
-      max_bytes_to_read, bytes_read_out, buffer_out, just_fail_deadline);
+  zx_status_t status =
+      ReadBytesInternal(max_bytes_to_read, bytes_read_out, buffer_out, just_fail_deadline);
   if (status != ZX_OK) {
     failure_seen_ = true;
     return status;
@@ -74,18 +71,16 @@ zx_status_t InStream::ReadBytesShort(uint32_t max_bytes_to_read,
   return ZX_OK;
 }
 
-zx_status_t InStream::ReadBytesComplete(uint32_t max_bytes_to_read,
-                                        uint32_t* bytes_read_out,
-                                        uint8_t* buffer_out,
-                                        zx::time just_fail_deadline) {
+zx_status_t InStream::ReadBytesComplete(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
+                                        uint8_t* buffer_out, zx::time just_fail_deadline) {
   ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
   ZX_DEBUG_ASSERT(!failure_seen_);
   uint32_t bytes_remaining = max_bytes_to_read;
   uint8_t* buffer_iter = buffer_out;
   while (bytes_remaining != 0) {
     uint32_t actual_bytes_read;
-    zx_status_t status = ReadBytesShort(
-        bytes_remaining, &actual_bytes_read, buffer_iter, just_fail_deadline);
+    zx_status_t status =
+        ReadBytesShort(bytes_remaining, &actual_bytes_read, buffer_iter, just_fail_deadline);
     if (status != ZX_OK) {
       ZX_DEBUG_ASSERT(failure_seen_);
       return status;

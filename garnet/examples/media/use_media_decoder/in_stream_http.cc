@@ -4,15 +4,16 @@
 
 #include "in_stream_http.h"
 
-#include "lib/zx/time.h"
-#include "src/lib/fxl/logging.h"
-#include "util.h"
-
 #include <lib/media/test/one_shot_event.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
 #include <queue>
 #include <tuple>
+
+#include "src/lib/fxl/logging.h"
+#include "util.h"
 
 namespace {
 
@@ -23,30 +24,25 @@ const uint32_t kResponseBodyBufferSize = 2 * 1024 * 1024;
 
 }  // namespace
 
-InStreamHttp::InStreamHttp(async::Loop* fidl_loop,
-              thrd_t fidl_thread,
-              component::StartupContext* startup_context,
-              std::string url)
-  : InStream(fidl_loop, fidl_thread, startup_context),
-    url_(url) {
+InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,
+                           sys::ComponentContext* component_context, std::string url)
+    : InStream(fidl_loop, fidl_thread, component_context), url_(url) {
   ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
   ZX_DEBUG_ASSERT(!url_.empty());
 
   // We're not runnign on the fidl_thread_, so we need to post over to the
   // fidl_thread_ for any binding, sending, etc.
   fuchsia::net::oldhttp::HttpServicePtr http_service;
-  http_service.set_error_handler([](zx_status_t status){
-    Exit("http_service failed - status: %lu", status);
-  });
-  startup_context_->ConnectToEnvironmentService(
-      http_service.NewRequest(fidl_dispatcher_));
+  http_service.set_error_handler(
+      [](zx_status_t status) { Exit("http_service failed - status: %lu", status); });
+  component_context_->svc()->Connect(http_service.NewRequest(fidl_dispatcher_));
 
-  url_loader_.set_error_handler([](zx_status_t status){
-    Exit("url_loader_ failed - status: %lu", status);
-  });
-  PostToFidlSerial([&http_service, url_loader_request = url_loader_.NewRequest(fidl_dispatcher_)]() mutable {
-    http_service->CreateURLLoader(std::move(url_loader_request));
-  });
+  url_loader_.set_error_handler(
+      [](zx_status_t status) { Exit("url_loader_ failed - status: %lu", status); });
+  PostToFidlSerial(
+      [&http_service, url_loader_request = url_loader_.NewRequest(fidl_dispatcher_)]() mutable {
+        http_service->CreateURLLoader(std::move(url_loader_request));
+      });
 
   fuchsia::net::oldhttp::URLRequest url_request{};
   url_request.url = url_;
@@ -57,12 +53,15 @@ InStreamHttp::InStreamHttp(async::Loop* fidl_loop,
   fuchsia::net::oldhttp::URLResponse response;
   OneShotEvent have_response_event;
 
-  PostToFidlSerial([this, url_request = std::move(url_request), &response, &have_response_event]() mutable {
-    url_loader_->Start(std::move(url_request), [&response, &have_response_event](fuchsia::net::oldhttp::URLResponse response_param){
-      response = std::move(response_param);
-      have_response_event.Signal();
-    });
-  });
+  PostToFidlSerial(
+      [this, url_request = std::move(url_request), &response, &have_response_event]() mutable {
+        url_loader_->Start(
+            std::move(url_request),
+            [&response, &have_response_event](fuchsia::net::oldhttp::URLResponse response_param) {
+              response = std::move(response_param);
+              have_response_event.Signal();
+            });
+      });
   have_response_event.Wait(zx::deadline_after(zx::sec(30)));
 
   ZX_ASSERT_MSG(!response.error, "http response has error");
@@ -86,9 +85,7 @@ InStreamHttp::~InStreamHttp() {
 
   // By fencing anything we've previously posted to fidl_thread, we avoid
   // touching "this" too late.
-  PostToFidlSerial([this]{
-    url_loader_.Unbind();
-  });
+  PostToFidlSerial([this] { url_loader_.Unbind(); });
 
   // After this call completes, we know the above post has run on fidl_thread_,
   // so no more code re. this instance will be running on fidl_thread_ (partly
@@ -97,10 +94,8 @@ InStreamHttp::~InStreamHttp() {
   FencePostToFidlSerial();
 }
 
-zx_status_t InStreamHttp::ReadBytesInternal(uint32_t max_bytes_to_read,
-                                            uint32_t* bytes_read_out,
-                                            uint8_t* buffer_out,
-                                            zx::time just_fail_deadline) {
+zx_status_t InStreamHttp::ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
+                                            uint8_t* buffer_out, zx::time just_fail_deadline) {
   if (eos_position_known_ && cursor_position_ == eos_position_) {
     // Not possible to read more because there isn't any more.  Not a failure.
     *bytes_read_out = 0;
@@ -108,7 +103,8 @@ zx_status_t InStreamHttp::ReadBytesInternal(uint32_t max_bytes_to_read,
   }
 
   zx_signals_t pending{};
-  zx_status_t status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, just_fail_deadline, &pending);
+  zx_status_t status =
+      socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, just_fail_deadline, &pending);
   if (status != ZX_OK) {
     Exit("socket_ wait failed - status: %d", status);
   }

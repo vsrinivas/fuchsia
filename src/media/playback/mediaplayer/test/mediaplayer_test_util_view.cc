@@ -5,14 +5,15 @@
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_view.h"
 
 #include <fcntl.h>
-#include <hid/usages.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fsl/io/fd.h>
+#include <lib/media/cpp/type_converters.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/io/fd.h"
-#include "lib/media/cpp/type_converters.h"
+#include <hid/usages.h>
+
 #include "src/lib/url/gurl.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
@@ -44,10 +45,10 @@ int64_t rand_less_than(int64_t limit) {
 
 }  // namespace
 
-MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContext view_context,
+MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContextTransitional view_context,
                                                  fit::function<void(int)> quit_callback,
                                                  const MediaPlayerTestUtilParams& params)
-    : scenic::BaseView(std::move(view_context), "Media Player"),
+    : scenic::BaseViewTransitional(std::move(view_context), "Media Player"),
       quit_callback_(std::move(quit_callback)),
       params_(params),
       background_node_(session()),
@@ -80,7 +81,7 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContext view_contex
   pixel_aspect_ratio_.height = 1;
 
   // Create a player from all that stuff.
-  player_ = startup_context()->ConnectToEnvironmentService<fuchsia::media::playback::Player>();
+  player_ = component_context()->svc()->Connect<fuchsia::media::playback::Player>();
 
   // Create the video view.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -150,7 +151,7 @@ void MediaPlayerTestUtilView::ContinueTestSeek() {
   }
 
   // For the start position, generate a number in the range [0..duration_ns_]
-  // with a 10% chance of being zero.
+  // with a 10% chance of being zero.player_impl.cc
   int64_t seek_interval_start = rand_less_than(duration_ns_ + duration_ns_ / 10);
   if (seek_interval_start >= duration_ns_) {
     seek_interval_start = 0;

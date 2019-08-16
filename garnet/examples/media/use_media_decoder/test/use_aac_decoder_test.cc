@@ -19,12 +19,13 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/sys/cpp/component_context.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "gtest/gtest.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/interface_ptr.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/logging.h"
 
 namespace {
@@ -55,12 +56,12 @@ constexpr char kGoldenSha256_arm64[SHA256_DIGEST_LENGTH * 2 + 1] =
 TEST(DecoderTest, AacDecoder) {
   async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
   main_loop.StartThread("main_loop");
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
-  startup_context->ConnectToEnvironmentService(codec_factory.NewRequest(main_loop.dispatcher()));
+  component_context->svc()->Connect(codec_factory.NewRequest(main_loop.dispatcher()));
 
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
-  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
+  component_context->svc()->Connect<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
   uint8_t md[SHA256_DIGEST_LENGTH];
   use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), kInputFilePath, "", md);

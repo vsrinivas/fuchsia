@@ -36,13 +36,13 @@ static const fuchsia::images::ImageInfo kBlackImageInfo{
 
 // static
 std::shared_ptr<FidlVideoRenderer> FidlVideoRenderer::Create(
-    component::StartupContext* startup_context) {
-  return std::make_shared<FidlVideoRenderer>(startup_context);
+    sys::ComponentContext* component_context) {
+  return std::make_shared<FidlVideoRenderer>(component_context);
 }
 
-FidlVideoRenderer::FidlVideoRenderer(component::StartupContext* startup_context)
-    : startup_context_(startup_context),
-      scenic_(startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
+FidlVideoRenderer::FidlVideoRenderer(sys::ComponentContext* component_context)
+    : component_context_(component_context),
+      scenic_(component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>()),
       arrivals_(true) {
   supported_stream_types_.push_back(
       VideoStreamTypeSet::Create({StreamType::kVideoEncodingUncompressed},
@@ -312,11 +312,11 @@ void FidlVideoRenderer::SetGeometryUpdateCallback(fit::closure callback) {
 }
 
 void FidlVideoRenderer::CreateView(fuchsia::ui::views::ViewToken view_token) {
-  scenic::ViewContext view_context{
+  scenic::ViewContextTransitional view_context{
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
       .view_token = std::move(view_token),
-      .startup_context = startup_context_};
+      .component_context = component_context_};
   auto view = std::make_unique<View>(
       std::move(view_context), std::static_pointer_cast<FidlVideoRenderer>(shared_from_this()));
   View* view_raw_ptr = view.get();
@@ -461,9 +461,9 @@ void FidlVideoRenderer::Image::WaitHandler(async_dispatcher_t* dispatcher, async
 ////////////////////////////////////////////////////////////////////////////////
 // FidlVideoRenderer::View implementation.
 
-FidlVideoRenderer::View::View(scenic::ViewContext context,
+FidlVideoRenderer::View::View(scenic::ViewContextTransitional context,
                               std::shared_ptr<FidlVideoRenderer> renderer)
-    : scenic::BaseView(std::move(context), "Video Renderer"),
+    : scenic::BaseViewTransitional(std::move(context), "Video Renderer"),
       renderer_(renderer),
       entity_node_(session()),
       image_pipe_node_(session()),

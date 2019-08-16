@@ -6,7 +6,9 @@
 #define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_H_
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <fbl/mutex.h>
 
 // Abstract base class which permits reading from a stream of input data.
 //
@@ -82,7 +84,7 @@ class InStream {
                                 zx::time just_fail_deadline = zx::time::infinite());
 
  protected:
-  InStream(async::Loop* fidl_loop, thrd_t fidl_thread, component::StartupContext* startup_context);
+  InStream(async::Loop* fidl_loop, thrd_t fidl_thread, sys::ComponentContext* component_context);
 
   void PostToFidlSerial(fit::closure to_run);
   void FencePostToFidlSerial();
@@ -91,14 +93,19 @@ class InStream {
   // sub-class doesn't need to update cursor_position_ since ReadBytes() handles
   // that.
   virtual zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
-                                        uint8_t* buffer_out,
-                                        zx::time just_fail_deadline = zx::time::infinite()) = 0;
+                                        uint8_t* buffer_out, zx::time just_fail_deadline) = 0;
+
+  zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
+                                uint8_t* buffer_out) {
+    return ReadBytesInternal(max_bytes_to_read, bytes_read_out, buffer_out, zx::time::infinite());
+  }
 
   async::Loop* const fidl_loop_ = nullptr;
   async_dispatcher_t* const fidl_dispatcher_ = nullptr;
   const thrd_t fidl_thread_{};
-  component::StartupContext* const startup_context_;
+  sys::ComponentContext* const component_context_;
 
+  // TODO(liyl): Need to change to std::mutex.
   fbl::Mutex lock_;
 
   uint64_t cursor_position_ = 0;

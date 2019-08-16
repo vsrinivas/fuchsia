@@ -26,8 +26,10 @@ source_set("use_media_decoder_source_set") {
     "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/lib/sys/cpp",
     "//third_party/boringssl:crypto",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
   ]
 
   deps = [
@@ -39,9 +41,11 @@ source_set("use_media_decoder_source_set") {
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/media/audio/lib/wav_writer:wav_writer",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
   ]
 }
 

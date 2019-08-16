@@ -15,15 +15,11 @@ static_assert(kCompleteReadThresholdBytes >= 1);
 
 }  // namespace
 
-InStreamFile::InStreamFile(async::Loop* fidl_loop,
-              thrd_t fidl_thread,
-              component::StartupContext* startup_context,
-              std::string input_file_name)
-  : InStream(fidl_loop, fidl_thread, startup_context),
-    input_file_name_(input_file_name) {
+InStreamFile::InStreamFile(async::Loop* fidl_loop, thrd_t fidl_thread,
+                           sys::ComponentContext* component_context, std::string input_file_name)
+    : InStream(fidl_loop, fidl_thread, component_context), input_file_name_(input_file_name) {
   // std::ios::ate means start at the end to tellg() will get the size
-  file_.open(input_file_name_.c_str(),
-             std::ios::in | std::ios::binary | std::ios::ate);
+  file_.open(input_file_name_.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
   if (!file_.is_open()) {
     Exit("failed to open file %s", input_file_name_.c_str());
   }
@@ -47,10 +43,8 @@ InStreamFile::~InStreamFile() {
   }
 }
 
-zx_status_t InStreamFile::ReadBytesInternal(uint32_t max_bytes_to_read,
-                                      uint32_t* bytes_read_out,
-                                      uint8_t* buffer_out,
-                                      zx::time just_fail_deadline) {
+zx_status_t InStreamFile::ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
+                                            uint8_t* buffer_out, zx::time just_fail_deadline) {
   // This sub-class doesn't enforce just_fail_deadline for now.
   (void)just_fail_deadline;
   // This implementation ignores the timeout, as we're reading from a local file

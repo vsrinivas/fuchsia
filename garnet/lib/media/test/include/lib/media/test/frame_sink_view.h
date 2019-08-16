@@ -7,11 +7,12 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/resources.h>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 // Sets up an ImagePipe (including scene graph aspects) such that FrameSink can
 // push frames to all the ImagePipe(s) of all the FrameSinkView(s) that are
@@ -20,10 +21,10 @@
 // Registers with parent on construction and de-registers on destruction.  Only
 // called on the thread that's running |loop|.
 class FrameSink;
-class FrameSinkView : public scenic::BaseView {
+class FrameSinkView : public scenic::BaseViewTransitional {
  public:
-  static std::unique_ptr<FrameSinkView> Create(scenic::ViewContext context, FrameSink* parent,
-                                               async::Loop* main_loop);
+  static std::unique_ptr<FrameSinkView> Create(scenic::ViewContextTransitional context,
+                                               FrameSink* parent, async::Loop* main_loop);
 
   ~FrameSinkView() override;
 
@@ -33,7 +34,7 @@ class FrameSinkView : public scenic::BaseView {
                 const fuchsia::media::VideoUncompressedFormat& video_format, fit::closure on_done);
 
  private:
-  FrameSinkView(scenic::ViewContext context, FrameSink* parent, async::Loop* main_loop);
+  FrameSinkView(scenic::ViewContextTransitional context, FrameSink* parent, async::Loop* main_loop);
 
   // |scenic::BaseView|
   // Called when the scene is invalidated, meaning its metrics or dimensions

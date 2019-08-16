@@ -7,14 +7,15 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/media/test/frame_sink_view.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/vmo.h>
-#include <src/lib/fxl/logging.h>
 
 #include <memory>
+
+#include "src/lib/fxl/logging.h"
 
 namespace {
 
@@ -25,9 +26,9 @@ constexpr double kDefaultFramesPerSecond = 24;
 }  // namespace
 
 std::unique_ptr<FrameSink> FrameSink::Create(
-    component::StartupContext* startup_context, async::Loop* main_loop, double frames_per_second,
+    sys::ComponentContext* component_context, async::Loop* main_loop, double frames_per_second,
     fit::function<void(FrameSink*)> view_connected_callback) {
-  return std::unique_ptr<FrameSink>(new FrameSink(startup_context, main_loop, frames_per_second,
+  return std::unique_ptr<FrameSink>(new FrameSink(component_context, main_loop, frames_per_second,
                                                   std::move(view_connected_callback)));
 }
 
@@ -91,8 +92,7 @@ void FrameSink::PutFrame(uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_off
   }
 }
 
-void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(
-    fit::closure on_frames_returned) {
+void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_frames_returned) {
   // We make a blank frame and send that in to be displayed 3 seconds after
   // the last real frame, to give us a chance to see the last frame of a short
   // .h264 file.  The blank frame is necessary to get Scenic to release the last
@@ -157,19 +157,19 @@ void FrameSink::AddFrameSinkView(FrameSinkView* view) {
 
 void FrameSink::RemoveFrameSinkView(FrameSinkView* view) { views_.erase(view); }
 
-FrameSink::FrameSink(component::StartupContext* startup_context, async::Loop* main_loop,
+FrameSink::FrameSink(sys::ComponentContext* component_context, async::Loop* main_loop,
                      double frames_per_second,
                      fit::function<void(FrameSink*)> view_connected_callback)
-    : startup_context_(startup_context),
+    : component_context_(component_context),
       main_loop_(main_loop),
       // IEEE 754 floating point can represent 0.0 exactly.
       frames_per_second_(frames_per_second != 0.0 ? frames_per_second : kDefaultFramesPerSecond),
       view_connected_callback_(std::move(view_connected_callback)) {
-  view_provider_component_ = std::make_unique<scenic::ViewProviderComponent>(
-      [this](scenic::ViewContext view_context) {
+  view_provider_component_ = std::make_unique<scenic::ViewProviderComponentTransitional>(
+      [this](scenic::ViewContextTransitional view_context) {
         return FrameSinkView::Create(std::move(view_context), this, main_loop_);
       },
-      main_loop_, startup_context_);
+      main_loop_, component_context_);
 }
 
 void FrameSink::CheckIfAllFramesReturned() {

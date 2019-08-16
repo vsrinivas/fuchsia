@@ -4,12 +4,13 @@
 
 #include "examples/media/audio/vu_meter/vu_meter_view.h"
 
+#include <lib/component/cpp/connect.h>
+#include <lib/media/audio/cpp/types.h>
+
 #include <iomanip>
 
 #include <hid/usages.h>
 
-#include "lib/component/cpp/connect.h"
-#include "lib/media/audio/cpp/types.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
@@ -19,7 +20,7 @@ constexpr uint64_t kBytesPerFrame = 4;
 
 namespace examples {
 
-VuMeterView::VuMeterView(scenic::ViewContext view_context, async::Loop* loop)
+VuMeterView::VuMeterView(scenic::ViewContextTransitional view_context, async::Loop* loop)
     : SkiaView(std::move(view_context), "VU Meter"),
       loop_(loop),
       fast_left_(kFastDecay),
@@ -28,7 +29,7 @@ VuMeterView::VuMeterView(scenic::ViewContext view_context, async::Loop* loop)
       slow_right_(kSlowDecay) {
   FXL_DCHECK(loop);
 
-  auto audio = startup_context()->ConnectToEnvironmentService<fuchsia::media::Audio>();
+  auto audio = component_context()->svc()->Connect<fuchsia::media::Audio>();
   audio->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
 
   audio_capturer_.set_error_handler([this](zx_status_t status) {

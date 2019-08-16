@@ -8,13 +8,13 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/media/cpp/timeline_function.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <unordered_map>
 
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/media/cpp/timeline_function.h"
 #include "src/media/playback/mediaplayer/core/player_core.h"
 #include "src/media/playback/mediaplayer/decode/decoder.h"
 #include "src/media/playback/mediaplayer/demux/demux.h"
@@ -33,10 +33,10 @@ class PlayerImpl : public fuchsia::media::playback::Player, public ServiceProvid
  public:
   static std::unique_ptr<PlayerImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::playback::Player> request,
-      component::StartupContext* startup_context, fit::closure quit_callback);
+      sys::ComponentContext* component_context, fit::closure quit_callback);
 
   PlayerImpl(fidl::InterfaceRequest<fuchsia::media::playback::Player> request,
-             component::StartupContext* startup_context, fit::closure quit_callback);
+             sys::ComponentContext* component_context, fit::closure quit_callback);
 
   ~PlayerImpl() override;
 
@@ -148,7 +148,7 @@ class PlayerImpl : public fuchsia::media::playback::Player, public ServiceProvid
   void UpdateStatus();
 
   async_dispatcher_t* dispatcher_;
-  component::StartupContext* startup_context_;
+  sys::ComponentContext* component_context_;
   fit::closure quit_callback_;
   fidl::BindingSet<fuchsia::media::playback::Player> bindings_;
   PlayerCore core_;

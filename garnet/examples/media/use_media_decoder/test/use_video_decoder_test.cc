@@ -11,19 +11,19 @@
 #include "use_video_decoder_test.h"
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/media/codec_impl/fourcc.h>
-#include <src/lib/fxl/logging.h>
+#include <lib/sys/cpp/component_context.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <map>
 #include <set>
 
-#include "../use_video_decoder.h"
-#include "../util.h"
 #include "../in_stream_file.h"
 #include "../in_stream_peeker.h"
+#include "../use_video_decoder.h"
+#include "../util.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 
@@ -31,44 +31,38 @@ namespace {
 // scan for start codes so won't peek anywhere near this much.
 constexpr uint32_t kMaxPeekBytes = 8 * 1024 * 1024;
 
-}
+}  // namespace
 
-int use_video_decoder_test(
-    std::string input_file_path, int expected_frame_count,
-    UseVideoDecoderFunction use_video_decoder,
-    std::string golden_sha256) {
+int use_video_decoder_test(std::string input_file_path, int expected_frame_count,
+                           UseVideoDecoderFunction use_video_decoder, std::string golden_sha256) {
   async::Loop fidl_loop(&kAsyncLoopConfigAttachToThread);
   thrd_t fidl_thread;
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("FIDL_thread", &fidl_thread));
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
 
   printf("Decoding test file %s\n", input_file_path.c_str());
 
-  auto in_stream_file = std::make_unique<InStreamFile>(
-    &fidl_loop,
-    fidl_thread,
-    startup_context.get(),
-    input_file_path);
+  auto in_stream_file = std::make_unique<InStreamFile>(&fidl_loop, fidl_thread,
+                                                       component_context.get(), input_file_path);
   auto in_stream_peeker = std::make_unique<InStreamPeeker>(
-    &fidl_loop,
-    fidl_thread,
-    startup_context.get(),
-    std::move(in_stream_file),
-    kMaxPeekBytes);
+      &fidl_loop, fidl_thread, component_context.get(), std::move(in_stream_file), kMaxPeekBytes);
 
   std::vector<std::pair<bool, uint64_t>> timestamps;
   SHA256_CTX sha256_ctx;
   SHA256_Init(&sha256_ctx);
 
-  EmitFrame emit_frame = [&sha256_ctx, &timestamps](uint8_t* i420_data, uint32_t width, uint32_t height, uint32_t stride, bool has_timestamp_ish, uint64_t timestamp_ish){
+  EmitFrame emit_frame = [&sha256_ctx, &timestamps](
+                             uint8_t* i420_data, uint32_t width, uint32_t height, uint32_t stride,
+                             bool has_timestamp_ish, uint64_t timestamp_ish) {
     ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
     ZX_ASSERT_MSG(width == stride, "stride != width not yet handled");
     timestamps.push_back({has_timestamp_ish, timestamp_ish});
     SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
   };
 
-  if (!decode_video_stream_test(&fidl_loop, fidl_thread, startup_context.get(), in_stream_peeker.get(), use_video_decoder, 0, std::move(emit_frame))) {
+  if (!decode_video_stream_test(&fidl_loop, fidl_thread, component_context.get(),
+                                in_stream_peeker.get(), use_video_decoder, 0,
+                                std::move(emit_frame))) {
     printf("decode_video_stream_test() failed.\n");
     return -1;
   }
@@ -121,43 +115,36 @@ int use_video_decoder_test(
   FXL_CHECK(actual_sha256_ptr == actual_sha256 + SHA256_DIGEST_LENGTH * 2);
   printf("Done decoding - computed sha256 is: %s\n", actual_sha256);
   if (strcmp(actual_sha256, golden_sha256.c_str())) {
-    printf("The sha256 doesn't match - expected: %s actual: %s\n",
-          golden_sha256.c_str(), actual_sha256);
+    printf("The sha256 doesn't match - expected: %s actual: %s\n", golden_sha256.c_str(),
+           actual_sha256);
     exit(-1);
   }
   printf("The computed sha256 matches golden sha256.  Yay!\nPASS\n");
 
   fidl_loop.Quit();
   fidl_loop.JoinThreads();
-  startup_context.reset();
+  component_context.reset();
   fidl_loop.Shutdown();
 
   return 0;
 }
 
-bool decode_video_stream_test(
-    async::Loop* fidl_loop,
-    thrd_t fidl_thread,
-    component::StartupContext* startup_context,
-    InStreamPeeker* in_stream_peeker,
-    UseVideoDecoderFunction use_video_decoder,
-    uint64_t min_output_buffer_size,
-    EmitFrame emit_frame) {
+bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
+                              sys::ComponentContext* component_context,
+                              InStreamPeeker* in_stream_peeker,
+                              UseVideoDecoderFunction use_video_decoder,
+                              uint64_t min_output_buffer_size, EmitFrame emit_frame) {
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
-  codec_factory.set_error_handler([](zx_status_t status) {
-    FXL_PLOG(FATAL, status) << "codec_factory failed - unexpected";
-  });
-  startup_context
-      ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
-          codec_factory.NewRequest());
+  codec_factory.set_error_handler(
+      [](zx_status_t status) { FXL_PLOG(FATAL, status) << "codec_factory failed - unexpected"; });
+  component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(codec_factory.NewRequest());
   fuchsia::sysmem::AllocatorPtr sysmem;
-  sysmem.set_error_handler([](zx_status_t status){
-    FXL_PLOG(FATAL, status) << "sysmem failed - unexpected";
-  });
-  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
-      sysmem.NewRequest());
+  sysmem.set_error_handler(
+      [](zx_status_t status) { FXL_PLOG(FATAL, status) << "sysmem failed - unexpected"; });
+  component_context->svc()->Connect<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
-  use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem), in_stream_peeker, min_output_buffer_size, nullptr, std::move(emit_frame));
+  use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
+                    in_stream_peeker, min_output_buffer_size, nullptr, std::move(emit_frame));
 
   return true;
 }

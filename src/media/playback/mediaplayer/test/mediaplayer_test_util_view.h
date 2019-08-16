@@ -8,23 +8,24 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/media/cpp/timeline_function.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 
 #include <memory>
 #include <queue>
 
-#include "lib/component/cpp/startup_context.h"
-#include "lib/media/cpp/timeline_function.h"
 #include "src/media/playback/mediaplayer/test/command_queue.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
 
 namespace media_player {
 namespace test {
 
-class MediaPlayerTestUtilView : public scenic::BaseView {
+class MediaPlayerTestUtilView : public scenic::BaseViewTransitional {
  public:
-  MediaPlayerTestUtilView(scenic::ViewContext view_context, fit::function<void(int)> quit_callback,
+  MediaPlayerTestUtilView(scenic::ViewContextTransitional view_context,
+                          fit::function<void(int)> quit_callback,
                           const MediaPlayerTestUtilParams& params);
 
   ~MediaPlayerTestUtilView() override;

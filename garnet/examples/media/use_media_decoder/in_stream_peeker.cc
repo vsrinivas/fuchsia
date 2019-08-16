@@ -8,15 +8,12 @@
 #include <atomic>
 #include <iostream>
 
-InStreamPeeker::InStreamPeeker(
-    async::Loop* fidl_loop,
-    thrd_t fidl_thread,
-    component::StartupContext* startup_context,
-    std::unique_ptr<InStream> in_stream_to_wrap,
-    uint32_t max_peek_bytes)
-  : InStream(fidl_loop, fidl_thread, startup_context),
-    in_stream_(std::move(in_stream_to_wrap)),
-    max_peek_bytes_(std::max(1u, max_peek_bytes)) {
+InStreamPeeker::InStreamPeeker(async::Loop* fidl_loop, thrd_t fidl_thread,
+                               sys::ComponentContext* component_context,
+                               std::unique_ptr<InStream> in_stream_to_wrap, uint32_t max_peek_bytes)
+    : InStream(fidl_loop, fidl_thread, component_context),
+      in_stream_(std::move(in_stream_to_wrap)),
+      max_peek_bytes_(std::max(1u, max_peek_bytes)) {
   ZX_DEBUG_ASSERT(in_stream_);
   // We force max_peek_bytes_ to be at least 1 above to avoid edge cases.
   ZX_DEBUG_ASSERT(max_peek_bytes_ != 0);
@@ -41,11 +38,8 @@ InStreamPeeker::InStreamPeeker(
   // First create a child VMAR that'll have room and that has
   // ZX_VM_CAN_MAP_SPECIFIC.
   status = zx::vmar::root_self()->allocate(
-      0,
-      vmo_size_bytes_ * 2,
-      ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
-      &ring_vmar_,
-      reinterpret_cast<uintptr_t*>(&ring_base_));
+      0, vmo_size_bytes_ * 2, ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+      &ring_vmar_, reinterpret_cast<uintptr_t*>(&ring_base_));
   ZX_ASSERT(status == ZX_OK);
 
   // Now we can map the ring_vmo_ twice, adjacently.  This allows us to use
@@ -54,7 +48,8 @@ InStreamPeeker::InStreamPeeker(
   //
   // We don't really need ptr, since we already have ring_base_.  But we can
   // assert that ptr is what we expect each time.
-  const zx_vm_option_t kMapOptions = ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE;
+  const zx_vm_option_t kMapOptions =
+      ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE;
   uintptr_t ptr;
   status = ring_vmar_.map(0, ring_vmo_, 0, vmo_size_bytes_, kMapOptions, &ptr);
   ZX_ASSERT(status == ZX_OK);
@@ -73,14 +68,10 @@ InStreamPeeker::~InStreamPeeker() {
   ring_vmar_.destroy();
 }
 
-uint32_t InStreamPeeker::max_peek_bytes() {
-  return max_peek_bytes_;
-}
+uint32_t InStreamPeeker::max_peek_bytes() { return max_peek_bytes_; }
 
-zx_status_t InStreamPeeker::PeekBytes(uint32_t desired_bytes_to_peek,
-                                      uint32_t* peek_bytes_out,
-                                      uint8_t** peek_buffer_out,
-                                      zx::time just_fail_deadline) {
+zx_status_t InStreamPeeker::PeekBytes(uint32_t desired_bytes_to_peek, uint32_t* peek_bytes_out,
+                                      uint8_t** peek_buffer_out, zx::time just_fail_deadline) {
   ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
   ZX_DEBUG_ASSERT(!failure_seen_);
   ZX_DEBUG_ASSERT(desired_bytes_to_peek <= max_peek_bytes_);
@@ -98,9 +89,8 @@ zx_status_t InStreamPeeker::PeekBytes(uint32_t desired_bytes_to_peek,
       return status;
     }
   }
-  ZX_DEBUG_ASSERT(
-    desired_bytes_to_peek <= valid_bytes_ ||
-    (eos_position_known_ && cursor_position_ + valid_bytes_ == eos_position_));
+  ZX_DEBUG_ASSERT(desired_bytes_to_peek <= valid_bytes_ ||
+                  (eos_position_known_ && cursor_position_ + valid_bytes_ == eos_position_));
   ZX_DEBUG_ASSERT(read_offset_ < vmo_size_bytes_);
   ZX_DEBUG_ASSERT(write_offset_ < vmo_size_bytes_);
   *peek_buffer_out = ring_base_ + read_offset_;
@@ -117,10 +107,8 @@ void InStreamPeeker::TossPeekedBytes(uint32_t bytes_to_toss) {
   cursor_position_ += bytes_to_toss;
 }
 
-zx_status_t InStreamPeeker::ReadBytesInternal(uint32_t max_bytes_to_read,
-                                              uint32_t* bytes_read_out,
-                                              uint8_t* buffer_out,
-                                              zx::time just_fail_deadline) {
+zx_status_t InStreamPeeker::ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
+                                              uint8_t* buffer_out, zx::time just_fail_deadline) {
   ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
   ZX_DEBUG_ASSERT(!failure_seen_);
   // If the ring has any data, satisfy from there, else satisfy directly from
@@ -144,8 +132,8 @@ zx_status_t InStreamPeeker::ReadBytesInternal(uint32_t max_bytes_to_read,
     //
     // We can assert in this case that the cursor_position()s match though.
     ZX_DEBUG_ASSERT(cursor_position_ == in_stream_->cursor_position());
-    zx_status_t status = in_stream_->ReadBytesShort(
-        max_bytes_to_read, bytes_read_out, buffer_out, just_fail_deadline);
+    zx_status_t status = in_stream_->ReadBytesShort(max_bytes_to_read, bytes_read_out, buffer_out,
+                                                    just_fail_deadline);
     if (status != ZX_OK) {
       ZX_DEBUG_ASSERT(!failure_seen_);
       failure_seen_ = true;
@@ -156,8 +144,8 @@ zx_status_t InStreamPeeker::ReadBytesInternal(uint32_t max_bytes_to_read,
   }
 }
 
-zx_status_t InStreamPeeker::ReadMoreIfPossible(
-    uint32_t bytes_to_read_if_possible, zx::time just_fail_deadline) {
+zx_status_t InStreamPeeker::ReadMoreIfPossible(uint32_t bytes_to_read_if_possible,
+                                               zx::time just_fail_deadline) {
   ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
   ZX_DEBUG_ASSERT(!failure_seen_);
   ZX_DEBUG_ASSERT(bytes_to_read_if_possible != 0);
@@ -169,7 +157,8 @@ zx_status_t InStreamPeeker::ReadMoreIfPossible(
   ZX_DEBUG_ASSERT(eos_position_known_ == in_stream_->eos_position_known());
   ZX_DEBUG_ASSERT(!eos_position_known_ || eos_position_ == in_stream_->eos_position());
 
-  if (in_stream_->eos_position_known() && (in_stream_->cursor_position() == in_stream_->eos_position())) {
+  if (in_stream_->eos_position_known() &&
+      (in_stream_->cursor_position() == in_stream_->eos_position())) {
     ZX_DEBUG_ASSERT(cursor_position_ + valid_bytes_ == eos_position_);
     // Not possible to read more because there isn't any more.  Not a failure.
     return ZX_OK;
@@ -183,8 +172,8 @@ zx_status_t InStreamPeeker::ReadMoreIfPossible(
   ring_memory_fence_.fetch_add(1, std::memory_order_acq_rel);
 
   uint32_t actual_bytes_read;
-  zx_status_t status = in_stream_->ReadBytesComplete(
-      bytes_to_read_if_possible, &actual_bytes_read, ring_base_ + write_offset_);
+  zx_status_t status = in_stream_->ReadBytesComplete(bytes_to_read_if_possible, &actual_bytes_read,
+                                                     ring_base_ + write_offset_);
   if (status != ZX_OK) {
     ZX_DEBUG_ASSERT(!failure_seen_);
     failure_seen_ = true;

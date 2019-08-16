@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include "in_stream.h"
+#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_PEEKER_H_
+#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_PEEKER_H_
 
 #include <memory>
+
+#include "in_stream.h"
 
 // This wrapper of an InStream adds the ability to peek into the stream.
 //
 // As with InStream, this class has blocking methods, and completion of those
 // methods relies on the FIDL thread being a separate thread.
 class InStreamPeeker : public InStream {
-public:
+ public:
   // in_stream_to_wrap - the underlying source of data, typically not capable
   //     of peeking, to wrap such that peeking is possible.
   // max_peek_bytes - the maximum peek distance in bytes.  Some usages will need
@@ -33,12 +34,9 @@ public:
   // The first three parameters to this constructor are for consistency in
   // threading across all InStream types.  We want the InStream base class to
   // be able to assert that methods are being called on the correct thread, etc.
-  InStreamPeeker(
-    async::Loop* fidl_loop,
-    thrd_t fidl_thread,
-    component::StartupContext* startup_context,
-    std::unique_ptr<InStream> in_stream_to_wrap,
-    uint32_t max_peek_bytes);
+  InStreamPeeker(async::Loop* fidl_loop, thrd_t fidl_thread,
+                 sys::ComponentContext* component_context,
+                 std::unique_ptr<InStream> in_stream_to_wrap, uint32_t max_peek_bytes);
   ~InStreamPeeker();
 
   uint32_t max_peek_bytes();
@@ -56,8 +54,7 @@ public:
   // The *peek_bytes_out may be less than desired_bytes_to_peek only if the end
   // of input data is reached and has offset < cursor_position() +
   // desired_bytes_to_peek.
-  zx_status_t PeekBytes(uint32_t desired_bytes_to_peek,
-                        uint32_t* peek_bytes_out,
+  zx_status_t PeekBytes(uint32_t desired_bytes_to_peek, uint32_t* peek_bytes_out,
                         uint8_t** peek_buffer_out,
                         zx::time just_fail_deadline = zx::time::infinite());
 
@@ -70,18 +67,14 @@ public:
   // The caller must only call this for bytes which were previously peeked.
   void TossPeekedBytes(uint32_t bytes_to_toss);
 
-private:
+ private:
   // This InStream sub-class guarantees that reads which only read previously
   // peeked bytes will be satisfied in their entirety.  Reads beyond previously
   // peeked bytes can be short like usual.
-  zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read,
-                                uint32_t* bytes_read_out,
-                                uint8_t* buffer_out,
-                                zx::time just_fail_deadline =
-                                    zx::time::infinite()) override;
+  zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
+                                uint8_t* buffer_out, zx::time just_fail_deadline) override;
 
-  zx_status_t ReadMoreIfPossible(
-      uint32_t bytes_to_read_if_possible, zx::time just_fail_deadline);
+  zx_status_t ReadMoreIfPossible(uint32_t bytes_to_read_if_possible, zx::time just_fail_deadline);
 
   void PropagateEosKnown();
 
@@ -127,3 +120,5 @@ private:
   // ring_vmo_.
   zx::vmar ring_vmar_;
 };
+
+#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_PEEKER_H_

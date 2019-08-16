@@ -7,11 +7,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/media/test/frame_sink.h>
+
 #include <openssl/sha.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 
 constexpr char kInputFilePath[] = "/pkg/data/bear_320x192_40frames.yuv";
 constexpr char kGoldenSha[SHA256_DIGEST_LENGTH * 2 + 1] =
@@ -78,8 +80,7 @@ int HashFrames(RawFrames&& raw_frames) {
 
 int SendFramesToScenic(RawFrames&& raw_frames) {
   async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
 
   auto send_frames = [&main_loop, &raw_frames](FrameSink* frame_sink) {
     std::optional<RawFrames::Image> frame;
@@ -96,7 +97,7 @@ int SendFramesToScenic(RawFrames&& raw_frames) {
   };
 
   auto frame_sink =
-      FrameSink::Create(startup_context.get(), &main_loop, 24.0, std::move(send_frames));
+      FrameSink::Create(component_context.get(), &main_loop, 24.0, std::move(send_frames));
   if (!frame_sink) {
     FXL_LOG(FATAL) << "Failed to create FrameSink.";
   }

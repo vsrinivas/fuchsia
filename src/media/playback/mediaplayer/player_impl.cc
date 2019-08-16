@@ -8,18 +8,19 @@
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fidl/cpp/type_converter.h>
 #include <lib/fit/function.h>
+#include <lib/media/cpp/type_converters.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
+#include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/zx/clock.h>
 
 #include <sstream>
 
 #include <fs/pseudo-file.h>
 
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fidl/cpp/type_converter.h"
-#include "lib/media/cpp/type_converters.h"
-#include "lib/ui/base_view/cpp/base_view.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"
@@ -43,6 +44,8 @@ static const char* kDumpEntry = "dump";
 static constexpr zx_duration_t kCacheLead = ZX_SEC(15);
 static constexpr zx_duration_t kCacheBacktrack = ZX_SEC(5);
 
+static constexpr size_t kMaxBufferSize = 2 * 1024;
+
 template <typename T>
 zx_koid_t GetKoid(const fidl::InterfaceRequest<T>& request) {
   zx_info_handle_basic_t info;
@@ -64,19 +67,19 @@ zx_koid_t GetRelatedKoid(const fidl::InterfaceHandle<T>& request) {
 // static
 std::unique_ptr<PlayerImpl> PlayerImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::playback::Player> request,
-    component::StartupContext* startup_context, fit::closure quit_callback) {
-  return std::make_unique<PlayerImpl>(std::move(request), startup_context,
+    sys::ComponentContext* component_context, fit::closure quit_callback) {
+  return std::make_unique<PlayerImpl>(std::move(request), component_context,
                                       std::move(quit_callback));
 }
 
 PlayerImpl::PlayerImpl(fidl::InterfaceRequest<fuchsia::media::playback::Player> request,
-                       component::StartupContext* startup_context, fit::closure quit_callback)
+                       sys::ComponentContext* component_context, fit::closure quit_callback)
     : dispatcher_(async_get_default_dispatcher()),
-      startup_context_(startup_context),
+      component_context_(component_context),
       quit_callback_(std::move(quit_callback)),
       core_(dispatcher_) {
   FXL_DCHECK(request);
-  FXL_DCHECK(startup_context_);
+  FXL_DCHECK(component_context_);
   FXL_DCHECK(quit_callback_);
 
   demux_factory_ = DemuxFactory::Create(this);
@@ -84,39 +87,44 @@ PlayerImpl::PlayerImpl(fidl::InterfaceRequest<fuchsia::media::playback::Player> 
   decoder_factory_ = DecoderFactory::Create(this);
   FXL_DCHECK(decoder_factory_);
 
-  startup_context_->outgoing().debug_dir()->AddEntry(
-      kDumpEntry, fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
-        std::ostringstream os;
+  component_context_->outgoing()->debug_dir()->AddEntry(
+      kDumpEntry,
+      std::make_unique<vfs::PseudoFile>(
+          kMaxBufferSize, [this](std::vector<uint8_t>* out, size_t max_bytes) -> zx_status_t {
+            std::ostringstream os;
 
-        os << fostr::NewLine << "duration:           " << AsNs(status_.duration);
-        os << fostr::NewLine << "can pause:          " << status_.can_pause;
-        os << fostr::NewLine << "can seek:           " << status_.can_seek;
+            os << fostr::NewLine << "duration:           " << AsNs(status_.duration);
+            os << fostr::NewLine << "can pause:          " << status_.can_pause;
+            os << fostr::NewLine << "can seek:           " << status_.can_seek;
 
-        if (status_.metadata) {
-          for (auto& property : status_.metadata->properties) {
-            os << fostr::NewLine << property.label << ": " << property.value;
-          }
-        }
+            if (status_.metadata) {
+              for (auto& property : status_.metadata->properties) {
+                os << fostr::NewLine << property.label << ": " << property.value;
+              }
+            }
 
-        os << fostr::NewLine << "state:              " << ToString(state_);
-        if (state_ == State::kWaiting) {
-          os << " " << waiting_reason_;
-        }
+            os << fostr::NewLine << "state:              " << ToString(state_);
+            if (state_ == State::kWaiting) {
+              os << " " << waiting_reason_;
+            }
 
-        if (target_state_ != state_) {
-          os << fostr::NewLine << "transitioning to:   " << ToString(target_state_);
-        }
+            if (target_state_ != state_) {
+              os << fostr::NewLine << "transitioning to:   " << ToString(target_state_);
+            }
 
-        if (target_position_ != Packet::kNoPts) {
-          os << fostr::NewLine << "pending seek to:    " << AsNs(target_position_);
-        }
+            if (target_position_ != Packet::kNoPts) {
+              os << fostr::NewLine << "pending seek to:    " << AsNs(target_position_);
+            }
 
-        core_.Dump(os << std::boolalpha);
-        os << "\n";
-        *out = os.str();
+            core_.Dump(os << std::boolalpha);
+            os << "\n";
 
-        return ZX_OK;
-      })));
+            auto out_str = os.str();
+            auto end = out_str.size() > max_bytes ? out_str.begin() + max_bytes : out_str.end();
+            *out = std::vector<uint8_t>(out_str.begin(), end);
+
+            return ZX_OK;
+          }));
 
   UpdateStatus();
   AddBindingInternal(std::move(request));
@@ -158,7 +166,7 @@ void PlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
       break;
     case StreamType::Medium::kVideo:
       if (!video_renderer_) {
-        video_renderer_ = FidlVideoRenderer::Create(startup_context_);
+        video_renderer_ = FidlVideoRenderer::Create(component_context_);
         video_renderer_->SetGeometryUpdateCallback([this]() { SendStatusUpdates(); });
 
         core_.SetSinkSegment(RendererSinkSegment::Create(video_renderer_, decoder_factory_.get()),
@@ -598,8 +606,8 @@ void PlayerImpl::CancelSourceTransition(
 }
 
 void PlayerImpl::ConnectToService(std::string service_path, zx::channel channel) {
-  FXL_DCHECK(startup_context_);
-  startup_context_->incoming_services()->ConnectToService(std::move(channel), service_path);
+  FXL_DCHECK(component_context_);
+  component_context_->svc()->Connect(service_path, std::move(channel));
 }
 
 std::unique_ptr<SourceImpl> PlayerImpl::CreateSource(

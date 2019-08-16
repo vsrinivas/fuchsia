@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/media/test/frame_sink.h>
 #include <lib/media/test/one_shot_event.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/zx/time.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -16,10 +14,12 @@
 
 #include "garnet/examples/media/use_media_decoder/in_stream_file.h"
 #include "garnet/examples/media/use_media_decoder/util.h"
-#include "lib/zx/time.h"
+#include "in_stream_peeker.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 #include "use_aac_decoder.h"
 #include "use_video_decoder.h"
-#include "in_stream_peeker.h"
 
 namespace {
 
@@ -57,12 +57,12 @@ int main(int argc, char* argv[]) {
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("fidl_thread", &fidl_thread));
   async_dispatcher_t* fidl_dispatcher = fidl_loop.dispatcher();
 
-  // The moment we component::StartupContext::CreateFromStartupInfo() + let the
+  // The moment we sys::ComponentContext::Create() + let the
   // fidl_thread retrieve anything from its port, we potentially are letting a
   // request for fuchsia::ui::views::View fail, since it'll fail to find the
   // View service in outgoing_services(), since we haven't yet added View to
   // outgoing_services().  A way to prevent this failure is by not letting
-  // fidl_thread read from its port between CreateFromStartupInfo() and
+  // fidl_thread read from its port between Create() and
   // outgoing_services()+=View.
   //
   // To that end, we batch up the lambdas we want to run on the fidl_thread,
@@ -76,10 +76,9 @@ int main(int argc, char* argv[]) {
   // an equivalent "batch".
   std::vector<fit::closure> to_run_on_fidl_thread;
 
-  std::unique_ptr<component::StartupContext> startup_context;
-  to_run_on_fidl_thread.emplace_back([&startup_context]{
-    startup_context = component::StartupContext::CreateFromStartupInfo();
-  });
+  std::unique_ptr<sys::ComponentContext> component_context;
+  to_run_on_fidl_thread.emplace_back(
+      [&component_context] { component_context = sys::ComponentContext::Create(); });
 
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   fuchsia::sysmem::AllocatorPtr sysmem;
@@ -88,16 +87,15 @@ int main(int argc, char* argv[]) {
     // possible.
     FXL_PLOG(ERROR, status) << "codec_factory failed - unexpected";
   });
-  sysmem.set_error_handler([](zx_status_t status){
-    FXL_PLOG(FATAL, status) << "sysmem failed - unexpected";
-  });
-  to_run_on_fidl_thread.emplace_back([&startup_context, fidl_dispatcher, &codec_factory, &sysmem]() mutable {
-    startup_context->
-        ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
+  sysmem.set_error_handler(
+      [](zx_status_t status) { FXL_PLOG(FATAL, status) << "sysmem failed - unexpected"; });
+  to_run_on_fidl_thread.emplace_back(
+      [&component_context, fidl_dispatcher, &codec_factory, &sysmem]() mutable {
+        component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(
             codec_factory.NewRequest(fidl_dispatcher));
-    startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
-        sysmem.NewRequest(fidl_dispatcher));
-  });
+        component_context->svc()->Connect<fuchsia::sysmem::Allocator>(
+            sysmem.NewRequest(fidl_dispatcher));
+      });
 
   std::string input_file = command_line.positional_args()[0];
   std::string output_file;
@@ -138,19 +136,16 @@ int main(int argc, char* argv[]) {
     // or implicitly), and we want that setup/binding to occur on the same
     // thread as runs that loop (the fidl_thread), as that's a typical
     // assumption of setup/binding code.
-    to_run_on_fidl_thread.emplace_back([&fidl_loop, &startup_context, frames_per_second, &frame_sink, &image_pipe_ready]{
-      frame_sink =
-          FrameSink::Create(startup_context.get(), &fidl_loop, frames_per_second,
-                            [&image_pipe_ready](FrameSink* frame_sink) {
-                              image_pipe_ready.Signal();
-                            });
-    });
+    to_run_on_fidl_thread.emplace_back(
+        [&fidl_loop, &component_context, frames_per_second, &frame_sink, &image_pipe_ready] {
+          frame_sink = FrameSink::Create(
+              component_context.get(), &fidl_loop, frames_per_second,
+              [&image_pipe_ready](FrameSink* frame_sink) { image_pipe_ready.Signal(); });
+        });
   } else {
     // Queue this up since image_pipe_ready is also relied on to ensure that
     // previously-queued lambdas have run.
-    to_run_on_fidl_thread.emplace_back([&image_pipe_ready]{
-      image_pipe_ready.Signal();
-    });
+    to_run_on_fidl_thread.emplace_back([&image_pipe_ready] { image_pipe_ready.Signal(); });
   }
 
   // Now we can run everything we've queued in to_run_on_fidl_thread.
@@ -172,17 +167,10 @@ int main(int argc, char* argv[]) {
   // signalled after the last lambda in to_run_on_fidl_thread has run.
   image_pipe_ready.Wait(zx::deadline_after(zx::sec(15)));
 
-  auto in_stream_file = std::make_unique<InStreamFile>(
-    &fidl_loop,
-    fidl_thread,
-    startup_context.get(),
-    input_file);
+  auto in_stream_file =
+      std::make_unique<InStreamFile>(&fidl_loop, fidl_thread, component_context.get(), input_file);
   auto in_stream_peeker = std::make_unique<InStreamPeeker>(
-    &fidl_loop,
-    fidl_thread,
-    startup_context.get(),
-    std::move(in_stream_file),
-    kMaxPeekBytes);
+      &fidl_loop, fidl_thread, component_context.get(), std::move(in_stream_file), kMaxPeekBytes);
 
   // We set up a closure here just to avoid forcing the two decoder types to
   // take the same parameters, but still be able to share the
@@ -191,11 +179,10 @@ int main(int argc, char* argv[]) {
   fit::closure use_decoder;
   if (command_line.HasOption("aac_adts")) {
     is_hash_valid = true;
-    use_decoder = [&fidl_loop, codec_factory = std::move(codec_factory),
-                   sysmem = std::move(sysmem), input_file, output_file,
-                   &md]() mutable {
-      use_aac_decoder(&fidl_loop, std::move(codec_factory), std::move(sysmem),
-                      input_file, output_file, md);
+    use_decoder = [&fidl_loop, codec_factory = std::move(codec_factory), sysmem = std::move(sysmem),
+                   input_file, output_file, &md]() mutable {
+      use_aac_decoder(&fidl_loop, std::move(codec_factory), std::move(sysmem), input_file,
+                      output_file, md);
     };
   } else if (command_line.HasOption("h264")) {
     use_decoder = [&fidl_loop, fidl_thread, codec_factory = std::move(codec_factory),

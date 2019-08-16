@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
 
 #include "examples/media/audio/vu_meter/vu_meter_view.h"
-#include "lib/ui/base_view/cpp/view_provider_component.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 
@@ -19,8 +18,8 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  scenic::ViewProviderComponent component(
-      [&loop](scenic::ViewContext view_context) {
+  scenic::ViewProviderComponentTransitional component(
+      [&loop](scenic::ViewContextTransitional view_context) {
         return std::make_unique<examples::VuMeterView>(std::move(view_context), &loop);
       },
       &loop);
