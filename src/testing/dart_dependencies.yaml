@@ -6,3 +6,4 @@ name:
 dependencies:
   # gcloud is needed by VP9 decode conformance tests
   gcloud: ^0.6.0
+  retry: ^3.0.0
