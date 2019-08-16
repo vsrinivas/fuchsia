@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
@@ -56,28 +55,13 @@ static pbus_dev_t tee_dev = []() {
   return tee_dev;
 }();
 
-constexpr zx_bind_inst_t root_match[] = {
-  BI_MATCH(),
-};
-constexpr zx_bind_inst_t sysmem_match[] = {
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-constexpr device_component_part_t sysmem_component[] = {
-  {countof(root_match), root_match},
-  {countof(sysmem_match), sysmem_match},
-};
-constexpr device_component_t components[] = {
-  {countof(sysmem_component), sysmem_component},
-};
-
 zx_status_t Sherlock::TeeInit() {
-  zx_status_t status =
-      pbus_.CompositeDeviceAdd(&tee_dev, components, countof(components), UINT32_MAX);
+  zx_status_t status = pbus_.DeviceAdd(&tee_dev);
+
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: pbus_device_add tee failed: %d\n", __FUNCTION__, status);
     return status;
   }
   return ZX_OK;
 }
-
 }  // namespace sherlock

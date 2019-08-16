@@ -12,7 +12,6 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fidl-utils/bind.h>
@@ -22,12 +21,6 @@
 #include "optee-controller.h"
 
 namespace optee {
-
-enum {
-  kComponentPdev,
-  kComponentSysmem,
-  kComponentCount,
-};
 
 constexpr TEEC_UUID kOpteeOsUuid = {
     0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
@@ -211,30 +204,9 @@ zx_status_t OpteeController::Create(void* ctx, zx_device_t* parent) {
 zx_status_t OpteeController::Bind() {
   zx_status_t status = ZX_ERR_INTERNAL;
 
-  composite_protocol_t composite;
-  status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to get composite protocol\n");
-    return status;
-  }
-
-  zx_device_t* components[kComponentCount];
-  size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual != countof(components)) {
-    zxlogf(ERROR, "optee: Unable to composite_get_components()\n");
-    return ZX_ERR_INTERNAL;
-  }
-
-  status = device_get_protocol(components[kComponentPdev], ZX_PROTOCOL_PDEV, &pdev_proto_);
+  status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev_proto_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "optee: Unable to get pdev protocol\n");
-    return status;
-  }
-
-  status = device_get_protocol(components[kComponentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_proto_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to get sysmem protocol\n");
     return status;
   }
 
@@ -422,7 +394,7 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(optee, optee::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_OPTEE),
