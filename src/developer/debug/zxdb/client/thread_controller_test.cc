@@ -29,10 +29,8 @@ void ThreadControllerTest::SetUp() {
 
   // Inject a mock module symbols.
   std::string build_id("abcd");  // Identifies the module below.
-  auto module_symbols = std::make_unique<MockModuleSymbols>("file.so");
-  module_symbols_ = module_symbols.get();  // Save pointer for tests.
-  symbol_module_ref_ =
-      session().system().GetSymbols()->InjectModuleForTesting(build_id, std::move(module_symbols));
+  module_symbols_ = fxl::MakeRefCounted<MockModuleSymbols>("file.so");
+  session().system().GetSymbols()->InjectModuleForTesting(build_id, module_symbols_.get());
 
   // Make the process load the mocked module symbols and the other one with no
   // symbols.

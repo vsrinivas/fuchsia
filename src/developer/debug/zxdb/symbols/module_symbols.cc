@@ -7,6 +7,10 @@
 namespace zxdb {
 
 ModuleSymbols::ModuleSymbols() = default;
-ModuleSymbols::~ModuleSymbols() = default;
+
+ModuleSymbols::~ModuleSymbols() {
+  if (deletion_cb_)
+    deletion_cb_(this);
+}
 
 }  // namespace zxdb

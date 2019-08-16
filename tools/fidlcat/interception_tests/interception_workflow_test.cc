@@ -279,13 +279,11 @@ void ProcessController::Initialize(zxdb::Session& session,
 
   // Load modules into program (including the one with the zx_channel_write
   // and zx_channel_read symbols)
-  std::unique_ptr<zxdb::MockModuleSymbols> module =
-      std::make_unique<zxdb::MockModuleSymbols>("zx.so");
-  module->AddSymbolLocations(syscall_name,
-                             {zxdb::Location(zxdb::Location::State::kSymbolized, kSyscallAddress)});
-  fxl::RefPtr<zxdb::SystemSymbols::ModuleRef> module_ref =
-      session.system().GetSymbols()->InjectModuleForTesting(DataForSyscallTest::kElfSymbolBuildID,
-                                                            std::move(module));
+  auto module_symbols = fxl::MakeRefCounted<zxdb::MockModuleSymbols>("zx.so");
+  module_symbols->AddSymbolLocations(
+      syscall_name, {zxdb::Location(zxdb::Location::State::kSymbolized, kSyscallAddress)});
+  session.system().GetSymbols()->InjectModuleForTesting(DataForSyscallTest::kElfSymbolBuildID,
+                                                        module_symbols.get());
 
   for (zxdb::Target* target : session.system().GetTargets()) {
     zxdb::Err err;

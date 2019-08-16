@@ -97,12 +97,11 @@ TEST(InputLocationParser, Parse) {
 
 TEST(InputLocation, ResolveInputLocation) {
   ProcessSymbolsTestSetup symbols;
-  auto owning_mod_sym = std::make_unique<MockModuleSymbols>("mod.so");
-  MockModuleSymbols* module_symbols = owning_mod_sym.get();
+  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
 
   constexpr uint64_t kModuleLoadAddress = 0x10000;
   SymbolContext symbol_context(kModuleLoadAddress);
-  symbols.InjectModule("mid.so", "1234", kModuleLoadAddress, std::move(owning_mod_sym));
+  symbols.InjectModule("mid.so", "1234", kModuleLoadAddress, module_symbols);
 
   // Resolve to nothing.
   Location output;
@@ -165,37 +164,38 @@ TEST(InputLocation, ResolveInputLocation) {
 // that with the InputLocation completion.
 TEST(InputLocation, CompleteInputLocation) {
   ProcessSymbolsTestSetup symbols;
-  auto owning_mod_sym = std::make_unique<MockModuleSymbols>("mod.so");
-  MockModuleSymbols* mod = owning_mod_sym.get();
+  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
   constexpr uint64_t kLoadAddress = 0x1000;
-  symbols.InjectModule("mod", "1234", kLoadAddress, std::move(owning_mod_sym));
-  auto& root = mod->index().root();  // Root of the index.
+  symbols.InjectModule("mod", "1234", kLoadAddress, module_symbols);
+  auto& root = module_symbols->index().root();  // Root of the index.
 
   // Global function.
   const char kGlobalName[] = "aGlobalFunction";
   auto global_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   global_func->set_assigned_name(kGlobalName);
-  TestIndexedSymbol indexed_global(mod, &root, kGlobalName, global_func);
+  TestIndexedSymbol indexed_global(module_symbols.get(), &root, kGlobalName, global_func);
 
   // Namespace
   const char kNsName[] = "aNamespace";
   auto ns = fxl::MakeRefCounted<Namespace>();
   ns->set_assigned_name(kNsName);
-  TestIndexedSymbol indexed_ns(mod, &root, kNsName, ns);
+  TestIndexedSymbol indexed_ns(module_symbols.get(), &root, kNsName, ns);
 
   // Class inside the namespace.
   const char kClassName[] = "Class";
   auto global_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   global_type->set_parent(ns);
   global_type->set_assigned_name(kClassName);
-  TestIndexedSymbol indexed_type(mod, indexed_ns.index_node, kClassName, global_type);
+  TestIndexedSymbol indexed_type(module_symbols.get(), indexed_ns.index_node, kClassName,
+                                 global_type);
 
   // Function inside the class.
   const char kMemberName[] = "MemberFunction";
   auto member_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   member_func->set_assigned_name(kMemberName);
   member_func->set_parent(global_type);
-  TestIndexedSymbol indexed_member(mod, indexed_type.index_node, kMemberName, member_func);
+  TestIndexedSymbol indexed_member(module_symbols.get(), indexed_type.index_node, kMemberName,
+                                   member_func);
 
   // TODO(brettw) make a test setup helper for a whole session / target / process / thread / frame +
   // symbols.

@@ -9,8 +9,8 @@
 
 namespace zxdb {
 
-LoadedModuleSymbols::LoadedModuleSymbols(fxl::RefPtr<SystemSymbols::ModuleRef> module,
-                                         std::string build_id, uint64_t load_address)
+LoadedModuleSymbols::LoadedModuleSymbols(fxl::RefPtr<ModuleSymbols> module, std::string build_id,
+                                         uint64_t load_address)
     : module_(std::move(module)),
       load_address_(load_address),
       build_id_(std::move(build_id)),

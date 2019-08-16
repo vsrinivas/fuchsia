@@ -404,7 +404,7 @@ void SystemImpl::OnSymbolServerBecomesReady(SymbolServer* server) {
       continue;
 
     for (const auto& mod : process->GetSymbols()->GetStatus()) {
-      if (!mod.symbols || !mod.symbols->module_ref()) {
+      if (!mod.symbols || !mod.symbols->module_symbols()) {
         auto download = GetDownload(mod.build_id, DebugSymbolFileType::kDebugInfo, true);
         download->AddServer(download, server);
       } else if (!mod.symbols->module_symbols()->HasBinary()) {

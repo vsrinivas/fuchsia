@@ -121,8 +121,8 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   const uint64_t kModule1Base = 0x1000000;
   const uint64_t kAddress1 = 0x78456345;
   const uint64_t kAddress2 = 0x12345678;
-  std::unique_ptr<MockModuleSymbols> module1 = std::make_unique<MockModuleSymbols>("myfile1.so");
-  std::unique_ptr<MockModuleSymbols> module2 = std::make_unique<MockModuleSymbols>("myfile2.so");
+  auto module1 = fxl::MakeRefCounted<MockModuleSymbols>("myfile1.so");
+  auto module2 = fxl::MakeRefCounted<MockModuleSymbols>("myfile2.so");
   module1->AddSymbolLocations(kFunctionName, {Location(Location::State::kSymbolized, kAddress1),
                                               Location(Location::State::kSymbolized, kAddress2)});
 
@@ -130,10 +130,8 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   // alive for this to stay cached in the SystemSymbols.
   const std::string kBuildID1 = "abcd";
   const std::string kBuildID2 = "zyxw";
-  fxl::RefPtr<SystemSymbols::ModuleRef> module1_ref =
-      session().system().GetSymbols()->InjectModuleForTesting(kBuildID1, std::move(module1));
-  fxl::RefPtr<SystemSymbols::ModuleRef> module2_ref =
-      session().system().GetSymbols()->InjectModuleForTesting(kBuildID2, std::move(module2));
+  session().system().GetSymbols()->InjectModuleForTesting(kBuildID1, module1.get());
+  session().system().GetSymbols()->InjectModuleForTesting(kBuildID2, module2.get());
 
   // Before modules no thread request should be made.
   EXPECT_FALSE(sink().thread_request_made);

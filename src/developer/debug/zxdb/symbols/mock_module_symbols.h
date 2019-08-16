@@ -16,9 +16,6 @@ namespace zxdb {
 // A mock for symbol lookup.
 class MockModuleSymbols : public ModuleSymbols {
  public:
-  explicit MockModuleSymbols(const std::string& local_file_name);
-  ~MockModuleSymbols() override;
-
   // Adds a mock mapping from the given name to the list of locations.
   void AddSymbolLocations(const std::string& name, std::vector<Location> locs);
 
@@ -51,6 +48,12 @@ class MockModuleSymbols : public ModuleSymbols {
   bool HasBinary() const override;
 
  private:
+  FRIEND_MAKE_REF_COUNTED(MockModuleSymbols);
+  FRIEND_REF_COUNTED_THREAD_SAFE(MockModuleSymbols);
+
+  explicit MockModuleSymbols(const std::string& local_file_name);
+  ~MockModuleSymbols() override;
+
   Index index_;
 
   std::string local_file_name_;

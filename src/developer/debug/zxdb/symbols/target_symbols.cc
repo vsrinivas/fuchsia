@@ -15,10 +15,9 @@
 
 namespace zxdb {
 
-// Does a pointer-identity comparison of two ModuleRefs.
-bool TargetSymbols::ModuleRefComparePtr::operator()(
-    const fxl::RefPtr<SystemSymbols::ModuleRef>& a,
-    const fxl::RefPtr<SystemSymbols::ModuleRef>& b) const {
+// Does a pointer-identity comparison of two refptrs.
+bool TargetSymbols::ModuleRefComparePtr::operator()(const fxl::RefPtr<ModuleSymbols>& a,
+                                                    const fxl::RefPtr<ModuleSymbols>& b) const {
   return a.get() < b.get();
 }
 
@@ -32,17 +31,8 @@ TargetSymbols& TargetSymbols::operator=(const TargetSymbols& other) {
   return *this;
 }
 
-void TargetSymbols::AddModule(fxl::RefPtr<SystemSymbols::ModuleRef> module) {
+void TargetSymbols::AddModule(fxl::RefPtr<ModuleSymbols> module) {
   modules_.insert(std::move(module));
-}
-
-void TargetSymbols::RemoveModule(fxl::RefPtr<SystemSymbols::ModuleRef>& module) {
-  auto found = modules_.find(module);
-  if (found == modules_.end()) {
-    FXL_NOTREACHED();
-    return;
-  }
-  modules_.erase(found);
 }
 
 void TargetSymbols::RemoveAllModules() { modules_.clear(); }
@@ -50,7 +40,7 @@ void TargetSymbols::RemoveAllModules() { modules_.clear(); }
 std::vector<const ModuleSymbols*> TargetSymbols::GetModuleSymbols() const {
   std::vector<const ModuleSymbols*> result;
   for (const auto& module : modules_)
-    result.push_back(module->module_symbols());
+    result.push_back(module.get());
   return result;
 }
 
@@ -65,8 +55,8 @@ std::vector<Location> TargetSymbols::ResolveInputLocation(const InputLocation& i
 
   std::vector<Location> result;
   for (const auto& module : modules_) {
-    for (const Location& location : module->module_symbols()->ResolveInputLocation(
-             symbol_context, input_location, ResolveOptions())) {
+    for (const Location& location :
+         module->ResolveInputLocation(symbol_context, input_location, ResolveOptions())) {
       // Clear the location on the result to prevent confusion.
       result.emplace_back(0, location.file_line(), location.column(), location.symbol_context(),
                           location.symbol());
@@ -80,7 +70,7 @@ std::vector<std::string> TargetSymbols::FindFileMatches(std::string_view name) c
   // one once.
   std::set<std::string> result_set;
   for (const auto& module : modules_) {
-    for (auto& file : module->module_symbols()->FindFileMatches(name))
+    for (auto& file : module->FindFileMatches(name))
       result_set.insert(std::move(file));
   }
 

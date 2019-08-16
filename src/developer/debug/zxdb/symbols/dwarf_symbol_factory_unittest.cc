@@ -35,19 +35,19 @@ const char kCallInlineName[] = "CallInline";
 
 // Returns the function symbol with the given name. The name is assumed to exit as this function
 // will EXPECT_* it to be valid. Returns empty refptr on failure.
-fxl::RefPtr<const Function> GetFunctionWithName(ModuleSymbolsImpl& module,
+fxl::RefPtr<const Function> GetFunctionWithName(fxl::RefPtr<ModuleSymbolsImpl>& module_symbols,
                                                 const std::string& name) {
-  DwarfSymbolFactory* factory = module.symbol_factory();
+  DwarfSymbolFactory* factory = module_symbols->symbol_factory();
 
-  llvm::DWARFUnit* unit =
-      GetUnitWithNameEndingIn(module.context(), module.compile_units(), "/type_test.cc");
+  llvm::DWARFUnit* unit = GetUnitWithNameEndingIn(module_symbols->context(),
+                                                  module_symbols->compile_units(), "/type_test.cc");
   EXPECT_TRUE(unit);
   if (!unit)
     return nullptr;
 
   // Find the GetIntPtr function.
-  llvm::DWARFDie function_die =
-      GetFirstDieOfTagAndName(module.context(), unit, llvm::dwarf::DW_TAG_subprogram, name);
+  llvm::DWARFDie function_die = GetFirstDieOfTagAndName(module_symbols->context(), unit,
+                                                        llvm::dwarf::DW_TAG_subprogram, name);
   EXPECT_TRUE(function_die);
   if (!function_die)
     return nullptr;
@@ -67,12 +67,13 @@ fxl::RefPtr<const Function> GetFunctionWithName(ModuleSymbolsImpl& module,
 }  // namespace
 
 TEST(DwarfSymbolFactory, Function) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetIntPtr function.
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetIntPtrName);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kGetIntPtrName);
   ASSERT_TRUE(function);
 
   // Unmangled name.
@@ -94,12 +95,14 @@ TEST(DwarfSymbolFactory, Function) {
 }
 
 TEST(DwarfSymbolFactory, PtrToMemberFunction) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetIntPtr function.
-  fxl::RefPtr<const Function> get_function = GetFunctionWithName(module, kGetStructMemberPtrName);
+  fxl::RefPtr<const Function> get_function =
+      GetFunctionWithName(module_symbols, kGetStructMemberPtrName);
   ASSERT_TRUE(get_function);
 
   // Get the return type, this is a typedef (because functions can't return pointers to member
@@ -114,12 +117,14 @@ TEST(DwarfSymbolFactory, PtrToMemberFunction) {
 }
 
 TEST(DwarfSymbolFactory, InlinedMemberFunction) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the CallInline function.
-  fxl::RefPtr<const Function> call_function = GetFunctionWithName(module, kCallInlineMemberName);
+  fxl::RefPtr<const Function> call_function =
+      GetFunctionWithName(module_symbols, kCallInlineMemberName);
   ASSERT_TRUE(call_function);
 
   // It should have one inner block that's the inline function.
@@ -147,12 +152,13 @@ TEST(DwarfSymbolFactory, InlinedMemberFunction) {
 }
 
 TEST(DwarfSymbolFactory, InlinedFunction) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the CallInline function.
-  fxl::RefPtr<const Function> call_function = GetFunctionWithName(module, kCallInlineName);
+  fxl::RefPtr<const Function> call_function = GetFunctionWithName(module_symbols, kCallInlineName);
   ASSERT_TRUE(call_function);
 
   // It should have one inner block that's the inline function.
@@ -175,12 +181,13 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
 }
 
 TEST(DwarfSymbolFactory, ModifiedBaseType) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetIntPtr function.
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetIntPtrName);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kGetIntPtrName);
   ASSERT_TRUE(function);
 
   // Get the return type, this references a "pointer" modifier.
@@ -214,12 +221,13 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
 }
 
 TEST(DwarfSymbolFactory, RValueRef) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetIntPtr function.
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kPassRValueRefName);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kPassRValueRefName);
   ASSERT_TRUE(function);
 
   // Should have one parameter of rvalue ref type.
@@ -234,13 +242,14 @@ TEST(DwarfSymbolFactory, RValueRef) {
 }
 
 TEST(DwarfSymbolFactory, ArrayType) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetString function.
   const char kGetString[] = "GetString";
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetString);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kGetString);
   ASSERT_TRUE(function);
 
   // Find the "str_array" variable in the function.
@@ -262,13 +271,14 @@ TEST(DwarfSymbolFactory, ArrayType) {
 }
 
 TEST(DwarfSymbolFactory, Array2D) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the My2DArray function.
   const char kMy2DArray[] = "My2DArray";
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kMy2DArray);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kMy2DArray);
   ASSERT_TRUE(function);
 
   // Find the "array" variable in the function. It's declared as:
@@ -301,13 +311,14 @@ TEST(DwarfSymbolFactory, Array2D) {
 }
 
 TEST(DwarfSymbolFactory, Collection) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetStruct function.
   const char kGetStruct[] = "GetStruct";
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetStruct);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kGetStruct);
   ASSERT_TRUE(function);
 
   // The return type should be the struct.
@@ -362,13 +373,14 @@ TEST(DwarfSymbolFactory, Collection) {
 }
 
 TEST(DwarfSymbolFactory, Enum) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetStruct function.
   const char kGetStruct[] = "GetStructWithEnums";
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetStruct);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kGetStruct);
   ASSERT_TRUE(function);
 
   // The return type should be the struct.
@@ -416,12 +428,13 @@ TEST(DwarfSymbolFactory, Enum) {
 
 // Tests nested code blocks, variables, and parameters.
 TEST(DwarfSymbolFactory, CodeBlocks) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the DoStructCall function.
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kDoStructCallName);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kDoStructCallName);
   ASSERT_TRUE(function);
 
   // It should have two parameters, arg1 and arg2.
@@ -482,13 +495,14 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
 
 // Tests both nullptr_t and typedef decoding (which is how it's encoded).
 TEST(DwarfSymbolFactory, NullPtrTTypedef) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetNullPtrT function.
   const char kGetNullPtrT[] = "GetNullPtrT";
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetNullPtrT);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kGetNullPtrT);
   ASSERT_TRUE(function);
 
   // The return type should be nullptr_t.
@@ -516,13 +530,14 @@ TEST(DwarfSymbolFactory, NullPtrTTypedef) {
 }
 
 TEST(DwarfSymbolFactory, TemplateParams) {
-  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "", "");
-  Err err = module.Load();
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetTemplate() function.
   const char kGetTemplate[] = "GetTemplate";
-  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetTemplate);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kGetTemplate);
   ASSERT_TRUE(function);
 
   // The return type should be our collection

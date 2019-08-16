@@ -37,10 +37,9 @@ class ResolveCollectionTest : public TestWithLoop {
     TestWithLoop::SetUp();
 
     // Need a bunch of symbol stuff to have the index.
-    auto mod_ref = std::make_unique<MockModuleSymbols>("mod.so");
-    module_symbols_ = mod_ref.get();  // Save for later.
+    module_symbols_ = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
 
-    process_setup_.InjectModule("mod1", "1234", kModuleLoadAddress, std::move(mod_ref));
+    process_setup_.InjectModule("mod1", "1234", kModuleLoadAddress, module_symbols_);
     index_root_ = &module_symbols_->index().root();  // Root of the index for module 1.
 
     data_provider_ = fxl::MakeRefCounted<MockSymbolDataProvider>();
@@ -54,6 +53,7 @@ class ResolveCollectionTest : public TestWithLoop {
     index_root_ = nullptr;
     data_provider_.reset();
     eval_context_.reset();
+    module_symbols_.reset();
 
     TestWithLoop::TearDown();
   }
@@ -62,7 +62,7 @@ class ResolveCollectionTest : public TestWithLoop {
   ProcessSymbolsTestSetup process_setup_;
 
   // Injected module.
-  MockModuleSymbols* module_symbols_ = nullptr;  // Ptr owned by process_setup_.
+  fxl::RefPtr<MockModuleSymbols> module_symbols_;
   SymbolContext module_symbol_context_;
   IndexNode* index_root_ = nullptr;
 
@@ -151,7 +151,7 @@ TEST_F(ResolveCollectionTest, ForwardDefinitionPtr) {
   // Make a definition for the type and index it. It has one 32-bit data member.
   auto int32_type = MakeInt32Type();
   auto def = MakeCollectionType(DwarfTag::kStructureType, kMyStructName, {{"a", int32_type}});
-  TestIndexedSymbol indexed_def(module_symbols_, index_root_, kMyStructName, def);
+  TestIndexedSymbol indexed_def(module_symbols_.get(), index_root_, kMyStructName, def);
 
   // Define the data for the object. It has a 32-bit little-endian value.
   const uint64_t kObjectAddr = 0x12345678;
@@ -203,7 +203,7 @@ TEST_F(ResolveCollectionTest, ForwardDefMember) {
   // Real definition of the type in the index.
   auto int32_type = MakeInt32Type();
   auto def = MakeCollectionType(DwarfTag::kStructureType, kFwdDeclaredName, {{"a", int32_type}});
-  TestIndexedSymbol indexed_def(module_symbols_, index_root_, kFwdDeclaredName, def);
+  TestIndexedSymbol indexed_def(module_symbols_.get(), index_root_, kFwdDeclaredName, def);
 
   // Struct that contains a reference to the forward-declared type as a member.
   const char kMemberName[] = "a";

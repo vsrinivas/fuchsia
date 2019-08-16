@@ -10,11 +10,13 @@
 #include <string>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/symbols/index_node.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
 
@@ -31,12 +33,14 @@ class SymbolContext;
 // All addresses in and out of the API of this class are absolute inside a running process. Since
 // this class itself is independent of load addresses, the functions take a SymbolContext which is
 // used to convert between the absolute addresses use as inputs and outputs, and the module-relative
-// addresses used by the symbol tables.
-class ModuleSymbols {
+// addresses used by the symbol tables. The SymbolContext comes from the LoadedModuleSymbols which
+// is owned by the ProcessSymbols object (which knows about the load addresses for each of its
+// modules).
+//
+// This class is reference counted because symbols have a backpointer to the module they come from
+// via the CompileUnit.
+class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
  public:
-  ModuleSymbols();
-  virtual ~ModuleSymbols();
-
   // Returns information about this module. This is relatively slow because it needs to count the
   // index size.
   //
@@ -93,7 +97,20 @@ class ModuleSymbols {
   // itself, such as PLT entries.
   virtual bool HasBinary() const = 0;
 
+  // The constructor takes an optional callback that will be executed when this class is destroyed.
+  // This allows the SystemSymbols to keep track of all live ModuleSymbols for caching purposes.
+  void set_deletion_cb(fit::callback<void(ModuleSymbols*)> cb) { deletion_cb_ = std::move(cb); }
+
+ protected:
+  FRIEND_REF_COUNTED_THREAD_SAFE(ModuleSymbols);
+  FRIEND_MAKE_REF_COUNTED(ModuleSymbols);
+
+  explicit ModuleSymbols();
+  virtual ~ModuleSymbols();
+
  private:
+  fit::callback<void(ModuleSymbols*)> deletion_cb_;  // Possibly null.
+
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleSymbols);
 };
 

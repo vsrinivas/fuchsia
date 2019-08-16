@@ -31,19 +31,9 @@ namespace zxdb {
 class DwarfSymbolFactory;
 class Variable;
 
-// Represents the symbols for a module (executable or shared library).
-//
-// All addresses in and out of the API of this class are module-relative. This way, the symbol
-// information can be shared between multiple processes that have mapped the same .so file (often at
-// different addresses). This means that callers have to offset addresses when calling into this
-// class, and offset them in the opposite way when they get the results.
+// Represents the symbols for a module (executable or shared library). See ModuleSymbols.
 class ModuleSymbolsImpl : public ModuleSymbols {
  public:
-  // You must call Load before using this class.
-  explicit ModuleSymbolsImpl(const std::string& name, const std::string& binary_name,
-                             const std::string& build_id);
-  ~ModuleSymbolsImpl();
-
   llvm::DWARFContext* context() { return context_.get(); }
   llvm::DWARFUnitVector& compile_units() { return compile_units_; }
   DwarfSymbolFactory* symbol_factory() { return symbol_factory_.get(); }
@@ -66,7 +56,14 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   bool HasBinary() const override;
 
  private:
+  FRIEND_MAKE_REF_COUNTED(ModuleSymbolsImpl);
+  FRIEND_REF_COUNTED_THREAD_SAFE(ModuleSymbolsImpl);
   FRIEND_TEST(ModuleSymbols, ResolveMainFunction);
+
+  // You must call Load before using this class.
+  ModuleSymbolsImpl(const std::string& name, const std::string& binary_name,
+                    const std::string& build_id);
+  ~ModuleSymbolsImpl() override;
 
   llvm::DWARFUnit* CompileUnitForRelativeAddress(uint64_t relative_address) const;
 

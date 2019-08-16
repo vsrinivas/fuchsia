@@ -8,21 +8,21 @@
 #include <map>
 #include <memory>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/build_id_index.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
 class ModuleSymbols;
 
-// Tracks a global view of all ModuleSymbols objects. Since each object is
-// independent of load address, we can share these between processes that
-// load the same binary.
+// Tracks a global view of all ModuleSymbols objects. Since each object is independent of load
+// address, we can share these between processes that load the same binary.
 //
-// This is an internal object but since there is no public API, there is no
-// "Impl" split.
+// This is an internal object but since there is no public API, there is no "Impl" split.
 class SystemSymbols {
  public:
   // What kind of downloading should be attempted for missing symbols.
@@ -30,30 +30,6 @@ class SystemSymbols {
     kNone,
     kSymbols,
     kBinary,
-  };
-
-  // A reference-counted holder for the ModuleSymbols object. This object
-  // will notify the owning SystemSymbols object when all references have
-  // been destroyed.
-  class ModuleRef : public fxl::RefCountedThreadSafe<ModuleRef> {
-   public:
-    ModuleRef(SystemSymbols* system_symbols, std::unique_ptr<ModuleSymbols> module_symbols);
-
-    ModuleSymbols* module_symbols() { return module_symbols_.get(); }
-    const ModuleSymbols* module_symbols() const { return module_symbols_.get(); }
-
-    // Notification from SystemSymbols that it's being deleted and no callbacks
-    // should be issued on the pointer.
-    void SystemSymbolsDeleting();
-
-   private:
-    FRIEND_REF_COUNTED_THREAD_SAFE(ModuleRef);
-    ~ModuleRef();
-
-    // May be null to indicate the SystemSymbols object is deleted.
-    SystemSymbols* system_symbols_;
-
-    std::unique_ptr<ModuleSymbols> module_symbols_;
   };
 
   class DownloadHandler {
@@ -67,41 +43,36 @@ class SystemSymbols {
 
   BuildIDIndex& build_id_index() { return build_id_index_; }
 
-  // Injects a ModuleSymbols object for the given build ID. Used for testing.
-  // Normally the test would provide a dummy implementation for ModuleSymbols.
-  // Ownership of the symbols will be transferred to the returned refcounted
-  // ModuleRef. As long as this is alive, the build id -> module mapping will
-  // remain in the SystemSymbols object.
-  fxl::RefPtr<ModuleRef> InjectModuleForTesting(const std::string& build_id,
-                                                std::unique_ptr<ModuleSymbols> module);
+  // Injects a ModuleSymbols object for the given build ID. Used for testing. Normally the test
+  // would provide a dummy implementation for ModuleSymbols.
+  void InjectModuleForTesting(const std::string& build_id, ModuleSymbols* module);
 
-  // Retrieves the symbols for the module with the given build ID. If the
-  // module's symbols have already been loaded, just puts an owning reference
-  // into the given out param. If not, the symbols will be loaded.
+  // Retrieves the symbols for the module with the given build ID. If the module's symbols have
+  // already been loaded, just puts an owning reference into the given out param. If not, the
+  // symbols will be loaded.
   //
-  // This function uses the build_id for loading symbols. The name is only
-  // used for generating informational messages.
+  // Missing symbols is not counted as an error, so *module will be empty even on success in this
+  // case. Errors will be from things like corrupted symbols. If a download is requested, downloads
+  // will be kicked off for any missing debug files in this case.
   //
-  // If download is set to true, downloads will be kicked off for any missing
-  // debug files.
-  Err GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>* module,
+  // This function uses the build_id for loading symbols. The name is only used for generating
+  // informational messages.
+  Err GetModule(const std::string& build_id, fxl::RefPtr<ModuleSymbols>* module,
                 DownloadType download_type = kSymbols);
 
  private:
-  friend ModuleRef;
-
-  // Notification from the ModuleRef that all references have been deleted and
-  // the tracking information should be removed from the map.
-  void WillDeleteModule(ModuleRef* module);
+  // Saves the given module in the modules_ map and registers for its deletion.
+  void SaveModule(const std::string& build_id, ModuleSymbols* module);
 
   DownloadHandler* download_handler_;
 
   BuildIDIndex build_id_index_;
 
-  // Index from module build ID to a non-owning ModuleRef pointer. The
-  // ModuleRef will notify us when it's being deleted so the pointers stay
-  // up-to-date.
-  std::map<std::string, ModuleRef*> modules_;
+  // Index from module build ID to a non-owning ModuleSymbols pointer. The ModuleSymbols will notify
+  // us when it's being deleted so the pointers stay up-to-date.
+  std::map<std::string, ModuleSymbols*> modules_;
+
+  fxl::WeakPtrFactory<SystemSymbols> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SystemSymbols);
 };

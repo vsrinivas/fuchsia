@@ -33,7 +33,7 @@ TEST(TargetSymbols, GetShortestUniqueName) {
   const char kNoPath1[] = "short/name.cc";
   const char kNoPath2[] = "name.cc";
 
-  auto mod_sym = std::make_unique<MockModuleSymbols>("foo.so");
+  auto mod_sym = fxl::MakeRefCounted<MockModuleSymbols>("foo.so");
   mod_sym->AddFileName(kUnique);
   mod_sym->AddFileName(kAbsolute1);
   mod_sym->AddFileName(kAbsolute2);
@@ -43,7 +43,7 @@ TEST(TargetSymbols, GetShortestUniqueName) {
   mod_sym->AddFileName(kNoPath1);
   mod_sym->AddFileName(kNoPath2);
 
-  setup.InjectModule("foo.so", "0", 0, std::move(mod_sym));
+  setup.InjectModule("foo.so", "0", 0, mod_sym);
 
   // Unique names and not found names get just the name part.
   EXPECT_EQ("unique.cc", setup.target().GetShortestUniqueFileName(kUnique));

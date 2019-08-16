@@ -18,10 +18,10 @@ ProcessSymbolsTestSetup::ProcessSymbolsTestSetup()
 ProcessSymbolsTestSetup::~ProcessSymbolsTestSetup() = default;
 
 void ProcessSymbolsTestSetup::InjectModule(const std::string& name, const std::string& build_id,
-                                           uint64_t base, std::unique_ptr<ModuleSymbols> mod_sym) {
-  auto loaded = std::make_unique<LoadedModuleSymbols>(
-      system_.InjectModuleForTesting(build_id, std::move(mod_sym)), build_id, base);
-  process_.InjectModuleForTesting(name, build_id, std::move(loaded));
+                                           uint64_t base, fxl::RefPtr<ModuleSymbols> mod_sym) {
+  system_.InjectModuleForTesting(build_id, mod_sym.get());
+  process_.InjectModuleForTesting(
+      name, build_id, std::make_unique<LoadedModuleSymbols>(std::move(mod_sym), build_id, base));
 }
 
 }  // namespace zxdb

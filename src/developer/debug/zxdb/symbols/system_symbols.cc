@@ -6,52 +6,29 @@
 
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/common/host_util.h"
+#include "src/developer/debug/zxdb/common/ref_ptr_to.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
 #include "src/lib/elflib/elflib.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
-// SystemSymbols::ModuleRef ------------------------------------------------------------------------
-
-SystemSymbols::ModuleRef::ModuleRef(SystemSymbols* system_symbols,
-                                    std::unique_ptr<ModuleSymbols> module_symbols)
-    : system_symbols_(system_symbols), module_symbols_(std::move(module_symbols)) {}
-
-SystemSymbols::ModuleRef::~ModuleRef() {
-  if (system_symbols_)
-    system_symbols_->WillDeleteModule(this);
-}
-
-void SystemSymbols::ModuleRef::SystemSymbolsDeleting() { system_symbols_ = nullptr; }
-
-// SystemSymbols -----------------------------------------------------------------------------------
-
 SystemSymbols::SystemSymbols(DownloadHandler* download_handler)
-    : download_handler_(download_handler) {}
+    : download_handler_(download_handler), weak_factory_(this) {}
 
-SystemSymbols::~SystemSymbols() {
-  // Disown any remaining ModuleRefs so they don't call us back.
-  for (auto& pair : modules_)
-    pair.second->SystemSymbolsDeleting();
-  modules_.clear();
+SystemSymbols::~SystemSymbols() = default;
+
+void SystemSymbols::InjectModuleForTesting(const std::string& build_id, ModuleSymbols* module) {
+  SaveModule(build_id, module);
 }
 
-fxl::RefPtr<SystemSymbols::ModuleRef> SystemSymbols::InjectModuleForTesting(
-    const std::string& build_id, std::unique_ptr<ModuleSymbols> module) {
-  // Can't inject a module that already exists.
-  FXL_DCHECK(modules_.find(build_id) == modules_.end());
-
-  fxl::RefPtr<ModuleRef> result = fxl::MakeRefCounted<ModuleRef>(this, std::move(module));
-  modules_[build_id] = result.get();
-  return result;
-}
-
-Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>* module,
+Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleSymbols>* module,
                              SystemSymbols::DownloadType download_type) {
+  *module = fxl::RefPtr<ModuleSymbols>();
+
   auto found_existing = modules_.find(build_id);
   if (found_existing != modules_.end()) {
-    *module = fxl::RefPtr<ModuleRef>(found_existing->second);
+    *module = RefPtrTo(found_existing->second);
     return Err();
   }
 
@@ -61,41 +38,49 @@ Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>
 
   if (file_name.empty() && download_type == SystemSymbols::DownloadType::kSymbols &&
       download_handler_) {
-    *module = nullptr;
     download_handler_->RequestDownload(build_id, DebugSymbolFileType::kDebugInfo, false);
   }
 
   if (auto debug = elflib::ElfLib::Create(file_name)) {
     if (!debug->ProbeHasProgramBits() && binary_file_name.empty() &&
         download_type == SystemSymbols::DownloadType::kBinary && download_handler_) {
+      // File doesn't exist or has no symbols, schedule a download.
       download_handler_->RequestDownload(build_id, DebugSymbolFileType::kBinary, false);
     }
   }
 
-  if (file_name.empty()) {
-    return Err();
-  }
+  if (file_name.empty())
+    return Err();  // No symbols synchronously available.
 
-  auto module_symbols = std::make_unique<ModuleSymbolsImpl>(file_name, binary_file_name, build_id);
-  Err err = module_symbols->Load();
-  if (err.has_error())
-    return err;
+  auto module_impl = fxl::MakeRefCounted<ModuleSymbolsImpl>(file_name, binary_file_name, build_id);
+  if (Err err = module_impl->Load(); err.has_error())
+    return err;  // Symbols corrupt.
+  *module = std::move(module_impl);
 
-  *module = fxl::MakeRefCounted<ModuleRef>(this, std::move(module_symbols));
-  modules_[build_id] = module->get();
+  SaveModule(build_id, module->get());  // Save in cache for future use.
   return Err();
 }
 
-void SystemSymbols::WillDeleteModule(ModuleRef* module) {
-  // We expect relatively few total modules and removing them is also uncommon,
-  // so this is a brute-force search.
-  for (auto iter = modules_.begin(); iter != modules_.end(); ++iter) {
-    if (iter->second == module) {
-      modules_.erase(iter);
-      return;
-    }
-  }
-  FXL_NOTREACHED();  // Notified for unknown ModuleRef.
+void SystemSymbols::SaveModule(const std::string& build_id, ModuleSymbols* module) {
+  // Can't save a module that already exists.
+  FXL_DCHECK(modules_.find(build_id) == modules_.end());
+
+  module->set_deletion_cb(
+      [weak_system = weak_factory_.GetWeakPtr(), build_id](ModuleSymbols* module) {
+        if (!weak_system)
+          return;
+        SystemSymbols* system = weak_system.get();
+
+        auto found = system->modules_.find(build_id);
+        if (found == system->modules_.end()) {
+          FXL_NOTREACHED();  // Should be found if we registered.
+          return;
+        }
+
+        FXL_DCHECK(module == found->second);  // Mapping should match.
+        system->modules_.erase(found);
+      });
+  modules_[build_id] = module;
 }
 
 }  // namespace zxdb

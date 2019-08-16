@@ -426,14 +426,13 @@ TEST_F(EvalContextImplTest, RegisterShadowed) {
 // Also tests ResolveForwardDefinition().
 TEST_F(EvalContextImplTest, GetConcreteType) {
   ProcessSymbolsTestSetup setup;
-  auto mod_ref = std::make_unique<MockModuleSymbols>("mod.so");
-  MockModuleSymbols* mod = mod_ref.get();  // Save for later.
+  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
 
   constexpr uint64_t kLoadAddress = 0x1000000;
   SymbolContext symbol_context(kLoadAddress);
-  setup.InjectModule("mod1", "1234", kLoadAddress, std::move(mod_ref));
+  setup.InjectModule("mod1", "1234", kLoadAddress, module_symbols);
 
-  auto& root = mod->index().root();  // Root of the index for module 1.
+  auto& root = module_symbols->index().root();  // Root of the index for module 1.
 
   const char kMyStructName[] = "MyStruct";
 
@@ -457,7 +456,7 @@ TEST_F(EvalContextImplTest, GetConcreteType) {
   auto def = MakeCollectionType(DwarfTag::kStructureType, kMyStructName, {{"a", MakeInt32Type()}});
 
   // Index the declaration of the type.
-  TestIndexedSymbol indexed_def(mod, &root, kMyStructName, def);
+  TestIndexedSymbol indexed_def(module_symbols.get(), &root, kMyStructName, def);
 
   // Now that the index exists for the type, both the const and non-const declarations should
   // resolve to the full definition.
