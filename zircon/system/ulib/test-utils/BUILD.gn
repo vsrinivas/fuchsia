@@ -12,6 +12,7 @@ library("test-utils") {
     "$zx/system/ulib/launchpad",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-process:llcpp",
     "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/elfload",
     "$zx/system/ulib/fdio",
@@ -19,5 +20,6 @@ library("test-utils") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
   ]
 }

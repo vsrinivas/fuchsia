@@ -36,7 +36,6 @@ library("launchpad") {
     "$zx/system/utest/channel-fatal:*",
     "$zx/system/utest/debugger:*",
     "$zx/system/utest/dlfcn:*",
-    "$zx/system/utest/exception:*",
     "$zx/system/utest/fs:*",
     "$zx/system/utest/property:*",
     "$zx/system/utest/spawn:*",

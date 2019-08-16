@@ -2,10 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstdio>
+#include <fcntl.h>
+#include <fuchsia/process/llcpp/fidl.h>
 #include <lib/backtrace-request/backtrace-request.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/job.h>
+#include <lib/zx/vmo.h>
 #include <stdlib.h>
+#include <string>
 #include <string.h>
+#include <zircon/dlfcn.h>
 #include <zircon/process.h>
+#include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
@@ -18,6 +30,8 @@
 #include <unittest/unittest.h>
 
 #define TU_FAIL_ERRCODE 10
+
+namespace fprocess = ::llcpp::fuchsia::process;
 
 void* tu_malloc(size_t size) {
   void* result = malloc(size);
@@ -69,6 +83,13 @@ void tu_fatal(const char* what, zx_status_t status) {
 
   unittest_printf_critical("FATAL: exiting process\n");
   exit(TU_FAIL_ERRCODE);
+}
+
+// Prints a message and terminates the process if |status| is not |ZX_OK|.
+static void tu_check(const char* what, zx_status_t status) {
+  if (status != ZX_OK) {
+    tu_fatal(what, status);
+  }
 }
 
 void tu_handle_close(zx_handle_t handle) {
@@ -197,12 +218,168 @@ launchpad_t* tu_launch_fdio_init(zx_handle_t job, const char* name, int argc,
   return lp;
 }
 
+// Loads the executable at the given path into the given VMO.
+static zx_status_t load_executable_vmo(const char* path, zx::vmo* result) {
+  int fd = open(path, O_RDONLY);
+  if (fd < 0) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  zx::vmo vmo;
+  zx_status_t status = fdio_get_vmo_clone(fd, vmo.reset_and_get_address());
+  close(fd);
+  tu_check("load vmo from fd", status);
+
+  status = vmo.replace_as_executable(zx::handle(), result);
+  tu_check("replace vmo as executable", status);
+
+  if (strlen(path) >= ZX_MAX_NAME_LEN) {
+    const char* p = strrchr(path, '/');
+    if (p != NULL) {
+      path = p + 1;
+    }
+  }
+
+  status = result->set_property(ZX_PROP_NAME, path, strlen(path));
+  tu_check("setting vmo name", status);
+
+  return ZX_OK;
+}
+
+struct springboard {
+  fprocess::ProcessStartData data;
+
+  springboard(fprocess::ProcessStartData* reference) {
+    data.process.reset(reference->process.release());
+    reference->root_vmar.reset();  // Not used.
+    data.thread.reset(reference->thread.release());
+    data.entry = reference->entry;
+    data.stack = reference->stack;
+    data.bootstrap.reset(reference->bootstrap.release());
+    data.vdso_base = reference->vdso_base;
+    // Not using base.
+  }
+};
+
+zx_handle_t springboard_get_process_handle(springboard_t* sb) {
+  return sb->data.process.get();
+}
+
+springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const char* const* argv,
+                              int envc, const char* const* envp, size_t num_handles,
+                              zx_handle_t* handles, uint32_t* handle_ids) {
+  zx_status_t status;
+
+  // Connect to the Launcher service.
+
+  zx::channel launcher_channel, launcher_request;
+  status = zx::channel::create(0, &launcher_channel, &launcher_request);
+  tu_check("creating channel for launcher service", status);
+
+  std::string service_name = "/svc/" + std::string(fprocess::Launcher::Name);
+  status = fdio_service_connect(service_name.c_str(), launcher_request.release());
+  tu_check("connecting to launcher service", status);
+
+  fprocess::Launcher::SyncClient launcher(std::move(launcher_channel));
+
+  // Add arguments.
+
+  {
+    fidl::VectorView<uint8_t> data[argc];
+    for (int i = 0; i < argc; i++) {
+      data[i] = fidl::VectorView<uint8_t>(strlen(argv[i]),
+                                          reinterpret_cast<uint8_t*>(const_cast<char*>(argv[i])));
+    }
+    fidl::VectorView<fidl::VectorView<uint8_t>> args(argc, data);
+    fprocess::Launcher::ResultOf::AddArgs result = launcher.AddArgs(args);
+    tu_check("sending arguments", result.status());
+  }
+
+  // Add environment.
+
+  if (envp) {
+    fidl::VectorView<uint8_t> data[envc];
+    for (int i = 0; i < envc; i++) {
+      data[i] = fidl::VectorView<uint8_t>(strlen(envp[i]),
+                                          reinterpret_cast<uint8_t*>(const_cast<char*>(envp[i])));
+    }
+    fidl::VectorView<fidl::VectorView<uint8_t>> env(envc, data);
+    fprocess::Launcher::ResultOf::AddEnvirons result = launcher.AddEnvirons(env);
+    tu_check("sending environment", result.status());
+  }
+
+  // Add handles.
+
+  {
+    const size_t handle_count = num_handles + 1;
+    fprocess::HandleInfo handle_infos[handle_count];
+
+    // Input handles.
+
+    size_t index;
+    for (index = 0; index < num_handles; index++) {
+      handle_infos[index].handle.reset(handles[index]);
+      handle_infos[index].id = handle_ids[index];
+    }
+
+    // LDSVC
+
+    zx::channel ldsvc;
+    status = dl_clone_loader_service(handle_infos[index].handle.reset_and_get_address());
+    tu_check("getting loader service", status);
+    handle_infos[index++].id = PA_LDSVC_LOADER;
+
+    fidl::VectorView<fprocess::HandleInfo> handle_vector(handle_count, handle_infos);
+    fprocess::Launcher::ResultOf::AddHandles result = launcher.AddHandles(handle_vector);
+    tu_check("sending handles", result.status());
+  }
+
+  // Create the process.
+
+  fprocess::LaunchInfo launch_info;
+
+  const char* filename = argv[0];
+  status = load_executable_vmo(filename, &launch_info.executable);
+  tu_check("loading executable", status);
+
+  zx::unowned_job unowned_job(job);
+  status = unowned_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &launch_info.job);
+  tu_check("duplicating job for launch", status);
+
+  const char* process_name = name ? name : filename;
+  size_t process_name_size = strlen(process_name);
+  if (process_name_size >= ZX_MAX_NAME_LEN) {
+    process_name_size = ZX_MAX_NAME_LEN - 1;
+  }
+  launch_info.name = fidl::StringView(process_name_size, process_name);
+
+  fprocess::Launcher::ResultOf::CreateWithoutStarting result =
+      launcher.CreateWithoutStarting(std::move(launch_info));
+  tu_check("process creation", result.status());
+
+  fprocess::Launcher::CreateWithoutStartingResponse* response = result.Unwrap();
+  tu_check("fuchsia.process.Launcher#CreateWithoutStarting failed", response->status);
+
+  return new springboard(response->data);
+}
+
 zx_handle_t tu_launch_fdio_fini(launchpad_t* lp) {
   zx_handle_t proc;
   zx_status_t status;
   if ((status = launchpad_go(lp, &proc, NULL)) < 0)
     tu_fatal("tu_launch_fdio_fini", status);
   return proc;
+}
+
+zx_handle_t tu_launch_fini(springboard* sb) {
+  zx_handle_t process = sb->data.process.release();
+  zx_handle_t thread = sb->data.thread.release();
+  zx_status_t status = zx_process_start(process, thread, sb->data.entry, sb->data.stack,
+                                        sb->data.bootstrap.release(), sb->data.vdso_base);
+  zx_handle_close(thread);
+  tu_check("starting process", status);
+  delete sb;
+  return process;
 }
 
 void tu_process_wait_signaled(zx_handle_t process) {

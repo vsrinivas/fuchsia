@@ -37,8 +37,6 @@
 #include <test-utils/test-utils.h>
 #include <zxtest/zxtest.h>
 
-#include <launchpad/launchpad.h>
-
 static int thread_func(void* arg);
 
 // argv[0]
@@ -362,7 +360,7 @@ static void __NO_RETURN test_child() {
   exit(0);
 }
 
-static launchpad_t* setup_test_child(zx_handle_t job, const char* arg, zx_handle_t* out_channel) {
+static springboard_t* setup_test_child(zx_handle_t job, const char* arg, zx_handle_t* out_channel) {
   zx_handle_t our_channel, their_channel;
   tu_channel_create(&our_channel, &their_channel);
   const char* test_child_path = program_path;
@@ -374,25 +372,25 @@ static launchpad_t* setup_test_child(zx_handle_t job, const char* arg, zx_handle
   zx_handle_t handles[1] = {their_channel};
   uint32_t handle_ids[1] = {PA_USER0};
   *out_channel = our_channel;
-  launchpad_t* lp =
-      tu_launch_fdio_init(job, test_child_name, argc, argv, NULL, 1, handles, handle_ids);
-  return lp;
+  springboard_t* sb =
+      tu_launch_init(job, test_child_name, argc, argv, 0, NULL, 1, handles, handle_ids);
+  return sb;
 }
 
 static void start_test_child(zx_handle_t job, const char* arg, zx_handle_t* out_child,
                              zx_handle_t* out_channel) {
-  launchpad_t* lp = setup_test_child(job, arg, out_channel);
-  *out_child = tu_launch_fdio_fini(lp);
+  springboard_t* sb = setup_test_child(job, arg, out_channel);
+  *out_child = tu_launch_fini(sb);
 }
 
 static void start_test_child_with_eport(zx_handle_t job, const char* arg, zx_handle_t* out_child,
                                         zx_handle_t* out_eport, zx_handle_t* out_channel) {
-  launchpad_t* lp = setup_test_child(zx_job_default(), arg, out_channel);
+  springboard_t* sb = setup_test_child(zx_job_default(), arg, out_channel);
   zx_handle_t eport = tu_io_port_create();
-  // Note: child is a borrowed handle, launchpad still owns it at this point.
-  zx_handle_t child = launchpad_get_process_handle(lp);
+  // Note: child is a borrowed handle, springboard still owns it at this point.
+  zx_handle_t child = springboard_get_process_handle(sb);
   tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, ZX_EXCEPTION_PORT_DEBUGGER);
-  child = tu_launch_fdio_fini(lp);
+  child = tu_launch_fini(sb);
   // Now we own the child handle, and lp is destroyed.
   // Note: This is a different handle, the previous child handle is gone at
   // this point (transfered to the child process).
@@ -1402,9 +1400,9 @@ TEST(ExceptionTest, ExitClosingExcpHandle) {
   };
   int argc = fbl::count_of(argv);
 
-  launchpad_t* lp = tu_launch_fdio_init(zx_job_default(), exit_closing_excp_handle_child_name, argc,
-                                        argv, NULL, 0, NULL, NULL);
-  zx_handle_t child = tu_launch_fdio_fini(lp);
+  springboard_t* sb = tu_launch_init(zx_job_default(), exit_closing_excp_handle_child_name, argc,
+                                     argv, 0, NULL, 0, NULL, NULL);
+  zx_handle_t child = tu_launch_fini(sb);
 
   zx_signals_t signals = ZX_PROCESS_TERMINATED;
   zx_signals_t pending;
@@ -1465,16 +1463,19 @@ class TestLoop {
   }
 
   void Step1CreateProcess() {
-    launchpad_ =
+    springboard_ =
         setup_test_child(job_.get(), test_child_name, process_channel_.reset_and_get_address());
-    ASSERT_NOT_NULL(launchpad_);
-    process_.reset(launchpad_get_process_handle(launchpad_));
+    ASSERT_NOT_NULL(springboard_);
+    process_.reset(springboard_get_process_handle(springboard_));
   }
 
   void Step2StartThreads() {
     // The initial process handle we got is invalidated by this call
     // and we're given the new one to use instead.
-    process_.reset(tu_launch_fdio_fini(launchpad_));
+    zx_handle_t process = tu_launch_fini(springboard_);
+    if (process != process_.get()) {
+      process_.reset(process);
+    }
     ASSERT_TRUE(process_.is_valid());
     send_msg(process_channel_.get(), MSG_CREATE_AUX_THREAD);
   }
@@ -1526,7 +1527,7 @@ class TestLoop {
   void CrashAuxThread() { send_msg(process_channel_.get(), MSG_CRASH_AUX_THREAD); }
 
  private:
-  launchpad_t* launchpad_ = nullptr;
+  springboard* springboard_ = nullptr;
   zx::job parent_job_;
   zx::job job_;
   zx::process process_;
