@@ -12,8 +12,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include <launchpad/vmo.h>
 #include <ldmsg/ldmsg.h>
+#include <lib/fdio/io.h>
 #include <loader-service/loader-service.h>
 #include <unittest/unittest.h>
 
@@ -23,20 +23,56 @@
 #define LIBPREFIX "/boot/lib/"
 #endif
 
+zx_status_t load_vmo(const char* filename, zx_handle_t* out) {
+  int fd = open(filename, O_RDONLY);
+  if (fd < 0)
+    return ZX_ERR_IO;
+  zx_handle_t vmo;
+  zx_handle_t exec_vmo;
+  zx_status_t status = fdio_get_vmo_clone(fd, &vmo);
+  close(fd);
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &exec_vmo);
+  if (status != ZX_OK) {
+    zx_handle_close(vmo);
+    return status;
+  }
+
+  if (strlen(filename) >= ZX_MAX_NAME_LEN) {
+    const char* p = strrchr(filename, '/');
+    if (p != NULL) {
+      filename = p + 1;
+    }
+  }
+
+  status = zx_object_set_property(exec_vmo, ZX_PROP_NAME, filename, strlen(filename));
+  if (status != ZX_OK) {
+    zx_handle_close(exec_vmo);
+    return status;
+  }
+
+  *out = exec_vmo;
+  return ZX_OK;
+}
+
 bool dlopen_vmo_test(void) {
   BEGIN_TEST;
 
   zx_handle_t vmo = ZX_HANDLE_INVALID;
-  zx_status_t status = launchpad_vmo_from_file(LIBPREFIX "liblaunchpad.so", &vmo);
+  zx_status_t status = load_vmo(LIBPREFIX "libtrace-engine.so", &vmo);
   EXPECT_EQ(status, ZX_OK, "");
-  EXPECT_NE(vmo, ZX_HANDLE_INVALID, "launchpad_vmo_from_file");
+  EXPECT_NE(vmo, ZX_HANDLE_INVALID, "load_vmo");
 
   void* obj = dlopen_vmo(vmo, RTLD_LOCAL);
   EXPECT_NONNULL(obj, "dlopen_vmo");
 
   zx_handle_close(vmo);
 
-  void* sym = dlsym(obj, "launchpad_create");
+  void* sym = dlsym(obj, "trace_engine_initialize");
   EXPECT_NONNULL(sym, "dlsym");
 
   int ok = dlclose(obj);
@@ -64,9 +100,9 @@ static zx_status_t my_load_object(void* ctx, const char* name, zx_handle_t* out)
   }
 
   zx_handle_t vmo = ZX_HANDLE_INVALID;
-  zx_status_t status = launchpad_vmo_from_file((char*)ctx, &vmo);
+  zx_status_t status = load_vmo((char*)ctx, &vmo);
   EXPECT_EQ(status, ZX_OK, "");
-  EXPECT_NE(vmo, ZX_HANDLE_INVALID, "launchpad_vmo_from_file");
+  EXPECT_NE(vmo, ZX_HANDLE_INVALID, "load_vmo");
   if (status < 0) {
     return status;
   }

@@ -11,8 +11,6 @@
 #include <string.h>
 
 #include <fbl/algorithm.h>
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>
@@ -107,42 +105,10 @@ size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf,
   return len;
 }
 
-// This does everything that launchpad_launch_fdio_etc does except
-// start the inferior. We want to attach to it first.
-// TODO(dje): Are there other uses of such a wrapper? Move to launchpad?
-// Plus there's a fair bit of code here. IWBN to not have to update it as
-// launchpad_launch_fdio_etc changes.
-
-zx_status_t create_inferior(const char* name, int argc, const char* const* argv,
-                            const char* const* envp, size_t hnds_count, zx_handle_t* handles,
-                            uint32_t* ids, launchpad_t** out_launchpad) {
-  launchpad_t* lp = NULL;
-
-  const char* filename = argv[0];
-  if (name == NULL)
-    name = filename;
-
-  zx_status_t status;
-  launchpad_create(0u, name, &lp);
-  launchpad_load_from_file(lp, filename);
-  launchpad_set_args(lp, argc, argv);
-  launchpad_set_environ(lp, envp);
-  launchpad_clone(lp, LP_CLONE_FDIO_ALL);
-  status = launchpad_add_handles(lp, hnds_count, handles, ids);
-
-  if (status < 0) {
-    launchpad_destroy(lp);
-  } else {
-    *out_launchpad = lp;
-  }
-  return status;
-}
-
-bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inferior,
+bool setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_inferior,
                     zx_handle_t* out_channel) {
   BEGIN_HELPER;
 
-  zx_status_t status;
   zx_handle_t channel1, channel2;
   tu_channel_create(&channel1, &channel2);
 
@@ -152,43 +118,30 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inf
   zx_handle_t handles[1] = {channel2};
   uint32_t handle_ids[1] = {PA_USER0};
 
-  launchpad_t* lp;
   unittest_printf("Creating process \"%s\"\n", name);
-  status = create_inferior(name, fbl::count_of(argv), argv, NULL, fbl::count_of(handles), handles,
-                           handle_ids, &lp);
-  ASSERT_EQ(status, ZX_OK, "failed to create inferior");
+  springboard_t* sb = tu_launch_init(zx_job_default(), name, fbl::count_of(argv), argv, 0, NULL,
+                                     fbl::count_of(handles), handles, handle_ids);
 
   // Note: |inferior| is a borrowed handle here.
-  zx_handle_t inferior = launchpad_get_process_handle(lp);
-  ASSERT_NE(inferior, ZX_HANDLE_INVALID, "can't get launchpad process handle");
+  zx_handle_t inferior = springboard_get_process_handle(sb);
+  ASSERT_NE(inferior, ZX_HANDLE_INVALID, "can't get process handle");
 
   zx_info_handle_basic_t process_info;
   tu_handle_get_basic_info(inferior, &process_info);
   unittest_printf("Inferior pid = %llu\n", (long long)process_info.koid);
 
-  // |inferior| is given to the child by launchpad_go.
-  // We need our own copy, and launchpad_go will give us one, but we need
-  // it before we call launchpad_go in order to attach to the debugging
-  // exception port. We could leave this to our caller to do, but since every
-  // caller needs this for convenience sake we do this here.
-  status = zx_handle_duplicate(inferior, ZX_RIGHT_SAME_RIGHTS, &inferior);
-  ASSERT_EQ(status, ZX_OK, "zx_handle_duplicate failed");
-
-  *out_lp = lp;
+  *out_sb = sb;
   *out_inferior = inferior;
   *out_channel = channel1;
 
   END_HELPER;
 }
 
-// While this should perhaps take a launchpad_t* argument instead of the
+// While this should perhaps take a springboard_t* argument instead of the
 // inferior's handle, we later want to test attaching to an already running
 // inferior.
 // |max_threads| is the maximum number of threads the process is expected
 // to have in its lifetime. A real debugger would be more flexible of course.
-// N.B. |inferior| cannot be the result of launchpad_get_process_handle().
-// That handle is passed to the inferior when started and thus is lost to us.
-// Returns a boolean indicating success.
 
 inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t max_threads) {
   // Fetch all current threads and attach async-waiters to them.
@@ -265,13 +218,9 @@ void unbind_inferior(inferior_data_t* data) {
   data->exception_channel = ZX_HANDLE_INVALID;
 }
 
-bool start_inferior(launchpad_t* lp) {
-  zx_handle_t dup_inferior = tu_launch_fdio_fini(lp);
+bool start_inferior(springboard_t* sb) {
+  tu_launch_fini(sb);
   unittest_printf("Inferior started\n");
-  // launchpad_go returns a dup of |inferior|. The original inferior
-  // handle is given to the child. However we don't need it, we already
-  // created one so that we could attach to the inferior before starting it.
-  tu_handle_close(dup_inferior);
   return true;
 }
 

@@ -216,9 +216,9 @@ int capture_regs_thread_func(void* arg) {
 bool StoppedInThreadStartingRegAccessTest() {
   BEGIN_TEST;
 
-  launchpad_t* lp;
+  springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestInferiorChildName, &lp, &inferior, &channel))
+  if (!setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel))
     return false;
 
   // Attach to the inferior now because we want to see thread starting
@@ -234,7 +234,7 @@ bool StoppedInThreadStartingRegAccessTest() {
       start_wait_inf_thread(inferior_data, thread_start_test_exception_handler, &test_state);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  if (!start_inferior(lp))
+  if (!start_inferior(sb))
     return false;
 
   // The first test happens here as the main thread starts.

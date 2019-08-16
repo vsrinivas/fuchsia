@@ -13,6 +13,7 @@
 #include <zircon/syscalls/exception.h>
 
 #include <lib/zx/exception.h>
+#include <test-utils/test-utils.h>
 
 struct thread_data_t {
   zx_koid_t tid;
@@ -50,11 +51,7 @@ size_t read_inferior_memory(zx_handle_t proc, uintptr_t vaddr, void* buf, size_t
 
 size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len);
 
-zx_status_t create_inferior(const char* name, int argc, const char* const* argv,
-                            const char* const* envp, size_t hnds_count, zx_handle_t* handles,
-                            uint32_t* ids, launchpad_t** out_launchpad);
-
-bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inferior,
+bool setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_inferior,
                     zx_handle_t* out_channel);
 
 // Attaches to |inferior| process.
@@ -82,7 +79,7 @@ void detach_inferior(inferior_data_t* data, bool close_exception_channel);
 // Closes |data|'s exception channel.
 void unbind_inferior(inferior_data_t* data);
 
-bool start_inferior(launchpad_t* lp);
+bool start_inferior(springboard_t* sb);
 
 bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior);
 

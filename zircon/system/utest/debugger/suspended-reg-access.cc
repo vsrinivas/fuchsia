@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
 #include <lib/backtrace-request/backtrace-request.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/thread.h>
@@ -499,12 +497,12 @@ bool suspended_in_exception_handler(inferior_data_t* data, const zx_port_packet_
 bool SuspendedInExceptionRegAccessTest() {
   BEGIN_TEST;
 
-  launchpad_t* lp;
+  springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestInferiorChildName, &lp, &inferior, &channel))
+  if (!setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel))
     return false;
 
-  if (!start_inferior(lp))
+  if (!start_inferior(sb))
     return false;
   if (!verify_inferior_running(channel))
     return false;

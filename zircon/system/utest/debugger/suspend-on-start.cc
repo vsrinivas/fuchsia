@@ -54,9 +54,9 @@ bool suspend_on_start_test_handler(inferior_data_t* data, const zx_port_packet_t
 bool SuspendOnStartTest() {
   BEGIN_TEST;
 
-  launchpad_t* lp;
+  springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestSuspendOnStart, &lp, &inferior, &channel))
+  if (!setup_inferior(kTestSuspendOnStart, &sb, &inferior, &channel))
     return false;
 
   // Attach to the inferior now because we want to see thread starting
@@ -70,7 +70,7 @@ bool SuspendOnStartTest() {
       start_wait_inf_thread(inferior_data, suspend_on_start_test_handler, &test_state);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  if (!start_inferior(lp))
+  if (!start_inferior(sb))
     return false;
 
   // The remaining testing happens at this point as threads start.

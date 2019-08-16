@@ -11,7 +11,7 @@ test("channel-fatal") {
   deps = [
     ":vdso-code-header",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/launchpad",
+    "$zx/system/ulib/test-utils",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
   ]

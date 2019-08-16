@@ -45,6 +45,7 @@ void tu_handle_close(zx_handle_t handle);
 zx_handle_t tu_handle_duplicate(zx_handle_t handle);
 
 // A wrapper on launchpad_launch.
+// Deprecated: use tu_launch_process instead.
 
 zx_handle_t tu_launch(zx_handle_t job, const char* name, int argc, const char* const* argv,
                       const char* const* envp, size_t num_handles, zx_handle_t* handles,
@@ -64,6 +65,12 @@ launchpad_t* tu_launch_fdio_init(zx_handle_t job, const char* name, int argc,
 
 zx_handle_t tu_launch_fdio_fini(launchpad_t* lp);
 
+// Sets up and starts a new process with the given parameters.
+
+zx_handle_t tu_launch_process(zx_handle_t job, const char* name, int argc, const char* const* argv,
+                              int envc, const char* const* envp, size_t num_handles,
+                              zx_handle_t* handles, uint32_t* handle_ids);
+
 // Opaque type representing launch state.
 // Use of this object is not thread-safe.
 
@@ -72,6 +79,7 @@ typedef struct springboard springboard_t;
 // Returns the process handle associated with the springboard object.
 // The handle is still owned by the input object, and must not be closed or
 // transferred.
+// This handle will be valid for the lifetime of the springboard object.
 
 zx_handle_t springboard_get_process_handle(springboard_t* sb);
 

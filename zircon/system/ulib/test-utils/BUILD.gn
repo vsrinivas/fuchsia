@@ -4,7 +4,6 @@
 
 library("test-utils") {
   testonly = true
-  shared = true
   sources = [
     "test-utils.cc",
   ]

@@ -25,7 +25,6 @@ test("debugger") {
   deps = [
     "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/launchpad",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/runtime",
     "$zx/system/ulib/test-utils",

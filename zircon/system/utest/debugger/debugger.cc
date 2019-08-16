@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
 #include <lib/backtrace-request/backtrace-request.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/thread.h>
@@ -126,9 +124,9 @@ bool debugger_test_exception_handler(inferior_data_t* data, const zx_port_packet
 bool DebuggerTest() {
   BEGIN_TEST;
 
-  launchpad_t* lp;
+  springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestInferiorChildName, &lp, &inferior, &channel))
+  if (!setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel))
     return false;
 
   std::atomic<int> segv_count;
@@ -142,7 +140,7 @@ bool DebuggerTest() {
   EXPECT_NE(port, ZX_HANDLE_INVALID);
   expect_debugger_attached_eq(inferior, true, "debugger should appear attached");
 
-  if (!start_inferior(lp))
+  if (!start_inferior(sb))
     return false;
   if (!verify_inferior_running(channel))
     return false;
@@ -175,9 +173,9 @@ bool DebuggerTest() {
 bool DebuggerThreadListTest() {
   BEGIN_TEST;
 
-  launchpad_t* lp;
+  springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestInferiorChildName, &lp, &inferior, &channel))
+  if (!setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel))
     return false;
 
   zx_handle_t port = tu_io_port_create();
@@ -187,7 +185,7 @@ bool DebuggerThreadListTest() {
       start_wait_inf_thread(inferior_data, debugger_test_exception_handler, NULL);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  if (!start_inferior(lp))
+  if (!start_inferior(sb))
     return false;
   if (!verify_inferior_running(channel))
     return false;
@@ -250,13 +248,9 @@ bool PropertyProcessDebugAddrTest() {
       zx_object_get_property(self, ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr));
   ASSERT_EQ(status, ZX_OK);
 
-  // These are all dsos we link with. See rules.mk.
-  const char* launchpad_so = "liblaunchpad.so";
-  bool found_launchpad = false;
+  // These are all dsos we link with. See BUILD.gn.
   const char* libc_so = "libc.so";
   bool found_libc = false;
-  const char* test_utils_so = "libtest-utils.so";
-  bool found_test_utils = false;
   const char* unittest_so = "libunittest.so";
   bool found_unittest = false;
 
@@ -266,20 +260,14 @@ bool PropertyProcessDebugAddrTest() {
   EXPECT_EQ(debug->r_state, r_debug::RT_CONSISTENT);
 
   while (lmap != NULL) {
-    if (strcmp(lmap->l_name, launchpad_so) == 0)
-      found_launchpad = true;
-    else if (strcmp(lmap->l_name, libc_so) == 0)
+    if (strcmp(lmap->l_name, libc_so) == 0)
       found_libc = true;
-    else if (strcmp(lmap->l_name, test_utils_so) == 0)
-      found_test_utils = true;
     else if (strcmp(lmap->l_name, unittest_so) == 0)
       found_unittest = true;
     lmap = lmap->l_next;
   }
 
-  EXPECT_TRUE(found_launchpad);
   EXPECT_TRUE(found_libc);
-  EXPECT_TRUE(found_test_utils);
   EXPECT_TRUE(found_unittest);
 
   END_TEST;

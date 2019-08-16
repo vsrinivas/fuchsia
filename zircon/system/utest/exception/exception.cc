@@ -391,9 +391,7 @@ static void start_test_child_with_eport(zx_handle_t job, const char* arg, zx_han
   zx_handle_t child = springboard_get_process_handle(sb);
   tu_set_exception_port(child, eport, EXCEPTION_PORT_KEY, ZX_EXCEPTION_PORT_DEBUGGER);
   child = tu_launch_fini(sb);
-  // Now we own the child handle, and lp is destroyed.
-  // Note: This is a different handle, the previous child handle is gone at
-  // this point (transfered to the child process).
+  // Now we own the child handle, and sb is destroyed.
   tu_object_wait_async(child, eport, ZX_PROCESS_TERMINATED);
   *out_child = child;
   *out_eport = eport;

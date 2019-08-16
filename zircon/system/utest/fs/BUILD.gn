@@ -82,7 +82,6 @@ test("fs") {
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
-    "$zx/system/ulib/launchpad",
     "$zx/system/ulib/memfs",
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/ramdevice-client",

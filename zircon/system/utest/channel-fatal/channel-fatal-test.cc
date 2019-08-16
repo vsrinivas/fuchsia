@@ -9,13 +9,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <launchpad/launchpad.h>
 #include <lib/zx/event.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
+#include <test-utils/test-utils.h>
+#include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -113,20 +114,24 @@ TEST(ChannelFatalTestCase, BadChannelCallContractViolation) {
   ASSERT_OK(zx::event::create(0, &event));
   ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy));
 
-  launchpad_t* lp;
-  launchpad_create(0, process_bin, &lp);
-  launchpad_clone(lp, LP_CLONE_FDIO_STDIO | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
   const char* args[] = {
       process_bin,
       "child",
   };
-  launchpad_set_args(lp, countof(args), args);
-  launchpad_add_handle(lp, remote.release(), PA_HND(PA_USER0, 0));
-  launchpad_add_handle(lp, event_copy.release(), PA_HND(PA_USER0, 1));
-  launchpad_load_from_file(lp, process_bin);
-  const char* errmsg;
-  zx::process proc;
-  ASSERT_OK(launchpad_go(lp, proc.reset_and_get_address(), &errmsg));
+  zx_handle_t handles[] = {
+    remote.release(),
+    event_copy.release(),
+  };
+  uint32_t handle_ids[] = {
+    PA_HND(PA_USER0, 0),
+    PA_HND(PA_USER0, 1),
+  };
+  int environ_count = 0;
+  for (char** i = environ; *i; i++) {
+    environ_count++;
+  }
+  zx::process proc(tu_launch_process(zx_job_default(), NULL, 2, args, environ_count, environ,
+                                     countof(handles), handles, handle_ids));
 
   uint32_t act_bytes = UINT32_MAX;
   uint32_t act_handles = UINT32_MAX;

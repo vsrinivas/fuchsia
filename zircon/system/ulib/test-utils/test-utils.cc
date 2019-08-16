@@ -197,6 +197,14 @@ zx_handle_t tu_launch(zx_handle_t job, const char* name, int argc, const char* c
   return child;
 }
 
+zx_handle_t tu_launch_process(zx_handle_t job, const char* name, int argc, const char* const* argv,
+                              int envc, const char* const* envp, size_t num_handles,
+                              zx_handle_t* handles, uint32_t* handle_ids) {
+  springboard_t* sb = tu_launch_init(job, name, argc, argv, envc, envp, num_handles, handles,
+                                     handle_ids);
+  return tu_launch_fini(sb);
+}
+
 launchpad_t* tu_launch_fdio_init(zx_handle_t job, const char* name, int argc,
                                  const char* const* argv, const char* const* envp,
                                  size_t hnds_count, zx_handle_t* handles, uint32_t* ids) {
