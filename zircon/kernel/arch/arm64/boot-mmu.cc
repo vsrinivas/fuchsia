@@ -54,8 +54,9 @@ extern "C" pte_t* boot_alloc_ptable() {
   // this point in the boot process
   // use a volatile pointer to make sure
   volatile pte_t* vptr = ptr;
-  for (auto i = 0; i < MMU_KERNEL_PAGE_TABLE_ENTRIES; i++)
+  for (auto i = 0; i < MMU_KERNEL_PAGE_TABLE_ENTRIES; i++) {
     vptr[i] = 0;
+  }
 
   return ptr;
 }
@@ -171,8 +172,9 @@ extern "C" zx_status_t arm64_boot_map(pte_t* kernel_table0, const vaddr_t vaddr,
     // this point in the boot process
     // use a volatile pointer to make sure the compiler doesn't emit a memset call
     volatile pte_t* vptr = reinterpret_cast<volatile pte_t*>(pa);
-    for (auto i = 0; i < MMU_KERNEL_PAGE_TABLE_ENTRIES; i++)
+    for (auto i = 0; i < MMU_KERNEL_PAGE_TABLE_ENTRIES; i++) {
       vptr[i] = 0;
+    }
 
     return pa;
   };

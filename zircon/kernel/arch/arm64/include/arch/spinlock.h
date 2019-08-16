@@ -78,10 +78,12 @@ static inline void arch_interrupt_save(spin_lock_saved_state_t* statep,
 
 static inline void arch_interrupt_restore(spin_lock_saved_state_t old_state,
                                           spin_lock_save_flags_t flags) {
-  if ((flags & SPIN_LOCK_FLAG_FIQ) && (old_state & SPIN_LOCK_STATE_RESTORE_FIQ))
+  if ((flags & SPIN_LOCK_FLAG_FIQ) && (old_state & SPIN_LOCK_STATE_RESTORE_FIQ)) {
     arch_enable_fiqs();
-  if ((flags & SPIN_LOCK_FLAG_IRQ) && (old_state & SPIN_LOCK_STATE_RESTORE_IRQ))
+  }
+  if ((flags & SPIN_LOCK_FLAG_IRQ) && (old_state & SPIN_LOCK_STATE_RESTORE_IRQ)) {
     arch_enable_ints();
+  }
 }
 
 __END_CDECLS

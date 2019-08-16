@@ -101,8 +101,9 @@ void arch_dump_thread(thread_t* t) {
 }
 
 void* arch_thread_get_blocked_fp(thread_t* t) {
-  if (!WITH_FRAME_POINTERS)
+  if (!WITH_FRAME_POINTERS) {
     return nullptr;
+  }
 
   struct arm64_context_switch_frame* frame = arm64_get_context_switch_frame(t);
   return (void*)frame->r29;

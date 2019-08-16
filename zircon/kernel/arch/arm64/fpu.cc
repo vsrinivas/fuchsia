@@ -118,6 +118,7 @@ void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
 
   /* load the state from the current cpu */
   thread_t* t = get_current_thread();
-  if (likely(t))
+  if (likely(t)) {
     arm64_fpu_load_state(t);
+  }
 }

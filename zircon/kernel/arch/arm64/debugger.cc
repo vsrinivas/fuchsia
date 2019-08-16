@@ -31,8 +31,9 @@ zx_status_t arch_get_general_regs(thread_t* thread, zx_thread_state_general_regs
 
   // Punt if registers aren't available. E.g.,
   // ZX-563 (registers aren't available in synthetic exceptions)
-  if (thread->arch.suspended_general_regs == nullptr)
+  if (thread->arch.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 
   arm64_iframe_t* in = thread->arch.suspended_general_regs;
   DEBUG_ASSERT(in);
@@ -55,8 +56,9 @@ zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_genera
 
   // Punt if registers aren't available. E.g.,
   // ZX-563 (registers aren't available in synthetic exceptions)
-  if (thread->arch.suspended_general_regs == nullptr)
+  if (thread->arch.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 
   arm64_iframe_t* out = thread->arch.suspended_general_regs;
   DEBUG_ASSERT(out);
@@ -79,8 +81,9 @@ zx_status_t arch_get_single_step(thread_t* thread, bool* single_step) {
 
   // Punt if registers aren't available. E.g.,
   // ZX-563 (registers aren't available in synthetic exceptions)
-  if (thread->arch.suspended_general_regs == nullptr)
+  if (thread->arch.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
   arm64_iframe_t* regs = thread->arch.suspended_general_regs;
 
   const bool mdscr_ss_enable = !!(regs->mdscr & kMdscrSSMask);
@@ -95,8 +98,9 @@ zx_status_t arch_set_single_step(thread_t* thread, bool single_step) {
 
   // Punt if registers aren't available. E.g.,
   // ZX-563 (registers aren't available in synthetic exceptions)
-  if (thread->arch.suspended_general_regs == nullptr)
+  if (thread->arch.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
   arm64_iframe_t* regs = thread->arch.suspended_general_regs;
   if (single_step) {
     regs->mdscr |= kMdscrSSMask;

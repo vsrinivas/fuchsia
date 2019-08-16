@@ -120,8 +120,9 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
 static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
                                           zx_port_packet_t* packet) {
   const SmcInstruction si(iss);
-  if (si.imm != kSmcPsci)
+  if (si.imm != kSmcPsci) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 
   next_pc(guest_state);
   switch (guest_state->x[0]) {
@@ -282,18 +283,21 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
   const DataAbort data_abort(iss);
   switch (trap->kind()) {
     case ZX_GUEST_TRAP_BELL:
-      if (data_abort.read)
+      if (data_abort.read) {
         return ZX_ERR_NOT_SUPPORTED;
+      }
       *packet = {};
       packet->key = trap->key();
       packet->type = ZX_PKT_TYPE_GUEST_BELL;
       packet->guest_bell.addr = guest_paddr;
-      if (!trap->HasPort())
+      if (!trap->HasPort()) {
         return ZX_ERR_BAD_STATE;
+      }
       return trap->Queue(*packet, nullptr);
     case ZX_GUEST_TRAP_MEM:
-      if (!data_abort.valid)
+      if (!data_abort.valid) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
       *packet = {};
       packet->key = trap->key();
       packet->type = ZX_PKT_TYPE_GUEST_MEM;
@@ -302,8 +306,9 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
       packet->guest_mem.sign_extend = data_abort.sign_extend;
       packet->guest_mem.xt = data_abort.xt;
       packet->guest_mem.read = data_abort.read;
-      if (!data_abort.read)
+      if (!data_abort.read) {
         packet->guest_mem.data = guest_state->x[data_abort.xt];
+      }
       return ZX_ERR_NEXT;
     default:
       return ZX_ERR_BAD_STATE;

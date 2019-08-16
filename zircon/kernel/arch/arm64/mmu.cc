@@ -309,8 +309,9 @@ zx_status_t ArmArchVmAspace<paf>::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uin
   DEBUG_ASSERT(tt_virt_);
 
   DEBUG_ASSERT(IsValidVaddr(vaddr));
-  if (!IsValidVaddr(vaddr))
+  if (!IsValidVaddr(vaddr)) {
     return ZX_ERR_OUT_OF_RANGE;
+  }
 
   // Compute shift values based on if this address space is for kernel or user space.
   if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
@@ -350,8 +351,9 @@ zx_status_t ArmArchVmAspace<paf>::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uin
     LTRACEF("va %#" PRIxPTR ", index %lu, index_shift %u, rem %#" PRIxPTR ", pte %#" PRIx64 "\n",
             vaddr, index, index_shift, vaddr_rem, pte);
 
-    if (descriptor_type == MMU_PTE_DESCRIPTOR_INVALID)
+    if (descriptor_type == MMU_PTE_DESCRIPTOR_INVALID) {
       return ZX_ERR_NOT_FOUND;
+    }
 
     if (descriptor_type == ((index_shift > page_size_shift) ? MMU_PTE_L012_DESCRIPTOR_BLOCK
                                                             : MMU_PTE_L3_DESCRIPTOR_PAGE)) {
@@ -366,8 +368,9 @@ zx_status_t ArmArchVmAspace<paf>::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uin
     index_shift -= page_size_shift - 3;
   }
 
-  if (paddr)
+  if (paddr) {
     *paddr = pte_addr + vaddr_rem;
+  }
   if (mmu_flags) {
     *mmu_flags = 0;
     if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
@@ -655,13 +658,15 @@ ssize_t ArmArchVmAspace<paf>::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_i
     if (((vaddr_rel | paddr) & block_mask) || (chunk_size != block_size) ||
         (index_shift > MMU_PTE_DESCRIPTOR_BLOCK_MAX_SHIFT)) {
       next_page_table = GetPageTable(page_size_shift, index, page_table);
-      if (!next_page_table)
+      if (!next_page_table) {
         goto err;
+      }
 
       ret = MapPageTable(vaddr, vaddr_rem, paddr, chunk_size, attrs,
                          index_shift - (page_size_shift - 3), page_size_shift, next_page_table);
-      if (ret < 0)
+      if (ret < 0) {
         goto err;
+      }
     } else {
       pte = page_table[index];
       if (pte) {
@@ -670,12 +675,14 @@ ssize_t ArmArchVmAspace<paf>::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_i
       }
 
       pte = paddr | attrs;
-      if (index_shift > page_size_shift)
+      if (index_shift > page_size_shift) {
         pte |= MMU_PTE_L012_DESCRIPTOR_BLOCK;
-      else
+      } else {
         pte |= MMU_PTE_L3_DESCRIPTOR_PAGE;
-      if (!(flags_ & ARCH_ASPACE_FLAG_GUEST))
+      }
+      if (!(flags_ & ARCH_ASPACE_FLAG_GUEST)) {
         pte |= MMU_PTE_ATTR_NON_GLOBAL;
+      }
       LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
       page_table[index] = pte;
     }
@@ -881,20 +888,24 @@ zx_status_t ArmArchVmAspace<paf>::MapContiguous(vaddr_t vaddr, paddr_t paddr, si
   DEBUG_ASSERT(tt_virt_);
 
   DEBUG_ASSERT(IsValidVaddr(vaddr));
-  if (!IsValidVaddr(vaddr))
+  if (!IsValidVaddr(vaddr)) {
     return ZX_ERR_OUT_OF_RANGE;
+  }
 
-  if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
+  if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // paddr and vaddr must be aligned.
   DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
-  if (!IS_PAGE_ALIGNED(vaddr) || !IS_PAGE_ALIGNED(paddr))
+  if (!IS_PAGE_ALIGNED(vaddr) || !IS_PAGE_ALIGNED(paddr)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
-  if (count == 0)
+  if (count == 0) {
     return ZX_OK;
+  }
 
   ssize_t ret;
   {
@@ -925,24 +936,29 @@ zx_status_t ArmArchVmAspace<paf>::Map(vaddr_t vaddr, paddr_t* phys, size_t count
   DEBUG_ASSERT(tt_virt_);
 
   DEBUG_ASSERT(IsValidVaddr(vaddr));
-  if (!IsValidVaddr(vaddr))
+  if (!IsValidVaddr(vaddr)) {
     return ZX_ERR_OUT_OF_RANGE;
+  }
   for (size_t i = 0; i < count; ++i) {
     DEBUG_ASSERT(IS_PAGE_ALIGNED(phys[i]));
-    if (!IS_PAGE_ALIGNED(phys[i]))
+    if (!IS_PAGE_ALIGNED(phys[i])) {
       return ZX_ERR_INVALID_ARGS;
+    }
   }
 
-  if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
+  if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // vaddr must be aligned.
   DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
-  if (!IS_PAGE_ALIGNED(vaddr))
+  if (!IS_PAGE_ALIGNED(vaddr)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
-  if (count == 0)
+  if (count == 0) {
     return ZX_OK;
+  }
 
   size_t total_mapped = 0;
   {
@@ -996,12 +1012,14 @@ zx_status_t ArmArchVmAspace<paf>::Unmap(vaddr_t vaddr, size_t count, size_t* unm
 
   DEBUG_ASSERT(IsValidVaddr(vaddr));
 
-  if (!IsValidVaddr(vaddr))
+  if (!IsValidVaddr(vaddr)) {
     return ZX_ERR_OUT_OF_RANGE;
+  }
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
-  if (!IS_PAGE_ALIGNED(vaddr))
+  if (!IS_PAGE_ALIGNED(vaddr)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   Guard<Mutex> a{&lock_};
 
@@ -1028,14 +1046,17 @@ template <page_alloc_fn_t paf>
 zx_status_t ArmArchVmAspace<paf>::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
   canary_.Assert();
 
-  if (!IsValidVaddr(vaddr))
+  if (!IsValidVaddr(vaddr)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
-  if (!IS_PAGE_ALIGNED(vaddr))
+  if (!IS_PAGE_ALIGNED(vaddr)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
-  if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
+  if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   Guard<Mutex> a{&lock_};
 
@@ -1081,8 +1102,9 @@ zx_status_t ArmArchVmAspace<paf>::Init(vaddr_t base, size_t size, uint flags) {
       DEBUG_ASSERT(base + size <= 1UL << MMU_GUEST_SIZE_SHIFT);
     } else {
       DEBUG_ASSERT(base + size <= 1UL << MMU_USER_SIZE_SHIFT);
-      if (asid.Alloc(&asid_) != ZX_OK)
+      if (asid.Alloc(&asid_) != ZX_OK) {
         return ZX_ERR_NO_MEMORY;
+      }
     }
 
     base_ = base;
@@ -1142,8 +1164,9 @@ zx_status_t ArmArchVmAspace<paf>::Destroy() {
 
 template <page_alloc_fn_t paf>
 void ArmArchVmAspace<paf>::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmAspace* aspace) {
-  if (TRACE_CONTEXT_SWITCH)
+  if (TRACE_CONTEXT_SWITCH) {
     TRACEF("aspace %p\n", aspace);
+  }
 
   uint64_t tcr;
   uint64_t ttbr;
@@ -1156,14 +1179,16 @@ void ArmArchVmAspace<paf>::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmA
     __arm_wsr64("ttbr0_el1", ttbr);
     __isb(ARM_MB_SY);
 
-    if (TRACE_CONTEXT_SWITCH)
+    if (TRACE_CONTEXT_SWITCH) {
       TRACEF("ttbr %#" PRIx64 ", tcr %#" PRIx64 "\n", ttbr, tcr);
+    }
 
   } else {
     tcr = MMU_TCR_FLAGS_KERNEL;
 
-    if (TRACE_CONTEXT_SWITCH)
+    if (TRACE_CONTEXT_SWITCH) {
       TRACEF("tcr %#" PRIx64 "\n", tcr);
+    }
   }
 
   __arm_wsr64("tcr_el1", tcr);
@@ -1205,8 +1230,9 @@ zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write) 
   arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
   // if bit 0 is clear, the translation succeeded
-  if (BIT(par, 0))
+  if (BIT(par, 0)) {
     return ZX_ERR_NO_MEMORY;
+  }
 
   // physical address is stored in bits [51..12], naturally aligned
   *pa = BITS(par, 51, 12) | (va & (PAGE_SIZE - 1));

@@ -178,15 +178,18 @@ static void arm64_instruction_abort_handler(arm64_iframe_t* iframe, uint excepti
   CPU_STATS_INC(page_faults);
   zx_status_t err = vmm_page_fault_handler(far, pf_flags);
   arch_disable_ints();
-  if (err >= 0)
+  if (err >= 0) {
     return;
+  }
 
   // If this is from user space, let the user exception handler
   // get a shot at it.
   if (is_user) {
     kcounter_add(exceptions_user, 1);
-    if (try_dispatch_user_data_fault_exception(ZX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == ZX_OK)
+    if (try_dispatch_user_data_fault_exception(ZX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) ==
+        ZX_OK) {
       return;
+    }
   }
 
   exception_die(iframe, esr, "instruction abort: PC at %#" PRIx64 ", is_user %d, FAR %" PRIx64 "\n",
@@ -241,8 +244,9 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
     if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
       excp_type = ZX_EXCP_UNALIGNED_ACCESS;
     }
-    if (try_dispatch_user_data_fault_exception(excp_type, iframe, esr, far) == ZX_OK)
+    if (try_dispatch_user_data_fault_exception(excp_type, iframe, esr, far) == ZX_OK) {
       return;
+    }
   }
 
   /* decode the iss */
@@ -318,8 +322,9 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
       }
       /* let the user exception handler get a shot at it */
       kcounter_add(exceptions_unhandled, 1);
-      if (try_dispatch_user_exception(ZX_EXCP_GENERAL, iframe, esr) == ZX_OK)
+      if (try_dispatch_user_exception(ZX_EXCP_GENERAL, iframe, esr) == ZX_OK) {
         break;
+      }
       exception_die(iframe, esr, "unhandled synchronous exception\n");
     }
   }
@@ -358,16 +363,19 @@ extern "C" uint32_t arm64_irq(iframe_short_t* iframe, uint exception_flags) {
   /* if we came from user space, check to see if we have any signals to handle */
   if (unlikely(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)) {
     uint32_t exit_flags = 0;
-    if (thread_is_signaled(get_current_thread()))
+    if (thread_is_signaled(get_current_thread())) {
       exit_flags |= ARM64_IRQ_EXIT_THREAD_SIGNALED;
-    if (do_preempt)
+    }
+    if (do_preempt) {
       exit_flags |= ARM64_IRQ_EXIT_RESCHEDULE;
+    }
     return exit_flags;
   }
 
   /* preempt the thread if the interrupt has signaled it */
-  if (do_preempt)
+  if (do_preempt) {
     thread_preempt();
+  }
 
   /* if we're returning to kernel space, make sure we restore the correct x18 */
   if ((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0) {
@@ -391,8 +399,9 @@ extern "C" void arm64_finish_user_irq(uint32_t exit_flags, arm64_iframe_t* ifram
   }
 
   /* preempt the thread if the interrupt has signaled it */
-  if (exit_flags & ARM64_IRQ_EXIT_RESCHEDULE)
+  if (exit_flags & ARM64_IRQ_EXIT_RESCHEDULE) {
     thread_preempt();
+  }
 }
 
 /* called from assembly */

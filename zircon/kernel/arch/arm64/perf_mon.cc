@@ -967,18 +967,18 @@ void arm64_pmi_interrupt_handler(const iframe_short_t* frame) TA_NO_THREAD_SAFET
   auto state = perfmon_state.get();
 
 #if 0
-    // TODO(dje): We may want this anyway. If we want to be able to handle
-    // page faults inside this handler we'll need to turn interrupts back
-    // on. At the moment we can't do this as we don't handle recursive PMIs.
-    arch_set_blocking_disallowed(false);
-    arch_enable_ints();
+  // TODO(dje): We may want this anyway. If we want to be able to handle
+  // page faults inside this handler we'll need to turn interrupts back
+  // on. At the moment we can't do this as we don't handle recursive PMIs.
+  arch_set_blocking_disallowed(false);
+  arch_enable_ints();
 #endif
 
   bool success = pmi_interrupt_handler(frame, state);
 
 #if 0
-    arch_disable_ints();
-    arch_set_blocking_disallowed(true);
+  arch_disable_ints();
+  arch_set_blocking_disallowed(true);
 #endif
 
   // If buffer is full leave everything turned off.

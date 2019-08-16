@@ -117,8 +117,9 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
   while ((i < SMP_MAX_CPUS) && (arm64_secondary_sp_list[i].mpid != 0)) {
     i++;
   }
-  if (i == SMP_MAX_CPUS)
+  if (i == SMP_MAX_CPUS) {
     return ZX_ERR_NO_RESOURCES;
+  }
 
   // Store it.
   LTRACEF("set mpid 0x%lx sp to %p\n", mpid, sp);
@@ -215,8 +216,9 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 __NO_RETURN int arch_idle_thread_routine(void*) {
-  for (;;)
+  for (;;) {
     __asm__ volatile("wfi");
+  }
 }
 
 void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uintptr_t arg1,

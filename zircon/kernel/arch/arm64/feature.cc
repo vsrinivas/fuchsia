@@ -273,15 +273,17 @@ static void print_feature() {
   printf("ARM Features: ");
   uint col = 0;
   for (uint i = 0; i < fbl::count_of(features); ++i) {
-    if (arm64_feature_test(features[i].bit))
+    if (arm64_feature_test(features[i].bit)) {
       col += printf("%s ", features[i].name);
+    }
     if (col >= 80) {
       printf("\n");
       col = 0;
     }
   }
-  if (col > 0)
+  if (col > 0) {
     printf("\n");
+  }
 }
 
 // dump the feature set
