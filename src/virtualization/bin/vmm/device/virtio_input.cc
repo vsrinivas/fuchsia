@@ -4,11 +4,12 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
-#include <trace-provider/provider.h>
-#include <virtio/input.h>
+#include <lib/trace-provider/provider.h>
 
 #include <array>
 #include <iomanip>
+
+#include <virtio/input.h>
 
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/input.h"
@@ -211,8 +212,8 @@ static uint32_t y_coordinate(float y, float height) {
 // Stream for event queue.
 class EventStream : public StreamBase, public fuchsia::virtualization::hardware::ViewListener {
  public:
-  EventStream(component::StartupContext* context) {
-    context->outgoing().AddPublicService(view_listener_bindings_.GetHandler(this));
+  EventStream(sys::ComponentContext* context) {
+    context->outgoing()->AddPublicService(view_listener_bindings_.GetHandler(this));
   }
 
   void DoEvent() {
@@ -358,8 +359,7 @@ class EventStream : public StreamBase, public fuchsia::virtualization::hardware:
 class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
                         public fuchsia::virtualization::hardware::VirtioInput {
  public:
-  VirtioInputImpl(component::StartupContext* context)
-      : DeviceBase(context), event_stream_(context) {}
+  VirtioInputImpl(sys::ComponentContext* context) : DeviceBase(context), event_stream_(context) {}
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
@@ -410,8 +410,7 @@ class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
   VirtioInputImpl virtio_input(context.get());
   return loop.Run();

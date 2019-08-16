@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
 
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/stream_base.h"
@@ -26,7 +26,7 @@ class RngStream : public StreamBase {
 class VirtioRngImpl : public DeviceBase<VirtioRngImpl>,
                       public fuchsia::virtualization::hardware::VirtioRng {
  public:
-  VirtioRngImpl(component::StartupContext* context) : DeviceBase(context) {}
+  VirtioRngImpl(sys::ComponentContext* context) : DeviceBase(context) {}
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
@@ -61,8 +61,7 @@ class VirtioRngImpl : public DeviceBase<VirtioRngImpl>,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
   VirtioRngImpl virtio_rng(context.get());
   return loop.Run();

@@ -4,10 +4,11 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 
 #include <fbl/ref_counted.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
+#include <fbl/ref_ptr.h>
 #include <virtio/block.h>
 
 #include "src/virtualization/bin/vmm/device/block.h"
@@ -215,7 +216,7 @@ class RequestStream : public StreamBase {
 class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
                         public fuchsia::virtualization::hardware::VirtioBlock {
  public:
-  VirtioBlockImpl(component::StartupContext* context) : DeviceBase(context) {}
+  VirtioBlockImpl(sys::ComponentContext* context) : DeviceBase(context) {}
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
@@ -292,8 +293,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
   // The virtio-block device is single-threaded.
   VirtioBlockImpl virtio_block(context.get());

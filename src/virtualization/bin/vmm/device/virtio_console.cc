@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
 
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/stream_base.h"
@@ -69,7 +69,7 @@ class ConsoleStream : public StreamBase {
 class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
                           public fuchsia::virtualization::hardware::VirtioConsole {
  public:
-  VirtioConsoleImpl(component::StartupContext* context) : DeviceBase(context) {}
+  VirtioConsoleImpl(sys::ComponentContext* context) : DeviceBase(context) {}
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
@@ -158,8 +158,7 @@ class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
   VirtioConsoleImpl virtio_console(context.get());
   return loop.Run();

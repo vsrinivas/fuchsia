@@ -14,10 +14,9 @@
 #include <string>
 #include <unordered_map>
 
-#include <src/lib/fxl/macros.h>
-
 #include "garnet/lib/magma/include/magma_abi/magma.h"
 #include "garnet/lib/magma/include/virtio/virtio_magma.h"
+#include "src/lib/fxl/macros.h"
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/virtio_magma_generic.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
@@ -26,7 +25,7 @@ class VirtioMagma : public VirtioMagmaGeneric,
                     public DeviceBase<VirtioMagma>,
                     public fuchsia::virtualization::hardware::VirtioMagma {
  public:
-  VirtioMagma(component::StartupContext* context);
+  explicit VirtioMagma(sys::ComponentContext* context);
   ~VirtioMagma() override = default;
 
   // |fuchsia::virtualization::hardware::VirtioDevice|

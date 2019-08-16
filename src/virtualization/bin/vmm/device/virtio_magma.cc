@@ -7,19 +7,19 @@
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 #include <lib/zx/vmar.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/status.h>
 
 #include <src/lib/fxl/logging.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
 
 #include "garnet/lib/magma/src/magma_util/macros.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
-VirtioMagma::VirtioMagma(component::StartupContext* context) : DeviceBase(context) {}
+VirtioMagma::VirtioMagma(sys::ComponentContext* context) : DeviceBase(context) {}
 
 void VirtioMagma::Start(
     fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
@@ -214,8 +214,7 @@ zx_status_t VirtioMagma::Handle_execute_command_buffer_with_resources(
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
   VirtioMagma virtio_magma(context.get());
   return loop.Run();

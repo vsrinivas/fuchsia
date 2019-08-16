@@ -8,13 +8,14 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
-#include <virtio/virtio_ids.h>
-#include <virtio/wl.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <deque>
 #include <unordered_map>
+
+#include <virtio/virtio_ids.h>
+#include <virtio/wl.h>
 
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
@@ -78,7 +79,7 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
     virtual zx_status_t Duplicate(zx::handle* handle) { return ZX_ERR_NOT_SUPPORTED; }
   };
 
-  VirtioWl(component::StartupContext* context);
+  explicit VirtioWl(sys::ComponentContext* context);
   ~VirtioWl() override = default;
   zx_status_t OnDeviceReady(uint32_t negotiated_features);
 

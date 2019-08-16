@@ -6,13 +6,13 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 #include <lib/zx/socket.h>
-#include <src/lib/fxl/logging.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
 
 #include <vector>
 
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/bits.h"
 
 static constexpr uint32_t DRM_FORMAT_ARGB8888 = 0x34325241;
@@ -185,7 +185,7 @@ class Pipe : public VirtioWl::Vfd {
   async::Wait tx_wait_;
 };
 
-VirtioWl::VirtioWl(component::StartupContext* context) : DeviceBase(context) {}
+VirtioWl::VirtioWl(sys::ComponentContext* context) : DeviceBase(context) {}
 
 void VirtioWl::Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
                      fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatcher,
@@ -927,8 +927,7 @@ bool VirtioWl::AcquireWritableDescriptor(VirtioQueue* queue, VirtioChain* chain,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
   VirtioWl virtio_wl(context.get());
   return loop.Run();

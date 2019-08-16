@@ -7,9 +7,10 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <trace-provider/provider.h>
+
 #include <virtio/gpu.h>
 
 #include "src/virtualization/bin/vmm/device/device_base.h"
@@ -278,7 +279,7 @@ class CursorStream : public StreamBase {
 class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
                       public fuchsia::virtualization::hardware::VirtioGpu {
  public:
-  VirtioGpuImpl(component::StartupContext* context) : DeviceBase(context), context_(*context) {
+  VirtioGpuImpl(sys::ComponentContext* context) : DeviceBase(context), context_(*context) {
     scanout_.SetConfigChangedHandler(fit::bind_member(this, &VirtioGpuImpl::OnConfigChanged));
   }
 
@@ -309,19 +310,19 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
       auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
       // Create view.
-      auto scenic = context_.ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-      scenic::ViewContext view_context = {
+      auto scenic = context_.svc()->Connect<fuchsia::ui::scenic::Scenic>();
+      scenic::ViewContextTransitional view_context = {
           .session_and_listener_request =
               scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
           .view_token = std::move(view_token),
-          .startup_context = &context_,
+          .component_context = &context_,
       };
       view_ =
           std::make_unique<GuestView>(std::move(view_context), std::move(view_listener), &scanout_);
       view_->SetReleaseHandler([this](zx_status_t status) { view_.reset(); });
 
       // Present view.
-      auto presenter = context_.ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+      auto presenter = context_.svc()->Connect<fuchsia::ui::policy::Presenter>();
       presenter->PresentView(std::move(view_holder_token), nullptr);
     }
 
@@ -358,7 +359,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
     }
   }
 
-  component::StartupContext& context_;
+  sys::ComponentContext& context_;
   std::unique_ptr<GuestView> view_;
   GpuScanout scanout_;
   GpuResourceMap resources_;
@@ -369,8 +370,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
   VirtioGpuImpl virtio_gpu(context.get());
   return loop.Run();

@@ -4,7 +4,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
+
 #include <virtio/balloon.h>
 
 #include "src/virtualization/bin/vmm/device/device_base.h"
@@ -142,7 +143,7 @@ class StatsStream : public StreamBase {
 class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
                           public fuchsia::virtualization::hardware::VirtioBalloon {
  public:
-  VirtioBalloonImpl(component::StartupContext* context) : DeviceBase(context) {}
+  VirtioBalloonImpl(sys::ComponentContext* context) : DeviceBase(context) {}
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
@@ -221,8 +222,7 @@ class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
   VirtioBalloonImpl virtio_balloon(context.get());
   return loop.Run();

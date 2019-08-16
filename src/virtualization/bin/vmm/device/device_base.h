@@ -8,11 +8,11 @@
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/async/cpp/trap.h>
 #include <lib/async/default.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/handles/object_info.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/trace/event.h>
 #include <lib/zx/event.h>
-#include <trace/event.h>
 
 #include "src/virtualization/bin/vmm/device/config.h"
 #include "src/virtualization/bin/vmm/device/phys_mem.h"
@@ -40,8 +40,8 @@ class DeviceBase {
   PhysMem phys_mem_;
   async::GuestBellTrapMethod<DeviceBase, &DeviceBase::OnQueueNotify> trap_{this};
 
-  DeviceBase(component::StartupContext* context) {
-    context->outgoing().AddPublicService(bindings_.GetHandler(static_cast<DeviceClass*>(this)));
+  explicit DeviceBase(sys::ComponentContext* context) {
+    context->outgoing()->AddPublicService(bindings_.GetHandler(static_cast<DeviceClass*>(this)));
   }
 
   // Prepares a device to start.

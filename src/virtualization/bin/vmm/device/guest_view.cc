@@ -5,13 +5,14 @@
 #include "src/virtualization/bin/vmm/device/guest_view.h"
 
 #include <lib/images/cpp/images.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 GuestView::GuestView(
-    scenic::ViewContext view_context,
+    scenic::ViewContextTransitional view_context,
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
     GpuScanout* scanout)
-    : BaseView(std::move(view_context), "Guest"),
+    : BaseViewTransitional(std::move(view_context), "Guest"),
       background_(session()),
       material_(session()),
       scanout_(*scanout),

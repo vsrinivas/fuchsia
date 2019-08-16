@@ -9,13 +9,14 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/scope.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/zx/fifo.h>
-#include <trace-provider/provider.h>
-#include <virtio/net.h>
 #include <zircon/device/ethernet.h>
 
 #include <memory>
 #include <queue>
+
+#include <virtio/net.h>
 
 #include "guest_ethernet.h"
 #include "src/virtualization/bin/vmm/device/device_base.h"
@@ -143,8 +144,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
                       public fuchsia::virtualization::hardware::VirtioNet,
                       public GuestEthernetReceiver {
  public:
-  VirtioNetImpl(component::StartupContext* context) : DeviceBase(context), context_(*context) {
-    netstack_ = context_.ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
+  VirtioNetImpl(sys::ComponentContext* context) : DeviceBase(context), context_(*context) {
+    netstack_ = context_.svc()->Connect<fuchsia::netstack::Netstack>();
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
@@ -261,7 +262,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     callback();
   }
 
-  component::StartupContext& context_;
+  sys::ComponentContext& context_;
   GuestEthernet guest_ethernet_{this};
   fidl::Binding<fuchsia::hardware::ethernet::Device> device_binding_ =
       fidl::Binding<fuchsia::hardware::ethernet::Device>(&guest_ethernet_);
@@ -278,8 +279,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
   VirtioNetImpl virtio_net(context.get());
 
