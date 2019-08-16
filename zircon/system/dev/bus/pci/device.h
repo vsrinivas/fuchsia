@@ -24,6 +24,8 @@
 
 #include "allocation.h"
 #include "capabilities.h"
+#include "capabilities/msi.h"
+#include "capabilities/pci_express.h"
 #include "config.h"
 #include "device_proxy.h"
 #include "ref_counted.h"
