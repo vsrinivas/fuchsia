@@ -5,12 +5,14 @@
 #include <arpa/inet.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <sys/socket.h>
 
 #include <future>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/trim.h>
 
 #include "enclosed_guest.h"
 #include "guest_test.h"
@@ -117,14 +119,26 @@ TEST_F(VirtioNetZirconGuestTest, ReceiveAndSend) {
 
 using VirtioNetDebianGuestTest = GuestTest<VirtioNetDebianGuest>;
 
-TEST_F(VirtioNetDebianGuestTest, DISABLED_ReceiveAndSend) {
+TEST_F(VirtioNetDebianGuestTest, ReceiveAndSend) {
   auto handle = std::async(std::launch::async, [this] {
     MockNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
     TestThread(*netstack, 0xab, 0xba, false /* use_raw_packets */);
   });
 
+  // Find the network interface corresponding to the guest's MAC address.
+  std::string network_interface;
+  ASSERT_EQ(this->RunUtil(kVirtioNetUtil,
+                          {
+                              "Find",
+                              "02:1a:11:00:01:00",
+                          },
+                          &network_interface),
+            ZX_OK);
+  network_interface = fxl::TrimString(network_interface, "\n").ToString();
+  ASSERT_FALSE(network_interface.empty());
+
   // Configure the guest IPv4 address.
-  EXPECT_EQ(this->Execute({"ifconfig", "enp0s5", "192.168.0.10"}), ZX_OK);
+  EXPECT_EQ(this->Execute({"ifconfig", network_interface, "192.168.0.10"}), ZX_OK);
 
   // Manually add a route to the host.
   EXPECT_EQ(this->Execute({"arp", "-s", "192.168.0.1", "02:1a:11:00:00:00"}), ZX_OK);
@@ -132,6 +146,7 @@ TEST_F(VirtioNetDebianGuestTest, DISABLED_ReceiveAndSend) {
   std::string result;
   EXPECT_EQ(this->RunUtil(kVirtioNetUtil,
                           {
+                              "Transfer",
                               fxl::StringPrintf("%u", 0xab),
                               fxl::StringPrintf("%u", 0xba),
                               fxl::StringPrintf("%zu", kTestPacketSize),
