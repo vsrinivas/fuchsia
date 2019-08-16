@@ -69,13 +69,6 @@ group("tracing") {
   ]
 }
 
-group("fidl_compatibility_test_bin") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_bin",
-  ]
-}
-
 group("sse") {
   testonly = true
   public_deps = [
@@ -358,7 +351,6 @@ group("all") {
     ":examples",
     ":fidl",
     ":fidl_compatibility_test",
-    ":fidl_compatibility_test_bin",
     ":fidl_compatibility_test_server_cpp",
     ":fidl_compatibility_test_server_go",
     ":fidl_compatibility_test_server_llcpp",
