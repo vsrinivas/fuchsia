@@ -364,7 +364,6 @@ struct wiphy {
     const struct wiphy_vendor_command* vendor_commands;
     uint8_t perm_addr[ETH_ALEN];
     struct brcmf_cfg80211_info* cfg80211_info;
-    struct brcmf_device* dev;
 };
 
 struct vif_params {

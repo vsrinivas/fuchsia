@@ -39,11 +39,11 @@
 #include "core.h"
 #include "debug.h"
 #include "defs.h"
-#include "device.h"
 #include "firmware.h"
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "soc.h"
+#include "timer.h"
 #include "workqueue.h"
 
 #define DCMD_RESP_TIMEOUT_MSEC (2500)
@@ -100,7 +100,6 @@ struct rte_console {
 #include "bus.h"
 #include "chipcommon.h"
 #include "debug.h"
-#include "device.h"
 
 #define TXQLEN 2048         /* bulk tx queue length */
 #define TXHI (TXQLEN - 256) /* turn on flow control above TXHI */
@@ -1571,9 +1570,9 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
                          brcmf_netbuf_list_prev(&bus->glom, pfirst));
       brcmf_netbuf_list_remove(&bus->glom, pfirst);
       if (brcmf_sdio_fromevntchan(&dptr[SDPCM_HWHDR_LEN])) {
-        brcmf_rx_event(bus->sdiodev->dev, pfirst);
+        brcmf_rx_event(bus->sdiodev->drvr, pfirst);
       } else {
-        brcmf_rx_frame(bus->sdiodev->dev, pfirst, false);
+        brcmf_rx_frame(bus->sdiodev->drvr, pfirst, false);
       }
       bus->sdcnt.rxglompkts++;
     }
@@ -1671,11 +1670,11 @@ gotpkt:
 
   /* Point to valid data and indicate its length */
   // spin_lock_bh(&bus->rxctl_lock);
-  pthread_mutex_lock(&irq_callback_lock);
+  bus->sdiodev->drvr->irq_callback_lock.lock();
   if (bus->rxctl) {
     BRCMF_ERR("last control frame is being processed.\n");
     // spin_unlock_bh(&bus->rxctl_lock);
-    pthread_mutex_unlock(&irq_callback_lock);
+    bus->sdiodev->drvr->irq_callback_lock.unlock();
     free(buf);
     goto done;
   }
@@ -1683,7 +1682,7 @@ gotpkt:
   bus->rxctl_orig = buf;
   bus->rxlen = len - doff;
   // spin_unlock_bh(&bus->rxctl_lock);
-  pthread_mutex_unlock(&irq_callback_lock);
+  bus->sdiodev->drvr->irq_callback_lock.unlock();
 
 done:
   /* Awake any waiters */
@@ -1884,9 +1883,9 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
     if (pkt->len == 0) {
       brcmu_pkt_buf_free_netbuf(pkt);
     } else if (rd->channel == SDPCM_EVENT_CHANNEL) {
-      brcmf_rx_event(bus->sdiodev->dev, pkt);
+      brcmf_rx_event(bus->sdiodev->drvr, pkt);
     } else {
-      brcmf_rx_frame(bus->sdiodev->dev, pkt, false);
+      brcmf_rx_frame(bus->sdiodev->drvr, pkt, false);
     }
 
     /* prepare the descriptor for the next read */
@@ -2056,7 +2055,7 @@ done:
   }
   brcmf_netbuf_list_for_every_safe(pktq, pkt_next, tmp) {
     brcmf_netbuf_list_remove(pktq, pkt_next);
-    brcmf_proto_bcdc_txcomplete(bus->sdiodev->dev, pkt_next, ret == ZX_OK);
+    brcmf_proto_bcdc_txcomplete(bus->sdiodev->drvr, pkt_next, ret == ZX_OK);
   }
   return ret;
 }
@@ -2081,7 +2080,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
     pkt_num = min_t(uint32_t, pkt_num, brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol));
     brcmf_netbuf_list_init(&pktq);
     // spin_lock_bh(&bus->txq_lock);
-    pthread_mutex_lock(&irq_callback_lock);
+    bus->sdiodev->drvr->irq_callback_lock.lock();
     for (i = 0; i < pkt_num; i++) {
       pkt = brcmu_pktq_mdeq(&bus->txq, tx_prec_map, &prec_out);
       if (pkt == NULL) {
@@ -2090,7 +2089,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
       brcmf_netbuf_list_add_tail(&pktq, pkt);
     }
     // spin_unlock_bh(&bus->txq_lock);
-    pthread_mutex_unlock(&irq_callback_lock);
+    bus->sdiodev->drvr->irq_callback_lock.unlock();
     if (i == 0) {
       break;
     }
@@ -2119,7 +2118,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
   /* Deflow-control stack if needed */
   if ((bus->sdiodev->state == BRCMF_SDIOD_DATA) && bus->txoff && (pktq_len(&bus->txq) < TXLOW)) {
     bus->txoff = false;
-    brcmf_proto_bcdc_txflowblock(bus->sdiodev->dev, false);
+    brcmf_proto_bcdc_txflowblock(bus->sdiodev->drvr, false);
   }
 
   return cnt;
@@ -2184,8 +2183,7 @@ static zx_status_t brcmf_sdio_tx_ctrlframe(struct brcmf_sdio* bus, uint8_t* fram
   return ret;
 }
 
-static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
+static void brcmf_sdio_bus_stop(brcmf_bus* bus_if) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
   struct brcmf_core* core = bus->sdio_core;
@@ -2244,10 +2242,10 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
 
   /* Clear rx control and wake any waiters */
   // spin_lock_bh(&bus->rxctl_lock);
-  pthread_mutex_lock(&irq_callback_lock);
+  sdiodev->drvr->irq_callback_lock.lock();
   bus->rxlen = 0;
   // spin_unlock_bh(&bus->rxctl_lock);
-  pthread_mutex_unlock(&irq_callback_lock);
+  sdiodev->drvr->irq_callback_lock.unlock();
   // TODO(cphoenix): I think the original Linux code in brcmf_sdio_dcmd_resp_wait() would have
   // gone right back to sleep, since rxlen is 0. In the current code, it will exit;
   // brcmf_sdio_bus_rxctl() will return ZX_ERR_SHOULD_WAIT; the loop in brcmf_proto_bcdc_cmplt
@@ -2436,12 +2434,18 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
   }
 }
 
-static struct pktq* brcmf_sdio_bus_gettxq(struct brcmf_device* dev) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
+static struct pktq* brcmf_sdio_bus_gettxq(brcmf_bus* bus_if) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
 
   return &bus->txq;
+}
+
+static void brcmf_sdio_wowl_config(brcmf_bus* bus_if, bool enabled) {
+  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
+
+  BRCMF_DBG(SDIO, "Configuring WOWL, enabled=%d\n", enabled);
+  sdiodev->wowl_enabled = enabled;
 }
 
 static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int prec) {
@@ -2489,10 +2493,9 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int pr
   return p != NULL;
 }
 
-static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct brcmf_netbuf* pkt) {
+static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
   zx_status_t ret;
   uint prec;
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
 
@@ -2514,7 +2517,7 @@ static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct brcmf_
 
   /* Priority based enq */
   // spin_lock_bh(&bus->txq_lock);
-  pthread_mutex_lock(&irq_callback_lock);
+  sdiodev->drvr->irq_callback_lock.lock();
   /* reset bus_flags in packet workspace */
   *(uint16_t*)(pkt->workspace) = 0;
   if (!brcmf_sdio_prec_enq(&bus->txq, pkt, prec)) {
@@ -2527,10 +2530,10 @@ static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct brcmf_
 
   if (pktq_len(&bus->txq) >= TXHI) {
     bus->txoff = true;
-    brcmf_proto_bcdc_txflowblock(dev, true);
+    brcmf_proto_bcdc_txflowblock(sdiodev->drvr, true);
   }
   // spin_unlock_bh(&bus->txq_lock);
-  pthread_mutex_unlock(&irq_callback_lock);
+  sdiodev->drvr->irq_callback_lock.unlock();
 
 #if !defined(NDEBUG)
   if (pktq_plen(&bus->txq, prec) > qcount[prec]) {
@@ -2630,8 +2633,7 @@ break2:
 }
 #endif /* !defined(NDEBUG) */
 
-static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char* msg, uint msglen) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
+static zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, uint msglen) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
   zx_status_t ret;
@@ -2723,13 +2725,12 @@ static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
 }
 #endif /* !defined(NDEBUG) */
 
-static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char* msg, uint msglen,
+static zx_status_t brcmf_sdio_bus_rxctl(brcmf_bus* bus_if, unsigned char* msg, uint msglen,
                                         int* rxlen_out) {
   bool timeout;
   uint rxlen = 0;
   bool pending;
   uint8_t* buf;
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
 
@@ -2742,7 +2743,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char*
   timeout = (brcmf_sdio_dcmd_resp_wait(bus, &pending) != ZX_OK);
 
   // spin_lock_bh(&bus->rxctl_lock);
-  pthread_mutex_lock(&irq_callback_lock);
+  sdiodev->drvr->irq_callback_lock.lock();
   rxlen = bus->rxlen;
   memcpy(msg, bus->rxctl, std::min(msglen, rxlen));
   bus->rxctl = NULL;
@@ -2750,7 +2751,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char*
   bus->rxctl_orig = NULL;
   bus->rxlen = 0;
   // spin_unlock_bh(&bus->rxctl_lock);
-  pthread_mutex_unlock(&irq_callback_lock);
+  sdiodev->drvr->irq_callback_lock.unlock();
   free(buf);
 
   if (rxlen) {
@@ -2970,8 +2971,7 @@ static zx_status_t brcmf_sdio_kso_init(struct brcmf_sdio* bus) {
   return ZX_OK;
 }
 
-static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
+static zx_status_t brcmf_sdio_bus_preinit(brcmf_bus* bus_if) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
   struct brcmf_core* core = bus->sdio_core;
@@ -2985,13 +2985,13 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
   if (core->rev < 12) {
     /* for sdio core rev < 12, disable txgloming */
     value = 0;
-    err = brcmf_iovar_data_set(dev, "bus:txglom", &value, sizeof(uint32_t), nullptr);
+    err = brcmf_iovar_data_set(sdiodev->drvr, "bus:txglom", &value, sizeof(uint32_t), nullptr);
   } else {
     /* otherwise, set txglomalign */
     value = sdiodev->settings->bus.sdio.sd_sgentry_align;
     /* SDIO ADMA requires at least 32 bit alignment */
     value = std::max<uint32_t>(value, DMA_ALIGNMENT);
-    err = brcmf_iovar_data_set(dev, "bus:txglomalign", &value, sizeof(uint32_t), nullptr);
+    err = brcmf_iovar_data_set(sdiodev->drvr, "bus:txglomalign", &value, sizeof(uint32_t), nullptr);
   }
 
   // No support for txglomming, requires SDIO scatter/gather support (see WLAN-882)
@@ -3001,23 +3001,20 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
   }
 
   bus->tx_hdrlen = SDPCM_HWHDR_LEN + SDPCM_SWHDR_LEN;
-  brcmf_bus_add_txhdrlen(bus->sdiodev->dev, bus->tx_hdrlen);
+  brcmf_bus_add_txhdrlen(sdiodev->drvr, bus->tx_hdrlen);
 
 done:
   return err;
 }
 
-static size_t brcmf_sdio_bus_get_ramsize(struct brcmf_device* dev) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
+static size_t brcmf_sdio_bus_get_ramsize(brcmf_bus* bus_if) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
 
   return bus->ci->ramsize - bus->ci->srsize;
 }
 
-static zx_status_t brcmf_sdio_bus_get_memdump(struct brcmf_device* dev, void* data,
-                                              size_t mem_size) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
+static zx_status_t brcmf_sdio_bus_get_memdump(brcmf_bus* bus_if, void* data, size_t mem_size) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
   zx_status_t err;
@@ -3455,8 +3452,7 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     goto fail;
   }
 
-  sdiodev->settings =
-      brcmf_get_module_param(sdiodev->dev, BRCMF_BUS_TYPE_SDIO, bus->ci->chip, bus->ci->chiprev);
+  sdiodev->settings = brcmf_get_module_param(BRCMF_BUS_TYPE_SDIO, bus->ci->chip, bus->ci->chiprev);
   if (!sdiodev->settings) {
     BRCMF_ERR("Failed to get device parameters\n");
     err = ZX_ERR_INTERNAL;
@@ -3573,8 +3569,8 @@ static void* brcmf_sdio_watchdog_thread(void* data) {
 }
 
 static void brcmf_sdio_watchdog(void* data) {
-  pthread_mutex_lock(&irq_callback_lock);
   struct brcmf_sdio* bus = static_cast<decltype(bus)>(data);
+  bus->sdiodev->drvr->irq_callback_lock.lock();
 
   if (bus->watchdog_tsk) {
     // Currently signaling watchdog_wait does nothing; brcmf_sdio_watchdog_thread() will
@@ -3589,12 +3585,11 @@ static void brcmf_sdio_watchdog(void* data) {
       brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
     }
   }
-  pthread_mutex_unlock(&irq_callback_lock);
+  bus->sdiodev->drvr->irq_callback_lock.unlock();
 }
 
-static zx_status_t brcmf_sdio_get_fwname(struct brcmf_device* dev, uint32_t chip, uint32_t chiprev,
+static zx_status_t brcmf_sdio_get_fwname(brcmf_bus* bus_if, uint32_t chip, uint32_t chiprev,
                                          uint8_t* fw_name) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   int ret = ZX_OK;
 
@@ -3607,8 +3602,7 @@ static zx_status_t brcmf_sdio_get_fwname(struct brcmf_device* dev, uint32_t chip
   return ret;
 }
 
-static zx_status_t brcmf_sdio_get_bootloader_macaddr(struct brcmf_device* dev, uint8_t* mac_addr) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
+static zx_status_t brcmf_sdio_get_bootloader_macaddr(brcmf_bus* bus_if, uint8_t* mac_addr) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   return brcmf_sdiod_get_bootloader_macaddr(sdiodev, mac_addr);
 }
@@ -3629,25 +3623,20 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .device_add = device_add,
 };
 
-static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t err,
-                                         const struct brcmf_firmware* code, void* nvram,
+static void brcmf_sdio_firmware_callback(brcmf_pub* drvr, zx_status_t err,
+                                         const brcmf_firmware* code, void* nvram,
                                          uint32_t nvram_len) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
+  struct brcmf_sdio_dev* sdiodev = drvr->bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
   struct brcmf_sdio_dev* sdiod = bus->sdiodev;
   struct brcmf_core* core = bus->sdio_core;
   struct sdpcm_shared sh = {};
   uint8_t saveclk = 0;
 
-  BRCMF_DBG(TRACE, "Enter: dev=%s, err=%d\n", device_get_name(dev->zxdev), err);
+  BRCMF_DBG(TRACE, "Enter: dev=%s, err=%d\n", device_get_name(sdiodev->drvr->zxdev), err);
 
   if (err != ZX_OK) {
     goto fail;
-  }
-
-  if (!bus_if->drvr) {
-    return;
   }
 
   /* try to download image and nvram to the dongle */
@@ -3757,7 +3746,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
   sdio_release_host(sdiodev->func1);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 
-  err = brcmf_bus_started(dev);
+  err = brcmf_bus_started(sdiodev->drvr);
   if (err != ZX_OK) {
     BRCMF_ERR("dongle is not responding\n");
     goto fail;
@@ -3767,7 +3756,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
 release:
   sdio_release_host(sdiodev->func1);
 fail:
-  BRCMF_DBG(TRACE, "failed: dev=%s, err=%d\n", device_get_name(dev->zxdev), err);
+  BRCMF_DBG(TRACE, "failed: dev=%s, err=%d\n", device_get_name(sdiodev->drvr->zxdev), err);
   BRCMF_ERR("Need to implement driver release logic (WLAN-888)\n");
   // TODO(WLAN-888)
   // device_release_driver(&sdiodev->func2->dev);
@@ -3799,7 +3788,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   /* single-threaded workqueue */
   char name[WORKQUEUE_NAME_MAXLEN];
   static int queue_uniquify = 0;
-  snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%s%d", device_get_name(sdiodev->dev->zxdev),
+  snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%s%d", device_get_name(sdiodev->drvr->zxdev),
            queue_uniquify++);
   wq = workqueue_create(name);
   if (!wq) {
@@ -3822,7 +3811,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->dcmd_resp_wait = {};
 
   /* Set up the watchdog timer */
-  brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog, bus);
+  brcmf_timer_init(&bus->timer, sdiodev->drvr->dispatcher, brcmf_sdio_watchdog, bus);
   /* Initialize watchdog thread */
   bus->watchdog_wait = {};
   bus->watchdog_should_stop.store(false);
@@ -3836,7 +3825,6 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->dpc_running = false;
 
   /* Assign bus interface call back */
-  bus->sdiodev->bus_if->dev = sdiodev->dev;
   bus->sdiodev->bus_if->ops = &brcmf_sdio_bus_ops;
   bus->sdiodev->bus_if->chip = bus->ci->chip;
   bus->sdiodev->bus_if->chiprev = bus->ci->chiprev;
@@ -3845,7 +3833,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->tx_hdrlen = SDPCM_HWHDR_LEN + SDPCM_SWHDR_LEN;
 
   /* Attach to the common layer, reserve hdr space */
-  ret = brcmf_attach(bus->sdiodev->dev, bus->sdiodev->settings);
+  ret = brcmf_attach(bus->sdiodev->drvr, bus->sdiodev->bus_if, bus->sdiodev->settings);
   if (ret != ZX_OK) {
     BRCMF_ERR("brcmf_attach failed\n");
     goto fail;
@@ -3896,7 +3884,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     goto fail;
   }
 
-  ret = brcmf_fw_get_firmwares(sdiodev->dev, BRCMF_FW_REQUEST_NVRAM, sdiodev->fw_name,
+  ret = brcmf_fw_get_firmwares(sdiodev->drvr, BRCMF_FW_REQUEST_NVRAM, sdiodev->fw_name,
                                sdiodev->nvram_name, brcmf_sdio_firmware_callback);
   if (ret != ZX_OK) {
     BRCMF_ERR("async firmware request failed: %d\n", ret);
@@ -3918,7 +3906,7 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
     /* De-register interrupt handler */
     brcmf_sdiod_intr_unregister(bus->sdiodev);
 
-    brcmf_detach(bus->sdiodev->dev);
+    brcmf_detach(bus->sdiodev->drvr);
 
     workqueue_cancel_work(&bus->datawork);
     if (bus->brcmf_wq) {

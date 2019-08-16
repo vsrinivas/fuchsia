@@ -35,7 +35,6 @@
 #include "core.h"
 #include "debug.h"
 #include "defs.h"
-#include "device.h"
 #include "feature.h"
 #include "fwil.h"
 #include "fwil_types.h"
@@ -1146,13 +1145,12 @@ static void brcmf_disconnect_timeout_worker(struct work_struct* work) {
 }
 
 static void brcmf_disconnect_timeout(void* data) {
-  pthread_mutex_lock(&irq_callback_lock);
-
   struct brcmf_cfg80211_info* cfg = static_cast<decltype(cfg)>(data);
+  cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "Enter\n");
   workqueue_schedule_default(&cfg->disconnect_timeout_work);
 
-  pthread_mutex_unlock(&irq_callback_lock);
+  cfg->pub->irq_callback_lock.unlock();
 }
 
 static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
@@ -1198,7 +1196,7 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
     goto done;
   }
 
-  brcmf_timer_init(&cfg->disconnect_timeout, brcmf_disconnect_timeout, cfg);
+  brcmf_timer_init(&cfg->disconnect_timeout, ifp->drvr->dispatcher,  brcmf_disconnect_timeout, cfg);
   brcmf_timer_set(&cfg->disconnect_timeout, BRCMF_DISCONNECT_TIMEOUT);
 
 done:
@@ -1572,14 +1570,14 @@ static void brcmf_cfg80211_escan_timeout_worker(struct work_struct* work) {
 }
 
 static void brcmf_escan_timeout(void* data) {
-  pthread_mutex_lock(&irq_callback_lock);
   struct brcmf_cfg80211_info* cfg = static_cast<decltype(cfg)>(data);
+  cfg->pub->irq_callback_lock.lock();
 
   if (cfg->int_escan_map || cfg->scan_request) {
     BRCMF_ERR("timer expired\n");
     workqueue_schedule_default(&cfg->escan_timeout_work);
   }
-  pthread_mutex_unlock(&irq_callback_lock);
+  cfg->pub->irq_callback_lock.unlock();
 }
 
 static bool brcmf_compare_update_same_bss(struct brcmf_cfg80211_info* cfg,
@@ -1720,7 +1718,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
   cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
   /* Init scan_timeout timer */
   cfg->escan_timeout.data = cfg;
-  brcmf_timer_init(&cfg->escan_timeout, brcmf_escan_timeout, cfg);
+  brcmf_timer_init(&cfg->escan_timeout, cfg->pub->dispatcher, brcmf_escan_timeout, cfg);
   workqueue_init_work(&cfg->escan_timeout_work, brcmf_cfg80211_escan_timeout_worker);
 }
 
@@ -4491,8 +4489,7 @@ static void brcmf_free_wiphy(struct wiphy* wiphy) {
   free(wiphy);
 }
 
-struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
-                                                  struct brcmf_device* busdev, bool p2pdev_forced) {
+struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   struct net_device* ndev = brcmf_get_ifp(drvr, 0)->ndev;
   struct brcmf_cfg80211_info* cfg;
   struct wiphy* wiphy;
@@ -4520,7 +4517,6 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     goto wiphy_out;
   }
   memcpy(wiphy->perm_addr, drvr->mac, ETH_ALEN);
-  wiphy->dev = busdev;
 
   cfg = wiphy_to_cfg(wiphy);
   cfg->wiphy = wiphy;

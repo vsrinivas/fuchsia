@@ -43,7 +43,6 @@
 #include "common.h"
 #include "debug.h"
 #include "defs.h"
-#include "device.h"
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "sdio.h"
@@ -91,7 +90,7 @@ zx_status_t brcmf_sdiod_get_bootloader_macaddr(struct brcmf_sdio_dev* sdiodev, u
   uint8_t bootloader_macaddr[8];
   size_t actual_len;
   zx_status_t ret =
-      device_get_metadata(sdiodev->dev->zxdev, DEVICE_METADATA_MAC_ADDRESS, bootloader_macaddr,
+      device_get_metadata(sdiodev->drvr->zxdev, DEVICE_METADATA_MAC_ADDRESS, bootloader_macaddr,
                           sizeof(bootloader_macaddr), &actual_len);
 
   if (ret != ZX_OK || actual_len < ETH_ALEN) {
@@ -113,7 +112,7 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
   pdata->oob_irq_supported = false;
   wifi_config_t config;
   size_t actual;
-  ret = device_get_metadata(sdiodev->dev->zxdev, DEVICE_METADATA_WIFI_CONFIG, &config,
+  ret = device_get_metadata(sdiodev->drvr->zxdev, DEVICE_METADATA_WIFI_CONFIG, &config,
                             sizeof(wifi_config_t), &actual);
   if ((ret != ZX_OK && ret != ZX_ERR_NOT_FOUND) ||
       (ret == ZX_OK && actual != sizeof(wifi_config_t))) {
@@ -769,7 +768,7 @@ static const struct sdio_device_id brcmf_sdmmc_ids[] = {
     {/* end: all zeroes */}};
 #endif  // TODO_ADD_SDIO_IDS
 
-zx_status_t brcmf_sdio_register(struct brcmf_device* device) {
+zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus) {
   zx_status_t err;
   zx_status_t status;
 
@@ -781,7 +780,7 @@ zx_status_t brcmf_sdio_register(struct brcmf_device* device) {
   BRCMF_DBG(SDIO, "Enter\n");
 
   composite_protocol_t composite_proto = {};
-  status = device_get_protocol(device->zxdev, ZX_PROTOCOL_COMPOSITE, &composite_proto);
+  status = device_get_protocol(drvr->zxdev, ZX_PROTOCOL_COMPOSITE, &composite_proto);
   if (status != ZX_OK) {
     return status;
   }
@@ -856,7 +855,7 @@ zx_status_t brcmf_sdio_register(struct brcmf_device* device) {
   /* Set MMC_QUIRK_LENIENT_FN0 for this card */
   // func->card->quirks |= MMC_QUIRK_LENIENT_FN0;
 
-  bus_if = std::make_unique<struct brcmf_bus>();
+  bus_if = std::make_unique<brcmf_bus>();
   func1 = static_cast<decltype(func1)>(calloc(1, sizeof(struct sdio_func)));
   if (!func1) {
     err = ZX_ERR_NO_MEMORY;
@@ -898,9 +897,8 @@ zx_status_t brcmf_sdio_register(struct brcmf_device* device) {
   sdiodev->bus_if = bus_if.get();
   sdiodev->func1 = func1;
   sdiodev->func2 = func2;
-  sdiodev->dev = device;
+  sdiodev->drvr = drvr;
   bus_if->bus_priv.sdio = sdiodev;
-  device->bus = std::move(bus_if);
 
   sdiodev->manufacturer_id = devinfo.funcs_hw_info[SDIO_FN_1].manufacturer_id;
   sdiodev->product_id = devinfo.funcs_hw_info[SDIO_FN_1].product_id;
@@ -916,6 +914,8 @@ zx_status_t brcmf_sdio_register(struct brcmf_device* device) {
 
   pthread_mutexattr_destroy(&mutex_attr);
   BRCMF_DBG(SDIO, "F2 init completed...\n");
+
+  *out_bus = std::move(bus_if);
   return ZX_OK;
 
 fail:
@@ -957,18 +957,10 @@ static void brcmf_ops_sdio_remove(struct brcmf_sdio_dev* sdiodev) {
   BRCMF_DBG(SDIO, "Exit\n");
 }
 
-void brcmf_sdio_wowl_config(struct brcmf_device* dev, bool enabled) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-
-  BRCMF_DBG(SDIO, "Configuring WOWL, enabled=%d\n", enabled);
-  sdiodev->wowl_enabled = enabled;
-}
-
-void brcmf_sdio_exit(struct brcmf_device* device) {
+void brcmf_sdio_exit(brcmf_bus* bus) {
   BRCMF_DBG(SDIO, "Enter\n");
 
-  brcmf_ops_sdio_remove(device->bus->bus_priv.sdio);
-  delete device->bus->bus_priv.sdio;
-  device->bus.reset();
+  brcmf_ops_sdio_remove(bus->bus_priv.sdio);
+  delete bus->bus_priv.sdio;
+  bus->bus_priv.sdio = nullptr;
 }

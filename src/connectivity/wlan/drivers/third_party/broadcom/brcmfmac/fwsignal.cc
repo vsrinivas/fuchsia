@@ -26,7 +26,6 @@
 #include "common.h"
 #include "core.h"
 #include "debug.h"
-#include "device.h"
 #include "fweh.h"
 #include "fwil.h"
 #include "fwil_types.h"
@@ -545,12 +544,12 @@ static zx_status_t brcmf_fws_get_tlv_len(struct brcmf_fws_info* fws, enum brcmf_
 
 static void brcmf_fws_lock(struct brcmf_fws_info* fws) {  // __TA_ACQUIRE(&fws->spinlock) {
   // spin_lock_irqsave(&fws->spinlock, fws->flags);
-  pthread_mutex_lock(&irq_callback_lock);
+  fws->drvr->irq_callback_lock.lock();
 }
 
 static void brcmf_fws_unlock(struct brcmf_fws_info* fws) {  // __TA_RELEASE(&fws->spinlock) {
   // spin_unlock_irqrestore(&fws->spinlock, fws->flags);
-  pthread_mutex_unlock(&irq_callback_lock);
+  fws->drvr->irq_callback_lock.unlock();
 }
 
 static bool brcmf_fws_ifidx_match(struct brcmf_netbuf* netbuf, void* arg) {

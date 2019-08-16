@@ -25,11 +25,9 @@
 #include "brcmu_wifi.h"
 #include "bus.h"
 #include "debug.h"
-#include "device.h"
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
-#include "of.h"
 
 MODULE_AUTHOR("Broadcom Corporation")
 MODULE_DESCRIPTION("Broadcom 802.11 wireless LAN fullmac driver.")
@@ -49,10 +47,6 @@ module_param_named(p2pon, brcmf_p2p_enable, int, 0)
 module_param_named(feature_disable, brcmf_feature_disable, int, 0)
     MODULE_PARM_DESC(feature_disable, "Disable features")
 
-        static char brcmf_firmware_path[BRCMF_FW_ALTPATH_LEN] = "brcmfmac/";
-module_param_string(alternative_fw_path, brcmf_firmware_path, BRCMF_FW_ALTPATH_LEN, S_IRUSR)
-    MODULE_PARM_DESC(alternative_fw_path, "Alternative firmware path")
-
         static int brcmf_fcmode;
 module_param_named(fcmode, brcmf_fcmode, int, 0)
     MODULE_PARM_DESC(fcmode, "Mode of firmware signalled flow control")
@@ -66,8 +60,6 @@ static int brcmf_ignore_probe_fail;
 module_param_named(ignore_probe_fail, brcmf_ignore_probe_fail, int, 0)
     MODULE_PARM_DESC(ignore_probe_fail, "always succeed probe for debugging")
 #endif  // !defined(NDEBUG)
-
-        struct brcmf_mp_global_t brcmf_mp_global;
 
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
   struct brcmf_join_pref_params join_pref_params[2];
@@ -338,16 +330,7 @@ done:
   return err;
 }
 
-static void brcmf_mp_attach(void) {
-  /* If module param firmware path is set then this will always be used,
-   * if not set then if available use the platform data version. To make
-   * sure it gets initialized at all, always copy the module param version
-   */
-  strlcpy(brcmf_mp_global.firmware_path, brcmf_firmware_path, BRCMF_FW_ALTPATH_LEN);
-}
-
-struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
-                                               enum brcmf_bus_type bus_type, uint32_t chip,
+struct brcmf_mp_device* brcmf_get_module_param(enum brcmf_bus_type bus_type, uint32_t chip,
                                                uint32_t chiprev) {
   struct brcmf_mp_device* settings;
 
@@ -406,43 +389,8 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
       }
     }
   }
-  if (!found) {
-    /* No platform data for this device, try OF (Open Firwmare) */
-    brcmf_of_probe(dev, bus_type, settings);
-  }
 #endif /* USE_PLATFORM_DATA */
   return settings;
 }
 
 void brcmf_release_module_param(struct brcmf_mp_device* module_param) { free(module_param); }
-
-zx_status_t brcmfmac_module_init(void) {
-  zx_status_t err = ZX_OK;
-
-  async_loop_t* async_loop;
-  async_loop_config_t async_config;
-  memset(&async_config, 0, sizeof(async_config));
-  err = async_loop_create(&async_config, &async_loop);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Returning err %d %s", err, zx_status_get_string(err));
-    return err;
-  }
-  err = async_loop_start_thread(async_loop, "async_thread", NULL);
-  if (err != ZX_OK) {
-    async_loop_destroy(async_loop);
-    BRCMF_ERR("Returning err %d %s", err, zx_status_get_string(err));
-    return err;
-  }
-  default_dispatcher = async_loop_get_dispatcher(async_loop);
-
-  /* Initialize global module paramaters */
-  brcmf_mp_attach();
-
-  return ZX_OK;
-}
-
-void brcmfmac_module_exit(void) {
-  if (default_dispatcher != NULL) {
-    async_loop_destroy(async_loop_from_dispatcher(default_dispatcher));
-  }
-}

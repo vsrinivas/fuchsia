@@ -26,7 +26,6 @@
 #include "bus.h"
 #include "core.h"
 #include "debug.h"
-#include "device.h"
 #include "fwil.h"
 #include "fwsignal.h"
 #include "linuxisms.h"
@@ -336,18 +335,13 @@ static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t of
   return brcmf_bus_txdata(drvr->bus_if, pktbuf);
 }
 
-void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr.get();
-
+void brcmf_proto_bcdc_txflowblock(brcmf_pub* drvr, bool state) {
   BRCMF_DBG(TRACE, "Enter\n");
-
   brcmf_fws_bus_blocked(drvr, state);
 }
 
-void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* txp, bool success) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(bus_if->drvr->proto->pd);
+void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr, struct brcmf_netbuf* txp, bool success) {
+  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
   struct brcmf_if* ifp;
 
   /* await txstatus signal for firmware if active */
@@ -356,7 +350,7 @@ void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* 
       brcmf_fws_bustxfail(bcdc->fws, txp);
     }
   } else {
-    if (brcmf_proto_bcdc_hdrpull(bus_if->drvr.get(), false, txp, &ifp)) {
+    if (brcmf_proto_bcdc_hdrpull(drvr, false, txp, &ifp)) {
       brcmu_pkt_buf_free_netbuf(txp);
     } else {
       brcmf_txfinalize(ifp, txp, success);

@@ -24,7 +24,6 @@
 #include "chipcommon.h"
 #include "debug.h"
 #include "defs.h"
-#include "device.h"
 #include "linuxisms.h"
 #include "soc.h"
 

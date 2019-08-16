@@ -22,13 +22,14 @@
 #include "common.h"
 #include "core.h"
 #include "debug.h"
-#include "device.h"
 #include "linuxisms.h"
 
 #define BRCMF_FW_MAX_NVRAM_SIZE 64000
 #define BRCMF_FW_NVRAM_DEVPATH_LEN 19 /* devpath0=pcie/1/4/ */
 #define BRCMF_FW_NVRAM_PCIEDEV_LEN 10 /* pcie/1/4/ + \0 */
 #define BRCMF_FW_DEFAULT_BOARDREV "boardrev=0xff"
+
+constexpr char kDefaultFirmwarePath[] = "brcmfmac/";
 
 enum nvram_parser_state { IDLE, KEY, VALUE, COMMENT, END };
 
@@ -425,13 +426,13 @@ static void* brcmf_fw_nvram_strip(const uint8_t* data, size_t data_len, uint32_t
 void brcmf_fw_nvram_free(void* nvram) { free(nvram); }
 
 struct brcmf_fw {
-  struct brcmf_device* dev;
+  brcmf_pub* drvr;
   uint16_t flags;
   const struct brcmf_firmware* code;
   const char* nvram_name;
   uint16_t domain_nr;
   uint16_t bus_nr;
-  void (*done)(struct brcmf_device* dev, zx_status_t err, const struct brcmf_firmware* fw,
+  void (*done)(brcmf_pub* drvr, zx_status_t err, const struct brcmf_firmware* fw,
                void* nvram_image, uint32_t nvram_len);
 };
 
@@ -443,7 +444,7 @@ static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, 
   size_t data_len;
   bool raw_nvram;
 
-  BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(fwctx->dev->zxdev));
+  BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(fwctx->drvr->zxdev));
   if (fw && fw->data) {
     data = (uint8_t*)fw->data;
     data_len = fw->size;
@@ -466,26 +467,24 @@ static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, 
     goto fail;
   }
 
-  fwctx->done(fwctx->dev, ZX_OK, fwctx->code, nvram, nvram_length);
+  fwctx->done(fwctx->drvr, ZX_OK, fwctx->code, nvram, nvram_length);
   free(fwctx);
   return ZX_OK;
 
 fail:
-  BRCMF_DBG(TRACE, "failed: dev=%s\n", device_get_name(fwctx->dev->zxdev));
-  fwctx->done(fwctx->dev, ZX_ERR_NOT_FOUND, NULL, NULL, 0);
+  BRCMF_DBG(TRACE, "failed: dev=%s\n", device_get_name(fwctx->drvr->zxdev));
+  fwctx->done(fwctx->drvr, ZX_ERR_NOT_FOUND, NULL, NULL, 0);
   free(fwctx);
   return ZX_ERR_NO_RESOURCES;
 }
 
-zx_status_t request_firmware_nowait(bool b, const char* name, struct brcmf_device* dev,
-                                    struct brcmf_fw* ctx,
-                                    zx_status_t (*callback)(const struct brcmf_firmware* fw,
-                                                            void* ctx)) {
+zx_status_t request_firmware_nowait(bool b, const char* name, brcmf_pub* drvr, brcmf_fw* ctx,
+                                    zx_status_t (*callback)(const brcmf_firmware* fw, void* ctx)) {
   zx_status_t result;
   zx_handle_t fw_vmo;
   struct brcmf_firmware fw;
 
-  result = load_firmware(dev->zxdev, name, &fw_vmo, &fw.size);
+  result = load_firmware(drvr->zxdev, name, &fw_vmo, &fw.size);
   BRCMF_DBG(TEMP, "load_firmware of '%s' -> ret %d, size %ld", name, result, fw.size);
   if (result != ZX_OK) {
     return result;
@@ -514,7 +513,7 @@ static zx_status_t brcmf_fw_request_code_done(const struct brcmf_firmware* fw, v
   struct brcmf_fw* fwctx = static_cast<decltype(fwctx)>(ctx);
   zx_status_t result = ZX_OK;
 
-  BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(fwctx->dev->zxdev));
+  BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(fwctx->drvr->zxdev));
   if (!fw) {
     result = ZX_ERR_INVALID_ARGS;
     goto fail;
@@ -525,7 +524,7 @@ static zx_status_t brcmf_fw_request_code_done(const struct brcmf_firmware* fw, v
   }
 
   fwctx->code = fw;
-  result = request_firmware_nowait(true, fwctx->nvram_name, fwctx->dev, fwctx,
+  result = request_firmware_nowait(true, fwctx->nvram_name, fwctx->drvr, fwctx,
                                    brcmf_fw_request_nvram_done);
 
   /* pass NULL to nvram callback for bcm47xx fallback */
@@ -535,22 +534,22 @@ static zx_status_t brcmf_fw_request_code_done(const struct brcmf_firmware* fw, v
   return result;
 
 fail:
-  BRCMF_DBG(TRACE, "failed: dev=%s\n", device_get_name(fwctx->dev->zxdev));
+  BRCMF_DBG(TRACE, "failed: dev=%s\n", device_get_name(fwctx->drvr->zxdev));
 done:
-  fwctx->done(fwctx->dev, result, fw, NULL, 0);
+  fwctx->done(fwctx->drvr, result, fw, NULL, 0);
   free(fwctx);
   return result;
 }
 
-zx_status_t brcmf_fw_get_firmwares_pcie(struct brcmf_device* dev, uint16_t flags, const char* code,
+zx_status_t brcmf_fw_get_firmwares_pcie(brcmf_pub* drvr, uint16_t flags, const char* code,
                                         const char* nvram,
-                                        void (*fw_cb)(struct brcmf_device* dev, zx_status_t err,
-                                                      const struct brcmf_firmware* fw,
-                                                      void* nvram_image, uint32_t nvram_len),
+                                        void (*fw_cb)(brcmf_pub* drvr, zx_status_t err,
+                                                      const brcmf_firmware* fw, void* nvram_image,
+                                                      uint32_t nvram_len),
                                         uint16_t domain_nr, uint16_t bus_nr) {
   struct brcmf_fw* fwctx;
 
-  BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(dev->zxdev));
+  BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(drvr->zxdev));
   if (!fw_cb || !code) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -564,7 +563,7 @@ zx_status_t brcmf_fw_get_firmwares_pcie(struct brcmf_device* dev, uint16_t flags
     return ZX_ERR_NO_MEMORY;
   }
 
-  fwctx->dev = dev;
+  fwctx->drvr = drvr;
   fwctx->flags = flags;
   fwctx->done = fw_cb;
   if (flags & BRCMF_FW_REQUEST_NVRAM) {
@@ -573,15 +572,15 @@ zx_status_t brcmf_fw_get_firmwares_pcie(struct brcmf_device* dev, uint16_t flags
   fwctx->domain_nr = domain_nr;
   fwctx->bus_nr = bus_nr;
 
-  return request_firmware_nowait(true, code, dev, fwctx, brcmf_fw_request_code_done);
+  return request_firmware_nowait(true, code, drvr, fwctx, brcmf_fw_request_code_done);
 }
 
-zx_status_t brcmf_fw_get_firmwares(struct brcmf_device* dev, uint16_t flags, const char* code,
+zx_status_t brcmf_fw_get_firmwares(brcmf_pub* drvr, uint16_t flags, const char* code,
                                    const char* nvram,
-                                   void (*fw_cb)(struct brcmf_device* dev, zx_status_t err,
-                                                 const struct brcmf_firmware* fw, void* nvram_image,
+                                   void (*fw_cb)(brcmf_pub* drvr, zx_status_t err,
+                                                 const brcmf_firmware* fw, void* nvram_image,
                                                  uint32_t nvram_len)) {
-  return brcmf_fw_get_firmwares_pcie(dev, flags, code, nvram, fw_cb, 0, 0);
+  return brcmf_fw_get_firmwares_pcie(drvr, flags, code, nvram, fw_cb, 0, 0);
 }
 
 zx_status_t brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev,
@@ -603,13 +602,13 @@ zx_status_t brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev,
   }
 
   /* check if firmware path is provided by module parameter */
-  if (brcmf_mp_global.firmware_path[0] != '\0') {
-    strlcpy(fw_name, brcmf_mp_global.firmware_path, BRCMF_FW_NAME_LEN);
+  if (kDefaultFirmwarePath[0] != '\0') {
+    strlcpy(fw_name, kDefaultFirmwarePath, BRCMF_FW_NAME_LEN);
     if ((nvram_name) && (mapping_table[i].nvram)) {
-      strlcpy(nvram_name, brcmf_mp_global.firmware_path, BRCMF_FW_NAME_LEN);
+      strlcpy(nvram_name, kDefaultFirmwarePath, BRCMF_FW_NAME_LEN);
     }
 
-    end = brcmf_mp_global.firmware_path[strlen(brcmf_mp_global.firmware_path) - 1];
+    end = kDefaultFirmwarePath[strlen(kDefaultFirmwarePath) - 1];
     if (end != '/') {
       strlcat(fw_name, "/", BRCMF_FW_NAME_LEN);
       if ((nvram_name) && (mapping_table[i].nvram)) {

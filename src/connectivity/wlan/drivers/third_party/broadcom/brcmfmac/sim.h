@@ -20,7 +20,6 @@
 #include <memory>
 
 #include "bus.h"
-#include "device.h"
 #include "sim-fw/sim_fw.h"
 
 struct brcmf_simdev {

@@ -78,7 +78,7 @@ TEST(Sdio, IntrRegister) {
   wifi_config_t config = {ZX_INTERRUPT_MODE_LEVEL_LOW};
   ddk.SetMetadata(&config, sizeof(config));
 
-  brcmf_device dev = {};
+  brcmf_pub drvr = {};
   brcmf_sdio_dev sdio_dev = {};
   sdio_func func1 = {};
   MockSdio sdio1;
@@ -91,7 +91,7 @@ TEST(Sdio, IntrRegister) {
   sdio_dev.gpios[WIFI_OOB_IRQ_GPIO_INDEX] = *gpio.GetProto();
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
-  sdio_dev.dev = &dev;
+  sdio_dev.drvr = &drvr;
   sdio_dev.bus_if = &bus_if;
   sdio_dev.settings = &settings;
 
@@ -109,7 +109,7 @@ TEST(Sdio, IntrRegister) {
 }
 
 TEST(Sdio, IntrUnregister) {
-  brcmf_device dev = {};
+  brcmf_pub drvr = {};
   brcmf_sdio_dev sdio_dev = {};
   sdio_func func1 = {};
 
@@ -118,7 +118,7 @@ TEST(Sdio, IntrUnregister) {
   sdio_dev.func1 = &func1;
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
-  sdio_dev.dev = &dev;
+  sdio_dev.drvr = &drvr;
   sdio_dev.oob_irq_requested = true;
 
   sdio1.ExpectDoVendorControlRwByte(ZX_OK, true, 0xf2, 0, 0).ExpectDisableFnIntr(ZX_OK);
@@ -135,7 +135,7 @@ TEST(Sdio, IntrUnregister) {
   sdio_dev.func1 = &func1;
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
-  sdio_dev.dev = &dev;
+  sdio_dev.drvr = &drvr;
   sdio_dev.sd_irq_requested = true;
 
   sdio1.ExpectDisableFnIntr(ZX_OK);

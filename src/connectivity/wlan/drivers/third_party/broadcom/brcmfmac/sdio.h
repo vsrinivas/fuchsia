@@ -22,7 +22,6 @@
 #include <ddk/protocol/sdio.h>
 
 #include "defs.h"
-#include "device.h"
 #include "firmware.h"
 #include "linuxisms.h"
 #include "netbuf.h"
@@ -200,7 +199,7 @@ struct brcmf_sdio_dev {
   bool has_debug_gpio;
   zx_handle_t irq_handle;
   thrd_t isr_thread;
-  struct brcmf_device* dev;
+  struct brcmf_pub* drvr;
   uint32_t sbwad;             /* Save backplane window address */
   struct brcmf_core* cc_core; /* chipcommon core info struct */
   struct brcmf_sdio* bus;
@@ -393,7 +392,6 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus);
 void brcmf_sdio_isr(struct brcmf_sdio* bus);
 
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active);
-void brcmf_sdio_wowl_config(struct brcmf_device* dev, bool enabled);
 zx_status_t brcmf_sdio_sleep(struct brcmf_sdio* bus, bool sleep);
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus);
 int brcmf_sdio_oob_irqhandler(void* cookie);

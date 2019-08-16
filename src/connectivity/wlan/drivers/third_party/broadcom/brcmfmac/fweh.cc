@@ -24,7 +24,6 @@
 #include "cfg80211.h"
 #include "core.h"
 #include "debug.h"
-#include "device.h"
 #include "fwil.h"
 #include "linuxisms.h"
 #include "proto.h"
@@ -89,13 +88,14 @@ const char* brcmf_fweh_event_name(enum brcmf_fweh_event_code code) { return "nod
  * @fweh: firmware event handling info.
  * @event: event queue entry.
  */
-static void brcmf_fweh_queue_event(struct brcmf_fweh_info* fweh,
-                                   struct brcmf_fweh_queue_item* event) {
+static void brcmf_fweh_queue_event(brcmf_pub* drvr,
+                                   brcmf_fweh_info* fweh,
+                                   brcmf_fweh_queue_item* event) {
   // spin_lock_irqsave(&fweh->evt_q_lock, flags);
-  pthread_mutex_lock(&irq_callback_lock);
+  drvr->irq_callback_lock.lock();
   list_add_tail(&fweh->event_q, &event->q);
   // spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
-  pthread_mutex_unlock(&irq_callback_lock);
+  drvr->irq_callback_lock.unlock();
   workqueue_schedule_default(&fweh->event_work);
 }
 
@@ -194,17 +194,18 @@ static void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_even
  *
  * @fweh: firmware event handling info.
  */
-static struct brcmf_fweh_queue_item* brcmf_fweh_dequeue_event(struct brcmf_fweh_info* fweh) {
+static struct brcmf_fweh_queue_item* brcmf_fweh_dequeue_event(brcmf_pub* drvr,
+                                                              brcmf_fweh_info* fweh) {
   struct brcmf_fweh_queue_item* event = NULL;
 
   // spin_lock_irqsave(&fweh->evt_q_lock, flags);
-  pthread_mutex_lock(&irq_callback_lock);
+  drvr->irq_callback_lock.lock();
   if (!list_is_empty(&fweh->event_q)) {
     event = list_peek_head_type(&fweh->event_q, struct brcmf_fweh_queue_item, q);
     list_delete(&event->q);
   }
   // spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
-  pthread_mutex_unlock(&irq_callback_lock);
+  drvr->irq_callback_lock.unlock();
 
   return event;
 }
@@ -226,7 +227,7 @@ static void brcmf_fweh_event_worker(struct work_struct* work) {
   fweh = containerof(work, struct brcmf_fweh_info, event_work);
   drvr = containerof(fweh, struct brcmf_pub, fweh);
 
-  while ((event = brcmf_fweh_dequeue_event(fweh))) {
+  while ((event = brcmf_fweh_dequeue_event(drvr, fweh))) {
     BRCMF_DBG(EVENT, "event %s (%u) ifidx %u bsscfg %u addr %pM\n",
               brcmf_fweh_event_name(event->code), event->code, event->emsg.ifidx,
               event->emsg.bsscfgidx, event->emsg.addr);
@@ -429,5 +430,5 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_
   memcpy(event->ifaddr, event_packet->eth.h_dest, ETH_ALEN);
 
   // BRCMF_DBG(TEMP, "Queueing event!");
-  brcmf_fweh_queue_event(fweh, event);
+  brcmf_fweh_queue_event(drvr, fweh, event);
 }

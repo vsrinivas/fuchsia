@@ -11,18 +11,18 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
-#include "bus.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 
-#include "debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 
 // Note that this file does not include any headers that define the bus-specific functions it calls,
 // since it cannot depend on them.  Hence we just declare them directly before use.
 
-zx_status_t brcmf_bus_register(struct brcmf_device* device) {
+zx_status_t brcmf_bus_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus) {
 #if CONFIG_BRCMFMAC_SDIO
   {
-    extern zx_status_t brcmf_sdio_register(struct brcmf_device * device);
-    const zx_status_t result = brcmf_sdio_register(device);
+    extern zx_status_t brcmf_sdio_register(brcmf_pub * drvr, std::unique_ptr<brcmf_bus> * out_bus);
+    const zx_status_t result = brcmf_sdio_register(drvr, out_bus);
     if (result != ZX_OK) {
       BRCMF_DBG(INFO, "SDIO registration failed: %d\n", result);
     } else {
@@ -33,8 +33,8 @@ zx_status_t brcmf_bus_register(struct brcmf_device* device) {
 
 #if CONFIG_BRCMFMAC_SIM
   {
-    extern zx_status_t brcmf_sim_register(struct brcmf_device * device);
-    const zx_status_t result = brcmf_sim_register(device);
+    extern zx_status_t brcmf_sim_register(brcmf_pub * drvr, std::unique_ptr<brcmf_bus> * out_bus);
+    const zx_status_t result = brcmf_sim_register(drvr, out_bus);
     if (result != ZX_OK) {
       BRCMF_DBG(INFO, "SIM registration failed: %d\n", result);
     } else {
@@ -46,14 +46,14 @@ zx_status_t brcmf_bus_register(struct brcmf_device* device) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void brcmf_bus_exit(struct brcmf_device* device) {
+void brcmf_bus_exit(brcmf_bus* bus) {
 #if CONFIG_BRCMFMAC_SDIO
-  extern void brcmf_sdio_exit(struct brcmf_device * device);
-  brcmf_sdio_exit(device);
+  extern void brcmf_sdio_exit(brcmf_bus * bus);
+  brcmf_sdio_exit(bus);
 #endif
 
 #if CONFIG_BRCMFMAC_SIM
-  extern void brcmf_sim_exit(struct brcmf_device * device);
-  brcmf_sim_exit(device);
+  extern void brcmf_sim_exit(brcmf_bus * bus);
+  brcmf_sim_exit(bus);
 #endif
 }

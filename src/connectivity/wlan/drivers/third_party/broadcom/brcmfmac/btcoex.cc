@@ -22,7 +22,6 @@
 #include "core.h"
 #include "debug.h"
 #include "defs.h"
-#include "device.h"
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
@@ -264,13 +263,13 @@ static void brcmf_btcoex_restore_part1(struct brcmf_btcoex_info* btci) {
  * brcmf_btcoex_timerfunc() - BT coex timer callback
  */
 static void brcmf_btcoex_timerfunc(void* data) {
-  pthread_mutex_lock(&irq_callback_lock);
   struct brcmf_btcoex_info* bt_local = static_cast<decltype(bt_local)>(data);
+  bt_local->cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "enter\n");
 
   bt_local->timer_on = false;
   workqueue_schedule_default(&bt_local->work);
-  pthread_mutex_unlock(&irq_callback_lock);
+  bt_local->cfg->pub->irq_callback_lock.unlock();
 }
 
 /**
@@ -362,7 +361,7 @@ zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
   /* Set up timer for BT  */
   btci->timer_on = false;
   btci->timeout = BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC;
-  brcmf_timer_init(&btci->timer, brcmf_btcoex_timerfunc, btci);
+  brcmf_timer_init(&btci->timer, cfg->pub->dispatcher, brcmf_btcoex_timerfunc, btci);
   btci->cfg = cfg;
   btci->saved_regs_part1 = false;
   btci->saved_regs_part2 = false;

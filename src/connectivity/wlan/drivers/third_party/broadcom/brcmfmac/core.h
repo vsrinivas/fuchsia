@@ -23,14 +23,16 @@
 
 #include <threads.h>
 #include <atomic>
+#include <mutex>
 
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/wlanphyimpl.h>
+#include <lib/async/dispatcher.h>
 #include <netinet/if_ether.h>
 #include <lib/sync/completion.h>
 #include <wlan/protocol/if-impl.h>
 
-#include "device.h"
+#include "bus.h"
 #include "fweh.h"
 #include "linuxisms.h"
 #include "netbuf.h"
@@ -38,6 +40,8 @@
 
 #define TOE_TX_CSUM_OL 0x00000001
 #define TOE_RX_CSUM_OL 0x00000002
+
+#define BRCMF_BSSIDX_INVALID -1
 
 /* For supporting multiple interfaces */
 #define BRCMF_MAX_IFS 16
@@ -125,6 +129,12 @@ struct brcmf_rev_info {
 
 /* Common structure for module and instance linkage */
 struct brcmf_pub {
+  zx_device_t* zxdev;
+  zx_device_t* phy_zxdev;
+  zx_device_t* if_zxdev;
+  async_dispatcher_t* dispatcher;
+  std::recursive_mutex irq_callback_lock;
+
   /* Linkage ponters */
   struct brcmf_bus* bus_if;
   struct brcmf_proto* proto;
@@ -142,7 +152,7 @@ struct brcmf_pub {
   struct brcmf_if* iflist[BRCMF_MAX_IFS];
   int32_t if2bss[BRCMF_MAX_IFS];
 
-  mtx_t proto_block;
+  std::mutex proto_block;
   unsigned char proto_buf[BRCMF_DCMD_MAXLEN];
 
   struct brcmf_fweh_info fweh;
@@ -240,8 +250,6 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
 void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool success);
 void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
-zx_status_t brcmf_core_init(struct brcmf_device* dev);
-void brcmf_core_exit(struct brcmf_device* dev);
 
 // Used in net_device.flags to indicate interface is up.
 #define IFF_UP 1
@@ -280,5 +288,29 @@ zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_re
                                    uint16_t* out_iface_id);
 zx_status_t brcmf_phy_destroy_iface(void* ctx, uint16_t id);
 zx_status_t brcmf_phy_set_country(void* ctx, const wlanphy_country_t* country);
+
+/*
+ * interface functions from common layer
+ */
+
+/* Receive frame for delivery to OS.  Callee disposes of rxp. */
+void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* rxp, bool handle_event);
+/* Receive async event packet from firmware. Callee disposes of rxp. */
+void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* rxp);
+
+/* Indication from bus module regarding presence/insertion of dongle. */
+zx_status_t brcmf_attach(brcmf_pub* drvr, brcmf_bus* bus_if, brcmf_mp_device* settings);
+/* Indication from bus module regarding removal/absence of dongle */
+void brcmf_detach(brcmf_pub* drvr);
+/* Indication from bus module that dongle should be reset */
+void brcmf_dev_reset(brcmf_pub* drvr);
+
+/* Configure the "global" bus state used by upper layers */
+void brcmf_bus_change_state(brcmf_bus* bus, enum brcmf_bus_state state);
+
+zx_status_t brcmf_bus_started(brcmf_pub* drvr);
+zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, uint32_t len,
+                                 int32_t* fwerr_ptr);
+void brcmf_bus_add_txhdrlen(brcmf_pub* drvr, uint len);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_

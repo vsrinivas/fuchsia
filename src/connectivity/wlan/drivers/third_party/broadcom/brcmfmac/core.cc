@@ -33,7 +33,6 @@
 #include "cfg80211.h"
 #include "common.h"
 #include "debug.h"
-#include "device.h"
 #include "feature.h"
 #include "fwil.h"
 #include "fwil_types.h"
@@ -46,14 +45,12 @@
 
 #define MAX_WAIT_FOR_8021X_TX_MSEC (950)
 
-#define BRCMF_BSSIDX_INVALID -1
-
-static inline struct brcmf_device* if_to_dev(struct brcmf_if* ifp) {
-  return ifp->drvr->bus_if->dev;
+static inline brcmf_pub* if_to_pub(struct brcmf_if* ifp) {
+  return ifp->drvr;
 }
 
-static inline struct brcmf_device* ndev_to_dev(struct net_device* ndev) {
-  return if_to_dev(ndev_to_if(ndev));
+static inline brcmf_pub* ndev_to_pub(struct net_device* ndev) {
+  return if_to_pub(ndev_to_if(ndev));
 }
 
 const char* brcmf_ifname(struct brcmf_if* ifp) {
@@ -301,7 +298,7 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
             ifp->netif_stop, reason, state);
 
   // spin_lock_irqsave(&ifp->netif_stop_lock, flags);
-  pthread_mutex_lock(&irq_callback_lock);
+  ifp->drvr->irq_callback_lock.lock();
 
   if (state) {
     if (!ifp->netif_stop) {
@@ -315,7 +312,7 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
     }
   }
   // spin_unlock_irqrestore(&ifp->netif_stop_lock, flags);
-  pthread_mutex_unlock(&irq_callback_lock);
+  ifp->drvr->irq_callback_lock.unlock();
 }
 
 void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
@@ -377,12 +374,10 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
   return ZX_OK;
 }
 
-void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* netbuf, bool handle_event) {
+void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
   struct brcmf_if* ifp;
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr.get();
 
-  BRCMF_DBG(DATA, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
+  BRCMF_DBG(DATA, "Enter: %s: rxp=%p\n", device_get_name(drvr->zxdev), netbuf);
 
   if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
     BRCMF_DBG(TEMP, "hdrpull returned nonzero\n");
@@ -401,12 +396,10 @@ void brcmf_rx_frame(struct brcmf_device* dev, struct brcmf_netbuf* netbuf, bool 
   }
 }
 
-void brcmf_rx_event(struct brcmf_device* dev, struct brcmf_netbuf* netbuf) {
+void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* netbuf) {
   struct brcmf_if* ifp;
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr.get();
 
-  BRCMF_DBG(EVENT, "Enter: %s: rxp=%p\n", device_get_name(dev->zxdev), netbuf);
+  BRCMF_DBG(EVENT, "Enter: %s: rxp=%p\n", device_get_name(drvr->zxdev), netbuf);
 
   if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
     return;
@@ -543,11 +536,11 @@ zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_re
       .proto_ops = &if_impl_proto_ops,
   };
 
-  struct brcmf_device* device = ifp->drvr->bus_if->dev;
-  struct brcmf_bus* bus = device->bus.get();
+  brcmf_pub* const drvr = ifp->drvr;
+  brcmf_bus* const bus = drvr->bus_if;
 
   BRCMF_DBG(TEMP, "About to add if_dev");
-  result = brcmf_bus_device_add(bus, device->phy_zxdev, &args, &device->if_zxdev);
+  result = brcmf_bus_device_add(bus, drvr->phy_zxdev, &args, &drvr->if_zxdev);
   if (result != ZX_OK) {
     BRCMF_ERR("Failed to device_add: %s", zx_status_get_string(result));
     return result;
@@ -591,23 +584,19 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
 
   ndev->needed_headroom += drvr->hdrlen;
   workqueue_init_work(&ifp->multicast_work, _brcmf_set_multicast_list);
-  device_make_visible(ifp->drvr->bus_if->dev->phy_zxdev);
-
-  BRCMF_DBG(TEMP, "device_make_visible() succeeded. Activated phy hooks.\n");
-
   return ZX_OK;
 }
 
 static void brcmf_net_detach(struct net_device* ndev, bool rtnl_locked) {
-  struct brcmf_device* device = ndev_to_dev(ndev);
+  brcmf_pub* drvr = ndev_to_pub(ndev);
 
   // TODO(cphoenix): Make sure devices are removed and memory is freed properly. This code
   // is probably wrong. See WLAN-1057.
   brcmf_free_net_device_vif(ndev);
   brcmf_free_net_device(ndev);
-  if (device->phy_zxdev != NULL) {
-    device_remove(device->phy_zxdev);
-    device->phy_zxdev = NULL;
+  if (drvr->phy_zxdev != NULL) {
+    device_remove(drvr->phy_zxdev);
+    drvr->phy_zxdev = NULL;
   }
 }
 
@@ -787,52 +776,36 @@ void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked) {
   brcmf_del_if(ifp->drvr, ifp->bsscfgidx, rtnl_locked);
 }
 
-zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* settings) {
+zx_status_t brcmf_attach(brcmf_pub* drvr, brcmf_bus* bus_if, brcmf_mp_device* settings) {
   zx_status_t ret = ZX_OK;
-  int i;
 
   BRCMF_DBG(TRACE, "Enter\n");
 
-  /* Allocate primary brcmf_info */
-  auto drvr = std::make_unique<struct brcmf_pub>();
-  if (!drvr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  for (i = 0; i < (int)countof(drvr->if2bss); i++) {
-    drvr->if2bss[i] = BRCMF_BSSIDX_INVALID;
-  }
-
-  mtx_init(&drvr->proto_block, mtx_plain);
-
   /* Link to bus module */
   drvr->hdrlen = 0;
-  drvr->bus_if = dev_to_bus(dev);
+  drvr->bus_if = bus_if;
   drvr->settings = settings;
 
   /* Attach and link in the protocol */
-  ret = brcmf_proto_attach(drvr.get());
+  ret = brcmf_proto_attach(drvr);
   if (ret != ZX_OK) {
     BRCMF_ERR("brcmf_prot_attach failed\n");
     goto fail;
   }
 
   /* attach firmware event handler */
-  brcmf_fweh_attach(drvr.get());
-
-  drvr->bus_if->drvr = std::move(drvr);
+  brcmf_fweh_attach(drvr);
   return ret;
 
 fail:
-  brcmf_detach(dev);
+  brcmf_detach(drvr);
 
   return ret;
 }
 
-zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
+zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   zx_status_t ret = ZX_ERR_IO;
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr.get();
+  struct brcmf_bus* bus_if = drvr->bus_if;
   struct brcmf_if* ifp;
   struct brcmf_if* p2p_ifp;
   zx_status_t err;
@@ -871,7 +844,7 @@ zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
 
   brcmf_proto_add_if(drvr, ifp);
 
-  drvr->config = brcmf_cfg80211_attach(drvr, bus_if->dev, drvr->settings->p2p_enable);
+  drvr->config = brcmf_cfg80211_attach(drvr);
   if (drvr->config == NULL) {
     ret = ZX_ERR_IO;
     goto fail;
@@ -911,19 +884,13 @@ fail:
   return ret;
 }
 
-void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr.get();
-
+void brcmf_bus_add_txhdrlen(brcmf_pub* drvr, uint len) {
   if (drvr) {
     drvr->hdrlen += len;
   }
 }
 
-void brcmf_dev_reset(struct brcmf_device* dev) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr.get();
-
+void brcmf_dev_reset(brcmf_pub* drvr) {
   if (drvr == NULL) {
     return;
   }
@@ -933,11 +900,8 @@ void brcmf_dev_reset(struct brcmf_device* dev) {
   }
 }
 
-void brcmf_detach(struct brcmf_device* dev) {
+void brcmf_detach(brcmf_pub* drvr) {
   int32_t i;
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_pub* drvr = bus_if->drvr.get();
-
   BRCMF_DBG(TRACE, "Enter\n");
 
   if (drvr == NULL) {
@@ -947,7 +911,7 @@ void brcmf_detach(struct brcmf_device* dev) {
   /* stop firmware event handling */
   brcmf_fweh_detach(drvr);
 
-  brcmf_bus_change_state(bus_if, BRCMF_BUS_DOWN);
+  brcmf_bus_change_state(drvr->bus_if, BRCMF_BUS_DOWN);
 
   /* make sure primary interface removed last */
   for (i = BRCMF_MAX_IFS - 1; i > -1; i--) {
@@ -959,14 +923,11 @@ void brcmf_detach(struct brcmf_device* dev) {
   brcmf_bus_stop(drvr->bus_if);
 
   brcmf_proto_detach(drvr);
-
-  bus_if->drvr.reset();
 }
 
-zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, const char* name, void* data,
+zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data,
                                  uint32_t len, int32_t* fwerr_ptr) {
-  struct brcmf_bus* bus_if = dev_to_bus(dev);
-  struct brcmf_if* ifp = bus_if->drvr->iflist[0];
+  struct brcmf_if* ifp = drvr->iflist[0];
 
   return brcmf_fil_iovar_data_set(ifp, name, data, len, fwerr_ptr);
 }
@@ -1012,12 +973,13 @@ void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {
 }
 
 void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
-  struct brcmf_pub* drvr = bus->drvr.get();
-  struct net_device* ndev;
-  int ifidx;
-
   BRCMF_DBG(TRACE, "%d -> %d\n", bus->state, state);
   bus->state = state;
+
+#if 0
+  struct brcmf_pub* drvr = bus->priv.sdio->drvr.get();
+  struct net_device* ndev;
+  int ifidx;
 
   if (state == BRCMF_BUS_UP) {
     for (ifidx = 0; ifidx < BRCMF_MAX_IFS; ifidx++) {
@@ -1029,23 +991,5 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
       }
     }
   }
+#endif
 }
-
-zx_status_t brcmf_core_init(struct brcmf_device* device) {
-  pthread_mutexattr_t pmutex_attributes;
-  zx_status_t result;
-
-  BRCMF_DBG(TEMP, "brcmfmac: core_init was called\n");
-
-  pthread_mutexattr_init(&pmutex_attributes);
-  pthread_mutexattr_settype(&pmutex_attributes, PTHREAD_MUTEX_NORMAL | PTHREAD_MUTEX_RECURSIVE);
-  pthread_mutex_init(&irq_callback_lock, &pmutex_attributes);
-
-  result = brcmf_bus_register(device);
-  if (result != ZX_OK) {
-    BRCMF_ERR("Bus registration failed: %s\n", zx_status_get_string(result));
-  }
-  return result;
-}
-
-void brcmf_core_exit(struct brcmf_device* device) { brcmf_bus_exit(device); }

@@ -27,9 +27,9 @@
 /* for brcmu_d11inf */
 #include "brcmu_d11.h"
 #include "core.h"
-#include "device.h"
 #include "fwil_types.h"
 #include "p2p.h"
+#include "timer.h"
 #include "workqueue.h"
 
 // clang-format off
@@ -418,8 +418,7 @@ static inline struct brcmf_cfg80211_connect_info* cfg_to_conn(struct brcmf_cfg80
   return &cfg->conn_info;
 }
 
-struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
-                                                  struct brcmf_device* busdev, bool p2pdev_forced);
+struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr);
 void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg);
 zx_status_t brcmf_cfg80211_up(struct net_device* ndev);
 zx_status_t brcmf_cfg80211_down(struct net_device* ndev);

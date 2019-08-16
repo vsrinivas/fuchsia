@@ -17,31 +17,11 @@
 
 #include "bus.h"
 #include "core.h"
-#include "device.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
 
 #define BRCMF_FW_ALTPATH_LEN 256
 #define BRCMF_FW_NAME_LEN 320
-
-/* Definitions for the module global and device specific settings are defined
- * here. Two structs are used for them. brcmf_mp_global_t and brcmf_mp_device.
- * The mp_global is instantiated once in a global struct and gets initialized
- * by the common_attach function which should be called before any other
- * (module) initiliazation takes place. The device specific settings is part
- * of the drvr struct and should be initialized on every brcmf_attach.
- */
-
-/**
- * struct brcmf_mp_global_t - Global module paramaters.
- *
- * @firmware_path: Alternative firmware path.
- */
-struct brcmf_mp_global_t {
-  char firmware_path[BRCMF_FW_ALTPATH_LEN];
-};
-
-extern struct brcmf_mp_global_t brcmf_mp_global;
 
 /**
  * struct brcmfmac_sdio_pd - SDIO-specific device module parameters
@@ -78,15 +58,11 @@ struct brcmf_mp_device {
 
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp);
 
-struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
-                                               enum brcmf_bus_type bus_type, uint32_t chip,
+struct brcmf_mp_device* brcmf_get_module_param(enum brcmf_bus_type bus_type, uint32_t chip,
                                                uint32_t chiprev);
 void brcmf_release_module_param(struct brcmf_mp_device* module_param);
 
 /* Sets dongle media info (drv_version, mac address). */
 zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp);
-
-zx_status_t brcmfmac_module_init();
-void brcmfmac_module_exit();
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_COMMON_H_

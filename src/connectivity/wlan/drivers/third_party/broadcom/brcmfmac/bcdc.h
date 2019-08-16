@@ -17,7 +17,6 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BCDC_H_
 
 #include "core.h"
-#include "device.h"
 #include "netbuf.h"
 
 struct brcmf_proto_bcdc_dcmd {
@@ -54,10 +53,10 @@ struct brcmf_proto_bcdc_dcmd {
 
 // clang-format on
 
-zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr);
-void brcmf_proto_bcdc_detach(struct brcmf_pub* drvr);
-void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state);
-void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct brcmf_netbuf* txp, bool success);
-struct brcmf_fws_info* drvr_to_fws(struct brcmf_pub* drvr);
+zx_status_t brcmf_proto_bcdc_attach(brcmf_pub* drvr);
+void brcmf_proto_bcdc_detach(brcmf_pub* drvr);
+void brcmf_proto_bcdc_txflowblock(brcmf_pub* drvr, bool state);
+void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr, brcmf_netbuf* txp, bool success);
+struct brcmf_fws_info* drvr_to_fws(brcmf_pub* drvr);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BCDC_H_

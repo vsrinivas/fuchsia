@@ -23,19 +23,21 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
+namespace wlan {
+namespace brcmfmac {
 namespace {
 
 TEST(LifecycleTest, StartStop) {
   zx_status_t status = ZX_OK;
-  brcmf_device device = {};
+  Device* device = nullptr;
 
-  status = brcmfmac_module_init();
-  EXPECT_EQ(status, ZX_OK);
-  status = brcmf_core_init(&device);
+  status = Device::Create(nullptr, &device);
   EXPECT_EQ(status, ZX_OK);
 
-  brcmf_core_exit(&device);
-  brcmfmac_module_exit();
+  device->SimUnbind();
+  device = nullptr;
 }
 
 }  // namespace
+}  // namespace brcmfmac
+}  // namespace wlan
