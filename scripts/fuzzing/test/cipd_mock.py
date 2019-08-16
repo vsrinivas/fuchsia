@@ -28,6 +28,12 @@ class MockCipd(Cipd):
         self.history.append(logged)
         if cmd[0] == 'install' or cmd[0] == 'create':
             return 'ok'
+        elif cmd[0] == 'instances':
+            return r"""
+Instance ID  | Timestamp | Uploader               | Refs
+----------------------------------------------------------------
+some-version | some-time | some-author@google.com | latest
+"""
         elif cmd[0] == 'search' and cmd[-1] == 'integration:some-revision':
             return """
 Instances:

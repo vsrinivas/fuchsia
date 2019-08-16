@@ -19,6 +19,16 @@ from device_mock import MockDevice
 
 class TestCipd(unittest.TestCase):
 
+    def test_instances(self):
+        mock_cipd = MockCipd()
+        corpus = mock_cipd.corpus
+
+        output = mock_cipd.instances()
+        self.assertIn(
+            mock_cipd._bin + ' instances fuchsia/test_data/fuzzing/' + str(
+                corpus.fuzzer), mock_cipd.history)
+        self.assertIn('some-version', output)
+
     def test_install(self):
         mock_cipd = MockCipd()
         corpus = mock_cipd.corpus

@@ -39,6 +39,10 @@ class Cipd(object):
         """Runs a CIPD command and returns its output. Sub-classed in tests."""
         return subprocess.check_output([self._bin] + cmd, cwd=cwd)
 
+    def instances(self):
+        """Returns the versioned instances of a fuzzing corpus package."""
+        return self._cipd(['instances', self._pkg])
+
     def install(self, label):
         # Look up version from tag.  Note if multiple versions of the package
         # have the same tag (e.g. the same integration revision), this will
