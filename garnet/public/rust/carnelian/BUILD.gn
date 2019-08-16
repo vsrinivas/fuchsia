@@ -168,6 +168,7 @@ rustc_binary("drawing") {
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

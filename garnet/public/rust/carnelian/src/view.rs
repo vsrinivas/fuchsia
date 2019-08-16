@@ -185,24 +185,21 @@ struct FramebufferResources {
 }
 
 trait ViewStrategy {
-    fn setup(&mut self, _view_details: &ViewDetails, _view_assistant: &mut ViewAssistantPtr) {}
+    fn setup(&mut self, _view_details: &ViewDetails, _view_assistant: &mut ViewAssistantPtr);
     fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr);
-    fn present(&mut self) {}
+    fn present(&mut self);
     fn validate_root_node_id(&self, _: u32) -> bool {
         true
     }
     fn validate_view_id(&self, _: u32) -> bool {
         true
     }
-
     fn handle_input_event(
         &mut self,
         _view_details: &ViewDetails,
         _view_assistant: &mut ViewAssistantPtr,
         _: &fidl_fuchsia_ui_input::InputEvent,
-    ) -> Vec<Message> {
-        Vec::new()
-    }
+    ) -> Vec<Message>;
 }
 
 type ViewStrategyPtr = Box<dyn ViewStrategy>;
@@ -291,7 +288,7 @@ impl ScenicCanvasViewStrategy {
 
     fn make_view_assistant_context<'a>(
         view_details: &ViewDetails,
-        canvas: &'a RefCell<Canvas<MappingPixelSink>>,
+        canvas: Option<&'a RefCell<Canvas<MappingPixelSink>>>,
     ) -> ViewAssistantContext<'a> {
         ViewAssistantContext {
             key: view_details.key,
@@ -301,12 +298,18 @@ impl ScenicCanvasViewStrategy {
             presentation_time: Time::get(ClockId::Monotonic),
             messages: Vec::new(),
             scenic_resources: None,
-            canvas: Some(canvas),
+            canvas: canvas,
         }
     }
 }
 
 impl ViewStrategy for ScenicCanvasViewStrategy {
+    fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
+        let canvas_context =
+            ScenicCanvasViewStrategy::make_view_assistant_context(view_details, None);
+        view_assistant.setup(&canvas_context).unwrap_or_else(|e| panic!("Setup error: {:?}", e));
+    }
+
     fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         let size = view_details.physical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
@@ -340,7 +343,7 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
             ));
 
             let canvas_context =
-                ScenicCanvasViewStrategy::make_view_assistant_context(view_details, &canvas);
+                ScenicCanvasViewStrategy::make_view_assistant_context(view_details, Some(&canvas));
             view_assistant
                 .update(&canvas_context)
                 .unwrap_or_else(|e| panic!("Update error: {:?}", e));
@@ -349,6 +352,21 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
 
     fn present(&mut self) {
         scenic_present(&self.scenic_resources);
+    }
+
+    fn handle_input_event(
+        &mut self,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+        event: &fidl_fuchsia_ui_input::InputEvent,
+    ) -> Vec<Message> {
+        let mut canvas_context =
+            ScenicCanvasViewStrategy::make_view_assistant_context(view_details, None);
+        view_assistant
+            .handle_input_event(&mut canvas_context, &event)
+            .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
+
+        canvas_context.messages
     }
 }
 
@@ -368,11 +386,9 @@ impl FrameBufferViewStrategy {
         let framebuffer_resources = FramebufferResources { canvas: RefCell::new(canvas) };
         Box::new(FrameBufferViewStrategy { framebuffer_resources })
     }
-}
 
-impl ViewStrategy for FrameBufferViewStrategy {
-    fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
-        let canvas_context = ViewAssistantContext {
+    fn make_context(&mut self, view_details: &ViewDetails) -> ViewAssistantContext {
+        ViewAssistantContext {
             key: view_details.key,
             logical_size: view_details.logical_size,
             size: view_details.physical_size,
@@ -381,8 +397,36 @@ impl ViewStrategy for FrameBufferViewStrategy {
             messages: Vec::new(),
             scenic_resources: None,
             canvas: Some(&self.framebuffer_resources.canvas),
-        };
-        view_assistant.update(&canvas_context).unwrap_or_else(|e| panic!("Update error: {:?}", e));
+        }
+    }
+}
+
+impl ViewStrategy for FrameBufferViewStrategy {
+    fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
+        let framebuffer_context = self.make_context(view_details);
+        view_assistant
+            .setup(&framebuffer_context)
+            .unwrap_or_else(|e| panic!("Setup error: {:?}", e));
+    }
+
+    fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
+        let framebuffer_context = self.make_context(view_details);
+        view_assistant
+            .update(&framebuffer_context)
+            .unwrap_or_else(|e| panic!("Update error: {:?}", e));
+    }
+
+    fn present(&mut self) {
+        // this function intentionally left blank
+    }
+
+    fn handle_input_event(
+        &mut self,
+        _view_details: &ViewDetails,
+        _view_assistant: &mut ViewAssistantPtr,
+        _event: &fidl_fuchsia_ui_input::InputEvent,
+    ) -> Vec<Message> {
+        panic!("Not yet implemented");
     }
 }
 

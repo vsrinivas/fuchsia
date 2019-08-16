@@ -5,11 +5,13 @@
 #![feature(async_await)]
 
 use carnelian::{
-    AnimationMode, App, AppAssistant, Canvas, Color, Coord, MappingPixelSink, Point, Rect, Size,
-    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+    make_message, AnimationMode, App, AppAssistant, Canvas, Color, Coord, MappingPixelSink, Point,
+    Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
+    ViewMode,
 };
 use euclid::rect;
 use failure::Error;
+use fidl_fuchsia_ui_input::{KeyboardEvent, KeyboardEventPhase};
 use fuchsia_zircon::{ClockId, Time};
 use std::{
     env,
@@ -160,6 +162,20 @@ impl ViewAssistant for DrawingViewAssistant {
 
         canvas.reset_update_area();
 
+        Ok(())
+    }
+
+    fn handle_keyboard_event(
+        &mut self,
+        context: &mut ViewAssistantContext,
+        keyboard_event: &KeyboardEvent,
+    ) -> Result<(), Error> {
+        if keyboard_event.code_point == ' ' as u32
+            && keyboard_event.phase == KeyboardEventPhase::Pressed
+        {
+            self.color3 = Color::from_hash_code("#FFFFFF")?;
+        }
+        context.queue_message(make_message(ViewMessages::Update));
         Ok(())
     }
 
