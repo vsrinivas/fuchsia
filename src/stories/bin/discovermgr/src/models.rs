@@ -275,6 +275,10 @@ impl AddModInfo {
         &self.intent
     }
 
+    pub fn mod_name(&self) -> &str {
+        &self.mod_name
+    }
+
     pub fn replace_reference_in_parameters(self, old: &str, new: &str) -> Self {
         AddModInfo {
             story_name: self.story_name,

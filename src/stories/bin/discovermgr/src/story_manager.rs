@@ -11,7 +11,6 @@ use {
     chrono::{Datelike, Timelike, Utc},
     failure::Error,
     fuchsia_syslog::macros::*,
-    uuid::Uuid,
 };
 
 /// Manage multiple story graphs to support restoring stories.
@@ -107,7 +106,7 @@ impl StoryManager {
                 self.current_story_graph = loaded_graph.unwrap_or(StoryGraph::new());
             }
         }
-        self.current_story_graph.add_module(Uuid::new_v4().to_string(), action.intent().clone());
+        self.current_story_graph.add_module(action.mod_name(), action.intent().clone());
         Ok(())
     }
 
