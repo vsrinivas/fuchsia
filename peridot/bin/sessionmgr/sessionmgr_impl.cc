@@ -175,9 +175,11 @@ class SessionmgrImpl::PresentationProviderImpl : public PresentationProvider {
 };
 
 SessionmgrImpl::SessionmgrImpl(sys::ComponentContext* const component_context,
-                               fuchsia::modular::session::SessionmgrConfig config)
+                               fuchsia::modular::session::SessionmgrConfig config,
+                               inspect::Node node_object)
     : component_context_(component_context),
       config_(std::move(config)),
+      node_(std::move(node_object)),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner"),
       weak_ptr_factory_(this) {
@@ -606,8 +608,9 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
   // all modules to be terminated before agents are terminated. Agents must
   // outlive the stories which contain modules that are connected to those
   // agents.
-  session_storage_ =
-      std::make_unique<SessionStorage>(ledger_client_.get(), fuchsia::ledger::PageId());
+
+  session_storage_ = std::make_unique<SessionStorage>(
+      ledger_client_.get(), fuchsia::ledger::PageId());
 
   module_facet_reader_.reset(
       new ModuleFacetReaderImpl(component_context_->svc()->Connect<fuchsia::sys::Loader>()));

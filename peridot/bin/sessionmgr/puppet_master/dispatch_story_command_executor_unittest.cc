@@ -54,7 +54,8 @@ class DispatchStoryCommandExecutorTest : public modular::testing::TestWithLedger
  protected:
   void SetUp() override {
     TestWithLedger::SetUp();
-    session_storage_ = std::make_unique<SessionStorage>(ledger_client(), LedgerPageId());
+    session_storage_ =
+        std::make_unique<SessionStorage>(ledger_client(), LedgerPageId());
   }
 
   void Reset() {

@@ -277,8 +277,10 @@ TEST_F(SessionmgrImplTest, LedgerInitializedWithUserId) {
 
   component_context_provider.service_directory_provider()->AddService(fake_launcher.GetHandler());
 
+  inspect::Node root_node;
   fuchsia::modular::internal::SessionmgrPtr sessionmgr;
-  SessionmgrImpl sessionmgr_impl(component_context_provider.context(), std::move(config));
+  SessionmgrImpl sessionmgr_impl(component_context_provider.context(), std::move(config),
+                                 std::move(root_node));
   component_context_provider.ConnectToPublicService(sessionmgr.NewRequest());
 
   sessionmgr.set_error_handler([](zx_status_t status) {
