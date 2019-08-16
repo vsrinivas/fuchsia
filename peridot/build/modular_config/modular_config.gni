@@ -5,6 +5,12 @@
 import("//build/config.gni")
 import("//build/json/validate_json.gni")
 
+declare_args() {
+  # Indicates whether to include basemgr.cmx in the boot sequence for the
+  # product image.
+  launch_basemgr_on_boot = true
+}
+
 # Validates a modular framework configuration file against a schema
 #
 # Parameters
@@ -54,6 +60,14 @@ template("modular_config") {
     ]
   }
 
+  # By default, add the sysmgr config to automatically launch basemgr.cmx,
+  # unless the invoker explicitly disables this with
+  # launch_basemgr_on_boot = false.
+  config_data_deps = [ ":${invoker.target_name}_validate" ]
+  if (launch_basemgr_on_boot) {
+    config_data_deps += [ ":basemgr.config" ]
+  }
+
   config_data(invoker.target_name) {
     for_pkg = "basemgr"
     sources = [
@@ -63,9 +77,6 @@ template("modular_config") {
       "startup.config",
     ]
 
-    deps = [
-      ":${invoker.target_name}_validate",
-      ":basemgr.config",
-    ]
+    deps = config_data_deps
   }
 }
