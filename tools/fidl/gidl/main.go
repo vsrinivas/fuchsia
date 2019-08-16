@@ -74,30 +74,40 @@ func parseFidlJSONIr(filename string) fidlir.Root {
 func filterByBinding(input gidlir.All, binding string) gidlir.All {
 	var output gidlir.All
 	for _, def := range input.Success {
-		if len(def.BindingsAllowlist) == 0 || contains(binding, def.BindingsAllowlist) {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
 			output.Success = append(output.Success, def)
 		}
 	}
 	for _, def := range input.FailsToEncode {
-		if len(def.BindingsAllowlist) == 0 || contains(binding, def.BindingsAllowlist) {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
 			output.FailsToEncode = append(output.FailsToEncode, def)
 		}
 	}
 	for _, def := range input.FailsToDecode {
-		if len(def.BindingsAllowlist) == 0 || contains(binding, def.BindingsAllowlist) {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
 			output.FailsToDecode = append(output.FailsToDecode, def)
 		}
 	}
 	return output
 }
 
-func contains(search string, list []string) bool {
-	for _, item := range list {
-		if item == search {
-			return true
+func shouldKeep(binding string, allowlist *[]string, denylist *[]string) bool {
+	if denylist != nil {
+		for _, item := range *denylist {
+			if binding == item {
+				return false
+			}
 		}
 	}
-	return false
+	if allowlist != nil {
+		for _, item := range *allowlist {
+			if binding == item {
+				return true
+			}
+		}
+		return false
+	}
+	return true
 }
 
 func main() {

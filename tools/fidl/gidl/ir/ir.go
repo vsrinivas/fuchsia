@@ -14,7 +14,8 @@ type Success struct {
 	Name              string
 	Value             interface{}
 	Bytes             []byte
-	BindingsAllowlist []string
+	BindingsAllowlist *[]string
+	BindingsDenylist  *[]string
 	// Handles
 }
 
@@ -22,7 +23,8 @@ type FailsToEncode struct {
 	Name              string
 	Value             interface{}
 	Err               ErrorCode
-	BindingsAllowlist []string
+	BindingsAllowlist *[]string
+	BindingsDenylist  *[]string
 }
 
 type FailsToDecode struct {
@@ -30,7 +32,8 @@ type FailsToDecode struct {
 	Type              string
 	Bytes             []byte
 	Err               ErrorCode
-	BindingsAllowlist []string
+	BindingsAllowlist *[]string
+	BindingsDenylist  *[]string
 }
 
 // Value represents any acceptable value used to represent a FIDL value.

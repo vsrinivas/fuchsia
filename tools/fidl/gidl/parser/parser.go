@@ -119,6 +119,7 @@ const (
 	isBytes
 	isErr
 	isBindingsAllowlist
+	isBindingsDenylist
 )
 
 func (kind bodyElement) String() string {
@@ -133,6 +134,8 @@ func (kind bodyElement) String() string {
 		return "err"
 	case isBindingsAllowlist:
 		return "bindings_allowlist"
+	case isBindingsDenylist:
+		return "bindings_denylist"
 	default:
 		panic("unsupported kind")
 	}
@@ -143,7 +146,8 @@ type body struct {
 	Value             ir.Value
 	Bytes             []byte
 	Err               ir.ErrorCode
-	BindingsAllowlist []string
+	BindingsAllowlist *[]string
+	BindingsDenylist  *[]string
 }
 
 type sectionMetadata struct {
@@ -155,33 +159,35 @@ type sectionMetadata struct {
 var sections = map[string]sectionMetadata{
 	"success": {
 		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.Success{
 				Name:              name,
 				Value:             body.Value,
 				Bytes:             body.Bytes,
 				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
 			}
 			all.Success = append(all.Success, result)
 		},
 	},
 	"fails_to_encode": {
 		requiredKinds: map[bodyElement]bool{isValue: true, isErr: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.FailsToEncode{
 				Name:              name,
 				Value:             body.Value,
 				Err:               body.Err,
 				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
 			}
 			all.FailsToEncode = append(all.FailsToEncode, result)
 		},
 	},
 	"fails_to_decode": {
 		requiredKinds: map[bodyElement]bool{isType: true, isBytes: true, isErr: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.FailsToDecode{
 				Name:              name,
@@ -189,6 +195,7 @@ var sections = map[string]sectionMetadata{
 				Bytes:             body.Bytes,
 				Err:               body.Err,
 				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
 			}
 			all.FailsToDecode = append(all.FailsToDecode, result)
 		},
@@ -312,10 +319,17 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 		if err != nil {
 			return err
 		}
-		result.BindingsAllowlist = languages
+		result.BindingsAllowlist = &languages
 		kind = isBindingsAllowlist
+	case "bindings_denylist":
+		languages, err := p.parseTextSlice()
+		if err != nil {
+			return err
+		}
+		result.BindingsDenylist = &languages
+		kind = isBindingsDenylist
 	default:
-		return p.newParseError(tok, "must be type, value, bytes, err or language_whitelist")
+		return p.newParseError(tok, "must be type, value, bytes, err, bindings_allowlist or bindings_denylist")
 	}
 	if all[kind] {
 		return p.newParseError(tok, "duplicate %s found", kind)

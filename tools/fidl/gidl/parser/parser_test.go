@@ -212,7 +212,7 @@ func TestParseFailsToDecodeCase(t *testing.T) {
 	})
 }
 
-func TestParseSucceedsBindingsAllowlist(t *testing.T) {
+func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 	parsingToCheck{
 		t: t,
 		fn: func(p *Parser) (interface{}, error) {
@@ -235,6 +235,7 @@ func TestParseSucceedsBindingsAllowlist(t *testing.T) {
 				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			}
 			bindings_allowlist = [go, rust,]
+			bindings_denylist = [go,]
 		}`: ir.Success{
 			Name: "OneStringOfMaxLengthFive-empty",
 			Value: ir.Object{
@@ -250,7 +251,8 @@ func TestParseSucceedsBindingsAllowlist(t *testing.T) {
 				0, 0, 0, 0, 0, 0, 0, 0, // length
 				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			},
-			BindingsAllowlist: []string{"go", "rust"},
+			BindingsAllowlist: &[]string{"go", "rust"},
+			BindingsDenylist:  &[]string{"go"},
 		},
 	})
 }
