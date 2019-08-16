@@ -20,7 +20,8 @@ class DataMember final : public Value {
   // Symbol overrides.
   const DataMember* AsDataMember() const;
 
-  // The byte offset from the containing class or struct of this data member.
+  // The byte offset from the containing class or struct of this data member. This is only valid
+  // if !is_external() -- see the base class' Value::is_external().
   uint32_t member_location() const { return member_location_; }
   void set_member_location(uint32_t m) { member_location_ = m; }
 

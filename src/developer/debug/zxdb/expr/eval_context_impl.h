@@ -25,17 +25,16 @@ class ProcessSymbols;
 class SymbolDataProvider;
 class Variable;
 
-// An implementation of EvalContext that integrates with the DWARF symbol
-// system. It will provide the values of variables currently in scope.
+// An implementation of EvalContext that integrates with the DWARF symbol system. It will provide
+// the values of variables currently in scope.
 //
-// This object is reference counted since it requires asynchronous operations
-// in some cases. This means it can outlive the scope in which it was invoked
-// (say if the thread was resumed or the process was killed).
+// This object is reference counted since it requires asynchronous operations in some cases. This
+// means it can outlive the scope in which it was invoked (say if the thread was resumed or the
+// process was killed).
 //
-// Generally the creator of this context will be something representing that
-// context in the running program like a stack frame. This frame should call
-// DisownContext() when it is destroyed to ensure that evaluation does not use
-// any invalid context.
+// Generally the creator of this context will be something representing that context in the running
+// program like a stack frame. This frame should call DisownContext() when it is destroyed to ensure
+// that evaluation does not use any invalid context.
 class EvalContextImpl : public EvalContext {
  public:
   // All of the input pointers can be null:
@@ -61,7 +60,7 @@ class EvalContextImpl : public EvalContext {
   // EvalContext implementation.
   ExprLanguage GetLanguage() const override;
   void GetNamedValue(const ParsedIdentifier& name, ValueCallback cb) const override;
-  void GetVariableValue(fxl::RefPtr<Variable> variable, ValueCallback cb) const override;
+  void GetVariableValue(fxl::RefPtr<Value> variable, ValueCallback cb) const override;
   fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override;
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
@@ -72,8 +71,12 @@ class EvalContextImpl : public EvalContext {
  private:
   struct ResolutionState;
 
-  // Computes the value of the given variable and issues the callback (possibly
-  // asynchronously, possibly not).
+  // Converts an extern value to a real Variable by looking the name up in the index.
+  Err ResolveExternValue(const fxl::RefPtr<Value>& input_value,
+                         fxl::RefPtr<Variable>* resolved) const;
+
+  // Computes the value of the given variable and issues the callback (possibly asynchronously,
+  // possibly not).
   void DoResolve(FoundName found, ValueCallback cb) const;
 
   // Callback for when the dwarf_eval_ has completed evaluation.
@@ -88,8 +91,8 @@ class EvalContextImpl : public EvalContext {
   SymbolContext symbol_context_;
   fxl::RefPtr<SymbolDataProvider> data_provider_;  // Possibly null.
 
-  // Innermost block of the current context. May be null if there is none
-  // (this means you won't get any local variable lookups).
+  // Innermost block of the current context. May be null if there is none (this means you won't get
+  // any local variable lookups).
   fxl::RefPtr<const CodeBlock> block_;
 
   // Language extracted from the code block.

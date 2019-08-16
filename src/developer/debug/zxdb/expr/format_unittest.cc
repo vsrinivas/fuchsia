@@ -286,6 +286,28 @@ TEST_F(FormatTest, Structs) {
       SyncTreeTypeDesc(pair_value, opts));
 }
 
+TEST_F(FormatTest, StructStatic) {
+  // Currently we don't output static struct members so this test validates that this case is
+  // handled as expected. This may be changed in the future if we change the policy on statics.
+  auto extern_member = fxl::MakeRefCounted<DataMember>("static_one", MakeInt32Type(), 0);
+  extern_member->set_is_external(true);
+  auto regular_member = fxl::MakeRefCounted<DataMember>("regular_one", MakeInt32Type(), 0);
+
+  auto collection = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
+  collection->set_assigned_name("Collection");
+  collection->set_data_members({LazySymbol(extern_member), LazySymbol(regular_member)});
+
+  // The collection is just the single non-external int32.
+  constexpr uint8_t kRegularValue = 42;
+  ExprValue value(collection, {kRegularValue, 0, 0, 0});
+
+  FormatOptions opts;
+  EXPECT_EQ(
+      " = Collection, \n"
+      "  regular_one = int32_t, 42\n",
+      SyncTreeTypeDesc(value, opts));
+}
+
 TEST_F(FormatTest, Struct_Anon) {
   // Test an anonymous struct. Clang will generate structs with no names for things like closures.
   // This struct has no members.

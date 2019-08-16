@@ -226,6 +226,45 @@ TEST_F(ResolveCollectionTest, ForwardDefMember) {
   EXPECT_EQ(forward_decl.get(), result.value().type());
 }
 
+TEST_F(ResolveCollectionTest, ExternStaticMember) {
+  // This test doesn't do an end-to-end resolution of the EvalContextImpl resolving extern variables
+  // since that requires a lot of setup and is tested by the EvalContextImpl unit tests. Instead
+  // this test only tests the resolve_collection code and validates that the extern variable was
+  // detected and the right EvalContext function was called.
+  const char kName[] = "member_name";
+
+  // External data member.
+  auto extern_member = fxl::MakeRefCounted<DataMember>(kName, MakeInt32Type(), 0);
+  extern_member->set_is_external(true);
+
+  // Collection with the member.
+  auto collection = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+  extern_member->set_parent(collection);
+
+  collection->set_assigned_name("Collection");
+  collection->set_data_members({LazySymbol(extern_member)});
+
+  // The collection needs no storage since the member is static.
+  ExprValue collection_value(collection, {});
+
+  auto mock_eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  ExprValue expected(42);
+  mock_eval_context->AddVariable(extern_member.get(), expected);
+
+  bool called = false;
+  ResolveMember(mock_eval_context, collection_value, ParsedIdentifier(kName),
+                [&called, expected](ErrOrValue result) {
+                  called = true;
+
+                  EXPECT_FALSE(result.has_error());
+                  EXPECT_EQ(expected, result.value());
+                });
+  EXPECT_TRUE(called);
+
+  // Clear parent to eliminate circular refcount.
+  extern_member->set_parent(nullptr);
+}
+
 TEST_F(ResolveCollectionTest, BadMemberArgs) {
   const DataMember* a_data;
   const DataMember* b_data;

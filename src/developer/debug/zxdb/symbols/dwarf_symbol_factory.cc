@@ -134,10 +134,10 @@ VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
   return VariableLocation(std::move(entries));
 }
 
-// Extracts the subrange size from an array subrange DIE. Puts the result in *size and returns true
-// on success, false on failure.
-bool ReadArraySubrange(llvm::DWARFContext* context, const llvm::DWARFDie& subrange_die,
-                       uint64_t* size) {
+// Extracts the subrange size from an array subrange DIE. Returns the value on success, nullopt on
+// failure.
+std::optional<size_t> ReadArraySubrange(llvm::DWARFContext* context,
+                                        const llvm::DWARFDie& subrange_die) {
   // Extract the DW_AT_count attribute which Clang generates, and DW_AT_upper_bound which GCC
   // generated.
   DwarfDieDecoder range_decoder(context, subrange_die.getDwarfUnit());
@@ -149,13 +149,11 @@ bool ReadArraySubrange(llvm::DWARFContext* context, const llvm::DWARFDie& subran
   range_decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_upper_bound, &upper_bound);
 
   if (!range_decoder.Decode(subrange_die) || (!count && !upper_bound))
-    return false;
+    return std::nullopt;
 
   if (count)
-    *size = *count;
-  else
-    *size = *upper_bound;
-  return true;
+    return static_cast<size_t>(*count);
+  return static_cast<size_t>(*upper_bound);
 }
 
 }  // namespace
@@ -419,13 +417,10 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeArrayType(const llvm::DWARFDie& di
 
   // Find all subranges stored in the declaration order. More than one means a multi-dimensional
   // array.
-  std::vector<uint64_t> subrange_sizes;
+  std::vector<std::optional<size_t>> subrange_sizes;
   for (const llvm::DWARFDie& child : die) {
-    if (child.getTag() == llvm::dwarf::DW_TAG_subrange_type) {
-      subrange_sizes.push_back(0);
-      if (!ReadArraySubrange(symbols_->context(), child, &subrange_sizes.back()))
-        return fxl::MakeRefCounted<Symbol>();
-    }
+    if (child.getTag() == llvm::dwarf::DW_TAG_subrange_type)
+      subrange_sizes.push_back(ReadArraySubrange(symbols_->context(), child));
   }
 
   // Require a subrange with a count in it. If we find cases where this isn't the case, we could add
@@ -586,6 +581,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(const llvm::DWARFDie& d
   llvm::Optional<bool> artificial;
   decoder.AddBool(llvm::dwarf::DW_AT_artificial, &artificial);
 
+  llvm::Optional<bool> external;
+  decoder.AddBool(llvm::dwarf::DW_AT_external, &external);
+
   llvm::Optional<uint64_t> member_offset;
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_data_member_location, &member_offset);
 
@@ -599,6 +597,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(const llvm::DWARFDie& d
     result->set_type(MakeLazy(type));
   if (artificial)
     result->set_artificial(*artificial);
+  if (external)
+    result->set_is_external(*external);
   if (member_offset)
     result->set_member_location(static_cast<uint32_t>(*member_offset));
   return result;
@@ -923,6 +923,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(const llvm::DWARFDie& die
   llvm::DWARFDie type;
   decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
 
+  llvm::Optional<bool> external;
+  decoder.AddBool(llvm::dwarf::DW_AT_external, &external);
+
   llvm::Optional<bool> artificial;
   decoder.AddBool(llvm::dwarf::DW_AT_artificial, &artificial);
 
@@ -950,6 +953,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(const llvm::DWARFDie& die
     variable->set_assigned_name(*name);
   if (type)
     variable->set_type(MakeLazy(type));
+  if (external)
+    variable->set_is_external(*external);
   if (artificial)
     variable->set_artificial(*artificial);
   variable->set_location(std::move(location));

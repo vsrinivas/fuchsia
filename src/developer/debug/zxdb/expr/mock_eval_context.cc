@@ -16,7 +16,10 @@ MockEvalContext::MockEvalContext()
 
 MockEvalContext::~MockEvalContext() = default;
 
-void MockEvalContext::AddVariable(const std::string& name, ExprValue v) { values_[name] = v; }
+void MockEvalContext::AddVariable(const std::string& name, ExprValue v) {
+  values_by_name_[name] = v;
+}
+void MockEvalContext::AddVariable(const Value* key, ExprValue v) { values_by_symbol_[key] = v; }
 
 void MockEvalContext::AddType(fxl::RefPtr<Type> type) { types_[type->GetFullName()] = type; }
 
@@ -28,15 +31,23 @@ void MockEvalContext::AddLocation(uint64_t address, Location location) {
 void MockEvalContext::GetNamedValue(const ParsedIdentifier& ident, ValueCallback cb) const {
   // Can ignore the symbol output for this test, it's not needed by the
   // expression evaluation system.
-  auto found = values_.find(ident.GetFullName());
-  if (found == values_.end())
-    cb(Err("Not found"), nullptr);
-  else
+  auto found = values_by_name_.find(ident.GetFullName());
+  if (found == values_by_name_.end()) {
+    cb(Err("MockEvalContext::GetVariableValue '%s' not found.", ident.GetFullName().c_str()),
+       nullptr);
+  } else {
     cb(found->second, nullptr);
+  }
 }
 
-void MockEvalContext::GetVariableValue(fxl::RefPtr<Variable> variable, ValueCallback cb) const {
-  cb(Err("Not found"), nullptr);
+void MockEvalContext::GetVariableValue(fxl::RefPtr<Value> variable, ValueCallback cb) const {
+  auto found = values_by_symbol_.find(variable.get());
+  if (found == values_by_symbol_.end()) {
+    cb(Err("MockEvalContext::GetVariableValue '%s' not found.", variable->GetFullName().c_str()),
+       nullptr);
+  } else {
+    cb(found->second, nullptr);
+  }
 }
 
 fxl::RefPtr<Type> MockEvalContext::ResolveForwardDefinition(const Type* type) const {

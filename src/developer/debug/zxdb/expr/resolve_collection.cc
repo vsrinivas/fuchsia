@@ -151,7 +151,18 @@ ErrOrValue DoResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, con
 // static data members that may require a memory fetch.
 void DoResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
                      const FoundMember& member, EvalCallback cb) {
-  // TODO(brettw) resolve extern data members here.
+  FXL_DCHECK(member.data_member());
+  if (member.data_member()->is_external()) {
+    // A forward-declared static member.
+    return context->GetVariableValue(
+        RefPtrTo(member.data_member()),
+        [cb = std::move(cb)](ErrOrValue value, fxl::RefPtr<Symbol>) mutable {
+          // Discard the symbol since it's not needed in this path.
+          cb(std::move(value));
+        });
+  }
+
+  // Normal nonstatic resolution is synchronous.
   cb(DoResolveNonstaticMember(context, base, member));
 }
 

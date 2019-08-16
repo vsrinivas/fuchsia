@@ -344,6 +344,53 @@ TEST_F(EvalContextImplTest, IntOnStack) {
   EXPECT_EQ(ExprValue(kValue), result1.value.value());
 }
 
+// Tests that externs are resolved by GetVariableValue(). This requires using the index.
+TEST_F(EvalContextImplTest, ExternVariable) {
+  // Offset from beginning of the module of the data.
+  constexpr uint8_t kRelativeValAddress = 0x99;
+  const char kValName[] = "val";
+
+  // The non-extern declaration for the variable (0, 0 means always valid). The little-endian
+  // module-relative address follows DW_OP_addr in the expression.
+  auto real_variable = MakeUint64VariableForTest(
+      kValName, 0, 0, {llvm::dwarf::DW_OP_addr, kRelativeValAddress, 0, 0, 0, 0, 0, 0, 0});
+
+  // A reference to the same variable, marked "external" with no location.
+  auto extern_variable = fxl::MakeRefCounted<Variable>(DwarfTag::kVariable);
+  extern_variable->set_assigned_name(kValName);
+  extern_variable->set_is_external(true);
+  extern_variable->set_type(MakeUint64Type());
+
+  constexpr uint64_t kLoadAddress = 0x1000000;
+  constexpr uint64_t kAbsoluteValAddress = kLoadAddress + kRelativeValAddress;
+
+  // Need to have a module for the variable to be relative to and to have an index.
+  ProcessSymbolsTestSetup setup;
+  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("mod.so");
+  SymbolContext symbol_context(kLoadAddress);
+  setup.InjectModule("mod1", "1234", kLoadAddress, module_symbols);
+
+  // Index the non-extern variable.
+  auto& root = module_symbols->index().root();  // Root of the index for module.
+  TestIndexedSymbol indexed_def(module_symbols.get(), &root, kValName, real_variable);
+
+  // Set the value for the non-extern variable in the mocked memory.
+  constexpr uint64_t kValValue = 0x0102030405060708;
+  provider()->AddMemory(kAbsoluteValAddress, {8, 7, 6, 5, 4, 3, 2, 1});
+
+  auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), symbol_context,
+                                                      provider(), MakeCodeBlock());
+
+  // Resolving the extern variable should give the value that the non-extern one points to.
+  ValueResult result;
+  GetVariableValue(context, extern_variable, GetValueAsync::kQuitLoop, &result);
+  loop().Run();
+  ASSERT_TRUE(result.called);
+  ASSERT_TRUE(result.value.ok());
+  EXPECT_EQ(ExprValue(kValValue), result.value.value());
+  EXPECT_EQ(static_cast<const Symbol*>(real_variable.get()), result.symbol.get());
+}
+
 // This is a larger test that runs the EvalContext through ExprNode.Eval.
 TEST_F(EvalContextImplTest, NodeIntegation) {
   constexpr uint64_t kValue = 12345678;

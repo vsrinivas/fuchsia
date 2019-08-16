@@ -283,15 +283,13 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
     if (!member)
       continue;
 
-    // TODO(brettw) handle static data members here.
-
     // Save the first member's name to be the name of the whole enum, even if there are no data
     // members. Normally there will be exactly one.
     if (enum_name.empty())
       enum_name = member->GetAssignedName();
 
     // In the error case, still append a child so that the child can have the error associated with
-    // it.
+    // it. Note that Rust enums are never static so we can use the synchronous variant.
     node->children().push_back(std::make_unique<FormatNode>(
         member->GetAssignedName(), ResolveNonstaticMember(eval_context, node->value(), member)));
   }
@@ -384,6 +382,16 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
 
     if (member->artificial())
       continue;  // Skip compiler-generated data.
+
+    // Skip static data members. This could potentially be revisited. This generally gives
+    // duplicated and uninteresting data in the view, and the user can still explicitly type the
+    // name if desired.
+    //
+    // To implement we should probably append a FormatNode with a lambda that gets the right
+    // value. It can be asynchronously expanded layer. That way this function doesn't need to
+    // handle any asynchronous state.
+    if (member->is_external())
+      continue;
 
     node->children().push_back(std::make_unique<FormatNode>(
         member->GetAssignedName(), ResolveNonstaticMember(eval_context, node->value(), member)));
@@ -537,12 +545,18 @@ bool TryFormatArrayOrString(FormatNode* node, const Type* type, const FormatOpti
     if (!array)
       return false;
 
+    if (!array->num_elts()) {
+      // Unknown array size, see ArrayType header for what this means. Nothing to do in this case.
+      node->SetDescribedError(Err("Array with unknown size."));
+      return true;
+    }
+
     auto value_type = eval_context->GetConcreteType(array->value_type());
     if (!value_type)
       return false;
 
     if (IsCharacterType(eval_context, value_type.get())) {
-      size_t length = array->num_elts();
+      size_t length = *array->num_elts();
       bool truncated = false;
       if (length > options.max_array_size) {
         length = options.max_array_size;
@@ -550,7 +564,8 @@ bool TryFormatArrayOrString(FormatNode* node, const Type* type, const FormatOpti
       }
       FormatCharArrayNode(node, value_type, node->value().data().data(), length, true, truncated);
     } else {
-      FormatArrayNode(node, node->value(), array->num_elts(), options, eval_context, std::move(cb));
+      FormatArrayNode(node, node->value(), *array->num_elts(), options, eval_context,
+                      std::move(cb));
     }
     return true;
   }

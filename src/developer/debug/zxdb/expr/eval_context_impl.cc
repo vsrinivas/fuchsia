@@ -137,7 +137,18 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCal
                                    });
 }
 
-void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var, ValueCallback cb) const {
+void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, ValueCallback cb) const {
+  fxl::RefPtr<Variable> var;
+  if (input_val->is_external()) {
+    // Convert extern Variables and DataMembers to the actual variable memory.
+    if (Err err = ResolveExternValue(input_val, &var); err.has_error())
+      return cb(err, nullptr);
+  } else {
+    // Everything else should be a variable.
+    var = RefPtrTo(input_val->AsVariable());
+    FXL_DCHECK(var);
+  }
+
   // Need to explicitly take a reference to the type.
   fxl::RefPtr<Type> type = RefPtrTo(var->type().Get()->AsType());
   if (!type)
@@ -261,6 +272,27 @@ Location EvalContextImpl::GetLocationForAddress(uint64_t address) const {
   return locations[0];
 }
 
+Err EvalContextImpl::ResolveExternValue(const fxl::RefPtr<Value>& input_value,
+                                        fxl::RefPtr<Variable>* resolved) const {
+  FXL_DCHECK(input_value->is_external());
+
+  FindNameOptions options(FindNameOptions::kNoKinds);
+  options.find_vars = true;
+
+  // Passing a null block in the FindNameContext will bypass searching the current scope and
+  // "this" object and instead only search global names. This is what we want since the extern
+  // Value name will be fully qualified.
+  FindNameContext context = GetFindNameContext();
+  context.block = nullptr;
+
+  FoundName found = FindName(context, options, ToParsedIdentifier(input_value->GetIdentifier()));
+  if (!found || !found.variable())
+    return Err("Extern variable '%s' not found.", input_value->GetFullName().c_str());
+
+  *resolved = std::move(found.variable_ref());
+  return Err();
+}
+
 void EvalContextImpl::DoResolve(FoundName found, ValueCallback cb) const {
   if (found.kind() == FoundName::kVariable) {
     // Simple variable resolution.
@@ -268,8 +300,14 @@ void EvalContextImpl::DoResolve(FoundName found, ValueCallback cb) const {
     return;
   }
 
-  // Object variable resolution: Get the value of of the |this| variable.
+  // Everything below here is an object variable resolution.
   FXL_DCHECK(found.kind() == FoundName::kMemberVariable);
+
+  // Static ("external") data members don't require a "this" pointer.
+  if (found.member().data_member()->is_external())
+    return GetVariableValue(RefPtrTo(found.member().data_member()), std::move(cb));
+
+  // Get the value of of the |this| variable to resolve.
   GetVariableValue(
       found.object_ptr_ref(), [weak_this = weak_factory_.GetWeakPtr(), found, cb = std::move(cb)](
                                   ErrOrValue value, fxl::RefPtr<Symbol> symbol) mutable {

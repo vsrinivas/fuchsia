@@ -151,7 +151,9 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
       fit::defer_callback([&called, loop = &loop()]() { called = true, loop->QuitNow(); }));
   ASSERT_TRUE(called);  // Current error case is sync.
 
-  EXPECT_EQ("Not found", bool_node.err().msg());
+  EXPECT_EQ(
+      "MockEvalContext::GetVariableValue 'vector_bool_printer_not_implemented_yet' not found.",
+      bool_node.err().msg());
 
   // Since this is an error, it should have no children.
   ASSERT_EQ(0u, bool_node.children().size());
