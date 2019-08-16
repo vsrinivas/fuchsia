@@ -63,11 +63,19 @@ AudioRendererImpl::~AudioRendererImpl() {
   FXL_DCHECK(is_shutdown_);
   FXL_DCHECK(!audio_renderer_binding_.is_bound());
   FXL_DCHECK(gain_control_bindings_.size() == 0);
+  ReportStop();
+
   REP(RemovingRenderer(*this));
 }
 
+void AudioRendererImpl::ReportStart() { owner_->UpdateRendererState(usage_, true, this); }
+
+void AudioRendererImpl::ReportStop() { owner_->UpdateRendererState(usage_, false, this); }
+
 void AudioRendererImpl::Shutdown() {
   AUD_VLOG_OBJ(TRACE, this);
+
+  ReportStop();
 
   // If we have already been shutdown, then we are just waiting for the service
   // to destroy us. Run some FXL_DCHECK sanity checks and get out.
@@ -138,6 +146,8 @@ void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
   }
   for (auto allowed : allowed_usages_) {
     if (allowed == usage) {
+      ReportStop();
+      usage_ = usage;
       ForEachDestLink([throttle_ptr = throttle_output_link_.get(), usage](auto& link) {
         if (&link != throttle_ptr) {
           fuchsia::media::Usage new_usage;
@@ -145,7 +155,8 @@ void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
           link.bookkeeping()->gain.SetUsage(std::move(new_usage));
         }
       });
-      usage_ = usage;
+      if (IsOperating())
+        ReportStart();
       return;
     }
   }
@@ -567,6 +578,7 @@ void AudioRendererImpl::SendPacketNoReply(fuchsia::media::StreamPacket packet) {
 void AudioRendererImpl::EndOfStream() {
   AUD_VLOG_OBJ(TRACE, this);
 
+  ReportStop();
   // Does nothing.
 }
 
@@ -604,6 +616,7 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // TODO(mpuryear): Validate Pause => DiscardAll => Play(..., NO_TIMESTAMP) -- specifically that we
   // resume at exactly the paused media time.
   pause_time_frac_frames_valid_ = false;
+  ReportStop();
 }
 
 void AudioRendererImpl::DiscardAllPacketsNoReply() {
@@ -695,6 +708,7 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time, PlayCal
     callback(reference_time, media_time);
   }
 
+  ReportStart();
   // Things went well, cancel the cleanup hook.
   cleanup.cancel();
 }

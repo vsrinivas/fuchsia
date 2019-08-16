@@ -29,6 +29,7 @@ constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_context,
                              CommandLineOptions options)
     : device_manager_(this),
+      audio_admin_(this),
       ctx_(std::move(startup_context)),
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
@@ -67,6 +68,10 @@ AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_cont
   // Set up our output manager.
   zx_status_t res = device_manager_.Init();
   // TODO(johngro): Do better at error handling than this weak check.
+  FXL_DCHECK(res == ZX_OK);
+
+  // Set up our audio policy.
+  res = audio_admin_.Init();
   FXL_DCHECK(res == ZX_OK);
 
   PublishServices();
@@ -167,7 +172,7 @@ float AudioCoreImpl::GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) 
     FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
     return Gain::kUnityGainDb;
   }
-  return Gain::GetRenderUsageGain(usage);
+  return Gain::GetRenderUsageGain(usage) + Gain::GetRenderUsageGainAdjustment(usage);
 }
 
 float AudioCoreImpl::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) {
@@ -177,7 +182,7 @@ float AudioCoreImpl::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage
     FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
     return Gain::kUnityGainDb;
   }
-  return Gain::GetCaptureUsageGain(usage);
+  return Gain::GetCaptureUsageGain(usage) + Gain::GetCaptureUsageGainAdjustment(usage);
 }
 
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
@@ -202,6 +207,26 @@ void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage,
   Gain::SetCaptureUsageGain(usage, gain_db);
 }
 
+void AudioCoreImpl::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage,
+                                                 float db_gain) {
+  auto usage_index = fidl::ToUnderlying(usage);
+  if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
+    FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
+    return;
+  }
+  Gain::SetRenderUsageGainAdjustment(usage, db_gain);
+}
+
+void AudioCoreImpl::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage,
+                                                  float db_gain) {
+  auto usage_index = fidl::ToUnderlying(usage);
+  if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
+    FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
+    return;
+  }
+  Gain::SetCaptureUsageGainAdjustment(usage, db_gain);
+}
+
 void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {
   AUD_VLOG(TRACE) << " (policy: " << static_cast<int>(policy) << ")";
   device_manager_.SetRoutingPolicy(policy);
@@ -210,6 +235,25 @@ void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy po
 void AudioCoreImpl::EnableDeviceSettings(bool enabled) {
   AUD_VLOG(TRACE) << " (enabled: " << enabled << ")";
   AudioDeviceSettings::EnableDeviceSettings(enabled);
+}
+
+void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
+                                   fuchsia::media::Behavior behavior) {
+  audio_admin_.SetInteraction(std::move(active), std::move(affected), behavior);
+}
+
+void AudioCoreImpl::LoadDefaults() { audio_admin_.LoadDefaults(); }
+
+void AudioCoreImpl::ResetInteractions() { audio_admin_.ResetInteractions(); }
+
+void AudioCoreImpl::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
+                                        fuchsia::media::AudioRenderer* renderer) {
+  audio_admin_.UpdateRendererState(usage, active, renderer);
+}
+
+void AudioCoreImpl::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bool active,
+                                        fuchsia::media::AudioCapturer* capturer) {
+  audio_admin_.UpdateCapturerState(usage, active, capturer);
 }
 
 void AudioCoreImpl::DoPacketCleanup() {

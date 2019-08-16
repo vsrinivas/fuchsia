@@ -21,34 +21,13 @@ constexpr float Gain::kMaxGainDb;
 std::atomic<float> Gain::render_usage_gain_[fuchsia::media::RENDER_USAGE_COUNT];
 std::atomic<float> Gain::capture_usage_gain_[fuchsia::media::CAPTURE_USAGE_COUNT];
 
-inline float Gain::GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) {
-  auto usage_index = fidl::ToUnderlying(usage);
-
-  if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
-    FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
-    return Gain::kUnityGainDb;
-  }
-
-  return render_usage_gain_[usage_index].load();
-}
-
-inline float Gain::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) {
-  auto usage_index = fidl::ToUnderlying(usage);
-
-  if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
-    FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
-    return Gain::kUnityGainDb;
-  }
-
-  return capture_usage_gain_[usage_index].load();
-}
+std::atomic<float> Gain::render_usage_gain_adjustment_[fuchsia::media::RENDER_USAGE_COUNT];
+std::atomic<float> Gain::capture_usage_gain_adjustment_[fuchsia::media::CAPTURE_USAGE_COUNT];
 
 void Gain::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
   auto usage_index = fidl::ToUnderlying(usage);
-  if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
-    FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
-    return;
-  }
+  FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT)
+      << "Unexpected Render Usage: " << usage_index;
 
   float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
 
@@ -57,22 +36,32 @@ void Gain::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain
 
 void Gain::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
   auto usage_index = fidl::ToUnderlying(usage);
-  if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
-    FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
-    return;
-  }
+  FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT)
+      << "Unexpected Capture Usage: " << usage_index;
 
   float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
 
   capture_usage_gain_[usage_index].store(clamped_gain_db);
 }
 
-inline float Gain::GetUsageGain() {
-  if (usage_.is_render_usage()) {
-    return GetRenderUsageGain(usage_.render_usage());
-  } else {
-    return GetCaptureUsageGain(usage_.capture_usage());
-  }
+void Gain::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db) {
+  auto usage_index = fidl::ToUnderlying(usage);
+  FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT)
+      << "Unexpected Render Usage: " << usage_index;
+
+  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
+
+  render_usage_gain_adjustment_[usage_index].store(clamped_gain_db);
+}
+
+void Gain::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
+  auto usage_index = fidl::ToUnderlying(usage);
+  FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT)
+      << "Unexpected Capture Usage: " << usage_index;
+
+  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
+
+  capture_usage_gain_adjustment_[usage_index].store(clamped_gain_db);
 }
 
 void Gain::SetUsage(fuchsia::media::Usage usage) { usage_ = std::move(usage); }

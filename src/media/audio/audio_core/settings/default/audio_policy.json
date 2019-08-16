@@ -1,0 +1,198 @@
+{
+ "audio_policy_rules":[
+   {
+     "active": {"render_usage":"COMMUNICATION"},
+     "affected": {"render_usage":"SYSTEM_AGENT"},
+     "behavior": "NONE"
+   },
+   {
+     "active": {"render_usage":"COMMUNICATION"},
+     "affected": {"render_usage":"INTERRUPTION"},
+     "behavior": "MUTE"
+   },
+   {
+     "active": {"render_usage":"COMMUNICATION"},
+     "affected": {"render_usage":"MEDIA"},
+     "behavior": "MUTE"
+   },
+   {
+     "active": {"render_usage":"COMMUNICATION"},
+     "affected": {"render_usage":"BACKGROUND"},
+     "behavior": "MUTE"
+   },
+
+   {
+     "active": {"render_usage":"COMMUNICATION"},
+     "affected": {"capture_usage":"COMMUNICATION"},
+     "behavior": "NONE"
+   },
+   {
+     "active": {"render_usage":"COMMUNICATION"},
+     "affected": {"capture_usage":"SYSTEM_AGENT"},
+     "behavior": "NONE"
+   },
+   {
+     "active": {"render_usage":"COMMUNICATION"},
+     "affected": {"capture_usage":"FOREGROUND"},
+     "behavior": "MUTE"
+   },
+   {
+     "active": {"render_usage":"COMMUNICATION"},
+     "affected": {"capture_usage":"BACKGROUND"},
+     "behavior": "MUTE"
+   },
+
+   {
+     "active": {"capture_usage":"COMMUNICATION"},
+     "affected": {"render_usage":"COMMUNICATION"},
+     "behavior": "NONE"
+   },
+   {
+     "active": {"capture_usage":"COMMUNICATION"},
+     "affected": {"render_usage":"SYSTEM_AGENT"},
+     "behavior": "NONE"
+   },
+   {
+     "active": {"capture_usage":"COMMUNICATION"},
+     "affected": {"render_usage":"INTERRUPTION"},
+     "behavior": "MUTE"
+   },
+   {
+     "active": {"capture_usage":"COMMUNICATION"},
+     "affected": {"render_usage":"MEDIA"},
+     "behavior": "MUTE"
+   },
+   {
+     "active": {"capture_usage":"COMMUNICATION"},
+     "affected": {"render_usage":"BACKGROUND"},
+     "behavior": "MUTE"
+   },
+
+   {
+     "active": {"capture_usage":"COMMUNICATION"},
+     "affected": {"capture_usage":"SYSTEM_AGENT"},
+     "behavior": "NONE"
+   },
+   {
+     "active": {"capture_usage":"COMMUNICATION"},
+     "affected": {"capture_usage":"FOREGROUND"},
+     "behavior": "MUTE"
+   },
+   {
+     "active": {"capture_usage":"COMMUNICATION"},
+     "affected": {"capture_usage":"BACKGROUND"},
+     "behavior": "MUTE"
+   },
+
+   {
+     "active": {"render_usage":"SYSTEM_AGENT"},
+     "affected": {"render_usage":"INTERRUPTION"},
+     "behavior": "DUCK"
+   },
+   {
+     "active": {"render_usage":"SYSTEM_AGENT"},
+     "affected": {"render_usage":"MEDIA"},
+     "behavior": "DUCK"
+   },
+   {
+     "active": {"render_usage":"SYSTEM_AGENT"},
+     "affected": {"render_usage":"BACKGROUND"},
+     "behavior": "MUTE"
+   },
+
+   {
+     "active": {"render_usage":"SYSTEM_AGENT"},
+     "affected": {"capture_usage":"SYSTEM_AGENT"},
+     "behavior": "NONE"
+   },
+   {
+     "active": {"render_usage":"SYSTEM_AGENT"},
+     "affected": {"capture_usage":"FOREGROUND"},
+     "behavior": "MUTE"
+   },
+   {
+     "active": {"render_usage":"SYSTEM_AGENT"},
+     "affected": {"capture_usage":"BACKGROUND"},
+     "behavior": "MUTE"
+   },
+
+   {
+     "active": {"capture_usage":"SYSTEM_AGENT"},
+     "affected": {"render_usage":"INTERRUPTION"},
+     "behavior": "DUCK"
+   },
+   {
+     "active": {"capture_usage":"SYSTEM_AGENT"},
+     "affected": {"render_usage":"MEDIA"},
+     "behavior": "DUCK"
+   },
+   {
+     "active": {"capture_usage":"SYSTEM_AGENT"},
+     "affected": {"render_usage":"BACKGROUND"},
+     "behavior": "MUTE"
+   },
+
+   {
+     "active": {"capture_usage":"SYSTEM_AGENT"},
+     "affected": {"capture_usage":"FOREGROUND"},
+     "behavior": "MUTE"
+   },
+
+   {
+     "active": {"render_usage":"INTERRUPTION"},
+     "affected": {"render_usage":"MEDIA"},
+     "behavior": "DUCK"
+   },
+   {
+     "active": {"render_usage":"INTERRUPTION"},
+     "affected": {"render_usage":"BACKGROUND"},
+     "behavior": "MUTE"
+   },
+
+   {
+     "active": {"render_usage":"INTERRUPTION"},
+     "affected": {"capture_usage":"FOREGROUND"},
+     "behavior": "NONE"
+   },
+   {
+     "active": {"render_usage":"INTERRUPTION"},
+     "affected": {"capture_usage":"BACKGROUND"},
+     "behavior": "NONE"
+   },
+
+   {
+     "active": {"render_usage":"MEDIA"},
+     "affected": {"render_usage":"BACKGROUND"},
+     "behavior": "MUTE"
+   },
+
+   {
+     "active": {"render_usage":"MEDIA"},
+     "affected": {"capture_usage":"FOREGROUND"},
+     "behavior": "NONE"
+   },
+   {
+     "active": {"render_usage":"MEDIA"},
+     "affected": {"capture_usage":"BACKGROUND"},
+     "behavior": "NONE"
+   },
+
+   {
+     "active": {"capture_usage":"FOREGROUND"},
+     "affected": {"render_usage":"BACKGROUND"},
+     "behavior": "NONE"
+   },
+
+   {
+     "active": {"capture_usage":"FOREGROUND"},
+     "affected": {"capture_usage":"BACKGROUND"},
+     "behavior": "NONE"
+   },
+
+   {
+     "active": {"render_usage":"BACKGROUND"},
+     "affected": {"capture_usage":"BACKGROUND"},
+     "behavior": "NONE"
+   }
+ ]
+}

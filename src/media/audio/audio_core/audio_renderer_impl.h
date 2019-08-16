@@ -139,6 +139,9 @@ class AudioRendererImpl : public AudioObject,
   void ComputePtsToFracFrames(int64_t first_pts);
   void UnlinkThrottle();
 
+  void ReportStart();
+  void ReportStop();
+
   AudioCoreImpl* owner_ = nullptr;
   fidl::Binding<fuchsia::media::AudioRenderer> audio_renderer_binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl, std::unique_ptr<GainControlBinding>>

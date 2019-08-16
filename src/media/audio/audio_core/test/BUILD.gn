@@ -9,6 +9,7 @@ import("//src/media/audio/hardware.gni")
 group("test") {
   testonly = true
   deps = [
+    ":audio_admin_tests",
     ":audio_core_inspect_tests",
     ":audio_device_service_tests",
     ":audio_device_tests",
@@ -183,6 +184,45 @@ executable("audio_pipeline_tests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/test:hermetic_audio_test",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
+test_package("audio_admin_tests") {
+  deps = [
+    ":audio_admin_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "audio_admin_tests"
+
+      # This (effectively real-time) test must be run on real hardware.
+      environments = [
+        astro_env,
+        nuc_env,
+        sherlock_env,
+        vim2_env,
+      ]
+    },
+  ]
+}
+
+executable("audio_admin_test_bin") {
+  testonly = true
+  output_name = "audio_admin_tests"
+
+  sources = [
+    "audio_admin/audio_admin_test.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/lib/test",
     "//zircon/public/lib/fzl",
   ]
 }

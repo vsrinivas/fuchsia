@@ -4,6 +4,78 @@
 
 library fuchsia.media;
 
+/// Usage annotating the purpose of the stream being used to render audio.
+/// An AudioRenderer's usage cannot be changed after creation.  The
+/// AudioRenderUsage is used by audio policy to dictate how audio streams
+/// interact with each other.
+enum AudioRenderUsage {
+    /// Stream is intended to be used for ambient or background sound. Streams
+    /// that can be interrupted without consequence should use this.
+    BACKGROUND = 0;
+
+    /// Stream is intended to be used for normal functionality. Streams that
+    /// are part of normal functionality should use this.
+    MEDIA = 1;
+
+    /// Stream is intended to interrupt any ongoing function of the device.
+    /// Streams that are used for interruptions like notifications should use
+    /// this.
+    INTERRUPTION = 2;
+
+    /// Stream is for interaction with a system agent.  This should be used
+    /// in response to a user initiated trigger.
+    SYSTEM_AGENT = 3;
+
+    /// Stream is intended to be used for some form of real time user to user
+    /// communication. Voice/Video chat should use this.
+    COMMUNICATION = 4;
+};
+const uint8 RENDER_USAGE_COUNT = 5;
+
+/// Usages annotating the purpose of the stream being used to capture audio. The
+/// AudioCaptureUsage is used by audio policy to dictate how audio streams
+/// interact with each other.
+enum AudioCaptureUsage {
+    /// Stream is used to capture audio while in the background.  These streams
+    /// may be active at any the time and are considered privileged.
+    /// Example: Listening for Hotwords
+    BACKGROUND = 0;
+
+    /// Stream is intended to be used for normal capture functionality. Streams
+    /// that are used for audio capture while the stream creator is in the
+    /// foreground should use this.
+    /// Example: Voice Recorder
+    FOREGROUND = 1;
+
+    /// Stream is for interaction with a system agent.  This should only be used
+    /// once a user has signalled their intent to have the interaction with an
+    /// interested party.
+    /// Examples: Assistant, Siri, Alexa
+    SYSTEM_AGENT = 2;
+
+    /// Stream is intended to be used for some form of real time user to user
+    /// communication. Voice/Video chat should use this.
+    COMMUNICATION = 3;
+};
+const uint8 CAPTURE_USAGE_COUNT = 4;
+
+/// The behaviors applied to streams when multiple are active.
+enum Behavior {
+    /// Mix the streams.
+    NONE = 0;
+
+    /// Apply a gain to duck the volume of one of the streams. (-14.0db)
+    DUCK = 1;
+
+    /// Apply a gain to mute one of the streams. (-160.0db)
+    MUTE = 2;
+};
+
+union Usage {
+    AudioRenderUsage render_usage;
+    AudioCaptureUsage capture_usage;
+};
+
 [Discoverable]
 protocol AudioCore {
     /// Create an AudioRenderer which outputs audio to the default device.
@@ -72,66 +144,20 @@ protocol AudioCore {
     /// Set the Usage gain applied to Capturers. By default, the gain for all
     /// capture usages is set to Unity (0 db).
     SetCaptureUsageGain(AudioCaptureUsage usage, float32 gain_db);
-};
 
-/// Usage annotating the purpose of the stream being used to render audio.
-/// An AudioRenderer's usage cannot be changed after creation.  The
-/// AudioRenderUsage is used by audio policy to dictate how audio streams
-/// interact with each other.
-enum AudioRenderUsage {
-    /// Stream is intended to be used for ambient or background sound. Streams
-    /// that can be interrupted without consequence should use this.
-    BACKGROUND = 0;
+    /// SetInteraction allows changing how audio_core handles interactions of multiple active
+    /// streams simultaneously.  If streams of Usage `active` are processing audio, and streams of
+    /// Usage `affected` are as well, the Behavior specified will be applied to the streams of Usage
+    /// `affected`.
+    SetInteraction(Usage active, Usage affected, Behavior behavior);
 
-    /// Stream is intended to be used for normal functionality. Streams that
-    /// are part of normal functionality should use this.
-    MEDIA = 1;
+    /// Re-initializes the set of rules that are currently governing the interaction of streams in
+    /// audio_core.  The default behavior is 'NONE'.
+    ResetInteractions();
 
-    /// Stream is intended to interrupt any ongoing function of the device.
-    /// Streams that are used for interruptions like notifications should use
-    /// this.
-    INTERRUPTION = 2;
-
-    /// Stream is for interaction with a system agent.  This should be used
-    /// in response to a user initiated trigger.
-    SYSTEM_AGENT = 3;
-
-    /// Stream is intended to be used for some form of real time user to user
-    /// communication. Voice/Video chat should use this.
-    COMMUNICATION = 4;
-};
-const uint8 RENDER_USAGE_COUNT = 5;
-
-/// Usages annotating the purpose of the stream being used to capture audio. The
-/// AudioCaptureUsage is used by audio policy to dictate how audio streams
-/// interact with each other.
-enum AudioCaptureUsage {
-    /// Stream is used to capture audio while in the background.  These streams
-    /// may be active at any the time and are considered privileged.
-    /// Example: Listening for Hotwords
-    BACKGROUND = 0;
-
-    /// Stream is intended to be used for normal capture functionality. Streams
-    /// that are used for audio capture while the stream creator is in the
-    /// foreground should use this.
-    /// Example: Voice Recorder
-    FOREGROUND = 1;
-
-    /// Stream is for interaction with a system agent.  This should only be used
-    /// once a user has signalled their intent to have the interaction with an
-    /// interested party.
-    /// Examples: Assistant, Siri, Alexa
-    SYSTEM_AGENT = 2;
-
-    /// Stream is intended to be used for some form of real time user to user
-    /// communication. Voice/Video chat should use this.
-    COMMUNICATION = 3;
-};
-const uint8 CAPTURE_USAGE_COUNT = 4;
-
-union Usage {
-    AudioRenderUsage render_usage;
-    AudioCaptureUsage capture_usage;
+    /// Re-loads the platform policy configuration.  Falls back to a default config if the platform
+    /// does not provide a config.
+    LoadDefaults();
 };
 
 // Placeholder for routing policies.

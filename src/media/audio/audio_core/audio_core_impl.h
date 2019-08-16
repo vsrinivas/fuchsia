@@ -18,6 +18,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_packet_ref.h"
 #include "src/media/audio/audio_core/command_line_options.h"
@@ -80,13 +81,29 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
 
   fbl::RefPtr<fzl::VmarManager> vmar() const { return vmar_manager_; }
 
+  // Usage related fidl calls
+  void SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
+                      fuchsia::media::Behavior behavior) final;
+  void ResetInteractions() final;
+  void LoadDefaults() final;
+
+  void UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
+                           fuchsia::media::AudioRenderer* renderer);
+  void UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bool active,
+                           fuchsia::media::AudioCapturer* capturer);
+
   void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) final;
   void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) final;
 
   float GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage);
   float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage);
 
+  friend class AudioAdmin;
+
  private:
+  void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db);
+  void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage, float gain_db);
+
   static constexpr float kDefaultSystemGainDb = -12.0f;
   static constexpr bool kDefaultSystemMuted = false;
   static constexpr float kMaxSystemAudioGainDb = Gain::kUnityGainDb;
@@ -105,6 +122,9 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
 
   // State for dealing with devices.
   AudioDeviceManager device_manager_;
+
+  // Audio usage manager
+  AudioAdmin audio_admin_;
 
   std::unique_ptr<sys::ComponentContext> ctx_;
 

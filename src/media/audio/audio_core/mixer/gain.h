@@ -179,15 +179,58 @@ class Gain {
   static void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db);
   static void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db);
 
-  static float GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage);
-  static float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage);
+  static float GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) {
+    auto usage_index = fidl::ToUnderlying(usage);
+    FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT)
+        << "Unexpected Render Usage: " << usage_index;
 
-  float GetUsageGain();
+    return render_usage_gain_[usage_index].load();
+  }
+
+  static float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) {
+    auto usage_index = fidl::ToUnderlying(usage);
+    FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT)
+        << "Unexpected Capture Usage: " << usage_index;
+
+    return capture_usage_gain_[usage_index].load();
+  }
+
+  static void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db);
+  static void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage, float gain_db);
+
+  static float GetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage) {
+    auto usage_index = fidl::ToUnderlying(usage);
+    FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT)
+        << "Unexpected Render Usage: " << usage_index;
+
+    return render_usage_gain_adjustment_[usage_index].load();
+  }
+
+  static float GetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage) {
+    auto usage_index = fidl::ToUnderlying(usage);
+    FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT)
+        << "Unexpected Capture Usage: " << usage_index;
+
+    return capture_usage_gain_adjustment_[usage_index].load();
+  }
+
+  float GetUsageGain() {
+    if (usage_.is_render_usage()) {
+      return GetRenderUsageGain(usage_.render_usage()) +
+             GetRenderUsageGainAdjustment(usage_.render_usage());
+    } else {
+      return GetCaptureUsageGain(usage_.capture_usage()) +
+             GetCaptureUsageGainAdjustment(usage_.capture_usage());
+    }
+  }
   void SetUsage(fuchsia::media::Usage usage);
 
  private:
   static std::atomic<float> render_usage_gain_[fuchsia::media::RENDER_USAGE_COUNT];
   static std::atomic<float> capture_usage_gain_[fuchsia::media::CAPTURE_USAGE_COUNT];
+
+  static std::atomic<float> render_usage_gain_adjustment_[fuchsia::media::RENDER_USAGE_COUNT];
+  static std::atomic<float> capture_usage_gain_adjustment_[fuchsia::media::CAPTURE_USAGE_COUNT];
 
   // Called by the above GetGainScale variants. For performance reasons, this
   // implementation caches values and recomputes the result only as needed.

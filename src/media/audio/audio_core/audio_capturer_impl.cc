@@ -78,8 +78,13 @@ AudioCapturerImpl::~AudioCapturerImpl() {
   FXL_DCHECK(!payload_buf_vmo_.is_valid());
   FXL_DCHECK(payload_buf_virt_ == nullptr);
   FXL_DCHECK(payload_buf_size_ == 0);
+  ReportStop();
   REP(RemovingCapturer(*this));
 }
+
+void AudioCapturerImpl::ReportStart() { owner_->UpdateCapturerState(usage_, true, this); }
+
+void AudioCapturerImpl::ReportStop() { owner_->UpdateCapturerState(usage_, false, this); }
 
 void AudioCapturerImpl::SetInitialFormat(fuchsia::media::AudioStreamType format) {
   UpdateFormat(format.sample_format, format.channels, format.frames_per_second);
@@ -89,8 +94,10 @@ void AudioCapturerImpl::Shutdown() {
   // Take a local ref to ourselves, else we might get freed before we return!
   auto self_ref = fbl::WrapRefPtr(this);
 
+  ReportStop();
   // Disconnect from everything we were connected to.
   // TODO(mpuryear): Considering eliminating this; it may not be needed.
+
   PreventNewLinks();
   Unlink();
 
@@ -422,6 +429,7 @@ void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_fr
   if (wake_mixer) {
     mix_wakeup_->Signal();
   }
+  ReportStart();
 
   // Things went well. Cancel the cleanup timer and we are done.
   cleanup.cancel();
@@ -465,6 +473,8 @@ void AudioCapturerImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
     FinishBuffers(finished);
     binding_.events().OnEndOfStream();
   }
+
+  ReportStop();
 
   if (cbk != nullptr && binding_.is_bound()) {
     cbk();
@@ -520,6 +530,7 @@ void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
   // 3) Kick the work thread to get the ball rolling.
   async_frames_per_packet_ = frames_per_packet;
   state_.store(State::OperatingAsync);
+  ReportStart();
   mix_wakeup_->Signal();
   cleanup.cancel();
 }
@@ -549,6 +560,7 @@ void AudioCapturerImpl::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   // work thread so it knows that it needs to shut down.
   FXL_DCHECK(pending_async_stop_cbk_ == nullptr);
   pending_async_stop_cbk_ = std::move(cbk);
+  ReportStop();
   state_.store(State::AsyncStopping);
   mix_wakeup_->Signal();
 }
@@ -628,6 +640,10 @@ zx_status_t AudioCapturerImpl::Process() {
             reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(payload_buf_virt_) + offset_bytes);
         mix_frames = p.num_frames - p.filled_frames;
         buffer_sequence_number = p.sequence_number;
+      } else {
+        if (state_.load() == State::OperatingSync) {
+          ReportStop();
+        }
       }
     }
 
@@ -790,12 +806,23 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   }
   for (auto allowed : allowed_usages_) {
     if (allowed == usage) {
+      ReportStop();
       usage_ = usage;
       ForEachSourceLink([usage](auto& link) {
         fuchsia::media::Usage new_usage;
         new_usage.set_capture_usage(usage);
         link.bookkeeping()->gain.SetUsage(std::move(new_usage));
       });
+      State state = state_.load();
+      if (state == State::OperatingAsync) {
+        ReportStart();
+      }
+      if (state == State::OperatingSync) {
+        fbl::AutoLock pending_lock(&pending_lock_);
+        if (!pending_capture_buffers_.is_empty()) {
+          ReportStart();
+        }
+      }
       return;
     }
   }
@@ -1296,6 +1323,7 @@ void AudioCapturerImpl::FinishAsyncStopThunk() {
   }
 
   // All done!  Transition back to the OperatingSync state.
+  ReportStop();
   state_.store(State::OperatingSync);
 }
 
