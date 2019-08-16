@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <string>
-#include <vector>
-
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -13,6 +9,11 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+
+#include <iostream>
+#include <string>
+#include <vector>
+
 #include <src/lib/files/glob.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
@@ -85,14 +86,6 @@ int main(int argc, const char** argv) {
   context->svc()->Connect(launcher.NewRequest());
   fidl::InterfacePtr<fuchsia::sys::ComponentController> controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
-
-  async::PostDelayedTask(
-      loop.dispatcher(),
-      [&controller, &loop] {
-        controller->Detach();
-        loop.Quit();
-      },
-      zx::sec(5));
 
   loop.Run();
   return 0;
