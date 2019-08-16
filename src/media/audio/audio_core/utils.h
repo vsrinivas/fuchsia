@@ -6,7 +6,9 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_UTILS_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/profile.h>
 #include <stdint.h>
 #include <zircon/device/audio.h>
@@ -69,6 +71,9 @@ class RefCountedVmoMapper : public fzl::VmoMapper, public fbl::RefCounted<fzl::V
 };
 
 zx_status_t AcquireHighPriorityProfile(zx::profile* profile);
+
+void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
+                                 fit::function<void(zx::profile)> callback);
 
 }  // namespace media::audio
 

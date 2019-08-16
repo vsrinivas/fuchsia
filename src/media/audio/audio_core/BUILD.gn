@@ -163,12 +163,15 @@ executable("unittest_bin") {
   sources = [
     "audio_link_packet_source_unittest.cc",
     "command_line_options_unittest.cc",
+    "utils_unittest.cc",
   ]
 
   deps = [
     ":audio_core_lib",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/fidl/fuchsia-scheduler",
     "//zircon/public/lib/fzl",
   ]
 }

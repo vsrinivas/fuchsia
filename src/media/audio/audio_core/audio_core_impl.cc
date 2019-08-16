@@ -47,27 +47,22 @@ AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_cont
   dispatcher_ = async_get_default_dispatcher();
   FXL_DCHECK(dispatcher_);
 
-  // TODO(johngro) : See ZX-940
+  // TODO(30888)
   //
-  // Eliminate this as soon as we have a more official way of
-  // meeting real-time latency requirements.  The main async_t is
-  // responsible for receiving audio payloads sent by applications, so it has
-  // real time requirements (just like the mixing threads do).  In a perfect
-  // world, however, we would want to have this task run on a thread which is
-  // different from the thread which is processing *all* audio service jobs
-  // (even non-realtime ones).  This, however, will take more significant
-  // restructuring.  We will cross that bridge when we have the TBD way to deal
-  // with realtime requirements in place.
-  auto profile_provider = ctx_->svc()->Connect<fuchsia::scheduler::ProfileProvider>();
-  profile_provider->GetProfile(24 /* HIGH_PRIORITY in LK */,
-                               "src/media/audio/audio_core/audio_core_impl",
-                               [](zx_status_t fidl_status, zx::profile profile) {
-                                 FXL_DCHECK(fidl_status == ZX_OK);
-                                 if (fidl_status == ZX_OK) {
-                                   zx_status_t status = zx::thread::self()->set_profile(profile, 0);
-                                   FXL_DCHECK(status == ZX_OK);
-                                 }
-                               });
+  // Eliminate this as soon as we have a more official way of meeting real-time latency
+  // requirements.  The main async_t is responsible for receiving audio payloads sent by
+  // applications, so it has real time requirements (just like the mixing threads do).  In a perfect
+  // world, however, we would want to have this task run on a thread which is different from the
+  // thread which is processing *all* audio service jobs (even non-realtime ones).  This, however,
+  // will take more significant restructuring.  We will cross that bridge when we have the TBD way
+  // to deal with realtime requirements in place.
+  AcquireAudioCoreImplProfile(ctx_.get(), [](zx::profile profile) {
+    FXL_DCHECK(profile);
+    if (profile) {
+      zx_status_t status = zx::thread::self()->set_profile(profile, 0);
+      FXL_DCHECK(status == ZX_OK);
+    }
+  });
 
   // Set up our output manager.
   zx_status_t res = device_manager_.Init();

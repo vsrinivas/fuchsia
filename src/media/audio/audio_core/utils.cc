@@ -271,4 +271,18 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
   return high_priority_profile.duplicate(ZX_RIGHT_SAME_RIGHTS, profile);
 }
 
+void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
+                                 fit::function<void(zx::profile)> callback) {
+  auto profile_provider = context->svc()->Connect<fuchsia::scheduler::ProfileProvider>();
+  profile_provider->GetProfile(
+      24 /* HIGH_PRIORITY in LK */, "src/media/audio/audio_core/audio_core_impl",
+      [callback = std::move(callback)](zx_status_t status, zx::profile profile) {
+        if (status == ZX_OK) {
+          callback(std::move(profile));
+        } else {
+          callback(zx::profile());
+        }
+      });
+}
+
 }  // namespace media::audio
