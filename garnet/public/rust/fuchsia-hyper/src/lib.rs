@@ -24,9 +24,14 @@ use {
         },
         Body,
     },
-    std::net::ToSocketAddrs,
-    std::pin::Pin,
+    std::{net::ToSocketAddrs, pin::Pin},
 };
+
+/// A Fuchsia-compatible hyper client configured for making HTTP requests.
+pub type HttpClient = Client<HyperConnector, Body>;
+
+/// A Fuchsia-compatible hyper client configured for making HTTP and HTTPS requests.
+pub type HttpsClient = Client<hyper_rustls::HttpsConnector<HyperConnector>, Body>;
 
 /// A future that yields a hyper-compatible TCP stream.
 pub struct HyperTcpConnector(Result<TcpConnector, Option<io::Error>>);
@@ -75,18 +80,17 @@ impl Connect for HyperConnector {
 }
 
 /// Returns a new Fuchsia-compatible hyper client for making HTTP requests.
-pub fn new_client() -> Client<HyperConnector, Body> {
+pub fn new_client() -> HttpClient {
     Client::builder().executor(EHandle::local().compat()).build(HyperConnector)
 }
 
-pub fn new_https_client_dangerous(
-    tls: rustls::ClientConfig,
-) -> Client<hyper_rustls::HttpsConnector<HyperConnector>, Body> {
+pub fn new_https_client_dangerous(tls: rustls::ClientConfig) -> HttpsClient {
     let https = hyper_rustls::HttpsConnector::from((HyperConnector, tls));
     Client::builder().executor(EHandle::local().compat()).build(https)
 }
 
-pub fn new_https_client() -> Client<hyper_rustls::HttpsConnector<HyperConnector>, Body> {
+/// Returns a new Fuchsia-compatible hyper client for making HTTP and HTTPS requests.
+pub fn new_https_client() -> HttpsClient {
     let mut tls = rustls::ClientConfig::new();
     tls.root_store.add_server_trust_anchors(&webpki_roots_fuchsia::TLS_SERVER_ROOTS);
     new_https_client_dangerous(tls)
