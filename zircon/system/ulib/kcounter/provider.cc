@@ -5,7 +5,6 @@
 #include <fuchsia/kernel/c/fidl.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/kcounter/provider.h>
-#include <lib/syslog/global.h>
 #include <lib/zx/vmo.h>
 #include <string.h>
 #include <zircon/status.h>
