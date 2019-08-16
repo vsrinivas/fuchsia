@@ -13,15 +13,15 @@ namespace {
 
 // Test handling of early loop cancel by having the loop be destructed before the provider.
 TEST(ProviderTest, EarlyLoopCancel) {
-  std::unique_ptr<async::Loop> loop{new async::Loop{&kAsyncLoopConfigNoAttachToThread}};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
 
   std::unique_ptr<trace::test::FakeTraceManager> manager;
   zx::channel channel;
-  trace::test::FakeTraceManager::Create(loop->dispatcher(), &manager, &channel);
+  trace::test::FakeTraceManager::Create(loop.dispatcher(), &manager, &channel);
 
-  TraceProvider provider{std::move(channel), loop->dispatcher()};
-  loop->RunUntilIdle();
-  loop.reset();
+  TraceProvider provider{std::move(channel), loop.dispatcher()};
+  loop.RunUntilIdle();
+  loop.Shutdown();
 }
 
 }  // namespace
