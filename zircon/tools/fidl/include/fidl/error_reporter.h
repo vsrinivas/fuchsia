@@ -82,7 +82,7 @@ class ErrorReporter {
   void AddError(std::string formatted_message);
   void AddWarning(std::string formatted_message);
 
-  ReportingMode mode_;
+  ReportingMode mode_ = ReportingMode::kReport;
   bool warnings_as_errors_;
   std::vector<std::string> errors_;
   std::vector<std::string> warnings_;
