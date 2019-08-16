@@ -25,6 +25,14 @@ test_package("audio_driver_tests") {
       # This test should be run on real hardware, although it can run everywhere. virtual_audio is
       # not automatically loaded (or involved in any way), but if manually loaded ahead of time it
       # does successfully load and pass, just like any other audio driver.
+      # By specifying 'hardware_envs' instead of 'extended_hardware_envs', we omit testing on the
+      # VIM2 platform, where our audio driver for the HDMI-based audio output does not yet generate
+      # position notifications, and thus cannot pass certain test cases. At this time, inability to
+      # generate position notifications does not prevent audio output streaming from working
+      # correctly (although it may in the future, when clocking relies on accurate correlation of
+      # audio position with system monotonic_time).
+      # TODO(34961): enable position notifications on VIM2 audio output.
+      # VIM2 is an older platform; its audio output is HDMI-based; this is unlikely to be addressed.
       environments = hardware_envs
     },
   ]

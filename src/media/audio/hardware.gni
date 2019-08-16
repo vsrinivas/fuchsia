@@ -12,5 +12,11 @@ hardware_envs = [
   astro_env,
   sherlock_env,
   nuc_env,
+]
+
+extended_hardware_envs = [
+  astro_env,
+  sherlock_env,
+  nuc_env,
   vim2_env,
 ]

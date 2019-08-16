@@ -162,8 +162,15 @@ test_package("audio_pipeline_tests") {
     {
       name = "audio_pipeline_tests"
 
-      # This (effectively real-time) test must be run on real hardware.
-      environments = hardware_envs
+      # This (effectively real-time) test must be run on a true hardware-based target.
+      # By specifying 'extended_hardware_envs' instead of 'hardware_envs', we allow these tests to
+      # run on the VIM2 platform, where our audio driver for the HDMI-based audio output does not
+      # yet generate position notifications. At this time, this does not prevent audio output
+      # streaming from working correctly on VIM2 (although it may in the future, when clocking
+      # relies on accurate correlation of audio position with system monotonic_time).
+      # TODO(34961): enable position notifications on VIM2 audio output.
+      # VIM2 is an older platform; its audio output is HDMI-based; this is unlikely to be addressed.
+      environments = extended_hardware_envs
     },
   ]
 }

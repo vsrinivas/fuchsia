@@ -85,7 +85,7 @@ bool AudioDriverTest::WaitForDevice(DeviceType device_type) {
 
     auto watcher = fsl::DeviceWatcher::Create(
         devnode.path, [this, device_type](int dir_fd, const std::string& filename) {
-          AUD_VLOG(TRACE) << " '" << filename << "' dir_fd " << dir_fd;
+          AUD_VLOG(TRACE) << "'" << filename << "' dir_fd " << dir_fd;
           this->AddDevice(dir_fd, filename, device_type);
         });
 
@@ -168,7 +168,7 @@ void AudioDriverTest::AddDevice(int dir_fd, const std::string& name, DeviceType 
     FAIL();
   }
 
-  AUD_VLOG(TRACE) << " successfully opened devnode '" << name << "' for audio "
+  AUD_VLOG(TRACE) << "Successfully opened devnode '" << name << "' for audio "
                   << ((device_type == DeviceType::Input) ? "input" : "output");
   stream_channel_ready_ = true;
 }
@@ -825,7 +825,7 @@ void AudioDriverTest::HandleSetFormatResponse(const audio_stream_cmd_set_format_
   if (response.result != ZX_OK) {
     if (response.result == ZX_ERR_ACCESS_DENIED) {
       AUD_LOG(WARNING)
-          << " ZX_ERR_ACCESS_DENIED: audio_core may already be connected to this device";
+          << "ZX_ERR_ACCESS_DENIED: audio_core may already be connected to this device";
     }
     error_occurred_ = true;
     FAIL();
@@ -871,7 +871,7 @@ void AudioDriverTest::HandlePlugDetect(audio_pd_notify_flags_t flags, zx_time_t 
   plug_state_time_ = plug_state_time;
   EXPECT_LT(plug_state_time_, zx::clock::get_monotonic().get());
 
-  AUD_VLOG(TRACE) << " plug_state_time: " << plug_state_time;
+  AUD_VLOG(TRACE) << "Plug_state_time: " << plug_state_time;
 }
 
 // Handle a plug_detect response on the stream channel (response solicited by client).
@@ -900,7 +900,7 @@ void AudioDriverTest::HandlePlugDetectNotify(const audio_stream_cmd_plug_detect_
   HandlePlugDetect(notify.flags, notify.plug_state_time);
   received_plug_detect_notify_ = true;
 
-  AUD_LOG(ERROR) << " Driver autonomously generated an asynchronous plug detect notification";
+  AUD_LOG(ERROR) << "Driver autonomously generated an asynchronous plug detect notification";
 }
 
 // Handle all incoming response message types, on the ring buffer channel.
@@ -986,7 +986,7 @@ void AudioDriverTest::ExtractRingBuffer(MessageTransceiver::Message get_buffer_r
                                 &ring_buffer_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER),
       ZX_OK);
 
-  AUD_VLOG(TRACE) << " mapping size: " << ring_buffer_frames_ * frame_size_;
+  AUD_VLOG(TRACE) << "Mapping size: " << ring_buffer_frames_ * frame_size_;
 
   ring_buffer_ready_ = true;
 }
@@ -1049,7 +1049,7 @@ void AudioDriverTest::HandlePositionNotify(const audio_rb_position_notify_t& not
 
   ++position_notification_count_;
 
-  AUD_VLOG(TRACE) << " position: " << ring_buffer_position_
+  AUD_VLOG(TRACE) << "Position: " << ring_buffer_position_
                   << ", notification_count: " << position_notification_count_;
 }
 
@@ -1063,7 +1063,7 @@ void AudioDriverTest::ExpectPositionNotifyCount(uint32_t count) {
 
   auto timestamp_duration = last_monotonic_time_ - start_time_;
   auto observed_duration = zx::clock::get_monotonic().get() - start_time_;
-  EXPECT_GE(position_notification_count_, count);
+  ASSERT_GE(position_notification_count_, count) << "No position notifications received";
 
   ASSERT_NE(frame_rate_ * notifications_per_ring_, 0u);
   auto ns_per_notification =
@@ -1072,19 +1072,18 @@ void AudioDriverTest::ExpectPositionNotifyCount(uint32_t count) {
   auto expected_time = ns_per_notification.get() * count;
   auto expected_max_time = ns_per_notification.get() * (count + 1);
 
-  AUD_VLOG(TRACE) << " Timestamp delta from min/ideal/max: " << std::setw(10)
+  AUD_VLOG(TRACE) << "Timestamp delta from min/ideal/max: " << std::setw(10)
                   << (expected_min_time - timestamp_duration) << " : " << std::setw(10)
                   << (expected_time - timestamp_duration) << " : " << std::setw(10)
                   << (expected_max_time - timestamp_duration);
   EXPECT_GE(timestamp_duration, expected_min_time);
-  EXPECT_LE(timestamp_duration, expected_time);
+  EXPECT_LT(timestamp_duration, expected_max_time);
 
-  AUD_VLOG(TRACE) << "  Observed delta from min/ideal/max: " << std::setw(10)
+  AUD_VLOG(TRACE) << "Observed delta from min/ideal/max : " << std::setw(10)
                   << (expected_min_time - observed_duration) << " : " << std::setw(10)
                   << (expected_time - observed_duration) << " : " << std::setw(10)
                   << (expected_max_time - observed_duration);
   EXPECT_GT(observed_duration, expected_min_time);
-  EXPECT_LT(observed_duration, expected_max_time);
 }
 
 // After waiting for one second, we should NOT have received any position notifications.
