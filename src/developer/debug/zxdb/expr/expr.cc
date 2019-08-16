@@ -46,7 +46,7 @@ class MultiEvalTracking {
 
 }  // namespace
 
-void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
+void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& context,
                     bool follow_references, EvalCallback cb) {
   ExprTokenizer tokenizer(input, context->GetLanguage());
   if (!tokenizer.Tokenize())
@@ -75,8 +75,9 @@ void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
     node->EvalFollowReferences(context, std::move(cb));
 }
 
-void EvalExpressions(const std::vector<std::string>& inputs, fxl::RefPtr<EvalContext> context,
-                     bool follow_references, fit::callback<void(std::vector<ErrOrValue>)> cb) {
+void EvalExpressions(const std::vector<std::string>& inputs,
+                     const fxl::RefPtr<EvalContext>& context, bool follow_references,
+                     fit::callback<void(std::vector<ErrOrValue>)> cb) {
   FXL_DCHECK(!inputs.empty());
 
   auto tracking = std::make_shared<MultiEvalTracking>(inputs.size(), std::move(cb));

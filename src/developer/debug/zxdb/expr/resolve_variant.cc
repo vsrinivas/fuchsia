@@ -15,7 +15,7 @@
 
 namespace zxdb {
 
-Err ResolveVariant(fxl::RefPtr<EvalContext> context, const ExprValue& value,
+Err ResolveVariant(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
                    const VariantPart* variant_part, fxl::RefPtr<Variant>* result) {
   // Resolve the discriminant value. It is effectively a member of the
   // enclosing structure.

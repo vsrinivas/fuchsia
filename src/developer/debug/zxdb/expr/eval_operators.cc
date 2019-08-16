@@ -42,7 +42,7 @@ namespace zxdb {
 
 namespace {
 
-void DoAssignment(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
+void DoAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue& left_value,
                   const ExprValue& right_value, EvalCallback cb) {
   // Note: the calling code will have evaluated the value of the left node. Often this isn't
   // strictly necessary: we only need the "source", but optimizing in that way would complicate
@@ -142,7 +142,7 @@ Err FillOpValue(EvalContext* context, const ExprValue& in, OpValue* out) {
 // Given a binary operation of the two parameters, computes the realm that the operation should be
 // done in, and computes which of the types is larger. This larger type does not take into account
 // integral promotion described at the top of this file, it will always be one of the two inputs.
-Err GetOpRealm(fxl::RefPtr<EvalContext>& context, const OpValue& left, const OpValue& right,
+Err GetOpRealm(const fxl::RefPtr<EvalContext>& context, const OpValue& left, const OpValue& right,
                MathRealm* op_realm, fxl::RefPtr<Type>* larger_type) {
   // Pointer always takes precedence.
   if (left.realm == MathRealm::kPointer) {
@@ -260,7 +260,7 @@ Err OpValueToDouble(const fxl::RefPtr<EvalContext>& context, const OpValue& in, 
 // result type should be either a double (for math) or bool (for comparison). In the boolean case,
 // the result_typee may be null since this will be the autmoatically created one.
 template <typename ResultT>
-ErrOrValue DoFloatBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& left,
+ErrOrValue DoFloatBinaryOp(const fxl::RefPtr<EvalContext>& context, const OpValue& left,
                            const OpValue& right, ResultT (*op)(double, double),
                            fxl::RefPtr<Type> result_type) {
   // The inputs could be various types like signed or unsigned integers or even bools. Use the
@@ -321,7 +321,8 @@ fxl::RefPtr<Type> ExpandTypeTo64(MathRealm realm, fxl::RefPtr<Type> input) {
 
 // Returns the byte size of the type pointed to by the given type. If anything fails or if the size
 // is 0, returns an error.
-Err GetPointedToByteSize(fxl::RefPtr<EvalContext> context, const Type* type, uint32_t* size) {
+Err GetPointedToByteSize(const fxl::RefPtr<EvalContext>& context, const Type* type,
+                         uint32_t* size) {
   *size = 0;
 
   fxl::RefPtr<Type> pointed_to;
@@ -336,7 +337,7 @@ Err GetPointedToByteSize(fxl::RefPtr<EvalContext> context, const Type* type, uin
   return Err();
 }
 
-ErrOrValue DoPointerOperation(fxl::RefPtr<EvalContext> context, const OpValue& left_value,
+ErrOrValue DoPointerOperation(const fxl::RefPtr<EvalContext>& context, const OpValue& left_value,
                               const ExprToken& op, const OpValue& right_value) {
   // Adding or subtracting a pointer and an integer or and integer to a pointer advances the pointer
   // by the size of the pointed-to type.
@@ -424,7 +425,7 @@ ErrOrValue DoPointerOperation(fxl::RefPtr<EvalContext> context, const OpValue& l
                    Make64BitIntegerType(MathRealm::kSigned, left_value.concrete_type));
 }
 
-ErrOrValue DoLogicalBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& left_value,
+ErrOrValue DoLogicalBinaryOp(const fxl::RefPtr<EvalContext>& context, const OpValue& left_value,
                              const ExprToken& op, const OpValue& right_value) {
   // In general the left will have already been converted to a bool and checks to implement
   // short-ciruiting for these operators. But reevaluate anyway which is useful for tests.
@@ -451,7 +452,7 @@ ErrOrValue DoLogicalBinaryOp(fxl::RefPtr<EvalContext> context, const OpValue& le
 
 }  // namespace
 
-void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
+void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue& left_value,
                         const ExprToken& op, const ExprValue& right_value, EvalCallback cb) {
   if (!left_value.type() || !right_value.type())
     return cb(Err("No type information."));
@@ -617,7 +618,7 @@ void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_
   cb(std::move(result));
 }
 
-void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<ExprNode>& left,
+void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const fxl::RefPtr<ExprNode>& left,
                         const ExprToken& op, const fxl::RefPtr<ExprNode>& right, EvalCallback cb) {
   left->Eval(context, [context, op, right, cb = std::move(cb)](ErrOrValue left_value) mutable {
     if (left_value.has_error())

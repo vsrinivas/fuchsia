@@ -42,7 +42,7 @@ class PrettyTypeManager {
   //
   // If there is no pretty type registered, does nothing with the callback and returns false.
   bool Format(FormatNode* node, const Type* type, const FormatOptions& options,
-              fxl::RefPtr<EvalContext> context, fit::deferred_callback& cb) const;
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback& cb) const;
 
  private:
   void AddDefaultCppPrettyTypes();

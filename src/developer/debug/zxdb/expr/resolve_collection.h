@@ -55,7 +55,7 @@ ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const
 // The variant takes an ExprValue which is a pointer to the base/struct or class. Because it fetches
 // memory it is asynchronous.
 void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
-                            const FoundMember& found_member, fit::callback<void(ErrOrValue)> cb);
+                            const FoundMember& found_member, EvalCallback cb);
 
 // Same as previous version but takes the name of the member to find. The callback also provides the
 // DataMember corresponding to what the name matched.

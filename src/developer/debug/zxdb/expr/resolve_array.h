@@ -27,7 +27,7 @@ class EvalContext;
 // compile time and therefor the entire array is contained in the ExprValue's data.
 //
 // This does not apply pretty types for item resolution.
-ErrOrValueVector ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+ErrOrValueVector ResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
                               size_t begin_index, size_t end_index);
 
 // This variant handles both the static array version above and also dereferencing pointers using
@@ -36,13 +36,13 @@ ErrOrValueVector ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprV
 // The input will be clipped to the array size so the result may be empty or smaller than requested.
 //
 // This does not apply pretty types for item resolution.
-void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
-                  size_t end_index, fit::callback<void(ErrOrValueVector)>);
+void ResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
+                  size_t begin_index, size_t end_index, fit::callback<void(ErrOrValueVector)>);
 
 // Resolves a single item in an array and applies pretty types for item resolution. This is the
 // backend for array access [ <number> ] in expressions.
-void ResolveArrayItem(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t index,
-                      EvalCallback cb);
+void ResolveArrayItem(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
+                      size_t index, EvalCallback cb);
 
 }  // namespace zxdb
 

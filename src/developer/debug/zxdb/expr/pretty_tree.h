@@ -62,12 +62,12 @@ class PrettyTreeIterator : public PrettyType {
  public:
   PrettyTreeIterator() : PrettyType() {}
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override;
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
   EvalFunction GetDereferencer() const override;
 
   // Computes the pointed-to value for the given iterator and calls the callback with it.
-  static void GetIteratorValue(fxl::RefPtr<EvalContext> context, const ExprValue& iter,
+  static void GetIteratorValue(const fxl::RefPtr<EvalContext>& context, const ExprValue& iter,
                                EvalCallback cb);
 };
 
@@ -76,12 +76,12 @@ class PrettyMapIterator : public PrettyType {
  public:
   PrettyMapIterator() : PrettyType() {}
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override;
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
   EvalFunction GetDereferencer() const override;
 
   // Computes the pointed-to value for the given iterator and calls the callback with it.
-  static void GetIteratorValue(fxl::RefPtr<EvalContext> context, const ExprValue& iter,
+  static void GetIteratorValue(const fxl::RefPtr<EvalContext>& context, const ExprValue& iter,
                                EvalCallback cb);
 };
 
@@ -91,8 +91,8 @@ class PrettyTree : public PrettyType {
   // The container name should be "std::set" or "std::map".
   PrettyTree(const std::string& container_name);
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override;
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
 
  private:
   std::string container_name_;

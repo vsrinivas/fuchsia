@@ -83,8 +83,8 @@ fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a, const Data
 }
 
 // Helper function that calls ResolveMember with an identifier with the containing value.
-ErrOrValue ResolveMemberFromString(fxl::RefPtr<EvalContext> eval_context, const ExprValue& base,
-                                   const std::string& name) {
+ErrOrValue ResolveMemberFromString(const fxl::RefPtr<EvalContext>& eval_context,
+                                   const ExprValue& base, const std::string& name) {
   ParsedIdentifier ident;
   Err err = ExprParser::ParseIdentifier(name, &ident);
   if (err.has_error())

@@ -29,8 +29,8 @@ Err GetPointerValue(const ExprValue& value, TargetPointer* pointer_value) {
 
 }  // namespace
 
-void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address, fxl::RefPtr<Type> type,
-                    fit::callback<void(ErrOrValue)> cb) {
+void ResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, uint64_t address,
+                    fxl::RefPtr<Type> type, EvalCallback cb) {
   // We need to be careful to construct the return type with the original type given since it may
   // have const qualifiers, etc., but to use the concrete one (no const, with forward-definitions
   // resolved) for size computation.
@@ -56,8 +56,8 @@ void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address, fxl
       });
 }
 
-void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& pointer,
-                    fit::callback<void(ErrOrValue)> cb) {
+void ResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& pointer,
+                    EvalCallback cb) {
   fxl::RefPtr<Type> pointed_to;
   if (Err err = GetPointedToType(eval_context, pointer.type(), &pointed_to); err.has_error())
     return cb(err);
@@ -70,7 +70,7 @@ void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& poin
 }
 
 void EnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprValue value,
-                            fit::callback<void(ErrOrValue)> cb) {
+                            EvalCallback cb) {
   Type* type = value.type();
   if (!type) {
     // Untyped input, pass the value forward and let the callback handle the problem.

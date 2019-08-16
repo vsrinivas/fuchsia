@@ -33,10 +33,10 @@ struct FormatOptions;
 // implementations of these functions.
 class PrettyType {
  public:
-  using EvalFunction =
-      fit::function<void(fxl::RefPtr<EvalContext>, const ExprValue& object_value, EvalCallback)>;
+  using EvalFunction = fit::function<void(const fxl::RefPtr<EvalContext>&,
+                                          const ExprValue& object_value, EvalCallback)>;
   using EvalArrayFunction = fit::function<void(
-      fxl::RefPtr<EvalContext>, const ExprValue& object_value, int64_t index, EvalCallback)>;
+      const fxl::RefPtr<EvalContext>&, const ExprValue& object_value, int64_t index, EvalCallback)>;
 
   PrettyType() = default;
 
@@ -58,7 +58,7 @@ class PrettyType {
   // node is filled asynchronously the implementation should take a weak pointer to it since the
   // lifetime is not guaranteed.
   virtual void Format(FormatNode* node, const FormatOptions& options,
-                      fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) = 0;
+                      const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) = 0;
 
   // Returns a function which can be evaluated to execute a getter on an object of this type.
   // If there is no matching getter, a null fit::function is returned.
@@ -99,8 +99,8 @@ class PrettyArray : public PrettyType {
               std::initializer_list<std::pair<std::string, std::string>> getters = {})
       : PrettyType(getters), ptr_expr_(ptr_expr), size_expr_(size_expr) {}
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override;
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
   EvalArrayFunction GetArrayAccess() const override;
 
  private:
@@ -120,8 +120,8 @@ class PrettyHeapString : public PrettyType {
                    std::initializer_list<std::pair<std::string, std::string>> getters = {})
       : PrettyType(getters), ptr_expr_(ptr_expr), size_expr_(size_expr) {}
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override;
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
   EvalArrayFunction GetArrayAccess() const override;
 
  private:
@@ -139,8 +139,8 @@ class PrettyPointer : public PrettyType {
                 std::initializer_list<std::pair<std::string, std::string>> getters = {})
       : PrettyType(std::move(getters)), expr_(expr) {}
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override;
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
   EvalFunction GetDereferencer() const override;
 
  private:
@@ -164,14 +164,14 @@ class PrettyOptional : public PrettyType {
         value_expr_(value_expr),
         name_when_disengaged_(name_when_disengaged) {}
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override;
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
   EvalFunction GetDereferencer() const override;
 
  private:
   // Executes the callback for the given optional struct. This takes the expression and executes the
   // callback which can be an error, is_disengaged, or have a value.
-  static void EvalOptional(fxl::RefPtr<EvalContext>& context, ExprValue object,
+  static void EvalOptional(const fxl::RefPtr<EvalContext>& context, ExprValue object,
                            const std::string& is_engaged_expr, const std::string& value_expr,
                            fit::callback<void(ErrOrValue, bool is_disengaged)> cb);
 
@@ -188,8 +188,8 @@ class PrettyStruct : public PrettyType {
   // Takes a list of struct member names and the expressions that evaluate them.
   PrettyStruct(std::initializer_list<std::pair<std::string, std::string>> members);
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override;
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
 
  private:
   std::vector<std::pair<std::string, std::string>> members_;

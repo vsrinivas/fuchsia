@@ -40,8 +40,8 @@ class MockGetterPrettyType : public PrettyType {
 
   MockGetterPrettyType() : PrettyType({{kGetterName, "5"}}) {}
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override {}
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override {}
 };
 const char MockGetterPrettyType::kGetterName[] = "get5";
 const int MockGetterPrettyType::kGetterValue = 5;
@@ -51,10 +51,10 @@ class MockDerefPrettyType : public PrettyType {
  public:
   MockDerefPrettyType(ExprValue val) : PrettyType(), val_(std::move(val)) {}
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override {}
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override {}
   EvalFunction GetDereferencer() const override {
-    return [val = val_](fxl::RefPtr<EvalContext>, ExprValue, EvalCallback cb) { cb(val); };
+    return [val = val_](const fxl::RefPtr<EvalContext>&, ExprValue, EvalCallback cb) { cb(val); };
   }
 
  private:

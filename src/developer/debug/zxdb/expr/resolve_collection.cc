@@ -92,7 +92,7 @@ Err GetMemberType(const fxl::RefPtr<EvalContext>& context, const Collection* col
 
 void DoResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
                               const Collection* pointed_to_type, const FoundMember& member,
-                              fit::callback<void(ErrOrValue)> cb) {
+                              EvalCallback cb) {
   Err err = base_ptr.EnsureSizeIs(kTargetPointerSize);
   if (err.has_error())
     return cb(err);
@@ -216,7 +216,7 @@ ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const
 }
 
 void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
-                            const FoundMember& found_member, fit::callback<void(ErrOrValue)> cb) {
+                            const FoundMember& found_member, EvalCallback cb) {
   fxl::RefPtr<Collection> pointed_to;
   Err err = GetConcretePointedToCollection(context, base_ptr.type(), &pointed_to);
   if (err.has_error())

@@ -78,7 +78,8 @@ PrettyType* PrettyTypeManager::GetForType(const Type* type) const {
 }
 
 bool PrettyTypeManager::Format(FormatNode* node, const Type* type, const FormatOptions& options,
-                               fxl::RefPtr<EvalContext> context, fit::deferred_callback& cb) const {
+                               const fxl::RefPtr<EvalContext>& context,
+                               fit::deferred_callback& cb) const {
   if (PrettyType* pretty = GetForType(type)) {
     pretty->Format(node, options, context, std::move(cb));
     return true;

@@ -21,10 +21,10 @@ class ExprValue;
 class ExprValueSource;
 class Type;
 
-void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
+void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue& left_value,
                         const ExprToken& op, const ExprValue& right_value, EvalCallback cb);
 
-void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<ExprNode>& left,
+void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const fxl::RefPtr<ExprNode>& left,
                         const ExprToken& op, const fxl::RefPtr<ExprNode>& right, EvalCallback cb);
 
 void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value, EvalCallback cb);

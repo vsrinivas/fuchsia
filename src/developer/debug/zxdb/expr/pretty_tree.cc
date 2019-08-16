@@ -38,7 +38,8 @@ void FillTreeIteratorNode(const char* container_type, FormatNode* node, ErrOrVal
 // PrettyTreeIterator ------------------------------------------------------------------------------
 
 void PrettyTreeIterator::Format(FormatNode* node, const FormatOptions& options,
-                                fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+                                const fxl::RefPtr<EvalContext>& context,
+                                fit::deferred_callback cb) {
   GetIteratorValue(context, node->value(),
                    [weak_node = node->GetWeakPtr(), cb = std::move(cb)](ErrOrValue value) {
                      if (weak_node)
@@ -47,13 +48,13 @@ void PrettyTreeIterator::Format(FormatNode* node, const FormatOptions& options,
 }
 
 PrettyTreeIterator::EvalFunction PrettyTreeIterator::GetDereferencer() const {
-  return [](fxl::RefPtr<EvalContext> context, const ExprValue& iter, EvalCallback cb) {
+  return [](const fxl::RefPtr<EvalContext>& context, const ExprValue& iter, EvalCallback cb) {
     GetIteratorValue(std::move(context), iter, std::move(cb));
   };
 }
 
-void PrettyTreeIterator::GetIteratorValue(fxl::RefPtr<EvalContext> context, const ExprValue& iter,
-                                          EvalCallback cb) {
+void PrettyTreeIterator::GetIteratorValue(const fxl::RefPtr<EvalContext>& context,
+                                          const ExprValue& iter, EvalCallback cb) {
   // Evaluate "static_cast<ITER_TYPE::__node_pointer>(iter.__ptr_)->__value_"
   //
   // Unfortunately, there is no way with the implementation to know when an iterator points to
@@ -70,7 +71,7 @@ void PrettyTreeIterator::GetIteratorValue(fxl::RefPtr<EvalContext> context, cons
 // PrettyMapIterator -------------------------------------------------------------------------------
 
 void PrettyMapIterator::Format(FormatNode* node, const FormatOptions& options,
-                               fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+                               const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   GetIteratorValue(context, node->value(),
                    [weak_node = node->GetWeakPtr(), cb = std::move(cb)](ErrOrValue value) {
                      if (weak_node)
@@ -79,13 +80,13 @@ void PrettyMapIterator::Format(FormatNode* node, const FormatOptions& options,
 }
 
 PrettyMapIterator::EvalFunction PrettyMapIterator::GetDereferencer() const {
-  return [](fxl::RefPtr<EvalContext> context, const ExprValue& iter, EvalCallback cb) {
+  return [](const fxl::RefPtr<EvalContext>& context, const ExprValue& iter, EvalCallback cb) {
     GetIteratorValue(std::move(context), iter, std::move(cb));
   };
 }
 
-void PrettyMapIterator::GetIteratorValue(fxl::RefPtr<EvalContext> context, const ExprValue& iter,
-                                         EvalCallback cb) {
+void PrettyMapIterator::GetIteratorValue(const fxl::RefPtr<EvalContext>& context,
+                                         const ExprValue& iter, EvalCallback cb) {
   // Evaluate "static_cast<ITER_TYPE::__node_pointer>(iter.__i_.__ptr_)->__value_.__cc"
   // Where ITER_TYPE is actually the type of "iter.__i_".
   ErrOrValue i_value = ResolveNonstaticMember(context, iter, {"__i_"});
@@ -109,7 +110,7 @@ PrettyTree::PrettyTree(const std::string& container_name)
       container_name_(container_name) {}
 
 void PrettyTree::Format(FormatNode* node, const FormatOptions& options,
-                        fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+                        const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   // Actually getting the set contents in our C++ code with our current asynchronous API is
   // prohibitive. When we have a way that walking the tree can be expressed in a synchronous
   // fashion (either by a scripting language or fancier expressions) we can add this ability.

@@ -27,11 +27,11 @@ class TestPrettyArray : public PrettyType {
  public:
   TestPrettyArray(){};
 
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override {}
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override {}
   EvalArrayFunction GetArrayAccess() const override {
-    return [](fxl::RefPtr<EvalContext>, const ExprValue& object_value, int64_t index,
-              fit::callback<void(ErrOrValue)> cb) { cb(ExprValue(index * 2)); };
+    return [](const fxl::RefPtr<EvalContext>&, const ExprValue& object_value, int64_t index,
+              EvalCallback cb) { cb(ExprValue(index * 2)); };
   }
 };
 

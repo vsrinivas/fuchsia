@@ -30,7 +30,7 @@ class FormatNode;
 // should keep a weak pointer to the node if they do not control its lifetime.
 //
 // TODO(brettw) should this be a member of FormatNode?
-void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
+void FillFormatNodeValue(FormatNode* node, const fxl::RefPtr<EvalContext>& context,
                          fit::deferred_callback cb);
 
 // Fills the description and children of a FormatNode based on the current
@@ -44,7 +44,7 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
 // The callback will always be issued, even if the node is destroyed. Callers
 // should keep a weak pointer to the node if they do not control its lifetime.
 void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,
-                               fxl::RefPtr<EvalContext> context, fit::deferred_callback cb);
+                               const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb);
 
 // Formatters for strings. These are public so they can be shared by the pretty-printers.
 //
@@ -57,7 +57,7 @@ void FormatCharArrayNode(FormatNode* node, fxl::RefPtr<Type> char_type, const ui
                          size_t length, bool length_was_known, bool truncated);
 void FormatCharPointerNode(FormatNode* node, uint64_t ptr, const Type* char_type,
                            std::optional<uint32_t> length, const FormatOptions& options,
-                           fxl::RefPtr<EvalContext> eval_context, fit::deferred_callback cb);
+                           const fxl::RefPtr<EvalContext>& eval_context, fit::deferred_callback cb);
 
 // Formats an array with a known length. This is for non-char arrays (which are special-cased in
 // FormatCharArrayNode).
@@ -65,7 +65,7 @@ void FormatCharPointerNode(FormatNode* node, uint64_t ptr, const Type* char_type
 // The value is given rather than being extracted from the node so it can be different. It can be
 // either an Array symbol type or a pointer.
 void FormatArrayNode(FormatNode* node, const ExprValue& value, int elt_count,
-                     const FormatOptions& options, fxl::RefPtr<EvalContext> eval_context,
+                     const FormatOptions& options, const fxl::RefPtr<EvalContext>& eval_context,
                      fit::deferred_callback cb);
 
 // Formats a node for a pointer. This function is synchronous.

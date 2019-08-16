@@ -96,7 +96,7 @@ PrettyType::EvalFunction PrettyType::GetGetter(const std::string& getter_name) c
   auto found = getters_.find(getter_name);
   if (found == getters_.end())
     return EvalFunction();
-  return [expression = found->second](fxl::RefPtr<EvalContext> context,
+  return [expression = found->second](const fxl::RefPtr<EvalContext>& context,
                                       const ExprValue& object_value, EvalCallback cb) {
     EvalExpressionOn(context, object_value, expression, std::move(cb));
   };
@@ -111,7 +111,7 @@ void PrettyType::EvalExpressionOn(const fxl::RefPtr<EvalContext>& context, const
 }
 
 void PrettyArray::Format(FormatNode* node, const FormatOptions& options,
-                         fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+                         const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   // Evaluate the expressions with this context to make the members in the current scope.
   auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node->value());
 
@@ -137,8 +137,8 @@ void PrettyArray::Format(FormatNode* node, const FormatOptions& options,
 PrettyArray::EvalArrayFunction PrettyArray::GetArrayAccess() const {
   // Since the PrettyArray is accessed by its pointer, we can just use the array access operator
   // combined with the pointer expression to produce an expression that references into the array.
-  return [expression = ptr_expr_](fxl::RefPtr<EvalContext> context, const ExprValue& object_value,
-                                  int64_t index, fit::callback<void(ErrOrValue)> cb) {
+  return [expression = ptr_expr_](const fxl::RefPtr<EvalContext>& context,
+                                  const ExprValue& object_value, int64_t index, EvalCallback cb) {
     EvalExpressionOn(context, object_value,
                      fxl::StringPrintf("(%s)[%" PRId64 "]", expression.c_str(), index),
                      std::move(cb));
@@ -146,7 +146,7 @@ PrettyArray::EvalArrayFunction PrettyArray::GetArrayAccess() const {
 }
 
 void PrettyHeapString::Format(FormatNode* node, const FormatOptions& options,
-                              fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+                              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   // Evaluate the expressions with this context to make the members in the current scope.
   auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node->value());
 
@@ -182,8 +182,8 @@ void PrettyHeapString::Format(FormatNode* node, const FormatOptions& options,
 }
 
 PrettyHeapString::EvalArrayFunction PrettyHeapString::GetArrayAccess() const {
-  return [expression = ptr_expr_](fxl::RefPtr<EvalContext> context, const ExprValue& object_value,
-                                  int64_t index, fit::callback<void(ErrOrValue)> cb) {
+  return [expression = ptr_expr_](const fxl::RefPtr<EvalContext>& context,
+                                  const ExprValue& object_value, int64_t index, EvalCallback cb) {
     EvalExpressionOn(context, object_value,
                      fxl::StringPrintf("(%s)[%" PRId64 "]", expression.c_str(), index),
                      std::move(cb));
@@ -191,7 +191,7 @@ PrettyHeapString::EvalArrayFunction PrettyHeapString::GetArrayAccess() const {
 }
 
 void PrettyPointer::Format(FormatNode* node, const FormatOptions& options,
-                           fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+                           const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node->value());
 
   EvalExpression(
@@ -208,7 +208,7 @@ void PrettyPointer::Format(FormatNode* node, const FormatOptions& options,
 }
 
 PrettyPointer::EvalFunction PrettyPointer::GetDereferencer() const {
-  return [expr = expr_](fxl::RefPtr<EvalContext> context, const ExprValue& object_value,
+  return [expr = expr_](const fxl::RefPtr<EvalContext>& context, const ExprValue& object_value,
                         EvalCallback cb) {
     // The value is from dereferencing the pointer value expression.
     EvalExpressionOn(context, object_value, "*(" + expr + ")", std::move(cb));
@@ -216,7 +216,7 @@ PrettyPointer::EvalFunction PrettyPointer::GetDereferencer() const {
 }
 
 void PrettyOptional::Format(FormatNode* node, const FormatOptions& options,
-                            fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+                            const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   EvalOptional(
       context, node->value(), is_engaged_expr_, value_expr_,
       [simple_type_name = simple_type_name_, name_when_disengaged = name_when_disengaged_,
@@ -234,21 +234,22 @@ void PrettyOptional::Format(FormatNode* node, const FormatOptions& options,
 }
 
 PrettyOptional::EvalFunction PrettyOptional::GetDereferencer() const {
-  return [is_engaged_expr = is_engaged_expr_, value_expr = value_expr_,
-          name_when_disengaged = name_when_disengaged_](
-             fxl::RefPtr<EvalContext> context, const ExprValue& object_value, EvalCallback cb) {
-    EvalOptional(
-        context, object_value, is_engaged_expr, value_expr,
-        [cb = std::move(cb), name_when_disengaged](ErrOrValue value, bool is_empty) mutable {
-          if (is_empty)
-            return cb(Err("Attempting to dereference a " + name_when_disengaged));
-          cb(std::move(value));
-        });
-  };
+  return
+      [is_engaged_expr = is_engaged_expr_, value_expr = value_expr_,
+       name_when_disengaged = name_when_disengaged_](
+          const fxl::RefPtr<EvalContext>& context, const ExprValue& object_value, EvalCallback cb) {
+        EvalOptional(
+            context, object_value, is_engaged_expr, value_expr,
+            [cb = std::move(cb), name_when_disengaged](ErrOrValue value, bool is_empty) mutable {
+              if (is_empty)
+                return cb(Err("Attempting to dereference a " + name_when_disengaged));
+              cb(std::move(value));
+            });
+      };
 }
 
 // static
-void PrettyOptional::EvalOptional(fxl::RefPtr<EvalContext>& context, ExprValue object,
+void PrettyOptional::EvalOptional(const fxl::RefPtr<EvalContext>& context, ExprValue object,
                                   const std::string& is_engaged_expr, const std::string& value_expr,
                                   fit::callback<void(ErrOrValue, bool is_empty)> cb) {
   auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, object);
@@ -278,7 +279,7 @@ PrettyStruct::PrettyStruct(std::initializer_list<std::pair<std::string, std::str
     : PrettyType({}), members_(std::begin(members), std::end(members)) {}
 
 void PrettyStruct::Format(FormatNode* node, const FormatOptions& options,
-                          fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+                          const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   node->set_description_kind(FormatNode::kCollection);
 
   // Generates a node for each "member_" that evaluates to the result of the corresponding expr.

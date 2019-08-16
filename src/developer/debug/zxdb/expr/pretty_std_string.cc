@@ -142,7 +142,7 @@ Err GetStringCapacity(const std::vector<uint8_t>& mem, uint64_t* capacity) {
 }
 
 void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
-                           const FormatOptions& options, fxl::RefPtr<EvalContext> context,
+                           const FormatOptions& options, const fxl::RefPtr<EvalContext>& context,
                            fit::deferred_callback cb) {
   node->set_type("std::string");
   if (mem.size() != kStdStringSize)
@@ -169,7 +169,7 @@ void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
 // missing. But the "source" will usually be set and we can go fetch the right amount of data.
 // This function calls the callback with a populated ExprValue if it can be made to have the correct
 // size.
-void EnsureStdStringMemory(fxl::RefPtr<EvalContext> context, const ExprValue& value,
+void EnsureStdStringMemory(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
                            EvalCallback cb) {
   if (value.data().size() != 0) {
     if (value.data().size() == kStdStringSize)
@@ -197,7 +197,7 @@ void EnsureStdStringMemory(fxl::RefPtr<EvalContext> context, const ExprValue& va
 // This returns a callback that does that stuff, with the given "getter" implementation taking
 // a complete string of a known correct size.
 PrettyStdString::EvalFunction MakeGetter(fit::function<void(ExprValue, EvalCallback)> getter) {
-  return [getter = std::move(getter)](fxl::RefPtr<EvalContext> context,
+  return [getter = std::move(getter)](const fxl::RefPtr<EvalContext>& context,
                                       const ExprValue& object_value, EvalCallback cb) mutable {
     EnsureStdStringMemory(
         context, object_value,
@@ -212,7 +212,7 @@ PrettyStdString::EvalFunction MakeGetter(fit::function<void(ExprValue, EvalCallb
 }  // namespace
 
 void PrettyStdString::Format(FormatNode* node, const FormatOptions& options,
-                             fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+                             const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   EnsureStdStringMemory(context, node->value(),
                         [weak_node = node->GetWeakPtr(), options, context,
                          cb = std::move(cb)](ErrOrValue value) mutable {
@@ -269,8 +269,8 @@ PrettyStdString::EvalFunction PrettyStdString::GetGetter(const std::string& gett
 }
 
 PrettyStdString::EvalArrayFunction PrettyStdString::GetArrayAccess() const {
-  return [](fxl::RefPtr<EvalContext> context, const ExprValue& object_value, int64_t index,
-            fit::callback<void(ErrOrValue)> cb) {
+  return [](const fxl::RefPtr<EvalContext>& context, const ExprValue& object_value, int64_t index,
+            EvalCallback cb) {
     EnsureStdStringMemory(
         context, object_value, [context, cb = std::move(cb), index](ErrOrValue value) mutable {
           if (value.has_error())

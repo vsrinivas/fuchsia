@@ -15,8 +15,8 @@ class PrettyStdString : public PrettyType {
   PrettyStdString() = default;
 
   // PrettyType implementation.
-  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
-              fit::deferred_callback cb) override;
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
   EvalFunction GetGetter(const std::string& getter_name) const override;
   EvalArrayFunction GetArrayAccess() const override;
 };

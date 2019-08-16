@@ -47,7 +47,7 @@ ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayType* arr
 }
 
 // Handles the "Foo*" case.
-void ResolvePointerArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+void ResolvePointerArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
                          const ModifiedType* ptr_type, size_t begin_index, size_t end_index,
                          fit::callback<void(ErrOrValueVector)> cb) {
   const Type* abstract_value_type = ptr_type->modified().Get()->AsType();
@@ -94,7 +94,7 @@ void ResolvePointerArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue&
 // Returns true if the callback was consumed. This means the item was an array or pointer that can
 // be handled (in which case the callback will have been either issued or will be pending). False
 // means that the item wasn't an array and the callback was not used.
-bool DoResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+bool DoResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
                     size_t begin_index, size_t end_index,
                     fit::callback<void(ErrOrValueVector)> cb) {
   if (!array.type()) {
@@ -121,7 +121,7 @@ bool DoResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& arra
 
 }  // namespace
 
-ErrOrValueVector ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+ErrOrValueVector ResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
                               size_t begin_index, size_t end_index) {
   if (!array.type())
     return Err("No type information.");
@@ -132,14 +132,14 @@ ErrOrValueVector ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprV
   return Err("Can't dereference a non-array type.");
 }
 
-void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
-                  size_t end_index, fit::callback<void(ErrOrValueVector)> cb) {
+void ResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
+                  size_t begin_index, size_t end_index, fit::callback<void(ErrOrValueVector)> cb) {
   if (!DoResolveArray(eval_context, array, begin_index, end_index, std::move(cb)))
     cb(Err("Can't dereference a non-pointer or array type."));
 }
 
-void ResolveArrayItem(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t index,
-                      EvalCallback cb) {
+void ResolveArrayItem(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
+                      size_t index, EvalCallback cb) {
   // This callback might possibly be bound to the regular array access function and we won't know
   // if it was needed until the function returns. We want to try regular resolution first to avoid
   // over-triggering pretty-printing if something is configured incorrectly. This case is not
