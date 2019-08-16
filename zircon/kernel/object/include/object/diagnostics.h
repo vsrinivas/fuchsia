@@ -45,7 +45,7 @@ zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace, user_out_ptr<zx_info_v
 // to resolve any lock ordering issues.
 zx_status_t GetProcessVmosLocked(ProcessDispatcher* process, user_out_ptr<zx_info_vmo_t> vmos,
                                  size_t max, size_t* actual, size_t* available)
-    TA_REQ(process->handle_table_lock());
+    TA_REQ_SHARED(process->handle_table_lock());
 
 // Prints (with the supplied prefix) the number of mapped, committed bytes for
 // each process in the system whose page count > |min_pages|. Does not take
