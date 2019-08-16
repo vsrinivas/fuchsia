@@ -43,7 +43,7 @@ zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace, user_out_ptr<zx_info_v
 // Requires that the caller hold the |process->handle_table_lock()| so it can
 // call ForEachHandleLocked. Pushing locking into the caller allows the caller
 // to resolve any lock ordering issues.
-zx_status_t GetProcessVmosLocked(ProcessDispatcher* process, user_out_ptr<zx_info_vmo_t> vmos,
+zx_status_t GetProcessVmosLocked(const ProcessDispatcher* process, user_out_ptr<zx_info_vmo_t> vmos,
                                  size_t max, size_t* actual, size_t* available)
     TA_REQ_SHARED(process->handle_table_lock());
 

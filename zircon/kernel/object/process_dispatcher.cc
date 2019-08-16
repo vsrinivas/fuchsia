@@ -543,7 +543,7 @@ zx_status_t ProcessDispatcher::GetDispatcherInternal(zx_handle_t handle_value,
   return ZX_OK;
 }
 
-zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
+zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) const {
   canary_.Assert();
 
   State state;
@@ -573,7 +573,7 @@ zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
   return ZX_OK;
 }
 
-zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) {
+zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) const {
   DEBUG_ASSERT(stats != nullptr);
   Guard<fbl::Mutex> guard{get_lock()};
   if (state_ == State::DEAD) {
@@ -592,7 +592,7 @@ zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) {
 }
 
 zx_status_t ProcessDispatcher::GetAspaceMaps(user_out_ptr<zx_info_maps_t> maps, size_t max,
-                                             size_t* actual, size_t* available) {
+                                             size_t* actual, size_t* available) const {
   Guard<fbl::Mutex> guard{get_lock()};
   if (state_ == State::DEAD) {
     return ZX_ERR_BAD_STATE;
@@ -601,7 +601,7 @@ zx_status_t ProcessDispatcher::GetAspaceMaps(user_out_ptr<zx_info_maps_t> maps, 
 }
 
 zx_status_t ProcessDispatcher::GetVmos(user_out_ptr<zx_info_vmo_t> vmos, size_t max,
-                                       size_t* actual_out, size_t* available_out) {
+                                       size_t* actual_out, size_t* available_out) const {
   // We need the handle_table_lock for |GetProcessVmosLocked|, but we must also acquire it
   // before acquiring |get_lock()|.
   Guard<BrwLockPi, BrwLockPi::Reader> handle_table_guard{handle_table_lock()};
@@ -630,7 +630,7 @@ zx_status_t ProcessDispatcher::GetVmos(user_out_ptr<zx_info_vmo_t> vmos, size_t 
   return ZX_OK;
 }
 
-zx_status_t ProcessDispatcher::GetThreads(fbl::Array<zx_koid_t>* out_threads) {
+zx_status_t ProcessDispatcher::GetThreads(fbl::Array<zx_koid_t>* out_threads) const {
   Guard<fbl::Mutex> guard{get_lock()};
   size_t n = thread_list_.size_slow();
   fbl::Array<zx_koid_t> threads;
