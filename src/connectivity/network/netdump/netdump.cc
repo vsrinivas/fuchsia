@@ -9,6 +9,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
@@ -28,12 +29,16 @@
 #include <iomanip>
 #include <iostream>
 #include <iterator>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include <pretty/hexdump.h>
 
+#include "filter_builder_impl.h"
+
 static constexpr size_t BUFSIZE = 2048;
+static constexpr size_t STRBUFSIZE = 256;
 static constexpr int64_t DEFAULT_TIMEOUT_SECONDS = 60;
 
 namespace netdump {
@@ -44,10 +49,14 @@ class NetdumpOptions {
   bool raw = false;
   bool link_level = false;
   bool promisc = false;
-  long int packet_count = 0;
+  std::optional<uint64_t> packet_count = std::nullopt;
   size_t verbose_level = 0;
   int dumpfile = 0;
-  int64_t timeout_seconds = 0;
+  zx::time timeout_deadline = zx::time::infinite();
+  Tokenizer tokenizer{};
+  parser::Parser parser{tokenizer};
+  FilterPtr filter = nullptr;
+  FilterPtr highlight_filter = nullptr;
 };
 
 typedef struct {
@@ -78,20 +87,20 @@ typedef struct {
 
 static constexpr size_t SIMPLE_PKT_MIN_SIZE = sizeof(simple_pkt_t) + sizeof(uint32_t);
 
-static void print_mac(const uint8_t mac[ETH_ALEN]) {
-  std::ios::fmtflags flags = std::cout.flags();
-  std::cout.flags(std::ios::hex);
-  std::cout.fill('0');
+static std::string mac_to_string(const uint8_t mac[ETH_ALEN]) {
+  std::stringstream stream;
+  stream.flags(std::ios::hex);
+  stream.fill('0');
   // clang-format off
-  // Cast is required to make cout not interpret input as a char.
-  std::cout << std::setw(2) << static_cast<uint16_t>(mac[0]) << ":"
-            << std::setw(2) << static_cast<uint16_t>(mac[1]) << ":"
-            << std::setw(2) << static_cast<uint16_t>(mac[2]) << ":"
-            << std::setw(2) << static_cast<uint16_t>(mac[3]) << ":"
-            << std::setw(2) << static_cast<uint16_t>(mac[4]) << ":"
-            << std::setw(2) << static_cast<uint16_t>(mac[5]);
+  // Cast is required to make `stream` not interpret input as a char.
+  stream << std::setw(2) << static_cast<uint16_t>(mac[0]) << ":"
+         << std::setw(2) << static_cast<uint16_t>(mac[1]) << ":"
+         << std::setw(2) << static_cast<uint16_t>(mac[2]) << ":"
+         << std::setw(2) << static_cast<uint16_t>(mac[3]) << ":"
+         << std::setw(2) << static_cast<uint16_t>(mac[4]) << ":"
+         << std::setw(2) << static_cast<uint16_t>(mac[5]);
   // clang-format on
-  std::cout.flags(flags);
+  return stream.str();
 }
 
 static std::string ethtype_to_string(uint16_t ethtype) {
@@ -101,7 +110,7 @@ static std::string ethtype_to_string(uint16_t ethtype) {
     case ETH_P_ARP:
       return "ARP";
     case ETH_P_IPV6:
-      return "IPV6";
+      return "IPv6";
     case ETH_P_8021Q:
       return "802.1Q";
     default:
@@ -167,79 +176,111 @@ static std::string port_to_string(uint16_t port) {
   }
 }
 
-static void print_port(uint16_t port, size_t verbosity) {
-  std::string str = port_to_string(port);
-  if (verbosity && !str.empty()) {
-    std::cout << ":" << port << " (" << str << ") ";
-  } else {
-    std::cout << ":" << port << " ";
+static inline std::string port_string_by_verbosity(uint16_t port, size_t verbosity) {
+  std::string port_name = port_to_string(port);
+  std::stringstream stream;
+  stream << port;
+  if (verbosity && !port_name.empty()) {
+    stream << " (" << port_name << ")";
   }
+  return stream.str();
 }
 
-void parse_packet(void* packet, size_t length, const NetdumpOptions& options) {
-  struct ethhdr* frame = static_cast<struct ethhdr*>(packet);
-  if (length < ETH_ZLEN) {
-    std::cout << "Packet size (" << length << ") too small for ethernet frame" << std::endl;
-    if (options.verbose_level == 2) {
-      hexdump8_ex(packet, length, 0);
-    }
-    return;
+// Return a `stringstream` with highlighting applied, as appropriate.
+inline std::stringstream highlighted_stream(const Packet& packet, const NetdumpOptions& options) {
+  std::stringstream stream;
+  if (options.highlight_filter != nullptr && options.highlight_filter->match(packet)) {
+    stream << parser::ANSI_HIGHLIGHT;
   }
-  uint16_t ethtype = htons(frame->h_proto);
+  return stream;
+}
 
+// Write link level information to `stream` and return the ethtype.
+uint16_t parse_l2_packet(const Packet& packet, const NetdumpOptions& options,
+                         std::stringstream* stream) {
+  ZX_ASSERT(stream != nullptr);
+  uint16_t ethtype = ntohs(packet.frame->h_proto);
   if (options.link_level) {
-    print_mac(frame->h_source);
-    std::cout << " > ";
-    print_mac(frame->h_dest);
-    std::cout << ", ethertype " << ethtype_to_string(ethtype) << " (0x" << std::hex << ethtype
-              << std::dec << "), ";
+    *stream << mac_to_string(packet.frame->h_source) << " > " << mac_to_string(packet.frame->h_dest)
+            << ", ethertype " << ethtype_to_string(ethtype) << " (0x" << std::hex << ethtype
+            << std::dec << "), ";
   }
+  return ethtype;
+}
 
-  struct iphdr* ip = reinterpret_cast<struct iphdr*>(frame + 1);
-  char buf[256];
-
-  void* transport_packet = nullptr;
-  uint8_t transport_protocol;
-
-  if (ip->version == 4) {
-    std::cout << "IP4 " << inet_ntop(AF_INET, &ip->saddr, buf, sizeof(buf)) << " > "
+// Write L3 information to `stream` and return the transport protocol number if L3 protocol is IP.
+uint8_t parse_l3_packet(uint16_t ethtype, const Packet& packet, const NetdumpOptions& options,
+                        std::stringstream* stream) {
+  ZX_ASSERT(stream != nullptr);
+  const struct iphdr* ip = packet.ip;
+  char buf[STRBUFSIZE];
+  switch (ip->version) {
+    case 4: {
+      *stream << "IP4 " << inet_ntop(AF_INET, &ip->saddr, buf, sizeof(buf)) << " > "
               << inet_ntop(AF_INET, &ip->daddr, buf, sizeof(buf)) << ": "
               << protocol_to_string(ip->protocol) << ", "
               << "length " << ntohs(ip->tot_len) << ", ";
-    auto transport = reinterpret_cast<uintptr_t>(ip + 1);
-    transport_packet = reinterpret_cast<void*>(transport + (ip->ihl > 5 ? ip->ihl * 4 : 0));
-    transport_protocol = ip->protocol;
-  } else if (ip->version == 6) {
-    auto ipv6 = reinterpret_cast<struct ip6_hdr*>(ip);
-    std::cout << "IP6 " << inet_ntop(AF_INET6, &ipv6->ip6_src.s6_addr, buf, sizeof(buf)) << " > "
+      return ip->protocol;
+    }
+    case 6: {
+      const struct ip6_hdr* ipv6 = packet.ipv6;
+      *stream << "IP6 " << inet_ntop(AF_INET6, &ipv6->ip6_src.s6_addr, buf, sizeof(buf)) << " > "
               << inet_ntop(AF_INET6, &ipv6->ip6_dst.s6_addr, buf, sizeof(buf)) << ": "
               << protocol_to_string(ipv6->ip6_nxt) << ", "
               << "length " << ntohs(ipv6->ip6_plen) << ", ";
-    transport_packet = reinterpret_cast<void*>(ipv6 + 1);
-    transport_protocol = ipv6->ip6_nxt;
-  } else {
-    std::cout << "IP Version Unknown (or unhandled)";
-  }
-
-  if (transport_packet != nullptr) {
-    if (transport_protocol == IPPROTO_TCP) {
-      auto tcp = static_cast<struct tcphdr*>(transport_packet);
-      std::cout << "Ports ";
-      print_port(ntohs(tcp->source), options.verbose_level);
-      std::cout << "> ";
-      print_port(ntohs(tcp->dest), options.verbose_level);
-    } else if (transport_protocol == IPPROTO_UDP) {
-      auto udp = static_cast<struct udphdr*>(transport_packet);
-      std::cout << "Ports ";
-      print_port(ntohs(udp->uh_sport), options.verbose_level);
-      std::cout << "> ";
-      print_port(ntohs(udp->uh_dport), options.verbose_level);
-    } else {
-      std::cout << "Transport Version Unknown (or unhandled)";
+      return ipv6->ip6_nxt;
+    }
+    default: {
+      ZX_DEBUG_ASSERT_MSG(false, "Ethtype recognized but IP headers malformed.");
+      return 0;
     }
   }
+}
 
-  std::cout << std::endl;
+void parse_l4_packet(uint8_t transport_protocol, const Packet& packet,
+                     const NetdumpOptions& options, std::stringstream* stream) {
+  ZX_ASSERT(stream != nullptr);
+  switch (transport_protocol) {
+    case IPPROTO_TCP: {
+      const struct tcphdr* tcp = packet.tcp;
+      *stream << "Ports: " << port_string_by_verbosity(ntohs(tcp->source), options.verbose_level)
+              << " > " << port_string_by_verbosity(ntohs(tcp->dest), options.verbose_level);
+      return;
+    }
+    case IPPROTO_UDP: {
+      const struct udphdr* udp = packet.udp;
+      *stream << "Ports: " << port_string_by_verbosity(ntohs(udp->uh_sport), options.verbose_level)
+              << " > " << port_string_by_verbosity(ntohs(udp->uh_dport), options.verbose_level);
+      return;
+    }
+    default: {
+      ZX_DEBUG_ASSERT_MSG(false, "Transport protocol recognized but headers malformed.");
+      return;
+    }
+  }
+}
+
+void parse_packet(const Packet& packet, const NetdumpOptions& options) {
+  std::stringstream stream = highlighted_stream(packet, options);
+  uint16_t ethtype = parse_l2_packet(packet, options, &stream);
+  if (packet.ip != nullptr) {
+    uint8_t transport_protocol = parse_l3_packet(ethtype, packet, options, &stream);
+    if (packet.transport != nullptr) {
+      parse_l4_packet(transport_protocol, packet, options, &stream);
+    } else {
+      stream << "L4 headers incomplete or unhandled";  // Protocol is displayed in L3 parsing.
+    }
+  } else {
+    stream << "L3 headers incomplete or unhandled";  // Ethtype is displayed in L2 parsing.
+  }
+  std::cout << stream.str() << parser::ANSI_RESET << std::endl;
+}
+
+inline bool filter_packet(const NetdumpOptions& options, Packet* packet) {
+  if (options.filter == nullptr) {
+    return true;
+  }
+  return options.filter->match(*packet);
 }
 
 int write_shb(int fd) {
@@ -338,13 +379,19 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
     return;
   }
 
-  size_t packet_count = options.packet_count;
-  for (;;) {
+  Packet packet{};
+  uint64_t packets_remaining =
+      (options.packet_count == std::nullopt ? std::numeric_limits<uint64_t>::max()
+                                            : *options.packet_count);
+  for (; packets_remaining > 0;) {
     size_t n;
     zx_status_t status;
     if ((status = rx_fifo.read(sizeof(entries[0]), entries, countof(entries), &n)) < 0) {
       if (status == ZX_ERR_SHOULD_WAIT) {
-        rx_fifo.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), nullptr);
+        rx_fifo.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, options.timeout_deadline, nullptr);
+        if (zx::clock::get_monotonic() >= options.timeout_deadline) {
+          return;
+        }
         continue;
       }
       std::cerr << "netdump: failed to read rx packets: " << status << std::endl;
@@ -352,28 +399,44 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
     }
 
     eth_fifo_entry_t* e = entries;
-    for (size_t i = 0; i < n; i++, e++) {
+    for (size_t i = 0; i < n; ++i, ++e) {
       if (e->flags & ETH_FIFO_RX_OK) {
-        if (options.raw) {
-          printf("---\n");
-          hexdump8_ex(iobuf + e->offset, e->length, 0);
+        void* buffer = iobuf + e->offset;
+        uint16_t length = e->length;
+        bool do_write = true;  // Whether the packet is included for write-out.
+        packet.populate(buffer, length);
+        if (packet.frame == nullptr) {
+          std::cout << "Packet size (" << length << ") too small for Ethernet headers" << std::endl;
+          if (options.verbose_level == 2) {
+            hexdump8_ex(buffer, length, 0);
+          }
+          // Not setting `write` to false in order to record small frames.
         } else {
-          parse_packet(iobuf + e->offset, e->length, options);
+          if (filter_packet(options, &packet)) {
+            if (options.raw) {
+              std::cout << "---" << std::endl;
+              hexdump8_ex(buffer, length, 0);
+            } else {
+              parse_packet(packet, options);
+            }
+            --packets_remaining;
+          } else {
+            do_write = false;
+          }
         }
 
-        if (write_packet(options.dumpfile, iobuf + e->offset, e->length)) {
+        if (do_write && write_packet(options.dumpfile, buffer, length)) {
           return;
         }
 
-        packet_count--;
-        if (packet_count == 0) {
+        if (packets_remaining == 0 || zx::clock::get_monotonic() >= options.timeout_deadline) {
           return;
         }
       }
 
       e->length = BUFSIZE;
       e->flags = 0;
-      if ((status = rx_fifo.write(sizeof(*e), e, 1, NULL)) < 0) {
+      if ((status = rx_fifo.write(sizeof(*e), e, 1, nullptr)) < 0) {
         std::cerr << "netdump: failed to queue rx packet: " << status << std::endl;
         break;
       }
@@ -383,14 +446,21 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
 
 int usage() {
   std::cerr << "usage: netdump [ <option>* ] <network-device>" << std::endl
-            << " -w file  : Write packet output to file in pcapng format" << std::endl
-            << " -c count : Exit after receiving count packets" << std::endl
-            << " -e       : Print link-level header information" << std::endl
-            << " -p       : Use promiscuous mode" << std::endl
-            << " -v       : Print verbose output" << std::endl
-            << " -vv      : Print extra verbose output" << std::endl
-            << " --raw    : Print raw bytes of all incoming packets" << std::endl
-            << " --help   : Show this help message" << std::endl;
+            << " -t {sec}  : Exit after sec seconds, default " << DEFAULT_TIMEOUT_SECONDS
+            << std::endl
+            << " -w file   : Write packet output to file in pcapng format" << std::endl
+            << " -c count  : Exit after receiving count packets" << std::endl
+            << " -e        : Print link-level header information" << std::endl
+            << " -f filter : Capture only packets specified by filter" << std::endl
+            << " -i filter : Highlight packets specified by filter" << std::endl
+            << " -p        : Use promiscuous mode" << std::endl
+            << " -v        : Print verbose output" << std::endl
+            << " -vv       : Print extra verbose output" << std::endl
+            << " --raw     : Print raw bytes of all incoming packets" << std::endl
+            << " --fhelp   : Show filter syntax usage" << std::endl
+            << " --help    : Show this help message" << std::endl
+            << "Filter syntax usage:" << std::endl;
+  parser::parser_syntax(&std::cerr);
   return -1;
 }
 
@@ -411,12 +481,29 @@ int parse_args(StringIterator begin, StringIterator end, NetdumpOptions* options
         return usage();
       }
       size_t num_end;
-      options->packet_count = stol(*begin, &num_end, 10);
-      if (options->packet_count < 0 || num_end < begin->length()) {
+      int64_t packet_count = stoll(*begin, &num_end, 10);
+      if (packet_count < 0 || num_end < begin->length()) {
         return usage();
       }
+      options->packet_count = std::optional(static_cast<uint64_t>(packet_count));
     } else if (arg == "-e") {
       options->link_level = true;
+    } else if (arg == "-f" || arg == "-i") {
+      ++begin;
+      if (begin == end) {
+        return usage();
+      }
+      parser::FilterTreeBuilder builder(options->tokenizer);
+      auto parsed = options->parser.parse(*begin, &builder);
+      if (auto error = std::get_if<parser::ParseError>(&parsed)) {
+        std::cerr << *error << "Use '--fhelp' to see the filter syntax." << std::endl;
+        return -1;
+      }
+      if (arg == "-f") {
+        options->filter = std::move(std::get<FilterPtr>(parsed));
+      } else {
+        options->highlight_filter = std::move(std::get<FilterPtr>(parsed));
+      }
     } else if (arg == "-p") {
       options->promisc = true;
     } else if (arg == "-w") {
@@ -436,11 +523,30 @@ int parse_args(StringIterator begin, StringIterator end, NetdumpOptions* options
       options->verbose_level = 2;
     } else if (arg == "--raw") {
       options->raw = true;
+    } else if (arg == "-t") {
+      int64_t timeout_seconds = DEFAULT_TIMEOUT_SECONDS;
+      if (begin < end - 1) {
+        size_t num_end;
+        int64_t input = stoll(begin[1], &num_end, 10);
+        if (num_end == begin[1].length()) {
+          // Valid number.
+          if (input < 0) {
+            return usage();
+          }
+          timeout_seconds = input;
+          ++begin;
+        }
+      }
+      options->timeout_deadline = zx::clock::get_monotonic() + zx::sec(timeout_seconds);
     } else {
       return usage();
     }
   }
 
+  if (last == "--fhelp") {
+    parser::parser_syntax(&std::cerr);
+    return -1;
+  }
   if (last == "--help") {
     return usage();
   }
@@ -454,7 +560,6 @@ int parse_args(StringIterator begin, StringIterator end, NetdumpOptions* options
 int main(int argc, const char** argv) {
   netdump::NetdumpOptions options;
   options.dumpfile = -1;
-  options.timeout_seconds = DEFAULT_TIMEOUT_SECONDS;
   std::vector<std::string> args(argv + 1, argv + argc);
   if (parse_args(args.begin(), args.end(), &options)) {
     return -1;

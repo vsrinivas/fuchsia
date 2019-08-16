@@ -11,6 +11,7 @@ group("tests") {
     ":netdump_integration_tests",
     ":netemul_empty_binaries",
     "basic_integration",
+    "filter_integration",
     "helper",
   ]
 }
@@ -18,12 +19,14 @@ group("tests") {
 # Required use of the netemul empty binaries pattern.
 group("netemul_empty_binaries") {
   write_file("$root_out_dir/basic_integration_test", "")
+  write_file("$root_out_dir/filter_integration_test", "")
 }
 
 test_package("netdump_integration_tests") {
   deps = [
     ":netemul_empty_binaries",
     "basic_integration",
+    "filter_integration",
     "helper:helper_test",
     "//src/connectivity/network/netdump",
     "//src/connectivity/network/testing/netemul/runner:netemul_sandbox",
@@ -35,6 +38,10 @@ test_package("netdump_integration_tests") {
       dest = "basic_integration.cmx"
     },
     {
+      path = rebase_path("meta/filter_integration.cmx")
+      dest = "filter_integration.cmx"
+    },
+    {
       path = rebase_path("meta/helper.cmx")
       dest = "helper.cmx"
     },
@@ -44,11 +51,18 @@ test_package("netdump_integration_tests") {
     {
       name = "basic_integration"
     },
+    {
+      name = "filter_integration"
+    },
   ]
 
   tests = [
     {
       name = "basic_integration_test"
+      environments = [ nuc_env ]
+    },
+    {
+      name = "filter_integration_test"
       environments = [ nuc_env ]
     },
     {

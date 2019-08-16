@@ -78,6 +78,16 @@ impl Args {
         self.insert_arg("-e".into())
     }
 
+    /// Helper method for inserting a filter argument.
+    pub fn insert_filter(self, filter: &str) -> Self {
+        self.insert_arg("-f".into()).insert_arg(filter.into())
+    }
+
+    /// Helper method for inserting a timeout argument.
+    pub fn insert_timeout(self, timeout_secs: u64) -> Self {
+        self.insert_arg("-t".into()).insert_arg(timeout_secs.to_string())
+    }
+
     /// Helper method for inserting a write to pcapng dumpfile argument.
     /// `path`: The file path to use, relative to `DUMPFILE_DIR`.
     pub fn insert_write_to_dumpfile(self, path: &str) -> Self {
