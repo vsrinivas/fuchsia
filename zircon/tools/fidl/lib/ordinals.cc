@@ -102,6 +102,16 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& librar
     }
     full_name.append(id.data(), id.size());
   }
+  // TODO(pascallouis/yifeit): Remove this once fuchsia.io has been renamed to
+  // fuchsia.io1.
+  //
+  // In order to make room for the new fuchsia.io library (dubbed fuchsia.io2
+  // currently), we are piggybacking the rename of the currently named
+  // `fuchsia.io` library to `fuchsia.io1`. In short, from an ABI standpoint,
+  // both `fuchsia.io` and `fuchsia.io1` are the same.
+  if (full_name == "fuchsia.io") {
+    full_name = "fuchsia.io1";
+  }
   full_name.append("/");
   full_name.append(container_name.data(), container_name.size());
   full_name.append(".");

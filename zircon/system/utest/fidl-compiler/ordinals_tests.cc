@@ -291,6 +291,38 @@ protocol protocol {
   END_TEST;
 }
 
+bool hack_to_rename_fuchsia_io_to_fuchsia_io_one() {
+  BEGIN_TEST;
+
+  TestLibrary library_io(R"FIDL(
+library fuchsia.io;
+
+protocol SomeProtocol {
+    SomeMethod();
+};
+)FIDL");
+  ASSERT_TRUE(library_io.Compile());
+
+  TestLibrary library_io_one(R"FIDL(
+library fuchsia.io1;
+
+protocol SomeProtocol {
+    SomeMethod();
+};
+)FIDL");
+  ASSERT_TRUE(library_io_one.Compile());
+
+  const fidl::flat::Protocol* io_protocol = library_io.LookupProtocol("SomeProtocol");
+  uint64_t io_hash64 = io_protocol->methods[0].generated_ordinal64->value;
+
+  const fidl::flat::Protocol* io_one_protocol = library_io_one.LookupProtocol("SomeProtocol");
+  uint64_t io_one_hash64 = io_one_protocol->methods[0].generated_ordinal64->value;
+
+  ASSERT_EQ(io_hash64, io_one_hash64);
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(ordinals_test)
@@ -300,4 +332,5 @@ RUN_TEST(clashing_ordinal_values_with_attribute)
 RUN_TEST(attribute_resolves_clashes)
 RUN_TEST(ordinal_value_is_sha256)
 RUN_TEST(ordinal_value_is_first64bits_of_sha256)
+RUN_TEST(hack_to_rename_fuchsia_io_to_fuchsia_io_one)
 END_TEST_CASE(ordinals_test)
