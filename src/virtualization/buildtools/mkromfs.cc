@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <endian.h>
-
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -50,8 +48,20 @@ uint32_t write(std::ostream& s, const char* data, size_t size, size_t align = kD
 
 // Write value as big-endian to the stream.
 uint32_t write(std::ostream& s, uint32_t value) {
-  uint32_t value_be = htobe32(value);
-  return write(s, reinterpret_cast<char*>(&value_be), sizeof(value_be), sizeof(value_be));
+  union pun {
+    uint32_t u;
+    char c[sizeof(u)];
+  };
+  static constexpr const pun test{0x11223344};
+  if (test.c[0] == 0x11) {
+    return write(s, reinterpret_cast<char*>(&value), sizeof(value), sizeof(value));
+  }
+  pun le = {value};
+  pun be{};
+  for (size_t i = 0; i < sizeof(le.u); ++i) {
+    be.c[i] = le.c[sizeof(le.u) - 1 - i];
+  }
+  return write(s, reinterpret_cast<char*>(&be), sizeof(be), sizeof(be));
 }
 
 // Read the entire contents of the specified file and return it in a char vector.
