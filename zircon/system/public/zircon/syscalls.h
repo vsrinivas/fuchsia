@@ -14,12 +14,6 @@
 
 __BEGIN_CDECLS
 
-#if defined(__clang__)
-#define ZX_SYSCALL_PARAM_ATTR(x) __attribute__((annotate("zx_" #x)))
-#else
-#define ZX_SYSCALL_PARAM_ATTR(x)  // no-op
-#endif
-
 #include <zircon/syscalls/definitions.h>
 
 // Compatibility wrappers for deprecated syscalls also go here, when

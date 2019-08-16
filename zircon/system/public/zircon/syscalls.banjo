@@ -120,8 +120,7 @@ protocol Api {
     system_get_physmem() -> (uint64 physmem);
 
     /// Get supported hardware capabilities.
-    [vdsocall,
-     argtype="features features"]
+    [vdsocall]
     system_get_features(uint32 kind) -> (zx.status status, uint32 features);
 
     /// Retrieve a handle to a system event.
@@ -146,8 +145,7 @@ protocol Api {
     //
 
     /// Close a handle.
-    [rights="None.",
-     argtype="handle handle_release_always"]
+    [rights="None."]
     handle_close(handle handle) -> (zx.status status);
 
     /// Close a number of handles.
@@ -156,14 +154,11 @@ protocol Api {
     handle_close_many(array<handle>:num_handles handles, usize num_handles) -> (zx.status status);
 
     /// Duplicate a handle.
-    [rights="handle must have ZX_RIGHT_DUPLICATE.",
-     argtype="out handle_acquire"]
+    [rights="handle must have ZX_RIGHT_DUPLICATE."]
     handle_duplicate(handle handle, zx.rights rights) -> (zx.status status, handle out);
 
     /// Replace a handle.
-    [rights="None.",
-     argtype="handle handle_release_always",
-     argtype="out handle_acquire"]
+    [rights="None."]
     handle_replace(handle handle, zx.rights rights) -> (zx.status status, handle out);
 
     //
@@ -270,8 +265,6 @@ protocol Api {
     //
 
     /// Create a channel.
-    [argtype="out0 handle_acquire",
-     argtype="out1 handle_acquire"]
     channel_create(uint32 options) -> (zx.status status, handle out0, handle out1);
 
     /// Read a message from a channel.
@@ -350,8 +343,6 @@ protocol Api {
     //
 
     /// Create a socket.
-    [argtype="out0 handle_acquire",
-     argtype="out1 handle_acquire"]
     socket_create(uint32 options) -> (zx.status status, handle out0, handle out1);
 
     /// Write data to a socket.
@@ -386,8 +377,7 @@ protocol Api {
 
     /// Create a thread.
     [rights="process must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_MANAGE_THREAD.",
-     argtype="name IN",
-     argtype="out handle_acquire"]
+     argtype="name IN"]
     thread_create(handle<process> process,
                   string:name_size name,
                   usize name_size,
@@ -426,9 +416,7 @@ protocol Api {
 
     /// Create a new process.
     [rights="job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.",
-     argtype="name IN",
-     argtype="proc_handle handle_acquire",
-     argtype="vmar_handle handle_acquire"]
+     argtype="name IN"]
     // TODO(ZX-2967): job with ZX_RIGHT_WRITE is also accepted.
     process_create(handle<job> job, string:name_size name, usize name_size, uint32 options) ->
         (zx.status status, handle<process> proc_handle, handle<vmar> vmar_handle);
@@ -436,8 +424,7 @@ protocol Api {
     /// Start execution on a process.
     [rights="handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.",
      rights="thread must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_WRITE.",
-     rights="arg1 must have ZX_RIGHT_TRANSFER.",
-     argtype="arg1 handle_release_always"]
+     rights="arg1 must have ZX_RIGHT_TRANSFER."]
     process_start(handle<process> handle, handle<thread> thread,
                   zx.vaddr entry, zx.vaddr stack,
                   handle arg1, uintptr_t arg2) ->
@@ -465,8 +452,7 @@ protocol Api {
     //
 
     /// Create a new job.
-    [rights="parent_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_JOB.",
-     argtype="out handle_acquire"]
+    [rights="parent_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_JOB."]
     // TODO(ZX-2967): parent_job with ZX_RIGHT_WRITE is also accepted.
     job_create(handle<job> parent_job, uint32 options) -> (zx.status status, handle<job> out);
 
@@ -492,14 +478,12 @@ protocol Api {
         (zx.status status);
 
     /// Suspend the given task. Currently only thread or process handles may be suspended.
-    [rights="handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.",
-     argtype="token handle_acquire"]
+    [rights="handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE."]
     // TODO(banjo): handle<task>?
     task_suspend(handle handle) -> (zx.status status, handle token);
 
     /// Suspend the given task. Currently only thread or process handles may be suspended.
-    [rights="handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.",
-     argtype="token handle_acquire"]
+    [rights="handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE."]
     // TODO(banjo): handle<task>?
     task_suspend_token(handle handle) -> (zx.status status, handle token);
 
@@ -513,8 +497,7 @@ protocol Api {
 
     /// Create an exception channel for a given job, process, or thread.
     [rights="handle must have ZX_RIGHT_INSPECT and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_TRANSFER and have ZX_RIGHT_MANAGE_THREAD.",
-     rights="If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must have ZX_RIGHT_ENUMERATE.",
-     argtype="out handle_acquire"]
+     rights="If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must have ZX_RIGHT_ENUMERATE."]
     // TODO(banjo): handle<task>?
     // TODO(banjo): is out a real handle<channel> or just something similar?
     task_create_exception_channel(handle handle, uint32 options) ->
@@ -532,14 +515,12 @@ protocol Api {
     //
 
     /// Create a handle for the exception's thread.
-    [rights="handle must be of type ZX_OBJ_TYPE_EXCEPTION.",
-     argtype="out handle_acquire"]
+    [rights="handle must be of type ZX_OBJ_TYPE_EXCEPTION."]
     // TODO(banjo): handle as handle<exception>
     exception_get_thread(handle handle) -> (zx.status status, handle<thread> out);
 
     /// Create a handle for the exception's process.
-    [rights="handle must be of type ZX_OBJ_TYPE_EXCEPTION.",
-     argtype="out handle_acquire"]
+    [rights="handle must be of type ZX_OBJ_TYPE_EXCEPTION."]
     // TODO(banjo): handle as handle<exception>
     exception_get_process(handle handle) -> (zx.status status, handle<process> out);
 
@@ -550,12 +531,9 @@ protocol Api {
     //
 
     /// Create an event.
-    [argtype="out handle_acquire"]
     event_create(uint32 options) -> (zx.status status, handle<event> out);
 
     /// Create an event pair.
-    [argtype="out0 handle_acquire",
-     argtype="out1 handle_acquire"]
     eventpair_create(uint32 options) ->
         (zx.status status, handle<eventpair> out0, handle<eventpair> out1);
 
@@ -612,7 +590,6 @@ protocol Api {
     //
 
     /// Create an IO port.
-    [argtype="out handle_acquire"]
     port_create(uint32 options) -> (zx.status status, handle<port> out);
 
     /// Queue a packet to a port.
@@ -639,7 +616,6 @@ protocol Api {
     //
 
     /// Create a timer.
-    [argtype="out handle_acquire"]
     timer_create(uint32 options, zx.clock clock_id) -> (zx.status status, handle<timer> out);
 
     /// Start a timer.
@@ -657,7 +633,6 @@ protocol Api {
     //
 
     /// Create a VM object.
-    [argtype="out handle_acquire"]
     vmo_create(uint64 size, uint32 options) -> (zx.status status, handle<vmo> out);
 
     /// Read bytes from the VMO.
@@ -702,8 +677,7 @@ protocol Api {
         (zx.status status);
 
     /// Create a child of a VM Object.
-    [rights="handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.",
-     argtype="out handle_acquire"]
+    [rights="handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ."]
     vmo_create_child(handle<vmo> handle, uint32 options, uint64 offset, uint64 size) ->
         (zx.status status, handle<vmo> out);
 
@@ -713,9 +687,7 @@ protocol Api {
 
     /// Add execute rights to a VMO.
     [rights="handle must be of type ZX_OBJ_TYPE_VMO.",
-     rights="vmex must have resource kind ZX_RSRC_KIND_VMEX.",
-     argtype="handle handle_release_always",
-     argtype="out handle_acquire"]
+     rights="vmex must have resource kind ZX_RSRC_KIND_VMEX."]
     // TODO(ZX-2967): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
     // TODO(ZX-2967): vmex == ZX_HANDLE_INVALID also accepted.
     vmo_replace_as_executable(handle<vmo> handle, handle<resource> vmex) ->
@@ -731,8 +703,7 @@ protocol Api {
     /// Allocate a new subregion.
     [rights="If options & ZX_VM_CAN_MAP_READ, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.",
      rights="If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.",
-     rights="If options & ZX_VM_CAN_MAP_EXECUTE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.",
-     argtype="child_vmar handle_acquire"]
+     rights="If options & ZX_VM_CAN_MAP_EXECUTE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE."]
     vmar_allocate(handle<vmar> parent_vmar, zx.vm_option options, uint64 offset, uint64 size) ->
         (zx.status status, handle<vmar> child_vmar, zx.vaddr child_addr);
 
@@ -789,8 +760,6 @@ protocol Api {
     //
 
     /// Create a fifo.
-    [argtype="out0 handle_acquire",
-     argtype="out1 handle_acquire"]
     fifo_create(usize elem_count, usize elem_size, uint32 options) ->
         (zx.status status, handle<fifo> out0, handle<fifo> out1);
 
@@ -819,8 +788,7 @@ protocol Api {
 
     /// Create a scheduler profile.
     [rights="root_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.",
-     argtype="profile IN",
-     argtype="out handle_acquire"]
+     argtype="profile IN"]
     profile_create(handle<job> root_job, uint32 options, array<zx_profile_info_t>:1 profile) ->
         (zx.status status, handle<profile> out);
 
@@ -832,8 +800,7 @@ protocol Api {
     //
 
     /// Unmap memory, close handle, exit.
-    [vdsocall,
-     argtype="close_handle handle_release"]
+    [vdsocall]
     // TODO(ZX-2399): ???
     vmar_unmap_handle_close_thread_exit(handle<vmar> vmar_handle,
                                         zx.vaddr addr, usize size,
@@ -843,8 +810,7 @@ protocol Api {
     /// Write to futex, wake futex, close handle, exit.
     [vdsocall,
      noreturn,
-     argtype="value_ptr IN",
-     argtype="close_handle handle_release"]
+     argtype="value_ptr IN"]
     futex_wake_handle_close_thread_exit(array<zx_futex_t>:1 value_ptr,
                                         uint32 wake_count,
                                         int32 new_value,
@@ -858,8 +824,7 @@ protocol Api {
     //
 
     // TODO(ZX-2967): handle == ZX_HANDLE_INVALID accepted.
-    [rights="resource must have resource kind ZX_RSRC_KIND_ROOT.",
-     argtype="out handle_acquire"]
+    [rights="resource must have resource kind ZX_RSRC_KIND_ROOT."]
     debuglog_create(handle<resource> resource, uint32 options) ->
         (zx.status status, handle<debuglog> out);
 
@@ -986,14 +951,12 @@ protocol Api {
     [rights="resource must have resource kind ZX_RSRC_KIND_IOPORT."]
     ioports_release(handle<resource> resource, uint16 io_addr, uint32 len) -> (zx.status status);
 
-    [rights="bti must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.",
-     argtype="out handle_acquire"]
+    [rights="bti must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP."]
     vmo_create_contiguous(handle<bti> bti, usize size, uint32 alignment_log2) ->
         (zx.status status, handle<vmo> out);
 
     /// Create a VM object referring to a specific contiguous range of physical memory.
-    [rights="resource must have resource kind ZX_RSRC_KIND_MMIO.",
-     argtype="out handle_acquire"]
+    [rights="resource must have resource kind ZX_RSRC_KIND_MMIO."]
     vmo_create_physical(handle<vmo> resource, zx.paddr paddr, usize size) ->
         (zx.status status, handle<vmo> out);
 
@@ -1007,15 +970,13 @@ protocol Api {
 
     /// Create a new IOMMU object in the kernel.
     [rights="resource must have resource kind ZX_RSRC_KIND_ROOT.",
-     argtype="desc IN",
-     argtype="out handle_acquire"]
+     argtype="desc IN"]
     iommu_create(handle<resource> resource, uint32 type,
                  array<voidptr>:desc_size desc, usize desc_size) ->
         (zx.status status, handle<iommu> out);
 
     /// Create a new bus transaction initiator.
-    [rights="iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.",
-     argtype="out handle_acquire"]
+    [rights="iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE."]
     // TODO(ZX-2967): This is unusual.
     bti_create(handle<iommu> iommu, uint32 options, uint64 bti_id) ->
         (zx.status status, handle<bti> out);
@@ -1027,8 +988,7 @@ protocol Api {
      rights="If options & ZX_BTI_PERM_WRITE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.",
     // READ is intentional in the following EXECUTE condition.
      rights="If options & ZX_BTI_PERM_EXECUTE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.",
-     argtype="addrs OUT",
-     argtype="pmt handle_acquire"]
+     argtype="addrs OUT"]
     bti_pin(handle<bti> handle, uint32 options, handle<vmo> vmo, uint64 offset, uint64 size,
             array<zx.paddr>:addrs_count addrs, usize addrs_count) ->
         (zx.status status, handle<pmt> pmt);
@@ -1038,7 +998,6 @@ protocol Api {
     bti_release_quarantine(handle<bti> handle) -> (zx.status status);
 
     /// Unpin pages and revoke device access to them.
-    [argtype="handle handle_release_always"]
     // TODO(ZX-2967): handle ZX_OBJ_TYPE_PMT; No rights required?
     pmt_unpin(handle<pmt> handle) -> (zx.status status);
 
@@ -1067,8 +1026,7 @@ protocol Api {
     //
     //
 
-    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT.",
-     argtype="out_handle handle_acquire"]
+    [rights="handle must have resource kind ZX_RSRC_KIND_ROOT."]
     // TODO(banjo): out_handle as handle<device>
     pci_get_nth_device(handle<resource> handle, uint32 index) ->
         (zx.status status, zx_pcie_device_info_t out_info, handle out_handle);
@@ -1098,15 +1056,13 @@ protocol Api {
         (zx.status status);
 
     [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.",
-     argtype="out_bar OUT",
-     argtype="out_handle handle_acquire"]
+     argtype="out_bar OUT"]
     // TODO(banjo): handle as handle<device>
     // TODO(banjo): type of out_handle?
     pci_get_bar(handle handle, uint32 bar_num, array<zx_pci_bar_t>:1 out_bar) ->
         (zx.status status, handle out_handle);
 
-    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ.",
-     argtype="out_handle handle_acquire"]
+    [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ."]
     // TODO(banjo): handle as handle<device>
     pci_map_interrupt(handle handle, int32 which_irq) -> (zx.status status, handle out_handle);
 
@@ -1162,8 +1118,7 @@ protocol Api {
 
     /// Create a resource object.
     [rights="parent_rsrc must be of type ZX_OBJ_TYPE_RESOURCE and have ZX_RIGHT_WRITE.",
-     argtype="name IN",
-     argtype="resource_out handle_acquire"]
+     argtype="name IN"]
     resource_create(handle<resource> parent_rsrc, uint32 options, uint64 base, usize size,
                     string:name_size name, usize name_size) ->
         (zx.status status, handle<resource> resource_out);
@@ -1176,9 +1131,7 @@ protocol Api {
     //
 
     /// Create a guest.
-    [rights="resource must have resource kind ZX_RSRC_KIND_HYPERVISOR.",
-     argtype="guest_handle handle_acquire",
-     argtype="vmar_handle handle_acquire"]
+    [rights="resource must have resource kind ZX_RSRC_KIND_HYPERVISOR."]
     guest_create(handle<resource> resource, uint32 options) ->
         (zx.status status, handle<guest> guest_handle, handle<vmar> vmar_handle);
 
@@ -1190,8 +1143,7 @@ protocol Api {
         (zx.status status);
 
     /// Create a VCPU.
-    [rights="guest must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_MANAGE_PROCESS.",
-     argtype="out handle_acquire"]
+    [rights="guest must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_MANAGE_PROCESS."]
     vcpu_create(handle<guest> guest, uint32 options, zx.vaddr entry) ->
         (zx.status status, handle<vcpu> out);
 
@@ -1255,14 +1207,12 @@ protocol Api {
     //
 
     /// Create a new pager object.
-    [rights="None.",
-     argtype="out handle_acquire"]
+    [rights="None."]
     pager_create(uint32 options) -> (zx.status status, handle<pager> out);
 
     /// Create a pager owned vmo.
     [rights="pager must be of type ZX_OBJ_TYPE_PAGER.",
-     rights="port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.",
-     argtype="out handle_acquire"]
+     rights="port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE."]
     pager_create_vmo(handle<pager> pager, uint32 options,
                      handle<port> port, uint64 key, uint64 size) ->
         (zx.status status, handle<vmo> out);
@@ -1312,7 +1262,6 @@ protocol Api {
 
     syscall_test_wrapper(int32 a, int32 b, int32 c) -> (zx.status status);
 
-    [argtype="out handle_acquire"]
     syscall_test_handle_create(zx.status return_value) -> (zx.status status, handle<event> out);
 };
 

@@ -14,7 +14,6 @@
 // Forward declaration so it can be used in abigen-generated sys_* prototypes.
 class user_out_handle;
 
-#define ZX_SYSCALL_PARAM_ATTR(x)
 #include <zircon/syscall-definitions.h>
 
 #include <object/handle.h>

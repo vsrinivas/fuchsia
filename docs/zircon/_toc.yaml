@@ -161,9 +161,6 @@ toc:
 - title: "Symbolizer markup format"
   path: /docs/zircon/symbolizer_markup.md
 
-- title: "Static Analysis"
-  path: /docs/zircon/static_analysis.md
-
 - title: "Zircon and LK"
   path: /docs/zircon/zx_and_lk.md
 

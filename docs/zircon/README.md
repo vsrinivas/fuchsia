@@ -65,7 +65,6 @@ This page is a non-comprehensive index of the zircon documentation.
 + [Entropy collection TODOs](entropy_collection_todos.md)
 + [Memory usage analysis tools](memory.md)
 + [Symbolizer](symbolizer_markup.md)
-+ [Static analysis](static_analysis.md)
 + [Relationship with LK](zx_and_lk.md)
 + [Micro-benchmarks](benchmarks/microbenchmarks.md)
 + [Avoiding a problem with the SYSRET instruction](sysret_problem.md)
