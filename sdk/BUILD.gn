@@ -236,6 +236,45 @@ sdk("core") {
   ]
 }
 
+# Tools and libraries to develop for Fuchsia with Dart.
+# TODO(gridman): Rename to fuchsia_dart after migration from //topaz/public/sdk is done.
+sdk("fuchsia_dart2") {
+  category = "partner"
+
+  id = sdk_id
+
+  api = "fuchsia_dart.api"
+
+  deps = [
+    "//sdk/docs:modular_config_schema",
+
+    # TODO(viktard): remove, needed to soft transition
+    # https://fuchsia-review.googlesource.com/c/fuchsia/+/295264
+    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2_sdk",
+
+    # TODO(SCN-1343): Remove this temporary dependency.
+    # Temporarily added as a direct dependency so that it can be removed from
+    # //sdk/fidl/fuchsia.ui.views.
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_sdk",
+    "//topaz/bin/fidlgen_dart:fidlgen_dart_sdk($host_toolchain)",
+    "//topaz/public/dart/composition_delegate:composition_delegate_sdk($dart_toolchain)",
+    "//topaz/public/dart/fidl:fidl_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia:fuchsia_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_inspect:fuchsia_inspect_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_logger:fuchsia_logger_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_media:fuchsia_media_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_modular:fuchsia_modular_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_modular_testing:fuchsia_modular_testing_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_scenic:fuchsia_scenic_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_services:fuchsia_services_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_vfs:fuchsia_vfs_sdk($dart_toolchain)",
+    "//topaz/public/dart/fuchsia_webview_flutter:fuchsia_webview_flutter_sdk($dart_toolchain)",
+    "//topaz/runtime/dart:gen_snapshot_sdk($dart_toolchain)",
+    "//topaz/runtime/dart:kernel_compiler_sdk($host_toolchain)",
+  ]
+}
+
 # The `modular_testing` SDK provides FIDL protocols and C++ libraries for writing hermetic
 # integration tests which use modular.
 #
