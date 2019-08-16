@@ -4,10 +4,12 @@
 
 #include "app.h"
 
-#include <src/lib/fxl/logging.h>
+#include <zircon/status.h>
 
 #include <functional>
 #include <iostream>
+
+#include <src/lib/fxl/logging.h>
 
 namespace ble = fuchsia::bluetooth::le;
 
@@ -22,34 +24,60 @@ App::App(std::unique_ptr<HeartModel> heart_model)
 
   peripheral_ = context_->svc()->Connect<ble::Peripheral>();
   FXL_DCHECK(peripheral_);
-  peripheral_.events().OnCentralConnected = fit::bind_member(this, &App::OnCentralConnected);
-  peripheral_.events().OnCentralDisconnected = fit::bind_member(this, &App::OnCentralDisconnected);
+  peripheral_.events().OnPeerConnected = fit::bind_member(this, &App::OnPeerConnected);
+
+  adv_handle_.set_error_handler([](zx_status_t s) {
+    std::cout << "LE advertising was stopped: " << zx_status_get_string(s) << std::endl;
+  });
+  connection_.set_error_handler([](zx_status_t s) {
+    std::cout << "connection to peer dropped: " << zx_status_get_string(s) << std::endl;
+  });
 }
 
 void App::StartAdvertising() {
-  ble::AdvertisingDataDeprecated ad;
-  ad.name = kDeviceName;
-  ad.service_uuids = fidl::VectorPtr<std::string>({Service::kServiceUuid});
+  fuchsia::bluetooth::Uuid uuid{{0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00,
+                                 0x00, 0x0d, 0x18, 0x00, 0x00}};
+  ble::AdvertisingData ad;
+  ad.set_name(kDeviceName);
+  ad.set_service_uuids({{uuid}});
 
-  const auto start_adv_result_cb = [](fuchsia::bluetooth::Status status,
-                                      fidl::StringPtr advertisement_id) {
-    std::cout << "StartAdvertising status: " << bool(status.error)
-              << ", advertisement_id: " << advertisement_id << std::endl;
-  };
+  ble::AdvertisingParameters params;
+  params.set_connectable(true);
+  params.set_data(std::move(ad));
+  params.set_mode_hint(ble::AdvertisingModeHint::FAST);
 
-  peripheral_->StartAdvertisingDeprecated(std::move(ad), nullptr, true, 60, false,
-                                          std::move(start_adv_result_cb));
+  peripheral_->StartAdvertising(std::move(params), adv_handle_.NewRequest(), [](auto result) {
+    if (result.is_err()) {
+      std::cout << "StartAdvertising failed: ";
+      switch (result.err()) {
+        case ble::PeripheralError::NOT_SUPPORTED:
+          std::cout << "not supported";
+          break;
+        case ble::PeripheralError::ADVERTISING_DATA_TOO_LONG:
+          std::cout << "advertising data too long";
+          break;
+        case ble::PeripheralError::SCAN_RESPONSE_DATA_TOO_LONG:
+          std::cout << "scan response data too long";
+          break;
+        case ble::PeripheralError::INVALID_PARAMETERS:
+          std::cout << "invalid parameters";
+          break;
+        case ble::PeripheralError::FAILED:
+        default:
+          std::cout << "failed";
+          break;
+      }
+      std::cout << std::endl;
+    } else {
+      std::cout << "started advertising" << std::endl;
+    }
+  });
 }
 
-void App::OnCentralConnected(fidl::StringPtr advertisement_id, ble::RemoteDevice central) {
-  std::cout << "Central (" << central.identifier << ") connected" << std::endl;
-
-  // Start another advertisement so other peers can connect.
-  StartAdvertising();
-}
-
-void App::OnCentralDisconnected(fidl::StringPtr device_id) {
-  std::cout << "Central (" << device_id << ") disconnected" << std::endl;
+void App::OnPeerConnected(fuchsia::bluetooth::le::Peer peer,
+                          fidl::InterfaceHandle<fuchsia::bluetooth::le::Connection> handle) {
+  std::cout << "received connection from peer (id: " << peer.id().value << ")" << std::endl;
+  connection_.Bind(std::move(handle));
 }
 
 }  // namespace bt_le_heart_rate
