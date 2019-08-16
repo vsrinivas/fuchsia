@@ -110,8 +110,7 @@ impl NetCfg {
     }
     // ports gets all physical ports in the system.
     pub async fn ports(&self) -> error::Result<Vec<Port>> {
-        let ports =
-            await!(self.stack.list_interfaces()).map_err(|_| error::Hal::OperationFailed)?;
+        let ports = self.stack.list_interfaces().await.map_err(|_| error::Hal::OperationFailed)?;
         let p = ports
             .into_iter()
             .filter(|x| x.properties.topopath != "")
@@ -122,7 +121,10 @@ impl NetCfg {
 
     /// interfaces returns all L3 interfaces with valid, non-local IPs in the system.
     pub async fn interfaces(&mut self) -> error::Result<Vec<Interface>> {
-        let ifs = await!(self.stack.list_interfaces())
+        let ifs = self
+            .stack
+            .list_interfaces()
+            .await
             .map_err(|_| error::Hal::OperationFailed)?
             .iter()
             .filter_map(|i| {
@@ -170,12 +172,12 @@ impl NetCfg {
         Ok(ifs)
     }
     pub async fn create_bridge(&mut self, ports: Vec<PortId>) -> error::Result<Interface> {
-        let _br = await!(
-            self.netstack
-                .bridge_interfaces(&mut ports.into_iter().map(|id| StackPortId::from(id).to_u32()))
-        );
+        let _br = self
+            .netstack
+            .bridge_interfaces(&mut ports.into_iter().map(|id| StackPortId::from(id).to_u32()))
+            .await;
         // Find out what was the interface created, as there is no indication from above API.
-        let ifs = await!(self.stack.list_interfaces()).map_err(|_| error::Hal::OperationFailed)?;
+        let ifs = self.stack.list_interfaces().await.map_err(|_| error::Hal::OperationFailed)?;
         if let Some(i) = ifs.iter().find(|x| self.id_in_use.insert(StackPortId::from(x.id))) {
             return Ok(Interface {
                 id: StackPortId::from(i.id).into(),
@@ -199,10 +201,13 @@ impl NetCfg {
         pid: PortId,
         addr: &'a LifIpAddr,
     ) -> error::Result<()> {
-        let r = await!(self.stack.add_interface_address(
-            StackPortId::from(pid).to_u64(),
-            &mut addr.to_fidl_interface_address(),
-        ));
+        let r = self
+            .stack
+            .add_interface_address(
+                StackPortId::from(pid).to_u64(),
+                &mut addr.to_fidl_interface_address(),
+            )
+            .await;
         match r {
             Err(_) => Err(error::RouterManager::HAL(error::Hal::OperationFailed)),
             Ok(r) => match r {
@@ -224,11 +229,14 @@ impl NetCfg {
         let a = addr.to_fidl_address_and_prefix();
         // TODO(dpradilla): this needs to be changed to use the stack fidl once
         // this functionality is moved there. the u32 conversion won't be needed.
-        let r = await!(self.netstack.remove_interface_address(
-            pid.to_u32(),
-            &mut a.address.unwrap(),
-            a.prefix_length.unwrap(),
-        ));
+        let r = self
+            .netstack
+            .remove_interface_address(
+                pid.to_u32(),
+                &mut a.address.unwrap(),
+                a.prefix_length.unwrap(),
+            )
+            .await;
         match r {
             Ok(fidl_fuchsia_netstack::NetErr {
                 status: fidl_fuchsia_netstack::Status::Ok,
@@ -244,15 +252,14 @@ impl NetCfg {
         } else {
             self.stack.disable_interface(StackPortId::from(pid).to_u64())
         };
-        match await!(r) {
+        match r.await {
             Ok(_) => Ok(()),
             _ => Err(error::RouterManager::HAL(error::Hal::OperationFailed)),
         }
     }
 
     pub async fn set_dhcp_client_state(&mut self, pid: PortId, enable: bool) -> error::Result<()> {
-        let r =
-            await!(self.netstack.set_dhcp_client_status(StackPortId::from(pid).to_u32(), enable));
+        let r = self.netstack.set_dhcp_client_status(StackPortId::from(pid).to_u32(), enable).await;
         match r {
             Ok(fidl_fuchsia_netstack::NetErr {
                 status: fidl_fuchsia_netstack::Status::Ok,
@@ -274,15 +281,15 @@ impl NetCfg {
                 if current_ip != current_ip {
                     // There has been a change.
                     // Remove the old one and add the new one.
-                    await!(self.unset_ip_address(pid, &current_ip))?;
-                    await!(self.set_ip_address(pid, &desired_ip))?;
+                    self.unset_ip_address(pid, &current_ip).await?;
+                    self.set_ip_address(pid, &desired_ip).await?;
                 }
             }
             (None, Some(desired_ip)) => {
-                await!(self.set_ip_address(pid, &desired_ip))?;
+                self.set_ip_address(pid, &desired_ip).await?;
             }
             (Some(current_ip), None) => {
-                await!(self.unset_ip_address(pid, &current_ip))?;
+                self.unset_ip_address(pid, &current_ip).await?;
             }
             // Nothing to do.
             (None, None) => {}
@@ -301,25 +308,25 @@ impl NetCfg {
             // dhcp configuration transitions from enabled to disabled.
             (true, false) => {
                 // Disable dhcp and apply manual address configuration.
-                await!(self.set_dhcp_client_state(pid, properties.dhcp))?;
-                await!(self.apply_manual_ip(pid, &old.address, &properties.address))?;
+                self.set_dhcp_client_state(pid, properties.dhcp).await?;
+                self.apply_manual_ip(pid, &old.address, &properties.address).await?;
             }
             // dhcp configuration transitions from disabled to enabled.
             (false, true) => {
                 // Remove any manual IP address and enable dhcp client.
-                await!(self.apply_manual_ip(pid, &old.address, &None))?;
-                await!(self.set_dhcp_client_state(pid, properties.dhcp))?;
+                self.apply_manual_ip(pid, &old.address, &None).await?;
+                self.set_dhcp_client_state(pid, properties.dhcp).await?;
             }
             // dhcp is still disabled, check for manual IP address changes.
             (false, false) => {
-                await!(self.apply_manual_ip(pid, &old.address, &properties.address))?;
+                self.apply_manual_ip(pid, &old.address, &properties.address).await?;
             }
             // No changes to dhcp configuration, it is still enabled, nothing to do.
             (true, true) => {}
         }
         if old.enabled != properties.enabled {
             info!("id {:?} updating state {:?}", pid, properties.enabled);
-            await!(self.set_interface_state(pid, properties.enabled))?;
+            self.set_interface_state(pid, properties.enabled).await?;
         }
         Ok(())
     }

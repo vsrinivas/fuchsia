@@ -40,7 +40,7 @@ impl FidlWorker {
     ) {
         fasync::spawn_local(
             async move {
-                while let Some(req) = await!(stream.try_next())? {
+                while let Some(req) = stream.try_next().await? {
                     event_chan.unbounded_send(Event::FidlRouterAdminEvent(req))?;
                 }
                 Ok(())
@@ -55,7 +55,7 @@ impl FidlWorker {
     ) {
         fasync::spawn_local(
             async move {
-                while let Some(req) = await!(stream.try_next())? {
+                while let Some(req) = stream.try_next().await? {
                     event_chan.unbounded_send(Event::FidlRouterStateEvent(req))?;
                 }
                 Ok(())

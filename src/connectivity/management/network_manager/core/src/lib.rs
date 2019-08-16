@@ -4,7 +4,7 @@
 
 //! A networking stack.
 
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await)]
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]
@@ -49,10 +49,10 @@ impl DeviceState {
 
     /// populate_state populates the state based on lower layers state.
     pub async fn populate_state(&mut self) -> error::Result<()> {
-        for p in await!(self.hal.ports())?.iter() {
+        for p in self.hal.ports().await?.iter() {
             self.add_port(p.id, &p.path, self.version());
         }
-        for i in await!(self.hal.interfaces())?.into_iter() {
+        for i in self.hal.interfaces().await?.into_iter() {
             let port = i.id;
             self.port_manager.use_port(&port);
             let l = lifmgr::LIF::new(
@@ -124,7 +124,7 @@ impl DeviceState {
         })?;
         if ports.len() > 1 {
             // Multiple ports, bridge them.
-            let i = await!(self.hal.create_bridge(ports.clone())).or_else(|e| {
+            let i = self.hal.create_bridge(ports.clone()).await.or_else(|e| {
                 self.release_ports(&ports);
                 Err(e)
             })?;
@@ -138,7 +138,7 @@ impl DeviceState {
             self.release_ports(&ports);
             // nothing to do if delete_bridge fails, all state changes have been reverted
             // already, just return an error to let caller handle it as appropriate.
-            await!(self.hal.delete_bridge(l.pid()))?;
+            self.hal.delete_bridge(l.pid()).await?;
             return Err(r.unwrap_err());
         }
         // all went well, increase version.
@@ -158,15 +158,17 @@ impl DeviceState {
             Some(x) => x.clone(),
         };
         // reset all properties, shut down LIF
-        await!(self.hal.apply_properties(
-            lif.pid(),
-            lif.properties(),
-            &LIFProperties { dhcp: false, address: None, enabled: false },
-        ))?;
+        self.hal
+            .apply_properties(
+                lif.pid(),
+                lif.properties(),
+                &LIFProperties { dhcp: false, address: None, enabled: false },
+            )
+            .await?;
         // delete bridge if there is one and shut down the related ports
         let ports = lif.ports();
         if ports.len() > 1 {
-            await!(self.hal.delete_bridge(lif.pid()))?;
+            self.hal.delete_bridge(lif.pid()).await?;
             //TODO(dpradilla) shut down the ports.
         }
         self.release_ports(&ports.collect());
@@ -324,7 +326,7 @@ impl DeviceState {
                         //  TODO(dpradilla): implement. - verify gw is in local network
                     }
                 };
-                await!(self.hal.apply_properties(lif.pid(), &old, &lp))?;
+                self.hal.apply_properties(lif.pid(), &old, &lp).await?;
                 lif.set_properties(self.version, lp)?;
                 self.version += 1;
                 Ok(())
@@ -387,7 +389,7 @@ impl DeviceState {
                         lp.enabled = *enable
                     }
                 };
-                await!(self.hal.apply_properties(lif.pid(), &old, &lp))?;
+                self.hal.apply_properties(lif.pid(), &old, &lp).await?;
                 lif.set_properties(self.version, lp)?;
                 self.version += 1;
                 Ok(())

@@ -4,7 +4,7 @@
 
 //! The router manager allows clients to manage router device properties.
 
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 

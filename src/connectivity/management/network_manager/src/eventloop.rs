@@ -96,14 +96,14 @@ impl EventLoop {
     }
 
     pub async fn run(mut self) -> Result<(), Error> {
-        await!(self.device.populate_state())?;
+        self.device.populate_state().await?;
         loop {
-            match await!(self.event_recv.next()) {
+            match self.event_recv.next().await {
                 Some(Event::FidlRouterAdminEvent(req)) => {
-                    await!(self.handle_fidl_router_admin_request(req));
+                    self.handle_fidl_router_admin_request(req).await;
                 }
                 Some(Event::FidlRouterStateEvent(req)) => {
-                    await!(self.handle_fidl_router_state_request(req));
+                    self.handle_fidl_router_state_request(req).await;
                 }
                 None => bail!("Stream of events ended unexpectedly"),
             }
@@ -113,48 +113,55 @@ impl EventLoop {
     async fn handle_fidl_router_admin_request(&mut self, req: RouterAdminRequest) {
         match req {
             RouterAdminRequest::CreateWan { name, vlan, ports, responder } => {
-                let r = await!(self.fidl_create_lif(
-                    LIFType::WAN,
-                    name,
-                    vlan,
-                    ports.iter().map(|x| PortId::from(*x as u64)).collect(),
-                ));
+                let r = self
+                    .fidl_create_lif(
+                        LIFType::WAN,
+                        name,
+                        vlan,
+                        ports.iter().map(|x| PortId::from(*x as u64)).collect(),
+                    )
+                    .await;
                 match r {
                     Ok(mut id) => responder.send(Some(fidl::encoding::OutOfLine(&mut id)), None),
                     Err(mut e) => responder.send(None, Some(fidl::encoding::OutOfLine(&mut e))),
                 }
             }
             RouterAdminRequest::CreateLan { name, vlan, ports, responder } => {
-                let r = await!(self.fidl_create_lif(
-                    LIFType::LAN,
-                    name,
-                    vlan,
-                    ports.iter().map(|x| PortId::from(*x as u64)).collect(),
-                ));
+                let r = self
+                    .fidl_create_lif(
+                        LIFType::LAN,
+                        name,
+                        vlan,
+                        ports.iter().map(|x| PortId::from(*x as u64)).collect(),
+                    )
+                    .await;
                 match r {
                     Ok(mut id) => responder.send(Some(fidl::encoding::OutOfLine(&mut id)), None),
                     Err(mut e) => responder.send(None, Some(fidl::encoding::OutOfLine(&mut e))),
                 }
             }
             RouterAdminRequest::RemoveWan { wan_id, responder } => {
-                let mut r = await!(self.fidl_delete_lif(wan_id));
+                let mut r = self.fidl_delete_lif(wan_id).await;
                 responder.send(r.as_mut().map(fidl::encoding::OutOfLine)).or_else(|e| {
                     error!("Error sending response: {:?}", e);
                     Err(e)
                 })
             }
             RouterAdminRequest::RemoveLan { lan_id, responder } => {
-                let mut r = await!(self.fidl_delete_lif(lan_id));
+                let mut r = self.fidl_delete_lif(lan_id).await;
                 responder.send(r.as_mut().map(fidl::encoding::OutOfLine)).or_else(|e| {
                     error!("Error sending response: {:?}", e);
                     Err(e)
                 })
             }
             RouterAdminRequest::SetWanProperties { wan_id, properties, responder } => {
-                if await!(self.device.update_lif_properties(
-                    u128::from_ne_bytes(wan_id.uuid),
-                    fidl_fuchsia_router_config::LifProperties::Wan(properties),
-                ))
+                if self
+                    .device
+                    .update_lif_properties(
+                        u128::from_ne_bytes(wan_id.uuid),
+                        fidl_fuchsia_router_config::LifProperties::Wan(properties),
+                    )
+                    .await
                     .is_err()
                 {
                     warn!("WAN {:?} found but failed to update properties", wan_id);
@@ -165,10 +172,13 @@ impl EventLoop {
                 }
             }
             RouterAdminRequest::SetLanProperties { lan_id, properties, responder } => {
-                if await!(self.device.update_lif_properties(
-                    u128::from_ne_bytes(lan_id.uuid),
-                    fidl_fuchsia_router_config::LifProperties::Lan(properties),
-                ))
+                if self
+                    .device
+                    .update_lif_properties(
+                        u128::from_ne_bytes(lan_id.uuid),
+                        fidl_fuchsia_router_config::LifProperties::Lan(properties),
+                    )
+                    .await
                     .is_err()
                 {
                     warn!("failed to update LAN properties");
@@ -243,7 +253,10 @@ impl EventLoop {
                 responder.send(not_supported!())
             }
             RouterAdminRequest::SetFilter { rule, responder } => {
-                let r = await!(self.packet_filter.set_filter(rule))
+                let r = self
+                    .packet_filter
+                    .set_filter(rule)
+                    .await
                     .context("Error installing new packet filter rule");
                 match r {
                     Ok(()) => responder.send(None, None),
@@ -293,7 +306,7 @@ impl EventLoop {
         vlan: u16,
         ports: Vec<PortId>,
     ) -> Result<Id, fidl_fuchsia_router_config::Error> {
-        let lif = await!(self.device.create_lif(lif_type, name, vlan, ports));
+        let lif = self.device.create_lif(lif_type, name, vlan, ports).await;
         match lif {
             Err(e) => {
                 error!("Error creating lif {:?}", e);
@@ -310,7 +323,7 @@ impl EventLoop {
     }
 
     async fn fidl_delete_lif(&mut self, id: Id) -> Option<fidl_fuchsia_router_config::Error> {
-        let lif = await!(self.device.delete_lif(u128::from_ne_bytes(id.uuid)));
+        let lif = self.device.delete_lif(u128::from_ne_bytes(id.uuid)).await;
         match lif {
             Err(e) => {
                 error!("Error deleting lif {:?}", e);
@@ -500,7 +513,7 @@ impl EventLoop {
                 responder.send(None, not_supported!())
             }
             RouterStateRequest::GetPorts { responder } => {
-                await!(self.fidl_get_ports(responder));
+                self.fidl_get_ports(responder).await;
                 Ok(())
             }
             RouterStateRequest::GetPort { port_id, responder } => {
@@ -518,7 +531,7 @@ impl EventLoop {
             }
             RouterStateRequest::GetFilters { responder } => {
                 let result =
-                    await!(self.packet_filter.get_filters()).context("Error getting filters");
+                    self.packet_filter.get_filters().await.context("Error getting filters");
                 let mut filter_rules = Vec::new();
                 match result {
                     Ok(f) => {

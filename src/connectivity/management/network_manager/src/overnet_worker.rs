@@ -59,7 +59,7 @@ impl OvernetWorker {
             while let Some(ServiceProviderRequest::ConnectToService {
                 chan: ch_req,
                 control_handle: _control_handle,
-            }) = await!(server.try_next()).unwrap()
+            }) = server.try_next().await.unwrap()
             {
                 callback(fasync::Channel::from_channel(ch_req).unwrap());
             }

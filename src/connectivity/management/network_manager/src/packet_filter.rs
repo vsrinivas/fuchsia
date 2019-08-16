@@ -226,7 +226,7 @@ impl PacketFilter {
     /// `router_config::FilterRule` produces an error result to the caller.
     pub async fn get_filters(&self) -> Result<Vec<router_config::FilterRule>, Error> {
         info!("Received request to get all active packet filters");
-        let netfilter_rules: Vec<netfilter::Rule> = match await!(self.filter_svc.get_rules()) {
+        let netfilter_rules: Vec<netfilter::Rule> = match self.filter_svc.get_rules().await {
             Ok((rules, _, Status::Ok)) => rules,
             Ok((_, _, status)) => {
                 return Err(format_err!("Failed to get filters: Status was: {:?}", status))
@@ -256,7 +256,7 @@ impl PacketFilter {
     /// produce an error result to the caller.
     pub async fn set_filter(&self, rule: router_config::FilterRule) -> Result<(), Error> {
         info!("Received request to add new packet filter rule");
-        let generation: u32 = match await!(self.filter_svc.get_rules()) {
+        let generation: u32 = match self.filter_svc.get_rules().await {
             Ok((_, generation, Status::Ok)) => generation,
             Ok((_, _, status)) => {
                 return Err(format_err!(
@@ -267,7 +267,7 @@ impl PacketFilter {
             Err(e) => return Err(format_err!("fidl error: {:?}", e)),
         };
         let mut netfilter_rules = from_filter_rule(rule)?;
-        match await!(self.filter_svc.update_rules(&mut netfilter_rules.iter_mut(), generation)) {
+        match self.filter_svc.update_rules(&mut netfilter_rules.iter_mut(), generation).await {
             Ok(Status::Ok) => Ok(()),
             Ok(status) => Err(format_err!("Failed to add new packet filter: {:?}", status)),
             Err(e) => Err(format_err!("fidl error: {:?}", e)),
