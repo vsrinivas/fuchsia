@@ -332,9 +332,10 @@ void Session::OnStreamReadable() {
 void Session::OnStreamError() {
   if (ClearConnectionData()) {
     SendSessionNotification(SessionObserver::NotificationType::kError,
-                            "The debug agent has disconnected.\nThis is most probably a bug, "
-                            "please "
-                            "file a bug adding the system crash log (fx syslog) if possible.");
+                            "The debug agent has disconnected.\n"
+                            "The system may have halted, or this may be a bug. "
+                            "If you believe it is a bug, please file a report, "
+                            "adding the system crash log (fx syslog) if possible.");
   }
 }
 
