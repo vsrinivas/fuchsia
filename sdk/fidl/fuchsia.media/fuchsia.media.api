@@ -7,7 +7,7 @@
   "fidl/fuchsia.media/metadata.fidl": "fb11fd050505ea7a8fc661754b044012",
   "fidl/fuchsia.media/stream.fidl": "3448eded0321f9308535708fa2ed53a1",
   "fidl/fuchsia.media/stream_common.fidl": "94f8089f2e58955d82560b6ef74247c3",
-  "fidl/fuchsia.media/stream_processor.fidl": "396fe28a914c0786bdcc9d88663fb67b",
+  "fidl/fuchsia.media/stream_processor.fidl": "3bebf793dd1678813002414c703d6281",
   "fidl/fuchsia.media/stream_type.fidl": "51b26d41607bec6c23b7335de736c756",
   "fidl/fuchsia.media/timeline_function.fidl": "10e9c5225e1b4596150724cf45d2a8a4"
 }

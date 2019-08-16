@@ -51,7 +51,7 @@ CodecClient::CodecClient(async::Loop* loop, thrd_t loop_thread, fidl::InterfaceH
   // We treat event setup as much as possible like a hidden part of creating the
   // CodecPtr.  If NewBinding() has !is_valid(), we rely on the Codec server to
   // close the Codec channel async.
-  codec_.events().OnStreamFailed2 = fit::bind_member(this, &CodecClient::OnStreamFailed);
+  codec_.events().OnStreamFailed = fit::bind_member(this, &CodecClient::OnStreamFailed);
   codec_.events().OnInputConstraints = fit::bind_member(this, &CodecClient::OnInputConstraints);
   codec_.events().OnFreeInputPacket = fit::bind_member(this, &CodecClient::OnFreeInputPacket);
   codec_.events().OnOutputConstraints = fit::bind_member(this, &CodecClient::OnOutputConstraints);

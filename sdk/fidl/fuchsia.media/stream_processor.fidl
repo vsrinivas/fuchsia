@@ -1061,7 +1061,7 @@ protocol StreamProcessor {
     // No further messages will arrive from the server regarding the failed
     // stream.  This includes any OnOutputEndOfStream() that the client would
     // have otherwise expected.
-    -> OnStreamFailed(uint64 stream_lifetime_ordinal);
+    -> OnStreamFailed(uint64 stream_lifetime_ordinal, StreamError error);
     -> OnStreamFailed2(uint64 stream_lifetime_ordinal, StreamError error);
 
     // OnInputConstraints()

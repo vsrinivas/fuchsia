@@ -59,7 +59,7 @@ void FidlDecoder::Init(fuchsia::media::StreamProcessorPtr decoder,
 
   outboard_decoder_.set_error_handler(fit::bind_member(this, &FidlDecoder::OnConnectionFailed));
 
-  outboard_decoder_.events().OnStreamFailed2 = fit::bind_member(this, &FidlDecoder::OnStreamFailed);
+  outboard_decoder_.events().OnStreamFailed = fit::bind_member(this, &FidlDecoder::OnStreamFailed);
   outboard_decoder_.events().OnInputConstraints =
       fit::bind_member(this, &FidlDecoder::OnInputConstraints);
   outboard_decoder_.events().OnOutputConstraints =

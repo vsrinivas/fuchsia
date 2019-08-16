@@ -139,7 +139,7 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     input_collection_.set_error_handler([this](zx_status_t s) { input_collection_error_ = s; });
     output_collection_.set_error_handler([this](zx_status_t s) { output_collection_error_ = s; });
 
-    decryptor_.events().OnStreamFailed2 =
+    decryptor_.events().OnStreamFailed =
         fit::bind_member(this, &DecryptorAdapterTest::OnStreamFailed);
     decryptor_.events().OnInputConstraints =
         fit::bind_member(this, &DecryptorAdapterTest::OnInputConstraints);
