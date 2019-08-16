@@ -63,7 +63,7 @@ class SynDhub : public DeviceType, public ddk::SharedDmaProtocol<SynDhub, ddk::b
   static constexpr struct {
     uint32_t bank;
     uint32_t fifo_data_depth;
-    uint32_t dma_mtus;
+    uint32_t dma_mtus;  // We use 64 for I2S and 128 for PDM.
   } channel_info_[] = {
       // clang-format off
     { 0,  60,  64},
@@ -75,9 +75,9 @@ class SynDhub : public DeviceType, public ddk::SharedDmaProtocol<SynDhub, ddk::b
     { 6,  60, 128},
     { 7, 252,  64},
     {11,  48,  64},
-    {12,  60,  64},
+    {12,  60, 128},
     {13,  60, 128},
-    {14,  60,  64},
+    {14,  60, 128},
     {15,  60,  64},
     {16,  60,  64},
     { 8, 252,  64},

@@ -4,6 +4,8 @@
 
 library("as370") {
   sources = [
+    "audio-dsp.cc",
+    "syn-audio-in.cc",
     "syn-audio-out.cc",
   ]
   deps = [
@@ -17,5 +19,45 @@ library("as370") {
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+  ]
+}
+
+test("syn-audio-in-test") {
+  output_name = "syn-audio-in-test"
+  sources = [
+    "syn-audio-in-test.cc",
+    "syn-audio-in.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.shareddma",
+    "$zx/system/dev/lib/as370",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("audio-dsp-test") {
+  output_name = "audio-dsp-test"
+  sources = [
+    "audio-dsp-test.cc",
+    "audio-dsp.cc",
+  ]
+  deps = [
+    "$zx/system/dev/lib/as370",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

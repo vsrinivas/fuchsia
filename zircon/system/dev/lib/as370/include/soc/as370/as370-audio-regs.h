@@ -5,8 +5,9 @@
 #ifndef ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_AS370_AS370_AUDIO_REGS_H_
 #define ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_AS370_AS370_AUDIO_REGS_H_
 
-#include <hwreg/bitfields.h>
 #include <zircon/types.h>
+
+#include <hwreg/bitfields.h>
 
 // AIO I2S Registers.
 
@@ -160,6 +161,86 @@ struct AIO_MCLKMIC2_ACLK_CTRL : public hwreg::RegisterBase<AIO_MCLKMIC2_ACLK_CTR
   DEF_FIELD(2, 1, src_sel);
   DEF_BIT(0, clk_Enable);
   static auto Get() { return hwreg::RegisterAddr<AIO_MCLKMIC2_ACLK_CTRL>(0x0178); }
+};
+
+// PDM Registers (under I2S, but not really I2S).
+
+struct AIO_PDM_CTRL1 : public hwreg::RegisterBase<AIO_PDM_CTRL1, uint32_t> {
+  DEF_BIT(12, LATCH_MODE);
+  DEF_BIT(11, SDR_CLKSEL);
+  DEF_BIT(10, MODE);
+  DEF_FIELD(9, 7, RDM);
+  DEF_BIT(6, RSLB);
+  DEF_BIT(5, INVCLK_INT);
+  DEF_BIT(4, INVCLK_OUT);
+  DEF_FIELD(3, 0, CLKDIV);
+  static auto Get() { return hwreg::RegisterAddr<AIO_PDM_CTRL1>(0x00c0); }
+};
+
+struct AIO_PDM_PDM0_CTRL : public hwreg::RegisterBase<AIO_PDM_PDM0_CTRL, uint32_t> {
+  DEF_BIT(3, FLUSH);
+  DEF_BIT(2, LRSWITCH);
+  DEF_BIT(1, MUTE);
+  DEF_BIT(0, ENABLE);
+  static auto Get() { return hwreg::RegisterAddr<AIO_PDM_PDM0_CTRL>(0x00d0); }
+};
+
+struct AIO_PDM_PDM0_CTRL2 : public hwreg::RegisterBase<AIO_PDM_PDM0_CTRL2, uint32_t> {
+  DEF_FIELD(31, 16, FDLT);
+  DEF_FIELD(15, 0, RDLT);
+  static auto Get() { return hwreg::RegisterAddr<AIO_PDM_PDM0_CTRL2>(0x00d4); }
+};
+
+struct AIO_PDM_PDM1_CTRL : public hwreg::RegisterBase<AIO_PDM_PDM1_CTRL, uint32_t> {
+  DEF_BIT(3, FLUSH);
+  DEF_BIT(2, LRSWITCH);
+  DEF_BIT(1, MUTE);
+  DEF_BIT(0, ENABLE);
+  static auto Get() { return hwreg::RegisterAddr<AIO_PDM_PDM1_CTRL>(0x00d8); }
+};
+
+struct AIO_PDM_PDM1_CTRL2 : public hwreg::RegisterBase<AIO_PDM_PDM1_CTRL2, uint32_t> {
+  DEF_FIELD(31, 16, FDLT);
+  DEF_FIELD(15, 0, RDLT);
+  static auto Get() { return hwreg::RegisterAddr<AIO_PDM_PDM1_CTRL2>(0x00dc); }
+};
+
+struct AIO_PDM_PDM2_CTRL : public hwreg::RegisterBase<AIO_PDM_PDM2_CTRL, uint32_t> {
+  DEF_BIT(3, FLUSH);
+  DEF_BIT(2, LRSWITCH);
+  DEF_BIT(1, MUTE);
+  DEF_BIT(0, ENABLE);
+  static auto Get() { return hwreg::RegisterAddr<AIO_PDM_PDM2_CTRL>(0x00e0); }
+};
+
+struct AIO_PDM_PDM2_CTRL2 : public hwreg::RegisterBase<AIO_PDM_PDM2_CTRL2, uint32_t> {
+  DEF_FIELD(31, 16, FDLT);
+  DEF_FIELD(15, 0, RDLT);
+  static auto Get() { return hwreg::RegisterAddr<AIO_PDM_PDM2_CTRL2>(0x00e4); }
+};
+
+struct AIO_PDM_PDM3_CTRL : public hwreg::RegisterBase<AIO_PDM_PDM3_CTRL, uint32_t> {
+  DEF_BIT(3, FLUSH);
+  DEF_BIT(2, LRSWITCH);
+  DEF_BIT(1, MUTE);
+  DEF_BIT(0, ENABLE);
+  static auto Get() { return hwreg::RegisterAddr<AIO_PDM_PDM3_CTRL>(0x00e8); }
+};
+
+struct AIO_PDM_PDM3_CTRL2 : public hwreg::RegisterBase<AIO_PDM_PDM3_CTRL2, uint32_t> {
+  DEF_FIELD(31, 16, FDLT);
+  DEF_FIELD(15, 0, RDLT);
+  static auto Get() { return hwreg::RegisterAddr<AIO_PDM_PDM3_CTRL2>(0x00ec); }
+};
+
+struct AIO_IOSEL_PDM : public hwreg::RegisterBase<AIO_IOSEL_PDM, uint32_t> {
+  DEF_BIT(0, GENABLE);
+  static auto Get() { return hwreg::RegisterAddr<AIO_IOSEL_PDM>(0x014c); }
+};
+
+struct AIO_PDM_MIC_SEL : public hwreg::RegisterBase<AIO_PDM_MIC_SEL, uint32_t> {
+  DEF_FIELD(3, 0, CTRL);
+  static auto Get() { return hwreg::RegisterAddr<AIO_PDM_MIC_SEL>(0x0160); }
 };
 
 // AVIO Global Registers.

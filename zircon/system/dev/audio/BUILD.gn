@@ -4,6 +4,7 @@
 
 group("audio") {
   deps = [
+    "as370-pdm-input",
     "as370-tdm-output",
     "astro-pdm-input",
     "astro-tdm-output",

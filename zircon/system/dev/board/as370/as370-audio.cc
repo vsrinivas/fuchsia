@@ -42,6 +42,7 @@ static const zx_bind_inst_t ref_out_clk0_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, as370::As370Clk::kClkAvpll0),
 };
+
 static const device_component_part_t ref_out_i2c_component[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(ref_out_i2c_match), ref_out_i2c_match},
@@ -77,6 +78,10 @@ static const device_component_t controller_components[] = {
     {countof(ref_out_codec_component), ref_out_codec_component},
     {countof(ref_out_clk0_component), ref_out_clk0_component},
 };
+static const device_component_t in_components[] = {
+    {countof(dma_component), dma_component},
+    {countof(ref_out_clk0_component), ref_out_clk0_component},
+};
 
 zx_status_t As370::AudioInit() {
   constexpr pbus_mmio_t mmios_out[] = {
@@ -101,6 +106,29 @@ zx_status_t As370::AudioInit() {
   controller_out.did = PDEV_DID_AS370_AUDIO_OUT;
   controller_out.mmio_list = mmios_out;
   controller_out.mmio_count = countof(mmios_out);
+
+  static constexpr pbus_mmio_t mmios_in[] = {
+      {
+          .base = as370::kGlobalBase,
+          .length = as370::kGlobalSize,
+      },
+      {
+          .base = as370::kAudioGlobalBase,
+          .length = as370::kAudioGlobalSize,
+      },
+      {
+          .base = as370::kAudioI2sBase,
+          .length = as370::kAudioI2sSize,
+      },
+  };
+
+  pbus_dev_t dev_in = {};
+  dev_in.name = "as370-audio-in";
+  dev_in.vid = PDEV_VID_SYNAPTICS;
+  dev_in.pid = PDEV_PID_SYNAPTICS_AS370;
+  dev_in.did = PDEV_DID_AS370_AUDIO_IN;
+  dev_in.mmio_list = mmios_in;
+  dev_in.mmio_count = countof(mmios_in);
 
   static constexpr pbus_mmio_t mmios_dhub[] = {
       {
@@ -138,6 +166,11 @@ zx_status_t As370::AudioInit() {
   gpio_impl_.SetAltFunction(17, 0);  // AMP_EN, mode 0 to set as GPIO.
   gpio_impl_.ConfigOut(17, 0);
 
+  // Input pin assignments.
+  gpio_impl_.SetAltFunction(13, 1);  // mode 1 to set as PDM_CLKO.
+  gpio_impl_.SetAltFunction(14, 1);  // mode 1 to set as PDM_DI[0].
+  gpio_impl_.SetAltFunction(15, 1);  // mode 1 to set as PDM_DI[1].
+
   // DMA device.
   auto status = pbus_.DeviceAdd(&dhub);
   if (status != ZX_OK) {
@@ -167,6 +200,17 @@ zx_status_t As370::AudioInit() {
     return status;
   }
 
+  // Input device.
+  // coresident_device_index = 1 to share devhost with DHub.
+  // When autoproxying (ZX-3478) or its replacement is in place,
+  // we can have these drivers in different devhosts.
+  constexpr uint32_t in_coresident_device_index = 1;
+  status = pbus_.CompositeDeviceAdd(&dev_in, in_components, countof(in_components),
+                                    in_coresident_device_index);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s adding audio input device failed %d\n", __FILE__, status);
+    return status;
+  }
   return ZX_OK;
 }
 
