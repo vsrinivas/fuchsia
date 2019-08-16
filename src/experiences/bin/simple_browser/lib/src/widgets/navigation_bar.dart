@@ -32,7 +32,6 @@ class _NavigationBarState extends State<NavigationBar> {
     _focusNode = FocusNode();
     _controller = TextEditingController();
     widget.bloc.url.addListener(_onUrlChanged);
-    _updateFocus();
     super.initState();
   }
 
@@ -190,6 +189,7 @@ class _NavigationBarState extends State<NavigationBar> {
   Widget _buildNavigationField() {
     return TextField(
       focusNode: _focusNode,
+      autofocus: _controller.text.isEmpty,
       controller: _controller,
       cursorWidth: 7,
       cursorRadius: Radius.zero,
