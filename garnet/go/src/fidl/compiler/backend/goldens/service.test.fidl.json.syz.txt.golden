@@ -7,7 +7,7 @@ include <test/name/c/fidl.h>
 
 
 test_name_FirstProtocolMethodOnFirstRequest {
-       hdr fidl_message_header[674801713]
+       hdr fidl_message_header[2898251288619778048]
 } [packed]
 test_name_FirstProtocolMethodOnFirstRequestHandles {
        void void
@@ -22,7 +22,7 @@ zx_channel_write$test_name_FirstProtocolMethodOnFirst(handle zx_chan_test_name_F
 
 
 test_name_SecondProtocolMethodOnSecondRequest {
-       hdr fidl_message_header[218742799]
+       hdr fidl_message_header[939493167940501504]
 } [packed]
 test_name_SecondProtocolMethodOnSecondRequestHandles {
        void void

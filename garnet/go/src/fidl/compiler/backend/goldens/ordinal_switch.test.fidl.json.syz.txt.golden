@@ -7,25 +7,25 @@ include <test/name/c/fidl.h>
 
 
 test_name_SwitchingOrdinalsOrdinalFiveRequest {
-       hdr fidl_message_header[2005164903]
+       hdr fidl_message_header[8612117681472012288]
 } [packed]
 test_name_SwitchingOrdinalsOrdinalFiveRequestHandles {
        void void
 } [packed]
 test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequest {
-       hdr fidl_message_header[667506719]
+       hdr fidl_message_header[2866919527965261824]
 } [packed]
 test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestHandles {
        void void
 } [packed]
 test_name_SwitchingOrdinalsEventOrdinalFifteenEvent {
-       hdr fidl_message_header[1467258273]
+       hdr fidl_message_header[6301826297320439808]
 } [packed]
 test_name_SwitchingOrdinalsEventOrdinalFifteenEventHandles {
        void void
 } [packed]
 test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent {
-       hdr fidl_message_header[2146190926]
+       hdr fidl_message_header[9217819838141956096]
 } [packed]
 test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventHandles {
        void void

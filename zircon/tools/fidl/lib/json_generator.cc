@@ -314,7 +314,9 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
   assert(method_with_info.method != nullptr);
   const auto& value = *method_with_info.method;
   GenerateObject([&]() {
-    GenerateObjectMember("ordinal", value.generated_ordinal32, Position::kFirst);
+    GenerateObjectPunctuation(Position::kFirst);
+    EmitObjectKey("ordinal");
+    EmitNumeric(static_cast<uint64_t>(value.generated_ordinal32->value) << 32);
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("generated_ordinal");
     EmitNumeric(static_cast<uint64_t>(value.generated_ordinal32->value) << 32);

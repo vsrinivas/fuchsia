@@ -15,7 +15,7 @@
       },
       "methods": [
         {
-          "ordinal": 2005164903,
+          "ordinal": 8612117681472012288,
           "generated_ordinal": 8612117681472012288,
           "name": "OrdinalFive",
           "location": {
@@ -33,7 +33,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 667506719,
+          "ordinal": 2866919527965261824,
           "generated_ordinal": 2866919527965261824,
           "name": "OnlyGeneratedOrdinal",
           "location": {
@@ -51,7 +51,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 1467258273,
+          "ordinal": 6301826297320439808,
           "generated_ordinal": 6301826297320439808,
           "name": "EventOrdinalFifteen",
           "location": {
@@ -69,7 +69,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 2146190926,
+          "ordinal": 9217819838141956096,
           "generated_ordinal": 9217819838141956096,
           "name": "EventOnlyGeneratedOrdinal",
           "location": {

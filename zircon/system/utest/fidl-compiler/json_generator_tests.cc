@@ -186,7 +186,7 @@ protocol EmptyProtocol {
       },
       "methods": [
         {
-          "ordinal": 285845058,
+          "ordinal": 1227695175833223168,
           "generated_ordinal": 1227695175833223168,
           "name": "Send",
           "location": {
@@ -223,7 +223,7 @@ protocol EmptyProtocol {
           "is_composed": false
         },
         {
-          "ordinal": 388770671,
+          "ordinal": 1669757317588975616,
           "generated_ordinal": 1669757317588975616,
           "name": "Receive",
           "location": {
@@ -260,7 +260,7 @@ protocol EmptyProtocol {
           "is_composed": false
         },
         {
-          "ordinal": 2071775804,
+          "ordinal": 8898209322824105984,
           "generated_ordinal": 8898209322824105984,
           "name": "SendAndReceive",
           "location": {
@@ -932,7 +932,7 @@ protocol Protocol {
       },
       "methods": [
         {
-          "ordinal": 289661890,
+          "ordinal": 1244088344447549440,
           "generated_ordinal": 1244088344447549440,
           "name": "RequestStrictResponseFlexible",
           "location": {
@@ -993,7 +993,7 @@ protocol Protocol {
           "is_composed": false
         },
         {
-          "ordinal": 825667327,
+          "ordinal": 3546214166840737792,
           "generated_ordinal": 3546214166840737792,
           "name": "RequestFlexibleResponseStrict",
           "location": {
@@ -1220,7 +1220,7 @@ protocol sub {
       ],
       "methods": [
         {
-          "ordinal": 790020540,
+          "ordinal": 3393112382468259840,
           "generated_ordinal": 3393112382468259840,
           "name": "foo",
           "location": {
@@ -1289,7 +1289,7 @@ protocol sub {
       },
       "methods": [
         {
-          "ordinal": 790020540,
+          "ordinal": 3393112382468259840,
           "generated_ordinal": 3393112382468259840,
           "name": "foo",
           "location": {
@@ -1411,7 +1411,7 @@ protocol Child {
       ],
       "methods": [
         {
-          "ordinal": 1722375644,
+          "ordinal": 7397547062406938624,
           "generated_ordinal": 7397547062406938624,
           "name": "First",
           "location": {
@@ -1458,7 +1458,7 @@ protocol Child {
       },
       "methods": [
         {
-          "ordinal": 1722375644,
+          "ordinal": 7397547062406938624,
           "generated_ordinal": 7397547062406938624,
           "name": "First",
           "location": {
@@ -1495,7 +1495,7 @@ protocol Child {
           "is_composed": true
         },
         {
-          "ordinal": 19139766,
+          "ordinal": 82204669023092736,
           "generated_ordinal": 82204669023092736,
           "name": "Second",
           "location": {
@@ -1583,7 +1583,7 @@ protocol Example {
       },
       "methods": [
         {
-          "ordinal": 1369693400,
+          "ordinal": 5882788358547046400,
           "generated_ordinal": 5882788358547046400,
           "name": "foo",
           "location": {
@@ -2927,7 +2927,7 @@ protocol Top {
       },
       "methods": [
         {
-          "ordinal": 961142572,
+          "ordinal": 4128075913533325312,
           "generated_ordinal": 4128075913533325312,
           "name": "GetFoo",
           "location": {
@@ -3064,7 +3064,7 @@ protocol Top {
       },
       "methods": [
         {
-          "ordinal": 187925920,
+          "ordinal": 807135680470712320,
           "generated_ordinal": 807135680470712320,
           "name": "GetFoo",
           "location": {
@@ -3353,7 +3353,7 @@ xunion ExampleXUnion {
       ],
       "methods": [
         {
-          "ordinal": 1123904027,
+          "ordinal": 4827131039807700992,
           "generated_ordinal": 4827131039807700992,
           "name": "Method",
           "location": {
