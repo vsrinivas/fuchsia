@@ -274,4 +274,23 @@ void PrettyOptional::EvalOptional(fxl::RefPtr<EvalContext>& context, ExprValue o
       });
 }
 
+PrettyStruct::PrettyStruct(std::initializer_list<std::pair<std::string, std::string>> members)
+    : PrettyType({}), members_(std::begin(members), std::end(members)) {}
+
+void PrettyStruct::Format(FormatNode* node, const FormatOptions& options,
+                          fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+  node->set_description_kind(FormatNode::kCollection);
+
+  // Generates a node for each "member_" that evaluates to the result of the corresponding expr.
+  for (const auto& [name, expr] : members_) {
+    auto child = std::make_unique<FormatNode>(
+        name, [object = node->value(), expr = expr](
+                  fxl::RefPtr<EvalContext> context,
+                  fit::callback<void(const Err& err, ExprValue value)> cb) {
+          EvalExpressionOn(context, object, expr, ErrOrValue::FromPairCallback(std::move(cb)));
+        });
+    node->children().push_back(std::move(child));
+  }
+}
+
 }  // namespace zxdb

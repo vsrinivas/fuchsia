@@ -181,6 +181,20 @@ class PrettyOptional : public PrettyType {
   const std::string name_when_disengaged_;
 };
 
+// Represents a simplified structure with a list of members. This is used to map a complicated
+// struct (perhaps with non-normally-relevant members or inheritance) to a simpler presentation.
+class PrettyStruct : public PrettyType {
+ public:
+  // Takes a list of struct member names and the expressions that evaluate them.
+  PrettyStruct(std::initializer_list<std::pair<std::string, std::string>> members);
+
+  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
+              fit::deferred_callback cb) override;
+
+ private:
+  std::vector<std::pair<std::string, std::string>> members_;
+};
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_TYPE_H_

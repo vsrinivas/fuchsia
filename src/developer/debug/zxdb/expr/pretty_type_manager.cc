@@ -192,11 +192,49 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
 }
 
 void PrettyTypeManager::AddDefaultFuchsiaCppPrettyTypes() {
+  // fbl
+  /* FBL string is currently broken due to the inability to evaluate the constants like
+     kLengthFieldOffset. Uncomment when these are fixed.
+  #define FBL_STRING_LENGTH_EXPRESSION \
+    "*reinterpret_cast<size_t*>(data - kDataFieldOffset + kLengthFieldOffset)"
+  cpp_.emplace_back(
+      InternalGlob("fbl::String"),
+      std::make_unique<PrettyHeapString>("data_", FBL_STRING_LENGTH_EXPRESSION,
+                                         GetterList{{"data", "data_"},
+                                                    {"c_str", "data_"},
+                                                    {"length", FBL_STRING_LENGTH_EXPRESSION},
+                                                    {"size", FBL_STRING_LENGTH_EXPRESSION},
+                                                    {"empty", "!" FBL_STRING_LENGTH_EXPRESSION}}));
+  */
+  cpp_.emplace_back(InternalGlob("fbl::Span<*>"),
+                    std::make_unique<PrettyArray>(
+                        "ptr_", "size_",
+                        GetterList{{"size", "size_"}, {"data", "ptr_"}, {"empty", "size_ == 0"}}));
+  cpp_.emplace_back(InternalGlob("fbl::Vector<*>"),
+                    std::make_unique<PrettyArray>("ptr_", "size_",
+                                                  GetterList{{"size", "size_"},
+                                                             {"get", "ptr_"},
+                                                             {"capacity", "capacity_"},
+                                                             {"is_empty", "size_ == 0"}}));
+  cpp_.emplace_back(InternalGlob("fbl::RefPtr<*>"),
+                    std::make_unique<PrettyPointer>("ptr_", GetterList{{"get", "ptr_"}}));
+  cpp_.emplace_back(
+      InternalGlob("fbl::RefCounted<*>"),
+      std::make_unique<PrettyStruct>(GetterList{{"ref_count_", "ref_count_.__a_.__a_value"}}));
+
+  // fit
   cpp_.emplace_back(
       InternalGlob("fit::optional<*>"),
       std::make_unique<PrettyOptional>(
           "fit::optional", "storage_.index_ == 0", "storage_.base_.value", "fit::nullopt",
           GetterList{{"value", "storage_.base_.value"}, {"has_value", "storage_.index_ == 0"}}));
+
+  // fxl
+  cpp_.emplace_back(InternalGlob("fxl::RefPtr<*>"),
+                    std::make_unique<PrettyPointer>("ptr_", GetterList{{"get", "ptr_"}}));
+  cpp_.emplace_back(
+      InternalGlob("fxl::RefCountedThreadSafe<*>"),
+      std::make_unique<PrettyStruct>(GetterList{{"ref_count_", "ref_count_.__a_.__a_value"}}));
 }
 
 }  // namespace zxdb
