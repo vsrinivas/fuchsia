@@ -91,6 +91,10 @@ test_package("timekeeper_bin_test") {
       path = "test/y2k"
       dest = "y2k"
     },
+    {
+      path = "test/end-of-unix-time"
+      dest = "end-of-unix-time"
+    },
   ]
 }
 

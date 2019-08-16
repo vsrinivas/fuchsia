@@ -21,14 +21,14 @@ mod diagnostics;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    assert_backstop_time_correct();
     diagnostics::init();
     let mut fs = ServiceFs::new();
 
     info!("diagnostics initialized, connecting notifier to servicefs.");
     diagnostics::INSPECTOR.export(&mut fs);
 
-    let notifier = Notifier::new();
+    let source = initial_utc_source("/config/build-info/minimum-utc-stamp".as_ref())?;
+    let notifier = Notifier::new(source);
 
     info!("connecting to external update service");
     let time_service =
@@ -48,23 +48,25 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn backstop_time(path: impl AsRef<Path>) -> Result<DateTime<Utc>, Error> {
-    let file_contents =
-        std::fs::read_to_string(path.as_ref()).context("reading backstop time from disk")?;
+fn backstop_time(path: &Path) -> Result<DateTime<Utc>, Error> {
+    let file_contents = std::fs::read_to_string(path).context("reading backstop time from disk")?;
     let parsed_offset = NaiveDateTime::parse_from_str(file_contents.trim(), "%s")?;
     let utc = DateTime::from_utc(parsed_offset, Utc);
     Ok(utc)
 }
 
-fn assert_backstop_time_correct() {
-    let expected_minimum = backstop_time("/config/build-info/minimum-utc-stamp").unwrap();
+fn initial_utc_source(backstop_path: &Path) -> Result<Option<ftime::UtcSource>, Error> {
+    let expected_minimum = backstop_time(backstop_path)?;
     let current_utc = Utc::now();
-    assert!(
-        expected_minimum <= current_utc,
-        "latest known-past UTC time ({}) must be earlier than current system time ({})",
-        expected_minimum,
-        current_utc,
-    );
+    Ok(if current_utc > expected_minimum {
+        Some(ftime::UtcSource::Backstop)
+    } else {
+        warn!(
+            "latest known-past UTC time ({}) should be earlier than current system time ({})",
+            expected_minimum, current_utc,
+        );
+        None
+    })
 }
 
 /// The top-level control loop for time synchronization.
@@ -119,11 +121,8 @@ async fn maintain_utc(
 struct Notifier(Arc<Mutex<NotifyInner>>);
 
 impl Notifier {
-    fn new() -> Self {
-        Notifier(Arc::new(Mutex::new(NotifyInner {
-            source: ftime::UtcSource::Backstop,
-            clients: Vec::new(),
-        })))
+    fn new(source: Option<ftime::UtcSource>) -> Self {
+        Notifier(Arc::new(Mutex::new(NotifyInner { source, clients: Vec::new() })))
     }
 
     /// Spawns an async task to handle requests on this channel.
@@ -139,7 +138,7 @@ impl Notifier {
                 let mut n = notifier.0.lock();
                 // we return immediately if this is the first request on this channel, but if
                 // the backstop time hasn't been set yet then we can't say anything
-                if request_count == 0 || last_seen_state != n.source {
+                if n.source.is_some() && (request_count == 0 || last_seen_state != n.source) {
                     n.reply(responder, zx::Time::get(zx::ClockId::Monotonic).into_nanos());
                 } else {
                     n.register(responder);
@@ -154,7 +153,7 @@ impl Notifier {
 #[derive(Debug)]
 struct NotifyInner {
     /// The current source for our UTC approximation.
-    source: ftime::UtcSource,
+    source: Option<ftime::UtcSource>,
     /// All clients waiting for an update to UTC's time.
     clients: Vec<ftime::UtcWatchStateResponder>,
 }
@@ -162,8 +161,8 @@ struct NotifyInner {
 impl NotifyInner {
     /// Reply to a client with the current UtcState.
     fn reply(&self, responder: ftime::UtcWatchStateResponder, update_time: i64) {
-        if let Err(why) = responder
-            .send(ftime::UtcState { timestamp: Some(update_time), source: Some(self.source) })
+        if let Err(why) =
+            responder.send(ftime::UtcState { timestamp: Some(update_time), source: self.source })
         {
             warn!("failed to notify a client of an update: {:?}", why);
         }
@@ -178,8 +177,8 @@ impl NotifyInner {
     /// Increases the revision counter by 1 and notifies any clients waiting on updates from
     /// previous revisions.
     fn set_source(&mut self, source: ftime::UtcSource, update_time: i64) {
-        if self.source != source {
-            self.source = source;
+        if self.source != Some(source) {
+            self.source = Some(source);
             let clients = std::mem::replace(&mut self.clients, vec![]);
             info!("UTC source changed to {:?}, notifying {} clients", source, clients.len());
             for responder in clients {
@@ -207,7 +206,9 @@ mod tests {
 
     #[test]
     fn fixed_backstop_check() {
-        let test_backstop = backstop_time("/pkg/data/y2k").unwrap();
+        let y2k_backstop = "/pkg/data/y2k";
+        let test_backstop = backstop_time(y2k_backstop.as_ref()).unwrap();
+        let test_source = initial_utc_source(y2k_backstop.as_ref()).unwrap();
         let before_test_backstop =
             Utc.from_utc_datetime(&NaiveDate::from_ymd(1999, 1, 1).and_hms(0, 0, 0));
         let after_test_backstop =
@@ -215,13 +216,12 @@ mod tests {
 
         assert!(test_backstop > before_test_backstop);
         assert!(test_backstop < after_test_backstop);
+        assert_eq!(test_source, Some(ftime::UtcSource::Backstop));
     }
 
-    // Disabled because test is flaky. See FLK-445.
-    #[ignore]
     #[test]
-    fn current_backstop_check() {
-        assert_backstop_time_correct();
+    fn fallible_backstop_check() {
+        assert_eq!(initial_utc_source("/pkg/data/end-of-unix-time".as_ref()).unwrap(), None);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -241,7 +241,7 @@ mod tests {
             reachability_server.into_stream_and_control_handle().unwrap();
         reachability_control.send_on_network_reachable(true).unwrap();
 
-        let notifier = Notifier::new();
+        let notifier = Notifier::new(Some(ftime::UtcSource::Backstop));
         let (mut allow_update, mut wait_for_update) = futures::channel::mpsc::channel(1);
         info!("spawning test notifier");
         notifier.handle_request_stream(utc_requests);
@@ -259,7 +259,7 @@ mod tests {
         info!("checking that the time source has not been externally initialized yet");
         assert_eq!(utc.watch_state().await.unwrap().source.unwrap(), ftime::UtcSource::Backstop);
 
-        let task_waker = futures::future::poll_fn(|cx| { Poll::Ready(cx.waker().clone()) }).await;
+        let task_waker = futures::future::poll_fn(|cx| Poll::Ready(cx.waker().clone())).await;
         let mut cx = Context::from_waker(&task_waker);
 
         let mut hanging = Box::pin(utc.watch_state());
