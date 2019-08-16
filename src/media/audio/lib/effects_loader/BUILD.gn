@@ -30,7 +30,7 @@ source_set("effects_loader") {
 
 executable("test") {
   testonly = true
-  output_name = "effects_loader_unittests"
+  output_name = "audio_effects_loader_unittests"
 
   sources = [
     "effect_unittest.cc",
@@ -47,7 +47,7 @@ executable("test") {
   ]
 }
 
-unittest_package("effects_loader_unittests") {
+unittest_package("audio_effects_loader_unittests") {
   deps = [
     ":test",
     "//src/media/audio/effects/test_effects",
@@ -61,7 +61,7 @@ unittest_package("effects_loader_unittests") {
 
   tests = [
     {
-      name = "effects_loader_unittests"
+      name = "audio_effects_loader_unittests"
       environments = basic_envs
     },
   ]
@@ -70,6 +70,6 @@ unittest_package("effects_loader_unittests") {
 group("tests") {
   testonly = true
   deps = [
-    ":effects_loader_unittests",
+    ":audio_effects_loader_unittests",
   ]
 }
