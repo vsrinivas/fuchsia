@@ -1971,7 +1971,6 @@ pub(crate) trait NdpPacketHandler: IpDeviceIdContext {
         dst_ip: Ipv6Addr,
         packet: Icmpv6Packet<B>,
     ) {
-
     }
 }
 

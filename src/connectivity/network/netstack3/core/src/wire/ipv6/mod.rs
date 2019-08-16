@@ -82,7 +82,7 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
                 // Pointer calculation didn't overflow so set action to send an ICMP
                 // message to the source of the original packet and the pointer value
                 // to what we calculated.
-                Some(p) => (p, IpParseErrorAction::DiscardPacketSendICMP),
+                Some(p) => (p, IpParseErrorAction::DiscardPacketSendICMPNoMulticast),
             };
 
             IpParseError::ParameterProblem {
@@ -102,7 +102,7 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
         } => {
             let (pointer, action) = match pointer.checked_add(IPV6_FIXED_HDR_LEN as u32) {
                 None => (0, IpParseErrorAction::DiscardPacket),
-                Some(p) => (p, IpParseErrorAction::DiscardPacketSendICMP),
+                Some(p) => (p, IpParseErrorAction::DiscardPacketSendICMPNoMulticast),
             };
 
             IpParseError::ParameterProblem {
@@ -234,7 +234,7 @@ impl<B: ByteSlice> FromRaw<Ipv6PacketRaw<B>, ()> for Ipv6Packet<B> {
                     pointer: NEXT_HEADER_OFFSET as u32,
                     must_send_icmp: false,
                     header_len: IPV6_FIXED_HDR_LEN,
-                    action: IpParseErrorAction::DiscardPacketSendICMP,
+                    action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
                 }),
                 "Unrecognized next header value"
             );
@@ -1035,7 +1035,7 @@ mod tests {
                 pointer: NEXT_HEADER_OFFSET as u32,
                 must_send_icmp: false,
                 header_len: IPV6_FIXED_HDR_LEN,
-                action: IpParseErrorAction::DiscardPacketSendICMP,
+                action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
             }
         );
 
@@ -1051,7 +1051,7 @@ mod tests {
                 pointer: NEXT_HEADER_OFFSET as u32,
                 must_send_icmp: false,
                 header_len: IPV6_FIXED_HDR_LEN,
-                action: IpParseErrorAction::DiscardPacketSendICMP,
+                action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
             }
         );
 
@@ -1097,7 +1097,7 @@ mod tests {
                 pointer: IPV6_FIXED_HDR_LEN as u32,
                 must_send_icmp: false,
                 header_len: IPV6_FIXED_HDR_LEN,
-                action: IpParseErrorAction::DiscardPacketSendICMP,
+                action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
             }
         );
 
@@ -1136,7 +1136,7 @@ mod tests {
                 pointer: (IPV6_FIXED_HDR_LEN as u32) + 2,
                 must_send_icmp: true,
                 header_len: IPV6_FIXED_HDR_LEN,
-                action: IpParseErrorAction::DiscardPacketSendICMP,
+                action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
             }
         );
     }

@@ -34,9 +34,8 @@ use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::{
-    send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, should_send_icmpv4_error,
-    should_send_icmpv6_error, IcmpContext, IcmpEventDispatcher, IcmpState, IcmpStateBuilder,
-    Icmpv4State, Icmpv6State,
+    send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, IcmpContext, IcmpEventDispatcher,
+    IcmpState, IcmpStateBuilder, Icmpv4State, Icmpv6State,
 };
 use crate::ip::igmp::{IgmpContext, IgmpInterface, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
@@ -1045,45 +1044,32 @@ fn handle_parse_error<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
                     // This should never return `true` for IPv4.
                     assert!(!action.should_send_icmp_to_multicast());
 
-                    if should_send_icmpv4_error(frame_dst, src_ip, dst_ip) {
-                        send_icmpv4_parameter_problem(
-                            ctx,
-                            device,
-                            src_ip,
-                            dst_ip,
-                            code,
-                            Icmpv4ParameterProblem::new(pointer),
-                            original_packet,
-                            header_len,
-                        );
-                    }
-                }
-
-                #[ipv6]
-                {
-                    // Some IPv6 parsing errors may require us to send an
-                    // ICMP response even if the original packet's destination
-                    // was a multicast (as defined by RFC 4443 section 2.4.e).
-                    // `action.should_send_icmp_to_multicast()` should return
-                    // `true` if such an exception applies.
-                    if should_send_icmpv6_error(
+                    send_icmpv4_parameter_problem(
+                        ctx,
+                        device,
                         frame_dst,
                         src_ip,
                         dst_ip,
-                        action.should_send_icmp_to_multicast(),
-                    ) {
-                        send_icmpv6_parameter_problem(
-                            ctx,
-                            device,
-                            src_ip,
-                            dst_ip,
-                            code,
-                            Icmpv6ParameterProblem::new(pointer),
-                            original_packet,
-                            header_len,
-                        );
-                    }
+                        code,
+                        Icmpv4ParameterProblem::new(pointer),
+                        original_packet,
+                        header_len,
+                    );
                 }
+
+                #[ipv6]
+                send_icmpv6_parameter_problem(
+                    ctx,
+                    device,
+                    frame_dst,
+                    src_ip,
+                    dst_ip,
+                    code,
+                    Icmpv6ParameterProblem::new(pointer),
+                    original_packet,
+                    header_len,
+                    action.should_send_icmp_to_multicast(),
+                );
             }
         }
         // TODO(joshlf): Do something with ICMP here? If not, then just turn
@@ -1494,10 +1480,12 @@ impl<I: IcmpIpExt, B: BufferMut, D: BufferDispatcher<B>> IcmpContext<I, B> for C
     fn send_icmp_error_message<S: Serializer<Buffer = B>, F: FnOnce(I::Addr) -> S>(
         &mut self,
         device: DeviceId,
+        frame_dst: FrameDestination,
         src_ip: I::Addr,
         dst_ip: I::Addr,
         get_body: F,
         ip_mtu: Option<u32>,
+        allow_dst_multicast: bool,
     ) -> Result<(), S> {
         trace!("send_icmp_error_message({}, {}, {}, {:?})", device, src_ip, dst_ip, ip_mtu);
         self.increment_counter("send_icmp_error_message");
@@ -1506,6 +1494,28 @@ impl<I: IcmpIpExt, B: BufferMut, D: BufferDispatcher<B>> IcmpContext<I, B> for C
         // E.g., should we send a response over a different device than the
         // device that the original packet ingressed over? We'll probably want
         // to consult BCP 38 (aka RFC 2827) and RFC 3704.
+
+        #[specialize_ip_address]
+        fn should_send_icmp_error<A: IpAddress>(
+            frame_dst: FrameDestination,
+            src_ip: A,
+            dst_ip: A,
+            allow_dst_multicast: bool,
+        ) -> bool {
+            #[ipv4addr]
+            return crate::ip::icmp::should_send_icmpv4_error(frame_dst, src_ip, dst_ip);
+            #[ipv6addr]
+            return crate::ip::icmp::should_send_icmpv6_error(
+                frame_dst,
+                src_ip,
+                dst_ip,
+                allow_dst_multicast,
+            );
+        }
+
+        if !should_send_icmp_error(frame_dst, src_ip, dst_ip, allow_dst_multicast) {
+            return Ok(());
+        }
 
         if let Some(route) = lookup_route(self, src_ip) {
             if let Some(local_ip) =
@@ -1609,11 +1619,12 @@ mod tests {
         ctx: &mut Context<DummyEventDispatcher>,
         code: Icmpv6ParameterProblemCode,
         pointer: u32,
+        offset: usize,
     ) {
         // Check the ICMP that bob attempted to send to alice
         let device_frames = ctx.dispatcher.frames_sent().clone();
         assert!(!device_frames.is_empty());
-        let mut buffer = Buf::new(device_frames[0].1.as_slice(), ..);
+        let mut buffer = Buf::new(device_frames[offset].1.as_slice(), ..);
         let frame = buffer.parse::<EthernetFrame<_>>().unwrap();
         let packet = buffer.parse::<<Ipv6 as IpExtByteSlice<&[u8]>>::Packet>().unwrap();
         let (src_ip, dst_ip, proto, _) = drop_packet!(packet);
@@ -1844,10 +1855,12 @@ mod tests {
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
         let mut buf = Buf::new(bytes, ..);
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, FrameDestination::Unicast, buf);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::ErroneousHeaderField,
             42,
+            0,
         );
     }
 
@@ -1878,6 +1891,7 @@ mod tests {
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
 
         //
         // Test with unrecognized option type set with
@@ -1891,6 +1905,7 @@ mod tests {
         );
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
 
         //
         // Test with unrecognized option type set with
@@ -1906,10 +1921,12 @@ mod tests {
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
             48,
+            expected_icmps - 1,
         );
 
         //
@@ -1926,10 +1943,12 @@ mod tests {
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
             48,
+            expected_icmps - 1,
         );
 
         //
@@ -1946,10 +1965,12 @@ mod tests {
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
             48,
+            expected_icmps - 1,
         );
 
         //
@@ -1966,6 +1987,7 @@ mod tests {
         // Do not expect an ICMP response for this packet
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
 
         //
         // None of our tests should have sent an icmpv4 packet, or dispatched an ip packet
