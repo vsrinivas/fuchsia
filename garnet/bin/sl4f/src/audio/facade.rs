@@ -69,7 +69,7 @@ struct OutputWorker {
     // How much of the vmo's data we're actually using, in bytes.
     work_space: u64,
 
-    // How often, in frames, we want to be updated on the state.
+    // How often, in frames, we want to be updated on the state of the extraction ring buffer.
     frames_per_notification: u64,
 
     // How many bytes a frame is.
@@ -106,12 +106,13 @@ impl OutputWorker {
         num_ring_buffer_frames: u32,
         _notifications_per_ring: u32,
     ) -> Result<(), Error> {
-        let va_output = self.va_output.as_mut().ok_or(format_err!("va_input not initialized"))?;
+        let va_output = self.va_output.as_mut().ok_or(format_err!("va_output not initialized"))?;
 
-        let target_frames_per_notification =
+        // Ignore AudioCore's notification cadence (_notifications_per_ring); set up our own.
+        let target_notifications_per_ring =
             num_ring_buffer_frames as u64 / self.frames_per_notification;
 
-        va_output.set_notification_frequency(target_frames_per_notification as u32)?;
+        va_output.set_notification_frequency(target_notifications_per_ring as u32)?;
 
         self.work_space = num_ring_buffer_frames as u64 * self.frame_size;
 
@@ -157,7 +158,8 @@ impl OutputWorker {
                 self.extracted_data.append(&mut data);
             }
         }
-        // We always stay 1 notification behind to work around audio glitches.
+        // We always stay 1 notification behind, since audio_core writes audio data into
+        // our shared buffer based on these same notifications. This avoids audio glitches.
         self.next_read = self.next_read_end;
         self.next_read_end = ring_position as u64;
         Ok(())
@@ -171,15 +173,17 @@ impl OutputWorker {
         let mut output_events = va_output.take_event_stream();
         self.va_output = Some(va_output);
 
-        // Monotonic time of last OnPositionNotify
-        let mut last_notify = zx::Time::from_nanos(0);
+        // Monotonic timestamp returned by the most-recent OnStart/OnPositionNotify/OnStop response.
+        let mut last_timestamp = zx::Time::from_nanos(0);
+        // Observed monotonic time that OnStart/OnPositionNotify/OnStop messages actually arrived.
+        let mut last_event_time = zx::Time::from_nanos(0);
 
         loop {
             select! {
                 rx_msg = rx.next() => {
                     match rx_msg {
                         None => {
-                            bail!("Got None InjectMsg Event, exiting worker");
+                            bail!("Got None ExtractMsg Event, exiting worker");
                         },
                         Some(ExtractMsg::Stop { mut out_sender }) => {
                             self.capturing = false;
@@ -198,30 +202,75 @@ impl OutputWorker {
                 output_msg = output_events.try_next() => {
                     match output_msg? {
                         None => {
-                            bail!("Got None InputEvent Message, exiting worker");
+                            bail!("Got None OutputEvent Message, exiting worker");
                         },
-                        Some(OutputEvent::OnSetFormat { frames_per_second, sample_format, num_channels, external_delay}) => {
-                            self.on_set_format(frames_per_second, sample_format, num_channels, external_delay)?;
+                        Some(OutputEvent::OnSetFormat { frames_per_second, sample_format,
+                                                        num_channels, external_delay}) => {
+                            self.on_set_format(frames_per_second, sample_format, num_channels,
+                                               external_delay)?;
                         },
-                        Some(OutputEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames, notifications_per_ring }) => {
-                            self.on_buffer_created(ring_buffer, num_ring_buffer_frames, notifications_per_ring)?;
+                        Some(OutputEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames,
+                                                            notifications_per_ring }) => {
+                            self.on_buffer_created(ring_buffer, num_ring_buffer_frames,
+                                                   notifications_per_ring)?;
+                        },
+                        Some(OutputEvent::OnStart { start_time }) => {
+                            if last_timestamp > zx::Time::from_nanos(0) {
+                                fx_log_info!("Extraction OnPositionNotify received before OnStart");
+                            }
+                            last_timestamp = zx::Time::from_nanos(start_time);
+                            last_event_time = zx::Time::get(zx::ClockId::Monotonic);
+                        },
+                        Some(OutputEvent::OnStop { stop_time, ring_position }) => {
+                            if last_timestamp == zx::Time::from_nanos(0) {
+                                fx_log_info!(
+                                    "Extraction OnPositionNotify timestamp cleared before OnStop");
+                            }
+                            last_timestamp = zx::Time::from_nanos(0);
+                            last_event_time = zx::Time::from_nanos(0);
                         },
                         Some(OutputEvent::OnPositionNotify { monotonic_time, ring_position }) => {
-                            // Log if we have been delayed more than 150ms.  This is highly abnormal and
-                            // is indicative of possible glitching in the captured audio.
-                            let now = zx::Time::get(zx::ClockId::Monotonic);
-                            if last_notify > zx::Time::from_nanos(0) {
-                                let interval = now - last_notify;
-                                if  interval > zx::Duration::from_millis(150) {
-                                    fx_log_info!("Output position not updated for 150ms({:?}).  Expect glitches.", interval.into_millis());
-                                }
+                            if last_timestamp == zx::Time::from_nanos(0) {
+                                fx_log_info!(
+                                    "Extraction OnStart not received before OnPositionNotify");
                             }
-                            last_notify = now;
+                            let monotonic_zx_time = zx::Time::from_nanos(monotonic_time);
+
+                            // Log if our timestamps had a gap of more than 100ms. This is highly
+                            // abnormal and indicates possible glitching while receiving playback
+                            // audio from the system and/or extracting it for analysis.
+                            let timestamp_interval = monotonic_zx_time - last_timestamp;
+
+                            if  timestamp_interval > zx::Duration::from_millis(100) {
+                                fx_log_info!(
+                "Extraction position timestamp jumped by more than 100ms ({:?}). Expect glitches.",
+                                    timestamp_interval.into_millis());
+                            }
+                            if  monotonic_zx_time < last_timestamp {
+                                fx_log_info!(
+                        "Extraction position timestamp moved backwards ({:?}). Expect glitches.",
+                                    timestamp_interval.into_millis());
+                            }
+                            last_timestamp = monotonic_zx_time;
+
+                            // Log if there was a gap in position notification arrivals of more
+                            // than 150ms. This is highly abnormal and indicates possible glitching
+                            // while receiving playback audio from the system and/or extracting it
+                            // for analysis.
+                            let now = zx::Time::get(zx::ClockId::Monotonic);
+                            let observed_interval = now - last_event_time;
+
+                            if  observed_interval > zx::Duration::from_millis(150) {
+                                fx_log_info!(
+                            "Extraction position not updated for 150ms ({:?}). Expect glitches.",
+                                    observed_interval.into_millis());
+                            }
+                            last_event_time = now;
 
                             self.on_position_notify(monotonic_time, ring_position, self.capturing)?;
                         },
                         Some(evt) => {
-                            fx_log_info!("Got unknown InputEvent {:?}", evt);
+                            fx_log_info!("Got unknown OutputEvent {:?}", evt);
                         }
                     }
                 },
@@ -267,8 +316,10 @@ impl VirtualOutput {
     pub fn start_output(&mut self) -> Result<(), Error> {
         let va_output = app::client::connect_to_service::<OutputMarker>()?;
         va_output.clear_format_ranges()?;
-        let sample_format = get_zircon_sample_format(self.sample_format);
+        va_output.set_fifo_depth(0)?;
+        va_output.set_external_delay(0)?;
 
+        let sample_format = get_zircon_sample_format(self.sample_format);
         va_output.add_format_range(
             sample_format as u32,
             self.frames_per_second,
@@ -293,7 +344,7 @@ impl VirtualOutput {
                 worker.run(rx, va_output).await?;
                 Ok::<(), Error>(())
             }
-                .unwrap_or_else(|e| eprintln!("Input injection thread failed: {:?}", e)),
+                .unwrap_or_else(|e| eprintln!("Output extraction thread failed: {:?}", e)),
         );
 
         self.output_sender = Some(tx);
@@ -344,7 +395,7 @@ struct InputWorker {
     // How close we let position get to where we've written before writing again.
     low_frames: u64,
 
-    // How often, in frames, we want to be updated on the state.
+    // How often, in frames, we want to be updated on the state of the injection ring buffer.
     frames_per_notification: u64,
 
     // How many bytes a frame is.
@@ -407,10 +458,11 @@ impl InputWorker {
     ) -> Result<(), Error> {
         let va_input = self.va_input.as_mut().ok_or(format_err!("va_input not initialized"))?;
 
-        let target_frames_per_notification =
+        // Ignore AudioCore's notification cadence (_notifications_per_ring); set up our own.
+        let target_notifications_per_ring =
             num_ring_buffer_frames as u64 / self.frames_per_notification;
 
-        va_input.set_notification_frequency(target_frames_per_notification as u32)?;
+        va_input.set_notification_frequency(target_notifications_per_ring as u32)?;
 
         self.work_space = num_ring_buffer_frames as u64 * self.frame_size;
 
@@ -506,8 +558,10 @@ impl InputWorker {
         let mut input_events = va_input.take_event_stream();
         self.va_input = Some(va_input);
 
-        // Monotonic time of last OnPositionNotify
-        let mut last_notify = zx::Time::from_nanos(0);
+        // Monotonic timestamp returned by the most-recent OnStart/OnPositionNotify/OnStop response.
+        let mut last_timestamp = zx::Time::from_nanos(0);
+        // Observed monotonic time that OnStart/OnPositionNotify/OnStop messages actually arrived.
+        let mut last_event_time = zx::Time::from_nanos(0);
 
         loop {
             select! {
@@ -532,23 +586,68 @@ impl InputWorker {
                         None => {
                             bail!("Got None InputEvent Message, exiting worker");
                         },
-                        Some(InputEvent::OnSetFormat { frames_per_second, sample_format, num_channels, external_delay}) => {
-                            self.on_set_format(frames_per_second, sample_format, num_channels, external_delay)?;
+                        Some(InputEvent::OnSetFormat { frames_per_second, sample_format,
+                                                       num_channels, external_delay}) => {
+                            self.on_set_format(frames_per_second, sample_format, num_channels,
+                                               external_delay)?;
                         },
-                        Some(InputEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames, notifications_per_ring }) => {
-                            self.on_buffer_created(ring_buffer, num_ring_buffer_frames, notifications_per_ring)?;
+                        Some(InputEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames,
+                                                           notifications_per_ring }) => {
+                            self.on_buffer_created(ring_buffer, num_ring_buffer_frames,
+                                                   notifications_per_ring)?;
+                        },
+                        Some(InputEvent::OnStart { start_time }) => {
+                            if last_timestamp > zx::Time::from_nanos(0) {
+                                fx_log_info!("Injection OnPositionNotify received before OnStart");
+                            }
+                            last_timestamp = zx::Time::from_nanos(start_time);
+                            last_event_time = zx::Time::get(zx::ClockId::Monotonic);
+                        },
+                        Some(InputEvent::OnStop { stop_time, ring_position }) => {
+                            if last_timestamp == zx::Time::from_nanos(0) {
+                                fx_log_info!(
+                                    "Injection OnPositionNotify timestamp cleared before OnStop");
+                            }
+                            last_timestamp = zx::Time::from_nanos(0);
+                            last_event_time = zx::Time::from_nanos(0);
                         },
                         Some(InputEvent::OnPositionNotify { monotonic_time, ring_position }) => {
-                            // Log if we have been delayed more than 150ms.  This is highly abnormal and
-                            // is indicative of possible glitching in the injection.
-                            let now = zx::Time::get(zx::ClockId::Monotonic);
-                            if last_notify > zx::Time::from_nanos(0) {
-                                let interval = now - last_notify;
-                                if  interval > zx::Duration::from_millis(150) {
-                                    fx_log_info!("Input position not updated for 150ms({:?}).  Expect glitches.", interval.into_millis());
-                                }
+                            if last_timestamp == zx::Time::from_nanos(0) {
+                                fx_log_info!(
+                                    "Injection OnStart not received before OnPositionNotify");
                             }
-                            last_notify = now;
+                            let monotonic_zx_time = zx::Time::from_nanos(monotonic_time);
+
+                            // Log if our timestamps had a gap of more than 100ms. This is highly
+                            // abnormal and indicates possible glitching while receiving audio to
+                            // be injected and/or providing it to the system.
+                            let timestamp_interval = monotonic_zx_time - last_timestamp;
+
+                            if  timestamp_interval > zx::Duration::from_millis(100) {
+                                fx_log_info!(
+                "Injection position timestamp jumped by more than 100ms ({:?}). Expect glitches.",
+                                    timestamp_interval.into_millis());
+                            }
+                            if  monotonic_zx_time < last_timestamp {
+                                fx_log_info!(
+                            "Injection position timestamp moved backwards ({:?}). Expect glitches.",
+                                    timestamp_interval.into_millis());
+                            }
+                            last_timestamp = monotonic_zx_time;
+
+                            // Log if there was a gap in position notification arrivals of more
+                            // than 150ms. This is highly abnormal and indicates possible glitching
+                            // while receiving audio to be injected and/or providing it to the
+                            // system.
+                            let now = zx::Time::get(zx::ClockId::Monotonic);
+                            let observed_interval = now - last_event_time;
+
+                            if  observed_interval > zx::Duration::from_millis(150) {
+                                fx_log_info!(
+                                "Injection position not updated for 150ms ({:?}). Expect glitches.",
+                                    observed_interval.into_millis());
+                            }
+                            last_event_time = now;
 
                             let mut active = active.lock().await;
                             self.on_position_notify(monotonic_time, ring_position, *active)?;
@@ -597,8 +696,10 @@ impl VirtualInput {
     pub fn start_input(&mut self) -> Result<(), Error> {
         let va_input = app::client::connect_to_service::<InputMarker>()?;
         va_input.clear_format_ranges()?;
-        let sample_format = get_zircon_sample_format(self.sample_format);
+        va_input.set_fifo_depth(0)?;
+        va_input.set_external_delay(0)?;
 
+        let sample_format = get_zircon_sample_format(self.sample_format);
         va_input.add_format_range(
             sample_format as u32,
             self.frames_per_second,
@@ -640,7 +741,7 @@ impl VirtualInput {
     }
 
     pub fn stop(&mut self) -> Result<(), Error> {
-        // The input worker will handle setting the active flag to false after it has zeroed out the vmo.
+        // The input worker will set the active flag to false after it has zeroed out the vmo.
         let sender =
             self.input_sender.as_mut().ok_or(format_err!("input_sender not initialized"))?;
         sender.try_send(InjectMsg::Flush)?;
@@ -656,7 +757,7 @@ enum InjectMsg {
 
 #[derive(Debug)]
 struct VirtualAudio {
-    // Output is from the AudioCore side, so it's what we'll be capturing
+    // Output is from the AudioCore side, so it's what we'll be capturing and extracting
     output_sample_format: AudioSampleFormat,
     output_channels: u8,
     output_frames_per_second: u32,
