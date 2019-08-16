@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <zircon/types.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
@@ -15,10 +16,14 @@ typedef struct hid_boot_kbd_report {
   uint8_t usage[6];
 } __attribute__((packed)) hid_boot_kbd_report_t;
 
+const uint8_t* get_boot_kbd_report_desc(size_t* size);
+
 typedef struct hid_boot_mouse_report {
   uint8_t buttons;
   int8_t rel_x;
   int8_t rel_y;
 } __attribute__((packed)) hid_boot_mouse_report_t;
+
+const uint8_t* get_boot_mouse_report_desc(size_t* size);
 
 __END_CDECLS

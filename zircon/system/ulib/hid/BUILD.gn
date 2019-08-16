@@ -26,6 +26,7 @@ library("hid") {
     "acer12.c",
     "ambient-light.c",
     "bma253.c",
+    "boot.c",
     "buttons.c",
     "egalax.c",
     "eyoyo.c",
