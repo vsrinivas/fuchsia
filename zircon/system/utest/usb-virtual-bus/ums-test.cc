@@ -92,6 +92,7 @@ class BlockDeviceController {
   explicit BlockDeviceController(USBVirtualBus* bus) : bus_(bus) {}
 
   void Disconnect() {
+    cachecontrol_.reset();
     auto result = peripheral().ClearFunctions();
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());

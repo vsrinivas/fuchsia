@@ -1,3 +1,4 @@
+
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -560,10 +561,6 @@ static void usb_ums_release(void* ctx) {
   if (ums->storage) {
     zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)ums->storage, STORAGE_SIZE);
   }
-  if (ums->writeback_cache) {
-    zx_handle_close(ums->storage_handle);
-  }
-
   if (ums->cbw_req) {
     usb_request_release(ums->cbw_req);
   }
@@ -705,23 +702,11 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
   // create and map a VMO
   if (!vmo) {
     status = zx_vmo_create(STORAGE_SIZE, 0, &vmo);
-  }
-  if (ums->writeback_cache) {
-    uint64_t size;
-    status = zx_vmo_get_size(vmo, &size);
     if (status != ZX_OK) {
       goto fail;
     }
-    status = zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &ums->storage_handle);
-    if (status != ZX_OK) {
-      goto fail;
-    }
-  } else {
-    ums->storage_handle = vmo;
   }
-  if (status != ZX_OK) {
-    goto fail;
-  }
+  ums->storage_handle = vmo;
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
                        ums->storage_handle, 0, STORAGE_SIZE, (zx_vaddr_t*)&ums->storage);
   if (status != ZX_OK) {
