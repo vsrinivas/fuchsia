@@ -20,7 +20,7 @@ You can configure Git to show the original text by enabling three-way diffs:
 
 ## Enabling fuchsia-specific git commands
 
-Add `$FUCHSIA_REPO/scripts/git` to your PATH to be able to use fuchsia-specific git
+Add `$FUCHSIA_DIR/scripts/git` to your PATH to be able to use fuchsia-specific git
 commands such as `git fuchsia-review [<commit ref>]`, which opens the current
 or given commit in gerrit.
 
