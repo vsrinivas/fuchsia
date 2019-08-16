@@ -252,6 +252,7 @@ executable("feedback_agent_integration_test") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.update",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",

@@ -26,6 +26,7 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.update.Info",
             "fuchsia.vulkan.loader.Loader"
         ]
     }

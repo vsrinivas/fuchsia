@@ -4,6 +4,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/update/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/handles/object_info.h>
@@ -34,6 +35,28 @@ MATCHER_P(MatchesKey, expected_key,
   return arg.key == expected_key;
 }
 
+class LogListener : public fuchsia::logger::LogListener {
+ public:
+  LogListener(std::shared_ptr<::sys::ServiceDirectory> services) : binding_(this) {
+    binding_.Bind(log_listener_.NewRequest());
+
+    fuchsia::logger::LogPtr logger = services->Connect<fuchsia::logger::Log>();
+    logger->Listen(std::move(log_listener_), /*options=*/nullptr);
+  }
+
+  bool HasLogs() { return has_logs_; }
+
+ private:
+  // |fuchsia::logger::LogListener|
+  void LogMany(::std::vector<fuchsia::logger::LogMessage> log) { has_logs_ = true; }
+  void Log(fuchsia::logger::LogMessage log) { has_logs_ = true; }
+  void Done() { FXL_NOTIMPLEMENTED(); }
+
+  fidl::Binding<fuchsia::logger::LogListener> binding_;
+  fuchsia::logger::LogListenerPtr log_listener_;
+  bool has_logs_ = false;
+};
+
 // Smoke-tests the real environment service for the fuchsia.feedback.DataProvider FIDL interface,
 // connecting through FIDL.
 class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment {
@@ -55,12 +78,46 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
   }
 
  protected:
-  // Injects a test app that exposes some Inspect data in the test environment.
+  // Makes sure the component serving fuchsia.logger.Log is up and running as the DumpLogs() request
+  // could time out on machines were the component is too slow to start.
   //
-  // Useful to guarantee there is a component within the environment that exposes Inspect data as we
-  // are excluding system_objects paths from the Inspect discovery and the test component itself
-  // only has a system_objects Inspect node.
-  void InjectInspectTestApp() {
+  // Syslog are generally handled by a single logger that implements two protocols:
+  //   (1) fuchsia.logger.LogSink to write syslog messages
+  //   (2) fuchsia.logger.Log to read syslog messages and kernel log messages.
+  // Returned syslog messages are restricted to the ones that were written using its LogSink while
+  // kernel log messages are the same for all loggers.
+  //
+  // In this integration test, we inject a "fresh copy" of logger.cmx for fuchsia.logger.Log so we
+  // can retrieve the syslog messages. But we do _not_ inject that same logger.cmx for
+  // fuchsia.logger.LogSink as it would swallow all the error and warning messages the other
+  // injected services could produce and make debugging really hard. Therefore, the injected
+  // logger.cmx does not have any syslog messages and will only have the global kernel log messages.
+  //
+  // When logger.cmx spawns, it will start collecting asynchronously kernel log messages. But if
+  // DumpLogs() is called "too soon", it will immediately return empty logs instead of waiting on
+  // the kernel log collection (fxb/4665), resulting in a flaky test (fxb/8303). We thus spawn
+  // logger.cmx on advance and wait for it to have at least one message before running the actual
+  // test.
+  void WaitForLogger() {
+    LogListener log_listener(environment_services_);
+    RunLoopUntil([&log_listener] { return log_listener.HasLogs(); });
+  }
+
+  // Makes sure the component serving fuchsia.update.Info is up and running as the GetChannel()
+  // request could time out on machines were the component is too slow to start.
+  void WaitForChannelProvider() {
+    fuchsia::update::InfoSyncPtr channel_provider;
+    environment_services_->Connect(channel_provider.NewRequest());
+    std::string unused;
+    ASSERT_EQ(channel_provider->GetChannel(&unused), ZX_OK);
+  }
+
+  // Makes sure there is at least one component in the test environment that exposes some Inspect
+  // data.
+  //
+  // This is useful as we are excluding system_objects paths from the Inspect discovery and the test
+  // component itself only has a system_objects Inspect node.
+  void WaitForInspect() {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/inspect_test_app.cmx";
     environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment", CreateServices());
@@ -90,52 +147,11 @@ VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
   // or not depending on which device the test runs.
 }
 
-class LogListener : public fuchsia::logger::LogListener {
- public:
-  LogListener(std::shared_ptr<::sys::ServiceDirectory> services) : binding_(this) {
-    binding_.Bind(log_listener_.NewRequest());
-
-    fuchsia::logger::LogPtr logger = services->Connect<fuchsia::logger::Log>();
-    logger->Listen(std::move(log_listener_), /*options=*/nullptr);
-  }
-
-  bool HasLogs() { return has_logs_; }
-
- private:
-  // |fuchsia::logger::LogListener|
-  void LogMany(::std::vector<fuchsia::logger::LogMessage> log) { has_logs_ = true; }
-  void Log(fuchsia::logger::LogMessage log) { has_logs_ = true; }
-  void Done() { FXL_NOTIMPLEMENTED(); }
-
-  fidl::Binding<fuchsia::logger::LogListener> binding_;
-  fuchsia::logger::LogListenerPtr log_listener_;
-  bool has_logs_ = false;
-};
-
 TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
-  // One of the attachments are the syslog. Syslog are generally handled by a single logger that
-  // implements two protocols: (1) fuchsia.logger.LogSink to write syslog messages and (2)
-  // fuchsia.logger.Log to read syslog messages and kernel log messages. Returned syslog messages
-  // are restricted to the ones that were written using its LogSink while kernel log messages are
-  // the same for all loggers.
-  //
-  // In this integration test, we inject a "fresh copy" of logger.cmx for fuchsia.logger.Log so we
-  // can retrieve the syslog messages. But we do _not_ inject that same logger.cmx for
-  // fuchsia.logger.LogSink as it would swallow all the error and warning messages the other
-  // injected services could produce and make debugging really hard. Therefore, the injected
-  // logger.cmx does not have any syslog messages and will only have the global kernel log messages.
-  //
-  // When logger.cmx spawns, it will start collecting asynchronously kernel log messages. But if
-  // DumpLogs() is called "too soon", it will immediately return empty logs instead of waiting on
-  // the kernel log collection (CF-790), resulting in a flaky test (FLK-179). We thus spawn
-  // logger.cmx on advance and wait for it to have at least one message before running the actual
-  // test.
-  LogListener log_listener(environment_services_);
-  RunLoopUntil([&log_listener] { return log_listener.HasLogs(); });
-
-  // We make sure there is at least one component in the test environment that exposes some Inspect
-  // data.
-  InjectInspectTestApp();
+  // We make sure the components serving the services GetData() connects to are up and running.
+  WaitForLogger();
+  WaitForChannelProvider();
+  WaitForInspect();
 
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
