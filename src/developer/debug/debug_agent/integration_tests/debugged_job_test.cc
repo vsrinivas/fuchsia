@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
 #include <lib/fdio/spawn.h>
 #include <unistd.h>
+
+#include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
+#include "src/developer/debug/debug_agent/object_util.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_writer.h"
@@ -413,11 +415,13 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
   ASSERT_TRUE(mock_stream_backend.attach_reply());
   debug_ipc::AttachReply comp_reply = *mock_stream_backend.attach_reply();
 
+  ObjectProvider* provider = ObjectProvider::Get();
+
   // At this point we can't validate that much since the test environment is
   // special and the component manager's job won't actually be the real one.
   // But we can at least check that the KOID matches what the component job
   // KOID getter computes.
-  EXPECT_EQ(GetComponentJobKoid(), comp_reply.koid);
+  EXPECT_EQ(provider->GetComponentJobKoid(), comp_reply.koid);
 
   // Now attach to the system root.
   mock_stream_backend.ClearAttachReply();
@@ -432,7 +436,7 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
   // Validate we got a root job KOID and that its different than the
   // component one. As above, this isn't the real root job so we can't do
   // too much checking.
-  EXPECT_EQ(GetRootJobKoid(), root_reply.koid);
+  EXPECT_EQ(provider->GetRootJobKoid(), root_reply.koid);
   EXPECT_NE(root_reply.koid, comp_reply.koid);
 }
 

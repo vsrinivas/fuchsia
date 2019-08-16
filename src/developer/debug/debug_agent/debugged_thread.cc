@@ -337,9 +337,10 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
 void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
                                       const zx_thread_state_general_regs* optional_regs,
                                       debug_ipc::ThreadRecord* record) const {
+  ObjectProvider* provider = ObjectProvider::Get();
   record->process_koid = process_->koid();
   record->thread_koid = koid();
-  record->name = NameForObject(thread_);
+  record->name = provider->NameForObject(thread_);
 
   // State (running, blocked, etc.).
   zx_info_thread info;

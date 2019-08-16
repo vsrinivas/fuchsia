@@ -116,9 +116,11 @@ zx_status_t DebuggedProcess::Init() {
   debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
   FXL_DCHECK(loop);  // Loop must be created on this thread first.
 
+  ObjectProvider* provider = ObjectProvider::Get();
+
   // Register for debug exceptions.
   debug_ipc::MessageLoopTarget::WatchProcessConfig config;
-  config.process_name = NameForObject(process_);
+  config.process_name = provider->NameForObject(process_);
   config.process_handle = process_.get();
   config.process_koid = koid_;
   config.watcher = this;
@@ -256,7 +258,8 @@ std::vector<DebuggedThread*> DebuggedProcess::GetThreads() const {
 }
 
 void DebuggedProcess::PopulateCurrentThreads() {
-  for (zx_koid_t koid : GetChildKoids(process_.get(), ZX_INFO_PROCESS_THREADS)) {
+  ObjectProvider* provider = ObjectProvider::Get();
+  for (zx_koid_t koid : provider->GetChildKoids(process_.get(), ZX_INFO_PROCESS_THREADS)) {
     // We should never populate the same thread twice.
     if (threads_.find(koid) != threads_.end())
       continue;
@@ -441,7 +444,9 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
                                        zx_exception_info_t exception_info) {
   FXL_DCHECK(exception_info.pid == koid());
   FXL_DCHECK(threads_.find(exception_info.tid) == threads_.end());
-  zx::thread thread = GetThreadFromException(exception.get());
+
+  ObjectProvider* provider = ObjectProvider::Get();
+  zx::thread thread = provider->GetThreadFromException(exception.get());
 
   auto added = threads_.emplace(
       exception_info.tid, std::make_unique<DebuggedThread>(

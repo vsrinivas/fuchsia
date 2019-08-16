@@ -24,9 +24,11 @@ zx_status_t DebuggedJob::Init() {
   debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
   FXL_DCHECK(loop);  // Loop must be created on this thread first.
 
+  ObjectProvider* provider = ObjectProvider::Get();
+
   // Register for debug exceptions.
   debug_ipc::MessageLoopTarget::WatchJobConfig config;
-  config.job_name = NameForObject(job_);
+  config.job_name = provider->NameForObject(job_);
   config.job_handle = job_.get();
   config.job_koid = koid_;
   config.watcher = this;
@@ -44,9 +46,11 @@ bool DebuggedJob::FilterInfo::Matches(const std::string& proc_name) {
 
 void DebuggedJob::OnProcessStarting(zx::exception exception_token,
                                     zx_exception_info_t exception_info) {
-  zx::process process = GetProcessFromException(exception_token.get());
-  auto proc_name = NameForObject(process);
-  zx::thread initial_thread = GetThreadFromException(exception_token.get());
+  ObjectProvider* provider = ObjectProvider::Get();
+  zx::process process = provider->GetProcessFromException(exception_token.get());
+  auto proc_name = provider->NameForObject(process);
+
+  zx::thread initial_thread = provider->GetThreadFromException(exception_token.get());
 
   // Tools like fx serve will connect every second or so to the target, spamming
   // logging for this with a lot of "/boot/bin/sh" starting.
@@ -82,8 +86,9 @@ void DebuggedJob::OnProcessStarting(zx::exception exception_token,
 }
 
 void DebuggedJob::ApplyToJob(FilterInfo& filter, zx::job& job) {
-  for (auto& child : GetChildProcesses(job.get())) {
-    auto proc_name = NameForObject(child);
+  ObjectProvider* provider = ObjectProvider::Get();
+  for (auto& child : provider->GetChildProcesses(job.get())) {
+    auto proc_name = provider->NameForObject(child);
     if (filter.Matches(proc_name)) {
       DEBUG_LOG(Job) << "New filter " << filter.filter << " matches process " << proc_name
                      << ". Attaching.";
@@ -91,7 +96,7 @@ void DebuggedJob::ApplyToJob(FilterInfo& filter, zx::job& job) {
     }
   }
 
-  for (auto& child : GetChildJobs(job.get())) {
+  for (auto& child : provider->GetChildJobs(job.get())) {
     ApplyToJob(filter, child);
   }
 }

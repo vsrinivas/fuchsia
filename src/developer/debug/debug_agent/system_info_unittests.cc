@@ -36,11 +36,13 @@ TEST(SystemInfo, GetProcessTree) {
   EXPECT_EQ(debug_ipc::ProcessTreeRecord::Type::kJob, root.type);
   EXPECT_FALSE(root.children.empty());
 
+  ObjectProvider* provider = ObjectProvider::Get();
+
   // Compute our own process name and koid.
   zx_handle_t self = zx_process_self();
-  std::string self_name = NameForObject(self);
+  std::string self_name = provider->NameForObject(self);
   EXPECT_FALSE(self_name.empty());
-  zx_koid_t self_koid = KoidForObject(self);
+  zx_koid_t self_koid = provider->KoidForObject(self);
   ASSERT_NE(0u, self_koid);
 
   // Our name and koid should be somewhere in the tree.

@@ -43,8 +43,7 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
     bool Matches(const std::string& proc_name);
   };
 
-  // Caller must call Init immediately after construction and delete the
-  // object if that fails.
+  // Caller must call Init immediately after construction and delete the object if that fails.
   DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid, zx::job job);
   virtual ~DebuggedJob();
 

@@ -228,13 +228,15 @@ TEST(DebuggedThread, FillThreadRecord) {
   zx::thread current_thread;
   zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
 
-  zx_koid_t current_thread_koid = KoidForObject(current_thread);
+  ObjectProvider* provider = ObjectProvider::Get();
+
+  zx_koid_t current_thread_koid = provider->KoidForObject(current_thread);
 
   // Set the name of the current thread so we can find it.
   const std::string thread_name("ProcessInfo test thread name");
-  std::string old_name = NameForObject(current_thread);
+  std::string old_name = provider->NameForObject(current_thread);
   current_thread.set_property(ZX_PROP_NAME, thread_name.c_str(), thread_name.size());
-  EXPECT_EQ(thread_name, NameForObject(current_thread));
+  EXPECT_EQ(thread_name, provider->NameForObject(current_thread));
 
   auto thread = std::make_unique<DebuggedThread>(&fake_process, std::move(current_thread),
                                                  current_thread_koid, zx::exception(),
