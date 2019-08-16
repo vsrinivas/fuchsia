@@ -5,8 +5,14 @@
 use {
     super::{asset::Asset, cache::Cache},
     failure::{format_err, Error, ResultExt},
-    fidl_fuchsia_mem as mem,
-    parking_lot::RwLock,
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
+    fidl_fuchsia_pkg::FontResolverMarker,
+    fuchsia_component::client::connect_to_service,
+    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_zircon as zx,
+    futures::lock::Mutex,
+    io_util,
     std::{
         collections::BTreeMap,
         fs::File,
@@ -36,9 +42,13 @@ pub struct Collection {
     path_to_id_map: BTreeMap<PathBuf, u32>,
     /// Inverse of `path_to_id_map`.
     id_to_path_map: BTreeMap<u32, PathBuf>,
+    /// Maps asset paths to package URLs.
+    path_to_url_map: BTreeMap<PathBuf, PkgUrl>,
+    /// Maps asset paths to previously-resolved directory handles.
+    path_to_dir_map: Mutex<BTreeMap<PathBuf, io::DirectoryProxy>>,
     /// Next ID to assign, autoincremented from 0.
     next_id: u32,
-    cache: RwLock<Cache>,
+    cache: Mutex<Cache>,
 }
 
 const CACHE_SIZE_BYTES: u64 = 4_000_000;
@@ -48,48 +58,94 @@ impl Collection {
         Collection {
             path_to_id_map: BTreeMap::new(),
             id_to_path_map: BTreeMap::new(),
+            path_to_url_map: BTreeMap::new(),
+            path_to_dir_map: Mutex::new(BTreeMap::new()),
             next_id: 0,
-            cache: RwLock::new(Cache::new(CACHE_SIZE_BYTES)),
+            cache: Mutex::new(Cache::new(CACHE_SIZE_BYTES)),
         }
     }
 
-    /// Add the [`Asset`] found at `path` to the collection and return its ID.
+    /// Add the [`Asset`] found at `path` to the collection, store its package URL if provided,
+    /// and return the asset's ID.
     /// If `path` is already in the collection, return the existing ID.
-    ///
-    /// TODO(seancuff): Switch to updating ID of existing entries. This would allow assets to be
-    /// updated without restarting the service (e.g. installing a newer version of a file). Clients
-    /// would need to check the ID of their currently-held asset against the response.
-    pub fn add_or_get_asset_id(&mut self, path: &Path) -> u32 {
+    pub fn add_or_get_asset_id(&mut self, path: &Path, package_url: Option<&PkgUrl>) -> u32 {
         if let Some(id) = self.path_to_id_map.get(&path.to_path_buf()) {
             return *id;
         }
         let id = self.next_id;
         self.id_to_path_map.insert(id, path.to_path_buf());
         self.path_to_id_map.insert(path.to_path_buf(), id);
+        if let Some(url) = package_url {
+            self.path_to_url_map.insert(path.to_path_buf(), url.clone());
+        }
         self.next_id += 1;
         id
     }
 
     /// Get a `Buffer` holding the `Vmo` for the [`Asset`] corresponding to `id`, using the cache
     /// if possible.
-    pub fn get_asset(&self, id: u32) -> Result<mem::Buffer, Error> {
+    pub async fn get_asset(&self, id: u32) -> Result<mem::Buffer, Error> {
         if let Some(path) = self.id_to_path_map.get(&id) {
-            let mut cache_writer = self.cache.write();
-            let buf = match cache_writer.get(id) {
+            let mut cache_lock = self.cache.lock().await;
+            let buf = match cache_lock.get(id) {
                 Some(cached) => cached.buffer,
                 None => {
-                    cache_writer
-                        .push(Asset {
-                            id,
-                            buffer: load_asset_to_vmo(path).with_context(|_| {
-                                format!("Failed to load {}", path.to_string_lossy())
-                            })?,
-                        })
-                        .buffer
+                    let buffer = if path.exists() {
+                        load_asset_to_vmo(path).with_context(|_| {
+                            format!("Failed to load {}.", path.to_string_lossy())
+                        })?
+                    } else {
+                        self.get_ephemeral_asset(path).await?
+                    };
+
+                    cache_lock.push(Asset { id, buffer }).buffer
                 }
             };
             return Ok(buf);
         }
         Err(format_err!("No asset found with id {}", id))
+    }
+
+    async fn get_ephemeral_asset(&self, path_buf: &PathBuf) -> Result<mem::Buffer, Error> {
+        let filename = path_buf.as_path().file_name().ok_or(format_err!(
+            "Path '{}' does not contain a valid filename.",
+            path_buf.to_string_lossy()
+        ))?;
+
+        // Get cached directory if it is cached
+        let mut cache_lock = self.path_to_dir_map.lock().await;
+
+        let directory_proxy = match cache_lock.get(path_buf) {
+            Some(dir_proxy) => dir_proxy,
+            None => {
+                let url = self.path_to_url_map.get(path_buf).ok_or(format_err!(
+                    "No asset found with path {}",
+                    path_buf.to_string_lossy()
+                ))?;
+
+                // Get directory handle from FontResolver
+                let font_resolver = connect_to_service::<FontResolverMarker>()?;
+                let (dir_proxy, dir_request) = create_proxy::<io::DirectoryMarker>()?;
+
+                let status = font_resolver.resolve(&url.to_string(), dir_request).await?;
+                zx::Status::ok(status)?;
+
+                // Cache directory handle
+                cache_lock.insert(path_buf.to_path_buf(), dir_proxy);
+                cache_lock.get(path_buf).unwrap() // Safe because just inserted
+            }
+        };
+
+        let file_proxy =
+            io_util::open_file(directory_proxy, Path::new(&filename), io::OPEN_RIGHT_READABLE)?;
+
+        drop(cache_lock);
+
+        let (status, buffer) = file_proxy.get_buffer(io::VMO_FLAG_READ).await?;
+        zx::Status::ok(status)?;
+
+        let buffer = *buffer
+            .ok_or(format_err!("Failed to get buffer for {}.", filename.to_string_lossy()))?;
+        Ok(buffer)
     }
 }

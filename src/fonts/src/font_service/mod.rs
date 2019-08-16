@@ -29,7 +29,6 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::prelude::*,
     itertools::Itertools,
-    log,
     std::{collections::BTreeMap, iter, path::Path, sync::Arc},
     unicase::UniCase,
 };
@@ -72,17 +71,17 @@ impl FontService {
         Ok(())
     }
 
-    pub fn load_manifest(&mut self, manifest_path: &Path) -> Result<(), Error> {
+    pub async fn load_manifest(&mut self, manifest_path: &Path) -> Result<(), Error> {
         fx_vlog!(1, "Loading manifest {:?}", manifest_path);
         let manifest = FontsManifest::load_from_file(&manifest_path)?;
-        self.add_fonts_from_manifest(manifest).with_context(|_| {
+        self.add_fonts_from_manifest(manifest).await.with_context(|_| {
             format!("Failed to load fonts from {}", manifest_path.to_string_lossy())
         })?;
 
         Ok(())
     }
 
-    fn add_fonts_from_manifest(&mut self, mut manifest: FontsManifest) -> Result<(), Error> {
+    async fn add_fonts_from_manifest(&mut self, mut manifest: FontsManifest) -> Result<(), Error> {
         let font_info_loader = FontInfoLoader::new()?;
 
         for mut family_manifest in manifest.families.drain(..) {
@@ -116,27 +115,42 @@ impl FontService {
                 }
             };
 
-            for font_manifest in family_manifest.fonts.drain(..) {
-                let asset_id = self.assets.add_or_get_asset_id(font_manifest.asset.as_path());
+            for mut font_manifest in family_manifest.fonts.drain(..) {
+                let asset_path = font_manifest.asset.as_path();
+                let asset_id =
+                    self.assets.add_or_get_asset_id(asset_path, font_manifest.package.as_ref());
 
-                let buffer = self.assets.get_asset(asset_id).with_context(|_| {
-                    format!("Failed to load font from {}", font_manifest.asset.to_string_lossy())
-                })?;
+                // Read `code_points` from file if not provided by manifest.
+                if font_manifest.code_points.is_empty() {
+                    if !asset_path.exists() {
+                        return Err(format_err!(
+                            "Unable to load code point info for '{}'. Manifest entry has no \
+                             code_points field and the file does not exist.",
+                            asset_path.to_string_lossy(),
+                        ));
+                    }
 
-                let info = font_info_loader
-                    .load_font_info(buffer.vmo, buffer.size as usize, font_manifest.index)
-                    .with_context(|_| {
-                        format!(
-                            "Failed to load font info from {}",
-                            font_manifest.asset.to_string_lossy()
-                        )
+                    let buffer = self.assets.get_asset(asset_id).await.with_context(|_| {
+                        format!("Failed to load font from {}", asset_path.to_string_lossy())
                     })?;
+
+                    let info = font_info_loader
+                        .load_font_info(buffer.vmo, buffer.size as usize, font_manifest.index)
+                        .with_context(|_| {
+                            format!(
+                                "Failed to load font info from {}",
+                                asset_path.to_string_lossy()
+                            )
+                        })?;
+
+                    font_manifest.code_points = info.char_set;
+                }
+
                 let typeface = Arc::new(Typeface::new(
                     asset_id,
                     font_manifest,
-                    info.char_set,
                     family_manifest.generic_family,
-                ));
+                )?);
                 family.faces.add_typeface(typeface.clone());
                 if family_manifest.fallback {
                     self.fallback_collection.add_typeface(typeface);
@@ -207,7 +221,7 @@ impl FontService {
             .unique_by(|family| &family.name)
     }
 
-    fn match_request(
+    async fn match_request(
         &self,
         mut request: fonts::TypefaceRequest,
     ) -> Result<fonts::TypefaceResponse, Error> {
@@ -238,20 +252,21 @@ impl FontService {
             typeface = self.fallback_collection.match_request(&request)?;
         }
 
-        let typeface_response = typeface
-            .ok_or("Couldn't match a typeface")
-            .and_then(|font| match self.assets.get_asset(font.asset_id) {
-                Ok(buffer) => Result::Ok(fonts::TypefaceResponse {
-                    buffer: Some(buffer),
-                    buffer_id: Some(font.asset_id),
-                    font_index: Some(font.font_index),
-                }),
-                Err(err) => {
-                    log::error!("Failed to load font file: {}", err);
-                    Err("Failed to load font file")
-                }
-            })
-            .unwrap_or_else(|_| fonts::TypefaceResponse::new_empty());
+        let typeface_response = match typeface {
+            Some(font) => self
+                .assets
+                .get_asset(font.asset_id)
+                .await
+                .and_then(|buffer| {
+                    Ok(fonts::TypefaceResponse {
+                        buffer: Some(buffer),
+                        buffer_id: Some(font.asset_id),
+                        font_index: Some(font.font_index),
+                    })
+                })
+                .unwrap_or_else(|_| fonts::TypefaceResponse::new_empty()),
+            None => fonts::TypefaceResponse::new_empty(),
+        };
 
         // Note that not finding a typeface is not an error, as long as the query was legal.
         Ok(typeface_response)
@@ -269,8 +284,11 @@ impl FontService {
         )
     }
 
-    fn get_typeface_by_id(&self, id: u32) -> Result<fonts::TypefaceResponse, fonts_exp::Error> {
-        match self.assets.get_asset(id) {
+    async fn get_typeface_by_id(
+        &self,
+        id: u32,
+    ) -> Result<fonts::TypefaceResponse, fonts_exp::Error> {
+        match self.assets.get_asset(id).await {
             Ok(buffer) => {
                 let response = fonts::TypefaceResponse {
                     buffer: Some(buffer),
@@ -451,7 +469,7 @@ impl FontService {
             // TODO(I18N-12): Remove when all clients have migrated to GetTypeface
             GetFont { request, responder } => {
                 let request = request.into_typeface_request();
-                let mut response = self.match_request(request)?.into_font_response();
+                let mut response = self.match_request(request).await?.into_font_response();
                 Ok(responder.send(response.as_mut().map(OutOfLine))?)
             }
             // TODO(I18N-12): Remove when all clients have migrated to GetFontFamilyInfo
@@ -461,7 +479,7 @@ impl FontService {
                 Ok(responder.send(font_info.as_mut().map(OutOfLine))?)
             }
             GetTypeface { request, responder } => {
-                let response = self.match_request(request)?;
+                let response = self.match_request(request).await?;
                 // TODO(kpozin): OutOfLine?
                 Ok(responder.send(response)?)
             }
@@ -481,7 +499,7 @@ impl FontService {
 
         match request {
             GetTypefaceById { id, responder } => {
-                let mut response = self.get_typeface_by_id(id);
+                let mut response = self.get_typeface_by_id(id).await;
                 Ok(responder.send(&mut response)?)
             }
             GetTypefacesByFamily { family, responder } => {

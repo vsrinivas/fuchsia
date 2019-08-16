@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.pkg.FontResolver": "fuchsia-pkg://fuchsia.com/font_provider_tests#meta/mock_font_resolver.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
             }
         }
@@ -11,6 +12,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.pkg.FontResolver",
             "fuchsia.sys.Launcher"
         ]
     }

@@ -4,6 +4,7 @@
 
 use {
     crate::font_service::{font_info::CharSet, manifest::Font},
+    failure::{format_err, Error},
     fidl_fuchsia_fonts::{FamilyName, GenericFontFamily, Slant, Style2, TypefaceRequest, Width},
     fidl_fuchsia_fonts_experimental::TypefaceInfo,
     fidl_fuchsia_intl::LocaleId,
@@ -23,22 +24,26 @@ pub struct Typeface {
 }
 
 impl Typeface {
+    /// Create a new `Typeface`, copying all fields except `asset_id` and `generic_family` from
+    /// `manifest_font`.
     pub fn new(
         asset_id: u32,
         manifest_font: Font,
-        char_set: CharSet,
         generic_family: Option<GenericFontFamily>,
-    ) -> Typeface {
-        Typeface {
+    ) -> Result<Typeface, Error> {
+        if manifest_font.code_points.is_empty() {
+            return Err(format_err!("Can't create Typeface from Font with empty CharSet."));
+        }
+        Ok(Typeface {
             asset_id,
             font_index: manifest_font.index,
             weight: manifest_font.weight,
             width: manifest_font.width,
             slant: manifest_font.slant,
             languages: manifest_font.languages.iter().map(|x| x.to_string()).collect(),
-            char_set,
+            char_set: manifest_font.code_points,
             generic_family,
-        }
+        })
     }
 
     /// Returns value in the range `[0, 2 * request_languages.len()]`. The language code is used for
@@ -138,5 +143,30 @@ impl From<TypefaceInfoAndCharSet> for TypefaceInfo {
             languages: Some(info.languages),
             generic_family: info.generic_family,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        fidl_fuchsia_fonts::{Slant, Width, WEIGHT_NORMAL},
+        std::path::PathBuf,
+    };
+
+    #[test]
+    fn test_typeface_new_empty_char_set_is_error() {
+        let font = Font {
+            asset: PathBuf::default(),
+            index: 0,
+            slant: Slant::Upright,
+            weight: WEIGHT_NORMAL,
+            width: Width::Normal,
+            languages: vec![],
+            package: None,
+            code_points: CharSet::new(vec![]),
+        };
+
+        assert!(Typeface::new(0, font, None).is_err())
     }
 }

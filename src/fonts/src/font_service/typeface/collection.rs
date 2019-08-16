@@ -153,6 +153,8 @@ mod tests {
         char_set: &[u32],
         generic_family: Option<GenericFontFamily>,
     ) -> Typeface {
+        // Prevent error if char_set is empty
+        let char_set = if char_set.is_empty() { &[0] } else { char_set };
         Typeface::new(
             0,
             manifest::Font {
@@ -162,10 +164,12 @@ mod tests {
                 weight,
                 width,
                 languages: languages.iter().map(|s| s.to_string()).collect(),
+                code_points: CharSet::new(char_set.to_vec()),
+                package: None,
             },
-            CharSet::new(char_set.to_vec()),
             generic_family,
         )
+        .unwrap() // Safe because char_set is not empty
     }
 
     fn request_typeface<'a, 'b>(

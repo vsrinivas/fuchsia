@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::cmp::Ordering;
+use {
+    failure::{format_err, Error},
+    std::cmp::Ordering,
+};
 
 type BitmapElement = u64;
 const BITMAP_ELEMENT_SIZE: usize = 64;
@@ -88,6 +91,37 @@ impl CharSet {
         CharSet { ranges }
     }
 
+    pub fn from_string(s: String) -> Result<CharSet, Error> {
+        let mut code_points: Vec<u32> = vec![];
+        let mut prev: u32 = 0;
+        for range in s.split(',').filter(|x| !x.is_empty()) {
+            let mut split = range.split('+');
+
+            let offset: u32 = match split.next() {
+                Some(off) => off
+                    .parse()
+                    .or_else(|_| Err(format_err!("Failed to parse {:?} as u32.", off)))?,
+                None => return Err(format_err!("Failed to parse {:?}: not a valid range.", range)),
+            };
+
+            let length: u32 = match split.next() {
+                Some(len) => len
+                    .parse()
+                    .or_else(|_| Err(format_err!("Failed to parse {:?} as u32.", len)))?,
+                None => 0, // We can treat "0,2,..." as "0+0,2+0,..."
+            };
+
+            if split.next().is_some() {
+                return Err(format_err!("Failed to parse {:?}: not a valid range.", range));
+            }
+
+            let begin = prev + offset;
+            prev = begin + length;
+            code_points.extend(begin..=prev);
+        }
+        Ok(CharSet::new(code_points))
+    }
+
     pub fn contains(&self, c: u32) -> bool {
         match self.ranges.binary_search_by(|r| {
             if r.end() < c {
@@ -101,6 +135,16 @@ impl CharSet {
             Ok(r) => self.ranges[r].contains(c),
             Err(_) => false,
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.ranges.is_empty()
+    }
+}
+
+impl Default for CharSet {
+    fn default() -> Self {
+        CharSet::new(vec![])
     }
 }
 
@@ -126,5 +170,21 @@ mod tests {
         assert!(!charset.contains(9999));
         assert!(charset.contains(10000));
         assert!(!charset.contains(10001));
+    }
+
+    #[test]
+    fn test_charset_from_string() -> Result<(), Error> {
+        let s = "0,2,11,19+94".to_string();
+        let charset = CharSet::from_string(s)?;
+        assert!([0, 2, 13, 32, 54, 126].into_iter().all(|c| charset.contains(*c)));
+        assert!([1, 11, 19, 127, 10000].into_iter().all(|c| !charset.contains(*c)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_charset_from_string_not_a_number() {
+        for s in &["0,p,11", "q+1", "3+r"] {
+            assert!(CharSet::from_string(s.to_string()).is_err())
+        }
     }
 }

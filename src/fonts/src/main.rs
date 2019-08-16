@@ -42,18 +42,20 @@ async fn main() -> Result<(), Error> {
     let mut service = FontService::new();
 
     if !options.opt_present("n") {
-        service.load_manifest(&PathBuf::from(FONT_MANIFEST_PATH))?;
+        let font_manifest_path = PathBuf::from(FONT_MANIFEST_PATH);
+        service.load_manifest(&font_manifest_path).await?;
 
         let font_manifest_path = PathBuf::from(VENDOR_FONT_MANIFEST_PATH);
         if font_manifest_path.exists() {
-            service.load_manifest(&font_manifest_path)?;
+            service.load_manifest(&font_manifest_path).await?;
         }
     } else {
         fx_vlog!(1, "no-default-fonts set, not loading fonts from default location");
     }
 
     for m in options.opt_strs("m") {
-        service.load_manifest(&PathBuf::from(m.as_str()))?;
+        let path_buf = PathBuf::from(m.as_str());
+        service.load_manifest(&path_buf).await?;
     }
 
     service.check_can_start()?;

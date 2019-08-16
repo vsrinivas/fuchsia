@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/mock_font_resolver"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

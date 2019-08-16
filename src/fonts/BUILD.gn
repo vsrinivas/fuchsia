@@ -23,6 +23,7 @@ rustc_binary("font_server") {
 
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_fonts_ext",
+    "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
@@ -32,6 +33,8 @@ rustc_binary("font_server") {
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/sys/lib/fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:getopts",
@@ -45,6 +48,7 @@ rustc_binary("font_server") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:unicase",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 
@@ -99,12 +103,16 @@ rustc_test("font_provider_test") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/sys/lib/fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
   source_root = "tests/font_provider_test.rs"
 }
@@ -113,6 +121,20 @@ test_package("font_provider_tests") {
   deps = [
     ":font_provider_test_test",
     ":font_server_test",
+    ":mock_font_resolver_bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mock_font_resolver.cmx")
+      dest = "mock_font_resolver.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "mock_font_resolver"
+    },
   ]
 
   tests = [
@@ -134,6 +156,10 @@ test_package("font_provider_tests") {
     {
       path = rebase_path("tests/all_fonts_manifest.json")
       dest = "testdata/test_fonts/all_fonts_manifest.json"
+    },
+    {
+      path = rebase_path("tests/ephemeral_manifest.json")
+      dest = "testdata/test_fonts/ephemeral_manifest.json"
     },
   ]
 
@@ -187,4 +213,25 @@ test_package("font_provider_tests") {
       },
     ]
   }
+}
+
+rustc_binary("mock_font_resolver_bin") {
+  name = "mock_font_resolver"
+  edition = "2018"
+  source_root = "tests/mock_font_resolver.rs"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/sys/lib/fuchsia_url:fuchsia_url",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:lazy_static",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
 }

@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    crate::font_service::font_info::CharSet,
     failure::{self, format_err, ResultExt},
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
+    fuchsia_url::pkg_url::PkgUrl,
     lazy_static::lazy_static,
     regex::Regex,
     serde::de::{self, Deserialize, Deserializer, Error},
@@ -68,6 +70,12 @@ pub struct Font {
         deserialize_with = "deserialize_languages"
     )]
     pub languages: LanguageSet,
+
+    #[serde(default = "default_package", deserialize_with = "deserialize_package")]
+    pub package: Option<PkgUrl>,
+
+    #[serde(default, deserialize_with = "deserialize_code_points")]
+    pub code_points: CharSet,
 }
 
 fn default_fallback() -> bool {
@@ -96,6 +104,10 @@ fn default_width() -> Width {
 
 fn default_languages() -> LanguageSet {
     LanguageSet::new()
+}
+
+fn default_package() -> Option<PkgUrl> {
+    None
 }
 
 lazy_static! {
@@ -202,6 +214,21 @@ where
     }
 
     deserializer.deserialize_any(LanguageSetVisitor)
+}
+
+fn deserialize_package<'d, D>(deserializer: D) -> Result<Option<PkgUrl>, D::Error>
+where
+    D: Deserializer<'d>,
+{
+    Some(PkgUrl::deserialize(deserializer)).transpose()
+}
+
+fn deserialize_code_points<'d, D>(deserializer: D) -> Result<CharSet, D::Error>
+where
+    D: Deserializer<'d>,
+{
+    let s = String::deserialize(deserializer)?;
+    CharSet::from_string(s).map_err(|e| D::Error::custom(format!("{:?}", e)))
 }
 
 impl FontsManifest {
