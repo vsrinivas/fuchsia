@@ -71,9 +71,6 @@ protocol PuppetMaster {
     GetStories() -> (vector<string> story_names);
 };
 
-struct WatchSessionOptions {
-};
-
 protocol StoryPuppetMaster {
     // Enqueues the given `commands` in the order they are given.
     // Can be called as many times as necessary to specify the full
