@@ -24,6 +24,21 @@ constexpr int64_t kPaddingForPlayNoReplyWithRefTime = ZX_MSEC(10);
 // Short-term workaround: pad our reported min_lead_time duration by this.
 constexpr int64_t kPaddingForMinLeadTimeReporting = ZX_MSEC(4);
 
+// To what extent should client-side underflows be logged? (A "client-side underflow" refers to when
+// all or part of a packet's data is discarded because its start timestamp has already passed.)
+// For each Renderer, we will log the first underflow. For subsequent occurrances, depending on
+// audio_core's logging level, we throttle how frequently these are displayed. If log_level is set
+// to TRACE or SPEW, all client-side underflows are logged -- at log_level -1: VLOG TRACE -- as
+// specified by kRenderUnderflowTraceInterval. If set to INFO, we log less often, at log_level
+// 1: INFO, throttling by the factor kRenderUnderflowInfoInterval. If set to WARNING or higher,
+// we throttle these even more, specified by kRenderUnderflowErrorInterval. Note: by default we
+// set NDEBUG builds to WARNING and DEBUG builds to INFO. To disable all logging of client-side
+// underflows, set kLogRenderUnderflow to false.
+static constexpr bool kLogRenderUnderflow = true;
+static constexpr uint16_t kRenderUnderflowTraceInterval = 1;
+static constexpr uint16_t kRenderUnderflowInfoInterval = 10;
+static constexpr uint16_t kRenderUnderflowErrorInterval = 100;
+
 fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     AudioCoreImpl* owner) {
@@ -38,7 +53,9 @@ AudioRendererImpl::AudioRendererImpl(
       owner_(owner),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       pts_ticks_per_second_(1000000000, 1),
-      ref_clock_to_frac_frames_(0, 0, {0, 1}) {
+      ref_clock_to_frac_frames_(0, 0, {0, 1}),
+      underflow_count_(0u),
+      partial_underflow_count_(0u) {
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -244,6 +261,64 @@ void AudioRendererImpl::UnlinkThrottle() {
   if (throttle_output_link_ != nullptr) {
     RemoveLink(throttle_output_link_);
     throttle_output_link_.reset();
+  }
+}
+
+void AudioRendererImpl::UnderflowOccurred(int64_t source_start, int64_t mix_point,
+                                          zx_duration_t underflow_duration) {
+  uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
+
+  if constexpr (kLogRenderUnderflow) {
+    int64_t underflow_msec = underflow_duration / ZX_MSEC(1);
+
+    if ((kRenderUnderflowErrorInterval > 0) &&
+        (underflow_count % kRenderUnderflowErrorInterval == 0)) {
+      AUD_LOG_OBJ(ERROR, this) << "#" << underflow_count + 1 << " (1/"
+                               << kRenderUnderflowErrorInterval << "): source-start 0x" << std::hex
+                               << source_start << " missed mix-point 0x" << mix_point << " by "
+                               << std::dec << underflow_msec << " ms";
+    } else if ((kRenderUnderflowInfoInterval > 0) &&
+               (underflow_count % kRenderUnderflowInfoInterval == 0)) {
+      AUD_LOG_OBJ(INFO, this) << "#" << underflow_count + 1 << " (1/"
+                              << kRenderUnderflowErrorInterval << "): source-start 0x" << std::hex
+                              << source_start << " missed mix-point 0x" << mix_point << " by "
+                              << std::dec << underflow_msec << " ms";
+    } else if ((kRenderUnderflowTraceInterval > 0) &&
+               (underflow_count % kRenderUnderflowTraceInterval == 0)) {
+      AUD_VLOG_OBJ(TRACE, this) << "#" << underflow_count + 1 << " (1/"
+                                << kRenderUnderflowErrorInterval << "): source-start 0x" << std::hex
+                                << source_start << " missed mix-point 0x" << mix_point << " by "
+                                << std::dec << underflow_msec << " ms";
+    }
+  }
+}
+
+void AudioRendererImpl::PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) {
+  if (source_offset >= (Mixer::FRAC_ONE >> 1)) {
+    auto partial_underflow_count = std::atomic_fetch_add<uint16_t>(&partial_underflow_count_, 1u);
+    if constexpr (kLogRenderUnderflow) {
+      if ((kRenderUnderflowErrorInterval > 0) &&
+          (partial_underflow_count % kRenderUnderflowErrorInterval == 0)) {
+        AUD_LOG(WARNING) << "#" << partial_underflow_count + 1 << " (1/"
+                         << kRenderUnderflowErrorInterval << "): shifted by "
+                         << (source_offset < 0 ? "-0x" : "0x") << std::hex << abs(source_offset)
+                         << " source subframes and " << std::dec << mix_offset << " mix frames";
+      } else if ((kRenderUnderflowInfoInterval > 0) &&
+                 (partial_underflow_count % kRenderUnderflowInfoInterval == 0)) {
+        AUD_LOG(INFO) << "#" << partial_underflow_count + 1 << " (1/"
+                      << kRenderUnderflowInfoInterval << "): shifted by "
+                      << (source_offset < 0 ? "-0x" : "0x") << std::hex << abs(source_offset)
+                      << " source subframes and " << std::dec << mix_offset << " mix frames";
+      } else if ((kRenderUnderflowTraceInterval > 0) &&
+                 (partial_underflow_count % kRenderUnderflowTraceInterval == 0)) {
+        AUD_VLOG(TRACE) << "#" << partial_underflow_count + 1 << " (1/"
+                        << kRenderUnderflowTraceInterval << "): shifted by "
+                        << (source_offset < 0 ? "-0x" : "0x") << std::hex << abs(source_offset)
+                        << " source subframes and " << std::dec << mix_offset << " mix frames";
+      }
+    }
+  } else {
+    AUD_VLOG(TRACE) << "skipped " << mix_offset << " output frames to align with source packet";
   }
 }
 

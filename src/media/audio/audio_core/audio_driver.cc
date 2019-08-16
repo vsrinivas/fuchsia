@@ -30,7 +30,7 @@ static constexpr bool kEnablePositionNotifications = true;
 // Trace const. If INFO, even less frequently per Info const (INFO is default for DEBUG builds).
 // Default for audio_core in NDEBUG builds is WARNING, so by default we do not log any of these
 // messages on Release builds. Set to false to not log at all, even for unsolicited notifications.
-static constexpr bool kLogPositionNotifications = true;
+static constexpr bool kLogPositionNotifications = false;
 static constexpr uint16_t kPositionNotificationSpewInterval = 1;
 static constexpr uint16_t kPositionNotificationTraceInterval = 60;
 static constexpr uint16_t kPositionNotificationInfoInterval = 3600;

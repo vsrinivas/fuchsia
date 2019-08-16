@@ -8,6 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
 
+#include <atomic>
 #include <memory>
 #include <unordered_map>
 
@@ -54,6 +55,11 @@ class AudioRendererImpl : public AudioObject,
   // time the link was created.
   const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const { return format_info_; }
   bool format_info_valid() const { return (format_info_ != nullptr); }
+
+  // We track the number of packets that could not be mixed on time, per packet timestamp.
+  void UnderflowOccurred(int64_t source_start, int64_t mix_point, zx_duration_t underflow_duration);
+  // We also track the number of times PART of a packet had to be skipped, per timestamp.
+  void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset);
 
   // AudioRenderer interface
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
@@ -171,6 +177,9 @@ class AudioRendererImpl : public AudioObject,
   fbl::Mutex ref_to_ff_lock_;
   TimelineFunction ref_clock_to_frac_frames_ FXL_GUARDED_BY(ref_to_ff_lock_);
   GenerationId ref_clock_to_frac_frames_gen_ FXL_GUARDED_BY(ref_to_ff_lock_);
+
+  std::atomic<uint16_t> underflow_count_;
+  std::atomic<uint16_t> partial_underflow_count_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
 };

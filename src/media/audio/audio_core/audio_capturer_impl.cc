@@ -881,11 +881,11 @@ struct RbRegion {
 void DumpRbRegions(const RbRegion* regions) {
   for (auto i = 0; i < 2; ++i) {
     if (regions[i].len) {
-      AUD_VLOG(TRACE) << " [" << i << "] srb_pos 0x" << std::hex << regions[i].srb_pos << ", len 0x"
-                      << regions[i].len << ", sfrac_pts 0x" << regions[i].sfrac_pts << " ("
-                      << std::dec << (regions[i].sfrac_pts >> kPtsFractionalBits) << " frames)";
+      AUD_VLOG(SPEW) << " [" << i << "] srb_pos 0x" << std::hex << regions[i].srb_pos << ", len 0x"
+                     << regions[i].len << ", sfrac_pts 0x" << regions[i].sfrac_pts << " ("
+                     << std::dec << (regions[i].sfrac_pts >> kPtsFractionalBits) << " frames)";
     } else {
-      AUD_VLOG(TRACE) << " [" << i << "] len 0x0";
+      AUD_VLOG(SPEW) << " [" << i << "] len 0x0";
     }
   }
 }

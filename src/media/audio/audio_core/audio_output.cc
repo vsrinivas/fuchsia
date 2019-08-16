@@ -374,11 +374,10 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
     auto clock_mono_late = info->clock_mono_to_frac_source_frames.rate().Inverse().Scale(
         frac_source_for_first_mix_job_frame - mixer.neg_filter_width() -
         frac_source_for_first_packet_frame);
-    AUD_LOG_OBJ(ERROR, audio_renderer.get())
-        << ", skipping packet [" << frac_source_for_first_packet_frame << ","
-        << frac_source_for_final_packet_frame << "]: missed mix-start "
-        << frac_source_for_first_mix_job_frame - mixer.neg_filter_width() << " by "
-        << static_cast<double>(clock_mono_late) / ZX_MSEC(1) << " ms";
+
+    audio_renderer->UnderflowOccurred(frac_source_for_first_packet_frame,
+                                      frac_source_for_first_mix_job_frame, clock_mono_late);
+
     return true;
   }
 
@@ -420,14 +419,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
 
     frac_source_offset_64 += dest_to_src.Scale(dest_offset_64);
 
-    if (abs(frac_source_offset_64) >= (Mixer::FRAC_ONE >> 1)) {
-      AUD_LOG_OBJ(WARNING, audio_renderer.get())
-          << " skipped " << dest_offset_64 << " output frames; frac_source_offset is 0x" << std::hex
-          << frac_source_offset_64;
-    } else {
-      AUD_VLOG_OBJ(TRACE, audio_renderer.get())
-          << " skipped " << dest_offset_64 << " output frames to align with source timestamp";
-    }
+    audio_renderer->PartialUnderflowOccurred(frac_source_offset_64, dest_offset_64);
   }
 
   FXL_DCHECK(dest_offset_64 >= 0);
@@ -492,11 +484,11 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
       info->gain.Advance(dest_offset - prev_dest_offset, cur_mix_job_.local_to_output->rate());
     }
   } else {
+    // This packet was initially within our mix window. After realigning our sampling point to the
+    // nearest dest frame, it is now entirely in the past. This can only occur when down-sampling
+    // and is made more likely if the rate conversion ratio is very high. We've already reported
+    // a partial underflow when realigning, so just complete the packet and move on to the next.
     consumed_source = true;
-    FXL_LOG(ERROR) << "Skipping packet -- frac_source_offset 0x" << std::hex << frac_source_offset
-                   << " exceeded final src frame's positive window 0x"
-                   << (static_cast<int32_t>(packet->frac_frame_len()) - Mixer::FRAC_ONE +
-                       mixer.pos_filter_width());
   }
 
   if (consumed_source) {
