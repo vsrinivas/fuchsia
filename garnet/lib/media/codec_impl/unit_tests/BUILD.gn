@@ -87,6 +87,9 @@ test_package("decryptor_adapter_tests") {
     {
       name = "decryptor_adapter_tests"
       environments = basic_envs
+
+      # TODO(34924): This test is currently flaky. Re-enable once issue is resolved.
+      disabled = true
     },
   ]
 }
