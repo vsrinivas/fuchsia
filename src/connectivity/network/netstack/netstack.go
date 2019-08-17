@@ -361,13 +361,13 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 	name := ifs.ns.nameLocked(ifs.nicid)
 
 	if oldAddr == newAddr {
-		syslog.Infof("NIC %s: DHCP renewed address %s/%d for %s", name, newAddr.Address, newAddr.PrefixLen, config.LeaseLength)
+		syslog.Infof("NIC %s: DHCP renewed address %s for %s", name, newAddr, config.LeaseLength)
 	} else {
 		if oldAddr != (tcpip.AddressWithPrefix{}) {
 			if err := ifs.ns.mu.stack.RemoveAddress(ifs.nicid, oldAddr.Address); err != nil {
-				syslog.Infof("NIC %s: failed to remove expired DHCP address %s/%d: %s", name, oldAddr.Address, oldAddr.PrefixLen, err)
+				syslog.Infof("NIC %s: failed to remove expired DHCP address %s: %s", name, oldAddr, err)
 			} else {
-				syslog.Infof("NIC %s: removed expired DHCP address %s/%d", name, oldAddr.Address, oldAddr.PrefixLen)
+				syslog.Infof("NIC %s: removed expired DHCP address %s", name, oldAddr)
 			}
 			// TODO(ckuiper): remove the routes.
 		}
@@ -376,9 +376,9 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 				Protocol:          ipv4.ProtocolNumber,
 				AddressWithPrefix: newAddr,
 			}, stack.FirstPrimaryEndpoint); err != nil {
-				syslog.Infof("NIC %s: failed to add DHCP acquired address %s/%d: %s", name, newAddr.Address, newAddr.PrefixLen, err)
+				syslog.Infof("NIC %s: failed to add DHCP acquired address %s: %s", name, newAddr, err)
 			} else {
-				syslog.Infof("NIC %s: DHCP acquired address %s/%d for %s", name, newAddr.Address, newAddr.PrefixLen, config.LeaseLength)
+				syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, newAddr, config.LeaseLength)
 
 				// Add a default route and a route for the local subnet.
 				rs := defaultRoutes(ifs.nicid, config.Gateway)

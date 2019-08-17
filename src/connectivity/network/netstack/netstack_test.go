@@ -5,7 +5,6 @@
 package netstack
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"syscall/zx"
@@ -414,7 +413,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 
 	t.Run("Add", func(t *testing.T) {
 		for _, addr := range testAddresses {
-			t.Run(fmt.Sprintf("%s/%d", addr.Address, addr.PrefixLen), func(t *testing.T) {
+			t.Run(addr.String(), func(t *testing.T) {
 				ifAddr := stack.InterfaceAddress{
 					IpAddress: fidlconv.ToNetIpAddress(addr.Address),
 					PrefixLen: uint8(addr.PrefixLen),
@@ -434,7 +433,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 
 	t.Run("Remove", func(t *testing.T) {
 		for _, addr := range testAddresses {
-			t.Run(fmt.Sprintf("%s/%d", addr.Address, addr.PrefixLen), func(t *testing.T) {
+			t.Run(addr.String(), func(t *testing.T) {
 				ifAddr := stack.InterfaceAddress{
 					IpAddress: fidlconv.ToNetIpAddress(addr.Address),
 					PrefixLen: uint8(addr.PrefixLen),
@@ -711,7 +710,7 @@ func TestDHCPAcquired(t *testing.T) {
 					if address.Protocol == ipv4.ProtocolNumber {
 						switch address.AddressWithPrefix {
 						case test.oldAddr:
-							t.Errorf("expired address %s/%d was not removed from NIC addresses %v", test.oldAddr.Address, test.oldAddr.PrefixLen, info.ProtocolAddresses)
+							t.Errorf("expired address %s was not removed from NIC addresses %v", test.oldAddr, info.ProtocolAddresses)
 						case test.newAddr:
 							found = true
 						}
@@ -719,7 +718,7 @@ func TestDHCPAcquired(t *testing.T) {
 				}
 
 				if !found {
-					t.Errorf("new address %s/%d was not added to NIC addresses %v", test.newAddr.Address, test.newAddr.PrefixLen, info.ProtocolAddresses)
+					t.Errorf("new address %s was not added to NIC addresses %v", test.newAddr, info.ProtocolAddresses)
 				}
 			} else {
 				t.Errorf("NIC %d not found in %v", ifState.nicid, infoMap)

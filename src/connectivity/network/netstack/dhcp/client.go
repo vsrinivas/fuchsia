@@ -329,7 +329,7 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 				PrefixLen: util.PrefixLength(cfg.SubnetMask),
 			}
 
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s/%d, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr.Address, requestedAddr.PrefixLen, c.server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
+			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, c.server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
 
 			break
 		}
@@ -376,7 +376,7 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 				PrefixLen: util.PrefixLength(cfg.SubnetMask),
 			}
 			if addr != requestedAddr {
-				return Config{}, fmt.Errorf("%s with unexpected address=%s/%d expected=%s/%d", typ, addr.Address, addr.PrefixLen, requestedAddr.Address, requestedAddr.PrefixLen)
+				return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", typ, addr, requestedAddr)
 			}
 
 			// Now that we've successfully acquired the address, update the client state.
