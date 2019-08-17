@@ -19,6 +19,10 @@ packages:
   - package: libx11-dev
   - package: libxcursor1
   - package: libxcursor-dev
+  - package: libxext6
+  - package: libxext-dev
+  - package: libxfixes3
+  - package: libxfixes-dev
   - package: libxi6
   - package: libxi-dev
   - package: libxrandr2
@@ -35,3 +39,5 @@ packages:
   - package: x11proto-kb-dev
   - package: x11proto-randr-dev
   - package: x11proto-render-dev
+  - package: x11proto-xext-dev
+  - package: x11proto-fixes-dev
