@@ -3,31 +3,22 @@
 // found in the LICENSE file.
 
 #include <string.h>
+#include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include <launchpad/launchpad.h>
+#include "launcher.h"
 
 int main(int argc, const char* const* argv) {
-  launchpad_t* lp = NULL;
-  launchpad_create(ZX_HANDLE_INVALID, "launcher-child", &lp);
-  launchpad_load_from_file(lp, argv[1]);
-  launchpad_set_args(lp, argc - 1, argv + 1);
-  launchpad_clone(lp, LP_CLONE_ALL);
-
-  zx_handle_t process = ZX_HANDLE_INVALID;
-  zx_status_t status = launchpad_go(lp, &process, NULL);
-  if (status != ZX_OK)
-    return 401;
-
-  status = zx_object_wait_one(process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, NULL);
-  if (status != ZX_OK)
-    return status;
-
-  zx_info_process_t proc_info;
-  memset(&proc_info, 0, sizeof(proc_info));
-  status = zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
-  if (status != ZX_OK)
-    return status;
-
-  return proc_info.return_code;
+  const char* name = "launcher-child";
+  zx_handle_t proc = ZX_HANDLE_INVALID;
+  zx_handle_t vmar = ZX_HANDLE_INVALID;
+  // Note: in order to test that the job policy is properly applied, |zx_process_create| must be
+  // called from within the launcher process.
+  zx_status_t status = zx_process_create(zx_job_default(), name, strlen(name), 0, &proc, &vmar);
+  if (status == ZX_OK) {
+    zx_task_kill(proc);
+  }
+  zx_handle_close(vmar);
+  zx_handle_close(proc);
+  return status == ZX_OK ? LAUNCHER_SUCCESS : LAUNCHER_FAILURE;
 }

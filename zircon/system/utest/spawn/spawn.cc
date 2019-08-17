@@ -23,6 +23,8 @@
 
 #include <string>
 
+#include "launcher.h"
+
 #define FDIO_SPAWN_CLONE_ALL_EXCEPT_NS (FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE)
 
 static constexpr char kSpawnChild[] = "bin/spawn-child";
@@ -95,21 +97,7 @@ static bool spawn_launcher_test(void) {
   zx_status_t status;
   zx::process process;
   const std::string launcher_path = new_path(kSpawnLauncher);
-  const std::string child_path = new_path(kSpawnChild);
-  const char* argv[] = {launcher_path.c_str(), child_path.c_str(), nullptr};
-
-  // Check that we can spawn the lancher process in a job and that the
-  // launcher process can launch the child.
-  {
-    zx::job job;
-    ASSERT_EQ(ZX_OK, zx::job::create(*zx::job::default_job(), 0, &job));
-
-    status = fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL, launcher_path.c_str(), argv,
-                        process.reset_and_get_address());
-    ASSERT_EQ(ZX_OK, status);
-    EXPECT_EQ(43, join(process));
-    ASSERT_EQ(ZX_OK, job.kill());
-  }
+  const char* argv[] = {launcher_path.c_str(), nullptr};
 
   // Check that setting |ZX_POL_NEW_PROCESS| to |ZX_POL_ACTION_DENY| prevents
   // the launcher from launching the child.
@@ -125,7 +113,7 @@ static bool spawn_launcher_test(void) {
     status = fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL, launcher_path.c_str(), argv,
                         process.reset_and_get_address());
     ASSERT_EQ(ZX_OK, status);
-    EXPECT_EQ(401, join(process));
+    EXPECT_EQ(LAUNCHER_FAILURE, join(process));
     ASSERT_EQ(ZX_OK, job.kill());
   }
 

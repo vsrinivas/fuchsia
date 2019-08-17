@@ -4,6 +4,7 @@
 
 test("spawn") {
   sources = [
+    "launcher.h",
     "spawn.cc",
   ]
   deps = [
@@ -35,10 +36,10 @@ executable("spawn-launcher") {
   testonly = true
   sources = [
     "launcher.c",
+    "launcher.h",
   ]
   deps = [
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/launchpad",
     "$zx/system/ulib/zircon",
   ]
 }
