@@ -80,18 +80,8 @@ source_set("cpp") {
     "//peridot/bin/context_engine/*",
     "//peridot/bin/module_resolver/*",
     "//peridot/bin/sessionmgr/*",
-    "//peridot/bin/suggestion_engine/*",
     "//peridot/examples/simple/*",
     "//peridot/examples/todo_cpp/*",
-    "//peridot/lib/bound_set/*",
-    "//peridot/lib/fidl/*",
-    "//peridot/lib/module_manifest/*",
-    "//peridot/lib/module_manifest_source/*",
-    "//peridot/lib/testing/*",
-    "//peridot/public/lib/app_driver/cpp/*",
-    "//peridot/public/lib/integration_testing/cpp/*",
-    "//peridot/tests/maxwell_integration/*",
-    "//peridot/tests/sessionctl/*",
 
     # TODO(SCN-1329): move playback to lib/sys.
     "//src/media/playback/*",
