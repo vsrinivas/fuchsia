@@ -94,7 +94,7 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
   // source and the resolved value. The typedef won't always map to something.
   cpp_.emplace_back(
       InternalGlob(
-          "std::basic_string<char, std::__2::char_traits<char>, std::__2::allocator<char> >"),
+          "std::__2::basic_string<char, std::__2::char_traits<char>, std::__2::allocator<char> >"),
       std::make_unique<PrettyStdString>());
   cpp_.emplace_back(InternalGlob("std::__2::string"), std::make_unique<PrettyStdString>());
 
@@ -133,6 +133,12 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
                     std::make_unique<PrettyOptional>(
                         "std::optional", "__engaged_", "__val_", "std::nullopt",
                         GetterList{{"value", "__val_"}, {"has_value", "__engaged_"}}));
+
+  cpp_.emplace_back(
+      InternalGlob("std::__2::variant<*>"),
+      std::make_unique<PrettyRecursiveVariant>(
+          "std::variant", "__impl.__data", "__impl.__index", "__tail", "__head.__value",
+          "std::variant::valueless_by_exception()", GetterList({{"index", "__impl.__index"}})));
 
   // Trees (std::set and std::map).
   cpp_.emplace_back(InternalGlob("std::__2::set<*>"), std::make_unique<PrettyTree>("std::set"));
@@ -229,6 +235,10 @@ void PrettyTypeManager::AddDefaultFuchsiaCppPrettyTypes() {
       std::make_unique<PrettyOptional>(
           "fit::optional", "storage_.index_ == 0", "storage_.base_.value", "fit::nullopt",
           GetterList{{"value", "storage_.base_.value"}, {"has_value", "storage_.index_ == 0"}}));
+  cpp_.emplace_back(InternalGlob("fit::variant<*>"),
+                    std::make_unique<PrettyRecursiveVariant>(
+                        "fit::variant", "storage_.base_", "storage_.index_", "rest", "value",
+                        "fit::variant::empty", GetterList({{"index", "storage_.index_"}})));
 
   // fxl
   cpp_.emplace_back(InternalGlob("fxl::RefPtr<*>"),

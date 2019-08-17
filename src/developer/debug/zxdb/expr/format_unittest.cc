@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/format_options.h"
+#include "src/developer/debug/zxdb/expr/format_test_support.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
@@ -33,87 +34,7 @@ class FormatTest : public TestWithLoop {
   fxl::RefPtr<MockEvalContext> eval_context() const { return eval_context_; }
   MockSymbolDataProvider* provider() { return eval_context_->data_provider(); }
 
-  // Formats a given node synchronously.
-  void SyncFormat(FormatNode* node, const FormatOptions& opts) {
-    // Populate the value.
-    bool called = false;
-    FillFormatNodeValue(node, eval_context_, fit::defer_callback([&called]() {
-                          debug_ipc::MessageLoop::Current()->QuitNow();
-                          called = true;
-                        }));
-    if (!called)
-      loop().Run();
-
-    called = false;
-    FillFormatNodeDescription(node, opts, eval_context_, fit::defer_callback([&called]() {
-                                debug_ipc::MessageLoop::Current()->QuitNow();
-                                called = true;
-                              }));
-    if (!called)
-      loop().Run();
-  }
-
-  std::unique_ptr<FormatNode> GetDescribedNode(const ExprValue& value, const FormatOptions& opts) {
-    auto node = std::make_unique<FormatNode>(std::string(), value);
-    SyncFormat(node.get(), opts);
-    return node;
-  }
-
-  // Recursively describes all nodes in the given tree. If update_value is set, the value of the
-  // node will also be refreshed.
-  void RecursiveSyncDescribe(FormatNode* node, bool update_value, const FormatOptions& opts) {
-    if (update_value)
-      SyncFormat(node, opts);
-    else
-      FillFormatNodeDescription(node, opts, eval_context_, {});
-
-    for (auto& c : node->children())
-      RecursiveSyncDescribe(c.get(), update_value, opts);
-  }
-
-  // Returns "<type>, <description>" for the given formatted node. Errors are also output.
-  std::string GetTypeDesc(const FormatNode* node) {
-    if (node->err().has_error())
-      return "Err: " + node->err().msg();
-    return node->type() + ", " + node->description();
-  }
-
-  // Returns "<type>, <description>" for the given formatting. On error, returns "Err: <msg>".
-  std::string SyncTypeDesc(const ExprValue& value, const FormatOptions& opts) {
-    auto node = GetDescribedNode(value, opts);
-    return GetTypeDesc(node.get());
-  }
-
-  // Recursively formats the values until everything is described and outputs a hierarchical tree
-  // structure, each level indented two spaces.
-  //
-  // Note that normally the root name will be empty so it will start with " = <type>, <description>"
-  //
-  // <name> = <type>, <description>
-  //   <child name> = <child type>, <child description>
-  //     <child level 2 name> = <child 2 type>, <child 2 description>
-  //   <child name> = <child type>, <child description>
-  std::string SyncTreeTypeDesc(const ExprValue& value, const FormatOptions& opts) {
-    auto node = std::make_unique<FormatNode>(std::string(), value);
-    RecursiveSyncDescribe(node.get(), true, opts);
-
-    std::string result;
-    RecursiveTreeTypeDesc(node.get(), &result, 0);
-    return result;
-  }
-
  private:
-  // Recursive backend for SyncTreeTypeDesc.
-  void RecursiveTreeTypeDesc(const FormatNode* node, std::string* output, int indent) {
-    output->append(std::string(indent * 2, ' '));
-    output->append(node->name());
-    output->append(" = ");
-    output->append(GetTypeDesc(node));
-    output->append("\n");
-    for (auto& c : node->children())
-      RecursiveTreeTypeDesc(c.get(), output, indent + 1);
-  }
-
   fxl::RefPtr<MockEvalContext> eval_context_;
 };
 
@@ -124,28 +45,28 @@ TEST_F(FormatTest, Signed) {
 
   // 8-bit.
   ExprValue val_int8(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "char"), {123});
-  EXPECT_EQ("char, 123", SyncTypeDesc(val_int8, opts));
+  EXPECT_EQ(" = char, 123\n", GetDebugTreeForValue(eval_context(), val_int8, opts));
 
   // 16-bit.
   ExprValue val_int16(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 2, "short"),
                       {0xe0, 0xf0});
-  EXPECT_EQ("short, -3872", SyncTypeDesc(val_int16, opts));
+  EXPECT_EQ(" = short, -3872\n", GetDebugTreeForValue(eval_context(), val_int16, opts));
 
   // 32-bit.
   ExprValue val_int32(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int"),
                       {0x01, 0x02, 0x03, 0x04});
-  EXPECT_EQ("int, 67305985", SyncTypeDesc(val_int32, opts));
+  EXPECT_EQ(" = int, 67305985\n", GetDebugTreeForValue(eval_context(), val_int32, opts));
 
   // 64-bit.
   ExprValue val_int64(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 8, "long long"),
                       {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff});
-  EXPECT_EQ("long long, -2", SyncTypeDesc(val_int64, opts));
+  EXPECT_EQ(" = long long, -2\n", GetDebugTreeForValue(eval_context(), val_int64, opts));
 
   // Force a 32-bit float to an int.
   ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
                       {0x04, 0x03, 0x02, 0x01});
   opts.num_format = FormatOptions::NumFormat::kSigned;
-  EXPECT_EQ("float, 16909060", SyncTypeDesc(val_float, opts));
+  EXPECT_EQ(" = float, 16909060\n", GetDebugTreeForValue(eval_context(), val_float, opts));
 }
 
 TEST_F(FormatTest, Unsigned) {
@@ -153,30 +74,31 @@ TEST_F(FormatTest, Unsigned) {
 
   // 8-bit.
   ExprValue val_int8(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "char"), {123});
-  EXPECT_EQ("char, 123", SyncTypeDesc(val_int8, opts));
+  EXPECT_EQ(" = char, 123\n", GetDebugTreeForValue(eval_context(), val_int8, opts));
 
   // 16-bit.
   ExprValue val_int16(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "short"),
                       {0xe0, 0xf0});
-  EXPECT_EQ("short, 61664", SyncTypeDesc(val_int16, opts));
+  EXPECT_EQ(" = short, 61664\n", GetDebugTreeForValue(eval_context(), val_int16, opts));
 
   // 32-bit.
   ExprValue val_int32(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "int"),
                       {0x01, 0x02, 0x03, 0x04});
-  EXPECT_EQ("int, 67305985", SyncTypeDesc(val_int32, opts));
+  EXPECT_EQ(" = int, 67305985\n", GetDebugTreeForValue(eval_context(), val_int32, opts));
 
   // 64-bit.
   ExprValue val_int64(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "long long"),
                       {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff});
-  EXPECT_EQ("long long, 18446744073709551614", SyncTypeDesc(val_int64, opts));
+  EXPECT_EQ(" = long long, 18446744073709551614\n",
+            GetDebugTreeForValue(eval_context(), val_int64, opts));
 
   // Force a 32-bit float to an unsigned and a hex.
   ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
                       {0x04, 0x03, 0x02, 0x01});
   opts.num_format = FormatOptions::NumFormat::kUnsigned;
-  EXPECT_EQ("float, 16909060", SyncTypeDesc(val_float, opts));
+  EXPECT_EQ(" = float, 16909060\n", GetDebugTreeForValue(eval_context(), val_float, opts));
   opts.num_format = FormatOptions::NumFormat::kHex;
-  EXPECT_EQ("float, 0x1020304", SyncTypeDesc(val_float, opts));
+  EXPECT_EQ(" = float, 0x1020304\n", GetDebugTreeForValue(eval_context(), val_float, opts));
 }
 
 TEST_F(FormatTest, Bool) {
@@ -184,17 +106,17 @@ TEST_F(FormatTest, Bool) {
 
   // 8-bit true.
   ExprValue val_true8(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool"), {0x01});
-  EXPECT_EQ("bool, true", SyncTypeDesc(val_true8, opts));
+  EXPECT_EQ(" = bool, true\n", GetDebugTreeForValue(eval_context(), val_true8, opts));
 
   // 8-bit false.
   ExprValue val_false8(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool"),
                        {0x00});
-  EXPECT_EQ("bool, false", SyncTypeDesc(val_false8, opts));
+  EXPECT_EQ(" = bool, false\n", GetDebugTreeForValue(eval_context(), val_false8, opts));
 
   // 32-bit true.
   ExprValue val_false32(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 4, "bool"),
                         {0x00, 0x01, 0x00, 0x00});
-  EXPECT_EQ("bool, false", SyncTypeDesc(val_false8, opts));
+  EXPECT_EQ(" = bool, false\n", GetDebugTreeForValue(eval_context(), val_false8, opts));
 }
 
 TEST_F(FormatTest, Char) {
@@ -203,28 +125,28 @@ TEST_F(FormatTest, Char) {
   // 8-bit char.
   ExprValue val_char8(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"),
                       {'c'});
-  EXPECT_EQ("char, 'c'", SyncTypeDesc(val_char8, opts));
+  EXPECT_EQ(" = char, 'c'\n", GetDebugTreeForValue(eval_context(), val_char8, opts));
 
   // Hex encoded 8-bit char.
   ExprValue val_char8_zero(
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"), {0});
-  EXPECT_EQ(R"(char, '\x00')", SyncTypeDesc(val_char8_zero, opts));
+  EXPECT_EQ(" = char, '\\x00'\n", GetDebugTreeForValue(eval_context(), val_char8_zero, opts));
 
   // Backslash-escaped 8-bit char.
   ExprValue val_char8_quote(
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"), {'\"'});
-  EXPECT_EQ(R"(char, '\"')", SyncTypeDesc(val_char8_quote, opts));
+  EXPECT_EQ(" = char, '\\\"'\n", GetDebugTreeForValue(eval_context(), val_char8_quote, opts));
 
   // 32-bit char (downcasted to 8 for printing).
   ExprValue val_char32(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 4, "big"),
                        {'A', 1, 2, 3});
-  EXPECT_EQ("big, 'A'", SyncTypeDesc(val_char32, opts));
+  EXPECT_EQ(" = big, 'A'\n", GetDebugTreeForValue(eval_context(), val_char32, opts));
 
   // 32-bit int forced to char.
   opts.num_format = FormatOptions::NumFormat::kChar;
   ExprValue val_int32(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t"),
                       {'$', 0x01, 0x00, 0x00});
-  EXPECT_EQ("int32_t, '$'", SyncTypeDesc(val_int32, opts));
+  EXPECT_EQ(" = int32_t, '$'\n", GetDebugTreeForValue(eval_context(), val_int32, opts));
 }
 
 TEST_F(FormatTest, Float) {
@@ -237,14 +159,14 @@ TEST_F(FormatTest, Float) {
   memcpy(buffer, &in_float, 4);
   ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
                       std::vector<uint8_t>(&buffer[0], &buffer[4]));
-  EXPECT_EQ("float, 3.14159", SyncTypeDesc(val_float, opts));
+  EXPECT_EQ(" = float, 3.14159\n", GetDebugTreeForValue(eval_context(), val_float, opts));
 
   // 64-bit float.
   double in_double = 9.875e+12;
   memcpy(buffer, &in_double, 8);
   ExprValue val_double(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double"),
                        std::vector<uint8_t>(&buffer[0], &buffer[8]));
-  EXPECT_EQ("double, 9.875e+12", SyncTypeDesc(val_double, opts));
+  EXPECT_EQ(" = double, 9.875e+12\n", GetDebugTreeForValue(eval_context(), val_double, opts));
 }
 
 TEST_F(FormatTest, Structs) {
@@ -283,7 +205,7 @@ TEST_F(FormatTest, Structs) {
       "    a = int32_t, 0x330033\n"
       "    b = int32_t&, 0x1100\n"
       "       = int32_t, 0x12\n",
-      SyncTreeTypeDesc(pair_value, opts));
+      GetDebugTreeForValue(eval_context(), pair_value, opts));
 }
 
 TEST_F(FormatTest, StructStatic) {
@@ -305,7 +227,7 @@ TEST_F(FormatTest, StructStatic) {
   EXPECT_EQ(
       " = Collection, \n"
       "  regular_one = int32_t, 42\n",
-      SyncTreeTypeDesc(value, opts));
+      GetDebugTreeForValue(eval_context(), value, opts));
 }
 
 TEST_F(FormatTest, Struct_Anon) {
@@ -318,7 +240,7 @@ TEST_F(FormatTest, Struct_Anon) {
   EXPECT_EQ(
       " = (anon struct)*, 0x1100\n"
       "  * = (anon struct), \n",
-      SyncTreeTypeDesc(anon_value, FormatOptions()));
+      GetDebugTreeForValue(eval_context(), anon_value, FormatOptions()));
 }
 
 // Structure members can be marked as "artificial" by the compiler. We shouldn't print these.
@@ -333,7 +255,7 @@ TEST_F(FormatTest, Struct_Artificial) {
       " = Foo, \n"
       "  normal = int32_t, 1\n"
       "  artificial = int32_t, 2\n",
-      SyncTreeTypeDesc(value, FormatOptions()));
+      GetDebugTreeForValue(eval_context(), value, FormatOptions()));
 
   // Mark second one as artificial.
   DataMember* artificial_member =
@@ -343,7 +265,7 @@ TEST_F(FormatTest, Struct_Artificial) {
   EXPECT_EQ(
       " = Foo, \n"
       "  normal = int32_t, 1\n",
-      SyncTreeTypeDesc(value, FormatOptions()));
+      GetDebugTreeForValue(eval_context(), value, FormatOptions()));
 }
 
 // GDB and LLDB both print all members of a union and accept the possibility that sometimes one of
@@ -378,7 +300,7 @@ TEST_F(FormatTest, Union) {
       " = MyUnion, \n"
       "  a = int32_t, 42\n"
       "  b = int32_t, 42\n",
-      SyncTreeTypeDesc(value, opts));
+      GetDebugTreeForValue(eval_context(), value, opts));
 }
 
 // Tests formatting when a class has derived base classes.
@@ -417,7 +339,7 @@ TEST_F(FormatTest, DerivedClasses) {
       "    b = int32_t, 2\n"
       "  c = int32_t, 3\n"
       "  d = int32_t, 4\n",
-      SyncTreeTypeDesc(value, opts));
+      GetDebugTreeForValue(eval_context(), value, opts));
 }
 
 TEST_F(FormatTest, Pointer) {
@@ -433,7 +355,7 @@ TEST_F(FormatTest, Pointer) {
   EXPECT_EQ(
       " = int32_t*, 0x807060504030201\n"
       "  * = Err: Invalid pointer 0x807060504030201\n",
-      SyncTreeTypeDesc(value, opts));
+      GetDebugTreeForValue(eval_context(), value, opts));
 
   // Provide some memory backing for the request.
   constexpr uint64_t kAddress = 0x807060504030201;
@@ -441,7 +363,7 @@ TEST_F(FormatTest, Pointer) {
   EXPECT_EQ(
       " = int32_t*, 0x807060504030201\n"
       "  * = int32_t, 123\n",
-      SyncTreeTypeDesc(value, opts));
+      GetDebugTreeForValue(eval_context(), value, opts));
 
   // Test an invalid one with an incorrect size.
   data.resize(7);
@@ -449,7 +371,7 @@ TEST_F(FormatTest, Pointer) {
   EXPECT_EQ(
       " = Err: The value of type 'int32_t*' is the incorrect size (expecting "
       "8, got 7). Please file a bug.\n",
-      SyncTreeTypeDesc(bad_value, opts));
+      GetDebugTreeForValue(eval_context(), bad_value, opts));
 }
 
 TEST_F(FormatTest, Reference) {
@@ -466,7 +388,7 @@ TEST_F(FormatTest, Reference) {
   EXPECT_EQ(
       " = int&, 0x1100\n"
       "   = int, 123\n",
-      SyncTreeTypeDesc(value, opts));
+      GetDebugTreeForValue(eval_context(), value, opts));
 
   // Test an invalid one with an invalid address.
   std::vector<uint8_t> bad_data = {0x00, 0x22, 0, 0, 0, 0, 0, 0};
@@ -474,7 +396,7 @@ TEST_F(FormatTest, Reference) {
   EXPECT_EQ(
       " = int&, 0x2200\n"
       "   = Err: Invalid pointer 0x2200\n",
-      SyncTreeTypeDesc(value, opts));
+      GetDebugTreeForValue(eval_context(), value, opts));
 
   // Test an rvalue reference. This is treated the same as a regular reference from an
   // interpretation and printing perspective.
@@ -484,7 +406,7 @@ TEST_F(FormatTest, Reference) {
   EXPECT_EQ(
       " = int&&, 0x1100\n"
       "   = int, 123\n",
-      SyncTreeTypeDesc(value, opts));
+      GetDebugTreeForValue(eval_context(), value, opts));
 }
 
 TEST_F(FormatTest, GoodStrings) {
@@ -522,13 +444,13 @@ TEST_F(FormatTest, GoodStrings) {
   // the children is like a normal pointer so there is only see the first character.
   auto ptr_type = MakeCharPointerType();
   EXPECT_EQ(" = char*, " + expected_desc_string + "\n" + expected_members_no_null,
-            SyncTreeTypeDesc(ExprValue(ptr_type, address_data), opts));
+            GetDebugTreeForValue(eval_context(), ExprValue(ptr_type, address_data), opts));
 
   // This string has the same data but is type encoded as char[12], it should give the same output
   // (except for type info).
   auto array_type = fxl::MakeRefCounted<ArrayType>(MakeSignedChar8Type(), 12);
   EXPECT_EQ(" = char[12], " + expected_desc_string + "\n" + expected_members_with_null,
-            SyncTreeTypeDesc(ExprValue(array_type, data), opts));
+            GetDebugTreeForValue(eval_context(), ExprValue(array_type, data), opts));
 
   // This type is a "const array of const char". I don't know how to type this in C (most related
   // things end up as "const pointer to const char") and the type name looks wrong but GCC will
@@ -540,7 +462,7 @@ TEST_F(FormatTest, GoodStrings) {
       fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, array_const_char);
   EXPECT_EQ(std::string(" = const const char[12], ") + expected_desc_string + "\n" +
                 expected_members_with_null,
-            SyncTreeTypeDesc(ExprValue(const_array_const_char, data), opts));
+            GetDebugTreeForValue(eval_context(), ExprValue(const_array_const_char, data), opts));
 }
 
 TEST_F(FormatTest, BadStrings) {
@@ -550,11 +472,12 @@ TEST_F(FormatTest, BadStrings) {
   // Should report invalid pointer.
   auto ptr_type = MakeCharPointerType();
   ExprValue ptr_value(ptr_type, address_data);
-  EXPECT_EQ(" = Err: 0x1100 invalid pointer\n", SyncTreeTypeDesc(ptr_value, opts));
+  EXPECT_EQ(" = Err: 0x1100 invalid pointer\n",
+            GetDebugTreeForValue(eval_context(), ptr_value, opts));
 
   // A null string should print just the null and not say invalid.
   ExprValue null_value(ptr_type, std::vector<uint8_t>(sizeof(uint64_t)));
-  EXPECT_EQ(" = char*, 0x0\n", SyncTreeTypeDesc(null_value, opts));
+  EXPECT_EQ(" = char*, 0x0\n", GetDebugTreeForValue(eval_context(), null_value, opts));
 }
 
 TEST_F(FormatTest, TruncatedString) {
@@ -577,7 +500,7 @@ TEST_F(FormatTest, TruncatedString) {
       "  [3] = char, 'D'\n"
       "  [4] = char, 'E'\n"
       "  [5] = char, 'F'\n",
-      SyncTreeTypeDesc(ExprValue(ptr_type, address_data), opts));
+      GetDebugTreeForValue(eval_context(), ExprValue(ptr_type, address_data), opts));
 
   // Should only report the first 4 chars with a ... indicator.
   opts.max_array_size = 4;  // Truncate past this value.
@@ -588,7 +511,7 @@ TEST_F(FormatTest, TruncatedString) {
       "  [2] = char, 'C'\n"
       "  [3] = char, 'D'\n"
       "  ... = , \n",
-      SyncTreeTypeDesc(ExprValue(ptr_type, address_data), opts));
+      GetDebugTreeForValue(eval_context(), ExprValue(ptr_type, address_data), opts));
 }
 
 TEST_F(FormatTest, RustEnum) {
@@ -602,7 +525,7 @@ TEST_F(FormatTest, RustEnum) {
   EXPECT_EQ(
       " = RustEnum, None\n"
       "  None = None, \n",
-      SyncTreeTypeDesc(none_value, opts));
+      GetDebugTreeForValue(eval_context(), none_value, opts));
 
   // Scalar value.
   ExprValue scalar_value(rust_enum, {0, 0, 0, 0,    // Discriminant
@@ -612,7 +535,7 @@ TEST_F(FormatTest, RustEnum) {
       " = RustEnum, Scalar\n"
       "  Scalar = Scalar, \n"
       "    0 = int32_t, 51\n",
-      SyncTreeTypeDesc(scalar_value, opts));
+      GetDebugTreeForValue(eval_context(), scalar_value, opts));
 
   // Point value.
   ExprValue point_value(rust_enum, {1, 0, 0, 0,    // Discriminant
@@ -623,7 +546,7 @@ TEST_F(FormatTest, RustEnum) {
       "  Point = Point, \n"
       "    x = int32_t, 1\n"
       "    y = int32_t, 2\n",
-      SyncTreeTypeDesc(point_value, opts));
+      GetDebugTreeForValue(eval_context(), point_value, opts));
 }
 
 TEST_F(FormatTest, RustTuple) {
@@ -636,7 +559,7 @@ TEST_F(FormatTest, RustTuple) {
       " = (int32_t, uint64_t), \n"
       "  0 = int32_t, 123\n"
       "  1 = uint64_t, 78\n",
-      SyncTreeTypeDesc(tuple_two, opts));
+      GetDebugTreeForValue(eval_context(), tuple_two, opts));
 
   // 1-element tuple struct.
   auto tuple_struct_one_type = MakeTestRustTuple("Some", {MakeInt32Type()});
@@ -644,7 +567,7 @@ TEST_F(FormatTest, RustTuple) {
   EXPECT_EQ(
       " = Some, \n"
       "  0 = int32_t, 123\n",
-      SyncTreeTypeDesc(tuple_struct_one, opts));
+      GetDebugTreeForValue(eval_context(), tuple_struct_one, opts));
 }
 
 TEST_F(FormatTest, Enumeration) {
@@ -659,9 +582,11 @@ TEST_F(FormatTest, Enumeration) {
   // Found value
   FormatOptions opts;
   EXPECT_EQ(" = UnsignedEnum, kZero\n",
-            SyncTreeTypeDesc(ExprValue(unsigned_enum, {0, 0, 0, 0, 0, 0, 0, 0}), opts));
+            GetDebugTreeForValue(eval_context(), ExprValue(unsigned_enum, {0, 0, 0, 0, 0, 0, 0, 0}),
+                                 opts));
   EXPECT_EQ(" = UnsignedEnum, kMax\n",
-            SyncTreeTypeDesc(
+            GetDebugTreeForValue(
+                eval_context(),
                 ExprValue(unsigned_enum, {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}), opts));
 
   // Found value forced to hex.
@@ -669,12 +594,14 @@ TEST_F(FormatTest, Enumeration) {
   hex_opts.num_format = FormatOptions::NumFormat::kHex;
   EXPECT_EQ(
       " = UnsignedEnum, 0xffffffffffffffff\n",
-      SyncTreeTypeDesc(ExprValue(unsigned_enum, {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}),
-                       hex_opts));
+      GetDebugTreeForValue(
+          eval_context(),
+          ExprValue(unsigned_enum, {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}), hex_opts));
 
   // Not found value.
   EXPECT_EQ(" = UnsignedEnum, 12\n",
-            SyncTreeTypeDesc(ExprValue(unsigned_enum, {12, 0, 0, 0, 0, 0, 0, 0}), opts));
+            GetDebugTreeForValue(eval_context(),
+                                 ExprValue(unsigned_enum, {12, 0, 0, 0, 0, 0, 0, 0}), opts));
 
   // Signed 32-bit enum.
   Enumeration::Map signed_map;
@@ -685,17 +612,21 @@ TEST_F(FormatTest, Enumeration) {
       fxl::MakeRefCounted<Enumeration>("SignedEnum", LazySymbol(), 4, true, signed_map);
 
   // Found values.
-  EXPECT_EQ(" = SignedEnum, kZero\n", SyncTreeTypeDesc(ExprValue(signed_enum, {0, 0, 0, 0}), opts));
-  EXPECT_EQ(" = SignedEnum, kMinusFive\n",
-            SyncTreeTypeDesc(ExprValue(signed_enum, {0xfb, 0xff, 0xff, 0xff}), opts));
+  EXPECT_EQ(" = SignedEnum, kZero\n",
+            GetDebugTreeForValue(eval_context(), ExprValue(signed_enum, {0, 0, 0, 0}), opts));
+  EXPECT_EQ(
+      " = SignedEnum, kMinusFive\n",
+      GetDebugTreeForValue(eval_context(), ExprValue(signed_enum, {0xfb, 0xff, 0xff, 0xff}), opts));
 
   // Not-found value.
-  EXPECT_EQ(" = SignedEnum, -4\n",
-            SyncTreeTypeDesc(ExprValue(signed_enum, {0xfc, 0xff, 0xff, 0xff}), opts));
+  EXPECT_EQ(
+      " = SignedEnum, -4\n",
+      GetDebugTreeForValue(eval_context(), ExprValue(signed_enum, {0xfc, 0xff, 0xff, 0xff}), opts));
 
   // Not-found signed value printed as hex should be unsigned.
   EXPECT_EQ(" = SignedEnum, 0xffffffff\n",
-            SyncTreeTypeDesc(ExprValue(signed_enum, {0xff, 0xff, 0xff, 0xff}), hex_opts));
+            GetDebugTreeForValue(eval_context(), ExprValue(signed_enum, {0xff, 0xff, 0xff, 0xff}),
+                                 hex_opts));
 }
 
 TEST_F(FormatTest, ZxStatusT) {
@@ -707,25 +638,27 @@ TEST_F(FormatTest, ZxStatusT) {
 
   ExprValue status_ok(status_t_type, {0, 0, 0, 0});
   FormatOptions opts;
-  EXPECT_EQ(" = zx_status_t, 0 (ZX_OK)\n", SyncTreeTypeDesc(status_ok, opts));
+  EXPECT_EQ(" = zx_status_t, 0 (ZX_OK)\n", GetDebugTreeForValue(eval_context(), status_ok, opts));
 
   // -15 = ZX_ERR_BUFFER_TOO_SMALL
   ExprValue status_too_small(status_t_type, {0xf1, 0xff, 0xff, 0xff});
   EXPECT_EQ(" = zx_status_t, -15 (ZX_ERR_BUFFER_TOO_SMALL)\n",
-            SyncTreeTypeDesc(status_too_small, opts));
+            GetDebugTreeForValue(eval_context(), status_too_small, opts));
 
   // Invalid negative number.
   ExprValue status_invalid(status_t_type, {0xf0, 0xd8, 0xff, 0xff});
-  EXPECT_EQ(" = zx_status_t, -10000 (<unknown>)\n", SyncTreeTypeDesc(status_invalid, opts));
+  EXPECT_EQ(" = zx_status_t, -10000 (<unknown>)\n",
+            GetDebugTreeForValue(eval_context(), status_invalid, opts));
 
   // Positive values.
   ExprValue status_one(status_t_type, {1, 0, 0, 0});
-  EXPECT_EQ(" = zx_status_t, 1 (<unknown>)\n", SyncTreeTypeDesc(status_one, opts));
+  EXPECT_EQ(" = zx_status_t, 1 (<unknown>)\n",
+            GetDebugTreeForValue(eval_context(), status_one, opts));
 
   // Hex formatting should be applied if requested.
   opts.num_format = FormatOptions::NumFormat::kHex;
   EXPECT_EQ(" = zx_status_t, 0xfffffff1 (ZX_ERR_BUFFER_TOO_SMALL)\n",
-            SyncTreeTypeDesc(status_too_small, opts));
+            GetDebugTreeForValue(eval_context(), status_too_small, opts));
 }
 
 TEST_F(FormatTest, EmptyAndBadArray) {
@@ -738,12 +671,14 @@ TEST_F(FormatTest, EmptyAndBadArray) {
   // Empty array with valid pointer.
   auto empty_array_type = fxl::MakeRefCounted<ArrayType>(MakeInt32Type(), 0);
   EXPECT_EQ(" = int32_t[0], \n",
-            SyncTreeTypeDesc(ExprValue(empty_array_type, std::vector<uint8_t>(), source), opts));
+            GetDebugTreeForValue(
+                eval_context(), ExprValue(empty_array_type, std::vector<uint8_t>(), source), opts));
 
   // Array type declares a size but there's no data.
   auto array_type = fxl::MakeRefCounted<ArrayType>(MakeInt32Type(), 1);
   EXPECT_EQ(" = Err: Array data (0 bytes) is too small for the expected size (4 bytes).\n",
-            SyncTreeTypeDesc(ExprValue(array_type, std::vector<uint8_t>(), source), opts));
+            GetDebugTreeForValue(eval_context(),
+                                 ExprValue(array_type, std::vector<uint8_t>(), source), opts));
 }
 
 TEST_F(FormatTest, TruncatedArray) {
@@ -762,7 +697,7 @@ TEST_F(FormatTest, TruncatedArray) {
       " = int32_t[2], \n"
       "  [0] = int32_t, 1\n"
       "  [1] = int32_t, 2\n",
-      SyncTreeTypeDesc(ExprValue(array_type, data, source), opts));
+      GetDebugTreeForValue(eval_context(), ExprValue(array_type, data, source), opts));
 
   // This one is truncated.
   opts.max_array_size = 1;
@@ -770,7 +705,7 @@ TEST_F(FormatTest, TruncatedArray) {
       " = int32_t[2], \n"
       "  [0] = int32_t, 1\n"
       "  ... = , \n",
-      SyncTreeTypeDesc(ExprValue(array_type, data, source), opts));
+      GetDebugTreeForValue(eval_context(), ExprValue(array_type, data, source), opts));
 }
 
 // Tests printing nullptr_t which is defined as "typedef decltype(nullptr) nullptr_t;".
@@ -788,7 +723,7 @@ TEST_F(FormatTest, NullptrT) {
   ExprValue null_value(nullptr_t_type, {0, 0, 0, 0, 0, 0, 0, 0});
 
   FormatOptions opts;
-  EXPECT_EQ(" = nullptr_t, 0x0\n", SyncTreeTypeDesc(null_value, opts));
+  EXPECT_EQ(" = nullptr_t, 0x0\n", GetDebugTreeForValue(eval_context(), null_value, opts));
 }
 
 TEST_F(FormatTest, FunctionPtr) {
@@ -812,19 +747,20 @@ TEST_F(FormatTest, FunctionPtr) {
   // Function.
   FormatOptions opts;
   ExprValue null_func(func_type, {0, 0, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ(" = void(), 0x0\n", SyncTreeTypeDesc(null_func, opts));
+  EXPECT_EQ(" = void(), 0x0\n", GetDebugTreeForValue(eval_context(), null_func, opts));
 
   // Null function pointer.
   ExprValue null_ptr(func_ptr_type, {0, 0, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ(" = void (*)(), 0x0\n", SyncTreeTypeDesc(null_ptr, opts));
+  EXPECT_EQ(" = void (*)(), 0x0\n", GetDebugTreeForValue(eval_context(), null_ptr, opts));
 
   // Function pointer to unknown memory is printed in hex.
   EXPECT_EQ(" = void (*)(), 0x5\n",
-            SyncTreeTypeDesc(ExprValue(func_ptr_type, {5, 0, 0, 0, 0, 0, 0, 0}), opts));
+            GetDebugTreeForValue(eval_context(), ExprValue(func_ptr_type, {5, 0, 0, 0, 0, 0, 0, 0}),
+                                 opts));
 
   // Found symbol (matching kAddress) should be printed.
   ExprValue good_ptr(func_ptr_type, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ(" = void (*)(), &MyFunc\n", SyncTreeTypeDesc(good_ptr, opts));
+  EXPECT_EQ(" = void (*)(), &MyFunc\n", GetDebugTreeForValue(eval_context(), good_ptr, opts));
 
   // Member function pointer. The type naming of function pointers is tested by the MemberPtr class,
   // and otherwise the code paths are the same, so here we only need to verify things are hooked up.
@@ -832,16 +768,19 @@ TEST_F(FormatTest, FunctionPtr) {
 
   auto member_func = fxl::MakeRefCounted<MemberPtr>(containing, func_type);
   ExprValue null_member_func_ptr(member_func, {0, 0, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ(" = void (MyClass::*)(), 0x0\n", SyncTreeTypeDesc(null_member_func_ptr, opts));
+  EXPECT_EQ(" = void (MyClass::*)(), 0x0\n",
+            GetDebugTreeForValue(eval_context(), null_member_func_ptr, opts));
 
   // Member function to a known symbol. This doesn't resolve to something that looks like a class
   // member, but that's OK, wherever the address points to is what we print.
   ExprValue good_member_func_ptr(member_func, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ(" = void (MyClass::*)(), &MyFunc\n", SyncTreeTypeDesc(good_member_func_ptr, opts));
+  EXPECT_EQ(" = void (MyClass::*)(), &MyFunc\n",
+            GetDebugTreeForValue(eval_context(), good_member_func_ptr, opts));
 
   // Numeric overrides force addresses instead of the resolved name.
   opts.num_format = FormatOptions::NumFormat::kHex;
-  EXPECT_EQ(" = void (MyClass::*)(), 0x1234\n", SyncTreeTypeDesc(good_member_func_ptr, opts));
+  EXPECT_EQ(" = void (MyClass::*)(), 0x1234\n",
+            GetDebugTreeForValue(eval_context(), good_member_func_ptr, opts));
 }
 
 // This tests pointers to member data. Pointers to member functions were tested by the FunctionPtr
@@ -855,11 +794,13 @@ TEST_F(FormatTest, MemberPtr) {
   // Null pointer.
   FormatOptions opts;
   ExprValue null_member_ptr(member_int32, {0, 0, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ(" = int32_t MyClass::*, 0x0\n", SyncTreeTypeDesc(null_member_ptr, opts));
+  EXPECT_EQ(" = int32_t MyClass::*, 0x0\n",
+            GetDebugTreeForValue(eval_context(), null_member_ptr, opts));
 
   // Regular pointer.
   ExprValue good_member_ptr(member_int32, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
-  EXPECT_EQ(" = int32_t MyClass::*, 0x1234\n", SyncTreeTypeDesc(good_member_ptr, opts));
+  EXPECT_EQ(" = int32_t MyClass::*, 0x1234\n",
+            GetDebugTreeForValue(eval_context(), good_member_ptr, opts));
 }
 
 }  // namespace zxdb

@@ -294,4 +294,57 @@ void PrettyStruct::Format(FormatNode* node, const FormatOptions& options,
   }
 }
 
+void PrettyRecursiveVariant::Format(FormatNode* node, const FormatOptions& options,
+                                    const fxl::RefPtr<EvalContext>& context,
+                                    fit::deferred_callback cb) {
+  auto eval_index_cb = [weak_node = node->GetWeakPtr(), simple_type_name = simple_type_name_,
+                        base_expr = base_expr_, next_expr = next_expr_, value_expr = value_expr_,
+                        no_value_string = no_value_string_, cb = std::move(cb)](ErrOrValue index) {
+    if (!weak_node)
+      return;
+    if (index.has_error())
+      return weak_node->SetDescribedError(index.err());
+
+    // Index value.
+    int64_t index_value = 0;
+    if (Err err = index.value().PromoteTo64(&index_value); err.has_error())
+      return weak_node->SetDescribedError(err);
+
+    if (index_value < 0) {
+      // This variant has no value.
+      weak_node->set_description_kind(FormatNode::kOther);
+      weak_node->set_description(no_value_string);
+      return;
+    }
+
+    // Sanity check index to prevent crash on corrupt data.
+    constexpr int64_t kMaxIndex = 16;
+    if (index_value > kMaxIndex)
+      return weak_node->SetDescribedError(Err("Variant index %" PRId64 " too large.", index_value));
+
+    // This expression evaluates to the variant value (see header).
+    std::string expr = base_expr;
+    for (int64_t i = 0; i < index_value; i++) {
+      if (!expr.empty())
+        expr.push_back('.');
+      expr.append(next_expr);
+    }
+    if (!value_expr.empty()) {
+      expr.push_back('.');
+      expr.append(value_expr);
+    }
+
+    FormatWrapper(weak_node.get(), simple_type_name, "(", ")", "",
+                  [object = weak_node->value(), expr](
+                      fxl::RefPtr<EvalContext> context,
+                      fit::callback<void(const Err& err, ExprValue value)> cb) {
+                    EvalExpressionOn(context, object, expr,
+                                     ErrOrValue::FromPairCallback(std::move(cb)));
+                  });
+  };
+
+  node->set_description_kind(FormatNode::kCollection);
+  EvalExpressionOn(context, node->value(), index_expr_, std::move(eval_index_cb));
+}
+
 }  // namespace zxdb

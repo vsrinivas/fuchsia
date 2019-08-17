@@ -10,12 +10,12 @@
 #include "lib/fit/defer.h"
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/format_node.h"
 
 namespace zxdb {
 
 class EvalContext;
 struct FormatOptions;
-class FormatNode;
 
 // Fills the value() of a FormatNode based on its expression. This does not
 // update the description based on the new value. The node can be in any state
@@ -77,10 +77,13 @@ void FormatPointerNode(FormatNode* node, const ExprValue& value, const FormatOpt
 // atomics, optionals, and iterators where there's some indirection.
 //
 // The node will be given the description, and it will have one child with the given name and value.
-// For convenience, this allows an error for the dereference node which will be used instead.
+// For convenience, this allows an value, an error, or a lambda for computing the value.
 void FormatWrapper(FormatNode* node, const std::string& description, const std::string& prefix,
                    const std::string& suffix, const std::string& contained_name,
                    ErrOrValue contained_value);
+void FormatWrapper(FormatNode* node, const std::string& description, const std::string& prefix,
+                   const std::string& suffix, const std::string& contained_name,
+                   FormatNode::GetProgramaticValue value_getter);
 
 }  // namespace zxdb
 

@@ -137,7 +137,7 @@ class PrettyPointer : public PrettyType {
  public:
   PrettyPointer(const std::string& expr,
                 std::initializer_list<std::pair<std::string, std::string>> getters = {})
-      : PrettyType(std::move(getters)), expr_(expr) {}
+      : PrettyType(getters), expr_(expr) {}
 
   void Format(FormatNode* node, const FormatOptions& options,
               const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
@@ -158,7 +158,7 @@ class PrettyOptional : public PrettyType {
   PrettyOptional(const std::string& simple_type_name, const std::string& is_engaged_expr,
                  const std::string& value_expr, const std::string& name_when_disengaged,
                  std::initializer_list<std::pair<std::string, std::string>> getters)
-      : PrettyType(std::move(getters)),
+      : PrettyType(getters),
         simple_type_name_(simple_type_name),
         is_engaged_expr_(is_engaged_expr),
         value_expr_(value_expr),
@@ -193,6 +193,43 @@ class PrettyStruct : public PrettyType {
 
  private:
   std::vector<std::pair<std::string, std::string>> members_;
+};
+
+// Generic variants in C++ are normally implemented as a nested list of unions. This allows a
+// generic number of possibilities for the variant value by using the type system to implement
+// recursion.
+class PrettyRecursiveVariant : public PrettyType {
+ public:
+  // To get to the value, this class constructs an expression based on the "index_expr" which is
+  // an expression that should evaluate to an integer. The pattern will be:
+  //   <base_expr> . ( <next_expr> * index ) . <value_expr>
+  // So if index_expr evaluates to 2 and given simple neams for each item, it will produce:
+  //   "base.next.next.value"
+  //
+  // If the index casted to a signed integer is negative, the value will be reported as the
+  // "no_value_string".
+  PrettyRecursiveVariant(const std::string& simple_type_name, const std::string& base_expr,
+                         const std::string& index_expr, const std::string& next_expr,
+                         const std::string& value_expr, const std::string& no_value_string,
+                         std::initializer_list<std::pair<std::string, std::string>> getters)
+      : PrettyType(getters),
+        simple_type_name_(simple_type_name),
+        base_expr_(base_expr),
+        index_expr_(index_expr),
+        next_expr_(next_expr),
+        value_expr_(value_expr),
+        no_value_string_(no_value_string) {}
+
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
+
+ private:
+  const std::string simple_type_name_;
+  const std::string base_expr_;
+  const std::string index_expr_;
+  const std::string next_expr_;
+  const std::string value_expr_;
+  const std::string no_value_string_;
 };
 
 }  // namespace zxdb

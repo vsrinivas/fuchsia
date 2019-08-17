@@ -31,6 +31,8 @@ fxl::RefPtr<BaseType> MakeUint32Type();
 fxl::RefPtr<BaseType> MakeInt64Type();
 fxl::RefPtr<BaseType> MakeUint64Type();
 
+fxl::RefPtr<BaseType> MakeDoubleType();
+
 fxl::RefPtr<BaseType> MakeSignedChar8Type();
 
 fxl::RefPtr<BaseType> MakeRustCharType();
@@ -42,11 +44,15 @@ fxl::RefPtr<ModifiedType> MakeCharPointerType();
 // Creates a collection type with the given members.
 //
 // type_tag is one of DwarfTag::k*Type appropriate for collections (class, struct, union).
+//
+// For structs and classes, each member will be placed sequentially in the struct starting from
+// offset 0, and advancing according to the size of the member. For unions, each member will be at
+// offset 0.
 fxl::RefPtr<Collection> MakeCollectionType(DwarfTag type_tag, const std::string& struct_name,
                                            std::initializer_list<NameAndType> members);
 
 // Like MakeCollectionType but takes an offset for the first data member to start at. Subsequent
-// data members go from there.
+// data members start from there (for unions they will all start from there).
 fxl::RefPtr<Collection> MakeCollectionTypeWithOffset(DwarfTag type_tag,
                                                      const std::string& type_name,
                                                      uint32_t first_member_offset,

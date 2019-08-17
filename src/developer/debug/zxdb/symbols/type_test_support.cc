@@ -36,6 +36,10 @@ fxl::RefPtr<BaseType> MakeUint64Type() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 8, "uint64_t");
 }
 
+fxl::RefPtr<BaseType> MakeDoubleType() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
+}
+
 fxl::RefPtr<BaseType> MakeSignedChar8Type() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
 }
@@ -69,6 +73,9 @@ fxl::RefPtr<Collection> MakeCollectionTypeWithOffset(DwarfTag type_tag,
   auto result = fxl::MakeRefCounted<Collection>(type_tag, type_name);
 
   uint32_t offset = first_member_offset;
+
+  uint32_t max_union_member_size = 0;  // For computing union sizes.
+
   std::vector<LazySymbol> data_members;
   for (const auto& [name, type] : members) {
     auto member = fxl::MakeRefCounted<DataMember>();
@@ -77,10 +84,17 @@ fxl::RefPtr<Collection> MakeCollectionTypeWithOffset(DwarfTag type_tag,
     member->set_member_location(offset);
     data_members.emplace_back(member);
 
-    offset += type->byte_size();
+    if (type_tag == DwarfTag::kUnionType)
+      max_union_member_size = std::max(max_union_member_size, type->byte_size());
+    else
+      offset += type->byte_size();
   }
 
-  result->set_byte_size(offset);
+  if (type_tag == DwarfTag::kUnionType)
+    result->set_byte_size(max_union_member_size);  // Unions are the max size of each member.
+  else
+    result->set_byte_size(offset);  // Adds up all member offsets.
+
   result->set_data_members(std::move(data_members));
   return result;
 }
