@@ -1634,7 +1634,7 @@ void CodecImpl::OnBufferCollectionInfoInternal(
       return;
     }
     if (allocate_status != ZX_OK) {
-      Fail(
+      FailLocked(
           "OnBufferCollectionInfoLocked() sees failure - port: %d "
           "allocate_status: %d",
           port, allocate_status);

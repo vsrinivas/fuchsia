@@ -5,15 +5,18 @@
 #include <fake_codec_adapter.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <gtest/gtest.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/gtest/real_loop_fixture.h>
+
+#include <gtest/gtest.h>
 
 #include "lib/media/codec_impl/codec_impl.h"
 
 namespace {
 
-constexpr uint32_t kInputMinBufferCountForCamping = 1;
+constexpr uint32_t kInputMinBufferCountForCamping = 3;
 
 auto CreateDecoderParams() {
   fuchsia::mediacodec::CreateDecoder_Params params;
@@ -126,6 +129,85 @@ TEST_F(CodecImplFailures, InputBufferCollectionConstraintsMinBufferCount) {
   };
 
   Create(processor.NewRequest());
+
+  RunLoopWithTimeoutOrUntil([this]() { return error_handler_ran_; });
+  ASSERT_TRUE(error_handler_ran_);
+}
+
+class TestBufferCollection : public fuchsia::sysmem::testing::BufferCollection_TestBase {
+ public:
+  TestBufferCollection() : binding_(this) {}
+
+  void Bind(fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> request) {
+    binding_.Bind(std::move(request));
+  }
+  void NotImplemented_(const std::string& name) override {}
+
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCallback callback) override {
+    wait_callback_ = std::move(callback);
+  }
+  void FailAllocation() {
+    WaitForBuffersAllocatedCallback callback;
+    callback.swap(wait_callback_);
+
+    callback(ZX_ERR_NOT_SUPPORTED, fuchsia::sysmem::BufferCollectionInfo_2());
+  }
+
+  bool is_waiting() { return !!wait_callback_; }
+
+ private:
+  fidl::Binding<fuchsia::sysmem::BufferCollection> binding_;
+  WaitForBuffersAllocatedCallback wait_callback_;
+};
+
+class TestAllocator : public fuchsia::sysmem::testing::Allocator_TestBase {
+ public:
+  TestAllocator() : binding_(this) {}
+
+  void Bind(fidl::InterfaceRequest<fuchsia::sysmem::Allocator> request) {
+    binding_.Bind(std::move(request));
+  }
+  void BindSharedCollection(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+                            fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection>
+                                buffer_collection_request) override {
+    collection_.Bind(std::move(buffer_collection_request));
+  }
+
+  void NotImplemented_(const std::string& name) override {}
+
+  TestBufferCollection& collection() { return collection_; }
+
+ private:
+  fidl::Binding<fuchsia::sysmem::Allocator> binding_;
+
+  TestBufferCollection collection_;
+};
+
+TEST_F(CodecImplFailures, InputBufferCollectionSysmemFailure) {
+  StreamProcessorPtr processor;
+
+  processor.events().OnInputConstraints = [this, &processor](auto input_constraints) {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+    token_request_ = token.NewRequest();
+
+    codec_adapter_->SetBufferCollectionConstraints(kInputPort,
+                                                   CreateValidInputBufferCollectionConstraints());
+
+    processor->SetInputBufferPartialSettings(
+        CreateStreamBufferPartialSettings(1, input_constraints, std::move(token)));
+  };
+
+  Create(processor.NewRequest());
+
+  TestAllocator allocator;
+  allocator.Bind(std::move(sysmem_request_.value()));
+  sysmem_request_.reset();
+
+  RunLoopWithTimeoutOrUntil([&allocator]() { return allocator.collection().is_waiting(); });
+  ASSERT_TRUE(error_handler_ran_ == 0);
+  ASSERT_TRUE(allocator.collection().is_waiting());
+
+  allocator.collection().FailAllocation();
 
   RunLoopWithTimeoutOrUntil([this]() { return error_handler_ran_; });
   ASSERT_TRUE(error_handler_ran_);
