@@ -37,10 +37,11 @@ mod kw {
 // It is probably mostly useful for tests, as actual users will most likely use non-trivial files,
 // thus requiring a closure.
 //
-// This macro is tested by tests in the fuchsia_vfs_pseudo_fs::directory module.  TODO
-// Unfortunately there are no tests for error cases in there.  We should add several test cases
-// into this crate directly, to make sure we report errors and report them in the right locations,
-// with proper error messages, etc.
+// This macro is tested by tests in the fuchsia_vfs_pseudo_fs::directory module.
+//
+// TODO Unfortunately there are no tests for error cases in there.  We should add several test
+// cases into this crate directly, to make sure we report errors and report them in the right
+// locations, with proper error messages, etc.
 #[proc_macro_hack]
 pub fn pseudo_directory(input: TokenStream) -> TokenStream {
     let parsed = parse_macro_input!(input as PseudoDirectory);
@@ -49,7 +50,7 @@ pub fn pseudo_directory(input: TokenStream) -> TokenStream {
     let span = Span::call_site();
 
     let directory_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs::directory);
-    let pseudo_directory_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs::pseudo_directory);
+    let macro_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs::pseudo_directory);
     // Remove the underscores when span becomes Span::def_site().
     let dir_var = Ident::new("__dir", span);
 
@@ -65,8 +66,8 @@ pub fn pseudo_directory(input: TokenStream) -> TokenStream {
     let entries = parsed.entries.into_iter().map(|DirectoryEntry { name, entry }| {
         let location = format!("{:?}", Spanned::span(&name));
         quote! {
-            #pseudo_directory_mod::unwrap_add_entry_span(#name, #location,
-                                                         #dir_var.add_entry(#name, #entry));
+            #macro_mod::unwrap_add_entry_span(#name, #location,
+                                              #dir_var.add_entry(#name, #entry));
         }
     });
 
@@ -106,17 +107,18 @@ struct DirectoryEntry {
 impl Parse for DirectoryEntry {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let mut seen = HashSet::new();
-        let mut check_literal = |name, span| {
+        let mut check_literal = |name: String, span| {
             // Can not statically check the name length.  I need fidl_fuchsia_io::MAX_FILENAME
             // which is generated from FIDL, and that generation is not implemented for the host
             // build. And this create is compiled for the host.
 
-            if seen.insert(name) {
+            if seen.insert(name.clone()) {
                 return Ok(());
             }
 
-            let message = "Duplicate literal entry name. There is another literal before this one \
-                           with the same value.";
+            let message = format!("Duplicate literal entry name '{}'. There is another literal \
+                                   before this one with the same value.",
+                                  name);
             Err(syn::Error::new(span, message))
         };
 
