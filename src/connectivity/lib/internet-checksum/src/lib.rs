@@ -34,72 +34,64 @@
 //! [RFC 1141]: https://tools.ietf.org/html/rfc1141
 //! [RFC 1624]: https://tools.ietf.org/html/rfc1624
 
-// Benchmarks on x86-64 gLinux workstation
+// Optimizations applied:
 //
-// The following microbenchmarks were performed on a gLinux machine.
-// Two operations are being measured: `checksum` and `update`. Metrics
-// are latency and throughput, measured with SIMD enabled/disabled, and
-// when the computation is endian-aware/unaware.
+// 0. Byteorder independence: as described in RFC 1071 section 2.(B)
+//    The sum of 16-bit integers can be computed in either byte order,
+//    so this actually saves us from the unnecessary byte swapping on
+//    an LE machine. As perfed on a gLinux workstation, that swapping
+//    can account for ~20% of the runtime.
 //
-// We can notice that by applying the technique described in Section 2(B)
-// of [RFC 1071], there is a speed up in both operations on an LE machine,
-// but when combined with SIMD, the improvement is marginal. The improvement
-// comes from eliminating all the `ror` instructions in the inner loop. According
-// to `perf`, ~20% time is spent on the `ror` instructions (simd disabled) and
-// the result roughly matches this observation. Theoretically speaking, this
-// technique will have even more insignificant improvement on BE machines.
+// 1. Widen the accumulator: doing so enables us to process a bigger
+//    chunk of data once at a time, achieving some kind of poor man's
+//    SIMD. Currently a u128 counter is used on x86-64 and a u64 is
+//    used conservatively on other architectures.
 //
-// TODO: Run the benchmark on product machines.
+// 2. Process more at a time: the old implementation uses a u32 accumulator
+//    but it only adds one u16 each time to implement deferred carry. In
+//    the current implementation we are processing a u128 once at a time
+//    on x86-64, which is 8 u16's. On other platforms, we are processing
+//    a u64 at a time, which is 4 u16's.
 //
-// Checksum latency
-// +-------+----------------------+--------------------+-----------------+-------------------+
-// | Bytes | end_unaware__no_simd | end_aware__no_simd | end_aware__simd | end_unaware__simd |
-// +-------+----------------------+--------------------+-----------------+-------------------+
-// |  1024 |        196 ns        |       250 ns       |      81 ns      |       54 ns       |
-// |   256 |        47 ns         |       63 ns        |      33 ns      |       31 ns       |
-// |   128 |        24 ns         |       30 ns        |      29 ns      |       28 ns       |
-// |    64 |         8 ns         |       11 ns        |      27 ns      |       25 ns       |
-// |    32 |         3 ns         |        4 ns        |       4 ns      |        3 ns       |
-// |    31 |         3 ns         |        4 ns        |       4 ns      |        3 ns       |
-// +-------+----------------------+--------------------+-----------------+-------------------+
+// 3. Induce the compiler to produce `adc` instruction: this is a very
+//    useful instruction to implement 1's complement addition and available
+//    on both x86 and ARM. The functions `adc_uXX` are for this use.
 //
-// Update latency
-// +-------+----------------------+--------------------+-----------------+-------------------+
-// | Bytes | end_unaware__no_simd | end_aware__no_simd | end_aware__simd | end_unaware__simd |
-// +-------+----------------------+--------------------+-----------------+-------------------+
-// |  1024 |        387 ns        |       535 ns       |      117 ns     |       112 ns      |
-// |   256 |        106 ns        |       149 ns       |      71 ns      |       66 ns       |
-// |   128 |        53 ns         |       73 ns        |      54 ns      |       51 ns       |
-// |    64 |        28 ns         |       37 ns        |      52 ns      |       54 ns       |
-// |    32 |        16 ns         |       21 ns        |      27 ns      |       23 ns       |
-// |    31 |        21 ns         |       25 ns        |      31 ns      |       27 ns       |
-// |    16 |        11 ns         |       13 ns        |      16 ns      |       15 ns       |
-// +-------+----------------------+--------------------+-----------------+-------------------+
+// 4. Eliminate branching as much as possible: the old implementation has
+//    if statements for detecting overflow of the u32 accumulator which
+//    is not needed when we can access the carry flag with `adc`. The old
+//    `normalize` function used to have a while loop to fold the u32,
+//    however, we can unroll that loop because we know ahead of time how
+//    much additions we need.
 //
-// Checksum throughput
-// +-------+----------------------+--------------------+-----------------+-------------------+
-// | Bytes | end_unaware__no_simd | end_aware__no_simd | end_aware__simd | end_unaware__simd |
-// +-------+----------------------+--------------------+-----------------+-------------------+
-// |  1024 |     4982.5 MB/s      |    3906.2 MB/s     |   12056.3 MB/s  |    18084.5 MB/s   |
-// |   256 |     5194.5 MB/s      |    3875.2 MB/s     |   7398.2 MB/s   |    7875.5 MB/s    |
-// |   128 |     5086.3 MB/s      |    4069.0 MB/s     |   4209.3 MB/s   |    4359.7 MB/s    |
-// |    64 |     7629.4 MB/s      |    5548.7 MB/s     |   2260.6 MB/s   |    2441.4 MB/s    |
-// |    32 |     10172.5 MB/s     |    7629.4 MB/s     |   7629.4 MB/s   |    10172.5 MB/s   |
-// |    31 |     9854.6 MB/s      |    7391.0 MB/s     |   7391.0 MB/s   |    9854.6 MB/s    |
-// +-------+----------------------+--------------------+-----------------+-------------------+
+// 5. In the loop of `add_bytes`, the `adc_u64` is not used, instead,
+//    the `overflowing_add` is directly used. `adc_u64`'s carry flag
+//    comes from the current number being added while the slightly
+//    convoluted version in `add_bytes`, adding each number depends on
+//    the carry flag of the previous computation. I checked under release
+//    mode this issues 3 instructions instead of 4 for x86 and it should
+//    theoretically be beneficial, however, measurement showed me that it
+//    helps only a little. So this trick is not used for `update`.
 //
-// Update throughput
-// +-------+----------------------+--------------------+-----------------+-------------------+
-// | Bytes | end_unaware__no_simd | end_aware__no_simd | end_aware__simd | end_unaware__simd |
-// +-------+----------------------+--------------------+-----------------+-------------------+
-// |  1024 |     2523.4 MB/s      |    1825.4 MB/s     |   8346.7 MB/s   |    8719.3 MB/s    |
-// |   256 |     2303.2 MB/s      |    1638.5 MB/s     |   3438.6 MB/s   |    3699.1 MB/s    |
-// |   128 |     2303.2 MB/s      |    1672.2 MB/s     |   2260.6 MB/s   |    2393.5 MB/s    |
-// |    64 |     2179.8 MB/s      |    1649.6 MB/s     |   1173.8 MB/s   |    1130.3 MB/s    |
-// |    32 |     1907.3 MB/s      |    1453.2 MB/s     |   1130.3 MB/s   |    1326.9 MB/s    |
-// |    31 |     1407.8 MB/s      |    1182.6 MB/s     |    953.7 MB/s   |    1095.0 MB/s    |
-// |    16 |     1387.2 MB/s      |    1173.8 MB/s     |    953.7 MB/s   |    1017.3 MB/s    |
-// +-------+----------------------+--------------------+-----------------+-------------------+
+// 6. When the input is small, fallback to deferred carry method. Deferred
+//    carry turns out to be very efficient when dealing with small buffers:
+//    If the input is small, the cost to deal with the tail may already
+//    outweigh the benefit of the unrolling itself. Some measurement
+//    confirms this theory.
+//
+// Results:
+//
+// Micro-benchmarks are run on an x86-64 gLinux workstation. In summary,
+// compared the baseline 0 which is prior to the byteorder independence
+// patch, there is a ~4x speedup and the current non-simd version is faster
+// than the simd version of that baseline version.
+//
+// TODO: run this optimization on other platforms. I would expect
+// the situation on ARM a bit different because I am not sure
+// how much penalty there will be for misaligned read on ARM, or
+// whether it is even supported (On x86 there is generally no
+// penalty for misaligned read). If there will be penalties, we
+// should consider alignment as an optimization opportunity on ARM.
 
 // TODO(joshlf): Right-justify the columns above
 
@@ -140,6 +132,82 @@ pub fn checksum(bytes: &[u8]) -> [u8; 2] {
     c.checksum()
 }
 
+#[cfg(target_arch = "x86_64")]
+type Accumulator = u128;
+#[cfg(not(target_arch = "x86_64"))]
+type Accumulator = u64;
+
+/// The threshold for small buffers, if the buffer is too small,
+/// fall back to the normal deferred carry method where a wide
+/// accumulator is used but one `u16` is added once at a time.
+// TODO: `64` works fine on x86_64, but this value may be different
+// on other platforms.
+const SMALL_BUF_THRESHOLD: usize = 64;
+
+/// The following macro unrolls operations on u16's to wider integers.
+///
+/// # Arguments
+///
+/// * `$arr`  - The byte slice being processed.
+/// * `$body` - The operation to operate on the wider integer. It should
+///             be a macro because functions are not options here.
+///
+///
+/// This macro will choose the "wide integer" for you, on x86-64,
+/// it will choose u128 as the "wide integer" and u64 anywhere else.
+macro_rules! loop_unroll {
+    (@inner $arr: ident, 16, $body:ident) => {
+        while $arr.len() >= 16 {
+            $body!(16, read_u128);
+        }
+        unroll_tail!($arr, 16, $body);
+    };
+
+    (@inner $arr: ident, 8, $body:ident) => {
+        while $arr.len() >= 8 {
+            $body!(8, read_u64);
+        }
+        unroll_tail!($arr, 8, $body);
+    };
+
+    ($arr: ident, $body: ident) => {
+        #[cfg(target_arch = "x86_64")]
+        loop_unroll!(@inner $arr, 16, $body);
+        #[cfg(not(target_arch = "x86_64"))]
+        loop_unroll!(@inner $arr, 8, $body);
+    };
+}
+
+/// At the the end of loop unrolling, we have to take care of bytes
+/// that are left over. For example, `unroll_tail!(bytes, 4, body)`
+/// expands to
+/// ```
+/// if bytes.len & 2 != 0 {
+///   body!(2, read_u16);
+/// }
+/// ```
+macro_rules! unroll_tail {
+    ($arr: ident, $n: literal, $read: ident, $body: ident) => {
+        if $arr.len() & $n != 0 {
+            $body!($n, $read);
+        }
+    };
+
+    ($arr: ident, 4, $body: ident) => {
+        unroll_tail!($arr, 2, read_u16, $body);
+    };
+
+    ($arr: ident, 8, $body: ident) => {
+        unroll_tail!($arr, 4, read_u32, $body);
+        unroll_tail!($arr, 4, $body);
+    };
+
+    ($arr: ident, 16, $body: ident) => {
+        unroll_tail!($arr, 8, read_u64, $body);
+        unroll_tail!($arr, 8, $body);
+    };
+}
+
 /// Updates bytes in an existing checksum.
 ///
 /// `update` updates a checksum to reflect that the already-checksummed bytes
@@ -163,31 +231,35 @@ pub fn update(checksum: [u8; 2], old: &[u8], new: &[u8]) -> [u8; 2] {
     // We compute on the sum, not the one's complement of the sum. checksum
     // is the one's complement of the sum, so we need to get back to the
     // sum. Thus, we negate checksum.
-    let mut sum = u32::from(!NativeEndian::read_u16(&checksum[..]));
+    let mut sum = !NativeEndian::read_u16(&checksum[..]) as Accumulator;
 
     // First, process as much as we can with SIMD.
     let (mut old, mut new) = Checksum::update_simd(&mut sum, old, new);
 
     // Continue with the normal algorithm to finish up whatever we couldn't
     // process with SIMD.
-    while old.len() > 1 {
-        let old_u16 = NativeEndian::read_u16(old);
-        let new_u16 = NativeEndian::read_u16(new);
-        // RFC 1624 Eqn. 3
-        Checksum::add_u16(&mut sum, !old_u16);
-        Checksum::add_u16(&mut sum, new_u16);
-        old = &old[2..];
-        new = &new[2..];
+    macro_rules! handle_chunk {
+        ($read: ident, $old: expr, $new: expr) => {
+            let o = NativeEndian::$read($old);
+            let n = NativeEndian::$read($new);
+            // RFC 1624 Eqn. 3
+            sum = adc_accumulator(sum, !o as Accumulator);
+            sum = adc_accumulator(sum, n as Accumulator);
+        };
+        ($n: literal, $read: ident) => {
+            handle_chunk!($read, old, new);
+            old = &old[$n..];
+            new = &new[$n..];
+        };
     }
+    loop_unroll!(old, handle_chunk);
+
     if old.len() == 1 {
-        let old_u16 = NativeEndian::read_u16(&[old[0], 0]);
-        let new_u16 = NativeEndian::read_u16(&[new[0], 0]);
-        // RFC 1624 Eqn. 3
-        Checksum::add_u16(&mut sum, !old_u16);
-        Checksum::add_u16(&mut sum, new_u16);
+        handle_chunk!(read_u16, &[old[0], 0], &[new[0], 0]);
     }
+
     let mut cksum = [0u8; 2];
-    NativeEndian::write_u16(&mut cksum[..], !Checksum::normalize(sum));
+    NativeEndian::write_u16(&mut cksum[..], !normalize(sum));
     cksum
 }
 
@@ -203,7 +275,7 @@ pub fn update(checksum: [u8; 2], old: &[u8], new: &[u8]) -> [u8; 2] {
 /// [RFC 1624]: https://tools.ietf.org/html/rfc1624
 #[derive(Default)]
 pub struct Checksum {
-    sum: u32,
+    sum: Accumulator,
     // Since odd-length inputs are treated specially, we store the trailing byte
     // for use in future calls to add_bytes(), and only treat it as a true
     // trailing byte in checksum().
@@ -217,9 +289,10 @@ impl Checksum {
     /// cause the benefits of SIMD to be dwarfed by the overhead (performing
     /// worse than the normal/non-SIMD algorithm). This value was chosen after
     /// several benchmarks which showed that the algorithm performed worse than
-    /// the normal/non-SIMD algorithm when the number of bytes was less than 64.
+    /// the normal/non-SIMD algorithm when the number of bytes was less than 256.
+    // TODO: 256 may not perform the best on other platforms such as ARM.
     #[cfg(target_arch = "x86_64")]
-    const MIN_BYTES_FOR_SIMD: usize = 64;
+    const MIN_BYTES_FOR_SIMD: usize = 256;
 
     /// Initialize a new checksum.
     #[inline]
@@ -238,38 +311,131 @@ impl Checksum {
     /// `add_bytes` with larger input over more calls with smaller input.
     #[inline]
     pub fn add_bytes(&mut self, mut bytes: &[u8]) {
-        if bytes.is_empty() {
+        if bytes.len() < SMALL_BUF_THRESHOLD {
+            self.add_bytes_small(bytes);
             return;
+        }
+
+        let mut sum = self.sum;
+        let mut carry = false;
+
+        // We are not using `adc_uXX` functions here, instead,
+        // we manually track the carry flag. This is because
+        // in `adc_uXX` functions, the carry flag depends on
+        // addition itself. So the assembly for that function
+        // reads as follows:
+        //
+        // mov %rdi, %rcx
+        // mov %rsi, %rax
+        // add %rcx, %rsi -- waste! only used to generate CF.
+        // adc %rdi, $rax -- the real useful instruction.
+        //
+        // So we had better to make us depend on the CF generated
+        // by the addition of the previous 16-bit word. The ideal
+        // assembly should look like:
+        // add 0(%rdi), %rax
+        // adc 8(%rdi), %rax
+        // adc 16(%rdi), %rax
+        // .... and so on ...
+        //
+        // Sadly, there are too many instructions that can affect
+        // the carry flag, and LLVM is not that optimized to find
+        // out the pattern and let all these adc instructions not
+        // interleaved. However, doing so results in 3 instructions
+        // instead of the original 4 instructions (the two mov's are
+        // still there) and it makes a difference on input size like
+        // 1023. And measurements showed little improvement on the
+        // update operation. Considering `update` is expected to be
+        // used on small inputs, and for readability issues, this
+        // trick is not employed there.
+
+        // The following macro is used as a `body` when invoking a
+        // `loop_unroll` macro. `$step` means how many bytes to handle
+        // at once; `$read` is supposed to be `read_u16`, `read_u32`
+        // and so on, it is used to get an unsigned integer of `$step`
+        // width from a byte slice; `$bytes` is the byte slice mentioned
+        // before, if omitted, it defaults to be `bytes`, which is the
+        // argument of the surrounding function.
+        macro_rules! update_sum_carry {
+            ($step: literal, $read: ident, $bytes: expr) => {
+                let (s, c) = sum.overflowing_add(NativeEndian::$read($bytes) as Accumulator);
+                sum = s + (carry as Accumulator);
+                carry = c;
+                bytes = &bytes[$step..];
+            };
+            ($step: literal, $read: ident) => {
+                update_sum_carry!($step, $read, bytes);
+            };
         }
 
         // if there's a trailing byte, consume it first
         if let Some(byte) = self.trailing_byte {
-            Self::add_u16(&mut self.sum, NativeEndian::read_u16(&[byte, bytes[0]]));
-            bytes = &bytes[1..];
+            update_sum_carry!(1, read_u16, &[byte, bytes[0]]);
             self.trailing_byte = None;
         }
 
         // First, process as much as we can with SIMD.
-        bytes = Self::add_bytes_simd(&mut self.sum, bytes);
+        bytes = Self::add_bytes_simd(&mut sum, bytes);
 
-        // Continue with the normal algorithm to finish up whatever we couldn't
-        // process with SIMD.
-        while bytes.len() > 1 {
-            Self::add_u16(&mut self.sum, NativeEndian::read_u16(bytes));
-            bytes = &bytes[2..];
-        }
+        loop_unroll!(bytes, update_sum_carry);
+
         if bytes.len() == 1 {
             self.trailing_byte = Some(bytes[0]);
         }
+
+        self.sum = sum + (carry as Accumulator);
+    }
+
+    /// The efficient fallback when the buffer is small.
+    ///
+    /// In this implementation, one `u16` is added once a
+    /// time, so we don't waste time on dealing with the
+    /// tail of the buffer. Besides, given that the accumulator
+    /// is large enough, when inputs are small, there should
+    /// hardly be overflows, so for any modern architecture,
+    /// there is little chance in misprediction.
+    // The inline attribute is needed here, micro benchmarks showed
+    // that it speeds up things.
+    #[inline(always)]
+    fn add_bytes_small(&mut self, mut bytes: &[u8]) {
+        if bytes.is_empty() {
+            return;
+        }
+
+        let mut sum = self.sum;
+        fn update_sum(acc: Accumulator, rhs: u16) -> Accumulator {
+            if let Some(updated) = acc.checked_add(rhs as Accumulator) {
+                updated
+            } else {
+                (normalize(acc) + rhs) as Accumulator
+            }
+        }
+
+        if let Some(byte) = self.trailing_byte {
+            sum = update_sum(sum, NativeEndian::read_u16(&[byte, bytes[0]]));
+            bytes = &bytes[1..];
+            self.trailing_byte = None;
+        }
+
+        while bytes.len() >= 2 {
+            sum = update_sum(sum, NativeEndian::read_u16(bytes));
+            bytes = &bytes[2..];
+        }
+
+        if bytes.len() == 1 {
+            self.trailing_byte = Some(bytes[0]);
+        }
+
+        self.sum = sum;
     }
 
     /// Computes the checksum, but in big endian byte order.
     fn checksum_inner(&self) -> u16 {
         let mut sum = self.sum;
         if let Some(byte) = self.trailing_byte {
-            Self::add_u16(&mut sum, NativeEndian::read_u16(&[byte, 0]));
+            sum = adc_accumulator(sum, NativeEndian::read_u16(&[byte, 0]) as Accumulator);
         }
-        !Self::normalize(sum)
+        !normalize(sum)
     }
 
     /// Computes the checksum, and returns the array representation.
@@ -289,30 +455,6 @@ impl Checksum {
         cksum
     }
 
-    /// Normalizes a 32-bit accumulator by mopping up the overflow until it fits
-    /// in a `u16`.
-    fn normalize(mut sum: u32) -> u16 {
-        while (sum >> 16) != 0 {
-            sum = (sum >> 16) + (sum & 0xFFFF);
-        }
-        sum as u16
-    }
-
-    /// Adds a new `u16` to a running sum, checking for overflow. If overflow is
-    /// detected, the sum is first normalized back to a 16-bit representation
-    /// and the addition is performed again.
-    fn add_u16(sum: &mut u32, u: u16) {
-        let new = if let Some(new) = sum.checked_add(u32::from(u)) {
-            new
-        } else {
-            let tmp = *sum;
-            *sum = u32::from(Self::normalize(tmp));
-            // sum is now in the range [0, 2^16), so this can't overflow
-            *sum + u32::from(u)
-        };
-        *sum = new;
-    }
-
     /// Adds bytes to a running sum using architecture specific SIMD
     /// instructions.
     ///
@@ -323,7 +465,7 @@ impl Checksum {
     /// features, `add_bytes_simd` does nothing and simply returns `bytes`
     /// directly.
     #[inline(always)]
-    fn add_bytes_simd<'a>(sum: &mut u32, bytes: &'a [u8]) -> &'a [u8] {
+    fn add_bytes_simd<'a>(sum: &mut Accumulator, bytes: &'a [u8]) -> &'a [u8] {
         #[cfg(target_arch = "x86_64")]
         {
             if is_x86_feature_detected!("avx2") && bytes.len() >= Self::MIN_BYTES_FOR_SIMD {
@@ -349,7 +491,7 @@ impl Checksum {
     /// behaviour.
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
-    unsafe fn add_bytes_x86_64<'a>(sum: &mut u32, mut bytes: &'a [u8]) -> &'a [u8] {
+    unsafe fn add_bytes_x86_64<'a>(sum: &mut Accumulator, mut bytes: &'a [u8]) -> &'a [u8] {
         // TODO(ghanan): Use safer alternatives to achieve SIMD algorithm once
         // they stabilize.
 
@@ -420,11 +562,24 @@ impl Checksum {
             #[allow(clippy::cast_ptr_alignment)]
             x86_64::_mm256_storeu_si256(data.as_ptr() as *mut x86_64::__m256i, acc);
 
-            // Iterate over the accumulator data 2 bytes (16 bits) at a time,
+            let mut fold = *sum;
+            // Iterate over the accumulator data accumulator-width bytes at a time,
             // and add it to `sum`.
-            for x in (0..32).step_by(2) {
-                Self::add_u16(sum, NativeEndian::read_u16(&data[x..x + 2]));
+            macro_rules! fold {
+                ($step: literal, $read: ident) => {
+                    for x in (0..32).step_by($step) {
+                        fold = adc_accumulator(
+                            fold,
+                            NativeEndian::$read(&data[x..x + $step]) as Accumulator,
+                        );
+                    }
+                };
             }
+            #[cfg(not(target_arch = "x86_64"))]
+            fold!(8, read_u64);
+            #[cfg(target_arch = "x86_64")]
+            fold!(16, read_u128);
+            *sum = fold;
         }
 
         bytes
@@ -442,7 +597,7 @@ impl Checksum {
     /// `new_bytes' directly.
     #[inline(always)]
     fn update_simd<'a, 'b>(
-        sum: &mut u32,
+        sum: &mut Accumulator,
         old_bytes: &'a [u8],
         new_bytes: &'b [u8],
     ) -> (&'a [u8], &'b [u8]) {
@@ -474,7 +629,7 @@ impl Checksum {
     /// `update_x86_64` panics if `old_bytes.len() != new_bytes.len()`.
     #[cfg(target_arch = "x86_64")]
     unsafe fn update_x86_64<'a, 'b>(
-        sum: &mut u32,
+        sum: &mut Accumulator,
         old_bytes: &'a [u8],
         new_bytes: &'b [u8],
     ) -> (&'a [u8], &'b [u8]) {
@@ -487,7 +642,7 @@ impl Checksum {
         // 1s complement. This will 'remove' `old_bytes` from `sum`.
         let mut old_sum = 0;
         let old_bytes = Self::add_bytes_x86_64(&mut old_sum, old_bytes);
-        Self::add_u16(sum, !Self::normalize(old_sum));
+        *sum = adc_accumulator(*sum, !old_sum as Accumulator);
 
         // Add `new_bytes` to `sum` using SIMD as normal.
         let new_bytes = Self::add_bytes_x86_64(sum, new_bytes);
@@ -498,6 +653,38 @@ impl Checksum {
 
         (old_bytes, new_bytes)
     }
+}
+
+macro_rules! impl_adc {
+    ($name: ident, $t: ty) => {
+        /// implements 1's complement addition for $t,
+        /// exploiting the carry flag on a 2's complement machine.
+        /// In practice, the adc instruction will be generated.
+        fn $name(a: $t, b: $t) -> $t {
+            let (s, c) = a.overflowing_add(b);
+            s + (c as $t)
+        }
+    };
+}
+
+impl_adc!(adc_u16, u16);
+impl_adc!(adc_u32, u32);
+#[cfg(target_arch = "x86_64")]
+impl_adc!(adc_u64, u64);
+impl_adc!(adc_accumulator, Accumulator);
+
+/// Normalizes the accumulator by mopping up the
+/// overflow until it fits in a `u16`.
+fn normalize(a: Accumulator) -> u16 {
+    #[cfg(target_arch = "x86_64")]
+    return normalize_64(adc_u64(a as u64, (a >> 64) as u64));
+    #[cfg(not(target_arch = "x86_64"))]
+    return normalize_64(a);
+}
+
+fn normalize_64(a: u64) -> u16 {
+    let t = adc_u32(a as u32, (a >> 32) as u32);
+    adc_u16(t as u16, (t >> 16) as u16)
 }
 
 #[cfg(all(test, feature = "benchmark"))]
@@ -591,11 +778,62 @@ mod benchmarks {
         });
     }
 
+    /// Benchmark time to calculate checksum with a single call to `add_bytes`
+    /// with 1023 bytes.
+    #[bench]
+    fn bench_checksum_1023(b: &mut test::Bencher) {
+        b.iter(|| {
+            let buf = test::black_box([0xFF; 1023]);
+            let mut c = Checksum::new();
+            c.add_bytes(&buf);
+            test::black_box(c.checksum());
+        });
+    }
+
+    #[bench]
+    fn bench_checksum_20(b: &mut test::Bencher) {
+        b.iter(|| {
+            let buf = test::black_box([0xFF; 20]);
+            let mut c = Checksum::new();
+            c.add_bytes(&buf);
+            test::black_box(c.checksum());
+        });
+    }
+
+    #[bench]
+    fn bench_checksum_small_20(b: &mut test::Bencher) {
+        b.iter(|| {
+            let buf = test::black_box([0xFF; 20]);
+            let mut c = Checksum::new();
+            c.add_bytes_small(&buf);
+            test::black_box(c.checksum());
+        });
+    }
+
+    #[bench]
+    fn bench_checksum_small_31(b: &mut test::Bencher) {
+        b.iter(|| {
+            let buf = test::black_box([0xFF; 31]);
+            let mut c = Checksum::new();
+            c.add_bytes_small(&buf);
+            test::black_box(c.checksum());
+        });
+    }
+
     #[bench]
     fn bench_update_1024(b: &mut test::Bencher) {
         b.iter(|| {
             let old = test::black_box([0x42; 1024]);
             let new = test::black_box([0xa0; 1024]);
+            test::black_box(update([42; 2], &old[..], &new[..]));
+        });
+    }
+
+    #[bench]
+    fn bench_update_1023(b: &mut test::Bencher) {
+        b.iter(|| {
+            let old = test::black_box([0x42; 1023]);
+            let new = test::black_box([0xa0; 1023]);
             test::black_box(update([42; 2], &old[..], &new[..]));
         });
     }
@@ -703,16 +941,9 @@ mod tests {
             // loop iteration to the next.
             let mut c = Checksum::new();
             c.add_bytes(&[0xFF, 0xFF]);
-            let mut prev_sum = c.sum;
-            let mut overflowed = false;
             for _ in 0..((2 * (1 << 16)) - 1) {
                 c.add_bytes(&[0xFF, 0xFF]);
-                if c.sum < prev_sum {
-                    overflowed = true;
-                }
-                prev_sum = c.sum;
             }
-            assert!(overflowed);
             assert_eq!(c.checksum(), [0u8; 2]);
         }
 
@@ -879,6 +1110,44 @@ mod tests {
             c.checksum()
         };
         assert_eq!(from_scratch, from_update);
+    }
+
+    #[test]
+    fn test_add_bytes_small_prop_test() {
+        // Since we have two independent implementations
+        // Now it is time for us to write a property test
+        // to ensure the checksum algorithm(s) are indeed correct.
+
+        let mut rng = new_rng(123478012483);
+        let mut c1 = Checksum::new();
+        let mut c2 = Checksum::new();
+        for len in 64..1_025 {
+            for _ in 0..4 {
+                let mut buf = vec![];
+                for _ in 0..len {
+                    buf.push(rng.gen());
+                }
+                c1.add_bytes(&buf[..]);
+                c2.add_bytes_small(&buf[..]);
+                assert_eq!(c1.checksum(), c2.checksum());
+                let n1 = c1.checksum_inner();
+                let n2 = c2.checksum_inner();
+                assert_eq!(n1, n2);
+                let mut t1 = Checksum::new();
+                let mut t2 = Checksum::new();
+                let mut t3 = Checksum::new();
+                t3.add_bytes(&buf[..]);
+                if buf.len() % 2 == 1 {
+                    buf.push(0);
+                }
+                assert_eq!(buf.len() % 2, 0);
+                buf.extend_from_slice(&t3.checksum());
+                t1.add_bytes(&buf[..]);
+                t2.add_bytes_small(&buf[..]);
+                assert_eq!(t1.checksum(), [0, 0]);
+                assert_eq!(t2.checksum(), [0, 0]);
+            }
+        }
     }
 
     /// IPv4 headers.

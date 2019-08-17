@@ -1,7 +1,7 @@
 [package]
 name = "internet-checksum"
 version = "0.1.0"
-authors = ["Joshua Liebow-Feeser <joshlf@google.com>", "Ghanan Gowripalan <ghanan@google.com>"]
+authors = ["Joshua Liebow-Feeser <joshlf@google.com>", "Ghanan Gowripalan <ghanan@google.com>", "Zeling Feng <zeling@google.com>"]
 edition = "2018"
 description = "RFC 1071 checksum computation (the \"internet checksum\")"
 license = "BSD-3-Clause"
