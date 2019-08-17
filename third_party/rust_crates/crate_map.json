@@ -406,6 +406,11 @@
             "package_name": "tempfile"
         },
         {
+            "crate_name": "textwrap",
+            "crate_type": "lib",
+            "package_name": "textwrap"
+        },
+        {
             "crate_name": "time",
             "crate_type": "lib",
             "package_name": "time"

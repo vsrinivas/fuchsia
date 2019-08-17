@@ -727,6 +727,7 @@ dependencies = [
  "synstructure 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "textwrap 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "timebomb 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "unic-char-range 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
