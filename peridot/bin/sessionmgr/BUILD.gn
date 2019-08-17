@@ -25,7 +25,6 @@ executable_package("sessionmgr") {
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/inspect/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]
@@ -95,7 +94,6 @@ source_set("sessionmgr_lib") {
     "//peridot/public/lib/async/cpp:operation",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/ledger/bin/fidl",
     "//src/lib/fxl",
@@ -278,7 +276,6 @@ executable("sessionmgr_impl_unittest") {
     "//peridot/lib/ledger_client:constants",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

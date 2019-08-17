@@ -8,14 +8,12 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/inspect/cpp/component.h>
-
-#include <memory>
-
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/split_string.h>
 #include <trace-provider/provider.h>
+
+#include <memory>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/sessionmgr_impl.h"
@@ -92,19 +90,15 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  auto component_context = sys::ComponentContext::Create();
-  auto inspector = sys::ComponentInspector::Initialize(component_context.get());
-  inspect::Node& inspect_root = inspector->root();
-
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
+  std::unique_ptr<sys::ComponentContext> component_context(sys::ComponentContext::Create());
 
   auto cobalt_cleanup =
       SetupCobalt((config.enable_cobalt()), std::move(loop.dispatcher()), component_context.get());
 
   modular::AppDriver<modular::SessionmgrImpl> driver(
       component_context->outgoing(),
-      std::make_unique<modular::SessionmgrImpl>(component_context.get(), std::move(config),
-                                                std::move(inspect_root)),
+      std::make_unique<modular::SessionmgrImpl>(component_context.get(), std::move(config)),
       [&loop, &cobalt_cleanup] {
         cobalt_cleanup.call();
         loop.Quit();

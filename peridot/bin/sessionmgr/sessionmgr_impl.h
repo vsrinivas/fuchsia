@@ -20,7 +20,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/sys/inspect/cpp/component.h>
 
 #include <memory>
 #include <string>
@@ -64,7 +63,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                        EntityProviderLauncher {
  public:
   SessionmgrImpl(sys::ComponentContext* component_context,
-                 fuchsia::modular::session::SessionmgrConfig config, inspect::Node object);
+                 fuchsia::modular::session::SessionmgrConfig config);
   ~SessionmgrImpl() override;
 
   // |AppDriver| calls this.
@@ -185,9 +184,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   sys::ComponentContext* const component_context_;
 
   fuchsia::modular::session::SessionmgrConfig config_;
-
-  inspect::Node node_;
-
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
 
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;
