@@ -12,8 +12,8 @@
 
 namespace examples {
 
-ImagePipeView::ImagePipeView(scenic::ViewContext view_context, bool protected_output)
-    : BaseView(std::move(view_context), "vklatency_on_scenic"),
+ImagePipeView::ImagePipeView(scenic::ViewContextTransitional view_context, bool protected_output)
+    : BaseViewTransitional(std::move(view_context), "vklatency_on_scenic"),
       canvas_node_(session()),
       vk_swapchain_(protected_output) {
   zx::channel remote_endpoint;

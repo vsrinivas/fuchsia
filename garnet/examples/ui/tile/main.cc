@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/trace-provider/provider.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
+#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
 
 #include "garnet/examples/ui/tile/tile_view.h"
 #include "src/lib/fxl/command_line.h"
@@ -20,8 +20,8 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  scenic::ViewProviderComponent component(
-      [params = std::move(tile_params)](scenic::ViewContext context) {
+  scenic::ViewProviderComponentTransitional component(
+      [params = std::move(tile_params)](scenic::ViewContextTransitional context) {
         return std::make_unique<examples::TileView>(std::move(context), std::move(params));
       },
       &loop);

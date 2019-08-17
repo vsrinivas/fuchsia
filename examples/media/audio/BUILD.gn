@@ -16,7 +16,6 @@ group("audio") {
     "simple_sine",
     "sync_sine",
     "tones",
-    "vu_meter",
   ]
 }
 

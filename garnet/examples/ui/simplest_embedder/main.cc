@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
+#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/system/ulib/zircon/include/zircon/status.h>
 
@@ -61,7 +61,7 @@ int main(int argc, const char** argv) {
 
     // Create a View which will launch shadertoy and attach shadertoy's View to
     // itself.
-    scenic::ViewContext view_context = {
+    scenic::ViewContextTransitional view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
@@ -117,7 +117,7 @@ int main(int argc, const char** argv) {
 
     // Create a View which will launch shadertoy and attach shadertoy's View to
     // itself.
-    scenic::ViewContext view_context = {
+    scenic::ViewContextTransitional view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
@@ -140,8 +140,8 @@ int main(int argc, const char** argv) {
     // Instead of creating a View directly, provide a component that will do so
     // when asked via FIDL.
     FXL_LOG(INFO) << "Launching view provider service.";
-    scenic::ViewProviderComponent component(
-        [&loop](scenic::ViewContext context) {
+    scenic::ViewProviderComponentTransitional component(
+        [&loop](scenic::ViewContextTransitional context) {
           // Create a View which will launch shadertoy and attach shadertoy's
           // View to itself.
           auto view = std::make_unique<ShadertoyEmbedderView>(std::move(context), &loop);

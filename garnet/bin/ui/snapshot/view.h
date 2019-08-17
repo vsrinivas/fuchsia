@@ -8,7 +8,7 @@
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
@@ -18,9 +18,9 @@
 namespace snapshot {
 
 // A view that displays saved snapshot of views.
-class View final : public scenic::BaseView, public fuchsia::scenic::snapshot::Loader {
+class View final : public scenic::BaseViewTransitional, public fuchsia::scenic::snapshot::Loader {
  public:
-  explicit View(scenic::ViewContext view_context);
+  explicit View(scenic::ViewContextTransitional view_context);
   ~View() override = default;
 
   // |fuchsia::scenic::snapshot::Loader|.

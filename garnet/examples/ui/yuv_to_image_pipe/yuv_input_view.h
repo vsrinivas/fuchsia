@@ -12,7 +12,7 @@ namespace yuv_to_image_pipe {
 // Displays a YUV frame via ImagePipe based on input.
 class YuvInputView : public YuvBaseView {
  public:
-  YuvInputView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format);
+  YuvInputView(scenic::ViewContextTransitional context, fuchsia::images::PixelFormat pixel_format);
   ~YuvInputView() override = default;
 
  private:

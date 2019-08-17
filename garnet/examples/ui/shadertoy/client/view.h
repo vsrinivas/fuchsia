@@ -11,7 +11,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <src/lib/fxl/macros.h>
@@ -67,9 +67,9 @@ class ViewImpl {
 // material for a number of rounded-rectangles (they all share the same
 // material).  When any of the rectangles is tapped, toggles between a swirling
 // animation and a static layout.
-class ShadertoyClientView : public scenic::BaseView {
+class ShadertoyClientView : public scenic::BaseViewTransitional {
  public:
-  ShadertoyClientView(scenic::ViewContext context, const std::string& debug_name);
+  ShadertoyClientView(scenic::ViewContextTransitional context, const std::string& debug_name);
   ~ShadertoyClientView() = default;
 
  private:

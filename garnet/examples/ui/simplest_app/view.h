@@ -8,14 +8,14 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 namespace simplest_app {
 
-class SimplestAppView : public scenic::BaseView {
+class SimplestAppView : public scenic::BaseViewTransitional {
  public:
-  SimplestAppView(scenic::ViewContext context, async::Loop* message_loop);
+  SimplestAppView(scenic::ViewContextTransitional context, async::Loop* message_loop);
   ~SimplestAppView() = default;
 
   // |scenic::BaseView|.

@@ -312,7 +312,7 @@ void FidlVideoRenderer::SetGeometryUpdateCallback(fit::closure callback) {
 }
 
 void FidlVideoRenderer::CreateView(fuchsia::ui::views::ViewToken view_token) {
-  scenic::ViewContext view_context{
+  scenic::ViewContextTransitional view_context{
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
       .view_token = std::move(view_token),
@@ -461,9 +461,9 @@ void FidlVideoRenderer::Image::WaitHandler(async_dispatcher_t* dispatcher, async
 ////////////////////////////////////////////////////////////////////////////////
 // FidlVideoRenderer::View implementation.
 
-FidlVideoRenderer::View::View(scenic::ViewContext context,
+FidlVideoRenderer::View::View(scenic::ViewContextTransitional context,
                               std::shared_ptr<FidlVideoRenderer> renderer)
-    : scenic::BaseView(std::move(context), "Video Renderer"),
+    : scenic::BaseViewTransitional(std::move(context), "Video Renderer"),
       renderer_(renderer),
       entity_node_(session()),
       image_pipe_node_(session()),

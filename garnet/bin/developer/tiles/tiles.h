@@ -12,15 +12,16 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/id.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 namespace tiles {
 
-class Tiles : public fuchsia::developer::tiles::Controller, public scenic::BaseView {
+class Tiles : public fuchsia::developer::tiles::Controller, public scenic::BaseViewTransitional {
  public:
-  Tiles(scenic::ViewContext view_context, std::vector<std::string> urls, int border = 0);
+  Tiles(scenic::ViewContextTransitional view_context, std::vector<std::string> urls,
+        int border = 0);
   ~Tiles() override = default;
 
  private:

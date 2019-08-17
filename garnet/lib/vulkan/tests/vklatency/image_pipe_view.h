@@ -8,7 +8,7 @@
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 
 #include <memory>
 
@@ -18,9 +18,9 @@
 
 namespace examples {
 
-class ImagePipeView : public scenic::BaseView {
+class ImagePipeView : public scenic::BaseViewTransitional {
  public:
-  ImagePipeView(scenic::ViewContext view_context, bool protected_output);
+  ImagePipeView(scenic::ViewContextTransitional view_context, bool protected_output);
   ~ImagePipeView() override = default;
 
  private:

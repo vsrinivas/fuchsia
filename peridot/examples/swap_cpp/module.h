@@ -7,7 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/zx/eventpair.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
@@ -15,9 +15,9 @@
 
 namespace modular_example {
 
-class ModuleView : public scenic::BaseView {
+class ModuleView : public scenic::BaseViewTransitional {
  public:
-  explicit ModuleView(scenic::ViewContext view_context, uint32_t color);
+  explicit ModuleView(scenic::ViewContextTransitional view_context, uint32_t color);
 
  private:
   // |scenic::SessionListener|
@@ -33,7 +33,8 @@ class ModuleView : public scenic::BaseView {
 
 class ModuleApp : public modular::ViewApp {
  public:
-  using CreateViewCallback = fit::function<scenic::BaseView*(scenic::ViewContext view_context)>;
+  using CreateViewCallback =
+      fit::function<scenic::BaseViewTransitional*(scenic::ViewContextTransitional view_context)>;
 
   explicit ModuleApp(sys::ComponentContext* component_context, CreateViewCallback create);
 
@@ -44,7 +45,7 @@ class ModuleApp : public modular::ViewApp {
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 
   CreateViewCallback create_;
-  std::unique_ptr<scenic::BaseView> view_;
+  std::unique_ptr<scenic::BaseViewTransitional> view_;
   std::unique_ptr<sys::ComponentContext> component_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleApp);

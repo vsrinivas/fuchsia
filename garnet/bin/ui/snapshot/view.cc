@@ -10,7 +10,8 @@
 
 namespace snapshot {
 
-View::View(scenic::ViewContext view_context) : BaseView(std::move(view_context), "Snapshot View") {
+View::View(scenic::ViewContextTransitional view_context)
+    : BaseViewTransitional(std::move(view_context), "Snapshot View") {
   outgoing_services().AddService(loader_bindings_.GetHandler(this));
 }
 

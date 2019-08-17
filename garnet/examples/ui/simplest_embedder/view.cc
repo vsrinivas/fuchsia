@@ -11,8 +11,9 @@ using ::fuchsia::ui::input::InputEvent;
 using ::fuchsia::ui::input::KeyboardEventPhase;
 using ::fuchsia::ui::input::PointerEventPhase;
 
-ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context, async::Loop* message_loop)
-    : scenic::BaseView(std::move(context), "simplest_embedder ShadertoyEmbedderView"),
+ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContextTransitional context,
+                                             async::Loop* message_loop)
+    : scenic::BaseViewTransitional(std::move(context), "simplest_embedder ShadertoyEmbedderView"),
       message_loop_(message_loop),
       background_(session()),
       focused_(false) {

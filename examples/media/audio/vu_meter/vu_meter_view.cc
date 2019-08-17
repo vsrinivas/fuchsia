@@ -20,7 +20,7 @@ constexpr uint64_t kBytesPerFrame = 4;
 
 namespace examples {
 
-VuMeterView::VuMeterView(scenic::ViewContext view_context, async::Loop* loop)
+VuMeterView::VuMeterView(scenic::ViewContextTransitional view_context, async::Loop* loop)
     : SkiaView(std::move(view_context), "VU Meter"),
       loop_(loop),
       fast_left_(kFastDecay),

@@ -45,10 +45,10 @@ int64_t rand_less_than(int64_t limit) {
 
 }  // namespace
 
-MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContext view_context,
+MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContextTransitional view_context,
                                                  fit::function<void(int)> quit_callback,
                                                  const MediaPlayerTestUtilParams& params)
-    : scenic::BaseView(std::move(view_context), "Media Player"),
+    : scenic::BaseViewTransitional(std::move(view_context), "Media Player"),
       quit_callback_(std::move(quit_callback)),
       params_(params),
       background_node_(session()),

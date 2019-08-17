@@ -10,9 +10,11 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/svc/cpp/services.h>
-#include <lib/ui/scenic/cpp/resources.h>
-#include <lib/ui/scenic/cpp/session.h>
+
+#include "lib/component/cpp/startup_context.h"
+#include "lib/svc/cpp/services.h"
+#include "lib/ui/scenic/cpp/resources.h"
+#include "lib/ui/scenic/cpp/session.h"
 
 namespace scenic {
 

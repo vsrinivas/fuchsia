@@ -6,7 +6,8 @@
 
 namespace scenic {
 
-CoordinateTestView::CoordinateTestView(ViewContext context, const std::string& debug_name)
+CoordinateTestView::CoordinateTestView(ViewContextTransitional context,
+                                       const std::string& debug_name)
     : BackgroundView(std::move(context), debug_name) {}
 
 void CoordinateTestView::Draw(float cx, float cy, float sx, float sy) {

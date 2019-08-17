@@ -7,7 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include "src/lib/fxl/logging.h"
@@ -17,9 +17,9 @@ namespace yuv_to_image_pipe {
 
 // Displays a YUV frame via ImagePipe using given PixelFormat, to allow visual
 // inspection that a given PixelFormat is being displayed properly by Scenic.
-class YuvBaseView : public scenic::BaseView {
+class YuvBaseView : public scenic::BaseViewTransitional {
  public:
-  YuvBaseView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format);
+  YuvBaseView(scenic::ViewContextTransitional context, fuchsia::images::PixelFormat pixel_format);
   ~YuvBaseView() override = default;
 
  protected:

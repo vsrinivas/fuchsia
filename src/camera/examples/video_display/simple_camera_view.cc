@@ -30,8 +30,8 @@ static const std::string kSimpleCameraServiceUrl =
 static const uint32_t camera_id = 0;  // 0 -> fake camera, 1 -> real camera
 static const auto kRectSize = 80;
 
-SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
-    : BaseView(std::move(view_context), "Video Display Example"), node_(session()) {
+SimpleCameraView::SimpleCameraView(scenic::ViewContextTransitional view_context)
+    : BaseViewTransitional(std::move(view_context), "Video Display Example"), node_(session()) {
   FXL_VLOG(4) << "Creating video_display View";
 
   // Create an ImagePipe and pass one end to the Session:

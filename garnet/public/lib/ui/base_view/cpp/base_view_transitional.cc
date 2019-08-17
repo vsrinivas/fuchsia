@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/base_view/cpp/base_view.h"
+#include "lib/ui/base_view/cpp/base_view_transitional.h"
 
 #include <lib/ui/gfx/cpp/math.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <trace/event.h>
 #include <zircon/status.h>
+
+#include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
 
 namespace scenic {
 
-BaseView::BaseView(ViewContext context, const std::string& debug_name)
-    : startup_context_(context.startup_context),
+BaseViewTransitional::BaseViewTransitional(ViewContextTransitional context,
+                                           const std::string& debug_name)
+    : component_context_(context.component_context),
       incoming_services_(context.outgoing_services.Bind()),
       outgoing_services_(std::move(context.incoming_services)),
       listener_binding_(this, std::move(context.session_and_listener_request.second)),
@@ -31,7 +33,7 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
   view_.AddChild(root_node_);
 
   if (enable_ime_) {
-    startup_context_->ConnectToEnvironmentService(ime_manager_.NewRequest());
+    ime_manager_ = component_context_->svc()->Connect<fuchsia::ui::input::ImeService>();
 
     ime_.set_error_handler([](zx_status_t status) {
       FXL_LOG(ERROR) << "Interface error on: Input Method Editor " << zx_status_get_string(status);
@@ -47,12 +49,12 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
   InvalidateScene();
 }
 
-void BaseView::SetReleaseHandler(fit::function<void(zx_status_t)> callback) {
+void BaseViewTransitional::SetReleaseHandler(fit::function<void(zx_status_t)> callback) {
   listener_binding_.set_error_handler(std::move(callback));
 }
 
-void BaseView::InvalidateScene() {
-  TRACE_DURATION("view", "BaseView::InvalidateScene");
+void BaseViewTransitional::InvalidateScene() {
+  TRACE_DURATION("view", "BaseViewTransitional::InvalidateScene");
   if (invalidate_pending_)
     return;
 
@@ -69,10 +71,10 @@ void BaseView::InvalidateScene() {
     PresentScene(last_presentation_time_);
 }
 
-void BaseView::PresentScene() { PresentScene(last_presentation_time_); }
+void BaseViewTransitional::PresentScene() { PresentScene(last_presentation_time_); }
 
-void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
-  TRACE_DURATION("view", "BaseView::OnScenicEvent");
+void BaseViewTransitional::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
+  TRACE_DURATION("view", "BaseViewTransitional::OnScenicEvent");
   for (auto& event : events) {
     switch (event.Which()) {
       case ::fuchsia::ui::scenic::Event::Tag::kGfx:
@@ -130,9 +132,9 @@ void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
   }
 }
 
-void BaseView::PresentScene(zx_time_t presentation_time) {
-  TRACE_DURATION("view", "BaseView::PresentScene");
-  // TODO(SCN-1202): Remove this when BaseView::PresentScene() is deprecated,
+void BaseViewTransitional::PresentScene(zx_time_t presentation_time) {
+  TRACE_DURATION("view", "BaseViewTransitional::PresentScene");
+  // TODO(SCN-1202): Remove this when BaseViewTransitional::PresentScene() is deprecated,
   // see SCN-1379.
   if (present_pending_)
     return;
@@ -147,7 +149,7 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   ++session_present_count_;
 
   session()->Present(presentation_time, [this](fuchsia::images::PresentationInfo info) {
-    TRACE_DURATION("view", "BaseView::PresentationCallback");
+    TRACE_DURATION("view", "BaseViewTransitional::PresentationCallback");
     TRACE_FLOW_END("gfx", "present_callback", info.presentation_time);
 
     FXL_DCHECK(present_pending_);
@@ -168,8 +170,9 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
 }
 
 // |fuchsia::ui::input::InputMethodEditorClient|
-void BaseView::DidUpdateState(fuchsia::ui::input::TextInputState state,
-                              std::unique_ptr<fuchsia::ui::input::InputEvent> input_event) {
+void BaseViewTransitional::DidUpdateState(
+    fuchsia::ui::input::TextInputState state,
+    std::unique_ptr<fuchsia::ui::input::InputEvent> input_event) {
   if (input_event) {
     const fuchsia::ui::input::InputEvent& input = *input_event;
     fuchsia::ui::input::InputEvent input_event_copy;
@@ -179,9 +182,9 @@ void BaseView::DidUpdateState(fuchsia::ui::input::TextInputState state,
 }
 
 // |fuchsia::ui::input::InputMethodEditorClient|
-void BaseView::OnAction(fuchsia::ui::input::InputMethodAction action) {}
+void BaseViewTransitional::OnAction(fuchsia::ui::input::InputMethodAction action) {}
 
-bool BaseView::OnHandleFocusEvent(const fuchsia::ui::input::FocusEvent& focus) {
+bool BaseViewTransitional::OnHandleFocusEvent(const fuchsia::ui::input::FocusEvent& focus) {
   if (focus.focused) {
     ActivateIme();
     return true;
@@ -192,7 +195,7 @@ bool BaseView::OnHandleFocusEvent(const fuchsia::ui::input::FocusEvent& focus) {
   return false;
 }
 
-void BaseView::ActivateIme() {
+void BaseViewTransitional::ActivateIme() {
   ime_manager_->GetInputMethodEditor(
       fuchsia::ui::input::KeyboardType::TEXT,       // keyboard type
       fuchsia::ui::input::InputMethodAction::DONE,  // input method action
@@ -202,7 +205,7 @@ void BaseView::ActivateIme() {
   );
 }
 
-void BaseView::DeactivateIme() {
+void BaseViewTransitional::DeactivateIme() {
   if (ime_) {
     ime_manager_->HideKeyboard();
     ime_ = nullptr;

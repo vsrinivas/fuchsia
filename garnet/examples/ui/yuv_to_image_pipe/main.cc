@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
+#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
 
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
@@ -53,19 +53,19 @@ int main(int argc, const char** argv) {
     exit(-1);
   }
 
-  scenic::ViewFactory factory;
+  scenic::ViewFactoryTransitional factory;
   if (command_line.HasOption("input_driven")) {
-    factory = [pixel_format](scenic::ViewContext view_context) {
+    factory = [pixel_format](scenic::ViewContextTransitional view_context) {
       return std::make_unique<yuv_to_image_pipe::YuvInputView>(std::move(view_context),
                                                                pixel_format);
     };
   } else {
-    factory = [pixel_format](scenic::ViewContext view_context) {
+    factory = [pixel_format](scenic::ViewContextTransitional view_context) {
       return std::make_unique<yuv_to_image_pipe::YuvCyclicView>(std::move(view_context),
                                                                 pixel_format);
     };
   }
-  scenic::ViewProviderComponent component(std::move(factory), &loop);
+  scenic::ViewProviderComponentTransitional component(std::move(factory), &loop);
   loop.Run();
   return 0;
 }

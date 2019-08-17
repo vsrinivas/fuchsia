@@ -114,7 +114,7 @@ class TestStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Sto
   void Connect() {
     if (story_shell_context_.is_bound() && view_token_.value) {
       auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-      scenic::ViewContext view_context = {
+      scenic::ViewContextTransitional view_context = {
           .session_and_listener_request =
               scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
           .view_token = std::move(view_token_),

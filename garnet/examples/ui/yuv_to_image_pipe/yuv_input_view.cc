@@ -28,7 +28,8 @@ using ::fuchsia::ui::input::InputEvent;
 using ::fuchsia::ui::input::KeyboardEventPhase;
 using ::fuchsia::ui::input::PointerEventPhase;
 
-YuvInputView::YuvInputView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format)
+YuvInputView::YuvInputView(scenic::ViewContextTransitional context,
+                           fuchsia::images::PixelFormat pixel_format)
     : YuvBaseView(std::move(context), pixel_format) {
   for (int i = 0; i < kNumImages; ++i) {
     image_ids_.push_back(AddImage());

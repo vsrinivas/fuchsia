@@ -49,7 +49,7 @@ class TestSessionShellApp : public modular::ViewApp,
     fuchsia::ui::views::ViewToken view_token;
     view_token.value = std::move(view_event_pair);
     auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-    scenic::ViewContext context = {
+    scenic::ViewContextTransitional context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),

@@ -13,7 +13,7 @@
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/fit/function.h>
 #include <lib/media/cpp/type_converters.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/zx/clock.h>
 

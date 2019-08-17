@@ -6,7 +6,7 @@
 
 namespace scenic {
 
-RotatedSquareView::RotatedSquareView(ViewContext context, const std::string& debug_name)
+RotatedSquareView::RotatedSquareView(ViewContextTransitional context, const std::string& debug_name)
     : BackgroundView(std::move(context), debug_name), square_node_(session()) {
   Material square_material(session());
   square_material.SetColor(0xf5, 0x00, 0x57, 0xff);  // Pink A400

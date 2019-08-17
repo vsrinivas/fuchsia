@@ -38,8 +38,8 @@ scenic::Material NextColor(scenic::Session* session) {
 
 }  // namespace
 
-SimplestAppView::SimplestAppView(scenic::ViewContext context, async::Loop* message_loop)
-    : scenic::BaseView(std::move(context), "simplest_app SimplestAppView"),
+SimplestAppView::SimplestAppView(scenic::ViewContextTransitional context, async::Loop* message_loop)
+    : scenic::BaseViewTransitional(std::move(context), "simplest_app SimplestAppView"),
       message_loop_(message_loop),
       background_(session()),
       focused_(false) {

@@ -8,16 +8,16 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/base_view_transitional.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 namespace simplest_embedder {
 
 // Example implementation of BaseView, designed to launch and embed an instance
 // of shadertoy_client.
-class ShadertoyEmbedderView : public scenic::BaseView {
+class ShadertoyEmbedderView : public scenic::BaseViewTransitional {
  public:
-  ShadertoyEmbedderView(scenic::ViewContext context, async::Loop* message_loop);
+  ShadertoyEmbedderView(scenic::ViewContextTransitional context, async::Loop* message_loop);
   ~ShadertoyEmbedderView() = default;
 
   void LaunchShadertoyClient();

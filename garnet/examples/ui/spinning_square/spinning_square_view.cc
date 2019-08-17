@@ -17,8 +17,8 @@ constexpr float kSpeed = 0.25f;
 constexpr float kSecondsPerNanosecond = .000'000'001f;
 }  // namespace
 
-SpinningSquareView::SpinningSquareView(scenic::ViewContext context)
-    : BaseView(std::move(context), "Spinning Square"),
+SpinningSquareView::SpinningSquareView(scenic::ViewContextTransitional context)
+    : BaseViewTransitional(std::move(context), "Spinning Square"),
       background_node_(session()),
       square_node_(session()) {
   scenic::Material background_material(session());
