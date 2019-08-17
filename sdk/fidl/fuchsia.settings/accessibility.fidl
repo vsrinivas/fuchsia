@@ -15,11 +15,14 @@ protocol Accessibility {
     ///
     /// - `settings` all current values of the accessibility settings.
     /// * see [`AccessibilitySettings`] for their meaning.
-    Watch() -> (AccessibilitySettings settings);
+    ///
+    /// This call may fail if AccessibilitySettings are not accessible, possibly because of file
+    /// system errors, not being supported on this product, or general service failures.
+    Watch() -> (AccessibilitySettings settings) error Error;
 
     /// Sets [AccessibilitySettings] settings. Any field not explicitly set in the table performs a
     /// no-op, and will not make any changes.
-    Set(AccessibilitySettings settings) -> ();
+    Set(AccessibilitySettings settings) -> () error Error;
 };
 
 /// Supported accessibility settings.

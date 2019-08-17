@@ -1,5 +1,5 @@
 {
-  "fidl/fuchsia.settings/accessibility.fidl": "3c728606c9f73ed8883d3a08e8b16ec2",
+  "fidl/fuchsia.settings/accessibility.fidl": "6eb250d1b8b1e943425860276946de30",
   "fidl/fuchsia.settings/display.fidl": "523dee069377765278e006560de3dfc0",
   "fidl/fuchsia.settings/do_not_disturb.fidl": "d06d9510290d1dc522e729baaaf8bec6",
   "fidl/fuchsia.settings/intl.fidl": "2981c300e3fcdb9ee2460ad4bd504e90",
