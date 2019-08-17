@@ -214,6 +214,7 @@ if (current_cpu != "") {
       "handle-alias",
       "hid",
       "hypervisor",
+      "inspector",
       "int-types",
       "kcounter",
       "kernel-cmdline",

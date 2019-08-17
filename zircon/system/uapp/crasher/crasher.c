@@ -120,6 +120,7 @@ int use_after_free(volatile unsigned int* arg) {
 typedef struct {
   int depth;
   int max_depth;
+  int thread_index;
 } deep_sleep_args_t;
 
 int deep_sleep(deep_sleep_args_t* args) {
@@ -143,9 +144,14 @@ int blind_write_multithreaded(volatile unsigned int* addr) {
   thrd_t threads[kThreads];
   deep_sleep_args_t args[kThreads];
   for (int i = 0; i < kThreads; ++i) {
+    args[i].thread_index = i;
     args[i].depth = 0;
-    args[i].max_depth = 5;
-    int ret = thrd_create_with_name(&threads[i], thread_func, &args[i], "deep_sleep");
+    args[i].max_depth = i;
+
+    char thread_name[128];
+    snprintf(thread_name, sizeof(thread_name), "deep_sleep%d", i);
+
+    int ret = thrd_create_with_name(&threads[i], thread_func, &args[i], thread_name);
     if (ret != thrd_success) {
       printf("Unexpected thread create return: %d\n", ret);
       return 1;

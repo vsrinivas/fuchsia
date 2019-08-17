@@ -87,8 +87,15 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
   }
 
   // Dump the crash info to the logs whether we have a FIDL handler or not.
-  zx_thread_state_general_regs_t regs = {};
-  inspector_print_debug_info(process.get(), thread.get(), &regs);
+  inspector_print_debug_info_for_all_threads(stdout, process.get());
+
+  // We get the general registers. Even if we do not get them, we want to continue with normal
+  // exception processing (exception handoff).
+  zx_thread_state_general_regs_t regs;
+  status = inspector_read_general_regs(thread.get(), &regs);
+  if (status != ZX_OK) {
+    LogError("failed to get general registers", info, status);
+  }
 
   // A backtrace request should just dump and continue.
   if (ResumeIfBacktraceRequest(thread, exception, info, &regs)) {

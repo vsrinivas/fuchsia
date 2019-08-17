@@ -9,7 +9,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-
 #include <zircon/compiler.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
@@ -86,15 +85,24 @@ void inspector_print_general_regs(FILE* f, const zx_thread_state_general_regs_t*
 // Print the contents of memory, typically the bottom of a thread's stack.
 void inspector_print_memory(FILE* f, zx_handle_t process, zx_vaddr_t addr, size_t length);
 
-// Prints to stdout the debug info (registers, bottom of user stack, dso list,
-// backtrace, etc.) of the given |thread| in |process|. The caller must be
-// holding |thread| in an exception while calling this function.
+// Prints a stacktrace of the current state of the thread to |f|.
 //
-// If |regs| are non-null, also fills it with the information extracted from
-// |thread|.
+// Does NOT close the handles.
+void inspector_print_stack_trace(FILE* f, zx_handle_t process, zx_handle_t thread,
+                                 const zx_thread_state_general_regs* regs);
+
+// Prints to |out| the debug info (registers, bottom of user stack, dso list, backtrace, etc.) of
+// the given |thread| in |process|. The caller must be holding |thread| either in exception
+// state or in a suspended state, otherwise obtaining the general registers will fail and this
+// function will return without printing the state.
 //
 // Does NOT close the handles nor resume the thread.
-void inspector_print_debug_info(zx_handle_t process, zx_handle_t thread,
-                                zx_thread_state_general_regs_t* regs);
+void inspector_print_debug_info(FILE* out, zx_handle_t process, zx_handle_t thread);
+
+// Prints to |out| the debug info for all the threads in the process (registers, bottom of user
+// stack, dso list, backtrace, etc.).
+//
+// Does NOT close the |process| handle.
+void inspector_print_debug_info_for_all_threads(FILE* out, zx_handle_t process);
 
 __END_CDECLS
