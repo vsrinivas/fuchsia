@@ -298,7 +298,7 @@ func TestRefresh(t *testing.T) {
 			addrCh := make(chan tcpip.AddressWithPrefix)
 			acquiredFunc := func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
 				if oldAddr != curAddr {
-					t.Fatalf("aquisition %d: curAddr=%s/%d, oldAddr=%s/%d", count, curAddr.Address, curAddr.PrefixLen, oldAddr.Address, oldAddr.PrefixLen)
+					t.Fatalf("aquisition %d: curAddr=%s, oldAddr=%s", count, curAddr, oldAddr)
 				}
 				if cfg.LeaseLength != serverCfg.LeaseLength {
 					t.Fatalf("aquisition %d: lease length: %s, want %s", count, cfg.LeaseLength, serverCfg.LeaseLength)
@@ -332,7 +332,7 @@ func TestRefresh(t *testing.T) {
 			var addr tcpip.AddressWithPrefix
 			select {
 			case addr = <-addrCh:
-				t.Logf("got first address: %s/%d", addr.Address, addr.PrefixLen)
+				t.Logf("got first address: %s", addr)
 			case <-time.After(10 * time.Second):
 				t.Fatal("timeout acquiring initial address")
 			}
@@ -344,9 +344,9 @@ func TestRefresh(t *testing.T) {
 
 			select {
 			case newAddr := <-addrCh:
-				t.Logf("got renewal: %s/%d", newAddr.Address, newAddr.PrefixLen)
+				t.Logf("got renewal: %s", newAddr)
 				if newAddr != addr {
-					t.Fatalf("renewal address is %s/%d, want %s/%d", newAddr.Address, newAddr.PrefixLen, addr.Address, addr.PrefixLen)
+					t.Fatalf("renewal address is %s, want %s", newAddr, addr)
 				}
 			case <-time.After(5 * timeout):
 				t.Fatal("timeout acquiring renewed address")
