@@ -54,7 +54,6 @@ class Node : public Resource {
   virtual ~Node() override;
 
   bool AddChild(NodePtr child_node, ErrorReporter* error_reporter);
-  bool AddPart(NodePtr part_node, ErrorReporter* error_reporter);
   bool DetachChildren(ErrorReporter* error_reporter);
 
   bool SetTagValue(uint32_t tag_value);
@@ -101,8 +100,6 @@ class Node : public Resource {
 
   const std::vector<NodePtr>& children() const { return children_; }
 
-  const std::vector<NodePtr>& parts() const { return parts_; }
-
   bool SetEventMask(uint32_t event_mask) override;
 
   void AddImport(Import* import, ErrorReporter* error_reporter) override;
@@ -140,7 +137,7 @@ class Node : public Resource {
 
  private:
   // Describes the manner in which a node is related to its parent.
-  enum class ParentRelation { kNone, kChild, kPart, kImportDelegate };
+  enum class ParentRelation { kNone, kChild, kImportDelegate };
 
   // Identifies a specific spatial property.
   enum NodeProperty { kTranslation, kScale, kRotation, kAnchor };
@@ -167,7 +164,6 @@ class Node : public Resource {
   ParentRelation parent_relation_ = ParentRelation::kNone;
   // TODO(SCN-1299) Split out child behavior into ContainerNode class.
   std::vector<NodePtr> children_;
-  std::vector<NodePtr> parts_;
 
   std::unordered_map<NodeProperty, std::unique_ptr<VariableBinding>> bound_variables_;
 

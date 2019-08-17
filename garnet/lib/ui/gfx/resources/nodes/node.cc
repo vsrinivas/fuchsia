@@ -22,8 +22,7 @@ namespace {
 
 constexpr ResourceTypeFlags kHasChildren = ResourceType::kEntityNode | ResourceType::kOpacityNode |
                                            ResourceType::kScene | ResourceType::kView;
-constexpr ResourceTypeFlags kHasParts =
-    ResourceType::kEntityNode | ResourceType::kOpacityNode | ResourceType::kClipNode;
+
 constexpr ResourceTypeFlags kHasTransform = ResourceType::kClipNode | ResourceType::kEntityNode |
                                             ResourceType::kOpacityNode | ResourceType::kScene |
                                             ResourceType::kShapeNode | ResourceType::kViewHolder;
@@ -84,24 +83,6 @@ bool Node::AddChild(NodePtr child_node, ErrorReporter* error_reporter) {
   return true;
 }
 
-bool Node::AddPart(NodePtr part_node, ErrorReporter* error_reporter) {
-  if (!(type_flags() & kHasParts)) {
-    error_reporter->ERROR() << "scenic::gfx::Node::AddPart(): node of type " << type_name()
-                            << " cannot have parts.";
-    return false;
-  }
-
-  if (part_node->parent_relation_ == ParentRelation::kPart && part_node->parent_ == this) {
-    return true;  // no change
-  }
-
-  // Detach and re-attach Node to us.
-  part_node->Detach(error_reporter);
-  part_node->SetParent(this, ParentRelation::kPart);
-  parts_.push_back(std::move(part_node));
-  return true;
-}
-
 void Node::SetParent(Node* parent, ParentRelation relation) {
   FXL_DCHECK(parent_ == nullptr);
   // A Scene node should always be a root node, and never a child.
@@ -117,9 +98,6 @@ bool Node::Detach(ErrorReporter* error_reporter) {
     switch (parent_relation_) {
       case ParentRelation::kChild:
         parent_->EraseChild(this);
-        break;
-      case ParentRelation::kPart:
-        parent_->ErasePart(this);
         break;
       case ParentRelation::kImportDelegate:
         error_reporter->ERROR() << "An imported node cannot be detached.";
@@ -376,13 +354,6 @@ void Node::EraseChild(Node* child) {
                          [child](const NodePtr& ptr) { return child == ptr.get(); });
   FXL_DCHECK(it != children_.end());
   children_.erase(it);
-}
-
-void Node::ErasePart(Node* part) {
-  auto it = std::find_if(parts_.begin(), parts_.end(),
-                         [part](const NodePtr& ptr) { return part == ptr.get(); });
-  FXL_DCHECK(it != parts_.end());
-  parts_.erase(it);
 }
 
 void Node::DetachInternal() {

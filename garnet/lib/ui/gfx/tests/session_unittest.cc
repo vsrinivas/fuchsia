@@ -16,13 +16,23 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
+
+TEST_F(SessionTest, AddPart_ShouldReturnFalse) {
+  fuchsia::ui::gfx::AddPartCmd add_part_command;
+  add_part_command.node_id = 0;
+  add_part_command.part_id = 1;
+  fuchsia::ui::gfx::Command command;
+  command.set_add_part(std::move(add_part_command));
+  EXPECT_FALSE(Apply(std::move(command)));
+}
+
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
   EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
+      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(),
+      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
   EXPECT_FALSE(session()->ScheduleUpdate(
-      /*presentation*/ zx::time(0), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
+      /*presentation*/ zx::time(0), std::vector<::fuchsia::ui::gfx::Command>(),
+      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(
       "scenic_impl::gfx::Session: Present called with out-of-order "
       "presentation "
@@ -32,11 +42,11 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
   EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
+      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(),
+      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
   EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
+      /*presentation*/ zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(),
+      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(nullptr);
 }
 
@@ -67,7 +77,6 @@ TEST_F(SessionTest, AddAndRemoveResource) {
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(3)));
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(4)));
   EXPECT_TRUE(Apply(scenic::NewAddChildCmd(1, 2)));
-  EXPECT_TRUE(Apply(scenic::NewAddPartCmd(1, 3)));
   EXPECT_EQ(4U, session()->GetTotalResourceCount());
   EXPECT_EQ(4U, session()->GetMappedResourceCount());
 
@@ -76,7 +85,7 @@ TEST_F(SessionTest, AddAndRemoveResource) {
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(2)));
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(3)));
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(4)));
-  EXPECT_EQ(3U, session()->GetTotalResourceCount());
+  EXPECT_EQ(2U, session()->GetTotalResourceCount());
   EXPECT_EQ(1U, session()->GetMappedResourceCount());
 
   // Releasing node 1 causes nodes 1-3 to be destroyed.

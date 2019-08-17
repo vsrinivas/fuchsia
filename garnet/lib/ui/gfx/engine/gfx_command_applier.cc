@@ -384,12 +384,9 @@ bool GfxCommandApplier::ApplyAddChildCmd(Session* session, fuchsia::ui::gfx::Add
 }
 
 bool GfxCommandApplier::ApplyAddPartCmd(Session* session, fuchsia::ui::gfx::AddPartCmd command) {
-  // Find the parent and part nodes.
-  if (auto parent_node = session->resources()->FindResource<Node>(command.node_id)) {
-    if (auto part_node = session->resources()->FindResource<Node>(command.part_id)) {
-      return parent_node->AddPart(std::move(part_node), session->error_reporter());
-    }
-  }
+  // This is now a no-op.
+  FXL_LOG(INFO) << "AddPart is illegal now.";
+  session->error_reporter()->ERROR() << "AddPartCmd is now a no-op. Do not use.";
   return false;
 }
 

@@ -87,7 +87,6 @@ void FakeSession::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
             HandleAddChild(command.gfx().add_child().node_id, command.gfx().add_child().child_id);
             break;
           case fuchsia::ui::gfx::Command::Tag::kAddPart:
-            HandleAddPart(command.gfx().add_part().node_id, command.gfx().add_part().part_id);
             break;
           case fuchsia::ui::gfx::Command::Tag::kSetMaterial:
             HandleSetMaterial(command.gfx().set_material().node_id,
@@ -246,53 +245,6 @@ void FakeSession::HandleAddChild(uint32_t parent_id, uint32_t child_id) {
 
   parent->children_.insert(child_id);
   child->parent_ = parent_id;
-}
-
-void FakeSession::HandleAddPart(uint32_t node_id, uint32_t part_id) {
-  Resource* node = FindResource(node_id);
-  Resource* part = FindResource(part_id);
-
-  if (!node) {
-    FXL_LOG(ERROR) << "Asked to add part, node_id (" << node_id
-                   << ") not recognized, closing connection.";
-    expected_ = false;
-    binding_.Unbind();
-    return;
-  }
-
-  if (!node->can_have_children()) {
-    FXL_LOG(ERROR) << "Asked to add part, node_id (" << node_id
-                   << ") can't have children, closing connection.";
-    expected_ = false;
-    binding_.Unbind();
-    return;
-  }
-
-  if (!part) {
-    FXL_LOG(ERROR) << "Asked to add part, part_id (" << part_id
-                   << ") not recognized, closing connection.";
-    expected_ = false;
-    binding_.Unbind();
-    return;
-  }
-
-  if (!part->can_be_part()) {
-    FXL_LOG(ERROR) << "Asked to add part, part_id (" << part_id
-                   << ") can't be a part, closing connection.";
-    expected_ = false;
-    binding_.Unbind();
-    return;
-  }
-
-  if (part->parent_ != kNullResourceId) {
-    Resource* prev_parent = FindResource(part->parent_);
-    if (prev_parent != nullptr) {
-      prev_parent->children_.erase(part_id);
-      prev_parent->parts_.erase(part_id);
-    }
-  }
-
-  node->parts_.insert(part_id);
 }
 
 void FakeSession::HandleSetMaterial(uint32_t node_id, uint32_t material_id) {

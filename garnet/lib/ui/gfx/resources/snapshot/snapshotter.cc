@@ -240,12 +240,6 @@ void Snapshotter::VisitNode(Node* r) {
   }
 
   // Children.
-  for (auto& part : r->parts()) {
-    // Set current node to this node during children traversal.
-    current_node_serializer_ = node_serializer;
-    part->Accept(this);
-  }
-
   for (auto& child : r->children()) {
     // Set current node to this node during children traversal.
     current_node_serializer_ = node_serializer;

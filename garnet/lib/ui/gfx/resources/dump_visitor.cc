@@ -182,13 +182,6 @@ void DumpVisitor::VisitNode(Node* r) {
   } else {
     WriteProperty("transform") << r->transform();
   }
-  if (!r->parts().empty()) {
-    BeginSection("parts");
-    for (auto& part : r->parts()) {
-      part->Accept(this);
-    }
-    EndSection();
-  }
   if (!r->children().empty()) {
     BeginSection("children");
     for (auto& child : r->children()) {

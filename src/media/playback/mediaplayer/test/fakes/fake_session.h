@@ -123,8 +123,6 @@ class FakeSession : public fuchsia::ui::scenic::Session {
 
   void HandleAddChild(uint32_t parent_id, uint32_t child_id);
 
-  void HandleAddPart(uint32_t parent_id, uint32_t part_id);
-
   void HandleSetMaterial(uint32_t node_id, uint32_t material_id);
 
   void HandleSetTexture(uint32_t material_id, uint32_t texture_id);

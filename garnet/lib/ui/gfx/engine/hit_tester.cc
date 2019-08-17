@@ -154,7 +154,7 @@ void HitTester::AccumulateHitsLocal(Node* node) {
 }
 
 void HitTester::AccumulateHitsInner(Node* node) {
-  if (node->clip_to_self() && !IsRayWithinPartsInner(node, ray_info_->ray, *intersection_info_))
+  if (node->clip_to_self())
     return;
 
   Node::IntersectionInfo* outer_intersection = intersection_info_;
@@ -171,49 +171,6 @@ void HitTester::AccumulateHitsInner(Node* node) {
   }
 
   intersection_info_ = outer_intersection;
-}
-
-// TODO(SCN-1493): This is only used for testing against "parts".
-bool HitTester::IsRayWithinPartsInner(const Node* node, const escher::ray4& ray,
-                                      const Node::IntersectionInfo& intersection) {
-  return ForEachPartFrontToBackUntilTrue(*node, [&ray, &intersection](Node* node) {
-    return IsRayWithinClippedContentOuter(node, ray, intersection);
-  });
-}
-
-// TODO(SCN-1493): This is only used for testing against "parts".
-bool HitTester::IsRayWithinClippedContentOuter(const Node* node, const escher::ray4& ray,
-                                               const Node::IntersectionInfo& intersection) {
-  if (node->transform().IsIdentity()) {
-    return IsRayWithinClippedContentInner(node, ray, intersection);
-  }
-
-  auto inverse_transform = glm::inverse(static_cast<glm::mat4>(node->transform()));
-  escher::ray4 local_ray = inverse_transform * ray;
-
-  Node::IntersectionInfo local_intersection =
-      GetTransformedIntersection(intersection, ray, local_ray, inverse_transform);
-
-  return IsRayWithinClippedContentInner(node, local_ray, local_intersection);
-}
-
-// TODO(SCN-1493): This is only used for testing against "parts".
-bool HitTester::IsRayWithinClippedContentInner(const Node* node, const escher::ray4& ray,
-                                               const Node::IntersectionInfo& intersection) {
-  Node::IntersectionInfo new_intersection = node->GetIntersection(ray, intersection);
-  if (new_intersection.did_hit)
-    return true;
-
-  // TODO(SCN-1493): Get rid of node "parts".
-  if (IsRayWithinPartsInner(node, ray, intersection))
-    return true;
-
-  if (node->clip_to_self())
-    return false;
-
-  return ForEachChildAndImportFrontToBackUntilTrue(*node, [&ray, &intersection](Node* node) {
-    return IsRayWithinClippedContentOuter(node, ray, intersection);
-  });
 }
 
 }  // namespace gfx

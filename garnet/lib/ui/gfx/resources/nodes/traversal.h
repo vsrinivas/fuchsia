@@ -24,15 +24,6 @@ namespace gfx {
 //
 // The functor's signature must be |void(Node* node)|.
 //
-
-template <typename Callable>
-void ForEachPartFrontToBack(const Node& node, const Callable& func) {
-  // Process most recently added parts first.
-  for (auto it = node.parts().rbegin(); it != node.parts().rend(); ++it) {
-    func(it->get());
-  }
-}
-
 template <typename Callable>
 void ForEachChildFrontToBack(const Node& node, const Callable& func) {
   // Process most recently added children first.
@@ -58,7 +49,6 @@ void ForEachChildAndImportFrontToBack(const Node& node, const Callable& func) {
 template <typename Callable>
 void ForEachDirectDescendantFrontToBack(const Node& node, const Callable& func) {
   ForEachChildAndImportFrontToBack(node, func);
-  ForEachPartFrontToBack(node, func);
 }
 
 //
@@ -66,17 +56,6 @@ void ForEachDirectDescendantFrontToBack(const Node& node, const Callable& func) 
 //
 // The functor's signature must be |bool(const Node* node)|.
 //
-
-template <typename Callable>
-bool ForEachPartFrontToBackUntilTrue(const Node& node, const Callable& func) {
-  // Process most recently added parts first.
-  for (auto it = node.parts().rbegin(); it != node.parts().rend(); ++it) {
-    if (func(it->get()))
-      return true;
-  }
-  return false;
-}
-
 template <typename Callable>
 bool ForEachChildFrontToBackUntilTrue(const Node& node, const Callable& func) {
   // Process most recently added children first.

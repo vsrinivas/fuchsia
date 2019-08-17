@@ -74,14 +74,6 @@ class HitTester {
   // |ray_info_| must be in the node's local coordinate system.
   void AccumulateHitsInner(Node* node);
 
-  // Returns true if the ray passes through the node's parts.
-  // |ray| must be in the node's local coordinate system.
-  //
-  // TODO(SCN-1493): Get rid of node "parts". This function only runs on
-  // node parts.
-  static bool IsRayWithinPartsInner(const Node* node, const escher::ray4& ray,
-                                    const Node::IntersectionInfo& intersection);
-
   // Returns true if the ray passes through the node's clipped content.
   // |ray| must be in the parent's local coordinate system.
   //

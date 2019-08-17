@@ -226,10 +226,6 @@ void ContainerNode::AddChild(uint32_t child_node_id) {
   session()->Enqueue(NewAddChildCmd(id(), child_node_id));
 }
 
-void ContainerNode::AddPart(uint32_t part_node_id) {
-  session()->Enqueue(NewAddPartCmd(id(), part_node_id));
-}
-
 void ContainerNode::DetachChildren() { session()->Enqueue(NewDetachChildrenCmd(id())); }
 
 EntityNode::EntityNode(Session* session) : ContainerNode(session) {

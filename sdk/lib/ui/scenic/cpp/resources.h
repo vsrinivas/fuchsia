@@ -257,12 +257,6 @@ class ContainerNode : public Node {
   }
   void AddChild(uint32_t child_node_id);
 
-  void AddPart(const Node& part) {
-    ZX_DEBUG_ASSERT(session() == part.session());
-    AddPart(part.id());
-  }
-  void AddPart(uint32_t part_node_id);
-
   // Detaches all children from the node.
   void DetachChildren();
 

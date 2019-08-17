@@ -589,17 +589,6 @@ fuchsia::ui::gfx::Command NewAddChildCmd(uint32_t node_id, uint32_t child_id) {
   return command;
 }
 
-fuchsia::ui::gfx::Command NewAddPartCmd(uint32_t node_id, uint32_t part_id) {
-  fuchsia::ui::gfx::AddPartCmd add_part;
-  add_part.node_id = node_id;
-  add_part.part_id = part_id;
-
-  fuchsia::ui::gfx::Command command;
-  command.set_add_part(std::move(add_part));
-
-  return command;
-}
-
 fuchsia::ui::gfx::Command NewDetachCmd(uint32_t id) {
   fuchsia::ui::gfx::DetachCmd detach;
   detach.id = id;

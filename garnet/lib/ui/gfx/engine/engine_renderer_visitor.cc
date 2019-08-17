@@ -116,9 +116,8 @@ void EngineRendererVisitor::Visit(LayerStack* r) { FXL_DCHECK(false); }
 void EngineRendererVisitor::Visit(Layer* r) { FXL_DCHECK(false); }
 
 void EngineRendererVisitor::Visit(ShapeNode* r) {
-  // We don't need to call |VisitNode| because shape nodes don't have
-  // children or parts.
-  FXL_DCHECK(r->children().empty() && r->parts().empty());
+  // We don't need to call |VisitNode| because shape nodes don't have children.
+  FXL_DCHECK(r->children().empty());
 
   auto& shape = r->shape();
   auto& material = r->material();

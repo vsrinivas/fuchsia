@@ -33,7 +33,6 @@ class SnapshotterTest : public VkSessionTest {
     EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(kParentId)));
     EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kParentId, "Parent")));
     EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kChildId)));
-    EXPECT_TRUE(Apply(scenic::NewAddPartCmd(kParentId, kChildId)));
 
     const ResourceId kMaterialId = nextId++;
     EXPECT_TRUE(Apply(scenic::NewCreateMaterialCmd(kMaterialId)));
