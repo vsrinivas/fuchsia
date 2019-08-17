@@ -77,8 +77,7 @@ TEST_F(UtilsTest, AcquireAudioCoreImplProfile) {
   AcquireAudioCoreImplProfile(context(), [&profile](zx::profile p) { profile = std::move(p); });
   RunLoopUntilIdle();
 
-  // Incorrect assertion here to document existing behavior. This will be fixed in a follow-up.
-  ASSERT_FALSE(profile);
+  ASSERT_TRUE(profile);
 }
 
 TEST_F(UtilsTest, AcquireAudioCoreImplProfile_ProfileUnavailable) {
@@ -91,8 +90,7 @@ TEST_F(UtilsTest, AcquireAudioCoreImplProfile_ProfileUnavailable) {
   RunLoopUntilIdle();
 
   ASSERT_FALSE(profile);
-  // Incorrect assertion here to document existing behavior. This will be fixed in a follow-up.
-  ASSERT_FALSE(callback_invoked);
+  ASSERT_TRUE(callback_invoked);
 }
 
 }  // namespace

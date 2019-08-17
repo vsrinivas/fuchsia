@@ -276,7 +276,10 @@ void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
   auto profile_provider = context->svc()->Connect<fuchsia::scheduler::ProfileProvider>();
   profile_provider->GetProfile(
       24 /* HIGH_PRIORITY in LK */, "src/media/audio/audio_core/audio_core_impl",
-      [callback = std::move(callback)](zx_status_t status, zx::profile profile) {
+      // Note we move the FIDL ptr into the closure to ensure we keep the channel open until we
+      // receive the callback, otherwise it will be impossible to get a response.
+      [profile_provider = std::move(profile_provider), callback = std::move(callback)](
+          zx_status_t status, zx::profile profile) {
         if (status == ZX_OK) {
           callback(std::move(profile));
         } else {
