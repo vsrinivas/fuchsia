@@ -74,6 +74,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
  private:
   LogicalBufferCollection(Device* parent_device);
 
+  // If |format| is nonnull, will log an error. This also cleans out a lot of
+  // state that's unnecessary after a failure.
   void Fail(const char* format, ...);
 
   static void LogInfo(const char* format, ...);

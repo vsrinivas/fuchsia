@@ -269,10 +269,12 @@ LogicalBufferCollection::~LogicalBufferCollection() {
 }
 
 void LogicalBufferCollection::Fail(const char* format, ...) {
-  va_list args;
-  va_start(args, format);
-  vLog(true, "LogicalBufferCollection", "fail", format, args);
-  va_end(args);
+  if (format) {
+    va_list args;
+    va_start(args, format);
+    vLog(true, "LogicalBufferCollection", "fail", format, args);
+    va_end(args);
+  }
 
   // Close all the associated channels.  We do this by swapping into local
   // collections and clearing those, since deleting the items in the
@@ -326,8 +328,9 @@ void LogicalBufferCollection::MaybeAllocate() {
     // The LogicalBufferCollection should be failed because there are no clients left, despite only
     // getting here if all of the clients did a clean Close().
     if (is_allocate_attempted_) {
-      // A case could be made for making this a silent failure.
-      Fail("All clients called Close(), but now zero clients remain (after allocation).");
+      // Only log as info because this is a normal way to destroy the buffer collection.
+      LogInfo("All clients called Close(), but now zero clients remain (after allocation).");
+      Fail(nullptr);
     } else {
       Fail("All clients called Close(), but now zero clients remain (before allocation).");
     }
