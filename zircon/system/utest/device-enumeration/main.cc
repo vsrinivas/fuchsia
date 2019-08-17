@@ -79,7 +79,8 @@ class DeviceEnumerationTest : public zxtest::Test {
 
     fbl::unique_fd fd;
     for (size_t i = 0; i < paths_num; ++i) {
-      printf("Checking %s\n", device_paths[i]);
+      // stderr helps diagnosibility, since stdout doesn't show up in test logs
+      fprintf(stderr, "Checking %s\n", device_paths[i]);
       EXPECT_OK(RecursiveWaitForFile(devfs_root, device_paths[i], &fd), "%s", device_paths[i]);
     }
   }
