@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"

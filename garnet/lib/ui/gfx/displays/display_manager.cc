@@ -4,25 +4,13 @@
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/fdio/directory.h>
-#include <zircon/syscalls.h>
 
-#include <trace/event.h>
-
-#include "fuchsia/ui/scenic/cpp/fidl.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {
-
-DisplayManager::DisplayManager() {
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator_.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    sysmem_allocator_.Unbind();
-    FXL_LOG(ERROR) << "Unable to connect to sysmem: " << status;
-  }
-}
 
 DisplayManager::~DisplayManager() {
   if (wait_.object() != ZX_HANDLE_INVALID) {
@@ -192,28 +180,6 @@ void DisplayManager::ReleaseImage(uint64_t id) {
   if (display_controller_->ReleaseImage(id) != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to release image";
   }
-}
-
-fuchsia::sysmem::BufferCollectionTokenSyncPtr DisplayManager::CreateBufferCollection() {
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
-  zx_status_t status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "CreateBufferCollection failed " << status;
-    return nullptr;
-  }
-  return local_token;
-}
-
-fuchsia::sysmem::BufferCollectionSyncPtr DisplayManager::GetCollectionFromToken(
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
-  fuchsia::sysmem::BufferCollectionSyncPtr collection;
-  zx_status_t status =
-      sysmem_allocator_->BindSharedCollection(std::move(token), collection.NewRequest());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "BindSharedCollection failed " << status;
-    return nullptr;
-  }
-  return collection;
 }
 
 uint64_t DisplayManager::ImportBufferCollection(

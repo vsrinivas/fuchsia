@@ -23,13 +23,15 @@ namespace gfx {
 
 class Display;
 class DisplayManager;
+class Sysmem;
 
 // DisplaySwapchain implements the Swapchain interface by using a Vulkan
 // swapchain to present images to a physical display using the Zircon
 // display controller API.
 class DisplaySwapchain : public Swapchain {
  public:
-  DisplaySwapchain(DisplayManager* display_manager, Display* display, escher::Escher* escher);
+  DisplaySwapchain(Sysmem* sysmem, DisplayManager* display_manager, Display* display,
+                   escher::Escher* escher);
   ~DisplaySwapchain() override;
 
   // Callback to call on every vsync. Arguments are:
@@ -90,6 +92,7 @@ class DisplaySwapchain : public Swapchain {
   // through its (valid) pointer.
   escher::Escher* const escher_ = nullptr;
 
+  Sysmem* sysmem_;
   DisplayManager* display_manager_;
   Display* const display_;
 

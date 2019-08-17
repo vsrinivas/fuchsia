@@ -15,12 +15,13 @@ namespace scenic_impl {
 namespace gfx {
 
 class DisplayManager;
+class Sysmem;
 
 class SwapchainFactory {
  public:
   // Create a swapchain for the specified display.  The display must not
   // already be claimed by another swapchain.
-  static std::unique_ptr<DisplaySwapchain> CreateDisplaySwapchain(Display* display,
+  static std::unique_ptr<DisplaySwapchain> CreateDisplaySwapchain(Display* display, Sysmem* sysmem,
                                                                   DisplayManager* display_manager,
                                                                   escher::Escher* escher);
 

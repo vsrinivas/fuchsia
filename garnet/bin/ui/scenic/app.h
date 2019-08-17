@@ -27,6 +27,7 @@ class App {
   void InitializeServices(escher::EscherUniquePtr escher, gfx::Display* display);
 
   async::Executor executor_;
+  gfx::Sysmem sysmem_;
   gfx::DisplayManager display_manager_;
   escher::EscherUniquePtr escher_;
   std::shared_ptr<gfx::FrameScheduler> frame_scheduler_;

@@ -14,7 +14,7 @@ namespace test {
 
 void SessionTest::SetUp() {
   ErrorReportingTest::SetUp();
-
+  sysmem_ = std::make_unique<Sysmem>();
   display_manager_ = std::make_unique<DisplayManager>();
   display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ 0, /*px-height*/ 0));
@@ -47,6 +47,7 @@ SessionContext SessionTest::CreateSessionContext() {
       nullptr,                 // escher::RoundedRectFactory*
       nullptr,                 // escher::ReleaseFenceSignaller*
       frame_scheduler_,        // shared_ptr<FrameScheduler>
+      sysmem_.get(),           // Sysmem*
       display_manager_.get(),  // DisplayManager*
       SceneGraphWeakPtr(),     // SceneGraphWeakPtr
       nullptr,                 // ResourceLinker*

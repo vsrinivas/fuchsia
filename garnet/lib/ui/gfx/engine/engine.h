@@ -24,6 +24,7 @@
 #include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
+#include "garnet/lib/ui/gfx/sysmem.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/flib/release_fence_signaller.h"
@@ -54,11 +55,13 @@ using OnPresentedCallback = fit::function<void(PresentationInfo)>;
 // producing output when prompted through the FrameRenderer interface.
 class Engine : public FrameRenderer {
  public:
-  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, DisplayManager* display_manager,
-         escher::EscherWeakPtr escher, inspect_deprecated::Node inspect_node);
+  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, Sysmem* sysmem,
+         DisplayManager* display_manager, escher::EscherWeakPtr escher,
+         inspect_deprecated::Node inspect_node);
 
   // Only used for testing.
-  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, DisplayManager* display_manager,
+  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, Sysmem* sysmem,
+         DisplayManager* display_manager,
          std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
          escher::EscherWeakPtr escher);
 
@@ -86,6 +89,7 @@ class Engine : public FrameRenderer {
                           escher_rounded_rect_factory(),
                           release_fence_signaller(),
                           frame_scheduler_,
+                          sysmem_,
                           display_manager_,
                           scene_graph(),
                           &resource_linker_,
@@ -136,6 +140,7 @@ class Engine : public FrameRenderer {
   void UpdateMetrics(Node* node, const ::fuchsia::ui::gfx::Metrics& parent_metrics,
                      std::vector<Node*>* updated_nodes);
 
+  Sysmem* const sysmem_;
   DisplayManager* const display_manager_;
   const escher::EscherWeakPtr escher_;
 

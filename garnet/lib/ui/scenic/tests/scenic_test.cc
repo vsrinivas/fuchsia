@@ -6,9 +6,6 @@
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-#include "garnet/lib/ui/gfx/displays/display.h"
-#include "garnet/lib/ui/gfx/displays/display_manager.h"
-
 namespace scenic_impl {
 namespace test {
 

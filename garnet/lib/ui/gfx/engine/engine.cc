@@ -30,10 +30,11 @@
 namespace scenic_impl {
 namespace gfx {
 
-Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
+Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, Sysmem* sysmem,
                DisplayManager* display_manager, escher::EscherWeakPtr weak_escher,
                inspect_deprecated::Node inspect_node)
-    : display_manager_(display_manager),
+    : sysmem_(sysmem),
+      display_manager_(display_manager),
       escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(
           escher_, escher_->device()->caps().GetMatchingDepthStencilFormat(
@@ -51,11 +52,12 @@ Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
   InitializeInspectObjects();
 }
 
-Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
+Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, Sysmem* sysmem,
                DisplayManager* display_manager,
                std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
                escher::EscherWeakPtr weak_escher)
-    : display_manager_(display_manager),
+    : sysmem_(sysmem),
+      display_manager_(display_manager),
       escher_(std::move(weak_escher)),
       release_fence_signaller_(std::move(release_fence_signaller)),
       frame_scheduler_(frame_scheduler),

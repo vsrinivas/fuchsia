@@ -7,7 +7,9 @@
 
 #include <lib/fit/function.h>
 
+#include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
+#include "garnet/lib/ui/gfx/sysmem.h"
 #include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
@@ -54,6 +56,7 @@ class SessionTest : public ErrorReportingTest {
  private:
   SessionContext session_context_;
 
+  std::unique_ptr<Sysmem> sysmem_;
   std::unique_ptr<DisplayManager> display_manager_;
   std::shared_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<Session> session_;

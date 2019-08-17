@@ -99,7 +99,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* displ
                                             gfx::DefaultFrameScheduler::kInitialUpdateDuration),
       scenic_.inspect_node()->CreateChild("FrameScheduler"));
 
-  engine_.emplace(frame_scheduler_, &display_manager_, escher_->GetWeakPtr(),
+  engine_.emplace(frame_scheduler_, &sysmem_, &display_manager_, escher_->GetWeakPtr(),
                   scenic_.inspect_node()->CreateChild("Engine"));
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
 

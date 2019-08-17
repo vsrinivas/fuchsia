@@ -62,6 +62,7 @@ void SessionHandlerTest::InitializeDisplayManager() {
 
 void SessionHandlerTest::InitializeEngine() {
   command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
+  sysmem_ = std::make_unique<Sysmem>();
 
   auto mock_release_fence_signaller =
       std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
@@ -71,7 +72,7 @@ void SessionHandlerTest::InitializeEngine() {
       std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
                                        DefaultFrameScheduler::kInitialUpdateDuration));
   engine_ =
-      std::make_unique<Engine>(frame_scheduler_, display_manager_.get(),
+      std::make_unique<Engine>(frame_scheduler_, sysmem_.get(), display_manager_.get(),
                                std::move(mock_release_fence_signaller), escher::EscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
   frame_scheduler_->AddSessionUpdater(weak_factory_.GetWeakPtr());

@@ -5,17 +5,17 @@
 #ifndef GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_MANAGER_H_
 #define GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_MANAGER_H_
 
+#include <fuchsia/hardware/display/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <zircon/pixelformat.h>
 
 #include <cstdint>
 
-#include "fuchsia/hardware/display/cpp/fidl.h"
-#include "fuchsia/sysmem/cpp/fidl.h"
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_controller_watcher.h"
-#include "lib/async/cpp/wait.h"
 #include "src/lib/fxl/macros.h"
 
 namespace scenic_impl {
@@ -24,7 +24,7 @@ namespace gfx {
 // Provides support for enumerating available displays.
 class DisplayManager {
  public:
-  DisplayManager();
+   DisplayManager() = default;
   ~DisplayManager();
 
   using VsyncCallback =
@@ -42,10 +42,6 @@ class DisplayManager {
 
   // Sets the config which will be used for all imported images.
   void SetImageConfig(int32_t width, int32_t height, zx_pixel_format_t format);
-
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr CreateBufferCollection();
-  fuchsia::sysmem::BufferCollectionSyncPtr GetCollectionFromToken(
-      fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
 
   // Import a buffer collection token into the display controller so the
   // constraints will be set on it. Returns an id that can be used to refer to
@@ -80,8 +76,6 @@ class DisplayManager {
   // Enables display vsync events and sets the callback which handles them.
   bool EnableVsync(VsyncCallback vsync_cb);
 
-  bool is_initialized() { return sysmem_allocator_.is_bound(); }
-
  private:
   void OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
                const zx_packet_signal_t* signal);
@@ -96,8 +90,6 @@ class DisplayManager {
   fuchsia::hardware::display::ControllerSyncPtr display_controller_;
   fidl::InterfacePtr<fuchsia::hardware::display::Controller> dc_event_dispatcher_;
   zx_handle_t dc_channel_;  // display_controller_ owns the zx::channel
-
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 
   uint64_t next_event_id_ = fuchsia::hardware::display::invalidId + 1;
   uint64_t next_buffer_collection_id_ = fuchsia::hardware::display::invalidId + 1;

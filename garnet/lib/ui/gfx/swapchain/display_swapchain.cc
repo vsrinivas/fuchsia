@@ -4,15 +4,16 @@
 
 #include "garnet/lib/ui/gfx/swapchain/display_swapchain.h"
 
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/default.h>
 
 #include <fbl/auto_call.h>
 #include <trace/event.h>
 
-#include "fuchsia/sysmem/cpp/fidl.h"
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
+#include "garnet/lib/ui/gfx/sysmem.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
@@ -70,10 +71,11 @@ vk::ImageUsageFlags GetFramebufferImageUsage();
 
 }  // namespace
 
-DisplaySwapchain::DisplaySwapchain(DisplayManager* display_manager, Display* display,
-                                   escher::Escher* escher)
-    : escher_(escher), display_manager_(display_manager), display_(display) {
+DisplaySwapchain::DisplaySwapchain(Sysmem* sysmem, DisplayManager* display_manager,
+                                   Display* display, escher::Escher* escher)
+    : escher_(escher), sysmem_(sysmem), display_manager_(display_manager), display_(display) {
   FXL_DCHECK(display);
+  FXL_DCHECK(sysmem);
 
   if (escher_) {
     device_ = escher_->vk_device();
@@ -147,8 +149,7 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
   display_manager_->SetImageConfig(width_in_px, height_in_px, pixel_format);
   for (uint32_t i = 0; i < kSwapchainImageCount; i++) {
     // Create all the tokens.
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token =
-        display_manager_->CreateBufferCollection();
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token = sysmem_->CreateBufferCollection();
     if (!local_token) {
       FXL_LOG(ERROR) << "Sysmem tokens couldn't be allocated";
       return false;
@@ -212,7 +213,7 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
     // fails, and to ensure everything's allocated before trying to import it
     // into another process.
     fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection =
-        display_manager_->GetCollectionFromToken(std::move(local_token));
+        sysmem_->GetCollectionFromToken(std::move(local_token));
     if (!sysmem_collection) {
       return false;
     }

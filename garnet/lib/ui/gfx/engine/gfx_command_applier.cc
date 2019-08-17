@@ -1494,7 +1494,8 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
 
   return fxl::AdoptRef(new DisplayCompositor(
       session, id, session->session_context().scene_graph, display,
-      SwapchainFactory::CreateDisplaySwapchain(display, session->session_context().display_manager,
+      SwapchainFactory::CreateDisplaySwapchain(display, session->session_context().sysmem,
+                                               session->session_context().display_manager,
                                                session->session_context().escher)));
 }
 

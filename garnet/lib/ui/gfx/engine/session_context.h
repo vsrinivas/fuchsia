@@ -17,6 +17,7 @@ namespace gfx {
 class SessionManager;
 class FrameScheduler;
 class UpdateScheduler;
+class Sysmem;
 class DisplayManager;
 class SceneGraph;
 class ResourceLinker;
@@ -40,6 +41,7 @@ struct SessionContext {
   escher::RoundedRectFactory* escher_rounded_rect_factory = nullptr;
   escher::ReleaseFenceSignaller* release_fence_signaller = nullptr;
   std::shared_ptr<FrameScheduler> frame_scheduler;
+  Sysmem* sysmem = nullptr;
   DisplayManager* display_manager = nullptr;
   SceneGraphWeakPtr scene_graph;
   ResourceLinker* resource_linker = nullptr;

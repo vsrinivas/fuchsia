@@ -10,9 +10,9 @@ namespace scenic_impl {
 namespace gfx {
 
 std::unique_ptr<DisplaySwapchain> SwapchainFactory::CreateDisplaySwapchain(
-    Display* display, DisplayManager* display_manager, escher::Escher* escher) {
+    Display* display, Sysmem* sysmem, DisplayManager* display_manager, escher::Escher* escher) {
   FXL_DCHECK(!display->is_claimed());
-  return std::make_unique<DisplaySwapchain>(display_manager, display, escher);
+  return std::make_unique<DisplaySwapchain>(sysmem, display_manager, display, escher);
 }
 
 }  // namespace gfx

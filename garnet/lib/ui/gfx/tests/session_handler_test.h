@@ -10,6 +10,7 @@
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
+#include "garnet/lib/ui/gfx/sysmem.h"
 #include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
@@ -59,6 +60,7 @@ class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<Engine> engine_;
   std::shared_ptr<FrameScheduler> frame_scheduler_;
+  std::unique_ptr<Sysmem> sysmem_;
   std::unique_ptr<DisplayManager> display_manager_;
   std::unique_ptr<scenic_impl::Session> scenic_session_;
   CommandDispatcherUniquePtr command_dispatcher_;

@@ -8,7 +8,6 @@
 
 #include <hid/hid.h>
 
-#include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/id.h"
 #include "lib/fidl/cpp/clone.h"
@@ -86,8 +85,8 @@ void InputSystemTest::InitializeScenic(Scenic* scenic) {
       std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
                                        DefaultFrameScheduler::kInitialUpdateDuration));
 
-  engine_ = std::make_unique<Engine>(frame_scheduler,
-                                     /*display_manager*/ nullptr, std::move(signaller),
+  engine_ = std::make_unique<Engine>(frame_scheduler, /* sysmem */ nullptr,
+                                     /* display_manager */ nullptr, std::move(signaller),
                                      escher::EscherWeakPtr());
   frame_scheduler->SetFrameRenderer(engine_->GetWeakPtr());
   auto gfx =

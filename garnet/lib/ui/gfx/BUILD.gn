@@ -185,6 +185,8 @@ source_set("gfx") {
     "swapchain/swapchain.h",
     "swapchain/swapchain_factory.cc",
     "swapchain/swapchain_factory.h",
+    "sysmem.cc",
+    "sysmem.h",
   ]
 
   public_configs = [
