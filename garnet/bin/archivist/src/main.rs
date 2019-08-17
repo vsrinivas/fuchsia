@@ -20,21 +20,16 @@ use {
 
 mod archive;
 mod collection;
+mod configs;
 mod diagnostics;
 
 static ARCHIVE_PATH: &str = "/data/archive";
-static NUM_THREADS: usize = 4;
+static ARCHIVE_CONFIG_FILE: &str = "/config/data/archivist_config.json";
 
-// The archive can take a maximum of 10MiB.
-// TODO(CF-834): Allow this to be configured using /data/config.
-static MAX_ARCHIVE_SIZE_BYTES: u64 = 10 * 1024 * 1024;
-
-// Each event file group can take a maximum of 256KiB.
-// TODO(CF-834): Allow this to be configured using /data/config.
-static MAX_EVENT_GROUP_SIZE_BYTES: u64 = 256 * 1024;
+static DEFAULT_NUM_THREADS: usize = 4;
 
 // Keep only the 50 most recent events.
-static EVENT_LOG_EVENT_LIMIT: usize = 50;
+static INSPECT_LOG_WINDOW_SIZE: usize = 50;
 
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new()?;
@@ -56,7 +51,19 @@ fn main() -> Result<(), Error> {
     );
     fs.take_and_serve_directory_handle()?;
 
-    executor.run(future::try_join(fs.collect::<()>().map(Ok), run_archivist()), NUM_THREADS)?;
+    let archivist_configuration: configs::Config = match configs::parse_config(ARCHIVE_CONFIG_FILE)
+    {
+        Ok(config) => config,
+        Err(parsing_error) => panic!("Parsing configuration failed: {}", parsing_error),
+    };
+
+    let archivist_threads: usize =
+        archivist_configuration.num_threads.unwrap_or(DEFAULT_NUM_THREADS);
+
+    executor.run(
+        future::try_join(fs.collect::<()>().map(Ok), run_archivist(archivist_configuration)),
+        archivist_threads,
+    )?;
     Ok(())
 }
 
@@ -64,11 +71,12 @@ struct ArchivistState {
     writer: archive::ArchiveWriter,
     group_stats: archive::EventFileGroupStatsMap,
     log_node: BoundedListNode,
+    configuration: configs::Config,
 }
 
 impl ArchivistState {
-    fn new(archive_path: &str) -> Result<Self, Error> {
-        let mut writer = archive::ArchiveWriter::open(archive_path)?;
+    fn new(configuration: configs::Config) -> Result<Self, Error> {
+        let mut writer = archive::ArchiveWriter::open(ARCHIVE_PATH)?;
         let mut group_stats = writer.get_archive().get_event_group_stats()?;
 
         let log = writer.get_log();
@@ -86,12 +94,14 @@ impl ArchivistState {
         // Add the counts for the current group.
         diagnostics::add_stats(&log.get_stats());
 
-        let mut log_node =
-            BoundedListNode::new(diagnostics::root().create_child("events"), EVENT_LOG_EVENT_LIMIT);
+        let mut log_node = BoundedListNode::new(
+            diagnostics::root().create_child("events"),
+            INSPECT_LOG_WINDOW_SIZE,
+        );
 
         inspect_log!(log_node, event: "Archivist started");
 
-        Ok(ArchivistState { writer, group_stats, log_node })
+        Ok(ArchivistState { writer, group_stats, log_node, configuration })
     }
 
     fn add_group_stat(&mut self, log_file_path: &Path, stat: archive::EventFileGroupStats) {
@@ -113,19 +123,21 @@ impl ArchivistState {
     }
 }
 
-async fn run_archivist() -> Result<(), Error> {
-    let state = Arc::new(Mutex::new(ArchivistState::new(ARCHIVE_PATH)?));
+async fn run_archivist(archivist_configuration: configs::Config) -> Result<(), Error> {
+    let state = Arc::new(Mutex::new(ArchivistState::new(archivist_configuration)?));
     component::health().set_starting_up();
 
     let mut collector = collection::HubCollector::new("/hub")?;
     let mut events = collector.component_events().unwrap();
 
     let collector_state = state.clone();
-    fasync::spawn(collector.start().then(|e| async move {
-        let mut state = collector_state.lock().unwrap();
-        component::health().set_unhealthy("Collection loop stopped");
-        inspect_log!(state.log_node, event: "Collection ended", result: format!("{:?}", e));
-        fx_log_err!("Collection ended with result {:?}", e);
+    fasync::spawn(collector.start().then(|e| {
+        async move {
+            let mut state = collector_state.lock().unwrap();
+            component::health().set_unhealthy("Collection loop stopped");
+            inspect_log!(state.log_node, event: "Collection ended", result: format!("{:?}", e));
+            fx_log_err!("Collection ended with result {:?}", e);
+        }
     }));
 
     component::health().set_ok();
@@ -192,7 +204,7 @@ async fn process_event(
     diagnostics::update_current_group(&current_group_stats);
     diagnostics::add_stats(&event_stat);
 
-    if current_group_stats.size >= MAX_EVENT_GROUP_SIZE_BYTES {
+    if current_group_stats.size >= state.configuration.max_event_group_size_bytes {
         let (path, stats) = state.writer.rotate_log()?;
         inspect_log!(state.log_node, event:"Rotated log",
                      new_path: path.to_string_lossy().to_string());
@@ -203,7 +215,7 @@ async fn process_event(
     }
 
     let mut current_archive_size = current_group_stats.size + state.archived_size();
-    if current_archive_size > MAX_ARCHIVE_SIZE_BYTES {
+    if current_archive_size > state.configuration.max_archive_size_bytes {
         let dates = state.writer.get_archive().get_dates().unwrap_or_else(|e| {
             fx_log_err!("Garbage collection failure");
             inspect_log!(state.log_node, event: "Failed to get dates for garbage collection",
@@ -242,7 +254,7 @@ async fn process_event(
                     }
                 };
 
-                if current_archive_size < MAX_ARCHIVE_SIZE_BYTES {
+                if current_archive_size < state.configuration.max_archive_size_bytes {
                     return Ok(());
                 }
             }
