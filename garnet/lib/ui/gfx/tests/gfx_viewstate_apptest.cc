@@ -62,10 +62,10 @@ class ViewEmbedderTest : public sys::testing::TestWithEnvironment {
 
   // Create a |ViewContext| that allows us to present a view via
   // |RootPresenter|. See also examples/ui/simplest_embedder
-  scenic::ViewContextTransitional CreatePresentationContext() {
+  scenic::ViewContext CreatePresentationContext() {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-    scenic::ViewContextTransitional view_context = {
+    scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
         .view_token = std::move(view_token),

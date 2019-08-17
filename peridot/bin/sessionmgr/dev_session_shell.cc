@@ -81,7 +81,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
                   << settings_.root_link;
 
     auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-    scenic::ViewContextTransitional context = {
+    scenic::ViewContext context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token_),

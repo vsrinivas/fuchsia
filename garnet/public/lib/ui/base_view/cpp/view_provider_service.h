@@ -6,12 +6,12 @@
 #define LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_SERVICE_H_
 
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <vector>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fit/function.h"
-#include "lib/ui/base_view/cpp/base_view.h"
+#include <vector>
 
 namespace scenic {
 
@@ -25,8 +25,8 @@ using ViewFactory = fit::function<std::unique_ptr<BaseView>(ViewContext context)
 // This is only intended to be used for simple example programs.
 class ViewProviderService : private fuchsia::ui::app::ViewProvider {
  public:
-  ViewProviderService(component::StartupContext* startup_context,
-                      fuchsia::ui::scenic::Scenic* scenic, ViewFactory factory);
+  ViewProviderService(sys::ComponentContext* component_context, fuchsia::ui::scenic::Scenic* scenic,
+                      ViewFactory factory);
 
   ~ViewProviderService();
 
@@ -36,18 +36,22 @@ class ViewProviderService : private fuchsia::ui::app::ViewProvider {
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 
  private:
-  ViewProviderService(component::StartupContext* startup_context,
+  ViewProviderService(sys::ComponentContext* component_context,
                       fuchsia::ui::scenic::Scenic* scenic);
   ViewProviderService(const ViewProviderService&) = delete;
   ViewProviderService& operator=(const ViewProviderService&) = delete;
 
-  component::StartupContext* const startup_context_;
+  sys::ComponentContext* const component_context_;
   fuchsia::ui::scenic::Scenic* const scenic_;
 
   ViewFactory view_factory_ = nullptr;
   std::vector<std::unique_ptr<BaseView>> views_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> bindings_;
 };
+
+// Aliasing for soft rollout in topaz.
+using ViewFactoryTransitional = ViewFactory;
+using ViewProviderServiceTransitional = ViewProviderService;
 
 }  // namespace scenic
 

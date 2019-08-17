@@ -11,7 +11,7 @@
 
 namespace scenic {
 
-BackgroundView::BackgroundView(ViewContextTransitional context, const std::string& debug_name)
+BackgroundView::BackgroundView(ViewContext context, const std::string& debug_name)
     : binding_(this, std::move(context.session_and_listener_request.second)),
       session_(std::move(context.session_and_listener_request.first)),
       view_(&session_, std::move(context.view_token), debug_name),

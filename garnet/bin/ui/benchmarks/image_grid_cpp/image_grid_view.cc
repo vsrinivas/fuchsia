@@ -25,8 +25,8 @@ constexpr int kColumns = 33;
 constexpr int kColumnsPerScreen = 5.f;
 }  // namespace
 
-ImageGridView::ImageGridView(scenic::ViewContextTransitional view_context)
-    : BaseViewTransitional(std::move(view_context), "Image Grid Benchmark (cpp)"),
+ImageGridView::ImageGridView(scenic::ViewContext view_context)
+    : BaseView(std::move(view_context), "Image Grid Benchmark (cpp)"),
       background_node_(session()),
       cards_parent_node_(session()),
       spring_(0.0 /* initial value */, 10.0 /* tension */, 50.0 /* friction */) {}

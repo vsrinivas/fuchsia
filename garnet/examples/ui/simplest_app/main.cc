@@ -6,7 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace-provider/provider.h>
-#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
+#include <lib/ui/base_view/cpp/view_provider_component.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -58,7 +58,7 @@ int main(int argc, const char** argv) {
   });
 
   // Create a |SimplestAppView| view.
-  scenic::ViewContextTransitional view_context = {
+  scenic::ViewContext view_context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
       .view_token = std::move(view_token),

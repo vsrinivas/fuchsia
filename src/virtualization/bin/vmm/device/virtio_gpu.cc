@@ -311,7 +311,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
 
       // Create view.
       auto scenic = context_.svc()->Connect<fuchsia::ui::scenic::Scenic>();
-      scenic::ViewContextTransitional view_context = {
+      scenic::ViewContext view_context = {
           .session_and_listener_request =
               scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
           .view_token = std::move(view_token),

@@ -8,8 +8,9 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/svc/cpp/service_namespace.h>
 #include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/ui/base_view/cpp/embedded_view_utils.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -22,7 +23,7 @@ struct ViewContext {
   fuchsia::ui::views::ViewToken view_token;
   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services;
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services;
-  component::StartupContext* startup_context;
+  sys::ComponentContext* component_context;
   bool enable_ime = false;
 };
 
@@ -46,7 +47,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   // your UI.
   scenic::EntityNode& root_node() { return root_node_; }
   Session* session() { return &session_; }
-  component::StartupContext* startup_context() { return startup_context_; }
+  sys::ComponentContext* component_context() { return component_context_; }
 
   fuchsia::ui::gfx::ViewProperties view_properties() const { return view_properties_; }
 
@@ -174,7 +175,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   // closing the onscreen keyboard.
   void DeactivateIme();
 
-  component::StartupContext* const startup_context_;
+  sys::ComponentContext* const component_context_;
   fuchsia::sys::ServiceProviderPtr incoming_services_;
   component::ServiceNamespace outgoing_services_;
 
@@ -198,6 +199,10 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   bool present_pending_ = false;
   bool enable_ime_ = false;
 };
+
+// Aliasing for soft rollout in topaz.
+using ViewContextTransitional = ViewContext;
+using BaseViewTransitional = BaseView;
 
 }  // namespace scenic
 

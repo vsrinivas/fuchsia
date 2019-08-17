@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
+#include <lib/ui/base_view/cpp/view_provider_component.h>
 
 #include <trace-provider/provider.h>
 
@@ -19,8 +19,8 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  scenic::ViewProviderComponentTransitional component(
-      [](scenic::ViewContextTransitional view_context) {
+  scenic::ViewProviderComponent component(
+      [](scenic::ViewContext view_context) {
         return std::make_unique<snapshot::View>(std::move(view_context));
       },
       &loop);

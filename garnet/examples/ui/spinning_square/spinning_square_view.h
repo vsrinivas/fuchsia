@@ -5,7 +5,7 @@
 #ifndef GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 #define GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 
-#include <lib/ui/base_view/cpp/base_view_transitional.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include "src/lib/fxl/logging.h"
@@ -13,9 +13,9 @@
 
 namespace examples {
 
-class SpinningSquareView : public scenic::BaseViewTransitional {
+class SpinningSquareView : public scenic::BaseView {
  public:
-  explicit SpinningSquareView(scenic::ViewContextTransitional context);
+  explicit SpinningSquareView(scenic::ViewContext context);
   ~SpinningSquareView() override;
 
  private:

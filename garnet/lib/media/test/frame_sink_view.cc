@@ -92,8 +92,8 @@ class Frame {
 
 }  // namespace
 
-std::unique_ptr<FrameSinkView> FrameSinkView::Create(scenic::ViewContextTransitional context,
-                                                     FrameSink* parent, async::Loop* main_loop) {
+std::unique_ptr<FrameSinkView> FrameSinkView::Create(scenic::ViewContext context, FrameSink* parent,
+                                                     async::Loop* main_loop) {
   return std::unique_ptr<FrameSinkView>(new FrameSinkView(std::move(context), parent, main_loop));
 }
 
@@ -224,9 +224,8 @@ void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx
   (void)frame.release();
 }
 
-FrameSinkView::FrameSinkView(scenic::ViewContextTransitional context, FrameSink* parent,
-                             async::Loop* main_loop)
-    : BaseViewTransitional(std::move(context), "FrameSinkView"),
+FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent, async::Loop* main_loop)
+    : BaseView(std::move(context), "FrameSinkView"),
       parent_(parent),
       main_loop_(main_loop),
       node_(session()) {

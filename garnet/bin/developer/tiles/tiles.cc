@@ -16,9 +16,8 @@ constexpr float kTileElevation = 5.f;
 
 namespace tiles {
 
-Tiles::Tiles(scenic::ViewContextTransitional view_context, std::vector<std::string> urls,
-             int border)
-    : scenic::BaseViewTransitional(std::move(view_context), "Tiles"),
+Tiles::Tiles(scenic::ViewContext view_context, std::vector<std::string> urls, int border)
+    : scenic::BaseView(std::move(view_context), "Tiles"),
       launcher_(component_context()->svc()->Connect<fuchsia::sys::Launcher>()),
       background_node_(session()),
       container_node_(session()),

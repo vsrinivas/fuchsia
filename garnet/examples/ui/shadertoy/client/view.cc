@@ -171,9 +171,8 @@ void ViewImpl::QuitLoop() {
   async_loop_quit(async_loop_from_dispatcher(async_get_default_dispatcher()));
 }
 
-ShadertoyClientView::ShadertoyClientView(scenic::ViewContextTransitional context,
-                                         const std::string& debug_name)
-    : scenic::BaseViewTransitional(std::move(context), debug_name),
+ShadertoyClientView::ShadertoyClientView(scenic::ViewContext context, const std::string& debug_name)
+    : scenic::BaseView(std::move(context), debug_name),
       impl_(component_context(), session(), &root_node()) {
   InvalidateScene();
 }

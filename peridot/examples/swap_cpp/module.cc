@@ -11,8 +11,8 @@
 
 namespace modular_example {
 
-ModuleView::ModuleView(scenic::ViewContextTransitional view_context, uint32_t color)
-    : BaseViewTransitional(std::move(view_context), "ModuleView"), background_node_(session()) {
+ModuleView::ModuleView(scenic::ViewContext view_context, uint32_t color)
+    : BaseView(std::move(view_context), "ModuleView"), background_node_(session()) {
   scenic::Material background_material(session());
   background_material.SetColor((color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff,
                                (color >> 24) & 0xff);
@@ -37,7 +37,7 @@ void ModuleApp::CreateView(zx::eventpair view_token,
                            fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                            fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
   auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-  scenic::ViewContextTransitional context = {
+  scenic::ViewContext context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
       .view_token = fuchsia::ui::views::ViewToken{.value = std::move(view_token)},

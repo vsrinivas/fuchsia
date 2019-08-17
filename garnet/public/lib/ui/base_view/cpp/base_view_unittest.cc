@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/base_view/cpp/base_view.h"
-
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/component/cpp/testing/test_with_context.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+
+#include <gmock/gmock.h>
 
 using ::testing::_;
 
@@ -69,12 +69,13 @@ class BaseViewImpl : public BaseView {
   void OnScenicError(std::string error) override {}
 };
 
-class BaseViewTest : public component::testing::TestWithContext {
+class BaseViewTest : public gtest::TestLoopFixture {
  protected:
   void SetUp() override {
-    controller().AddService(fake_scenic_.GetRequestHandler());
+    provider.service_directory_provider()->AddService(fake_scenic_.GetRequestHandler());
+
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-    auto startup_context = TakeContext();
+    auto component_context = provider.TakeContext();
 
     scenic::ViewContext view_context = {
         .session_and_listener_request =
@@ -82,10 +83,10 @@ class BaseViewTest : public component::testing::TestWithContext {
         .view_token = std::move(view_token),
         .incoming_services = {},
         .outgoing_services = {},
-        .startup_context = startup_context.get(),
+        .component_context = component_context.get(),
     };
     view_holder_token_ = std::move(view_holder_token);
-    startup_context_ = std::move(startup_context);
+    component_context_ = std::move(component_context);
     base_view_ = std::make_unique<BaseViewImpl>(std::move(view_context), std::string());
   }
 
@@ -93,8 +94,9 @@ class BaseViewTest : public component::testing::TestWithContext {
   FakeScenic fake_scenic_;
 
  private:
+  sys::testing::ComponentContextProvider provider;
   fuchsia::ui::views::ViewHolderToken view_holder_token_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 };
 
 TEST_F(BaseViewTest, HandlesMultiplePresentCalls) {

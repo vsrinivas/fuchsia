@@ -8,8 +8,8 @@
 
 namespace modular {
 
-ViewHost::ViewHost(scenic::ViewContextTransitional view_context)
-    : BaseViewTransitional(std::move(view_context), "ViewHost") {}
+ViewHost::ViewHost(scenic::ViewContext view_context)
+    : BaseView(std::move(view_context), "ViewHost") {}
 
 void ViewHost::ConnectView(fuchsia::ui::views::ViewHolderToken view_holder_token) {
   auto view_data = std::make_unique<ViewData>(session(), std::move(view_holder_token));

@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/trace-provider/provider.h>
-#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
+#include <lib/ui/base_view/cpp/view_provider_component.h>
 
 #include "garnet/lib/vulkan/tests/vklatency/image_pipe_view.h"
 #include "src/lib/fxl/command_line.h"
@@ -19,8 +19,8 @@ int main(int argc, const char** argv) {
     return 1;
 
   const bool protected_output = command_line.HasOption("protected_output");
-  scenic::ViewProviderComponentTransitional component(
-      [protected_output](scenic::ViewContextTransitional view_context) {
+  scenic::ViewProviderComponent component(
+      [protected_output](scenic::ViewContext view_context) {
         return std::make_unique<examples::ImagePipeView>(std::move(view_context), protected_output);
       },
       &loop);

@@ -14,13 +14,15 @@
 #include <lib/ui/base_view/cpp/embedded_view_utils.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
+#include <fs/service.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace examples {
 
-TileView::TileView(scenic::ViewContextTransitional context, TileParams params)
-    : BaseViewTransitional(std::move(context), "Tile"),
+TileView::TileView(scenic::ViewContext context, TileParams params)
+    : BaseView(std::move(context), "Tile"),
       vfs_(async_get_default_dispatcher()),
       services_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       params_(std::move(params)),

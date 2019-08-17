@@ -11,7 +11,7 @@
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/base_view_transitional.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
 
@@ -27,10 +27,10 @@ namespace {
 constexpr int kSwapSeconds = 5;
 constexpr std::array<const char*, 2> kModuleQueries{{"swap_module1", "swap_module2"}};
 
-class RecipeView : public scenic::BaseViewTransitional {
+class RecipeView : public scenic::BaseView {
  public:
-  explicit RecipeView(scenic::ViewContextTransitional view_context)
-      : BaseViewTransitional(std::move(view_context), "RecipeView") {}
+  explicit RecipeView(scenic::ViewContext view_context)
+      : BaseView(std::move(view_context), "RecipeView") {}
 
   ~RecipeView() override = default;
 
@@ -86,7 +86,7 @@ class RecipeApp : public modular::ViewApp {
                   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override {
     auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-    scenic::ViewContextTransitional view_context = {
+    scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = scenic::ToViewToken(std::move(view_token)),

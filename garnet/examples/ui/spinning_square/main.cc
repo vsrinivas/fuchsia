@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/trace-provider/provider.h>
-#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
+#include <lib/ui/base_view/cpp/view_provider_component.h>
 
 #include "garnet/examples/ui/spinning_square/spinning_square_view.h"
 
@@ -12,8 +12,8 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  scenic::ViewProviderComponentTransitional component(
-      [](scenic::ViewContextTransitional context) {
+  scenic::ViewProviderComponent component(
+      [](scenic::ViewContext context) {
         return std::make_unique<examples::SpinningSquareView>(std::move(context));
       },
       &loop);
