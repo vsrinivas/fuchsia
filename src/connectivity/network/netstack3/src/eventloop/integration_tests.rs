@@ -663,6 +663,7 @@ async fn test_list_interfaces() {
             .squash_result()
             .expect("Add interface address succeeds");
         if_props.insert(if_id, (ep_info, vec![if_ip]));
+        t.get(0).wait_for_interface_online(i as u64).await;
     }
 
     let mut test_stack = t.get(0);
@@ -697,6 +698,8 @@ async fn test_get_interface_info() {
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
     let if_id = test_stack.get_endpoint_id(1);
+
+    test_stack.wait_for_interface_online(1).await;
 
     // get the interface info:
     let if_info = test_stack
