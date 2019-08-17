@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
+#include <ddk/platform-defs.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -18,7 +20,6 @@ namespace {
 
 zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
   uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;
-  ;
   int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
   // Please do not use get_root_resource() in new code. See ZX-1467.
   return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
@@ -45,7 +46,21 @@ class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC>
     rtc_last_.day = 1;
   }
 
-  zx_status_t Bind() { return DdkAdd("fallback-rtc"); }
+  zx_status_t Bind() {
+    // Check if inside an IsolatedDevmgr
+    // TODO: Eventually we should figure out how drivers can be better isolated
+    size_t size;
+    zx_status_t status = DdkGetMetadataSize(DEVICE_METADATA_TEST, &size);
+    if (status == ZX_OK && size == 1) {
+      uint8_t metadata;
+      status = DdkGetMetadata(DEVICE_METADATA_TEST, &metadata, 1, &size);
+      if (status == ZX_OK && metadata == PDEV_PID_FALLBACK_RTC_TEST) {
+        is_isolated_for_testing = true;
+      }
+    }
+
+    return DdkAdd("fallback-rtc");
+  }
 
   void DdkRelease() { delete this; }
 
@@ -70,9 +85,11 @@ class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC>
 
     rtc_last_ = rtc;
 
-    auto status = set_utc_offset(&rtc_last_);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
+    if (!is_isolated_for_testing) {
+      auto status = set_utc_offset(&rtc_last_);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
+      }
     }
 
     return ZX_OK;
@@ -87,6 +104,7 @@ class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC>
   };
 
   fuchsia_hardware_rtc_Time rtc_last_;
+  bool is_isolated_for_testing = false;
 };
 
 zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {

@@ -14,9 +14,13 @@ static zx_driver_ops_t fallback_rtc_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(fallback_rtc, fallback_rtc_ops, "fallback_rtc", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(fallback_rtc, fallback_rtc_ops, "fallback_rtc", "0.1", 7)
+    BI_GOTO_IF(EQ, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST, 0),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_RTC_FALLBACK),
+    BI_ABORT(),
+    BI_LABEL(0),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_FALLBACK_RTC_TEST),
 ZIRCON_DRIVER_END(fallback_rtc)
     // clang-format on

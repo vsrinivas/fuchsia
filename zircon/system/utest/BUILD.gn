@@ -192,6 +192,7 @@ if (current_cpu != "") {
       "evil",
       "exception",
       "exit",
+      "fallback-rtc",
       "fdio",
       "ffl",
       "fidl",
