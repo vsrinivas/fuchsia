@@ -20,9 +20,25 @@ DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(media::audio::AudioCapturerImpl::PcbAlloca
 
 namespace media::audio {
 
+// To what extent should client-side underflows be logged? (A "client-side underflow" refers to when
+// all or part of a packet's data is discarded because its start timestamp has already passed.)
+// For each Renderer, we will log the first underflow. For subsequent occurrances, depending on
+// audio_core's logging level, we throttle how frequently these are displayed. If log_level is set
+// to TRACE or SPEW, all client-side underflows are logged -- at log_level -1: VLOG TRACE -- as
+// specified by kCaptureUnderflowTraceInterval. If set to INFO, we log less often, at log_level
+// 1: INFO, throttling by the factor kCaptureUnderflowInfoInterval. If set to WARNING or higher,
+// we throttle these even more, specified by kCaptureUnderflowErrorInterval. Note: by default we
+// set NDEBUG builds to WARNING and DEBUG builds to INFO. To disable all logging of client-side
+// underflows, set kLogCaptureUnderflow to false.
+static constexpr bool kLogCaptureUnderflow = true;
+static constexpr uint16_t kCaptureUnderflowTraceInterval = 1;
+static constexpr uint16_t kCaptureUnderflowInfoInterval = 10;
+static constexpr uint16_t kCaptureUnderflowErrorInterval = 100;
+
 zx_duration_t kAssumedWorstSourceFenceTime = ZX_MSEC(5);
 
 constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
+constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
 
 // static
 AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
@@ -43,7 +59,9 @@ AudioCapturerImpl::AudioCapturerImpl(
       state_(State::WaitingForVmo),
       loopback_(loopback),
       stream_gain_db_(kInitialCaptureGainDb),
-      mute_(false) {
+      mute_(false),
+      underflow_count_(0u),
+      partial_underflow_count_(0u) {
   REP(AddingCapturer(*this));
 
   std::vector<fuchsia::media::AudioCaptureUsage> allowed_usages;
@@ -53,8 +71,6 @@ AudioCapturerImpl::AudioCapturerImpl(
   allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
   allowed_usages_ = std::move(allowed_usages);
 
-  // TODO(johngro) : See ZX-940. Eliminate this priority boost as soon as we
-  // have a more official way of meeting real-time latency requirements.
   zx::profile profile;
   zx_status_t res = AcquireHighPriorityProfile(&profile);
   if (res != ZX_OK) {
@@ -833,38 +849,38 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
 // Temporary function to debug an unexplainable "end_fence_frames<0" condition in MixToIntermediate.
 void DumpRbSnapshot(const AudioDriver::RingBufferSnapshot& rb_snap) {
   AUD_LOG_OBJ(ERROR, const_cast<AudioDriver::RingBufferSnapshot*>(&rb_snap))
-      << " (RBSnapshot) position_to_end_fence_frames " << rb_snap.position_to_end_fence_frames
+      << "(RBSnapshot) position_to_end_fence_frames " << rb_snap.position_to_end_fence_frames
       << ", end_fence_to_start_fence_frames " << rb_snap.end_fence_to_start_fence_frames
       << ", gen_id " << rb_snap.gen_id;
 
   auto cm2rb = const_cast<media::TimelineFunction*>(&rb_snap.clock_mono_to_ring_pos_bytes);
-  AUD_LOG_OBJ(ERROR, cm2rb) << " (TLFunction) clock_mono_to_ring_pos_bytes sub/ref deltas "
+  AUD_LOG_OBJ(ERROR, cm2rb) << "(TLFunction) clock_mono_to_ring_pos_bytes sub/ref deltas "
                             << cm2rb->subject_delta() << "/" << cm2rb->reference_delta()
                             << ", sub/ref times " << cm2rb->subject_time() << "/"
                             << cm2rb->reference_time();
 
   auto rb = rb_snap.ring_buffer;
   AUD_LOG_OBJ(ERROR, rb_snap.ring_buffer.get())
-      << " (DriverRBuf) size " << rb->size() << ", frames " << rb->frames() << ", frame_size "
+      << "(DriverRBuf) size " << rb->size() << ", frames " << rb->frames() << ", frame_size "
       << rb->frame_size() << ", start " << static_cast<void*>(rb->virt());
 }
 
 // Temporary function to debug an unexplainable "end_fence_frames<0" condition in MixToIntermediate.
 void DumpBookkeeping(const Bookkeeping& info) {
   AUD_LOG_OBJ(ERROR, const_cast<Bookkeeping*>(&info))
-      << " (Bookkeeping) mixer 0x" << info.mixer.get() << ", gain 0x" << &info.gain
+      << "(Bookkeeping) mixer 0x" << info.mixer.get() << ", gain 0x" << &info.gain
       << ", step_size 0x" << std::hex << info.step_size << ", rate_modulo/denom " << std::dec
       << info.rate_modulo << "/" << info.denominator << ", src_pos_modulo " << info.src_pos_modulo;
 
   auto d2src = const_cast<media::TimelineFunction*>(&info.dest_frames_to_frac_source_frames);
-  AUD_LOG_OBJ(ERROR, d2src) << " (TLFunction) dest_frames_to_frac_source_frames sub/ref deltas "
+  AUD_LOG_OBJ(ERROR, d2src) << "(TLFunction) dest_frames_to_frac_source_frames sub/ref deltas "
                             << d2src->subject_delta() << "/" << d2src->reference_delta()
                             << ", sub/ref times " << d2src->subject_time() << "/"
                             << d2src->reference_time() << ", dest_trans_gen_id "
                             << info.dest_trans_gen_id;
 
   auto cm2src = const_cast<media::TimelineFunction*>(&info.clock_mono_to_frac_source_frames);
-  AUD_LOG_OBJ(ERROR, cm2src) << " (TLFunction) clock_mono_to_frac_source_frames sub/ref deltas "
+  AUD_LOG_OBJ(ERROR, cm2src) << "(TLFunction) clock_mono_to_frac_source_frames sub/ref deltas "
                              << cm2src->subject_delta() << "/" << cm2src->reference_delta()
                              << ", sub/ref times " << cm2src->subject_time() << "/"
                              << cm2src->reference_time() << ", source_trans_gen_id "
@@ -881,11 +897,74 @@ struct RbRegion {
 void DumpRbRegions(const RbRegion* regions) {
   for (auto i = 0; i < 2; ++i) {
     if (regions[i].len) {
-      AUD_VLOG(SPEW) << " [" << i << "] srb_pos 0x" << std::hex << regions[i].srb_pos << ", len 0x"
+      AUD_VLOG(SPEW) << "[" << i << "] srb_pos 0x" << std::hex << regions[i].srb_pos << ", len 0x"
                      << regions[i].len << ", sfrac_pts 0x" << regions[i].sfrac_pts << " ("
                      << std::dec << (regions[i].sfrac_pts >> kPtsFractionalBits) << " frames)";
     } else {
-      AUD_VLOG(SPEW) << " [" << i << "] len 0x0";
+      AUD_VLOG(SPEW) << "[" << i << "] len 0x0";
+    }
+  }
+}
+
+void AudioCapturerImpl::UnderflowOccurred(int64_t source_start, int64_t mix_point,
+                                          zx_duration_t underflow_duration) {
+  uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
+
+  if constexpr (kLogCaptureUnderflow) {
+    int64_t underflow_msec = underflow_duration / ZX_MSEC(1);
+
+    if ((kCaptureUnderflowErrorInterval > 0) &&
+        (underflow_count % kCaptureUnderflowErrorInterval == 0)) {
+      AUD_LOG_OBJ(ERROR, this) << "#" << underflow_count + 1 << " (1/"
+                               << kCaptureUnderflowErrorInterval << "): source-start 0x" << std::hex
+                               << source_start << " missed mix-point 0x" << mix_point << " by "
+                               << std::dec << underflow_msec << " ms";
+    } else if ((kCaptureUnderflowInfoInterval > 0) &&
+               (underflow_count % kCaptureUnderflowInfoInterval == 0)) {
+      AUD_LOG_OBJ(INFO, this) << "#" << underflow_count + 1 << " (1/"
+                              << kCaptureUnderflowErrorInterval << "): source-start 0x" << std::hex
+                              << source_start << " missed mix-point 0x" << mix_point << " by "
+                              << std::dec << underflow_msec << " ms";
+    } else if ((kCaptureUnderflowTraceInterval > 0) &&
+               (underflow_count % kCaptureUnderflowTraceInterval == 0)) {
+      AUD_VLOG_OBJ(TRACE, this) << "#" << underflow_count + 1 << " (1/"
+                                << kCaptureUnderflowErrorInterval << "): source-start 0x"
+                                << std::hex << source_start << " missed mix-point 0x" << mix_point
+                                << " by " << std::dec << underflow_msec << " ms";
+    }
+  }
+}
+
+void AudioCapturerImpl::PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) {
+  uint16_t partial_underflow_count = std::atomic_fetch_add<uint16_t>(&partial_underflow_count_, 1u);
+
+  if constexpr (kLogCaptureUnderflow) {
+    if (abs(source_offset) >= (Mixer::FRAC_ONE >> 1)) {
+      if ((kCaptureUnderflowErrorInterval > 0) &&
+          (partial_underflow_count % kCaptureUnderflowErrorInterval == 0)) {
+        AUD_LOG_OBJ(ERROR, this) << "#" << partial_underflow_count + 1 << " (1/"
+                                 << kCaptureUnderflowErrorInterval << "): shifting by "
+                                 << (source_offset < 0 ? "-0x" : "0x") << std::hex
+                                 << abs(source_offset) << " source subframes and " << std::dec
+                                 << mix_offset << " mix (capture) frames";
+      } else if ((kCaptureUnderflowInfoInterval > 0) &&
+                 (partial_underflow_count % kCaptureUnderflowInfoInterval == 0)) {
+        AUD_LOG_OBJ(INFO, this) << "#" << partial_underflow_count + 1 << " (1/"
+                                << kCaptureUnderflowInfoInterval << "): shifting by "
+                                << (source_offset < 0 ? "-0x" : "0x") << std::hex
+                                << abs(source_offset) << " source subframes and " << std::dec
+                                << mix_offset << " mix (capture) frames";
+      } else if ((kCaptureUnderflowTraceInterval > 0) &&
+                 (partial_underflow_count % kCaptureUnderflowTraceInterval == 0)) {
+        AUD_VLOG_OBJ(TRACE, this) << "#" << partial_underflow_count + 1 << " (1/"
+                                  << kCaptureUnderflowTraceInterval << "): shifting by "
+                                  << (source_offset < 0 ? "-0x" : "0x") << std::hex
+                                  << abs(source_offset) << " source subframes and " << std::dec
+                                  << mix_offset << " mix (capture) frames";
+      }
+    } else {
+      AUD_VLOG_OBJ(TRACE, this) << "Shifting by " << mix_offset
+                                << " mix (capture) frames to align with source region";
     }
   }
 }
@@ -951,7 +1030,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // If this gain scale is at or below our mute threshold, skip this source,
     // as it will not contribute to this mix pass.
     if (info.gain.IsSilent()) {
-      AUD_LOG_OBJ(INFO, &link) << " skipping this capture source -- it is mute";
+      AUD_LOG_OBJ(INFO, &link) << "Skipping this capture source -- it is mute";
       continue;
     }
 
@@ -962,7 +1041,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // ring buffer position transformation, then there is nothing to do (at the
     // moment). Just skip this source and move on to the next one.
     if ((rb_snap.ring_buffer == nullptr) || (!rb_snap.clock_mono_to_ring_pos_bytes.invertible())) {
-      AUD_LOG_OBJ(INFO, &link) << " skipping this capture source -- it isn't ready";
+      AUD_LOG_OBJ(INFO, &link) << "Skipping this capture source -- it isn't ready";
       continue;
     }
 
@@ -974,7 +1053,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // safe area will be contiguous, although it may be split by the ring boundary. Determine the
     // starting PTS of these region(s), expressed in fractional source frames.
     //
-    // TODO(MTWN-408): This mix job handling is similar to sections in AudioOutput that sample from
+    // TODO(13688): This mix job handling is similar to sections in AudioOutput that sample from
     // packet sources. Here we basically model the available ring buffer space as either 1 or 2
     // packets, depending on which regions can be safely read. Re-factor so both AudioCapturer and
     // AudioOutput can sample from packets and ring-buffers, sharing common logic across input mix
@@ -988,14 +1067,12 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
 
     int64_t start_fence_frames = end_fence_frames - rb_snap.end_fence_to_start_fence_frames;
 
-    if (end_fence_frames < 0) {
-      DumpRbSnapshot(rb_snap);
-      DumpBookkeeping(info);
+    // Sometimes, because of significant fifo_depth or external_delay, we calculate an
+    // end_fence_frames value that is negative. In this case, "wraparound" the ring-buffer.
+    end_fence_frames += (end_fence_frames < 0 ? rb->frames() : 0);
+    FXL_DCHECK(end_fence_frames >= 0);
+    start_fence_frames = end_fence_frames - rb_snap.end_fence_to_start_fence_frames;
 
-      AUD_LOG(FATAL) << " start_fence_frames: 0x" << std::hex << start_fence_frames
-                     << ", end_fence_frames: 0x" << end_fence_frames << ", gap " << std::dec
-                     << (end_fence_frames - start_fence_frames);
-    }
     start_fence_frames = std::max<int64_t>(start_fence_frames, 0);
     FXL_DCHECK(end_fence_frames - start_fence_frames < rb->frames());
 
@@ -1042,15 +1119,19 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       int64_t job_end = job_start + trans.rate().Scale(frames_left - 1);
 
       // Figure out the PTS of the final frame of audio in our source region
-      int64_t efrac_pts = region.sfrac_pts + (region.len << kPtsFractionalBits);
-      FXL_DCHECK((efrac_pts - region.sfrac_pts) >= Mixer::FRAC_ONE);
-      int64_t final_pts = efrac_pts - Mixer::FRAC_ONE;
+      int64_t source_end_frac_pts = region.sfrac_pts + (region.len << kPtsFractionalBits);
+      FXL_DCHECK((source_end_frac_pts - region.sfrac_pts) >= Mixer::FRAC_ONE);
+      int64_t final_pts = source_end_frac_pts - Mixer::FRAC_ONE;
 
-      // If the PTS of the final frame of audio in our source region is before
-      // the negative window edge of our filter centered at our job's first
-      // sampling point, then this source region is entirely in the past and may
-      // be skipped.
+      // If this source region's final frame occurs before our filter's negative edge (centered at
+      // this job's first sample), this source region is entirely in the past and may be skipped.
+      // Our job could have started as much as (job_start-region_start)+negative_edge sooner.
       if (final_pts < (job_start - info.mixer->neg_filter_width())) {
+        auto clock_mono_late = info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
+            job_start - region.sfrac_pts + info.mixer->neg_filter_width());
+
+        UnderflowOccurred(region.sfrac_pts, job_start - info.mixer->neg_filter_width(),
+                          clock_mono_late);
         continue;
       }
 
@@ -1061,35 +1142,36 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
         break;
       }
 
-      // Looks like the contents of this source region intersect our mixer's
-      // filter. Compute where in the intermediate buffer the first sample will
-      // be produced, as well as where, relative to the start of the source
-      // region, this sample will be taken from.
+      // Looks like this source region intersects our mix job (when including its filter). Compute
+      // where in the intermediate buffer the first produced frame will be placed, as well as where,
+      // relative to start of source region, the first sampling point will be.
       int64_t source_offset_64 = job_start - region.sfrac_pts;
-      int64_t output_offset_64 = 0;
+      int64_t dest_offset_64 = 0;
       int64_t first_sample_pos_window_edge = job_start + info.mixer->pos_filter_width();
 
       const TimelineRate& dest_to_src = info.dest_frames_to_frac_source_frames.rate();
-      // If first frame in this source region comes after positive edge of
-      // filter window, we must skip output frames before producing data.
+      // If source region's first frame is after filter's positive edge, skip some output frames.
       if (region.sfrac_pts > first_sample_pos_window_edge) {
         int64_t src_to_skip = region.sfrac_pts - first_sample_pos_window_edge;
 
-        // In determining output_offset and input_offset, we want to "round up"
-        // any subframes to the next integer frame. To do this, we subtract a
-        // single subframe (to handle the no-subframes case), then scale (which
-        // truncates any subframes), then add an additional 'round-up' frame.
-        output_offset_64 = dest_to_src.Inverse().Scale(src_to_skip - 1) + 1;
-        source_offset_64 += dest_to_src.Scale(output_offset_64);
+        // In scaling our (fractional) source_offset to (integral) dest_offset, we want to "round
+        // up" to the next integer dest frame, but the 'scale' operation truncates any fractional
+        // result. So we will add 1 in all cases (since all cases have SOME fractional component)
+        // but also subtract 1 before scaling (because the only case in which we DON'T need to add 1
+        // to the result iis when the input val is X.0).
+        dest_offset_64 = dest_to_src.Inverse().Scale(src_to_skip - 1) + 1;
+        source_offset_64 += dest_to_src.Scale(dest_offset_64);
+
+        PartialUnderflowOccurred(source_offset_64, dest_offset_64);
       }
 
-      FXL_DCHECK(output_offset_64 >= 0);
-      FXL_DCHECK(output_offset_64 < static_cast<int64_t>(mix_frames));
+      FXL_DCHECK(dest_offset_64 >= 0);
+      FXL_DCHECK(dest_offset_64 < static_cast<int64_t>(mix_frames));
       FXL_DCHECK(source_offset_64 <= std::numeric_limits<int32_t>::max());
       FXL_DCHECK(source_offset_64 >= std::numeric_limits<int32_t>::min());
 
       uint32_t region_frac_frame_len = region.len << kPtsFractionalBits;
-      auto output_offset = static_cast<uint32_t>(output_offset_64);
+      auto dest_offset = static_cast<uint32_t>(dest_offset_64);
       auto frac_source_offset = static_cast<int32_t>(source_offset_64);
 
       FXL_DCHECK(frac_source_offset < static_cast<int32_t>(region_frac_frame_len));
@@ -1099,7 +1181,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // Invalidate the region of the cache we are just about to read on
       // architectures who require it.
       //
-      // TODO(johngro): Optimize this. In particular...
+      // TODO(35022): Optimize this. In particular...
       // 1) When we have multiple clients of this ring buffer, it would be good
       //    not to invalidate what has already been invalidated.
       // 2) If our driver's ring buffer is not being fed directly from hardware,
@@ -1107,21 +1189,21 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       //
       // Also, at some point I need to come back and double check that the
       // mixer's filter width is being accounted for properly here.
-      FXL_DCHECK(output_offset <= frames_left);
-      uint64_t cache_target_frac_frames = dest_to_src.Scale(frames_left - output_offset);
+      FXL_DCHECK(dest_offset <= frames_left);
+      uint64_t cache_target_frac_frames = dest_to_src.Scale(frames_left - dest_offset);
       uint32_t cache_target_frames = ((cache_target_frac_frames - 1) >> kPtsFractionalBits) + 1;
       cache_target_frames = std::min(cache_target_frames, region.len);
       zx_cache_flush(region_source, cache_target_frames * rb->frame_size(),
                      ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
 
       // Looks like we are ready to go. Mix.
-      // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
+      // TODO(13415): integrate bookkeeping into the Mixer itself.
       //
       // When calling Mix(), we communicate the resampling rate with three
       // parameters. We augment frac_step_size with rate_modulo and denominator
       // arguments that capture the remaining rate component that cannot be
       // expressed by a 19.13 fixed-point step_size. Note: frac_step_size and
-      // frac_input_offset use the same format -- they have the same limitations
+      // frac_source_offset use the same format -- they have the same limitations
       // in what they can and cannot communicate. This begs two questions:
       //
       // Q1: For perfect position accuracy, just as we track incoming/outgoing
@@ -1142,19 +1224,19 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       //
       // Update: src_pos_modulo is added to Mix(), but for now we omit it here.
       bool consumed_source =
-          info.mixer->Mix(buf, frames_left, &output_offset, region_source, region_frac_frame_len,
+          info.mixer->Mix(buf, frames_left, &dest_offset, region_source, region_frac_frame_len,
                           &frac_source_offset, accumulate, &info);
-      FXL_DCHECK(output_offset <= frames_left);
+      FXL_DCHECK(dest_offset <= frames_left);
 
       if (!consumed_source) {
         // Looks like we didn't consume all of this region. Assert that we
         // have produced all of our frames and we are done.
-        FXL_DCHECK(output_offset == frames_left);
+        FXL_DCHECK(dest_offset == frames_left);
         break;
       }
 
-      buf += output_offset * format_->channels;
-      frames_left -= output_offset;
+      buf += dest_offset * format_->channels;
+      frames_left -= dest_offset;
       if (!frames_left) {
         break;
       }
@@ -1388,10 +1470,6 @@ void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_fo
   // work, then the AudioOutput may have overwritten the data before we decide
   // to get around to capturing it. Limiting our maximum number of frames of to
   // capture to be less than this amount of time prevents this issue.
-  //
-  // TODO(johngro) : This constant does not belong here (and is not even
-  // constant, strictly speaking). We should move it somewhere else.
-  constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
   int64_t tmp;
   frames_to_clock_mono_rate_ = TimelineRate(ZX_SEC(1), format_->frames_per_second);
   tmp = frames_to_clock_mono_rate_.Inverse().Scale(kMaxTimePerCapture);

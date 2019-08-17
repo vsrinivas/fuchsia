@@ -82,9 +82,6 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
 }
 
 zx_status_t AudioDevice::Init() {
-  // TODO(johngro) : See ZX-940.  Eliminate this priority boost as soon as we
-  // have a more official way of meeting real-time latency requirements.
-
   zx::profile profile;
   zx_status_t res = AcquireHighPriorityProfile(&profile);
   if (res != ZX_OK) {

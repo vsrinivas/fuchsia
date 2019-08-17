@@ -48,7 +48,7 @@ zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size, uint32_t fr
   }
 
   // Map the VMO into our address space.
-  // TODO(johngro): How do I specify the cache policy for this mapping?
+  // TODO(35022): How do I specify the cache policy for this mapping?
   zx_vm_option_t flags = ZX_VM_PERM_READ | (input ? 0 : ZX_VM_PERM_WRITE);
   res = vmo_mapper_.Map(vmo, 0u, size, flags);
 
