@@ -88,6 +88,7 @@ hyper-rustls = { version = "0.16.1", default-features = false }
 id_tree = "1.5"
 itertools = "0.8"
 itoa = "0.4"
+lipsum = "0.6.0"
 maplit = "1.0"
 net2 = "0.2"
 num-derive = "0.2.4"
