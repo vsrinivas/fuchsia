@@ -282,7 +282,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo
   if (status != ZX_OK) {
     return status;
   }
-  launch_info->block_devices.push_back({
+  launch_info->block_devices->push_back({
       "extras",
       fuchsia::virtualization::BlockMode::READ_ONLY,
       fuchsia::virtualization::BlockFormat::RAW,

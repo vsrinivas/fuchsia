@@ -12,7 +12,7 @@ class EchoImpl : public fidl::examples::echo::Echo {
   explicit EchoImpl(std::string label) : label_(std::move(label)) {}
 
   void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
-    callback(label_ + (value.is_null() ? "(null)" : *value));
+    callback(label_ + (value.has_value() ? value.value() : "(null)"));
   }
 
  private:

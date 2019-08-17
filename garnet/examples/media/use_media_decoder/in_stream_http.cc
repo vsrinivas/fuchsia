@@ -69,7 +69,7 @@ InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,
   ZX_ASSERT_MSG(response.body->stream().is_valid(), "http response stream !is_valid()");
 
   if (response.headers) {
-    for (auto& header : response.headers.get()) {
+    for (auto& header : response.headers.value()) {
       // TODO(dustingreen): deal with chunked encoding, or switch to a new http
       // client impl that deals with de-chunking before we see the data. For now
       // we rely on the http server to not generate chunked encoding.

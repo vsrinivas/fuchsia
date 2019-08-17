@@ -8,6 +8,6 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "9ddd2535dcb92a775a6bb3525665d6e0",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "c337c571adf78d4be70eb604f7091416",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "c9727f4c4685d6b7664196b3fae50123",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/transition.h": "47b829c45f2debf32787e51fcc1d6dad",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/transition.h": "bf975c948375bc68a1c4e912b152c9f8",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "c78abc65376ff836e372dedd124ee1f5"
 }

@@ -59,7 +59,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
 Node CreateTestNode(uint32_t node_id, std::string label) {
   Node node = Node();
   node.set_node_id(node_id);
-  node.set_child_ids(fidl::VectorPtr<uint32_t>::New(0));
+  node.set_child_ids({});
   node.set_role(Role::UNKNOWN);
   node.set_attributes(Attributes());
   node.mutable_attributes()->set_label(std::move(label));

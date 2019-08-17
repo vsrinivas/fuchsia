@@ -189,10 +189,10 @@ void XdrContext::ValueWithDefault(fidl::StringPtr* const data, bool use_data,
   switch (op_) {
     case XdrOp::TO_JSON:
       if (!use_data) {
-        value_->SetString(default_value.get(), allocator());
+        value_->SetString(default_value.has_value() ? default_value.value() : "", allocator());
         break;
       }
-      data->is_null() ? value_->SetNull() : value_->SetString(data->get(), allocator());
+      data->has_value() ? value_->SetString(data->value(), allocator()) : value_->SetNull();
       break;
 
     case XdrOp::FROM_JSON:

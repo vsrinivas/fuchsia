@@ -11,6 +11,7 @@
 #include <lib/fuzzing/cpp/traits.h>
 
 #include <cstddef>
+#include <string>
 #include <vector>
 
 // Note: Namespace must be contained in ::fuzzing to specialize ::fuzzing::MinSize<T> and
@@ -37,7 +38,7 @@ struct Allocate<StringPtr> {
     }
 
     const char* out = reinterpret_cast<const char*>(src->TakeBytes(*size));
-    return StringPtr(out, *size);
+    return std::string(out, *size);
   }
 };
 

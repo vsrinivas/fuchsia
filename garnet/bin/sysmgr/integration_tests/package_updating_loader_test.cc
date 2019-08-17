@@ -155,7 +155,7 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   ConnectToServiceAt(std::move(h1), echo.NewRequest());
   const std::string message = "component launched";
   std::string ret_msg = "";
-  echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
+  echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval.value_or(""); });
   RunLoopUntil([&] { return ret_msg == message; });
 
   // Verify that Resolve was called with the expected arguments.
@@ -184,7 +184,7 @@ TEST_F(PackageUpdatingLoaderTest, Failure) {
   ConnectToServiceAt(std::move(h1), echo.NewRequest());
   const std::string message = "component launched";
   std::string ret_msg = "";
-  echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
+  echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval.value_or(""); });
   // Even though the update failed, the loader should load the component anyway.
   RunLoopUntil([&] { return ret_msg == message; });
 }
@@ -209,7 +209,7 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
     const std::string message = "component launched";
     std::string ret_msg = "";
 
-    echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
+    echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval.value_or(""); });
     RunLoopUntil([&] { return ret_msg == message; });
   }
 
@@ -233,7 +233,7 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
     std::string ret_msg = "";
 
     FXL_LOG(INFO) << "sending echo message.";
-    echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
+    echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval.value_or(""); });
     RunLoopUntil([&] { return ret_msg == message; });
   }
 
@@ -258,7 +258,7 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
     std::string ret_msg = "";
 
     FXL_LOG(INFO) << "sending echo message.";
-    echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval; });
+    echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval.value_or(""); });
     RunLoopUntil([&] { return ret_msg == message; });
   }
 

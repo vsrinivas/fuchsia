@@ -27,7 +27,7 @@ fit::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
                             .TakeChannel();
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
-    launch_info.arguments.reset(args);
+    launch_info.arguments = args;
     launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
     launch_info.flat_namespace->paths.push_back("/dev");
     launch_info.flat_namespace->directories.push_back(std::move(devfs));
