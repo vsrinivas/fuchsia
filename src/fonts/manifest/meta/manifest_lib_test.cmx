@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/manifest_lib_test"
+    }
+}

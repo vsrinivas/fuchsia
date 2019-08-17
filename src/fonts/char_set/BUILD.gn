@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+# Library for working with collections of Unicode code points.
+rustc_library("char_set") {
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+test_package("char_set_tests") {
+  deps = [
+    ":char_set_test",
+  ]
+
+  tests = [
+    {
+      name = "char_set_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":char_set_tests",
+  ]
+}

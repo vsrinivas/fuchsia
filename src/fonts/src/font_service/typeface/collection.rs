@@ -126,12 +126,12 @@ impl Collection {
 mod tests {
     use {
         super::*,
-        crate::font_service::manifest,
         fidl_fuchsia_fonts::{
             GenericFontFamily, Slant, Width, WEIGHT_BOLD, WEIGHT_EXTRA_BOLD, WEIGHT_EXTRA_LIGHT,
             WEIGHT_LIGHT, WEIGHT_MEDIUM, WEIGHT_NORMAL, WEIGHT_SEMI_BOLD, WEIGHT_THIN,
         },
         fidl_fuchsia_intl::LocaleId,
+        manifest,
     };
 
     fn make_fake_typeface_collection(mut faces: Vec<Typeface>) -> Collection {

@@ -6,7 +6,6 @@ mod asset;
 mod family;
 mod font_info;
 mod freetype_ffi;
-mod manifest;
 mod typeface;
 
 use {
@@ -14,7 +13,6 @@ use {
         asset::Collection as AssetCollection,
         family::{FamilyOrAlias, FontFamily},
         font_info::FontInfoLoader,
-        manifest::FontsManifest,
         typeface::{Collection as TypefaceCollection, Typeface, TypefaceInfoAndCharSet},
     },
     failure::{format_err, Error, ResultExt},
@@ -29,6 +27,7 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::prelude::*,
     itertools::Itertools,
+    manifest::FontsManifest,
     std::{collections::BTreeMap, iter, path::Path, sync::Arc},
     unicase::UniCase,
 };

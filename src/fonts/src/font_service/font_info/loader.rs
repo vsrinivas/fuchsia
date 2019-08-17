@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    super::{char_set::CharSet, vmo_stream::VmoStream},
+    super::vmo_stream::VmoStream,
     crate::font_service::freetype_ffi::{
         FT_Add_Default_Modules, FT_Done_Face, FT_Done_Library, FT_Get_First_Char, FT_Get_Next_Char,
         FT_Library, FT_New_Library, FT_Open_Args, FT_Open_Face, FT_MEMORY, FT_OPEN_STREAM,
     },
+    char_set::CharSet,
     failure::{format_err, Error},
     fuchsia_zircon as zx,
     std::ptr,

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::font_service::font_info::CharSet,
+    char_set::CharSet,
     failure::{self, format_err, ResultExt},
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
     fuchsia_url::pkg_url::PkgUrl,
