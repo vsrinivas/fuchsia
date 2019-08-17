@@ -14,8 +14,7 @@ namespace {
 
 // The stride is how much time is in each sample.
 // This should be a constexpr when C++ 14 is supported.
-SampleTimeNs CalcStride(SampleTimeNs start, SampleTimeNs finish,
-                                  size_t count) {
+SampleTimeNs CalcStride(SampleTimeNs start, SampleTimeNs finish, size_t count) {
   SampleTimeNs stride = (finish - start);
   if (count) {
     stride /= count;

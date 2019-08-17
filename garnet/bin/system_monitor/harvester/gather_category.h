@@ -24,12 +24,13 @@ class DockyardProxy;
 // manageable and enabling/disabling categories.
 class GatherCategory {
  public:
-  GatherCategory(zx_handle_t root_resource, harvester::DockyardProxy& dockyard_proxy)
+  GatherCategory(zx_handle_t root_resource,
+                 harvester::DockyardProxy* dockyard_proxy)
       : root_resource_(root_resource), dockyard_proxy_(dockyard_proxy) {}
   virtual ~GatherCategory() = default;
 
   // The dockyard proxy is used to send data to the remote Dockyard.
-  harvester::DockyardProxy& Dockyard() { return dockyard_proxy_; }
+  harvester::DockyardProxy& Dockyard() { return *dockyard_proxy_; }
 
   // Override this in a base class to gather sample data.
   virtual void Gather() = 0;
@@ -40,15 +41,18 @@ class GatherCategory {
   // Set (or reset) the time this task will run on |dispatcher|.
   // |Gather()| will be called at (or after) |start| and then every multiple of
   // |period|.
-  void PostUpdate(async_dispatcher_t* dispatcher, zx::time start, zx::duration period);
+  void PostUpdate(async_dispatcher_t* dispatcher, zx::time start,
+                  zx::duration period);
 
   // For use by the task dispatcher.
-  void TaskHandler(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
+  void TaskHandler(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                   zx_status_t status);
 
- protected:
-  async::TaskMethod<GatherCategory, &GatherCategory::TaskHandler> task_method_{this};
+ private:
+  async::TaskMethod<GatherCategory, &GatherCategory::TaskHandler> task_method_{
+      this};
   zx_handle_t root_resource_;
-  harvester::DockyardProxy& dockyard_proxy_;
+  harvester::DockyardProxy* dockyard_proxy_;
 
   zx::duration update_period_;
   zx::time next_update_;

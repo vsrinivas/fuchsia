@@ -18,20 +18,21 @@ class DockyardProxyLocal : public DockyardProxy {
   DockyardProxyLocal() {}
 
   // |DockyardProxy|.
-  virtual DockyardProxyStatus Init() override;
+  DockyardProxyStatus Init() override;
 
   // |DockyardProxy|.
-  virtual DockyardProxyStatus SendInspectJson(const std::string& stream_name,
-                                              const std::string& json) override;
+  DockyardProxyStatus SendInspectJson(const std::string& stream_name,
+                                      const std::string& json) override;
 
   // |DockyardProxy|.
-  virtual DockyardProxyStatus SendSample(const std::string& stream_name, uint64_t value) override;
+  DockyardProxyStatus SendSample(const std::string& stream_name,
+                                 uint64_t value) override;
 
   // |DockyardProxy|.
-  virtual DockyardProxyStatus SendSampleList(const SampleList list) override;
+  DockyardProxyStatus SendSampleList(const SampleList list) override;
 
   // |DockyardProxy|.
-  virtual DockyardProxyStatus SendStringSampleList(const StringSampleList list) override;
+  DockyardProxyStatus SendStringSampleList(StringSampleList list) override;
 };
 
 }  // namespace harvester

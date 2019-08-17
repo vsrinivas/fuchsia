@@ -38,7 +38,7 @@ typedef uint64_t SampleValue;
 // This is not intended to remain a std::map. This works fine for small numbers
 // of samples and it has the API desired. So a std::map is being used while
 // framing out the API.
-typedef std::map<SampleTimeNs, SampleValue> SampleStream;
+using SampleStream = std::map<SampleTimeNs, SampleValue>;
 
 // This is clearer than using the raw number.
 constexpr SampleTimeNs kNanosecondsPerSecond = 1000000000;
@@ -295,17 +295,17 @@ class SampleStreamMap
 };
 
 // Lookup for a sample stream name string, given the sample stream ID.
-typedef std::map<DockyardId, std::string> DockyardIdToPathMap;
-typedef std::map<std::string, DockyardId> DockyardPathToIdMap;
+using DockyardIdToPathMap = std::map<DockyardId, std::string>;
+using DockyardPathToIdMap = std::map<std::string, DockyardId>;
 
 // Called when a request to ignore samples is complete.
-typedef std::function<void(const IgnoreSamplesResponse& message)>
-    IgnoreSamplesCallback;
+using IgnoreSamplesCallback =
+    std::function<void(const IgnoreSamplesResponse& message)>;
 
 // Called when a connection is made between the Dockyard and Harvester on a
 // Fuchsia device.
-typedef std::function<void(const std::string& device_name)>
-    OnConnectionCallback;
+using OnConnectionCallback =
+    std::function<void(const std::string& device_name)>;
 
 // Called when new streams are added or removed. Added values include their ID
 // and string path. Removed values only have the ID.
@@ -314,20 +314,19 @@ typedef std::function<void(const std::string& device_name)>
 // because the rest of the API will cope with invalid stream IDs, so 'eventually
 // consistent' is acceptable).
 // Use SetDockyardPathsHandler() to install a StreamCallback callback.
-typedef std::function<void(const std::vector<PathInfo>& add,
-                           const std::vector<DockyardId>& remove)>
-    OnPathsCallback;
+using OnPathsCallback = std::function<void(
+    const std::vector<PathInfo>& add, const std::vector<DockyardId>& remove)>;
 
 // Called after (and in response to) a request is sent to |GetStreamSets()|.
 // Use SetStreamSetsHandler() to install a StreamSetsCallback callback.
-typedef std::function<void(const StreamSetsResponse& response)>
-    OnStreamSetsCallback;
+using OnStreamSetsCallback =
+    std::function<void(const StreamSetsResponse& response)>;
 
 // Called after (and in response to) a request is sent to |DiscardSamples()|.
 // Use SetDiscardSamplesHandler() to install a OnDiscardSamplesCallback
 // callback.
-typedef std::function<void(const DiscardSamplesResponse& response)>
-    OnDiscardSamplesCallback;
+using OnDiscardSamplesCallback =
+    std::function<void(const DiscardSamplesResponse& response)>;
 
 class Dockyard {
  public:

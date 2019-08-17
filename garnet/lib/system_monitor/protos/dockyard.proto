@@ -4,29 +4,29 @@
 
 syntax = "proto3";
 
+package dockyard_proto;
+
 option java_multiple_files = true;
 option java_package = "io.grpc.system_monitor.dockyard";
 option java_outer_classname = "DockyardProto";
 option objc_class_prefix = "HLW";
 
-package dockyard_proto;
-
 // The dockyard service definition.
 service Dockyard {
   // Sends initial set up data.
-  rpc Init (InitRequest) returns (InitReply) {}
+  rpc Init(InitRequest) returns (InitReply) {}
 
   // Ask the Dockyard what the ID is for the given path.
-  rpc GetDockyardIdsForPaths (DockyardPaths) returns (DockyardIds) {}
+  rpc GetDockyardIdsForPaths(DockyardPaths) returns (DockyardIds) {}
 
   // Sends a single JSON inspection message.
-  rpc SendInspectJson (stream InspectJson) returns (stream EmptyMessage) {}
+  rpc SendInspectJson(stream InspectJson) returns (stream EmptyMessage) {}
 
   // Sends a single sample.
-  rpc SendSample (stream RawSample) returns (stream EmptyMessage) {}
+  rpc SendSample(stream RawSample) returns (stream EmptyMessage) {}
 
   // Sends a list of samples.
-  rpc SendSamples (stream RawSamples) returns (stream EmptyMessage) {}
+  rpc SendSamples(stream RawSamples) returns (stream EmptyMessage) {}
 }
 
 // Introduction from the Harvester to the Dockyard.

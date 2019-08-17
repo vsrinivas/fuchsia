@@ -16,7 +16,7 @@ TEST_F(GatherCpuTest, CheckValues) {
   ASSERT_EQ(ret, ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
 
-  harvester::GatherCpu gatherer(root_resource, dockyard_proxy);
+  harvester::GatherCpu gatherer(root_resource, &dockyard_proxy);
   gatherer.Gather();
   uint64_t test_value;
   EXPECT_TRUE(dockyard_proxy.CheckValueSent("cpu:0:busy_time", &test_value));

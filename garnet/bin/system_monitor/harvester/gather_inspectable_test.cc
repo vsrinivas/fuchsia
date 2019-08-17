@@ -16,7 +16,7 @@ TEST_F(GatherInspectableTest, Inspectable) {
   zx_handle_t root_resource = 0;
   harvester::DockyardProxyFake dockyard_proxy;
 
-  harvester::GatherInspectable gatherer(root_resource, dockyard_proxy);
+  harvester::GatherInspectable gatherer(root_resource, &dockyard_proxy);
   gatherer.Gather();
   std::string test_string;
   EXPECT_TRUE(dockyard_proxy.CheckStringPrefixSent(

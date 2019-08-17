@@ -24,11 +24,13 @@ zx_status_t GetRootResource(zx_handle_t* root_resource) {
   const char* root_resource_svc = "/svc/fuchsia.boot.RootResource";
   status = fdio_service_connect(root_resource_svc, remote.release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Cannot open fuchsia.boot.RootResource." << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Cannot open fuchsia.boot.RootResource."
+                   << zx_status_get_string(status);
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx_status_t fidl_status = fuchsia_boot_RootResourceGet(local.get(), root_resource);
+  zx_status_t fidl_status =
+      fuchsia_boot_RootResourceGet(local.get(), root_resource);
   if (fidl_status != ZX_OK) {
     FXL_LOG(ERROR) << "FIDL issue while trying to get root resource: "
                    << zx_status_get_string(fidl_status);

@@ -31,11 +31,12 @@ class Harvester {
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy_;
 
-  GatherCpu gather_cpu_{root_resource_, *dockyard_proxy_};
-  GatherInspectable gather_inspectable_{root_resource_, *dockyard_proxy_};
-  GatherIntrospection gather_introspection_{root_resource_, *dockyard_proxy_};
-  GatherMemory gather_memory_{root_resource_, *dockyard_proxy_};
-  GatherTasks gather_tasks_{root_resource_, *dockyard_proxy_};
+  GatherCpu gather_cpu_{root_resource_, dockyard_proxy_.get()};
+  GatherInspectable gather_inspectable_{root_resource_, dockyard_proxy_.get()};
+  GatherIntrospection gather_introspection_{root_resource_,
+                                            dockyard_proxy_.get()};
+  GatherMemory gather_memory_{root_resource_, dockyard_proxy_.get()};
+  GatherTasks gather_tasks_{root_resource_, dockyard_proxy_.get()};
 
   friend class ::SystemMonitorHarvesterTest;
 };

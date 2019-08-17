@@ -12,7 +12,8 @@ namespace harvester {
 // Gather inspect information for components.
 class GatherIntrospection : public GatherCategory {
  public:
-  GatherIntrospection(zx_handle_t root_resource, harvester::DockyardProxy& dockyard_proxy)
+  GatherIntrospection(zx_handle_t root_resource,
+                      harvester::DockyardProxy* dockyard_proxy)
       : GatherCategory(root_resource, dockyard_proxy) {}
 
   void Gather() override;

@@ -11,7 +11,8 @@ namespace harvester {
 
 class GatherMemory : public GatherCategory {
  public:
-  GatherMemory(zx_handle_t root_resource, harvester::DockyardProxy& dockyard_proxy)
+  GatherMemory(zx_handle_t root_resource,
+               harvester::DockyardProxy* dockyard_proxy)
       : GatherCategory(root_resource, dockyard_proxy) {}
 
   void Gather() override;

@@ -23,7 +23,7 @@ struct AsyncQuery {
 };
 
 // Associate a request context ID with an AsyncQuery.
-typedef std::map<uint64_t, std::unique_ptr<AsyncQuery>> RequestIdToAsyncQuery;
+using RequestIdToAsyncQuery = std::map<uint64_t, std::unique_ptr<AsyncQuery>>;
 
 // The DockyardHost is a demonstration application for the Harvester component
 // and the Dockyard library. This makes it possible to test queries independent
