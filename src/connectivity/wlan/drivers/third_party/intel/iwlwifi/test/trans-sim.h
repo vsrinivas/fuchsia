@@ -19,7 +19,7 @@ namespace testing {
 
 class TransportSim : public SimMvm {
  public:
-  TransportSim(SimulatedEnvironment* env) : SimMvm(env) {}
+  explicit TransportSim(::wlan::simulation::Environment* env) : SimMvm(env) {}
   ~TransportSim() {}
 
   // This function must be called before starting using other functions.

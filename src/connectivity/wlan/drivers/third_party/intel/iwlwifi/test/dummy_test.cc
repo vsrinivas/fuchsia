@@ -14,8 +14,7 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 
-namespace wlan {
-namespace testing {
+namespace wlan::testing {
 namespace {
 
 // To test helper functions only.
@@ -46,5 +45,4 @@ class MvmTest : public SingleApTest {
 TEST_F(MvmTest, MvmTestFunction) { EXPECT_EQ(trans_.Init(), ZX_OK); }
 
 }  // namespace
-}  // namespace testing
-}  // namespace wlan
+}  // namespace wlan::testing

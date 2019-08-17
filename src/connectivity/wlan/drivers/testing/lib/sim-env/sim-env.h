@@ -29,84 +29,65 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_ENV_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_ENV_H_
 
+#include <netinet/if_ether.h>
 #include <stdint.h>
-#include <wlan/protocol/ieee80211.h>
-#include <wlan/protocol/info.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 #include <list>
 
-#include "netinet/if_ether.h"
-#include "zircon/types.h"
+#include <wlan/protocol/ieee80211.h>
+#include <wlan/protocol/info.h>
+
+#include "sim-sta-ifc.h"
 
 namespace wlan {
-namespace testing {
-
-// To simulate an AP. Only keep minimum information for sim-fw to generate
-// response for driver.
-//
-class SimulatedAp {
- public:
-  struct SimulatedSecurity {
-    enum ieee80211_cipher_suite cipher_suite;
-    size_t key_len;
-    uint8_t key[32];
-  };
-
-  SimulatedAp(const uint8_t bssid[ETH_ALEN], const uint8_t* ssid, const size_t ssid_len,
-              uint8_t chan)
-      : chan_(chan) {
-    memcpy(bssid_, bssid, sizeof(bssid_));
-
-    ssid_.len = std::min(ssid_len, static_cast<size_t>(WLAN_MAX_SSID_LEN));
-    memcpy(ssid_.ssid, ssid, ssid_.len);
-
-    memset(&security_, 0, sizeof(security_));
-    security_.cipher_suite = IEEE80211_CIPHER_SUITE_NONE;
-  }
-  ~SimulatedAp() {}
-
-  // When this is not called, the default is open network.
-  void SetSecurity(const struct SimulatedSecurity sec);
-
- private:
-  uint8_t chan_;
-  uint8_t bssid_[ETH_ALEN];
-  wlan_ssid_t ssid_;
-  struct SimulatedSecurity security_;
-};
+namespace simulation {
 
 // To simulate the physical environment.
 //
-class SimulatedEnvironment {
+class Environment {
  public:
-  SimulatedEnvironment() {}
-  ~SimulatedEnvironment() {}
+  Environment() = default;
+  ~Environment() = default;
 
-  // Add an AP into the environment. This can be called by unit test and sim-fw.
-  void AddAp(SimulatedAp* ap) { aps_.push_back(ap); }
+  // Add a station into the environment.
+  void AddStation(StationIfc* sta) { stations_.push_back(sta); }
 
-  // getter function for sim-fw to generate the scan response.
-  std::list<SimulatedAp*> aps() { return aps_; }
+  // Remove a station from the environment.
+  void RemoveStation(StationIfc* sta) { stations_.remove(sta); }
+
+  // Begin simulation. Simulation will end when there are no more events pending.
+  void Start();
+
+  // Send a packet into the simulated environment.
+  void Tx();
+
+  // Send a beacon. Note that this will (likely) someday be deprecated in favor of Tx().
+  void TxBeacon();
+
+  // Ask for a future notification. Specify sender so we can omit them from the Rx notifications.
+  zx_status_t RequestNotification(StationIfc* sta, uint64_t msec);
 
  private:
-  std::list<SimulatedAp*> aps_;
+  struct EnvironmentEvent {
+    zx_time_t msec;  // The absolute time to fire
+    enum EnvironmentEventType type;
+    StationIfc* requester;
+    void* payload;
+  };
+
+  // All registered stations
+  std::list<StationIfc*> stations_;
+
+  // Current time
+  zx_time_t msec_;
+
+  // Future events, sorted by time
+  std::list<std::unique_ptr<EnvironmentEvent>> events_;
 };
 
-//
-// The driver-specific simulated firmware must inherit this class.
-//
-class SimulatedFirmware {
- public:
-  // |env| is passed into the simulated firmware so that the firmware can
-  // interact with the simulated environment.
-  SimulatedFirmware(SimulatedEnvironment* env) : env_(env) {}
-  ~SimulatedFirmware() {}
-
- protected:
-  SimulatedEnvironment* env_;
-};
-
-}  // namespace testing
+}  // namespace simulation
 }  // namespace wlan
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_ENV_H_
