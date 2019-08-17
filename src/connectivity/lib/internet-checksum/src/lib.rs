@@ -231,33 +231,25 @@ pub fn update(checksum: [u8; 2], old: &[u8], new: &[u8]) -> [u8; 2] {
     // We compute on the sum, not the one's complement of the sum. checksum
     // is the one's complement of the sum, so we need to get back to the
     // sum. Thus, we negate checksum.
+    // HC' = ~HC
     let mut sum = !NativeEndian::read_u16(&checksum[..]) as Accumulator;
 
-    // First, process as much as we can with SIMD.
-    let (mut old, mut new) = Checksum::update_simd(&mut sum, old, new);
+    // Let's reuse `Checksum::add_bytes` to update our checksum
+    // so that we can get the speedup for free. Using
+    // [RFC 1071 Eqn. 3], we can efficiently update our new checksum.
+    let mut c1 = Checksum::new();
+    let mut c2 = Checksum::new();
+    c1.add_bytes(old);
+    c2.add_bytes(new);
 
-    // Continue with the normal algorithm to finish up whatever we couldn't
-    // process with SIMD.
-    macro_rules! handle_chunk {
-        ($read: ident, $old: expr, $new: expr) => {
-            let o = NativeEndian::$read($old);
-            let n = NativeEndian::$read($new);
-            // RFC 1624 Eqn. 3
-            sum = adc_accumulator(sum, !o as Accumulator);
-            sum = adc_accumulator(sum, n as Accumulator);
-        };
-        ($n: literal, $read: ident) => {
-            handle_chunk!($read, old, new);
-            old = &old[$n..];
-            new = &new[$n..];
-        };
-    }
-    loop_unroll!(old, handle_chunk);
-
-    if old.len() == 1 {
-        handle_chunk!(read_u16, &[old[0], 0], &[new[0], 0]);
-    }
-
+    // Note, `c1.checksum_inner()` is actually ~m in [Eqn. 3]
+    // `c2.checksum_inner()` is actually ~m' in [Eqn. 3]
+    // so we have to negate `c2.checksum_inner()` first to get m'.
+    // HC' += ~m, c1.checksum_inner() == ~m.
+    sum = adc_accumulator(sum, c1.checksum_inner() as Accumulator);
+    // HC' += m', c2.checksum_inner() == ~m'.
+    sum = adc_accumulator(sum, !c2.checksum_inner() as Accumulator);
+    // HC' = ~HC.
     let mut cksum = [0u8; 2];
     NativeEndian::write_u16(&mut cksum[..], !normalize(sum));
     cksum
@@ -333,6 +325,7 @@ impl Checksum {
         // So we had better to make us depend on the CF generated
         // by the addition of the previous 16-bit word. The ideal
         // assembly should look like:
+        //
         // add 0(%rdi), %rax
         // adc 8(%rdi), %rax
         // adc 16(%rdi), %rax
@@ -344,10 +337,7 @@ impl Checksum {
         // interleaved. However, doing so results in 3 instructions
         // instead of the original 4 instructions (the two mov's are
         // still there) and it makes a difference on input size like
-        // 1023. And measurements showed little improvement on the
-        // update operation. Considering `update` is expected to be
-        // used on small inputs, and for readability issues, this
-        // trick is not employed there.
+        // 1023.
 
         // The following macro is used as a `body` when invoking a
         // `loop_unroll` macro. `$step` means how many bytes to handle
@@ -584,75 +574,6 @@ impl Checksum {
 
         bytes
     }
-
-    /// Updates bytes in an existing checksum using architecture-specific SIMD
-    /// instructions.
-    ///
-    /// `update_simd` updates a checksum to reflect that the already-checksumed
-    /// bytes `old_bytes` have been updated to contain the values in `new_bytes`
-    /// using architecture-specific SIMD instructions. It may not process all
-    /// the bytes, and whatever bytes are not processed will be returned. If no
-    /// implementation exists for the target architecture and run-time CPU
-    /// features, `update_simd` does nothing and simply returns `old_bytes` and
-    /// `new_bytes' directly.
-    #[inline(always)]
-    fn update_simd<'a, 'b>(
-        sum: &mut Accumulator,
-        old_bytes: &'a [u8],
-        new_bytes: &'b [u8],
-    ) -> (&'a [u8], &'b [u8]) {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") && old_bytes.len() >= Self::MIN_BYTES_FOR_SIMD {
-                return unsafe { Self::update_x86_64(sum, old_bytes, new_bytes) };
-            }
-        }
-
-        // Suppress unused variable warning when we don't compile the preceding
-        // block.
-        #[cfg(not(target_arch = "x86_64"))]
-        let _ = sum;
-
-        (old_bytes, new_bytes)
-    }
-
-    /// Updates bytes in an existing checksum using x86_64's avx2 instructions.
-    ///
-    /// # Safety
-    ///
-    /// `update_x86_64` should never be called unless the run-time CPU features
-    /// include 'avx2'. If `update_x86_64` is called and the run-time CPU
-    /// features do not include 'avx2', it is considered undefined behaviour.
-    ///
-    /// # Panics
-    ///
-    /// `update_x86_64` panics if `old_bytes.len() != new_bytes.len()`.
-    #[cfg(target_arch = "x86_64")]
-    unsafe fn update_x86_64<'a, 'b>(
-        sum: &mut Accumulator,
-        old_bytes: &'a [u8],
-        new_bytes: &'b [u8],
-    ) -> (&'a [u8], &'b [u8]) {
-        assert_eq!(new_bytes.len(), old_bytes.len());
-
-        // Instead of gettings the 1s complement of each 16bit word before
-        // adding it to sum, we can get the sum of just `old_bytes` to a
-        // temporary variable `old_sum`. We can then add it as a normal 16bit
-        // word to the current sum (`sum`) after normalizng it and getting the
-        // 1s complement. This will 'remove' `old_bytes` from `sum`.
-        let mut old_sum = 0;
-        let old_bytes = Self::add_bytes_x86_64(&mut old_sum, old_bytes);
-        *sum = adc_accumulator(*sum, !old_sum as Accumulator);
-
-        // Add `new_bytes` to `sum` using SIMD as normal.
-        let new_bytes = Self::add_bytes_x86_64(sum, new_bytes);
-
-        // We should have the exact same number of bytes left over for both
-        // `new_bytes` and `old_bytes`.
-        assert_eq!(new_bytes.len(), old_bytes.len());
-
-        (old_bytes, new_bytes)
-    }
 }
 
 macro_rules! impl_adc {
@@ -821,73 +742,28 @@ mod benchmarks {
     }
 
     #[bench]
-    fn bench_update_1024(b: &mut test::Bencher) {
+    fn bench_update_2(b: &mut test::Bencher) {
         b.iter(|| {
-            let old = test::black_box([0x42; 1024]);
-            let new = test::black_box([0xa0; 1024]);
+            let old = test::black_box([0x42; 2]);
+            let new = test::black_box([0xa0; 2]);
             test::black_box(update([42; 2], &old[..], &new[..]));
         });
     }
 
     #[bench]
-    fn bench_update_1023(b: &mut test::Bencher) {
+    fn bench_update_4(b: &mut test::Bencher) {
         b.iter(|| {
-            let old = test::black_box([0x42; 1023]);
-            let new = test::black_box([0xa0; 1023]);
+            let old = test::black_box([0x42; 4]);
+            let new = test::black_box([0xa0; 4]);
             test::black_box(update([42; 2], &old[..], &new[..]));
         });
     }
 
     #[bench]
-    fn bench_update_256(b: &mut test::Bencher) {
+    fn bench_update_8(b: &mut test::Bencher) {
         b.iter(|| {
-            let old = test::black_box([0x42; 256]);
-            let new = test::black_box([0xa0; 256]);
-            test::black_box(update([42; 2], &old[..], &new[..]));
-        });
-    }
-
-    #[bench]
-    fn bench_update_128(b: &mut test::Bencher) {
-        b.iter(|| {
-            let old = test::black_box([0x42; 128]);
-            let new = test::black_box([0xa0; 128]);
-            test::black_box(update([42; 2], &old[..], &new[..]));
-        });
-    }
-
-    #[bench]
-    fn bench_update_64(b: &mut test::Bencher) {
-        b.iter(|| {
-            let old = test::black_box([0x42; 64]);
-            let new = test::black_box([0xa0; 64]);
-            test::black_box(update([42; 2], &old[..], &new[..]));
-        });
-    }
-
-    #[bench]
-    fn bench_update_32(b: &mut test::Bencher) {
-        b.iter(|| {
-            let old = test::black_box([0x42; 32]);
-            let new = test::black_box([0xa0; 32]);
-            test::black_box(update([42; 2], &old[..], &new[..]));
-        });
-    }
-
-    #[bench]
-    fn bench_update_31(b: &mut test::Bencher) {
-        b.iter(|| {
-            let old = test::black_box([0x42; 31]);
-            let new = test::black_box([0xa0; 31]);
-            test::black_box(update([42; 2], &old[..], &new[..]));
-        });
-    }
-
-    #[bench]
-    fn bench_update_16(b: &mut test::Bencher) {
-        b.iter(|| {
-            let old = test::black_box([0x42; 16]);
-            let new = test::black_box([0xa0; 16]);
+            let old = test::black_box([0x42; 8]);
+            let new = test::black_box([0xa0; 8]);
             test::black_box(update([42; 2], &old[..], &new[..]));
         });
     }
