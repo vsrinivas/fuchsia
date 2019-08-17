@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "test/transit_bench",
+        "env_vars": [
+            "CARGO_TARGET_DIR=/cache"
+        ]
+    },
+    "sandbox": {
+        "features": [
+            "isolated-cache-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
