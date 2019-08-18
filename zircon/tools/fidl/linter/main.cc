@@ -131,4 +131,6 @@ int main(int argc, char* argv[]) {
     assert(options.format == "json");  // should never be false
     std::cout << fidl::FindingsJson(findings).Produce().str();
   }
+
+  std::exit(findings.size() == 0 ? 0 : 1);
 }
