@@ -222,7 +222,7 @@ void ShadertoyClientView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   }
 }
 
-void ShadertoyClientView::OnScenicError(::std::string error) {
+void ShadertoyClientView::OnScenicError(std::string error) {
   FXL_LOG(ERROR) << "Received Scenic Session error: " << error;
 }
 

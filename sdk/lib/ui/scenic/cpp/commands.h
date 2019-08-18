@@ -38,7 +38,7 @@ fuchsia::ui::gfx::Command NewCreateImageCmd(uint32_t id, uint32_t memory_id, uin
                                             fuchsia::images::Tiling tiling, uint32_t width,
                                             uint32_t height, uint32_t stride);
 fuchsia::ui::gfx::Command NewCreateImagePipeCmd(
-    uint32_t id, ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
+    uint32_t id, fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
 fuchsia::ui::gfx::Command NewCreateBufferCmd(uint32_t id, uint32_t memory_id,
                                              uint32_t memory_offset, uint32_t num_bytes);
 
@@ -203,9 +203,9 @@ fuchsia::ui::gfx::Command NewDetachLightCmd(uint32_t light_id);
 fuchsia::ui::gfx::Command NewDetachLightsCmd(uint32_t scene_id);
 
 // Material operations.
-fuchsia::ui::gfx::Command NewSetTextureCmd(uint32_t node_id, uint32_t image_id);
-fuchsia::ui::gfx::Command NewSetColorCmd(uint32_t node_id, uint8_t red, uint8_t green, uint8_t blue,
-                                         uint8_t alpha);
+fuchsia::ui::gfx::Command NewSetTextureCmd(uint32_t material_id, uint32_t texture_id);
+fuchsia::ui::gfx::Command NewSetColorCmd(uint32_t material_id, uint8_t red, uint8_t green,
+                                         uint8_t blue, uint8_t alpha);
 
 // Mesh operations.
 fuchsia::ui::gfx::MeshVertexFormat NewMeshVertexFormat(fuchsia::ui::gfx::ValueType position_type,
@@ -235,7 +235,7 @@ fuchsia::ui::gfx::Command NewSetEventMaskCmd(uint32_t resource_id, uint32_t even
 fuchsia::ui::gfx::Command NewSetLabelCmd(uint32_t resource_id, const std::string& label);
 
 // Debugging operations.
-fuchsia::ui::gfx::Command NewSetDisableClippingCmd(uint32_t resource_id, bool disable_clipping);
+fuchsia::ui::gfx::Command NewSetDisableClippingCmd(uint32_t renderer_id, bool disable_clipping);
 
 // Basic types.
 fuchsia::ui::gfx::FloatValue NewFloatValue(float value);
@@ -247,7 +247,7 @@ fuchsia::ui::gfx::Vector4Value NewVector4Value(const float value[4]);
 fuchsia::ui::gfx::Vector4Value NewVector4Value(uint32_t variable_id);
 fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(const float value[4]);
 fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(uint32_t variable_id);
-fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(const float value[16]);
+fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(const float matrix[16]);
 fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(uint32_t variable_id);
 fuchsia::ui::gfx::ColorRgbValue NewColorRgbValue(float red, float green, float blue);
 fuchsia::ui::gfx::ColorRgbValue NewColorRgbValue(uint32_t variable_id);

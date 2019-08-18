@@ -6,11 +6,12 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/component/cpp/testing/test_with_context.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 using ::testing::_;
 
@@ -28,8 +29,8 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
     listener_ = std::move(listener);
   }
 
-  MOCK_METHOD4(Present, void(uint64_t presentation_time, std::vector<::zx::event> acquire_fences,
-                             std::vector<::zx::event> release_fences, PresentCallback callback));
+  MOCK_METHOD4(Present, void(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+                             std::vector<zx::event> release_fences, PresentCallback callback));
 
  private:
   fidl::Binding<fuchsia::ui::scenic::Session> binding_;
@@ -100,10 +101,10 @@ class BaseViewTest : public component::testing::TestWithContext {
 TEST_F(BaseViewTest, HandlesMultiplePresentCalls) {
   // Expect Present() calls in initialization.
   EXPECT_CALL(*fake_scenic_.mock_session(), Present(_, _, _, _))
-      .WillRepeatedly(
-          [](uint64_t presentation_time, std::vector<::zx::event> acquire_fences,
-             std::vector<::zx::event> release_fences,
-             Session::PresentCallback callback) { callback(fuchsia::images::PresentationInfo()); });
+      .WillRepeatedly([](uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+                         std::vector<zx::event> release_fences, Session::PresentCallback callback) {
+        callback(fuchsia::images::PresentationInfo());
+      });
   RunLoopUntilIdle();
   ASSERT_TRUE(testing::Mock::VerifyAndClear(fake_scenic_.mock_session()));
 

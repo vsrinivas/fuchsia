@@ -41,7 +41,7 @@ class ImagePipe : public ImageBase {
   ImagePipe(Session* session, ResourceId id, std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
             std::shared_ptr<ErrorReporter> error_reporter);
   ImagePipe(Session* session, ResourceId id,
-            ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
+            fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
             std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
             std::shared_ptr<ErrorReporter> error_reporter);
 
@@ -52,8 +52,7 @@ class ImagePipe : public ImageBase {
   void RemoveImage(uint32_t image_id);
 
   void PresentImage(uint32_t image_id, zx::time presentation_time,
-                    ::std::vector<zx::event> acquire_fences,
-                    ::std::vector<zx::event> release_fences,
+                    std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
                     fuchsia::images::ImagePipe::PresentImageCallback callback);
 
   void Accept(class ResourceVisitor* visitor) override;
@@ -109,7 +108,7 @@ class ImagePipe : public ImageBase {
     ImagePtr image;
     zx::time presentation_time;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
-    ::fidl::VectorPtr<zx::event> release_fences;
+    fidl::VectorPtr<zx::event> release_fences;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |ImagePipe.PresentImage()|.
@@ -120,7 +119,7 @@ class ImagePipe : public ImageBase {
 
   ResourceId current_image_id_ = 0;
   ImagePtr current_image_;
-  ::fidl::VectorPtr<zx::event> current_release_fences_;
+  fidl::VectorPtr<zx::event> current_release_fences_;
 
   std::unordered_map<ResourceId, ImagePtr> images_;
   bool is_valid_ = true;

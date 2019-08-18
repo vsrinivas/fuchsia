@@ -79,7 +79,7 @@ void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
 }
 
 void App::HACK_SetRendererParams(bool enable_clipping,
-                                 ::std::vector<fuchsia::ui::gfx::RendererParam> params) {
+                                 std::vector<fuchsia::ui::gfx::RendererParam> params) {
   renderer_params_.clipping_enabled = enable_clipping;
   FXL_LOG(INFO) << "Presenter::HACK_SetRendererParams: Setting clipping enabled to "
                 << (enable_clipping ? "true" : "false");
@@ -238,8 +238,7 @@ void App::InitializeServices() {
     scenic_->GetDisplayOwnershipEvent(
         [this](zx::event event) { input_reader_.SetOwnershipEvent(std::move(event)); });
 
-    ime_service_ =
-        startup_context_->ConnectToEnvironmentService<fuchsia::ui::input::ImeService>();
+    ime_service_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::input::ImeService>();
     ime_service_.set_error_handler([this](zx_status_t error) {
       FXL_LOG(ERROR) << "IME Service died, destroying all presentations.";
       Reset();

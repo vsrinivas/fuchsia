@@ -86,7 +86,7 @@ class ShadertoyClientView : public scenic::BaseViewTransitional {
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
   // |scenic::SessionListener|
-  virtual void OnScenicError(::std::string error) override;
+  virtual void OnScenicError(std::string error) override;
 
   ViewImpl impl_;
 

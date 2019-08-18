@@ -36,7 +36,7 @@ void DisplayManager::WaitForDefaultDisplayController(fit::closure callback) {
     };
     dispatcher->ClientOwnershipChange = [this](auto change) { ClientOwnershipChange(change); };
     dispatcher->Vsync = [this](uint64_t display_id, uint64_t timestamp,
-                               ::std::vector<uint64_t> images) {
+                               std::vector<uint64_t> images) {
       if (display_id == default_display_->display_id() && vsync_cb_) {
         vsync_cb_(zx::time(timestamp), images);
       }
@@ -72,8 +72,8 @@ void DisplayManager::OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* se
       ->Dispatch_(std::move(msg));
 }
 
-void DisplayManager::DisplaysChanged(::std::vector<fuchsia::hardware::display::Info> added,
-                                     ::std::vector<uint64_t> removed) {
+void DisplayManager::DisplaysChanged(std::vector<fuchsia::hardware::display::Info> added,
+                                     std::vector<uint64_t> removed) {
   if (!default_display_) {
     FXL_DCHECK(added.size());
 

@@ -65,10 +65,10 @@ uint32_t YuvBaseView::AddImage() {
       .pixel_format = pixel_format_,
   };
   uint64_t image_vmo_bytes = images::ImageSize(image_info);
-  ::zx::vmo image_vmo;
-  zx_status_t status = ::zx::vmo::create(image_vmo_bytes, 0, &image_vmo);
+  zx::vmo image_vmo;
+  zx_status_t status = zx::vmo::create(image_vmo_bytes, 0, &image_vmo);
   if (status != ZX_OK) {
-    FXL_LOG(FATAL) << "::zx::vmo::create() failed";
+    FXL_LOG(FATAL) << "zx::vmo::create() failed";
     FXL_NOTREACHED();
   }
 
@@ -94,8 +94,8 @@ void YuvBaseView::PresentImage(uint32_t image_id) {
   FXL_CHECK(image_vmos_.count(image_id));
   TRACE_DURATION("gfx", "YuvBaseView::PresentImage");
 
-  ::std::vector<::zx::event> acquire_fences;
-  ::std::vector<::zx::event> release_fences;
+  std::vector<zx::event> acquire_fences;
+  std::vector<zx::event> release_fences;
   uint64_t now_ns = zx_clock_get_monotonic();
   TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", image_id);
   image_pipe_->PresentImage(image_id, now_ns, std::move(acquire_fences), std::move(release_fences),

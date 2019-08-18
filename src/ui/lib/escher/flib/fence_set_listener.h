@@ -21,7 +21,7 @@ class FenceSetListener {
  public:
   // Takes ownership of the fences.
   // |fence_listeners| must be valid handles.
-  explicit FenceSetListener(::std::vector<zx::event> fence_listeners);
+  explicit FenceSetListener(std::vector<zx::event> fence_listeners);
 
   // Invokes the callback when all the fences have been signalled. The callback
   // will be invoked on the current message loop.
@@ -37,7 +37,7 @@ class FenceSetListener {
 
   void ClearHandlers();
 
-  ::std::vector<zx::event> fences_;
+  std::vector<zx::event> fences_;
   uint32_t num_signalled_fences_ = 0;
 
   // Each wait corresponds to an |zx::event| with the same

@@ -5,6 +5,7 @@
 #include "garnet/examples/ui/embedder/example_view_provider_service.h"
 
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+
 #include <src/lib/fxl/logging.h>
 
 namespace embedder {
@@ -26,9 +27,8 @@ ExampleViewProviderService::~ExampleViewProviderService() {
 }
 
 void ExampleViewProviderService::CreateView(
-    ::zx::eventpair token,
-    ::fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-    ::fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
+    zx::eventpair token, fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
   // Services in CreateView() API are from the client's perspective.
   // Services in the ViewContext are from the view's perspective.
   ViewContext view_ctx{

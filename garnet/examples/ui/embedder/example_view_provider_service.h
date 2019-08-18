@@ -38,10 +38,9 @@ class ExampleViewProviderService : public fuchsia::ui::app::ViewProvider {
   ExampleViewProviderService& operator=(const ExampleViewProviderService&) = delete;
 
   // |fuchsia::ui::app::ViewProvider|
-  void CreateView(
-      ::zx::eventpair token,
-      ::fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      ::fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
+  void CreateView(zx::eventpair token,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 
  private:
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> bindings_;

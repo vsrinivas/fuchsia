@@ -62,7 +62,7 @@ fuchsia::ui::gfx::Command NewCreateImageCmd(uint32_t id, uint32_t memory_id, uin
 }
 
 fuchsia::ui::gfx::Command NewCreateImagePipeCmd(
-    uint32_t id, ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
+    uint32_t id, fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
   fuchsia::ui::gfx::ImagePipeArgs image_pipe;
   image_pipe.image_pipe_request = std::move(request);
 

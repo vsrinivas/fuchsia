@@ -24,7 +24,7 @@ namespace gfx {
 // Provides support for enumerating available displays.
 class DisplayManager {
  public:
-   DisplayManager() = default;
+  DisplayManager() = default;
   ~DisplayManager();
 
   using VsyncCallback =
@@ -80,8 +80,8 @@ class DisplayManager {
   void OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
                const zx_packet_signal_t* signal);
 
-  void DisplaysChanged(::std::vector<fuchsia::hardware::display::Info> added,
-                       ::std::vector<uint64_t> removed);
+  void DisplaysChanged(std::vector<fuchsia::hardware::display::Info> added,
+                       std::vector<uint64_t> removed);
   void ClientOwnershipChange(bool has_ownership);
 
   async::WaitMethod<DisplayManager, &DisplayManager::OnAsync> wait_{this};

@@ -28,8 +28,8 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
     listener_ = std::move(listener);
   }
 
-  MOCK_METHOD4(Present, void(uint64_t presentation_time, std::vector<::zx::event> acquire_fences,
-                             std::vector<::zx::event> release_fences, PresentCallback callback));
+  MOCK_METHOD4(Present, void(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+                             std::vector<zx::event> release_fences, PresentCallback callback));
 
  private:
   fidl::Binding<fuchsia::ui::scenic::Session> binding_;
@@ -102,10 +102,10 @@ class BaseViewTransitionalTest : public gtest::TestLoopFixture {
 TEST_F(BaseViewTransitionalTest, HandlesMultiplePresentCalls) {
   // Expect Present() calls in initialization.
   EXPECT_CALL(*fake_scenic_.mock_session(), Present(_, _, _, _))
-      .WillRepeatedly(
-          [](uint64_t presentation_time, std::vector<::zx::event> acquire_fences,
-             std::vector<::zx::event> release_fences,
-             Session::PresentCallback callback) { callback(fuchsia::images::PresentationInfo()); });
+      .WillRepeatedly([](uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+                         std::vector<zx::event> release_fences, Session::PresentCallback callback) {
+        callback(fuchsia::images::PresentationInfo());
+      });
   RunLoopUntilIdle();
   ASSERT_TRUE(testing::Mock::VerifyAndClear(fake_scenic_.mock_session()));
 

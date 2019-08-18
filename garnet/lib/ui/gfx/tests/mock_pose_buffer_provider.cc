@@ -13,7 +13,7 @@ MockPoseBufferProviderApp::MockPoseBufferProviderApp() : context_(sys::Component
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
-void MockPoseBufferProviderApp::SetPoseBuffer(::zx::vmo buffer, uint32_t num_entries,
+void MockPoseBufferProviderApp::SetPoseBuffer(zx::vmo buffer, uint32_t num_entries,
                                               int64_t base_time, uint64_t time_interval) {
   buffer_ = std::move(buffer);
   num_entries_ = num_entries;

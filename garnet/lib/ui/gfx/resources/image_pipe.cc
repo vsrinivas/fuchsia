@@ -30,7 +30,7 @@ ImagePipe::ImagePipe(Session* session, ResourceId id,
 }
 
 ImagePipe::ImagePipe(Session* session, ResourceId id,
-                     ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
+                     fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
                      std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
                      std::shared_ptr<ErrorReporter> error_reporter)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
@@ -109,8 +109,8 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
 };
 
 void ImagePipe::PresentImage(uint32_t image_id, zx::time presentation_time,
-                             ::std::vector<zx::event> acquire_fences,
-                             ::std::vector<zx::event> release_fences,
+                             std::vector<zx::event> acquire_fences,
+                             std::vector<zx::event> release_fences,
                              fuchsia::images::ImagePipe::PresentImageCallback callback) {
   TRACE_DURATION("gfx", "ImagePipe::PresentImage", "image_id", image_id);
   TRACE_FLOW_END("gfx", "image_pipe_present_image", image_id);
@@ -155,7 +155,7 @@ ImagePipeUpdateResults ImagePipe::Update(escher::ReleaseFenceSignaller* release_
 
   bool present_next_image = false;
   ResourceId next_image_id = current_image_id_;
-  ::fidl::VectorPtr<zx::event> next_release_fences;
+  fidl::VectorPtr<zx::event> next_release_fences;
 
   ImagePtr next_image = nullptr;
   while (!frames_.empty() && frames_.front().presentation_time <= presentation_time &&

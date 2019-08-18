@@ -26,7 +26,7 @@ class ShadertoyImpl : public fuchsia::examples::shadertoy::Shadertoy {
 
   // |Shadertoy|
   void SetShaderCode(
-      ::std::string glsl,
+      std::string glsl,
       fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback) override;
 
   // |Shadertoy|
@@ -37,7 +37,7 @@ class ShadertoyImpl : public fuchsia::examples::shadertoy::Shadertoy {
 
   // |Shadertoy|
   void SetImage(uint32_t channel,
-                ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) override;
+                fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) override;
 
   fxl::RefPtr<ShadertoyState> state_;
 

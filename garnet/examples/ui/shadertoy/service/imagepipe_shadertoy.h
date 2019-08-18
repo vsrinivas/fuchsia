@@ -13,7 +13,7 @@ namespace shadertoy {
 class ShadertoyStateForImagePipe : public ShadertoyState {
  public:
   ShadertoyStateForImagePipe(App* app,
-                             ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe);
+                             fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe);
   ~ShadertoyStateForImagePipe();
 
  private:

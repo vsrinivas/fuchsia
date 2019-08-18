@@ -11,8 +11,7 @@
 
 namespace scenic_impl {
 
-Session::Session(SessionId id,
-                 ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
+Session::Session(SessionId id, fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
     : id_(id),
       listener_(listener.Bind()),
       reporter_(std::make_shared<EventAndErrorReporter>(this)),
@@ -23,7 +22,7 @@ Session::~Session() {
   reporter_->Reset();
 }
 
-void Session::Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) {
+void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
   // TODO(SCN-1265): Come up with a better solution to avoid children
   // calling into us during destruction.
   if (!valid_)
@@ -41,8 +40,8 @@ void Session::Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) {
   }
 }
 
-void Session::Present(uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
-                      ::std::vector<zx::event> release_fences, PresentCallback callback) {
+void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+                      std::vector<zx::event> release_fences, PresentCallback callback) {
   TRACE_DURATION("gfx", "scenic_impl::Session::Present");
   TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
   next_present_trace_id_++;

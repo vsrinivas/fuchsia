@@ -54,8 +54,8 @@ void Scenic::RunAfterInitialized(fit::closure closure) {
   }
 }
 
-void Scenic::CreateSession(::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-                           ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
+void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
+                           fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   RunAfterInitialized([this, session_request = std::move(session_request),
                        listener = std::move(listener)]() mutable {
     CreateSessionImmediately(std::move(session_request), std::move(listener));
@@ -63,8 +63,8 @@ void Scenic::CreateSession(::fidl::InterfaceRequest<fuchsia::ui::scenic::Session
 }
 
 void Scenic::CreateSessionImmediately(
-    ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-    ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
+    fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
+    fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   auto session = std::make_unique<Session>(next_session_id_++, std::move(listener));
 
   // Give each installed System an opportunity to install a CommandDispatcher in

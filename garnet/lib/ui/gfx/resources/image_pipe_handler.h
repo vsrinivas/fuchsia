@@ -17,7 +17,7 @@ class ImagePipe;
 
 class ImagePipeHandler : public fuchsia::images::ImagePipe {
  public:
-  ImagePipeHandler(::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
+  ImagePipeHandler(fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
                    ::scenic_impl::gfx::ImagePipe* image_pipe);
 
  private:
@@ -31,11 +31,10 @@ class ImagePipeHandler : public fuchsia::images::ImagePipe {
 
   // |fuchsia::images::ImagePipe|
   void PresentImage(uint32_t image_id, uint64_t presentation_time,
-                    ::std::vector<zx::event> acquire_fences,
-                    ::std::vector<zx::event> release_fences,
+                    std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
                     PresentImageCallback callback) override;
 
-  ::fidl::Binding<fuchsia::images::ImagePipe> binding_;
+  fidl::Binding<fuchsia::images::ImagePipe> binding_;
   ::scenic_impl::gfx::ImagePipe* image_pipe_;
 };
 

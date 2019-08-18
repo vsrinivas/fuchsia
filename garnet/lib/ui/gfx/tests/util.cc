@@ -61,7 +61,7 @@ zx::event CreateEvent() {
 }
 
 std::vector<zx::event> CreateEventArray(size_t n) {
-  ::std::vector<zx::event> events;
+  std::vector<zx::event> events;
   for (size_t i = 0; i < n; i++) {
     events.push_back(CreateEvent());
   }

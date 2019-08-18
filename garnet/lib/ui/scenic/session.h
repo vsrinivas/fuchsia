@@ -29,18 +29,18 @@ using SessionId = uint64_t;
 
 class Session final : public fuchsia::ui::scenic::Session {
  public:
-  Session(SessionId id, ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
+  Session(SessionId id, fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
   ~Session() override;
 
   void SetCommandDispatchers(
       std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers);
 
   // |fuchsia::ui::scenic::Session|
-  void Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) override;
+  void Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) override;
 
   // |fuchsia::ui::scenic::Session|
-  void Present(uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
-               ::std::vector<zx::event> release_fences, PresentCallback callback) override;
+  void Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+               std::vector<zx::event> release_fences, PresentCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
   void SetDebugName(std::string debug_name) override;
@@ -126,7 +126,7 @@ class Session final : public fuchsia::ui::scenic::Session {
   bool valid_ = true;
 
   const SessionId id_;
-  ::fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
+  fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
 
   std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers_;
 

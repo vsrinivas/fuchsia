@@ -63,9 +63,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   void CloseSession(Session* session);
 
   // |fuchsia::ui::scenic::Scenic|
-  void CreateSession(
-      ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
+  void CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
+                     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
 
   sys::ComponentContext* app_context() const { return app_context_; }
   inspect_deprecated::Node* inspect_node() { return &inspect_node_; }
@@ -85,8 +84,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
  private:
   void CreateSessionImmediately(
-      ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
+      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
+      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
 
   // If a System is not initially initialized, this method will be called when
   // it is ready.

@@ -6,14 +6,15 @@
 
 #include <lib/component/cpp/connect.h>
 #include <lib/ui/input/cpp/formatting.h>
-#include <src/lib/fxl/logging.h>
-#include <trace/event.h>
 
 #include <cmath>
 #include <utility>
 
+#include <trace/event.h>
+
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
 #include "garnet/bin/ui/root_presenter/key_util.h"
+#include "src/lib/fxl/logging.h"
 
 using fuchsia::ui::policy::MediaButtonsListenerPtr;
 
@@ -63,10 +64,9 @@ Presentation::Presentation(
     fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session, scenic::ResourceId compositor_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-    fuchsia::ui::shortcut::Manager* shortcut_manager,
-    fuchsia::ui::input::ImeService* ime_service,
-    RendererParams renderer_params,
-    int32_t display_startup_rotation_adjustment, YieldCallback yield_callback)
+    fuchsia::ui::shortcut::Manager* shortcut_manager, fuchsia::ui::input::ImeService* ime_service,
+    RendererParams renderer_params, int32_t display_startup_rotation_adjustment,
+    YieldCallback yield_callback)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
@@ -712,8 +712,7 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
         ime_service_->DispatchKey(
             std::move(*key_event),
             [this, key_event = std::move(clone),
-             handled_callback =
-                 std::move(handled_callback)](bool was_handled) mutable {
+             handled_callback = std::move(handled_callback)](bool was_handled) mutable {
               if (was_handled || !shortcut_manager_) {
                 handled_callback(false);
               } else {
@@ -860,7 +859,7 @@ void Presentation::UpdateLightsForShadowTechnique(fuchsia::ui::gfx::ShadowTechni
   }
 }
 
-void Presentation::SetRendererParams(::std::vector<fuchsia::ui::gfx::RendererParam> params) {
+void Presentation::SetRendererParams(std::vector<fuchsia::ui::gfx::RendererParam> params) {
   for (size_t i = 0; i < params.size(); ++i) {
     SetRendererParam(std::move(params[i]));
   }

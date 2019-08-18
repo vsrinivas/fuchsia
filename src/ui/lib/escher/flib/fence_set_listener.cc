@@ -12,7 +12,7 @@
 
 namespace escher {
 
-FenceSetListener::FenceSetListener(::std::vector<zx::event> fence_listeners)
+FenceSetListener::FenceSetListener(std::vector<zx::event> fence_listeners)
     : fences_(std::move(fence_listeners)) {}
 
 void FenceSetListener::WaitReadyAsync(fit::closure ready_callback) {

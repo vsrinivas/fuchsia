@@ -17,8 +17,6 @@
 #include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/scenic/cpp/id.h>
 #include <lib/ui/scenic/cpp/resources.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include <map>
 #include <memory>
@@ -33,6 +31,8 @@
 #include "garnet/bin/ui/root_presenter/presentation.h"
 #include "garnet/bin/ui/root_presenter/presentation_switcher.h"
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace root_presenter {
 
@@ -60,8 +60,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
                fuchsia::ui::shortcut::Manager* shortcut_manager,
-               fuchsia::ui::input::ImeService* ime_service,
-               RendererParams renderer_params,
+               fuchsia::ui::input::ImeService* ime_service, RendererParams renderer_params,
                int32_t display_startup_rotation_adjustment, YieldCallback yield_callback);
   ~Presentation();
 
@@ -90,7 +89,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   void EnableClipping(bool enabled) override;
   void UseOrthographicView() override;
   void UsePerspectiveView() override;
-  void SetRendererParams(::std::vector<fuchsia::ui::gfx::RendererParam> params) override;
+  void SetRendererParams(std::vector<fuchsia::ui::gfx::RendererParam> params) override;
   void SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) override;
   void SetDisplaySizeInMm(float width_in_mm, float height_in_mm) override;
   void SetDisplayRotation(float display_rotation_degrees, bool animate) override;
