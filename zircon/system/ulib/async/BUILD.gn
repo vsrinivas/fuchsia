@@ -33,6 +33,7 @@ library("async-cpp") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [
+    "lib/async/cpp/executor.h",
     "lib/async/cpp/receiver.h",
     "lib/async/cpp/task.h",
     "lib/async/cpp/time.h",
@@ -40,13 +41,16 @@ library("async-cpp") {
     "lib/async/cpp/wait.h",
   ]
   public_deps = [
+    # <lib/async/cpp/executor.h> has #include <lib/zx/time.h>.
     # <lib/async/cpp/task.h> has #include <lib/zx/time.h>.
     "$zx/system/ulib/zx:headers",
 
+    # <lib/async/cpp/executor.h> has many lib/fit includes.
     # <lib/async/cpp/task.h> has #include <lib/fit/function.h>.
     "$zx/system/ulib/fit:headers",
   ]
   sources = [
+    "executor.cc",
     "receiver.cc",
     "task.cc",
     "trap.cc",
