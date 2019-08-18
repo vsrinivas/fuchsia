@@ -92,11 +92,11 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	if err != nil {
 		return err
 	}
-	encodeFailureCases, err := encodeFailureCases(gidl.FailsToEncode, fidl)
+	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, fidl)
 	if err != nil {
 		return err
 	}
-	decodeFailureCases, err := decodeFailureCases(gidl.FailsToDecode, fidl)
+	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, fidl)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func successCases(gidlSuccesses []gidlir.Success, fidl fidlir.Root) ([]successCa
 	return successCases, nil
 }
 
-func encodeFailureCases(gidlEncodeFailures []gidlir.FailsToEncode, fidl fidlir.Root) ([]encodeFailureCase, error) {
+func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.Root) ([]encodeFailureCase, error) {
 	var encodeFailureCases []encodeFailureCase
 	for _, encodeFailure := range gidlEncodeFailures {
 		decl, err := gidlmixer.ExtractDeclarationUnsafe(encodeFailure.Value, fidl)
@@ -154,7 +154,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.FailsToEncode, fidl fidlir.R
 	return encodeFailureCases, nil
 }
 
-func decodeFailureCases(gidlDecodeFailures []gidlir.FailsToDecode, fidl fidlir.Root) ([]decodeFailureCase, error) {
+func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.Root) ([]decodeFailureCase, error) {
 	var decodeFailureCases []decodeFailureCase
 	for _, decodeFailure := range gidlDecodeFailures {
 		code, err := goErrorCode(decodeFailure.Err)

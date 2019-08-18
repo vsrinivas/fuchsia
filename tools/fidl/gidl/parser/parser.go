@@ -171,25 +171,25 @@ var sections = map[string]sectionMetadata{
 			all.Success = append(all.Success, result)
 		},
 	},
-	"fails_to_encode": {
+	"encode_failure": {
 		requiredKinds: map[bodyElement]bool{isValue: true, isErr: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
-			result := ir.FailsToEncode{
+			result := ir.EncodeFailure{
 				Name:              name,
 				Value:             body.Value,
 				Err:               body.Err,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
 			}
-			all.FailsToEncode = append(all.FailsToEncode, result)
+			all.EncodeFailure = append(all.EncodeFailure, result)
 		},
 	},
-	"fails_to_decode": {
+	"decode_failure": {
 		requiredKinds: map[bodyElement]bool{isType: true, isBytes: true, isErr: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
-			result := ir.FailsToDecode{
+			result := ir.DecodeFailure{
 				Name:              name,
 				Type:              body.Type,
 				Bytes:             body.Bytes,
@@ -197,7 +197,7 @@ var sections = map[string]sectionMetadata{
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
 			}
-			all.FailsToDecode = append(all.FailsToDecode, result)
+			all.DecodeFailure = append(all.DecodeFailure, result)
 		},
 	},
 }

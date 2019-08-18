@@ -142,26 +142,26 @@ func TestParseSuccessCase(t *testing.T) {
 	})
 }
 
-func TestParseFailsToEncodeCase(t *testing.T) {
+func TestParseEncodeFailureCase(t *testing.T) {
 	parsingToCheck{
 		t: t,
 		fn: func(p *Parser) (interface{}, error) {
 			var all ir.All
 			if err := p.parseSection(&all); err != nil {
 				return nil, err
-			} else if len(all.FailsToEncode) != 1 {
-				return nil, fmt.Errorf("did not parse fails_to_encode section")
+			} else if len(all.EncodeFailure) != 1 {
+				return nil, fmt.Errorf("did not parse encode_failure section")
 			}
-			return all.FailsToEncode[0], nil
+			return all.EncodeFailure[0], nil
 		},
 	}.checkSuccess(map[string]interface{}{
 		`
-		fails_to_encode("OneStringOfMaxLengthFive-too-long") {
+		encode_failure("OneStringOfMaxLengthFive-too-long") {
 			value = OneStringOfMaxLengthFive {
 				the_string: "bonjour", // 6 characters
 			}
 			err = STRING_TOO_LONG
-		}`: ir.FailsToEncode{
+		}`: ir.EncodeFailure{
 			Name: "OneStringOfMaxLengthFive-too-long",
 			Value: ir.Object{
 				Name: "OneStringOfMaxLengthFive",
@@ -177,21 +177,21 @@ func TestParseFailsToEncodeCase(t *testing.T) {
 	})
 }
 
-func TestParseFailsToDecodeCase(t *testing.T) {
+func TestParseDecodeFailureCase(t *testing.T) {
 	parsingToCheck{
 		t: t,
 		fn: func(p *Parser) (interface{}, error) {
 			var all ir.All
 			if err := p.parseSection(&all); err != nil {
 				return nil, err
-			} else if len(all.FailsToDecode) != 1 {
-				return nil, fmt.Errorf("did not parse fails_to_decode section")
+			} else if len(all.DecodeFailure) != 1 {
+				return nil, fmt.Errorf("did not parse decode_failure section")
 			}
-			return all.FailsToDecode[0], nil
+			return all.DecodeFailure[0], nil
 		},
 	}.checkSuccess(map[string]interface{}{
 		`
-		fails_to_decode("OneStringOfMaxLengthFive-wrong-length") {
+		decode_failure("OneStringOfMaxLengthFive-wrong-length") {
 			type = TypeName
 			bytes = {
 				1, 0, 0, 0, 0, 0, 0, 0, // length
@@ -199,7 +199,7 @@ func TestParseFailsToDecodeCase(t *testing.T) {
 				// one character missing
 			}
 			err = STRING_TOO_LONG
-		}`: ir.FailsToDecode{
+		}`: ir.DecodeFailure{
 			Name: "OneStringOfMaxLengthFive-wrong-length",
 			Type: "TypeName",
 			Bytes: []byte{
@@ -307,7 +307,7 @@ func TestParseFailsMissingKind(t *testing.T) {
 
 func TestParseFailsUnknownErrorCode(t *testing.T) {
 	input := `
-	fails_to_encode("OneStringOfMaxLengthFive-too-long") {
+	encode_failure("OneStringOfMaxLengthFive-too-long") {
 		value = OneStringOfMaxLengthFive {
 			the_string: "bonjour",
 		}

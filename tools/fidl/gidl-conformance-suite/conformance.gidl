@@ -360,7 +360,7 @@ success("StrictXUnion") {
 	}
 }
 
-fails_to_encode("StrictXUnion Field Not Set") {
+encode_failure("StrictXUnion Field Not Set") {
 	value = TestStrictXUnionInStruct {
 		xu: SampleStrictXUnion {},
 	}
@@ -370,7 +370,7 @@ fails_to_encode("StrictXUnion Field Not Set") {
 	bindings_allowlist = [none,]
 }
 
-fails_to_decode("StrictXUnion Field Unknown") {
+decode_failure("StrictXUnion Field Unknown") {
 	type = TestStrictXUnionInStruct
 	bytes = {
       0x11, 0xba, 0x5e, 0xba, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
@@ -546,14 +546,14 @@ success("Vectors") {
 	}
 }
 
-fails_to_encode("StringExceedsLimit") {
+encode_failure("StringExceedsLimit") {
 	value = Length2StringWrapper {
 		length_2_string: "abc", // exceeeds the string length
 	}
 	err = STRING_TOO_LONG
 }
 
-fails_to_decode("NonEmptyStringWithNullPtrBody") {
+decode_failure("NonEmptyStringWithNullPtrBody") {
 	type = StringWrapper
 	bytes = {
 		0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data

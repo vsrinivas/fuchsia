@@ -6,8 +6,8 @@ package ir
 
 type All struct {
 	Success       []Success
-	FailsToEncode []FailsToEncode
-	FailsToDecode []FailsToDecode
+	EncodeFailure []EncodeFailure
+	DecodeFailure []DecodeFailure
 }
 
 type Success struct {
@@ -19,7 +19,7 @@ type Success struct {
 	// Handles
 }
 
-type FailsToEncode struct {
+type EncodeFailure struct {
 	Name              string
 	Value             interface{}
 	Err               ErrorCode
@@ -27,7 +27,7 @@ type FailsToEncode struct {
 	BindingsDenylist  *[]string
 }
 
-type FailsToDecode struct {
+type DecodeFailure struct {
 	Name              string
 	Type              string
 	Bytes             []byte
