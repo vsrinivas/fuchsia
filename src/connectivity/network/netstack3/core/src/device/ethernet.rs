@@ -429,12 +429,8 @@ pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
                 types => debug!("got ARP packet for unsupported types: {:?}", types),
             }
         }
-        Some(EtherType::Ipv4) => {
-            crate::ip::receive_ip_packet::<_, _, Ipv4>(ctx, device, frame_dst, buffer)
-        }
-        Some(EtherType::Ipv6) => {
-            crate::ip::receive_ip_packet::<_, _, Ipv6>(ctx, device, frame_dst, buffer)
-        }
+        Some(EtherType::Ipv4) => crate::ip::receive_ipv4_packet(ctx, device, frame_dst, buffer),
+        Some(EtherType::Ipv6) => crate::ip::receive_ipv6_packet(ctx, device, frame_dst, buffer),
         Some(EtherType::Other(_)) | None => {} // TODO(joshlf)
     }
 }
@@ -1125,7 +1121,10 @@ mod tests {
 
         // If we did not initialize, we would not reach here since
         // `receive_frame` would have paniced.
-        assert_eq!(get_counter_val(&mut ctx, "receive_ip_packet"), 1);
+        #[ipv4]
+        assert_eq!(get_counter_val(&mut ctx, "receive_ipv4_packet"), 1);
+        #[ipv6]
+        assert_eq!(get_counter_val(&mut ctx, "receive_ipv6_packet"), 1);
     }
 
     #[test]

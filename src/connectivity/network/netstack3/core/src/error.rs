@@ -50,7 +50,7 @@ pub enum ParseError {
 }
 
 /// Action to take when an error is encountered while parsing an IP packet.
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IpParseErrorAction {
     /// Discard the packet and do nothing further.
     DiscardPacket,

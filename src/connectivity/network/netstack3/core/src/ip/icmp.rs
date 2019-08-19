@@ -1269,7 +1269,7 @@ mod tests {
 
     use super::*;
     use crate::device::{set_forwarding_enabled, DeviceId, FrameDestination};
-    use crate::ip::{receive_ip_packet, IpExt};
+    use crate::ip::{receive_ipv4_packet, IpExt};
     use crate::testutil::{
         DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
     };
@@ -1325,7 +1325,7 @@ mod tests {
         // currently only used by test_ttl_exceeded
         ctx.state_mut().ip.v4.forward = true;
         set_forwarding_enabled::<_, Ipv4>(&mut ctx, device, true);
-        receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, FrameDestination::Unicast, buffer);
+        receive_ipv4_packet(&mut ctx, device, FrameDestination::Unicast, buffer);
 
         for counter in assert_counters {
             assert!(*ctx.state().test_counters.get(counter) > 0, "counter at zero: {}", counter);

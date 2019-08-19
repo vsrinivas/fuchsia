@@ -46,7 +46,8 @@ use crate::ip::reassembly::{
     FragmentProcessingState, IpLayerFragmentCache,
 };
 use crate::wire::icmp::{IcmpIpExt, Icmpv4ParameterProblem, Icmpv6ParameterProblem};
-use crate::wire::ipv4::{Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions};
+use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions};
+use crate::wire::ipv6::Ipv6Packet;
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
 /// Default IPv4 TTL.
@@ -690,200 +691,350 @@ macro_rules! process_fragment {
     }};
 }
 
+// TODO(joshlf): Can we turn `try_parse_ip_packet` into a function? So far, I've
+// been unable to get the borrow checker to accept it.
+
+/// Try to parse an IP packet from a buffer.
+///
+/// If parsing fails, return the buffer to its original state so that its
+/// contents can be used to send an ICMP error message. When invoked, the macro
+/// expands to an expression whose type is `Result<P, P::Error>`, where `P` is
+/// the parsed packet type.
+macro_rules! try_parse_ip_packet {
+    ($buffer:expr) => {{
+        let p_len = $buffer.prefix_len();
+        let s_len = $buffer.suffix_len();
+
+        let result = $buffer.parse_mut();
+
+        if let Err(err) = result {
+            // Revert `buffer` to it's original state.
+            let n_p_len = $buffer.prefix_len();
+            let n_s_len = $buffer.suffix_len();
+
+            if p_len > n_p_len {
+                $buffer.grow_front(p_len - n_p_len);
+            }
+
+            if s_len > n_s_len {
+                $buffer.grow_back(s_len - n_s_len);
+            }
+
+            Err(err)
+        } else {
+            result
+        }
+    }};
+}
+
 /// Receive an IP packet from a device.
 ///
-/// `frame_dst` specifies whether this packet was received in a broadcast or
-/// unicast link-layer frame.
+/// `receive_ip_packet` calls [`receive_ipv4_packet`] or [`receive_ipv6_packet`]
+/// depending on the type parameter, `I`. It is used only in testing.
+#[cfg(test)]
 #[specialize_ip]
 pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
     ctx: &mut Context<D>,
     device: DeviceId,
     frame_dst: FrameDestination,
+    buffer: B,
+) {
+    #[ipv4]
+    receive_ipv4_packet(ctx, device, frame_dst, buffer);
+    #[ipv6]
+    receive_ipv6_packet(ctx, device, frame_dst, buffer);
+}
+
+/// Receive an IPv4 packet from a device.
+///
+/// `frame_dst` specifies whether this packet was received in a broadcast or
+/// unicast link-layer frame.
+pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    frame_dst: FrameDestination,
     mut buffer: B,
 ) {
-    increment_counter!(ctx, "receive_ip_packet");
-
+    increment_counter!(ctx, "receive_ipv4_packet");
     trace!("receive_ip_packet({})", device);
 
-    // Snapshot of `buffer`'s current state to revert to if parsing fails.
-    // TODO(ghanan): Remove manual restoration of `buffer`'s state once
-    //               the packet crate guarantees that if parsing fails,
-    //               the buffer's state is left as it was before parsing.
-    let p_len = buffer.prefix_len();
-    let s_len = buffer.suffix_len();
-
-    let result = buffer.parse_mut::<<I as IpExtByteSlice<&mut [u8]>>::Packet>();
-
-    if result.is_err() {
-        let err = result.unwrap_err();
-
-        // Revert `buffer` to it's original state.
-        let n_p_len = buffer.prefix_len();
-        let n_s_len = buffer.suffix_len();
-
-        if p_len > n_p_len {
-            buffer.grow_front(p_len - n_p_len);
+    let mut packet: Ipv4Packet<_> = match try_parse_ip_packet!(buffer) {
+        Ok(packet) => packet,
+        // Conditionally send an ICMP response if we encountered a parameter
+        // problem error when parsing an IPv4 packet. Note, we do not always
+        // send back an ICMP response as it can be used as an attack vector for
+        // DDoS attacks. We only send back an ICMP response if the RFC requires
+        // that we MUST send one, as noted by `must_send_icmp` and `action`.
+        Err(IpParseError::ParameterProblem {
+            src_ip,
+            dst_ip,
+            code,
+            pointer,
+            must_send_icmp,
+            header_len,
+            action,
+        }) if action.should_send_icmp(&dst_ip) && must_send_icmp => {
+            // This should never return `true` for IPv4.
+            assert!(!action.should_send_icmp_to_multicast());
+            send_icmpv4_parameter_problem(
+                ctx,
+                device,
+                frame_dst,
+                src_ip,
+                dst_ip,
+                code,
+                Icmpv4ParameterProblem::new(pointer),
+                buffer,
+                header_len,
+            );
+            return;
         }
+        _ => return, // TODO(joshlf): Do something with ICMP here?
+    };
 
-        if s_len > n_s_len {
-            buffer.grow_back(s_len - n_s_len);
-        }
+    // TODO(ghanan): Act upon options.
 
-        handle_parse_error(ctx, device, frame_dst, buffer, err);
-
-        return;
-    }
-
-    // This will never panic because we check if `result` was an error earlier
-    // and return before reaching here. That is, it is guaranteed that when we
-    // reach here, `result` is not an error.
-    let mut packet = result.unwrap();
-
-    trace!("receive_ip_packet: parsed packet: {:?}", packet);
-
-    // TODO(ghanan): For IPv4 packets, act upon options and for IPv6 packets,
-    //               act upon extension headers.
-
-    if I::LOOPBACK_SUBNET.contains(&packet.dst_ip()) {
+    if Ipv4::LOOPBACK_SUBNET.contains(&packet.dst_ip()) {
         // A packet from outside this host was sent with the destination IP of
         // the loopback address, which is illegal. Loopback traffic is handled
         // explicitly in send_ip_packet.
         //
         // TODO(joshlf): Do something with ICMP here?
         debug!("got packet from remote host for loopback address {}", packet.dst_ip());
-    } else if let Some((dst_ip, true)) =
-        SpecifiedAddr::new(packet.dst_ip()).map(|dst_ip| (dst_ip, deliver(ctx, device, dst_ip)))
+    } else if let Some((dst_ip, true)) = SpecifiedAddr::new(packet.dst_ip())
+        .map(|dst_ip| (dst_ip, deliver_ipv4(ctx, device, dst_ip)))
     {
-        trace!("receive_ip_packet: delivering locally");
+        trace!("receive_ipv4_packet: delivering locally");
 
         // Process a potential IPv4 fragment if the destination is this host.
         //
         // We process IPv4 packet reassembly here because, for IPv4, the
         // fragment data is in the header itself so we can handle it right away.
-        // For IPv6, it is in an extension header and where it appears in the
-        // extension header determines whether or not a node processes it.
         //
-        // For IPv6, we need to process extension headers in the order they
-        // appear in the header. With some extension headers, we do not proceed
-        // to the next header, and do some action immediately. For example, say
-        // we have an IPv6 packet with two extension headers (routing extension
-        // header before a fragment extension header). Until we get to the final
+        // Note, the `process_fragment` function (which is called by the
+        // `process_fragment!` macro) could panic if the packet does not have
+        // fragment data. However, we are guaranteed that it will not panic
+        // because the fragment data is in the fixed header so it is always
+        // present (even if the fragment data has values that implies that the
+        // packet is not fragmented).
+        process_fragment!(ctx, device, frame_dst, buffer, packet, dst_ip, Ipv4);
+    } else if let Some(dest) = forward(ctx, device, packet.dst_ip()) {
+        let ttl = packet.ttl();
+        if ttl > 1 {
+            trace!("receive_ipv4_packet: forwarding");
+
+            packet.set_ttl(ttl - 1);
+            let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+            if crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer).is_err() {
+                debug!("failed to forward IPv4 packet: MTU exceeded");
+            }
+        } else {
+            debug!("received IPv4 packet dropped due to expired TTL");
+
+            // TTL is 0 or would become 0 after decrement; see "TTL" section,
+            // https://tools.ietf.org/html/rfc791#page-14
+            let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+            icmp::send_icmpv4_ttl_expired(
+                ctx,
+                device,
+                frame_dst,
+                src_ip,
+                dst_ip,
+                proto,
+                buffer,
+                meta.header_len(),
+            );
+        }
+    } else {
+        let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+        debug!("received IPv4 packet with no known route to destination {}", dst_ip);
+
+        icmp::send_icmpv4_net_unreachable(
+            ctx,
+            device,
+            frame_dst,
+            src_ip,
+            dst_ip,
+            proto,
+            buffer,
+            meta.header_len(),
+        );
+    }
+}
+
+/// Receive an IPv6 packet from a device.
+///
+/// `frame_dst` specifies whether this packet was received in a broadcast or
+/// unicast link-layer frame.
+pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    frame_dst: FrameDestination,
+    mut buffer: B,
+) {
+    increment_counter!(ctx, "receive_ipv6_packet");
+    trace!("receive_ipv6_packet({})", device);
+
+    let mut packet: Ipv6Packet<_> = match try_parse_ip_packet!(buffer) {
+        Ok(packet) => packet,
+        // Conditionally send an ICMP response if we encountered a parameter
+        // problem error when parsing an IPv4 packet. Note, we do not always
+        // send back an ICMP response as it can be used as an attack vector for
+        // DDoS attacks. We only send back an ICMP response if the RFC requires
+        // that we MUST send one, as noted by `must_send_icmp` and `action`.
+        Err(IpParseError::ParameterProblem {
+            src_ip,
+            dst_ip,
+            code,
+            pointer,
+            must_send_icmp,
+            header_len,
+            action,
+        }) if action.should_send_icmp(&dst_ip) && must_send_icmp => {
+            send_icmpv6_parameter_problem(
+                ctx,
+                device,
+                frame_dst,
+                src_ip,
+                dst_ip,
+                code,
+                Icmpv6ParameterProblem::new(pointer),
+                buffer,
+                header_len,
+                action.should_send_icmp_to_multicast(),
+            );
+            return;
+        }
+        _ => return, // TODO(joshlf): Do something with ICMP here?
+    };
+
+    trace!("receive_ipv6_packet: parsed packet: {:?}", packet);
+
+    // TODO(ghanan): Act upon extension headers.
+
+    if Ipv6::LOOPBACK_SUBNET.contains(&packet.dst_ip()) {
+        // A packet from outside this host was sent with the destination IP of
+        // the loopback address, which is illegal. Loopback traffic is handled
+        // explicitly in send_ip_packet.
+        //
+        // TODO(joshlf): Do something with ICMP here?
+        debug!("got packet from remote host for loopback address {}", packet.dst_ip());
+    } else if let Some((dst_ip, true)) = SpecifiedAddr::new(packet.dst_ip())
+        .map(|dst_ip| (dst_ip, deliver_ipv6(ctx, device, dst_ip)))
+    {
+        trace!("receive_ipv6_packet: delivering locally");
+
+        // Process a potential IPv6 fragment if the destination is this host.
+        //
+        // We need to process extension headers in the order they appear in the
+        // header. With some extension headers, we do not proceed to the next
+        // header, and do some action immediately. For example, say we have an
+        // IPv6 packet with two extension headers (routing extension header
+        // before a fragment extension header). Until we get to the final
         // destination node in the routing header, we would need to reroute the
         // packet to the next destination without reassembling. Once the packet
         // gets to the last destination in the routing header, that node will
         // process the fragment extension header and handle reassembly.
         //
-        // Note, the `process_fragment` function (which is called by the
-        // `process_fragment!` macro) could panic if the packet does not have
-        // fragment data. However, we are guaranteed that it will not panic for
-        // an IPv4 packet because the fragment data is in the fixed header so it
-        // is always present (even if the fragment data has values that implies
-        // that the packet is not fragmented).
-        #[ipv4]
-        process_fragment!(ctx, device, frame_dst, buffer, packet, dst_ip, Ipv4);
+        // We also need to make sure the destination address is not actually a
+        // tentative address we are performing NDP's Duplicate Address Detection
+        // on.
+        //
+        // As per RFC 4862 section 5.4:
+        //
+        //   An address on which the Duplicate Address Detection procedure is
+        //   applied is said to be tentative until the procedure has completed
+        //   successfully. A tentative address is not considered "assigned to an
+        //   interface" in the traditional sense.  That is, the interface must
+        //   accept Neighbor Solicitation and Advertisement messages containing
+        //   the tentative address in the Target Address field, but processes
+        //   such packets differently from those whose Target Address matches an
+        //   address assigned to the interface. Other packets addressed to the
+        //   tentative address should be silently discarded. Note that the
+        //   "other packets" include Neighbor Solicitation and Advertisement
+        //   messages that have the tentative (i.e., unicast) address as the IP
+        //   destination address and contain the tentative address in the Target
+        //   Address field.  Such a case should not happen in normal operation,
+        //   though, since these messages are multicasted in the Duplicate
+        //   Address Detection procedure.
+        //
+        // That is, we accept no packets destined to a tentative address. NS and
+        // NA packets should be addressed to a multicast address that we would
+        // have joined during DAD so that we can receive those packets.
+        //
+        // Here we check to see if the packet's destination address is the IPv6
+        // address assigned to the device. If it is, we check to see if it is
+        // tentative. If the destination address is not the address assigned to
+        // the device, or it is not tentative, we are okay to proceed; else, we
+        // drop the packet.
+        if crate::device::is_addr_tentative_on_device(ctx, dst_ip, device) {
+            // Silently drop as per RFC 4862 section 5.4
+            trace!(
+                "receive_ipv6_packet: Dropping packet as it is destined for a tentative address"
+            );
+            return;
+        }
 
-        #[ipv6]
-        {
-            // For IPv6, we need to make sure the destination address is not
-            // actually a tentative address we are performing NDP's Duplicate
-            // Address Detection on.
-            //
-            // As per RFC 4862 section 5.4: An address on which the Duplicate
-            // Address Detection procedure is applied is said to be tentative
-            // until the procedure has completed successfully. A tentative
-            // address is not considered "assigned to an interface" in the
-            // traditional sense.  That is, the interface must accept Neighbor
-            // Solicitation and Advertisement messages containing the tentative
-            // address in the Target Address field, but processes such packets
-            // differently from those whose Target Address matches an address
-            // assigned to the interface. Other packets addressed to the
-            // tentative address should be silently discarded.  Note that the
-            // "other packets" include Neighbor Solicitation and Advertisement
-            // messages that have the tentative (i.e., unicast) address as the
-            // IP destination address and contain the tentative address in the
-            // Target Address field.  Such a case should not happen in normal
-            // operation, though, since these messages are multicasted in the
-            // Duplicate Address Detection procedure.
-            //
-            // That is, we accept no packets destined to a tentative address. NS
-            // and NA packets should be addressed to a multicast address that we
-            // would have joined during DAD so that we can receive those
-            // packets.
-            //
-            // Here we check to see if the packet's destination address is the
-            // IPv6 address assigned to the device. If it is, we check to see if
-            // it is tentative. If the destination address is not the address
-            // assigned to the device, or it is not tentative, we are okay to
-            // proceed; else, we drop the packet.
-            if crate::device::is_addr_tentative_on_device(ctx, dst_ip, device) {
-                // Silently drop as per RFC 4862 section 5.4
-                trace!(
-                    "receive_ip_packet: Dropping packet as it is destined for a tentative address"
-                );
-                return;
+        // Handle extension headers first.
+        match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, true) {
+            Ipv6PacketAction::Discard => {
+                trace!("receive_ipv6_packet: handled IPv6 extension headers: discarding packet");
             }
+            Ipv6PacketAction::Continue => {
+                trace!("receive_ipv6_packet: handled IPv6 extension headers: dispatching packet");
 
-            // Handle extension headers first.
-            match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, true) {
-                Ipv6PacketAction::Discard => {
-                    trace!("receive_ip_packet: handled IPv6 extension headers: discarding packet");
-                }
-                Ipv6PacketAction::Continue => {
-                    trace!("receive_ip_packet: handled IPv6 extension headers: dispatching packet");
+                // TODO(joshlf):
+                // - Do something with ICMP if we don't have a handler for that
+                //   protocol?
+                // - Check for already-expired TTL?
+                let (src_ip, _, proto, meta) = packet.into_metadata();
+                dispatch_receive_ip_packet(
+                    ctx,
+                    Some(device),
+                    frame_dst,
+                    src_ip,
+                    dst_ip,
+                    proto,
+                    buffer,
+                    Some(meta),
+                );
+            }
+            Ipv6PacketAction::ProcessFragment => {
+                trace!(
+                    "receive_ipv6_packet: handled IPv6 extension headers: handling fragmented packet"
+                );
 
-                    // TODO(joshlf):
-                    // - Do something with ICMP if we don't have a handler for
-                    //   that protocol?
-                    // - Check for already-expired TTL?
-                    let (src_ip, _, proto, meta) = packet.into_metadata();
-                    dispatch_receive_ip_packet(
-                        ctx,
-                        Some(device),
-                        frame_dst,
-                        src_ip,
-                        dst_ip,
-                        proto,
-                        buffer,
-                        Some(meta),
-                    );
-                }
-                Ipv6PacketAction::ProcessFragment => {
-                    trace!("receive_ip_packet: handled IPv6 extension headers: handling fragmented packet");
-
-                    // Note, the `process_fragment` function (which is called by
-                    // the `process_fragment!` macro) could panic if the packet
-                    // does not have fragment data. However, we are guaranteed
-                    // that it will not panic for an IPv6 packet because the
-                    // fragment data is in an (optional) fragment extension
-                    // header which we attempt to handle by calling
-                    // `ipv6::handle_extension_headers`. We will only end up
-                    // here if its return value is
-                    // `Ipv6PacketAction::ProcessFragment` which is only
-                    // posisble when the packet has the fragment extension
-                    // header (even if the fragment data has values that implies
-                    // that the packet is not fragmented).
-                    //
-                    // TODO(ghanan): Handle extension headers again since there
-                    //               could be some more in a reassembled packet
-                    //               (after the fragment header).
-                    process_fragment!(ctx, device, frame_dst, buffer, packet, dst_ip, Ipv6);
-                }
+                // Note, the `process_fragment` function (which is called by the
+                // `process_fragment!` macro) could panic if the packet does not
+                // have fragment data. However, we are guaranteed that it will
+                // not panic for an IPv6 packet because the fragment data is in
+                // an (optional) fragment extension header which we attempt to
+                // handle by calling `ipv6::handle_extension_headers`. We will
+                // only end up here if its return value is
+                // `Ipv6PacketAction::ProcessFragment` which is only posisble
+                // when the packet has the fragment extension header (even if
+                // the fragment data has values that implies that the packet is
+                // not fragmented).
+                //
+                // TODO(ghanan): Handle extension headers again since there
+                //               could be some more in a reassembled packet
+                //               (after the fragment header).
+                process_fragment!(ctx, device, frame_dst, buffer, packet, dst_ip, Ipv6);
             }
         }
     } else if let Some(dest) = forward(ctx, device, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
-            trace!("receive_ip_packet: forwarding");
+            trace!("receive_ipv6_packet: forwarding");
 
-            #[ipv6]
             // Handle extension headers first.
             match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, false) {
                 Ipv6PacketAction::Discard => {
-                    trace!("receive_ip_packet: handled IPv6 extension headers: discarding packet");
+                    trace!("receive_ipv6_packet: handled IPv6 extension headers: discarding packet");
                     return;
                 }
                 Ipv6PacketAction::Continue => {
-                    trace!("receive_ip_packet: handled IPv6 extension headers: forwarding packet");
+                    trace!("receive_ipv6_packet: handled IPv6 extension headers: forwarding packet");
                 }
                 Ipv6PacketAction::ProcessFragment => unreachable!("When forwarding packets, we should only ever look at the hop by hop options extension header (if present)"),
             }
@@ -893,34 +1044,8 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
             if let Err(buffer) =
                 crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer)
             {
-                #[specialize_ip_address]
-                fn send_packet_too_big<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress>(
-                    ctx: &mut Context<D>,
-                    device: DeviceId,
-                    frame_dst: FrameDestination,
-                    src_ip: A,
-                    dst_ip: A,
-                    proto: IpProto,
-                    mtu: u32,
-                    original_packet: B,
-                    header_len: usize,
-                ) {
-                    #[ipv6addr]
-                    crate::ip::icmp::send_icmpv6_packet_too_big(
-                        ctx,
-                        device,
-                        frame_dst,
-                        src_ip,
-                        dst_ip,
-                        proto,
-                        mtu,
-                        original_packet,
-                        header_len,
-                    );
-                }
-
-                debug!("failed to forward IP packet: MTU exceeded");
-                trace!("receive_ip_packet: Sending ICMPv6 Packet Too Big");
+                debug!("failed to forward IPv6 packet: MTU exceeded");
+                trace!("receive_ipv6_packet: Sending ICMPv6 Packet Too Big");
                 // TODO(joshlf): Increment the TTL since we just decremented it.
                 // The fact that we don't do this is technically a violation of
                 // the ICMP spec (we're not encapsulating the original packet
@@ -930,7 +1055,7 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
                 // may break other logic, though, so we should still fix it
                 // eventually.
                 let mtu = crate::device::get_mtu(ctx.state(), device);
-                send_packet_too_big(
+                crate::ip::icmp::send_icmpv6_packet_too_big(
                     ctx,
                     device,
                     frame_dst,
@@ -943,23 +1068,11 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
                 );
             }
         } else {
-            debug!("received IP packet dropped due to expired TTL");
+            debug!("received IPv6 packet dropped due to expired Hop Limit");
 
-            // TTL is 0 or would become 0 after decrement; see "TTL" section,
-            // https://tools.ietf.org/html/rfc791#page-14
+            // Hop Limit is 0 or would become 0 after decrement; see RFC 2460
+            // Section 3.
             let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-            #[ipv4]
-            icmp::send_icmpv4_ttl_expired(
-                ctx,
-                device,
-                frame_dst,
-                src_ip,
-                dst_ip,
-                proto,
-                buffer,
-                meta.header_len(),
-            );
-            #[ipv6]
             icmp::send_icmpv6_ttl_expired(
                 ctx,
                 device,
@@ -973,21 +1086,8 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
         }
     } else {
         let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-        debug!("received IP packet with no known route to destination {}", dst_ip);
+        debug!("received IPv6 packet with no known route to destination {}", dst_ip);
 
-        #[ipv4]
-        icmp::send_icmpv4_net_unreachable(
-            ctx,
-            device,
-            frame_dst,
-            src_ip,
-            dst_ip,
-            proto,
-            buffer,
-            meta.header_len(),
-        );
-
-        #[ipv6]
         icmp::send_icmpv6_net_unreachable(
             ctx,
             device,
@@ -1015,111 +1115,54 @@ pub(crate) fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
     crate::device::get_ip_addr_subnet(ctx, route.device).map(AddrSubnet::into_addr)
 }
 
-/// Handle an IP parsing error, `err`.
-#[specialize_ip]
-fn handle_parse_error<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
-    frame_dst: FrameDestination,
-    original_packet: B,
-    err: IpParseError<I>,
-) {
-    match err {
-        // Conditionally send an ICMP response if we encountered a parameter
-        // problem error when parsing an IP packet. Note, we do not always send
-        // back an ICMP response as it can be used as an attack vector for DDoS
-        // attacks. We only send back an ICMP response if the RFC requires
-        // that we MUST send one, as noted by `must_send_icmp` and `action`.
-        IpParseError::ParameterProblem {
-            src_ip,
-            dst_ip,
-            code,
-            pointer,
-            must_send_icmp,
-            header_len,
-            action,
-        } => {
-            if action.should_send_icmp(&dst_ip) && must_send_icmp {
-                #[ipv4]
-                {
-                    // This should never return `true` for IPv4.
-                    assert!(!action.should_send_icmp_to_multicast());
-
-                    send_icmpv4_parameter_problem(
-                        ctx,
-                        device,
-                        frame_dst,
-                        src_ip,
-                        dst_ip,
-                        code,
-                        Icmpv4ParameterProblem::new(pointer),
-                        original_packet,
-                        header_len,
-                    );
-                }
-
-                #[ipv6]
-                send_icmpv6_parameter_problem(
-                    ctx,
-                    device,
-                    frame_dst,
-                    src_ip,
-                    dst_ip,
-                    code,
-                    Icmpv6ParameterProblem::new(pointer),
-                    original_packet,
-                    header_len,
-                    action.should_send_icmp_to_multicast(),
-                );
-            }
-        }
-        // TODO(joshlf): Do something with ICMP here? If not, then just turn
-        // this match into an if let.
-        _ => {}
-    }
-}
-
-// Should we deliver this packet locally?
+// Should we deliver this IPv4 packet locally?
 // deliver returns true if:
 // - dst_ip is equal to the address set on the device
 // - dst_ip is equal to the broadcast address of the subnet set on the device
 // - dst_ip is equal to the global broadcast address
 // - dst_ip is equal to a mutlicast group that `device` joined
-#[specialize_ip_address]
-fn deliver<D: EventDispatcher, A: IpAddress>(
+fn deliver_ipv4<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
-    dst_ip: SpecifiedAddr<A>,
+    dst_ip: SpecifiedAddr<Ipv4Addr>,
 ) -> bool {
     // TODO(joshlf):
     // - This implements a strict host model (in which we only accept packets
     //   which are addressed to the device over which they were received). This
     //   is the easiest to implement for the time being, but we should actually
     //   put real thought into what our host model should be (NET-1011).
-    #[ipv4addr]
-    #[allow(clippy::or_fun_call)] // for the .map_or(dst_ip.is_global_broadcast(), ...)
-    return crate::device::get_ip_addr_subnet(ctx, device)
+    crate::device::get_ip_addr_subnet(ctx, device)
         .map(AddrSubnet::into_addr_subnet)
         .map_or(dst_ip.is_global_broadcast(), |(addr, subnet)| {
             dst_ip == addr || dst_ip.get() == subnet.broadcast()
         })
         || MulticastAddr::new(dst_ip.get())
-            .map_or(false, |a| crate::device::is_in_ip_multicast(ctx, device, a));
+            .map_or(false, |a| crate::device::is_in_ip_multicast(ctx, device, a))
+}
 
+// Should we deliver this IPv6 packet locally?
+// deliver returns true if:
+// - dst_ip is equal to the address set on the device
+// - dst_ip is equal to the broadcast address of the subnet set on the device
+// - dst_ip is equal to a mutlicast group that `device` joined
+fn deliver_ipv6<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
+) -> bool {
     // TODO(brunodalbo):
     // Along with the host model described above, we need to be able to have
     // multiple IPs per interface, it becomes imperative for IPv6.
     //
     // Also, only when we're a router we should accept
     // Ipv6::ALL_ROUTERS_LINK_LOCAL.
-    #[ipv6addr]
-    return crate::device::get_ip_addr_subnet(ctx, device)
+    crate::device::get_ip_addr_subnet(ctx, device)
         .map(AddrSubnet::into_addr_subnet)
         .map_or(false, |(addr, _)| dst_ip == addr)
         || crate::device::get_ipv6_link_local_addr(ctx, device).into_specified() == dst_ip
         || dst_ip.deref() == &Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS
         || MulticastAddr::new(dst_ip.get())
-            .map_or(false, |a| crate::device::is_in_ip_multicast(ctx, device, a));
+            .map_or(false, |a| crate::device::is_in_ip_multicast(ctx, device, a))
 }
 
 // Should we forward this packet, and if so, to whom?
@@ -1745,7 +1788,7 @@ mod tests {
         body.extend(fragment_offset * 8..fragment_offset * 8 + 8);
         let mut buffer =
             Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap().into_inner();
-        receive_ip_packet::<_, _, Ipv4>(ctx, device, FrameDestination::Unicast, buffer);
+        receive_ipv4_packet(ctx, device, FrameDestination::Unicast, buffer);
     }
 
     /// Generate and 'receive' an IPv6 fragment packet.
@@ -1779,7 +1822,7 @@ mod tests {
         let payload_len = (bytes.len() - 40) as u16;
         NetworkEndian::write_u16(&mut bytes[4..6], payload_len);
         let mut buffer = Buf::new(bytes, ..);
-        receive_ip_packet::<_, _, Ipv6>(ctx, device, FrameDestination::Unicast, buffer);
+        receive_ipv6_packet(ctx, device, FrameDestination::Unicast, buffer);
     }
 
     #[test]
@@ -1812,7 +1855,7 @@ mod tests {
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
         let mut buf = Buf::new(bytes, ..);
 
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, FrameDestination::Unicast, buf);
+        receive_ipv6_packet(&mut ctx, device, FrameDestination::Unicast, buf);
 
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_parameter_problem"), 0);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), 0);
@@ -1857,7 +1900,7 @@ mod tests {
         bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
         let mut buf = Buf::new(bytes, ..);
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, FrameDestination::Unicast, buf);
+        receive_ipv6_packet(&mut ctx, device, FrameDestination::Unicast, buf);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
@@ -1891,7 +1934,7 @@ mod tests {
             ExtensionHeaderOptionAction::SkipAndContinue,
             false,
         );
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
         assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
@@ -1906,7 +1949,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacket,
             false,
         );
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
 
@@ -1921,7 +1964,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacketSendICMP,
             false,
         );
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
@@ -1943,7 +1986,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacketSendICMP,
             true,
         );
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
@@ -1965,7 +2008,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast,
             false,
         );
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
@@ -1988,7 +2031,7 @@ mod tests {
             true,
         );
         // Do not expect an ICMP response for this packet
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
 
@@ -2281,7 +2324,7 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
         // Receive the IP packet.
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, ipv6_packet_buf.clone());
+        receive_ipv6_packet(&mut ctx, device, frame_dst, ipv6_packet_buf.clone());
 
         // Should not have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
@@ -2542,7 +2585,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
@@ -2568,7 +2611,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
@@ -2594,7 +2637,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 3);
@@ -2622,7 +2665,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 4);
@@ -2659,7 +2702,7 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
 
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
 
         // Should not have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
@@ -2697,7 +2740,7 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
 
-        receive_ip_packet::<_, _, Ipv4>(&mut ctx, device, frame_dst, buf);
+        receive_ipv4_packet(&mut ctx, device, frame_dst, buf);
 
         // Should have dispatched the packet but resulted in an ICMP error.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
@@ -2822,7 +2865,7 @@ mod tests {
         trigger_timers_until(&mut ctx, |_| false);
 
         // Received packet should have been dispatched.
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
 
         // Set the new IP (this should trigger DAD).
@@ -2836,14 +2879,14 @@ mod tests {
             .into_inner();
 
         // Received packet should not have been dispatched.
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf.clone());
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
 
         // Make sure all timers are done (DAD to complete on the interface due to new IP).
         trigger_timers_until(&mut ctx, |_| false);
 
         // Received packet should have been dispatched.
-        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
     }
 }
