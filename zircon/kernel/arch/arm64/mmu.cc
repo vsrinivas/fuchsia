@@ -381,7 +381,7 @@ zx_status_t ArmArchVmAspace<paf>::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uin
   }
   LTRACEF("va 0x%lx, paddr 0x%lx, flags 0x%x\n", vaddr, paddr ? *paddr : ~0UL,
           mmu_flags ? *mmu_flags : ~0U);
-  return 0;
+  return ZX_OK;
 }
 
 template <page_alloc_fn_t paf>
@@ -403,7 +403,7 @@ zx_status_t ArmArchVmAspace<paf>::AllocPageTable(paddr_t* paddrp, uint page_size
   LOCAL_KTRACE("page table alloc");
 
   LTRACEF("allocated 0x%lx\n", *paddrp);
-  return 0;
+  return ZX_OK;
 }
 
 template <page_alloc_fn_t paf>
