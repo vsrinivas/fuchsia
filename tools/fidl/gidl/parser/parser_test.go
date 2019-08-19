@@ -142,6 +142,88 @@ func TestParseSuccessCase(t *testing.T) {
 	})
 }
 
+func TestParseEncodeSuccessCase(t *testing.T) {
+	parsingToCheck{
+		t: t,
+		fn: func(p *Parser) (interface{}, error) {
+			var all ir.All
+			if err := p.parseSection(&all); err != nil {
+				return nil, err
+			} else if len(all.EncodeSuccess) != 1 {
+				return nil, fmt.Errorf("did not parse success section")
+			}
+			return all.EncodeSuccess[0], nil
+		},
+	}.checkSuccess(map[string]interface{}{
+		`
+		encode_success("OneStringOfMaxLengthFive-empty") {
+			value = OneStringOfMaxLengthFive {
+				first: "four",
+			}
+			bytes = {
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			}
+		}`: ir.EncodeSuccess{
+			Name: "OneStringOfMaxLengthFive-empty",
+			Value: ir.Object{
+				Name: "OneStringOfMaxLengthFive",
+				Fields: []ir.Field{
+					{
+						Name:  "first",
+						Value: "four",
+					},
+				},
+			},
+			Bytes: []byte{
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			},
+		},
+	})
+}
+
+func TestParseDecodeSuccessCase(t *testing.T) {
+	parsingToCheck{
+		t: t,
+		fn: func(p *Parser) (interface{}, error) {
+			var all ir.All
+			if err := p.parseSection(&all); err != nil {
+				return nil, err
+			} else if len(all.DecodeSuccess) != 1 {
+				return nil, fmt.Errorf("did not parse success section")
+			}
+			return all.DecodeSuccess[0], nil
+		},
+	}.checkSuccess(map[string]interface{}{
+		`
+		decode_success("OneStringOfMaxLengthFive-empty") {
+			value = OneStringOfMaxLengthFive {
+				first: "four",
+			}
+			bytes = {
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			}
+		}`: ir.DecodeSuccess{
+			Name: "OneStringOfMaxLengthFive-empty",
+			Value: ir.Object{
+				Name: "OneStringOfMaxLengthFive",
+				Fields: []ir.Field{
+					{
+						Name:  "first",
+						Value: "four",
+					},
+				},
+			},
+			Bytes: []byte{
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			},
+		},
+	})
+}
+
 func TestParseEncodeFailureCase(t *testing.T) {
 	parsingToCheck{
 		t: t,

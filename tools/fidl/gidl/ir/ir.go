@@ -6,11 +6,31 @@ package ir
 
 type All struct {
 	Success       []Success
+	EncodeSuccess       []EncodeSuccess
+	DecodeSuccess       []DecodeSuccess
 	EncodeFailure []EncodeFailure
 	DecodeFailure []DecodeFailure
 }
 
 type Success struct {
+	Name              string
+	Value             interface{}
+	Bytes             []byte
+	BindingsAllowlist *[]string
+	BindingsDenylist  *[]string
+	// Handles
+}
+
+type EncodeSuccess struct {
+	Name              string
+	Value             interface{}
+	Bytes             []byte
+	BindingsAllowlist *[]string
+	BindingsDenylist  *[]string
+	// Handles
+}
+
+type DecodeSuccess struct {
 	Name              string
 	Value             interface{}
 	Bytes             []byte

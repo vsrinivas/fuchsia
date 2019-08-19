@@ -78,6 +78,16 @@ func filterByBinding(input gidlir.All, binding string) gidlir.All {
 			output.Success = append(output.Success, def)
 		}
 	}
+	for _, def := range input.EncodeSuccess {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
+			output.EncodeSuccess = append(output.EncodeSuccess, def)
+		}
+	}
+	for _, def := range input.DecodeSuccess {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
+			output.DecodeSuccess = append(output.DecodeSuccess, def)
+		}
+	}
 	for _, def := range input.EncodeFailure {
 		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
 			output.EncodeFailure = append(output.EncodeFailure, def)
