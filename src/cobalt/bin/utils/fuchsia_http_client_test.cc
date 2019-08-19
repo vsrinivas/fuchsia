@@ -144,7 +144,7 @@ TEST_F(FuchsiaHTTPClientTest, MakePostAndGet) {
   EXPECT_EQ(response.response, "Response");
 }
 
-TEST_F(FuchsiaHTTPClientTest, TestTimeout) {
+TEST_F(FuchsiaHTTPClientTest, DISABLED_TestTimeout) {
   auto response_future = PostString("Request");
 
   RunLoopFor(zx::msec(100));
@@ -158,7 +158,7 @@ TEST_F(FuchsiaHTTPClientTest, TestTimeout) {
   EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
 }
 
-TEST_F(FuchsiaHTTPClientTest, WaitAfterRelease) {
+TEST_F(FuchsiaHTTPClientTest, DISABLED_WaitAfterRelease) {
   zx::socket socket_in, socket_out;
   ASSERT_EQ(zx::socket::create(0u, &socket_in, &socket_out), ZX_OK);
   PrepareResponse(std::move(socket_in));
