@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef BLOBFS_WRITEBACK_WORK_H_
+#define BLOBFS_WRITEBACK_WORK_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
@@ -19,6 +20,8 @@
 namespace blobfs {
 
 // A wrapper around a WriteTxn with added support for callback invocation on completion.
+//
+// DEPRECATED.
 class WritebackWork : public fbl::SinglyLinkedListable<std::unique_ptr<WritebackWork>> {
  public:
   using ReadyCallback = fbl::Function<bool()>;
@@ -63,4 +66,22 @@ class WritebackWork : public fbl::SinglyLinkedListable<std::unique_ptr<Writeback
   SyncCallback sync_cb_;    // Call after work has been completely flushed.
 };
 
+// An object compatible with the WritebackWork interface, which contains a single blob reference.
+// When the writeback is completed, this reference will go out of scope.
+//
+// This class helps WritebackWork avoid concurrent writes and reads to blobs: if a BlobWork
+// is alive, the impacted Blob is still alive.
+//
+// DEPRECATED.
+class BlobWork : public WritebackWork {
+ public:
+  BlobWork(TransactionManager* transaction_manager, fbl::RefPtr<Blob> vnode)
+      : WritebackWork(transaction_manager), vnode_(std::move(vnode)) {}
+
+ private:
+  fbl::RefPtr<Blob> vnode_;
+};
+
 }  // namespace blobfs
+
+#endif  // BLOBFS_WRITEBACK_WORK_H_

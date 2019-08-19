@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UTILS_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UTILS_H_
+
+#include <optional>
 
 #include <blobfs/allocator.h>
-#include <blobfs/writeback-queue.h>
-#include <blobfs/writeback-work.h>
+#include <blobfs/transaction-manager.h>
 #include <block-client/cpp/block-device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
-
-#include <optional>
 
 namespace blobfs {
 
@@ -35,10 +35,7 @@ using block_client::BlockDevice;
 // This class is thread-safe.
 class MockTransactionManager : public TransactionManager {
  public:
-  MockTransactionManager() {
-    ASSERT_OK(WritebackQueue::Create(this, kWritebackCapacity, &writeback_));
-  }
-
+  MockTransactionManager() = default;
   ~MockTransactionManager() = default;
 
   // Sets the |callback| to be invoked for each request on calls to Transaction().
@@ -71,21 +68,20 @@ class MockTransactionManager : public TransactionManager {
 
   size_t WritebackCapacity() const final { return kWritebackCapacity; }
 
-  zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final {
-    ZX_ASSERT(out != nullptr);
-    ZX_ASSERT(vnode == nullptr);
+  Journal2* journal() final {
+    ZX_ASSERT(false);
+    return nullptr;
+  }
 
-    out->reset(new WritebackWork(this));
-    return ZX_OK;
+  zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final {
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
 
   zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final {
-    ZX_ASSERT(type == EnqueueType::kData);
-    return writeback_->Enqueue(std::move(work));
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
 
  private:
-  fbl::unique_ptr<WritebackQueue> writeback_{};
   BlobfsMetrics metrics_{};
   Superblock superblock_{};
   fbl::Vector<std::optional<zx::vmo>> attached_vmos_ __TA_GUARDED(lock_);
@@ -132,3 +128,5 @@ void DeviceBlockRead(BlockDevice* device, void* buf, size_t size, uint64_t dev_o
 void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_t dev_offset);
 
 }  // namespace blobfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UTILS_H_

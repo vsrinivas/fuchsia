@@ -56,14 +56,15 @@ library("blobfs") {
       "blob.cc",
       "blobfs.cc",
       "blocking-ring-buffer.cc",
-      "buffer.cc",
+      "buffer.cc",  # Journal V1
       "cache-node.cc",
       "compression/blob-compressor.cc",
+      "data-streamer.cc",
       "directory.cc",
       "format.cc",
       "iterator/node-populator.cc",
-      "journal-entry.cc",
-      "journal.cc",
+      "journal-entry.cc",  # Journal V1
+      "journal.cc",  # Journal V1
       "journal/entry-view.cc",
       "journal/journal2.cc",
       "journal/replay.cc",
@@ -74,9 +75,9 @@ library("blobfs") {
       "ring-buffer.cc",
       "unbuffered-operations-builder.cc",
       "vmo-buffer.cc",
-      "write-txn.cc",
-      "writeback-queue.cc",
-      "writeback-work.cc",
+      "write-txn.cc",  # Journal V1
+      "writeback-queue.cc",  # Journal V1
+      "writeback-work.cc",  # Journal V1
       "writeback.cc",
     ]
     public_deps += [
