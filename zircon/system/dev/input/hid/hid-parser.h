@@ -5,9 +5,8 @@
 #ifndef ZIRCON_SYSTEM_DEV_INPUT_HID_HID_PARSER_H_
 #define ZIRCON_SYSTEM_DEV_INPUT_HID_HID_PARSER_H_
 
-#include <zircon/types.h>
-
 #include <stdint.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 

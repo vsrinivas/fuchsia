@@ -702,5 +702,8 @@ static zx_driver_ops_t hid_driver_ops = {
     .bind = hid_bind,
 };
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(hid, hid_driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_HIDBUS), ZIRCON_DRIVER_END(hid)
+  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_HIDBUS),
+ZIRCON_DRIVER_END(hid)
+    // clang-format on

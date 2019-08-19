@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <zircon/compiler.h>
-#include <zircon/types.h>
+#ifndef ZIRCON_SYSTEM_DEV_INPUT_HID_HID_FIFO_H_
+#define ZIRCON_SYSTEM_DEV_INPUT_HID_HID_FIFO_H_
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <threads.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
@@ -38,3 +38,5 @@ ssize_t zx_hid_fifo_write(zx_hid_fifo_t* fifo, const void* buf, size_t len);
 void zx_hid_fifo_dump(zx_hid_fifo_t* fifo);
 
 __END_CDECLS;
+
+#endif  // ZIRCON_SYSTEM_DEV_INPUT_HID_HID_FIFO_H_

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "hid-parser.h"
+#include <stdlib.h>
+#include <string.h>
 
 #include <hid-parser/item.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 
-#include <stdlib.h>
-#include <string.h>
+#include "hid-parser.h"
 
 zx_status_t hid_lib_parse_reports(const uint8_t* buf, const size_t buf_len,
                                   hid_reports_t* reports) {
