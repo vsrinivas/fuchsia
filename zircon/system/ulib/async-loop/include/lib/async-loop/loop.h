@@ -71,6 +71,8 @@ typedef struct async_loop_config {
   void* data;
 } async_loop_config_t;
 
+// Using this symbol from this header is deprecated.  Please use the variant
+// from <lib/async-loop/default.h>
 // Simple config that when passed to async_loop_create will create a loop
 // that will automatically register itself as the default
 // dispatcher for the thread upon which it was created and will
@@ -78,6 +80,8 @@ typedef struct async_loop_config {
 // the same thread).
 extern const async_loop_config_t kAsyncLoopConfigAttachToThread;
 
+// Using this symbol from this header is deprecated.  Please use the variant
+// from <lib/async-loop/default.h>
 // Simple config that when passed to async_loop_create will create a loop
 // that is not registered to the current thread, but any threads created with
 // async_loop_start_thread will have the loop registered.

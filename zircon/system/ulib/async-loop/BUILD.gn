@@ -42,3 +42,21 @@ library("async-loop-cpp") {
     "$zx/system/ulib/zx:headers",
   ]
 }
+
+library("async-loop-default") {
+  sdk = "static"
+  sdk_publishable = true
+  sdk_headers = [ "lib/async-loop/default.h" ]
+  shared = false
+  sources = [
+    "default.c",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/async:async-default",
+  ]
+  public_deps = [
+    # <lib/async-loop/default.h> has #include <lib/async-loop/loop.h>.
+    ":async-loop.headers",
+  ]
+}
