@@ -7,6 +7,7 @@
 use std::num::NonZeroU16;
 
 use net_types::ip::{Ip, IpAddress};
+use net_types::SpecifiedAddr;
 use packet::{BufferMut, ParsablePacket, Serializer};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::ByteSlice;
@@ -27,9 +28,9 @@ pub struct UdpState<I: Ip> {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 struct Conn<A: IpAddress> {
-    local_addr: A,
+    local_addr: SpecifiedAddr<A>,
     local_port: NonZeroU16,
-    remote_addr: A,
+    remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
 }
 
@@ -39,7 +40,11 @@ impl<A: IpAddress> Conn<A> {
     /// The source is treated as the remote address/port, and the destination is
     /// treated as the local address/port. If there is no source port, then the
     /// packet cannot correspond to a connection, and so None is returned.
-    fn from_packet<B: ByteSlice>(src_ip: A, dst_ip: A, packet: &UdpPacket<B>) -> Option<Conn<A>> {
+    fn from_packet<B: ByteSlice>(
+        src_ip: SpecifiedAddr<A>,
+        dst_ip: SpecifiedAddr<A>,
+        packet: &UdpPacket<B>,
+    ) -> Option<Conn<A>> {
         Some(Conn {
             local_addr: dst_ip,
             local_port: packet.dst_port(),
@@ -51,7 +56,7 @@ impl<A: IpAddress> Conn<A> {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 struct Listener<A: IpAddress> {
-    addr: A,
+    addr: SpecifiedAddr<A>,
     port: NonZeroU16,
 }
 
@@ -59,7 +64,7 @@ impl<A: IpAddress> Listener<A> {
     /// Construct a `Listener` from an incoming packet.
     ///
     /// The destination is treated as the local address/port.
-    fn from_packet<B: ByteSlice>(dst_ip: A, packet: &UdpPacket<B>) -> Listener<A> {
+    fn from_packet<B: ByteSlice>(dst_ip: SpecifiedAddr<A>, packet: &UdpPacket<B>) -> Listener<A> {
         Listener { addr: dst_ip, port: packet.dst_port() }
     }
 }
@@ -200,12 +205,12 @@ pub trait UdpEventDispatcher {
 pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
     ctx: &mut C,
     src_ip: A,
-    dst_ip: A,
+    dst_ip: SpecifiedAddr<A>,
     mut buffer: B,
 ) -> Result<(), B> {
     println!("received udp packet: {:x?}", buffer.as_mut());
     let packet = if let Ok(packet) =
-        buffer.parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(src_ip, dst_ip))
+        buffer.parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(src_ip, dst_ip.get()))
     {
         packet
     } else {
@@ -215,8 +220,9 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
 
     let state = ctx.get_state(());
 
-    if let Some(conn) =
-        Conn::from_packet(src_ip, dst_ip, &packet).and_then(|conn| state.conns.get_by_addr(&conn))
+    if let Some(conn) = SpecifiedAddr::new(src_ip)
+        .and_then(|src_ip| Conn::from_packet(src_ip, dst_ip, &packet))
+        .and_then(|conn| state.conns.get_by_addr(&conn))
     {
         ctx.receive_udp_from_conn(UdpConnId(conn), packet.body());
         Ok(())
@@ -228,7 +234,7 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
         ctx.receive_udp_from_listen(
             UdpListenerId(listener),
             src_ip,
-            dst_ip,
+            dst_ip.get(),
             packet.src_port(),
             packet.body(),
         );
@@ -276,8 +282,8 @@ pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx.send_frame(
         IpPacketFromArgs::new(local_addr, remote_addr, IpProto::Udp),
         body.encapsulate(UdpPacketBuilder::new(
-            local_addr,
-            remote_addr,
+            local_addr.into_addr(),
+            remote_addr.into_addr(),
             Some(local_port),
             remote_port,
         )),
@@ -298,12 +304,12 @@ pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
 pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
     ctx: &mut C,
     listener: UdpListenerId,
-    local_addr: A,
-    remote_addr: A,
+    local_addr: SpecifiedAddr<A>,
+    remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
     body: B,
 ) {
-    if !ctx.is_local_addr(local_addr) {
+    if !ctx.is_local_addr(local_addr.get()) {
         // TODO(joshlf): Return error.
         panic!("transport::udp::send_udp::listener: invalid local addr");
     }
@@ -342,8 +348,8 @@ pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<
     ctx.send_frame(
         IpPacketFromArgs::new(local_addr, remote_addr, IpProto::Udp),
         body.encapsulate(UdpPacketBuilder::new(
-            local_addr,
-            remote_addr,
+            local_addr.into_addr(),
+            remote_addr.into_addr(),
             Some(local_port),
             remote_port,
         )),
@@ -371,9 +377,9 @@ pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<
 /// `connect_udp` panics if `conn` is already in use.
 pub(crate) fn connect_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
     ctx: &mut C,
-    local_addr: Option<A>,
+    local_addr: Option<SpecifiedAddr<A>>,
     local_port: Option<NonZeroU16>,
-    remote_addr: A,
+    remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
 ) -> UdpConnId {
     let default_local = if let Some(local) = ctx.local_address_for_remote(remote_addr) {
@@ -416,7 +422,7 @@ pub(crate) fn connect_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Ver
 /// `listen_udp` panics if `listener` is already in use.
 pub(crate) fn listen_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
     ctx: &mut C,
-    addrs: Vec<A>,
+    addrs: Vec<SpecifiedAddr<A>>,
     port: NonZeroU16,
 ) -> UdpListenerId {
     let mut state = ctx.get_state_mut(());

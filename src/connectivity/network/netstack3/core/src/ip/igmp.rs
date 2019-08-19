@@ -14,7 +14,7 @@ use std::time::Duration;
 use failure::Fail;
 use log::{debug, error};
 use net_types::ip::{AddrSubnet, Ipv4Addr};
-use net_types::{MulticastAddr, SpecifiedAddress};
+use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder};
 use rand::Rng;
 use rand_xorshift::XorShiftRng;
@@ -39,12 +39,16 @@ use crate::Instant;
 /// "Router Alert" option set.
 pub(crate) struct IgmpPacketMetadata<D> {
     pub(crate) device: D,
-    pub(crate) src_ip: Ipv4Addr,
-    pub(crate) dst_ip: Ipv4Addr,
+    pub(crate) src_ip: SpecifiedAddr<Ipv4Addr>,
+    pub(crate) dst_ip: MulticastAddr<Ipv4Addr>,
 }
 
 impl<D> IgmpPacketMetadata<D> {
-    fn new(device: D, src_ip: Ipv4Addr, dst_ip: Ipv4Addr) -> IgmpPacketMetadata<D> {
+    fn new(
+        device: D,
+        src_ip: SpecifiedAddr<Ipv4Addr>,
+        dst_ip: MulticastAddr<Ipv4Addr>,
+    ) -> IgmpPacketMetadata<D> {
         IgmpPacketMetadata { device, src_ip, dst_ip }
     }
 }
@@ -68,7 +72,7 @@ pub(crate) fn receive_igmp_packet<C: IgmpContext, B: BufferMut>(
     ctx: &mut C,
     device: C::DeviceId,
     src_ip: Ipv4Addr,
-    dst_ip: Ipv4Addr,
+    dst_ip: SpecifiedAddr<Ipv4Addr>,
     mut buffer: B,
 ) {
     let packet = match buffer.parse_with::<_, IgmpPacket<&[u8]>>(()) {
@@ -222,7 +226,7 @@ where
     };
     let body =
         IgmpPacketBuilder::<EmptyBuf, M>::new_with_resp_time(group_addr.get(), max_resp_time);
-    ctx.send_frame(IgmpPacketMetadata::new(device, src_ip, dst_ip.get()), body.into_serializer())
+    ctx.send_frame(IgmpPacketMetadata::new(device, src_ip, dst_ip), body.into_serializer())
         .map_err(|_| IgmpError::SendFailure { addr: *group_addr })
 }
 
@@ -522,7 +526,8 @@ mod tests {
         }
     }
 
-    const MY_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 2]);
+    const MY_ADDR: SpecifiedAddr<Ipv4Addr> =
+        unsafe { SpecifiedAddr::new_unchecked(Ipv4Addr::new([192, 168, 0, 2])) };
     const ROUTER_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 1]);
     const OTHER_HOST_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 3]);
     const GROUP_ADDR: Ipv4Addr = Ipv4Addr::new([224, 0, 0, 3]);
@@ -568,7 +573,7 @@ mod tests {
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let dev_id = ctx.state.add_ethernet_device(Mac::new([1, 2, 3, 4, 5, 6]), 1500);
         crate::device::initialize_device(&mut ctx, dev_id);
-        set_ip_addr_subnet(&mut ctx, dev_id.id(), AddrSubnet::new(MY_ADDR, 24).unwrap());
+        set_ip_addr_subnet(&mut ctx, dev_id.id(), AddrSubnet::new(MY_ADDR.get(), 24).unwrap());
         (ctx, dev_id)
     }
 

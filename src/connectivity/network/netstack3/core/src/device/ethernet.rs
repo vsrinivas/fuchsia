@@ -10,7 +10,9 @@ use std::num::NonZeroU8;
 use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::{BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, UnicastAddress};
+use net_types::{
+    BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, SpecifiedAddr, UnicastAddress,
+};
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
@@ -329,12 +331,13 @@ pub(crate) fn send_ip_frame<
 >(
     ctx: &mut Context<D>,
     device_id: usize,
-    local_addr: A,
+    local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
     let state = get_device_state_mut(ctx.state_mut(), device_id);
     let (local_mac, mtu) = (state.mac, state.mtu);
 
+    let local_addr = local_addr.get();
     let dst_mac = match MulticastAddr::new(local_addr) {
         Some(multicast) => Ok(Mac::from(&multicast)),
         None => {
@@ -513,7 +516,7 @@ pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
                 ndp::cancel_duplicate_address_detection::<_, EthernetNdpDevice>(
                     ctx,
                     device_id,
-                    addr.inner().addr(),
+                    addr.inner().addr().into_addr(),
                 );
             }
 
@@ -530,7 +533,7 @@ pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
         ndp::start_duplicate_address_detection::<D, EthernetNdpDevice>(
             ctx,
             device_id,
-            addr_sub.addr(),
+            addr_sub.addr().into_addr(),
         );
     }
 }
@@ -763,7 +766,9 @@ impl<D: EventDispatcher> ArpContext<Ipv4Addr, Mac> for Context<D> {
     type DeviceId = usize;
 
     fn get_protocol_addr(&self, device_id: usize) -> Option<Ipv4Addr> {
-        get_device_state(self.state(), device_id).ipv4_addr_sub.map(AddrSubnet::into_addr)
+        get_device_state(self.state(), device_id)
+            .ipv4_addr_sub
+            .map(|addr_sub| addr_sub.into_addr().into_addr())
     }
 
     fn get_hardware_addr(&self, device_id: usize) -> Mac {
@@ -824,7 +829,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         //  link_local address for now, we need a better structure to keep
         //  a list of IPv6 addresses.
         match state.ipv6_addr_sub {
-            Some(addr_sub) => Some(addr_sub.map(|a| a.into_addr())),
+            Some(addr_sub) => Some(addr_sub.map(|a| a.into_addr().into_addr())),
             None => Some(Tentative::new_permanent(state.mac.to_ipv6_link_local().get())),
         }
     }
@@ -837,7 +842,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         let state = get_device_state(state, device_id);
 
         if let Some(addr) = state.ipv6_addr_sub {
-            if addr.inner().addr() == *address {
+            if &addr.inner().addr().into_addr() == address {
                 if addr.is_tentative() {
                     return ndp::AddressState::Tentative;
                 } else {
@@ -882,7 +887,8 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         // `device_id` must be initialized.
         assert!(is_device_initialized(ctx.state(), Self::get_device_id(device_id)));
 
-        send_ip_frame(ctx, device_id, next_hop, body)
+        // TODO(joshlf): Wire `SpecifiedAddr` through the `ndp` module.
+        send_ip_frame(ctx, device_id, SpecifiedAddr::new(next_hop).unwrap(), body)
     }
 
     fn get_device_id(id: usize) -> DeviceId {
@@ -928,7 +934,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         match ipv6_addr_sub {
             Some(ref mut tentative) => {
                 tentative.mark_permanent();
-                assert_eq!(tentative.inner().into_addr(), addr);
+                assert_eq!(tentative.inner().into_addr().into_addr(), addr);
             }
             _ => panic!("Attempted to resolve an unknown tentative address"),
         }
@@ -1071,7 +1077,7 @@ mod tests {
     fn test_pending_frames() {
         let mut state =
             EthernetDeviceStateBuilder::new(DUMMY_CONFIG_V4.local_mac, IPV6_MIN_MTU).build();
-        let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip);
+        let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip.into_addr());
         state.add_pending_frame(ip, Buf::new(vec![1], ..));
         state.add_pending_frame(ip, Buf::new(vec![2], ..));
         state.add_pending_frame(ip, Buf::new(vec![3], ..));
@@ -1259,8 +1265,8 @@ mod tests {
         let mut body: Vec<u8> = std::iter::repeat_with(|| rng.gen()).take(100).collect();
         let buf = Buf::new(&mut body[..], ..)
             .encapsulate(<I as IpExt>::PacketBuilder::new(
-                src_ip,
-                config.remote_ip,
+                src_ip.get(),
+                config.remote_ip.get(),
                 64,
                 IpProto::Tcp,
             ))
@@ -1274,7 +1280,7 @@ mod tests {
         //
 
         let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
-        add_arp_or_ndp_table_entry(&mut builder, device.id(), src_ip, src_mac);
+        add_arp_or_ndp_table_entry(&mut builder, device.id(), src_ip.get(), src_mac);
         let mut ctx = builder.build();
 
         // Should not be a router (default).
@@ -1308,7 +1314,7 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
-        add_arp_or_ndp_table_entry(&mut builder, device.id(), src_ip, src_mac);
+        add_arp_or_ndp_table_entry(&mut builder, device.id(), src_ip.get(), src_mac);
         let mut ctx = builder.build_with(state_builder, DummyEventDispatcher::default());
 
         // Should not be a router (default).
@@ -1334,8 +1340,8 @@ mod tests {
         let (packet_buf, _, _, packet_src_ip, packet_dst_ip, proto) =
             parse_ip_packet_in_ethernet_frame::<I>(&ctx.dispatcher().frames_sent()[1].1[..])
                 .unwrap();
-        assert_eq!(src_ip, packet_src_ip);
-        assert_eq!(config.remote_ip, packet_dst_ip);
+        assert_eq!(src_ip.get(), packet_src_ip);
+        assert_eq!(config.remote_ip.get(), packet_dst_ip);
         assert_eq!(proto, IpProto::Tcp);
         assert_eq!(body, packet_buf);
 

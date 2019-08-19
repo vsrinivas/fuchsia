@@ -369,8 +369,8 @@ pub(crate) struct IcmpParseArgs<A: IpAddress> {
 
 impl<A: IpAddress> IcmpParseArgs<A> {
     /// Construct a new `IcmpParseArgs`.
-    pub(crate) fn new(src_ip: A, dst_ip: A) -> IcmpParseArgs<A> {
-        IcmpParseArgs { src_ip, dst_ip }
+    pub(crate) fn new<S: Into<A>, D: Into<A>>(src_ip: S, dst_ip: D) -> IcmpParseArgs<A> {
+        IcmpParseArgs { src_ip: src_ip.into(), dst_ip: dst_ip.into() }
     }
 }
 
@@ -514,13 +514,13 @@ pub(crate) struct IcmpPacketBuilder<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I
 
 impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacketBuilder<I, B, M> {
     /// Construct a new `IcmpPacketBuilder`.
-    pub(crate) fn new(
-        src_ip: I::Addr,
-        dst_ip: I::Addr,
+    pub(crate) fn new<S: Into<I::Addr>, D: Into<I::Addr>>(
+        src_ip: S,
+        dst_ip: D,
         code: M::Code,
         msg: M,
     ) -> IcmpPacketBuilder<I, B, M> {
-        IcmpPacketBuilder { src_ip, dst_ip, code, msg }
+        IcmpPacketBuilder { src_ip: src_ip.into(), dst_ip: dst_ip.into(), code, msg }
     }
 }
 

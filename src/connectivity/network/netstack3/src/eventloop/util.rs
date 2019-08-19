@@ -5,6 +5,7 @@
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
+use net_types::SpecifiedAddr;
 use netstack3_core::{Context, DeviceId, EntryDest, EntryDestEither, EntryEither};
 use never::Never;
 use std::convert::TryFrom;
@@ -122,6 +123,31 @@ impl FidlCompatible<fidl_net::IpAddress> for IpAddr {
                 Ok(fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address { addr: addr.ipv6_bytes() }))
             }
         }
+    }
+}
+
+/// An error indicating that an address was a member of the wrong class (for
+/// example, a unicast address used where a multicast address is required).
+pub struct AddrClassError;
+
+// TODO(joshlf): Introduce a separate variant to `fidl_net_stack::ErrorType` for
+// `AddrClassError`?
+impl From<AddrClassError> for fidl_net_stack::Error {
+    fn from(_err: AddrClassError) -> Self {
+        fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::InvalidArgs }
+    }
+}
+
+impl FidlCompatible<fidl_net::IpAddress> for SpecifiedAddr<IpAddr> {
+    type FromError = AddrClassError;
+    type IntoError = Never;
+
+    fn try_from_fidl(fidl: fidl_net::IpAddress) -> Result<Self, AddrClassError> {
+        SpecifiedAddr::new(fidl.into_core()).ok_or(AddrClassError)
+    }
+
+    fn try_into_fidl(self) -> Result<fidl_net::IpAddress, Never> {
+        Ok(self.into_addr().into_fidl())
     }
 }
 
@@ -251,6 +277,7 @@ pub enum ForwardingConversionError {
     DeviceNotFound,
     TypeMismatch,
     InvalidSubnet,
+    AddrClassError,
 }
 
 impl From<DeviceNotFoundError> for ForwardingConversionError {
@@ -265,13 +292,20 @@ impl From<InvalidSubnetError> for ForwardingConversionError {
     }
 }
 
+impl From<AddrClassError> for ForwardingConversionError {
+    fn from(_: AddrClassError) -> Self {
+        ForwardingConversionError::AddrClassError
+    }
+}
+
 impl From<ForwardingConversionError> for fidl_net_stack::Error {
     fn from(fwd_error: ForwardingConversionError) -> Self {
         fidl_net_stack::Error {
             type_: match fwd_error {
                 ForwardingConversionError::DeviceNotFound => fidl_net_stack::ErrorType::NotFound,
                 ForwardingConversionError::TypeMismatch
-                | ForwardingConversionError::InvalidSubnet => {
+                | ForwardingConversionError::InvalidSubnet
+                | ForwardingConversionError::AddrClassError => {
                     fidl_net_stack::ErrorType::InvalidArgs
                 }
             },
@@ -280,7 +314,7 @@ impl From<ForwardingConversionError> for fidl_net_stack::Error {
 }
 
 impl ContextFidlCompatible<fidl_net_stack::ForwardingDestination> for EntryDestEither {
-    type FromError = DeviceNotFoundError;
+    type FromError = ForwardingConversionError;
     type IntoError = DeviceNotFoundError;
 
     fn try_from_fidl_with_ctx<C: ConversionContext>(
@@ -292,7 +326,7 @@ impl ContextFidlCompatible<fidl_net_stack::ForwardingDestination> for EntryDestE
                 EntryDest::Local { device: binding_id.try_into_core_with_ctx(ctx)? }
             }
             fidl_net_stack::ForwardingDestination::NextHop(addr) => {
-                EntryDest::Remote { next_hop: addr.into_core() }
+                EntryDest::Remote { next_hop: addr.try_into_core()? }
             }
         })
     }
@@ -306,7 +340,7 @@ impl ContextFidlCompatible<fidl_net_stack::ForwardingDestination> for EntryDestE
                 fidl_net_stack::ForwardingDestination::DeviceId(device.try_into_fidl_with_ctx(ctx)?)
             }
             EntryDest::Remote { next_hop } => {
-                let next_hop: IpAddr = next_hop.into();
+                let next_hop: IpAddr = next_hop.into_addr().into();
                 fidl_net_stack::ForwardingDestination::NextHop(next_hop.into_fidl())
             }
         })
@@ -444,7 +478,7 @@ mod tests {
         addr: (IpAddr, fidl_net::IpAddress),
     ) -> (EntryDestEither, fidl_net_stack::ForwardingDestination) {
         let (core, fidl) = addr;
-        let core = EntryDest::<IpAddr>::Remote { next_hop: core };
+        let core = EntryDest::<IpAddr>::Remote { next_hop: SpecifiedAddr::new(core).unwrap() };
         let fidl = fidl_net_stack::ForwardingDestination::NextHop(fidl);
         (core, fidl)
     }

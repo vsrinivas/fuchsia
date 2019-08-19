@@ -406,6 +406,7 @@ mod tests {
     use super::*;
 
     use net_types::ip::{Ipv4, Ipv6};
+    use net_types::SpecifiedAddr;
     use specialize_ip_macro::specialize_ip_address;
 
     use crate::testutil::{
@@ -456,9 +457,16 @@ mod tests {
             .build::<DummyEventDispatcher>();
 
         // Nothing in the cache yet
-        assert_eq!(get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip), None);
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
+            None
+        );
+        assert_eq!(
+            get_pmtu_last_updated(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            ),
             None
         );
 
@@ -473,7 +481,13 @@ mod tests {
         // PMTU should be updated to `new_mtu1` and last updated instant
         // should be updated to the start of the test + 1s.
         assert_eq!(
-            update_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip, new_mtu1).unwrap(),
+            update_pmtu(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get(),
+                new_mtu1
+            )
+            .unwrap(),
             None
         );
 
@@ -485,11 +499,16 @@ mod tests {
         // should be updated to the start of the test + 1s (when the
         // update occurred.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu1
         );
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu_last_updated(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             start_time + duration
         );
 
@@ -502,9 +521,14 @@ mod tests {
         // PMTU should be updated to `new_mtu2` and last updated instant
         // should be updated to the start of the test + 3s.
         assert_eq!(
-            update_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip, new_mtu2)
-                .unwrap()
-                .unwrap(),
+            update_pmtu(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get(),
+                new_mtu2
+            )
+            .unwrap()
+            .unwrap(),
             new_mtu1
         );
 
@@ -516,11 +540,16 @@ mod tests {
         // should be updated to the start of the test + 3s (when the
         // update occurred).
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu2
         );
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu_last_updated(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             start_time + (duration * 3)
         );
 
@@ -535,8 +564,8 @@ mod tests {
         assert_eq!(
             PmtuHandler::<I>::update_pmtu_if_less(
                 &mut ctx,
-                dummy_config.local_ip,
-                dummy_config.remote_ip,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get(),
                 new_mtu3
             )
             .unwrap()
@@ -552,12 +581,17 @@ mod tests {
         // should be updated to the start of the test + 5s (when the
         // update occurred).
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu3
         );
         let last_updated = start_time + (duration * 5);
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu_last_updated(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             last_updated
         );
 
@@ -570,8 +604,8 @@ mod tests {
         assert_eq!(
             PmtuHandler::<I>::update_pmtu_if_less(
                 &mut ctx,
-                dummy_config.local_ip,
-                dummy_config.remote_ip,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get(),
                 new_mtu4
             )
             .unwrap()
@@ -585,11 +619,16 @@ mod tests {
         // Make sure the update didn't work.
         // PMTU and last updated should not have changed.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu3
         );
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu_last_updated(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             last_updated
         );
 
@@ -602,8 +641,8 @@ mod tests {
         assert_eq!(
             PmtuHandler::<I>::update_pmtu_if_less(
                 &mut ctx,
-                dummy_config.local_ip,
-                dummy_config.remote_ip,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get(),
                 low_mtu
             )
             .unwrap_err()
@@ -617,11 +656,16 @@ mod tests {
         // Make sure the update didn't work.
         // PMTU and last updated should not have changed.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu3
         );
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu_last_updated(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             last_updated
         );
     }
@@ -638,7 +682,7 @@ mod tests {
 
     /// Get an IPv4 or IPv6 address within the same subnet as that of `DUMMY_CONFIG_*`,
     /// but with the last octet set to `3`.
-    fn get_other_ip_address<A: IpAddress>() -> A {
+    fn get_other_ip_address<A: IpAddress>() -> SpecifiedAddr<A> {
         crate::testutil::get_other_ip_address::<A>(3)
     }
 
@@ -661,7 +705,13 @@ mod tests {
         // PMTU should be updated to `new_mtu1` and last updated instant
         // should be updated to the start of the test + 1s.
         assert_eq!(
-            update_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip, new_mtu1).unwrap(),
+            update_pmtu(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get(),
+                new_mtu1
+            )
+            .unwrap(),
             None
         );
 
@@ -676,11 +726,16 @@ mod tests {
         // should be updated to the start of the test + 1s (when the
         // update occurred.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu1
         );
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu_last_updated(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             start_time + duration
         );
 
@@ -692,7 +747,10 @@ mod tests {
         // should be updated to the start of the test + 1s.
         let other_ip = get_other_ip_address::<I::Addr>();
         let new_mtu2 = min_mtu::<I>() + 100;
-        assert_eq!(update_pmtu(&mut ctx, dummy_config.local_ip, other_ip, new_mtu2).unwrap(), None);
+        assert_eq!(
+            update_pmtu(&mut ctx, dummy_config.local_ip.get(), other_ip.get(), new_mtu2).unwrap(),
+            None
+        );
 
         // Make sure there is still a task scheduled.
         // (we know no timers got triggered because the `run_for`
@@ -703,18 +761,26 @@ mod tests {
         // PMTU should be updated to `new_mtu2` and last updated instant
         // should be updated to the start of the test + 30mins + 2s (when the
         // update occurred.
-        assert_eq!(get_pmtu(&mut ctx, dummy_config.local_ip, other_ip).unwrap(), new_mtu2);
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, other_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
+            new_mtu2
+        );
+        assert_eq!(
+            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
             start_time + (duration * 1800)
         );
         // Make sure first update is still in the cache.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu1
         );
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu_last_updated(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             start_time + duration
         );
 
@@ -724,16 +790,24 @@ mod tests {
         // Make sure none of the cache data has been marked as
         // stale and removed.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu1
         );
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).unwrap(),
+            get_pmtu_last_updated(
+                &mut ctx,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             start_time + duration
         );
-        assert_eq!(get_pmtu(&mut ctx, dummy_config.local_ip, other_ip).unwrap(), new_mtu2);
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, other_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
+            new_mtu2
+        );
+        assert_eq!(
+            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
             start_time + (duration * 1800)
         );
         // Should still have another task scheduled.
@@ -744,12 +818,21 @@ mod tests {
         assert_eq!(run_for(&mut ctx, duration * 7200), 2);
         // Make sure only the earlier PMTU data got marked
         // as stale and removed.
-        assert!(get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).is_none());
-        assert!(get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip)
-            .is_none());
-        assert_eq!(get_pmtu(&mut ctx, dummy_config.local_ip, other_ip).unwrap(), new_mtu2);
+        assert!(
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).is_none()
+        );
+        assert!(get_pmtu_last_updated(
+            &mut ctx,
+            dummy_config.local_ip.get(),
+            dummy_config.remote_ip.get()
+        )
+        .is_none());
         assert_eq!(
-            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, other_ip).unwrap(),
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
+            new_mtu2
+        );
+        assert_eq!(
+            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
             start_time + (duration * 1800)
         );
         // Should still have another task scheduled.
@@ -760,11 +843,19 @@ mod tests {
         assert_eq!(run_for(&mut ctx, duration * 3600), 1);
         // Make sure both PMTU data got marked
         // as stale and removed.
-        assert!(get_pmtu(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip).is_none());
-        assert!(get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, dummy_config.remote_ip)
-            .is_none());
-        assert!(get_pmtu(&mut ctx, dummy_config.local_ip, other_ip).is_none(),);
-        assert!(get_pmtu_last_updated(&mut ctx, dummy_config.local_ip, other_ip).is_none(),);
+        assert!(
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).is_none()
+        );
+        assert!(get_pmtu_last_updated(
+            &mut ctx,
+            dummy_config.local_ip.get(),
+            dummy_config.remote_ip.get()
+        )
+        .is_none());
+        assert!(get_pmtu(&mut ctx, dummy_config.local_ip.get(), other_ip.get()).is_none(),);
+        assert!(
+            get_pmtu_last_updated(&mut ctx, dummy_config.local_ip.get(), other_ip.get()).is_none(),
+        );
         // Should not have a task scheduled since there is no more PMTU
         // data.
         assert_eq!(ctx.dispatcher.timer_events().count(), 0);

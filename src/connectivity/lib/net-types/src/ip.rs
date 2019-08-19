@@ -184,7 +184,7 @@ pub trait Ip:
     ///
     /// When sending packets to a loopback interface, this address is used as
     /// the source address. It is an address in the loopback subnet.
-    const LOOPBACK_ADDRESS: Self::Addr;
+    const LOOPBACK_ADDRESS: SpecifiedAddr<Self::Addr>;
 
     /// The subnet of loopback addresses.
     ///
@@ -225,7 +225,7 @@ impl Ip for Ipv4 {
     const VERSION: IpVersion = IpVersion::V4;
     const UNSPECIFIED_ADDRESS: Ipv4Addr = Ipv4Addr::new([0, 0, 0, 0]);
     // https://tools.ietf.org/html/rfc5735#section-3
-    const LOOPBACK_ADDRESS: Ipv4Addr = Ipv4Addr::new([127, 0, 0, 1]);
+    const LOOPBACK_ADDRESS: SpecifiedAddr<Ipv4Addr> = SpecifiedAddr(Ipv4Addr::new([127, 0, 0, 1]));
     const LOOPBACK_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([127, 0, 0, 0]), prefix: 8 };
     const MULTICAST_SUBNET: Subnet<Ipv4Addr> =
@@ -244,7 +244,8 @@ impl Ipv4 {
     /// This address is considered to be a broadcast address on all networks
     /// regardless of subnet address. This is distinct from the subnet-specific
     /// broadcast address (e.g., 192.168.255.255 on the subnet 192.168.0.0/16).
-    pub const GLOBAL_BROADCAST_ADDRESS: Ipv4Addr = Ipv4Addr::new([255, 255, 255, 255]);
+    pub const GLOBAL_BROADCAST_ADDRESS: SpecifiedAddr<Ipv4Addr> =
+        SpecifiedAddr(Ipv4Addr::new([255, 255, 255, 255]));
 
     /// The Class E subnet.
     ///
@@ -273,8 +274,8 @@ impl sealed::Sealed for Ipv6 {}
 impl Ip for Ipv6 {
     const VERSION: IpVersion = IpVersion::V6;
     const UNSPECIFIED_ADDRESS: Ipv6Addr = Ipv6Addr::new([0; 16]);
-    const LOOPBACK_ADDRESS: Ipv6Addr =
-        Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+    const LOOPBACK_ADDRESS: SpecifiedAddr<Ipv6Addr> =
+        SpecifiedAddr(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]));
     const LOOPBACK_SUBNET: Subnet<Ipv6Addr> = Subnet {
         network: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
         prefix: 128,
@@ -555,7 +556,7 @@ impl Ipv4Addr {
     /// [`Ipv4::GLOBAL_BROADCAST_ADDRESS`].
     #[inline]
     pub fn is_global_broadcast(self) -> bool {
-        self == Ipv4::GLOBAL_BROADCAST_ADDRESS
+        self == Ipv4::GLOBAL_BROADCAST_ADDRESS.into_addr()
     }
 
     /// Is this a Class E address?
@@ -1035,8 +1036,8 @@ impl<A: IpAddress> AddrSubnet<A> {
 
     /// Gets the address.
     #[inline]
-    pub fn addr(&self) -> A {
-        self.addr.get()
+    pub fn addr(&self) -> SpecifiedAddr<A> {
+        self.addr
     }
 
     /// Gets the subnet.
@@ -1047,8 +1048,8 @@ impl<A: IpAddress> AddrSubnet<A> {
 
     /// Consumes the `AddrSubnet` and returns the address.
     #[inline]
-    pub fn into_addr(self) -> A {
-        self.addr.get()
+    pub fn into_addr(self) -> SpecifiedAddr<A> {
+        self.addr
     }
 
     /// Consumes the `AddrSubnet` and returns the subnet.
@@ -1060,8 +1061,8 @@ impl<A: IpAddress> AddrSubnet<A> {
     /// Consumes the `AddrSubnet` and returns the address and subnet
     /// individually.
     #[inline]
-    pub fn into_addr_subnet(self) -> (A, Subnet<A>) {
-        (self.addr.get(), self.subnet)
+    pub fn into_addr_subnet(self) -> (SpecifiedAddr<A>, Subnet<A>) {
+        (self.addr, self.subnet)
     }
 }
 
@@ -1116,6 +1117,15 @@ impl AddrSubnetEither {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_loopback_unicast() {
+        // The loopback addresses are constructed as `SpecifiedAddr`s directly,
+        // bypassing the actual check against `is_specified`. Test that that's
+        // actually valid.
+        assert!(Ipv4::LOOPBACK_ADDRESS.0.is_specified());
+        assert!(Ipv6::LOOPBACK_ADDRESS.0.is_specified());
+    }
 
     #[test]
     fn test_specified() {
@@ -1184,7 +1194,7 @@ mod tests {
             ) == None
         );
         // Global broadcast
-        assert!(AddrSubnet::new(Ipv4::GLOBAL_BROADCAST_ADDRESS, 16) == None);
+        assert!(AddrSubnet::new(Ipv4::GLOBAL_BROADCAST_ADDRESS.into_addr(), 16) == None);
         // Subnet broadcast
         assert!(AddrSubnet::new(Ipv4Addr::new([192, 168, 255, 255]), 16) == None);
         // Multicast
@@ -1212,6 +1222,7 @@ mod tests {
             .is_unicast_in_subnet(&Subnet::new(Ipv6::UNSPECIFIED_ADDRESS, 64).unwrap()));
         // Global broadcast
         assert!(!Ipv4::GLOBAL_BROADCAST_ADDRESS
+            .into_addr()
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 16).unwrap()));
         // Subnet broadcast
         assert!(!Ipv4Addr::new([1, 2, 255, 255])

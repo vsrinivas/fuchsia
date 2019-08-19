@@ -608,9 +608,9 @@ pub(crate) struct Ipv6PacketBuilder {
 
 impl Ipv6PacketBuilder {
     /// Construct a new `Ipv6PacketBuilder`.
-    pub(crate) fn new(
-        src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
+    pub(crate) fn new<S: Into<Ipv6Addr>, D: Into<Ipv6Addr>>(
+        src_ip: S,
+        dst_ip: D,
         hop_limit: u8,
         next_hdr: IpProto,
     ) -> Ipv6PacketBuilder {
@@ -620,8 +620,8 @@ impl Ipv6PacketBuilder {
             flowlabel: 0,
             hop_limit,
             next_hdr: next_hdr.into(),
-            src_ip,
-            dst_ip,
+            src_ip: src_ip.into(),
+            dst_ip: dst_ip.into(),
         }
     }
 

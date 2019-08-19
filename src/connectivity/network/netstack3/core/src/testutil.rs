@@ -16,6 +16,7 @@ use byteorder::{ByteOrder, NativeEndian};
 use log::debug;
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither};
+use net_types::SpecifiedAddr;
 use packet::{Buf, BufferMut, ParsablePacket, ParseBuffer, Serializer};
 use rand::{self, CryptoRng, RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;
@@ -522,12 +523,14 @@ pub(crate) fn get_counter_val(ctx: &mut Context<DummyEventDispatcher>, key: &str
 ///
 /// `last` is the value to be put in the last octet of the IP address.
 #[specialize_ip_address]
-pub(crate) fn get_other_ip_address<A: IpAddress>(last: u8) -> A {
+pub(crate) fn get_other_ip_address<A: IpAddress>(last: u8) -> SpecifiedAddr<A> {
     #[ipv4addr]
-    let ret = Ipv4Addr::new([192, 168, 0, last]);
+    let ret = SpecifiedAddr::new(Ipv4Addr::new([192, 168, 0, last])).unwrap();
 
     #[ipv6addr]
-    let ret = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, last]);
+    let ret =
+        SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, last]))
+            .unwrap();
 
     ret
 }
@@ -542,39 +545,43 @@ pub(crate) struct DummyEventDispatcherConfig<A: IpAddress> {
     pub(crate) subnet: Subnet<A>,
     /// The IP address of our interface to the local network (must be in
     /// subnet).
-    pub(crate) local_ip: A,
+    pub(crate) local_ip: SpecifiedAddr<A>,
     /// The MAC address of our interface to the local network.
     pub(crate) local_mac: Mac,
     /// The remote host's IP address (must be in subnet if provided).
-    pub(crate) remote_ip: A,
+    pub(crate) remote_ip: SpecifiedAddr<A>,
     /// The remote host's MAC address.
     pub(crate) remote_mac: Mac,
 }
 
 /// A `DummyEventDispatcherConfig` with reasonable values for an IPv4 network.
-pub(crate) const DUMMY_CONFIG_V4: DummyEventDispatcherConfig<Ipv4Addr> =
+pub(crate) const DUMMY_CONFIG_V4: DummyEventDispatcherConfig<Ipv4Addr> = unsafe {
     DummyEventDispatcherConfig {
-        subnet: unsafe { Subnet::new_unchecked(Ipv4Addr::new([192, 168, 0, 0]), 16) },
-        local_ip: Ipv4Addr::new([192, 168, 0, 1]),
+        subnet: Subnet::new_unchecked(Ipv4Addr::new([192, 168, 0, 0]), 16),
+        local_ip: SpecifiedAddr::new_unchecked(Ipv4Addr::new([192, 168, 0, 1])),
         local_mac: Mac::new([0, 1, 2, 3, 4, 5]),
-        remote_ip: Ipv4Addr::new([192, 168, 0, 2]),
+        remote_ip: SpecifiedAddr::new_unchecked(Ipv4Addr::new([192, 168, 0, 2])),
         remote_mac: Mac::new([6, 7, 8, 9, 10, 11]),
-    };
+    }
+};
 
 /// A `DummyEventDispatcherConfig` with reasonable values for an IPv6 network.
-pub(crate) const DUMMY_CONFIG_V6: DummyEventDispatcherConfig<Ipv6Addr> =
+pub(crate) const DUMMY_CONFIG_V6: DummyEventDispatcherConfig<Ipv6Addr> = unsafe {
     DummyEventDispatcherConfig {
-        subnet: unsafe {
-            Subnet::new_unchecked(
-                Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
-                112,
-            )
-        },
-        local_ip: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 1]),
+        subnet: Subnet::new_unchecked(
+            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
+            112,
+        ),
+        local_ip: SpecifiedAddr::new_unchecked(Ipv6Addr::new([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 1,
+        ])),
         local_mac: Mac::new([0, 1, 2, 3, 4, 5]),
-        remote_ip: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 2]),
+        remote_ip: SpecifiedAddr::new_unchecked(Ipv6Addr::new([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 2,
+        ])),
         remote_mac: Mac::new([6, 7, 8, 9, 10, 11]),
-    };
+    }
+};
 
 impl<A: IpAddress> DummyEventDispatcherConfig<A> {
     /// Creates a copy of `self` with all the remote and local fields reversed.
@@ -603,7 +610,7 @@ pub(crate) struct DummyEventDispatcherBuilder {
     ndp_table_entries: Vec<(usize, Ipv6Addr, Mac)>,
     // usize refers to index into devices Vec
     device_routes: Vec<(SubnetEither, usize)>,
-    routes: Vec<(SubnetEither, IpAddr)>,
+    routes: Vec<(SubnetEither, SpecifiedAddr<IpAddr>)>,
 }
 
 impl DummyEventDispatcherBuilder {
@@ -616,12 +623,12 @@ impl DummyEventDispatcherBuilder {
         assert!(cfg.subnet.contains(&cfg.remote_ip));
 
         let mut builder = DummyEventDispatcherBuilder::default();
-        builder.devices.push((cfg.local_mac, Some((cfg.local_ip.into(), cfg.subnet.into()))));
+        builder.devices.push((cfg.local_mac, Some((cfg.local_ip.get().into(), cfg.subnet.into()))));
 
         #[ipv4addr]
-        builder.arp_table_entries.push((0, cfg.remote_ip, cfg.remote_mac));
+        builder.arp_table_entries.push((0, cfg.remote_ip.get(), cfg.remote_mac));
         #[ipv6addr]
-        builder.ndp_table_entries.push((0, cfg.remote_ip, cfg.remote_mac));
+        builder.ndp_table_entries.push((0, cfg.remote_ip.get(), cfg.remote_mac));
 
         // even with fixed ipv4 address we can have ipv6 link local addresses
         // pre-cached.
@@ -671,8 +678,12 @@ impl DummyEventDispatcherBuilder {
     }
 
     /// Add a route to the forwarding table.
-    pub(crate) fn add_route<A: IpAddress>(&mut self, subnet: Subnet<A>, next_hop: A) {
-        self.routes.push((subnet.into(), next_hop.into()));
+    pub(crate) fn add_route<A: IpAddress>(
+        &mut self,
+        subnet: Subnet<A>,
+        next_hop: SpecifiedAddr<A>,
+    ) {
+        self.routes.push((subnet.into(), SpecifiedAddr::new(next_hop.get().into()).unwrap()));
     }
 
     /// Add a device route to the forwarding table.
@@ -745,7 +756,7 @@ impl DummyEventDispatcherBuilder {
             };
         }
         for (subnet, next_hop) in routes {
-            match (subnet, next_hop) {
+            match (subnet, next_hop.into()) {
                 (SubnetEither::V4(subnet), IpAddr::V4(next_hop)) => {
                     crate::ip::add_route(&mut ctx, subnet, next_hop)
                 }

@@ -5,6 +5,7 @@
 use std::fmt::Debug;
 
 use net_types::ip::{Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither};
+use net_types::SpecifiedAddr;
 use never::Never;
 use packet::{PacketBuilder, ParsablePacket};
 use zerocopy::{ByteSlice, ByteSliceMut};
@@ -36,20 +37,21 @@ impl<I: Ip> Default for IpVersionMarker<I> {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum EntryDest<A> {
     Local { device: DeviceId },
-    Remote { next_hop: A },
+    Remote { next_hop: SpecifiedAddr<A> },
 }
 
 /// A local forwarding destination, or a remote forwarding destination that can
 /// be an IPv4 or an IPv6 address.
 pub type EntryDestEither = EntryDest<IpAddr>;
 
-impl<A: IpAddress> EntryDest<A> {
+impl<A: IpAddress> EntryDest<A>
+where
+    SpecifiedAddr<IpAddr>: From<SpecifiedAddr<A>>,
+{
     fn into_ip_addr(self) -> EntryDest<IpAddr> {
         match self {
             EntryDest::Local { device } => EntryDest::Local { device },
-            EntryDest::Remote { next_hop } => {
-                EntryDest::Remote { next_hop: next_hop.into_ip_addr() }
-            }
+            EntryDest::Remote { next_hop } => EntryDest::Remote { next_hop: next_hop.into() },
         }
     }
 }
@@ -86,7 +88,7 @@ impl EntryEither {
                     Some(EntryEither::V6(Entry { subnet, dest: EntryDest::Local { device } }))
                 }
             },
-            EntryDest::Remote { next_hop } => match (subnet, next_hop) {
+            EntryDest::Remote { next_hop } => match (subnet, next_hop.into()) {
                 (SubnetEither::V4(subnet), IpAddr::V4(next_hop)) => {
                     Some(EntryEither::V4(Entry { subnet, dest: EntryDest::Remote { next_hop } }))
                 }
@@ -365,10 +367,15 @@ mod tests {
             Subnet::new(Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
                 .unwrap()
                 .into();
-        let entry_v4 =
-            EntryDest::Remote { next_hop: Ipv4Addr::new([192, 168, 0, 1]) }.into_ip_addr();
+        let entry_v4 = EntryDest::Remote {
+            next_hop: SpecifiedAddr::new(Ipv4Addr::new([192, 168, 0, 1])).unwrap(),
+        }
+        .into_ip_addr();
         let entry_v6 = EntryDest::Remote {
-            next_hop: Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+            next_hop: SpecifiedAddr::new(Ipv6Addr::new([
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+            ]))
+            .unwrap(),
         }
         .into_ip_addr();
         assert!(EntryEither::new(subnet_v4, entry_v6).is_none());

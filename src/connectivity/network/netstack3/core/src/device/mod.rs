@@ -14,7 +14,7 @@ use std::num::NonZeroU8;
 use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::{LinkLocalAddr, MulticastAddr};
+use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr};
 use packet::{BufferMut, Serializer};
 use specialize_ip_macro::specialize_ip;
 
@@ -351,7 +351,7 @@ pub fn remove_device<D: EventDispatcher>(
 pub(crate) fn send_ip_frame<B: BufferMut, D: BufferDispatcher<B>, A, S>(
     ctx: &mut Context<D>,
     device: DeviceId,
-    local_addr: A,
+    local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S>
 where
@@ -530,7 +530,7 @@ pub fn get_ipv6_link_local_addr<D: EventDispatcher>(
 /// on another device, `is_addr_tentative_on_device` will return `false`.
 pub(crate) fn is_addr_tentative_on_device<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
-    addr: A,
+    addr: SpecifiedAddr<A>,
     device: DeviceId,
 ) -> bool {
     get_ip_addr_subnet_with_tentative::<_, A>(ctx, device)

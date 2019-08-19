@@ -874,8 +874,8 @@ mod tests {
                 // We add 20 to the expected packet length because of the IPv4 header.
                 let (key, packet_len) = assert_frag_proc_state_ready!(
                     process_fragment::<Ipv4, _, &[u8]>(ctx, packet),
-                    DUMMY_CONFIG_V4.remote_ip,
-                    DUMMY_CONFIG_V4.local_ip,
+                    DUMMY_CONFIG_V4.remote_ip.get(),
+                    DUMMY_CONFIG_V4.local_ip.get(),
                     fragment_id,
                     (FRAGMENT_BLOCK_SIZE as usize) * (fragment_count as usize) + 20
                 );
@@ -946,8 +946,8 @@ mod tests {
                 // We add 20 to the expected packet length because of the IPv4 header.
                 let (key, packet_len) = assert_frag_proc_state_ready!(
                     process_fragment::<Ipv6, _, &[u8]>(ctx, packet),
-                    DUMMY_CONFIG_V6.remote_ip,
-                    DUMMY_CONFIG_V6.local_ip,
+                    DUMMY_CONFIG_V6.remote_ip.get(),
+                    DUMMY_CONFIG_V6.local_ip.get(),
                     fragment_id,
                     (FRAGMENT_BLOCK_SIZE as usize) * (fragment_count as usize) + 40
                 );
@@ -1056,8 +1056,8 @@ mod tests {
         let mut buffer: Vec<u8> = vec![0; 1];
         let mut buffer = &mut buffer[..];
         let key = FragmentCacheKey::new(
-            dummy_config.remote_ip,
-            dummy_config.local_ip,
+            dummy_config.remote_ip.get(),
+            dummy_config.local_ip.get(),
             fragment_id as u32,
         );
         assert_eq!(
@@ -1113,8 +1113,8 @@ mod tests {
         // Attempt to reassemble the packet but get an error since the fragment
         // data would have been reset/cleared.
         let key = FragmentCacheKey::new(
-            dummy_config.local_ip,
-            dummy_config.remote_ip,
+            dummy_config.local_ip.get(),
+            dummy_config.remote_ip.get(),
             fragment_id as u32,
         );
         let packet_len = 44;
@@ -1205,8 +1205,8 @@ mod tests {
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
             process_fragment::<Ipv4, _, &[u8]>(&mut ctx, packet),
-            DUMMY_CONFIG_V4.remote_ip,
-            DUMMY_CONFIG_V4.local_ip,
+            DUMMY_CONFIG_V4.remote_ip.get(),
+            DUMMY_CONFIG_V4.local_ip.get(),
             fragment_id,
             35
         );
@@ -1272,8 +1272,8 @@ mod tests {
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
             process_fragment::<Ipv6, _, &[u8]>(&mut ctx, packet),
-            DUMMY_CONFIG_V6.remote_ip,
-            DUMMY_CONFIG_V6.local_ip,
+            DUMMY_CONFIG_V6.remote_ip.get(),
+            DUMMY_CONFIG_V6.local_ip.get(),
             fragment_id,
             55
         );

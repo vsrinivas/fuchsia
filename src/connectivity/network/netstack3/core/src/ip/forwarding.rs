@@ -5,7 +5,7 @@
 use std::collections::HashSet;
 
 use net_types::ip::{Ip, IpAddress, Subnet};
-use net_types::SpecifiedAddress;
+use net_types::SpecifiedAddr;
 
 use crate::device::DeviceId;
 use crate::ip::*;
@@ -30,7 +30,7 @@ use crate::ip::*;
 /// IP address of the next IP router on the way to the destination.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) struct Destination<A: IpAddress> {
-    pub(crate) next_hop: A,
+    pub(crate) next_hop: SpecifiedAddr<A>,
     pub(crate) device: DeviceId,
 }
 
@@ -106,11 +106,14 @@ impl<I: Ip> ForwardingTable<I> {
         }
     }
 
+    // TODO(joshlf): Should `next_hop` actually be restricted even further,
+    // perhaps to unicast addresses?
+
     /// Add a route to a destination subnet that requires going through another node.
     pub(crate) fn add_route(
         &mut self,
         subnet: Subnet<I::Addr>,
-        next_hop: I::Addr,
+        next_hop: SpecifiedAddr<I::Addr>,
     ) -> Result<(), ExistsError> {
         debug!("adding route: {} -> {}", subnet, next_hop);
         self.add_entry(Entry { subnet, dest: EntryDest::Remote { next_hop } })
@@ -156,7 +159,7 @@ impl<I: Ip> ForwardingTable<I> {
     pub(crate) fn del_next_hop_route(
         &mut self,
         subnet: Subnet<I::Addr>,
-        next_hop: I::Addr,
+        next_hop: SpecifiedAddr<I::Addr>,
     ) -> Result<(), NotFoundError> {
         debug!("deleting next hop route: {} -> {}", subnet, next_hop);
         self.del_entry(Entry { subnet, dest: EntryDest::Remote { next_hop } })
@@ -219,15 +222,11 @@ impl<I: Ip> ForwardingTable<I> {
     /// be properly routed without consulting the forwarding table, and traffic
     /// from the network with a loopback destination address is invalid and
     /// should be dropped before consulting the forwarding table.
-    pub(crate) fn lookup(&self, address: I::Addr) -> Option<Destination<I::Addr>> {
+    pub(crate) fn lookup(&self, address: SpecifiedAddr<I::Addr>) -> Option<Destination<I::Addr>> {
         assert!(
             !I::LOOPBACK_SUBNET.contains(&address),
             "loopback addresses should be handled before consulting the forwarding table"
         );
-
-        if !address.is_specified() {
-            return None;
-        }
 
         let best_match = self
             .active
@@ -329,7 +328,7 @@ impl<I: Ip> ForwardingTable<I> {
 
     /// Find the destination a packet destined to `address` should be routed to by inspecting the
     /// installed table.
-    fn installed_lookup(&self, address: I::Addr) -> Option<Destination<I::Addr>> {
+    fn installed_lookup(&self, address: SpecifiedAddr<I::Addr>) -> Option<Destination<I::Addr>> {
         let mut observed = vec![false; self.installed.len()];
         self.installed_lookup_helper(address, &mut observed)
     }
@@ -340,7 +339,7 @@ impl<I: Ip> ForwardingTable<I> {
     /// `observed` will be marked with each entry we have already observed to prevent loops.
     fn installed_lookup_helper(
         &self,
-        address: I::Addr,
+        address: SpecifiedAddr<I::Addr>,
         observed: &mut Vec<bool>,
     ) -> Option<Destination<I::Addr>> {
         // Get all potential routes we could take to reach `address`.
@@ -469,24 +468,34 @@ mod tests {
     }
 
     #[specialize_ip]
-    fn next_hop_addr_sub<I: Ip>(v: u8, neg_prefix: u8) -> (I::Addr, Subnet<I::Addr>) {
+    fn next_hop_addr_sub<I: Ip>(
+        v: u8,
+        neg_prefix: u8,
+    ) -> (SpecifiedAddr<I::Addr>, Subnet<I::Addr>) {
         #[ipv4]
-        return (Ipv4Addr::new([v, 0, 0, 1]), sub::<Ipv4>(v, neg_prefix));
+        return (
+            SpecifiedAddr::new(Ipv4Addr::new([v, 0, 0, 1])).unwrap(),
+            sub::<Ipv4>(v, neg_prefix),
+        );
 
         #[ipv6]
         return (
-            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, v, 0, 0, 1]),
+            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, v, 0, 0, 1]))
+                .unwrap(),
             sub::<Ipv6>(v, neg_prefix),
         );
     }
 
     #[specialize_ip]
-    fn next_hop_addr<I: Ip>() -> I::Addr {
+    fn next_hop_addr<I: Ip>() -> SpecifiedAddr<I::Addr> {
         #[ipv4]
-        return Ipv4Addr::new([10, 0, 0, 1]);
+        return SpecifiedAddr::new(Ipv4Addr::new([10, 0, 0, 1])).unwrap();
 
         #[ipv6]
-        return Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1]);
+        return SpecifiedAddr::new(Ipv6Addr::new([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1,
+        ]))
+        .unwrap();
     }
 
     fn test_add_del_lookup_simple_ip<I: Ip>() {
@@ -496,7 +505,7 @@ mod tests {
         let subnet = config.subnet;
         let device = DeviceId::new_ethernet(0);
         let next_hop = next_hop_addr::<I>();
-        let next_hop_specific_subnet = Subnet::new(next_hop, I::Addr::BYTES * 8).unwrap();
+        let next_hop_specific_subnet = Subnet::new(next_hop.get(), I::Addr::BYTES * 8).unwrap();
 
         // Should add the route successfully.
         table.add_device_route(subnet, device).unwrap();

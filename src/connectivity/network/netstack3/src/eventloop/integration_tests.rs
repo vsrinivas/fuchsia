@@ -11,6 +11,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::client;
 use futures::{future, Future, FutureExt, StreamExt};
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr};
+use net_types::SpecifiedAddr;
 use netstack3_core::icmp::{self as core_icmp, IcmpConnId};
 use packet::Buf;
 use pin_utils::pin_mut;
@@ -544,8 +545,8 @@ async fn test_ping() {
     // create icmp connection on alice:
     let conn_id = core_icmp::new_icmp_connection::<_, Ipv4Addr>(
         t.ctx(0),
-        ALICE_IP.into(),
-        BOB_IP.into(),
+        SpecifiedAddr::new(ALICE_IP.into()).unwrap(),
+        SpecifiedAddr::new(BOB_IP.into()).unwrap(),
         ICMP_ID,
     )
     .unwrap();
@@ -925,7 +926,9 @@ async fn test_list_del_routes() {
     .unwrap();
     let route2 = EntryEither::new(
         SubnetEither::new(Ipv4Addr::from([10, 0, 0, 0]).into(), 24).unwrap(),
-        EntryDest::Remote { next_hop: Ipv4Addr::from([10, 0, 0, 1]).into() },
+        EntryDest::Remote {
+            next_hop: SpecifiedAddr::new(Ipv4Addr::from([10, 0, 0, 1]).into()).unwrap(),
+        },
     )
     .unwrap();
 

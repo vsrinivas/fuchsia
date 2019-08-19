@@ -490,9 +490,9 @@ pub(crate) struct Ipv4PacketBuilder {
 
 impl Ipv4PacketBuilder {
     /// Construct a new `Ipv4PacketBuilder`.
-    pub(crate) fn new(
-        src_ip: Ipv4Addr,
-        dst_ip: Ipv4Addr,
+    pub(crate) fn new<S: Into<Ipv4Addr>, D: Into<Ipv4Addr>>(
+        src_ip: S,
+        dst_ip: D,
         ttl: u8,
         proto: IpProto,
     ) -> Ipv4PacketBuilder {
@@ -504,8 +504,8 @@ impl Ipv4PacketBuilder {
             frag_off: 0,
             ttl,
             proto: proto.into(),
-            src_ip,
-            dst_ip,
+            src_ip: src_ip.into(),
+            dst_ip: dst_ip.into(),
         }
     }
 

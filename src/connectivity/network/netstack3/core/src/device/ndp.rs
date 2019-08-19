@@ -27,7 +27,9 @@ use std::time::Duration;
 use log::{debug, error, trace};
 
 use net_types::ip::{AddrSubnet, Ip, Ipv6, Ipv6Addr};
-use net_types::{LinkLocalAddr, LinkLocalAddress, MulticastAddress, SpecifiedAddress};
+use net_types::{
+    LinkLocalAddr, LinkLocalAddress, MulticastAddress, SpecifiedAddr, SpecifiedAddress,
+};
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use rand::{thread_rng, Rng};
 use zerocopy::ByteSlice;
@@ -1968,7 +1970,7 @@ pub(crate) trait NdpPacketHandler: IpDeviceIdContext {
         &mut self,
         device: Option<Self::DeviceId>,
         src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
+        dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: Icmpv6Packet<B>,
     ) {
     }
@@ -1979,7 +1981,7 @@ impl<D: EventDispatcher> NdpPacketHandler for Context<D> {
         &mut self,
         device: Option<DeviceId>,
         src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
+        dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: Icmpv6Packet<B>,
     ) {
         trace!("receive_ndp_packet");
@@ -2019,7 +2021,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
     ctx: &mut Context<D>,
     device_id: usize,
     src_ip: Ipv6Addr,
-    dst_ip: Ipv6Addr,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
     packet: Icmpv6Packet<B>,
 ) where
     B: ByteSlice,
@@ -2997,7 +2999,7 @@ mod tests {
             device_id,
             local_ip(),
             remote_ip(),
-            remote_ip(),
+            SpecifiedAddr::new(remote_ip()).unwrap(),
             IpProto::Icmpv6,
             body,
             None,
@@ -3437,7 +3439,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip, config.local_ip, 1, false, false, 3, 4, 5);
+            router_advertisement_message(src_ip, config.local_ip.get(), 1, false, false, 3, 4, 5);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
@@ -3450,7 +3452,7 @@ mod tests {
 
         let src_ip = Mac::new(src_mac).to_ipv6_link_local().get();
         let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip, config.local_ip, 1, false, false, 3, 4, 5);
+            router_advertisement_message(src_ip, config.local_ip.get(), 1, false, false, 3, 4, 5);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
@@ -3471,8 +3473,16 @@ mod tests {
         // Receive a router advertisement for a brand new router with a valid lifetime.
         //
 
-        let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 1, false, false, 3, 4, 5);
+        let mut icmpv6_packet_buf = router_advertisement_message(
+            src_ip.get(),
+            config.local_ip.get(),
+            1,
+            false,
+            false,
+            3,
+            4,
+            5,
+        );
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3497,8 +3507,16 @@ mod tests {
         // Receive a new router advertisement for the same router with a valid lifetime.
         //
 
-        let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 7, false, false, 9, 10, 11);
+        let mut icmpv6_packet_buf = router_advertisement_message(
+            src_ip.get(),
+            config.local_ip.get(),
+            7,
+            false,
+            false,
+            9,
+            10,
+            11,
+        );
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3526,7 +3544,7 @@ mod tests {
         // Other non zero values should update.
         let mut icmpv6_packet_buf = router_advertisement_message(
             src_ip.get(),
-            config.local_ip,
+            config.local_ip.get(),
             13,
             false,
             false,
@@ -3554,7 +3572,7 @@ mod tests {
         // Other non zero values should update.
         let mut icmpv6_packet_buf = router_advertisement_message(
             src_ip.get(),
-            config.local_ip,
+            config.local_ip.get(),
             19,
             false,
             false,
@@ -3586,7 +3604,7 @@ mod tests {
         // Other non zero values should update.
         let mut icmpv6_packet_buf = router_advertisement_message(
             src_ip.get(),
-            config.local_ip,
+            config.local_ip.get(),
             0,
             false,
             false,
@@ -3620,7 +3638,7 @@ mod tests {
 
         let mut icmpv6_packet_buf = router_advertisement_message(
             src_ip.get(),
-            config.local_ip,
+            config.local_ip.get(),
             31,
             false,
             false,
@@ -3657,7 +3675,7 @@ mod tests {
 
         let mut icmpv6_packet_buf = router_advertisement_message(
             src_ip.get(),
-            config.local_ip,
+            config.local_ip.get(),
             37,
             false,
             false,
@@ -3706,7 +3724,7 @@ mod tests {
 
             let mut icmpv6_packet_buf = router_advertisement_message(
                 src_ip.get(),
-                config.local_ip,
+                config.local_ip.get(),
                 hop_limit,
                 false,
                 false,
@@ -3724,8 +3742,8 @@ mod tests {
             crate::ip::send_ip_packet_from_device(
                 ctx,
                 device.unwrap(),
-                config.local_ip,
-                config.remote_ip,
+                config.local_ip.get(),
+                config.remote_ip.get(),
                 config.remote_ip,
                 IpProto::Tcp,
                 Buf::new(vec![0; 10], ..),
@@ -3765,8 +3783,16 @@ mod tests {
         // make sure no new neighbor gets added.
         //
 
-        let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 1, false, false, 3, 4, 5);
+        let mut icmpv6_packet_buf = router_advertisement_message(
+            src_ip.get(),
+            config.local_ip.get(),
+            1,
+            false,
+            false,
+            3,
+            4,
+            5,
+        );
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3841,7 +3867,7 @@ mod tests {
         // as that is the max MTU of the device).
         //
 
-        let mut icmpv6_packet_buf = packet_buf(src_ip.get(), config.local_ip, 5781);
+        let mut icmpv6_packet_buf = packet_buf(src_ip.get(), config.local_ip.get(), 5781);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3856,7 +3882,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            packet_buf(src_ip.get(), config.local_ip, crate::ip::path_mtu::IPV6_MIN_MTU - 1);
+            packet_buf(src_ip.get(), config.local_ip.get(), crate::ip::path_mtu::IPV6_MIN_MTU - 1);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3871,7 +3897,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            packet_buf(src_ip.get(), config.local_ip, crate::ip::path_mtu::IPV6_MIN_MTU);
+            packet_buf(src_ip.get(), config.local_ip.get(), crate::ip::path_mtu::IPV6_MIN_MTU);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3932,7 +3958,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            packet_buf(src_ip, config.local_ip, prefix, prefix_length, true, false, 100, 0);
+            packet_buf(src_ip, config.local_ip.get(), prefix, prefix_length, true, false, 100, 0);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
@@ -3949,7 +3975,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            packet_buf(src_ip, config.local_ip, prefix, prefix_length, true, false, 0, 0);
+            packet_buf(src_ip, config.local_ip.get(), prefix, prefix_length, true, false, 0, 0);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
@@ -3967,7 +3993,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            packet_buf(src_ip, config.local_ip, prefix, prefix_length, true, false, 100, 0);
+            packet_buf(src_ip, config.local_ip.get(), prefix, prefix_length, true, false, 100, 0);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
@@ -3984,7 +4010,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            packet_buf(src_ip, config.local_ip, prefix, prefix_length, true, false, 100, 0);
+            packet_buf(src_ip, config.local_ip.get(), prefix, prefix_length, true, false, 100, 0);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
@@ -4075,7 +4101,7 @@ mod tests {
         set_ip_addr_subnet(
             &mut ctx,
             device_id,
-            AddrSubnet::new(dummy_config.local_ip, 128).unwrap(),
+            AddrSubnet::new(dummy_config.local_ip.get(), 128).unwrap(),
         );
         let time = ctx.dispatcher().now();
         assert!(trigger_next_timer(&mut ctx));
@@ -4097,7 +4123,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(src_mac, dummy_config.local_mac);
-        assert_eq!(src_ip, dummy_config.local_ip);
+        assert_eq!(src_ip, dummy_config.local_ip.get());
         assert_eq!(message, RouterSolicitation::default());
         assert_eq!(code, IcmpUnusedCode);
 
@@ -4299,7 +4325,11 @@ mod tests {
 
         // Updating the IP should resolve immediately since DAD is turned off by
         // `DummyEventDispatcherBuilder::build`.
-        set_ip_addr_subnet(&mut ctx, device, AddrSubnet::new(dummy_config.local_ip, 128).unwrap());
+        set_ip_addr_subnet(
+            &mut ctx,
+            device,
+            AddrSubnet::new(dummy_config.local_ip.get(), 128).unwrap(),
+        );
         assert_eq!(
             EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &dummy_config.local_ip),
             AddressState::Assigned
@@ -4313,7 +4343,11 @@ mod tests {
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
 
         // Updating the IP should start the DAD process.
-        set_ip_addr_subnet(&mut ctx, device, AddrSubnet::new(dummy_config.remote_ip, 128).unwrap());
+        set_ip_addr_subnet(
+            &mut ctx,
+            device,
+            AddrSubnet::new(dummy_config.remote_ip.get(), 128).unwrap(),
+        );
         assert_eq!(
             EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &dummy_config.local_ip),
             AddressState::Unassigned
@@ -4342,7 +4376,11 @@ mod tests {
         );
 
         // Updating the IP should resolve immediately since DAD has just been turned off.
-        set_ip_addr_subnet(&mut ctx, device, AddrSubnet::new(dummy_config.local_ip, 128).unwrap());
+        set_ip_addr_subnet(
+            &mut ctx,
+            device,
+            AddrSubnet::new(dummy_config.local_ip.get(), 128).unwrap(),
+        );
         assert_eq!(
             EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &dummy_config.remote_ip),
             AddressState::Unassigned

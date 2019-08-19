@@ -14,7 +14,7 @@ use std::time::Duration;
 use failure::Fail;
 use log::{debug, error};
 use net_types::ip::{AddrSubnet, Ip, Ipv6, Ipv6Addr};
-use net_types::{LinkLocalAddress, MulticastAddr, SpecifiedAddress};
+use net_types::{LinkLocalAddress, MulticastAddr, SpecifiedAddr, SpecifiedAddress};
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
 use rand::Rng;
@@ -46,11 +46,11 @@ use crate::Instant;
 /// IP address.
 pub(crate) struct MldFrameMetadata<D> {
     pub(crate) device: D,
-    pub(crate) local_ip: Ipv6Addr,
+    pub(crate) local_ip: MulticastAddr<Ipv6Addr>,
 }
 
 impl<D> MldFrameMetadata<D> {
-    fn new(device: D, local_ip: Ipv6Addr) -> MldFrameMetadata<D> {
+    fn new(device: D, local_ip: MulticastAddr<Ipv6Addr>) -> MldFrameMetadata<D> {
         MldFrameMetadata { device, local_ip }
     }
 }
@@ -88,7 +88,7 @@ pub(crate) trait MldHandler: IpDeviceIdContext {
         &mut self,
         device: Self::DeviceId,
         src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
+        dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: Icmpv6Packet<B>,
     );
 }
@@ -98,7 +98,7 @@ impl<C: MldContext> MldHandler for C {
         &mut self,
         device: Self::DeviceId,
         src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
+        dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: Icmpv6Packet<B>,
     ) {
         if let Err(e) = match packet {
@@ -398,7 +398,7 @@ fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
         |x: AddrSubnet<Ipv6Addr>| {
             let addr = x.addr();
             if addr.is_linklocal() {
-                addr
+                addr.into_addr()
             } else {
                 Ipv6::UNSPECIFIED_ADDRESS
             }
@@ -418,7 +418,7 @@ fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
             )
             .unwrap(),
         );
-    ctx.send_frame(MldFrameMetadata::new(device, dst_ip.get()), body)
+    ctx.send_frame(MldFrameMetadata::new(device, dst_ip), body)
         .map_err(|_| MldError::SendFailure { addr: group_addr.into() })
 }
 
@@ -482,7 +482,7 @@ mod tests {
         device: DeviceId,
         resp_time: Duration,
     ) {
-        let my_addr = MY_MAC.to_ipv6_link_local().get();
+        let my_addr = MY_MAC.to_ipv6_link_local().into_specified();
         let router_addr = ROUTER_MAC.to_ipv6_link_local().get();
         let buffer = Mldv1MessageBuilder::<MulticastListenerQuery>::new_with_max_resp_delay(
             GROUP_ADDR,
@@ -501,7 +501,7 @@ mod tests {
     }
 
     fn receive_mld_report(ctx: &mut Context<DummyEventDispatcher>, device: DeviceId) {
-        let my_addr = MY_MAC.to_ipv6_link_local().get();
+        let my_addr = MY_MAC.to_ipv6_link_local().into_specified();
         let router_addr = ROUTER_MAC.to_ipv6_link_local().get();
         let buffer = Mldv1MessageBuilder::<MulticastListenerReport>::new(
             MulticastAddr::new(GROUP_ADDR).unwrap(),

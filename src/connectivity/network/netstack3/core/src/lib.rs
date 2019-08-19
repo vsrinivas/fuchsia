@@ -470,12 +470,15 @@ pub fn add_route<D: EventDispatcher>(
             crate::ip::add_device_route(ctx, subnet, device)
         )
         .map_err(From::from),
-        EntryDest::Remote { next_hop } => map_addr_version!(
-            (subnet: SubnetEither, next_hop: IpAddr);
-            crate::ip::add_route(ctx, subnet, next_hop),
-            unreachable!(),
-        )
-        .map_err(From::from),
+        EntryDest::Remote { next_hop } => {
+            let next_hop = next_hop.into();
+            map_addr_version!(
+                (subnet: SubnetEither, next_hop: IpAddr);
+                crate::ip::add_route(ctx, subnet, next_hop),
+                unreachable!(),
+            )
+            .map_err(From::from)
+        }
     }
 }
 
