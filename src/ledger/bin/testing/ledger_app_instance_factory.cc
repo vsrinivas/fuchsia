@@ -14,19 +14,15 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
-namespace {
-constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
-}
 
 LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
     LoopController* loop_controller, std::vector<uint8_t> test_ledger_name,
-    ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory)
-    : top_level_node_(inspect_deprecated::Node(kTestTopLevelNodeName.ToString())),
-      attachment_node_(
-          top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString())),
-      loop_controller_(loop_controller),
+    ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
+    fuchsia::inspect::InspectPtr inspect)
+    : loop_controller_(loop_controller),
       test_ledger_name_(std::move(test_ledger_name)),
-      ledger_repository_factory_(std::move(ledger_repository_factory)) {
+      ledger_repository_factory_(std::move(ledger_repository_factory)),
+      inspect_(std::move(inspect)) {
   ledger_repository_factory_.set_error_handler([](zx_status_t status) {
     if (status != ZX_ERR_PEER_CLOSED) {
       ADD_FAILURE() << "|LedgerRepositoryFactory| failed with an error: " << status;
@@ -88,11 +84,7 @@ PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(const PageIdPtr& pa
 
 bool LedgerAppInstanceFactory::LedgerAppInstance::Inspect(
     LoopController* loop_controller, inspect_deprecated::ObjectHierarchy* hierarchy) {
-  return ledger::Inspect(&top_level_node_, loop_controller, hierarchy);
-}
-
-inspect_deprecated::Node* LedgerAppInstanceFactory::LedgerAppInstance::GetAttachmentNode() {
-  return &attachment_node_;
+  return ledger::Inspect(&inspect_, loop_controller, hierarchy);
 }
 
 }  // namespace ledger

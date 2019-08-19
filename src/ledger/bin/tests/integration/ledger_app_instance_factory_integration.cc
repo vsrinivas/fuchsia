@@ -42,6 +42,7 @@ namespace {
 constexpr fxl::StringView kLedgerName = "AppTests";
 constexpr zx::duration kBackoffDuration = zx::msec(5);
 const char kUserId[] = "user";
+constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
 
 // Implementation of rng::Random that delegates to another instance. This is
 // needed because EnvironmentBuilder requires taking ownership of the random
@@ -82,7 +83,9 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
       fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>*
           cloud_provider,
-      std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory);
+      std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
+      fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request,
+      fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_ptr);
   ~LedgerAppInstanceImpl() override;
 
  private:
@@ -93,12 +96,15 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
         rng::Random* random,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request,
         std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
-        inspect_deprecated::Node repositories_node)
+        inspect_deprecated::Node repositories_node,
+        fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request,
+        fuchsia::inspect::Inspect* inspect_impl)
         : environment_(BuildEnvironment(loop, dispatcher, io_dispatcher,
                                         component_context_provider_.context(), random)),
           factory_impl_(&environment_, std::move(user_communicator_factory),
                         std::move(repositories_node)),
-          binding_(&factory_impl_, std::move(request)) {}
+          binding_(&factory_impl_, std::move(request)),
+          inspect_binding_(inspect_impl, std::move(inspect_request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 
     void Close(fit::closure callback) { factory_impl_.Close(std::move(callback)); }
@@ -108,6 +114,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
     Environment environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
     SyncableBinding<fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate> binding_;
+    fidl::Binding<fuchsia::inspect::Inspect> inspect_binding_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
   };
@@ -118,6 +125,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
   LoopController* const loop_controller_;
   std::unique_ptr<SubLoop> loop_;
   std::unique_ptr<SubLoop> io_loop_;
+  inspect_deprecated::Node top_level_inspect_node_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   async_dispatcher_t* services_dispatcher_;
   fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>* const
@@ -134,23 +142,33 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
     fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>*
         cloud_provider,
-    std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory)
+    std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
+    fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request,
+    fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_ptr)
     : LedgerAppInstanceFactory::LedgerAppInstance(loop_controller, convert::ToArray(kLedgerName),
-                                                  std::move(repository_factory_ptr)),
+                                                  std::move(repository_factory_ptr),
+                                                  std::move(inspect_ptr)),
       loop_controller_(loop_controller),
       loop_(loop_controller->StartNewLoop()),
       io_loop_(loop_controller->StartNewLoop()),
       services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider),
       weak_ptr_factory_(this) {
+  auto top_level_objects = component::Object::Make(kTestTopLevelNodeName.ToString());
+  auto top_level_object_dir = component::ObjectDir(top_level_objects);
+  std::shared_ptr<component::Object> top_level_component_object = top_level_object_dir.object();
+  top_level_inspect_node_ = inspect_deprecated::Node(std::move(top_level_object_dir));
+
   async::PostTask(
       loop_->dispatcher(),
       [this, loop_controller, random, request = std::move(repository_factory_request),
-       user_communicator_factory = std::move(user_communicator_factory)]() mutable {
+       user_communicator_factory = std::move(user_communicator_factory),
+       inspect_request = std::move(inspect_request), top_level_component_object]() mutable {
         factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
             &loop_controller->test_loop(), loop_->dispatcher(), io_loop_->dispatcher(), random,
             std::move(request), std::move(user_communicator_factory),
-            GetAttachmentNode()->CreateChild(kRepositoriesInspectPathComponent.ToString()));
+            top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent.ToString()),
+            std::move(inspect_request), top_level_component_object.get());
       });
 }
 
@@ -268,6 +286,8 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory_ptr;
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request =
       repository_factory_ptr.NewRequest();
+  fuchsia::inspect::InspectPtr inspect_ptr;
+  fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request = inspect_ptr.NewRequest();
 
   std::unique_ptr<LedgerAppInstanceImpl> result;
   if (enable_sync_ == EnableSync::YES) {
@@ -280,11 +300,12 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
     result = std::make_unique<LedgerAppInstanceImpl>(
         &loop_controller_, services_loop_->dispatcher(), &random_,
         std::move(repository_factory_request), std::move(repository_factory_ptr), &cloud_provider_,
-        std::move(user_communicator_factory));
+        std::move(user_communicator_factory), std::move(inspect_request), std::move(inspect_ptr));
   } else {
     result = std::make_unique<LedgerAppInstanceImpl>(
         &loop_controller_, services_loop_->dispatcher(), &random_,
-        std::move(repository_factory_request), std::move(repository_factory_ptr), nullptr, nullptr);
+        std::move(repository_factory_request), std::move(repository_factory_ptr), nullptr, nullptr,
+        std::move(inspect_request), std::move(inspect_ptr));
   }
   app_instance_counter_++;
   return result;

@@ -28,11 +28,12 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
  public:
   LedgerAppInstanceImpl(LoopController* loop_controller, rng::Random* random,
                         ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-                        SyncParams sync_params,
+                        fuchsia::inspect::InspectPtr inspect, SyncParams sync_params,
                         cloud_provider_firestore::CloudProviderFactory::UserId user_id);
 
   void Init(
-      fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request);
+      fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request,
+      fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request);
 
  private:
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
@@ -48,10 +49,12 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     LoopController* loop_controller, rng::Random* random,
-    ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory, SyncParams sync_params,
+    ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
+    fuchsia::inspect::InspectPtr inspect, SyncParams sync_params,
     cloud_provider_firestore::CloudProviderFactory::UserId user_id)
     : LedgerAppInstanceFactory::LedgerAppInstance(loop_controller, convert::ToArray(kLedgerName),
-                                                  std::move(ledger_repository_factory)),
+                                                  std::move(ledger_repository_factory),
+                                                  std::move(inspect)),
       sync_params_(sync_params),
       component_context_(sys::ComponentContext::Create()),
       cloud_provider_factory_(component_context_.get(), random, std::move(sync_params.api_key),
@@ -59,9 +62,12 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       user_id_(std::move(user_id)) {}
 
 void LedgerAppInstanceImpl::Init(
-    fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request) {
+    fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request,
+    fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request) {
   cloud_provider_factory_.Init();
 
+  // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12278): Connect |inspect_request| to
+  // the Ledger component under test.
   component::Services child_services;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
@@ -97,9 +103,12 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request =
       repository_factory.NewRequest();
-  auto result = std::make_unique<LedgerAppInstanceImpl>(
-      loop_controller_.get(), &random_, std::move(repository_factory), sync_params_, user_id_);
-  result->Init(std::move(repository_factory_request));
+  fuchsia::inspect::InspectPtr inspect;
+  fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request = inspect.NewRequest();
+  auto result = std::make_unique<LedgerAppInstanceImpl>(loop_controller_.get(), &random_,
+                                                        std::move(repository_factory),
+                                                        std::move(inspect), sync_params_, user_id_);
+  result->Init(std::move(repository_factory_request), std::move(inspect_request));
   return result;
 }
 

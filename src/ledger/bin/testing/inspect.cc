@@ -41,7 +41,6 @@ using ::inspect_deprecated::testing::NodeMatches;
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
-using ::testing::IsEmpty;
 
 }  // namespace
 
@@ -61,21 +60,17 @@ testing::AssertionResult OpenChild(inspect_deprecated::Node* parent, const std::
   return ::testing::AssertionSuccess();
 }
 
-testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
+testing::AssertionResult Inspect(fuchsia::inspect::InspectPtr* top_level,
                                  LoopController* loop_controller,
                                  inspect_deprecated::ObjectHierarchy* hierarchy) {
-  fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_ptr;
-  testing::AssertionResult open_child_result =
-      OpenChild(top_level_node, kSystemUnderTestAttachmentPointPathComponent.ToString(),
-                &inspect_ptr, loop_controller);
-  if (!open_child_result) {
-    return open_child_result;
-  }
+  fidl::InterfaceHandle<fuchsia::inspect::Inspect> handle = top_level->Unbind();
+  inspect_deprecated::ObjectReader object_reader =
+      inspect_deprecated::ObjectReader(std::move(handle));
   async::Executor executor(loop_controller->dispatcher());
   fit::result<inspect_deprecated::ObjectHierarchy> hierarchy_result;
   std::unique_ptr<CallbackWaiter> waiter = loop_controller->NewWaiter();
   auto hierarchy_promise =
-      inspect_deprecated::ReadFromFidl(inspect_deprecated::ObjectReader(inspect_ptr.Unbind()))
+      inspect_deprecated::ReadFromFidl(object_reader)
           .then([&](fit::result<inspect_deprecated::ObjectHierarchy>& then_hierarchy_result) {
             hierarchy_result = std::move(then_hierarchy_result);
             waiter->GetCallback()();
@@ -88,6 +83,7 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
     return ::testing::AssertionFailure() << "Hierarchy result not okay!";
   }
   *hierarchy = hierarchy_result.take_value();
+  top_level->Bind(object_reader.TakeChannel());
   return ::testing::AssertionSuccess();
 }
 
@@ -95,7 +91,14 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
                                  async::TestLoop* test_loop,
                                  inspect_deprecated::ObjectHierarchy* hierarchy) {
   LoopControllerTestLoop loop_controller(test_loop);
-  return Inspect(top_level_node, &loop_controller, hierarchy);
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_ptr;
+  testing::AssertionResult open_child_result =
+      OpenChild(top_level_node, kSystemUnderTestAttachmentPointPathComponent.ToString(),
+                &inspect_ptr, &loop_controller);
+  if (!open_child_result) {
+    return open_child_result;
+  }
+  return Inspect(&inspect_ptr, &loop_controller, hierarchy);
 }
 
 ::testing::Matcher<const inspect_deprecated::ObjectHierarchy&> PageMatches(
