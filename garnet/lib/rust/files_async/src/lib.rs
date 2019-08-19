@@ -4,6 +4,7 @@
 
 #![feature(async_await)]
 
+///! Safe wrappers for enumerating `fuchsia.io.Directory` contents.
 use {
     failure::{Error, Fail},
     fidl::endpoints::ServerEnd,
@@ -12,6 +13,7 @@ use {
     std::{collections::VecDeque, mem, str::Utf8Error},
 };
 
+/// An error encountered while querying and parsing directory entries from a directory proxy.
 #[derive(Debug, Fail)]
 pub enum ReadDirError {
     #[fail(display = "a directory entry could not be decoded: {:?}", _0)]
@@ -24,6 +26,7 @@ pub enum ReadDirError {
     ReadDir(#[cause] zx::Status),
 }
 
+/// An error encountered while decoding a single directory entry.
 #[derive(Debug, PartialEq, Eq, Fail)]
 pub enum DirentDecodeError {
     #[fail(display = "an entry extended past the end of the buffer")]
@@ -33,6 +36,7 @@ pub enum DirentDecodeError {
     InvalidUtf8(#[cause] Utf8Error),
 }
 
+/// The type of a node.
 #[derive(Eq, Ord, PartialOrd, PartialEq, Clone, Copy, Debug)]
 pub enum DirentKind {
     Unknown,
@@ -56,9 +60,13 @@ impl From<u8> for DirentKind {
     }
 }
 
+/// A directory entry.
 #[derive(Eq, Ord, PartialOrd, PartialEq, Debug)]
 pub struct DirEntry {
+    /// The name of this node.
     pub name: String,
+
+    /// The type of this node, or [`DirentKind::Unknown`] if not known.
     pub kind: DirentKind,
 }
 
@@ -72,6 +80,8 @@ impl DirEntry {
     }
 }
 
+/// Returns a Vec of all non-directory nodes and all empty directory nodes in the given directory
+/// proxy. The returned entries will not include ".".
 pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     let mut directories: VecDeque<DirEntry> = VecDeque::new();
     let mut entries: Vec<DirEntry> = Vec::new();
@@ -115,6 +125,8 @@ pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Er
     Ok(entries)
 }
 
+/// Returns a sorted Vec of directory entries contained directly in the given directory proxy. The
+/// returned entries will not include "." or nodes from any subdirectories.
 pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, ReadDirError> {
     let mut entries = vec![];
 
@@ -142,9 +154,14 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, ReadDirError
 fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DirentDecodeError>> {
     #[repr(C, packed)]
     struct Dirent {
+        /// The inode number of the entry.
         _ino: u64,
+        /// The length of the filename located after this entry.
         size: u8,
+        /// The type of the entry. One of the `fidl_fuchsia_io::DIRENT_TYPE_*` constants.
         kind: u8,
+        // The unterminated name of the entry.  Length is the `size` field above.
+        // char name[0],
     }
     const DIRENT_SIZE: usize = mem::size_of::<Dirent>();
 
@@ -208,25 +225,16 @@ mod tests {
 
     #[test]
     fn test_parse_dir_entries() {
+        #[rustfmt::skip]
         let buf = &[
             // ino
-            42,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
+            42, 0, 0, 0, 0, 0, 0, 0,
             // name length
             4,
             // type
             fidl_fuchsia_io::DIRENT_TYPE_FILE,
             // name
-            't' as u8,
-            'e' as u8,
-            's' as u8,
-            't' as u8,
+            't' as u8, 'e' as u8, 's' as u8, 't' as u8,
         ];
 
         assert_eq!(
@@ -237,40 +245,26 @@ mod tests {
 
     #[test]
     fn test_parse_dir_entries_rejects_invalid_utf8() {
+        #[rustfmt::skip]
         let buf = &[
+            // entry 0
             // ino
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
+            1, 0, 0, 0, 0, 0, 0, 0,
             // name length
             1,
             // type
             fidl_fuchsia_io::DIRENT_TYPE_FILE,
             // name (a lonely continuation byte)
             0x80,
+            // entry 1
             // ino
-            2,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
+            2, 0, 0, 0, 0, 0, 0, 0,
             // name length
             4,
             // type
             fidl_fuchsia_io::DIRENT_TYPE_FILE,
             // name
-            'o' as u8,
-            'k' as u8,
-            'a' as u8,
-            'y' as u8,
+            'o' as u8, 'k' as u8, 'a' as u8, 'y' as u8,
         ];
 
         let expected_err = std::str::from_utf8(&[0x80]).unwrap_err();
@@ -286,25 +280,16 @@ mod tests {
 
     #[test]
     fn test_parse_dir_entries_overrun() {
+        #[rustfmt::skip]
         let buf = &[
             // ino
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
+            0, 0, 0, 0, 0, 0, 0, 0,
             // name length
             5,
             // type
             fidl_fuchsia_io::DIRENT_TYPE_FILE,
             // name
-            't' as u8,
-            'e' as u8,
-            's' as u8,
-            't' as u8,
+            't' as u8, 'e' as u8, 's' as u8, 't' as u8,
         ];
 
         assert_eq!(parse_dir_entries(buf), vec![Err(DirentDecodeError::BufferOverrun)]);
