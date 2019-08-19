@@ -17,6 +17,7 @@ executable("gltf_export") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//src/lib/fxl",
     "//third_party/cobalt/src/lib/crypto_util",
     "//third_party/libpng",

@@ -85,9 +85,9 @@ void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback 
   RunAfterInitialized([this, callback = std::move(callback)]() mutable {
     // TODO(SCN-452): This code assumes that, once all systems have been initialized, that there
     // will be a proper delegate for Scenic API functions. Attached to the bug to remove this
-    // delegate class completely. If the delegate becomes a permanent fixture of the system, switch
-    // to SCN-1506, as we need a more formal mechanism for delayed execution and initialization
-    // order logic.
+    // delegate class completely. If the delegate becomes a permanent fixture of the system,
+    // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
+    // initialization order logic.
     FXL_DCHECK(delegate_);
     delegate_->GetDisplayInfo(std::move(callback));
   });
@@ -97,9 +97,9 @@ void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback 
   RunAfterInitialized([this, callback = std::move(callback)]() mutable {
     // TODO(SCN-452): This code assumes that, once all systems have been initialized, that there
     // will be a proper delegate for Scenic API functions. Attached to the bug to remove this
-    // delegate class completely. If the delegate becomes a permanent fixture of the system, switch
-    // to SCN-1506, as we need a more formal mechanism for delayed execution and initialization
-    // order logic.
+    // delegate class completely. If the delegate becomes a permanent fixture of the system,
+    // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
+    // initialization order logic.
     FXL_DCHECK(delegate_);
     delegate_->TakeScreenshot(std::move(callback));
   });
@@ -110,12 +110,18 @@ void Scenic::GetDisplayOwnershipEvent(
   RunAfterInitialized([this, callback = std::move(callback)]() mutable {
     // TODO(SCN-452): This code assumes that, once all systems have been initialized, that there
     // will be a proper delegate for Scenic API functions. Attached to the bug to remove this
-    // delegate class completely. If the delegate becomes a permanent fixture of the system, switch
-    // to SCN-1506, as we need a more formal mechanism for delayed execution and initialization
-    // order logic.
+    // delegate class completely. If the delegate becomes a permanent fixture of the system,
+    // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
+    // initialization order logic.
     FXL_DCHECK(delegate_);
     delegate_->GetDisplayOwnershipEvent(std::move(callback));
   });
+}
+
+void Scenic::InitializeSnapshotService(
+    std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot) {
+  snapshot_ = std::move(snapshot);
+  app_context_->outgoing()->AddPublicService(snapshot_bindings_.GetHandler(snapshot_.get()));
 }
 
 }  // namespace scenic_impl

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_SERIALIZER_H_
-#define GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_SERIALIZER_H_
+#ifndef GARNET_LIB_UI_GFX_SNAPSHOT_SERIALIZER_H_
+#define GARNET_LIB_UI_GFX_SNAPSHOT_SERIALIZER_H_
 
-#include "garnet/lib/ui/gfx/resources/snapshot/snapshot_generated.h"
+#include "garnet/lib/ui/gfx/snapshot/snapshot_generated.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 
 namespace scenic_impl {
@@ -236,4 +236,4 @@ class ScenesSerializer : public Serializer<snapshot::Scenes> {
 }  // namespace gfx
 }  // namespace scenic_impl
 
-#endif  // GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_SERIALIZER_H_
+#endif  // GARNET_LIB_UI_GFX_SNAPSHOT_SERIALIZER_H_

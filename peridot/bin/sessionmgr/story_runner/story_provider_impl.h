@@ -63,7 +63,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                     EntityProviderRunner* entity_provider_runner,
                     modular::ModuleFacetReader* module_facet_reader,
                     PresentationProvider* presentation_provider,
-                    fuchsia::ui::scenic::SnapshooterPtr view_snapshot, bool test);
+                    fuchsia::ui::scenic::SnapshotPtr view_snapshot, bool test);
 
   ~StoryProviderImpl() override;
 
@@ -315,7 +315,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   fidl::Binding<fuchsia::modular::FocusWatcher> focus_watcher_binding_;
 
   // Service provided by scenic to take snapshots of stories.
-  fuchsia::ui::scenic::SnapshooterPtr snapshooter_;
+  fuchsia::ui::scenic::SnapshotPtr snapshotter_;
 
   // Cached mapping of story ID's to the story view koids. Used as a token to
   // take snapshots of stories. This is a temporary hack because koids are

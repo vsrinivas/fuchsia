@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <png.h>
 
@@ -12,8 +13,8 @@
 
 #include <trace-provider/provider.h>
 
-#include "garnet/lib/ui/gfx/resources/snapshot/snapshot_generated.h"
-#include "garnet/lib/ui/gfx/resources/snapshot/version.h"
+#include "garnet/lib/ui/gfx/snapshot/snapshot_generated.h"
+#include "garnet/lib/ui/gfx/snapshot/version.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/vmo/vector.h"
 #include "rapidjson/document.h"
@@ -88,9 +89,9 @@ class SnapshotTaker {
       loop_->Quit();
     });
 
-    // Connect to the Snapshooter service.
-    snapshooter_ = context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Snapshooter>();
-    snapshooter_.set_error_handler([this](zx_status_t status) {
+    // Connect to the internal snapshot service.
+    snapshotter_ = context_->ConnectToEnvironmentService<fuchsia::ui::scenic::internal::Snapshot>();
+    snapshotter_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Snapshot service.";
       encountered_error_ = true;
       loop_->Quit();
@@ -106,42 +107,63 @@ class SnapshotTaker {
     // the GFX system is initialized, which is a prerequisite for taking a
     // screenshot. TODO(SCN-678): Remove call to GetDisplayInfo once bug done.
     scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo /*unused*/) {
-      snapshooter_->TakeViewSnapshot(0, [this](fuchsia::mem::Buffer buffer) {
-        std::vector<uint8_t> data;
-        if (!fsl::VectorFromVmo(buffer, &data)) {
-          FXL_LOG(ERROR) << "TakeSnapshot failed";
-          encountered_error_ = true;
-          loop_->Quit();
-          return;
-        }
+      snapshotter_->TakeSnapshot(
+          [this](std::vector<fuchsia::ui::scenic::internal::SnapshotResult> results) {
+            if (results.size() == 0) {
+              FXL_LOG(INFO) << "No compositors found.";
+              loop_->Quit();
+            }
 
-        // We currently support flatbuffer.v1_0 format.
-        auto snapshot = (const SnapshotData *)data.data();
-        if (snapshot->type != SnapshotData::SnapshotType::kFlatBuffer ||
-            snapshot->version != SnapshotData::SnapshotVersion::v1_0) {
-          FXL_LOG(ERROR) << "Invalid snapshot format encountered. Aborting.";
-          encountered_error_ = true;
-          loop_->Quit();
-          return;
-        }
+            // Although multiple results can be returned, one for each compositor, the glTF exporter
+            // currently only makes use of the first compositor that is found.
+            if (results.size() > 1) {
+              FXL_LOG(WARNING) << "Multiple snapshot buffers were returned, but glTF exporter is "
+                                  "only using the first one.";
+            }
 
-        // De-serialize the snapshot from flatbuffer.
-        auto node = flatbuffers::GetRoot<snapshot::Node>(snapshot->data);
+            const auto &result = results[0];
+            if (!result.success) {
+              FXL_LOG(ERROR) << "Snapshot was not successful.";
+              encountered_error_ = true;
+              loop_->Quit();
+            }
 
-        // Start with an empty glTF document.
-        document_.Parse(EMPTY_GLTF_DOC);
+            const auto &buffer = result.buffer;
+            std::vector<uint8_t> data;
+            if (!fsl::VectorFromVmo(buffer, &data)) {
+              FXL_LOG(ERROR) << "TakeSnapshot failed";
+              encountered_error_ = true;
+              loop_->Quit();
+              return;
+            }
 
-        // Export root node of the scene graph. This recursively exports all
-        // descendant nodes.
-        int index = glTF_export_node(node, true);
-        auto &gltf_nodes = document_["scenes"][0]["nodes"];
-        gltf_nodes.PushBack(index, document_.GetAllocator());
+            // We currently support flatbuffer.v1_0 format.
+            auto snapshot = (const SnapshotData *)data.data();
+            if (snapshot->type != SnapshotData::SnapshotType::kFlatBuffer ||
+                snapshot->version != SnapshotData::SnapshotVersion::v1_0) {
+              FXL_LOG(ERROR) << "Invalid snapshot format encountered. Aborting.";
+              encountered_error_ = true;
+              loop_->Quit();
+              return;
+            }
 
-        // Dump the result json document in glTF format to stdout.
-        std::cout << document_;
+            // De-serialize the snapshot from flatbuffer.
+            auto node = flatbuffers::GetRoot<snapshot::Node>(snapshot->data);
 
-        loop_->Quit();
-      });
+            // Start with an empty glTF document.
+            document_.Parse(EMPTY_GLTF_DOC);
+
+            // Export root node of the scene graph. This recursively exports all
+            // descendant nodes.
+            int index = glTF_export_node(node, true);
+            auto &gltf_nodes = document_["scenes"][0]["nodes"];
+            gltf_nodes.PushBack(index, document_.GetAllocator());
+
+            // Dump the result json document in glTF format to stdout.
+            std::cout << document_;
+
+            loop_->Quit();
+          });
     });
   }
 
@@ -412,7 +434,7 @@ class SnapshotTaker {
   std::unique_ptr<component::StartupContext> context_;
   bool encountered_error_ = false;
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  fuchsia::ui::scenic::SnapshooterPtr snapshooter_;
+  fuchsia::ui::scenic::internal::SnapshotPtr snapshotter_;
   Document document_;
 };
 

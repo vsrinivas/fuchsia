@@ -35,6 +35,7 @@ class GfxSystem : public System, public TempScenicDelegate, public SessionUpdate
   // TODO(SCN-452): Remove this when we externalize Displays.
   void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
   void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
+
   void GetDisplayOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 

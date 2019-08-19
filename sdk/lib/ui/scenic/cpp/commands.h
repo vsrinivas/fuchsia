@@ -151,8 +151,6 @@ fuchsia::ui::gfx::Command NewSetClipPlanesCmd(uint32_t node_id,
 fuchsia::ui::gfx::Command NewSetTagCmd(uint32_t node_id, uint32_t tag_value);
 fuchsia::ui::gfx::Command NewSetHitTestBehaviorCmd(
     uint32_t node_id, fuchsia::ui::gfx::HitTestBehavior hit_test_behavior);
-fuchsia::ui::gfx::Command NewTakeSnapshotCmdHACK(
-    uint32_t id, fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback);
 
 // Display Commands.
 fuchsia::ui::gfx::Command NewSetEnableDebugViewBoundsCmd(uint32_t view_id, bool enable);

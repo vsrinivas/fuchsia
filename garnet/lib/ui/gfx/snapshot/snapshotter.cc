@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/resources/snapshot/snapshotter.h"
+#include "garnet/lib/ui/gfx/snapshot/snapshotter.h"
 
 #include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
@@ -30,9 +30,9 @@
 #include "garnet/lib/ui/gfx/resources/shapes/mesh_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
-#include "garnet/lib/ui/gfx/resources/snapshot/version.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
+#include "garnet/lib/ui/gfx/snapshot/version.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
@@ -81,28 +81,39 @@ bool VmoFromBytes(const uint8_t* bytes, size_t num_bytes, uint32_t type, uint32_
 Snapshotter::Snapshotter(std::unique_ptr<escher::BatchGpuUploader> gpu_uploader)
     : gpu_uploader_(std::move(gpu_uploader)) {}
 
-void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback callback) {
+void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot_callback) {
   FXL_DCHECK(resource) << "Cannot snapshot null resource.";
   // Visit the scene graph starting with |resource| and collecting images
   // and buffers to read from the GPU.
   resource->Accept(this);
 
-  // Submit all images/buffers to be read from GPU.
-  gpu_uploader_->Submit(
-      [node_serializer = current_node_serializer_, callback = std::move(callback)]() {
-        TRACE_DURATION("gfx", "Snapshotter::Serialize");
-        auto builder = std::make_shared<flatbuffers::FlatBufferBuilder>();
-        builder->Finish(node_serializer->serialize(*builder));
+  auto content_ready_callback = [node_serializer = current_node_serializer_,
+                                 snapshot_callback = std::move(snapshot_callback)]() {
+    TRACE_DURATION("gfx", "Snapshotter::Serialize");
+    auto builder = std::make_shared<flatbuffers::FlatBufferBuilder>();
+    builder->Finish(node_serializer->serialize(*builder));
 
-        fsl::SizedVmo sized_vmo;
-        if (!VmoFromBytes(builder->GetBufferPointer(), builder->GetSize(),
-                          SnapshotData::SnapshotType::kFlatBuffer,
-                          SnapshotData::SnapshotVersion::v1_0, &sized_vmo)) {
-          return callback(fuchsia::mem::Buffer{});
-        } else {
-          return callback(std::move(sized_vmo).ToTransport());
-        }
-      });
+    fsl::SizedVmo sized_vmo;
+    if (!VmoFromBytes(builder->GetBufferPointer(), builder->GetSize(),
+                      SnapshotData::SnapshotType::kFlatBuffer, SnapshotData::SnapshotVersion::v1_0,
+                      &sized_vmo)) {
+      return snapshot_callback(fuchsia::mem::Buffer{}, false);
+    } else {
+      return snapshot_callback(std::move(sized_vmo).ToTransport(), true);
+    }
+  };
+
+  // If there are no GPU operations, call the callback directly
+  // as the BatchGPUUploader will not call it unless it has work
+  // on the GPU to do. This is necessary as there are some scenes
+  // that do not contain any gpu buffers or textures.
+  if (!gpu_uploader_->HasContentToUpload()) {
+    content_ready_callback();
+  } else {
+    // Submit all images/buffers to be read from GPU.
+    FXL_DCHECK(gpu_uploader_);
+    gpu_uploader_->Submit(std::move(content_ready_callback));
+  }
 }
 
 void Snapshotter::Visit(EntityNode* r) { VisitNode(r); }

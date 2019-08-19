@@ -240,10 +240,6 @@ void EntityNode::Attach(const ViewHolder& view_holder) {
   session()->Enqueue(NewAddChildCmd(id(), view_holder.id()));
 }
 
-void EntityNode::Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback) {
-  session()->Enqueue(NewTakeSnapshotCmdHACK(id(), std::move(callback)));
-}
-
 void EntityNode::SetClip(uint32_t clip_id, bool clip_to_self) {
   session()->Enqueue(NewSetClipCmd(id(), clip_id, clip_to_self));
 }
@@ -274,10 +270,6 @@ void ImportNode::BindAsRequest(zx::eventpair* out_export_token) {
 
 void ImportNode::Attach(const ViewHolder& view_holder) {
   session()->Enqueue(NewAddChildCmd(id(), view_holder.id()));
-}
-
-void ImportNode::Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback) {
-  session()->Enqueue(NewTakeSnapshotCmdHACK(id(), std::move(callback)));
 }
 
 ViewHolder::ViewHolder(Session* session, zx::eventpair token, const std::string& debug_name)

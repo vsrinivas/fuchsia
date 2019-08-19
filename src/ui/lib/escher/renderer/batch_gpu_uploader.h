@@ -7,13 +7,13 @@
 
 #include <lib/fit/function.h>
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/renderer/buffer_cache.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -32,6 +32,10 @@ class BatchGpuUploader {
 
   BatchGpuUploader(EscherWeakPtr weak_escher, uint64_t frame_trace_number = 0);
   ~BatchGpuUploader();
+
+  // Returns true if the BatchGPUUploader has acquired a reader or writer and
+  // has work to do on the GPU.
+  bool HasContentToUpload() const { return is_initialized_; }
 
   // Provides a pointer in host-accessible GPU memory, and methods to copy this
   // memory into optimally-formatted Images and Buffers.

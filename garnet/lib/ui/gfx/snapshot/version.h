@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_VERSION_H_
-#define GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_VERSION_H_
+#ifndef GARNET_LIB_UI_GFX_SNAPSHOT_VERSION_H_
+#define GARNET_LIB_UI_GFX_SNAPSHOT_VERSION_H_
 
 namespace scenic_impl {
 namespace gfx {
@@ -18,4 +18,4 @@ typedef struct {
 }  // namespace gfx
 }  // namespace scenic_impl
 
-#endif  // GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_VERSION_H_
+#endif  // GARNET_LIB_UI_GFX_SNAPSHOT_VERSION_H_

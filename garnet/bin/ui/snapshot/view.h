@@ -13,7 +13,7 @@
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 
-#include "garnet/lib/ui/gfx/resources/snapshot/snapshot_generated.h"
+#include "garnet/lib/ui/gfx/snapshot/snapshot_generated.h"
 
 namespace snapshot {
 

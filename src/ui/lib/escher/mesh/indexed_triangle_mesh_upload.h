@@ -40,11 +40,12 @@ MeshPtr IndexedTriangleMeshUpload(Escher* escher, BatchGpuUploader* uploader,
 
   // Use a single buffer, but don't interleave the position and attribute
   // data.
-  auto buffer = escher->NewBuffer(total_bytes,
-                                  vk::BufferUsageFlagBits::eIndexBuffer |
-                                      vk::BufferUsageFlagBits::eVertexBuffer |
-                                      vk::BufferUsageFlagBits::eTransferDst,
-                                  vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto buffer = escher->NewBuffer(
+      total_bytes,
+      // |eTransferSrc| needed for glTF Exporter.
+      vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eIndexBuffer |
+          vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+      vk::MemoryPropertyFlagBits::eDeviceLocal);
   auto writer = uploader->AcquireWriter(total_bytes);
   {
     TRACE_DURATION("gfx", "escher::IndexedTriangleMeshUpload[memcpy]");

@@ -218,6 +218,10 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout
       barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
       src_stage_mask = vk::PipelineStageFlagBits::eTransfer;
       break;
+    case vk::ImageLayout::eTransferSrcOptimal:
+      barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+      src_stage_mask = vk::PipelineStageFlagBits::eTransfer;
+      break;
     case vk::ImageLayout::eUndefined:
       // If layout was eUndefined, we don't need a srcAccessMask.
       src_stage_mask = vk::PipelineStageFlagBits::eAllCommands;
@@ -263,6 +267,7 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout
       barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
       dst_stage_mask = vk::PipelineStageFlagBits::eTransfer;
       break;
+    case vk::ImageLayout::eUndefined:
     default:
       FXL_LOG(ERROR) << "CommandBuffer does not know how to transition to layout: "
                      << vk::to_string(new_layout);

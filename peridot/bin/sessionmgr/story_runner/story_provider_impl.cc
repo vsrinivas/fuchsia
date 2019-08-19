@@ -278,7 +278,7 @@ StoryProviderImpl::StoryProviderImpl(
     EntityProviderRunner* const entity_provider_runner,
     modular::ModuleFacetReader* const module_facet_reader,
     PresentationProvider* const presentation_provider,
-    fuchsia::ui::scenic::SnapshooterPtr view_snapshot, const bool enable_story_shell_preload)
+    fuchsia::ui::scenic::SnapshotPtr view_snapshot, const bool enable_story_shell_preload)
     : user_environment_(user_environment),
       session_storage_(session_storage),
       device_id_(std::move(device_id)),
@@ -294,7 +294,7 @@ StoryProviderImpl::StoryProviderImpl(
       presentation_provider_(presentation_provider),
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),
-      snapshooter_(std::move(view_snapshot)),
+      snapshotter_(std::move(view_snapshot)),
       weak_factory_(this) {
   session_storage_->set_on_story_deleted(
       [weak_ptr = weak_factory_.GetWeakPtr()](fidl::StringPtr story_id) {
@@ -802,15 +802,8 @@ void StoryProviderImpl::WatchVisualState(
 
 void StoryProviderImpl::TakeSnapshot(fidl::StringPtr story_id,
                                      fit::function<void(fuchsia::mem::Buffer)> callback) {
-  auto it = view_endpoints_.find(story_id);
-  if (it != view_endpoints_.end()) {
-    snapshooter_->TakeViewSnapshot(it->second,
-                                   [callback = std::move(callback)](fuchsia::mem::Buffer buffer) {
-                                     callback(std::move(buffer));
-                                   });
-  } else {
-    callback(fuchsia::mem::Buffer{});
-  }
+  FXL_LOG(WARNING) << "StoryProvider::TakeSnapshot is currently unimplemented.";
+  callback(fuchsia::mem::Buffer{});
 }
 
 void StoryProviderImpl::StartSnapshotLoader(

@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_SCENIC_SCENIC_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
@@ -82,6 +83,10 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   void SetInitialized();
 
+  void InitializeSnapshotService(std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot);
+
+  fuchsia::ui::scenic::internal::Snapshot* snapshot() { return snapshot_.get(); }
+
  private:
   void CreateSessionImmediately(
       fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
@@ -108,10 +113,14 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // Session bindings rely on setup of systems_; order matters.
   fidl::BindingSet<fuchsia::ui::scenic::Session, std::unique_ptr<Session>> session_bindings_;
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
+  fidl::BindingSet<fuchsia::ui::scenic::internal::Snapshot> snapshot_bindings_;
 
   size_t next_session_id_ = 1;
 
   TempScenicDelegate* delegate_ = nullptr;
+
+ protected:
+  std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Scenic);
 };

@@ -198,8 +198,8 @@ class GfxCommandApplier {
   static bool ApplyCreateLayer(Session* session, ResourceId id, fuchsia::ui::gfx::LayerArgs args);
   static bool ApplyCreateVariable(Session* session, ResourceId id,
                                   fuchsia::ui::gfx::VariableArgs args);
-  static bool ApplyTakeSnapshotCmdHACK(Session* session,
-                                       fuchsia::ui::gfx::TakeSnapshotCmdHACK command);
+  static bool ApplyTakeSnapshotCmdDEPRECATED(Session* session,
+                                             fuchsia::ui::gfx::TakeSnapshotCmdDEPRECATED command);
 
   static bool ApplySetDisplayColorConversionCmd(
       Session* session, fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK command);

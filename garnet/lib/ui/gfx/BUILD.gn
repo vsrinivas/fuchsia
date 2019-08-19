@@ -60,6 +60,8 @@ source_set("gfx_always_optimized") {
 
 source_set("gfx") {
   sources = [
+    "api/internal_snapshot_impl.cc",
+    "api/internal_snapshot_impl.h",
     "engine/engine.cc",
     "engine/engine.h",
     "engine/engine_renderer.cc",
@@ -166,10 +168,6 @@ source_set("gfx") {
     "resources/shapes/rounded_rectangle_shape.h",
     "resources/shapes/shape.cc",
     "resources/shapes/shape.h",
-    "resources/snapshot/serializer.h",
-    "resources/snapshot/snapshotter.cc",
-    "resources/snapshot/snapshotter.h",
-    "resources/snapshot/version.h",
     "resources/stereo_camera.cc",
     "resources/stereo_camera.h",
     "resources/variable.cc",
@@ -180,6 +178,10 @@ source_set("gfx") {
     "resources/view_holder.h",
     "screenshotter.cc",
     "screenshotter.h",
+    "snapshot/serializer.h",
+    "snapshot/snapshotter.cc",
+    "snapshot/snapshotter.h",
+    "snapshot/version.h",
     "swapchain/display_swapchain.cc",
     "swapchain/display_swapchain.h",
     "swapchain/swapchain.h",
@@ -333,6 +335,6 @@ source_set("validate_eventpair") {
 
 flatbuffer("snapshot_fbs") {
   sources = [
-    "resources/snapshot/snapshot.fbs",
+    "snapshot/snapshot.fbs",
   ]
 }

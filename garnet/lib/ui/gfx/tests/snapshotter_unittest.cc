@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/resources/snapshot/snapshotter.h"
+#include "garnet/lib/ui/gfx/snapshot/snapshotter.h"
 
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/shape_node.h"
-#include "garnet/lib/ui/gfx/resources/snapshot/serializer.h"
-#include "garnet/lib/ui/gfx/resources/snapshot/version.h"
+#include "garnet/lib/ui/gfx/snapshot/serializer.h"
+#include "garnet/lib/ui/gfx/snapshot/version.h"
 #include "garnet/lib/ui/gfx/tests/vk_session_test.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/vmo/vector.h"
@@ -33,6 +33,7 @@ class SnapshotterTest : public VkSessionTest {
     EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(kParentId)));
     EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kParentId, "Parent")));
     EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kChildId)));
+    EXPECT_TRUE(Apply(scenic::NewAddChildCmd(kParentId, kChildId)));
 
     const ResourceId kMaterialId = nextId++;
     EXPECT_TRUE(Apply(scenic::NewCreateMaterialCmd(kMaterialId)));
@@ -46,7 +47,7 @@ class SnapshotterTest : public VkSessionTest {
   }
 };
 
-VK_TEST_F(SnapshotterTest, DISABLED_Creation) {
+VK_TEST_F(SnapshotterTest, Creation) {
   auto escher = escher::test::GetEscher()->GetWeakPtr();
   Snapshotter snapshotter(escher::BatchGpuUploader::New(escher));
 
@@ -54,7 +55,9 @@ VK_TEST_F(SnapshotterTest, DISABLED_Creation) {
   ASSERT_NE(nullptr, entity.get());
 
   size_t size = 0;
-  snapshotter.TakeSnapshot(entity.get(), [&size](::fuchsia::mem::Buffer buffer) {
+  snapshotter.TakeSnapshot(entity.get(), [&size](::fuchsia::mem::Buffer buffer, bool success) {
+    EXPECT_TRUE(success);
+
     size = buffer.size;
     std::vector<uint8_t> data;
     EXPECT_TRUE(fsl::VectorFromVmo(buffer, &data));

@@ -618,7 +618,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
       std::move(focus_provider_story_provider), user_intelligence_provider_impl_.get(),
       discover_registry_service_.get(), module_resolver_service_.get(),
       entity_provider_runner_.get(), module_facet_reader_.get(), presentation_provider_impl_.get(),
-      component_context_->svc()->Connect<fuchsia::ui::scenic::Snapshooter>(),
+      component_context_->svc()->Connect<fuchsia::ui::scenic::Snapshot>(),
       (config_.enable_story_shell_preload())));
   story_provider_impl_->Connect(std::move(story_provider_request));
 

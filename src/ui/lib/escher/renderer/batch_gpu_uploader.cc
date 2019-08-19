@@ -89,13 +89,12 @@ void BatchGpuUploader::Reader::ReadImage(const ImagePtr& source, vk::BufferImage
 
   BatchGpuUploader::SemaphoreAssignmentHelper(source.get(), command_buffer_.get());
 
-  command_buffer_->impl()->TransitionImageLayout(source, vk::ImageLayout::eShaderReadOnlyOptimal,
+  command_buffer_->impl()->TransitionImageLayout(source, source->layout(),
                                                  vk::ImageLayout::eTransferSrcOptimal);
   command_buffer_->vk().copyImageToBuffer(source->vk(), vk::ImageLayout::eTransferSrcOptimal,
                                           buffer_->vk(), 1, &region);
-  command_buffer_->impl()->TransitionImageLayout(source, vk::ImageLayout::eUndefined,
+  command_buffer_->impl()->TransitionImageLayout(source, vk::ImageLayout::eTransferSrcOptimal,
                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
-
   command_buffer_->impl()->KeepAlive(source);
 }
 
@@ -235,7 +234,6 @@ void BatchGpuUploader::Submit(fit::function<void()> callback) {
   // buffers, and the frame's primary command buffer is not moved into the
   // Writer.
   FXL_DCHECK(writer_count_ == 0 && reader_count_ == 0);
-
   if (!is_initialized_) {
     // This uploader was never used, nothing to submit.
     return;

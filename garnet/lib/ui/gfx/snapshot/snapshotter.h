@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_SNAPSHOTTER_H_
-#define GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_SNAPSHOTTER_H_
+#ifndef GARNET_LIB_UI_GFX_SNAPSHOT_SNAPSHOTTER_H_
+#define GARNET_LIB_UI_GFX_SNAPSHOT_SNAPSHOTTER_H_
 
 #include <lib/fit/function.h>
 
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
-#include "garnet/lib/ui/gfx/resources/snapshot/serializer.h"
+#include "garnet/lib/ui/gfx/snapshot/serializer.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 
@@ -18,7 +18,9 @@ namespace gfx {
 class Node;
 class Resource;
 
-using TakeSnapshotCallback = fit::function<void(::fuchsia::mem::Buffer)>;
+// Callback for the snapshotter, where the buffer stores the snapshot data and
+// the bool represents the success or lack thereof of the snapshot operation.
+using TakeSnapshotCallback = fit::function<void(fuchsia::mem::Buffer, bool)>;
 
 // Defines a |ResourceVisitor| that takes snapshot of a branch of the scene
 // graph. It provides the snapshot in flatbuffer formatted |fuchsia.mem.Buffer|.
@@ -32,7 +34,7 @@ class Snapshotter : public ResourceVisitor {
 
   // Takes the snapshot of the |node| and calls the |callback| with a
   // |fuchsia.mem.Buffer| buffer.
-  void TakeSnapshot(Resource* resource, TakeSnapshotCallback callback);
+  void TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot_callback);
 
  protected:
   void Visit(Memory* r) override;
@@ -84,4 +86,4 @@ class Snapshotter : public ResourceVisitor {
 }  // namespace gfx
 }  // namespace scenic_impl
 
-#endif  // GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_SNAPSHOTTER_H_
+#endif  // GARNET_LIB_UI_GFX_SNAPSHOT_SNAPSHOTTER_H_

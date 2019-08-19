@@ -281,8 +281,6 @@ class EntityNode : public ContainerNode {
   void SetClipPlanes(std::vector<fuchsia::ui::gfx::Plane3> planes);
 
   void Attach(const ViewHolder& view_holder);
-
-  void Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback);
 };
 
 // Represents an imported node resource in a session.
@@ -305,8 +303,6 @@ class ImportNode final : public ContainerNode {
   bool is_bound() const { return is_bound_; }
 
   void Attach(const ViewHolder& view_holder);
-
-  void Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback);
 
  private:
   bool is_bound_ = false;

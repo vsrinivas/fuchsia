@@ -34,10 +34,11 @@ MeshPtr RoundedRectFactory::NewRoundedRect(const RoundedRectSpec& spec, const Me
   const size_t vertex_buffer_size =
       vertex_count * (primary_buffer_stride + secondary_buffer_stride);
 
-  auto vertex_buffer = buffer_factory_.NewBuffer(
-      vertex_buffer_size,
-      vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-      vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto vertex_buffer = buffer_factory_.NewBuffer(vertex_buffer_size,
+                                                 vk::BufferUsageFlagBits::eVertexBuffer |
+                                                     vk::BufferUsageFlagBits::eTransferSrc |
+                                                     vk::BufferUsageFlagBits::eTransferDst,
+                                                 vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   const auto bounding_box = BoundingBox::NewChecked(-0.5f * vec3(spec.width, spec.height, 0),
                                                     0.5f * vec3(spec.width, spec.height, 0), 1);
@@ -83,10 +84,11 @@ BufferPtr RoundedRectFactory::GetIndexBuffer(const RoundedRectSpec& spec, const 
     uint32_t index_count = GetRoundedRectMeshVertexAndIndexCounts(spec).second;
     size_t index_buffer_size = index_count * sizeof(MeshSpec::IndexType);
 
-    index_buffer_ = buffer_factory_.NewBuffer(
-        index_buffer_size,
-        vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        vk::MemoryPropertyFlagBits::eDeviceLocal);
+    index_buffer_ = buffer_factory_.NewBuffer(index_buffer_size,
+                                              vk::BufferUsageFlagBits::eIndexBuffer |
+                                                  vk::BufferUsageFlagBits::eTransferSrc |
+                                                  vk::BufferUsageFlagBits::eTransferDst,
+                                              vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     auto writer = batch_gpu_uploader->AcquireWriter(index_buffer_size);
     GenerateRoundedRectIndices(spec, mesh_spec, writer->host_ptr(), writer->size());

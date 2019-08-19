@@ -16,6 +16,7 @@
 #include "garnet/lib/ui/input/input_system.h"
 #endif
 
+#include "garnet/lib/ui/gfx/api/internal_snapshot_impl.h"
 #include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_predictor.h"
 
@@ -115,6 +116,11 @@ void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* displ
   auto input = scenic_.RegisterSystem<input::InputSystem>(&engine_.value());
   FXL_DCHECK(input);
 #endif
+
+  // Create the snapshotter and pass it to scenic.
+  auto snapshotter =
+      std::make_unique<gfx::InternalSnapshotImpl>(engine_->scene_graph(), escher_->GetWeakPtr());
+  scenic_.InitializeSnapshotService(std::move(snapshotter));
 
   scenic_.SetInitialized();
 }

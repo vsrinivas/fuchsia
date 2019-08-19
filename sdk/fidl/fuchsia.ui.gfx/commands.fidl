@@ -39,7 +39,7 @@ union Command {
     SetClipCmd set_clip;
     SetHitTestBehaviorCmd set_hit_test_behavior;
     SetViewPropertiesCmd set_view_properties;
-    TakeSnapshotCmdHACK take_snapshot_cmd;
+    TakeSnapshotCmdDEPRECATED take_snapshot_cmd;
 
     /// Camera and lighting commands.
     SetCameraCmd set_camera;
@@ -381,13 +381,13 @@ struct SetViewPropertiesCmd {
     ViewProperties properties;
 };
 
-protocol SnapshotCallbackHACK {
+protocol SnapshotCallbackDEPRECATED {
     OnData(fuchsia.mem.Buffer data);
 };
 
-struct TakeSnapshotCmdHACK {
+struct TakeSnapshotCmdDEPRECATED {
     uint32 node_id;
-    SnapshotCallbackHACK callback;
+    SnapshotCallbackDEPRECATED callback;
 };
 
 /// Sets a renderer's camera.

@@ -16,14 +16,21 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-
 TEST_F(SessionTest, AddPart_ShouldReturnFalse) {
   fuchsia::ui::gfx::AddPartCmd add_part_command;
   add_part_command.node_id = 0;
   add_part_command.part_id = 1;
   fuchsia::ui::gfx::Command command;
   command.set_add_part(std::move(add_part_command));
+
   EXPECT_FALSE(Apply(std::move(command)));
+}
+
+TEST_F(SessionTest, TakeSnapshot_ShouldReturnFalse) {
+  fuchsia::ui::gfx::TakeSnapshotCmdDEPRECATED snapshot_command;
+  snapshot_command.node_id = 0;
+  fuchsia::ui::gfx::Command command;
+  command.set_take_snapshot_cmd(std::move(snapshot_command));
 }
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {

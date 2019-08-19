@@ -36,7 +36,6 @@
 #include "garnet/lib/ui/gfx/resources/shapes/mesh_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
-#include "garnet/lib/ui/gfx/resources/snapshot/snapshotter.h"
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
@@ -212,7 +211,7 @@ bool GfxCommandApplier::ApplyCommand(Session* session, CommandContext* command_c
     case fuchsia::ui::gfx::Command::Tag::kSetDisableClipping:
       return ApplySetDisableClippingCmd(session, std::move(command.set_disable_clipping()));
     case fuchsia::ui::gfx::Command::Tag::kTakeSnapshotCmd:
-      return ApplyTakeSnapshotCmdHACK(session, std::move(command.take_snapshot_cmd()));
+      return ApplyTakeSnapshotCmdDEPRECATED(session, std::move(command.take_snapshot_cmd()));
     case fuchsia::ui::gfx::Command::Tag::kSetDisplayColorConversion:
       return ApplySetDisplayColorConversionCmd(session,
                                                std::move(command.set_display_color_conversion()));
@@ -390,48 +389,12 @@ bool GfxCommandApplier::ApplyAddPartCmd(Session* session, fuchsia::ui::gfx::AddP
   return false;
 }
 
-bool GfxCommandApplier::ApplyTakeSnapshotCmdHACK(Session* session,
-                                                 fuchsia::ui::gfx::TakeSnapshotCmdHACK command) {
-  async::PostTask(async_get_default_dispatcher(), [weak = session->GetWeakPtr(),
-                                                   command = std::move(command)]() mutable {
-    if (!weak) {
-      if (auto callback = command.callback.Bind()) {
-        // TODO(SCN-978): Return an error to the caller for invalid data.
-        callback->OnData(fuchsia::mem::Buffer{});
-      }
-      return;
-    }
-
-    const auto& context = weak->session_context();
-    Resource* resource = nullptr;
-    if (auto node = weak->resources()->FindResource<Node>(command.node_id)) {
-      resource = node.get();
-    } else if (command.node_id == 0) {
-      // TODO(SCN-1170): get rid of SceneGraph::first_compositor().
-      const auto& first_compositor_weak = context.scene_graph->first_compositor();
-      if (first_compositor_weak) {
-        resource = first_compositor_weak.get();
-      }
-    }
-
-    if (resource == nullptr) {
-      if (auto callback = command.callback.Bind()) {
-        callback->OnData(fuchsia::mem::Buffer{});
-      }
-      return;
-    }
-
-    auto gpu_uploader = escher::BatchGpuUploader::New(context.escher->GetWeakPtr());
-    Snapshotter snapshotter(std::move(gpu_uploader));
-    // Take a snapshot and return the data in callback. The closure does
-    // not need the snapshotter instance and is invoked after the instance
-    // is destroyed.
-    snapshotter.TakeSnapshot(resource,
-                             [callback = command.callback.Bind()](fuchsia::mem::Buffer snapshot) {
-                               callback->OnData(std::move(snapshot));
-                             });
-  });
-  return true;
+bool GfxCommandApplier::ApplyTakeSnapshotCmdDEPRECATED(
+    Session* session, fuchsia::ui::gfx::TakeSnapshotCmdDEPRECATED command) {
+  // This is now illegal; use will cause the session to be closed.
+  session->error_reporter()->ERROR() << "ApplyTakeSnapshotCmdDEPRECATED is is now illegal; use "
+                                        "will cause the session to be closed.";
+  return false;
 }
 
 bool GfxCommandApplier::ApplySetDisplayColorConversionCmd(
