@@ -19,12 +19,12 @@ Options
 
 )";
 
-const char kBuildDirsHelp[] = R"(  --build-dir=<path>
+const char kBuildDirsHelp[] = R"(  --build-dirs=<path>
   -b <path>
       Adds the given directory to the list of build directories. These
       directories are where source file names from the symbols are relative to.
       There can be multiple ones which will be searched in order.
-      The populates the "build-dirs" setting (see "get build-dir").)";
+      The populates the "build-dirs" setting (see "get build-dirs").)";
 
 const char kConnectHelp[] = R"(  --connect=<host>:<port>
   -c <host>:<port>
