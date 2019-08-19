@@ -6,7 +6,7 @@ driver("hid") {
   sources = [
     "hid-fifo.c",
     "hid-parser-lib.cc",
-    "hid.c",
+    "hid.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",

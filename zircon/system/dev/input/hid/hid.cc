@@ -15,6 +15,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/hidbus.h>
 #include <ddk/trace/event.h>
+#include <fbl/auto_call.h>
 
 #include "hid-fifo.h"
 #include "hid-parser.h"
@@ -29,7 +30,9 @@
 
 #define foreach_instance(base, instance) \
   list_for_every_entry (&base->instance_list, instance, hid_instance_t, node)
-#define bits_to_bytes(n) (((n) + 7) / 8)
+static constexpr input_report_size_t bits_to_bytes(input_report_size_t bits) {
+  return static_cast<input_report_size_t>((bits + 7) / 8);
+}
 
 // Until we do full HID parsing, we put mouse and keyboard devices into boot
 // protocol mode. In particular, a mouse will always send 3 byte reports (see
@@ -156,7 +159,7 @@ static fuchsia_hardware_input_BootProtocol get_boot_protocol(hid_device_t* hid) 
 }
 
 static input_report_size_t get_max_input_reportsize(hid_device_t* hid) {
-  size_t size = 0;
+  input_report_size_t size = 0;
   for (size_t i = 0; i < hid->num_reports; i++) {
     if (hid->sizes[i].in_size > size)
       size = hid->sizes[i].in_size;
@@ -168,8 +171,9 @@ static input_report_size_t get_max_input_reportsize(hid_device_t* hid) {
 static zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_t off,
                                      size_t* actual) {
   TRACE_DURATION("input", "HID Read Instance");
+  zx_status_t status = ZX_OK;
 
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
 
   if (hid->flags & HID_FLAGS_DEAD) {
     return ZX_ERR_PEER_CLOSED;
@@ -211,13 +215,13 @@ static zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_
     *actual = r;
     r = ZX_OK;
   } else if (r == 0) {
-    r = ZX_ERR_SHOULD_WAIT;
+    status = ZX_ERR_SHOULD_WAIT;
   }
-  return r;
+  return status;
 }
 
 static zx_status_t hid_close_instance(void* ctx, uint32_t flags) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   hid->flags |= HID_FLAGS_DEAD;
   mtx_lock(&hid->base->instance_lock);
   // TODO: refcount the base device and call stop if no instances are open
@@ -229,33 +233,35 @@ static zx_status_t hid_close_instance(void* ctx, uint32_t flags) {
 static void hid_release_reassembly_buffer(hid_device_t* dev);
 
 static void hid_release_instance(void* ctx) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   free(hid);
 }
 
 static zx_status_t fidl_GetBootProtocol(void* ctx, fidl_txn_t* txn) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   return fuchsia_hardware_input_DeviceGetBootProtocol_reply(txn, get_boot_protocol(hid->base));
 }
 
 static zx_status_t fidl_GetReportDescSize(void* ctx, fidl_txn_t* txn) {
-  hid_instance_t* hid = ctx;
-  return fuchsia_hardware_input_DeviceGetReportDescSize_reply(txn, hid->base->hid_report_desc_len);
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
+  return fuchsia_hardware_input_DeviceGetReportDescSize_reply(
+      txn, static_cast<uint16_t>(hid->base->hid_report_desc_len));
 }
 
 static zx_status_t fidl_GetReportDesc(void* ctx, fidl_txn_t* txn) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   return fuchsia_hardware_input_DeviceGetReportDesc_reply(txn, hid->base->hid_report_desc,
                                                           hid->base->hid_report_desc_len);
 }
 
 static zx_status_t fidl_GetNumReports(void* ctx, fidl_txn_t* txn) {
-  hid_instance_t* hid = ctx;
-  return fuchsia_hardware_input_DeviceGetNumReports_reply(txn, hid->base->num_reports);
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
+  return fuchsia_hardware_input_DeviceGetNumReports_reply(
+      txn, static_cast<uint16_t>(hid->base->num_reports));
 }
 
 static zx_status_t fidl_GetReportIds(void* ctx, fidl_txn_t* txn) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   uint8_t report[fuchsia_hardware_input_MAX_REPORT_IDS];
   for (size_t i = 0; i < hid->base->num_reports; i++) {
     report[i] = hid->base->sizes[i].id;
@@ -265,21 +271,21 @@ static zx_status_t fidl_GetReportIds(void* ctx, fidl_txn_t* txn) {
 
 static zx_status_t fidl_GetReportSize(void* ctx, fuchsia_hardware_input_ReportType type, uint8_t id,
                                       fidl_txn_t* txn) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   input_report_size_t size = hid_get_report_size_by_id(hid->base, id, type);
   return fuchsia_hardware_input_DeviceGetReportSize_reply(txn, size == 0 ? ZX_ERR_NOT_FOUND : ZX_OK,
                                                           size);
 }
 
 static zx_status_t fidl_GetMaxInputReportSize(void* ctx, fidl_txn_t* txn) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   return fuchsia_hardware_input_DeviceGetMaxInputReportSize_reply(
       txn, get_max_input_reportsize(hid->base));
 }
 
 static zx_status_t fidl_GetReport(void* ctx, fuchsia_hardware_input_ReportType type, uint8_t id,
                                   fidl_txn_t* txn) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   input_report_size_t needed = hid_get_report_size_by_id(hid->base, id, type);
   if (needed == 0) {
     return fuchsia_hardware_input_DeviceGetReport_reply(txn, ZX_ERR_NOT_FOUND, NULL, 0);
@@ -293,7 +299,7 @@ static zx_status_t fidl_GetReport(void* ctx, fuchsia_hardware_input_ReportType t
 
 static zx_status_t fidl_SetReport(void* ctx, fuchsia_hardware_input_ReportType type, uint8_t id,
                                   const uint8_t* report, size_t report_len, fidl_txn_t* txn) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   input_report_size_t needed = hid_get_report_size_by_id(hid->base, id, type);
   if (needed < report_len) {
     return fuchsia_hardware_input_DeviceSetReport_reply(txn, ZX_ERR_BUFFER_TOO_SMALL);
@@ -303,7 +309,7 @@ static zx_status_t fidl_SetReport(void* ctx, fuchsia_hardware_input_ReportType t
 }
 
 static zx_status_t fidl_SetTraceId(void* ctx, uint32_t id) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   hid->trace_id = id;
   return ZX_OK;
 }
@@ -322,7 +328,7 @@ static fuchsia_hardware_input_Device_ops_t fidl_ops = {
 };
 
 static zx_status_t hid_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-  hid_instance_t* hid = ctx;
+  hid_instance_t* hid = reinterpret_cast<hid_instance_t*>(ctx);
   if (hid->flags & HID_FLAGS_DEAD) {
     return ZX_ERR_PEER_CLOSED;
   }
@@ -330,13 +336,15 @@ static zx_status_t hid_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* 
   return fuchsia_hardware_input_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
-zx_protocol_device_t hid_instance_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .read = hid_read_instance,
-    .close = hid_close_instance,
-    .message = hid_message_instance,
-    .release = hid_release_instance,
-};
+zx_protocol_device_t hid_instance_proto = []() {
+  zx_protocol_device_t proto = {};
+  proto.version = DEVICE_OPS_VERSION;
+  proto.read = hid_read_instance;
+  proto.close = hid_close_instance;
+  proto.message = hid_message_instance;
+  proto.release = hid_release_instance;
+  return proto;
+}();
 
 static void hid_dump_hid_report_desc(hid_device_t* dev) {
   zxlogf(TRACE, "hid: dev %p HID report descriptor\n", dev);
@@ -423,7 +431,7 @@ static zx_status_t hid_init_reassembly_buffer(hid_device_t* dev) {
   // maximum HID input report size is only 60 bytes, we should not need a
   // reassembly buffer.
   input_report_size_t max_report_size = get_max_input_reportsize(dev);
-  dev->rbuf = malloc(max_report_size);
+  dev->rbuf = static_cast<uint8_t*>(malloc(max_report_size));
   if (dev->rbuf == NULL) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -433,7 +441,7 @@ static zx_status_t hid_init_reassembly_buffer(hid_device_t* dev) {
 }
 
 static void hid_release_device(void* ctx) {
-  hid_device_t* hid = ctx;
+  hid_device_t* hid = reinterpret_cast<hid_device_t*>(ctx);
 
   if (hid->hid_report_desc) {
     free(hid->hid_report_desc);
@@ -445,24 +453,23 @@ static void hid_release_device(void* ctx) {
 }
 
 static zx_status_t hid_open_device(void* ctx, zx_device_t** dev_out, uint32_t flags) {
-  hid_device_t* hid = ctx;
+  hid_device_t* hid = reinterpret_cast<hid_device_t*>(ctx);
 
-  hid_instance_t* inst = calloc(1, sizeof(hid_instance_t));
+  hid_instance_t* inst = static_cast<hid_instance_t*>(calloc(1, sizeof(hid_instance_t)));
   if (inst == NULL) {
     return ZX_ERR_NO_MEMORY;
   }
   zx_hid_fifo_init(&inst->fifo);
 
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "hid",
-      .ctx = inst,
-      .ops = &hid_instance_proto,
-      .proto_id = ZX_PROTOCOL_INPUT,
-      .flags = DEVICE_ADD_INSTANCE,
-  };
+  device_add_args_t args = {};
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.name = "hid";
+  args.ctx = inst;
+  args.ops = &hid_instance_proto;
+  args.proto_id = ZX_PROTOCOL_INPUT;
+  args.flags = DEVICE_ADD_INSTANCE;
 
-  zx_status_t status = status = device_add(hid->zxdev, &args, &inst->zxdev);
+  zx_status_t status = device_add(hid->zxdev, &args, &inst->zxdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "hid: error creating instance %d\n", status);
     free(inst);
@@ -479,7 +486,7 @@ static zx_status_t hid_open_device(void* ctx, zx_device_t** dev_out, uint32_t fl
 }
 
 static void hid_unbind_device(void* ctx) {
-  hid_device_t* hid = ctx;
+  hid_device_t* hid = reinterpret_cast<hid_device_t*>(ctx);
   mtx_lock(&hid->instance_lock);
   hid_instance_t* instance;
   foreach_instance(hid, instance) {
@@ -490,16 +497,18 @@ static void hid_unbind_device(void* ctx) {
   device_remove(hid->zxdev);
 }
 
-zx_protocol_device_t hid_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .open = hid_open_device,
-    .unbind = hid_unbind_device,
-    .release = hid_release_device,
-};
+zx_protocol_device_t hid_device_proto = []() {
+  zx_protocol_device_t proto = {};
+  proto.version = DEVICE_OPS_VERSION;
+  proto.open = hid_open_device;
+  proto.unbind = hid_unbind_device;
+  proto.release = hid_release_device;
+  return proto;
+}();
 
 void hid_io_queue(void* cookie, const void* _buf, size_t len) {
-  const uint8_t* buf = _buf;
-  hid_device_t* hid = cookie;
+  const uint8_t* buf = static_cast<const uint8_t*>(_buf);
+  hid_device_t* hid = static_cast<hid_device_t*>(cookie);
 
   TRACE_DURATION("input", "HID IO Queue");
 
@@ -604,20 +613,24 @@ hidbus_ifc_protocol_ops_t hid_ifc_ops = {
 
 static zx_status_t hid_bind(void* ctx, zx_device_t* parent) {
   hid_device_t* hiddev;
-  if ((hiddev = calloc(1, sizeof(hid_device_t))) == NULL) {
+  if ((hiddev = static_cast<hid_device_t*>(calloc(1, sizeof(hid_device_t)))) == NULL) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  auto cleanup = fbl::MakeAutoCall([&]() {
+    hid_release_reassembly_buffer(hiddev);
+    free(hiddev);
+  });
 
   zx_status_t status;
   if (device_get_protocol(parent, ZX_PROTOCOL_HIDBUS, &hiddev->hid)) {
     zxlogf(ERROR, "hid: bind: no hidbus protocol\n");
-    status = ZX_ERR_INTERNAL;
-    goto fail;
+    return ZX_ERR_INTERNAL;
   }
 
   if ((status = hid_op_query(hiddev, 0, &hiddev->info)) < 0) {
     zxlogf(ERROR, "hid: bind: hidbus query failed: %d\n", status);
-    goto fail;
+    return status;
   }
 
   mtx_init(&hiddev->instance_lock, mtx_plain);
@@ -630,7 +643,7 @@ static zx_status_t hid_bind(void* ctx, zx_device_t* parent) {
     status = hid_op_set_protocol(hiddev, HID_PROTOCOL_BOOT);
     if (status != ZX_OK) {
       zxlogf(ERROR, "hid: could not put HID device into boot protocol: %d\n", status);
-      goto fail;
+      return status;
     }
 
     // Disable numlock
@@ -645,35 +658,37 @@ static zx_status_t hid_bind(void* ctx, zx_device_t* parent) {
                                  (void**)&hiddev->hid_report_desc, &hiddev->hid_report_desc_len);
   if (status != ZX_OK) {
     zxlogf(ERROR, "hid: could not retrieve HID report descriptor: %d\n", status);
-    goto fail;
+    return status;
   }
 
   status = hid_process_hid_report_desc(hiddev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "hid: could not parse hid report descriptor: %d\n", status);
-    goto fail;
+    return status;
   }
   hid_dump_hid_report_desc(hiddev);
 
   status = hid_init_reassembly_buffer(hiddev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "hid: failed to initialize reassembly buffer: %d\n", status);
-    goto fail;
+    return status;
   }
 
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = hiddev->name,
-      .ctx = hiddev,
-      .ops = &hid_device_proto,
-      .proto_id = ZX_PROTOCOL_INPUT,
-  };
+  device_add_args_t args = {};
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.name = hiddev->name;
+  args.ctx = hiddev;
+  args.ops = &hid_device_proto;
+  args.proto_id = ZX_PROTOCOL_INPUT;
 
   status = device_add(parent, &args, &hiddev->zxdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "hid: device_add failed for HID device: %d\n", status);
-    goto fail;
+    return status;
   }
+
+  // Cancel cleanup now that we've been added.
+  cleanup.cancel();
 
   // TODO: delay calling start until we've been opened by someone
   status = hid_op_start(hiddev, hiddev, &hid_ifc_ops);
@@ -689,18 +704,16 @@ static zx_status_t hid_bind(void* ctx, zx_device_t* parent) {
     zxlogf(TRACE, "hid: [W] set_idle failed for %s: %d\n", hiddev->name, status);
     // continue anyway
   }
-  return ZX_OK;
 
-fail:
-  hid_release_reassembly_buffer(hiddev);
-  free(hiddev);
-  return status;
+  return ZX_OK;
 }
 
-static zx_driver_ops_t hid_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = hid_bind,
-};
+static zx_driver_ops_t hid_driver_ops = []() {
+  zx_driver_ops_t ops;
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = hid_bind;
+  return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(hid, hid_driver_ops, "zircon", "0.1", 1)

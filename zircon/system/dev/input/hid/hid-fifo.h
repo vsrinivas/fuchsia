@@ -13,7 +13,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 #ifndef HID_FIFO_SIZE
 #define HID_FIFO_SIZE 4096
@@ -37,6 +37,6 @@ ssize_t zx_hid_fifo_write(zx_hid_fifo_t* fifo, const void* buf, size_t len);
 
 void zx_hid_fifo_dump(zx_hid_fifo_t* fifo);
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_DEV_INPUT_HID_HID_FIFO_H_
