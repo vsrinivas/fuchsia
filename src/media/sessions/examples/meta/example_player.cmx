@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.media.Audio",
-            "fuchsia.media.sessions.Publisher"
+            "fuchsia.media.sessions2.Publisher"
         ]
     }
 }

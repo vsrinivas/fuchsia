@@ -8,16 +8,14 @@ import("//build/rust/rustc_binary.gni")
 group("examples") {
   testonly = true
   deps = [
-    ":sine_player"
+    ":example_player",
   ]
 }
 
-rustc_binary("sine_player_bin") {
-  name = "sine_player"
+rustc_binary("example_player_bin") {
+  name = "example_player"
   edition = "2018"
   with_unit_tests = true
-
-  source_root = "src/sine_player.rs"
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
@@ -25,25 +23,24 @@ rustc_binary("sine_player_bin") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.media.sessions:fuchsia.media.sessions-rustc",
-    "//third_party/rust_crates:byteorder",
+    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
   ]
 }
 
-package("sine_player") {
+package("example_player") {
   deps = [
-    ":sine_player_bin",
+    ":example_player_bin",
   ]
 
-  binary = "sine_player"
+  binary = "example_player"
 
   meta = [
     {
-      path = rebase_path("meta/sine_player.cmx")
-      dest = "sine_player.cmx"
+      path = rebase_path("meta/example_player.cmx")
+      dest = "example_player.cmx"
     },
   ]
 }
