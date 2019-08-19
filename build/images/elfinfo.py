@@ -5,9 +5,11 @@
 
 from contextlib import contextmanager
 from collections import namedtuple
+import argparse
 import mmap
 import os
 import struct
+import sys
 import uuid
 
 # Standard ELF constants.
@@ -566,29 +568,28 @@ def get_elf_info(filename, match_notes=False):
 __all__ = ['cpu', 'elf_info', 'elf_note', 'get_elf_accessor', 'get_elf_info']
 
 
-def test_main_strip(filenames):
-    for filename in filenames:
-        info = get_elf_info(filename)
-        print info
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--strip', action='store_true')
+    parser.add_argument('--build-id', action='store_true')
+    parser.add_argument('file', help='ELF file')
+    args = parser.parse_args()
+
+    info = get_elf_info(args.file)
+
+    if args.strip:
         stripped_filename = info.filename + '.ei-strip'
         info.strip(stripped_filename)
-        print '\t%s: %u -> %u' % (stripped_filename,
-                                  os.stat(filename).st_size,
-                                  os.stat(stripped_filename).st_size)
-
-
-def test_main_get_info(filenames):
-    for filename in filenames:
-        info = get_elf_info(filename)
+        print stripped_filename
+    elif args.build_id:
+        print info.build_id
+    else:
         print info
         for source in info.get_sources():
             print '\t' + source
 
+    return 0
 
-# For manual testing.
-if __name__ == "__main__":
-    import sys
-    if sys.argv[1] == '-strip':
-        test_main_strip(sys.argv[2:])
-    else:
-        test_main_get_info(sys.argv[1:])
+
+if __name__ == '__main__':
+    sys.exit(main())
