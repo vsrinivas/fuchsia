@@ -24,3 +24,5 @@ toc:
   path: /docs/development/workflows/testing_faq.md
 - title: "Workflow: tips"
   path: /docs/development/workflows/workflow_tips_and_faq.md
+- title: "Packet capture"
+  path: /docs/development/workflows/packet_capture.md

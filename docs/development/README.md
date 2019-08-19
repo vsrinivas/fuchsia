@@ -94,6 +94,7 @@ This section covers Fuchsia-wide conventions and best practices.
 
  - [CTU analysis in Zircon](workflows/ctu_analysis.md)
  - [Component Inspection](inspect/README.md)
+ - [Packet capture](workflows/packet_capture.md)
 
 
 [acer_12]: /docs/zircon/targets/acer12.md "Acer 12"
