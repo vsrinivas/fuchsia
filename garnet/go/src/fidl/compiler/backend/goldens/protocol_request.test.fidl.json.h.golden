@@ -18,10 +18,10 @@ class Parent_Sync;
 using ParentSyncPtr = ::fidl::SynchronousInterfacePtr<Parent>;
 class Parent_SyncProxy;
 namespace internal {
-constexpr uint64_t kParent_GetChild_GenOrdinal = 0x3692bc6900000000lu;
-constexpr uint64_t kParent_GetChildRequest_GenOrdinal = 0x3faacc7e00000000lu;
-constexpr uint64_t kParent_TakeChild_GenOrdinal = 0x4c0642f900000000lu;
-constexpr uint64_t kParent_TakeChildRequest_GenOrdinal = 0x5ec3867a00000000lu;
+constexpr uint64_t kParent_GetChild_Ordinal = 0x3692bc6900000000lu;
+constexpr uint64_t kParent_GetChildRequest_Ordinal = 0x3faacc7e00000000lu;
+constexpr uint64_t kParent_TakeChild_Ordinal = 0x4c0642f900000000lu;
+constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x5ec3867a00000000lu;
 
 }  // namespace
 #endif // __Fuchsia__
@@ -102,23 +102,23 @@ class Parent_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kParent_GetChild_GenOrdinal:
+      case internal::kParent_GetChild_Ordinal:
       {
         GetChild();
         break;
       }
-      case internal::kParent_GetChildRequest_GenOrdinal:
+      case internal::kParent_GetChildRequest_Ordinal:
       {
         GetChildRequest();
         break;
       }
-      case internal::kParent_TakeChild_GenOrdinal:
+      case internal::kParent_TakeChild_Ordinal:
       {
         auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(&request_decoder, 16);
         TakeChild(std::move(arg0));
         break;
       }
-      case internal::kParent_TakeChildRequest_GenOrdinal:
+      case internal::kParent_TakeChildRequest_Ordinal:
       {
         auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(&request_decoder, 16);
         TakeChildRequest(std::move(arg0));
@@ -169,13 +169,13 @@ class Parent_ResponseDecoder {
     }
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
-      case internal::kParent_GetChild_GenOrdinal:
+      case internal::kParent_GetChild_Ordinal:
       {
         auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(&response_decoder, 16);
         GetChild(std::move(arg0));
         break;
       }
-      case internal::kParent_GetChildRequest_GenOrdinal:
+      case internal::kParent_GetChildRequest_Ordinal:
       {
         auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(&response_decoder, 16);
         GetChildRequest(std::move(arg0));

@@ -11,7 +11,7 @@ namespace net {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kConnectivity_OnNetworkReachable_GenOrdinal = 0x658708c800000000lu;
+constexpr uint64_t kConnectivity_OnNetworkReachable_Ordinal = 0x658708c800000000lu;
 extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableEventTable;
 
 }  // namespace
@@ -73,7 +73,7 @@ zx_status_t Connectivity::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kConnectivity_OnNetworkReachable_GenOrdinal:
+    case kConnectivity_OnNetworkReachable_Ordinal:
     {
       auto result = ::fidl::DecodeAs<OnNetworkReachableResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -117,7 +117,7 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnNetworkReachableResponse*>(_write_bytes);
   _response._hdr = {};
-  _response._hdr.ordinal = kConnectivity_OnNetworkReachable_GenOrdinal;
+  _response._hdr.ordinal = kConnectivity_OnNetworkReachable_Ordinal;
   _response.reachable = std::move(reachable);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnNetworkReachableResponse));
   return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnNetworkReachableResponse>(std::move(_response_bytes)));
@@ -129,7 +129,7 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
   }
   auto& _response = *reinterpret_cast<OnNetworkReachableResponse*>(_buffer.data());
   _response._hdr = {};
-  _response._hdr.ordinal = kConnectivity_OnNetworkReachable_GenOrdinal;
+  _response._hdr.ordinal = kConnectivity_OnNetworkReachable_Ordinal;
   _response.reachable = std::move(reachable);
   _buffer.set_actual(sizeof(OnNetworkReachableResponse));
   return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnNetworkReachableResponse>(std::move(_buffer)));
@@ -137,7 +137,7 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
 
 zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnNetworkReachableResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kConnectivity_OnNetworkReachable_GenOrdinal;
+  params.message()->_hdr.ordinal = kConnectivity_OnNetworkReachable_Ordinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
 
@@ -331,11 +331,11 @@ Ipv6Address& ::llcpp::fuchsia::net::IpAddress::mutable_ipv6() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kNameLookup_LookupIp_GenOrdinal = 0x30c22b4c00000000lu;
+constexpr uint64_t kNameLookup_LookupIp_Ordinal = 0x30c22b4c00000000lu;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpRequestTable;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kNameLookup_LookupHostname_GenOrdinal = 0x17582c9400000000lu;
+constexpr uint64_t kNameLookup_LookupHostname_Ordinal = 0x17582c9400000000lu;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameRequestTable;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameResponseTable;
 
@@ -395,7 +395,7 @@ NameLookup::UnownedResultOf::LookupIp NameLookup::Call::LookupIp(zx::unowned_cha
 
 ::fidl::DecodeResult<NameLookup::LookupIpResponse> NameLookup::InPlace::LookupIp(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kNameLookup_LookupIp_GenOrdinal;
+  params.message()->_hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<NameLookup::LookupIpResponse>::FromFailure(
@@ -458,7 +458,7 @@ NameLookup::UnownedResultOf::LookupHostname NameLookup::Call::LookupHostname(zx:
 
 ::fidl::DecodeResult<NameLookup::LookupHostnameResponse> NameLookup::InPlace::LookupHostname(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kNameLookup_LookupHostname_GenOrdinal;
+  params.message()->_hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<NameLookup::LookupHostnameResponse>::FromFailure(
@@ -482,7 +482,7 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kNameLookup_LookupIp_GenOrdinal:
+    case kNameLookup_LookupIp_Ordinal:
     {
       auto result = ::fidl::DecodeAs<LookupIpRequest>(msg);
       if (result.status != ZX_OK) {
@@ -494,7 +494,7 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::LookupIpCompleter::Sync(txn));
       return true;
     }
-    case kNameLookup_LookupHostname_GenOrdinal:
+    case kNameLookup_LookupHostname_Ordinal:
     {
       auto result = ::fidl::DecodeAs<LookupHostnameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -527,7 +527,7 @@ void NameLookup::Interface::LookupIpCompleterBase::Reply(NameLookup_LookupIp_Res
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   LookupIpResponse _response = {};
-  _response._hdr.ordinal = kNameLookup_LookupIp_GenOrdinal;
+  _response._hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -544,7 +544,7 @@ void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   LookupIpResponse _response = {};
-  _response._hdr.ordinal = kNameLookup_LookupIp_GenOrdinal;
+  _response._hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -556,7 +556,7 @@ void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::BytePart _buffe
 
 void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::DecodedMessage<LookupIpResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kNameLookup_LookupIp_GenOrdinal;
+  params.message()->_hdr.ordinal = kNameLookup_LookupIp_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -565,7 +565,7 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(NameLookup_Lookup
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupHostnameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   LookupHostnameResponse _response = {};
-  _response._hdr.ordinal = kNameLookup_LookupHostname_GenOrdinal;
+  _response._hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -582,7 +582,7 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::BytePart 
     return;
   }
   LookupHostnameResponse _response = {};
-  _response._hdr.ordinal = kNameLookup_LookupHostname_GenOrdinal;
+  _response._hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -594,7 +594,7 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::BytePart 
 
 void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::DecodedMessage<LookupHostnameResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kNameLookup_LookupHostname_GenOrdinal;
+  params.message()->_hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -602,7 +602,7 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::DecodedMe
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kSocketProvider_GetAddrInfo_GenOrdinal = 0x1dbb070500000000lu;
+constexpr uint64_t kSocketProvider_GetAddrInfo_Ordinal = 0x1dbb070500000000lu;
 extern "C" const fidl_type_t fuchsia_net_SocketProviderGetAddrInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketProviderGetAddrInfoResponseTable;
 
@@ -664,7 +664,7 @@ SocketProvider::UnownedResultOf::GetAddrInfo SocketProvider::Call::GetAddrInfo(z
 
 ::fidl::DecodeResult<SocketProvider::GetAddrInfoResponse> SocketProvider::InPlace::GetAddrInfo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetAddrInfoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSocketProvider_GetAddrInfo_GenOrdinal;
+  params.message()->_hdr.ordinal = kSocketProvider_GetAddrInfo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<SocketProvider::GetAddrInfoResponse>::FromFailure(
@@ -688,7 +688,7 @@ bool SocketProvider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kSocketProvider_GetAddrInfo_GenOrdinal:
+    case kSocketProvider_GetAddrInfo_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetAddrInfoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -720,7 +720,7 @@ void SocketProvider::Interface::GetAddrInfoCompleterBase::Reply(AddrInfoStatus s
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAddrInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetAddrInfoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kSocketProvider_GetAddrInfo_GenOrdinal;
+  _response._hdr.ordinal = kSocketProvider_GetAddrInfo_Ordinal;
   _response.status = std::move(status);
   _response.nres = std::move(nres);
   _response.res = std::move(res);
@@ -734,7 +734,7 @@ void SocketProvider::Interface::GetAddrInfoCompleterBase::Reply(::fidl::BytePart
     return;
   }
   auto& _response = *reinterpret_cast<GetAddrInfoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kSocketProvider_GetAddrInfo_GenOrdinal;
+  _response._hdr.ordinal = kSocketProvider_GetAddrInfo_Ordinal;
   _response.status = std::move(status);
   _response.nres = std::move(nres);
   _response.res = std::move(res);
@@ -744,7 +744,7 @@ void SocketProvider::Interface::GetAddrInfoCompleterBase::Reply(::fidl::BytePart
 
 void SocketProvider::Interface::GetAddrInfoCompleterBase::Reply(::fidl::DecodedMessage<GetAddrInfoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSocketProvider_GetAddrInfo_GenOrdinal;
+  params.message()->_hdr.ordinal = kSocketProvider_GetAddrInfo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

@@ -12,14 +12,14 @@ namespace common {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kStream_Start_GenOrdinal = 0x379994e300000000lu;
+constexpr uint64_t kStream_Start_Ordinal = 0x379994e300000000lu;
 [[maybe_unused]]
-constexpr uint64_t kStream_Stop_GenOrdinal = 0x8977a200000000lu;
+constexpr uint64_t kStream_Stop_Ordinal = 0x8977a200000000lu;
 [[maybe_unused]]
-constexpr uint64_t kStream_ReleaseFrame_GenOrdinal = 0x258c738c00000000lu;
+constexpr uint64_t kStream_ReleaseFrame_Ordinal = 0x258c738c00000000lu;
 extern "C" const fidl_type_t fuchsia_camera_common_StreamReleaseFrameRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kStream_OnFrameAvailable_GenOrdinal = 0x69926e9500000000lu;
+constexpr uint64_t kStream_OnFrameAvailable_Ordinal = 0x69926e9500000000lu;
 
 }  // namespace
 
@@ -50,7 +50,7 @@ Stream::ResultOf::Start Stream::Call::Start(zx::unowned_channel _client_end) {
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<StartRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kStream_Start_GenOrdinal;
+  params.message()->_hdr.ordinal = kStream_Start_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -93,7 +93,7 @@ Stream::ResultOf::Stop Stream::Call::Stop(zx::unowned_channel _client_end) {
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<StopRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kStream_Stop_GenOrdinal;
+  params.message()->_hdr.ordinal = kStream_Stop_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -157,7 +157,7 @@ Stream::UnownedResultOf::ReleaseFrame Stream::Call::ReleaseFrame(zx::unowned_cha
 
 ::fidl::internal::StatusAndError Stream::InPlace::ReleaseFrame(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseFrameRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kStream_ReleaseFrame_GenOrdinal;
+  params.message()->_hdr.ordinal = kStream_ReleaseFrame_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -230,7 +230,7 @@ zx_status_t Stream::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kStream_OnFrameAvailable_GenOrdinal:
+    case kStream_OnFrameAvailable_Ordinal:
     {
       auto result = ::fidl::DecodeAs<OnFrameAvailableResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -253,7 +253,7 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kStream_Start_GenOrdinal:
+    case kStream_Start_Ordinal:
     {
       auto result = ::fidl::DecodeAs<StartRequest>(msg);
       if (result.status != ZX_OK) {
@@ -264,7 +264,7 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::StartCompleter::Sync(txn));
       return true;
     }
-    case kStream_Stop_GenOrdinal:
+    case kStream_Stop_Ordinal:
     {
       auto result = ::fidl::DecodeAs<StopRequest>(msg);
       if (result.status != ZX_OK) {
@@ -275,7 +275,7 @@ bool Stream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::StopCompleter::Sync(txn));
       return true;
     }
-    case kStream_ReleaseFrame_GenOrdinal:
+    case kStream_ReleaseFrame_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ReleaseFrameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -308,7 +308,7 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, Frame
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnFrameAvailableResponse*>(_write_bytes);
   _response._hdr = {};
-  _response._hdr.ordinal = kStream_OnFrameAvailable_GenOrdinal;
+  _response._hdr.ordinal = kStream_OnFrameAvailable_Ordinal;
   _response.frame = std::move(frame);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnFrameAvailableResponse));
   return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnFrameAvailableResponse>(std::move(_response_bytes)));
@@ -320,7 +320,7 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fid
   }
   auto& _response = *reinterpret_cast<OnFrameAvailableResponse*>(_buffer.data());
   _response._hdr = {};
-  _response._hdr.ordinal = kStream_OnFrameAvailable_GenOrdinal;
+  _response._hdr.ordinal = kStream_OnFrameAvailable_Ordinal;
   _response.frame = std::move(frame);
   _buffer.set_actual(sizeof(OnFrameAvailableResponse));
   return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnFrameAvailableResponse>(std::move(_buffer)));
@@ -328,7 +328,7 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fid
 
 zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnFrameAvailableResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kStream_OnFrameAvailable_GenOrdinal;
+  params.message()->_hdr.ordinal = kStream_OnFrameAvailable_Ordinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
 
@@ -352,7 +352,7 @@ void ::llcpp::fuchsia::camera::common::VirtualStreamConfig::SizeAndOffsetAsserti
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kVirtualCameraFactory_CreateDevice_GenOrdinal = 0x77cc2f4400000000lu;
+constexpr uint64_t kVirtualCameraFactory_CreateDevice_Ordinal = 0x77cc2f4400000000lu;
 extern "C" const fidl_type_t fuchsia_camera_common_VirtualCameraFactoryCreateDeviceRequestTable;
 
 }  // namespace
@@ -410,7 +410,7 @@ VirtualCameraFactory::UnownedResultOf::CreateDevice VirtualCameraFactory::Call::
 
 ::fidl::internal::StatusAndError VirtualCameraFactory::InPlace::CreateDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kVirtualCameraFactory_CreateDevice_GenOrdinal;
+  params.message()->_hdr.ordinal = kVirtualCameraFactory_CreateDevice_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -434,7 +434,7 @@ bool VirtualCameraFactory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl:
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kVirtualCameraFactory_CreateDevice_GenOrdinal:
+    case kVirtualCameraFactory_CreateDevice_Ordinal:
     {
       auto result = ::fidl::DecodeAs<CreateDeviceRequest>(msg);
       if (result.status != ZX_OK) {

@@ -12,7 +12,7 @@ namespace block {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kFtl_Format_GenOrdinal = 0x34f0c1b900000000lu;
+constexpr uint64_t kFtl_Format_Ordinal = 0x34f0c1b900000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_FtlFormatResponseTable;
 
 }  // namespace
@@ -63,7 +63,7 @@ Ftl::UnownedResultOf::Format Ftl::Call::Format(zx::unowned_channel _client_end, 
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<FormatRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kFtl_Format_GenOrdinal;
+  params.message()->_hdr.ordinal = kFtl_Format_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Ftl::FormatResponse>::FromFailure(
@@ -87,7 +87,7 @@ bool Ftl::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kFtl_Format_GenOrdinal:
+    case kFtl_Format_Ordinal:
     {
       auto result = ::fidl::DecodeAs<FormatRequest>(msg);
       if (result.status != ZX_OK) {
@@ -118,7 +118,7 @@ void Ftl::Interface::FormatCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<FormatResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<FormatResponse*>(_write_bytes);
-  _response._hdr.ordinal = kFtl_Format_GenOrdinal;
+  _response._hdr.ordinal = kFtl_Format_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(FormatResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<FormatResponse>(std::move(_response_bytes)));
@@ -130,7 +130,7 @@ void Ftl::Interface::FormatCompleterBase::Reply(::fidl::BytePart _buffer, int32_
     return;
   }
   auto& _response = *reinterpret_cast<FormatResponse*>(_buffer.data());
-  _response._hdr.ordinal = kFtl_Format_GenOrdinal;
+  _response._hdr.ordinal = kFtl_Format_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(FormatResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<FormatResponse>(std::move(_buffer)));
@@ -138,7 +138,7 @@ void Ftl::Interface::FormatCompleterBase::Reply(::fidl::BytePart _buffer, int32_
 
 void Ftl::Interface::FormatCompleterBase::Reply(::fidl::DecodedMessage<FormatResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kFtl_Format_GenOrdinal;
+  params.message()->_hdr.ordinal = kFtl_Format_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -146,24 +146,24 @@ void Ftl::Interface::FormatCompleterBase::Reply(::fidl::DecodedMessage<FormatRes
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kBlock_GetInfo_GenOrdinal = 0x7279049800000000lu;
+constexpr uint64_t kBlock_GetInfo_Ordinal = 0x7279049800000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetInfoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBlock_GetStats_GenOrdinal = 0x73b9275400000000lu;
+constexpr uint64_t kBlock_GetStats_Ordinal = 0x73b9275400000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetStatsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBlock_GetFifo_GenOrdinal = 0x63616dbe00000000lu;
+constexpr uint64_t kBlock_GetFifo_Ordinal = 0x63616dbe00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetFifoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBlock_AttachVmo_GenOrdinal = 0x72df2e6600000000lu;
+constexpr uint64_t kBlock_AttachVmo_Ordinal = 0x72df2e6600000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockAttachVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockAttachVmoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBlock_CloseFifo_GenOrdinal = 0x6b4a461300000000lu;
+constexpr uint64_t kBlock_CloseFifo_Ordinal = 0x6b4a461300000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockCloseFifoResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBlock_RebindDevice_GenOrdinal = 0x2c1ffdb000000000lu;
+constexpr uint64_t kBlock_RebindDevice_Ordinal = 0x2c1ffdb000000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceResponseTable;
 
 }  // namespace
@@ -214,7 +214,7 @@ Block::UnownedResultOf::GetInfo Block::Call::GetInfo(zx::unowned_channel _client
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetInfoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_GetInfo_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_GetInfo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Block::GetInfoResponse>::FromFailure(
@@ -277,7 +277,7 @@ Block::UnownedResultOf::GetStats Block::Call::GetStats(zx::unowned_channel _clie
 
 ::fidl::DecodeResult<Block::GetStatsResponse> Block::InPlace::GetStats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_GetStats_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_GetStats_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Block::GetStatsResponse>::FromFailure(
@@ -339,7 +339,7 @@ Block::UnownedResultOf::GetFifo Block::Call::GetFifo(zx::unowned_channel _client
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetFifoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_GetFifo_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_GetFifo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Block::GetFifoResponse>::FromFailure(
@@ -402,7 +402,7 @@ Block::UnownedResultOf::AttachVmo Block::Call::AttachVmo(zx::unowned_channel _cl
 
 ::fidl::DecodeResult<Block::AttachVmoResponse> Block::InPlace::AttachVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_AttachVmo_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_AttachVmo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Block::AttachVmoResponse>::FromFailure(
@@ -464,7 +464,7 @@ Block::UnownedResultOf::CloseFifo Block::Call::CloseFifo(zx::unowned_channel _cl
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CloseFifoRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_CloseFifo_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_CloseFifo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Block::CloseFifoResponse>::FromFailure(
@@ -526,7 +526,7 @@ Block::UnownedResultOf::RebindDevice Block::Call::RebindDevice(zx::unowned_chann
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<RebindDeviceRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_RebindDevice_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_RebindDevice_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Block::RebindDeviceResponse>::FromFailure(
@@ -550,7 +550,7 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kBlock_GetInfo_GenOrdinal:
+    case kBlock_GetInfo_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetInfoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -561,7 +561,7 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::GetInfoCompleter::Sync(txn));
       return true;
     }
-    case kBlock_GetStats_GenOrdinal:
+    case kBlock_GetStats_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetStatsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -573,7 +573,7 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::GetStatsCompleter::Sync(txn));
       return true;
     }
-    case kBlock_GetFifo_GenOrdinal:
+    case kBlock_GetFifo_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetFifoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -584,7 +584,7 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::GetFifoCompleter::Sync(txn));
       return true;
     }
-    case kBlock_AttachVmo_GenOrdinal:
+    case kBlock_AttachVmo_Ordinal:
     {
       auto result = ::fidl::DecodeAs<AttachVmoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -596,7 +596,7 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::AttachVmoCompleter::Sync(txn));
       return true;
     }
-    case kBlock_CloseFifo_GenOrdinal:
+    case kBlock_CloseFifo_Ordinal:
     {
       auto result = ::fidl::DecodeAs<CloseFifoRequest>(msg);
       if (result.status != ZX_OK) {
@@ -607,7 +607,7 @@ bool Block::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::CloseFifoCompleter::Sync(txn));
       return true;
     }
-    case kBlock_RebindDevice_GenOrdinal:
+    case kBlock_RebindDevice_Ordinal:
     {
       auto result = ::fidl::DecodeAs<RebindDeviceRequest>(msg);
       if (result.status != ZX_OK) {
@@ -638,7 +638,7 @@ void Block::Interface::GetInfoCompleterBase::Reply(int32_t status, BlockInfo* in
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetInfoResponse _response = {};
-  _response._hdr.ordinal = kBlock_GetInfo_GenOrdinal;
+  _response._hdr.ordinal = kBlock_GetInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -656,7 +656,7 @@ void Block::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, int
     return;
   }
   GetInfoResponse _response = {};
-  _response._hdr.ordinal = kBlock_GetInfo_GenOrdinal;
+  _response._hdr.ordinal = kBlock_GetInfo_Ordinal;
   _response.status = std::move(status);
   _response.info = std::move(info);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -669,7 +669,7 @@ void Block::Interface::GetInfoCompleterBase::Reply(::fidl::BytePart _buffer, int
 
 void Block::Interface::GetInfoCompleterBase::Reply(::fidl::DecodedMessage<GetInfoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_GetInfo_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_GetInfo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -679,7 +679,7 @@ void Block::Interface::GetStatsCompleterBase::Reply(int32_t status, BlockStats* 
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetStatsResponse _response = {};
-  _response._hdr.ordinal = kBlock_GetStats_GenOrdinal;
+  _response._hdr.ordinal = kBlock_GetStats_Ordinal;
   _response.status = std::move(status);
   _response.stats = std::move(stats);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -697,7 +697,7 @@ void Block::Interface::GetStatsCompleterBase::Reply(::fidl::BytePart _buffer, in
     return;
   }
   GetStatsResponse _response = {};
-  _response._hdr.ordinal = kBlock_GetStats_GenOrdinal;
+  _response._hdr.ordinal = kBlock_GetStats_Ordinal;
   _response.status = std::move(status);
   _response.stats = std::move(stats);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -710,7 +710,7 @@ void Block::Interface::GetStatsCompleterBase::Reply(::fidl::BytePart _buffer, in
 
 void Block::Interface::GetStatsCompleterBase::Reply(::fidl::DecodedMessage<GetStatsResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_GetStats_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_GetStats_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -719,7 +719,7 @@ void Block::Interface::GetFifoCompleterBase::Reply(int32_t status, ::zx::fifo fi
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetFifoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBlock_GetFifo_GenOrdinal;
+  _response._hdr.ordinal = kBlock_GetFifo_Ordinal;
   _response.status = std::move(status);
   _response.fifo = std::move(fifo);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetFifoResponse));
@@ -732,7 +732,7 @@ void Block::Interface::GetFifoCompleterBase::Reply(::fidl::BytePart _buffer, int
     return;
   }
   auto& _response = *reinterpret_cast<GetFifoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kBlock_GetFifo_GenOrdinal;
+  _response._hdr.ordinal = kBlock_GetFifo_Ordinal;
   _response.status = std::move(status);
   _response.fifo = std::move(fifo);
   _buffer.set_actual(sizeof(GetFifoResponse));
@@ -741,7 +741,7 @@ void Block::Interface::GetFifoCompleterBase::Reply(::fidl::BytePart _buffer, int
 
 void Block::Interface::GetFifoCompleterBase::Reply(::fidl::DecodedMessage<GetFifoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_GetFifo_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_GetFifo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -750,7 +750,7 @@ void Block::Interface::AttachVmoCompleterBase::Reply(int32_t status, VmoID* vmoi
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AttachVmoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   AttachVmoResponse _response = {};
-  _response._hdr.ordinal = kBlock_AttachVmo_GenOrdinal;
+  _response._hdr.ordinal = kBlock_AttachVmo_Ordinal;
   _response.status = std::move(status);
   _response.vmoid = std::move(vmoid);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -768,7 +768,7 @@ void Block::Interface::AttachVmoCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   AttachVmoResponse _response = {};
-  _response._hdr.ordinal = kBlock_AttachVmo_GenOrdinal;
+  _response._hdr.ordinal = kBlock_AttachVmo_Ordinal;
   _response.status = std::move(status);
   _response.vmoid = std::move(vmoid);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -781,7 +781,7 @@ void Block::Interface::AttachVmoCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void Block::Interface::AttachVmoCompleterBase::Reply(::fidl::DecodedMessage<AttachVmoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_AttachVmo_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_AttachVmo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -790,7 +790,7 @@ void Block::Interface::CloseFifoCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CloseFifoResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBlock_CloseFifo_GenOrdinal;
+  _response._hdr.ordinal = kBlock_CloseFifo_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseFifoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloseFifoResponse>(std::move(_response_bytes)));
@@ -802,7 +802,7 @@ void Block::Interface::CloseFifoCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   auto& _response = *reinterpret_cast<CloseFifoResponse*>(_buffer.data());
-  _response._hdr.ordinal = kBlock_CloseFifo_GenOrdinal;
+  _response._hdr.ordinal = kBlock_CloseFifo_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(CloseFifoResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloseFifoResponse>(std::move(_buffer)));
@@ -810,7 +810,7 @@ void Block::Interface::CloseFifoCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void Block::Interface::CloseFifoCompleterBase::Reply(::fidl::DecodedMessage<CloseFifoResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_CloseFifo_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_CloseFifo_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -819,7 +819,7 @@ void Block::Interface::RebindDeviceCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RebindDeviceResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBlock_RebindDevice_GenOrdinal;
+  _response._hdr.ordinal = kBlock_RebindDevice_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RebindDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RebindDeviceResponse>(std::move(_response_bytes)));
@@ -831,7 +831,7 @@ void Block::Interface::RebindDeviceCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   auto& _response = *reinterpret_cast<RebindDeviceResponse*>(_buffer.data());
-  _response._hdr.ordinal = kBlock_RebindDevice_GenOrdinal;
+  _response._hdr.ordinal = kBlock_RebindDevice_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(RebindDeviceResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RebindDeviceResponse>(std::move(_buffer)));
@@ -839,7 +839,7 @@ void Block::Interface::RebindDeviceCompleterBase::Reply(::fidl::BytePart _buffer
 
 void Block::Interface::RebindDeviceCompleterBase::Reply(::fidl::DecodedMessage<RebindDeviceResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBlock_RebindDevice_GenOrdinal;
+  params.message()->_hdr.ordinal = kBlock_RebindDevice_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

@@ -18,7 +18,7 @@ class SecondProtocol_Sync;
 using SecondProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SecondProtocol>;
 class SecondProtocol_SyncProxy;
 namespace internal {
-constexpr uint64_t kSecondProtocol_MethodOnSecond_GenOrdinal = 0xd09c00f00000000lu;
+constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal = 0xd09c00f00000000lu;
 
 }  // namespace
 #endif // __Fuchsia__
@@ -32,7 +32,7 @@ class FirstProtocol_Sync;
 using FirstProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<FirstProtocol>;
 class FirstProtocol_SyncProxy;
 namespace internal {
-constexpr uint64_t kFirstProtocol_MethodOnFirst_GenOrdinal = 0x2838a83100000000lu;
+constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x2838a83100000000lu;
 
 }  // namespace
 #endif // __Fuchsia__
@@ -85,7 +85,7 @@ class SecondProtocol_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kSecondProtocol_MethodOnSecond_GenOrdinal:
+      case internal::kSecondProtocol_MethodOnSecond_Ordinal:
       {
         MethodOnSecond();
         break;
@@ -221,7 +221,7 @@ class FirstProtocol_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kFirstProtocol_MethodOnFirst_GenOrdinal:
+      case internal::kFirstProtocol_MethodOnFirst_Ordinal:
       {
         MethodOnFirst();
         break;

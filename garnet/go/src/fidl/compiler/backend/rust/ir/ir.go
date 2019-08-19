@@ -733,7 +733,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 
 		m := Method{
 			Attributes:  v.Attributes,
-			Ordinals:    types.NewOrdinalsStep3(v, "UNUSED", "UNUSED"),
+			Ordinals:    types.NewOrdinalsStep5(v, "UNUSED", "UNUSED"),
 			Name:        name,
 			CamelName:   camelName,
 			HasRequest:  v.HasRequest,

@@ -14,16 +14,16 @@ namespace bus {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kBus_Enable_GenOrdinal = 0x52804a5800000000lu;
+constexpr uint64_t kBus_Enable_Ordinal = 0x52804a5800000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBus_Disable_GenOrdinal = 0x4962c56f00000000lu;
+constexpr uint64_t kBus_Disable_Ordinal = 0x4962c56f00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBus_Connect_GenOrdinal = 0x6252c09800000000lu;
+constexpr uint64_t kBus_Connect_Ordinal = 0x6252c09800000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kBus_Disconnect_GenOrdinal = 0x663c1cc700000000lu;
+constexpr uint64_t kBus_Disconnect_Ordinal = 0x663c1cc700000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
 
 }  // namespace
@@ -74,7 +74,7 @@ Bus::UnownedResultOf::Enable Bus::Call::Enable(zx::unowned_channel _client_end, 
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<EnableRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBus_Enable_GenOrdinal;
+  params.message()->_hdr.ordinal = kBus_Enable_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Bus::EnableResponse>::FromFailure(
@@ -136,7 +136,7 @@ Bus::UnownedResultOf::Disable Bus::Call::Disable(zx::unowned_channel _client_end
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DisableRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBus_Disable_GenOrdinal;
+  params.message()->_hdr.ordinal = kBus_Disable_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Bus::DisableResponse>::FromFailure(
@@ -198,7 +198,7 @@ Bus::UnownedResultOf::Connect Bus::Call::Connect(zx::unowned_channel _client_end
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ConnectRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBus_Connect_GenOrdinal;
+  params.message()->_hdr.ordinal = kBus_Connect_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Bus::ConnectResponse>::FromFailure(
@@ -260,7 +260,7 @@ Bus::UnownedResultOf::Disconnect Bus::Call::Disconnect(zx::unowned_channel _clie
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DisconnectRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBus_Disconnect_GenOrdinal;
+  params.message()->_hdr.ordinal = kBus_Disconnect_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Bus::DisconnectResponse>::FromFailure(
@@ -284,7 +284,7 @@ bool Bus::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kBus_Enable_GenOrdinal:
+    case kBus_Enable_Ordinal:
     {
       auto result = ::fidl::DecodeAs<EnableRequest>(msg);
       if (result.status != ZX_OK) {
@@ -295,7 +295,7 @@ bool Bus::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
         Interface::EnableCompleter::Sync(txn));
       return true;
     }
-    case kBus_Disable_GenOrdinal:
+    case kBus_Disable_Ordinal:
     {
       auto result = ::fidl::DecodeAs<DisableRequest>(msg);
       if (result.status != ZX_OK) {
@@ -306,7 +306,7 @@ bool Bus::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
         Interface::DisableCompleter::Sync(txn));
       return true;
     }
-    case kBus_Connect_GenOrdinal:
+    case kBus_Connect_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ConnectRequest>(msg);
       if (result.status != ZX_OK) {
@@ -317,7 +317,7 @@ bool Bus::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
         Interface::ConnectCompleter::Sync(txn));
       return true;
     }
-    case kBus_Disconnect_GenOrdinal:
+    case kBus_Disconnect_Ordinal:
     {
       auto result = ::fidl::DecodeAs<DisconnectRequest>(msg);
       if (result.status != ZX_OK) {
@@ -348,7 +348,7 @@ void Bus::Interface::EnableCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<EnableResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBus_Enable_GenOrdinal;
+  _response._hdr.ordinal = kBus_Enable_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(EnableResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<EnableResponse>(std::move(_response_bytes)));
@@ -360,7 +360,7 @@ void Bus::Interface::EnableCompleterBase::Reply(::fidl::BytePart _buffer, int32_
     return;
   }
   auto& _response = *reinterpret_cast<EnableResponse*>(_buffer.data());
-  _response._hdr.ordinal = kBus_Enable_GenOrdinal;
+  _response._hdr.ordinal = kBus_Enable_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(EnableResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<EnableResponse>(std::move(_buffer)));
@@ -368,7 +368,7 @@ void Bus::Interface::EnableCompleterBase::Reply(::fidl::BytePart _buffer, int32_
 
 void Bus::Interface::EnableCompleterBase::Reply(::fidl::DecodedMessage<EnableResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBus_Enable_GenOrdinal;
+  params.message()->_hdr.ordinal = kBus_Enable_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -377,7 +377,7 @@ void Bus::Interface::DisableCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DisableResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBus_Disable_GenOrdinal;
+  _response._hdr.ordinal = kBus_Disable_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DisableResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DisableResponse>(std::move(_response_bytes)));
@@ -389,7 +389,7 @@ void Bus::Interface::DisableCompleterBase::Reply(::fidl::BytePart _buffer, int32
     return;
   }
   auto& _response = *reinterpret_cast<DisableResponse*>(_buffer.data());
-  _response._hdr.ordinal = kBus_Disable_GenOrdinal;
+  _response._hdr.ordinal = kBus_Disable_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(DisableResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DisableResponse>(std::move(_buffer)));
@@ -397,7 +397,7 @@ void Bus::Interface::DisableCompleterBase::Reply(::fidl::BytePart _buffer, int32
 
 void Bus::Interface::DisableCompleterBase::Reply(::fidl::DecodedMessage<DisableResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBus_Disable_GenOrdinal;
+  params.message()->_hdr.ordinal = kBus_Disable_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -406,7 +406,7 @@ void Bus::Interface::ConnectCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConnectResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBus_Connect_GenOrdinal;
+  _response._hdr.ordinal = kBus_Connect_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConnectResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConnectResponse>(std::move(_response_bytes)));
@@ -418,7 +418,7 @@ void Bus::Interface::ConnectCompleterBase::Reply(::fidl::BytePart _buffer, int32
     return;
   }
   auto& _response = *reinterpret_cast<ConnectResponse*>(_buffer.data());
-  _response._hdr.ordinal = kBus_Connect_GenOrdinal;
+  _response._hdr.ordinal = kBus_Connect_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(ConnectResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConnectResponse>(std::move(_buffer)));
@@ -426,7 +426,7 @@ void Bus::Interface::ConnectCompleterBase::Reply(::fidl::BytePart _buffer, int32
 
 void Bus::Interface::ConnectCompleterBase::Reply(::fidl::DecodedMessage<ConnectResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBus_Connect_GenOrdinal;
+  params.message()->_hdr.ordinal = kBus_Connect_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -435,7 +435,7 @@ void Bus::Interface::DisconnectCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DisconnectResponse*>(_write_bytes);
-  _response._hdr.ordinal = kBus_Disconnect_GenOrdinal;
+  _response._hdr.ordinal = kBus_Disconnect_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DisconnectResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DisconnectResponse>(std::move(_response_bytes)));
@@ -447,7 +447,7 @@ void Bus::Interface::DisconnectCompleterBase::Reply(::fidl::BytePart _buffer, in
     return;
   }
   auto& _response = *reinterpret_cast<DisconnectResponse*>(_buffer.data());
-  _response._hdr.ordinal = kBus_Disconnect_GenOrdinal;
+  _response._hdr.ordinal = kBus_Disconnect_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(DisconnectResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DisconnectResponse>(std::move(_buffer)));
@@ -455,7 +455,7 @@ void Bus::Interface::DisconnectCompleterBase::Reply(::fidl::BytePart _buffer, in
 
 void Bus::Interface::DisconnectCompleterBase::Reply(::fidl::DecodedMessage<DisconnectResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kBus_Disconnect_GenOrdinal;
+  params.message()->_hdr.ordinal = kBus_Disconnect_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

@@ -31,20 +31,6 @@ type Ordinals struct {
 	writeGen bool
 }
 
-// NewOrdinals creates an Ordinals using the `ordName`, and `genName` provided.
-func NewOrdinals(method Method, ordName, genName string) Ordinals {
-	return Ordinals{
-		ord: NamedOrdinal{
-			Name:    ordName,
-			Ordinal: methodOrdinal(method.Ordinal << 32),
-		},
-		gen: NamedOrdinal{
-			Name:    genName,
-			Ordinal: methodOrdinal(method.GenOrdinal << 32),
-		},
-	}
-}
-
 // NewOrdinalsStep3 creates an Ordinals using the `ordName`, and `genName`
 // provided.
 //
@@ -64,11 +50,29 @@ func NewOrdinalsStep3(method Method, ordName, genName string) Ordinals {
 	}
 }
 
+// NewOrdinalsStep5 creates an Ordinals using the `ordName`, and `genName`
+// provided.
+//
+// Step #5 of migration: neither ord nor gen are shifted (they are read directly
+// from fidlc)
+func NewOrdinalsStep5(method Method, ordName, genName string) Ordinals {
+	return Ordinals{
+		ord: NamedOrdinal{
+			Name:    ordName,
+			Ordinal: methodOrdinal(method.Ordinal),
+		},
+		gen: NamedOrdinal{
+			Name:    genName,
+			Ordinal: methodOrdinal(method.GenOrdinal),
+		},
+	}
+}
+
 // Reads returns all distinct ordinals to be used on read, i.e. either
 // ord, gen, or both, depending on the current status of the migration.
 func (ords Ordinals) Reads() []NamedOrdinal {
 	var (
-		reads []NamedOrdinal
+		reads      []NamedOrdinal
 		includeOrd = ords.ord.Ordinal != 0
 		includeGen = ords.gen.Ordinal != 0
 	)

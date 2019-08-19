@@ -12,7 +12,7 @@ namespace test {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetChannel_GenOrdinal = 0x3ee7275100000000lu;
+constexpr uint64_t kDevice_GetChannel_Ordinal = 0x3ee7275100000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_test_DeviceGetChannelResponseTable;
 
 }  // namespace
@@ -63,7 +63,7 @@ Device::UnownedResultOf::GetChannel Device::Call::GetChannel(zx::unowned_channel
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetChannelRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetChannel_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetChannel_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetChannelResponse>::FromFailure(
@@ -87,7 +87,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_GetChannel_GenOrdinal:
+    case kDevice_GetChannel_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetChannelRequest>(msg);
       if (result.status != ZX_OK) {
@@ -118,7 +118,7 @@ void Device::Interface::GetChannelCompleterBase::Reply(::zx::channel ch) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetChannelResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_GetChannel_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetChannel_Ordinal;
   _response.ch = std::move(ch);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChannelResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetChannelResponse>(std::move(_response_bytes)));
@@ -130,7 +130,7 @@ void Device::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<GetChannelResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_GetChannel_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetChannel_Ordinal;
   _response.ch = std::move(ch);
   _buffer.set_actual(sizeof(GetChannelResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetChannelResponse>(std::move(_buffer)));
@@ -138,7 +138,7 @@ void Device::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Device::Interface::GetChannelCompleterBase::Reply(::fidl::DecodedMessage<GetChannelResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetChannel_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetChannel_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

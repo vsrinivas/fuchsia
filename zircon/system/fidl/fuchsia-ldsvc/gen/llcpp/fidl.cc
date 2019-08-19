@@ -11,29 +11,29 @@ namespace ldsvc {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kLoader_Done_GenOrdinal = 0x501635da00000000lu;
+constexpr uint64_t kLoader_Done_Ordinal = 0x501635da00000000lu;
 [[maybe_unused]]
-constexpr uint64_t kLoader_LoadObject_GenOrdinal = 0x18d35e6000000000lu;
+constexpr uint64_t kLoader_LoadObject_Ordinal = 0x18d35e6000000000lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLoader_LoadScriptInterpreter_GenOrdinal = 0x32cc7f4e00000000lu;
+constexpr uint64_t kLoader_LoadScriptInterpreter_Ordinal = 0x32cc7f4e00000000lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadScriptInterpreterRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadScriptInterpreterResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLoader_Config_GenOrdinal = 0x1adeb78d00000000lu;
+constexpr uint64_t kLoader_Config_Ordinal = 0x1adeb78d00000000lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLoader_Clone_GenOrdinal = 0x3862fcb900000000lu;
+constexpr uint64_t kLoader_Clone_Ordinal = 0x3862fcb900000000lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLoader_DebugPublishDataSink_GenOrdinal = 0x4f64fa4100000000lu;
+constexpr uint64_t kLoader_DebugPublishDataSink_Ordinal = 0x4f64fa4100000000lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugPublishDataSinkRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugPublishDataSinkResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLoader_DebugLoadConfig_GenOrdinal = 0x722d77ba00000000lu;
+constexpr uint64_t kLoader_DebugLoadConfig_Ordinal = 0x722d77ba00000000lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugLoadConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugLoadConfigResponseTable;
 
@@ -66,7 +66,7 @@ Loader::ResultOf::Done Loader::Call::Done(zx::unowned_channel _client_end) {
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DoneRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_Done_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_Done_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -134,7 +134,7 @@ Loader::UnownedResultOf::LoadObject Loader::Call::LoadObject(zx::unowned_channel
 
 ::fidl::DecodeResult<Loader::LoadObjectResponse> Loader::InPlace::LoadObject(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadObjectRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_LoadObject_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Loader::LoadObjectResponse>::FromFailure(
@@ -202,7 +202,7 @@ Loader::UnownedResultOf::LoadScriptInterpreter Loader::Call::LoadScriptInterpret
 
 ::fidl::DecodeResult<Loader::LoadScriptInterpreterResponse> Loader::InPlace::LoadScriptInterpreter(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadScriptInterpreterRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_LoadScriptInterpreter_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_LoadScriptInterpreter_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Loader::LoadScriptInterpreterResponse>::FromFailure(
@@ -270,7 +270,7 @@ Loader::UnownedResultOf::Config Loader::Call::Config(zx::unowned_channel _client
 
 ::fidl::DecodeResult<Loader::ConfigResponse> Loader::InPlace::Config(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_Config_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_Config_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Loader::ConfigResponse>::FromFailure(
@@ -333,7 +333,7 @@ Loader::UnownedResultOf::Clone Loader::Call::Clone(zx::unowned_channel _client_e
 
 ::fidl::DecodeResult<Loader::CloneResponse> Loader::InPlace::Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_Clone_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Loader::CloneResponse>::FromFailure(
@@ -403,7 +403,7 @@ Loader::UnownedResultOf::DebugPublishDataSink Loader::Call::DebugPublishDataSink
 
 ::fidl::DecodeResult<Loader::DebugPublishDataSinkResponse> Loader::InPlace::DebugPublishDataSink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DebugPublishDataSinkRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_DebugPublishDataSink_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_DebugPublishDataSink_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Loader::DebugPublishDataSinkResponse>::FromFailure(
@@ -471,7 +471,7 @@ Loader::UnownedResultOf::DebugLoadConfig Loader::Call::DebugLoadConfig(zx::unown
 
 ::fidl::DecodeResult<Loader::DebugLoadConfigResponse> Loader::InPlace::DebugLoadConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DebugLoadConfigRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_DebugLoadConfig_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_DebugLoadConfig_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Loader::DebugLoadConfigResponse>::FromFailure(
@@ -495,7 +495,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kLoader_Done_GenOrdinal:
+    case kLoader_Done_Ordinal:
     {
       auto result = ::fidl::DecodeAs<DoneRequest>(msg);
       if (result.status != ZX_OK) {
@@ -506,7 +506,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::DoneCompleter::Sync(txn));
       return true;
     }
-    case kLoader_LoadObject_GenOrdinal:
+    case kLoader_LoadObject_Ordinal:
     {
       auto result = ::fidl::DecodeAs<LoadObjectRequest>(msg);
       if (result.status != ZX_OK) {
@@ -518,7 +518,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::LoadObjectCompleter::Sync(txn));
       return true;
     }
-    case kLoader_LoadScriptInterpreter_GenOrdinal:
+    case kLoader_LoadScriptInterpreter_Ordinal:
     {
       auto result = ::fidl::DecodeAs<LoadScriptInterpreterRequest>(msg);
       if (result.status != ZX_OK) {
@@ -530,7 +530,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::LoadScriptInterpreterCompleter::Sync(txn));
       return true;
     }
-    case kLoader_Config_GenOrdinal:
+    case kLoader_Config_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ConfigRequest>(msg);
       if (result.status != ZX_OK) {
@@ -542,7 +542,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::ConfigCompleter::Sync(txn));
       return true;
     }
-    case kLoader_Clone_GenOrdinal:
+    case kLoader_Clone_Ordinal:
     {
       auto result = ::fidl::DecodeAs<CloneRequest>(msg);
       if (result.status != ZX_OK) {
@@ -554,7 +554,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::CloneCompleter::Sync(txn));
       return true;
     }
-    case kLoader_DebugPublishDataSink_GenOrdinal:
+    case kLoader_DebugPublishDataSink_Ordinal:
     {
       auto result = ::fidl::DecodeAs<DebugPublishDataSinkRequest>(msg);
       if (result.status != ZX_OK) {
@@ -566,7 +566,7 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::DebugPublishDataSinkCompleter::Sync(txn));
       return true;
     }
-    case kLoader_DebugLoadConfig_GenOrdinal:
+    case kLoader_DebugLoadConfig_Ordinal:
     {
       auto result = ::fidl::DecodeAs<DebugLoadConfigRequest>(msg);
       if (result.status != ZX_OK) {
@@ -598,7 +598,7 @@ void Loader::Interface::LoadObjectCompleterBase::Reply(int32_t rv, ::zx::vmo obj
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadObjectResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LoadObjectResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLoader_LoadObject_GenOrdinal;
+  _response._hdr.ordinal = kLoader_LoadObject_Ordinal;
   _response.rv = std::move(rv);
   _response.object = std::move(object);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LoadObjectResponse));
@@ -611,7 +611,7 @@ void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<LoadObjectResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLoader_LoadObject_GenOrdinal;
+  _response._hdr.ordinal = kLoader_LoadObject_Ordinal;
   _response.rv = std::move(rv);
   _response.object = std::move(object);
   _buffer.set_actual(sizeof(LoadObjectResponse));
@@ -620,7 +620,7 @@ void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::DecodedMessage<LoadObjectResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_LoadObject_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -629,7 +629,7 @@ void Loader::Interface::LoadScriptInterpreterCompleterBase::Reply(int32_t rv, ::
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadScriptInterpreterResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LoadScriptInterpreterResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLoader_LoadScriptInterpreter_GenOrdinal;
+  _response._hdr.ordinal = kLoader_LoadScriptInterpreter_Ordinal;
   _response.rv = std::move(rv);
   _response.object = std::move(object);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LoadScriptInterpreterResponse));
@@ -642,7 +642,7 @@ void Loader::Interface::LoadScriptInterpreterCompleterBase::Reply(::fidl::BytePa
     return;
   }
   auto& _response = *reinterpret_cast<LoadScriptInterpreterResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLoader_LoadScriptInterpreter_GenOrdinal;
+  _response._hdr.ordinal = kLoader_LoadScriptInterpreter_Ordinal;
   _response.rv = std::move(rv);
   _response.object = std::move(object);
   _buffer.set_actual(sizeof(LoadScriptInterpreterResponse));
@@ -651,7 +651,7 @@ void Loader::Interface::LoadScriptInterpreterCompleterBase::Reply(::fidl::BytePa
 
 void Loader::Interface::LoadScriptInterpreterCompleterBase::Reply(::fidl::DecodedMessage<LoadScriptInterpreterResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_LoadScriptInterpreter_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_LoadScriptInterpreter_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -660,7 +660,7 @@ void Loader::Interface::ConfigCompleterBase::Reply(int32_t rv) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConfigResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConfigResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLoader_Config_GenOrdinal;
+  _response._hdr.ordinal = kLoader_Config_Ordinal;
   _response.rv = std::move(rv);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConfigResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConfigResponse>(std::move(_response_bytes)));
@@ -672,7 +672,7 @@ void Loader::Interface::ConfigCompleterBase::Reply(::fidl::BytePart _buffer, int
     return;
   }
   auto& _response = *reinterpret_cast<ConfigResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLoader_Config_GenOrdinal;
+  _response._hdr.ordinal = kLoader_Config_Ordinal;
   _response.rv = std::move(rv);
   _buffer.set_actual(sizeof(ConfigResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConfigResponse>(std::move(_buffer)));
@@ -680,7 +680,7 @@ void Loader::Interface::ConfigCompleterBase::Reply(::fidl::BytePart _buffer, int
 
 void Loader::Interface::ConfigCompleterBase::Reply(::fidl::DecodedMessage<ConfigResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_Config_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_Config_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -689,7 +689,7 @@ void Loader::Interface::CloneCompleterBase::Reply(int32_t rv) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloneResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CloneResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLoader_Clone_GenOrdinal;
+  _response._hdr.ordinal = kLoader_Clone_Ordinal;
   _response.rv = std::move(rv);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloneResponse>(std::move(_response_bytes)));
@@ -701,7 +701,7 @@ void Loader::Interface::CloneCompleterBase::Reply(::fidl::BytePart _buffer, int3
     return;
   }
   auto& _response = *reinterpret_cast<CloneResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLoader_Clone_GenOrdinal;
+  _response._hdr.ordinal = kLoader_Clone_Ordinal;
   _response.rv = std::move(rv);
   _buffer.set_actual(sizeof(CloneResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloneResponse>(std::move(_buffer)));
@@ -709,7 +709,7 @@ void Loader::Interface::CloneCompleterBase::Reply(::fidl::BytePart _buffer, int3
 
 void Loader::Interface::CloneCompleterBase::Reply(::fidl::DecodedMessage<CloneResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_Clone_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -718,7 +718,7 @@ void Loader::Interface::DebugPublishDataSinkCompleterBase::Reply(int32_t rv) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugPublishDataSinkResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DebugPublishDataSinkResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLoader_DebugPublishDataSink_GenOrdinal;
+  _response._hdr.ordinal = kLoader_DebugPublishDataSink_Ordinal;
   _response.rv = std::move(rv);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DebugPublishDataSinkResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DebugPublishDataSinkResponse>(std::move(_response_bytes)));
@@ -730,7 +730,7 @@ void Loader::Interface::DebugPublishDataSinkCompleterBase::Reply(::fidl::BytePar
     return;
   }
   auto& _response = *reinterpret_cast<DebugPublishDataSinkResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLoader_DebugPublishDataSink_GenOrdinal;
+  _response._hdr.ordinal = kLoader_DebugPublishDataSink_Ordinal;
   _response.rv = std::move(rv);
   _buffer.set_actual(sizeof(DebugPublishDataSinkResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DebugPublishDataSinkResponse>(std::move(_buffer)));
@@ -738,7 +738,7 @@ void Loader::Interface::DebugPublishDataSinkCompleterBase::Reply(::fidl::BytePar
 
 void Loader::Interface::DebugPublishDataSinkCompleterBase::Reply(::fidl::DecodedMessage<DebugPublishDataSinkResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_DebugPublishDataSink_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_DebugPublishDataSink_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -747,7 +747,7 @@ void Loader::Interface::DebugLoadConfigCompleterBase::Reply(int32_t rv, ::zx::vm
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugLoadConfigResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DebugLoadConfigResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLoader_DebugLoadConfig_GenOrdinal;
+  _response._hdr.ordinal = kLoader_DebugLoadConfig_Ordinal;
   _response.rv = std::move(rv);
   _response.config = std::move(config);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DebugLoadConfigResponse));
@@ -760,7 +760,7 @@ void Loader::Interface::DebugLoadConfigCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<DebugLoadConfigResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLoader_DebugLoadConfig_GenOrdinal;
+  _response._hdr.ordinal = kLoader_DebugLoadConfig_Ordinal;
   _response.rv = std::move(rv);
   _response.config = std::move(config);
   _buffer.set_actual(sizeof(DebugLoadConfigResponse));
@@ -769,7 +769,7 @@ void Loader::Interface::DebugLoadConfigCompleterBase::Reply(::fidl::BytePart _bu
 
 void Loader::Interface::DebugLoadConfigCompleterBase::Reply(::fidl::DecodedMessage<DebugLoadConfigResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_DebugLoadConfig_GenOrdinal;
+  params.message()->_hdr.ordinal = kLoader_DebugLoadConfig_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

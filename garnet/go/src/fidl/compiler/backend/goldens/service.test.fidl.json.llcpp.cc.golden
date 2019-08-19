@@ -11,7 +11,7 @@ namespace name {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kSecondProtocol_MethodOnSecond_GenOrdinal = 0xd09c00f00000000lu;
+constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal = 0xd09c00f00000000lu;
 
 }  // namespace
 
@@ -42,7 +42,7 @@ SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(zx
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<MethodOnSecondRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kSecondProtocol_MethodOnSecond_GenOrdinal;
+  params.message()->_hdr.ordinal = kSecondProtocol_MethodOnSecond_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -66,7 +66,7 @@ bool SecondProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kSecondProtocol_MethodOnSecond_GenOrdinal:
+    case kSecondProtocol_MethodOnSecond_Ordinal:
     {
       auto result = ::fidl::DecodeAs<MethodOnSecondRequest>(msg);
       if (result.status != ZX_OK) {
@@ -96,7 +96,7 @@ bool SecondProtocol::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kFirstProtocol_MethodOnFirst_GenOrdinal = 0x2838a83100000000lu;
+constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x2838a83100000000lu;
 
 }  // namespace
 
@@ -127,7 +127,7 @@ FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(zx::un
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<MethodOnFirstRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kFirstProtocol_MethodOnFirst_GenOrdinal;
+  params.message()->_hdr.ordinal = kFirstProtocol_MethodOnFirst_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -151,7 +151,7 @@ bool FirstProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kFirstProtocol_MethodOnFirst_GenOrdinal:
+    case kFirstProtocol_MethodOnFirst_Ordinal:
     {
       auto result = ::fidl::DecodeAs<MethodOnFirstRequest>(msg);
       if (result.status != ZX_OK) {

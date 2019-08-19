@@ -12,29 +12,29 @@ namespace light {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kLight_GetName_GenOrdinal = 0x9d4dbd800000000lu;
+constexpr uint64_t kLight_GetName_Ordinal = 0x9d4dbd800000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetNameRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetNameResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLight_GetCount_GenOrdinal = 0x4e441b4600000000lu;
+constexpr uint64_t kLight_GetCount_Ordinal = 0x4e441b4600000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetCountResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLight_HasCapability_GenOrdinal = 0x703098f200000000lu;
+constexpr uint64_t kLight_HasCapability_Ordinal = 0x703098f200000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightHasCapabilityResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLight_GetSimpleValue_GenOrdinal = 0x634b636200000000lu;
+constexpr uint64_t kLight_GetSimpleValue_Ordinal = 0x634b636200000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetSimpleValueRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetSimpleValueResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLight_SetSimpleValue_GenOrdinal = 0x56deecd500000000lu;
+constexpr uint64_t kLight_SetSimpleValue_Ordinal = 0x56deecd500000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightSetSimpleValueRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightSetSimpleValueResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLight_GetRgbValue_GenOrdinal = 0xf37a4e00000000lu;
+constexpr uint64_t kLight_GetRgbValue_Ordinal = 0xf37a4e00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetRgbValueRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetRgbValueResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLight_SetRgbValue_GenOrdinal = 0x81b4c9b00000000lu;
+constexpr uint64_t kLight_SetRgbValue_Ordinal = 0x81b4c9b00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightSetRgbValueRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightSetRgbValueResponseTable;
 
@@ -87,7 +87,7 @@ Light::UnownedResultOf::GetName Light::Call::GetName(zx::unowned_channel _client
 
 ::fidl::DecodeResult<Light::GetNameResponse> Light::InPlace::GetName(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetNameRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_GetName_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_GetName_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::GetNameResponse>::FromFailure(
@@ -149,7 +149,7 @@ Light::UnownedResultOf::GetCount Light::Call::GetCount(zx::unowned_channel _clie
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetCountRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_GetCount_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_GetCount_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::GetCountResponse>::FromFailure(
@@ -214,7 +214,7 @@ Light::UnownedResultOf::HasCapability Light::Call::HasCapability(zx::unowned_cha
 
 ::fidl::DecodeResult<Light::HasCapabilityResponse> Light::InPlace::HasCapability(zx::unowned_channel _client_end, ::fidl::DecodedMessage<HasCapabilityRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_HasCapability_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_HasCapability_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::HasCapabilityResponse>::FromFailure(
@@ -277,7 +277,7 @@ Light::UnownedResultOf::GetSimpleValue Light::Call::GetSimpleValue(zx::unowned_c
 
 ::fidl::DecodeResult<Light::GetSimpleValueResponse> Light::InPlace::GetSimpleValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSimpleValueRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_GetSimpleValue_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_GetSimpleValue_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::GetSimpleValueResponse>::FromFailure(
@@ -342,7 +342,7 @@ Light::UnownedResultOf::SetSimpleValue Light::Call::SetSimpleValue(zx::unowned_c
 
 ::fidl::DecodeResult<Light::SetSimpleValueResponse> Light::InPlace::SetSimpleValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSimpleValueRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_SetSimpleValue_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::SetSimpleValueResponse>::FromFailure(
@@ -405,7 +405,7 @@ Light::UnownedResultOf::GetRgbValue Light::Call::GetRgbValue(zx::unowned_channel
 
 ::fidl::DecodeResult<Light::GetRgbValueResponse> Light::InPlace::GetRgbValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRgbValueRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_GetRgbValue_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_GetRgbValue_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::GetRgbValueResponse>::FromFailure(
@@ -470,7 +470,7 @@ Light::UnownedResultOf::SetRgbValue Light::Call::SetRgbValue(zx::unowned_channel
 
 ::fidl::DecodeResult<Light::SetRgbValueResponse> Light::InPlace::SetRgbValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetRgbValueRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_SetRgbValue_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_SetRgbValue_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Light::SetRgbValueResponse>::FromFailure(
@@ -494,7 +494,7 @@ bool Light::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kLight_GetName_GenOrdinal:
+    case kLight_GetName_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetNameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -506,7 +506,7 @@ bool Light::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::GetNameCompleter::Sync(txn));
       return true;
     }
-    case kLight_GetCount_GenOrdinal:
+    case kLight_GetCount_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetCountRequest>(msg);
       if (result.status != ZX_OK) {
@@ -517,7 +517,7 @@ bool Light::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::GetCountCompleter::Sync(txn));
       return true;
     }
-    case kLight_HasCapability_GenOrdinal:
+    case kLight_HasCapability_Ordinal:
     {
       auto result = ::fidl::DecodeAs<HasCapabilityRequest>(msg);
       if (result.status != ZX_OK) {
@@ -529,7 +529,7 @@ bool Light::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::HasCapabilityCompleter::Sync(txn));
       return true;
     }
-    case kLight_GetSimpleValue_GenOrdinal:
+    case kLight_GetSimpleValue_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetSimpleValueRequest>(msg);
       if (result.status != ZX_OK) {
@@ -541,7 +541,7 @@ bool Light::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::GetSimpleValueCompleter::Sync(txn));
       return true;
     }
-    case kLight_SetSimpleValue_GenOrdinal:
+    case kLight_SetSimpleValue_Ordinal:
     {
       auto result = ::fidl::DecodeAs<SetSimpleValueRequest>(msg);
       if (result.status != ZX_OK) {
@@ -553,7 +553,7 @@ bool Light::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::SetSimpleValueCompleter::Sync(txn));
       return true;
     }
-    case kLight_GetRgbValue_GenOrdinal:
+    case kLight_GetRgbValue_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetRgbValueRequest>(msg);
       if (result.status != ZX_OK) {
@@ -565,7 +565,7 @@ bool Light::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::GetRgbValueCompleter::Sync(txn));
       return true;
     }
-    case kLight_SetRgbValue_GenOrdinal:
+    case kLight_SetRgbValue_Ordinal:
     {
       auto result = ::fidl::DecodeAs<SetRgbValueRequest>(msg);
       if (result.status != ZX_OK) {
@@ -597,7 +597,7 @@ void Light::Interface::GetNameCompleterBase::Reply(int32_t status, ::fidl::Strin
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetNameResponse _response = {};
-  _response._hdr.ordinal = kLight_GetName_GenOrdinal;
+  _response._hdr.ordinal = kLight_GetName_Ordinal;
   _response.status = std::move(status);
   _response.name = std::move(name);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -615,7 +615,7 @@ void Light::Interface::GetNameCompleterBase::Reply(::fidl::BytePart _buffer, int
     return;
   }
   GetNameResponse _response = {};
-  _response._hdr.ordinal = kLight_GetName_GenOrdinal;
+  _response._hdr.ordinal = kLight_GetName_Ordinal;
   _response.status = std::move(status);
   _response.name = std::move(name);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -628,7 +628,7 @@ void Light::Interface::GetNameCompleterBase::Reply(::fidl::BytePart _buffer, int
 
 void Light::Interface::GetNameCompleterBase::Reply(::fidl::DecodedMessage<GetNameResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_GetName_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_GetName_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -637,7 +637,7 @@ void Light::Interface::GetCountCompleterBase::Reply(uint32_t count) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCountResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetCountResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLight_GetCount_GenOrdinal;
+  _response._hdr.ordinal = kLight_GetCount_Ordinal;
   _response.count = std::move(count);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCountResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetCountResponse>(std::move(_response_bytes)));
@@ -649,7 +649,7 @@ void Light::Interface::GetCountCompleterBase::Reply(::fidl::BytePart _buffer, ui
     return;
   }
   auto& _response = *reinterpret_cast<GetCountResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLight_GetCount_GenOrdinal;
+  _response._hdr.ordinal = kLight_GetCount_Ordinal;
   _response.count = std::move(count);
   _buffer.set_actual(sizeof(GetCountResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetCountResponse>(std::move(_buffer)));
@@ -657,7 +657,7 @@ void Light::Interface::GetCountCompleterBase::Reply(::fidl::BytePart _buffer, ui
 
 void Light::Interface::GetCountCompleterBase::Reply(::fidl::DecodedMessage<GetCountResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_GetCount_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_GetCount_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -666,7 +666,7 @@ void Light::Interface::HasCapabilityCompleterBase::Reply(int32_t status, bool ha
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<HasCapabilityResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLight_HasCapability_GenOrdinal;
+  _response._hdr.ordinal = kLight_HasCapability_Ordinal;
   _response.status = std::move(status);
   _response.has = std::move(has);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(HasCapabilityResponse));
@@ -679,7 +679,7 @@ void Light::Interface::HasCapabilityCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   auto& _response = *reinterpret_cast<HasCapabilityResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLight_HasCapability_GenOrdinal;
+  _response._hdr.ordinal = kLight_HasCapability_Ordinal;
   _response.status = std::move(status);
   _response.has = std::move(has);
   _buffer.set_actual(sizeof(HasCapabilityResponse));
@@ -688,7 +688,7 @@ void Light::Interface::HasCapabilityCompleterBase::Reply(::fidl::BytePart _buffe
 
 void Light::Interface::HasCapabilityCompleterBase::Reply(::fidl::DecodedMessage<HasCapabilityResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_HasCapability_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_HasCapability_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -697,7 +697,7 @@ void Light::Interface::GetSimpleValueCompleterBase::Reply(int32_t status, uint8_
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetSimpleValueResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLight_GetSimpleValue_GenOrdinal;
+  _response._hdr.ordinal = kLight_GetSimpleValue_Ordinal;
   _response.status = std::move(status);
   _response.value = std::move(value);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetSimpleValueResponse));
@@ -710,7 +710,7 @@ void Light::Interface::GetSimpleValueCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<GetSimpleValueResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLight_GetSimpleValue_GenOrdinal;
+  _response._hdr.ordinal = kLight_GetSimpleValue_Ordinal;
   _response.status = std::move(status);
   _response.value = std::move(value);
   _buffer.set_actual(sizeof(GetSimpleValueResponse));
@@ -719,7 +719,7 @@ void Light::Interface::GetSimpleValueCompleterBase::Reply(::fidl::BytePart _buff
 
 void Light::Interface::GetSimpleValueCompleterBase::Reply(::fidl::DecodedMessage<GetSimpleValueResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_GetSimpleValue_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_GetSimpleValue_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -728,7 +728,7 @@ void Light::Interface::SetSimpleValueCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetSimpleValueResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
+  _response._hdr.ordinal = kLight_SetSimpleValue_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetSimpleValueResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetSimpleValueResponse>(std::move(_response_bytes)));
@@ -740,7 +740,7 @@ void Light::Interface::SetSimpleValueCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<SetSimpleValueResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
+  _response._hdr.ordinal = kLight_SetSimpleValue_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SetSimpleValueResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetSimpleValueResponse>(std::move(_buffer)));
@@ -748,7 +748,7 @@ void Light::Interface::SetSimpleValueCompleterBase::Reply(::fidl::BytePart _buff
 
 void Light::Interface::SetSimpleValueCompleterBase::Reply(::fidl::DecodedMessage<SetSimpleValueResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_SetSimpleValue_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_SetSimpleValue_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -757,7 +757,7 @@ void Light::Interface::GetRgbValueCompleterBase::Reply(int32_t status, Rgb value
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetRgbValueResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLight_GetRgbValue_GenOrdinal;
+  _response._hdr.ordinal = kLight_GetRgbValue_Ordinal;
   _response.status = std::move(status);
   _response.value = std::move(value);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRgbValueResponse));
@@ -770,7 +770,7 @@ void Light::Interface::GetRgbValueCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<GetRgbValueResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLight_GetRgbValue_GenOrdinal;
+  _response._hdr.ordinal = kLight_GetRgbValue_Ordinal;
   _response.status = std::move(status);
   _response.value = std::move(value);
   _buffer.set_actual(sizeof(GetRgbValueResponse));
@@ -779,7 +779,7 @@ void Light::Interface::GetRgbValueCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Light::Interface::GetRgbValueCompleterBase::Reply(::fidl::DecodedMessage<GetRgbValueResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_GetRgbValue_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_GetRgbValue_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -788,7 +788,7 @@ void Light::Interface::SetRgbValueCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetRgbValueResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLight_SetRgbValue_GenOrdinal;
+  _response._hdr.ordinal = kLight_SetRgbValue_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetRgbValueResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetRgbValueResponse>(std::move(_response_bytes)));
@@ -800,7 +800,7 @@ void Light::Interface::SetRgbValueCompleterBase::Reply(::fidl::BytePart _buffer,
     return;
   }
   auto& _response = *reinterpret_cast<SetRgbValueResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLight_SetRgbValue_GenOrdinal;
+  _response._hdr.ordinal = kLight_SetRgbValue_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SetRgbValueResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetRgbValueResponse>(std::move(_buffer)));
@@ -808,7 +808,7 @@ void Light::Interface::SetRgbValueCompleterBase::Reply(::fidl::BytePart _buffer,
 
 void Light::Interface::SetRgbValueCompleterBase::Reply(::fidl::DecodedMessage<SetRgbValueResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLight_SetRgbValue_GenOrdinal;
+  params.message()->_hdr.ordinal = kLight_SetRgbValue_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

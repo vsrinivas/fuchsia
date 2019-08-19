@@ -11,16 +11,16 @@ namespace name {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kParent_GetChild_GenOrdinal = 0x3692bc6900000000lu;
+constexpr uint64_t kParent_GetChild_Ordinal = 0x3692bc6900000000lu;
 extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kParent_GetChildRequest_GenOrdinal = 0x3faacc7e00000000lu;
+constexpr uint64_t kParent_GetChildRequest_Ordinal = 0x3faacc7e00000000lu;
 extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kParent_TakeChild_GenOrdinal = 0x4c0642f900000000lu;
+constexpr uint64_t kParent_TakeChild_Ordinal = 0x4c0642f900000000lu;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kParent_TakeChildRequest_GenOrdinal = 0x5ec3867a00000000lu;
+constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x5ec3867a00000000lu;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
 
 }  // namespace
@@ -71,7 +71,7 @@ Parent::UnownedResultOf::GetChild Parent::Call::GetChild(zx::unowned_channel _cl
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetChildRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kParent_GetChild_GenOrdinal;
+  params.message()->_hdr.ordinal = kParent_GetChild_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Parent::GetChildResponse>::FromFailure(
@@ -133,7 +133,7 @@ Parent::UnownedResultOf::GetChildRequest Parent::Call::GetChildRequest(zx::unown
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetChildRequestRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kParent_GetChildRequest_GenOrdinal;
+  params.message()->_hdr.ordinal = kParent_GetChildRequest_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Parent::GetChildRequestResponse>::FromFailure(
@@ -197,7 +197,7 @@ Parent::UnownedResultOf::TakeChild Parent::Call::TakeChild(zx::unowned_channel _
 
 ::fidl::internal::StatusAndError Parent::InPlace::TakeChild(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TakeChildRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kParent_TakeChild_GenOrdinal;
+  params.message()->_hdr.ordinal = kParent_TakeChild_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -261,7 +261,7 @@ Parent::UnownedResultOf::TakeChildRequest Parent::Call::TakeChildRequest(zx::uno
 
 ::fidl::internal::StatusAndError Parent::InPlace::TakeChildRequest(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TakeChildRequestRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kParent_TakeChildRequest_GenOrdinal;
+  params.message()->_hdr.ordinal = kParent_TakeChildRequest_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -285,7 +285,7 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kParent_GetChild_GenOrdinal:
+    case kParent_GetChild_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetChildRequest>(msg);
       if (result.status != ZX_OK) {
@@ -296,7 +296,7 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetChildCompleter::Sync(txn));
       return true;
     }
-    case kParent_GetChildRequest_GenOrdinal:
+    case kParent_GetChildRequest_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetChildRequestRequest>(msg);
       if (result.status != ZX_OK) {
@@ -307,7 +307,7 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetChildRequestCompleter::Sync(txn));
       return true;
     }
-    case kParent_TakeChild_GenOrdinal:
+    case kParent_TakeChild_Ordinal:
     {
       auto result = ::fidl::DecodeAs<TakeChildRequest>(msg);
       if (result.status != ZX_OK) {
@@ -319,7 +319,7 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::TakeChildCompleter::Sync(txn));
       return true;
     }
-    case kParent_TakeChildRequest_GenOrdinal:
+    case kParent_TakeChildRequest_Ordinal:
     {
       auto result = ::fidl::DecodeAs<TakeChildRequestRequest>(msg);
       if (result.status != ZX_OK) {
@@ -351,7 +351,7 @@ void Parent::Interface::GetChildCompleterBase::Reply(::zx::channel c) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChildResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetChildResponse*>(_write_bytes);
-  _response._hdr.ordinal = kParent_GetChild_GenOrdinal;
+  _response._hdr.ordinal = kParent_GetChild_Ordinal;
   _response.c = std::move(c);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChildResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetChildResponse>(std::move(_response_bytes)));
@@ -363,7 +363,7 @@ void Parent::Interface::GetChildCompleterBase::Reply(::fidl::BytePart _buffer, :
     return;
   }
   auto& _response = *reinterpret_cast<GetChildResponse*>(_buffer.data());
-  _response._hdr.ordinal = kParent_GetChild_GenOrdinal;
+  _response._hdr.ordinal = kParent_GetChild_Ordinal;
   _response.c = std::move(c);
   _buffer.set_actual(sizeof(GetChildResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetChildResponse>(std::move(_buffer)));
@@ -371,7 +371,7 @@ void Parent::Interface::GetChildCompleterBase::Reply(::fidl::BytePart _buffer, :
 
 void Parent::Interface::GetChildCompleterBase::Reply(::fidl::DecodedMessage<GetChildResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kParent_GetChild_GenOrdinal;
+  params.message()->_hdr.ordinal = kParent_GetChild_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -380,7 +380,7 @@ void Parent::Interface::GetChildRequestCompleterBase::Reply(::zx::channel r) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChildRequestResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetChildRequestResponse*>(_write_bytes);
-  _response._hdr.ordinal = kParent_GetChildRequest_GenOrdinal;
+  _response._hdr.ordinal = kParent_GetChildRequest_Ordinal;
   _response.r = std::move(r);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChildRequestResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetChildRequestResponse>(std::move(_response_bytes)));
@@ -392,7 +392,7 @@ void Parent::Interface::GetChildRequestCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<GetChildRequestResponse*>(_buffer.data());
-  _response._hdr.ordinal = kParent_GetChildRequest_GenOrdinal;
+  _response._hdr.ordinal = kParent_GetChildRequest_Ordinal;
   _response.r = std::move(r);
   _buffer.set_actual(sizeof(GetChildRequestResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetChildRequestResponse>(std::move(_buffer)));
@@ -400,7 +400,7 @@ void Parent::Interface::GetChildRequestCompleterBase::Reply(::fidl::BytePart _bu
 
 void Parent::Interface::GetChildRequestCompleterBase::Reply(::fidl::DecodedMessage<GetChildRequestResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kParent_GetChildRequest_GenOrdinal;
+  params.message()->_hdr.ordinal = kParent_GetChildRequest_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

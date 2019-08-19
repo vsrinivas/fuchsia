@@ -40,8 +40,6 @@ enum.test.fidl.json.go.golden
 enum.test.fidl.json.h.golden
 enum.test.fidl.json.llcpp.cc.golden
 enum.test.fidl.json.llcpp.h.golden
-enum.test.fidl.json.overnet_internal.cc.golden
-enum.test.fidl.json.overnet_internal.h.golden
 enum.test.fidl.json.rs.golden
 enum.test.fidl.json.syz.txt.golden
 enum.test.fidl.json_test_base.h.golden

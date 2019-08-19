@@ -38,45 +38,6 @@ func (ex testCase) run(t *testing.T) {
 	})
 }
 
-func TestStartOfMigration(t *testing.T) {
-	cases := []testCase{
-		// Both ordinals are the same, use ord.
-		{
-			name: "ord_and_gen_same",
-			input: NewOrdinals(Method{
-				Ordinal:    0x7676e0ea,
-				GenOrdinal: 0x7676e0ea,
-			}, "ord", "gen"),
-			expectedReads: []string{"ord"},
-			expectedWrite: "ord",
-		},
-		// Both ordinals are different, use both on reads, ord on write.
-		{
-			name: "ord_and_gen_different",
-			input: NewOrdinals(Method{
-				Ordinal:    0x7676e0ea,
-				GenOrdinal: 0xae0e6767,
-			}, "ord", "gen"),
-			expectedReads: []string{"ord", "gen"},
-			expectedWrite: "ord",
-		},
-		// Assume gen is already shifted (by fidlc), it results in a 0 ordinal
-		// which should be ignored.
-		{
-			name: "ord_should_be_0_and_ignored",
-			input: NewOrdinals(Method{
-				Ordinal:    0x7676e0ea,
-				GenOrdinal: 0x7676e0ea00000000,
-			}, "ord", "gen"),
-			expectedReads: []string{"ord"},
-			expectedWrite: "ord",
-		},
-	}
-	for _, ex := range cases {
-		ex.run(t)
-	}
-}
-
 func TestStep3(t *testing.T) {
 	// At step 3, fidlc emits 32b, but shifts gen << 32.
 	cases := []testCase{
@@ -110,6 +71,34 @@ func TestStep3(t *testing.T) {
 			}, "ord", "gen"),
 			expectedReads: []string{"gen"},
 			expectedWrite: "gen",
+		},
+	}
+	for _, ex := range cases {
+		ex.run(t)
+	}
+}
+
+func TestStep5(t *testing.T) {
+	// At step 5, fidlc emits 64b and bindings should just use them.
+	cases := []testCase{
+		{
+			name: "ord_and_gen_same",
+			input: NewOrdinalsStep5(Method{
+				Ordinal:    0x7676e0ea00000000,
+				GenOrdinal: 0x7676e0ea00000000,
+			}, "ord", "gen"),
+			expectedReads: []string{"ord"},
+			expectedWrite: "ord",
+		},
+		// Both ordinals are different, use both on reads, ord on write.
+		{
+			name: "ord_and_gen_different",
+			input: NewOrdinalsStep5(Method{
+				Ordinal:    0x7676e0ea00000000,
+				GenOrdinal: 0xae0e676700000000,
+			}, "ord", "gen"),
+			expectedReads: []string{"ord", "gen"},
+			expectedWrite: "ord",
 		},
 	}
 	for _, ex := range cases {

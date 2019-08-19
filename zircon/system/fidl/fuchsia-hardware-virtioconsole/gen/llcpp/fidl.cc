@@ -12,7 +12,7 @@ namespace virtioconsole {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetChannel_GenOrdinal = 0x1ff7011500000000lu;
+constexpr uint64_t kDevice_GetChannel_Ordinal = 0x1ff7011500000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_virtioconsole_DeviceGetChannelRequestTable;
 
 }  // namespace
@@ -65,7 +65,7 @@ Device::UnownedResultOf::GetChannel Device::Call::GetChannel(zx::unowned_channel
 
 ::fidl::internal::StatusAndError Device::InPlace::GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetChannel_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetChannel_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -89,7 +89,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_GetChannel_GenOrdinal:
+    case kDevice_GetChannel_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetChannelRequest>(msg);
       if (result.status != ZX_OK) {

@@ -12,7 +12,7 @@ namespace socket {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kProvider_Socket_GenOrdinal = 0x4d07378200000000lu;
+constexpr uint64_t kProvider_Socket_Ordinal = 0x4d07378200000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketResponseTable;
 
@@ -69,7 +69,7 @@ Provider::UnownedResultOf::Socket Provider::Call::Socket(zx::unowned_channel _cl
 
 ::fidl::DecodeResult<Provider::SocketResponse> Provider::InPlace::Socket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kProvider_Socket_GenOrdinal;
+  params.message()->_hdr.ordinal = kProvider_Socket_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Provider::SocketResponse>::FromFailure(
@@ -93,7 +93,7 @@ bool Provider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kProvider_Socket_GenOrdinal:
+    case kProvider_Socket_Ordinal:
     {
       auto result = ::fidl::DecodeAs<SocketRequest>(msg);
       if (result.status != ZX_OK) {
@@ -125,7 +125,7 @@ void Provider::Interface::SocketCompleterBase::Reply(int16_t code, ::zx::channel
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SocketResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SocketResponse*>(_write_bytes);
-  _response._hdr.ordinal = kProvider_Socket_GenOrdinal;
+  _response._hdr.ordinal = kProvider_Socket_Ordinal;
   _response.code = std::move(code);
   _response.s = std::move(s);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SocketResponse));
@@ -138,7 +138,7 @@ void Provider::Interface::SocketCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   auto& _response = *reinterpret_cast<SocketResponse*>(_buffer.data());
-  _response._hdr.ordinal = kProvider_Socket_GenOrdinal;
+  _response._hdr.ordinal = kProvider_Socket_Ordinal;
   _response.code = std::move(code);
   _response.s = std::move(s);
   _buffer.set_actual(sizeof(SocketResponse));
@@ -147,7 +147,7 @@ void Provider::Interface::SocketCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void Provider::Interface::SocketCompleterBase::Reply(::fidl::DecodedMessage<SocketResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kProvider_Socket_GenOrdinal;
+  params.message()->_hdr.ordinal = kProvider_Socket_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -155,63 +155,63 @@ void Provider::Interface::SocketCompleterBase::Reply(::fidl::DecodedMessage<Sock
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kControl_Clone_GenOrdinal = 0x17fe6a4c00000000lu;
+constexpr uint64_t kControl_Clone_Ordinal = 0x17fe6a4c00000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_Close_GenOrdinal = 0x52b9568700000000lu;
+constexpr uint64_t kControl_Close_Ordinal = 0x52b9568700000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloseResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_Describe_GenOrdinal = 0x1f62df5e00000000lu;
+constexpr uint64_t kControl_Describe_Ordinal = 0x1f62df5e00000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlDescribeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_OnOpen_GenOrdinal = 0x4700a7bd00000000lu;
+constexpr uint64_t kControl_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlOnOpenEventTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_Sync_GenOrdinal = 0x62423faa00000000lu;
+constexpr uint64_t kControl_Sync_Ordinal = 0x62423faa00000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_GetAttr_GenOrdinal = 0x4585e7c800000000lu;
+constexpr uint64_t kControl_GetAttr_Ordinal = 0x4585e7c800000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_SetAttr_GenOrdinal = 0xbd5559a00000000lu;
+constexpr uint64_t kControl_SetAttr_Ordinal = 0xbd5559a00000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_Ioctl_GenOrdinal = 0x35f3aca700000000lu;
+constexpr uint64_t kControl_Ioctl_Ordinal = 0x35f3aca700000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_Bind_GenOrdinal = 0x147441ed00000000lu;
+constexpr uint64_t kControl_Bind_Ordinal = 0x147441ed00000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_Connect_GenOrdinal = 0x237ed33800000000lu;
+constexpr uint64_t kControl_Connect_Ordinal = 0x237ed33800000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlConnectRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlConnectResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_Listen_GenOrdinal = 0x2e63628600000000lu;
+constexpr uint64_t kControl_Listen_Ordinal = 0x2e63628600000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlListenRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlListenResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_Accept_GenOrdinal = 0x11ed297300000000lu;
+constexpr uint64_t kControl_Accept_Ordinal = 0x11ed297300000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_GetSockName_GenOrdinal = 0x63c1368200000000lu;
+constexpr uint64_t kControl_GetSockName_Ordinal = 0x63c1368200000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockNameResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_GetPeerName_GenOrdinal = 0x58787bb600000000lu;
+constexpr uint64_t kControl_GetPeerName_Ordinal = 0x58787bb600000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetPeerNameResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_SetSockOpt_GenOrdinal = 0x4ba217a700000000lu;
+constexpr uint64_t kControl_SetSockOpt_Ordinal = 0x4ba217a700000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_GetSockOpt_GenOrdinal = 0x3685367800000000lu;
+constexpr uint64_t kControl_GetSockOpt_Ordinal = 0x3685367800000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kControl_IoctlPOSIX_GenOrdinal = 0x50a8f69d00000000lu;
+constexpr uint64_t kControl_IoctlPOSIX_Ordinal = 0x50a8f69d00000000lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXResponseTable;
 
@@ -267,7 +267,7 @@ Control::UnownedResultOf::Clone Control::Call::Clone(zx::unowned_channel _client
 
 ::fidl::internal::StatusAndError Control::InPlace::Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Clone_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Clone_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -329,7 +329,7 @@ Control::UnownedResultOf::Close Control::Call::Close(zx::unowned_channel _client
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<CloseRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Close_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Close_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::CloseResponse>::FromFailure(
@@ -391,7 +391,7 @@ Control::UnownedResultOf::Describe Control::Call::Describe(zx::unowned_channel _
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<DescribeRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Describe_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Describe_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::DescribeResponse>::FromFailure(
@@ -453,7 +453,7 @@ Control::UnownedResultOf::Sync Control::Call::Sync(zx::unowned_channel _client_e
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<SyncRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Sync_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Sync_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::SyncResponse>::FromFailure(
@@ -515,7 +515,7 @@ Control::UnownedResultOf::GetAttr Control::Call::GetAttr(zx::unowned_channel _cl
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetAttrRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetAttr_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_GetAttr_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::GetAttrResponse>::FromFailure(
@@ -580,7 +580,7 @@ Control::UnownedResultOf::SetAttr Control::Call::SetAttr(zx::unowned_channel _cl
 
 ::fidl::DecodeResult<Control::SetAttrResponse> Control::InPlace::SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_SetAttr_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_SetAttr_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::SetAttrResponse>::FromFailure(
@@ -654,7 +654,7 @@ Control::UnownedResultOf::Ioctl Control::Call::Ioctl(zx::unowned_channel _client
 
 ::fidl::DecodeResult<Control::IoctlResponse> Control::InPlace::Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Ioctl_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Ioctl_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::IoctlResponse>::FromFailure(
@@ -722,7 +722,7 @@ Control::UnownedResultOf::Bind Control::Call::Bind(zx::unowned_channel _client_e
 
 ::fidl::DecodeResult<Control::BindResponse> Control::InPlace::Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Bind_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Bind_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::BindResponse>::FromFailure(
@@ -790,7 +790,7 @@ Control::UnownedResultOf::Connect Control::Call::Connect(zx::unowned_channel _cl
 
 ::fidl::DecodeResult<Control::ConnectResponse> Control::InPlace::Connect(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Connect_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Connect_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::ConnectResponse>::FromFailure(
@@ -853,7 +853,7 @@ Control::UnownedResultOf::Listen Control::Call::Listen(zx::unowned_channel _clie
 
 ::fidl::DecodeResult<Control::ListenResponse> Control::InPlace::Listen(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Listen_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Listen_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::ListenResponse>::FromFailure(
@@ -916,7 +916,7 @@ Control::UnownedResultOf::Accept Control::Call::Accept(zx::unowned_channel _clie
 
 ::fidl::DecodeResult<Control::AcceptResponse> Control::InPlace::Accept(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Accept_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Accept_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::AcceptResponse>::FromFailure(
@@ -978,7 +978,7 @@ Control::UnownedResultOf::GetSockName Control::Call::GetSockName(zx::unowned_cha
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetSockNameRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetSockName_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_GetSockName_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::GetSockNameResponse>::FromFailure(
@@ -1040,7 +1040,7 @@ Control::UnownedResultOf::GetPeerName Control::Call::GetPeerName(zx::unowned_cha
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetPeerNameRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetPeerName_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_GetPeerName_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::GetPeerNameResponse>::FromFailure(
@@ -1112,7 +1112,7 @@ Control::UnownedResultOf::SetSockOpt Control::Call::SetSockOpt(zx::unowned_chann
 
 ::fidl::DecodeResult<Control::SetSockOptResponse> Control::InPlace::SetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_SetSockOpt_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_SetSockOpt_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::SetSockOptResponse>::FromFailure(
@@ -1177,7 +1177,7 @@ Control::UnownedResultOf::GetSockOpt Control::Call::GetSockOpt(zx::unowned_chann
 
 ::fidl::DecodeResult<Control::GetSockOptResponse> Control::InPlace::GetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetSockOpt_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_GetSockOpt_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::GetSockOptResponse>::FromFailure(
@@ -1247,7 +1247,7 @@ Control::UnownedResultOf::IoctlPOSIX Control::Call::IoctlPOSIX(zx::unowned_chann
 
 ::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::InPlace::IoctlPOSIX(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_IoctlPOSIX_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_IoctlPOSIX_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Control::IoctlPOSIXResponse>::FromFailure(
@@ -1320,7 +1320,7 @@ zx_status_t Control::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kControl_OnOpen_GenOrdinal:
+    case kControl_OnOpen_Ordinal:
     {
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -1343,7 +1343,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kControl_Clone_GenOrdinal:
+    case kControl_Clone_Ordinal:
     {
       auto result = ::fidl::DecodeAs<CloneRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1355,7 +1355,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::CloneCompleter::Sync(txn));
       return true;
     }
-    case kControl_Close_GenOrdinal:
+    case kControl_Close_Ordinal:
     {
       auto result = ::fidl::DecodeAs<CloseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1366,7 +1366,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::CloseCompleter::Sync(txn));
       return true;
     }
-    case kControl_Describe_GenOrdinal:
+    case kControl_Describe_Ordinal:
     {
       auto result = ::fidl::DecodeAs<DescribeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1377,7 +1377,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::DescribeCompleter::Sync(txn));
       return true;
     }
-    case kControl_Sync_GenOrdinal:
+    case kControl_Sync_Ordinal:
     {
       auto result = ::fidl::DecodeAs<SyncRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1388,7 +1388,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::SyncCompleter::Sync(txn));
       return true;
     }
-    case kControl_GetAttr_GenOrdinal:
+    case kControl_GetAttr_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetAttrRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1399,7 +1399,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::GetAttrCompleter::Sync(txn));
       return true;
     }
-    case kControl_SetAttr_GenOrdinal:
+    case kControl_SetAttr_Ordinal:
     {
       auto result = ::fidl::DecodeAs<SetAttrRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1411,7 +1411,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
-    case kControl_Ioctl_GenOrdinal:
+    case kControl_Ioctl_Ordinal:
     {
       auto result = ::fidl::DecodeAs<IoctlRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1423,7 +1423,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::IoctlCompleter::Sync(txn));
       return true;
     }
-    case kControl_Bind_GenOrdinal:
+    case kControl_Bind_Ordinal:
     {
       auto result = ::fidl::DecodeAs<BindRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1435,7 +1435,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::BindCompleter::Sync(txn));
       return true;
     }
-    case kControl_Connect_GenOrdinal:
+    case kControl_Connect_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ConnectRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1447,7 +1447,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::ConnectCompleter::Sync(txn));
       return true;
     }
-    case kControl_Listen_GenOrdinal:
+    case kControl_Listen_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ListenRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1459,7 +1459,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::ListenCompleter::Sync(txn));
       return true;
     }
-    case kControl_Accept_GenOrdinal:
+    case kControl_Accept_Ordinal:
     {
       auto result = ::fidl::DecodeAs<AcceptRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1471,7 +1471,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::AcceptCompleter::Sync(txn));
       return true;
     }
-    case kControl_GetSockName_GenOrdinal:
+    case kControl_GetSockName_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetSockNameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1482,7 +1482,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::GetSockNameCompleter::Sync(txn));
       return true;
     }
-    case kControl_GetPeerName_GenOrdinal:
+    case kControl_GetPeerName_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetPeerNameRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1493,7 +1493,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::GetPeerNameCompleter::Sync(txn));
       return true;
     }
-    case kControl_SetSockOpt_GenOrdinal:
+    case kControl_SetSockOpt_Ordinal:
     {
       auto result = ::fidl::DecodeAs<SetSockOptRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1505,7 +1505,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::SetSockOptCompleter::Sync(txn));
       return true;
     }
-    case kControl_GetSockOpt_GenOrdinal:
+    case kControl_GetSockOpt_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetSockOptRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1517,7 +1517,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         Interface::GetSockOptCompleter::Sync(txn));
       return true;
     }
-    case kControl_IoctlPOSIX_GenOrdinal:
+    case kControl_IoctlPOSIX_Ordinal:
     {
       auto result = ::fidl::DecodeAs<IoctlPOSIXRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1549,7 +1549,7 @@ void Control::Interface::CloseCompleterBase::Reply(int32_t s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<CloseResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_Close_GenOrdinal;
+  _response._hdr.ordinal = kControl_Close_Ordinal;
   _response.s = std::move(s);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CloseResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloseResponse>(std::move(_response_bytes)));
@@ -1561,7 +1561,7 @@ void Control::Interface::CloseCompleterBase::Reply(::fidl::BytePart _buffer, int
     return;
   }
   auto& _response = *reinterpret_cast<CloseResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_Close_GenOrdinal;
+  _response._hdr.ordinal = kControl_Close_Ordinal;
   _response.s = std::move(s);
   _buffer.set_actual(sizeof(CloseResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<CloseResponse>(std::move(_buffer)));
@@ -1569,7 +1569,7 @@ void Control::Interface::CloseCompleterBase::Reply(::fidl::BytePart _buffer, int
 
 void Control::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<CloseResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Close_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Close_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1578,7 +1578,7 @@ void Control::Interface::DescribeCompleterBase::Reply(::llcpp::fuchsia::io::Node
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<DescribeResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_Describe_GenOrdinal;
+  _response._hdr.ordinal = kControl_Describe_Ordinal;
   _response.info = std::move(info);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DescribeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_response_bytes)));
@@ -1590,7 +1590,7 @@ void Control::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<DescribeResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_Describe_GenOrdinal;
+  _response._hdr.ordinal = kControl_Describe_Ordinal;
   _response.info = std::move(info);
   _buffer.set_actual(sizeof(DescribeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_buffer)));
@@ -1598,7 +1598,7 @@ void Control::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void Control::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<DescribeResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Describe_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Describe_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1608,7 +1608,7 @@ zx_status_t Control::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::l
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   OnOpenResponse _response = {};
   _response._hdr = {};
-  _response._hdr.ordinal = kControl_OnOpen_GenOrdinal;
+  _response._hdr.ordinal = kControl_OnOpen_Ordinal;
   _response.s = std::move(s);
   _response.info = std::move(info);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -1625,7 +1625,7 @@ zx_status_t Control::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePa
   }
   OnOpenResponse _response = {};
   _response._hdr = {};
-  _response._hdr.ordinal = kControl_OnOpen_GenOrdinal;
+  _response._hdr.ordinal = kControl_OnOpen_Ordinal;
   _response.s = std::move(s);
   _response.info = std::move(info);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -1637,7 +1637,7 @@ zx_status_t Control::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePa
 
 zx_status_t Control::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_OnOpen_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_OnOpen_Ordinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
 
@@ -1646,7 +1646,7 @@ void Control::Interface::SyncCompleterBase::Reply(int32_t s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SyncResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SyncResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_Sync_GenOrdinal;
+  _response._hdr.ordinal = kControl_Sync_Ordinal;
   _response.s = std::move(s);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SyncResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SyncResponse>(std::move(_response_bytes)));
@@ -1658,7 +1658,7 @@ void Control::Interface::SyncCompleterBase::Reply(::fidl::BytePart _buffer, int3
     return;
   }
   auto& _response = *reinterpret_cast<SyncResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_Sync_GenOrdinal;
+  _response._hdr.ordinal = kControl_Sync_Ordinal;
   _response.s = std::move(s);
   _buffer.set_actual(sizeof(SyncResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SyncResponse>(std::move(_buffer)));
@@ -1666,7 +1666,7 @@ void Control::Interface::SyncCompleterBase::Reply(::fidl::BytePart _buffer, int3
 
 void Control::Interface::SyncCompleterBase::Reply(::fidl::DecodedMessage<SyncResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Sync_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Sync_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1675,7 +1675,7 @@ void Control::Interface::GetAttrCompleterBase::Reply(int32_t s, ::llcpp::fuchsia
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAttrResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetAttrResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_GetAttr_GenOrdinal;
+  _response._hdr.ordinal = kControl_GetAttr_Ordinal;
   _response.s = std::move(s);
   _response.attributes = std::move(attributes);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetAttrResponse));
@@ -1688,7 +1688,7 @@ void Control::Interface::GetAttrCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   auto& _response = *reinterpret_cast<GetAttrResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_GetAttr_GenOrdinal;
+  _response._hdr.ordinal = kControl_GetAttr_Ordinal;
   _response.s = std::move(s);
   _response.attributes = std::move(attributes);
   _buffer.set_actual(sizeof(GetAttrResponse));
@@ -1697,7 +1697,7 @@ void Control::Interface::GetAttrCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void Control::Interface::GetAttrCompleterBase::Reply(::fidl::DecodedMessage<GetAttrResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetAttr_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_GetAttr_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1706,7 +1706,7 @@ void Control::Interface::SetAttrCompleterBase::Reply(int32_t s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetAttrResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetAttrResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_SetAttr_GenOrdinal;
+  _response._hdr.ordinal = kControl_SetAttr_Ordinal;
   _response.s = std::move(s);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetAttrResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetAttrResponse>(std::move(_response_bytes)));
@@ -1718,7 +1718,7 @@ void Control::Interface::SetAttrCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   auto& _response = *reinterpret_cast<SetAttrResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_SetAttr_GenOrdinal;
+  _response._hdr.ordinal = kControl_SetAttr_Ordinal;
   _response.s = std::move(s);
   _buffer.set_actual(sizeof(SetAttrResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetAttrResponse>(std::move(_buffer)));
@@ -1726,7 +1726,7 @@ void Control::Interface::SetAttrCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void Control::Interface::SetAttrCompleterBase::Reply(::fidl::DecodedMessage<SetAttrResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_SetAttr_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_SetAttr_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1736,7 +1736,7 @@ void Control::Interface::IoctlCompleterBase::Reply(int32_t s, ::fidl::VectorView
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   IoctlResponse _response = {};
-  _response._hdr.ordinal = kControl_Ioctl_GenOrdinal;
+  _response._hdr.ordinal = kControl_Ioctl_Ordinal;
   _response.s = std::move(s);
   _response.handles = std::move(handles);
   _response.out = std::move(out);
@@ -1755,7 +1755,7 @@ void Control::Interface::IoctlCompleterBase::Reply(::fidl::BytePart _buffer, int
     return;
   }
   IoctlResponse _response = {};
-  _response._hdr.ordinal = kControl_Ioctl_GenOrdinal;
+  _response._hdr.ordinal = kControl_Ioctl_Ordinal;
   _response.s = std::move(s);
   _response.handles = std::move(handles);
   _response.out = std::move(out);
@@ -1769,7 +1769,7 @@ void Control::Interface::IoctlCompleterBase::Reply(::fidl::BytePart _buffer, int
 
 void Control::Interface::IoctlCompleterBase::Reply(::fidl::DecodedMessage<IoctlResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Ioctl_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Ioctl_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1778,7 +1778,7 @@ void Control::Interface::BindCompleterBase::Reply(int16_t code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<BindResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_Bind_GenOrdinal;
+  _response._hdr.ordinal = kControl_Bind_Ordinal;
   _response.code = std::move(code);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(BindResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindResponse>(std::move(_response_bytes)));
@@ -1790,7 +1790,7 @@ void Control::Interface::BindCompleterBase::Reply(::fidl::BytePart _buffer, int1
     return;
   }
   auto& _response = *reinterpret_cast<BindResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_Bind_GenOrdinal;
+  _response._hdr.ordinal = kControl_Bind_Ordinal;
   _response.code = std::move(code);
   _buffer.set_actual(sizeof(BindResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindResponse>(std::move(_buffer)));
@@ -1798,7 +1798,7 @@ void Control::Interface::BindCompleterBase::Reply(::fidl::BytePart _buffer, int1
 
 void Control::Interface::BindCompleterBase::Reply(::fidl::DecodedMessage<BindResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Bind_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Bind_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1807,7 +1807,7 @@ void Control::Interface::ConnectCompleterBase::Reply(int16_t code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ConnectResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_Connect_GenOrdinal;
+  _response._hdr.ordinal = kControl_Connect_Ordinal;
   _response.code = std::move(code);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConnectResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConnectResponse>(std::move(_response_bytes)));
@@ -1819,7 +1819,7 @@ void Control::Interface::ConnectCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   auto& _response = *reinterpret_cast<ConnectResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_Connect_GenOrdinal;
+  _response._hdr.ordinal = kControl_Connect_Ordinal;
   _response.code = std::move(code);
   _buffer.set_actual(sizeof(ConnectResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ConnectResponse>(std::move(_buffer)));
@@ -1827,7 +1827,7 @@ void Control::Interface::ConnectCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void Control::Interface::ConnectCompleterBase::Reply(::fidl::DecodedMessage<ConnectResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Connect_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Connect_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1836,7 +1836,7 @@ void Control::Interface::ListenCompleterBase::Reply(int16_t code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ListenResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ListenResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_Listen_GenOrdinal;
+  _response._hdr.ordinal = kControl_Listen_Ordinal;
   _response.code = std::move(code);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ListenResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ListenResponse>(std::move(_response_bytes)));
@@ -1848,7 +1848,7 @@ void Control::Interface::ListenCompleterBase::Reply(::fidl::BytePart _buffer, in
     return;
   }
   auto& _response = *reinterpret_cast<ListenResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_Listen_GenOrdinal;
+  _response._hdr.ordinal = kControl_Listen_Ordinal;
   _response.code = std::move(code);
   _buffer.set_actual(sizeof(ListenResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ListenResponse>(std::move(_buffer)));
@@ -1856,7 +1856,7 @@ void Control::Interface::ListenCompleterBase::Reply(::fidl::BytePart _buffer, in
 
 void Control::Interface::ListenCompleterBase::Reply(::fidl::DecodedMessage<ListenResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Listen_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Listen_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1865,7 +1865,7 @@ void Control::Interface::AcceptCompleterBase::Reply(int16_t code, ::zx::channel 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AcceptResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<AcceptResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_Accept_GenOrdinal;
+  _response._hdr.ordinal = kControl_Accept_Ordinal;
   _response.code = std::move(code);
   _response.s = std::move(s);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AcceptResponse));
@@ -1878,7 +1878,7 @@ void Control::Interface::AcceptCompleterBase::Reply(::fidl::BytePart _buffer, in
     return;
   }
   auto& _response = *reinterpret_cast<AcceptResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_Accept_GenOrdinal;
+  _response._hdr.ordinal = kControl_Accept_Ordinal;
   _response.code = std::move(code);
   _response.s = std::move(s);
   _buffer.set_actual(sizeof(AcceptResponse));
@@ -1887,7 +1887,7 @@ void Control::Interface::AcceptCompleterBase::Reply(::fidl::BytePart _buffer, in
 
 void Control::Interface::AcceptCompleterBase::Reply(::fidl::DecodedMessage<AcceptResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_Accept_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_Accept_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1897,7 +1897,7 @@ void Control::Interface::GetSockNameCompleterBase::Reply(int16_t code, ::fidl::V
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetSockNameResponse _response = {};
-  _response._hdr.ordinal = kControl_GetSockName_GenOrdinal;
+  _response._hdr.ordinal = kControl_GetSockName_Ordinal;
   _response.code = std::move(code);
   _response.addr = std::move(addr);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -1915,7 +1915,7 @@ void Control::Interface::GetSockNameCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   GetSockNameResponse _response = {};
-  _response._hdr.ordinal = kControl_GetSockName_GenOrdinal;
+  _response._hdr.ordinal = kControl_GetSockName_Ordinal;
   _response.code = std::move(code);
   _response.addr = std::move(addr);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -1928,7 +1928,7 @@ void Control::Interface::GetSockNameCompleterBase::Reply(::fidl::BytePart _buffe
 
 void Control::Interface::GetSockNameCompleterBase::Reply(::fidl::DecodedMessage<GetSockNameResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetSockName_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_GetSockName_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1938,7 +1938,7 @@ void Control::Interface::GetPeerNameCompleterBase::Reply(int16_t code, ::fidl::V
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetPeerNameResponse _response = {};
-  _response._hdr.ordinal = kControl_GetPeerName_GenOrdinal;
+  _response._hdr.ordinal = kControl_GetPeerName_Ordinal;
   _response.code = std::move(code);
   _response.addr = std::move(addr);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -1956,7 +1956,7 @@ void Control::Interface::GetPeerNameCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   GetPeerNameResponse _response = {};
-  _response._hdr.ordinal = kControl_GetPeerName_GenOrdinal;
+  _response._hdr.ordinal = kControl_GetPeerName_Ordinal;
   _response.code = std::move(code);
   _response.addr = std::move(addr);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -1969,7 +1969,7 @@ void Control::Interface::GetPeerNameCompleterBase::Reply(::fidl::BytePart _buffe
 
 void Control::Interface::GetPeerNameCompleterBase::Reply(::fidl::DecodedMessage<GetPeerNameResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetPeerName_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_GetPeerName_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1978,7 +1978,7 @@ void Control::Interface::SetSockOptCompleterBase::Reply(int16_t code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSockOptResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetSockOptResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControl_SetSockOpt_GenOrdinal;
+  _response._hdr.ordinal = kControl_SetSockOpt_Ordinal;
   _response.code = std::move(code);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetSockOptResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetSockOptResponse>(std::move(_response_bytes)));
@@ -1990,7 +1990,7 @@ void Control::Interface::SetSockOptCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   auto& _response = *reinterpret_cast<SetSockOptResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControl_SetSockOpt_GenOrdinal;
+  _response._hdr.ordinal = kControl_SetSockOpt_Ordinal;
   _response.code = std::move(code);
   _buffer.set_actual(sizeof(SetSockOptResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetSockOptResponse>(std::move(_buffer)));
@@ -1998,7 +1998,7 @@ void Control::Interface::SetSockOptCompleterBase::Reply(::fidl::BytePart _buffer
 
 void Control::Interface::SetSockOptCompleterBase::Reply(::fidl::DecodedMessage<SetSockOptResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_SetSockOpt_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_SetSockOpt_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2008,7 +2008,7 @@ void Control::Interface::GetSockOptCompleterBase::Reply(int16_t code, ::fidl::Ve
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetSockOptResponse _response = {};
-  _response._hdr.ordinal = kControl_GetSockOpt_GenOrdinal;
+  _response._hdr.ordinal = kControl_GetSockOpt_Ordinal;
   _response.code = std::move(code);
   _response.optval = std::move(optval);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -2026,7 +2026,7 @@ void Control::Interface::GetSockOptCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   GetSockOptResponse _response = {};
-  _response._hdr.ordinal = kControl_GetSockOpt_GenOrdinal;
+  _response._hdr.ordinal = kControl_GetSockOpt_Ordinal;
   _response.code = std::move(code);
   _response.optval = std::move(optval);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -2039,7 +2039,7 @@ void Control::Interface::GetSockOptCompleterBase::Reply(::fidl::BytePart _buffer
 
 void Control::Interface::GetSockOptCompleterBase::Reply(::fidl::DecodedMessage<GetSockOptResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_GetSockOpt_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_GetSockOpt_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2049,7 +2049,7 @@ void Control::Interface::IoctlPOSIXCompleterBase::Reply(int16_t code, ::fidl::Ve
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   IoctlPOSIXResponse _response = {};
-  _response._hdr.ordinal = kControl_IoctlPOSIX_GenOrdinal;
+  _response._hdr.ordinal = kControl_IoctlPOSIX_Ordinal;
   _response.code = std::move(code);
   _response.out = std::move(out);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -2067,7 +2067,7 @@ void Control::Interface::IoctlPOSIXCompleterBase::Reply(::fidl::BytePart _buffer
     return;
   }
   IoctlPOSIXResponse _response = {};
-  _response._hdr.ordinal = kControl_IoctlPOSIX_GenOrdinal;
+  _response._hdr.ordinal = kControl_IoctlPOSIX_Ordinal;
   _response.code = std::move(code);
   _response.out = std::move(out);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -2080,7 +2080,7 @@ void Control::Interface::IoctlPOSIXCompleterBase::Reply(::fidl::BytePart _buffer
 
 void Control::Interface::IoctlPOSIXCompleterBase::Reply(::fidl::DecodedMessage<IoctlPOSIXResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControl_IoctlPOSIX_GenOrdinal;
+  params.message()->_hdr.ordinal = kControl_IoctlPOSIX_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

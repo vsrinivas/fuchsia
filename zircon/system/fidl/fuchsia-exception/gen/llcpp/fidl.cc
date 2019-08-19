@@ -11,7 +11,7 @@ namespace exception {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kHandler_OnException_GenOrdinal = 0x7ec50e5a00000000lu;
+constexpr uint64_t kHandler_OnException_Ordinal = 0x7ec50e5a00000000lu;
 extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionRequestTable;
 
 }  // namespace
@@ -65,7 +65,7 @@ Handler::UnownedResultOf::OnException Handler::Call::OnException(zx::unowned_cha
 
 ::fidl::DecodeResult<Handler::OnExceptionResponse> Handler::InPlace::OnException(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnExceptionRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kHandler_OnException_GenOrdinal;
+  params.message()->_hdr.ordinal = kHandler_OnException_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Handler::OnExceptionResponse>::FromFailure(
@@ -89,7 +89,7 @@ bool Handler::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kHandler_OnException_GenOrdinal:
+    case kHandler_OnException_Ordinal:
     {
       auto result = ::fidl::DecodeAs<OnExceptionRequest>(msg);
       if (result.status != ZX_OK) {
@@ -121,7 +121,7 @@ void Handler::Interface::OnExceptionCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnExceptionResponse*>(_write_bytes);
-  _response._hdr.ordinal = kHandler_OnException_GenOrdinal;
+  _response._hdr.ordinal = kHandler_OnException_Ordinal;
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnExceptionResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<OnExceptionResponse>(std::move(_response_bytes)));
 }

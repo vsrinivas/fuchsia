@@ -13,7 +13,7 @@ namespace peripheral {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kEvents_FunctionRegistered_GenOrdinal = 0x48ca785200000000lu;
+constexpr uint64_t kEvents_FunctionRegistered_Ordinal = 0x48ca785200000000lu;
 
 }  // namespace
 template <>
@@ -44,7 +44,7 @@ Events::ResultOf::FunctionRegistered Events::Call::FunctionRegistered(zx::unowne
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<FunctionRegisteredRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kEvents_FunctionRegistered_GenOrdinal;
+  params.message()->_hdr.ordinal = kEvents_FunctionRegistered_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Events::FunctionRegisteredResponse>::FromFailure(
@@ -68,7 +68,7 @@ bool Events::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kEvents_FunctionRegistered_GenOrdinal:
+    case kEvents_FunctionRegistered_Ordinal:
     {
       auto result = ::fidl::DecodeAs<FunctionRegisteredRequest>(msg);
       if (result.status != ZX_OK) {
@@ -99,7 +99,7 @@ void Events::Interface::FunctionRegisteredCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<FunctionRegisteredResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<FunctionRegisteredResponse*>(_write_bytes);
-  _response._hdr.ordinal = kEvents_FunctionRegistered_GenOrdinal;
+  _response._hdr.ordinal = kEvents_FunctionRegistered_Ordinal;
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(FunctionRegisteredResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<FunctionRegisteredResponse>(std::move(_response_bytes)));
 }
@@ -226,14 +226,14 @@ int32_t& ::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Resu
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_SetConfiguration_GenOrdinal = 0x7969547500000000lu;
+constexpr uint64_t kDevice_SetConfiguration_Ordinal = 0x7969547500000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_ClearFunctions_GenOrdinal = 0x4e0ef30000000000lu;
+constexpr uint64_t kDevice_ClearFunctions_Ordinal = 0x4e0ef30000000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_SetStateChangeListener_GenOrdinal = 0x4409dd700000000lu;
+constexpr uint64_t kDevice_SetStateChangeListener_Ordinal = 0x4409dd700000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
 
 }  // namespace
@@ -292,7 +292,7 @@ Device::UnownedResultOf::SetConfiguration Device::Call::SetConfiguration(zx::uno
 
 ::fidl::DecodeResult<Device::SetConfigurationResponse> Device::InPlace::SetConfiguration(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_SetConfiguration_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_SetConfiguration_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::SetConfigurationResponse>::FromFailure(
@@ -354,7 +354,7 @@ Device::UnownedResultOf::ClearFunctions Device::Call::ClearFunctions(zx::unowned
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ClearFunctionsRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_ClearFunctions_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_ClearFunctions_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::ClearFunctionsResponse>::FromFailure(
@@ -418,7 +418,7 @@ Device::UnownedResultOf::SetStateChangeListener Device::Call::SetStateChangeList
 
 ::fidl::internal::StatusAndError Device::InPlace::SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateChangeListenerRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_SetStateChangeListener_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_SetStateChangeListener_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -442,7 +442,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_SetConfiguration_GenOrdinal:
+    case kDevice_SetConfiguration_Ordinal:
     {
       auto result = ::fidl::DecodeAs<SetConfigurationRequest>(msg);
       if (result.status != ZX_OK) {
@@ -454,7 +454,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::SetConfigurationCompleter::Sync(txn));
       return true;
     }
-    case kDevice_ClearFunctions_GenOrdinal:
+    case kDevice_ClearFunctions_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ClearFunctionsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -465,7 +465,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::ClearFunctionsCompleter::Sync(txn));
       return true;
     }
-    case kDevice_SetStateChangeListener_GenOrdinal:
+    case kDevice_SetStateChangeListener_Ordinal:
     {
       auto result = ::fidl::DecodeAs<SetStateChangeListenerRequest>(msg);
       if (result.status != ZX_OK) {
@@ -497,7 +497,7 @@ void Device::Interface::SetConfigurationCompleterBase::Reply(Device_SetConfigura
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetConfigurationResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_SetConfiguration_GenOrdinal;
+  _response._hdr.ordinal = kDevice_SetConfiguration_Ordinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationResponse>(std::move(_response_bytes)));
@@ -509,7 +509,7 @@ void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<SetConfigurationResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_SetConfiguration_GenOrdinal;
+  _response._hdr.ordinal = kDevice_SetConfiguration_Ordinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(SetConfigurationResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationResponse>(std::move(_buffer)));
@@ -517,7 +517,7 @@ void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::BytePart _b
 
 void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::DecodedMessage<SetConfigurationResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_SetConfiguration_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_SetConfiguration_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -526,7 +526,7 @@ void Device::Interface::ClearFunctionsCompleterBase::Reply(Device_ClearFunctions
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ClearFunctionsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ClearFunctionsResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_ClearFunctions_GenOrdinal;
+  _response._hdr.ordinal = kDevice_ClearFunctions_Ordinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ClearFunctionsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ClearFunctionsResponse>(std::move(_response_bytes)));
@@ -538,7 +538,7 @@ void Device::Interface::ClearFunctionsCompleterBase::Reply(::fidl::BytePart _buf
     return;
   }
   auto& _response = *reinterpret_cast<ClearFunctionsResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_ClearFunctions_GenOrdinal;
+  _response._hdr.ordinal = kDevice_ClearFunctions_Ordinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(ClearFunctionsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ClearFunctionsResponse>(std::move(_buffer)));
@@ -546,7 +546,7 @@ void Device::Interface::ClearFunctionsCompleterBase::Reply(::fidl::BytePart _buf
 
 void Device::Interface::ClearFunctionsCompleterBase::Reply(::fidl::DecodedMessage<ClearFunctionsResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_ClearFunctions_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_ClearFunctions_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

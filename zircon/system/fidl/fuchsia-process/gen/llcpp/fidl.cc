@@ -11,7 +11,7 @@ namespace process {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kResolver_Resolve_GenOrdinal = 0x20980a8100000000lu;
+constexpr uint64_t kResolver_Resolve_Ordinal = 0x20980a8100000000lu;
 extern "C" const fidl_type_t fuchsia_process_ResolverResolveRequestTable;
 extern "C" const fidl_type_t fuchsia_process_ResolverResolveResponseTable;
 
@@ -69,7 +69,7 @@ Resolver::UnownedResultOf::Resolve Resolver::Call::Resolve(zx::unowned_channel _
 
 ::fidl::DecodeResult<Resolver::ResolveResponse> Resolver::InPlace::Resolve(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResolveRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kResolver_Resolve_GenOrdinal;
+  params.message()->_hdr.ordinal = kResolver_Resolve_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Resolver::ResolveResponse>::FromFailure(
@@ -93,7 +93,7 @@ bool Resolver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kResolver_Resolve_GenOrdinal:
+    case kResolver_Resolve_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ResolveRequest>(msg);
       if (result.status != ZX_OK) {
@@ -125,7 +125,7 @@ void Resolver::Interface::ResolveCompleterBase::Reply(int32_t status, ::zx::vmo 
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ResolveResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ResolveResponse*>(_write_bytes);
-  _response._hdr.ordinal = kResolver_Resolve_GenOrdinal;
+  _response._hdr.ordinal = kResolver_Resolve_Ordinal;
   _response.status = std::move(status);
   _response.executable = std::move(executable);
   _response.ldsvc = std::move(ldsvc);
@@ -139,7 +139,7 @@ void Resolver::Interface::ResolveCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<ResolveResponse*>(_buffer.data());
-  _response._hdr.ordinal = kResolver_Resolve_GenOrdinal;
+  _response._hdr.ordinal = kResolver_Resolve_Ordinal;
   _response.status = std::move(status);
   _response.executable = std::move(executable);
   _response.ldsvc = std::move(ldsvc);
@@ -149,7 +149,7 @@ void Resolver::Interface::ResolveCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void Resolver::Interface::ResolveCompleterBase::Reply(::fidl::DecodedMessage<ResolveResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kResolver_Resolve_GenOrdinal;
+  params.message()->_hdr.ordinal = kResolver_Resolve_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -157,24 +157,24 @@ void Resolver::Interface::ResolveCompleterBase::Reply(::fidl::DecodedMessage<Res
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kLauncher_Launch_GenOrdinal = 0x26884d9d00000000lu;
+constexpr uint64_t kLauncher_Launch_Ordinal = 0x26884d9d00000000lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherLaunchRequestTable;
 extern "C" const fidl_type_t fuchsia_process_LauncherLaunchResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLauncher_CreateWithoutStarting_GenOrdinal = 0x4fcfbc1100000000lu;
+constexpr uint64_t kLauncher_CreateWithoutStarting_Ordinal = 0x4fcfbc1100000000lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherCreateWithoutStartingRequestTable;
 extern "C" const fidl_type_t fuchsia_process_LauncherCreateWithoutStartingResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLauncher_AddArgs_GenOrdinal = 0x1480f9a000000000lu;
+constexpr uint64_t kLauncher_AddArgs_Ordinal = 0x1480f9a000000000lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddArgsRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kLauncher_AddEnvirons_GenOrdinal = 0x48c62c9900000000lu;
+constexpr uint64_t kLauncher_AddEnvirons_Ordinal = 0x48c62c9900000000lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddEnvironsRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kLauncher_AddNames_GenOrdinal = 0x53fcef0c00000000lu;
+constexpr uint64_t kLauncher_AddNames_Ordinal = 0x53fcef0c00000000lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddNamesRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kLauncher_AddHandles_GenOrdinal = 0x5cd6900b00000000lu;
+constexpr uint64_t kLauncher_AddHandles_Ordinal = 0x5cd6900b00000000lu;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddHandlesRequestTable;
 
 }  // namespace
@@ -231,7 +231,7 @@ Launcher::UnownedResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _cl
 
 ::fidl::DecodeResult<Launcher::LaunchResponse> Launcher::InPlace::Launch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LaunchRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLauncher_Launch_GenOrdinal;
+  params.message()->_hdr.ordinal = kLauncher_Launch_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Launcher::LaunchResponse>::FromFailure(
@@ -299,7 +299,7 @@ Launcher::UnownedResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutSt
 
 ::fidl::DecodeResult<Launcher::CreateWithoutStartingResponse> Launcher::InPlace::CreateWithoutStarting(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateWithoutStartingRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLauncher_CreateWithoutStarting_GenOrdinal;
+  params.message()->_hdr.ordinal = kLauncher_CreateWithoutStarting_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Launcher::CreateWithoutStartingResponse>::FromFailure(
@@ -368,7 +368,7 @@ Launcher::UnownedResultOf::AddArgs Launcher::Call::AddArgs(zx::unowned_channel _
 
 ::fidl::internal::StatusAndError Launcher::InPlace::AddArgs(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddArgsRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLauncher_AddArgs_GenOrdinal;
+  params.message()->_hdr.ordinal = kLauncher_AddArgs_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -437,7 +437,7 @@ Launcher::UnownedResultOf::AddEnvirons Launcher::Call::AddEnvirons(zx::unowned_c
 
 ::fidl::internal::StatusAndError Launcher::InPlace::AddEnvirons(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddEnvironsRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLauncher_AddEnvirons_GenOrdinal;
+  params.message()->_hdr.ordinal = kLauncher_AddEnvirons_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -506,7 +506,7 @@ Launcher::UnownedResultOf::AddNames Launcher::Call::AddNames(zx::unowned_channel
 
 ::fidl::internal::StatusAndError Launcher::InPlace::AddNames(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddNamesRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLauncher_AddNames_GenOrdinal;
+  params.message()->_hdr.ordinal = kLauncher_AddNames_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -575,7 +575,7 @@ Launcher::UnownedResultOf::AddHandles Launcher::Call::AddHandles(zx::unowned_cha
 
 ::fidl::internal::StatusAndError Launcher::InPlace::AddHandles(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddHandlesRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLauncher_AddHandles_GenOrdinal;
+  params.message()->_hdr.ordinal = kLauncher_AddHandles_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -599,7 +599,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kLauncher_Launch_GenOrdinal:
+    case kLauncher_Launch_Ordinal:
     {
       auto result = ::fidl::DecodeAs<LaunchRequest>(msg);
       if (result.status != ZX_OK) {
@@ -611,7 +611,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
         Interface::LaunchCompleter::Sync(txn));
       return true;
     }
-    case kLauncher_CreateWithoutStarting_GenOrdinal:
+    case kLauncher_CreateWithoutStarting_Ordinal:
     {
       auto result = ::fidl::DecodeAs<CreateWithoutStartingRequest>(msg);
       if (result.status != ZX_OK) {
@@ -623,7 +623,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
         Interface::CreateWithoutStartingCompleter::Sync(txn));
       return true;
     }
-    case kLauncher_AddArgs_GenOrdinal:
+    case kLauncher_AddArgs_Ordinal:
     {
       auto result = ::fidl::DecodeAs<AddArgsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -635,7 +635,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
         Interface::AddArgsCompleter::Sync(txn));
       return true;
     }
-    case kLauncher_AddEnvirons_GenOrdinal:
+    case kLauncher_AddEnvirons_Ordinal:
     {
       auto result = ::fidl::DecodeAs<AddEnvironsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -647,7 +647,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
         Interface::AddEnvironsCompleter::Sync(txn));
       return true;
     }
-    case kLauncher_AddNames_GenOrdinal:
+    case kLauncher_AddNames_Ordinal:
     {
       auto result = ::fidl::DecodeAs<AddNamesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -659,7 +659,7 @@ bool Launcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
         Interface::AddNamesCompleter::Sync(txn));
       return true;
     }
-    case kLauncher_AddHandles_GenOrdinal:
+    case kLauncher_AddHandles_Ordinal:
     {
       auto result = ::fidl::DecodeAs<AddHandlesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -691,7 +691,7 @@ void Launcher::Interface::LaunchCompleterBase::Reply(int32_t status, ::zx::proce
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LaunchResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<LaunchResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLauncher_Launch_GenOrdinal;
+  _response._hdr.ordinal = kLauncher_Launch_Ordinal;
   _response.status = std::move(status);
   _response.process = std::move(process);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LaunchResponse));
@@ -704,7 +704,7 @@ void Launcher::Interface::LaunchCompleterBase::Reply(::fidl::BytePart _buffer, i
     return;
   }
   auto& _response = *reinterpret_cast<LaunchResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLauncher_Launch_GenOrdinal;
+  _response._hdr.ordinal = kLauncher_Launch_Ordinal;
   _response.status = std::move(status);
   _response.process = std::move(process);
   _buffer.set_actual(sizeof(LaunchResponse));
@@ -713,7 +713,7 @@ void Launcher::Interface::LaunchCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void Launcher::Interface::LaunchCompleterBase::Reply(::fidl::DecodedMessage<LaunchResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLauncher_Launch_GenOrdinal;
+  params.message()->_hdr.ordinal = kLauncher_Launch_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -722,7 +722,7 @@ void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(int32_t stat
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateWithoutStartingResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   CreateWithoutStartingResponse _response = {};
-  _response._hdr.ordinal = kLauncher_CreateWithoutStarting_GenOrdinal;
+  _response._hdr.ordinal = kLauncher_CreateWithoutStarting_Ordinal;
   _response.status = std::move(status);
   _response.data = std::move(data);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -740,7 +740,7 @@ void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(::fidl::Byte
     return;
   }
   CreateWithoutStartingResponse _response = {};
-  _response._hdr.ordinal = kLauncher_CreateWithoutStarting_GenOrdinal;
+  _response._hdr.ordinal = kLauncher_CreateWithoutStarting_Ordinal;
   _response.status = std::move(status);
   _response.data = std::move(data);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -753,7 +753,7 @@ void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(::fidl::Byte
 
 void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(::fidl::DecodedMessage<CreateWithoutStartingResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLauncher_CreateWithoutStarting_GenOrdinal;
+  params.message()->_hdr.ordinal = kLauncher_CreateWithoutStarting_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

@@ -12,37 +12,37 @@ namespace input {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetBootProtocol_GenOrdinal = 0x47ac8ff500000000lu;
+constexpr uint64_t kDevice_GetBootProtocol_Ordinal = 0x47ac8ff500000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetBootProtocolResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetReportDescSize_GenOrdinal = 0x312dbbe100000000lu;
+constexpr uint64_t kDevice_GetReportDescSize_Ordinal = 0x312dbbe100000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescSizeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetReportDesc_GenOrdinal = 0x6ae0c2f200000000lu;
+constexpr uint64_t kDevice_GetReportDesc_Ordinal = 0x6ae0c2f200000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetNumReports_GenOrdinal = 0x79b0ee200000000lu;
+constexpr uint64_t kDevice_GetNumReports_Ordinal = 0x79b0ee200000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetNumReportsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetReportIds_GenOrdinal = 0x74f7d94f00000000lu;
+constexpr uint64_t kDevice_GetReportIds_Ordinal = 0x74f7d94f00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportIdsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetReportSize_GenOrdinal = 0x22e76cac00000000lu;
+constexpr uint64_t kDevice_GetReportSize_Ordinal = 0x22e76cac00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportSizeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetMaxInputReportSize_GenOrdinal = 0x4e9ab77400000000lu;
+constexpr uint64_t kDevice_GetMaxInputReportSize_Ordinal = 0x4e9ab77400000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetMaxInputReportSizeResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetReport_GenOrdinal = 0x2a267cd000000000lu;
+constexpr uint64_t kDevice_GetReport_Ordinal = 0x2a267cd000000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_SetReport_GenOrdinal = 0x14ff63cb00000000lu;
+constexpr uint64_t kDevice_SetReport_Ordinal = 0x14ff63cb00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetReportRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetReportResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kDevice_SetTraceId_GenOrdinal = 0x67de25bb00000000lu;
+constexpr uint64_t kDevice_SetTraceId_Ordinal = 0x67de25bb00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetTraceIdRequestTable;
 
 }  // namespace
@@ -93,7 +93,7 @@ Device::UnownedResultOf::GetBootProtocol Device::Call::GetBootProtocol(zx::unown
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetBootProtocolRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetBootProtocol_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetBootProtocol_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetBootProtocolResponse>::FromFailure(
@@ -155,7 +155,7 @@ Device::UnownedResultOf::GetReportDescSize Device::Call::GetReportDescSize(zx::u
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetReportDescSizeRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetReportDescSize_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetReportDescSize_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetReportDescSizeResponse>::FromFailure(
@@ -217,7 +217,7 @@ Device::UnownedResultOf::GetReportDesc Device::Call::GetReportDesc(zx::unowned_c
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetReportDescRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetReportDesc_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetReportDesc_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetReportDescResponse>::FromFailure(
@@ -279,7 +279,7 @@ Device::UnownedResultOf::GetNumReports Device::Call::GetNumReports(zx::unowned_c
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetNumReportsRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetNumReports_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetNumReports_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetNumReportsResponse>::FromFailure(
@@ -341,7 +341,7 @@ Device::UnownedResultOf::GetReportIds Device::Call::GetReportIds(zx::unowned_cha
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetReportIdsRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetReportIds_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetReportIds_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetReportIdsResponse>::FromFailure(
@@ -406,7 +406,7 @@ Device::UnownedResultOf::GetReportSize Device::Call::GetReportSize(zx::unowned_c
 
 ::fidl::DecodeResult<Device::GetReportSizeResponse> Device::InPlace::GetReportSize(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetReportSizeRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetReportSize_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetReportSize_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetReportSizeResponse>::FromFailure(
@@ -468,7 +468,7 @@ Device::UnownedResultOf::GetMaxInputReportSize Device::Call::GetMaxInputReportSi
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetMaxInputReportSizeRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetMaxInputReportSize_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetMaxInputReportSize_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetMaxInputReportSizeResponse>::FromFailure(
@@ -533,7 +533,7 @@ Device::UnownedResultOf::GetReport Device::Call::GetReport(zx::unowned_channel _
 
 ::fidl::DecodeResult<Device::GetReportResponse> Device::InPlace::GetReport(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetReportRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetReport_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetReport_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::GetReportResponse>::FromFailure(
@@ -605,7 +605,7 @@ Device::UnownedResultOf::SetReport Device::Call::SetReport(zx::unowned_channel _
 
 ::fidl::DecodeResult<Device::SetReportResponse> Device::InPlace::SetReport(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetReportRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_SetReport_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_SetReport_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Device::SetReportResponse>::FromFailure(
@@ -669,7 +669,7 @@ Device::UnownedResultOf::SetTraceId Device::Call::SetTraceId(zx::unowned_channel
 
 ::fidl::internal::StatusAndError Device::InPlace::SetTraceId(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTraceIdRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_SetTraceId_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_SetTraceId_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -693,7 +693,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_GetBootProtocol_GenOrdinal:
+    case kDevice_GetBootProtocol_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetBootProtocolRequest>(msg);
       if (result.status != ZX_OK) {
@@ -704,7 +704,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetBootProtocolCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetReportDescSize_GenOrdinal:
+    case kDevice_GetReportDescSize_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetReportDescSizeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -715,7 +715,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetReportDescSizeCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetReportDesc_GenOrdinal:
+    case kDevice_GetReportDesc_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetReportDescRequest>(msg);
       if (result.status != ZX_OK) {
@@ -726,7 +726,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetReportDescCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetNumReports_GenOrdinal:
+    case kDevice_GetNumReports_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetNumReportsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -737,7 +737,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetNumReportsCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetReportIds_GenOrdinal:
+    case kDevice_GetReportIds_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetReportIdsRequest>(msg);
       if (result.status != ZX_OK) {
@@ -748,7 +748,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetReportIdsCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetReportSize_GenOrdinal:
+    case kDevice_GetReportSize_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetReportSizeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -760,7 +760,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetReportSizeCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetMaxInputReportSize_GenOrdinal:
+    case kDevice_GetMaxInputReportSize_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetMaxInputReportSizeRequest>(msg);
       if (result.status != ZX_OK) {
@@ -771,7 +771,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetMaxInputReportSizeCompleter::Sync(txn));
       return true;
     }
-    case kDevice_GetReport_GenOrdinal:
+    case kDevice_GetReport_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetReportRequest>(msg);
       if (result.status != ZX_OK) {
@@ -783,7 +783,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::GetReportCompleter::Sync(txn));
       return true;
     }
-    case kDevice_SetReport_GenOrdinal:
+    case kDevice_SetReport_Ordinal:
     {
       auto result = ::fidl::DecodeAs<SetReportRequest>(msg);
       if (result.status != ZX_OK) {
@@ -795,7 +795,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::SetReportCompleter::Sync(txn));
       return true;
     }
-    case kDevice_SetTraceId_GenOrdinal:
+    case kDevice_SetTraceId_Ordinal:
     {
       auto result = ::fidl::DecodeAs<SetTraceIdRequest>(msg);
       if (result.status != ZX_OK) {
@@ -827,7 +827,7 @@ void Device::Interface::GetBootProtocolCompleterBase::Reply(BootProtocol protoco
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBootProtocolResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetBootProtocolResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_GetBootProtocol_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetBootProtocol_Ordinal;
   _response.protocol = std::move(protocol);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetBootProtocolResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetBootProtocolResponse>(std::move(_response_bytes)));
@@ -839,7 +839,7 @@ void Device::Interface::GetBootProtocolCompleterBase::Reply(::fidl::BytePart _bu
     return;
   }
   auto& _response = *reinterpret_cast<GetBootProtocolResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_GetBootProtocol_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetBootProtocol_Ordinal;
   _response.protocol = std::move(protocol);
   _buffer.set_actual(sizeof(GetBootProtocolResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetBootProtocolResponse>(std::move(_buffer)));
@@ -847,7 +847,7 @@ void Device::Interface::GetBootProtocolCompleterBase::Reply(::fidl::BytePart _bu
 
 void Device::Interface::GetBootProtocolCompleterBase::Reply(::fidl::DecodedMessage<GetBootProtocolResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetBootProtocol_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetBootProtocol_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -856,7 +856,7 @@ void Device::Interface::GetReportDescSizeCompleterBase::Reply(uint16_t size) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetReportDescSizeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetReportDescSizeResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_GetReportDescSize_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetReportDescSize_Ordinal;
   _response.size = std::move(size);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetReportDescSizeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetReportDescSizeResponse>(std::move(_response_bytes)));
@@ -868,7 +868,7 @@ void Device::Interface::GetReportDescSizeCompleterBase::Reply(::fidl::BytePart _
     return;
   }
   auto& _response = *reinterpret_cast<GetReportDescSizeResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_GetReportDescSize_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetReportDescSize_Ordinal;
   _response.size = std::move(size);
   _buffer.set_actual(sizeof(GetReportDescSizeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetReportDescSizeResponse>(std::move(_buffer)));
@@ -876,7 +876,7 @@ void Device::Interface::GetReportDescSizeCompleterBase::Reply(::fidl::BytePart _
 
 void Device::Interface::GetReportDescSizeCompleterBase::Reply(::fidl::DecodedMessage<GetReportDescSizeResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetReportDescSize_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetReportDescSize_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -886,7 +886,7 @@ void Device::Interface::GetReportDescCompleterBase::Reply(::fidl::VectorView<uin
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetReportDescResponse _response = {};
-  _response._hdr.ordinal = kDevice_GetReportDesc_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetReportDesc_Ordinal;
   _response.desc = std::move(desc);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -903,7 +903,7 @@ void Device::Interface::GetReportDescCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   GetReportDescResponse _response = {};
-  _response._hdr.ordinal = kDevice_GetReportDesc_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetReportDesc_Ordinal;
   _response.desc = std::move(desc);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -915,7 +915,7 @@ void Device::Interface::GetReportDescCompleterBase::Reply(::fidl::BytePart _buff
 
 void Device::Interface::GetReportDescCompleterBase::Reply(::fidl::DecodedMessage<GetReportDescResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetReportDesc_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetReportDesc_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -924,7 +924,7 @@ void Device::Interface::GetNumReportsCompleterBase::Reply(uint16_t count) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNumReportsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetNumReportsResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_GetNumReports_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetNumReports_Ordinal;
   _response.count = std::move(count);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetNumReportsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetNumReportsResponse>(std::move(_response_bytes)));
@@ -936,7 +936,7 @@ void Device::Interface::GetNumReportsCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<GetNumReportsResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_GetNumReports_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetNumReports_Ordinal;
   _response.count = std::move(count);
   _buffer.set_actual(sizeof(GetNumReportsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetNumReportsResponse>(std::move(_buffer)));
@@ -944,7 +944,7 @@ void Device::Interface::GetNumReportsCompleterBase::Reply(::fidl::BytePart _buff
 
 void Device::Interface::GetNumReportsCompleterBase::Reply(::fidl::DecodedMessage<GetNumReportsResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetNumReports_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetNumReports_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -953,7 +953,7 @@ void Device::Interface::GetReportIdsCompleterBase::Reply(::fidl::VectorView<uint
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetReportIdsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetReportIdsResponse _response = {};
-  _response._hdr.ordinal = kDevice_GetReportIds_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetReportIds_Ordinal;
   _response.ids = std::move(ids);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -970,7 +970,7 @@ void Device::Interface::GetReportIdsCompleterBase::Reply(::fidl::BytePart _buffe
     return;
   }
   GetReportIdsResponse _response = {};
-  _response._hdr.ordinal = kDevice_GetReportIds_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetReportIds_Ordinal;
   _response.ids = std::move(ids);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -982,7 +982,7 @@ void Device::Interface::GetReportIdsCompleterBase::Reply(::fidl::BytePart _buffe
 
 void Device::Interface::GetReportIdsCompleterBase::Reply(::fidl::DecodedMessage<GetReportIdsResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetReportIds_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetReportIds_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -991,7 +991,7 @@ void Device::Interface::GetReportSizeCompleterBase::Reply(int32_t status, uint16
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetReportSizeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetReportSizeResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_GetReportSize_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetReportSize_Ordinal;
   _response.status = std::move(status);
   _response.size = std::move(size);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetReportSizeResponse));
@@ -1004,7 +1004,7 @@ void Device::Interface::GetReportSizeCompleterBase::Reply(::fidl::BytePart _buff
     return;
   }
   auto& _response = *reinterpret_cast<GetReportSizeResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_GetReportSize_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetReportSize_Ordinal;
   _response.status = std::move(status);
   _response.size = std::move(size);
   _buffer.set_actual(sizeof(GetReportSizeResponse));
@@ -1013,7 +1013,7 @@ void Device::Interface::GetReportSizeCompleterBase::Reply(::fidl::BytePart _buff
 
 void Device::Interface::GetReportSizeCompleterBase::Reply(::fidl::DecodedMessage<GetReportSizeResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetReportSize_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetReportSize_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1022,7 +1022,7 @@ void Device::Interface::GetMaxInputReportSizeCompleterBase::Reply(uint16_t size)
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMaxInputReportSizeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetMaxInputReportSizeResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_GetMaxInputReportSize_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetMaxInputReportSize_Ordinal;
   _response.size = std::move(size);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMaxInputReportSizeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMaxInputReportSizeResponse>(std::move(_response_bytes)));
@@ -1034,7 +1034,7 @@ void Device::Interface::GetMaxInputReportSizeCompleterBase::Reply(::fidl::BytePa
     return;
   }
   auto& _response = *reinterpret_cast<GetMaxInputReportSizeResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_GetMaxInputReportSize_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetMaxInputReportSize_Ordinal;
   _response.size = std::move(size);
   _buffer.set_actual(sizeof(GetMaxInputReportSizeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetMaxInputReportSizeResponse>(std::move(_buffer)));
@@ -1042,7 +1042,7 @@ void Device::Interface::GetMaxInputReportSizeCompleterBase::Reply(::fidl::BytePa
 
 void Device::Interface::GetMaxInputReportSizeCompleterBase::Reply(::fidl::DecodedMessage<GetMaxInputReportSizeResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetMaxInputReportSize_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetMaxInputReportSize_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1052,7 +1052,7 @@ void Device::Interface::GetReportCompleterBase::Reply(int32_t status, ::fidl::Ve
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetReportResponse _response = {};
-  _response._hdr.ordinal = kDevice_GetReport_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetReport_Ordinal;
   _response.status = std::move(status);
   _response.report = std::move(report);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
@@ -1070,7 +1070,7 @@ void Device::Interface::GetReportCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   GetReportResponse _response = {};
-  _response._hdr.ordinal = kDevice_GetReport_GenOrdinal;
+  _response._hdr.ordinal = kDevice_GetReport_Ordinal;
   _response.status = std::move(status);
   _response.report = std::move(report);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
@@ -1083,7 +1083,7 @@ void Device::Interface::GetReportCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void Device::Interface::GetReportCompleterBase::Reply(::fidl::DecodedMessage<GetReportResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetReport_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_GetReport_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1092,7 +1092,7 @@ void Device::Interface::SetReportCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetReportResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<SetReportResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_SetReport_GenOrdinal;
+  _response._hdr.ordinal = kDevice_SetReport_Ordinal;
   _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetReportResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetReportResponse>(std::move(_response_bytes)));
@@ -1104,7 +1104,7 @@ void Device::Interface::SetReportCompleterBase::Reply(::fidl::BytePart _buffer, 
     return;
   }
   auto& _response = *reinterpret_cast<SetReportResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_SetReport_GenOrdinal;
+  _response._hdr.ordinal = kDevice_SetReport_Ordinal;
   _response.status = std::move(status);
   _buffer.set_actual(sizeof(SetReportResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<SetReportResponse>(std::move(_buffer)));
@@ -1112,7 +1112,7 @@ void Device::Interface::SetReportCompleterBase::Reply(::fidl::BytePart _buffer, 
 
 void Device::Interface::SetReportCompleterBase::Reply(::fidl::DecodedMessage<SetReportResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_SetReport_GenOrdinal;
+  params.message()->_hdr.ordinal = kDevice_SetReport_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

@@ -70,13 +70,13 @@ uint32_t& ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::mutable_
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kChannelProtocol_MethodA_GenOrdinal = 0x556693d200000000lu;
+constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x556693d200000000lu;
 [[maybe_unused]]
-constexpr uint64_t kChannelProtocol_EventA_GenOrdinal = 0x1c78c20200000000lu;
+constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x1c78c20200000000lu;
 [[maybe_unused]]
-constexpr uint64_t kChannelProtocol_MethodB_GenOrdinal = 0xac6551b00000000lu;
+constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0xac6551b00000000lu;
 [[maybe_unused]]
-constexpr uint64_t kChannelProtocol_MutateSocket_GenOrdinal = 0x4b02e28600000000lu;
+constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x4b02e28600000000lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
@@ -132,7 +132,7 @@ ChannelProtocol::UnownedResultOf::MethodA ChannelProtocol::Call::MethodA(zx::uno
 
 ::fidl::internal::StatusAndError ChannelProtocol::InPlace::MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kChannelProtocol_MethodA_GenOrdinal;
+  params.message()->_hdr.ordinal = kChannelProtocol_MethodA_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -197,7 +197,7 @@ ChannelProtocol::UnownedResultOf::MethodB ChannelProtocol::Call::MethodB(zx::uno
 
 ::fidl::DecodeResult<ChannelProtocol::MethodBResponse> ChannelProtocol::InPlace::MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kChannelProtocol_MethodB_GenOrdinal;
+  params.message()->_hdr.ordinal = kChannelProtocol_MethodB_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<ChannelProtocol::MethodBResponse>::FromFailure(
@@ -260,7 +260,7 @@ ChannelProtocol::UnownedResultOf::MutateSocket ChannelProtocol::Call::MutateSock
 
 ::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse> ChannelProtocol::InPlace::MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kChannelProtocol_MutateSocket_GenOrdinal;
+  params.message()->_hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse>::FromFailure(
@@ -333,7 +333,7 @@ zx_status_t ChannelProtocol::Call::HandleEvents(zx::unowned_channel client_end,
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kChannelProtocol_EventA_GenOrdinal:
+    case kChannelProtocol_EventA_Ordinal:
     {
       auto result = ::fidl::DecodeAs<EventAResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -356,7 +356,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kChannelProtocol_MethodA_GenOrdinal:
+    case kChannelProtocol_MethodA_Ordinal:
     {
       auto result = ::fidl::DecodeAs<MethodARequest>(msg);
       if (result.status != ZX_OK) {
@@ -368,7 +368,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
         Interface::MethodACompleter::Sync(txn));
       return true;
     }
-    case kChannelProtocol_MethodB_GenOrdinal:
+    case kChannelProtocol_MethodB_Ordinal:
     {
       auto result = ::fidl::DecodeAs<MethodBRequest>(msg);
       if (result.status != ZX_OK) {
@@ -380,7 +380,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
         Interface::MethodBCompleter::Sync(txn));
       return true;
     }
-    case kChannelProtocol_MutateSocket_GenOrdinal:
+    case kChannelProtocol_MutateSocket_Ordinal:
     {
       auto result = ::fidl::DecodeAs<MutateSocketRequest>(msg);
       if (result.status != ZX_OK) {
@@ -413,7 +413,7 @@ zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan, int64_
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<EventAResponse*>(_write_bytes);
   _response._hdr = {};
-  _response._hdr.ordinal = kChannelProtocol_EventA_GenOrdinal;
+  _response._hdr.ordinal = kChannelProtocol_EventA_Ordinal;
   _response.a = std::move(a);
   _response.b = std::move(b);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(EventAResponse));
@@ -426,7 +426,7 @@ zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan, ::fidl
   }
   auto& _response = *reinterpret_cast<EventAResponse*>(_buffer.data());
   _response._hdr = {};
-  _response._hdr.ordinal = kChannelProtocol_EventA_GenOrdinal;
+  _response._hdr.ordinal = kChannelProtocol_EventA_Ordinal;
   _response.a = std::move(a);
   _response.b = std::move(b);
   _buffer.set_actual(sizeof(EventAResponse));
@@ -435,7 +435,7 @@ zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan, ::fidl
 
 zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<EventAResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kChannelProtocol_EventA_GenOrdinal;
+  params.message()->_hdr.ordinal = kChannelProtocol_EventA_Ordinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
 
@@ -444,7 +444,7 @@ void ChannelProtocol::Interface::MethodBCompleterBase::Reply(int64_t result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodBResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MethodBResponse*>(_write_bytes);
-  _response._hdr.ordinal = kChannelProtocol_MethodB_GenOrdinal;
+  _response._hdr.ordinal = kChannelProtocol_MethodB_Ordinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MethodBResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MethodBResponse>(std::move(_response_bytes)));
@@ -456,7 +456,7 @@ void ChannelProtocol::Interface::MethodBCompleterBase::Reply(::fidl::BytePart _b
     return;
   }
   auto& _response = *reinterpret_cast<MethodBResponse*>(_buffer.data());
-  _response._hdr.ordinal = kChannelProtocol_MethodB_GenOrdinal;
+  _response._hdr.ordinal = kChannelProtocol_MethodB_Ordinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(MethodBResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MethodBResponse>(std::move(_buffer)));
@@ -464,7 +464,7 @@ void ChannelProtocol::Interface::MethodBCompleterBase::Reply(::fidl::BytePart _b
 
 void ChannelProtocol::Interface::MethodBCompleterBase::Reply(::fidl::DecodedMessage<MethodBResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kChannelProtocol_MethodB_GenOrdinal;
+  params.message()->_hdr.ordinal = kChannelProtocol_MethodB_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -473,7 +473,7 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::zx::socket b
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MutateSocketResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MutateSocketResponse*>(_write_bytes);
-  _response._hdr.ordinal = kChannelProtocol_MutateSocket_GenOrdinal;
+  _response._hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
   _response.b = std::move(b);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MutateSocketResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MutateSocketResponse>(std::move(_response_bytes)));
@@ -485,7 +485,7 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::BytePa
     return;
   }
   auto& _response = *reinterpret_cast<MutateSocketResponse*>(_buffer.data());
-  _response._hdr.ordinal = kChannelProtocol_MutateSocket_GenOrdinal;
+  _response._hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
   _response.b = std::move(b);
   _buffer.set_actual(sizeof(MutateSocketResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MutateSocketResponse>(std::move(_buffer)));
@@ -493,7 +493,7 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::BytePa
 
 void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::DecodedMessage<MutateSocketResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kChannelProtocol_MutateSocket_GenOrdinal;
+  params.message()->_hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -501,26 +501,26 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::Decode
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal = 0x1e03f87500000000lu;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 0x1e03f87500000000lu;
 [[maybe_unused]]
-constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal = 0x4df6dbd500000000lu;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 0x4df6dbd500000000lu;
 [[maybe_unused]]
-constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal = 0x668d7f800000000lu;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 0x668d7f800000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal = 0x19c2137100000000lu;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 0x19c2137100000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal = 0x76f2397300000000lu;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 0x76f2397300000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 [[maybe_unused]]
-constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal = 0x1973292000000000lu;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 0x1973292000000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal = 0x697fd73200000000lu;
+constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 0x697fd73200000000lu;
 [[maybe_unused]]
-constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal = 0x7a47120700000000lu;
+constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 0x7a47120700000000lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
@@ -552,7 +552,7 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse WithAndWithoutReque
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<NoRequestNoResponseRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -595,7 +595,7 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse WithAndWithoutRe
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<NoRequestEmptyResponseRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>::FromFailure(
@@ -657,7 +657,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse WithAndWit
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<NoRequestWithResponseRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithAndWithoutRequestResponse::NoRequestWithResponseResponse>::FromFailure(
@@ -726,7 +726,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse WithAndWit
 
 ::fidl::internal::StatusAndError WithAndWithoutRequestResponse::InPlace::WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestNoResponseRequest> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -794,7 +794,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse WithAnd
 
 ::fidl::DecodeResult<WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse> WithAndWithoutRequestResponse::InPlace::WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>::FromFailure(
@@ -862,7 +862,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse WithAndW
 
 ::fidl::DecodeResult<WithAndWithoutRequestResponse::WithRequestWithResponseResponse> WithAndWithoutRequestResponse::InPlace::WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithAndWithoutRequestResponse::WithRequestWithResponseResponse>::FromFailure(
@@ -942,7 +942,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(zx::unowned_channe
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
-    case kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal:
+    case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
     {
       auto result = ::fidl::DecodeAs<OnEmptyResponseResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -950,7 +950,7 @@ zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(zx::unowned_channe
       }
       return handlers.on_empty_response();
     }
-    case kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal:
+    case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
     {
       auto result = ::fidl::DecodeAs<OnWithResponseResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -973,7 +973,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal:
+    case kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal:
     {
       auto result = ::fidl::DecodeAs<NoRequestNoResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -984,7 +984,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
         Interface::NoRequestNoResponseCompleter::Sync(txn));
       return true;
     }
-    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal:
+    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
     {
       auto result = ::fidl::DecodeAs<NoRequestEmptyResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -995,7 +995,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
         Interface::NoRequestEmptyResponseCompleter::Sync(txn));
       return true;
     }
-    case kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal:
+    case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
     {
       auto result = ::fidl::DecodeAs<NoRequestWithResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1006,7 +1006,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
         Interface::NoRequestWithResponseCompleter::Sync(txn));
       return true;
     }
-    case kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal:
+    case kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal:
     {
       auto result = ::fidl::DecodeAs<WithRequestNoResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1018,7 +1018,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
         Interface::WithRequestNoResponseCompleter::Sync(txn));
       return true;
     }
-    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal:
+    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
     {
       auto result = ::fidl::DecodeAs<WithRequestEmptyResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1030,7 +1030,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
         Interface::WithRequestEmptyResponseCompleter::Sync(txn));
       return true;
     }
-    case kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal:
+    case kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
     {
       auto result = ::fidl::DecodeAs<WithRequestWithResponseRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1062,7 +1062,7 @@ void WithAndWithoutRequestResponse::Interface::NoRequestEmptyResponseCompleterBa
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NoRequestEmptyResponseResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<NoRequestEmptyResponseResponse*>(_write_bytes);
-  _response._hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal;
+  _response._hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal;
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NoRequestEmptyResponseResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<NoRequestEmptyResponseResponse>(std::move(_response_bytes)));
 }
@@ -1073,7 +1073,7 @@ void WithAndWithoutRequestResponse::Interface::NoRequestWithResponseCompleterBas
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   NoRequestWithResponseResponse _response = {};
-  _response._hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal;
+  _response._hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal;
   _response.ret = std::move(ret);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -1090,7 +1090,7 @@ void WithAndWithoutRequestResponse::Interface::NoRequestWithResponseCompleterBas
     return;
   }
   NoRequestWithResponseResponse _response = {};
-  _response._hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal;
+  _response._hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal;
   _response.ret = std::move(ret);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -1102,7 +1102,7 @@ void WithAndWithoutRequestResponse::Interface::NoRequestWithResponseCompleterBas
 
 void WithAndWithoutRequestResponse::Interface::NoRequestWithResponseCompleterBase::Reply(::fidl::DecodedMessage<NoRequestWithResponseResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1111,7 +1111,7 @@ void WithAndWithoutRequestResponse::Interface::WithRequestEmptyResponseCompleter
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WithRequestEmptyResponseResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WithRequestEmptyResponseResponse*>(_write_bytes);
-  _response._hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal;
+  _response._hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal;
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WithRequestEmptyResponseResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WithRequestEmptyResponseResponse>(std::move(_response_bytes)));
 }
@@ -1122,7 +1122,7 @@ void WithAndWithoutRequestResponse::Interface::WithRequestWithResponseCompleterB
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   WithRequestWithResponseResponse _response = {};
-  _response._hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal;
+  _response._hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal;
   _response.ret = std::move(ret);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -1139,7 +1139,7 @@ void WithAndWithoutRequestResponse::Interface::WithRequestWithResponseCompleterB
     return;
   }
   WithRequestWithResponseResponse _response = {};
-  _response._hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal;
+  _response._hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal;
   _response.ret = std::move(ret);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -1151,7 +1151,7 @@ void WithAndWithoutRequestResponse::Interface::WithRequestWithResponseCompleterB
 
 void WithAndWithoutRequestResponse::Interface::WithRequestWithResponseCompleterBase::Reply(::fidl::DecodedMessage<WithRequestWithResponseResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1161,7 +1161,7 @@ zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(::zx::unowne
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<OnEmptyResponseResponse*>(_write_bytes);
   _response._hdr = {};
-  _response._hdr.ordinal = kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal;
+  _response._hdr.ordinal = kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal;
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnEmptyResponseResponse));
   return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnEmptyResponseResponse>(std::move(_response_bytes)));
 }
@@ -1173,7 +1173,7 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(::zx::unowned
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   OnWithResponseResponse _response = {};
   _response._hdr = {};
-  _response._hdr.ordinal = kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal;
+  _response._hdr.ordinal = kWithAndWithoutRequestResponse_OnWithResponse_Ordinal;
   _response.ret = std::move(ret);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
@@ -1189,7 +1189,7 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(::zx::unowned
   }
   OnWithResponseResponse _response = {};
   _response._hdr = {};
-  _response._hdr.ordinal = kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal;
+  _response._hdr.ordinal = kWithAndWithoutRequestResponse_OnWithResponse_Ordinal;
   _response.ret = std::move(ret);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -1200,7 +1200,7 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(::zx::unowned
 
 zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnWithResponseResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_OnWithResponse_Ordinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
 }
 
@@ -1270,10 +1270,10 @@ ErrorEnun& ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::mutable_err(
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal = 0x7b58113900000000lu;
+constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 0x7b58113900000000lu;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_GenOrdinal = 0x4c95de1f00000000lu;
+constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x4c95de1f00000000lu;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace
@@ -1324,7 +1324,7 @@ WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive WithErrorSyntax::Call::ErrorA
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ErrorAsPrimitiveRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithErrorSyntax::ErrorAsPrimitiveResponse>::FromFailure(
@@ -1386,7 +1386,7 @@ WithErrorSyntax::UnownedResultOf::ErrorAsEnum WithErrorSyntax::Call::ErrorAsEnum
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ErrorAsEnumRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<WithErrorSyntax::ErrorAsEnumResponse>::FromFailure(
@@ -1410,7 +1410,7 @@ bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal:
+    case kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ErrorAsPrimitiveRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1421,7 +1421,7 @@ bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
         Interface::ErrorAsPrimitiveCompleter::Sync(txn));
       return true;
     }
-    case kWithErrorSyntax_ErrorAsEnum_GenOrdinal:
+    case kWithErrorSyntax_ErrorAsEnum_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ErrorAsEnumRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1452,7 +1452,7 @@ void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(WithErrorS
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ErrorAsPrimitiveResponse*>(_write_bytes);
-  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal;
+  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ErrorAsPrimitiveResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse>(std::move(_response_bytes)));
@@ -1464,7 +1464,7 @@ void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::By
     return;
   }
   auto& _response = *reinterpret_cast<ErrorAsPrimitiveResponse*>(_buffer.data());
-  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal;
+  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(ErrorAsPrimitiveResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse>(std::move(_buffer)));
@@ -1472,7 +1472,7 @@ void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::By
 
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -1481,7 +1481,7 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(WithErrorSyntax
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ErrorAsEnumResponse*>(_write_bytes);
-  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_GenOrdinal;
+  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
   _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ErrorAsEnumResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsEnumResponse>(std::move(_response_bytes)));
@@ -1493,7 +1493,7 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::BytePar
     return;
   }
   auto& _response = *reinterpret_cast<ErrorAsEnumResponse*>(_buffer.data());
-  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_GenOrdinal;
+  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
   _response.result = std::move(result);
   _buffer.set_actual(sizeof(ErrorAsEnumResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsEnumResponse>(std::move(_buffer)));
@@ -1501,7 +1501,7 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::BytePar
 
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::DecodedMessage<ErrorAsEnumResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_GenOrdinal;
+  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

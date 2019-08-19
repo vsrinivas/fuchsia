@@ -211,8 +211,8 @@ func (_m *StrictBoundedXUnion) SetV(v []uint8) {
 
 
 const (
-	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal uint64 = 0x71a1b4b700000000
-	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal uint64 = 0x3959ff0900000000
+	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal uint64 = 0x71a1b4b700000000
+	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal uint64 = 0x3959ff0900000000
 )
 
 type testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
@@ -243,14 +243,14 @@ type TestProtocolInterface _bindings.ChannelProxy
 func (p *TestProtocolInterface) StrictXUnionHenceResponseMayBeStackAllocated() (StrictBoundedXUnion, error) {
 	var req_ _bindings.Message
 	resp_ := &testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal, req_, resp_)
 	return resp_.Xu, err
 }
 
 func (p *TestProtocolInterface) FlexibleXUnionHenceResponseMustBeHeapAllocated() (OlderSimpleUnion, error) {
 	var req_ _bindings.Message
 	resp_ := &testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal, req_, resp_)
 	return resp_.Xu, err
 }
 
@@ -276,12 +276,12 @@ type TestProtocolStub struct {
 
 func (s_ *TestProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
 	switch ordinal_ {
-	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal:
+	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal:
 		xu, err_ := s_.Impl.StrictXUnionHenceResponseMayBeStackAllocated()
 		out_ := testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
 		out_.Xu = xu
 		return &out_, err_
-	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal:
+	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal:
 		xu, err_ := s_.Impl.FlexibleXUnionHenceResponseMustBeHeapAllocated()
 		out_ := testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
 		out_.Xu = xu
