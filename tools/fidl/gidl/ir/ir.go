@@ -6,8 +6,8 @@ package ir
 
 type All struct {
 	Success       []Success
-	EncodeSuccess       []EncodeSuccess
-	DecodeSuccess       []DecodeSuccess
+	EncodeSuccess []EncodeSuccess
+	DecodeSuccess []DecodeSuccess
 	EncodeFailure []EncodeFailure
 	DecodeFailure []DecodeFailure
 }
