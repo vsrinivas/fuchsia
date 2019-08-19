@@ -14,6 +14,8 @@ pub use id_map_collection::{IdMapCollection, IdMapCollectionKey};
 /// by an internally managed pool of identifiers kept densely packed.
 pub(crate) mod id_map {
 
+    use std::collections::BTreeSet;
+
     type Key = usize;
 
     /// A generic container for `T` keyed by densily packed integers.
@@ -23,18 +25,24 @@ pub(crate) mod id_map {
     /// dense as possible.
     ///
     /// The main guarantee provided by `IdMap` is that all `get` operations are
-    /// provided in O(1) without the need to hash the keys.
+    /// provided in O(1) without the need to hash the keys. The only operations
+    /// of `IdMap` that are used in the hot path are the `get` operations.
     ///
-    /// The only operations of `IdMap` that are used in the hot path are the `get`
-    /// operations. `push` is used
+    /// All operations that mutate the `IdMap` are O(log(n)) average.
+    ///
+    /// `push` will grab the lowest free `id` and assign it to the given value,
+    /// returning the assigned `id`. `insert` can be used for assigning a
+    /// specific `id` to an object, and returns the previous object at that `id`
+    /// if any.
     pub(crate) struct IdMap<T> {
         data: Vec<Option<T>>,
+        avail: BTreeSet<Key>,
     }
 
     impl<T> IdMap<T> {
         /// Creates a new empty [`IdMap`].
         pub(crate) fn new() -> Self {
-            Self { data: Vec::new() }
+            Self { data: Vec::new(), avail: BTreeSet::new() }
         }
 
         /// Returns `true` if there are no items in [`IdMap`].
@@ -63,6 +71,8 @@ pub(crate) mod id_map {
         pub(crate) fn remove(&mut self, key: Key) -> Option<T> {
             let r = self.data.get_mut(key).and_then(|v| v.take());
             if r.is_some() {
+                self.mark_avail(key);
+                // compress will also truncate available keys, if necessary.
                 self.compress();
             }
             r
@@ -77,8 +87,12 @@ pub(crate) mod id_map {
         /// larger than the number of items currently held by the [`IdMap`].
         pub(crate) fn insert(&mut self, key: Key, item: T) -> Option<T> {
             if key < self.data.len() {
+                self.mark_unavail(key);
                 self.data[key].replace(item)
             } else {
+                for idx in self.data.len()..key {
+                    self.mark_avail(idx);
+                }
                 self.data.resize_with(key, Option::default);
                 self.data.push(Some(item));
                 None
@@ -102,25 +116,9 @@ pub(crate) mod id_map {
         //  gets used for larger n's and fragmentation is concentrated at the
         //  end of the internal vec.
         pub(crate) fn push(&mut self, item: T) -> Key {
-            match self.data.iter().enumerate().find_map(
-                |(k, v)| {
-                    if v.is_none() {
-                        Some(k)
-                    } else {
-                        None
-                    }
-                },
-            ) {
-                Some(k) => {
-                    self.data[k].replace(item);
-                    k
-                }
-                None => {
-                    let k = self.data.len();
-                    self.data.push(Some(item));
-                    k
-                }
-            }
+            let k = self.get_avail();
+            self.data[k].replace(item);
+            k
         }
 
         /// Compresses the tail of the internal `Vec`.
@@ -136,8 +134,10 @@ pub(crate) mod id_map {
                 }
             }) {
                 self.data.truncate(idx + 1);
+                self.truncate_avail(idx);
             } else {
                 self.data.clear();
+                self.avail.clear();
             }
         }
 
@@ -166,6 +166,35 @@ pub(crate) mod id_map {
             } else {
                 Entry::Vacant(VacantEntry { key, slot: LazyEntry::Lazy(self) })
             }
+        }
+
+        /// Gets the lowest available key that does not have an associated value. If no keys are
+        /// available, storage is extended by 1 and the key for the new space is returned. O(n)
+        /// worst case, O(log(n)) average.
+        fn get_avail(&mut self) -> Key {
+            if let Some(k) = self.avail.iter().next() {
+                let mut key = k.clone();
+                self.avail.take(&key).unwrap()
+            } else {
+                self.data.push(None);
+                self.data.len() - 1
+            }
+        }
+
+        /// Returns the given key to the pool of unused keys. O(log(n)) average.
+        fn mark_avail(&mut self, key: Key) {
+            self.avail.insert(key);
+        }
+
+        /// Marks the key as being in use. O(log(n)) average.
+        fn mark_unavail(&mut self, key: Key) {
+            self.avail.remove(&key);
+        }
+
+        /// Truncates the set of available keys, removing all keys equal to or above the given
+        /// value. O(log(n)) average.
+        fn truncate_avail(&mut self, trunc_key: Key) {
+            self.avail.split_off(&trunc_key);
         }
     }
 
@@ -401,11 +430,14 @@ pub(crate) mod id_map {
     #[cfg(test)]
     mod tests {
         use super::{Entry, IdMap};
+        use std::collections::BTreeSet;
+        use std::iter::FromIterator;
 
         #[test]
         fn test_push() {
             let mut map = IdMap::new();
-            map.data = vec![None, Some(2)];
+            map.insert(1, 2);
+            assert_eq!(map.data, vec![None, Some(2)]);
             assert_eq!(map.push(1), 0);
             assert_eq!(map.data, vec![Some(1), Some(2)]);
             assert_eq!(map.push(3), 2);
@@ -415,7 +447,9 @@ pub(crate) mod id_map {
         #[test]
         fn test_get() {
             let mut map = IdMap::new();
-            map.data = vec![Some(1), None, Some(3)];
+            map.push(1);
+            map.insert(2, 3);
+            assert_eq!(map.data, vec![Some(1), None, Some(3)]);
             assert_eq!(*map.get(0).unwrap(), 1);
             assert!(map.get(1).is_none());
             assert_eq!(*map.get(2).unwrap(), 3);
@@ -425,7 +459,9 @@ pub(crate) mod id_map {
         #[test]
         fn test_get_mut() {
             let mut map = IdMap::new();
-            map.data = vec![Some(1), None, Some(3)];
+            map.push(1);
+            map.insert(2, 3);
+            assert_eq!(map.data, vec![Some(1), None, Some(3)]);
             *map.get_mut(2).unwrap() = 10;
             assert_eq!(*map.get(0).unwrap(), 1);
             assert_eq!(*map.get(2).unwrap(), 10);
@@ -436,14 +472,24 @@ pub(crate) mod id_map {
 
         #[test]
         fn test_is_empty() {
-            assert!(IdMap::<i32>::new().is_empty())
+            let mut map = IdMap::<i32>::new();
+            assert!(map.is_empty());
+            map.push(1);
+            assert!(!map.is_empty());
         }
 
         #[test]
         fn test_remove() {
             let mut map = IdMap::new();
-            map.data = vec![Some(1), Some(2), Some(3)];
+            map.push(1);
+            map.push(2);
+            map.push(3);
+            assert_eq!(map.data, vec![Some(1), Some(2), Some(3)]);
+            assert_eq!(map.avail, BTreeSet::new());
+
             assert_eq!(map.remove(1).unwrap(), 2);
+            assert_eq!(map.avail, BTreeSet::from_iter(vec![1].into_iter()));
+
             assert!(map.remove(1).is_none());
             assert_eq!(map.data, vec![Some(1), None, Some(3)]);
         }
@@ -451,11 +497,18 @@ pub(crate) mod id_map {
         #[test]
         fn test_remove_compress() {
             let mut map = IdMap::new();
-            map.data = vec![Some(1), None, Some(3)];
+            map.push(1);
+            map.insert(2, 3);
+            assert_eq!(map.data, vec![Some(1), None, Some(3)]);
+            assert_eq!(map.avail, BTreeSet::from_iter(vec![1].into_iter()));
+
             assert_eq!(map.remove(2).unwrap(), 3);
             assert_eq!(map.data, vec![Some(1)]);
+            assert!(map.avail.is_empty());
+
             assert_eq!(map.remove(0).unwrap(), 1);
             assert!(map.data.is_empty());
+            assert!(map.avail.is_empty());
         }
 
         #[test]
@@ -463,18 +516,25 @@ pub(crate) mod id_map {
             let mut map = IdMap::new();
             assert!(map.insert(1, 2).is_none());
             assert_eq!(map.data, vec![None, Some(2)]);
+            assert_eq!(map.avail, BTreeSet::from_iter(vec![0].into_iter()));
             assert!(map.insert(3, 4).is_none());
             assert_eq!(map.data, vec![None, Some(2), None, Some(4)]);
+            assert_eq!(map.avail, BTreeSet::from_iter(vec![0, 2].into_iter()));
             assert!(map.insert(0, 1).is_none());
             assert_eq!(map.data, vec![Some(1), Some(2), None, Some(4)]);
+            assert_eq!(map.avail, BTreeSet::from_iter(vec![2].into_iter()));
             assert_eq!(map.insert(3, 5).unwrap(), 4);
             assert_eq!(map.data, vec![Some(1), Some(2), None, Some(5)]);
+            assert_eq!(map.avail, BTreeSet::from_iter(vec![2].into_iter()));
         }
 
         #[test]
         fn test_iter() {
             let mut map = IdMap::new();
-            map.data = vec![None, Some(0), None, Some(1), None, None, Some(2)];
+            map.insert(1, 0);
+            map.insert(3, 1);
+            map.insert(6, 2);
+            assert_eq!(map.data, vec![None, Some(0), None, Some(1), None, None, Some(2)]);
             let mut c = 0;
             for (i, (k, v)) in map.iter().enumerate() {
                 assert_eq!(i, *v as usize);
@@ -487,7 +547,10 @@ pub(crate) mod id_map {
         #[test]
         fn test_iter_mut() {
             let mut map = IdMap::new();
-            map.data = vec![None, Some(0), None, Some(1), None, None, Some(2)];
+            map.insert(1, 0);
+            map.insert(3, 1);
+            map.insert(6, 2);
+            assert_eq!(map.data, vec![None, Some(0), None, Some(1), None, None, Some(2)]);
             for (k, v) in map.iter_mut() {
                 *v += k as u32;
             }
