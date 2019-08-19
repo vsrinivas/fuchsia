@@ -17,9 +17,15 @@ struct Property {
 const string METADATA_LABEL_TITLE = "fuchsia.media.title";
 const string METADATA_LABEL_ARTIST = "fuchsia.media.artist";
 const string METADATA_LABEL_ALBUM = "fuchsia.media.album";
+const string METADATA_LABEL_TRACK_NUMBER = "fuchsia.media.track_number";
 const string METADATA_LABEL_PUBLISHER = "fuchsia.media.publisher";
 const string METADATA_LABEL_GENRE = "fuchsia.media.genre";
 const string METADATA_LABEL_COMPOSER = "fuchsia.media.composer";
+const string METADATA_LABEL_SUBTITLE = "fuchsia.media.subtitle";
+const string METADATA_LABEL_RELEASE_DATE = "fuchsia.media.release_date";
+const string METADATA_LABEL_EPISODE = "fuchsia.media.episode";
+const string METADATA_LABEL_SEASON = "fuchsia.media.season";
+const string METADATA_LABEL_STUDIO = "fuchsia.media.studio";
 
 /// The title of the source of the media, e.g. a player, streaming service, or
 /// website.
