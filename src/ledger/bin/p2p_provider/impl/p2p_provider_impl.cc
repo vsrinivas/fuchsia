@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 
+#include <lib/callback/set_when_called.h>
+
 #include <algorithm>
 #include <iterator>
 
@@ -128,20 +130,15 @@ void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection, std::vector
   bool existed_before = false;
   auto it = connection_map_.find(remote_node);
   if (it != connection_map_.end()) {
-    if (remote_node < *self_client_id_) {
-      it->second->Disconnect();
-      existed_before = true;
-    } else {
-      connection->Disconnect();
-      return;
-    }
+    it->second->Disconnect();
+    connection_map_.erase(it);
+    existed_before = true;
   }
-
-  connection_map_[remote_node] = connection;
 
   connection->set_on_message(
       [this, remote_node](std::vector<uint8_t> data) { Dispatch(remote_node, std::move(data)); });
 
+  bool connection_closed = false;
   if (should_send_handshake) {
     // We send an handshake to signal to the other side the connection is
     // indeed established.
@@ -153,18 +150,29 @@ void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection, std::vector
     buffer.Finish(envelope);
     char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
     size_t size = buffer.GetSize();
+
+    // SendMessage may detect that the pipe is disconnected. We detect this case to exit early and
+    // avoid a use-after-free.
+    connection->set_on_close(callback::SetWhenCalled(&connection_closed));
+
     connection->SendMessage(fxl::StringView(buf, size));
   }
 
-  if (!existed_before) {
-    // If the connection existed before, we don't need to notify again.
-    OnDeviceChange(remote_node, DeviceChangeType::NEW);
+  if (connection_closed) {
+    return;
   }
+
+  connection_map_[remote_node] = connection;
 
   connection->set_on_close([this, remote_node]() {
     connection_map_.erase(remote_node);
     OnDeviceChange(remote_node, DeviceChangeType::DELETED);
   });
+
+  if (!existed_before) {
+    // If the connection existed before, we don't need to notify again.
+    OnDeviceChange(remote_node, DeviceChangeType::NEW);
+  }
 }
 
 void P2PProviderImpl::ListenForNewDevices(uint64_t version) {

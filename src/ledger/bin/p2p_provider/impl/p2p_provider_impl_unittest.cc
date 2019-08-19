@@ -14,8 +14,10 @@
 #include <string>
 
 // gtest matchers are in gmock.
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+#include "src/ledger/bin/p2p_provider/impl/envelope_generated.h"
 #include "src/ledger/bin/p2p_provider/impl/make_client_id.h"
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
 #include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
@@ -297,6 +299,109 @@ TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
   // Only one device should initiate the connection. We don't really care which
   // one, as long as it is reliably correct.
   EXPECT_EQ(overnet_impl_0.device_requests.size() + overnet_impl_1.device_requests.size(), 1U);
+}
+
+// Verifies that P2PProviderImpl does not crash when a connection is immediately broken after
+// receiving a handshake.
+TEST_F(P2PProviderImplTest, DisconnectBeforeHandshake) {
+  std::unique_ptr<P2PProvider> provider1 = GetProvider(10, "user1");
+  RecordingClient client1;
+  provider1->Start(&client1);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(client1.device_changes.empty());
+
+  fuchsia::overnet::OvernetPtr overnet;
+  // We use a lower host ID to ensure we are the one establishing a connection.
+  overnet_factory_.AddBinding(2, overnet.NewRequest());
+
+  zx::channel local;
+  zx::channel remote;
+  zx_status_t status = zx::channel::create(0u, &local, &remote);
+  ASSERT_EQ(status, ZX_OK);
+
+  fuchsia::overnet::protocol::NodeId node{10};
+  overnet->ConnectToService(node, "ledger-p2p-user1", std::move(remote));
+
+  // Send handshake
+  flatbuffers::FlatBufferBuilder buffer;
+  flatbuffers::Offset<Handshake> request = CreateHandshake(
+      buffer, 1, convert::ToFlatBufferVector(&buffer, MakeP2PClientId(2).GetData()));
+  flatbuffers::Offset<Envelope> envelope =
+      CreateEnvelope(buffer, EnvelopeMessage_Handshake, request.Union());
+  buffer.Finish(envelope);
+  char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
+  size_t size = buffer.GetSize();
+  status = local.write(0, buf, size, nullptr, 0);
+  EXPECT_EQ(status, ZX_OK);
+  local.reset();
+
+  RunLoopUntilIdle();
+
+  // Test does not crash under ASAN.
+
+  EXPECT_THAT(client1.device_changes, testing::IsEmpty());
+}
+
+// Verifies that P2PProviderImpl does not crash when connected multiple times (for example, on an
+// unreliable network).
+TEST_F(P2PProviderImplTest, TripleConnection) {
+  std::unique_ptr<P2PProvider> provider1 = GetProvider(10, "user1");
+  RecordingClient client1;
+  provider1->Start(&client1);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(client1.device_changes.empty());
+
+  fuchsia::overnet::OvernetPtr overnet;
+  // We use a lower host ID to ensure we are the one establishing a connection.
+  overnet_factory_.AddBinding(2, overnet.NewRequest());
+
+  zx::channel local;
+  zx::channel remote;
+  zx_status_t status = zx::channel::create(0u, &local, &remote);
+  ASSERT_EQ(status, ZX_OK);
+
+  fuchsia::overnet::protocol::NodeId node{10};
+  overnet->ConnectToService(node, "ledger-p2p-user1", std::move(remote));
+
+  // Send handshake
+  flatbuffers::FlatBufferBuilder buffer;
+  flatbuffers::Offset<Handshake> request = CreateHandshake(
+      buffer, 1, convert::ToFlatBufferVector(&buffer, MakeP2PClientId(2).GetData()));
+  flatbuffers::Offset<Envelope> envelope =
+      CreateEnvelope(buffer, EnvelopeMessage_Handshake, request.Union());
+  buffer.Finish(envelope);
+  char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
+  size_t size = buffer.GetSize();
+  status = local.write(0, buf, size, nullptr, 0);
+  EXPECT_EQ(status, ZX_OK);
+
+  RunLoopUntilIdle();
+
+  zx::channel local2;
+  zx::channel remote2;
+  status = zx::channel::create(0u, &local2, &remote2);
+  ASSERT_EQ(status, ZX_OK);
+
+  overnet->ConnectToService(node, "ledger-p2p-user1", std::move(remote2));
+  // Send handshake
+  status = local2.write(0, buf, size, nullptr, 0);
+  EXPECT_EQ(status, ZX_OK);
+  local2.reset();
+
+  RunLoopUntilIdle();
+
+  zx::channel local3;
+  zx::channel remote3;
+  status = zx::channel::create(0u, &local3, &remote3);
+  ASSERT_EQ(status, ZX_OK);
+
+  overnet->ConnectToService(node, "ledger-p2p-user1", std::move(remote3));
+  // Send handshake
+  status = local3.write(0, buf, size, nullptr, 0);
+  EXPECT_EQ(status, ZX_OK);
+  RunLoopUntilIdle();
+
+  // Does not crash under ASAN.
 }
 
 }  // namespace

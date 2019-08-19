@@ -20,7 +20,7 @@ namespace {
 
 class IntegrationTestTests : public IntegrationTest {};
 
-TEST_P(IntegrationTestTests, DISABLED_MultipleLedgerAppInstances) {
+TEST_P(IntegrationTestTests, MultipleLedgerAppInstances) {
   auto instance1 = NewLedgerAppInstance();
   auto instance2 = NewLedgerAppInstance();
 
