@@ -165,8 +165,8 @@ FrameSink::FrameSink(sys::ComponentContext* component_context, async::Loop* main
       // IEEE 754 floating point can represent 0.0 exactly.
       frames_per_second_(frames_per_second != 0.0 ? frames_per_second : kDefaultFramesPerSecond),
       view_connected_callback_(std::move(view_connected_callback)) {
-  view_provider_component_ = std::make_unique<scenic::ViewProviderComponentTransitional>(
-      [this](scenic::ViewContextTransitional view_context) {
+  view_provider_component_ = std::make_unique<scenic::ViewProviderComponent>(
+      [this](scenic::ViewContext view_context) {
         return FrameSinkView::Create(std::move(view_context), this, main_loop_);
       },
       main_loop_, component_context_);

@@ -180,7 +180,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // is enforced by basemgr which vends sessions.
   std::string session_id_;
 
-  std::unique_ptr<component::StartupContext> startup_context_;
   sys::ComponentContext* const component_context_;
 
   fuchsia::modular::session::SessionmgrConfig config_;

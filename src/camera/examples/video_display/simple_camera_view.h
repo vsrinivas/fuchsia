@@ -6,7 +6,7 @@
 #define SRC_CAMERA_EXAMPLES_VIDEO_DISPLAY_SIMPLE_CAMERA_VIEW_H_
 
 #include <fuchsia/simplecamera/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view_transitional.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <deque>
@@ -19,9 +19,9 @@
 
 namespace video_display {
 
-class SimpleCameraView : public scenic::BaseViewTransitional {
+class SimpleCameraView : public scenic::BaseView {
  public:
-  explicit SimpleCameraView(scenic::ViewContextTransitional view_context);
+  explicit SimpleCameraView(scenic::ViewContext view_context);
   ~SimpleCameraView() override = default;
 
  private:

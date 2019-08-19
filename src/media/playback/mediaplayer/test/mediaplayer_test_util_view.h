@@ -11,7 +11,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/media/cpp/timeline_function.h>
-#include <lib/ui/base_view/cpp/base_view_transitional.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 
 #include <memory>
 #include <queue>
@@ -22,10 +22,9 @@
 namespace media_player {
 namespace test {
 
-class MediaPlayerTestUtilView : public scenic::BaseViewTransitional {
+class MediaPlayerTestUtilView : public scenic::BaseView {
  public:
-  MediaPlayerTestUtilView(scenic::ViewContextTransitional view_context,
-                          fit::function<void(int)> quit_callback,
+  MediaPlayerTestUtilView(scenic::ViewContext view_context, fit::function<void(int)> quit_callback,
                           const MediaPlayerTestUtilParams& params);
 
   ~MediaPlayerTestUtilView() override;

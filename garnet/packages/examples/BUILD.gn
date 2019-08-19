@@ -182,6 +182,7 @@ group("media") {
     "//examples/media/audio/simple_sine",
     "//examples/media/audio/sync_sine",
     "//examples/media/audio/tones",
+    "//examples/media/audio/vu_meter",
     "//garnet/examples/media:use_h264_decoder_test",
     "//garnet/examples/media:use_media_decoder",
     "//garnet/examples/media:use_vp9_decoder_test",

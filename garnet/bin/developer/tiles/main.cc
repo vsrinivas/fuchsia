@@ -49,7 +49,7 @@ int main(int argc, const char** argv) {
 
   // Create tiles with a token for its root view.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  scenic::ViewContextTransitional view_context = {
+  scenic::ViewContext view_context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
       .view_token = std::move(view_token),

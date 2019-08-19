@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/trace-provider/provider.h>
-#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
+#include <lib/ui/base_view/cpp/view_provider_component.h>
 
 #include "garnet/examples/ui/shadertoy/client/view.h"
 #include "src/lib/fxl/command_line.h"
@@ -18,8 +18,8 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  scenic::ViewProviderComponentTransitional component(
-      [](scenic::ViewContextTransitional context) {
+  scenic::ViewProviderComponent component(
+      [](scenic::ViewContext context) {
         return std::make_unique<shadertoy_client::ShadertoyClientView>(std::move(context),
                                                                        "Shadertoy Client Example");
       },

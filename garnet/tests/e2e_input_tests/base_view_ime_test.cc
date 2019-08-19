@@ -10,7 +10,7 @@
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/base_view_transitional.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -46,10 +46,10 @@ constexpr zx::duration kTimeout = zx::min(5);
 
 // A very small Scenic client. Puts up a fuchsia-colored rectangle, and stores
 // input events for examination.
-class ImeClientView : public scenic::BaseViewTransitional {
+class ImeClientView : public scenic::BaseView {
  public:
-  ImeClientView(scenic::ViewContextTransitional context, async_dispatcher_t* dispatcher)
-      : scenic::BaseViewTransitional(std::move(context), "ImeClientView"), dispatcher_(dispatcher) {
+  ImeClientView(scenic::ViewContext context, async_dispatcher_t* dispatcher)
+      : scenic::BaseView(std::move(context), "ImeClientView"), dispatcher_(dispatcher) {
     FXL_CHECK(dispatcher_);
   }
 
@@ -106,7 +106,7 @@ class ImeInputTest : public gtest::RealLoopFixture {
     scenic_.set_error_handler([](zx_status_t status) {
       FXL_LOG(FATAL) << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
-    scenic::ViewContextTransitional view_context = {
+    scenic::ViewContext view_context = {
         .enable_ime = true,
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),

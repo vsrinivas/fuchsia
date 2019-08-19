@@ -9,10 +9,10 @@
 #include "src/lib/fxl/logging.h"
 
 GuestView::GuestView(
-    scenic::ViewContextTransitional view_context,
+    scenic::ViewContext view_context,
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
     GpuScanout* scanout)
-    : BaseViewTransitional(std::move(view_context), "Guest"),
+    : BaseView(std::move(view_context), "Guest"),
       background_(session()),
       material_(session()),
       scanout_(*scanout),

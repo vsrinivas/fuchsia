@@ -6,7 +6,7 @@
 #define GARNET_TESTING_VIEWS_BACKGROUND_VIEW_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view_transitional.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 
@@ -24,7 +24,7 @@ class BackgroundView : public TestView, private fuchsia::ui::scenic::SessionList
   static constexpr float kBackgroundElevation = 0.f;
   static constexpr Color kBackgroundColor = {0x67, 0x3a, 0xb7, 0xff};  // Deep Purple 500
 
-  BackgroundView(ViewContextTransitional context, const std::string& debug_name = "BackgroundView");
+  BackgroundView(ViewContext context, const std::string& debug_name = "BackgroundView");
 
   // |TestView|
   void set_present_callback(Session::PresentCallback present_callback) override;

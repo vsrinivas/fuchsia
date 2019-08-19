@@ -12,7 +12,7 @@ namespace yuv_to_image_pipe {
 // Displays a YUV frame that moves around the screen in a cycle.
 class YuvCyclicView : public YuvBaseView {
  public:
-  YuvCyclicView(scenic::ViewContextTransitional context, fuchsia::images::PixelFormat pixel_format);
+  YuvCyclicView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format);
   ~YuvCyclicView() override = default;
 
  private:

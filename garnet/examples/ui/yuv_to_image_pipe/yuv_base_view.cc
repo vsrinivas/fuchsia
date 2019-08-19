@@ -25,9 +25,8 @@ constexpr float kInitialWindowYPos = 240;
 
 }  // namespace
 
-YuvBaseView::YuvBaseView(scenic::ViewContextTransitional context,
-                         fuchsia::images::PixelFormat pixel_format)
-    : BaseViewTransitional(std::move(context), "YuvBaseView Example"),
+YuvBaseView::YuvBaseView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format)
+    : BaseView(std::move(context), "YuvBaseView Example"),
       node_(session()),
       pixel_format_(pixel_format),
       stride_(

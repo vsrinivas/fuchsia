@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/ui/base_view/cpp/view_provider_component_transitional.h>
+#include <lib/ui/base_view/cpp/view_provider_component.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
@@ -23,8 +23,8 @@ int main(int argc, char** argv) {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   };
 
-  scenic::ViewProviderComponentTransitional component(
-      [&params, quit_callback](scenic::ViewContextTransitional view_context) {
+  scenic::ViewProviderComponent component(
+      [&params, quit_callback](scenic::ViewContext view_context) {
         return std::make_unique<media_player::test::MediaPlayerTestUtilView>(
             std::move(view_context), quit_callback, params);
       },

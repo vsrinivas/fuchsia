@@ -21,7 +21,7 @@ namespace examples {
 
 class VuMeterView : public scenic::SkiaView {
  public:
-  VuMeterView(scenic::ViewContextTransitional view_context, async::Loop* loop);
+  VuMeterView(scenic::ViewContext view_context, async::Loop* loop);
   ~VuMeterView() override = default;
 
  private:

@@ -16,8 +16,7 @@ constexpr float kDisplayHeight = 50;
 
 }  // namespace
 
-YuvCyclicView::YuvCyclicView(scenic::ViewContextTransitional context,
-                             fuchsia::images::PixelFormat pixel_format)
+YuvCyclicView::YuvCyclicView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format)
     : YuvBaseView(std::move(context), pixel_format) {
   const auto image_id = AddImage();
   PaintImage(image_id, 255);

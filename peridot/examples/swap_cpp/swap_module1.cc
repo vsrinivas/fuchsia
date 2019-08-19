@@ -16,11 +16,11 @@ int main(int /*argc*/, const char** /*argv*/) {
   auto context = sys::ComponentContext::Create();
   modular::AppDriver<modular_example::ModuleApp> driver(
       context->outgoing(),
-      std::make_unique<modular_example::ModuleApp>(
-          context.get(),
-          [](scenic::ViewContextTransitional view_context) {
-            return new modular_example::ModuleView(std::move(view_context), 0xFF00FFFF);
-          }),
+      std::make_unique<modular_example::ModuleApp>(context.get(),
+                                                   [](scenic::ViewContext view_context) {
+                                                     return new modular_example::ModuleView(
+                                                         std::move(view_context), 0xFF00FFFF);
+                                                   }),
       [&loop] { loop.Quit(); });
 
   loop.Run();

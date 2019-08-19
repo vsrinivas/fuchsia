@@ -10,7 +10,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/base_view_transitional.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/eventpair.h>
 
@@ -26,9 +26,9 @@
 
 namespace examples {
 
-class TileView : public scenic::BaseViewTransitional, public fuchsia::ui::policy::Presenter {
+class TileView : public scenic::BaseView, public fuchsia::ui::policy::Presenter {
  public:
-  TileView(scenic::ViewContextTransitional context, TileParams tile_params);
+  TileView(scenic::ViewContext context, TileParams tile_params);
 
   ~TileView() override = default;
 
