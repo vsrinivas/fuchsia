@@ -100,7 +100,7 @@ while true; do
     exit 1
   fi
   
-  fx-command-run shell -o ConnectionAttempts=1 -o ConnectTimeout=1 echo >/dev/null 2>&1
+  fx-command-run shell 'PATH=;echo' >/dev/null 2>&1
   ping_result=$?
 
   if [[ "$state" == "discover" && "$ping_result" == 0 ]]; then
