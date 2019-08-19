@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### run Google signin e2e tests
-## Usage: run-signin-e2e --chromedriver <chromedriver> --test-account-email <email>
+## Usage: run-signin-e2e --test-account-email <email>
 ## --test-account-password <pass>
 ##
 ## Runs the Google signin e2e test.
@@ -21,10 +21,6 @@ while (($#)); do
       export FUCHSIA_TEST_ACCOUNT_PASSWORD=$2
       shift
       ;;
-    --chromedriver)
-      chromedriver=$2
-      shift
-      ;;
   esac
   shift
 done
@@ -37,10 +33,6 @@ if [[ -z "$FUCHSIA_TEST_ACCOUNT_PASSWORD" ]]; then
   fx-error "No test account password provided"
   exit 1
 fi
-if [[ -z "$chromedriver" ]]; then
-  fx-error "No Chromedriver path provided"
-  exit 1
-fi
 
 export FUCHSIA_IPV4_ADDR=$(fx-command-run shell ifconfig eth | perl -n -e 'print $1 if /inet addr:(\S*)/')
 if [[ -z "$FUCHSIA_IPV4_ADDR" ]]; then
@@ -48,9 +40,5 @@ if [[ -z "$FUCHSIA_IPV4_ADDR" ]]; then
   exit 1
 fi
 export FUCHSIA_SSH_KEY="${FUCHSIA_DIR}/.ssh/pkey"
-
-RUNTIME_DEPS=${FUCHSIA_OUT_DIR}/default/gen/src/identity/tests/google_signin_e2e/runtime_deps
-mkdir ${RUNTIME_DEPS} -p
-cp -n $chromedriver ${RUNTIME_DEPS}/chromedriver
 
 "${FUCHSIA_OUT_DIR}/default/google_signin_e2e_test"

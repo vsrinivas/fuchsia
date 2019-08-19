@@ -42,12 +42,21 @@ dart_test("google_signin_e2e_test") {
     "//third_party/dart-pkg/pub/test",
     "//third_party/dart-pkg/pub/webdriver",
   ]
+
+  non_dart_deps = [ ":runtime_deps" ]
 }
 
-# TODO(satsukiu): Chromedriver needs to be added as a non-dart dependency.
-# Before this is done, the Chromedriver version in //prebuilt needs to be
-# automatically kept up to date with the Chrome version - this is tracked in
-# IN-1321
+copy("runtime_deps") {
+  _data_dir = "$target_gen_dir/runtime_deps"
+
+  sources = [
+    "//prebuilt/third_party/chromedriver/linux-x64/chromedriver",
+  ]
+
+  outputs = [
+    "$_data_dir/{{source_file_part}}",
+  ]
+}
 
 group("test") {
   testonly = true
