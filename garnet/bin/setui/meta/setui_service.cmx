@@ -11,6 +11,7 @@
             "fuchsia.logger.LogSink",
             "fuchsia.net.Connectivity",
             "fuchsia.netstack.Netstack",
+            "fuchsia.stash.Store",
             "fuchsia.sys.Environment",
             "fuchsia.timezone.Timezone"
         ]

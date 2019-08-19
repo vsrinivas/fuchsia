@@ -32,6 +32,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.timezone:fuchsia.timezone-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
