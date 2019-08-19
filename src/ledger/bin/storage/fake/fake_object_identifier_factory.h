@@ -32,6 +32,9 @@ class FakeObjectIdentifierFactory : public ObjectIdentifierFactory {
   // ObjectIdentifierFactory:
   ObjectIdentifier MakeObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id,
                                         ObjectDigest object_digest) override;
+  bool MakeObjectIdentifierFromStorageBytes(convert::ExtendedStringView storage_bytes,
+                                            ObjectIdentifier* object_identifier) override;
+  std::string ObjectIdentifierToStorageBytes(const ObjectIdentifier& identifier) override;
 
  private:
   // Token for each digest. Entries are never cleaned up, the count stays to at least 1 because the

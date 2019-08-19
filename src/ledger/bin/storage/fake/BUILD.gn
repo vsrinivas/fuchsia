@@ -46,6 +46,7 @@ source_set("lib") {
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/encryption/fake",
     "//src/ledger/bin/encryption/primitives",
+    "//src/ledger/bin/storage/impl:object_identifier_lib",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

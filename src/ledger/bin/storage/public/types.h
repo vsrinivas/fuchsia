@@ -141,6 +141,15 @@ class ObjectIdentifierFactory {
   // Destruction of the returned identifier must happen on the same thread too.
   virtual ObjectIdentifier MakeObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id,
                                                 ObjectDigest object_digest) = 0;
+
+  // Creates an object identifier from its serialization.
+  // This function must called only from the thread that created this |ObjectIdentifierFactory|.
+  // Destruction of the returned identifier must happen on the same thread too.
+  virtual bool MakeObjectIdentifierFromStorageBytes(convert::ExtendedStringView storage_bytes,
+                                                    ObjectIdentifier* object_identifier) = 0;
+
+  // Serializes an object identifier.
+  virtual std::string ObjectIdentifierToStorageBytes(const ObjectIdentifier& identifier) = 0;
 };
 
 // Object-object references, for garbage collection.

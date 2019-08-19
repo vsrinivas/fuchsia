@@ -196,8 +196,8 @@ Status PageDbImpl::GetUnsyncedPieces(CoroutineHandler* handler,
   object_identifiers->clear();
   ObjectIdentifier object_identifier;
   for (auto& encoded_identifier : encoded_identifiers) {
-    if (!DecodeObjectIdentifier(encoded_identifier, object_identifier_factory_,
-                                &object_identifier)) {
+    if (!object_identifier_factory_->MakeObjectIdentifierFromStorageBytes(encoded_identifier,
+                                                                          &object_identifier)) {
       return Status::DATA_INTEGRITY_ERROR;
     }
     object_identifiers->emplace_back(std::move(object_identifier));

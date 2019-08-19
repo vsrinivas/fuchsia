@@ -59,6 +59,7 @@ source_set("object_identifier_lib") {
 
   public_deps = [
     ":object_identifier",
+    "//peridot/lib/convert",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:dispatcher_checker",
     "//src/lib/fxl",
@@ -131,8 +132,8 @@ source_set("lib") {
   ]
 
   public_deps = [
-    ":object_identifier_lib",
     ":data_serialization",
+    ":object_identifier_lib",
     "//peridot/lib/convert",
     "//src/ledger/lib/coroutine",
     "//src/ledger/third_party/bup",
@@ -184,6 +185,7 @@ source_set("unittests") {
     "ledger_storage_unittest.cc",
     "leveldb_factory_unittest.cc",
     "object_digest_unittest.cc",
+    "object_identifier_encoding_unittest.cc",
     "object_identifier_factory_impl_unittest.cc",
     "object_impl_unittest.cc",
     "page_db_empty_impl.cc",

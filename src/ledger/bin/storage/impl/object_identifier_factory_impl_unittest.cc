@@ -90,5 +90,13 @@ TEST_F(ObjectIdentifierFactoryImplTest, ObjectOutlivingFactory) {
   EXPECT_EQ(identifier.factory(), nullptr);
 }
 
+TEST_F(ObjectIdentifierFactoryImplTest, DecodingInvalidObjectDigest) {
+  const ObjectDigest digest("INVALID");
+  ObjectIdentifier identifier(0, 1, digest, nullptr);
+  ObjectIdentifierFactoryImpl factory;
+  std::string encoded = factory.ObjectIdentifierToStorageBytes(identifier);
+  ASSERT_FALSE(factory.MakeObjectIdentifierFromStorageBytes(encoded, &identifier));
+}
+
 }  // namespace
 }  // namespace storage

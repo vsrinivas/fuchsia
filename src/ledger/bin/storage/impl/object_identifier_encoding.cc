@@ -46,7 +46,7 @@ bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* facto
 }
 
 bool IsObjectIdentifierStorageValid(const ObjectIdentifierStorage* storage) {
-  return storage && storage->object_digest() && IsDigestValid(storage->object_digest());
+  return storage && storage->object_digest();
 }
 
 }  // namespace storage

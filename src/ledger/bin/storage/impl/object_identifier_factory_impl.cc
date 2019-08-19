@@ -8,6 +8,7 @@
 #include <string>
 
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -96,6 +97,19 @@ ObjectIdentifier ObjectIdentifierFactoryImpl::MakeObjectIdentifier(uint32_t key_
                                                                    ObjectDigest object_digest) {
   auto token = GetToken(object_digest);
   return ObjectIdentifier(key_index, deletion_scope_id, std::move(object_digest), std::move(token));
+}
+
+bool ObjectIdentifierFactoryImpl::MakeObjectIdentifierFromStorageBytes(
+    convert::ExtendedStringView storage_bytes, ObjectIdentifier* object_identifier) {
+  if (!DecodeObjectIdentifier(convert::ToStringView(storage_bytes), this, object_identifier)) {
+    return false;
+  }
+  return IsDigestValid(object_identifier->object_digest());
+}
+
+std::string ObjectIdentifierFactoryImpl::ObjectIdentifierToStorageBytes(
+    const ObjectIdentifier& identifier) {
+  return EncodeObjectIdentifier(identifier);
 }
 
 }  // namespace storage
