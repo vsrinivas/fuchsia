@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
 import 'dart:io' as io;
 
+import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:webdriver/sync_core.dart' show WebDriver;
 import 'package:webdriver/sync_io.dart' as sync_io;
 
 /// Port Chromedriver listens on.
 const _chromedriverPort = 9072;
+
+final _log = Logger('Webdriver');
 
 /// `WebDriverConnector` is a utility for host-driven tests that control Chrome
 /// contexts running on a remote device under test(DuT).  `WebDriverConnector`
@@ -98,6 +102,19 @@ class WebDriverConnector {
           io.Platform.script.resolve(_chromedriverPath).toFilePath();
       final args = ['--port=$_chromedriverPort'];
       _chromedriverProcess = await _processHelper.start(chromedriver, args);
+      _chromedriverProcess.stderr
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen((error) {
+        _log.info('[Chromedriver] $error');
+      });
+
+      _chromedriverProcess.stdout
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen((log) {
+        _log.info('[Chromedriver] $log');
+      });
     }
   }
 
