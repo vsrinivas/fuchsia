@@ -159,6 +159,47 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Ima
 	return n.Reboot(addr)
 }
 
+// BootZedbootShim extracts the Zircon-R image that is intended to be paved to the device
+// and mexec()'s it, it is intended to be executed before calling Boot().
+// This function serves to emulate zero-state, and will eventually be superseded by an
+// infra implementation.
+func BootZedbootShim(ctx context.Context, addr *net.UDPAddr, imgs []build.Image) error {
+	zirconRImg := build.Image{}
+	for _, img := range imgs {
+		for _, arg := range img.PaveArgs {
+			// Find name by bootserver arg to ensure we are extracting the correct zircon-r.
+			// There may be more than one in images.json but only one should be passed to
+			// the bootserver for paving.
+			name, ok := bootserverArgToName[arg]
+			if !ok {
+				return fmt.Errorf("unrecognized bootserver argument found: %q", arg)
+			}
+			if name == zirconRNetsvcName {
+				zirconRImg = img
+				break
+			}
+		}
+		if zirconRImg.Name != "" {
+			break
+		}
+	}
+
+	if zirconRImg.Name != "" {
+		imgFile, err := openNetsvcFile(zirconRImg.Name, zirconRImg.Path)
+		if err != nil {
+			return err
+		}
+		defer imgFile.close()
+		if err := transfer(ctx, addr, []*netsvcFile{imgFile}); err != nil {
+			return err
+		}
+		n := netboot.NewClient(time.Second)
+		return n.Boot(addr)
+	}
+
+	return fmt.Errorf("no zircon-r image found in: %v", imgs)
+}
+
 // A file to send to netsvc.
 type netsvcFile struct {
 	name   string
