@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use net_types::ip::{Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither};
 use net_types::SpecifiedAddr;
 use never::Never;
-use packet::{PacketBuilder, ParsablePacket};
+use packet::{PacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::device::DeviceId;
@@ -229,6 +229,18 @@ pub(crate) trait IpPacket<B: ByteSlice, I: Ip>:
 
     /// Get the body.
     fn body(&self) -> &[u8];
+
+    /// Consume the packet and return some metadata.
+    ///
+    /// Consume the packet and return the source address, destination address,
+    /// protocol, and `ParseMetadata`.
+    fn into_metadata(self) -> (I::Addr, I::Addr, IpProto, ParseMetadata) {
+        let src_ip = self.src_ip();
+        let dst_ip = self.dst_ip();
+        let proto = self.proto();
+        let meta = self.parse_metadata();
+        (src_ip, dst_ip, proto, meta)
+    }
 }
 
 impl<B: ByteSlice> IpPacket<B, Ipv4> for Ipv4Packet<B> {

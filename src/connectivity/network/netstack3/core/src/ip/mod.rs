@@ -20,13 +20,12 @@ mod types;
 pub use self::types::*;
 
 use std::fmt::{Debug, Display};
-use std::mem;
 use std::ops::Deref;
 
 use log::{debug, trace};
 use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
 use net_types::{MulticastAddr, SpecifiedAddr};
-use packet::{Buf, BufferMut, Either, EmptyBuf, ParsablePacket, ParseMetadata, Serializer};
+use packet::{Buf, BufferMut, Either, EmptyBuf, ParseMetadata, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::context::{CounterContext, FrameContext, StateContext, TimerContext};
@@ -605,23 +604,6 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
     }
 }
 
-/// Drop a packet and extract some of the fields.
-///
-/// `drop_packet!` saves the results of the `src_ip()`, `dst_ip()`, `proto()`,
-/// and `parse_metadata()` methods, drops the packet, and returns them. This
-/// exposes the buffer that the packet was borrowed from so that it can be used
-/// directly again.
-macro_rules! drop_packet {
-    ($packet:expr) => {{
-        let src_ip = $packet.src_ip();
-        let dst_ip = $packet.dst_ip();
-        let proto = $packet.proto();
-        let meta = $packet.parse_metadata();
-        mem::drop($packet);
-        (src_ip, dst_ip, proto, meta)
-    }};
-}
-
 /// Drop a packet and undo the effects of parsing it.
 ///
 /// `drop_packet_and_undo_parse!` takes a `$packet` and a `$buffer` which the
@@ -632,7 +614,7 @@ macro_rules! drop_packet {
 /// metadata.
 macro_rules! drop_packet_and_undo_parse {
     ($packet:expr, $buffer:expr) => {{
-        let (src_ip, dst_ip, proto, meta) = drop_packet!($packet);
+        let (src_ip, dst_ip, proto, meta) = $packet.into_metadata();
         $buffer.undo_parse(meta);
         (src_ip, dst_ip, proto, meta)
     }};
@@ -651,7 +633,7 @@ macro_rules! process_fragment {
                 trace!("receive_ip_packet: not fragmented");
                 // TODO(joshlf):
                 // - Check for already-expired TTL?
-                let (src_ip, _, proto, meta) = drop_packet!(packet);
+                let (src_ip, _, proto, meta) = packet.into_metadata();
                 dispatch_receive_ip_packet(
                     $ctx,
                     Some($device),
@@ -676,7 +658,7 @@ macro_rules! process_fragment {
                         trace!("receive_ip_packet: fragmented, reassembled packet: {:?}", packet);
                         // TODO(joshlf):
                         // - Check for already-expired TTL?
-                        let (src_ip, _, proto, meta) = drop_packet!(packet);
+                        let (src_ip, _, proto, meta) = packet.into_metadata();
                         dispatch_receive_ip_packet::<Buf<Vec<u8>>, _, _>(
                             $ctx,
                             Some($device),
@@ -853,7 +835,7 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
                     // - Do something with ICMP if we don't have a handler for
                     //   that protocol?
                     // - Check for already-expired TTL?
-                    let (src_ip, _, proto, meta) = drop_packet!(packet);
+                    let (src_ip, _, proto, meta) = packet.into_metadata();
                     dispatch_receive_ip_packet(
                         ctx,
                         Some(device),
@@ -1648,7 +1630,7 @@ mod tests {
         let mut buffer = Buf::new(device_frames[offset].1.as_slice(), ..);
         let frame = buffer.parse::<EthernetFrame<_>>().unwrap();
         let packet = buffer.parse::<<Ipv6 as IpExtByteSlice<&[u8]>>::Packet>().unwrap();
-        let (src_ip, dst_ip, proto, _) = drop_packet!(packet);
+        let (src_ip, dst_ip, proto, _) = packet.into_metadata();
         assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip.get());
         assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip.get());
         assert_eq!(proto, IpProto::Icmpv6);
