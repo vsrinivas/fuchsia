@@ -8,6 +8,7 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
+
 #include <peridot/lib/modular_config/modular_config.h>
 #include <peridot/lib/modular_config/modular_config_constants.h>
 #include <peridot/lib/util/pseudo_dir_server.h>
@@ -15,8 +16,6 @@
 #include <src/lib/files/path.h>
 #include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/substitute.h>
-
-#include <thread>
 
 #include "gtest/gtest.h"
 
@@ -42,8 +41,9 @@ std::string GenerateFakeUrl() {
 
 class TestHarnessImplTest : public sys::testing::TestWithEnvironment {
  public:
-  TestHarnessImplTest()
-      : harness_impl_(real_env(), harness_.NewRequest(), [this] { did_exit_ = true; }) {}
+  TestHarnessImplTest() : harness_impl_(real_env(), [this] { did_exit_ = true; }) {
+    harness_impl_.Bind(harness_.NewRequest());
+  }
 
   fuchsia::modular::testing::TestHarnessPtr& test_harness() { return harness_; };
 

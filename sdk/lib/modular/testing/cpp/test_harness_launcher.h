@@ -38,6 +38,7 @@ class TestHarnessLauncher final {
   std::shared_ptr<sys::ServiceDirectory> test_harness_svc_;
   fuchsia::sys::ComponentControllerPtr test_harness_ctrl_;
   fuchsia::modular::testing::TestHarnessPtr test_harness_;
+  fuchsia::modular::LifecyclePtr lifecycle_;
 };
 
 }  // namespace modular_testing

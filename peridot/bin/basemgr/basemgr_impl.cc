@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
@@ -199,6 +200,9 @@ void BasemgrImpl::Start() {
       config_.use_session_shell_for_story_shell_factory(),
       /* on_zero_sessions= */
       [this] {
+        if (state_ == State::SHUTTING_DOWN) {
+          return;
+        }
         if (config_.base_shell().keep_alive_after_login()) {
           // TODO(MI4-1117): Integration tests currently
           // expect base shell to always be running. So, if
@@ -252,8 +256,6 @@ void BasemgrImpl::Shutdown() {
 
   state_ = State::SHUTTING_DOWN;
 
-  FXL_DLOG(INFO) << "fuchsia::modular::BaseShellContext::Shutdown()";
-
   if (config_.test()) {
     FXL_LOG(INFO) << std::endl
                   << "============================================================" << std::endl
@@ -267,15 +269,15 @@ void BasemgrImpl::Shutdown() {
       FXL_DLOG(INFO) << "- fuchsia::modular::BaseShell down";
       session_user_provider_impl_.reset();
       FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
-
       StopTokenManagerFactoryApp()->Then([this] {
         FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
-        FXL_LOG(INFO) << "Clean shutdown";
         on_shutdown_();
       });
     });
   });
 }
+
+void BasemgrImpl::Terminate() { Shutdown(); }
 
 void BasemgrImpl::GetAuthenticationUIContext(
     fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) {

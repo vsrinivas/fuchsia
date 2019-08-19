@@ -5,8 +5,6 @@
 #ifndef PERIDOT_BIN_BASEMGR_BASEMGR_IMPL_H_
 #define PERIDOT_BIN_BASEMGR_BASEMGR_IMPL_H_
 
-#include <memory>
-
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
@@ -24,6 +22,9 @@
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/service_namespace.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <memory>
+
 #include <src/lib/fxl/macros.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
@@ -43,7 +44,8 @@ namespace modular {
 // 1) Initializes and owns the system's root view and presentation.
 // 2) Sets up the interactive flow for user authentication and login.
 // 3) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
-class BasemgrImpl : fuchsia::modular::BaseShellContext,
+class BasemgrImpl : public fuchsia::modular::Lifecycle,
+                    fuchsia::modular::BaseShellContext,
                     fuchsia::auth::AuthenticationContextProvider,
                     fuchsia::modular::internal::BasemgrDebug,
                     modular::SessionProvider::Delegate {
@@ -71,6 +73,9 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   ~BasemgrImpl() override;
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request);
+
+  // |fuchsia::modular::Lifecycle|
+  void Terminate() override;
 
  private:
   void StartBaseShell();

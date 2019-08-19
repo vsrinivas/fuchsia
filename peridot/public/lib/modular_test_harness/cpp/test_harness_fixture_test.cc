@@ -9,6 +9,7 @@
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+
 #include <src/lib/files/glob.h>
 
 #include "gmock/gmock.h"
@@ -125,9 +126,8 @@ TEST_F(TestHarnessFixtureTest, AddModToStory) {
 
   modular::testing::FakeModule mod;
   auto mod_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
-  builder.InterceptComponent(
-      mod.GetOnCreateHandler(),
-      modular_testing::TestHarnessBuilder::InterceptOptions{.url = mod_url});
+  builder.InterceptComponent(mod.GetOnCreateHandler(),
+                             modular_testing::TestHarnessBuilder::InterceptOptions{.url = mod_url});
   builder.BuildAndRun(test_harness());
 
   modular::testing::AddModToStory(test_harness(), "mystory", "mymod",
