@@ -4,7 +4,9 @@
 
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/zx/time.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 
@@ -279,6 +281,48 @@ TEST(Coroutine, AsyncCallCapture) {
   callback(10);
 
   EXPECT_EQ(0u, value);
+}
+
+TEST(Coroutine, DoubleResume) {
+  // This tests the existence of a debug assertion.
+  // Skip this test when debug assertions are not enabled.
+  bool running_debug = false;
+  FXL_DCHECK(running_debug = true);
+  if (! running_debug) {
+    GTEST_SKIP();
+  }
+
+  CoroutineServiceImpl coroutine_service;
+
+  ASSERT_DEATH(
+      {
+        coroutine_service.StartCoroutine(
+            [](CoroutineHandler* handler) { handler->Resume(ContinuationStatus::INTERRUPTED); });
+      },
+      "Attempting to resume a running coroutine");
+}
+
+TEST(Coroutine, DoubleYield) {
+  // This tests the existence of a debug assertion.
+  // Skip this test when debug assertions are not enabled.
+  bool running_debug = false;
+  FXL_DCHECK(running_debug = true);
+  if (! running_debug) {
+    GTEST_SKIP();
+  }
+
+  CoroutineServiceImpl coroutine_service;
+
+  CoroutineHandler* coroutine_handler;
+  ASSERT_DEATH(
+      {
+        coroutine_service.StartCoroutine([&coroutine_handler](CoroutineHandler* handler) {
+          coroutine_handler = handler;
+          (void)handler->Yield();
+        });
+        (void)coroutine_handler->Yield();
+      },
+      "Attempting to yield from outside the coroutine");
 }
 
 }  // namespace

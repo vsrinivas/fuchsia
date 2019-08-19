@@ -37,6 +37,7 @@ source_set("unittests") {
   deps = [
     ":coroutine",
     "//src/lib/fxl",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 

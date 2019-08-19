@@ -3,6 +3,9 @@
         "binary": "test/ledger_lib_unittests"
     },
     "sandbox": {
-        "services": [ "fuchsia.logger.LogSink" ]
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
     }
 }

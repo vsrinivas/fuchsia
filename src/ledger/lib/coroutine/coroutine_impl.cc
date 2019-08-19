@@ -45,6 +45,7 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
   context::Context routine_context_;
   bool interrupted_ = false;
   bool finished_ = false;
+  bool suspended_ = true;
 #if __has_feature(address_sanitizer)
   const void* origin_stack_ = nullptr;
   size_t origin_stacksize_ = 0;
@@ -74,6 +75,7 @@ ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::Yield() {
 
 void CoroutineServiceImpl::CoroutineHandlerImpl::Resume(ContinuationStatus status) {
   FXL_DCHECK(!finished_);
+  FXL_DCHECK(suspended_) << "Attempting to resume a running coroutine.";
 
   interrupted_ = interrupted_ || (status == ContinuationStatus::INTERRUPTED);
 #if __has_feature(address_sanitizer)
@@ -107,6 +109,7 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Run() {
 #if __has_feature(address_sanitizer)
   __sanitizer_finish_switch_fiber(nullptr, &origin_stack_, &origin_stacksize_);
 #endif
+  suspended_ = false;
   runnable_(this);
   // Delete |runnable_|, as it can have side effects that should be run inside
   // the co-routine.
@@ -117,6 +120,8 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Run() {
 }
 
 ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::DoYield() {
+  FXL_DCHECK(!suspended_) << "Attempting to yield from outside the coroutine.";
+  suspended_ = true;
 #if __has_feature(address_sanitizer)
   FXL_DCHECK(origin_stack_);
   FXL_DCHECK(origin_stacksize_);
@@ -128,7 +133,7 @@ ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::DoYield() {
 #if __has_feature(address_sanitizer)
   __sanitizer_finish_switch_fiber(fake_stack_save, &origin_stack_, &origin_stacksize_);
 #endif
-
+  suspended_ = false;
   return interrupted_ ? ContinuationStatus::INTERRUPTED : ContinuationStatus::OK;
 }
 
