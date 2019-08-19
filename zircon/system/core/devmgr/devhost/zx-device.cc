@@ -48,6 +48,11 @@ bool zx_device::PopTestCompatibilityConn(fs::FidlConnection* conn) {
   return true;
 }
 
+const std::array<fuchsia_device_DevicePowerStateInfo,
+    fuchsia_device_MAX_DEVICE_POWER_STATES>& zx_device::GetPowerStates() const {
+  return power_states_;
+}
+
 zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_states,
                                uint8_t count) {
   if (count < fuchsia_device_MIN_DEVICE_POWER_STATES ||
@@ -63,7 +68,7 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
     if (visited[info.state_id]) {
       return ZX_ERR_INVALID_ARGS;
     }
-    fuchsia_device_DevicePowerStateInfo* state = &power_states_[info.state_id];
+    fuchsia_device_DevicePowerStateInfo* state = &(power_states_[info.state_id]);
     state->state_id = info.state_id;
     state->is_supported = true;
     state->restore_latency = info.restore_latency;

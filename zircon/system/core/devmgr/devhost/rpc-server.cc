@@ -36,6 +36,7 @@
 
 #include "devhost.h"
 #include "zx-device.h"
+#include <array>
 
 namespace devmgr {
 
@@ -589,6 +590,22 @@ static zx_status_t fidl_DeviceControllerGetTopologicalPath(void* ctx, fidl_txn_t
   return fuchsia_device_ControllerGetTopologicalPath_reply(txn, ZX_OK, buf, actual);
 }
 
+static zx_status_t fidl_DeviceControllerGetDevicePowerCaps(void* ctx, fidl_txn_t* txn) {
+  auto conn = static_cast<DevfsConnection*>(ctx);
+  fuchsia_device_Controller_GetDevicePowerCaps_Result result{};
+  auto& states = conn->dev->GetPowerStates();
+
+  ZX_DEBUG_ASSERT(states.size() == fuchsia_device_MAX_DEVICE_POWER_STATES);
+  // For now, the result is always a successful response because the device itself is not added
+  // without power states validation. In future, we may add more checks for validation, and the
+  // error result will be put to use.
+  result.tag = fuchsia_device_Controller_GetDevicePowerCaps_ResultTag_response;
+  for (size_t i = 0; i < fuchsia_device_MAX_DEVICE_POWER_STATES; i++) {
+    result.response.dpstates[i] = states[i];
+  }
+  return fuchsia_device_ControllerGetDevicePowerCaps_reply(txn, &result);
+}
+
 static zx_status_t fidl_DeviceControllerGetEventHandle(void* ctx, fidl_txn_t* txn) {
   auto conn = static_cast<DevfsConnection*>(ctx);
   zx::eventpair event;
@@ -645,6 +662,7 @@ static const fuchsia_device_Controller_ops_t kDeviceControllerOps = {
     .DebugSuspend = fidl_DeviceControllerDebugSuspend,
     .DebugResume = fidl_DeviceControllerDebugResume,
     .RunCompatibilityTests = fidl_DeviceControllerRunCompatibilityTests,
+    .GetDevicePowerCaps = fidl_DeviceControllerGetDevicePowerCaps,
 };
 
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
@@ -673,4 +691,4 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
   return conn->dev->MessageOp(msg, txn);
 }
 
-}  // namespace devmgr
+}

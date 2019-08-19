@@ -158,7 +158,6 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK;
 
 zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
                                   zx_handle_t* fw, size_t* size) REQ_DM_LOCK;
-
 zx_status_t devhost_get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max,
                                   size_t* actual);
 

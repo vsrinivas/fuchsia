@@ -136,4 +136,8 @@ protocol Controller {
     /// each device hook in nanoseconds.
     /// Returns whether the driver passed the compatibility check.
     RunCompatibilityTests(int64 hook_wait_time) -> (uint32 status);
+
+    /// Gets the device power capabilities. Used by the system wide power manager
+    /// to manage power for this device.
+    GetDevicePowerCaps() -> (array<DevicePowerStateInfo>:MAX_DEVICE_POWER_STATES dpstates) error zx.status;
 };

@@ -23,6 +23,7 @@
 #include <atomic>
 #include <new>
 #include <utility>
+#include <array>
 
 #include "composite-device.h"
 #include "devhost.h"
@@ -567,5 +568,4 @@ zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t f
   }
   return ZX_OK;
 }
-
 }  // namespace devmgr

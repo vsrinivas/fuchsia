@@ -22,6 +22,7 @@
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <atomic>
+#include <array>
 
 namespace devmgr {
 
@@ -154,7 +155,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   void set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite);
   fbl::RefPtr<devmgr::CompositeDevice> take_composite();
-
+  const std::array<fuchsia_device_DevicePowerStateInfo,
+             fuchsia_device_MAX_DEVICE_POWER_STATES>& GetPowerStates() const;
   zx_status_t SetPowerStates(const device_power_state_info_t* power_states,
                              uint8_t count);
  private:
@@ -196,7 +198,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   fbl::Vector<fs::FidlConnection> test_compatibility_conn_
       TA_GUARDED(test_compatibility_conn_lock_);
 
-  fuchsia_device_DevicePowerStateInfo power_states_[fuchsia_device_MAX_DEVICE_POWER_STATES];
+  std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>
+                                                                        power_states_;
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

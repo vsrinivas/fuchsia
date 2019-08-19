@@ -66,7 +66,7 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(::fidl::VectorView<DevicePower
     states[i].wakeup_capable = state_info[i].wakeup_capable;
     states[i].system_wake_state = state_info[i].system_wake_state;
   }
-  zx_status_t status = child2->DdkAdd("test-power-child-2", 0, nullptr, 0, 0, nullptr,
+  zx_status_t status = child2->DdkAdd("power-test-child-2", 0, nullptr, 0, 0, nullptr,
                        ZX_HANDLE_INVALID, states.get(), count);
   if (status != ZX_OK) {
     response.set_err(status);
