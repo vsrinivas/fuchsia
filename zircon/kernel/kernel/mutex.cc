@@ -118,7 +118,7 @@ Mutex::~Mutex() {
 /**
  * @brief  Acquire the mutex
  */
-void Mutex::Acquire() {
+void Mutex::Acquire(uint32_t spin_max) {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
@@ -128,18 +128,30 @@ void Mutex::Acquire() {
 
   // fast path: assume the mutex is unlocked and try to grab it
   //
-  old_mutex_state = STATE_FREE;
-  new_mutex_state = reinterpret_cast<uintptr_t>(ct);
-  if (likely(val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
-                                          ktl::memory_order_seq_cst, ktl::memory_order_seq_cst))) {
-    // acquired it cleanly.  Don't bother to update the ownership of our
-    // wait queue.  As of this instant, the mutex appears to be uncontested.
-    // If someone else attempts to acquire the mutex and discovers it to be
-    // already locked, they will take care of updating the wait queue
-    // ownership while they are inside of the thread_lock.
-    KTracer{}.KernelMutexUncontestedAcquire(this);
-    return;
-  }
+  // TODO(ZX-4873): Optimize cache pressure of spinners and default spin max.
+  do {
+    old_mutex_state = STATE_FREE;
+    new_mutex_state = reinterpret_cast<uintptr_t>(ct);
+    if (likely(val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
+                                            ktl::memory_order_seq_cst,
+                                            ktl::memory_order_seq_cst))) {
+      // acquired it cleanly.  Don't bother to update the ownership of our
+      // wait queue.  As of this instant, the mutex appears to be uncontested.
+      // If someone else attempts to acquire the mutex and discovers it to be
+      // already locked, they will take care of updating the wait queue
+      // ownership while they are inside of the thread_lock.
+      KTracer{}.KernelMutexUncontestedAcquire(this);
+      return;
+    }
+
+    // Stop spinning if the mutex is or becomes contested. All spinners convert
+    // to blocking when the first one reaches the maximum tries.
+    if (old_mutex_state & STATE_FLAG_CONTESTED) {
+      break;
+    }
+
+    arch_spinloop_pause();
+  } while (spin_max-- != 0);
 
   if ((LK_DEBUGLEVEL > 0) && unlikely(this->IsHeld())) {
     panic("Mutex::Acquire: thread %p (%s) tried to acquire mutex %p it already owns.\n", ct,

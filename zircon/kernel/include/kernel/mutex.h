@@ -32,7 +32,12 @@ class TA_CAP("mutex") Mutex {
   // No moving or copying allowed.
   DISALLOW_COPY_ASSIGN_AND_MOVE(Mutex);
 
-  void Acquire() TA_ACQ() TA_EXCL(thread_lock);
+  // The maximum number of iterations to spin before falling back to blocking.
+  // TODO(ZX-4873): Decide how to make this configurable per device/platform
+  // and describe how to optimize this value.
+  static constexpr uint32_t SPIN_MAX = 8192;
+
+  void Acquire(uint32_t spin_max = SPIN_MAX) TA_ACQ() TA_EXCL(thread_lock);
   void Release() TA_REL() TA_EXCL(thread_lock);
 
   // Special version of Release which operates with the thread lock held
@@ -74,13 +79,14 @@ class TA_CAP("mutex") Mutex {
 // Lock policy for kernel mutexes
 //
 struct MutexPolicy {
-  // No extra state required for mutexes.
-  struct State {};
+  struct State {
+    const uint32_t spin_max{Mutex::SPIN_MAX};
+  };
 
   // Basic acquire and release operations.
   template <typename LockType>
-  static bool Acquire(LockType* lock, State*) TA_ACQ(lock) TA_EXCL(thread_lock) {
-    lock->Acquire();
+  static bool Acquire(LockType* lock, State* state) TA_ACQ(lock) TA_EXCL(thread_lock) {
+    lock->Acquire(state->spin_max);
     return true;
   }
   template <typename LockType>
