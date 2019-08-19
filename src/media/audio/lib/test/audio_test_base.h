@@ -19,14 +19,14 @@ namespace media::audio::test {
 // AudioCoreTestBase, and combine constants.h into hermetic_audio_test.h.
 class AudioTestBase : public TestFixture {
  public:
-  static void SetStartupContext(std::unique_ptr<sys::ComponentContext> startup_context) {
-    startup_context_ = std::move(startup_context);
+  static void SetComponentContext(std::unique_ptr<sys::ComponentContext> component_context) {
+    component_context_ = std::move(component_context);
   }
 
   static void SetUpTestSuite();
 
  protected:
-  static std::unique_ptr<sys::ComponentContext> startup_context_;
+  static std::unique_ptr<sys::ComponentContext> component_context_;
 };
 
 }  // namespace media::audio::test

@@ -6,14 +6,14 @@
 
 namespace media::audio::test {
 
-std::unique_ptr<sys::ComponentContext> AudioTestBase::startup_context_;
+std::unique_ptr<sys::ComponentContext> AudioTestBase::component_context_;
 
 //
 // AudioTestBase implementation
 //
 void AudioTestBase::SetUpTestSuite() {
-  if (!startup_context_) {
-    startup_context_ = sys::ComponentContext::Create();
+  if (!component_context_) {
+    component_context_ = sys::ComponentContext::Create();
   }
 }
 

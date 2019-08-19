@@ -216,7 +216,7 @@ void MediaApp::DisplayConfigurationSettings() {
   printf(".\n\n");
 }
 
-// Use StartupContext to acquire AudioPtr; use that to acquire AudioRendererPtr in turn. Set
+// Use ComponentContext to acquire AudioPtr; use that to acquire AudioRendererPtr in turn. Set
 // AudioRenderer error handler, in case of channel closure.
 void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
   if (set_device_settings_) {

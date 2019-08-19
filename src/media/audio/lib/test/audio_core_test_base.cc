@@ -12,7 +12,7 @@ namespace media::audio::test {
 void AudioCoreTestBase::SetUp() {
   AudioTestBase::SetUp();
 
-  startup_context_->svc()->Connect(audio_core_.NewRequest());
+  component_context_->svc()->Connect(audio_core_.NewRequest());
   audio_core_.set_error_handler(ErrorHandler());
 }
 

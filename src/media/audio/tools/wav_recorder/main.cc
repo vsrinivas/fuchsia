@@ -12,13 +12,13 @@
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::Create();
 
   media::tools::WavRecorder wav_recorder(fxl::CommandLineFromArgcArgv(argc, argv), [&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   });
 
-  wav_recorder.Run(startup_context.get());
+  wav_recorder.Run(component_context.get());
   loop.Run();
 
   return 0;

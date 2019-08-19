@@ -26,11 +26,11 @@ constexpr zx_vm_option_t kAudioRendererVmarFlags =
 
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
-AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_context,
+AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_context,
                              CommandLineOptions options)
     : device_manager_(this),
       audio_admin_(this),
-      ctx_(std::move(startup_context)),
+      component_context_(std::move(component_context)),
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
   FXL_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
@@ -57,7 +57,7 @@ AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_cont
   // thread which is processing *all* audio service jobs (even non-realtime ones).  This, however,
   // will take more significant restructuring.  We will cross that bridge when we have the TBD way
   // to deal with realtime requirements in place.
-  AcquireAudioCoreImplProfile(ctx_.get(), [](zx::profile profile) {
+  AcquireAudioCoreImplProfile(component_context_.get(), [](zx::profile profile) {
     FXL_DCHECK(profile);
     if (profile) {
       zx_status_t status = zx::thread::self()->set_profile(profile, 0);
@@ -84,14 +84,14 @@ AudioCoreImpl::~AudioCoreImpl() {
 }
 
 void AudioCoreImpl::PublishServices() {
-  ctx_->outgoing()->AddPublicService<fuchsia::media::AudioCore>(
+  component_context_->outgoing()->AddPublicService<fuchsia::media::AudioCore>(
       [this](fidl::InterfaceRequest<fuchsia::media::AudioCore> request) {
         bindings_.AddBinding(this, std::move(request));
         bindings_.bindings().back()->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
       });
   // TODO(dalesat): Load the gain/mute values.
 
-  ctx_->outgoing()->AddPublicService<fuchsia::media::AudioDeviceEnumerator>(
+  component_context_->outgoing()->AddPublicService<fuchsia::media::AudioDeviceEnumerator>(
       [this](fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request) {
         device_manager_.AddDeviceEnumeratorClient(std::move(request));
       });

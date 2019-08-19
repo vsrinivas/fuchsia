@@ -162,7 +162,7 @@ class VirtualAudioUtil {
   bool GetPosition();
   bool SetNotificationFrequency(const std::string& override_notifs_str);
 
-  std::unique_ptr<sys::ComponentContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   fsl::FDWaiter keystroke_waiter_;
   bool key_quit_ = false;
 
@@ -301,7 +301,7 @@ bool VirtualAudioUtil::ConnectToController() {
     return true;
   }
 
-  startup_context_->svc()->Connect(controller_.NewRequest());
+  component_context_->svc()->Connect(controller_.NewRequest());
 
   controller_.set_error_handler([this](zx_status_t error) {
     printf("controller_ disconnected (%d)!\n", error);
@@ -326,7 +326,7 @@ bool VirtualAudioUtil::ConnectToInput() {
     return true;
   }
 
-  startup_context_->svc()->Connect(input_.NewRequest());
+  component_context_->svc()->Connect(input_.NewRequest());
 
   input_.set_error_handler([this](zx_status_t error) {
     printf("input_ disconnected (%d)!\n", error);
@@ -349,7 +349,7 @@ bool VirtualAudioUtil::ConnectToOutput() {
     return true;
   }
 
-  startup_context_->svc()->Connect(output_.NewRequest());
+  component_context_->svc()->Connect(output_.NewRequest());
 
   output_.set_error_handler([this](zx_status_t error) {
     printf("output_ disconnected (%d)!\n", error);
@@ -392,7 +392,7 @@ void VirtualAudioUtil::ParseAndExecute(fxl::CommandLine* cmdline) {
   }
 
   // Looks like we will interact with the service; get ready to connect to it.
-  startup_context_ = sys::ComponentContext::Create();
+  component_context_ = sys::ComponentContext::Create();
 
   for (auto option : cmdline->options()) {
     bool success = false;

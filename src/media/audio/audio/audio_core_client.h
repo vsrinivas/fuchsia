@@ -15,7 +15,7 @@
 namespace media::audio {
 class AudioCoreClient : public fuchsia::media::Audio {
  public:
-  AudioCoreClient(sys::ComponentContext* startup_context, fit::closure quit_callback);
+  AudioCoreClient(sys::ComponentContext* component_context, fit::closure quit_callback);
 
   // Audio implementation.
   void CreateAudioRenderer(

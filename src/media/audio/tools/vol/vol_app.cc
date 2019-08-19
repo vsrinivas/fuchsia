@@ -81,7 +81,7 @@ class EscapeDecoder {
 class VolApp {
  public:
   VolApp(int argc, const char** argv, fit::closure quit_callback)
-      : startup_context_(sys::ComponentContext::Create()),
+      : component_context_(sys::ComponentContext::Create()),
         quit_callback_(std::move(quit_callback)) {
     FXL_DCHECK(quit_callback_);
 
@@ -160,7 +160,7 @@ class VolApp {
       non_interactive_actions_.emplace_back([this, val]() { SetDeviceGain(val, false); });
     }
 
-    audio_ = startup_context_->svc()->Connect<fuchsia::media::AudioDeviceEnumerator>();
+    audio_ = component_context_->svc()->Connect<fuchsia::media::AudioDeviceEnumerator>();
     audio_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Client connection to fuchsia.media.AudioDeviceEnumerator failed: "
                      << status;
@@ -588,7 +588,7 @@ class VolApp {
 
   bool interactive() const { return non_interactive_actions_.empty(); }
 
-  std::unique_ptr<sys::ComponentContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   fit::closure quit_callback_;
   std::deque<fit::closure> non_interactive_actions_;
   fuchsia::media::AudioDeviceEnumeratorPtr audio_;

@@ -20,6 +20,12 @@ source_set("demux") {
     "sliding_buffer.h",
   ]
 
+  public_deps = [
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
   deps = [
     "//garnet/bin/http:errors",
     "//garnet/public/lib/fsl",
@@ -27,10 +33,6 @@ source_set("demux") {
     "//src/lib/fxl",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/util",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/component/cpp",
   ]
 }
 

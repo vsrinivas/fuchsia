@@ -45,7 +45,6 @@ executable("mediaplayer_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.media",
@@ -80,7 +79,6 @@ executable("mediaplayer_test_util_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.media.playback",
@@ -142,7 +140,6 @@ executable("mediaplayer_tests_bin") {
 
   deps = [
     ":mediaplayer_bin",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/base_view/cpp",

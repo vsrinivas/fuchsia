@@ -156,7 +156,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::Create();
 
   media::tools::MediaApp media_app(
       [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
@@ -347,7 +347,7 @@ int main(int argc, const char** argv) {
     media_app.set_save_file_name(save_file_str);
   }
 
-  media_app.Run(startup_context.get());
+  media_app.Run(component_context.get());
 
   // We've set everything going. Wait for our message loop to return.
   loop.Run();

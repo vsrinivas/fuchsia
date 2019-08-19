@@ -8,7 +8,6 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/ui/base_view/cpp/base_view.h>

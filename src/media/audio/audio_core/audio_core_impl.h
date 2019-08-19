@@ -33,7 +33,8 @@ namespace media::audio {
 
 class AudioCoreImpl : public fuchsia::media::AudioCore {
  public:
-  AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_context, CommandLineOptions options);
+  AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_context,
+                CommandLineOptions options);
   ~AudioCoreImpl() override;
 
   // Audio implementation.
@@ -126,7 +127,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   // Audio usage manager
   AudioAdmin audio_admin_;
 
-  std::unique_ptr<sys::ComponentContext> ctx_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 
   // State for dealing with cleanup tasks.
   std::mutex cleanup_queue_mutex_;

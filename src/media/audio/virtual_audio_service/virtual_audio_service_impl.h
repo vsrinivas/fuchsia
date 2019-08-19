@@ -14,7 +14,7 @@ namespace virtual_audio {
 
 class VirtualAudioServiceImpl {
  public:
-  VirtualAudioServiceImpl(std::unique_ptr<sys::ComponentContext> startup_context);
+  VirtualAudioServiceImpl(std::unique_ptr<sys::ComponentContext> component_context);
   ~VirtualAudioServiceImpl();
 
   zx_status_t Init();
@@ -26,7 +26,7 @@ class VirtualAudioServiceImpl {
 
   bool OpenControlDriver();
 
-  std::unique_ptr<sys::ComponentContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   bool driver_open_ = false;
   zx_handle_t channel_handle_ = ZX_KOID_INVALID;
 

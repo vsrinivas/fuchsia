@@ -11,12 +11,12 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  // StartupContext is safe to initialize early as we publish all implemented
-  // interfaces before we run the event loop.
-  auto ctx = sys::ComponentContext::Create();
+  // ComponentContext is safe to initialize early as we publish all implemented interfaces before we
+  // run the event loop.
+  auto component_context = sys::ComponentContext::Create();
 
   auto closer = [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); };
-  media::audio::AudioCoreClient audio_core(ctx.get(), closer);
+  media::audio::AudioCoreClient audio_core(component_context.get(), closer);
 
   loop.Run();
   return 0;

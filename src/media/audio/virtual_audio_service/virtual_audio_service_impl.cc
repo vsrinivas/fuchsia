@@ -14,25 +14,25 @@
 namespace virtual_audio {
 
 VirtualAudioServiceImpl::VirtualAudioServiceImpl(
-    std::unique_ptr<sys::ComponentContext> startup_context)
-    : startup_context_(std::move(startup_context)) {
-  FXL_DCHECK(startup_context_);
+    std::unique_ptr<sys::ComponentContext> component_context)
+    : component_context_(std::move(component_context)) {
+  FXL_DCHECK(component_context_);
 
-  startup_context_->outgoing()->AddPublicService<fuchsia::virtualaudio::Control>(
+  component_context_->outgoing()->AddPublicService<fuchsia::virtualaudio::Control>(
       [this](fidl::InterfaceRequest<fuchsia::virtualaudio::Control> request) {
         if (driver_open_) {
           ForwardControlRequest(std::move(request));
         }
       });
 
-  startup_context_->outgoing()->AddPublicService<fuchsia::virtualaudio::Input>(
+  component_context_->outgoing()->AddPublicService<fuchsia::virtualaudio::Input>(
       [this](fidl::InterfaceRequest<fuchsia::virtualaudio::Input> request) {
         if (driver_open_) {
           ForwardInputRequest(std::move(request));
         }
       });
 
-  startup_context_->outgoing()->AddPublicService<fuchsia::virtualaudio::Output>(
+  component_context_->outgoing()->AddPublicService<fuchsia::virtualaudio::Output>(
       [this](fidl::InterfaceRequest<fuchsia::virtualaudio::Output> request) {
         if (driver_open_) {
           ForwardOutputRequest(std::move(request));
