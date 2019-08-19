@@ -95,10 +95,7 @@ impl auth_provider::WebFrameSupplier for WebFrameSupplier {
         context_provider.create(
             CreateContextParams {
                 service_directory: Some(service_directory),
-                data_directory: None,
-                user_agent_product: None,
-                user_agent_version: None,
-                remote_debugging_port: None,
+                ..CreateContextParams::empty()
             },
             context_server_end,
         )?;

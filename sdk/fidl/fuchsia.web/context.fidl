@@ -25,6 +25,33 @@ protocol ContextProvider {
     Create(CreateContextParams params, request<Context> context);
 };
 
+/// Defines a provider which hosts resources from a fuchsia.io.Directory.
+/// Content can GET resource files via the provider, but not enumerate
+/// directories. Resources can be accessed by their URLs:
+///
+///    content://<provider-name>/<path/to/resource>
+///
+/// By default the MIME types of files are determined automatically by
+/// "sniffing" the contents of the files. No content encoding will be
+/// declared, which browsers will interpret as meaning "text/plain".
+/// Content type and encoding metadata may optionally be specified explicitly
+/// by metadata/ files which reside alongside the file. Metadata is expressed
+/// in JSON files, named are the files they describe with a "._metadata" suffix.
+/// For example, the file "index.html" would have the a metadata file called
+/// "index.html._metadata", with the following contents:
+///    {
+///      "charset": "utf-8",
+///      "mime": "text/html"
+///    }
+table ContentDirectoryProvider {
+    /// Name of the provider.
+    /// Must be non-empty and composed solely of alphanumerics, dots, and dashes.
+    1: string:255 name;
+
+    /// Directory containing the files served by this provider.
+    2: fuchsia.io.Directory directory;
+};
+
 table CreateContextParams {
     /// Service directory to be used by the context.
     // TODO(WEB-26): Document required and optional services that Context uses.
@@ -51,6 +78,9 @@ table CreateContextParams {
     /// This is only for testing purposes and should not be set in production
     /// code.
     5: uint16 remote_debugging_port;
+
+    /// List of providers whose contents will be served by content:// URLs.
+    6: vector<ContentDirectoryProvider>:100 content_directories;
 };
 
 /// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with
