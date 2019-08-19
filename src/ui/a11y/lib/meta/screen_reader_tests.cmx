@@ -1,10 +1,9 @@
 {
     "program": {
-        "binary": "test/tts_manager_tests"
+        "binary": "test/screen_reader_tests"
     },
     "sandbox": {
         "services": [
-            "fuchsia.accessibility.tts.EngineRegistry",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"

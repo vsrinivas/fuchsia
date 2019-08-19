@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mocks") {
+  testonly = true
+
+  sources = [
+    "mock_semantic_listener.cc",
+    "mock_semantic_listener.h",
+    "mock_tts_engine.cc",
+    "mock_tts_engine.h",
+  ]
+  deps = [
+    "//garnet/lib/ui/gfx",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.accessibility.tts",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}

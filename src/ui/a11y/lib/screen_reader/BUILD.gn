@@ -5,13 +5,24 @@
 source_set("screen_reader") {
   sources = [
     "actions.h",
+    "explore_action.cc",
+    "explore_action.h",
     "screen_reader.h",
   ]
 
   public_deps = [
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
+    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.accessibility.tts",
+    "//sdk/fidl/fuchsia.math",
+    "//sdk/fidl/fuchsia.ui.input.accessibility",
   ]
 
-  deps = []
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/ui/a11y/lib/semantics",
+    "//src/ui/lib/glm_workaround",
+  ]
 }

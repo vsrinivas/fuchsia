@@ -76,5 +76,9 @@ test_package("a11y_lib_tests") {
       name = "gesture_manager_tests"
       environments = basic_envs
     },
+    {
+      name = "screen_reader_tests"
+      environments = basic_envs
+    },
   ]
 }
