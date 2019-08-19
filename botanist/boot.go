@@ -185,7 +185,7 @@ func BootZedbootShim(ctx context.Context, addr *net.UDPAddr, imgs []build.Image)
 	}
 
 	if zirconRImg.Name != "" {
-		imgFile, err := openNetsvcFile(zirconRImg.Name, zirconRImg.Path)
+		imgFile, err := openNetsvcFile(zirconRNetsvcName, zirconRImg.Path)
 		if err != nil {
 			return err
 		}
