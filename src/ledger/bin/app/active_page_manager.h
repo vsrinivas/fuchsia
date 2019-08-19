@@ -75,8 +75,10 @@ class ActivePageManager {
   // Checks whether the page is offline and has no entries.
   void IsOfflineAndEmpty(fit::function<void(Status, bool)> callback);
 
-  // Returns true if this ActivePageManager can be deleted without interrupting
-  // syncing, merging, or requests related to this page.
+  // Populates |heads| with the page's heads.
+  storage::Status GetHeads(std::vector<const storage::CommitId>* heads);
+
+  // Returns true if this |ActivePageManager| is not currently active in any way and can be deleted.
   bool IsEmpty();
 
   void set_on_empty(fit::closure on_empty_callback) {

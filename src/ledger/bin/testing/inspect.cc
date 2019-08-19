@@ -38,19 +38,19 @@ namespace {
 using ::inspect_deprecated::testing::ChildrenMatch;
 using ::inspect_deprecated::testing::NameMatches;
 using ::inspect_deprecated::testing::NodeMatches;
+using ::testing::_;
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 
-}  // namespace
-
-testing::AssertionResult OpenChild(inspect_deprecated::Node* parent, const std::string& child_name,
+template <typename P>
+testing::AssertionResult OpenChild(P parent, const std::string& child_name,
                                    fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
                                    LoopController* loop_controller) {
   bool success;
   std::unique_ptr<CallbackWaiter> waiter = loop_controller->NewWaiter();
-  parent->object_dir().object()->OpenChild(child_name, child->NewRequest(),
-                                           callback::Capture(waiter->GetCallback(), &success));
+  (*parent)->OpenChild(child_name, child->NewRequest(),
+                       callback::Capture(waiter->GetCallback(), &success));
   if (!waiter->RunUntilCalled()) {
     return ::testing::AssertionFailure() << "RunUntilCalled not successful!";
   }
@@ -58,6 +58,31 @@ testing::AssertionResult OpenChild(inspect_deprecated::Node* parent, const std::
     return ::testing::AssertionFailure() << "OpenChild not successful!";
   }
   return ::testing::AssertionSuccess();
+}
+
+}  // namespace
+
+testing::AssertionResult OpenChild(inspect_deprecated::Node* parent, const std::string& child_name,
+                                   fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
+                                   LoopController* loop_controller) {
+  std::shared_ptr<component::Object> parent_object = parent->object_dir().object();
+  return OpenChild(&parent_object, child_name, child, loop_controller);
+}
+
+testing::AssertionResult OpenChild(inspect_deprecated::Node* parent, const std::string& child_name,
+                                   fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
+                                   async::TestLoop* test_loop) {
+  std::shared_ptr<component::Object> parent_object = parent->object_dir().object();
+  LoopControllerTestLoop loop_controller(test_loop);
+  return OpenChild(&parent_object, child_name, child, &loop_controller);
+}
+
+testing::AssertionResult OpenChild(fidl::InterfacePtr<fuchsia::inspect::Inspect>* parent,
+                                   const std::string& child_name,
+                                   fidl::InterfacePtr<fuchsia::inspect::Inspect>* child,
+                                   async::TestLoop* test_loop) {
+  LoopControllerTestLoop loop_controller(test_loop);
+  return OpenChild(parent, child_name, child, &loop_controller);
 }
 
 testing::AssertionResult Inspect(fuchsia::inspect::InspectPtr* top_level,
@@ -102,9 +127,22 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
 }
 
 ::testing::Matcher<const inspect_deprecated::ObjectHierarchy&> PageMatches(
-    fuchsia::ledger::PageId page_id) {
-  return NodeMatches(
-      NameMatches(PageIdToDisplayName(convert::ExtendedStringView(page_id.id).ToString())));
+    const convert::ExtendedStringView& page_id,
+    const std::set<const std::optional<const storage::CommitId>>& heads) {
+  std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>> head_matchers;
+  head_matchers.reserve(heads.size());
+  for (const std::optional<const storage::CommitId>& head : heads) {
+    if (head) {
+      head_matchers.push_back(NodeMatches(NameMatches(CommitIdToDisplayName(head.value()))));
+    } else {
+      head_matchers.push_back(_);
+    }
+  }
+  return AllOf(NodeMatches(NameMatches(PageIdToDisplayName(page_id.ToString()))),
+               ChildrenMatch(ElementsAre(
+                   NodeMatches(NameMatches(kCommitsInspectPathComponent.ToString())),
+                   AllOf(NodeMatches(NameMatches(kHeadsInspectPathComponent.ToString())),
+                         ChildrenMatch(UnorderedElementsAreArray(head_matchers))))));
 }
 
 ::testing::Matcher<const inspect_deprecated::ObjectHierarchy&> LedgerMatches(

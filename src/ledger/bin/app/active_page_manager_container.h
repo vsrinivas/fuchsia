@@ -9,6 +9,7 @@
 #include <lib/fit/function.h>
 
 #include <string>
+#include <vector>
 
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/page_impl.h"
@@ -43,6 +44,9 @@ class ActivePageManagerContainer {
 
   // Returns true if there is at least one active external page connection.
   bool PageConnectionIsOpen();
+
+  // Checks whether this container is empty.
+  bool IsEmpty();
 
  private:
   // If |has_external_requests_| is true when called, calls the |OnExternallyUnused| method of each

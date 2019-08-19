@@ -82,6 +82,36 @@ class PageManager {
  private:
   using PageTracker = fit::function<bool()>;
 
+  class InspectedHead;
+
+  // An |inspect_deprecated::ChildrenManager| that exposes to Inspect the commit IDs of this page's
+  // heads.
+  class HeadsChildrenManager final : public inspect_deprecated::ChildrenManager {
+   public:
+    explicit HeadsChildrenManager(inspect_deprecated::Node* heads_node, PageManager* page_manager);
+    ~HeadsChildrenManager() override;
+
+    void set_on_empty(fit::closure on_empty_callback);
+    bool IsEmpty();
+
+   private:
+    // inspect_deprecated::ChildrenManager
+    void GetNames(fit::function<void(std::vector<std::string>)> callback) override;
+    void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
+
+    void CheckEmpty();
+
+    inspect_deprecated::Node* heads_node_;
+    PageManager* page_manager_;
+    fit::closure on_empty_callback_;
+    callback::AutoCleanableMap<storage::CommitId, InspectedHead> inspected_heads_;
+
+    FXL_DISALLOW_COPY_AND_ASSIGN(HeadsChildrenManager);
+  };
+
+  // Ensures that the ActivePageManagerContainer is up (or creates and inits it if it isn't).
+  void EnsureActivePageManagerContainerForInspect();
+
   // Requests a PageStorage object for the given |container|. If the page is not
   // locally available, the |callback| is called with |PAGE_NOT_FOUND|.
   void InitActivePageManagerContainer(ActivePageManagerContainer* container,
@@ -154,6 +184,10 @@ class PageManager {
   // The static Inspect object maintaining in Inspect a representation of this
   // |PageManager|.
   inspect_deprecated::Node inspect_node_;
+  // The static Inspect object to which this |PageManager|'s heads are attached.
+  inspect_deprecated::Node heads_node_;
+  HeadsChildrenManager heads_children_manager_;
+  fit::deferred_callback heads_children_manager_retainer_;
   // The static Inspect object to which this |PageManager|'s commits are
   // attached.
   inspect_deprecated::Node commits_node_;

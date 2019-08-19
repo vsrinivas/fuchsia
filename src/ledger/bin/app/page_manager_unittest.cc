@@ -27,11 +27,16 @@
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/inspect/inspect.h"
+#include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
+#include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
+#include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/sync_coordinator/testing/fake_ledger_sync.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
+#include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -39,7 +44,8 @@
 namespace ledger {
 namespace {
 
-constexpr char kLedgerName[] = "ledger_under_test";
+constexpr fxl::StringView kLedgerName = "ledger_under_test";
+constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
 
 class DelayingCallbacksManager {
  public:
@@ -205,14 +211,17 @@ class PageManagerTest : public TestWithEnvironment {
   void SetUp() override {
     TestWithEnvironment::SetUp();
     page_id_ = RandomId();
+    top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName.ToString());
+    attachment_node_ =
+        top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
     ledger_merge_manager_ = std::make_unique<LedgerMergeManager>(&environment_);
     storage_ = std::make_unique<FakeLedgerStorage>(&environment_);
     sync_ = std::make_unique<sync_coordinator::FakeLedgerSync>();
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     page_manager_ = std::make_unique<PageManager>(
-        &environment_, kLedgerName, convert::ToString(page_id_.id),
+        &environment_, kLedgerName.ToString(), convert::ToString(page_id_.id),
         std::vector<PageUsageListener*>{disk_cleanup_manager_.get()}, storage_.get(), sync_.get(),
-        ledger_merge_manager_.get(), inspect_deprecated::Node());
+        ledger_merge_manager_.get(), attachment_node_.CreateChild(convert::ToString(page_id_.id)));
   }
 
   PageId RandomId() {
@@ -222,6 +231,13 @@ class PageManagerTest : public TestWithEnvironment {
   }
 
  protected:
+  // TODO(nathaniel): Because we use the ChildrenManager API, we need to do our reads using FIDL,
+  // and because we want to use inspect::ReadFromFidl for our reads, we need to have these two
+  // objects (one parent, one child, both part of the test, and with the system under test attaching
+  // to the child) rather than just one. Even though this is test code this is still a layer of
+  // indirection that should be eliminable in Inspect's upcoming "VMO-World".
+  inspect_deprecated::Node top_level_node_;
+  inspect_deprecated::Node attachment_node_;
   std::unique_ptr<FakeLedgerStorage> storage_;
   std::unique_ptr<sync_coordinator::FakeLedgerSync> sync_;
   std::unique_ptr<LedgerMergeManager> ledger_merge_manager_;
@@ -279,6 +295,323 @@ TEST_F(PageManagerTest, OnEmptyCalled) {
   detacher();
   RunLoopUntilIdle();
   EXPECT_TRUE(on_empty_callback_called);
+}
+
+TEST_F(PageManagerTest, OnEmptyCalledWhenHeadDetacherCalled) {
+  bool get_page_callback_called;
+  Status get_page_status;
+  bool on_empty_callback_called;
+
+  page_manager_->set_on_empty(
+      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+
+  PagePtr page;
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_FALSE(on_empty_callback_called);
+
+  fit::closure page_detacher = page_manager_->CreateDetacher();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  EXPECT_TRUE(
+      OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> heads_node;
+  EXPECT_TRUE(
+      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> head_node;
+  EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+                        &head_node, &test_loop()));
+
+  page_detacher();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  page_node.Unbind();
+  heads_node.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  head_node.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_callback_called);
+}
+
+TEST_F(PageManagerTest, OnEmptyCalledInspectEarlierAndLaterThanPageBinding) {
+  bool get_page_callback_called;
+  Status get_page_status;
+  bool on_empty_callback_called;
+
+  page_manager_->set_on_empty(
+      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+
+  PagePtr page;
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_FALSE(on_empty_callback_called);
+
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_callback_called);
+
+  page_manager_->set_on_empty(
+      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  EXPECT_TRUE(
+      OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> heads_node;
+  EXPECT_TRUE(
+      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> head_node;
+  EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+                        &head_node, &test_loop()));
+
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_FALSE(on_empty_callback_called);
+
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  heads_node.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  head_node.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_callback_called);
+
+  // Why didn't we have to unbind page_node or heads_node?
+  //
+  // For page_node: because within the scope of this unit test the Page is the system under test, so
+  // there's no LedgerManager-acting-as-a-ChildrenManager using an active inspection as a reason to
+  // keep a PageManager non-empty. Outside of the scope of this test, in the scope of a real running
+  // integrated system, an active inspection of a Page serves to keep a PageManager non-empty.
+  //
+  // For heads_node: an active inspection of a heads node would never serve to keep a Page non-empty
+  // (applications under inspection retain the right to remove nodes from their hierarchies at any
+  // time) but inspections always maintain connections to parents for the entirety of their
+  // connections to children, so any time heads_node is bound in a real integrated system, page_node
+  // is also bound.
+}
+
+TEST_F(PageManagerTest, OnEmptyCalledInspectEarlierAndPageBindingLater) {
+  bool get_page_callback_called;
+  Status get_page_status;
+  bool on_empty_callback_called;
+
+  page_manager_->set_on_empty(
+      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+
+  PagePtr page;
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_FALSE(on_empty_callback_called);
+
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_callback_called);
+
+  page_manager_->set_on_empty(
+      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  EXPECT_TRUE(
+      OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> heads_node;
+  EXPECT_TRUE(
+      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> head_node;
+  EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+                        &head_node, &test_loop()));
+
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_FALSE(on_empty_callback_called);
+
+  heads_node.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  head_node.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_callback_called);
+
+  // Why didn't we have to unbind page_node or heads_node?
+  //
+  // For page_node: because within the scope of this unit test the Page is the system under test, so
+  // there's no LedgerManager-acting-as-a-ChildrenManager using an active inspection as a reason to
+  // keep a PageManager non-empty. Outside of the scope of this test, in the scope of a real running
+  // integrated system, an active inspection of a Page serves to keep a PageManager non-empty.
+  //
+  // For heads_node: an active inspection of a heads node would never serve to keep a Page non-empty
+  // (applications under inspection retain the right to remove nodes from their hierarchies at any
+  // time) but inspections always maintain connections to parents for the entirety of their
+  // connections to children, so any time heads_node is bound in a real integrated system, page_node
+  // is also bound.
+}
+
+TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndInspectLater) {
+  bool get_page_callback_called;
+  Status get_page_status;
+  bool on_empty_callback_called;
+
+  page_manager_->set_on_empty(
+      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+
+  PagePtr page;
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_FALSE(on_empty_callback_called);
+
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_callback_called);
+
+  page_manager_->set_on_empty(
+      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_FALSE(on_empty_callback_called);
+
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  EXPECT_TRUE(
+      OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> heads_node;
+  EXPECT_TRUE(
+      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> head_node;
+  EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+                        &head_node, &test_loop()));
+
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  head_node.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_callback_called);
+
+  // Why didn't we have to unbind page_node or heads_node?
+  //
+  // For page_node: because within the scope of this unit test the Page is the system under test, so
+  // there's no LedgerManager-acting-as-a-ChildrenManager using an active inspection as a reason to
+  // keep a PageManager non-empty. Outside of the scope of this test, in the scope of a real running
+  // integrated system, an active inspection of a Page serves to keep a PageManager non-empty.
+  //
+  // For heads_node: an active inspection of a heads node would never serve to keep a Page non-empty
+  // (applications under inspection retain the right to remove nodes from their hierarchies at any
+  // time) but inspections always maintain connections to parents for the entirety of their
+  // connections to children, so any time heads_node is bound in a real integrated system, page_node
+  // is also bound.
+}
+
+TEST_F(PageManagerTest, OnEmptyCalledPageBindingEarlierAndLaterThanInspect) {
+  bool get_page_callback_called;
+  Status get_page_status;
+  bool on_empty_callback_called;
+
+  page_manager_->set_on_empty(
+      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+
+  PagePtr page;
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_FALSE(on_empty_callback_called);
+
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_callback_called);
+
+  page_manager_->set_on_empty(
+      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_FALSE(on_empty_callback_called);
+
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> page_node;
+  EXPECT_TRUE(
+      OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> heads_node;
+  EXPECT_TRUE(
+      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
+  fidl::InterfacePtr<fuchsia::inspect::Inspect> head_node;
+  EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+                        &head_node, &test_loop()));
+
+  head_node.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  heads_node.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_callback_called);
+
+  // Why didn't we have to unbind page_node or heads_node?
+  //
+  // For page_node: because within the scope of this unit test the Page is the system under test, so
+  // there's no LedgerManager-acting-as-a-ChildrenManager using an active inspection as a reason to
+  // keep a PageManager non-empty. Outside of the scope of this test, in the scope of a real running
+  // integrated system, an active inspection of a Page serves to keep a PageManager non-empty.
+  //
+  // For heads_node: an active inspection of a heads node would never serve to keep a Page non-empty
+  // (applications under inspection retain the right to remove nodes from their hierarchies at any
+  // time) but inspections always maintain connections to parents for the entirety of their
+  // connections to children, so any time heads_node is bound in a real integrated system, page_node
+  // is also bound.
 }
 
 TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckNotFound) {

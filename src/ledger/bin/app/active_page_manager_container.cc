@@ -9,6 +9,7 @@
 
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
@@ -155,11 +156,15 @@ void ActivePageManagerContainer::OnInternallyUnused() {
   CheckEmpty();
 }
 
-void ActivePageManagerContainer::CheckEmpty() {
+bool ActivePageManagerContainer::IsEmpty() {
   // The ActivePageManagerContainer is not considered empty until
   // |SetActivePageManager| has been called.
-  if (on_empty_callback_ && !has_external_requests_ && token_manager_.IsEmpty() &&
-      active_page_manager_is_set_ && (!active_page_manager_ || active_page_manager_->IsEmpty())) {
+  return !has_external_requests_ && token_manager_.IsEmpty() && active_page_manager_is_set_ &&
+         (!active_page_manager_ || active_page_manager_->IsEmpty());
+}
+
+void ActivePageManagerContainer::CheckEmpty() {
+  if (on_empty_callback_ && IsEmpty()) {
     on_empty_callback_();
   }
 }

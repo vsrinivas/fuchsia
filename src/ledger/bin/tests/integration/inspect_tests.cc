@@ -107,12 +107,16 @@ TEST_P(InspectTest, ContentInspectableAfterDisconnection) {
   page->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  // Verify that the inspection hierarchy now shows a single page with the expected page ID.
+  // Verify that the inspection hierarchy now shows a single page with the expected page ID and with
+  // the root commit ID as its head.
   inspect_deprecated::ObjectHierarchy fully_connected_hierarchy;
   ASSERT_TRUE(app_instance_->Inspect(this, &fully_connected_hierarchy));
-  EXPECT_THAT(fully_connected_hierarchy,
-              TopLevelMatches({RepositoryMatches(
-                  repository_display_name, {LedgerMatches(ledger_name, {PageMatches(page_id)})})}));
+  EXPECT_THAT(
+      fully_connected_hierarchy,
+      TopLevelMatches({RepositoryMatches(
+          repository_display_name,
+          {LedgerMatches(ledger_name,
+                         {PageMatches(page_id.id, {storage::kFirstPageCommitId.ToString()})})})}));
 
   // Mutate the page.
   page->Put(key, value);
@@ -120,12 +124,25 @@ TEST_P(InspectTest, ContentInspectableAfterDisconnection) {
   page->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  // Verify that an inspection still shows the single page with the expected page ID.
+  // Verify that an inspection still shows the single page with the expected page ID and learn from
+  // the inspection the commit ID of the new head of the page.
   inspect_deprecated::ObjectHierarchy post_put_hierarchy;
   ASSERT_TRUE(app_instance_->Inspect(this, &post_put_hierarchy));
   EXPECT_THAT(post_put_hierarchy,
               TopLevelMatches({RepositoryMatches(
-                  repository_display_name, {LedgerMatches(ledger_name, {PageMatches(page_id)})})}));
+                  repository_display_name,
+                  {LedgerMatches(ledger_name, {PageMatches(page_id.id, {std::nullopt})})})}));
+  const inspect_deprecated::ObjectHierarchy* post_put_heads_node = post_put_hierarchy.GetByPath(
+      {kRepositoriesInspectPathComponent.ToString(), repository_display_name,
+       kLedgersInspectPathComponent.ToString(), convert::ExtendedStringView(ledger_name).ToString(),
+       kPagesInspectPathComponent.ToString(),
+       PageIdToDisplayName(convert::ExtendedStringView(page_id.id).ToString()),
+       kHeadsInspectPathComponent.ToString()});
+  ASSERT_EQ(1UL, post_put_heads_node->children().size());
+  const inspect_deprecated::ObjectHierarchy& post_put_head_node =
+      post_put_heads_node->children()[0];
+  storage::CommitId post_put_head;
+  ASSERT_TRUE(CommitDisplayNameToCommitId(post_put_head_node.name(), &post_put_head));
 
   // Disconnect the page and ledger bindings.
   page.Unbind();
@@ -137,7 +154,8 @@ TEST_P(InspectTest, ContentInspectableAfterDisconnection) {
   ASSERT_TRUE(app_instance_->Inspect(this, &page_and_ledger_unbound_hierarchy));
   EXPECT_THAT(page_and_ledger_unbound_hierarchy,
               TopLevelMatches({RepositoryMatches(
-                  repository_display_name, {LedgerMatches(ledger_name, {PageMatches(page_id)})})}));
+                  repository_display_name,
+                  {LedgerMatches(ledger_name, {PageMatches(page_id.id, {post_put_head})})})}));
 
   // Disconnect the repository binding.
   repository.Unbind();
@@ -198,12 +216,16 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   page->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  // Verify that an inspection now shows a single page with the expected page ID.
+  // Verify that an inspection now shows a single page with the expected page ID and with the root
+  // commit ID as its head.
   inspect_deprecated::ObjectHierarchy fully_connected_hierarchy;
   ASSERT_TRUE(app_instance_->Inspect(this, &fully_connected_hierarchy));
-  EXPECT_THAT(fully_connected_hierarchy,
-              TopLevelMatches({RepositoryMatches(
-                  repository_display_name, {LedgerMatches(ledger_name, {PageMatches(page_id)})})}));
+  EXPECT_THAT(
+      fully_connected_hierarchy,
+      TopLevelMatches({RepositoryMatches(
+          repository_display_name,
+          {LedgerMatches(ledger_name,
+                         {PageMatches(page_id.id, {storage::kFirstPageCommitId.ToString()})})})}));
 
   // Mutate the page.
   page->Put(key, value);
@@ -211,12 +233,25 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   page->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  // Verify that the inspection hierarchy still shows the single page with the expected page ID.
+  // Verify that the inspection hierarchy still shows the single page with the expected page ID and
+  // learn from the inspection the commit ID of the new head of the page.
   inspect_deprecated::ObjectHierarchy post_put_hierarchy;
   ASSERT_TRUE(app_instance_->Inspect(this, &post_put_hierarchy));
   EXPECT_THAT(post_put_hierarchy,
               TopLevelMatches({RepositoryMatches(
-                  repository_display_name, {LedgerMatches(ledger_name, {PageMatches(page_id)})})}));
+                  repository_display_name,
+                  {LedgerMatches(ledger_name, {PageMatches(page_id.id, {std::nullopt})})})}));
+  const inspect_deprecated::ObjectHierarchy* post_put_heads_node = post_put_hierarchy.GetByPath(
+      {kRepositoriesInspectPathComponent.ToString(), repository_display_name,
+       kLedgersInspectPathComponent.ToString(), convert::ExtendedStringView(ledger_name).ToString(),
+       kPagesInspectPathComponent.ToString(),
+       PageIdToDisplayName(convert::ExtendedStringView(page_id.id).ToString()),
+       kHeadsInspectPathComponent.ToString()});
+  ASSERT_EQ(1UL, post_put_heads_node->children().size());
+  const inspect_deprecated::ObjectHierarchy& post_put_head_node =
+      post_put_heads_node->children()[0];
+  storage::CommitId post_put_head_id;
+  ASSERT_TRUE(CommitDisplayNameToCommitId(post_put_head_node.name(), &post_put_head_id));
 
   // Create a conflict on the page.
   ledger::PagePtr left_page_connection;
@@ -232,12 +267,27 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   right_page_connection->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  // Verify that an inspection shows the single page with the expected page ID.
+  // Verify that an inspection still shows the single page with the expected page ID and learn from
+  // the inspection the commit ID of the new, post-conflict head of the page.
   inspect_deprecated::ObjectHierarchy post_conflict_hierarchy;
   ASSERT_TRUE(app_instance_->Inspect(this, &post_conflict_hierarchy));
   EXPECT_THAT(post_conflict_hierarchy,
               TopLevelMatches({RepositoryMatches(
-                  repository_display_name, {LedgerMatches(ledger_name, {PageMatches(page_id)})})}));
+                  repository_display_name,
+                  {LedgerMatches(ledger_name, {PageMatches(page_id.id, {std::nullopt})})})}));
+  const inspect_deprecated::ObjectHierarchy* post_conflict_heads_node =
+      post_conflict_hierarchy.GetByPath(
+          {kRepositoriesInspectPathComponent.ToString(), repository_display_name,
+           kLedgersInspectPathComponent.ToString(),
+           convert::ExtendedStringView(ledger_name).ToString(),
+           kPagesInspectPathComponent.ToString(),
+           PageIdToDisplayName(convert::ExtendedStringView(page_id.id).ToString()),
+           kHeadsInspectPathComponent.ToString()});
+  ASSERT_EQ(1UL, post_conflict_heads_node->children().size());
+  const inspect_deprecated::ObjectHierarchy& post_conflict_head_node =
+      post_conflict_heads_node->children()[0];
+  storage::CommitId post_conflict_head_id;
+  ASSERT_TRUE(CommitDisplayNameToCommitId(post_conflict_head_node.name(), &post_conflict_head_id));
 }
 
 INSTANTIATE_TEST_SUITE_P(InspectTest, InspectTest,

@@ -33,6 +33,123 @@
 
 namespace ledger {
 
+// Represents to Inspect a head. Because a head is just a commit ID (for commit data like parent
+// commit IDs and entries), instances of this class expose what they need to expose to Inspect just
+// existing and maintaining an inspect_deprecated::Node in Inspect's hierarchy.
+class PageManager::InspectedHead final {
+ public:
+  explicit InspectedHead(inspect_deprecated::Node node);
+  ~InspectedHead() = default;
+
+  void set_on_empty(fit::closure on_empty_callback);
+
+  fit::closure CreateDetacher();
+
+ private:
+  inspect_deprecated::Node node_;
+  fit::closure on_empty_callback_;
+  int64_t outstanding_detachers_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(InspectedHead);
+};
+
+PageManager::InspectedHead::InspectedHead(inspect_deprecated::Node node)
+    : node_(std::move(node)), outstanding_detachers_(0) {}
+
+void PageManager::InspectedHead::set_on_empty(fit::closure on_empty_callback) {
+  on_empty_callback_ = std::move(on_empty_callback);
+}
+
+fit::closure PageManager::InspectedHead::CreateDetacher() {
+  outstanding_detachers_++;
+  return [this]() {
+    FXL_DCHECK(outstanding_detachers_ > 0);
+    outstanding_detachers_--;
+    if (on_empty_callback_ && outstanding_detachers_ == 0) {
+      on_empty_callback_();
+    }
+  };
+}
+
+PageManager::HeadsChildrenManager::HeadsChildrenManager(inspect_deprecated::Node* heads_node,
+                                                        PageManager* page_manager)
+    : heads_node_(heads_node), page_manager_(page_manager) {
+  inspected_heads_.set_on_empty([this] { CheckEmpty(); });
+}
+
+PageManager::HeadsChildrenManager::~HeadsChildrenManager() = default;
+
+void PageManager::HeadsChildrenManager::set_on_empty(fit::closure on_empty_callback) {
+  on_empty_callback_ = std::move(on_empty_callback);
+}
+
+bool PageManager::HeadsChildrenManager::IsEmpty() { return inspected_heads_.empty(); }
+
+void PageManager::HeadsChildrenManager::CheckEmpty() {
+  if (on_empty_callback_ && IsEmpty()) {
+    on_empty_callback_();
+  }
+}
+
+void PageManager::HeadsChildrenManager::GetNames(
+    fit::function<void(std::vector<std::string>)> callback) {
+  fit::function<void(std::vector<std::string>)> call_ensured_callback =
+      callback::EnsureCalled(std::move(callback), std::vector<std::string>());
+  page_manager_->EnsureActivePageManagerContainerForInspect();
+  page_manager_->active_page_manager_container_->NewInternalRequest(
+      [callback = std::move(call_ensured_callback)](storage::Status status, ExpiringToken token,
+                                                    ActivePageManager* active_page_manager) {
+        if (status != storage::Status::OK) {
+          // Inspect is prepared to receive incomplete information; there's not really anything
+          // further for us to do than to log that the function failed.
+          FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
+          callback({});
+          return;
+        }
+        FXL_DCHECK(active_page_manager);
+        std::vector<const storage::CommitId> heads;
+        status = active_page_manager->GetHeads(&heads);
+        if (status != storage::Status::OK) {
+          // Inspect is prepared to receive incomplete information; there's not really anything
+          // further for us to do than to log that the function failed.
+          FXL_LOG(WARNING) << "GetHeads returned non-OK status: " << status;
+          callback({});
+          return;
+        }
+        std::vector<std::string> head_display_names;
+        head_display_names.reserve(heads.size());
+        for (const storage::CommitId& head : heads) {
+          head_display_names.push_back(CommitIdToDisplayName(head));
+        }
+        callback(head_display_names);
+      });
+}
+
+void PageManager::HeadsChildrenManager::Attach(std::string name,
+                                               fit::function<void(fit::closure)> callback) {
+  storage::CommitId head;
+  if (!CommitDisplayNameToCommitId(name, &head)) {
+    FXL_LOG(WARNING) << "Inspect passed invalid head display name: " << name;
+    callback({});
+    return;
+  }
+  auto it = inspected_heads_.find(head);
+  if (it != inspected_heads_.end()) {
+    callback(it->second.CreateDetacher());
+    return;
+  }
+  // We don't bother with a storage read because the head's name was originally found in a
+  // call to |GetHeads| and there's nothing about the |inspect_deprecated::Node|
+  // representing the head that would require another storage read. As for the possibility
+  // that the page's heads may have changed between calls to |GetHeads| and
+  // |AttachHead|: that race is inherent; the page's heads can just as easily change
+  // immediately after any storage read performed at this point in the code.
+  inspect_deprecated::Node head_node = heads_node_->CreateChild(name);
+  auto emplacement = inspected_heads_.emplace(std::piecewise_construct, std::forward_as_tuple(head),
+                                              std::forward_as_tuple(std::move(head_node)));
+  callback(emplacement.first->second.CreateDetacher());
+}
+
 PageManager::PageManager(Environment* environment, std::string ledger_name, storage::PageId page_id,
                          std::vector<PageUsageListener*> page_usage_listeners,
                          storage::LedgerStorage* ledger_storage,
@@ -47,12 +164,16 @@ PageManager::PageManager(Environment* environment, std::string ledger_name, stor
       ledger_sync_(ledger_sync),
       ledger_merge_manager_(ledger_merge_manager),
       inspect_node_(std::move(inspect_node)),
+      heads_node_(inspect_node_.CreateChild(kHeadsInspectPathComponent.ToString())),
+      heads_children_manager_(&heads_node_, this),
+      heads_children_manager_retainer_(heads_node_.SetChildrenManager(&heads_children_manager_)),
       commits_node_(inspect_node_.CreateChild(kCommitsInspectPathComponent.ToString())),
       weak_factory_(this) {
   page_availability_manager_.set_on_empty([this] { CheckEmpty(); });
+  heads_children_manager_.set_on_empty([this] { CheckEmpty(); });
 }
 
-PageManager::~PageManager() {}
+PageManager::~PageManager() { heads_children_manager_retainer_.cancel(); }
 
 fit::closure PageManager::CreateDetacher() {
   outstanding_detachers_++;
@@ -122,6 +243,19 @@ void PageManager::GetPage(LedgerImpl::Delegate::PageState page_state,
                                      CreatePageStorage(page_state, container);
                                    }
                                  });
+}
+
+void PageManager::EnsureActivePageManagerContainerForInspect() {
+  if (!active_page_manager_container_) {
+    ActivePageManagerContainer* container = CreateActivePageManagerContainer();
+    InitActivePageManagerContainer(container, [](Status status) {
+      if (status != Status::OK) {
+        // It's odd that the page storage failed to come up; we will just report to Inspect that
+        // there is no data for the page.
+        FXL_LOG(WARNING) << "Tried to bring up a page for Inspect but got status: " << status;
+      }
+    });
+  }
 }
 
 void PageManager::StartPageSync() {
@@ -314,8 +448,10 @@ fit::function<bool()> PageManager::NewPageTracker() {
 void PageManager::MaybeMarkPageOpened() { was_opened_.clear(); }
 
 void PageManager::CheckEmpty() {
-  if (on_empty_callback_ && !active_page_manager_container_ && outstanding_operations_ == 0 &&
-      page_availability_manager_.IsEmpty() && outstanding_detachers_ == 0) {
+  if (on_empty_callback_ &&
+      (!active_page_manager_container_ || active_page_manager_container_->IsEmpty()) &&
+      outstanding_operations_ == 0 && page_availability_manager_.IsEmpty() &&
+      outstanding_detachers_ == 0 && heads_children_manager_.IsEmpty()) {
     on_empty_callback_();
   }
 }

@@ -129,6 +129,19 @@ void ActivePageManager::IsOfflineAndEmpty(fit::function<void(Status, bool)> call
   });
 }
 
+storage::Status ActivePageManager::GetHeads(std::vector<const storage::CommitId>* heads) {
+  std::vector<std::unique_ptr<const storage::Commit>> head_commits;
+  storage::Status status = page_storage_->GetHeadCommits(&head_commits);
+  if (status != storage::Status::OK) {
+    return status;
+  }
+  heads->reserve(head_commits.size());
+  for (const auto& head_commit : head_commits) {
+    heads->push_back(head_commit->GetId());
+  }
+  return storage::Status::OK;
+}
+
 bool ActivePageManager::IsEmpty() {
   return page_delegates_.empty() && snapshots_.empty() && page_impls_.empty() &&
          merge_resolver_->IsEmpty() && (!page_sync_ || page_sync_->IsIdle());
