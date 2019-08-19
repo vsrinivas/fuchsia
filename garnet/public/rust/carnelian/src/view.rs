@@ -607,7 +607,6 @@ impl ViewController {
                 for msg in messages {
                     self.send_message(msg);
                 }
-                self.update();
             }
             _ => (),
         });

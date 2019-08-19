@@ -5,8 +5,8 @@
 #![feature(async_await)]
 
 use carnelian::{
-    set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey,
+    make_message, set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServiceMarker};
@@ -153,7 +153,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
 
     fn handle_keyboard_event(
         &mut self,
-        _: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext,
         keyboard_event: &KeyboardEvent,
     ) -> Result<(), Error> {
         if keyboard_event.code_point == ' ' as u32
@@ -161,6 +161,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         {
             self.rounded = !self.rounded;
         }
+        context.queue_message(make_message(ViewMessages::Update));
         Ok(())
     }
 }

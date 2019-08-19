@@ -4,7 +4,7 @@
 
 use carnelian::{
     make_message, set_node_color, App, AppAssistant, Color, Label, Message, Paint, Point, Rect,
-    Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use failure::Error;
 use fidl_fuchsia_ui_input::{FocusEvent, PointerEvent, PointerEventPhase};
@@ -277,15 +277,17 @@ impl ViewAssistant for ButtonViewAssistant {
         pointer_event: &PointerEvent,
     ) -> Result<(), Error> {
         self.button.handle_pointer_event(context, pointer_event);
+        context.queue_message(make_message(ViewMessages::Update));
         Ok(())
     }
 
     fn handle_focus_event(
         &mut self,
-        _: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext,
         focus_event: &FocusEvent,
     ) -> Result<(), Error> {
         self.button.set_focused(focus_event.focused);
+        context.queue_message(make_message(ViewMessages::Update));
         Ok(())
     }
 }
