@@ -85,6 +85,7 @@ source_set("session_storage_xdr") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//peridot/lib/base64url",
     "//peridot/lib/fidl:json_xdr",
     "//sdk/fidl/fuchsia.modular",
@@ -101,11 +102,13 @@ executable("session_storage_unittest") {
 
   deps = [
     ":session_storage",
+    "//peridot/bin/sessionmgr/testing:annotations_matchers",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.ledger",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//zircon/system/public",
   ]
 }

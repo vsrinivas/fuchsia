@@ -5,11 +5,14 @@
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
 
 #include <lib/async/cpp/future.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
 
 #include <memory>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/sessionmgr/testing/annotations_matchers.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
@@ -17,6 +20,8 @@
 
 namespace modular {
 namespace {
+
+using ::testing::ByRef;
 
 class SessionStorageTest : public testing::TestWithLedger {
  protected:
@@ -28,7 +33,8 @@ class SessionStorageTest : public testing::TestWithLedger {
   // we're not testing CreateStory().
   fidl::StringPtr CreateStory(SessionStorage* storage,
                               fuchsia::modular::StoryOptions story_options = {}) {
-    auto future_story = storage->CreateStory(nullptr /* name */, std::move(story_options));
+    auto future_story =
+        storage->CreateStory(/*name=*/nullptr, std::move(story_options), /*annotations=*/{});
     bool done{};
     fidl::StringPtr story_name;
     future_story->Then([&](fidl::StringPtr name, fuchsia::ledger::PageId page_id) {
@@ -48,7 +54,16 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
 
   fuchsia::modular::StoryOptions story_options;
   story_options.kind_of_proto_story = true;
-  auto future_story = storage->CreateStory("story_name", std::move(story_options));
+
+  std::vector<fuchsia::modular::Annotation> annotations{};
+  fuchsia::modular::AnnotationValue annotation_value;
+  annotation_value.set_text("test_annotation_value");
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+  annotations.push_back(fidl::Clone(annotation));
+
+  auto future_story =
+      storage->CreateStory("story_name", std::move(story_options), std::move(annotations));
   bool done{};
   fidl::StringPtr story_name;
   fuchsia::ledger::PageId page_id;
@@ -69,6 +84,12 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
     EXPECT_EQ("story_name", data->story_name());
     EXPECT_TRUE(data->story_options().kind_of_proto_story);
     EXPECT_EQ(story_name, data->story_info().id());
+
+    EXPECT_TRUE(data->story_info().has_annotations());
+    EXPECT_EQ(1u, data->story_info().annotations().size());
+    EXPECT_THAT(data->story_info().annotations().at(0),
+                annotations::AnnotationEq(ByRef(annotation)));
+
     ASSERT_TRUE(data->has_story_page_id());
     EXPECT_TRUE(fidl::Equals(page_id, data->story_page_id()));
 
@@ -107,7 +128,7 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   // Pipeline all the calls such to show that we data consistency based on call
   // order.
   auto storage = CreateStorage("page");
-  auto future_story = storage->CreateStory("story_name", /*story_options=*/{});
+  auto future_story = storage->CreateStory("story_name", /*story_options=*/{}, /*annotations=*/{});
 
   // Immediately after creation is complete, delete it.
   FuturePtr<> delete_done;
@@ -144,8 +165,8 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   // * If we GetAllStoryData() we should see both of them.
   auto storage = CreateStorage("page");
 
-  auto future_story1 = storage->CreateStory("story1", /*story_options=*/{});
-  auto future_story2 = storage->CreateStory("story2", /*story_options=*/{});
+  auto future_story1 = storage->CreateStory("story1", /*story_options=*/{}, /*annotations=*/{});
+  auto future_story2 = storage->CreateStory("story2", /*story_options=*/{}, /*annotations=*/{});
 
   fidl::StringPtr story1_name;
   fuchsia::ledger::PageId story1_pageid;
@@ -217,7 +238,7 @@ TEST_F(SessionStorageTest, DISABLED_DeleteStoryDeletesStoryPage) {
   // When we call DeleteStory, we expect the story's page to be completely
   // emptied.
   auto storage = CreateStorage("page");
-  auto future_story = storage->CreateStory("story_name", /*story_options=*/{});
+  auto future_story = storage->CreateStory("story_name", /*story_options=*/{}, /*annotations=*/{});
 
   bool done{false};
   auto story_page_id = fuchsia::ledger::PageId::New();

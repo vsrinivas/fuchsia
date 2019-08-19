@@ -4,6 +4,9 @@
 
 library fuchsia.modular;
 
+/// Maximum number of annotations that can be passed to StoryPuppetMaster.Annotate.
+const uint32 MAX_ANNOTATE_SIZE = 50;
+
 enum ExecuteStatus {
     OK = 0;
 
@@ -103,4 +106,12 @@ protocol StoryPuppetMaster {
     [Transitional = "Deprecated, no-op"]
     SetStoryInfoExtra(vector<StoryInfoExtraEntry> story_info_extra)
         -> () error ConfigureStoryError;
+
+    /// Attach the `annotations` to the story. If the story does not yet exist,
+    /// it will be created.
+    ///
+    /// Existing annotations with the same key will be overwritten, or
+    /// deleted if new value is null.
+    Annotate(vector<Annotation>:MAX_ANNOTATE_SIZE annotations)
+        -> () error AnnotationError;
 };

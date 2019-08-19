@@ -36,6 +36,12 @@ table StoryInfo2 {
     ///
     /// A value of zero means the story has never been focused.
     2: int64 last_focus_time;
+
+    /// Collection of user-defined key-value attributes that describe
+    /// this story.
+    ///
+    /// The `Annotation.value` field of each `Annotation` is always set.
+    3: vector<Annotation>:MAX_ANNOTATIONS_PER_STORY annotations;
 };
 
 struct StoryInfoExtraEntry {

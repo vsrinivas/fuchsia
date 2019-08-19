@@ -49,6 +49,7 @@ source_set("puppet_master_impl") {
   ]
 
   public_deps = [
+    "//peridot/bin/sessionmgr:annotations",
     "//peridot/bin/sessionmgr/storage",
     "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.modular",
@@ -65,10 +66,13 @@ executable("puppet_master_impl_unittest") {
   deps = [
     ":puppet_master_impl",
     ":story_command_executor",
+    "//garnet/public/lib/fsl",
+    "//peridot/bin/sessionmgr/testing:annotations_matchers",
     "//peridot/lib/testing:test_story_command_executor",
     "//peridot/lib/testing:test_with_session_storage",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
   ]
 }
 

@@ -253,11 +253,39 @@ source_set("rate_limited_retry") {
   ]
 }
 
+source_set("annotations") {
+  sources = [
+    "annotations.cc",
+    "annotations.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+  ]
+}
+
 hermetic_tests_package("sessionmgr_unittests") {
   deps = [
+    ":annotations_unittest",
     ":sessionmgr_impl_unittest",
   ]
   environments = basic_envs
+}
+
+executable("annotations_unittest") {
+  testonly = true
+
+  sources = [
+    "annotations_unittest.cc",
+  ]
+
+  deps = [
+    ":annotations",
+    "//peridot/bin/sessionmgr/testing:annotations_matchers",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
 }
 
 executable("sessionmgr_impl_unittest") {

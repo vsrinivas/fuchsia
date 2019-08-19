@@ -15,6 +15,12 @@ struct Annotation {
     AnnotationValue? value;
 };
 
+/// Maximum number of annotations on a single story.
+const uint32 MAX_ANNOTATIONS_PER_STORY = 100;
+
+/// Maximum number of annotations on a single module.
+const uint32 MAX_ANNOTATIONS_PER_MODULE = 100;
+
 /// Maximum length of [`fuchsia.modular/AnnotationKey`].
 const uint32 MAX_ANNOTATION_KEY_LENGTH = 256;
 
@@ -42,4 +48,15 @@ xunion AnnotationValue {
     string:MAX_ANNOTATION_VALUE_LENGTH text;
     vector<uint8>:MAX_ANNOTATION_VALUE_LENGTH bytes;
     fuchsia.mem.Buffer buffer;
+};
+
+/// Error returned from calls to Annotate().
+enum AnnotationError {
+    /// The `AnnotationValue.buffer` size exceeds the maximum length,
+    /// `MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES`.
+    VALUE_TOO_BIG = 1;
+
+    /// The total number of annotations on the story or module being annotated
+    /// exceeds `MAX_ANNOTATIONS_PER_STORY` or `MAX_ANNOTATIONS_PER_MODULE`.
+    TOO_MANY_ANNOTATIONS = 2;
 };

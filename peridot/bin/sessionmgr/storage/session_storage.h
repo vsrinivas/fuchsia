@@ -68,11 +68,13 @@ class SessionStorage : public PageClient {
   // SessionStorage, or if they should be exposed to the story runtime
   // architecture.
   FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
-      fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options);
+      fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options,
+      std::vector<fuchsia::modular::Annotation> annotations);
 
   // Same as above, but defaults |story_name| to nullptr.
   FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
-      fuchsia::modular::StoryOptions story_options);
+      fuchsia::modular::StoryOptions story_options,
+      std::vector<fuchsia::modular::Annotation> annotations);
 
   // Deletes the |story_id| from the list of known stories and completes the
   // returned Future when done.
@@ -92,8 +94,13 @@ class SessionStorage : public PageClient {
   // be a more appropriate return value.
   FuturePtr<std::vector<fuchsia::modular::internal::StoryData>> GetAllStoryData();
 
+  // Sets the StoryOptions for |story_id| to |story_options|.
   FuturePtr<> UpdateStoryOptions(fidl::StringPtr story_id,
                                  fuchsia::modular::StoryOptions story_options);
+
+  // Sets the annotations for |story_id| to |annotations|. This overwrites all existing annotations.
+  FuturePtr<> UpdateStoryAnnotations(fidl::StringPtr story_name,
+                                     std::vector<fuchsia::modular::Annotation> annotations);
 
   // Gets the StoryStorage for the story with the given |story_id| to perform
   // operations on the story such as adding modules, updating links, etc.

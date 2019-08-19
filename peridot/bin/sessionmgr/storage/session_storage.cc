@@ -65,11 +65,12 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
  public:
   CreateStoryCall(fuchsia::ledger::Ledger* const ledger, fuchsia::ledger::Page* const root_page,
                   fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options,
-                  ResultCall result_call)
+                  std::vector<fuchsia::modular::Annotation> annotations, ResultCall result_call)
       : LedgerOperation("SessionStorage::CreateStoryCall", ledger, root_page,
                         std::move(result_call)),
         story_name_(std::move(story_name)),
-        story_options_(std::move(story_options)) {}
+        story_options_(std::move(story_options)),
+        annotations_(std::move(annotations)) {}
 
  private:
   void Run() override {
@@ -98,11 +99,15 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
     story_data_->set_story_page_id(std::move(story_page_id_));
     story_data_->mutable_story_info()->set_id(story_name_.value_or(""));
     story_data_->mutable_story_info()->set_last_focus_time(0);
+    if (!annotations_.empty()) {
+      story_data_->mutable_story_info()->set_annotations(std::move(annotations_));
+    }
     operation_queue_.Add(MakeWriteStoryDataCall(page(), std::move(story_data_), [flow] {}));
   }
 
   fidl::StringPtr story_name_;
   fuchsia::modular::StoryOptions story_options_;
+  std::vector<fuchsia::modular::Annotation> annotations_;
 
   fuchsia::ledger::PagePtr story_page_;
   fuchsia::modular::internal::StoryDataPtr story_data_;
@@ -116,18 +121,20 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
 }  // namespace
 
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
-    fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options) {
+    fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options,
+    std::vector<fuchsia::modular::Annotation> annotations) {
   auto ret =
       Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create("SessionStorage.CreateStory.ret");
-  operation_queue_.Add(
-      std::make_unique<CreateStoryCall>(ledger_client_->ledger(), page(), std::move(story_name),
-                                        std::move(story_options), ret->Completer()));
+  operation_queue_.Add(std::make_unique<CreateStoryCall>(
+      ledger_client_->ledger(), page(), std::move(story_name), std::move(story_options),
+      std::move(annotations), ret->Completer()));
   return ret;
 }
 
 FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
-    fuchsia::modular::StoryOptions story_options) {
-  return CreateStory(/*story_name=*/nullptr, std::move(story_options));
+    fuchsia::modular::StoryOptions story_options,
+    std::vector<fuchsia::modular::Annotation> annotations) {
+  return CreateStory(/*story_name=*/nullptr, std::move(story_options), std::move(annotations));
 }
 
 namespace {
@@ -256,7 +263,7 @@ FuturePtr<std::vector<fuchsia::modular::internal::StoryData>> SessionStorage::Ge
 
 FuturePtr<> SessionStorage::UpdateStoryOptions(fidl::StringPtr story_name,
                                                fuchsia::modular::StoryOptions story_options) {
-  auto ret = Future<>::Create("SessionStorage.SetOptions.ret");
+  auto ret = Future<>::Create("SessionStorage.UpdateStoryOptions.ret");
   auto mutate = [story_options = std::move(story_options)](
                     fuchsia::modular::internal::StoryData* story_data) mutable {
     if (!fidl::Equals(story_data->story_options(), story_options)) {
@@ -264,6 +271,19 @@ FuturePtr<> SessionStorage::UpdateStoryOptions(fidl::StringPtr story_name,
       return true;
     }
     return false;
+  };
+  operation_queue_.Add(std::make_unique<MutateStoryDataCall>(page(), story_name, std::move(mutate),
+                                                             ret->Completer()));
+  return ret;
+}
+
+FuturePtr<> SessionStorage::UpdateStoryAnnotations(
+    fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
+  auto ret = Future<>::Create("SessionStorage.UpdateStoryAnnotations.ret");
+  auto mutate = [annotations = std::move(annotations)](
+                    fuchsia::modular::internal::StoryData* story_data) mutable {
+    story_data->mutable_story_info()->set_annotations(std::move(annotations));
+    return true;
   };
   operation_queue_.Add(std::make_unique<MutateStoryDataCall>(page(), story_name, std::move(mutate),
                                                              ret->Completer()));

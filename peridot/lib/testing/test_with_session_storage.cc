@@ -31,7 +31,7 @@ std::unique_ptr<StoryStorage> TestWithSessionStorage::GetStoryStorage(SessionSto
 }
 
 fidl::StringPtr TestWithSessionStorage::CreateStory(SessionStorage* const storage) {
-  auto future_story = storage->CreateStory(nullptr /* extra */, {} /* story_options */);
+  auto future_story = storage->CreateStory(nullptr, /*story_options=*/{}, /*annotations=*/{});
   bool done{};
   fidl::StringPtr story_id;
   future_story->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId) {

@@ -5,13 +5,21 @@
 #include "peridot/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fsl/vmo/strings.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/sessionmgr/testing/annotations_matchers.h"
 #include "peridot/lib/testing/test_story_command_executor.h"
 #include "peridot/lib/testing/test_with_session_storage.h"
 
 namespace modular {
 namespace {
+
+using ::testing::ByRef;
+using ::testing::Pointee;
+using ::testing::UnorderedElementsAre;
 
 fuchsia::modular::StoryCommand MakeRemoveModCommand(std::string mod_name) {
   fuchsia::modular::StoryCommand command;
@@ -338,7 +346,7 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
 
   // Create the story.
   bool done{};
-  storage_->CreateStory(story_name, /*story_options=*/{})
+  storage_->CreateStory(story_name, /*story_options=*/{}, /*annotations=*/{})
       ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { done = true; });
   RunLoopUntil([&] { return done; });
 
@@ -380,7 +388,7 @@ TEST_F(PuppetMasterTest, DeleteStory) {
   std::string story_id;
 
   // Create a story.
-  storage_->CreateStory("foo", /*story_options=*/{})
+  storage_->CreateStory("foo", /*story_options=*/{}, /*annotations=*/{})
       ->Then(
           [&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { story_id = id.value_or(""); });
 
@@ -408,8 +416,8 @@ TEST_F(PuppetMasterTest, GetStories) {
   RunLoopUntil([&] { return done; });
 
   // Create a story.
-  storage_->CreateStory("foo", /*story_options=*/{});
 
+  storage_->CreateStory("foo", /*story_options=*/{}, /*annotations=*/{});
   // "foo" should be listed.
   done = false;
   ptr_->GetStories([&](std::vector<std::string> story_names) {
@@ -417,6 +425,281 @@ TEST_F(PuppetMasterTest, GetStories) {
     EXPECT_EQ("foo", story_names.at(0));
     done = true;
   });
+  RunLoopUntil([&] { return done; });
+}
+
+// Verifies that a call to Annotate create a story.
+TEST_F(PuppetMasterTest, AnnotateCreatesStory) {
+  const auto story_name = "annotate_creates_story";
+
+  auto story = ControlStory(story_name);
+
+  // Create some annotations.
+  auto annotation_value = fuchsia::modular::AnnotationValue{};
+  annotation_value.set_text("test_value");
+
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(std::move(annotation));
+
+  // Annotate the story, which should implicitly create it.
+  bool done{false};
+  story->Annotate(std::move(annotations),
+                  [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+                    EXPECT_FALSE(result.is_err());
+                    done = true;
+                  });
+  RunLoopUntil([&] { return done; });
+
+  // GetStories should return the newly-created story.
+  done = false;
+  ptr_->GetStories([&](std::vector<std::string> story_names) {
+    ASSERT_EQ(1u, story_names.size());
+    EXPECT_EQ(story_name, story_names.at(0));
+    done = true;
+  });
+  RunLoopUntil([&] { return done; });
+}
+
+// Verifies that annotations are saved to StoryData.
+TEST_F(PuppetMasterTest, AnnotateInStoryData) {
+  const auto story_name = "annotate_in_storydata";
+
+  auto story = ControlStory(story_name);
+
+  // Create some annotations, one for each variant of AnnotationValue.
+  auto text_annotation_value = fuchsia::modular::AnnotationValue{};
+  text_annotation_value.set_text("text_value");
+  auto text_annotation = fuchsia::modular::Annotation{
+      .key = "text_key", .value = fidl::MakeOptional(fidl::Clone(text_annotation_value))};
+
+  auto bytes_annotation_value = fuchsia::modular::AnnotationValue{};
+  bytes_annotation_value.set_bytes({0x01, 0x02, 0x03, 0x04});
+  auto bytes_annotation = fuchsia::modular::Annotation{
+      .key = "bytes_key", .value = fidl::MakeOptional(fidl::Clone(bytes_annotation_value))};
+
+  fuchsia::mem::Buffer buffer{};
+  std::string buffer_value = "buffer_value";
+  ASSERT_TRUE(fsl::VmoFromString(buffer_value, &buffer));
+  auto buffer_annotation_value = fuchsia::modular::AnnotationValue{};
+  buffer_annotation_value.set_buffer(std::move(buffer));
+  auto buffer_annotation = fuchsia::modular::Annotation{
+      .key = "buffer_key", .value = fidl::MakeOptional(fidl::Clone(buffer_annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(fidl::Clone(text_annotation));
+  annotations.push_back(fidl::Clone(bytes_annotation));
+  annotations.push_back(fidl::Clone(buffer_annotation));
+
+  // Annotate the story.
+  bool done{false};
+  story->Annotate(std::move(annotations),
+                  [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+                    EXPECT_FALSE(result.is_err());
+                    done = true;
+                  });
+  RunLoopUntil([&] { return done; });
+
+  // GetStoryData should contain the annotations.
+  done = false;
+  storage_->GetStoryData(story_name)
+      ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
+        ASSERT_NE(nullptr, story_data);
+        ASSERT_TRUE(story_data->has_story_info());
+        EXPECT_TRUE(story_data->story_info().has_annotations());
+
+        const auto annotations = story_data->mutable_story_info()->mutable_annotations();
+        EXPECT_EQ(3u, annotations->size());
+
+        EXPECT_THAT(annotations, Pointee(UnorderedElementsAre(
+                                     annotations::AnnotationEq(ByRef(text_annotation)),
+                                     annotations::AnnotationEq(ByRef(bytes_annotation)),
+                                     annotations::AnnotationEq(ByRef(buffer_annotation)))));
+
+        done = true;
+      });
+  RunLoopUntil([&] { return done; });
+}
+
+// Verifies that Annotate merges new annotations, preserving existing ones.
+TEST_F(PuppetMasterTest, AnnotateMerge) {
+  const auto story_name = "annotate_merge";
+
+  auto story = ControlStory(story_name);
+
+  // Create the initial set of annotations.
+  auto first_annotation_value = fuchsia::modular::AnnotationValue{};
+  first_annotation_value.set_text("first_value");
+  auto first_annotation = fuchsia::modular::Annotation{
+      .key = "first_key", .value = fidl::MakeOptional(fidl::Clone(first_annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(fidl::Clone(first_annotation));
+
+  // Annotate the story.
+  bool done{false};
+  story->Annotate(std::move(annotations),
+                  [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+                    EXPECT_FALSE(result.is_err());
+                    done = true;
+                  });
+  RunLoopUntil([&] { return done; });
+
+  // GetStoryData should contain the first annotation.
+  done = false;
+  storage_->GetStoryData(story_name)
+      ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
+        ASSERT_NE(nullptr, story_data);
+        ASSERT_TRUE(story_data->has_story_info());
+        EXPECT_TRUE(story_data->story_info().has_annotations());
+
+        const auto annotations = story_data->mutable_story_info()->mutable_annotations();
+        EXPECT_EQ(1u, annotations->size());
+
+        EXPECT_EQ(annotations->at(0).key, first_annotation.key);
+        EXPECT_EQ(annotations->at(0).value->text(), first_annotation_value.text());
+
+        done = true;
+      });
+  RunLoopUntil([&] { return done; });
+
+  // Create another set of annotations that should be merged into the initial one.
+  auto second_annotation_value = fuchsia::modular::AnnotationValue{};
+  second_annotation_value.set_text("second_value");
+  auto second_annotation = fuchsia::modular::Annotation{
+      .key = "second_key", .value = fidl::MakeOptional(fidl::Clone(second_annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations_2;
+  annotations_2.push_back(fidl::Clone(second_annotation));
+
+  // Annotate the story with the second set of annotations.
+  done = false;
+  story->Annotate(std::move(annotations_2),
+                  [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+                    EXPECT_FALSE(result.is_err());
+                    done = true;
+                  });
+  RunLoopUntil([&] { return done; });
+
+  // GetStoryData should now return annotations from both the first and second set.
+  done = false;
+  storage_->GetStoryData(story_name)
+      ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
+        ASSERT_NE(nullptr, story_data);
+        ASSERT_TRUE(story_data->has_story_info());
+        EXPECT_TRUE(story_data->story_info().has_annotations());
+
+        const auto annotations = story_data->mutable_story_info()->mutable_annotations();
+        EXPECT_EQ(2u, annotations->size());
+
+        EXPECT_THAT(annotations, Pointee(UnorderedElementsAre(
+                                     annotations::AnnotationEq(ByRef(first_annotation)),
+                                     annotations::AnnotationEq(ByRef(second_annotation)))));
+
+        done = true;
+      });
+  RunLoopUntil([&] { return done; });
+}
+
+// Verifies that Annotate returns an error when one of the annotations has a buffer value that
+// exceeds MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES.
+TEST_F(PuppetMasterTest, AnnotateBufferValueTooBig) {
+  const auto story_name = "annotate_buffer_value_too_big";
+
+  auto story = ControlStory(story_name);
+
+  // Create an annotation with a large buffer value.
+  fuchsia::mem::Buffer buffer{};
+  std::string buffer_value(fuchsia::modular::MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES + 1, 'x');
+  ASSERT_TRUE(fsl::VmoFromString(buffer_value, &buffer));
+
+  auto annotation_value = fuchsia::modular::AnnotationValue{};
+  annotation_value.set_buffer(std::move(buffer));
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "buffer_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+
+  std::vector<fuchsia::modular::Annotation> annotations;
+  annotations.push_back(std::move(annotation));
+
+  // Annotate the story.
+  bool done{false};
+  story->Annotate(std::move(annotations),
+                  [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+                    EXPECT_TRUE(result.is_err());
+                    EXPECT_EQ(fuchsia::modular::AnnotationError::VALUE_TOO_BIG, result.err());
+                    done = true;
+                  });
+  RunLoopUntil([&] { return done; });
+}
+
+// Verifies that Annotate returns an error when adding new annotations to exceeds
+// MAX_ANNOTATIONS_PER_STORY.
+TEST_F(PuppetMasterTest, AnnotateTooMany) {
+  // A single Annotate call should not accept more annotations than allowed on a single story.
+  ASSERT_GE(fuchsia::modular::MAX_ANNOTATIONS_PER_STORY, fuchsia::modular::MAX_ANNOTATE_SIZE);
+
+  const auto story_name = "annotate_too_many";
+
+  auto story = ControlStory(story_name);
+
+  // Annotate the story repeatedly, in batches of MAX_ANNOTATE_SIZE items, in order
+  // to reach, but not exceed the MAX_ANNOTATIONS_PER_STORY limit.
+  for (unsigned int num_annotate_calls = 0;
+       num_annotate_calls <
+       fuchsia::modular::MAX_ANNOTATIONS_PER_STORY / fuchsia::modular::MAX_ANNOTATE_SIZE;
+       ++num_annotate_calls) {
+    std::vector<fuchsia::modular::Annotation> annotations;
+
+    // Create MAX_ANNOTATE_SIZE annotations for each call to Annotate.
+    for (unsigned int num_annotations = 0; num_annotations < fuchsia::modular::MAX_ANNOTATE_SIZE;
+         ++num_annotations) {
+      auto annotation_value = fuchsia::modular::AnnotationValue{};
+      annotation_value.set_text("test_annotation_value");
+      auto annotation =
+          fuchsia::modular::Annotation{.key = "annotation_" + std::to_string(num_annotate_calls) +
+                                              "_" + std::to_string(num_annotations),
+                                       .value = fidl::MakeOptional(std::move(annotation_value))};
+      annotations.push_back(std::move(annotation));
+    }
+
+    // Annotate the story.
+    bool done{false};
+    story->Annotate(
+        std::move(annotations), [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+          EXPECT_FALSE(result.is_err())
+              << "Annotate call #" << num_annotate_calls << " returned an error when trying to add "
+              << std::to_string(fuchsia::modular::MAX_ANNOTATE_SIZE)
+              << " annotations to the story.";
+          done = true;
+        });
+    RunLoopUntil([&] { return done; });
+  }
+
+  // Create some more annotations for a total of (MAX_ANNOTATIONS_PER_STORY + 1) on the story.
+  std::vector<fuchsia::modular::Annotation> annotations;
+
+  for (unsigned int num_annotations = 0;
+       num_annotations <
+       (fuchsia::modular::MAX_ANNOTATIONS_PER_STORY % fuchsia::modular::MAX_ANNOTATE_SIZE) + 1;
+       ++num_annotations) {
+    auto annotation_value = fuchsia::modular::AnnotationValue{};
+    annotation_value.set_text("test_annotation_value");
+    auto annotation =
+        fuchsia::modular::Annotation{.key = "excess_annotation_" + std::to_string(num_annotations),
+                                     .value = fidl::MakeOptional(std::move(annotation_value))};
+    annotations.push_back(std::move(annotation));
+  }
+
+  // Annotate the story.
+  bool done{false};
+  story->Annotate(
+      std::move(annotations), [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+        EXPECT_TRUE(result.is_err());
+        EXPECT_EQ(fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS, result.err());
+        done = true;
+      });
   RunLoopUntil([&] { return done; });
 }
 

@@ -42,6 +42,10 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   void SetStoryInfoExtra(std::vector<fuchsia::modular::StoryInfoExtraEntry> story_info_extra,
                          SetStoryInfoExtraCallback callback) override;
 
+  // |StoryPuppetMaster|
+  void Annotate(std::vector<fuchsia::modular::Annotation> annotations,
+                AnnotateCallback callback) override;
+
   std::string story_name_;
   SessionStorage* const session_storage_;  // Not owned.
   StoryCommandExecutor* const executor_;   // Not owned.
