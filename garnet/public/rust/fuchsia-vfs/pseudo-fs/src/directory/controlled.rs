@@ -318,8 +318,9 @@ impl<'entries> Controller<'entries> {
     pub fn remove_entry_res<Name>(
         &self,
         name: Name,
-    ) -> impl Future<Output = Result<Option<Box<dyn DirectoryEntry + 'entries>>, RemoveEntryResError>>
-                 + 'entries
+    ) -> impl Future<
+        Output = Result<Option<Box<dyn DirectoryEntry + 'entries>>, RemoveEntryResError>,
+    > + 'entries
     where
         Name: Into<String>,
     {
