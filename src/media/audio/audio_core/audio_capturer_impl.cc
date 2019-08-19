@@ -30,7 +30,7 @@ namespace media::audio {
 // we throttle these even more, specified by kCaptureUnderflowErrorInterval. Note: by default we
 // set NDEBUG builds to WARNING and DEBUG builds to INFO. To disable all logging of client-side
 // underflows, set kLogCaptureUnderflow to false.
-static constexpr bool kLogCaptureUnderflow = true;
+static constexpr bool kLogCaptureUnderflow = false;
 static constexpr uint16_t kCaptureUnderflowTraceInterval = 1;
 static constexpr uint16_t kCaptureUnderflowInfoInterval = 10;
 static constexpr uint16_t kCaptureUnderflowErrorInterval = 100;
