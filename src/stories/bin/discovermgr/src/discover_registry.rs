@@ -20,9 +20,7 @@ pub async fn run_server(
     mod_manager: Arc<Mutex<ModManager>>,
     mut stream: DiscoverRegistryRequestStream,
 ) -> Result<(), Error> {
-    while let Some(request) =
-        stream.try_next().await.context("Error running discover registry")?
-    {
+    while let Some(request) = stream.try_next().await.context("Error running discover registry")? {
         match request {
             DiscoverRegistryRequest::RegisterModuleOutputWriter { module, request, .. } => {
                 let module_output_stream = request.into_stream()?;
@@ -45,6 +43,7 @@ mod tests {
         crate::{
             story_context_store::{ContextEntity, Contributor},
             story_manager::StoryManager,
+            story_storage::MemoryStorage,
             testing::{FakeEntityData, FakeEntityResolver},
         },
         fidl_fuchsia_app_discover::{
@@ -59,7 +58,7 @@ mod tests {
     async fn test_register_module_output() -> Result<(), Error> {
         let (puppet_master_client, _) =
             fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
-        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
         let mod_manager =
             Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
 

@@ -39,17 +39,11 @@ impl SearchSuggestionsProvider for StorySuggestionsProvider {
         _context: &'a Vec<&'a ContextEntity>,
     ) -> LocalFutureObj<'a, Result<Vec<Suggestion>, Error>> {
         LocalFutureObj::new(Box::new(async move {
-            let result = self
-                .story_manager
-                .lock()
-                .get_name_titles()
-                .iter()
-                .map(|(name, title)| {
-                    StorySuggestionsProvider::new_story_suggestion(
-                        name.to_string(),
-                        title.to_string(),
-                    )
-                })
+            let story_manager = self.story_manager.lock();
+            let name_titles = story_manager.get_name_titles().await?;
+            let result = name_titles
+                .into_iter()
+                .map(|(name, title)| StorySuggestionsProvider::new_story_suggestion(name, title))
                 .collect::<Vec<Suggestion>>();
             Ok(result)
         }))

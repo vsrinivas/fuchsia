@@ -41,7 +41,8 @@ impl ModManager {
             SuggestedAction::AddMod(action) => {
                 // execute a mod suggestion
                 self.execute_actions(vec![&action], /*focus=*/ true).await?;
-                self.story_manager.lock().add_to_story_graph(&action);
+                let mut story_manager = self.story_manager.lock();
+                story_manager.add_to_story_graph(&action).await?;
                 for param in action.intent().parameters() {
                     self.actions
                         .entry(param.entity_reference().to_string())
@@ -51,10 +52,12 @@ impl ModManager {
             }
 
             SuggestedAction::RestoreStory(restore_story_info) => {
-                let actions = self
-                    .story_manager
-                    .lock()
+                let mut story_manager = self.story_manager.lock();
+                let modules = story_manager
                     .restore_story_graph(restore_story_info.story_name.to_string())
+                    .await?;
+
+                let actions = modules
                     .map(|module| {
                         AddModInfo::new(
                             module.last_intent.clone(),
@@ -66,7 +69,8 @@ impl ModManager {
                 self.execute_actions(
                     actions.iter().map(|action| action).collect(),
                     /*focus=*/ true,
-                ).await?;
+                )
+                .await?;
             }
         }
         Ok(())
@@ -80,9 +84,8 @@ impl ModManager {
             .into_iter()
             .map(|action| action.replace_reference_in_parameters(old, new))
             .collect::<HashSet<AddModInfo>>();
-        join_all(
-            actions.iter().map(|action| self.execute_actions(vec![action], /*focus=*/ false)),
-        ).await;
+        join_all(actions.iter().map(|action| self.execute_actions(vec![action], /*focus=*/ false)))
+            .await;
         self.actions.insert(new.to_string(), actions);
     }
 
@@ -129,6 +132,7 @@ mod tests {
         super::*,
         crate::{
             models::{DisplayInfo, Intent},
+            story_storage::MemoryStorage,
             testing::puppet_master_fake::PuppetMasterFake,
         },
         fidl_fuchsia_modular::{IntentParameter, IntentParameterData, PuppetMasterMarker},
@@ -172,7 +176,7 @@ mod tests {
         });
 
         puppet_master_fake.spawn(request_stream);
-        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
         let mut mod_manager = ModManager::new(puppet_master_client, story_manager);
 
         let suggestion = suggestion!(
@@ -231,7 +235,7 @@ mod tests {
         });
 
         puppet_master_fake.spawn(request_stream);
-        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
         let mut mod_manager = ModManager::new(puppet_master_client, story_manager);
 
         // Set initial state. The actions here will be executed with the new

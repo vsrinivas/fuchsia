@@ -9,6 +9,9 @@
         "services": [
             "fuchsia.device.NameProvider",
             "fuchsia.sys.Loader",
+            "fuchsia.ledger.Ledger",
+            "fuchsia.ledger.Page",
+            "fuchsia.ledger.PageSnapshot",
             "fuchsia.logger.LogSink",
             "fuchsia.modular.EntityResolver",
             "fuchsia.modular.PuppetMaster",

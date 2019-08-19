@@ -94,6 +94,7 @@ mod tests {
         crate::{
             models::{AddModInfo, DisplayInfo, Intent, Suggestion},
             story_manager::StoryManager,
+            story_storage::MemoryStorage,
             testing::{
                 puppet_master_fake::PuppetMasterFake, suggestion_providers::TestSuggestionsProvider,
             },
@@ -122,7 +123,7 @@ mod tests {
 
         // Set up our test suggestions provider. This will provide two suggestions
         // all the time.
-        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
         let mod_manager =
             Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
         let mut suggestions_manager = SuggestionsManager::new(mod_manager);
@@ -130,7 +131,9 @@ mod tests {
 
         // Get suggestions and ensure the right ones are received.
         let context = vec![];
-        let suggestions = suggestions_manager.get_suggestions("garnet", &context).await
+        let suggestions = suggestions_manager
+            .get_suggestions("garnet", &context)
+            .await
             .collect::<Vec<&Suggestion>>();
         assert_eq!(suggestions.len(), 2);
         let titles = suggestions
@@ -176,7 +179,7 @@ mod tests {
         });
 
         puppet_master_fake.spawn(request_stream);
-        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
         let mod_manager =
             Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
         let mut suggestions_manager = SuggestionsManager::new(mod_manager);

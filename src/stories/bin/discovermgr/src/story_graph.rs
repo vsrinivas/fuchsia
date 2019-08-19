@@ -5,6 +5,7 @@
 use {
     crate::models::Intent,
     maplit::{hashmap, hashset},
+    serde_derive::{Deserialize, Serialize},
     std::{
         collections::{HashMap, HashSet},
         time::{SystemTime, UNIX_EPOCH},
@@ -44,7 +45,7 @@ impl SessionGraph {
         self.stories.get_mut(story_id)
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct StoryGraph {
     modules: HashMap<ModuleId, ModuleData>,
 }
@@ -84,7 +85,7 @@ impl StoryGraph {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct ModuleData {
     outputs: HashMap<OutputName, ModuleOutput>,
     children: HashSet<ModuleId>,
@@ -154,7 +155,7 @@ impl ModuleData {
             SystemTime::now().duration_since(UNIX_EPOCH).expect("time went backwards").as_nanos();
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct ModuleOutput {
     entity_reference: EntityReference,
     consumers: HashSet<(ModuleId, EntityType)>,

@@ -11,6 +11,7 @@ use {
         mod_manager::ModManager,
         story_context_store::StoryContextStore,
         story_manager::StoryManager,
+        story_storage::{LedgerStorage, MemoryStorage, StoryStorage},
         suggestion_providers::{
             ContextualSuggestionsProvider, PackageSuggestionsProvider, StorySuggestionsProvider,
         },
@@ -43,6 +44,7 @@ mod module_output;
 mod story_context_store;
 mod story_graph;
 mod story_manager;
+mod story_storage;
 mod suggestion_providers;
 mod suggestions_manager;
 mod suggestions_service;
@@ -93,7 +95,12 @@ async fn main() -> Result<(), Error> {
 
     let puppet_master =
         connect_to_service::<PuppetMasterMarker>().context("failed to connect to puppet master")?;
-    let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+    let storage =
+        LedgerStorage::new().map(|s| Box::new(s) as Box<dyn StoryStorage>).unwrap_or_else(|_| {
+            fx_log_err!("Error in creating LedgerStorage, Use MemoryStorage instead");
+            Box::new(MemoryStorage::new()) as Box<dyn StoryStorage>
+        });
+    let story_manager = Arc::new(Mutex::new(StoryManager::new(storage)));
     let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master, story_manager.clone())));
 
     let mut suggestions_manager = SuggestionsManager::new(mod_manager.clone());

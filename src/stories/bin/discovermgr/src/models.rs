@@ -12,7 +12,7 @@ use {
         SurfaceArrangement, SurfaceDependency, SurfaceRelation,
     },
     maplit::btreeset,
-    serde_derive::Deserialize,
+    serde_derive::{Deserialize, Serialize},
     std::collections::{BTreeSet, HashMap},
     uuid::Uuid,
 };
@@ -103,14 +103,14 @@ pub struct AddModInfo {
     pub intent: Intent,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct Intent {
     pub handler: Option<String>,
     pub action: Option<String>,
     pub parameters: BTreeSet<IntentParameter>,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct IntentParameter {
     pub name: String,
     pub entity_reference: String,

@@ -98,12 +98,9 @@ impl ModuleOutputWriterService {
                     let mut issuer_lock = self.mod_manager.lock();
                     issuer_lock.replace(old_reference, &reference).await;
                 }
-                context_store_lock.contribute(
-                    &self.story_id,
-                    &self.module_id,
-                    &output_name,
-                    &reference,
-                ).await?;
+                context_store_lock
+                    .contribute(&self.story_id, &self.module_id, &output_name, &reference)
+                    .await?;
             }
             None => context_store_lock.withdraw(&self.story_id, &self.module_id, &output_name),
         }
@@ -119,6 +116,7 @@ mod tests {
             models::{AddModInfo, Intent},
             story_context_store::{ContextEntity, Contributor},
             story_manager::StoryManager,
+            story_storage::MemoryStorage,
             testing::{FakeEntityData, FakeEntityResolver, PuppetMasterFake},
         },
         fidl_fuchsia_app_discover::ModuleOutputWriterMarker,
@@ -133,7 +131,7 @@ mod tests {
     async fn test_write() {
         let (puppet_master_client, _) =
             fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
-        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
         let mod_manager =
             Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
 
@@ -220,7 +218,7 @@ mod tests {
 
         // Set initial state of connected mods. The actions here will be executed with the new
         // entity reference in the parameter.
-        let story_manager = Arc::new(Mutex::new(StoryManager::new()));
+        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
         let mut mod_manager = ModManager::new(puppet_master_client, story_manager);
         let intent = Intent::new().with_action("PLAY_MUSIC").add_parameter("artist", "peridot-ref");
         let action = AddModInfo::new(intent, Some("story1".to_string()), Some("mod-a".to_string()));
