@@ -16,11 +16,41 @@
 
 #include <trace/event.h>
 
+#include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
+#include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
+
+BatchUpload::UploadStatus BatchUpload::EncryptionStatusToUploadStatus(encryption::Status status) {
+  if (status == encryption::Status::OK) {
+    return UploadStatus::OK;
+  } else if (encryption::IsPermanentError(status)) {
+    return UploadStatus::PERMANENT_ERROR;
+  } else {
+    return UploadStatus::TEMPORARY_ERROR;
+  }
+}
+
+BatchUpload::UploadStatus BatchUpload::LedgerStatusToUploadStatus(ledger::Status status) {
+  if (status == ledger::Status::OK) {
+    return UploadStatus::OK;
+  } else {
+    return UploadStatus::PERMANENT_ERROR;
+  }
+}
+
+BatchUpload::ErrorType BatchUpload::UploadStatusToErrorType(BatchUpload::UploadStatus status) {
+  FXL_DCHECK(status != UploadStatus::OK);
+
+  if (status == UploadStatus::TEMPORARY_ERROR) {
+    return ErrorType::TEMPORARY;
+  } else {
+    return ErrorType::PERMANENT;
+  }
+}
 
 BatchUpload::BatchUpload(storage::PageStorage* storage,
                          encryption::EncryptionService* encryption_service,
@@ -223,31 +253,110 @@ void BatchUpload::FilterAndUploadCommits() {
       }));
 }
 
+void BatchUpload::EncodeCommit(
+    const storage::Commit& commit,
+    fit::function<void(UploadStatus, cloud_provider::Commit)> commit_callback) {
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<UploadStatus>>(UploadStatus::OK);
+
+  auto remote_commit = std::make_unique<cloud_provider::Commit>();
+  auto remote_commit_ptr = remote_commit.get();
+
+  // TODO(mariagl): change to the encoded version of the commit id.
+  remote_commit_ptr->set_id(convert::ToArray(commit.GetId()));
+  encryption_service_->EncryptCommit(
+      commit.GetStorageBytes().ToString(),
+      waiter->MakeScoped([callback = waiter->NewCallback(), remote_commit_ptr](
+                             encryption::Status status, std::string encrypted_commit) {
+        if (status == encryption::Status::OK) {
+          remote_commit_ptr->set_data(convert::ToArray(encrypted_commit));
+        }
+        callback(EncryptionStatusToUploadStatus(status));
+      }));
+
+  storage_->GetDiffForCloud(
+      commit,
+      waiter->MakeScoped([this, waiter, callback = waiter->NewCallback(), remote_commit_ptr](
+                             storage::Status status, storage::CommitIdView base_commit,
+                             std::vector<storage::EntryChange> changes) mutable {
+        if (status != storage::Status::OK) {
+          callback(LedgerStatusToUploadStatus(status));
+          return;
+        }
+        EncodeDiff(base_commit, std::move(changes),
+                   waiter->MakeScoped([callback = std::move(callback), remote_commit_ptr](
+                                          UploadStatus status, cloud_provider::Diff diff) {
+                     if (status == UploadStatus::OK) {
+                       remote_commit_ptr->set_diff(std::move(diff));
+                     }
+                     callback(status);
+                   }));
+      }));
+
+  waiter->Finalize([remote_commit = std::move(remote_commit),
+                    commit_callback = std::move(commit_callback)](UploadStatus status) mutable {
+    commit_callback(status, std::move(*remote_commit));
+  });
+}
+
+void BatchUpload::EncodeDiff(storage::CommitIdView commit_id,
+                             std::vector<storage::EntryChange> entries,
+                             fit::function<void(UploadStatus, cloud_provider::Diff)> callback) {
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<UploadStatus, cloud_provider::DiffEntry>>(
+      UploadStatus::OK);
+
+  cloud_provider::Diff diff;
+  if (commit_id == storage::kFirstPageCommitId) {
+    diff.mutable_base_state()->set_empty_page({});
+  } else {
+    diff.mutable_base_state()->set_at_commit(convert::ToArray(commit_id));
+  }
+
+  for (auto& entry : entries) {
+    EncodeEntry(std::move(entry), waiter->NewCallback());
+  }
+
+  waiter->Finalize(
+      [diff = std::move(diff), callback = std::move(callback)](
+          UploadStatus status, std::vector<cloud_provider::DiffEntry> entries) mutable {
+        if (status != UploadStatus::OK) {
+          callback(status, {});
+          return;
+        }
+        diff.set_changes(std::move(entries));
+        callback(status, std::move(diff));
+      });
+}
+
+void BatchUpload::EncodeEntry(
+    storage::EntryChange change,
+    fit::function<void(UploadStatus, cloud_provider::DiffEntry)> callback) {
+  cloud_provider::DiffEntry remote_entry;
+  remote_entry.set_entry_id(convert::ToArray(change.entry.entry_id));
+  remote_entry.set_operation(change.deleted ? cloud_provider::Operation::DELETION
+                                            : cloud_provider::Operation::INSERTION);
+  remote_entry.set_data(
+      convert::ToArray(EncodeEntryPayload(change.entry, storage_->GetObjectIdentifierFactory())));
+  callback(UploadStatus::OK, std::move(remote_entry));
+}
+
 void BatchUpload::UploadCommits() {
   FXL_DCHECK(!errored_);
   std::vector<storage::CommitId> ids;
-  auto waiter = fxl::MakeRefCounted<callback::Waiter<encryption::Status, cloud_provider::Commit>>(
-      encryption::Status::OK);
+  auto waiter =
+      fxl::MakeRefCounted<callback::Waiter<UploadStatus, cloud_provider::Commit>>(UploadStatus::OK);
+
   for (auto& storage_commit : commits_) {
-    storage::CommitId id = storage_commit->GetId();
-    encryption_service_->EncryptCommit(
-        storage_commit->GetStorageBytes().ToString(),
-        [id, callback = waiter->NewCallback()](encryption::Status status,
-                                               std::string encrypted_storage_bytes) mutable {
-          cloud_provider::Commit remote_commit;
-          *remote_commit.mutable_id() = convert::ToArray(id);
-          *remote_commit.mutable_data() = convert::ToArray(encrypted_storage_bytes);
-          callback(status, std::move(remote_commit));
-        });
-    ids.push_back(std::move(id));
+    EncodeCommit(*storage_commit, waiter->NewCallback());
+    ids.push_back(storage_commit->GetId());
   }
+
   waiter->Finalize(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
-      [this, ids = std::move(ids)](encryption::Status status,
+      [this, ids = std::move(ids)](UploadStatus status,
                                    std::vector<cloud_provider::Commit> commits) mutable {
-        if (status != encryption::Status::OK) {
+        if (status != UploadStatus::OK) {
           errored_ = true;
-          on_error_(ErrorType::PERMANENT);
+          on_error_(UploadStatusToErrorType(status));
           return;
         }
         cloud_provider::CommitPack commit_pack;

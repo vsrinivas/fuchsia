@@ -36,6 +36,10 @@ std::unique_ptr<TestCommit> TestPageStorage::NewCommit(std::string id, std::stri
 
 storage::PageId TestPageStorage::GetId() { return page_id_to_return; }
 
+storage::ObjectIdentifierFactory* TestPageStorage::GetObjectIdentifierFactory() {
+  return &object_identifier_factory_;
+}
+
 void TestPageStorage::SetSyncDelegate(storage::PageSyncDelegate* page_sync_delegate) {
   page_sync_delegate_ = page_sync_delegate;
 }
@@ -188,6 +192,23 @@ void TestPageStorage::GetPiece(
                   [piece = std::move(piece), callback = std::move(callback)]() mutable {
                     callback(ledger::Status::OK, std::move(piece));
                   });
+}
+
+void TestPageStorage::GetDiffForCloud(
+    const storage::Commit& commit,
+    fit::function<void(ledger::Status, storage::CommitIdView, std::vector<storage::EntryChange>)>
+        callback) {
+  if (should_fail_get_diff_for_cloud) {
+    async::PostTask(dispatcher_, [callback = std::move(callback)] {
+      callback(ledger::Status::IO_ERROR, "", {});
+    });
+    return;
+  }
+
+  auto& diff = diffs_to_return[commit.GetId()];
+  async::PostTask(dispatcher_, [diff, callback = std::move(callback)] {
+    callback(ledger::Status::OK, diff.first, std::move(diff.second));
+  });
 }
 
 }  // namespace cloud_sync

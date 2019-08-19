@@ -66,6 +66,22 @@ class BatchUpload {
   void Retry();
 
  private:
+  // Status of an upload operation: successful, or the type of the error to return.
+  enum class UploadStatus {
+    OK,
+    TEMPORARY_ERROR,
+    PERMANENT_ERROR,
+  };
+
+  // Converts an encryption status to an upload status.
+  static UploadStatus EncryptionStatusToUploadStatus(encryption::Status status);
+
+  // Converts a ledger status to an upload status.
+  static UploadStatus LedgerStatusToUploadStatus(ledger::Status status);
+
+  // Converts a non-OK upload status to its error type.
+  static ErrorType UploadStatusToErrorType(UploadStatus status);
+
   void StartObjectUpload();
 
   void UploadNextObject();
@@ -90,6 +106,18 @@ class BatchUpload {
 
   // Notifies an error when trying to upload the given object.
   void EnqueueForRetryAndSignalError(storage::ObjectIdentifier object_identifier);
+
+  // Encodes a commit for sending to the cloud.
+  void EncodeCommit(const storage::Commit& commit,
+                    fit::function<void(UploadStatus, cloud_provider::Commit)> callback);
+
+  // Encodes a diff for sending to the cloud.
+  void EncodeDiff(storage::CommitIdView commit_id, std::vector<storage::EntryChange> entries,
+                  fit::function<void(UploadStatus, cloud_provider::Diff)> callback);
+
+  // Encodes a diff entry for sending to the cloud.
+  void EncodeEntry(storage::EntryChange entry,
+                   fit::function<void(UploadStatus, cloud_provider::DiffEntry)> callback);
 
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;

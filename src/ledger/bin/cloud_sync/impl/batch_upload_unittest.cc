@@ -16,12 +16,14 @@
 
 #include <gmock/gmock.h>
 
+#include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/commit.h"
+#include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
@@ -32,6 +34,7 @@ namespace {
 using ::storage::fake::FakeObject;
 using ::storage::fake::FakePiece;
 using ::testing::Each;
+using ::testing::SizeIs;
 using ::testing::Truly;
 
 template <typename E>
@@ -45,7 +48,6 @@ class BaseBatchUploadTest : public gtest::TestLoopFixture {
 
  public:
   TestPageStorage storage_;
-  storage::fake::FakeObjectIdentifierFactory object_identifier_factory_;
   E encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
   TestPageCloud page_cloud_;
@@ -82,7 +84,7 @@ class BaseBatchUploadTest : public gtest::TestLoopFixture {
   // is only used as an opaque identifier for cloud_sync.
   storage::ObjectIdentifier MakeObjectIdentifier(std::string object_digest) {
     return encryption_service_.MakeObjectIdentifier(
-        &object_identifier_factory_, storage::ObjectDigest(std::move(object_digest)));
+        storage_.GetObjectIdentifierFactory(), storage::ObjectDigest(std::move(object_digest)));
   }
 
  private:
@@ -259,6 +261,134 @@ TEST_F(BatchUploadTest, FailedObjectUpload) {
   // Verify that neither the objects nor the commit were marked as synced.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
   EXPECT_TRUE(storage_.objects_marked_as_synced.empty());
+}
+
+// Test an upload of a commit with a diff from the empty page.
+TEST_F(BatchUploadTest, DiffFromEmpty) {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content", true));
+  auto batch_upload = MakeBatchUpload(std::move(commits));
+
+  auto obj_id0 = MakeObjectIdentifier("obj_digest0");
+  auto obj_id1 = MakeObjectIdentifier("obj_digest1");
+  storage_.diffs_to_return["id"] =
+      std::make_pair(storage::kFirstPageCommitId.ToString(),
+                     std::vector<storage::EntryChange>{
+                         {{"key0", obj_id0, storage::KeyPriority::EAGER, "entry0"}, false},
+                         {{"key1", obj_id1, storage::KeyPriority::LAZY, "entry1"}, true}});
+
+  batch_upload->Start();
+  RunLoopUntilIdle();
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 0u);
+
+  // Verify the artifacts uploaded to cloud provider.
+  EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(
+      encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
+      "content");
+  ASSERT_TRUE(page_cloud_.received_commits[0].has_diff());
+  ASSERT_TRUE(page_cloud_.received_commits[0].diff().has_base_state());
+  EXPECT_TRUE(page_cloud_.received_commits[0].diff().base_state().is_empty_page());
+  EXPECT_TRUE(page_cloud_.received_commits[0].diff().has_changes());
+  EXPECT_THAT(page_cloud_.received_commits[0].diff().changes(), SizeIs(2));
+
+  auto& changes = page_cloud_.received_commits[0].diff().changes();
+  ASSERT_TRUE(changes[0].has_operation());
+  ASSERT_TRUE(changes[0].has_entry_id());
+  ASSERT_TRUE(changes[0].has_data());
+  EXPECT_EQ(changes[0].operation(), cloud_provider::Operation::INSERTION);
+  storage::Entry entry0;
+  ASSERT_TRUE(DecodeEntryPayload(changes[0].entry_id(), changes[0].data(),
+                                 storage_.GetObjectIdentifierFactory(), &entry0));
+  EXPECT_EQ(entry0, (storage::Entry{"key0", obj_id0, storage::KeyPriority::EAGER, "entry0"}));
+
+  ASSERT_TRUE(changes[1].has_operation());
+  ASSERT_TRUE(changes[1].has_entry_id());
+  ASSERT_TRUE(changes[1].has_data());
+  EXPECT_EQ(changes[1].operation(), cloud_provider::Operation::DELETION);
+  EXPECT_EQ(changes[1].entry_id(), convert::ToArray("entry1"));
+  storage::Entry entry1;
+  ASSERT_TRUE(DecodeEntryPayload(changes[1].entry_id(), changes[1].data(),
+                                 storage_.GetObjectIdentifierFactory(), &entry1));
+  EXPECT_EQ(entry1, (storage::Entry{"key1", obj_id1, storage::KeyPriority::LAZY, "entry1"}));
+
+  EXPECT_TRUE(page_cloud_.received_objects.empty());
+
+  // Verify the sync status in storage.
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 1u);
+  EXPECT_EQ(storage_.commits_marked_as_synced.count("id"), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 0u);
+}
+
+// Test an upload of a commit with a diff from another commit.
+TEST_F(BatchUploadTest, DiffFromCommit) {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content", true));
+  auto batch_upload = MakeBatchUpload(std::move(commits));
+
+  storage_.diffs_to_return["id"] =
+      std::make_pair("other_commit", std::vector<storage::EntryChange>{});
+
+  batch_upload->Start();
+  RunLoopUntilIdle();
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 0u);
+
+  // Verify the artifacts uploaded to cloud provider.
+  EXPECT_EQ(page_cloud_.received_commits.size(), 1u);
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  EXPECT_EQ(
+      encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
+      "content");
+  ASSERT_TRUE(page_cloud_.received_commits.front().has_diff());
+  ASSERT_TRUE(page_cloud_.received_commits.front().diff().has_base_state());
+  ASSERT_TRUE(page_cloud_.received_commits.front().diff().base_state().is_at_commit());
+  EXPECT_EQ(page_cloud_.received_commits.front().diff().base_state().at_commit(),
+            convert::ToArray("other_commit"));
+  ASSERT_TRUE(page_cloud_.received_commits.front().diff().has_changes());
+  EXPECT_THAT(page_cloud_.received_commits.front().diff().changes(), SizeIs(0));
+
+  EXPECT_TRUE(page_cloud_.received_objects.empty());
+
+  // Verify the sync status in storage.
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 1u);
+  EXPECT_EQ(storage_.commits_marked_as_synced.count("id"), 1u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 0u);
+}
+
+TEST_F(BatchUploadTest, GetDiffFailure) {
+  storage_.should_fail_get_diff_for_cloud = true;
+
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content", true));
+
+  storage::ObjectIdentifier id1 = MakeObjectIdentifier("obj_digest1");
+  storage::ObjectIdentifier id2 = MakeObjectIdentifier("obj_digest2");
+
+  storage_.unsynced_objects_to_return[id1] = std::make_unique<FakePiece>(id1, "obj_data1");
+  storage_.unsynced_objects_to_return[id2] = std::make_unique<FakePiece>(id2, "obj_data2");
+
+  storage_.diffs_to_return["id"] = std::make_pair("parent", std::vector<storage::EntryChange>{});
+
+  auto batch_upload = MakeBatchUpload(std::move(commits));
+
+  batch_upload->Start();
+  RunLoopUntilIdle();
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
+  EXPECT_EQ(last_error_type_, BatchUpload::ErrorType::PERMANENT);
+
+  // Verify the artifacts uploaded to cloud provider.
+  EXPECT_EQ(page_cloud_.received_commits.size(), 0u);
+  EXPECT_THAT(page_cloud_.received_objects, SizeIs(2));
+
+  // Verify the sync status in storage.
+  EXPECT_EQ(storage_.commits_marked_as_synced.size(), 0u);
+  EXPECT_EQ(storage_.objects_marked_as_synced.size(), 2u);
 }
 
 // Test an upload that fails on uploading the commit.

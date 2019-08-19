@@ -17,6 +17,7 @@
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_commit.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 
@@ -31,51 +32,47 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   std::unique_ptr<TestCommit> NewCommit(std::string id, std::string content, bool unsynced = true);
 
+  // storage::PageStorage:
   storage::PageId GetId() override;
-
+  storage::ObjectIdentifierFactory* GetObjectIdentifierFactory() override;
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync_delegate) override;
-
   ledger::Status GetHeadCommits(
       std::vector<std::unique_ptr<const storage::Commit>>* head_commits) override;
-
   void AddCommitsFromSync(
       std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes, storage::ChangeSource source,
       fit::function<void(ledger::Status status, std::vector<storage::CommitId>)> callback) override;
-
   void GetUnsyncedPieces(fit::function<void(ledger::Status, std::vector<storage::ObjectIdentifier>)>
                              callback) override;
-
   void AddCommitWatcher(storage::CommitWatcher* watcher) override;
-
   void RemoveCommitWatcher(storage::CommitWatcher* watcher) override;
-
   void GetUnsyncedCommits(
       fit::function<void(ledger::Status, std::vector<std::unique_ptr<const storage::Commit>>)>
           callback) override;
-
   void MarkCommitSynced(const storage::CommitId& commit_id,
                         fit::function<void(ledger::Status)> callback) override;
-
   void MarkPieceSynced(storage::ObjectIdentifier object_identifier,
                        fit::function<void(ledger::Status)> callback) override;
-
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        fit::function<void(ledger::Status)> callback) override;
-
   void GetSyncMetadata(fxl::StringView key,
                        fit::function<void(ledger::Status, std::string)> callback) override;
-
   void GetObject(storage::ObjectIdentifier object_identifier, Location /*location*/,
                  fit::function<void(ledger::Status, std::unique_ptr<const storage::Object>)>
                      callback) override;
-
   void GetPiece(
       storage::ObjectIdentifier object_identifier,
       fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>)> callback) override;
+  void GetDiffForCloud(
+      const storage::Commit& commit,
+      fit::function<void(ledger::Status, storage::CommitIdView, std::vector<storage::EntryChange>)>
+          callback) override;
 
   storage::PageId page_id_to_return;
   // Commits to be returned from GetUnsyncedCommits calls.
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits_to_return;
+  // Diffs to be returned from GetDiffForCloud.
+  std::map<storage::CommitId, std::pair<storage::CommitId, std::vector<storage::EntryChange>>>
+      diffs_to_return;
   // Objects to be returned from GetUnsyncedPieces/GetObject calls.
   std::map<storage::ObjectIdentifier, std::unique_ptr<const storage::fake::FakePiece>>
       unsynced_objects_to_return;
@@ -84,6 +81,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   bool should_fail_get_unsynced_pieces = false;
   bool should_fail_add_commit_from_sync = false;
   bool should_delay_add_commit_confirmation = false;
+  bool should_fail_get_diff_for_cloud = false;
   bool should_fail_mark_piece_synced = false;
   std::vector<fit::closure> delayed_add_commit_confirmations;
 
@@ -97,6 +95,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   bool watcher_removed = false;
   std::map<storage::CommitId, std::string> received_commits;
   std::map<std::string, std::string> sync_metadata;
+  storage::fake::FakeObjectIdentifierFactory object_identifier_factory_;
 
  private:
   async_dispatcher_t* const dispatcher_;
