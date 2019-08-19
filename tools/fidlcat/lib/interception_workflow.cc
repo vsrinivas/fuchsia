@@ -98,6 +98,9 @@ void InterceptingTargetObserver::DidCreateProcess(zxdb::Target* target, zxdb::Pr
   process->AddObserver(&dispatcher_);
   workflow_->syscall_decoder_dispatcher()->AddLaunchedProcess(process->GetKoid());
   workflow_->SetBreakpoints(target);
+  // Register a new target to be able to attach to more processes.
+  zxdb::Target* next_target = workflow_->GetNewTarget();
+  workflow_->AddObserver(next_target);
 }
 
 void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* target, zxdb::Process* process,
@@ -127,7 +130,6 @@ InterceptionWorkflow::InterceptionWorkflow()
       delete_session_(true),
       loop_(new debug_ipc::PlatformMessageLoop()),
       delete_loop_(true),
-      target_count_(0),
       observer_(this) {}
 
 InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
@@ -136,7 +138,6 @@ InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
       delete_session_(false),
       loop_(loop),
       delete_loop_(false),
-      target_count_(0),
       observer_(this) {}
 
 InterceptionWorkflow::~InterceptionWorkflow() {
@@ -190,17 +191,17 @@ void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,
 }
 
 // Helper function that finds a target for fidlcat to attach itself to. The
-// target may already be running. |process_koid| should be set if you want to
-// attach to a particular given process.
+// target with |process_koid| must already be running.
 zxdb::Target* InterceptionWorkflow::GetTarget(uint64_t process_koid) {
-  if (process_koid != ULLONG_MAX) {
-    for (zxdb::Target* target : session_->system().GetTargets()) {
-      if (target->GetProcess() && target->GetProcess()->GetKoid() == process_koid) {
-        return target;
-      }
+  for (zxdb::Target* target : session_->system().GetTargets()) {
+    if (target->GetProcess() && target->GetProcess()->GetKoid() == process_koid) {
+      return target;
     }
   }
+  return session_->system().CreateNewTarget(nullptr);
+}
 
+zxdb::Target* InterceptionWorkflow::GetNewTarget() {
   for (zxdb::Target* target : session_->system().GetTargets()) {
     if (target->GetState() == zxdb::Target::State::kNone) {
       return target;
@@ -210,13 +211,9 @@ zxdb::Target* InterceptionWorkflow::GetTarget(uint64_t process_koid) {
 }
 
 // Gets the workflow to observe the given target.
-void InterceptionWorkflow::AddObserver(zxdb::Target* target) {
-  target->AddObserver(&observer_);
-  target_count_++;
-}
+void InterceptionWorkflow::AddObserver(zxdb::Target* target) { target->AddObserver(&observer_); }
 
-void InterceptionWorkflow::Attach(const std::vector<uint64_t>& process_koids,
-                                  KoidFunction and_then) {
+void InterceptionWorkflow::Attach(const std::vector<uint64_t>& process_koids) {
   for (uint64_t process_koid : process_koids) {
     // Get a target for this process.
     zxdb::Target* target = GetTarget(process_koid);
@@ -228,47 +225,30 @@ void InterceptionWorkflow::Attach(const std::vector<uint64_t>& process_koids,
     }
 
     // The debugger is not yet attached to the process.  Attach to it.
-    AddObserver(target);
-    target->Attach(process_koid, [process_koid, and_then = std::move(and_then)](
-                                     fxl::WeakPtr<zxdb::Target>, const zxdb::Err& err) {
+    target->Attach(process_koid, [this, target, process_koid](fxl::WeakPtr<zxdb::Target>,
+                                                              const zxdb::Err& err) {
       if (!err.ok()) {
         FXL_LOG(INFO) << "Unable to attach to koid " << process_koid << ": " << err.msg();
         return;
       } else {
         FXL_LOG(INFO) << "Attached to process with koid " << process_koid;
       }
-      and_then(err, process_koid);
+      target->GetProcess()->AddObserver(&observer_.process_observer());
+      SetBreakpoints(target);
     });
   }
 }
 
 void InterceptionWorkflow::Detach() {
-  if (target_count_ > 0) {
-    target_count_--;
-    if (target_count_ == 0) {
-      target_count_ = -1;  // don't execute this again.
+  if (configured_processes_.empty()) {
+    if (!shutdown_done_) {
+      shutdown_done_ = true;
       Shutdown();
     }
   }
 }
 
-class SetupTargetObserver : public zxdb::TargetObserver {
- public:
-  explicit SetupTargetObserver(KoidFunction&& fn) : fn_(std::move(fn)) {}
-  virtual ~SetupTargetObserver() {}
-
-  virtual void DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
-                                bool autoattached_to_new_process) override {
-    fn_(zxdb::Err(), process->GetKoid());
-    target->RemoveObserver(this);
-    delete this;
-  }
-
- private:
-  KoidFunction fn_;
-};
-
-void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, KoidFunction and_then) {
+void InterceptionWorkflow::Filter(zxdb::Target* target, const std::vector<std::string>& filter) {
   std::set<std::string> filter_set(filter.begin(), filter.end());
 
   for (auto it = filters_.begin(); it != filters_.end();) {
@@ -288,15 +268,9 @@ void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, KoidFu
     filters_.back()->SetPattern(pattern);
     filters_.back()->SetJob(default_job);
   }
-
-  GetTarget()->AddObserver(new SetupTargetObserver(std::move(and_then)));
-  AddObserver(GetTarget());
 }
 
-void InterceptionWorkflow::Launch(const std::vector<std::string>& command, KoidFunction and_then) {
-  zxdb::Target* target = GetTarget();
-  AddObserver(target);
-
+void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::string>& command) {
   FXL_CHECK(!command.empty()) << "No arguments passed to launcher";
 
   auto on_err = [command](const zxdb::Err& err) {
@@ -319,34 +293,33 @@ void InterceptionWorkflow::Launch(const std::vector<std::string>& command, KoidF
     request.inferior_type = debug_ipc::InferiorType::kComponent;
     request.argv = std::vector<std::string>(command.begin() + 1, command.end());
     session_->remote_api()->Launch(
-        std::move(request),
-        [target = target->GetWeakPtr(), on_err = std::move(on_err), and_then = std::move(and_then)](
-            const zxdb::Err& err, debug_ipc::LaunchReply reply) {
+        std::move(request), [this, target = target->GetWeakPtr(), on_err = std::move(on_err)](
+                                const zxdb::Err& err, debug_ipc::LaunchReply reply) {
           if (!on_err(err)) {
             return;
           }
           if (reply.status != debug_ipc::kZxOk) {
-            FXL_LOG(INFO) << "Could not start component " << reply.process_name << ": error "
-                          << reply.status;
+            FXL_LOG(INFO) << "Could not start component " << reply.process_name << ": "
+                          << DisplayStatus(reply.status);
           }
           target->session()->ExpectComponent(reply.component_id);
           if (target->GetProcess() != nullptr) {
-            and_then(err, target->GetProcess()->GetKoid());
+            SetBreakpoints(target.get());
           }
         });
     return;
   }
 
   target->SetArgs(command);
-  target->Launch([on_err = std::move(on_err), and_then = std::move(and_then)](
-                     fxl::WeakPtr<zxdb::Target> target, const zxdb::Err& err) {
-    if (!on_err(err)) {
-      return;
-    }
-    if (target->GetProcess() != nullptr) {
-      and_then(err, target->GetProcess()->GetKoid());
-    }
-  });
+  target->Launch(
+      [this, on_err = std::move(on_err)](fxl::WeakPtr<zxdb::Target> target, const zxdb::Err& err) {
+        if (!on_err(err)) {
+          return;
+        }
+        if (target->GetProcess() != nullptr) {
+          SetBreakpoints(target.get());
+        }
+      });
 }
 
 void InterceptionWorkflow::SetBreakpoints(zxdb::Target* target) {
@@ -393,16 +366,6 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Target* target) {
           }
         });
       }
-    }
-  }
-}
-
-void InterceptionWorkflow::SetBreakpoints(uint64_t process_koid) {
-  for (zxdb::Target* target : session_->system().GetTargets()) {
-    if (target->GetState() == zxdb::Target::State::kRunning &&
-        target->GetProcess()->GetKoid() == process_koid) {
-      SetBreakpoints(target);
-      return;
     }
   }
 }

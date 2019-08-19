@@ -262,17 +262,15 @@ void ProcessController::Initialize(zxdb::Session& session,
     zxdb::Target* target = process->GetTarget();
     targets_.push_back(target);
     workflow_.AddObserver(target);
-    workflow_.observer_.DidCreateProcess(target, process, false);
+    process->AddObserver(&workflow_.observer_.process_observer());
+    workflow_.SetBreakpoints(target);
     workflow_.observer_.process_observer().DidCreateThread(process, the_thread);
     remote_api_->AddThread(the_thread);
   }
 
   // Attach to processes.
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [this]() {
-    workflow_.Attach(process_koids_, [](const zxdb::Err& err, uint64_t process_koid) {
-      // Because we are already attached, we don't get here.
-      FAIL() << "Should not be reached";
-    });
+    workflow_.Attach(process_koids_);
     debug_ipc::MessageLoop::Current()->QuitNow();
   });
   debug_ipc::MessageLoop::Current()->Run();
@@ -297,6 +295,10 @@ void ProcessController::Initialize(zxdb::Session& session,
   }
 }
 
-void ProcessController::Detach() { workflow_.Detach(); }
+void ProcessController::Detach() {
+  if (++detached_processes_ == processes_.size()) {
+    workflow_.Shutdown();
+  }
+}
 
 }  // namespace fidlcat

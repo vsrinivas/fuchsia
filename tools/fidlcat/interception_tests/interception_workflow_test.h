@@ -388,6 +388,7 @@ class ProcessController {
 
   std::vector<zxdb::Process*> processes_;
   std::vector<zxdb::Target*> targets_;
+  size_t detached_processes_ = 0;
 };
 
 class AlwaysQuit {

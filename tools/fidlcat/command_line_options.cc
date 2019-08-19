@@ -203,10 +203,6 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
     return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
   }
 
-  if (!options->remote_name.empty() && !options->remote_pid.empty()) {
-    return cmdline::Status::Error("Cannot specify both a remote pid and name.");
-  }
-
   decode_options->stack_level = options->stack_level;
   if (options->syscall_filters.empty()) {
     decode_options->syscall_filters.push_back(std::regex("zx_channel_.*"));

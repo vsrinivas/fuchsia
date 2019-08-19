@@ -49,7 +49,7 @@ If you run the `ps` command in the shell, you can get a pid you want to monitor,
 and run:
 
 ```sh
-fx fidlcat --remote-pid <pid>
+fx fidlcat --remote-pid=<pid>
 ```
 
 If your code is executed by a runner, you are likely to want to attach to the
@@ -66,13 +66,13 @@ You can then attach directly to that process, and view all FIDL messages sent by
 Dart programs:
 
 ```sh
-host$ fx fidlcat --remote-pid 21107
+host$ fx fidlcat --remote-pid=21107
 ```
 
 You can use the `--remote-pid` flag multiple times to connect to multiple processes:
 
 ```sh
-fx fidlcat --remote-pid <pid1> --remote-pid <pid2>
+fx fidlcat --remote-pid=<pid1> --remote-pid=<pid2>
 ```
 
 ### Launching a component with fidlcat
@@ -98,7 +98,42 @@ the system, wait for a program with the substring "echo_client" to start, and
 automatically attach to it.
 
 ```sh
-fx fidlcat --remote-name echo_client
+fx fidlcat --remote-name=echo_client
+```
+
+### Mixed use
+
+All three options --remote-pid, --remote-name and run can be used together.
+However, run must always be the last one.
+
+When --remote-name and run are used together, only processes which match
+--remote-name are monitored.
+
+Examples (echo_server is launched by echo_client):
+
+Run and monitor echo_client.
+```sh
+fx fidlcat run echo_client_cpp.cmx
+```
+
+Run and monitor echo_client.
+```sh
+fx fidlcat --remote-name=echo_client run echo_client_cpp.cmx
+```
+
+Run echo_client and monitor echo_server.
+```sh
+fx fidlcat --remote-name=echo_server run echo_client_cpp.cmx
+```
+
+Run echo_client and monitor echo_client and echo_server.
+```sh
+fx fidlcat --remote-name=echo run echo_client_cpp.cmx
+```
+
+Run echo_client and monitor echo_client and echo_server.
+```sh
+fx fidlcat --remote-name=echo_client --remote-name=echo_server run echo_client_cpp.cmx
 ```
 
 ## Running without the fx tool

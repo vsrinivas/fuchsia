@@ -117,6 +117,20 @@ inline std::ostream& operator<<(std::ostream& os, const DisplayDuration& duratio
   return os;
 }
 
+class DisplayStatus {
+ public:
+  explicit DisplayStatus(zx_status_t status) : status_(status) {}
+  [[nodiscard]] zx_status_t status() const { return status_; }
+
+ private:
+  const zx_status_t status_;
+};
+
+inline std::ostream& operator<<(std::ostream& os, const DisplayStatus& status) {
+  StatusName(status.status(), os);
+  return os;
+}
+
 class DisplayTime {
  public:
   DisplayTime(const Colors& colors, zx_time_t time_ns) : colors_(colors), time_ns_(time_ns) {}

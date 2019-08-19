@@ -134,7 +134,7 @@ class InterceptionWorkflow {
 
   // Attach the workflow to the given koids.  Must be connected.  |and_then| is
   // posted to the loop on completion.
-  void Attach(const std::vector<uint64_t>& process_koids, KoidFunction and_then);
+  void Attach(const std::vector<uint64_t>& process_koids);
 
   // Detach from one target.  session() keeps track of details about the Target
   // object; this just reduces the number of targets to which we are attached by
@@ -143,19 +143,15 @@ class InterceptionWorkflow {
 
   // Run the given |command| and attach to it.  Must be connected.  |and_then|
   // is posted to the loop on completion.
-  void Launch(const std::vector<std::string>& command, KoidFunction and_then);
+  void Launch(zxdb::Target* target, const std::vector<std::string>& command);
 
   // Run when a process matching the given |filter| regexp is started.  Must be
   // connected.  |and_then| is posted to the loop on completion.
-  void Filter(const std::vector<std::string>& filter, KoidFunction and_then);
+  void Filter(zxdb::Target* target, const std::vector<std::string>& filter);
 
   // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
   // for the given |target|
-  void SetBreakpoints(zxdb::Target* target = nullptr);
-
-  // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
-  // for the process with given |process_koid|.
-  void SetBreakpoints(uint64_t process_koid);
+  void SetBreakpoints(zxdb::Target* target);
 
   // Starts running the loop.  Returns when loop is (asynchronously) terminated.
   void Go();
@@ -165,6 +161,11 @@ class InterceptionWorkflow {
       loop_->PostTask(FROM_HERE, [this]() { loop_->QuitNow(); });
     });
   }
+
+  zxdb::Target* GetTarget(uint64_t process_koid);
+  zxdb::Target* GetNewTarget();
+
+  void AddObserver(zxdb::Target* target);
 
   zxdb::Session* session() const { return session_; }
   std::unordered_set<uint64_t>& configured_processes() { return configured_processes_; }
@@ -176,18 +177,13 @@ class InterceptionWorkflow {
   InterceptionWorkflow& operator=(const InterceptionWorkflow&) = delete;
 
  private:
-  zxdb::Target* GetTarget(uint64_t process_koid = ULLONG_MAX);
-
-  void AddObserver(zxdb::Target* target);
-
   debug_ipc::BufferedFD buffer_;
   zxdb::Session* session_;
   std::vector<zxdb::Filter*> filters_;
   bool delete_session_;
   debug_ipc::PlatformMessageLoop* loop_;
   bool delete_loop_;
-  // -1 means "we already shut down".
-  int target_count_;
+  bool shutdown_done_ = false;
 
   // All the processes for which the breapoints have been set.
   std::unordered_set<uint64_t> configured_processes_;

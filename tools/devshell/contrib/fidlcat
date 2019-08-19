@@ -25,7 +25,7 @@
 ## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>] [--with-process-info] [--stack=<value>]
 ##                   [--syscalls=<regexp>] [--exclude-syscalls=<regexp>]
 ##                   [--verbose=<value> | --quiet=<value>] [--log-file <path>]
-##                   [--remote-pid <pid> | --remote-name <names> | run <component specification>]
+##                   [--remote-pid=<pid> | --remote-name=<name> | run <component specification>]
 ##
 ##    --port               Port the debug agent will be listening on. Will use 2345
 ##                         by default.
@@ -79,6 +79,28 @@
 ##
 ## # Will trace the next process that starts whose name contains "echo_client"
 ## fx fidlcat --remote-name echo_client
+##
+## All three options --remote-pid, --remote-name and run can be used together.
+## However, run must always be the last one.
+## When --remote-name and run are used together, only processes which match
+## --remote-name are monitored.
+##
+## Examples (echo_server is launched by echo_client):
+##
+## # run and monitor echo_client.
+## fx fidlcat run echo_client_cpp.cmx
+##
+## # run and monitor echo_client.
+## fx fidlcat --remote-name=echo_client run echo_client_cpp.cmx
+##
+## # run echo_client and monitor echo_server.
+## fx fidlcat --remote-name=echo_server run echo_client_cpp.cmx
+##
+## # run echo_client and monitor echo_client and echo_server.
+## fx fidlcat --remote-name=echo run echo_client_cpp.cmx
+##
+## # run echo_client and monitor echo_client and echo_server.
+## fx fidlcat --remote-name=echo_client --remote-name=echo_server run echo_client_cpp.cmx
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contrib/lib/debug.sh || exit $?
@@ -92,6 +114,8 @@ syscalls=()
 verbose=
 quiet=
 log_file=
+remote_pids=()
+remote_names=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -128,11 +152,11 @@ while [[ $# -gt 0 ]]; do
     --log-file=*)
       log_file="$1"
       ;;
-    --remote-pid)
-      break # Remaining flags are passed to fidlcat
+    --remote-pid=*)
+      remote_pids+="$1 "
       ;;
-    --remote-name)
-      break # Remaining flags are passed to fidlcat
+    --remote-name=*)
+      remote_names+="$1 "
       ;;
     run)
       action="$1"
@@ -209,6 +233,8 @@ if launch_debug_agent; then
     ${verbose} \
     ${quiet} \
     ${log_file} \
+    ${remote_pids} \
+    ${remote_names} \
     $@
 else
   fx-error "Could not launch debug agent. Exiting."

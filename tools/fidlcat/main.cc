@@ -81,23 +81,29 @@ void EnqueueStartup(InterceptionWorkflow& workflow, const CommandLineOptions& op
     FXL_LOG(FATAL) << "Could not parse host/port pair: " << parse_err.msg();
   }
 
-  auto set_breakpoints = [&workflow](const zxdb::Err& err, uint64_t process_koid) {
-    workflow.SetBreakpoints(process_koid);
-  };
-
-  auto attach = [&workflow, process_koids, remote_name = options.remote_name, params,
-                 set_breakpoints = std::move(set_breakpoints)](const zxdb::Err& err) {
+  auto attach = [&workflow, process_koids, remote_name = options.remote_name,
+                 params](const zxdb::Err& err) {
     if (!err.ok()) {
       FXL_LOG(FATAL) << "Unable to connect: " << err.msg();
       return;
     }
     FXL_LOG(INFO) << "Connected!";
     if (!process_koids.empty()) {
-      workflow.Attach(process_koids, set_breakpoints);
-    } else if (!remote_name.empty()) {
-      workflow.Filter(remote_name, set_breakpoints);
+      workflow.Attach(process_koids);
+    }
+    if (remote_name.empty()) {
+      if (std::find(params.begin(), params.end(), "run") != params.end()) {
+        zxdb::Target* target = workflow.GetNewTarget();
+        workflow.AddObserver(target);
+        workflow.Launch(target, params);
+      }
     } else {
-      workflow.Launch(params, set_breakpoints);
+      zxdb::Target* target = workflow.GetNewTarget();
+      workflow.AddObserver(target);
+      if (std::find(params.begin(), params.end(), "run") != params.end()) {
+        workflow.Launch(target, params);
+      }
+      workflow.Filter(target, remote_name);
     }
   };
 
