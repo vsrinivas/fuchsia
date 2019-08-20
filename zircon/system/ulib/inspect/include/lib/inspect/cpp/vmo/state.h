@@ -24,6 +24,11 @@ class State final {
   // Create a new State wrapping the given Heap.
   // On failure, returns nullptr.
   static std::shared_ptr<State> Create(std::unique_ptr<Heap> heap);
+
+  // Create a new State wrapping a heap of the given size.
+  // On failure, returns nullptr.
+  static std::shared_ptr<State> CreateWithSize(size_t size);
+
   ~State();
 
   // Disallow copy and assign.
@@ -35,6 +40,11 @@ class State final {
   // Obtain a reference to the wrapped VMO.
   // This may be duplicated read-only to pass to a reader process.
   const zx::vmo& GetVmo() const;
+
+  // Obtain a copy of the VMO backing this state.
+  //
+  // Returns true on success, false otherwise.
+  bool Copy(zx::vmo* vmo) const;
 
   // Create a new |IntProperty| in the Inspect VMO. The returned node releases
   // the property when destroyed.

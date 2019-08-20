@@ -155,11 +155,34 @@ std::shared_ptr<State> State::Create(std::unique_ptr<Heap> heap) {
   return ret;
 }
 
+std::shared_ptr<State> State::CreateWithSize(size_t size) {
+  zx::vmo vmo;
+  if (size == 0 || ZX_OK != zx::vmo::create(size, 0, &vmo)) {
+    return nullptr;
+  }
+  return State::Create(std::make_unique<Heap>(std::move(vmo)));
+}
+
 State::~State() { heap_->Free(header_); }
 
 const zx::vmo& State::GetVmo() const {
   std::lock_guard lock(mutex_);
   return heap_->GetVmo();
+}
+
+bool State::Copy(zx::vmo* vmo) const {
+  std::lock_guard lock(mutex_);
+
+  size_t size = heap_->size();
+  if (zx::vmo::create(size, 0, vmo) != ZX_OK) {
+    return false;
+  }
+
+  if (vmo->write(heap_->data(), 0, size) != ZX_OK) {
+    return false;
+  }
+
+  return true;
 }
 
 IntProperty State::CreateIntProperty(const std::string& name, BlockIndex parent, int64_t value) {

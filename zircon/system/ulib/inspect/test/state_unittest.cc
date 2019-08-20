@@ -152,6 +152,29 @@ Snapshot SnapshotAndScan(const zx::vmo& vmo,
   return snapshot;
 }
 
+TEST(State, CreateAndCopy) {
+  auto state = State::CreateWithSize(4096);
+  ASSERT_TRUE(state);
+
+  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  size_t free_blocks, allocated_blocks;
+  auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
+  ASSERT_TRUE(snapshot);
+
+  EXPECT_EQ(1u, allocated_blocks);
+  EXPECT_EQ(8u, free_blocks);
+  blocks.clear();
+
+  zx::vmo copy;
+  ASSERT_TRUE(state->Copy(&copy));
+
+  snapshot = SnapshotAndScan(copy, &blocks, &free_blocks, &allocated_blocks);
+  ASSERT_TRUE(snapshot);
+
+  EXPECT_EQ(1u, allocated_blocks);
+  EXPECT_EQ(8u, free_blocks);
+}
+
 TEST(State, CreateIntProperty) {
   auto vmo = MakeVmo(4096);
   ASSERT_TRUE(!!vmo);

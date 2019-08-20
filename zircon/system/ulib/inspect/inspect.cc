@@ -14,28 +14,17 @@ namespace inspect {
 
 namespace {
 const InspectSettings kDefaultInspectSettings = {.maximum_size = 256 * 1024};
-
-std::shared_ptr<State> CreateState(zx::vmo vmo) {
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
-  if (!state) {
-    return nullptr;
-  }
-  return state;
-}
-
 }  // namespace
 
 Inspector::Inspector(const std::string& name) : Inspector(name, kDefaultInspectSettings) {}
 
 Inspector::Inspector(const std::string& name, const InspectSettings& settings)
     : root_(std::make_unique<Node>()) {
-  zx::vmo vmo;
-  if (settings.maximum_size == 0 || ZX_OK != zx::vmo::create(settings.maximum_size, 0, &vmo)) {
+  if (settings.maximum_size == 0) {
     return;
   }
 
-  state_ = CreateState(std::move(vmo));
+  state_ = State::CreateWithSize(settings.maximum_size);
   if (!state_) {
     return;
   }
@@ -61,7 +50,7 @@ Inspector::Inspector(const std::string& name, zx::vmo vmo) : root_(std::make_uni
     return;
   }
 
-  state_ = CreateState(std::move(vmo));
+  state_ = State::Create(std::make_unique<Heap>(std::move(vmo)));
   if (!state_) {
     return;
   }
