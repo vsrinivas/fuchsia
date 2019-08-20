@@ -132,18 +132,21 @@ typedef bool (*EnumValidationPredicate)(uint64_t);
 struct FidlCodedEnum {
   const FidlCodedPrimitive underlying_type;
   const EnumValidationPredicate validate;
+  const char* name;  // may be nullptr if omitted at compile time
 
   constexpr explicit FidlCodedEnum(FidlCodedPrimitive underlying_type,
-                                   EnumValidationPredicate validate)
-      : underlying_type(underlying_type), validate(validate) {}
+                                   EnumValidationPredicate validate, const char* name)
+      : underlying_type(underlying_type), validate(validate), name(name) {}
 };
 
 struct FidlCodedBits {
   const FidlCodedPrimitive underlying_type;
   const uint64_t mask;
+  const char* name;  // may be nullptr if omitted at compile time
 
-  constexpr explicit FidlCodedBits(FidlCodedPrimitive underlying_type, uint64_t mask)
-      : underlying_type(underlying_type), mask(mask) {}
+  constexpr explicit FidlCodedBits(FidlCodedPrimitive underlying_type, uint64_t mask,
+                                   const char* name)
+      : underlying_type(underlying_type), mask(mask), name(name) {}
 };
 
 // Though the |size| is implied by the fields, computing that information is not the purview of this

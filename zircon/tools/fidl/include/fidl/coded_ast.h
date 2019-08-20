@@ -144,23 +144,28 @@ struct PrimitiveType : public Type {
 
 struct EnumType : public Type {
   EnumType(std::string name, types::PrimitiveSubtype subtype, uint32_t size,
-           std::vector<uint64_t> members)
+           std::vector<uint64_t> members, std::string qname)
       : Type(Kind::kEnum, std::move(name), size, CodingNeeded::kAlways),
         subtype(subtype),
-        members(std::move(members)) {}
+        members(std::move(members)),
+        qname(std::move(qname)) {}
 
   const types::PrimitiveSubtype subtype;
   const std::vector<uint64_t> members;
+  const std::string qname;
 };
 
 struct BitsType : public Type {
-  BitsType(std::string name, types::PrimitiveSubtype subtype, uint32_t size, uint64_t mask)
+  BitsType(std::string name, types::PrimitiveSubtype subtype, uint32_t size, uint64_t mask,
+           std::string qname)
       : Type(Kind::kBits, std::move(name), size, CodingNeeded::kAlways),
         subtype(subtype),
-        mask(mask) {}
+        mask(mask),
+        qname(std::move(qname)) {}
 
   const types::PrimitiveSubtype subtype;
   const uint64_t mask;
+  const std::string qname;
 };
 
 struct HandleType : public Type {

@@ -334,7 +334,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       named_coded_types_.emplace(
           &bits_decl->name,
           std::make_unique<coded::BitsType>(std::move(bits_name), primitive_type->subtype,
-                                            primitive_type->shape.InlineSize(), bits_decl->mask));
+                                            primitive_type->shape.InlineSize(), bits_decl->mask,
+                                            NameFlatName(bits_decl->name)));
       break;
     }
     case flat::Decl::Kind::kEnum: {
@@ -359,10 +360,11 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         }
         members.push_back(uint64);
       }
-      named_coded_types_.emplace(&enum_decl->name,
-                                 std::make_unique<coded::EnumType>(
-                                     std::move(enum_name), enum_decl->type->subtype,
-                                     enum_decl->type->shape.InlineSize(), std::move(members)));
+      named_coded_types_.emplace(
+          &enum_decl->name,
+          std::make_unique<coded::EnumType>(std::move(enum_name), enum_decl->type->subtype,
+                                            enum_decl->type->shape.InlineSize(), std::move(members),
+                                            NameFlatName(enum_decl->name)));
       break;
     }
     case flat::Decl::Kind::kProtocol: {

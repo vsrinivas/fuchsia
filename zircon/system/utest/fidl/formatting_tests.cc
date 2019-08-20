@@ -5,8 +5,10 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
 #include <stddef.h>
+
 #include <unittest/unittest.h>
 
+#include "extra_messages.h"
 #include "fidl_coded_types.h"
 
 #define EXPECT_NAME_EQ(expected, type, capacity)                                             \
@@ -101,10 +103,27 @@ bool vector_types() {
   END_TEST;
 }
 
+bool enum_types() {
+  BEGIN_TEST;
+
+  EXPECT_NAME_EQ("fidl.test.coding/Int32Enum", &fidl_test_coding_Int32EnumTable, 1024);
+
+  END_TEST;
+}
+
+bool bits_types() {
+  BEGIN_TEST;
+
+  EXPECT_NAME_EQ("fidl.test.coding/Int32Bits", &fidl_test_coding_Int32BitsTable, 1024);
+
+  END_TEST;
+}
+
 bool union_types() {
   BEGIN_TEST;
 
   EXPECT_NAME_EQ("nonnullable_handle_union", &nonnullable_handle_union_type, 1024);
+  EXPECT_NAME_EQ("fidl.test.coding/SampleUnion", &fidl_test_coding_SampleUnionTable, 1024);
 
   END_TEST;
 }
@@ -121,6 +140,8 @@ bool struct_types() {
   BEGIN_TEST;
 
   EXPECT_NAME_EQ("struct_level_0", &struct_level_0_struct, 1024);
+  EXPECT_NAME_EQ("fidl.test.coding/StructWithManyHandles",
+                 &fidl_test_coding_StructWithManyHandlesTable, 1024);
 
   END_TEST;
 }
@@ -133,6 +154,22 @@ bool struct_ptr_types() {
   END_TEST;
 }
 
+bool xunion_types() {
+  BEGIN_TEST;
+
+  EXPECT_NAME_EQ("fidl.test.coding/SampleXUnion", &fidl_test_coding_SampleXUnionTable, 1024);
+
+  END_TEST;
+}
+
+bool table_types() {
+  BEGIN_TEST;
+
+  EXPECT_NAME_EQ("fidl.test.coding/SimpleTable", &fidl_test_coding_SimpleTableTable, 1024);
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(formatting)
 RUN_TEST(no_output)
 RUN_TEST(truncated_output)
@@ -140,10 +177,14 @@ RUN_TEST(handle_types)
 RUN_TEST(array_types)
 RUN_TEST(string_types)
 RUN_TEST(vector_types)
+RUN_TEST(enum_types)
+RUN_TEST(bits_types)
 RUN_TEST(union_types)
 RUN_TEST(union_ptr_types)
 RUN_TEST(struct_types)
 RUN_TEST(struct_ptr_types)
+RUN_TEST(xunion_types)
+RUN_TEST(table_types)
 END_TEST_CASE(formatting)
 
 }  // namespace

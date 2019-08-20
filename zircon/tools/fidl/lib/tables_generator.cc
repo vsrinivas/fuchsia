@@ -158,8 +158,9 @@ void TablesGenerator::Generate(const coded::EnumType& enum_type) {
   Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedEnum(");
   Emit(&tables_file_, "::fidl::FidlCodedPrimitive::k");
   Emit(&tables_file_, PrimitiveSubtypeToString(enum_type.subtype));
-  Emit(&tables_file_, ", &" + validator_func);
-  Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, ", &" + validator_func + ", \"");
+  Emit(&tables_file_, enum_type.qname);
+  Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::BitsType& bits_type) {
@@ -170,7 +171,9 @@ void TablesGenerator::Generate(const coded::BitsType& bits_type) {
   Emit(&tables_file_, PrimitiveSubtypeToString(bits_type.subtype));
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, bits_type.mask);
-  Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, bits_type.qname);
+  Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::StructType& struct_type) {

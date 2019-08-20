@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef ZIRCON_SYSTEM_UTEST_FIDL_EXTRA_MESSAGES_H_
+#define ZIRCON_SYSTEM_UTEST_FIDL_EXTRA_MESSAGES_H_
+
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/cpp/vector_view.h>
@@ -20,6 +23,7 @@ extern const fidl_type_t fidl_test_coding_OlderSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_NewerSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SmallerTableOfStructWithHandleTable;
+extern const fidl_type_t fidl_test_coding_SampleUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleStrictXUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
@@ -31,6 +35,7 @@ extern const fidl_type_t fidl_test_coding_Int32BitsStructTable;
 extern const fidl_type_t fidl_test_coding_Int16BitsTable;
 extern const fidl_type_t fidl_test_coding_Int16BitsStructTable;
 
+extern const fidl_type_t fidl_test_coding_Int32EnumTable;
 extern const fidl_type_t fidl_test_coding_Int8EnumStructTable;
 extern const fidl_type_t fidl_test_coding_Int16EnumStructTable;
 extern const fidl_type_t fidl_test_coding_Int32EnumStructTable;
@@ -166,3 +171,5 @@ TEST_ENUM_DEF(Uint32, uint32_t)
 TEST_ENUM_DEF(Uint64, uint64_t)
 
 }  // namespace fidl
+
+#endif  // ZIRCON_SYSTEM_UTEST_FIDL_EXTRA_MESSAGES_H_

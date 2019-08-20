@@ -62,6 +62,22 @@ void FormatNullability(StringBuilder* str, fidl::FidlNullability nullable) {
   }
 }
 
+void FormatEnumName(StringBuilder* str, const fidl::FidlCodedEnum* coded_enum) {
+  if (coded_enum->name) {
+    str->Append(coded_enum->name);
+  } else {
+    str->Append("enum");
+  }
+}
+
+void FormatBitsName(StringBuilder* str, const fidl::FidlCodedBits* coded_bits) {
+  if (coded_bits->name) {
+    str->Append(coded_bits->name);
+  } else {
+    str->Append("bits");
+  }
+}
+
 void FormatStructName(StringBuilder* str, const fidl::FidlCodedStruct* coded_struct) {
   if (coded_struct->name) {
     str->Append(coded_struct->name);
@@ -78,6 +94,22 @@ void FormatUnionName(StringBuilder* str, const fidl::FidlCodedUnion* coded_union
   }
 }
 
+void FormatTableName(StringBuilder* str, const fidl::FidlCodedTable* coded_table) {
+  if (coded_table->name) {
+    str->Append(coded_table->name);
+  } else {
+    str->Append("table");
+  }
+}
+
+void FormatXUnionName(StringBuilder* str, const fidl::FidlCodedXUnion* coded_xunion) {
+  if (coded_xunion->name) {
+    str->Append(coded_xunion->name);
+  } else {
+    str->Append("xunion");
+  }
+}
+
 void FormatTypeName(StringBuilder* str, const fidl_type_t* type);
 void FormatElementName(StringBuilder* str, const fidl_type_t* type) {
   if (type) {
@@ -91,6 +123,12 @@ void FormatElementName(StringBuilder* str, const fidl_type_t* type) {
 
 void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
   switch (type->type_tag) {
+    case fidl::kFidlTypeEnum:
+      FormatEnumName(str, &type->coded_enum);
+      break;
+    case fidl::kFidlTypeBits:
+      FormatBitsName(str, &type->coded_bits);
+      break;
     case fidl::kFidlTypeStruct:
       FormatStructName(str, &type->coded_struct);
       break;
@@ -218,7 +256,13 @@ void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
       }
       FormatNullability(str, type->coded_vector.nullable);
       break;
-    default:
+    case fidl::kFidlTypeTable:
+      FormatTableName(str, &type->coded_table);
+      break;
+    case fidl::kFidlTypeXUnion:
+      FormatXUnionName(str, &type->coded_xunion);
+      break;
+    case fidl::kFidlTypePrimitive:
       ZX_PANIC("unrecognized tag");
       break;
   }

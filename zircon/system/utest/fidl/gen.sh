@@ -6,12 +6,12 @@ set -o pipefail
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 FUCHSIA_DIR="$( echo ${TEST_DIR} | sed -e 's,zircon/system/utest.*$,,' )"
 
-if [ -z ${FUCHSIA_BUILD_DIR+x} ]; then
+if [ -z ${FUCHSIA_BUILD_DIR+x} ] || [ -z ${ZIRCON_TOOLS_DIR+x} ]; then
     echo "please use fx exec to run this script" 1>&2
     exit 1
 fi
 
-FIDLC=${FUCHSIA_BUILD_DIR}/host_x64/fidlc
+FIDLC=${ZIRCON_TOOLS_DIR}/fidlc
 FIDLGEN=${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_llcpp
 
 if [ ! -x "${FIDLC}" ]; then
