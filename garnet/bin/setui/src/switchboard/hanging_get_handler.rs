@@ -17,8 +17,8 @@ use {
 /// To use, one should implement a sender, as well as a way to convert SettingResponse into
 /// something that sender can use.
 pub struct HangingGetHandler<T, ST> {
-    switchboard_handle: Arc<RwLock<Switchboard + Send + Sync>>,
-    listen_session: Box<ListenSession + Send + Sync>,
+    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    listen_session: Box<dyn ListenSession + Send + Sync>,
     sent_latest_value: bool,
     hanging_get: Option<ST>,
     data_type: PhantomData<T>,
@@ -36,7 +36,7 @@ where
     ST: Sender<T> + Send + Sync + 'static,
 {
     pub fn create(
-        switchboard_handle: Arc<RwLock<Switchboard + Send + Sync>>,
+        switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
         setting_type: SettingType,
     ) -> Arc<Mutex<HangingGetHandler<T, ST>>> {
         let (on_change_sender, mut on_change_receiver) =
@@ -200,7 +200,7 @@ mod tests {
             &mut self,
             setting_type: SettingType,
             listener: UnboundedSender<SettingType>,
-        ) -> Result<Box<ListenSession + Send + Sync>, Error> {
+        ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
             self.setting_type = Some(setting_type);
             self.listener = Some(listener);
             Ok(Box::new(TestListenSession {}))

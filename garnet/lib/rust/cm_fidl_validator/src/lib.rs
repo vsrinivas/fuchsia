@@ -738,7 +738,7 @@ fn check_name(
     if let Some(name) = prop {
         for b in name.bytes() {
             match b as char {
-                '0'...'9' | 'a'...'z' | '_' | '-' | '.' => (),
+                '0'..='9' | 'a'..='z' | '_' | '-' | '.' => (),
                 c => {
                     errors.push(Error::invalid_character_in_field(decl_type, keyword, c));
                     return false;
@@ -762,7 +762,7 @@ fn check_url(
         let mut first_char = true;
         while let Some(c) = chars_iter.next() {
             match c {
-                '0'...'9' | 'a'...'z' | '+' | '-' | '.' => first_char = false,
+                '0'..='9' | 'a'..='z' | '+' | '-' | '.' => first_char = false,
                 ':' => {
                     if first_char {
                         // There must be at least one character in the schema

@@ -130,7 +130,7 @@ impl<'entries> DirectoryEntry for Box<dyn DirectoryEntry + 'entries> {
         &mut self,
         flags: u32,
         mode: u32,
-        path: &mut Iterator<Item = &str>,
+        path: &mut dyn Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
     ) {
         self.as_mut().open(flags, mode, path, server_end)

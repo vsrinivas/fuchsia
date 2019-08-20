@@ -60,8 +60,8 @@ pub trait NodeStateCallback {
 /// that changes.
 struct VersionTracker {
     version: u64,
-    pending_callbacks: Vec<Box<NodeStateCallback>>,
-    triggered_callbacks: Vec<Box<NodeStateCallback>>,
+    pending_callbacks: Vec<Box<dyn NodeStateCallback>>,
+    triggered_callbacks: Vec<Box<dyn NodeStateCallback>>,
 }
 
 impl VersionTracker {
@@ -72,7 +72,7 @@ impl VersionTracker {
 
     /// Query for a new version (given the last version seen).
     /// Trigger on the next flush if last_version == self.version.
-    fn post_query(&mut self, last_version: u64, cb: Box<NodeStateCallback>) {
+    fn post_query(&mut self, last_version: u64, cb: Box<dyn NodeStateCallback>) {
         if last_version < self.version {
             self.triggered_callbacks.push(cb);
         } else {
@@ -87,7 +87,7 @@ impl VersionTracker {
     }
 
     /// Returns the current version and the (now flushed) triggered callbacks
-    fn take_triggered_callbacks(&mut self) -> (u64, Vec<Box<NodeStateCallback>>) {
+    fn take_triggered_callbacks(&mut self) -> (u64, Vec<Box<dyn NodeStateCallback>>) {
         let callbacks = std::mem::replace(&mut self.triggered_callbacks, Vec::new());
         (self.version, callbacks)
     }
@@ -111,7 +111,7 @@ impl NodeTable {
 
     /// Query for a new version (given the last version seen).
     /// Trigger on the next flush if `last_version` == the current version.
-    pub fn post_query(&mut self, last_version: u64, cb: Box<NodeStateCallback>) {
+    pub fn post_query(&mut self, last_version: u64, cb: Box<dyn NodeStateCallback>) {
         self.version_tracker.post_query(last_version, cb);
     }
 

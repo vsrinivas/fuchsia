@@ -18,7 +18,7 @@ use crate::{
     Peer, SimpleResponder,
 };
 
-pub type StreamEndpointUpdateCallback = Box<Fn(&StreamEndpoint) -> () + Sync + Send>;
+pub type StreamEndpointUpdateCallback = Box<dyn Fn(&StreamEndpoint) -> () + Sync + Send>;
 
 #[derive(PartialEq, Debug)]
 pub enum StreamState {

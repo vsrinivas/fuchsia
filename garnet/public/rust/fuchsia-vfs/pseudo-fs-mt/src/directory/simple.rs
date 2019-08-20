@@ -170,7 +170,7 @@ impl DirectoryEntryContainer<AlphabeticalTraversal> for Simple {
     fn read_dirents(
         self: Arc<Self>,
         pos: AlphabeticalTraversal,
-        sink: Box<dirents_sink::Sink<AlphabeticalTraversal>>,
+        sink: Box<dyn dirents_sink::Sink<AlphabeticalTraversal>>,
     ) -> AsyncReadDirents {
         use dirents_sink::AppendResult;
 

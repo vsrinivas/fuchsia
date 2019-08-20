@@ -34,7 +34,7 @@ use {
     std::{default::Default, iter, iter::ExactSizeIterator, mem::replace, sync::Arc},
 };
 
-pub type ReadDirentsResult = Result<Box<dirents_sink::Sealed>, Status>;
+pub type ReadDirentsResult = Result<Box<dyn dirents_sink::Sealed>, Status>;
 
 pub enum AsyncReadDirents {
     Immediate(ReadDirentsResult),
@@ -55,7 +55,7 @@ where
     fn read_dirents(
         self: Arc<Self>,
         pos: TraversalPosition,
-        sink: Box<dirents_sink::Sink<TraversalPosition>>,
+        sink: Box<dyn dirents_sink::Sink<TraversalPosition>>,
     ) -> AsyncReadDirents;
 
     fn register_watcher(

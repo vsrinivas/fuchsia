@@ -54,7 +54,7 @@ pub trait Sealed: Send {
     /// object safe, as long as they do not use their type arguments, which seems pointless, but
     /// here would be used to make sure that the type of the returned object is preserved.  Maybe
     /// `?Sized` would be a good boundary for generic methods allowed in traits?
-    fn open(self: Box<Self>) -> Box<Any>;
+    fn open(self: Box<Self>) -> Box<dyn Any>;
 }
 
 /// Result of the [`Sink::append`] method. See there for details.

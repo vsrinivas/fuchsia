@@ -169,8 +169,6 @@ def main():
         args.rustc,
         args.crate_root,
         warnings_flag,
-        "-Abare-trait-objects", # FIXME remove when `dyn Trait` is used everywhere
-        "-Aellipsis-inclusive-range-patterns", # FIXME remove when `..=` is used everywhere
         "--edition=%s" % args.edition,
         "--crate-type=%s" % args.crate_type,
         "--crate-name=%s" % args.crate_name,

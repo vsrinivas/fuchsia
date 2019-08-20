@@ -116,5 +116,5 @@ pub trait Switchboard {
         &mut self,
         setting_type: SettingType,
         listener: UnboundedSender<SettingType>,
-    ) -> Result<Box<ListenSession + Send + Sync>, Error>;
+    ) -> Result<Box<dyn ListenSession + Send + Sync>, Error>;
 }

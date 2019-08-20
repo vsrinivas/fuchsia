@@ -15,13 +15,13 @@ use std::sync::{Arc, RwLock};
 use fuchsia_async as fasync;
 
 pub struct IntlFidlHandler {
-    switchboard_handle: Arc<RwLock<Switchboard + Send + Sync>>,
+    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
 }
 
 /// Handler for translating Intl service requests into SetUI switchboard commands.
 impl IntlFidlHandler {
     pub fn spawn(
-        switchboard: Arc<RwLock<Switchboard + Send + Sync>>,
+        switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
         mut stream: IntlRequestStream,
     ) {
         let switchboard_lock = switchboard.clone();

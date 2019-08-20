@@ -210,7 +210,7 @@ impl Switchboard for SwitchboardImpl {
         &mut self,
         setting_type: SettingType,
         listener: UnboundedSender<SettingType>,
-    ) -> Result<Box<ListenSession + Send + Sync>, Error> {
+    ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
         let action_id = self.get_next_action_id();
 
         if !self.listeners.contains_key(&setting_type) {

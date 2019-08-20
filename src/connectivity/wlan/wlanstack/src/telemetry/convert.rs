@@ -111,17 +111,17 @@ pub(super) fn convert_protection(
 pub(super) fn convert_rssi(rssi: i8) -> metrics::ConnectionResultPerRssiMetricDimensionRssi {
     use metrics::ConnectionResultPerRssiMetricDimensionRssi::*;
     match rssi.abs() {
-        90...127 => From127To90,
-        86...89 => From89To86,
-        83...85 => From85To83,
-        80...82 => From82To80,
-        77...79 => From79To77,
-        74...76 => From76To74,
-        71...73 => From73To71,
-        66...70 => From70To66,
-        61...65 => From65To61,
-        51...60 => From60To51,
-        1...50 => From50To1,
+        90..=127 => From127To90,
+        86..=89 => From89To86,
+        83..=85 => From85To83,
+        80..=82 => From82To80,
+        77..=79 => From79To77,
+        74..=76 => From76To74,
+        71..=73 => From73To71,
+        66..=70 => From70To66,
+        61..=65 => From65To61,
+        51..=60 => From60To51,
+        1..=50 => From50To1,
         _ => _0,
     }
 }

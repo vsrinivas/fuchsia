@@ -101,7 +101,7 @@ impl<TraversalPosition> dirents_sink::Sealed for Done<TraversalPosition>
 where
     TraversalPosition: Default + Send + 'static,
 {
-    fn open(self: Box<Self>) -> Box<Any> {
+    fn open(self: Box<Self>) -> Box<dyn Any> {
         self
     }
 }
