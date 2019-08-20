@@ -23,3 +23,29 @@ driver("hid") {
     "$zx/system/ulib/trace:headers",
   ]
 }
+
+test("hid-test") {
+  sources = [
+    "hid-fifo.c",
+    "hid-parser-lib.cc",
+    "hid-test.cc",
+    "hid.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/fidl/fuchsia-hardware-input:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/hid-parser",
+    "$zx/system/ulib/trace:trace-driver",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+
+    # TODO(BLD-353): This is actually a transitive dependency of the ddk
+    # library, but the library doesn't express it properly because of
+    # legacy complications.
+    "$zx/system/ulib/trace:headers",
+  ]
+}
