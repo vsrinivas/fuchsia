@@ -7,11 +7,12 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <src/lib/fxl/logging.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <memory>
+
+#include <src/lib/fxl/logging.h>
 
 #include "local_single_codec_factory.h"
 
@@ -23,14 +24,14 @@ class CodecRunnerApp {
  public:
   CodecRunnerApp()
       : loop_(&kAsyncLoopConfigAttachToThread),
-        startup_context_(component::StartupContext::CreateFromStartupInfo()),
+        component_context_(sys::ComponentContext::Create()),
         codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
   void Run() {
     zx_status_t status = syslog::InitLogger();
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to init syslog: %d", status);
 
-    startup_context_->outgoing().deprecated_services()->AddService(
+    component_context_->outgoing()->AddPublicService(
         fidl::InterfaceRequestHandler<fuchsia::mediacodec::CodecFactory>(
             [this, codec_admission_control = codec_admission_control_.get()](
                 fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
@@ -39,7 +40,7 @@ class CodecRunnerApp {
               FXL_DCHECK(!codec_factory_);
 
               fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
-              startup_context_->ConnectToEnvironmentService(sysmem.NewRequest());
+              component_context_->svc()->Connect(sysmem.NewRequest());
               codec_factory_ = std::make_unique<LocalSingleCodecFactory<Decoder, Encoder>>(
                   loop_.dispatcher(), std::move(sysmem), std::move(request),
                   [this](std::unique_ptr<CodecImpl> created_codec_instance) {
@@ -74,9 +75,8 @@ class CodecRunnerApp {
               // This call deletes the presently-running lambda, so nothing
               // after this call can use the lambda's captures, including the
               // "this" pointer implicitly.
-              startup_context_->outgoing()
-                  .deprecated_services()
-                  ->RemoveService<fuchsia::mediacodec::CodecFactory>();
+              component_context_->outgoing()
+                  ->RemovePublicService<fuchsia::mediacodec::CodecFactory>();
             }));
 
     loop_.Run();
@@ -92,7 +92,7 @@ class CodecRunnerApp {
 
  private:
   async::Loop loop_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   std::unique_ptr<CodecAdmissionControl> codec_admission_control_;
   std::unique_ptr<LocalSingleCodecFactory<Decoder, Encoder>> codec_factory_;
   std::unique_ptr<CodecImpl> codec_instance_;
