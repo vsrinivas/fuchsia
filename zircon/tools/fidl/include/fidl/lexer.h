@@ -37,7 +37,6 @@ class Lexer {
   }
 
   Token Lex();
-  Token LexNoComments();
 
  private:
   std::string_view data() { return source_file_.data(); }

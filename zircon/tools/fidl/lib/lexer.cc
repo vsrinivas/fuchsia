@@ -241,15 +241,6 @@ void Lexer::SkipWhitespace() {
   }
 }
 
-Token Lexer::LexNoComments() {
-  for (;;) {
-    auto token = Lex();
-    if (token.kind() == Token::Kind::kComment)
-      continue;
-    return token;
-  }
-}
-
 Token Lexer::Lex() {
   do {
     SkipWhitespace();

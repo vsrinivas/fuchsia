@@ -83,17 +83,20 @@ bool read_and_write_direct_test() {
   for (auto element : Examples::map()) {
     TestLibrary library(element.first, element.second);
     std::unique_ptr<fidl::raw::File> ast;
-    EXPECT_TRUE(library.Parse(&ast));
+    bool is_parse_success = library.Parse(&ast);
+    EXPECT_TRUE(is_parse_success);
 
-    NoopTreeVisitor visitor;
-    visitor.OnFile(ast);
-    std::string expected(library.source_file().data());
-    std::string output = visitor.output();
-    const char* actual = output.c_str();
-    std::string d = targeted_diff(expected.c_str(), actual, output.size());
-    d = element.first + ": " + d;
+    if (is_parse_success) {
+      NoopTreeVisitor visitor;
+      visitor.OnFile(ast);
+      std::string expected(library.source_file().data());
+      std::string output = visitor.output();
+      const char* actual = output.c_str();
+      std::string d = targeted_diff(expected.c_str(), actual, output.size());
+      d = element.first + ": " + d;
 
-    EXPECT_STR_EQ(expected.c_str(), actual, d.c_str());
+      EXPECT_STR_EQ(expected.c_str(), actual, d.c_str());
+    }
   }
 
   END_TEST;

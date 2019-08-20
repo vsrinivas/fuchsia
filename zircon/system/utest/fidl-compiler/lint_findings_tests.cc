@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <sstream>
+
 #include <fidl/findings.h>
 #include <fidl/template_string.h>
 #include <fidl/utils.h>
-
-#include <sstream>
 
 #include "test_library.h"
 #include "unittest_helpers.h"
@@ -1979,7 +1979,6 @@ struct TestStruct {
   ${TEST2}TODO: Replace the placeholder
   string:64 placeholder;${DOC_NOT_ALLOWED_HERE1} TODO(fxb/FIDL-0000): Add some more fields
 };
-${DOC_NOT_ALLOWED_HERE2} TODO(someldap): Submit this for review once finished
 )FIDL";
 
   LintTest test;
@@ -1991,7 +1990,6 @@ ${DOC_NOT_ALLOWED_HERE2} TODO(someldap): Submit this for review once finished
       {"TEST1", "//"},
       {"TEST2", "//"},
       {"DOC_NOT_ALLOWED_HERE1", "//"},
-      {"DOC_NOT_ALLOWED_HERE2", "//"},
   });
 
   ASSERT_NO_FINDINGS(test);
@@ -2000,7 +1998,6 @@ ${DOC_NOT_ALLOWED_HERE2} TODO(someldap): Submit this for review once finished
                       {"TEST1", "///"},
                       {"TEST2", "//"},
                       {"DOC_NOT_ALLOWED_HERE1", "//"},
-                      {"DOC_NOT_ALLOWED_HERE2", "//"},
                   })
       .suggestion("change '///' to '//'")
       .replacement("//")
@@ -2012,7 +2009,6 @@ ${DOC_NOT_ALLOWED_HERE2} TODO(someldap): Submit this for review once finished
                       {"TEST1", "//"},
                       {"TEST2", "///"},
                       {"DOC_NOT_ALLOWED_HERE1", "//"},
-                      {"DOC_NOT_ALLOWED_HERE2", "//"},
                   })
       .AddFinding("${TEST2}");
 
@@ -2022,7 +2018,6 @@ ${DOC_NOT_ALLOWED_HERE2} TODO(someldap): Submit this for review once finished
                       {"TEST1", "///"},
                       {"TEST2", "///"},
                       {"DOC_NOT_ALLOWED_HERE1", "//"},
-                      {"DOC_NOT_ALLOWED_HERE2", "///"},
                   })
       .AddFinding("${TEST1}")
       .AddFinding("${TEST2}");
@@ -2035,7 +2030,6 @@ ${DOC_NOT_ALLOWED_HERE2} TODO(someldap): Submit this for review once finished
           {"TEST1", "//"},
           {"TEST2", "//"},
           {"DOC_NOT_ALLOWED_HERE1", "///"},
-          {"DOC_NOT_ALLOWED_HERE2", "//"},
       })
       .check_id("parser-error")
       .message(
@@ -2046,23 +2040,6 @@ ${DOC_NOT_ALLOWED_HERE2} TODO(someldap): Submit this for review once finished
       .AddFinding("\n");  // Linter fails on first character
 
   ASSERT_FINDINGS(parser_test);
-
-  parser_test
-      .substitute({
-          {"TEST1", "//"},
-          {"TEST2", "//"},
-          {"DOC_NOT_ALLOWED_HERE1", "//"},
-          {"DOC_NOT_ALLOWED_HERE2", "///"},
-      })
-      .message(
-          R"ERROR(example.fidl:11:1: error: unexpected token RightCurly, was expecting Identifier
-};
-^
-)ERROR");  // Parser does not interpret this as a Doc Comment, and does not fail
-           // BUT Parser swallows the comment, so the Linter does not see it.
-           // Since this comment doesn't flow-through, I guess it's not failing the check.
-
-  ASSERT_NO_FINDINGS(parser_test);
 
   END_TEST;
 }

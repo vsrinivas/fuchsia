@@ -91,6 +91,7 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
       {"vmo", types::HandleSubtype::kVmo},
   };
 
+  state_ = State::kNormal;
   last_token_ = Lex();
 }
 
@@ -322,12 +323,30 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
   std::string str_value("");
 
   Token doc_line;
+  bool is_first_doc_comment = true;
   while (Peek().kind() == Token::Kind::kDocComment) {
+    if (is_first_doc_comment) {
+      is_first_doc_comment = false;
+    } else {
+      // disallow any blank lines between this doc comment and the previous one
+      std::string_view trailing_whitespace = last_token_.previous_end().data();
+      if (std::count(trailing_whitespace.cbegin(), trailing_whitespace.cend(), '\n') > 1)
+        error_reporter_->ReportWarning(previous_token_,
+                                       "cannot have blank lines within doc comment block");
+    }
+
     doc_line = ConsumeToken(OfKind(Token::Kind::kDocComment));
+    if (!Ok())
+      return Fail();
+    // NOTE: we currently explicitly only support UNIX line endings
     str_value +=
         std::string(doc_line.location().data().data() + 3, doc_line.location().data().size() - 2);
-    assert(Ok());
   }
+
+  if (Peek().kind() == Token::Kind::kEndOfFile)
+    error_reporter_->ReportWarning(previous_token_,
+                                   "doc comment must be followed by a declaration");
+
   return std::make_unique<raw::Attribute>(scope.GetSourceElement(), "Doc", str_value);
 }
 

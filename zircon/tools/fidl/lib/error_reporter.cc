@@ -152,6 +152,10 @@ void ErrorReporter::ReportWarningWithSquiggle(const SourceLocation& location,
   AddWarning(std::move(warning));
 }
 
+void ErrorReporter::ReportWarning(const Token& token, std::string_view message) {
+  ReportWarningWithSquiggle(token.location(), message);
+}
+
 void ErrorReporter::PrintReports() {
   for (const auto& error : errors_) {
     fprintf(stderr, "%s\n", error.data());

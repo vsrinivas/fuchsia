@@ -24,7 +24,39 @@ class Parser {
   bool Ok() const { return error_reporter_->errors().size() == 0; }
 
  private:
-  Token Lex() { return lexer_->LexNoComments(); }
+  // currently the only usecase for this enum is to identify the case where the parser
+  // has seen a doc comment block, followed by a regular comment block, followed by
+  // a doc comment block
+  enum class State {
+    // the parser is currently in a doc comment block
+    kDocCommentLast,
+    // the parser is currently in a regular comment block, which directly followed a
+    // doc comment block
+    kDocCommentThenComment,
+    // the parser is in kNormal for all other cases
+    kNormal,
+  };
+
+  Token Lex() {
+    for (;;) {
+      auto token = lexer_->Lex();
+      switch (token.kind()) {
+        case Token::Kind::kComment:
+          if (state_ == State::kDocCommentLast)
+            state_ = State::kDocCommentThenComment;
+          break;
+        case Token::Kind::kDocComment:
+          if (state_ == State::kDocCommentThenComment)
+            error_reporter_->ReportWarning(last_token_,
+                                           "cannot have comment within doc comment block");
+          state_ = State::kDocCommentLast;
+          return token;
+        default:
+          state_ = State::kNormal;
+          return token;
+      }
+    }
+  }
 
   Token::KindAndSubkind Peek() { return last_token_.kind_and_subkind(); }
 
@@ -270,6 +302,7 @@ class Parser {
   Token previous_token_;
 
   Token last_token_;
+  State state_;
 };
 
 }  // namespace fidl

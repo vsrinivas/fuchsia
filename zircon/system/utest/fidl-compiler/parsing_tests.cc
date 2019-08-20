@@ -384,7 +384,7 @@ bool multiline_comment_has_correct_source_location() {
   )FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
-  library.Parse(&ast);
+  ASSERT_TRUE(library.Parse(&ast));
 
   fidl::raw::Attribute attribute =
       ast->struct_declaration_list.front()->attributes->attributes.front();
@@ -393,6 +393,154 @@ bool multiline_comment_has_correct_source_location() {
                 R"EXPECTED(/// A
   /// multiline
   /// comment!)EXPECTED");
+
+  END_TEST;
+}
+
+bool doc_comment_blank_line_test() {
+  BEGIN_TEST;
+
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  /// start
+
+  /// end
+  struct Empty{};
+  )FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  library.set_warnings_as_errors(true);
+  library.Parse(&ast);
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "cannot have blank lines within doc comment block");
+
+  END_TEST;
+}
+
+bool comment_inside_doc_comment_test() {
+  BEGIN_TEST;
+
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  /// start
+  // middle
+  /// end
+  struct Empty{};
+  )FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  library.Parse(&ast);
+  auto warnings = library.warnings();
+  ASSERT_GE(warnings.size(), 1);
+  ASSERT_STR_STR(warnings[0].c_str(), "cannot have comment within doc comment block");
+
+  END_TEST;
+}
+
+bool doc_comment_with_comment_blank_line_test() {
+  BEGIN_TEST;
+
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  /// start
+  // middle
+
+  /// end
+  struct Empty{};
+  )FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  library.Parse(&ast);
+  auto warnings = library.warnings();
+  ASSERT_EQ(warnings.size(), 2);
+  ASSERT_STR_STR(warnings[0].c_str(), "cannot have comment within doc comment block");
+  ASSERT_STR_STR(warnings[1].c_str(), "cannot have blank lines within doc comment block");
+
+  END_TEST;
+}
+
+bool comments_surrounding_doc_comment_test() {
+  BEGIN_TEST;
+
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  // some comments above,
+  // maybe about the doc comment
+  /// A
+  /// multiline
+  /// comment!
+  // another comment about the struct
+  struct Empty{};
+  )FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  library.set_warnings_as_errors(true);
+  ASSERT_TRUE(library.Parse(&ast));
+
+  END_TEST;
+}
+
+bool blank_lines_after_doc_comment_test() {
+  BEGIN_TEST;
+
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  /// doc comment
+
+
+
+  struct Empty{};
+  )FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  library.set_warnings_as_errors(true);
+  ASSERT_TRUE(library.Parse(&ast));
+
+  END_TEST;
+}
+
+bool blank_lines_after_doc_comment_with_comment_test() {
+  BEGIN_TEST;
+
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  /// doc comment
+
+
+  // regular comment
+
+  struct Empty{};
+  )FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  library.set_warnings_as_errors(true);
+  ASSERT_TRUE(library.Parse(&ast));
+
+  END_TEST;
+}
+
+bool trailing_doc_comment_test() {
+  BEGIN_TEST;
+
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  struct Empty{};
+  /// bad
+  )FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  library.Parse(&ast);
+  auto warnings = library.warnings();
+  ASSERT_EQ(warnings.size(), 1);
+  ASSERT_STR_STR(warnings[0].c_str(), "doc comment must be followed by a declaration");
 
   END_TEST;
 }
@@ -413,4 +561,11 @@ RUN_TEST(invalid_character_test)
 RUN_TEST(empty_struct_test)
 RUN_TEST(warn_on_type_alias_before_imports)
 RUN_TEST(multiline_comment_has_correct_source_location)
+RUN_TEST(doc_comment_blank_line_test)
+RUN_TEST(doc_comment_with_comment_blank_line_test)
+RUN_TEST(comment_inside_doc_comment_test)
+RUN_TEST(comments_surrounding_doc_comment_test)
+RUN_TEST(blank_lines_after_doc_comment_test)
+RUN_TEST(blank_lines_after_doc_comment_with_comment_test)
+RUN_TEST(trailing_doc_comment_test)
 END_TEST_CASE(parsing_tests)

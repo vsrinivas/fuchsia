@@ -64,11 +64,14 @@ class ErrorReporter {
   void ReportError(const SourceLocation* maybe_location, std::string_view message);
   void ReportError(const Token& token, std::string_view message);
   void ReportError(std::string_view message);
+
   void ReportWarningWithSquiggle(const SourceLocation& location, std::string_view message);
   void ReportWarning(const SourceLocation& location, std::string_view message) {
     ReportWarning(&location, message);
   }
   void ReportWarning(const SourceLocation* maybe_location, std::string_view message);
+  void ReportWarning(const Token& token, std::string_view message);
+
   void PrintReports();
   Counts Checkpoint() const { return Counts(this); }
   ScopedReportingMode OverrideMode(ReportingMode mode_override) {
