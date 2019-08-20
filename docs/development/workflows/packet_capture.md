@@ -120,7 +120,7 @@ Keyword | Alias
 `port`  | `portrange`
 
 
-## What fx workflow packet signatures?
+## Reference: `fx` workflow packet signatures
 There are many different kinds of services running between the Fuchsia development host and the target. Those are usually invoked by `fx` commands. Most of times, you are not interested in those packets incurred by the `fx` workflows.  The following table lists up noteworthy signatures.
 
 |Use           |Signature                   |Reference             |
