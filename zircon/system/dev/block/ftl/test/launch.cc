@@ -5,28 +5,31 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <launchpad/launchpad.h>
+#include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include "launch.h"
+
 namespace {
 
-zx::process Launch(int argc, const char** argv) {
-  ZX_ASSERT(argc);
+zx::process Launch(const char* const* argv) {
   ZX_ASSERT(argv);
 
-  launchpad_t* launchpad;
-  launchpad_create(0, "worker", &launchpad);
-  launchpad_load_from_file(launchpad, argv[0]);
-  launchpad_set_args(launchpad, argc, argv);
-  launchpad_clone(launchpad, LP_CLONE_ALL);
-
-  const char* error;
+  fdio_spawn_action_t actions[1] = {
+    {
+      .action = FDIO_SPAWN_ACTION_SET_NAME,
+      .name = {.data = "worker"},
+    }
+  };
+  char error[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_handle_t subprocess;
-  if (launchpad_go(launchpad, &subprocess, &error) != ZX_OK) {
+  zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv, NULL,
+                                      1, actions, &subprocess, error);
+  if (status != ZX_OK) {
     printf("Subprocess launch failed: %s\n", error);
     subprocess = ZX_HANDLE_INVALID;
   }
@@ -56,8 +59,8 @@ bool WaitForExit(const zx::process& process, int64_t* exit_code) {
 
 }  // namespace.
 
-int Execute(int argc, const char** argv) {
-  zx::process process = Launch(argc, argv);
+int Execute(const char** argv) {
+  zx::process process = Launch(argv);
   if (process == ZX_HANDLE_INVALID) {
     return -1;
   }

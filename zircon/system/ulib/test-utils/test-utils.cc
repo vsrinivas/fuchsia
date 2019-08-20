@@ -24,8 +24,6 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
 #include <runtime/thread.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
@@ -179,52 +177,12 @@ bool tu_channel_wait_readable(zx_handle_t channel) {
   return true;
 }
 
-zx_handle_t tu_launch(zx_handle_t job, const char* name, int argc, const char* const* argv,
-                      const char* const* envp, size_t num_handles, zx_handle_t* handles,
-                      uint32_t* handle_ids) {
-  launchpad_t* lp;
-  launchpad_create(job, name, &lp);
-  launchpad_load_from_file(lp, argv[0]);
-  launchpad_set_args(lp, argc, argv);
-  launchpad_set_environ(lp, envp);
-  launchpad_add_handles(lp, num_handles, handles, handle_ids);
-
-  zx_status_t status;
-  zx_handle_t child;
-  status = launchpad_go(lp, &child, NULL);
-
-  if (status < 0)
-    tu_fatal("tu_launch", status);
-  return child;
-}
-
 zx_handle_t tu_launch_process(zx_handle_t job, const char* name, int argc, const char* const* argv,
                               int envc, const char* const* envp, size_t num_handles,
                               zx_handle_t* handles, uint32_t* handle_ids) {
   springboard_t* sb = tu_launch_init(job, name, argc, argv, envc, envp, num_handles, handles,
                                      handle_ids);
   return tu_launch_fini(sb);
-}
-
-launchpad_t* tu_launch_fdio_init(zx_handle_t job, const char* name, int argc,
-                                 const char* const* argv, const char* const* envp,
-                                 size_t hnds_count, zx_handle_t* handles, uint32_t* ids) {
-  // This is the first part of launchpad_launch_fdio_etc.
-  // It does everything except start the process running.
-  launchpad_t* lp;
-
-  const char* filename = argv[0];
-  if (name == NULL)
-    name = filename;
-
-  launchpad_create(job, name, &lp);
-  launchpad_load_from_file(lp, filename);
-  launchpad_set_args(lp, argc, argv);
-  launchpad_set_environ(lp, envp);
-  launchpad_clone(lp, LP_CLONE_FDIO_ALL);
-  launchpad_add_handles(lp, hnds_count, handles, ids);
-
-  return lp;
 }
 
 // Loads the executable at the given path into the given VMO.
@@ -389,14 +347,6 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
   tu_check("fuchsia.process.Launcher#CreateWithoutStarting failed", response->status);
 
   return new springboard(response->data);
-}
-
-zx_handle_t tu_launch_fdio_fini(launchpad_t* lp) {
-  zx_handle_t proc;
-  zx_status_t status;
-  if ((status = launchpad_go(lp, &proc, NULL)) < 0)
-    tu_fatal("tu_launch_fdio_fini", status);
-  return proc;
 }
 
 zx_handle_t tu_launch_fini(springboard* sb) {
@@ -600,33 +550,6 @@ void tu_task_kill(zx_handle_t task) {
   zx_status_t status = zx_task_kill(task);
   if (status < 0)
     tu_fatal("zx_task_kill", status);
-}
-
-int tu_run_program(const char* progname, int argc, const char** argv) {
-  launchpad_t* lp;
-
-  unittest_printf("%s: running %s\n", __func__, progname);
-
-  launchpad_create(ZX_HANDLE_INVALID, progname, &lp);
-  launchpad_clone(lp, LP_CLONE_ALL);
-  launchpad_load_from_file(lp, argv[0]);
-  launchpad_set_args(lp, argc, argv);
-  zx_status_t status;
-  zx_handle_t child;
-  if ((status = launchpad_go(lp, &child, NULL)) < 0) {
-    tu_fatal(__func__, status);
-  }
-
-  int rc = tu_process_wait_exit(child);
-  tu_handle_close(child);
-  unittest_printf("%s: child returned %d\n", __func__, rc);
-  return rc;
-}
-
-int tu_run_command(const char* progname, const char* cmd) {
-  const char* argv[] = {"/boot/bin/sh", "-c", cmd};
-
-  return tu_run_program(progname, countof(argv), argv);
 }
 
 const char* tu_exception_to_string(uint32_t exception) {

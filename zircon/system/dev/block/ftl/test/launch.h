@@ -4,4 +4,5 @@
 
 // Launches a new process to execute the desired command. Returns the exit code
 // of the executed program, and -1 if a problem was found during launch.
-int Execute(int argc, const char** argv);
+// Note: the given argument list must be terminated by a null pointer.
+int Execute(const char** argv);

@@ -11,8 +11,6 @@
 #include <string.h>
 
 #include <fbl/algorithm.h>
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>

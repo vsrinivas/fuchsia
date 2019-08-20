@@ -7,9 +7,6 @@ library("test-utils") {
   sources = [
     "test-utils.cc",
   ]
-  public_deps = [
-    "$zx/system/ulib/launchpad",
-  ]
   deps = [
     "$zx/system/fidl/fuchsia-process:llcpp",
     "$zx/system/ulib/backtrace-request",

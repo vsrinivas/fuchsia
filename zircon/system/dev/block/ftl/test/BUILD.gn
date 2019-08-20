@@ -45,7 +45,6 @@ test("ftl-integration") {
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/launchpad",
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

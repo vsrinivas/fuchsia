@@ -19,7 +19,6 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
-#include <launchpad/launchpad.h>
 
 __BEGIN_CDECLS
 
@@ -43,27 +42,6 @@ void tu_handle_close(zx_handle_t handle);
 // A wrapper on zx_handle_duplicate.
 
 zx_handle_t tu_handle_duplicate(zx_handle_t handle);
-
-// A wrapper on launchpad_launch.
-// Deprecated: use tu_launch_process instead.
-
-zx_handle_t tu_launch(zx_handle_t job, const char* name, int argc, const char* const* argv,
-                      const char* const* envp, size_t num_handles, zx_handle_t* handles,
-                      uint32_t* handle_ids);
-
-// The first part of launchpad_launch_fdio_etc that creates the
-// launchpad and initializes the process.
-// Deprecated: use tu_launch_init instead.
-
-launchpad_t* tu_launch_fdio_init(zx_handle_t job, const char* name, int argc,
-                                 const char* const* argv, const char* const* envp,
-                                 size_t num_handles, zx_handle_t* handles, uint32_t* handle_ids);
-
-// The second part of launchpad_launch_fdio_etc that starts the process.
-// Returns a handle of the started process.
-// Deprecated: use tu_launch_fini instead.
-
-zx_handle_t tu_launch_fdio_fini(launchpad_t* lp);
 
 // Sets up and starts a new process with the given parameters.
 
@@ -224,16 +202,6 @@ bool tu_thread_is_dying_or_dead(zx_handle_t thread);
 // Kill |task|.
 
 void tu_task_kill(zx_handle_t task);
-
-// Run a program and wait for it to exit.
-// Any error in trying to run the program is fatal.
-// The result is the return code of the child process.
-
-int tu_run_program(const char* progname, int argc, const char** argv);
-
-// A wrapper for /bin/sh -c <command>.
-
-int tu_run_command(const char* progname, const char* cmd);
 
 // Set the scaling factor for timeouts.
 // The default is 1. A value of 2 waits twice as long, and so on.

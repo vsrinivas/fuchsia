@@ -27,11 +27,9 @@ library("launchpad") {
     # Instead of launchpad, use fdio_spawn or fuchsia.process.Launcher.
     "$zx/system/core/devmgr/devcoordinator:*",
     "$zx/system/core/devmgr/shared:*",
-    "$zx/system/dev/block/ftl/test:*",
     "$zx/system/ulib:*",
     "$zx/system/ulib/elf-search/test:*",
     "$zx/system/ulib/process-launcher:*",
-    "$zx/system/ulib/test-utils:*",
     "$zx/system/utest/vdso-variant:*",
   ]
 }

@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
 #include <lib/backtrace-request/backtrace-request.h>
 #include <lib/zx/thread.h>
 #include <pretty/hexdump.h>
