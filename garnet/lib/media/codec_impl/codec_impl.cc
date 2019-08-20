@@ -3037,9 +3037,7 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
     PostToSharedFidl([this, stream_lifetime_ordinal = stream_lifetime_ordinal_, error] {
       // See "is_bound_checks" comment up top.
       if (binding_.is_bound()) {
-        // TODO(MTWN-411): Complete soft transition and only send one event.
         binding_.events().OnStreamFailed(stream_lifetime_ordinal, error);
-        binding_.events().OnStreamFailed2(stream_lifetime_ordinal, error);
       }
     });
   }  // ~lock
