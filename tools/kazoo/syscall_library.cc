@@ -10,6 +10,7 @@
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/trim.h"
+#include "tools/kazoo/alias_workaround.h"
 #include "tools/kazoo/output_util.h"
 
 namespace {
@@ -32,6 +33,12 @@ std::string StripLibraryName(const std::string& full_name) {
   // "zx/" or "zz/".
   constexpr size_t kPrefixLen = 3;
   return full_name.substr(kPrefixLen, full_name.size() - kPrefixLen);
+}
+
+// Converts a type name to Zircon style: In particular, this converts the basic name to snake_case,
+// and then wraps it in "zx_" and "_t". For example, HandleInfo -> "zx_handle_info_t".
+std::string TypeNameToZirconStyle(const std::string& base_name) {
+  return "zx_" + CamelToSnake(base_name) + "_t";
 }
 
 std::string GetCategory(const rapidjson::Value& interface, const std::string& interface_name) {
@@ -59,7 +66,37 @@ std::string GetDocAttribute(const rapidjson::Value& method) {
   return std::string();
 }
 
-Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type) {
+Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
+                  const rapidjson::Value* type_alias) {
+  if (type_alias) {
+    // If the "experimental_maybe_from_type_alias" field is non-null, then the source-level has used
+    // a type that's declared as "using x = y;". Here, treat various "x"s as special types. This
+    // is likely mostly (?) temporary until there's 1) a more nailed down alias implementation in
+    // the front end (fidlc) and 2) we move various parts of zx.fidl from being built-in to fidlc to
+    // actual source level fidl and shared between the syscall definitions and normal FIDL.
+    const std::string full_name(type_alias->operator[]("name").GetString());
+    FXL_CHECK(full_name.substr(0, 3) == "zx/" || full_name.substr(0, 3) == "zz/");
+    const std::string name = full_name.substr(3);
+    if (name == "duration" || name == "futex" || name == "koid" || name == "paddr" ||
+        name == "rights" || name == "signals" || name == "status" || name == "time" ||
+        name == "ticks" || name == "vaddr" || name == "VmOption") {
+      return Type(TypeZxBasicAlias(CamelToSnake(name)));
+    }
+
+    if (name == "uintptr") {
+      return Type(TypeUintptrT{});
+    }
+
+    if (name == "usize") {
+      return Type(TypeSizeT{});
+    }
+
+    Type workaround_type;
+    if (AliasWorkaround(name, library, &workaround_type)) {
+      return workaround_type;
+    }
+  }
+
   if (!type.HasMember("kind")) {
     FXL_LOG(ERROR) << "type has no 'kind'";
     return Type();
@@ -91,7 +128,7 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type) {
   } else if (kind == "handle") {
     return Type(TypeHandle(type["subtype"].GetString()));
   } else if (kind == "vector") {
-    Type contained_type = TypeFromJson(library, type["element_type"]);
+    Type contained_type = TypeFromJson(library, type["element_type"], nullptr);
     return Type(TypeVector(contained_type));
   } else if (kind == "string") {
     return Type(TypeString{});
@@ -105,6 +142,11 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type) {
 
 bool Syscall::HasAttribute(const char* attrib_name) const {
   return attributes_.find(attrib_name) != attributes_.end();
+}
+
+std::string Syscall::GetAttribute(const char* attrib_name) const {
+  FXL_DCHECK(HasAttribute(attrib_name));
+  return attributes_.find(attrib_name)->second;
 }
 
 // Converts from FIDL style to C/Kernel style:
@@ -155,7 +197,11 @@ bool Syscall::MapRequestResponseToKernelAbi() {
       } else {
         prefix = "num_";
       }
-      into->emplace_back(prefix + member.name() + suffix, Type(TypeSizeT{}));
+      if (type.DataAsVector().uint32_size()) {
+        into->emplace_back(prefix + member.name() + suffix, Type(TypeUint32{}));
+      } else {
+        into->emplace_back(prefix + member.name() + suffix, Type(TypeSizeT{}));
+      }
     } else if (type.IsString()) {
       // char*, using the same constness as the string was specified as.
       into->emplace_back(member.name(),
@@ -190,8 +236,16 @@ bool Syscall::MapRequestResponseToKernelAbi() {
   // Now from these vectors into kernel_arguments_ making pointers to structs as necessary on input
   // (again, with the correct constness).
   for (const auto& m : kernel_request) {
-    // TODO(scottmg): Struct stuff here, otherwise copy it over unchanged.
-    kernel_arguments_.push_back(m);
+    if (m.type().IsStruct()) {
+      // If it's a struct, map to struct*, const unless otherwise specified. The pointer takes the
+      // constness of the struct.
+      kernel_arguments_.emplace_back(
+          m.name(), Type(TypePointer(m.type()), default_to_const(m.type().constness()),
+                         Optionality::kInputArgument));
+    } else {
+      // Otherwise, copy it over, unchanged.
+      kernel_arguments_.push_back(m);
+    }
   }
 
   // For output arguments:
@@ -216,6 +270,12 @@ bool Syscall::MapRequestResponseToKernelAbi() {
 }
 
 Type SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
+  for (const auto& strukt : structs_) {
+    if (strukt->id() == id) {
+      return Type(TypeStruct(strukt.get()));
+    }
+  }
+
   // TODO: Load struct, union, usings and return one of them here!
   return Type();
 }
@@ -241,6 +301,10 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
   }
 
   FXL_DCHECK(library->syscalls_.empty());
+
+  if (!LoadStructs(document, library)) {
+    return false;
+  }
 
   if (!LoadInterfaces(document, library)) {
     return false;
@@ -283,7 +347,11 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
       FXL_CHECK(method["has_request"].GetBool());  // Events are not expected in syscalls.
 
       auto add_struct_members = [&library](Struct* strukt, const rapidjson::Value& arg) {
-        strukt->members_.emplace_back(arg["name"].GetString(), TypeFromJson(*library, arg["type"]));
+        const auto* type_alias = arg.HasMember("experimental_maybe_from_type_alias")
+                                     ? &arg["experimental_maybe_from_type_alias"]
+                                     : nullptr;
+        strukt->members_.emplace_back(arg["name"].GetString(),
+                                      TypeFromJson(*library, arg["type"], type_alias));
       };
 
       Struct& req = syscall->request_;
@@ -308,6 +376,25 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
     }
   }
 
+  return true;
+}
+
+// static
+bool SyscallLibraryLoader::LoadStructs(const rapidjson::Document& document,
+                                          SyscallLibrary* library) {
+  // TODO(scottmg): In transition, we're still relying on the existing Zircon headers to define all
+  // these structures. So we only load their names for the time being, which is enough for now to
+  // know that there's something in the .fidl file where the struct is declared. Note also that
+  // interface parsing fills out request/response "structs", so that code should likely be shared
+  // when this is implemented.
+  for (const auto& struct_json : document["struct_declarations"].GetArray()) {
+    auto obj = std::make_unique<Struct>();
+    std::string full_name = struct_json["name"].GetString();
+    obj->id_ = full_name;
+    obj->original_name_ = StripLibraryName(full_name);
+    obj->name_ = TypeNameToZirconStyle(obj->original_name_);
+    library->structs_.push_back(std::move(obj));
+  }
   return true;
 }
 

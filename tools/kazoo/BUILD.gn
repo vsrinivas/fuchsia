@@ -23,6 +23,8 @@ if (current_toolchain == host_toolchain) {
 
   static_library("lib") {
     sources = [
+      "alias_workaround.cc",
+      "alias_workaround.h",
       "asm_output.cc",
       "category_output.cc",
       "kernel_branches_output.cc",
@@ -58,6 +60,7 @@ if (current_toolchain == host_toolchain) {
     include_dirs = [ "$target_gen_dir" ]
 
     sources = [
+      "alias_workaround_test.cc",
       "asm_output_test.cc",
       "category_output_test.cc",
       "kernel_branches_output_test.cc",
@@ -84,6 +87,7 @@ if (current_toolchain == host_toolchain) {
     ]
 
     sources = [
+      "test_aliases.test.fidl",
       "test_no_methods.test.fidl",
       "test_one_protocol_one_method.test.fidl",
       "test_one_protocol_two_methods.test.fidl",

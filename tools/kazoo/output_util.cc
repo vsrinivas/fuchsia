@@ -79,3 +79,49 @@ std::string CamelToSnake(const std::string& camel_fidl) {
 
   return fxl::JoinStrings(parts, "_");
 }
+
+std::string GetCName(const Type& type) {
+  struct {
+   public:
+    void operator()(const std::monostate&) { ret = "<TODO!>"; }
+    void operator()(const TypeBool&) { ret = "bool"; }
+    void operator()(const TypeChar&) { ret = "char"; }
+    void operator()(const TypeInt32&) { ret = "int32_t"; }
+    void operator()(const TypeInt64&) { ret = "int64_t"; }
+    void operator()(const TypeSizeT&) { ret = "size_t"; }
+    void operator()(const TypeUint16&) { ret = "uint16_t"; }
+    void operator()(const TypeUint32&) { ret = "uint32_t"; }
+    void operator()(const TypeUint64&) { ret = "uint64_t"; }
+    void operator()(const TypeUint8&) { ret = "uint8_t"; }
+    void operator()(const TypeUintptrT&) { ret = "uintptr_t"; }
+    void operator()(const TypeVoid&) { ret = "void"; }
+    void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.name(); }
+
+    void operator()(const TypeHandle& handle) {
+      ret = "zx_handle_t";
+      // TOOD(syscall-fidl-transition): Once we're not trying to match abigen, it might be nice to
+      // add the underlying handle type here like "zx_handle_t /*vmo*/ handle" or similar.
+    }
+    void operator()(const TypePointer& pointer) {
+      FXL_CHECK(constness != Constness::kUnspecified)
+          << "Pointer should be explictly const or mutable by output time";
+      ret = (constness == Constness::kConst ? "const " : "") + GetCName(pointer.pointed_to_type()) +
+            "*";
+    }
+    void operator()(const TypeString&) {
+      FXL_DCHECK(false) << "can't convert string to C directly";
+      ret = "<!>";
+    }
+    void operator()(const TypeStruct& strukt) { ret = strukt.struct_data().name(); }
+    void operator()(const TypeVector&) {
+      FXL_DCHECK(false) << "can't convert vector to C directly";
+      ret = "<!>";
+    }
+
+    Constness constness;
+    std::string ret;
+  } name_visitor;
+  name_visitor.constness = type.constness();
+  std::visit(name_visitor, type.type_data());
+  return name_visitor.ret;
+}

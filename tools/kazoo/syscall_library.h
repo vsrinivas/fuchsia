@@ -35,11 +35,12 @@ class TypeZxBasicAlias;
 class TypeHandle;
 class TypePointer;
 class TypeString {};
+class TypeStruct;
 class TypeVector;
 using TypeData =
     std::variant<std::monostate, TypeBool, TypeChar, TypeInt32, TypeInt64, TypeSizeT, TypeUint16,
                  TypeUint32, TypeUint64, TypeUint8, TypeUintptrT, TypeVoid, TypeZxBasicAlias,
-                 TypeHandle, TypePointer, TypeString, TypeVector>;
+                 TypeHandle, TypePointer, TypeString, TypeStruct, TypeVector>;
 
 class Type;
 
@@ -64,15 +65,32 @@ class TypePointer {
   std::shared_ptr<Type> pointed_to_type_;
 };
 
+class TypeStruct {
+ public:
+  explicit TypeStruct(const Struct* struct_data) : struct_(struct_data) {}
+
+  const Struct& struct_data() const { return *struct_; }
+
+ private:
+  const Struct* struct_;
+};
+
+class UseUint32ForVectorSizeTag{};
+
 class TypeVector {
  public:
   explicit TypeVector(const Type& contained_type)
       : contained_type_(std::make_shared<Type>(contained_type)) {}
 
+  explicit TypeVector(const Type& contained_type, UseUint32ForVectorSizeTag)
+      : contained_type_(std::make_shared<Type>(contained_type)), uint32_size_(true) {}
+
   const Type& contained_type() const;
+  bool uint32_size() const { return uint32_size_; }
 
  private:
   std::shared_ptr<Type> contained_type_;
+  bool uint32_size_{false};
 };
 
 class TypeZxBasicAlias {
@@ -125,12 +143,11 @@ class Type {
   bool IsVector() const { return std::holds_alternative<TypeVector>(type_data_); }
   bool IsPointer() const { return std::holds_alternative<TypePointer>(type_data_); }
   bool IsString() const { return std::holds_alternative<TypeString>(type_data_); }
+  bool IsStruct() const { return std::holds_alternative<TypeStruct>(type_data_); }
 
   const TypeVector& DataAsVector() const { return std::get<TypeVector>(type_data_); }
 
-  bool IsSimpleType() const {
-    return !IsVector() && !IsString(); /* TODO(scottmg): && !IsStruct() */
-  }
+  bool IsSimpleType() const { return !IsVector() && !IsString() && !IsStruct(); }
 
  private:
   TypeData type_data_;
@@ -194,6 +211,7 @@ class Syscall {
   const Struct& response() const { return response_; }
 
   bool HasAttribute(const char* attrib_name) const;
+  std::string GetAttribute(const char* attrib_name) const;
 
   const Type& kernel_return_type() const { return kernel_return_type_; }
   const std::vector<StructMember>& kernel_arguments() const { return kernel_arguments_; }
@@ -234,6 +252,7 @@ class SyscallLibrary {
   friend class SyscallLibraryLoader;
 
   std::string name_;
+  std::vector<std::unique_ptr<Struct>> structs_;
   std::vector<std::unique_ptr<Syscall>> syscalls_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SyscallLibrary);
@@ -250,6 +269,7 @@ class SyscallLibraryLoader {
 
  private:
   static bool LoadInterfaces(const rapidjson::Document& document, SyscallLibrary* library);
+  static bool LoadStructs(const rapidjson::Document& document, SyscallLibrary* library);
 
   // TODO(syscall-fidl-transition): A temporary measure during transition that
   // maps the possibly-arbitrary order that the syscalls are in in the JSON IR,

@@ -1,0 +1,77 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zz;
+
+using zx;
+
+// Mirrors alias_workarounds[.test].fidl. We don't want to pull real syscalls
+// into the test data, so these are copied here. The structs and basic types
+// will eventually go away when we can make this test pull in a zx.fidl that
+// contains them.
+
+struct HandleDisposition {};
+struct HandleInfo {};
+struct PciBar {};
+struct PortPacket {};
+struct WaitItem {};
+using koid = uint64;
+using paddr = uint64;
+using signals = uint32;
+using time = int64;
+using usize = uint64;
+
+using charptr = uint64;
+using const_futexptr = int32;
+using const_voidptr = uint64;
+using mutable_string = string;
+using mutable_uint32 = uint32;
+using mutable_usize = usize;
+using mutable_vector_HandleDisposition_u32size = vector<HandleDisposition>;
+using mutable_vector_HandleInfo_u32size = vector<HandleInfo>;
+using mutable_vector_WaitItem = vector<WaitItem>;
+using mutable_vector_handle_u32size = vector<handle>;
+using mutable_vector_paddr = vector<paddr>;
+using mutable_vector_void = vector<byte>;
+using mutable_vector_void_u32size = vector<byte>;
+using optional_PciBar = PciBar;
+using optional_PortPacket = PortPacket;
+using optional_koid = koid;
+using optional_signals = signals;
+using optional_time = time;
+using optional_uint32 = uint32;
+using optional_usize = usize;
+using vector_handle_u32size = vector<handle>;
+using vector_void = vector<byte>;
+using vector_void_u32size = vector<byte>;
+using voidptr = uint64;
+
+[Transport="Syscall"]
+protocol Aliases {
+    SomeFunc(charptr a,
+             const_futexptr b,
+             const_voidptr c,
+             mutable_string d,
+             mutable_uint32 e,
+             mutable_usize f,
+             mutable_vector_HandleDisposition_u32size g,
+             mutable_vector_HandleInfo_u32size h,
+             mutable_vector_WaitItem i,
+             mutable_vector_handle_u32size j,
+             mutable_vector_paddr k,
+             mutable_vector_void l,
+             mutable_vector_void_u32size m,
+             vector_handle_u32size n,
+             vector_void o,
+             vector_void_u32size p,
+             voidptr q) ->
+        (zx.status status,
+         optional_PciBar r,
+         optional_PortPacket s,
+         optional_koid t,
+         optional_signals u,
+         optional_time v,
+         optional_uint32 w,
+         optional_usize x);
+};

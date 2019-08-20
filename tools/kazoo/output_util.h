@@ -23,4 +23,7 @@ std::string ToLowerAscii(const std::string& input);
 // Maps a name from typical FidlCamelStyle to zircon_snake_style.
 std::string CamelToSnake(const std::string& camel_fidl);
 
+// Gets an string representing |type| suitable for output to a C file.
+std::string GetCName(const Type& type);
+
 #endif  // TOOLS_KAZOO_OUTPUT_UTIL_H_
