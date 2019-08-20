@@ -53,6 +53,14 @@ void FakeEncryptionService::EncryptCommit(std::string commit_storage,
   });
 }
 
+std::string FakeEncryptionService::EncodeCommitId(std::string commit_id) {
+  return Encode(commit_id);
+}
+
+bool FakeEncryptionService::IsSameVersion(convert::ExtendedStringView remote_commit_id) {
+  return true;
+}
+
 void FakeEncryptionService::DecryptCommit(convert::ExtendedStringView storage_bytes,
                                           fit::function<void(Status, std::string)> callback) {
   std::string commit = DecryptCommitSynchronous(storage_bytes);

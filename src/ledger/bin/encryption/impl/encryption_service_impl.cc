@@ -14,6 +14,7 @@
 #include <flatbuffers/flatbuffers.h>
 
 #include "src/ledger/bin/encryption/impl/encrypted_commit_generated.h"
+#include "src/ledger/bin/encryption/impl/remote_commit_id_generated.h"
 #include "src/ledger/bin/encryption/primitives/encrypt.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/encryption/primitives/hmac.h"
@@ -24,6 +25,12 @@
 
 namespace encryption {
 namespace {
+
+// Version of the encryption scheme.
+// This is used to check that the encryption scheme used in the data obtained from the cloud
+// matches the one currently used.
+// TODO(mariagl): Use this for the backward compatibility.
+constexpr uint32_t kEncryptionVersion = 0;
 
 // The default encryption values. Only used until real encryption is
 // implemented: LE-286
@@ -142,6 +149,16 @@ void EncryptionServiceImpl::EncryptCommit(std::string commit_storage,
         callback(Status::OK, std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
                                          builder.GetSize()));
       });
+}
+
+std::string EncryptionServiceImpl::EncodeCommitId(std::string commit_id) {
+  flatbuffers::FlatBufferBuilder builder;
+
+  auto storage =
+      CreateRemoteCommitId(builder, kEncryptionVersion,
+                           convert::ToFlatBufferVector(&builder, SHA256WithLengthHash(commit_id)));
+  builder.Finish(storage);
+  return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
 }
 
 void EncryptionServiceImpl::DecryptCommit(convert::ExtendedStringView storage_bytes,
@@ -311,6 +328,19 @@ std::string EncryptionServiceImpl::GetEntryIdForMerge(fxl::StringView entry_name
   std::string hash = SHA256WithLengthHash(input);
   hash.resize(kEntryIdSize);
   return hash;
+}
+
+bool EncryptionServiceImpl::IsSameVersion(convert::ExtendedStringView remote_commit_id) {
+  flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(remote_commit_id.data()),
+                                 remote_commit_id.size());
+
+  if (!VerifyRemoteCommitIdBuffer(verifier)) {
+    FXL_LOG(WARNING) << "Received invalid data. Cannot check the version.";
+    return false;
+  }
+
+  const RemoteCommitId* data = GetRemoteCommitId(remote_commit_id.data());
+  return data->version() == kEncryptionVersion;
 }
 
 }  // namespace encryption

@@ -8,6 +8,7 @@
 #include <lib/callback/set_when_called.h>
 
 #include "gtest/gtest.h"
+#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
@@ -85,6 +86,14 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
                                  fxl::StringView operation_list) {
     return encryption_service_.GetEntryIdForMerge(entry_name, left_parent_id, right_parent_id,
                                                   operation_list);
+  }
+
+  std::string EncodeCommitId(std::string commit_id) {
+    return encryption_service_.EncodeCommitId(std::move(commit_id));
+  }
+
+  bool IsSameVersion(convert::ExtendedStringView remote_commit_id) {
+    return encryption_service_.IsSameVersion(remote_commit_id);
   }
 
   EncryptionServiceImpl encryption_service_;
@@ -175,6 +184,16 @@ TEST_F(EncryptionServiceTest, GetEntryIdMergeCommit) {
 }
 
 TEST_F(EncryptionServiceTest, GetEntryIdNonMergeCommit) { EXPECT_NE(GetEntryId(), GetEntryId()); }
+
+TEST_F(EncryptionServiceTest, EncodeVerifyCommitId) {
+  std::string encoded_id1 = EncodeCommitId("commit_id1");
+  EXPECT_TRUE(IsSameVersion(encoded_id1));
+
+  std::string encoded_id2 = EncodeCommitId("commit_id2");
+  EXPECT_TRUE(IsSameVersion(encoded_id2));
+
+  EXPECT_NE(encoded_id1, encoded_id2);
+}
 
 }  // namespace
 }  // namespace encryption

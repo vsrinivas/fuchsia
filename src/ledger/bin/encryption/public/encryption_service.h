@@ -51,6 +51,12 @@ class EncryptionService {
   virtual void DecryptCommit(convert::ExtendedStringView storage_bytes,
                              fit::function<void(Status, std::string)> callback) = 0;
 
+  // Obfuscates the commit id by hashing it before sending it to the cloud.
+  virtual std::string EncodeCommitId(std::string commit_id) = 0;
+
+  // Checks whether the remote commit id mentions the currently used version.
+  virtual bool IsSameVersion(convert::ExtendedStringView remote_commit_id) = 0;
+
   // Returns the obfuscated object name for the given identifier.
   //
   // This method is used to translate a local object identifier to the name that

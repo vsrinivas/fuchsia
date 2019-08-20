@@ -55,6 +55,10 @@ class FakeEncryptionService : public EncryptionService {
                                  storage::CommitId right_parent_id,
                                  fxl::StringView operation_list) override;
 
+  std::string EncodeCommitId(std::string commit_id) override;
+
+  bool IsSameVersion(convert::ExtendedStringView remote_commit_id) override;
+
   // Synchronously encrypts the given commit.
   std::string EncryptCommitSynchronous(convert::ExtendedStringView commit_storage);
 
