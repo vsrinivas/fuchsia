@@ -54,6 +54,7 @@ TEST_F(FeedbackAgentIntegrationTest, ValidOverrideConfig_SmokeTest) {
                                                         }));
   ASSERT_TRUE(out_result.response().data.has_attachments());
   EXPECT_THAT(out_result.response().data.attachments(), testing::UnorderedElementsAreArray({
+                                                            MatchesKey("annotations.json"),
                                                             MatchesKey("build.snapshot.xml"),
                                                         }));
 }

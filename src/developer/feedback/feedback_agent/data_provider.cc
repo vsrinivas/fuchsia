@@ -129,6 +129,14 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
                   FX_LOGS(WARNING) << "Failed to retrieve any attachments";
                 }
 
+                // We also add the annotations as a single extra attachment.
+                // This is useful for clients that surface the annotations differentily in the UI
+                // but still want all the annotations to be easily downloadable in one file.
+                if (response.data.has_annotations()) {
+                  AddAnnotationsAsExtraAttachment(response.data.annotations(),
+                                                  response.data.mutable_attachments());
+                }
+
                 DataProvider_GetData_Result result;
                 result.set_response(std::move(response));
                 callback(std::move(result));

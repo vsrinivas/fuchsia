@@ -432,6 +432,61 @@ TEST_F(DataProviderImplTest, GetData_SmokeTest) {
   // There is nothing else we can assert here as no missing annotation nor attachment is fatal.
 }
 
+constexpr char kAnnotationsAsAttachmentJsonSchema[] = R"({
+  "type": "object",
+  "properties": {
+    "build.board": {
+      "type": "string"
+    },
+    "build.latest-commit-date": {
+      "type": "string"
+    },
+    "build.product": {
+      "type": "string"
+    },
+    "build.version": {
+      "type": "string"
+    },
+    "channel": {
+      "type": "string"
+    },
+    "device.board-name": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+})";
+
+TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
+  DataProvider_GetData_Result result = GetData();
+
+  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.response().data.has_attachments());
+
+  bool found_annotations_attachment = false;
+  for (const auto& attachment : result.response().data.attachments()) {
+    if (attachment.key.compare("annotations.json") != 0) {
+      continue;
+    }
+    found_annotations_attachment = true;
+
+    std::string json_str;
+    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &json_str));
+    ASSERT_FALSE(json_str.empty());
+
+    // JSON verification.
+    // We check that the output is a valid JSON and that it matches the schema.
+    rapidjson::Document json;
+    ASSERT_FALSE(json.Parse(json_str.c_str()).HasParseError());
+    rapidjson::Document schema_json;
+    ASSERT_FALSE(schema_json.Parse(kAnnotationsAsAttachmentJsonSchema).HasParseError());
+    rapidjson::SchemaDocument schema(schema_json);
+    rapidjson::SchemaValidator validator(schema);
+    EXPECT_TRUE(json.Accept(validator));
+  }
+  EXPECT_TRUE(found_annotations_attachment);
+}
+
 TEST_F(DataProviderImplTest, GetData_SysLog) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
   // check that we are attaching the logs.
@@ -551,7 +606,9 @@ TEST_F(DataProviderImplTest, GetData_EmptyAttachmentAllowlist) {
 
   DataProvider_GetData_Result result = GetData();
   ASSERT_TRUE(result.is_response());
-  EXPECT_FALSE(result.response().data.has_attachments());
+  EXPECT_TRUE(result.response().data.has_attachments());
+  ASSERT_EQ(result.response().data.attachments().size(), 1u);
+  ASSERT_STREQ(result.response().data.attachments()[0].key.c_str(), "annotations.json");
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
@@ -577,7 +634,9 @@ TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAttachment) {
 
   DataProvider_GetData_Result result = GetData();
   ASSERT_TRUE(result.is_response());
-  EXPECT_FALSE(result.response().data.has_attachments());
+  EXPECT_TRUE(result.response().data.has_attachments());
+  EXPECT_EQ(result.response().data.attachments().size(), 1u);
+  ASSERT_STREQ(result.response().data.attachments()[0].key.c_str(), "annotations.json");
 }
 
 }  // namespace

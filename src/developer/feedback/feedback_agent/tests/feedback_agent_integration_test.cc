@@ -175,6 +175,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                                                         }));
   ASSERT_TRUE(out_result.response().data.has_attachments());
   EXPECT_THAT(out_result.response().data.attachments(), testing::UnorderedElementsAreArray({
+                                                            MatchesKey("annotations.json"),
                                                             MatchesKey("build.snapshot.xml"),
                                                             MatchesKey("log.kernel.txt"),
                                                             MatchesKey("log.system.txt"),

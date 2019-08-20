@@ -21,6 +21,8 @@
 #include "src/developer/feedback/feedback_agent/inspect_ptr.h"
 #include "src/developer/feedback/feedback_agent/log_listener_ptr.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -122,6 +124,31 @@ std::vector<fit::promise<Attachment>> GetAttachments(
     attachments.push_back(BuildAttachment(key, dispatcher, services, timeout));
   }
   return attachments;
+}
+
+void AddAnnotationsAsExtraAttachment(const std::vector<Annotation>& annotations,
+                                     std::vector<Attachment>* attachments) {
+  rapidjson::Document json;
+  json.SetObject();
+  for (const auto& annotation : annotations) {
+    json.AddMember(rapidjson::StringRef(annotation.key), annotation.value, json.GetAllocator());
+  }
+  rapidjson::StringBuffer buffer;
+  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+  json.Accept(writer);
+  if (!writer.IsComplete()) {
+    FX_LOGS(WARNING) << "Failed to write annotations as a JSON";
+    return;
+  }
+  std::string json_str(buffer.GetString(), buffer.GetSize());
+
+  Attachment extra_attachment;
+  extra_attachment.key = "annotations.json";
+  if (!fsl::VmoFromString(json_str, &extra_attachment.value)) {
+    FX_LOGS(WARNING) << "Failed to write annotations as an extra attachment";
+    return;
+  }
+  attachments->push_back(std::move(extra_attachment));
 }
 
 }  // namespace feedback

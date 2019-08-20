@@ -26,6 +26,10 @@ std::vector<fit::promise<Attachment>> GetAttachments(
     async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
     const std::set<std::string>& allowlist, zx::duration timeout);
 
+// Adds the |annotations| as an extra JSON attachment to |attachments|.
+void AddAnnotationsAsExtraAttachment(const std::vector<Annotation>& annotations,
+                                     std::vector<Attachment>* attachments);
+
 }  // namespace feedback
 }  // namespace fuchsia
 
