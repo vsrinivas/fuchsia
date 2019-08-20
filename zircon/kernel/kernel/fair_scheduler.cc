@@ -358,7 +358,8 @@ void FairScheduler::RescheduleCommon(SchedTime now, void* outer_trace) {
   // Adjust the rate of the current thread when demand changes. Changes in
   // demand could be due to threads entering or leaving the run queue, or due
   // to weights changing in the current or enqueued threads.
-  if (!thread_is_idle(current_thread) && weight_total_ != scheduled_weight_total_) {
+  if (!thread_is_idle(current_thread) && weight_total_ != scheduled_weight_total_ &&
+      total_runtime_ns < current_state->time_slice_ns_) {
     LocalTraceDuration trace_adjust_rate{"adjust_rate"_stringref};
     scheduled_weight_total_ = weight_total_;
 
