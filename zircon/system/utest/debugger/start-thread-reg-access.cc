@@ -2,28 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
+#include <lib/zx/thread.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
+
+#include <atomic>
 
 #include <fbl/algorithm.h>
-#include <lib/zx/thread.h>
 #include <pretty/hexdump.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
-#include <zircon/types.h>
-#include <zircon/syscalls/debug.h>
-#include <zircon/syscalls/port.h>
 
 #include "debugger.h"
-#include "inferior.h"
 #include "inferior-control.h"
+#include "inferior.h"
 #include "utils.h"
 
 namespace {
 
 constexpr uint64_t kMagicRegisterValue = 0x0123456789abcdefull;
+#define MAGIC_REGISTER_VALUE_ASM "0x0123456789abcdef"
 
 // State that is maintained across the register access tests.
 
@@ -44,18 +46,37 @@ typedef void(raw_thread_func_t)(void* arg1, void* arg2);
 // values. We want to grab the register values at the start of the thread to
 // see if they were set correctly, but we can't (or at least shouldn't) make
 // any assumptions about what libc's thread entry will do to them before we're
-// able to see them.
-
-__NO_RETURN void raw_capture_regs_thread_func(void* arg1, void* arg2, raw_thread_func_t* func,
-                                              uint64_t magic_value) {
-  // We can't do much in this function, at this point all we have is a
-  // raw thread. If |magic_value| is wrong then crash.
-  if (magic_value != kMagicRegisterValue) {
-    undefined_insn();
-  }
-  func(arg1, arg2);
-  __UNREACHABLE;
-}
+// able to see them.  It's defined in pure assembly so that there are no
+// issues with compiler-generated code's assumptions about the proper ABI
+// setup, instrumentation, etc.
+extern "C" [[noreturn]] void raw_capture_regs_thread_func(void* arg1, void* arg2,
+                                                          raw_thread_func_t* func,
+                                                          uint64_t magic_value);
+__asm__(
+    ".pushsection .text.raw_capture_regs_thread_func,\"ax\",%progbits\n"
+    ".balign 4\n"
+    ".type raw_capture_regs_thread_func,%function\n"
+    "raw_capture_regs_thread_func:\n"
+#ifdef __aarch64__
+    "  mov x8, #(" MAGIC_REGISTER_VALUE_ASM " & 0xffff)\n"
+    "  movk x8, #((" MAGIC_REGISTER_VALUE_ASM " >> 16) & 0xffff), lsl #16\n"
+    "  movk x8, #((" MAGIC_REGISTER_VALUE_ASM " >> 32) & 0xffff), lsl #32\n"
+    "  movk x8, #((" MAGIC_REGISTER_VALUE_ASM " >> 48) & 0xffff), lsl #48\n"
+    "  cmp x3, x8\n"
+    "  bne 0f\n"
+    "  br x2\n"
+    "0:brk #0\n"
+#elif defined(__x86_64__)
+    "  movabs $" MAGIC_REGISTER_VALUE_ASM ", %rax\n"
+    "  cmpq %rax, %rcx\n"
+    "  jne 0f\n"
+    "  jmp *%rdx\n"
+    "0:ud2\n"
+#else
+#error "what machine?"
+#endif
+    ".size raw_capture_regs_thread_func, . - raw_capture_regs_thread_func\n"
+    ".popsection");
 
 // Helper function to test register access when a thread starts.
 
