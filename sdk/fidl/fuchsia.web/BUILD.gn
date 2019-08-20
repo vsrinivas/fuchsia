@@ -8,11 +8,13 @@ fidl("fuchsia.web") {
   sdk_category = "partner"
 
   sources = [
+    "constants.fidl",
     "context.fidl",
     "cookie.fidl",
     "debug.fidl",
     "frame.fidl",
     "navigation.fidl",
+    "url_request_rewrite_rules.fidl",
   ]
 
   public_deps = [

@@ -1,0 +1,71 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.web;
+
+using fuchsia.net.http;
+
+table UrlRequestRewriteRule {
+    /// Set of hosts to apply the rules to. If not set, the rule will apply to every request,
+    /// independent of host.
+    1: vector<UrlHostName>:MAX_RULE_COUNT hosts_filter;
+
+    /// Set of schemes to apply the rules to. If not set, the rule will apply to every request,
+    /// independent of scheme.
+    2: vector<UrlSchemeName>:MAX_RULE_COUNT schemes_filter;
+
+    /// URL request rewrites to apply.
+    3: vector<UrlRequestRewrite>:MAX_RULE_COUNT rewrites;
+};
+
+xunion UrlRequestRewrite {
+    /// Adds a set of headers to a URL request.
+    UrlRequestRewriteAddHeaders add_headers;
+
+    /// Removes a header based on the presence of a pattern in the URL query.
+    UrlRequestRewriteRemoveHeader remove_header;
+
+    /// Substitutes a pattern in the URL query.
+    UrlRequestRewriteSubstituteQueryPattern substitute_query_pattern;
+
+    /// Replaces a URL if the original URL ends with a pattern.
+    UrlRequestRewriteReplaceUrl replace_url;
+};
+
+/// Adds `headers` to the URL request. If a header is already present in the original URL request,
+/// it will be overwritten.
+/// * `headers` must be set.
+/// * Each [`fuchsia.net.http.Header`] in `headers` must have a valid HTTP header name and value,
+///   per [RFC 7230 section  3.2](https://tools.ietf.org/html/rfc7230#section-3.2).
+table UrlRequestRewriteAddHeaders {
+    1: vector<fuchsia.net.http.Header>:MAX_HEADERS_COUNT headers;
+};
+
+/// If `query_pattern` in the URL query, removes `header_name` from the list of headers. If
+/// `query_pattern` is not set, removes `header_name` from the list of headers unconditionally.
+/// * `header_name` must be set.
+/// * `header_name` must be a valid HTTP header name, per
+///   [RFC 7230 section 3.2](https://tools.ietf.org/html/rfc7230#section-3.2).
+table UrlRequestRewriteRemoveHeader {
+    1: Url query_pattern;
+    2: bytes:MAX_HEADERS_COUNT header_name;
+};
+
+/// If `pattern` is found in the URL request query, replaces it with `substitution`.
+/// * `pattern` and `substitution` must be set.
+/// * `substitution` must be a valid [URL unit](https://url.spec.whatwg.org/#url-units).
+table UrlRequestRewriteSubstituteQueryPattern {
+    1: Url pattern;
+    2: Url substitution;
+};
+
+/// If the URL in the URL request ends with `url_ends_with`, rewrites the URL to `new_url`.
+/// * `url_ends_with` and `new_url` must be set.
+/// * `url_ends_with` must be a valid
+///   [path-relative-URL string](https://url.spec.whatwg.org/#path-relative-url-string).
+/// * `new_url` must be a [valid URL string](https://url.spec.whatwg.org/#valid-url-string).
+table UrlRequestRewriteReplaceUrl {
+    1: Url url_ends_with;
+    2: Url new_url;
+};

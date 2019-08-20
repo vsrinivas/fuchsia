@@ -10,8 +10,6 @@ using fuchsia.net.http;
 using fuchsia.ui.views;
 using zx;
 
-using Url = string;
-
 // TODO(WEB-29): Consider using fuchsia.logger.LogLevelFilter if possible.
 enum ConsoleLogLevel : int32 {
     /// No logging.
@@ -172,6 +170,7 @@ protocol Frame {
     /// lifetime.
     /// Invalid usage will result in closure of the Frame channel with
     /// `ERR_INVALID_ARGS`.
+    // [Deprecated] Use fuchsia.web.Frame/SetUrlRequestRewriteRules instead.
     [Transitional]
     SetAdditionalHeadersProvider(AdditionalHeadersProvider provider) -> ();
 
@@ -182,8 +181,20 @@ protocol Frame {
     ///             null.
     [Transitional]
     SetPopupFrameCreationListener(PopupFrameCreationListener? listener);
+
+    /// Supplies a set of [`fuchsia.web.UrlRequestRewriteRule`] to apply on every subsequent URL
+    /// request.
+    /// * `rules` are cumulative and applied in order.
+    /// * `rules` will be validated before being applied. If `rules` are invalid, the
+    ///   [`fuchsia.web.Frame`] will be closed with `ERR_INVALID_ARGS`.
+    /// * [`fuchsia.web.Frame/SetUrlRequestRewriteRules`] must not be called again until its
+    ///   acknowledgement callback has been processed. If this happens, the [`fuchsia.web.Frame`]
+    ///   will be closed with `ERR_BAD_STATE`.
+    [Transitional]
+    SetUrlRequestRewriteRules(vector<UrlRequestRewriteRule>:MAX_RULE_COUNT rules) -> ();
 };
 
+// [Deprecated] Use fuchsia.web.Frame/SetUrlRequestRewriteRules instead.
 [Discoverable]
 protocol AdditionalHeadersProvider {
     /// Returns a set of `headers` to include in network requests. The returned
