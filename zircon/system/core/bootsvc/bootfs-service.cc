@@ -4,10 +4,7 @@
 
 #include "bootfs-service.h"
 
-#include <fbl/algorithm.h>
 #include <fcntl.h>
-#include <fs/connection.h>
-#include <launchpad/launchpad.h>
 #include <lib/bootfs/parser.h>
 #include <sys/stat.h>
 #include <zircon/compiler.h>
@@ -16,6 +13,10 @@
 #include <zircon/status.h>
 
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <fs/connection.h>
+#include <launchpad/launchpad.h>
 
 #include "util.h"
 
@@ -42,7 +43,7 @@ zx_status_t BootfsService::AddBootfs(zx::vmo bootfs_vmo) {
   }
 
   // Load all of the entries in the bootfs into the FS
-  status = parser.Parse([this, &bootfs_vmo](const bootfs_entry_t* entry) -> zx_status_t {
+  status = parser.Parse([this, &bootfs_vmo](const zbi_bootfs_dirent_t* entry) -> zx_status_t {
     PublishUnownedVmo(entry->name, bootfs_vmo, entry->data_off, entry->data_len);
     return ZX_OK;
   });

@@ -5,7 +5,7 @@
 #include "bootfs.h"
 
 #include <string.h>
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/bootfs.h>
 #include <zircon/syscalls.h>
 
 #include "util.h"
@@ -31,27 +31,27 @@ void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs* fs) {
   check(log, status, "zx_handle_close failed\n");
 }
 
-static const bootfs_entry_t* bootfs_search(zx_handle_t log, struct bootfs* fs,
-                                           const char* root_prefix, const char* filename) {
+static const zbi_bootfs_dirent_t* bootfs_search(zx_handle_t log, struct bootfs* fs,
+                                                const char* root_prefix, const char* filename) {
   const std::byte* p = fs->contents;
 
-  if (fs->len < sizeof(bootfs_header_t))
+  if (fs->len < sizeof(zbi_bootfs_header_t))
     fail(log, "bootfs is too small");
 
-  const bootfs_header_t* hdr = reinterpret_cast<const bootfs_header_t*>(p);
-  if ((hdr->magic != BOOTFS_MAGIC) || (hdr->dirsize > fs->len))
+  const zbi_bootfs_header_t* hdr = reinterpret_cast<const zbi_bootfs_header_t*>(p);
+  if ((hdr->magic != ZBI_BOOTFS_MAGIC) || (hdr->dirsize > fs->len))
     fail(log, "bootfs bad magic or size");
 
   size_t prefix_len = strlen(root_prefix);
   size_t filename_len = strlen(filename) + 1;
 
-  p += sizeof(bootfs_header_t);
+  p += sizeof(zbi_bootfs_header_t);
   size_t avail = hdr->dirsize;
 
-  while (avail > sizeof(bootfs_entry_t)) {
-    auto e = reinterpret_cast<const bootfs_entry_t*>(p);
+  while (avail > sizeof(zbi_bootfs_dirent_t)) {
+    auto e = reinterpret_cast<const zbi_bootfs_dirent_t*>(p);
 
-    size_t sz = BOOTFS_RECSIZE(e);
+    size_t sz = ZBI_BOOTFS_DIRENT_SIZE(e->name_len);
     if ((e->name_len < 1) || (sz > avail))
       fail(log, "bootfs has bogus namelen in header");
 
@@ -71,7 +71,7 @@ zx_handle_t bootfs_open(zx_handle_t log, const char* purpose, struct bootfs* fs,
                         const char* root_prefix, const char* filename) {
   printl(log, "searching bootfs for '%s%s'", root_prefix, filename);
 
-  const bootfs_entry_t* e = bootfs_search(log, fs, root_prefix, filename);
+  const zbi_bootfs_dirent_t* e = bootfs_search(log, fs, root_prefix, filename);
   if (e == NULL) {
     printl(log, "file not found");
     return ZX_HANDLE_INVALID;

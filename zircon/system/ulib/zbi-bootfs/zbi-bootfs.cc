@@ -119,8 +119,8 @@ zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* entry) {
 
         // TODO(joeljacob): Consider making the vector a class member
         // This will prevent unnecessarily re-reading the VMO
-        fbl::Vector<const bootfs_entry_t*> parsed_entries;
-        parser.Parse([&](const bootfs_entry_t* entry) {
+        fbl::Vector<const zbi_bootfs_dirent_t*> parsed_entries;
+        parser.Parse([&](const zbi_bootfs_dirent_t* entry) {
           parsed_entries.push_back(entry);
 
           return ZX_OK;

@@ -6,7 +6,6 @@
 
 #include <lib/hermetic-decompressor/hermetic-decompressor.h>
 #include <string.h>
-#include <zircon/boot/bootdata.h>
 #include <zircon/boot/image.h>
 #include <zircon/syscalls.h>
 
@@ -52,15 +51,15 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
                                 zx_handle_t bootdata_vmo) {
   size_t off = 0;
   for (;;) {
-    bootdata_t bootdata;
+    zbi_header_t bootdata;
     zx_status_t status = zx_vmo_read(bootdata_vmo, &bootdata, off, sizeof(bootdata));
     check(log, status, "zx_vmo_read failed on bootdata VMO");
-    if (!(bootdata.flags & BOOTDATA_FLAG_V2)) {
+    if (!(bootdata.flags & ZBI_FLAG_VERSION)) {
       fail(log, "bootdata v1 no longer supported");
     }
 
     switch (bootdata.type) {
-      case BOOTDATA_CONTAINER:
+      case ZBI_TYPE_CONTAINER:
         if (off == 0) {
           // Quietly skip container header.
           bootdata.length = 0;
@@ -69,7 +68,7 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
         }
         break;
 
-      case BOOTDATA_BOOTFS_BOOT: {
+      case ZBI_TYPE_STORAGE_BOOTFS: {
         zx::vmo bootfs_vmo;
         if (bootdata.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
           status = zx::vmo::create(bootdata.extra, 0, &bootfs_vmo);
@@ -83,9 +82,9 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
         }
 
         // Signal that we've already processed this one.
-        bootdata.type = BOOTDATA_BOOTFS_DISCARD;
+        bootdata.type = ZBI_TYPE_DISCARD;
         check(log,
-              zx_vmo_write(bootdata_vmo, &bootdata.type, off + offsetof(bootdata_t, type),
+              zx_vmo_write(bootdata_vmo, &bootdata.type, off + offsetof(zbi_header_t, type),
                            sizeof(bootdata.type)),
               "zx_vmo_write failed on bootdata VMO\n");
 
@@ -94,7 +93,7 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
       }
     }
 
-    off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.length);
+    off += ZBI_ALIGN(static_cast<uint32_t>(sizeof(bootdata)) + bootdata.length);
   }
 
   fail(log, "no '/boot' bootfs in bootstrap message\n");

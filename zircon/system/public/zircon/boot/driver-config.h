@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <zircon/compiler.h>
 
-// BOOTDATA_KERNEL_DRIVER bootdata types
+// ZBI_TYPE_KERNEL_DRIVER item types (for zbi_header_t.extra)
 #define KDRV_ARM_PSCI 0x49435350           // 'PSCI'
 #define KDRV_ARM_GIC_V2 0x32434947         // 'GIC2'
 #define KDRV_ARM_GIC_V3 0x33434947         // 'GIC3'

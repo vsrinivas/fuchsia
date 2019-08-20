@@ -52,7 +52,7 @@ Source: [https://goto.google.com/zircon-platform-bus-diagram](https://goto.googl
 The platform bus driver is started automatically by the devmgr at boot.
 Since the platform bus driver is a generic driver that contains no information about the
 platform it is running on, it first loads the board driver, which handles platform specific logic.
-To determine which board driver to load, platform bus driver reads the `BOOTDATA_PLATFORM_ID`
+To determine which board driver to load, platform bus driver reads the `ZBI_TYPE_PLATFORM_ID`
 record from the [ZBI data](/zircon/system/public/zircon/boot/image.h) passed from the bootloader.
 It then adds a device with protocol `ZX_PROTOCOL_PBUS` with the
 `BIND_PLATFORM_DEV_VID` and `BIND_PLATFORM_DEV_PID` binding variables set to the vid and did

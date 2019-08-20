@@ -54,7 +54,6 @@ library("c") {
           include_dir = "//zircon/system/public"
           headers = [
             "zircon/assert.h",
-            "zircon/boot/bootdata.h",
             "zircon/boot/driver-config.h",
             "zircon/boot/e820.h",
             "zircon/boot/image.h",

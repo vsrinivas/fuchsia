@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/bootfs/parser.h>
+#include <lib/zx/vmo.h>
+#include <zircon/boot/bootfs.h>
+
 #include <cstdint>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
-#include <lib/bootfs/parser.h>
-#include <lib/zx/vmo.h>
 #include <zxtest/zxtest.h>
-#include <zircon/boot/bootdata.h>
 
 namespace {
 
@@ -27,7 +28,7 @@ void CreateBootfs(BootfsEntry* entries, size_t num_entries, zx::vmo* vmo_out) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
 
-  uint32_t offset = static_cast<uint32_t>(sizeof(bootfs_header_t));
+  uint32_t offset = static_cast<uint32_t>(sizeof(zbi_bootfs_header_t));
   for (size_t i = 0; i < num_entries; ++i) {
     auto& entry = entries[i];
     // Must be page-aligned
@@ -54,8 +55,8 @@ void CreateBootfs(BootfsEntry* entries, size_t num_entries, zx::vmo* vmo_out) {
     offset = fbl::round_up(offset, 4u);
   }
 
-  bootfs_header_t header = {};
-  header.magic = BOOTFS_MAGIC;
+  zbi_bootfs_header_t header = {};
+  header.magic = ZBI_BOOTFS_MAGIC;
   header.dirsize = static_cast<uint32_t>(offset - sizeof(header));
 
   ASSERT_OK(vmo.write(&header, 0, sizeof(header)));
@@ -65,7 +66,7 @@ void CreateBootfs(BootfsEntry* entries, size_t num_entries, zx::vmo* vmo_out) {
 TEST(ParserTestCase, ParseWithoutInit) {
   bootfs::Parser parser;
 
-  ASSERT_EQ(parser.Parse([](const bootfs_entry_t* entry) { return ZX_OK; }), ZX_ERR_BAD_STATE);
+  ASSERT_EQ(parser.Parse([](const zbi_bootfs_dirent_t* entry) { return ZX_OK; }), ZX_ERR_BAD_STATE);
 }
 
 TEST(ParserTestCase, InitTwice) {
@@ -81,8 +82,8 @@ TEST(ParserTestCase, InitBadMagic) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
 
-  bootfs_header_t header = {};
-  header.magic = BOOTFS_MAGIC ^ 1;
+  zbi_bootfs_header_t header = {};
+  header.magic = ZBI_BOOTFS_MAGIC ^ 1;
   header.dirsize = 0;
 
   ASSERT_OK(vmo.write(&header, 0, sizeof(header)));
@@ -129,9 +130,9 @@ TEST(ParserTestCase, ParseSuccess) {
   bootfs::Parser parser;
   ASSERT_OK(parser.Init(zx::unowned_vmo(vmo)));
 
-  const bootfs_entry_t* parsed_entries[3];
+  const zbi_bootfs_dirent_t* parsed_entries[3];
   size_t seen = 0;
-  EXPECT_OK(parser.Parse([&entries, &parsed_entries, &seen](const bootfs_entry_t* entry) {
+  EXPECT_OK(parser.Parse([&entries, &parsed_entries, &seen](const zbi_bootfs_dirent_t* entry) {
     if (seen >= fbl::count_of(entries)) {
       return ZX_ERR_BAD_STATE;
     }

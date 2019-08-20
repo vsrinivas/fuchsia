@@ -83,9 +83,9 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
   ramdisk_client* client;
   status = ramdisk_create_from_vmo(vmo.release(), &client);
   if (status != ZX_OK) {
-    printf("fshost: failed to create ramdisk from BOOTDATA_RAMDISK\n");
+    printf("fshost: failed to create ramdisk from ZBI_TYPE_STORAGE_RAMDISK\n");
   } else {
-    printf("fshost: BOOTDATA_RAMDISK attached\n");
+    printf("fshost: ZBI_TYPE_STORAGE_RAMDISK attached\n");
   }
   return ZX_ERR_STOP;
 }
