@@ -10,7 +10,7 @@ use failure::{Error, ResultExt};
 use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_text as txt;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_err, fx_vlog};
 use futures::lock::Mutex;
 use futures::prelude::*;
 use std::sync::{Arc, Weak};
@@ -211,7 +211,7 @@ impl ImeService {
                 self.hide_keyboard().await;
             }
             uii::ImeServiceRequest::InjectInput { event, .. } => {
-                fx_log_info!("InjectInput triggered: {:?}", event);
+                fx_vlog!(tag: "ime", 1, "InjectInput triggered: {:?}", event);
                 self.inject_input(event).await;
             }
             uii::ImeServiceRequest::DispatchKey { .. } => {
