@@ -2,150 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(turnage): Remove file after migrating clients to sessions2.
-
-use crate::{clone_session_id_handle, MAX_EVENTS_SENT_WITHOUT_ACK};
-use failure::{Error, ResultExt};
-use fidl::encoding::OutOfLine;
-use fidl::endpoints::{create_endpoints, ClientEnd};
-use fidl_fuchsia_math::Size;
-use fidl_fuchsia_media::TimelineFunction;
-use fidl_fuchsia_media_sessions::*;
-use fidl_fuchsia_mem::Buffer;
+use crate::Result;
+use failure::ResultExt;
+use fidl::encoding::Decodable;
+use fidl::endpoints::create_endpoints;
+use fidl_fuchsia_media_sessions2::*;
 use fuchsia_async as fasync;
 use fuchsia_component as comp;
-use fuchsia_zircon as zx;
-use futures::{
-    select,
-    stream::{FusedStream, TryStreamExt},
-    FutureExt, StreamExt,
-};
-use zx::{AsHandleRef, HandleBased};
+use futures::stream::TryStreamExt;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
-
-fn clone_session_entry(entry: &SessionEntry) -> Result<SessionEntry, Error> {
-    Ok(SessionEntry {
-        session_id: entry.session_id.as_ref().map(clone_session_id_handle).transpose()?,
-        local: entry.local.clone(),
-    })
-}
-
-fn clone_buffer(src: &Buffer) -> Buffer {
-    Buffer {
-        vmo: src
-            .vmo
-            .duplicate_handle(zx::Rights::DUPLICATE | zx::Rights::TRANSFER)
-            .expect("duplicating vmo"),
-        size: src.size,
-    }
-}
-
-fn clone_media_image_bitmap(src: &MediaImageBitmap) -> MediaImageBitmap {
-    MediaImageBitmap { size: src.size, argb8888_pixel_data: clone_buffer(&src.argb8888_pixel_data) }
-}
-
-fn bitmaps_refer_to_same_memory(a: &MediaImageBitmap, b: &MediaImageBitmap) -> bool {
-    a.size == b.size
-        && a.argb8888_pixel_data.size == b.argb8888_pixel_data.size
-        && a.argb8888_pixel_data.vmo.as_handle_ref().get_koid().expect("taking handle KOID")
-            == b.argb8888_pixel_data.vmo.as_handle_ref().get_koid().expect("taking handle KOID")
-}
-
-fn default_playback_status() -> PlaybackStatus {
-    PlaybackStatus {
-        duration: Some(100),
-        playback_state: Some(PlaybackState::Playing),
-        playback_function: Some(TimelineFunction {
-            subject_time: 0,
-            reference_time: 0,
-            subject_delta: 1,
-            reference_delta: 1,
-        }),
-        repeat_mode: Some(RepeatMode::Off),
-        shuffle_on: Some(false),
-        has_next_item: Some(true),
-        has_prev_item: Some(false),
-        error: None,
-    }
-}
-
-/// Checks two session entries and returns true if they are equal.
-fn are_session_entries_equal(actual: &SessionEntry, expected: &SessionEntry) -> bool {
-    assert!(
-        actual.session_id.is_some(),
-        "Media Session should never omit the session id from the entry."
-    );
-    let actual_koid = actual
-        .session_id
-        .as_ref()
-        .map(|id| id.as_handle_ref().get_koid().expect("taking handle KOID"));
-    let expected_koid = expected
-        .session_id
-        .as_ref()
-        .map(|id| id.as_handle_ref().get_koid().expect("taking handle KOID"));
-    actual.local == expected.local && actual_koid == expected_koid
-}
-
-fn vectors_equal_unordered<T: PartialEq>(actual: Vec<T>, mut expected: Vec<T>) -> bool {
-    for actual in &actual {
-        let i = expected.iter().position(|e| actual == e);
-        match i {
-            Some(i) => expected.remove(i),
-            None => return false,
-        };
-    }
-
-    true
-}
-
-fn are_session_entry_lists_equal(actual: Vec<SessionEntry>, expected_sessions: &[SessionEntry]) {
-    assert_eq!(
-        actual.len(),
-        expected_sessions.len(),
-        "Actual: {:?}\nExpected: {:?}",
-        actual,
-        expected_sessions
-    );
-    for expected in expected_sessions.iter() {
-        assert!(
-            actual.iter().find(|actual| are_session_entries_equal(actual, expected)).is_some(),
-            "Actual: {:?}\nExpected: {:?}",
-            actual,
-            expected_sessions
-        );
-    }
-}
-
-struct TestSession {
-    request_stream: SessionRequestStream,
-    control_handle: SessionControlHandle,
-    client_end: ClientEnd<SessionMarker>,
-}
-
-impl TestSession {
-    fn new() -> Result<Self, Error> {
-        let (client_end, server_end) =
-            create_endpoints::<SessionMarker>().expect("making FIDL endpoints");
-
-        let (request_stream, control_handle) =
-            server_end.into_stream_and_control_handle().context("Unpacking Session server end")?;
-
-        Ok(Self { request_stream, control_handle, client_end })
-    }
-}
 
 struct TestService {
     // This needs to stay alive to keep the service running.
     #[allow(unused)]
     app: comp::client::App,
     publisher: PublisherProxy,
-    registry: RegistryProxy,
-    registry_events: RegistryEventStream,
+    discovery: DiscoveryProxy,
 }
 
 impl TestService {
-    fn new() -> Result<Self, Error> {
+    fn new() -> Result<Self> {
         let launcher = comp::client::launcher().context("Connecting to launcher")?;
         let mediasession = comp::client::launch(&launcher, String::from(MEDIASESSION_URL), None)
             .context("Launching mediasession")?;
@@ -153,756 +30,263 @@ impl TestService {
         let publisher = mediasession
             .connect_to_service::<PublisherMarker>()
             .context("Connecting to Publisher")?;
-        let registry = mediasession
-            .connect_to_service::<RegistryMarker>()
-            .context("Connecting to Registry")?;
-        let registry_events = registry.take_event_stream();
+        let discovery = mediasession
+            .connect_to_service::<DiscoveryMarker>()
+            .context("Connecting to Discovery")?;
 
-        Ok(Self { app: mediasession, publisher, registry, registry_events })
+        Ok(Self { app: mediasession, publisher, discovery })
     }
 
-    /// Consumes the next active session event and compares the Koids with the
-    /// expectation.
-    async fn expect_active_session(&mut self, expected: Option<zx::Koid>) {
-        assert!(!self.registry_events.is_terminated());
-        let actual = self.registry_events.try_next().await
-            .expect("taking registry event")
-            .expect("unwrapping registry event")
-            .into_on_active_session_changed()
-            .expect("Expected active session event");
-        let actual = actual
-            .session_id
-            .map(|session_id| session_id.as_handle_ref().get_koid().expect("taking handle KOID"));
-        assert_eq!(actual, expected);
+    fn new_watcher(&self, watch_options: WatchOptions) -> Result<TestWatcher> {
+        let (watcher_client, watcher_server) = create_endpoints()?;
+        self.discovery.watch_sessions(watch_options, watcher_client)?;
+        Ok(TestWatcher { watcher: watcher_server.into_stream()? })
     }
+}
 
-    async fn expect_sessions_change(&mut self, expected_change: SessionsChange) {
-        assert!(!self.registry_events.is_terminated());
-        let sessions_change = self.registry_events.try_next().await
-            .expect("taking registry event")
-            .expect("unwrapping registry event")
-            .into_on_sessions_changed()
-            .expect("Expected session list");
-        match (&sessions_change, &expected_change) {
-            (
-                SessionsChange { session: ref actual, delta: SessionDelta::Added },
-                SessionsChange { session: ref expected, delta: SessionDelta::Added },
-            ) => {
-                assert!(
-                    are_session_entries_equal(actual, expected),
-                    "Actual: {:?}\nExpected: {:?}",
-                    sessions_change,
-                    expected_change
-                );
-            }
-            (
-                SessionsChange { session: ref actual, delta: SessionDelta::Removed },
-                SessionsChange { session: ref expected, delta: SessionDelta::Removed },
-            ) => {
-                assert!(
-                    are_session_entries_equal(actual, expected),
-                    "Actual: {:?}\nExpected: {:?}",
-                    sessions_change,
-                    expected_change
-                );
-            }
-            _ => panic!("Expected {:?}; got {:?}", expected_change, sessions_change),
+struct TestWatcher {
+    watcher: SessionsWatcherRequestStream,
+}
+
+impl TestWatcher {
+    async fn wait_for_n_updates(&mut self, n: usize) -> Result<Vec<(u64, SessionInfoDelta)>> {
+        let mut updates: Vec<(u64, SessionInfoDelta)> = vec![];
+        for i in 0..n {
+            let (id, delta, responder) = self.watcher.try_next().await?
+                .and_then(|r| r.into_session_updated())
+                .expect(&format!("Unwrapping watcher request {:?}", i));
+            responder.send()?;
+            updates.push((id, delta));
         }
+        Ok(updates)
     }
 
-    /// Consumes the next two events in any order and expects them to be the
-    /// expected active session and be expected session change.
-    async fn expect_update_events(
-        &mut self,
-        expected_active_session: Option<zx::Koid>,
-        expected_change: SessionsChange,
-    ) {
-        assert!(!self.registry_events.is_terminated());
-        for _ in 0..2 {
-            let event = self.registry_events.try_next().await
-                .expect("taking registry event")
-                .expect("unwrapping registry event");
-            match event {
-                RegistryEvent::OnActiveSessionChanged { active_session: actual } => {
-                    let actual = actual.session_id.map(|session_id| {
-                        session_id.as_handle_ref().get_koid().expect("taking handle KOID")
-                    });
-                    assert_eq!(actual, expected_active_session);
-                }
-                RegistryEvent::OnSessionsChanged { sessions_change } => {
-                    match (&sessions_change, &expected_change) {
-                        (
-                            SessionsChange { session: ref actual, delta: SessionDelta::Added },
-                            SessionsChange { session: ref expected, delta: SessionDelta::Added },
-                        ) => {
-                            assert!(
-                                are_session_entries_equal(actual, expected),
-                                "Actual: {:?}\nExpected: {:?}",
-                                sessions_change,
-                                expected_change
-                            );
-                        }
-                        (
-                            SessionsChange { session: ref actual, delta: SessionDelta::Removed },
-                            SessionsChange { session: ref expected, delta: SessionDelta::Removed },
-                        ) => {
-                            assert!(
-                                are_session_entries_equal(actual, expected),
-                                "Actual: {:?}\nExpected: {:?}",
-                                sessions_change,
-                                expected_change
-                            );
-                        }
-                        _ => panic!("Expected {:?}; got {:?}", expected_change, sessions_change),
-                    }
-                }
+    async fn wait_for_removal(&mut self) -> Result<u64> {
+        let (id, responder) = self.watcher.try_next().await?
+            .and_then(|r| r.into_session_removed())
+            .expect("Unwrapping watcher request");
+        responder.send()?;
+        Ok(id)
+    }
+}
+
+struct TestPlayer {
+    requests: PlayerRequestStream,
+}
+
+impl TestPlayer {
+    fn new(service: &TestService) -> Result<Self> {
+        let (player_client, player_server) = create_endpoints()?;
+        service
+            .publisher
+            .publish_player(player_client, PlayerRegistration { domain: Some(test_domain()) })?;
+        let requests = player_server.into_stream()?;
+        Ok(Self { requests })
+    }
+
+    async fn emit_delta(&mut self, delta: PlayerInfoDelta) -> Result<()> {
+        match self.requests.try_next().await? {
+            Some(PlayerRequest::WatchInfoChange { responder }) => responder.send(delta)?,
+            _ => {
+                panic!("Expected status change request.");
             }
         }
+
+        Ok(())
     }
 
-    // Gets the full list of sessions from the service and expects it to be
-    // equal to the expectation, without respect to order.
-    async fn expect_session_list(&mut self, expected_sessions: Vec<SessionEntry>) {
-        let new_client = self
-            .app
-            .connect_to_service::<RegistryMarker>()
-            .context("Connecting to Registry")
-            .expect("creating new registry client");
-        let mut new_client_events = new_client.take_event_stream();
-        let mut sessions = vec![];
-
-        while sessions.len() < expected_sessions.len() {
-            let event = new_client_events.try_next().await
-                .expect("taking registry event")
-                .expect("unwrapping registry event");
-
-            if let Some(SessionsChange { session, delta: SessionDelta::Added }) =
-                event.into_on_sessions_changed()
-            {
-                sessions.push(session);
+    async fn wait_for_request(&mut self, predicate: impl Fn(PlayerRequest) -> bool) -> Result<()> {
+        while let Some(request) = self.requests.try_next().await? {
+            if predicate(request) {
+                return Ok(());
             }
-            new_client.notify_sessions_change_handled().expect("acking events");
         }
-
-        are_session_entry_lists_equal(sessions, &expected_sessions);
+        panic!("Did not receive request that matched predicate. ")
     }
+}
 
-    fn notify_events_handled(&mut self) {
-        self.notify_active_session_change_handled();
-        self.notify_sessions_change_handled();
-    }
+fn test_domain() -> String {
+    String::from("domain://TEST")
+}
 
-    fn notify_active_session_change_handled(&mut self) {
-        self.registry
-            .notify_active_session_change_handled()
-            .expect("notifying service active session change was handled");
-    }
-
-    fn notify_sessions_change_handled(&mut self) {
-        self.registry
-            .notify_sessions_change_handled()
-            .expect("notifying service sessions change handled");
+fn delta_with_state(state: PlayerState) -> PlayerInfoDelta {
+    PlayerInfoDelta {
+        player_status: Some(PlayerStatus {
+            player_state: Some(state),
+            repeat_mode: Some(RepeatMode::Off),
+            shuffle_on: Some(false),
+            content_type: Some(ContentType::Audio),
+            ..Decodable::new_empty()
+        }),
+        ..Decodable::new_empty()
     }
 }
 
 #[fasync::run_singlethreaded]
 #[test]
-async fn empty_service_reports_no_sessions() {
-    let mut test_service = TestService::new().expect("making test service");
-    test_service.expect_active_session(None).await;
-    test_service.expect_session_list(vec![]).await;
+async fn can_publish_players() -> Result<()> {
+    let service = TestService::new()?;
+
+    let _player = TestPlayer::new(&service)?;
+
+    let mut watcher = service.new_watcher(Decodable::new_empty())?;
+    let mut sessions = watcher.wait_for_n_updates(1).await?;
+    let (_id, delta) = sessions.remove(0);
+    assert_eq!(delta.domain, Some(test_domain()));
+
+    Ok(())
 }
 
 #[fasync::run_singlethreaded]
 #[test]
-async fn service_routes_bitmaps() {
-    let test_service = TestService::new().expect("making test service");
+async fn can_receive_deltas() -> Result<()> {
+    let service = TestService::new()?;
 
-    // Creates a new session and publishes it. Returns the proxy through Media
-    // Session service and the request stream on the backend.
-    let new_session = || {
-        async {
-            let test_session = TestSession::new().expect("making test session");
-            let session_id = test_service.publisher.publish(test_session.client_end).await
-                .expect("taking session id");
-            let (client_end, server_end) =
-                create_endpoints::<SessionMarker>().expect("making session endpoints");
-            test_service
-                .registry
-                .connect_to_session_by_id(session_id, server_end)
-                .expect("connecting to session");
-            let proxy = client_end.into_proxy().expect("making session into a proxy");
-            (proxy, test_session.request_stream)
-        }
-    };
+    let mut player = TestPlayer::new(&service)?;
+    let mut player2 = TestPlayer::new(&service)?;
+    let mut watcher = service.new_watcher(Decodable::new_empty())?;
+    let _ = watcher.wait_for_n_updates(2).await?;
 
-    let (proxy, mut request_stream) = new_session().await;
+    player2.emit_delta(PlayerInfoDelta {
+        player_capabilities: Some(PlayerCapabilities { flags: Some(PlayerCapabilityFlags::Play) }),
+        ..Decodable::new_empty()
+    }).await?;
+    let mut updates = watcher.wait_for_n_updates(1).await?;
+    let (_id, delta) = updates.remove(0);
+    assert_eq!(
+        delta.player_capabilities,
+        Some(PlayerCapabilities { flags: Some(PlayerCapabilityFlags::Play) })
+    );
 
-    let expected_bitmap = MediaImageBitmap {
-        size: Size { width: 102, height: 140 },
-        argb8888_pixel_data: Buffer {
-            vmo: zx::Vmo::create(128).expect("creating bitmap vmo"),
-            size: 127,
-        },
-    };
-    let mut expected_url = String::from("an url");
-    let mut expected_minimum_size = Size { width: 7, height: 5 };
-    let mut expected_desired_size = Size { width: 12, height: 11 };
+    player.emit_delta(PlayerInfoDelta {
+        player_capabilities: Some(PlayerCapabilities { flags: Some(PlayerCapabilityFlags::Pause) }),
+        ..Decodable::new_empty()
+    }).await?;
+    let mut updates = watcher.wait_for_n_updates(1).await?;
+    let (_id, delta) = updates.remove(0);
+    assert_eq!(
+        delta.player_capabilities,
+        Some(PlayerCapabilities { flags: Some(PlayerCapabilityFlags::Pause) })
+    );
 
-    let serve_fut = |expected_url,
-                     expected_minimum_size,
-                     expected_desired_size,
-                     expected_bitmap| {
-        async move {
-            let event =
-                request_stream.try_next().await.expect("pulling next request from session");
-
-            match event {
-                Some(SessionRequest::GetMediaImageBitmap {
-                    url,
-                    minimum_size,
-                    desired_size,
-                    responder,
-                }) => {
-                    assert_eq!(url, expected_url);
-                    assert_eq!(minimum_size, expected_minimum_size);
-                    assert_eq!(desired_size, expected_desired_size);
-                    let mut bitmap = expected_bitmap;
-                    responder.send(Some(OutOfLine(&mut bitmap))).expect("responding with bitmap.");
-                }
-                _ => {}
-            };
-        }
-    };
-
-    fasync::spawn(serve_fut(
-        expected_url.clone(),
-        expected_minimum_size,
-        expected_desired_size,
-        clone_media_image_bitmap(&expected_bitmap),
-    ));
-
-    let bitmap = proxy.get_media_image_bitmap(
-        &mut expected_url,
-        &mut expected_minimum_size,
-        &mut expected_desired_size,
-    ).await
-        .expect("receiving media image bitmap");
-    match (bitmap, expected_bitmap) {
-        (Some(actual), expected) => {
-            assert!(bitmaps_refer_to_same_memory(actual.as_ref(), &expected))
-        }
-        _ => panic!("Wanted bitmap returned."),
-    }
+    Ok(())
 }
 
 #[fasync::run_singlethreaded]
 #[test]
-async fn service_routes_controls() {
-    let test_service = TestService::new().expect("making test service");
+async fn active_status() -> Result<()> {
+    let service = TestService::new()?;
 
-    // Creates a new session and publishes it. Returns the proxy through Media
-    // Session service and the request stream on the backend.
-    let new_session = || {
-        async {
-            let test_session = TestSession::new().expect("making test session");
-            let session_id = test_service.publisher.publish(test_session.client_end).await
-                .expect("taking session id");
-            let (client_end, server_end) =
-                create_endpoints::<SessionMarker>().expect("making session endpoints");
-            test_service
-                .registry
-                .connect_to_session_by_id(session_id, server_end)
-                .expect("connecting to session");
-            let proxy = client_end.into_proxy().expect("making Session into a proxy");
-            (proxy, test_session.request_stream)
-        }
-    };
+    let mut player = TestPlayer::new(&service)?;
+    let mut player2 = TestPlayer::new(&service)?;
+    let mut watcher = service.new_watcher(Decodable::new_empty())?;
+    let _ = watcher.wait_for_n_updates(2).await?;
 
-    let (proxy_a, mut request_stream_a) = new_session().await;
-    let (proxy_b, mut request_stream_b) = new_session().await;
+    player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let mut updates = watcher.wait_for_n_updates(1).await?;
+    let (active_id, delta) = updates.remove(0);
+    assert_eq!(delta.is_locally_active, Some(true));
 
-    proxy_a.play().expect("To call Play() on Session a");
-    proxy_b.pause().expect("To call Pause() on Session b");
+    player2.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let mut updates = watcher.wait_for_n_updates(1).await?;
+    let (new_active_id, delta) = updates.remove(0);
+    assert_eq!(delta.is_locally_active, Some(true));
 
-    let a_event = request_stream_a.try_next().await.expect("taking next request from session a");
-    let b_event = request_stream_b.try_next().await.expect("taking next request from session b");
+    assert_ne!(new_active_id, active_id);
 
-    a_event.expect("missing play event").into_play().expect("wasn't a play event");
-
-    b_event.expect("missing pause event").into_pause().expect("wasn't a pause event");
-
-    // Ensure the behaviour continues.
-
-    proxy_b.play().expect("To call Play() on Session b");
-
-    let b_event = request_stream_b.try_next().await.expect("taking next request from session b");
-
-    b_event
-        .expect("missing play event on session b")
-        .into_play()
-        .expect("wasn't a play event on session b");
+    Ok(())
 }
 
 #[fasync::run_singlethreaded]
 #[test]
-async fn service_reports_published_active_session() {
-    let mut test_service = TestService::new().expect("making test service");
-    test_service.expect_active_session(None).await;
-    test_service.notify_events_handled();
+async fn player_controls_are_proxied() -> Result<()> {
+    let service = TestService::new()?;
 
-    let test_session = TestSession::new().expect("making test session");
-    let our_session_id =
-        test_service.publisher.publish(test_session.client_end).await.expect("taking session id");
-    test_session
-        .control_handle
-        .send_on_playback_status_changed(default_playback_status())
-        .expect("To update playback status");
-    test_service.expect_update_events(
-        Some(our_session_id.as_handle_ref().get_koid().expect("taking handle KOID")),
-        SessionsChange {
-            session: SessionEntry { session_id: Some(our_session_id), local: Some(true) },
-            delta: SessionDelta::Added,
-        },
-    ).await;
+    let mut player = TestPlayer::new(&service)?;
+    let mut watcher = service.new_watcher(Decodable::new_empty())?;
+    let mut updates = watcher.wait_for_n_updates(1).await?;
+    let (id, _) = updates.remove(0);
+
+    // We take the watch request from the player's queue and don't answer it, so that
+    // the stream of requests coming in that we match on down below doesn't contain it.
+    let _watch_request = player.requests.try_next().await?;
+
+    let (session_client, session_server) = create_endpoints()?;
+    let session: SessionControlProxy = session_client.into_proxy()?;
+    session.play()?;
+    service.discovery.connect_to_session(id, session_server)?;
+
+    player.wait_for_request(|request| match request {
+        PlayerRequest::Play { .. } => true,
+        _ => false,
+    }).await
 }
 
 #[fasync::run_singlethreaded]
 #[test]
-async fn nonlocal_session_does_not_compete_for_active() {
-    let mut test_service = TestService::new().expect("making test service");
-    test_service.expect_active_session(None).await;
-    test_service.notify_events_handled();
+async fn player_disconnection_propagates() -> Result<()> {
+    let service = TestService::new()?;
 
-    // Register a remote session.
-    let remote_test_session = TestSession::new().expect("making test session");
-    let remote_session_id =
-        test_service.publisher.publish_remote(remote_test_session.client_end).await
-            .expect("Remote session id");
-    remote_test_session
-        .control_handle
-        .send_on_playback_status_changed(default_playback_status())
-        .expect("To update remote playback status");
-    test_service.expect_sessions_change(SessionsChange {
-        session: SessionEntry { session_id: Some(remote_session_id), local: Some(false) },
-        delta: SessionDelta::Added,
-    }).await;
-    test_service.notify_events_handled();
+    let player = TestPlayer::new(&service)?;
+    let mut watcher = service.new_watcher(Decodable::new_empty())?;
+    let mut updates = watcher.wait_for_n_updates(1).await?;
+    let (id, _) = updates.remove(0);
 
-    // Register a local session.
-    let local_test_session = TestSession::new().expect("making test session");
-    let local_session_id = test_service.publisher.publish(local_test_session.client_end).await
-        .expect("Local session id");
-    local_test_session
-        .control_handle
-        .send_on_playback_status_changed(default_playback_status())
-        .expect("To update local playback status");
+    let (session_client, session_server) = create_endpoints()?;
+    let session: SessionControlProxy = session_client.into_proxy()?;
+    service.discovery.connect_to_session(id, session_server)?;
 
-    // Ensure that the only active session update we get is for the local session.
-    test_service.expect_update_events(
-        Some(local_session_id.as_handle_ref().get_koid().expect("taking handle KOID")),
-        SessionsChange {
-            session: SessionEntry { session_id: Some(local_session_id), local: Some(true) },
-            delta: SessionDelta::Added,
-        },
-    ).await;
+    drop(player);
+    watcher.wait_for_removal().await?;
+    assert!(session.play().is_err());
+
+    Ok(())
 }
 
 #[fasync::run_singlethreaded]
 #[test]
-async fn service_reports_changed_active_session() {
-    let mut test_service = TestService::new().expect("making test service");
-    test_service.expect_active_session(None).await;
-    test_service.notify_events_handled();
+async fn watch_filter_active() -> Result<()> {
+    let service = TestService::new()?;
 
-    // Publish sessions.
-    let session_count: usize = 100;
-    let mut keep_alive = Vec::new();
-    for i in 0..session_count {
-        let test_session = TestSession::new().expect(&format!("making test session {}.", i));
-        let session_id = test_service.publisher.publish(test_session.client_end).await
-            .expect(&format!("Session {}", i));
-        test_session
-            .control_handle
-            .send_on_playback_status_changed(default_playback_status())
-            .expect("To update playback status");
-        test_service.expect_update_events(
-            Some(session_id.as_handle_ref().get_koid().expect("taking handle KOID")),
-            SessionsChange {
-                session: SessionEntry { session_id: Some(session_id), local: Some(true) },
-                delta: SessionDelta::Added,
-            },
-        ).await;
-        test_service.notify_events_handled();
-        keep_alive.push(test_session.control_handle);
-    }
+    let mut player1 = TestPlayer::new(&service)?;
+    let mut player2 = TestPlayer::new(&service)?;
+    let _player3 = TestPlayer::new(&service)?;
+    let mut active_watcher =
+        service.new_watcher(WatchOptions { only_active: Some(true), ..Decodable::new_empty() })?;
+
+    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    player2.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let updates = active_watcher.wait_for_n_updates(2).await?;
+    assert_eq!(updates.len(), 2);
+    assert_eq!(updates[0].1.is_locally_active, Some(true), "Update: {:?}", updates[0]);
+    assert_eq!(updates[1].1.is_locally_active, Some(true), "Update: {:?}", updates[1]);
+
+    player1.emit_delta(delta_with_state(PlayerState::Paused)).await?;
+    let updates = active_watcher.wait_for_n_updates(1).await?;
+    assert_eq!(updates.len(), 1);
+    assert_eq!(updates[0].1.is_locally_active, Some(false));
+
+    Ok(())
 }
 
 #[fasync::run_singlethreaded]
 #[test]
-async fn service_broadcasts_events() {
-    let mut test_service = TestService::new().expect("making test service");
-    test_service.expect_active_session(None).await;
-    test_service.notify_events_handled();
+async fn disconnected_player_results_in_removal_event() -> Result<()> {
+    let service = TestService::new()?;
 
-    let test_session = TestSession::new().expect("making test session");
-    let session_id = test_service.publisher.publish(test_session.client_end).await
-        .expect("publishing session");
+    let mut player1 = TestPlayer::new(&service)?;
+    let _player2 = TestPlayer::new(&service)?;
+    let mut watcher = service.new_watcher(Decodable::new_empty())?;
+    let _updates = watcher.wait_for_n_updates(2).await?;
 
-    test_service.expect_sessions_change(SessionsChange {
-        session: SessionEntry {
-            session_id: Some(
-                clone_session_id_handle(&session_id).expect("duplicating session handle"),
-            ),
-            local: Some(true),
-        },
-        delta: SessionDelta::Added,
-    }).await;
-    test_service.notify_events_handled();
+    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let mut updates = watcher.wait_for_n_updates(1).await?;
+    assert_eq!(updates.len(), 1);
+    let (player1_id, _) = updates.remove(0);
 
-    let expected_playback_capabilities = || PlaybackCapabilities {
-        flags: Some(PlaybackCapabilityFlags::Play | PlaybackCapabilityFlags::Pause),
-        supported_skip_intervals: Some(vec![23, 34]),
-        supported_playback_rates: Some(vec![10.0, 20.0]),
-        supported_repeat_modes: Some(vec![RepeatMode::Off]),
-        custom_extensions: Some(vec![String::from("1"), String::from("2")]),
-    };
+    drop(player1);
+    let removed_id = watcher.wait_for_removal().await?;
+    assert_eq!(player1_id, removed_id);
 
-    let expected_media_images = || {
-        vec![
-            MediaImage {
-                image_type: MediaImageType::SourceIcon,
-                url: String::from("url"),
-                mime_type: String::from("image/jpeg"),
-                sizes: vec![Size { width: 100, height: 100 }],
-            },
-            MediaImage {
-                image_type: MediaImageType::Artwork,
-                url: String::from("url2"),
-                mime_type: String::from("image/png"),
-                sizes: vec![Size { width: 105, height: 130 }],
-            },
-        ]
-    };
-
-    test_session
-        .control_handle
-        .send_on_playback_capabilities_changed(expected_playback_capabilities())
-        .expect("updating playback capabilities");
-
-    let mut images_to_send = expected_media_images();
-    test_session
-        .control_handle
-        .send_on_media_images_changed(&mut images_to_send.iter_mut())
-        .expect("updating media images");
-
-    // We send this last because channels are ordered, so waiting for the active
-    // session change event is how from our test we can be sure that the service
-    // has ingested all the events we published. (Short of creating a test-only
-    // FIDL interface to account for them all directly.)
-    test_session
-        .control_handle
-        .send_on_playback_status_changed(default_playback_status())
-        .expect("updating playback status");
-
-    // Ensure we wait for the service to accept the session.
-    test_service.expect_active_session(Some(
-        session_id.as_handle_ref().get_koid().expect("taking handle KOID"),
-    )).await;
-    test_service.notify_events_handled();
-
-    // Connect many clients and ensure they all receive the event.
-    let client_count: usize = 100;
-    for _ in 0..client_count {
-        let (client_end, server_end) =
-            create_endpoints::<SessionMarker>().expect("making session endpoints");
-        test_service
-            .registry
-            .connect_to_session_by_id(
-                clone_session_id_handle(&session_id).expect("duplicating session handle"),
-                server_end,
-            )
-            .expect("connecting to session");
-        let mut event_stream =
-            client_end.into_proxy().expect("making Session into a proxy").take_event_stream();
-        let check_event = |event: Option<SessionEvent>| {
-            assert!(event
-                .and_then(|event| match event {
-                    SessionEvent::OnPlaybackStatusChanged { playback_status } => {
-                        Some(playback_status == default_playback_status())
-                    }
-                    SessionEvent::OnPlaybackCapabilitiesChanged { playback_capabilities } => {
-                        Some(playback_capabilities == expected_playback_capabilities())
-                    }
-                    SessionEvent::OnMediaImagesChanged { media_images } => {
-                        Some(vectors_equal_unordered(media_images, expected_media_images()))
-                    }
-                    _ => None,
-                })
-                .unwrap_or(false));
-        };
-
-        // Expect we get all of our published events; accept any order.
-        check_event(event_stream.try_next().await.expect("taking next Session event"));
-        check_event(event_stream.try_next().await.expect("taking next Session event"));
-        check_event(event_stream.try_next().await.expect("taking next Session event"));
-    }
-}
-
-#[fasync::run_singlethreaded]
-#[test]
-async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
-    let mut test_service = TestService::new().expect("making test service");
-    test_service.expect_active_session(None).await;
-    test_service.expect_session_list(vec![]).await;
-
-    // Publish many sessions and have each of them post a playback status.
-    let count = 100;
-    let mut test_sessions = Vec::new();
-    let numbered_playback_status =
-        |i| PlaybackStatus { duration: Some(i), ..default_playback_status() };
-    for i in 0..count {
-        let test_session = TestSession::new().expect(&format!("making test session {}.", i));
-        let session_id = test_service.publisher.publish(test_session.client_end).await
-            .expect(&format!("publishing test session {}.", i));
-        test_session
-            .control_handle
-            .send_on_playback_status_changed(numbered_playback_status(i as i64))
-            .expect(&format!("broadcasting playback status {}.", i));
-        test_sessions.push((
-            clone_session_id_handle(&session_id).expect("cloning id handle"),
-            test_session.control_handle,
-        ));
-
-        test_service.expect_update_events(
-            Some(session_id.as_handle_ref().get_koid().expect("taking new active session koid")),
-            SessionsChange {
-                session: SessionEntry {
-                    session_id: Some(
-                        clone_session_id_handle(&session_id).expect("cloning id handle"),
-                    ),
-                    local: Some(true),
-                },
-                delta: SessionDelta::Added,
-            },
-        ).await;
-        test_service.notify_events_handled();
-    }
-
-    enum Expectation {
-        SessionIsDropped,
-        SessionReportsPlaybackStatus(PlaybackStatus),
-    }
-
-    // Set up expectations.
-    let mut expectations = Vec::new();
-    let mut control_handles_to_keep_sessions_alive = Vec::new();
-    for (i, (session_id, control_handle)) in test_sessions.into_iter().enumerate() {
-        let should_drop = i % 3 == 0;
-        expectations.push(if should_drop {
-            (Expectation::SessionIsDropped, session_id)
-        } else {
-            control_handles_to_keep_sessions_alive.push(control_handle);
-            (
-                Expectation::SessionReportsPlaybackStatus(numbered_playback_status(i as i64)),
-                session_id,
-            )
-        });
-        test_service.notify_events_handled();
-    }
-
-    // Check all expectations.
-    for (expectation, session_id) in expectations.into_iter() {
-        let (client_end, server_end) =
-            create_endpoints::<SessionMarker>().expect("making FIDL endpoints");
-        test_service
-            .registry
-            .connect_to_session_by_id(
-                clone_session_id_handle(&session_id).expect("duplicating session handle"),
-                server_end,
-            )
-            .expect(&format!("making connection request to session {:?}", session_id));
-        let mut event_stream = client_end
-            .into_proxy()
-            .expect(&format!("making Session into a proxy for session {:?}.", session_id))
-            .take_event_stream();
-        let maybe_event = event_stream.try_next().await.expect("taking next session event");
-        match expectation {
-            Expectation::SessionIsDropped => {
-                // If we shutdown the session, this or the next event should be
-                // None depending on whether our shutdown reached the service
-                // before this request.
-                if maybe_event.is_some() {
-                    let next_event =
-                        event_stream.try_next().await.expect("taking next session event");
-                    assert!(next_event.is_none(), "{:?}", next_event)
-                }
-            }
-            Expectation::SessionReportsPlaybackStatus(expected) => match maybe_event {
-                Some(SessionEvent::OnPlaybackStatusChanged { playback_status: actual }) => {
-                    assert_eq!(actual, expected)
-                }
-                other => panic!("Expected a playback status event; got: {:?}", other),
-            },
-        }
-    }
-}
-
-#[fasync::run_singlethreaded]
-#[test]
-async fn service_stops_sending_sessions_change_events_to_inactive_clients() {
-    let mut test_service = TestService::new().expect("making test service");
-    test_service.expect_active_session(None).await;
-    test_service.expect_session_list(vec![]).await;
-
-    // Force the service to generate MAX_EVENTS_SENT_WITHOUT_ACK + 1 events to
-    // send us, and consume all but the last of them.
-    let count = MAX_EVENTS_SENT_WITHOUT_ACK + 1;
-    let mut test_sessions = Vec::new();
-    let mut expected_sessions = Vec::new();
-    for i in 0..count {
-        let test_session = TestSession::new().expect(&format!("making test session {}.", i));
-        let session_id = test_service.publisher.publish(test_session.client_end).await
-            .expect(&format!("To publish test session {}.", i));
-        let entry = SessionEntry { session_id: Some(session_id), local: Some(true) };
-        test_sessions.push(test_session.control_handle);
-        expected_sessions.push(
-            clone_session_entry(&entry).expect(&format!("cloning test session entry {}.", i)),
-        );
-
-        test_service.notify_active_session_change_handled();
-        if i < MAX_EVENTS_SENT_WITHOUT_ACK {
-            test_service.expect_sessions_change(SessionsChange {
-                session: entry,
-                delta: SessionDelta::Added,
-            }).await;
-        }
-    }
-
-    select! {
-        e = test_service.registry_events.select_next_some() => {
-            panic!("Received event even though we didn't ack: {:?}, sessions registered: {:?}",
-                   e, expected_sessions);
-        }
-        _ = fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(2))).fuse() => {
-            return;
-        }
-    }
-}
-
-#[fasync::run_singlethreaded]
-#[test]
-async fn service_stops_sending_active_session_change_events_to_inactive_clients() {
-    let mut test_service = TestService::new().expect("making test service");
-    test_service.expect_active_session(None).await;
-    test_service.expect_session_list(vec![]).await;
-
-    // Force the service to generate MAX_EVENTS_SENT_WITHOUT_ACK + 1 events to
-    // send us, and consume all but the last of them. The first event generated
-    // was the `None` sent on connection.
-    let count = MAX_EVENTS_SENT_WITHOUT_ACK;
-    let mut test_sessions = Vec::new();
-    let mut expected_sessions = Vec::new();
-    for i in 0..count {
-        let test_session = TestSession::new().expect(&format!("making test session {}.", i));
-        let session_id = test_service.publisher.publish(test_session.client_end).await
-            .expect(&format!("publishing test session {}.", i));
-        test_session
-            .control_handle
-            .send_on_playback_status_changed(default_playback_status())
-            .expect(&format!("broadcasting playback status {}.", i));
-        let entry = SessionEntry {
-            session_id: Some(clone_session_id_handle(&session_id).expect("handle clone")),
-            local: Some(true),
-        };
-        test_sessions.push(test_session.control_handle);
-        expected_sessions.push(
-            clone_session_entry(&entry).expect(&format!("cloning test session entry {}.", i)),
-        );
-
-        if i < MAX_EVENTS_SENT_WITHOUT_ACK - 1 {
-            test_service.expect_update_events(
-                Some(
-                    session_id.as_handle_ref().get_koid().expect("taking new active session koid"),
-                ),
-                SessionsChange { session: entry, delta: SessionDelta::Added },
-            ).await;
-        } else {
-            test_service.expect_sessions_change(SessionsChange {
-                session: entry,
-                delta: SessionDelta::Added,
-            }).await;
-        }
-        test_service.notify_sessions_change_handled();
-    }
-
-    select! {
-        _ = test_service.registry_events.select_next_some() => {
-            panic!("Received event from service even though we didn't ack");
-        }
-        _ = fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(2))).fuse() => {
-            return;
-        }
-    }
-}
-
-#[fasync::run_singlethreaded]
-#[test]
-async fn service_maintains_session_list() {
-    let mut test_service = TestService::new().expect("making test service");
-    test_service.expect_active_session(None).await;
-    test_service.expect_session_list(vec![]).await;
-    test_service.notify_events_handled();
-
-    // Publish many sessions and check at each point that the session list is
-    // accurate.
-    let count = 30;
-    let mut test_sessions = Vec::new();
-    let mut expected_sessions = Vec::new();
-    for i in 0..count {
-        let test_session = TestSession::new().expect(&format!("making test session {}.", i));
-        let session_id = test_service.publisher.publish(test_session.client_end).await
-            .expect(&format!("publishing test session {}.", i));
-        let entry = SessionEntry { session_id: Some(session_id), local: Some(true) };
-        expected_sessions.push(
-            clone_session_entry(&entry).expect(&format!("cloning test session entry {}.", i)),
-        );
-        test_sessions.push(test_session.control_handle);
-        test_service
-            .expect_sessions_change(SessionsChange { session: entry, delta: SessionDelta::Added })
-            .await;
-        test_service.notify_events_handled();
-        test_service
-            .expect_session_list(
-                expected_sessions
-                    .iter()
-                    .map(|s| clone_session_entry(s))
-                    .collect::<Result<Vec<SessionEntry>, _>>()
-                    .expect("cloning expected sessions"),
-            )
-            .await;
-    }
-
-    // Remove sessions in an odd pattern and ensure the list remains accurate.
-    let mut removed = 0;
-    for i in 0..(count / 2 - 1) {
-        test_sessions.swap_remove(i * 2 - removed);
-        let entry = expected_sessions.swap_remove(i * 2 - removed);
-        removed += 1;
-        // We wait for the removal event first to ensure the server sees the disconnect.
-        test_service.expect_sessions_change(SessionsChange {
-            session: entry,
-            delta: SessionDelta::Removed,
-        }).await;
-        test_service
-            .expect_session_list(
-                expected_sessions
-                    .iter()
-                    .map(|s| clone_session_entry(s))
-                    .collect::<Result<Vec<SessionEntry>, _>>()
-                    .expect("cloning expected sessions"),
-            )
-            .await;
-        test_service.notify_events_handled();
-    }
+    Ok(())
 }

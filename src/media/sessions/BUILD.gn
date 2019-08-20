@@ -53,7 +53,6 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.media.sessions:fuchsia.media.sessions-rustc",
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
     "//src/lib/fidl_table_validation",
     "//src/lib/mpmc",

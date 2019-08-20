@@ -9,7 +9,7 @@ use self::{player_event::PlayerEvent, watcher::*};
 use crate::{
     mpmc,
     proxies::player::Player,
-    services::publisher2::{NewPlayer, ValidPlayerRegistration},
+    services::publisher::{NewPlayer, ValidPlayerRegistration},
     spawn_log_error, Ref, Result,
 };
 use fidl_fuchsia_media_sessions2::*;

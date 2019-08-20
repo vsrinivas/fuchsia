@@ -4,5 +4,3 @@
 
 pub mod discovery;
 pub mod publisher;
-pub mod publisher2;
-pub mod registry;

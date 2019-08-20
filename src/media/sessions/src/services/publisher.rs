@@ -2,85 +2,60 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(turnage): Remove file after migrating clients to sessions2.
-
-use crate::{
-    clone_session_id_handle, mpmc,
-    proxies::session::{Session, SessionCollectionEvent, SessionRegistration},
-    state::active_session_queue::ActiveSessionQueue,
-    state::session_list::SessionList,
-    Ref, Result,
-};
+use crate::Result;
 use failure::ResultExt;
 use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_media_sessions::{PublisherRequest, PublisherRequestStream, SessionMarker};
-use fuchsia_zircon as zx;
-use futures::TryStreamExt;
-use std::{ops::DerefMut, rc::Rc};
-use zx::AsHandleRef;
+use fidl_fuchsia_media_sessions2::*;
+use fidl_table_validation::*;
+use futures::{channel::mpsc, prelude::*};
+use std::convert::TryFrom;
 
-/// `Publisher` implements fuchsia.media.session.Publisher.
+#[derive(Debug, Clone, ValidFidlTable)]
+#[fidl_table_src(PlayerRegistration)]
+pub struct ValidPlayerRegistration {
+    pub domain: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct NewPlayer {
+    pub proxy: PlayerProxy,
+    pub registration: ValidPlayerRegistration,
+}
+
+impl NewPlayer {
+    fn new(client_end: ClientEnd<PlayerMarker>, registration: PlayerRegistration) -> Result<Self> {
+        Ok(Self {
+            proxy: client_end.into_proxy()?,
+            registration: ValidPlayerRegistration::try_from(registration)?,
+        })
+    }
+}
+
+/// Implements `fuchsia.media.session2.Publisher`.
 #[derive(Clone)]
 pub struct Publisher {
-    session_list: Ref<SessionList>,
-    active_session_queue: Ref<ActiveSessionQueue>,
-    collection_event_sink: mpmc::Sender<(SessionRegistration, SessionCollectionEvent)>,
-    active_session_sink: mpmc::Sender<Option<SessionRegistration>>,
+    player_sink: mpsc::Sender<NewPlayer>,
 }
 
 impl Publisher {
-    pub fn new(
-        session_list: Ref<SessionList>,
-        active_session_queue: Ref<ActiveSessionQueue>,
-        collection_event_sink: mpmc::Sender<(SessionRegistration, SessionCollectionEvent)>,
-        active_session_sink: mpmc::Sender<Option<SessionRegistration>>,
-    ) -> Publisher {
-        Publisher { session_list, active_session_queue, collection_event_sink, active_session_sink }
+    pub fn new(player_sink: mpsc::Sender<NewPlayer>) -> Self {
+        Self { player_sink }
     }
 
     pub async fn serve(mut self, mut request_stream: PublisherRequestStream) -> Result<()> {
-        while let Some(request) =
-            request_stream.try_next().await.context("Publisher server request stream")?
-        {
+        while let Some(request) = request_stream.try_next().await.context("Publisher requests")? {
             match request {
-                PublisherRequest::Publish { responder, session } => {
-                    responder
-                        .send(self.publish(session, true).await?)
-                        .context("Giving id to client")?;
+                PublisherRequest::PublishPlayer { player, registration, .. } => {
+                    match NewPlayer::new(player, registration) {
+                        Ok(new_player) => self.player_sink.send(new_player).await?,
+                        Err(e) => {
+                            eprintln!("A request to publish a player was invalid: {:?}", e);
+                        }
+                    }
                 }
-                PublisherRequest::PublishRemote { responder, session } => {
-                    responder
-                        .send(self.publish(session, false).await?)
-                        .context("Giving id to client")?;
-                }
-            };
+            }
         }
-        Ok(())
-    }
 
-    async fn publish(
-        &mut self,
-        session: ClientEnd<SessionMarker>,
-        is_local: bool,
-    ) -> Result<zx::Event> {
-        let session_id_handle = zx::Event::create()?;
-        let koid = session_id_handle.as_handle_ref().get_koid()?;
-        let handle_for_client = clone_session_id_handle(&session_id_handle)?;
-        let registration = SessionRegistration { id: Rc::new(session_id_handle), koid, is_local };
-        self.session_list.lock().await.deref_mut().push(
-            registration.clone(),
-            Session::serve(
-                session,
-                registration.clone(),
-                self.active_session_queue.clone(),
-                self.session_list.clone(),
-                self.collection_event_sink.clone(),
-                self.active_session_sink.clone(),
-            ).await?,
-        );
-        self.collection_event_sink
-            .send((registration.clone(), SessionCollectionEvent::Added))
-            .await;
-        Ok(handle_for_client)
+        Ok(())
     }
 }
