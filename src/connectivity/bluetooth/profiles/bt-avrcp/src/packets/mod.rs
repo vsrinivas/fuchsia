@@ -13,10 +13,12 @@ mod get_element_attributes;
 mod get_play_status;
 mod notification;
 mod rejected;
+mod set_absolute_volume;
 
 pub use {
     self::continuation::*, self::get_capabilities::*, self::get_element_attributes::*,
     self::get_play_status::*, self::notification::*, self::rejected::*,
+    self::set_absolute_volume::*,
 };
 
 /// The error types for packet parsing.
