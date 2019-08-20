@@ -808,7 +808,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
         std::string coded_name = NameTable(c_name);
         named_method.request = std::make_unique<NamedMessage>(
             NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_request->members,
-                         method.maybe_request->typeshape});
+                         method.maybe_request->typeshape()});
       }
       if (method.maybe_response != nullptr) {
         if (method.maybe_request == nullptr) {
@@ -816,13 +816,13 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
           std::string coded_name = NameTable(c_name);
           named_method.response = std::make_unique<NamedMessage>(
               NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response->members,
-                           method.maybe_response->typeshape});
+                           method.maybe_response->typeshape()});
         } else {
           std::string c_name = NameMessage(method_name, types::MessageKind::kResponse);
           std::string coded_name = NameTable(c_name);
           named_method.response = std::make_unique<NamedMessage>(
               NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response->members,
-                           method.maybe_response->typeshape});
+                           method.maybe_response->typeshape()});
         }
       }
       named_protocol.methods.push_back(std::move(named_method));

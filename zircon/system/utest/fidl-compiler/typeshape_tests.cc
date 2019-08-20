@@ -64,7 +64,7 @@ struct Empty {};
 
   auto empty = test_library.LookupStruct("Empty");
   ASSERT_NONNULL(empty);
-  EXPECT_TRUE(CheckTypeShape(empty->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(empty->typeshape(), Expected{
                                                    .inline_size = 1,
                                                    .alignment = 1,
                                                }));
@@ -117,7 +117,7 @@ struct EmptyWithOtherThings {
 
   auto empty_with_other_things = test_library.LookupStruct("EmptyWithOtherThings");
   ASSERT_NONNULL(empty_with_other_things);
-  EXPECT_TRUE(CheckTypeShape(empty_with_other_things->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(empty_with_other_things->typeshape(), Expected{
                                                                      .inline_size = 16,
                                                                      .alignment = 4,
                                                                      .has_padding = true,
@@ -185,7 +185,7 @@ struct BoolAndU64 {
 
   auto one_bool = test_library.LookupStruct("OneBool");
   ASSERT_NONNULL(one_bool);
-  EXPECT_TRUE(CheckTypeShape(one_bool->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(one_bool->typeshape(), Expected{
                                                       .inline_size = 1,
                                                       .alignment = 1,
                                                   }));
@@ -194,7 +194,7 @@ struct BoolAndU64 {
 
   auto two_bools = test_library.LookupStruct("TwoBools");
   ASSERT_NONNULL(two_bools);
-  EXPECT_TRUE(CheckTypeShape(two_bools->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(two_bools->typeshape(), Expected{
                                                        .inline_size = 2,
                                                        .alignment = 1,
                                                    }));
@@ -206,7 +206,7 @@ struct BoolAndU64 {
 
   auto bool_and_u32 = test_library.LookupStruct("BoolAndU32");
   ASSERT_NONNULL(bool_and_u32);
-  EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape(), Expected{
                                                           .inline_size = 8,
                                                           .alignment = 4,
                                                           .has_padding = true,
@@ -219,7 +219,7 @@ struct BoolAndU64 {
 
   auto bool_and_u64 = test_library.LookupStruct("BoolAndU64");
   ASSERT_NONNULL(bool_and_u64);
-  EXPECT_TRUE(CheckTypeShape(bool_and_u64->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(bool_and_u64->typeshape(), Expected{
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .has_padding = true,
@@ -259,7 +259,7 @@ struct ThreeHandlesOneOptional {
 
   auto one_handle = test_library.LookupStruct("OneHandle");
   ASSERT_NONNULL(one_handle);
-  EXPECT_TRUE(CheckTypeShape(one_handle->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(one_handle->typeshape(), Expected{
                                                         .inline_size = 4,
                                                         .alignment = 4,
                                                         .max_handles = 1,
@@ -269,7 +269,7 @@ struct ThreeHandlesOneOptional {
 
   auto two_handles = test_library.LookupStruct("TwoHandles");
   ASSERT_NONNULL(two_handles);
-  EXPECT_TRUE(CheckTypeShape(two_handles->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(two_handles->typeshape(), Expected{
                                                          .inline_size = 8,
                                                          .alignment = 4,
                                                          .max_handles = 2,
@@ -282,7 +282,7 @@ struct ThreeHandlesOneOptional {
 
   auto three_handles_one_optional = test_library.LookupStruct("ThreeHandlesOneOptional");
   ASSERT_NONNULL(three_handles_one_optional);
-  EXPECT_TRUE(CheckTypeShape(three_handles_one_optional->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(three_handles_one_optional->typeshape(), Expected{
                                                                         .inline_size = 12,
                                                                         .alignment = 4,
                                                                         .max_handles = 3,
@@ -333,7 +333,7 @@ table TableWithBoolAndU64 {
   auto no_members = test_library.LookupTable("TableWithNoMembers");
   ASSERT_NONNULL(no_members);
   EXPECT_TRUE(
-      CheckTypeShape(no_members->typeshape, Expected{
+      CheckTypeShape(no_members->typeshape(), Expected{
                                                 .inline_size = 16,
                                                 .alignment = 8,
                                                 .depth = 4294967295,  // TODO(FIDL-457): wrong.
@@ -343,7 +343,7 @@ table TableWithBoolAndU64 {
 
   auto one_bool = test_library.LookupTable("TableWithOneBool");
   ASSERT_NONNULL(one_bool);
-  EXPECT_TRUE(CheckTypeShape(one_bool->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(one_bool->typeshape(), Expected{
                                                       .inline_size = 16,
                                                       .alignment = 8,
                                                       .max_out_of_line = 24,
@@ -354,7 +354,7 @@ table TableWithBoolAndU64 {
 
   auto two_bools = test_library.LookupTable("TableWithTwoBools");
   ASSERT_NONNULL(two_bools);
-  EXPECT_TRUE(CheckTypeShape(two_bools->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(two_bools->typeshape(), Expected{
                                                        .inline_size = 16,
                                                        .alignment = 8,
                                                        .max_out_of_line = 48,
@@ -365,7 +365,7 @@ table TableWithBoolAndU64 {
 
   auto bool_and_u32 = test_library.LookupTable("TableWithBoolAndU32");
   ASSERT_NONNULL(bool_and_u32);
-  EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape(), Expected{
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 48,
@@ -376,7 +376,7 @@ table TableWithBoolAndU64 {
 
   auto bool_and_u64 = test_library.LookupTable("TableWithBoolAndU64");
   ASSERT_NONNULL(bool_and_u64);
-  EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape(), Expected{
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 48,
@@ -403,7 +403,7 @@ table TableWithOneHandle {
 
   auto one_handle = test_library.LookupTable("TableWithOneHandle");
   ASSERT_NONNULL(one_handle);
-  EXPECT_TRUE(CheckTypeShape(one_handle->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(one_handle->typeshape(), Expected{
                                                         .inline_size = 16,
                                                         .alignment = 8,
                                                         .max_out_of_line = 24,
@@ -462,7 +462,7 @@ struct OptionalBoolAndU64 {
 
   auto one_bool = test_library.LookupStruct("OptionalOneBool");
   ASSERT_NONNULL(one_bool);
-  EXPECT_TRUE(CheckTypeShape(one_bool->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(one_bool->typeshape(), Expected{
                                                       .inline_size = 8,
                                                       .alignment = 8,
                                                       .max_out_of_line = 8,
@@ -472,7 +472,7 @@ struct OptionalBoolAndU64 {
 
   auto two_bools = test_library.LookupStruct("OptionalTwoBools");
   ASSERT_NONNULL(two_bools);
-  EXPECT_TRUE(CheckTypeShape(two_bools->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(two_bools->typeshape(), Expected{
                                                        .inline_size = 8,
                                                        .alignment = 8,
                                                        .max_out_of_line = 8,
@@ -482,7 +482,7 @@ struct OptionalBoolAndU64 {
 
   auto bool_and_u32 = test_library.LookupStruct("OptionalBoolAndU32");
   ASSERT_NONNULL(bool_and_u32);
-  EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape,
+  EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape(),
                              Expected{
                                  .inline_size = 8,
                                  .alignment = 8,
@@ -493,7 +493,7 @@ struct OptionalBoolAndU64 {
 
   auto bool_and_u64 = test_library.LookupStruct("OptionalBoolAndU64");
   ASSERT_NONNULL(bool_and_u64);
-  EXPECT_TRUE(CheckTypeShape(bool_and_u64->typeshape,
+  EXPECT_TRUE(CheckTypeShape(bool_and_u64->typeshape(),
                              Expected{
                                  .inline_size = 8,
                                  .alignment = 8,
@@ -586,7 +586,7 @@ table TableWithOptionalTableWithBoolAndU64 {
 
   auto one_bool = test_library.LookupTable("TableWithOptionalOneBool");
   ASSERT_NONNULL(one_bool);
-  EXPECT_TRUE(CheckTypeShape(one_bool->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(one_bool->typeshape(), Expected{
                                                       .inline_size = 16,
                                                       .alignment = 8,
                                                       .max_out_of_line = 24,
@@ -598,7 +598,7 @@ table TableWithOptionalTableWithBoolAndU64 {
   auto table_with_one_bool = test_library.LookupTable("TableWithOptionalTableWithOneBool");
   ASSERT_NONNULL(table_with_one_bool);
   EXPECT_TRUE(
-      CheckTypeShape(table_with_one_bool->typeshape, Expected{
+      CheckTypeShape(table_with_one_bool->typeshape(), Expected{
                                                          .inline_size = 16,
                                                          .alignment = 8,
                                                          .max_out_of_line = 56,
@@ -609,7 +609,7 @@ table TableWithOptionalTableWithBoolAndU64 {
 
   auto two_bools = test_library.LookupTable("TableWithOptionalTwoBools");
   ASSERT_NONNULL(two_bools);
-  EXPECT_TRUE(CheckTypeShape(two_bools->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(two_bools->typeshape(), Expected{
                                                        .inline_size = 16,
                                                        .alignment = 8,
                                                        .max_out_of_line = 24,
@@ -621,7 +621,7 @@ table TableWithOptionalTableWithBoolAndU64 {
   auto table_with_two_bools = test_library.LookupTable("TableWithOptionalTableWithTwoBools");
   ASSERT_NONNULL(table_with_two_bools);
   EXPECT_TRUE(
-      CheckTypeShape(table_with_two_bools->typeshape, Expected{
+      CheckTypeShape(table_with_two_bools->typeshape(), Expected{
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 80,
@@ -632,7 +632,7 @@ table TableWithOptionalTableWithBoolAndU64 {
 
   auto bool_and_u32 = test_library.LookupTable("TableWithOptionalBoolAndU32");
   ASSERT_NONNULL(bool_and_u32);
-  EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape(), Expected{
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 24,
@@ -644,7 +644,7 @@ table TableWithOptionalTableWithBoolAndU64 {
   auto table_with_bool_and_u32 = test_library.LookupTable("TableWithOptionalTableWithBoolAndU32");
   ASSERT_NONNULL(table_with_bool_and_u32);
   EXPECT_TRUE(
-      CheckTypeShape(table_with_bool_and_u32->typeshape, Expected{
+      CheckTypeShape(table_with_bool_and_u32->typeshape(), Expected{
                                                              .inline_size = 16,
                                                              .alignment = 8,
                                                              .max_out_of_line = 80,
@@ -655,7 +655,7 @@ table TableWithOptionalTableWithBoolAndU64 {
 
   auto bool_and_u64 = test_library.LookupTable("TableWithOptionalBoolAndU64");
   ASSERT_NONNULL(bool_and_u64);
-  EXPECT_TRUE(CheckTypeShape(bool_and_u64->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(bool_and_u64->typeshape(), Expected{
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 32,
@@ -667,7 +667,7 @@ table TableWithOptionalTableWithBoolAndU64 {
   auto table_with_bool_and_u64 = test_library.LookupTable("TableWithOptionalTableWithBoolAndU64");
   ASSERT_NONNULL(table_with_bool_and_u64);
   EXPECT_TRUE(
-      CheckTypeShape(table_with_bool_and_u64->typeshape, Expected{
+      CheckTypeShape(table_with_bool_and_u64->typeshape(), Expected{
                                                              .inline_size = 16,
                                                              .alignment = 8,
                                                              .max_out_of_line = 80,
@@ -708,7 +708,7 @@ table TableWithOptionalUnion {
 
   auto a_union = test_library.LookupUnion("UnionOfThings");
   ASSERT_NONNULL(a_union);
-  EXPECT_TRUE(CheckTypeShape(a_union->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(a_union->typeshape(), Expected{
                                                      .inline_size = 24,
                                                      .alignment = 8,
                                                      .has_padding = true,
@@ -728,7 +728,7 @@ table TableWithOptionalUnion {
 
   auto optional_union = test_library.LookupStruct("OptionalUnion");
   ASSERT_NONNULL(optional_union);
-  EXPECT_TRUE(CheckTypeShape(optional_union->typeshape,
+  EXPECT_TRUE(CheckTypeShape(optional_union->typeshape(),
                              Expected{
                                  .inline_size = 8,
                                  .alignment = 8,
@@ -739,7 +739,7 @@ table TableWithOptionalUnion {
 
   auto table_with_optional_union = test_library.LookupTable("TableWithOptionalUnion");
   ASSERT_NONNULL(table_with_optional_union);
-  EXPECT_TRUE(CheckTypeShape(table_with_optional_union->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(table_with_optional_union->typeshape(), Expected{
       .inline_size = 16,
       .alignment = 8,
       .max_out_of_line = 40,
@@ -774,7 +774,7 @@ union ManyHandleUnion {
 
   auto one_handle_union = test_library.LookupUnion("OneHandleUnion");
   ASSERT_NONNULL(one_handle_union);
-  EXPECT_TRUE(CheckTypeShape(one_handle_union->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(one_handle_union->typeshape(), Expected{
                                                               .inline_size = 8,
                                                               .alignment = 4,
                                                               .max_handles = 1,
@@ -799,7 +799,7 @@ union ManyHandleUnion {
 
   auto many_handle_union = test_library.LookupUnion("ManyHandleUnion");
   ASSERT_NONNULL(many_handle_union);
-  EXPECT_TRUE(CheckTypeShape(many_handle_union->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(many_handle_union->typeshape(), Expected{
                                                                .inline_size = 40,
                                                                .alignment = 8,
                                                                .max_out_of_line = 32,
@@ -870,7 +870,7 @@ table TableWithUnboundedVectors {
 
   auto padded_vector = test_library.LookupStruct("PaddedVector");
   ASSERT_NONNULL(padded_vector);
-  EXPECT_TRUE(CheckTypeShape(padded_vector->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(padded_vector->typeshape(), Expected{
                                                            .inline_size = 16,
                                                            .alignment = 8,
                                                            .max_out_of_line = 16,
@@ -880,7 +880,7 @@ table TableWithUnboundedVectors {
 
   auto no_padding_vector = test_library.LookupStruct("NoPaddingVector");
   ASSERT_NONNULL(no_padding_vector);
-  EXPECT_TRUE(CheckTypeShape(no_padding_vector->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(no_padding_vector->typeshape(), Expected{
       .inline_size = 16,
       .alignment = 8,
       .max_out_of_line = 24,
@@ -890,7 +890,7 @@ table TableWithUnboundedVectors {
 
   auto unbounded_vector = test_library.LookupStruct("UnboundedVector");
   ASSERT_NONNULL(unbounded_vector);
-  EXPECT_TRUE(CheckTypeShape(unbounded_vector->typeshape,
+  EXPECT_TRUE(CheckTypeShape(unbounded_vector->typeshape(),
                              Expected{
                                  .inline_size = 16,
                                  .alignment = 8,
@@ -901,7 +901,7 @@ table TableWithUnboundedVectors {
 
   auto unbounded_vectors = test_library.LookupStruct("UnboundedVectors");
   ASSERT_NONNULL(unbounded_vectors);
-  EXPECT_TRUE(CheckTypeShape(unbounded_vectors->typeshape,
+  EXPECT_TRUE(CheckTypeShape(unbounded_vectors->typeshape(),
                              Expected{
                                  .inline_size = 32,
                                  .alignment = 8,
@@ -913,7 +913,7 @@ table TableWithUnboundedVectors {
   auto table_with_padded_vector = test_library.LookupTable("TableWithPaddedVector");
   ASSERT_NONNULL(table_with_padded_vector);
   EXPECT_TRUE(
-      CheckTypeShape(table_with_padded_vector->typeshape, Expected{
+      CheckTypeShape(table_with_padded_vector->typeshape(), Expected{
                                                               .inline_size = 16,
                                                               .alignment = 8,
                                                               .max_out_of_line = 48,
@@ -924,7 +924,7 @@ table TableWithUnboundedVectors {
 
   auto table_with_unbounded_vector = test_library.LookupTable("TableWithUnboundedVector");
   ASSERT_NONNULL(table_with_unbounded_vector);
-  EXPECT_TRUE(CheckTypeShape(table_with_unbounded_vector->typeshape,
+  EXPECT_TRUE(CheckTypeShape(table_with_unbounded_vector->typeshape(),
                              Expected{
                                  .inline_size = 16,
                                  .alignment = 8,
@@ -936,7 +936,7 @@ table TableWithUnboundedVectors {
 
   auto table_with_unbounded_vectors = test_library.LookupTable("TableWithUnboundedVectors");
   ASSERT_NONNULL(table_with_unbounded_vectors);
-  EXPECT_TRUE(CheckTypeShape(table_with_unbounded_vectors->typeshape,
+  EXPECT_TRUE(CheckTypeShape(table_with_unbounded_vectors->typeshape(),
                              Expected{
                                  .inline_size = 16,
                                  .alignment = 8,
@@ -1000,7 +1000,7 @@ table TableWithHandleStructVector {
 
   auto handle_vector = test_library.LookupStruct("HandleVector");
   ASSERT_NONNULL(handle_vector);
-  EXPECT_TRUE(CheckTypeShape(handle_vector->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(handle_vector->typeshape(), Expected{
                                                            .inline_size = 16,
                                                            .alignment = 8,
                                                            .max_out_of_line = 32,
@@ -1011,7 +1011,7 @@ table TableWithHandleStructVector {
 
   auto handle_nullable_vector = test_library.LookupStruct("HandleNullableVector");
   ASSERT_NONNULL(handle_nullable_vector);
-  EXPECT_TRUE(CheckTypeShape(handle_nullable_vector->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(handle_nullable_vector->typeshape(), Expected{
                                                                     .inline_size = 16,
                                                                     .alignment = 8,
                                                                     .max_out_of_line = 32,
@@ -1022,7 +1022,7 @@ table TableWithHandleStructVector {
 
   auto unbounded_handle_vector = test_library.LookupStruct("UnboundedHandleVector");
   ASSERT_NONNULL(unbounded_handle_vector);
-  EXPECT_TRUE(CheckTypeShape(unbounded_handle_vector->typeshape,
+  EXPECT_TRUE(CheckTypeShape(unbounded_handle_vector->typeshape(),
                              Expected{
                                  .inline_size = 16,
                                  .alignment = 8,
@@ -1035,7 +1035,7 @@ table TableWithHandleStructVector {
   auto table_with_unbounded_handle_vector =
       test_library.LookupTable("TableWithUnboundedHandleVector");
   ASSERT_NONNULL(table_with_unbounded_handle_vector);
-  EXPECT_TRUE(CheckTypeShape(table_with_unbounded_handle_vector->typeshape,
+  EXPECT_TRUE(CheckTypeShape(table_with_unbounded_handle_vector->typeshape(),
                              Expected{
                                  .inline_size = 16,
                                  .alignment = 8,
@@ -1048,7 +1048,7 @@ table TableWithHandleStructVector {
 
   auto handle_struct_vector = test_library.LookupStruct("HandleStructVector");
   ASSERT_NONNULL(handle_struct_vector);
-  EXPECT_TRUE(CheckTypeShape(handle_struct_vector->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(handle_struct_vector->typeshape(), Expected{
                                                                   .inline_size = 16,
                                                                   .alignment = 8,
                                                                   .max_out_of_line = 32,
@@ -1060,7 +1060,7 @@ table TableWithHandleStructVector {
   auto handle_table_vector = test_library.LookupStruct("HandleTableVector");
   ASSERT_NONNULL(handle_table_vector);
   EXPECT_TRUE(
-      CheckTypeShape(handle_table_vector->typeshape, Expected{
+      CheckTypeShape(handle_table_vector->typeshape(), Expected{
                                                          .inline_size = 16,
                                                          .alignment = 8,
                                                          .max_out_of_line = 320,
@@ -1072,7 +1072,7 @@ table TableWithHandleStructVector {
 
   auto table_with_handle_struct_vector = test_library.LookupTable("TableWithHandleStructVector");
   ASSERT_NONNULL(table_with_handle_struct_vector);
-  EXPECT_TRUE(CheckTypeShape(table_with_handle_struct_vector->typeshape,
+  EXPECT_TRUE(CheckTypeShape(table_with_handle_struct_vector->typeshape(),
                              Expected{
                                  .inline_size = 16,
                                  .alignment = 8,
@@ -1113,7 +1113,7 @@ table TableWithUnboundedString {
 
   auto short_string = test_library.LookupStruct("ShortString");
   ASSERT_NONNULL(short_string);
-  EXPECT_TRUE(CheckTypeShape(short_string->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(short_string->typeshape(), Expected{
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                           .max_out_of_line = 8,
@@ -1123,7 +1123,7 @@ table TableWithUnboundedString {
 
   auto unbounded_string = test_library.LookupStruct("UnboundedString");
   ASSERT_NONNULL(unbounded_string);
-  EXPECT_TRUE(CheckTypeShape(unbounded_string->typeshape,
+  EXPECT_TRUE(CheckTypeShape(unbounded_string->typeshape(),
                              Expected{
                                  .inline_size = 16,
                                  .alignment = 8,
@@ -1135,7 +1135,7 @@ table TableWithUnboundedString {
   auto table_with_short_string = test_library.LookupTable("TableWithShortString");
   ASSERT_NONNULL(table_with_short_string);
   EXPECT_TRUE(
-      CheckTypeShape(table_with_short_string->typeshape, Expected{
+      CheckTypeShape(table_with_short_string->typeshape(), Expected{
                                                              .inline_size = 16,
                                                              .alignment = 8,
                                                              .max_out_of_line = 40,
@@ -1146,7 +1146,7 @@ table TableWithUnboundedString {
 
   auto table_with_unbounded_string = test_library.LookupTable("TableWithUnboundedString");
   ASSERT_NONNULL(table_with_unbounded_string);
-  EXPECT_TRUE(CheckTypeShape(table_with_unbounded_string->typeshape,
+  EXPECT_TRUE(CheckTypeShape(table_with_unbounded_string->typeshape(),
                              Expected{
                                  .inline_size = 16,
                                  .alignment = 8,
@@ -1186,7 +1186,7 @@ table TableWithAnInt32ArrayNoPadding {
 
   auto an_array = test_library.LookupStruct("AnArray");
   ASSERT_NONNULL(an_array);
-  EXPECT_TRUE(CheckTypeShape(an_array->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(an_array->typeshape(), Expected{
                                                       .inline_size = 40,
                                                       .alignment = 8,
                                                   }));
@@ -1194,7 +1194,7 @@ table TableWithAnInt32ArrayNoPadding {
   auto table_with_an_array = test_library.LookupTable("TableWithAnArray");
   ASSERT_NONNULL(table_with_an_array);
   EXPECT_TRUE(
-      CheckTypeShape(table_with_an_array->typeshape, Expected{
+      CheckTypeShape(table_with_an_array->typeshape(), Expected{
                                                          .inline_size = 16,
                                                          .alignment = 8,
                                                          .max_out_of_line = 56,
@@ -1207,7 +1207,7 @@ table TableWithAnInt32ArrayNoPadding {
       test_library.LookupTable("TableWithAnInt32ArrayWithPadding");
   ASSERT_NONNULL(table_with_an_int32_array_with_padding);
   EXPECT_TRUE(
-      CheckTypeShape(table_with_an_int32_array_with_padding->typeshape, Expected{
+      CheckTypeShape(table_with_an_int32_array_with_padding->typeshape(), Expected{
           .inline_size = 16,
           .alignment = 8,
           .max_out_of_line = 32,  // 16 table header + ALIGN(4 * 3 array) = 32
@@ -1220,7 +1220,7 @@ table TableWithAnInt32ArrayNoPadding {
       test_library.LookupTable("TableWithAnInt32ArrayNoPadding");
   ASSERT_NONNULL(table_with_an_int32_array_no_padding);
   EXPECT_TRUE(
-      CheckTypeShape(table_with_an_int32_array_no_padding->typeshape, Expected{
+      CheckTypeShape(table_with_an_int32_array_no_padding->typeshape(), Expected{
           .inline_size = 16,
           .alignment = 8,
           .max_out_of_line = 32,  // 16 table header + ALIGN(4 * 4 array) = 32
@@ -1259,7 +1259,7 @@ table TableWithNullableHandleArray {
 
   auto handle_array = test_library.LookupStruct("HandleArray");
   ASSERT_NONNULL(handle_array);
-  EXPECT_TRUE(CheckTypeShape(handle_array->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(handle_array->typeshape(), Expected{
                                                           .inline_size = 32,
                                                           .alignment = 4,
                                                           .max_handles = 8,
@@ -1268,7 +1268,7 @@ table TableWithNullableHandleArray {
   auto table_with_handle_array = test_library.LookupTable("TableWithHandleArray");
   ASSERT_NONNULL(table_with_handle_array);
   EXPECT_TRUE(
-      CheckTypeShape(table_with_handle_array->typeshape, Expected{
+      CheckTypeShape(table_with_handle_array->typeshape(), Expected{
                                                              .inline_size = 16,
                                                              .alignment = 8,
                                                              .max_out_of_line = 48,
@@ -1280,7 +1280,7 @@ table TableWithNullableHandleArray {
 
   auto nullable_handle_array = test_library.LookupStruct("NullableHandleArray");
   ASSERT_NONNULL(nullable_handle_array);
-  EXPECT_TRUE(CheckTypeShape(nullable_handle_array->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(nullable_handle_array->typeshape(), Expected{
                                                                    .inline_size = 32,
                                                                    .alignment = 4,
                                                                    .max_handles = 8,
@@ -1288,7 +1288,7 @@ table TableWithNullableHandleArray {
 
   auto table_with_nullable_handle_array = test_library.LookupTable("TableWithNullableHandleArray");
   ASSERT_NONNULL(table_with_nullable_handle_array);
-  EXPECT_TRUE(CheckTypeShape(table_with_nullable_handle_array->typeshape,
+  EXPECT_TRUE(CheckTypeShape(table_with_nullable_handle_array->typeshape(),
                              Expected{
                                  .inline_size = 16,
                                  .alignment = 8,
@@ -1347,7 +1347,7 @@ xunion XUnionWithoutPayloadPadding {
 
   auto one_bool = test_library.LookupXUnion("XUnionWithOneBool");
   ASSERT_NONNULL(one_bool);
-  EXPECT_TRUE(CheckTypeShape(one_bool->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(one_bool->typeshape(), Expected{
                                                       .inline_size = 24,
                                                       .alignment = 8,
                                                       .max_out_of_line = 8,
@@ -1360,7 +1360,7 @@ xunion XUnionWithoutPayloadPadding {
 
   auto opt_one_bool = test_library.LookupStruct("StructWithOptionalXUnionWithOneBool");
   ASSERT_NONNULL(opt_one_bool);
-  EXPECT_TRUE(CheckTypeShape(opt_one_bool->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(opt_one_bool->typeshape(), Expected{
                                                           .inline_size = 24,
                                                           .alignment = 8,
                                                           .max_out_of_line = 8,
@@ -1371,7 +1371,7 @@ xunion XUnionWithoutPayloadPadding {
 
   auto xu = test_library.LookupXUnion("XUnionWithBoundedOutOfLineObject");
   ASSERT_NONNULL(xu);
-  EXPECT_TRUE(CheckTypeShape(xu->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(xu->typeshape(), Expected{
                                                 .inline_size = 24,
                                                 .alignment = 8,
                                                 .max_out_of_line = 256,
@@ -1382,7 +1382,7 @@ xunion XUnionWithoutPayloadPadding {
 
   auto unbounded = test_library.LookupXUnion("XUnionWithUnboundedOutOfLineObject");
   ASSERT_NONNULL(unbounded);
-  EXPECT_TRUE(CheckTypeShape(unbounded->typeshape,
+  EXPECT_TRUE(CheckTypeShape(unbounded->typeshape(),
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
@@ -1394,7 +1394,7 @@ xunion XUnionWithoutPayloadPadding {
 
   auto xu_no_payload_padding = test_library.LookupXUnion("XUnionWithoutPayloadPadding");
   ASSERT_NONNULL(xu_no_payload_padding);
-  EXPECT_TRUE(CheckTypeShape(xu_no_payload_padding->typeshape,
+  EXPECT_TRUE(CheckTypeShape(xu_no_payload_padding->typeshape(),
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
@@ -1452,7 +1452,7 @@ strict xunion StrictXUnionOfFlexibleTable {
 
   auto strict_xunion = test_library.LookupXUnion("StrictLeafXUnion");
   ASSERT_NONNULL(strict_xunion);
-  EXPECT_TRUE(CheckTypeShape(strict_xunion->typeshape,
+  EXPECT_TRUE(CheckTypeShape(strict_xunion->typeshape(),
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
@@ -1463,7 +1463,7 @@ strict xunion StrictXUnionOfFlexibleTable {
 
   auto flexible_xunion = test_library.LookupXUnion("FlexibleLeafXUnion");
   ASSERT_NONNULL(flexible_xunion);
-  EXPECT_TRUE(CheckTypeShape(flexible_xunion->typeshape,
+  EXPECT_TRUE(CheckTypeShape(flexible_xunion->typeshape(),
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
@@ -1475,7 +1475,7 @@ strict xunion StrictXUnionOfFlexibleTable {
 
   auto flexible_of_strict = test_library.LookupXUnion("FlexibleXUnionOfStrictXUnion");
   ASSERT_NONNULL(flexible_of_strict);
-  EXPECT_TRUE(CheckTypeShape(flexible_of_strict->typeshape,
+  EXPECT_TRUE(CheckTypeShape(flexible_of_strict->typeshape(),
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
@@ -1487,7 +1487,7 @@ strict xunion StrictXUnionOfFlexibleTable {
 
   auto flexible_of_flexible = test_library.LookupXUnion("FlexibleXUnionOfFlexibleXUnion");
   ASSERT_NONNULL(flexible_of_flexible);
-  EXPECT_TRUE(CheckTypeShape(flexible_of_flexible->typeshape,
+  EXPECT_TRUE(CheckTypeShape(flexible_of_flexible->typeshape(),
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
@@ -1499,7 +1499,7 @@ strict xunion StrictXUnionOfFlexibleTable {
 
   auto strict_of_strict = test_library.LookupXUnion("StrictXUnionOfStrictXUnion");
   ASSERT_NONNULL(strict_of_strict);
-  EXPECT_TRUE(CheckTypeShape(strict_of_strict->typeshape,
+  EXPECT_TRUE(CheckTypeShape(strict_of_strict->typeshape(),
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
@@ -1511,7 +1511,7 @@ strict xunion StrictXUnionOfFlexibleTable {
 
   auto strict_of_flexible = test_library.LookupXUnion("StrictXUnionOfFlexibleXUnion");
   ASSERT_NONNULL(strict_of_flexible);
-  EXPECT_TRUE(CheckTypeShape(strict_of_flexible->typeshape,
+  EXPECT_TRUE(CheckTypeShape(strict_of_flexible->typeshape(),
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
@@ -1523,7 +1523,7 @@ strict xunion StrictXUnionOfFlexibleTable {
 
   auto flexible_table = test_library.LookupTable("FlexibleLeafTable");
   ASSERT_NONNULL(flexible_table);
-  EXPECT_TRUE(CheckTypeShape(flexible_table->typeshape,
+  EXPECT_TRUE(CheckTypeShape(flexible_table->typeshape(),
                              Expected{
                                  .inline_size = 16,
                                  .alignment = 8,
@@ -1535,7 +1535,7 @@ strict xunion StrictXUnionOfFlexibleTable {
 
   auto strict_xunion_of_flexible_table = test_library.LookupXUnion("StrictXUnionOfFlexibleTable");
   ASSERT_NONNULL(strict_xunion_of_flexible_table);
-  EXPECT_TRUE(CheckTypeShape(strict_xunion_of_flexible_table->typeshape,
+  EXPECT_TRUE(CheckTypeShape(strict_xunion_of_flexible_table->typeshape(),
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
@@ -1577,7 +1577,7 @@ struct UsingOptRequestSomeProtocol {
 
   auto using_some_protocol = test_library.LookupStruct("UsingSomeProtocol");
   ASSERT_NONNULL(using_some_protocol);
-  EXPECT_TRUE(CheckTypeShape(using_some_protocol->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(using_some_protocol->typeshape(), Expected{
                                                                  .inline_size = 4,
                                                                  .alignment = 4,
                                                                  .max_handles = 1,
@@ -1585,7 +1585,7 @@ struct UsingOptRequestSomeProtocol {
 
   auto using_opt_some_protocol = test_library.LookupStruct("UsingOptSomeProtocol");
   ASSERT_NONNULL(using_opt_some_protocol);
-  EXPECT_TRUE(CheckTypeShape(using_opt_some_protocol->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(using_opt_some_protocol->typeshape(), Expected{
                                                                      .inline_size = 4,
                                                                      .alignment = 4,
                                                                      .max_handles = 1,
@@ -1593,7 +1593,7 @@ struct UsingOptRequestSomeProtocol {
 
   auto using_request_some_protocol = test_library.LookupStruct("UsingRequestSomeProtocol");
   ASSERT_NONNULL(using_request_some_protocol);
-  EXPECT_TRUE(CheckTypeShape(using_request_some_protocol->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(using_request_some_protocol->typeshape(), Expected{
                                                                          .inline_size = 4,
                                                                          .alignment = 4,
                                                                          .max_handles = 1,
@@ -1601,7 +1601,7 @@ struct UsingOptRequestSomeProtocol {
 
   auto using_opt_request_some_protocol = test_library.LookupStruct("UsingOptRequestSomeProtocol");
   ASSERT_NONNULL(using_opt_request_some_protocol);
-  EXPECT_TRUE(CheckTypeShape(using_opt_request_some_protocol->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(using_opt_request_some_protocol->typeshape(), Expected{
                                                                              .inline_size = 4,
                                                                              .alignment = 4,
                                                                              .max_handles = 1,
@@ -1645,21 +1645,21 @@ struct ExternalSimpleStruct {
 
   auto ext_struct = test_library.LookupStruct("ExternalSimpleStruct");
   ASSERT_NONNULL(ext_struct);
-  EXPECT_TRUE(CheckTypeShape(ext_struct->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(ext_struct->typeshape(), Expected{
                                                         .inline_size = 4,
                                                         .alignment = 4,
                                                     }));
 
   auto ext_arr_struct = test_library.LookupStruct("ExternalArrayStruct");
   ASSERT_NONNULL(ext_arr_struct);
-  EXPECT_TRUE(CheckTypeShape(ext_arr_struct->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(ext_arr_struct->typeshape(), Expected{
                                                             .inline_size = 4 * 32,
                                                             .alignment = 4,
                                                         }));
 
   auto ext_str_struct = test_library.LookupStruct("ExternalStringSizeStruct");
   ASSERT_NONNULL(ext_str_struct);
-  EXPECT_TRUE(CheckTypeShape(ext_str_struct->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(ext_str_struct->typeshape(), Expected{
                                                             .inline_size = 16,
                                                             .alignment = 8,
                                                             .max_out_of_line = 32,
@@ -1669,7 +1669,7 @@ struct ExternalSimpleStruct {
 
   auto ext_vec_struct = test_library.LookupStruct("ExternalVectorSizeStruct");
   ASSERT_NONNULL(ext_vec_struct);
-  EXPECT_TRUE(CheckTypeShape(ext_vec_struct->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(ext_vec_struct->typeshape(), Expected{
                                                             .inline_size = 16,
                                                             .alignment = 8,
                                                             .max_out_of_line = 32 * 4,
@@ -1699,7 +1699,7 @@ protocol MessagePort {
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NONNULL(web_message);
-  EXPECT_TRUE(CheckTypeShape(web_message->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(web_message->typeshape(), Expected{
                                                          .inline_size = 4,
                                                          .alignment = 4,
                                                          .max_handles = 1,
@@ -1713,7 +1713,7 @@ protocol MessagePort {
   auto& post_message = message_port->methods[0];
   auto post_message_request = post_message.maybe_request;
   ASSERT_NONNULL(post_message_request);
-  EXPECT_TRUE(CheckTypeShape(post_message_request->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(post_message_request->typeshape(), Expected{
                                                                   .inline_size = 24,
                                                                   .alignment = 8,
                                                                   .max_handles = 1,
@@ -1744,7 +1744,7 @@ protocol MessagePort {
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NONNULL(web_message);
-  EXPECT_TRUE(CheckTypeShape(web_message->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(web_message->typeshape(), Expected{
                                                          .inline_size = 4,
                                                          .alignment = 4,
                                                          .max_handles = 1,
@@ -1756,7 +1756,7 @@ protocol MessagePort {
   auto& post_message = message_port->methods[0];
   auto post_message_request = post_message.maybe_request;
   ASSERT_NONNULL(post_message_request);
-  EXPECT_TRUE(CheckTypeShape(post_message_request->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(post_message_request->typeshape(), Expected{
                                                                   .inline_size = 24,
                                                                   .alignment = 8,
                                                                   .max_handles = 1,
@@ -1784,7 +1784,7 @@ protocol MessagePort {
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NONNULL(web_message);
-  EXPECT_TRUE(CheckTypeShape(web_message->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(web_message->typeshape(), Expected{
                                                          .inline_size = 4,
                                                          .alignment = 4,
                                                          .max_handles = 1,
@@ -1796,7 +1796,7 @@ protocol MessagePort {
   auto& post_message = message_port->methods[0];
   auto post_message_request = post_message.maybe_request;
   ASSERT_NONNULL(post_message_request);
-  EXPECT_TRUE(CheckTypeShape(post_message_request->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(post_message_request->typeshape(), Expected{
                                                                   .inline_size = 24,
                                                                   .alignment = 8,
                                                                   .max_handles = 1,
@@ -1824,7 +1824,7 @@ protocol MessagePort {
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NONNULL(web_message);
-  EXPECT_TRUE(CheckTypeShape(web_message->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(web_message->typeshape(), Expected{
                                                          .inline_size = 4,
                                                          .alignment = 4,
                                                          .max_handles = 1,
@@ -1836,7 +1836,7 @@ protocol MessagePort {
   auto& post_message = message_port->methods[0];
   auto post_message_request = post_message.maybe_request;
   ASSERT_NONNULL(post_message_request);
-  EXPECT_TRUE(CheckTypeShape(post_message_request->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(post_message_request->typeshape(), Expected{
                                                                   .inline_size = 24,
                                                                   .alignment = 8,
                                                                   .max_handles = 1,
@@ -1861,7 +1861,7 @@ struct TheStruct {
   auto the_struct = library.LookupStruct("TheStruct");
   ASSERT_NONNULL(the_struct);
   EXPECT_TRUE(
-      CheckTypeShape(the_struct->typeshape,
+      CheckTypeShape(the_struct->typeshape(),
                      Expected{
                          .inline_size = 8,
                          .alignment = 8,
@@ -1893,7 +1893,7 @@ struct TheStruct {
   auto the_struct = library.LookupStruct("TheStruct");
   ASSERT_NONNULL(the_struct);
   EXPECT_TRUE(CheckTypeShape(
-      the_struct->typeshape,
+      the_struct->typeshape(),
       Expected{.inline_size = 16,
                .alignment = 8,
                // TODO(FIDL-457): Imprecision here, max out-of-line should be infinite.
@@ -1931,7 +1931,7 @@ struct B {
   auto struct_a = library.LookupStruct("A");
   ASSERT_NONNULL(struct_a);
   EXPECT_TRUE(
-      CheckTypeShape(struct_a->typeshape,
+      CheckTypeShape(struct_a->typeshape(),
                      Expected{
                          .inline_size = 8,
                          .alignment = 8,
@@ -1945,7 +1945,7 @@ struct B {
   auto struct_b = library.LookupStruct("B");
   ASSERT_NONNULL(struct_b);
   EXPECT_TRUE(
-      CheckTypeShape(struct_b->typeshape,
+      CheckTypeShape(struct_b->typeshape(),
                      Expected{
                          .inline_size = 8,
                          .alignment = 8,
@@ -1980,7 +1980,7 @@ struct B {
   auto struct_a = library.LookupStruct("A");
   ASSERT_NONNULL(struct_a);
   EXPECT_TRUE(
-      CheckTypeShape(struct_a->typeshape,
+      CheckTypeShape(struct_a->typeshape(),
                      Expected{
                          .inline_size = 16,
                          .alignment = 8,
@@ -1994,7 +1994,7 @@ struct B {
   auto struct_b = library.LookupStruct("B");
   ASSERT_NONNULL(struct_b);
   EXPECT_TRUE(
-      CheckTypeShape(struct_b->typeshape,
+      CheckTypeShape(struct_b->typeshape(),
                      Expected{
                          .inline_size = 16,
                          .alignment = 8,
@@ -2027,7 +2027,7 @@ struct Bar {
   auto struct_foo = library.LookupStruct("Foo");
   ASSERT_NONNULL(struct_foo);
   EXPECT_TRUE(
-      CheckTypeShape(struct_foo->typeshape,
+      CheckTypeShape(struct_foo->typeshape(),
                      Expected{
                          .inline_size = 8,
                          .alignment = 8,
@@ -2041,7 +2041,7 @@ struct Bar {
   auto struct_bar = library.LookupStruct("Bar");
   ASSERT_NONNULL(struct_bar);
   EXPECT_TRUE(
-      CheckTypeShape(struct_bar->typeshape,
+      CheckTypeShape(struct_bar->typeshape(),
                      Expected{
                          .inline_size = 8,
                          .alignment = 8,
@@ -2088,7 +2088,7 @@ enum Priority {
 
   auto buffer = library.LookupStruct("Buffer");
   ASSERT_NONNULL(buffer);
-  EXPECT_TRUE(CheckTypeShape(buffer->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(buffer->typeshape(), Expected{
                                                     .inline_size = 16,
                                                     .alignment = 8,
                                                     .max_handles = 1,
@@ -2098,7 +2098,7 @@ enum Priority {
   auto value = library.LookupStruct("Value");
   ASSERT_NONNULL(value);
   EXPECT_TRUE(
-      CheckTypeShape(value->typeshape,
+      CheckTypeShape(value->typeshape(),
                      Expected{
                          .inline_size = 16,
                          .alignment = 8,
@@ -2111,7 +2111,7 @@ enum Priority {
   auto diff_entry = library.LookupStruct("DiffEntry");
   ASSERT_NONNULL(diff_entry);
   EXPECT_TRUE(
-      CheckTypeShape(diff_entry->typeshape, Expected{
+      CheckTypeShape(diff_entry->typeshape(), Expected{
                                                 .inline_size = 40,
                                                 .alignment = 8,
                                                 .max_out_of_line = 352,
@@ -2157,7 +2157,7 @@ protocol Child {
   auto& sync_with_info = child->all_methods[0];
   auto sync_request = sync_with_info.method->maybe_request;
   ASSERT_NONNULL(sync_request);
-  EXPECT_TRUE(CheckTypeShape(sync_request->typeshape, Expected{
+  EXPECT_TRUE(CheckTypeShape(sync_request->typeshape(), Expected{
                                                           .inline_size = 16,
                                                           .alignment = 8,
                                                       }));

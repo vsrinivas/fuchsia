@@ -267,9 +267,8 @@ TypeShape Table::Shape(std::vector<TypeShape*>* fields, types::Strictness strict
   return Struct::Shape(&header, extra_handles);
 }
 
-TypeShape XUnion::Shape(std::vector<FieldShape*>* fields,
-                        types::Strictness strictness,
-                        uint32_t extra_handles) {  
+TypeShape XUnion::Shape(std::vector<FieldShape*>* fields, types::Strictness strictness,
+                        uint32_t extra_handles) {
   TypeShapeBuilder builder{.inline_size = 24, .alignment = 8};
   for (auto& field : *fields) {
     const auto& envelope = CEnvelopeTypeShape(field->Typeshape());
@@ -684,7 +683,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
         }
       }
     }
-    auto typeshape = type_decl_->typeshape;
+    auto typeshape = type_decl_->typeshape();
     switch (type_decl_->kind) {
       case Decl::Kind::kService:
         return Fail(maybe_location, "cannot use services in other declarations");
@@ -769,8 +768,8 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
                                     out_type, nullptr))
       return false;
     if (out_from_type_alias)
-      *out_from_type_alias = TypeConstructor::FromTypeAlias(decl_, maybe_arg_type, maybe_size,
-                                                            maybe_nullability);
+      *out_from_type_alias =
+          TypeConstructor::FromTypeAlias(decl_, maybe_arg_type, maybe_size, maybe_nullability);
     return true;
   }
 
@@ -929,22 +928,22 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& att
   switch (decl->kind) {
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const Struct*>(decl);
-      max_bytes = struct_decl->typeshape.InlineSize() + struct_decl->typeshape.MaxOutOfLine();
+      max_bytes = struct_decl->typeshape().InlineSize() + struct_decl->typeshape().MaxOutOfLine();
       break;
     }
     case Decl::Kind::kTable: {
       auto table_decl = static_cast<const Table*>(decl);
-      max_bytes = table_decl->typeshape.InlineSize() + table_decl->typeshape.MaxOutOfLine();
+      max_bytes = table_decl->typeshape().InlineSize() + table_decl->typeshape().MaxOutOfLine();
       break;
     }
     case Decl::Kind::kUnion: {
       auto union_decl = static_cast<const Union*>(decl);
-      max_bytes = union_decl->typeshape.InlineSize() + union_decl->typeshape.MaxOutOfLine();
+      max_bytes = union_decl->typeshape().InlineSize() + union_decl->typeshape().MaxOutOfLine();
       break;
     }
     case Decl::Kind::kXUnion: {
       auto xunion_decl = static_cast<const XUnion*>(decl);
-      max_bytes = xunion_decl->typeshape.InlineSize() + xunion_decl->typeshape.MaxOutOfLine();
+      max_bytes = xunion_decl->typeshape().InlineSize() + xunion_decl->typeshape().MaxOutOfLine();
       break;
     }
     default:
@@ -973,22 +972,22 @@ bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& a
   switch (decl->kind) {
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const Struct*>(decl);
-      max_handles = struct_decl->typeshape.MaxHandles();
+      max_handles = struct_decl->typeshape().MaxHandles();
       break;
     }
     case Decl::Kind::kTable: {
       auto table_decl = static_cast<const Table*>(decl);
-      max_handles = table_decl->typeshape.MaxHandles();
+      max_handles = table_decl->typeshape().MaxHandles();
       break;
     }
     case Decl::Kind::kUnion: {
       auto union_decl = static_cast<const Union*>(decl);
-      max_handles = union_decl->typeshape.MaxHandles();
+      max_handles = union_decl->typeshape().MaxHandles();
       break;
     }
     case Decl::Kind::kXUnion: {
       auto xunion_decl = static_cast<const XUnion*>(decl);
-      max_handles = xunion_decl->typeshape.MaxHandles();
+      max_handles = xunion_decl->typeshape().MaxHandles();
       break;
     }
     default:
@@ -2933,7 +2932,8 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
 }
 
 bool Library::CompileBits(Bits* bits_declaration) {
-  if (!CompileTypeConstructor(bits_declaration->subtype_ctor.get(), &bits_declaration->typeshape))
+  if (!CompileTypeConstructor(bits_declaration->subtype_ctor.get(),
+                              &bits_declaration->mutable_typeshape()))
     return false;
 
   if (bits_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
@@ -3005,7 +3005,8 @@ bool Library::CompileConst(Const* const_declaration) {
 }
 
 bool Library::CompileEnum(Enum* enum_declaration) {
-  if (!CompileTypeConstructor(enum_declaration->subtype_ctor.get(), &enum_declaration->typeshape))
+  if (!CompileTypeConstructor(enum_declaration->subtype_ctor.get(),
+                              &enum_declaration->mutable_typeshape()))
     return false;
 
   if (enum_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
@@ -3128,7 +3129,7 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
   if (!CheckScopes(protocol_declaration, CheckScopes))
     return false;
 
-  protocol_declaration->typeshape = HandleType::Shape();
+  protocol_declaration->mutable_typeshape() = HandleType::Shape();
 
   for (auto& method : protocol_declaration->methods) {
     auto CreateMessage = [&](Struct* message) -> bool {
@@ -3208,7 +3209,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
     max_member_handles = 0;
   }
 
-  struct_declaration->typeshape = Struct::Shape(&fidl_struct, max_member_handles);
+  struct_declaration->mutable_typeshape() = Struct::Shape(&fidl_struct, max_member_handles);
 
   return true;
 }
@@ -3231,7 +3232,7 @@ bool Library::CompileTable(Table* table_declaration) {
                     "Multiple table fields with the same name; previous was at " +
                         name_result.previous_occurrence().position_str());
       if (!CompileTypeConstructor(member.maybe_used->type_ctor.get(),
-                                  &member.maybe_used->typeshape))
+                                  &member.maybe_used->mutable_typeshape()))
         return false;
     }
   }
@@ -3255,11 +3256,11 @@ bool Library::CompileTable(Table* table_declaration) {
   std::vector<TypeShape*> fields(table_declaration->members.size());
   for (auto& member : table_declaration->members) {
     if (member.maybe_used) {
-      fields[member.ordinal->value - 1] = &member.maybe_used->typeshape;
+      fields[member.ordinal->value - 1] = &member.maybe_used->mutable_typeshape();
     }
   }
 
-  table_declaration->typeshape =
+  table_declaration->mutable_typeshape() =
       Table::Shape(&fields, table_declaration->strictness, max_member_handles);
 
   return true;
@@ -3287,7 +3288,7 @@ bool Library::CompileUnion(Union* union_declaration) {
     extra_handles = std::numeric_limits<uint32_t>::max();
   }
   std::vector<FieldShape*> fidl_union = {&tag, &union_declaration->membershape};
-  union_declaration->typeshape = Struct::Shape(&fidl_union, extra_handles);
+  union_declaration->mutable_typeshape() = Struct::Shape(&fidl_union, extra_handles);
 
   return true;
 }
@@ -3324,7 +3325,7 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
   for (auto& member : xunion_declaration->members) {
     fields.push_back(&member.fieldshape);
   }
-  xunion_declaration->typeshape =
+  xunion_declaration->mutable_typeshape() =
       XUnion::Shape(&fields, xunion_declaration->strictness, max_member_handles);
 
   return true;
@@ -3397,7 +3398,7 @@ bool Library::Compile() {
         message_struct.push_back(&header_field_shape);
         for (auto& param : message->members)
           message_struct.push_back(&param.fieldshape);
-        message->typeshape = FidlMessageTypeShape(&message_struct);
+        message->mutable_typeshape() = FidlMessageTypeShape(&message_struct);
       };
       if (method_with_info.method->maybe_request)
         FixupMessage(method_with_info.method->maybe_request);

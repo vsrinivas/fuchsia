@@ -475,10 +475,9 @@ struct Decl {
   bool compiled = false;
 };
 
-struct TypeDecl : public Decl {
+struct TypeDecl : public Decl, public virtual TypeShapeContainer {
   TypeDecl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
       : Decl(kind, std::move(attributes), std::move(name)) {}
-  TypeShape typeshape;
   bool recursive = false;
 };
 
@@ -661,7 +660,9 @@ struct TypeConstructor final {
   struct FromTypeAlias {
     FromTypeAlias(const TypeAlias* decl, const Type* maybe_arg_type, const Size* maybe_size,
                   types::Nullability nullability) noexcept
-        : decl(decl), maybe_arg_type(maybe_arg_type), maybe_size(maybe_size),
+        : decl(decl),
+          maybe_arg_type(maybe_arg_type),
+          maybe_size(maybe_size),
           nullability(nullability) {}
     const TypeAlias* decl;
     const Type* maybe_arg_type;
@@ -826,7 +827,7 @@ struct Table final : public TypeDecl {
     std::unique_ptr<raw::Ordinal32> ordinal;
     // The location for reserved table members.
     std::unique_ptr<SourceLocation> maybe_location;
-    struct Used {
+    struct Used : public virtual TypeShapeContainer {
       Used(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
            std::unique_ptr<Constant> maybe_default_value,
            std::unique_ptr<raw::AttributeList> attributes)
@@ -838,7 +839,6 @@ struct Table final : public TypeDecl {
       SourceLocation name;
       std::unique_ptr<Constant> maybe_default_value;
       std::unique_ptr<raw::AttributeList> attributes;
-      TypeShape typeshape;
     };
     std::unique_ptr<Used> maybe_used;
   };

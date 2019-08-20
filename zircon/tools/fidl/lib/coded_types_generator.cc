@@ -250,8 +250,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         } else if (member.fieldshape.Padding() > 0) {
           // The type does not need coding, but the field needs padding zeroing.
           struct_fields.emplace_back(nullptr, member.fieldshape.InlineSize(),
-                                     member.fieldshape.Offset(),
-                                     member.fieldshape.Padding());
+                                     member.fieldshape.Offset(), member.fieldshape.Padding());
         }
       }
       break;
@@ -360,11 +359,10 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         }
         members.push_back(uint64);
       }
-      named_coded_types_.emplace(
-          &enum_decl->name,
-          std::make_unique<coded::EnumType>(std::move(enum_name), enum_decl->type->subtype,
-                                            enum_decl->type->shape.InlineSize(),
-                                            std::move(members)));
+      named_coded_types_.emplace(&enum_decl->name,
+                                 std::make_unique<coded::EnumType>(
+                                     std::move(enum_name), enum_decl->type->subtype,
+                                     enum_decl->type->shape.InlineSize(), std::move(members)));
       break;
     }
     case flat::Decl::Kind::kProtocol: {
@@ -381,10 +379,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
           std::string message_name = NameMessage(method_name, kind);
           std::string message_qname = NameMessage(method_qname, kind);
           protocol_messages.push_back(std::make_unique<coded::MessageType>(
-              std::move(message_name),
-              std::vector<coded::StructField>(),
-              message.typeshape.InlineSize(),
-              std::move(message_qname)));
+              std::move(message_name), std::vector<coded::StructField>(),
+              message.typeshape().InlineSize(), std::move(message_qname)));
         };
         if (method.maybe_request) {
           CreateMessage(*method.maybe_request, types::MessageKind::kRequest);
@@ -402,11 +398,10 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     case flat::Decl::Kind::kTable: {
       auto table_decl = static_cast<const flat::Table*>(decl);
       std::string table_name = NameCodedName(table_decl->name);
-      named_coded_types_.emplace(&decl->name,
-                                 std::make_unique<coded::TableType>(
-                                     std::move(table_name), std::vector<coded::TableField>(),
-                                     table_decl->typeshape.InlineSize(),
-                                     NameFlatName(table_decl->name)));
+      named_coded_types_.emplace(
+          &decl->name, std::make_unique<coded::TableType>(
+                           std::move(table_name), std::vector<coded::TableField>(),
+                           table_decl->typeshape().InlineSize(), NameFlatName(table_decl->name)));
       break;
     }
     case flat::Decl::Kind::kStruct: {
@@ -417,19 +412,17 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       named_coded_types_.emplace(
           &decl->name, std::make_unique<coded::StructType>(
                            std::move(struct_name), std::vector<coded::StructField>(),
-                           struct_decl->typeshape.InlineSize(),
-                           NameFlatName(struct_decl->name)));
+                           struct_decl->typeshape().InlineSize(), NameFlatName(struct_decl->name)));
       break;
     }
     case flat::Decl::Kind::kUnion: {
       auto union_decl = static_cast<const flat::Union*>(decl);
       std::string union_name = NameCodedName(union_decl->name);
-      named_coded_types_.emplace(&decl->name,
-                                 std::make_unique<coded::UnionType>(
-                                     std::move(union_name), std::vector<coded::UnionField>(),
-                                     union_decl->membershape.Offset(),
-                                     union_decl->typeshape.InlineSize(),
-                                     NameFlatName(union_decl->name)));
+      named_coded_types_.emplace(
+          &decl->name, std::make_unique<coded::UnionType>(
+                           std::move(union_name), std::vector<coded::UnionField>(),
+                           union_decl->membershape.Offset(), union_decl->typeshape().InlineSize(),
+                           NameFlatName(union_decl->name)));
       break;
     }
     case flat::Decl::Kind::kXUnion: {

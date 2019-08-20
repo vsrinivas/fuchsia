@@ -74,6 +74,34 @@ class TypeShape {
   bool has_flexible_envelope_;
 };
 
+// An object that has a TypeShape is a TypeShapeContainer. This is a simple class that provides
+// accessors to a private typeshape_ member variable, but is a useful step in enabling existing
+// classes to encapsulate access to their typeshape.
+//
+// You should always _virtually_ inherit from this class, to ensure that your class only has one
+// definition of these members. For example:
+//
+//   struct Foo : public virtual TypeShapeContainer {
+//     ...
+//   };
+//
+// Google for "C++ virtual inheritance" for more information.
+class TypeShapeContainer {
+ public:
+  virtual const TypeShape& typeshape() const { return typeshape_; }
+
+  // The method is named mutable_typeshape() to make it easy to identify where client code needs
+  // mutable (write) access to the typeshape_ member variable (grep for mutable_typeshape).
+  virtual TypeShape& mutable_typeshape() { return typeshape_; }
+
+  virtual ~TypeShapeContainer() = default;
+
+ private:
+  // |typeshape_| is mutable since some overrides of typeshape(), which is a const method, may need
+  // to mutate it for e.g. memoization.
+  mutable TypeShape typeshape_;
+};
+
 // |FieldShape| describes a |TypeShape| that is embedded in a struct or (x)union as a member field.
 // It contains additional offset and padding information.
 class FieldShape {

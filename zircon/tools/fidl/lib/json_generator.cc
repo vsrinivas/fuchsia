@@ -345,11 +345,11 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& va
 
 void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {
   GenerateObjectMember(prefix, value.members);
-  GenerateObjectMember(prefix + "_size", value.typeshape.InlineSize());
-  GenerateObjectMember(prefix + "_alignment", value.typeshape.Alignment());
-  GenerateObjectMember(prefix + "_has_padding", value.typeshape.HasPadding());
+  GenerateObjectMember(prefix + "_size", value.typeshape().InlineSize());
+  GenerateObjectMember(prefix + "_alignment", value.typeshape().Alignment());
+  GenerateObjectMember(prefix + "_has_padding", value.typeshape().HasPadding());
   GenerateObjectMember("experimental_" + prefix + "_has_flexible_envelope",
-                       value.typeshape.HasFlexibleEnvelope());
+                       value.typeshape().HasFlexibleEnvelope());
 }
 
 void JSONGenerator::Generate(const flat::Service& value) {
@@ -380,11 +380,11 @@ void JSONGenerator::Generate(const flat::Struct& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape.InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape.Alignment());
-    GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
-    GenerateObjectMember("has_padding", value.typeshape.HasPadding());
+    GenerateObjectMember("size", value.typeshape().InlineSize());
+    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
+    GenerateObjectMember("alignment", value.typeshape().Alignment());
+    GenerateObjectMember("max_handles", value.typeshape().MaxHandles());
+    GenerateObjectMember("has_padding", value.typeshape().HasPadding());
   });
 }
 
@@ -412,10 +412,10 @@ void JSONGenerator::Generate(const flat::Table& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape.InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape.Alignment());
-    GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
+    GenerateObjectMember("size", value.typeshape().InlineSize());
+    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
+    GenerateObjectMember("alignment", value.typeshape().Alignment());
+    GenerateObjectMember("max_handles", value.typeshape().MaxHandles());
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
   });
 }
@@ -432,10 +432,10 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
       if (value.maybe_used->attributes)
         GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
       // TODO(FIDL-609): Support defaults on tables.
-      GenerateObjectMember("size", value.maybe_used->typeshape.InlineSize());
-      GenerateObjectMember("max_out_of_line", value.maybe_used->typeshape.MaxOutOfLine());
-      GenerateObjectMember("alignment", value.maybe_used->typeshape.Alignment());
-      GenerateObjectMember("max_handles", value.maybe_used->typeshape.MaxHandles());
+      GenerateObjectMember("size", value.maybe_used->typeshape().InlineSize());
+      GenerateObjectMember("max_out_of_line", value.maybe_used->typeshape().MaxOutOfLine());
+      GenerateObjectMember("alignment", value.maybe_used->typeshape().Alignment());
+      GenerateObjectMember("max_handles", value.maybe_used->typeshape().MaxHandles());
     } else {
       assert(value.maybe_location);
       GenerateObjectMember("reserved", true);
@@ -451,10 +451,10 @@ void JSONGenerator::Generate(const flat::Union& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape.InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape.Alignment());
-    GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
+    GenerateObjectMember("size", value.typeshape().InlineSize());
+    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
+    GenerateObjectMember("alignment", value.typeshape().Alignment());
+    GenerateObjectMember("max_handles", value.typeshape().MaxHandles());
   });
 }
 
@@ -479,10 +479,10 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape.InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape.Alignment());
-    GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
+    GenerateObjectMember("size", value.typeshape().InlineSize());
+    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
+    GenerateObjectMember("alignment", value.typeshape().Alignment());
+    GenerateObjectMember("max_handles", value.typeshape().MaxHandles());
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
   });
 }
