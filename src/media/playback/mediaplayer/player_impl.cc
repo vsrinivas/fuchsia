@@ -44,7 +44,7 @@ static const char* kDumpEntry = "dump";
 static constexpr zx_duration_t kCacheLead = ZX_SEC(15);
 static constexpr zx_duration_t kCacheBacktrack = ZX_SEC(5);
 
-static constexpr size_t kMaxBufferSize = 2 * 1024;
+static constexpr size_t kMaxBufferSize = 32 * 1024;
 
 template <typename T>
 zx_koid_t GetKoid(const fidl::InterfaceRequest<T>& request) {
