@@ -1,4 +1,4 @@
-# Recovery Netstack Hacking HOWTO
+# Netstack3 Hacking HOWTO
 
 This document describes how to run Netstack3, as well as a few possible dev
 workflows. The instructions are for how to set up QEMU, but are also applicable

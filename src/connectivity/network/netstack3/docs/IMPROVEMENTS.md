@@ -1,4 +1,4 @@
-# Recovery Netstack Improvements
+# Netstack3 Improvements
 
 This document describes various improvements that we might want to make to
 structure or algorithms in the future, but that we don't have concrete plans to

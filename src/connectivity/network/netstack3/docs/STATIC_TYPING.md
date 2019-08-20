@@ -1,12 +1,11 @@
 # Static Typing
 
-This document describes and motivates the use of static typing in the recovery
-netstack.
+This document describes and motivates the use of static typing in netstack3.
 
-The recovery netstack makes heavy use of static typing largely for the same
-reasons that any program does - to catch bugs at compile time. But there are a
-number of benefits to static typing that are more specific to our use case that
-are worth calling out.
+Netstack3 makes heavy use of static typing largely for the same reasons that any
+program does - to catch bugs at compile time. But there are a number of benefits
+to static typing that are more specific to our use case that are worth calling
+out.
 
 ## Guaranteeing invariants and preventing denial-of-service attacks
 

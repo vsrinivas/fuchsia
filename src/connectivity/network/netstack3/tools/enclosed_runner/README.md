@@ -1,9 +1,9 @@
-# Recovery Netstack Enclosed Runner
+# Netstack3 Enclosed Runner
 
-`enclosed_runner` is a component that starts recovery netstack in its own environment and
-optionally performs some early configuration.
-Use this alongside `chrealm` to be able to manually test the netstack without having to hack your
-way around `sysmgr` entries.
+`enclosed_runner` is a component that starts netstack3 in its own environment
+and optionally performs some early configuration.
+Use this alongside `chrealm` to be able to manually test the netstack without
+having to hack your way around `sysmgr` entries.
 
 ## Usage
 

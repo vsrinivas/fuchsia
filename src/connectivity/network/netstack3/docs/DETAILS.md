@@ -1,4 +1,4 @@
-# Recovery Netstack Implementation Details
+# Netstack3 Implementation Details
 
 This document describes various implementation details that are confusing enough
 to be worth calling out explicitly, and cannot naturally be documented in inline

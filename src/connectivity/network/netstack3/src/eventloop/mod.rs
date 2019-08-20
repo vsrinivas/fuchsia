@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The special-purpose event loop used by the recovery netstack.
+//! The special-purpose event loop used by netstack3.
 //!
 //! This event loop takes in events from all sources (currently ethernet devices, FIDL, and
 //! timers), and handles them appropriately. It dispatches ethernet and timer events to the netstack
@@ -179,8 +179,7 @@ impl EthernetSetupWorker {
             async move {
                 let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
                 let eth_client =
-                    eth::Client::new(self.dev, vmo, eth::DEFAULT_BUFFER_SIZE, "recovery-ns")
-                        .await?;
+                    eth::Client::new(self.dev, vmo, eth::DEFAULT_BUFFER_SIZE, "netstack3").await?;
                 let info = eth_client.info().await?;
                 eth_client.start().await?;
                 let eth_device_event = Event::EthSetupEvent(EthernetDeviceReady {
