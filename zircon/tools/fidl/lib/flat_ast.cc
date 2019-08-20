@@ -2655,14 +2655,10 @@ bool Library::SortDeclarations() {
   std::map<Decl*, std::vector<Decl*>, CmpDeclInLibrary> inverse_dependencies;
   for (auto& name_and_decl : declarations_) {
     Decl* decl = name_and_decl.second;
-    degrees[decl] = 0u;
-  }
-  for (auto& name_and_decl : declarations_) {
-    Decl* decl = name_and_decl.second;
     std::set<Decl*> deps;
     if (!DeclDependencies(decl, &deps))
       return false;
-    degrees[decl] += deps.size();
+    degrees[decl] = static_cast<uint32_t>(deps.size());
     for (Decl* dep : deps) {
       inverse_dependencies[dep].push_back(decl);
     }
