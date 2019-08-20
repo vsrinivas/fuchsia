@@ -200,10 +200,6 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   bool enable_ime_ = false;
 };
 
-// Aliasing for soft rollout in topaz.
-using ViewContextTransitional = ViewContext;
-using BaseViewTransitional = BaseView;
-
 }  // namespace scenic
 
 #endif  // LIB_UI_BASE_VIEW_CPP_BASE_VIEW_H_

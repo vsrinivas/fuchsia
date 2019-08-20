@@ -49,10 +49,6 @@ class ViewProviderService : private fuchsia::ui::app::ViewProvider {
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> bindings_;
 };
 
-// Aliasing for soft rollout in topaz.
-using ViewFactoryTransitional = ViewFactory;
-using ViewProviderServiceTransitional = ViewProviderService;
-
 }  // namespace scenic
 
 #endif  // LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_SERVICE_H_

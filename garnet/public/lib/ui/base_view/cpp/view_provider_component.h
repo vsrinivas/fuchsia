@@ -72,9 +72,6 @@ class ViewProviderComponent {
   std::unique_ptr<ViewImpl> view_impl_;
 };
 
-// Aliasing for soft rollout in topaz.
-using ViewProviderComponentTransitional = ViewProviderComponent;
-
 }  // namespace scenic
 
 #endif  // LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_COMPONENT_H_
