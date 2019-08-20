@@ -220,8 +220,8 @@ TEST_F(PciProtocolTests, GetBar1) {
 
 TEST_F(PciProtocolTests, GetBar2) {
   zx_pci_bar_t info = {};
-  // BAR 2 (unused)
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetBar(2, &info));
+  // BAR 2 contains MSI-X registers and should be denied
+  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, pci().GetBar(2, &info));
 }
 
 TEST_F(PciProtocolTests, GetBar3) {
@@ -322,6 +322,12 @@ TEST_F(PciProtocolTests, GetCapabilities) {
 
   // There is no fifth Vendor Capability.
   ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetNextCapability(PCI_CAP_ID_VENDOR, offsetB, &offsetA));
+
+  // There is an MSIX capability at 0xF8
+  ASSERT_OK(pci().GetFirstCapability(PCI_CAP_ID_MSIX, &offsetA));
+  ASSERT_EQ(0xF0, offsetA);
+  ASSERT_OK(pci().ConfigRead8(offsetA, &val8));
+  ASSERT_EQ(PCI_CAP_ID_MSIX, val8);
 }
 
 TEST_F(PciProtocolTests, GetDeviceInfo) {

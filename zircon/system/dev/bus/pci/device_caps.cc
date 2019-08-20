@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include "capabilities/msi.h"
+#include "capabilities/msix.h"
 #include "capabilities/pci_express.h"
 #include "common.h"
 #include "device.h"
@@ -85,6 +86,21 @@ zx_status_t AllocateCapability(
 
 }  // namespace
 
+zx_status_t Device::ConfigureCapabilities() {
+  fbl::AutoLock dev_lock(&dev_lock_);
+  zx_status_t st;
+  if (caps_.msix) {
+    auto& msix = *caps_.msix;
+    st = msix.Init(GetBar(msix.table_bar()), GetBar(msix.pba_bar()));
+    if (st != ZX_OK) {
+      pci_errorf("Failed to initialize MSI-X: %d\n", st);
+      return st;
+    }
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t Device::ParseCapabilities() {
   // Our starting point comes from the Capability Pointer in the config header.
   struct CapabilityHdr<uint8_t> hdr;
@@ -114,14 +130,22 @@ zx_status_t Device::ParseCapabilities() {
       case Capability::Id::kPciExpress:
         st = AllocateCapability<PciExpressCapability>(cap_offset, *cfg_, &caps_.pcie, &caps_.list);
         if (st != ZX_OK) {
-          pci_tracef("%s Error allocating PCIe capability: %d, %p\n", cfg_->addr(), st, caps_.pcie);
+          pci_errorf("%s Error allocating PCIe capability: %d, %p\n", cfg_->addr(), st, caps_.pcie);
           return st;
         }
         break;
       case Capability::Id::kMsi:
         st = AllocateCapability<MsiCapability>(cap_offset, *cfg_, &caps_.msi, &caps_.list);
         if (st != ZX_OK) {
-          pci_tracef("%s Error allocating MSI capability: %d, %p\n", cfg_->addr(), st, caps_.msi);
+          pci_errorf("%s Error allocating MSI capability: %d, %p\n", cfg_->addr(), st, caps_.msi);
+          return st;
+        }
+        break;
+      case Capability::Id::kMsiX:
+        st = AllocateCapability<MsixCapability>(cap_offset, *cfg_, &caps_.msix, &caps_.list);
+        if (st != ZX_OK) {
+          pci_errorf("%s Error allocating MSI-X capability: %d, %p\n", cfg_->addr(), st,
+                     caps_.msix);
           return st;
         }
         break;
@@ -140,7 +164,6 @@ zx_status_t Device::ParseCapabilities() {
       case Capability::Id::kPciBridgeSubsystemVendorId:
       case Capability::Id::kAgp8x:
       case Capability::Id::kSecureDevice:
-      case Capability::Id::kMsiX:
       case Capability::Id::kSataDataNdxCfg:
       case Capability::Id::kAdvancedFeatures:
       case Capability::Id::kEnhancedAllocation:

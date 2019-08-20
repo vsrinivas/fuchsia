@@ -2,20 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "allocation.h"
 #include "bridge.h"
-#include "bus.h"
-#include "common.h"
-#include "config.h"
-#include "device.h"
+
 #include <assert.h>
 #include <err.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <string.h>
 #include <zircon/compiler.h>
+
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+
+#include "allocation.h"
+#include "bus.h"
+#include "common.h"
+#include "config.h"
+#include "device.h"
 
 namespace pci {
 
@@ -201,7 +204,7 @@ zx_status_t Bridge::ConfigureBars() {
     return status;
   }
 
-  ConfigureDownstreamBars();
+  ConfigureDownstreamDevices();
   return ZX_OK;
 }
 

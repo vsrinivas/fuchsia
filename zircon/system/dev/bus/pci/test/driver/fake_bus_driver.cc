@@ -33,7 +33,7 @@ zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name) {
     return st;
   }
 
-  bus->upstream().ConfigureDownstreamBars();
+  bus->upstream().ConfigureDownstreamDevices();
   cleanup.cancel();
   bus.release();
   return ZX_OK;

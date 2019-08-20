@@ -23,8 +23,10 @@
 #include <region-alloc/region-alloc.h>
 
 #include "allocation.h"
+#include "bar_info.h"
 #include "capabilities.h"
 #include "capabilities/msi.h"
+#include "capabilities/msix.h"
 #include "capabilities/pci_express.h"
 #include "config.h"
 #include "device_proxy.h"
@@ -70,21 +72,10 @@ class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
     }
   };
 
-  // struct used to hold information about a configured base address register
-  struct BarInfo {
-    size_t size = 0;
-    zx_paddr_t address = 0;  // Allocated address for the bar
-    bool is_mmio;
-    bool is_64bit;
-    bool is_prefetchable;
-    uint32_t bar_id;  // The bar index in the config space. If the bar is 64 bit
-    // then this corresponds to the first half of the register pair
-    std::unique_ptr<PciAllocation> allocation;
-  };
-
   struct Capabilities {
     CapabilityList list;
     MsiCapability* msi;
+    MsixCapability* msix;
     PciExpressCapability* pcie;
   };
 
@@ -171,7 +162,10 @@ class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
   uint8_t func_id() const { return cfg_->bdf().function_id; }
   uint32_t bar_count() const { return bar_count_; }
   const Capabilities& capabilities() const { return caps_; }
-
+  const BarInfo& GetBar(uint8_t bar_id) {
+    ZX_DEBUG_ASSERT(bar_id < bar_count_);
+    return bars_[bar_id];
+  }
   // Dump some information about the device
   virtual void Dump() const;
 
@@ -251,10 +245,11 @@ class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
   zx_status_t AllocateBar(uint32_t bar_id) TA_REQ(dev_lock_);
   // Called a device to configure (probe/allocate) its BARs
   zx_status_t ConfigureBarsLocked() TA_REQ(dev_lock_);
-  // Called by an UpstreamNode to configure the BARs of a device downsteream.
+  // Called by an UpstreamNode to configure the BARs of a device downstream.
   // Bridge implements it so it can allocate its bridge windows and own BARs before
   // configuring downstream BARs..
   virtual zx_status_t ConfigureBars() TA_EXCL(dev_lock_);
+  zx_status_t ConfigureCapabilities() TA_EXCL(dev_lock_);
 
   // Disable a device, and anything downstream of it.  The device will
   // continue to enumerate, but users will only be able to access config (and

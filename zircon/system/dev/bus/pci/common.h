@@ -1,20 +1,23 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_COMMON_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_COMMON_H_
 
 #include <ddk/debug.h>
 
 // Switch for easy enabling of output during unit tests where we
 // won't have driver log values set.
 #if 1
-#define pci_tracef(...) zxlogf(TRACE, "pci: " __VA_ARGS__)
-#define pci_errorf(...) zxlogf(ERROR, "pci: " __VA_ARGS__)
 #define pci_infof(...) zxlogf(INFO, "pci: " __VA_ARGS__)
+#define pci_errorf(...) zxlogf(ERROR, "pci: " __VA_ARGS__)
+#define pci_tracef(...) zxlogf(TRACE, "pci: " __VA_ARGS__)
+#define pci_spewf(...) zxlogf(SPEW, "pci: " __VA_ARGS__)
 #else
-#define pci_tracef(...) printf("pci: " __VA_ARGS__)
-#define pci_errorf(...) printf("pci: " __VA_ARGS__)
 #define pci_infof(...) printf("pci: " __VA_ARGS__)
+#define pci_errorf(...) printf("pci: " __VA_ARGS__)
+#define pci_tracef(...) printf("pci: " __VA_ARGS__)
+#define pci_spewf(...) printtf("pci: " __VA_ARGS__)
 #endif
 
 /*
@@ -146,3 +149,5 @@ constexpr bool PCI_HAS_IO_ADDR_SPACE = false;
 constexpr uint64_t PCI_PIO_ADDR_SPACE_MASK = 0xFFFFFFFF;
 constexpr uint64_t PCI_PIO_ADDR_SPACE_SIZE = 0x100000000;
 #endif  // #if defined(__x86_64__)
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_COMMON_H_

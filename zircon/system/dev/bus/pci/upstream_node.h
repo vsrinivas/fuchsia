@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_UPSTREAM_NODE_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_UPSTREAM_NODE_H_
+
+#include <sys/types.h>
+#include <zircon/types.h>
+
+#include <fbl/intrusive_double_list.h>
+#include <fbl/macros.h>
 
 #include "allocation.h"
 #include "device.h"
 #include "ref_counted.h"
-#include <fbl/intrusive_double_list.h>
-#include <fbl/macros.h>
-#include <sys/types.h>
-#include <zircon/types.h>
 
 // UpstreamNode
 //
@@ -50,7 +53,8 @@ class UpstreamNode {
   UpstreamNode(Type type, uint32_t mbus_id) : type_(type), managed_bus_id_(mbus_id) {}
   virtual ~UpstreamNode() = default;
 
-  virtual void ConfigureDownstreamBars();
+  // Configure / late-initialization any devices downstream of this node.
+  virtual void ConfigureDownstreamDevices();
   // Disable all devices directly connected to this bridge.
   virtual void DisableDownstream();
   // Unplug all devices directly connected to this bridge.
@@ -64,3 +68,5 @@ class UpstreamNode {
 };
 
 }  // namespace pci
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_UPSTREAM_NODE_H_

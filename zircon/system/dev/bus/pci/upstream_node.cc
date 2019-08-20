@@ -3,18 +3,27 @@
 // found in the LICENSE file.
 
 #include "upstream_node.h"
-#include "common.h"
+
 #include <assert.h>
 #include <err.h>
-#include <fbl/algorithm.h>
 #include <inttypes.h>
 #include <string.h>
 
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+
+#include "common.h"
+
 namespace pci {
 
-void UpstreamNode::ConfigureDownstreamBars() {
+void UpstreamNode::ConfigureDownstreamDevices() {
   for (auto& device : downstream_) {
-    device.ConfigureBars();
+    // Some capabilities can only be configured after device BARs have been
+    // configured, and device BARs cannot be configured when a Device is object
+    // is created since bridge windows still need to be allocated.
+    if (device.ConfigureBars() != ZX_OK || device.ConfigureCapabilities() != ZX_OK) {
+      device.Disable();
+    }
   }
 }
 

@@ -3,17 +3,20 @@
 // found in the LICENSE file.
 
 #include "bus.h"
-#include "bridge.h"
-#include "common.h"
-#include "config.h"
-#include "device.h"
+
+#include <list>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
-#include <list>
+
+#include "bridge.h"
+#include "common.h"
+#include "config.h"
+#include "device.h"
 
 namespace pci {
 
@@ -82,7 +85,7 @@ zx_status_t Bus::Initialize() {
 
   // Begin our bus scan starting at our root
   ScanDownstream();
-  root_->ConfigureDownstreamBars();
+  root_->ConfigureDownstreamDevices();
   pci_infof("AllDevicesList:\n");
   for (auto& dev : device_list_) {
     dev.Dump();

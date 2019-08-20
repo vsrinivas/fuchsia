@@ -1,10 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_
+
+#include <lib/zx/vmo.h>
 
 #include "../../allocation.h"
-#include <lib/zx/vmo.h>
 
 namespace pci {
 
@@ -15,7 +17,9 @@ namespace pci {
 class FakeAllocation : public PciAllocation {
  public:
   FakeAllocation(zx_paddr_t base, size_t size)
-      : PciAllocation(zx::resource(ZX_HANDLE_INVALID)), base_(base), size_(size) {}
+      : PciAllocation(zx::resource(ZX_HANDLE_INVALID)), base_(base), size_(size) {
+    pci_infof("fake allocation created %#lx - %#lx\n", base, base + size);
+  }
   zx_paddr_t base() const final { return base_; }
   size_t size() const final { return size_; }
   zx_status_t CreateVmObject(zx::vmo* out_vmo) const final {
@@ -42,3 +46,5 @@ class FakeAllocator : public PciAllocator {
 };
 
 }  // namespace pci
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_

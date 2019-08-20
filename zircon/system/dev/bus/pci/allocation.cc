@@ -2,23 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "common.h"
-#include "root.h"
-#include "upstream_node.h"
+#include <err.h>
+#include <lib/zx/resource.h>
+#include <lib/zx/vmo.h>
+#include <zircon/rights.h>
+
 #include <cassert>
 #include <cinttypes>
 #include <cstring>
-#include <err.h>
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <lib/zx/resource.h>
-#include <lib/zx/vmo.h>
-#include <memory>
-#include <zircon/rights.h>
+
+#include "common.h"
+#include "root.h"
+#include "upstream_node.h"
 
 namespace pci {
 
 zx_status_t PciAllocation::CreateVmObject(zx::vmo* out_vmo) const {
+  pci_tracef("Creating vmo for allocation [base = %#lx, size = %#zx]\n", base(), size());
   return zx::vmo::create_physical(resource(), base(), size(), out_vmo);
 }
 

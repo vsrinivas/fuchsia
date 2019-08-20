@@ -127,8 +127,8 @@ zx_status_t Device::RpcConfigRead(const zx::unowned_channel& ch) {
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
   }
 
-  pci_tracef("%s Read%u[%#x] = %#x\n", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
-             response_.cfg.value);
+  pci_spewf("%s Read%u[%#x] = %#x\n", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
+            response_.cfg.value);
   return RpcReply(ch, ZX_OK);
 }
 
@@ -160,8 +160,8 @@ zx_status_t Device::RpcConfigWrite(const zx::unowned_channel& ch) {
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
   }
 
-  pci_tracef("%s Write%u[%#x] <- %#x\n", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
-             request_.cfg.value);
+  pci_spewf("%s Write%u[%#x] <- %#x\n", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
+            request_.cfg.value);
   return RpcReply(ch, ZX_OK);
 }
 
@@ -172,13 +172,21 @@ zx_status_t Device::RpcEnableBusMaster(const zx::unowned_channel& ch) {
 zx_status_t Device::RpcGetAuxdata(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }
 
 zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
-  if (request_.bar.id >= bar_count_) {
+  auto bar_id = request_.bar.id;
+  if (bar_id >= bar_count_) {
     return RpcReply(ch, ZX_ERR_INVALID_ARGS);
+  }
+
+  // If this device supports MSIX then we need to deny access to the BARs it
+  // uses.
+  auto& msix = caps_.msix;
+  if (msix && (msix->table_bar() == bar_id || msix->pba_bar() == bar_id)) {
+    return RpcReply(ch, ZX_ERR_ACCESS_DENIED);
   }
 
   // Both unused BARs and BARs that are the second half of a 64 bit
   // BAR have a size of zero.
-  auto& bar = bars_[request_.bar.id];
+  auto& bar = bars_[bar_id];
   if (bar.size == 0) {
     return RpcReply(ch, ZX_ERR_NOT_FOUND);
   }
@@ -186,7 +194,7 @@ zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
   zx_status_t st;
   zx_handle_t handle = ZX_HANDLE_INVALID;
   uint32_t handle_cnt = 0;
-  response_.bar.id = request_.bar.id;
+  response_.bar.id = bar_id;
   // MMIO Bars have an associated VMO for the driver to map, whereas
   // IO bars have a Resource corresponding to an IO range for the
   // driver to access. These are mutually exclusive, so only one

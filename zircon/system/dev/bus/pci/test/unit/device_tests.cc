@@ -224,4 +224,24 @@ TEST_F(PciDeviceTests, MsiCapabilityTest) {
   EXPECT_EQ(1, ctrl.enable());
 }
 
+// Ensure we parse MSIX capabilities properly in the Virtio-input device.
+TEST_F(PciDeviceTests, MsixCapabilityTest) {
+  auto& dev = CreateTestDevice(kFakeVirtioInputDeviceConfig, sizeof(kFakeVirtioInputDeviceConfig));
+  ASSERT_EQ(false, CURRENT_TEST_HAS_FAILURES());
+  ASSERT_NE(nullptr, dev.capabilities().msix);
+
+  auto& msix = *dev.capabilities().msix;
+  EXPECT_EQ(0x98, msix.base());
+  EXPECT_EQ(static_cast<uint8_t>(Capability::Id::kMsiX), msix.id());
+  EXPECT_EQ(1, msix.table_bar());
+  EXPECT_EQ(0, msix.table_offset());
+  EXPECT_EQ(2, msix.table_size());
+  EXPECT_EQ(1, msix.pba_bar());
+  EXPECT_EQ(0x800, msix.pba_offset());
+  EXPECT_EQ(false, msix.function_mask());
+
+  MsixControlReg ctrl = {.value = dev.config()->Read(msix.ctrl())};
+  EXPECT_EQ(0, ctrl.enable());
+}
+
 }  // namespace pci
