@@ -1001,7 +1001,7 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
       story_shell_context_impl_{story_id_, story_provider_impl, this},
       weak_factory_(this) {
   auto story_scope = fuchsia::modular::StoryScope::New();
-  story_scope->story_id = story_id_.value_or("");
+  story_scope->story_id = story_id_;
   auto scope = fuchsia::modular::ComponentScope::New();
   scope->set_story_scope(std::move(*story_scope));
   story_provider_impl_->user_intelligence_provider()->GetComponentIntelligenceServices(
@@ -1223,7 +1223,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   // If this call enters a race with a StoryProvider.DeleteStory() call,
   // resulting in |this| being destroyed, |callback| will be dropped.
   operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)] {
-    auto story_info_2 = story_provider_impl_->GetCachedStoryInfo(story_id_.value_or(""));
+    auto story_info_2 = story_provider_impl_->GetCachedStoryInfo(story_id_);
     FXL_CHECK(story_info_2);
     auto story_info = modular::StoryProviderImpl::StoryInfo2ToStoryInfo(*story_info_2);
     callback(std::move(story_info), story_observer_->model().runtime_state());
@@ -1389,10 +1389,10 @@ void StoryControllerImpl::InitStoryEnvironment() {
 
   static const auto* const kEnvServices =
       new std::vector<std::string>{fuchsia::modular::ContextWriter::Name_};
-  story_environment_ = std::make_unique<Environment>(
-      story_provider_impl_->user_environment(),
-      kStoryEnvironmentLabelPrefix + story_id_.value_or(""), *kEnvServices,
-      /* kill_on_oom = */ false);
+  story_environment_ =
+      std::make_unique<Environment>(story_provider_impl_->user_environment(),
+                                    kStoryEnvironmentLabelPrefix + story_id_, *kEnvServices,
+                                    /* kill_on_oom = */ false);
   story_environment_->AddService<fuchsia::modular::ContextWriter>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
         intelligence_services_->GetContextWriter(std::move(request));
@@ -1428,8 +1428,8 @@ void StoryControllerImpl::CreateEntity(
     std::string type, fuchsia::mem::Buffer data,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
     fit::function<void(std::string /* entity_reference */)> callback) {
-  story_provider_impl_->CreateEntity(story_id_.value_or(""), type, std::move(data),
-                                     std::move(entity_request), std::move(callback));
+  story_provider_impl_->CreateEntity(story_id_, type, std::move(data), std::move(entity_request),
+                                     std::move(callback));
 }
 
 void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {

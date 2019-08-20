@@ -22,13 +22,14 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <src/lib/fxl/macros.h>
 
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
+
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
@@ -251,9 +252,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   RunningModInfo* FindAnchor(RunningModInfo* running_mod_info);
 
   // The ID of the story, copied from |story_observer_| for convenience in
-  // transitioning clients.  TODO(thatguy): Remove users of this in favor of
-  // reading from the |story_observer_| directly.
-  const fidl::StringPtr story_id_;
+  // transitioning clients.
+  const std::string story_id_;
 
   StoryProviderImpl* const story_provider_impl_;  // Not owned.
   SessionStorage* const session_storage_;         // Not owned.
