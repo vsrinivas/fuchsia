@@ -4,7 +4,7 @@ You can download the Fuchsia SDK using the links below. Please be aware that
 Fuchsia is under active development and its API surface is subject to frequent
 changes. The Fuchsia SDK is produced continuously as Fuchsia is developed.
 
-Because the [Fuchsia System Interface](../abi/system.md) is changing, you will
+Because the [Fuchsia System Interface](/docs/development/abi/system.md) is changing, you will
 need to run software built using a particular version of the SDK on a Fuchsia
 system with a matching version. The [Core SDK](#core) contains a matching system
 image appropriate for running in [Qemu](#qemu).

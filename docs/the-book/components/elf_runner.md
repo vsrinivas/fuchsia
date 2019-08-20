@@ -27,7 +27,7 @@ and `world!`:
 }
 ```
 
-[glossary-components]: ../../glossary.md#component
+[glossary-components]: /docs/glossary.md#component
 [program-loading]: /docs/zircon/program_loading.md
 <!-- TODO: the component manifest link describes v1 manifests -->
-[glossary-component-manifests]: ../../glossary.md#component-manifest
+[glossary-component-manifests]: /docs/glossary.md#component-manifest

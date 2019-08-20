@@ -26,7 +26,7 @@ Read this all before? See the
 [quickstart guide](build_and_pave_quickstart.md)
 for a workflow summary.
 
-## Building
+## Building {#building}
 
 Detailed instructions for obtaining and building Fuchsia are available from the
 [Getting Started](/docs/getting_started.md) guide, but we'll assume here that the
@@ -35,7 +35,7 @@ configure our build for this we can run `fx set {product_name}.x64` and then bui
 `fx build`. For Pixelbook, rather than using the x64 build, you need to specify the
 Chromebook board. Example: `fx set core.chromebook-x64`.
 
-## Creating install media
+## Creating install media {#creating-install-media}
 
 To create your install media we recommend using a USB drive since these are
 well-supported as boot media by most systems. Note that the install media
@@ -45,7 +45,7 @@ typically something like /dev/sd&lt;X&gt; where X is a letter and on Mac is typi
 something like /dev/disk&lt;N&gt; where 'N' is a number. **Be careful not to select
 the wrong device**. Once this is done, remove the USB drive.
 
-## Paving
+## Paving {#paving}
 
 Now we'll build the artifacts to transfer over the network during the paving
 process. What is transferred is dependent on the target device. For UEFI based
@@ -75,7 +75,7 @@ select Zedboot. For vboot-based systems using the USB drive is currently the
 only option for re-paving. In all cases the bootserver needs to have been
 started with `fx pave`
 
-## Troubleshooting
+## Troubleshooting {#troubleshooting}
 
 In some cases paving may fail because you have a disk layout that is incompatible.
 In these cases you will see a message that asks you to run

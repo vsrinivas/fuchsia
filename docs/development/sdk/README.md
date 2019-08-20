@@ -5,7 +5,7 @@ This folder contains information about developing the Fuchsia SDK.
 > [Download the Fuchsia Core SDK](download.md)
 
 
-## Strategy
+## Strategy {#strategy}
 
 Fuchsia is taking a modular approach to building an SDK, just as it took one to
 building a new operating system.
@@ -38,7 +38,7 @@ enabling Fuchsia development using [Bazel][bazel] - this distribution is
 currently used to test versions of the Core SDK before they are published.
 
 
-## What belongs in an SDK?
+## What belongs in an SDK? {#what-belongs-in-an-sdk}
 
 By default, a piece of code in the Fuchsia tree cannot be added to any SDK:
 participation is a strictly opt-in decision. Additionally, this decision is
@@ -57,7 +57,7 @@ In order to be made available in SDKs, a piece of code must follow a set of
 [standards and guidelines](standards.md).
 
 
-## Infrastructure
+## Infrastructure {#infrastructure}
 
 The SDK creation pipeline consists of two pieces:
 
@@ -66,7 +66,7 @@ The SDK creation pipeline consists of two pieces:
 1. the frontend, which applies transformations to that tarball and turn into
    e.g. an SDK distribution.
 
-### Backend
+### Backend {#backend}
 
 The backend really is just a specialized use of the build system. In other
 words, running the SDK backend amounts to passing the right set of arguments to
@@ -83,7 +83,7 @@ this mechanism is to detect and prevent accidental changes to the SDK as early
 as possible in the release cycle, as well as give us tools to observe and review
 the evolution of the API surface.
 
-### Frontend
+### Frontend {#frontend}
 
 The term frontend is used to describe any process that ingests a Fuchsia SDK
 archive and applies transformations to it.
@@ -97,7 +97,7 @@ given build system. The presence of extensive metadata in the archive itself
 allows for this kind of processing.
 
 
-## Core SDK and SDK add-ons
+## Core SDK and SDK add-ons {#core-sdk-and-sdk-add-ons}
 
 The Core SDK is represented by the `//sdk:core` target.
 That SDK is complemented by multiple SDK add-ons:
@@ -110,9 +110,9 @@ That SDK is complemented by multiple SDK add-ons:
 Internally these targets are all instances of the `sdk` GN template.
 
 
-## Recipes
+## Recipes {#recipes}
 
-### Generating an SDK archive
+### Generating an SDK archive {#generating-an-sdk-archive}
 
 The various targets representing SDKs are always included in the build graph.
 In order to build the contents of an SDK, [build][fx-build-target] one of the
@@ -125,7 +125,7 @@ build configuration][fx-config] and run the build command again.
 The resulting archive will be located under
 `<outdir>/sdk/archive/<name>.tar.gz`.
 
-### Adding content to an SDK
+### Adding content to an SDK {#adding-content-to-an-sdk}
 
 The first step is to make that content available to SDKs. This is done by using
 a set of templates listed in the [backend documentation][backend].
@@ -141,7 +141,7 @@ where it expects to find the file, then create this file and leave it empty,
 and finally run the build again: it will again tell you where to get the initial
 version from.
 
-### Turning SDK-related errors into warnings
+### Turning SDK-related errors into warnings {#turning-sdk-related-errors}
 
 There exist some build steps to verify that the contents of an SDK don't get
 modified by accident. An unacknowledged modification results in a build failure
@@ -150,7 +150,7 @@ While locally iterating on some public API, having to repeatedly update
 reference files can be tedious. In order to turn the build errors into warnings,
 configure then build with this extra GN argument: `warn_no_sdk_changes=true`.
 
-### Producing an SDK distribution
+### Producing an SDK distribution {#producing-an-sdk-distribution}
 
 This is done by running a frontend. See the [frontend documentation][frontends]
 for more details.

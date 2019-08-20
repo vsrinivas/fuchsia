@@ -135,12 +135,12 @@ that if a component instance is renamed in its parent manifest or moved to a
 different parent then it will receive a different sub-directory than it did
 before the change.
 
-[component-instance]: ../../../glossary.md#component-instance
-[directory-capabilities]: ../../../glossary.md#directory-capability
-[glossary-storage]: ../../../glossary.md#storage-capability
-[manifests]: ../component_manifests.md
-[offer]: ../../../glossary.md#offer
-[realm]: ../../../glossary.md#realm
-[storage-syntax]: ../component_manifests.md#storage
-[use-syntax]: ../component_manifests.md#use
-[use]: ../../../glossary.md#use
+[component-instance]: /docs/glossary.md#component-instance
+[directory-capabilities]: /docs/glossary.md#directory-capability
+[glossary-storage]: /docs/glossary.md#storage-capability
+[manifests]: /docs/the-book/components/component_manifests.md
+[offer]: /docs/glossary.md#offer
+[realm]: /docs/glossary.md#realm
+[storage-syntax]: /docs/the-book/components/component_manifests.md#storage
+[use-syntax]: /docs/the-book/components/component_manifests.md#use
+[use]: /docs/glossary.md#use

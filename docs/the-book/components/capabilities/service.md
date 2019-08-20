@@ -148,14 +148,14 @@ When `C` attempts to open the `example` node in its `/service` directory, `A`
 will see an open request for `/svc/fidl.example.X`. If any of the names didn't
 match in this chain, `C` would see the opened `example` node be closed.
 
-[capability-routing]: ../component_manifests.md#capability-routing
+[capability-routing]: /docs/the-book/components/component_manifests.md#capability-routing
 [expose]: ../component_manifests.md#expose
-[framework-services]: ../component_manifests.md#framework-services
-[glossary-fidl]: ../../../glossary.md#fidl
-[glossary-namespace]: ../../../glossary.md#namespace
-[glossary-outgoing]: ../../../glossary.md#outgoing-directory
-[glossary-service]: ../../../glossary.md#service-capability
-[life-of-a-service-open]: ../life_of_a_service_open.md
-[offer]: ../component_manifests.md#offer
+[framework-services]: /docs/the-book/components/component_manifests.md#framework-services
+[glossary-fidl]: /docs/glossary.md#fidl
+[glossary-namespace]: /docs/glossary.md#namespace
+[glossary-outgoing]: /docs/glossary.md#outgoing-directory
+[glossary-service]: /docs/glossary.md#service-capability
+[life-of-a-service-open]: /docs/the-book/components/life_of_a_service_open.md
+[offer]: /docs/the-book/components/component_manifests.md#offer
 [routing-example]: /examples/components/routing
-[use]: ../component_manifests.md#use
+[use]: /docs/the-book/components/component_manifests.md#use

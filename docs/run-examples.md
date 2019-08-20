@@ -42,7 +42,7 @@ the application on Fuchsia as a [component](glossary.md#component). This is
 the proper way to create a [Fuchsia package](glossary.md#fuchsia-package).
 
 You run a Fuchsia component by referencing its
-[Fuchsia package URI](glossary.md#fuchsia_pkg-uri). To run one of the
+[Fuchsia package URI](glossary.md#fuchsia-pkg-url). To run one of the
 examples:
 
 1.  Make sure `fx serve` is running in a terminal window. If it's not running, start it:
@@ -79,7 +79,7 @@ will be included:
 *   Universe: Packages that are additional optional packages that can be
     fetched and run on-demand, but are not pre-baked into any paving images.
 
-(For more information, see [fx workflows](development/workflows/fx.md).)
+(For more information, see [fx workflows](/docs/development/workflows/fx.md).)
 
 To include this package in Universe so it can be fetched on-demand, use the
 `--with` flag when setting the product and board:

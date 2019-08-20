@@ -27,7 +27,7 @@ runs amounts to configuring the process's namespace.
 
 ## Package namespace
 
-A [component](../glossary.md#Component) run from a package is given access to
+A [component](/docs/glossary.md#component) run from a package is given access to
 `/pkg`, which is a read-only view of the package containing the component. To
 access these resources at runtime, a process can use the `/pkg` namespace. For
 example, the `root_presenter` can access `cursor32.png` using the absolute path
@@ -35,12 +35,12 @@ example, the `root_presenter` can access `cursor32.png` using the absolute path
 
 ## Services
 
-Processes that are [components](../glossary.md#Component) receive an `/svc`
+Processes that are [components](/docs/glossary.md#component) receive an `/svc`
 directory in their namespace. The services available through `/svc` are a
 subset of the services provided by the component's
-[environment](../glossary.md#Environment). This subset is determined by the
+[environment](/docs/glossary.md#environment). This subset is determined by the
 [`sandbox.services`](package_metadata.md#sandbox) whitelist in the
-component's [manifest file](package_metadata.md#Component-manifest).
+component's [manifest file](package_metadata.md#component-manifest).
 
 A typical component will interact with a number of services from `/svc` in
 order to play some useful role in the system. For example, the service
@@ -54,7 +54,7 @@ receive whatever `/svc` their creator decided to provide to them.
 
 If a process requires access to additional resources (e.g., device drivers),
 the package can request access to additional names by including the `sandbox`
-property in its  [Component Manifest](package_metadata.md#Component-Manifest)
+property in its  [Component Manifest](package_metadata.md#component-manifest)
 for the package. For example, the following `meta/sandbox` file requests
 direct access to the input driver:
 
@@ -64,7 +64,7 @@ direct access to the input driver:
 }
 ```
 
-In the current implementation, the [AppMgr](../glossary.md#AppMgr) grants all such
+In the current implementation, the [AppMgr](/docs/glossary.md#appmgr) grants all such
 requests, but that is likely to change as the system evolves.
 
 ## Building a package

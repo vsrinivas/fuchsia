@@ -26,7 +26,7 @@ topics:
 # Concepts
 
 In the Fuchsia tracing system, three types of
-[components](../../glossary.md#Component) cooperate in a distributed manner:
+[components](/docs/glossary.md#component) cooperate in a distributed manner:
 
 * Trace Manager &mdash; an administrator that manages the overall tracing system
 * Trace Provider &mdash; a program that generates trace data

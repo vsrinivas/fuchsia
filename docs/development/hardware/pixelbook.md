@@ -2,7 +2,7 @@
 
 ## Prerequisites
 Ensure that you have a chromebook build for Fuchsia. Note that Chromebook is now a
-distinct board configuration from other x64 devices. See [Paving](../workflows/paving.md#building) for
+distinct board configuration from other x64 devices. See [Paving](/docs/development/workflows/paving.md#building) for
 more information.
 
 ## Update ChromeOS
@@ -65,7 +65,7 @@ bootloader USB enumeration during boot has been observed to be slow. If you're
 having trouble booting from USB, it may be helpful to remove other USB devices
 until the device is through the bootloader and also avoid using a USB hub.
 
-## Tips and Tricks
+## Tips and Tricks {#tips-and-tricks}
 
 By default the ChromeOS bootloader has a long timeout to allow you to press
 buttons. To shortcut this you can press Ctrl+D or Ctrl+U when on the grey screen
