@@ -6,8 +6,6 @@
 ///
 /// Matches parameters types to a list of input types (with duplicates)
 /// and matches a text query against the text in the Action.
-
-#[cfg(test)]
 use crate::models::Action;
 use std::cmp::min;
 
@@ -39,16 +37,16 @@ fn covers(a: &Vec<&str>, b: &Vec<&str>) -> bool {
 
 /// Match the query against text.
 ///
-/// returns true if
+/// returns true if query is not empty and
 ///  - query is a case insensitive prefix of any word in text
-///  - query or text is empty.
+///  - text is empty.
 ///
 pub fn query_text_match(query: &str, text: &str) -> bool {
-    query.is_empty()
-        || text.is_empty()
-        || text
-            .split_whitespace()
-            .any(|w| w[0..min(query.len(), w.len())].eq_ignore_ascii_case(query))
+    !query.is_empty()
+        && (text.is_empty()
+            || text
+                .split_whitespace()
+                .any(|w| w[0..min(query.len(), w.len())].eq_ignore_ascii_case(query)))
 }
 
 /// Match the query against text in the Action
@@ -56,8 +54,7 @@ pub fn query_text_match(query: &str, text: &str) -> bool {
 /// returns true if query string matches action keywords
 ///
 // TODO: match against keywords rather than display_info.title
-#[cfg(test)]
-fn query_action_match(action: &Action, query: &str) -> bool {
+pub fn query_action_match(action: &Action, query: &str) -> bool {
     action
         .action_display
         .as_ref()
@@ -100,7 +97,7 @@ mod tests {
         assert!(query_text_match("Wea", text), "Prefix failed");
         assert!(!query_text_match(text, "Wea"), "Long query failed");
         assert!(query_text_match("In", text), "Middle word failed");
-        assert!(query_text_match("", text), "Empty query failed");
+        assert!(!query_text_match("", text), "Empty query failed");
         assert!(query_text_match("Weather", ""), "Empty text failed");
     }
 

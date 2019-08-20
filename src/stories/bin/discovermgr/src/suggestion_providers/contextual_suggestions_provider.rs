@@ -12,14 +12,15 @@ use {
     futures::future::{join_all, LocalFutureObj},
     itertools::Itertools,
     std::collections::{HashMap, HashSet},
+    std::sync::Arc,
 };
 
 pub struct ContextualSuggestionsProvider {
-    actions: Vec<Action>,
+    actions: Arc<Vec<Action>>,
 }
 
 impl ContextualSuggestionsProvider {
-    pub fn new(actions: Vec<Action>) -> Self {
+    pub fn new(actions: Arc<Vec<Action>>) -> Self {
         ContextualSuggestionsProvider { actions }
     }
 }
@@ -38,7 +39,8 @@ impl SearchSuggestionsProvider for ContextualSuggestionsProvider {
                 .iter()
                 .filter_map(|action| ActionMatching::try_to_match(action.clone(), context))
                 .map(|matching| matching.suggestions());
-            let result = join_all(futs).await
+            let result = join_all(futs)
+                .await
                 .into_iter()
                 .flat_map(|suggestions| suggestions.into_iter())
                 .collect::<Vec<Suggestion>>();
@@ -103,7 +105,9 @@ impl<'a> ActionMatching<'a> {
                         }
                     });
                 let add_mod = AddModInfo::new(intent, story_name, None);
-                action.load_display_info(parameters).await
+                action
+                    .load_display_info(parameters)
+                    .await
                     .map(|display_info| Suggestion::new(add_mod, display_info))
             }
         });
@@ -154,8 +158,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn get_suggestions() -> Result<(), Error> {
-        let contextual_suggestions_provider =
-            ContextualSuggestionsProvider::new(test_action_index());
+        let actions = test_action_index();
+        let contextual_suggestions_provider = ContextualSuggestionsProvider::new(actions.clone());
         let context = test_context().await?;
         let context_refs = context.iter().collect::<Vec<_>>();
         let results = contextual_suggestions_provider.request("", &context_refs).await?;
@@ -273,7 +277,7 @@ mod tests {
         Ok(join_all(futs).await.into_iter().map(|e| e.unwrap()).collect::<Vec<ContextEntity>>())
     }
 
-    fn test_action_index() -> Vec<Action> {
-        serde_json::from_str(include_str!("../../test_data/test_actions.json")).unwrap()
+    fn test_action_index() -> Arc<Vec<Action>> {
+        Arc::new(serde_json::from_str(include_str!("../../test_data/test_actions.json")).unwrap())
     }
 }

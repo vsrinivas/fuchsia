@@ -259,6 +259,14 @@ impl AddModInfo {
         }
     }
 
+    pub fn new_intent(intent: Intent) -> Self {
+        AddModInfo {
+            story_name: Uuid::new_v4().to_string(),
+            mod_name: Uuid::new_v4().to_string(),
+            intent: intent,
+        }
+    }
+
     pub fn new(intent: Intent, story_name: Option<String>, mod_name: Option<String>) -> Self {
         AddModInfo {
             story_name: story_name.unwrap_or(Uuid::new_v4().to_string()),

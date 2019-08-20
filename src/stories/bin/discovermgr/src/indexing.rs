@@ -51,8 +51,8 @@ pub struct IntentFilter {
     // The action this intent filter describes.
     pub action: Action,
 
-    // The parameters associated with `action`t)]
-    #[serde(deserialize_with = "deserialize_intent_parameters")]
+    // The parameters associated with `action`)]
+    #[serde(default, deserialize_with = "deserialize_intent_parameters")]
     pub parameters: HashMap<ParameterName, ParameterType>,
 
     pub action_display: Option<ActionDisplayInfo>,
@@ -137,7 +137,9 @@ pub async fn load_module_facet(component_url: &str) -> Result<ModuleFacet, Error
     let loader =
         connect_to_service::<fsys::LoaderMarker>().context("Error connecting to loader.")?;
 
-    let loader_result = loader.load_url(&component_url).await
+    let loader_result = loader
+        .load_url(&component_url)
+        .await
         .context(format!("Could not load package: {:?}", component_url))?;
 
     let package: fsys::Package = *loader_result.ok_or_else(|| {

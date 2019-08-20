@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 pub use crate::suggestion_providers::{
-    contextual_suggestions_provider::*, package_suggestions_provider::*,
-    story_suggestions_provider::*,
+    action_suggestions_provider::*, contextual_suggestions_provider::*,
+    package_suggestions_provider::*, story_suggestions_provider::*,
 };
 
+mod action_suggestions_provider;
 mod contextual_suggestions_provider;
 mod package_suggestions_provider;
 mod story_suggestions_provider;

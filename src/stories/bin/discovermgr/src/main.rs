@@ -13,7 +13,8 @@ use {
         story_manager::StoryManager,
         story_storage::{LedgerStorage, MemoryStorage, StoryStorage},
         suggestion_providers::{
-            ContextualSuggestionsProvider, PackageSuggestionsProvider, StorySuggestionsProvider,
+            ActionSuggestionsProvider, ContextualSuggestionsProvider, PackageSuggestionsProvider,
+            StorySuggestionsProvider,
         },
         suggestions_manager::SuggestionsManager,
         suggestions_service::SuggestionsService,
@@ -121,8 +122,13 @@ async fn main() -> Result<(), Error> {
             vec![]
         });
     }
+    let actions_arc = Arc::new(actions.clone());
+    suggestions_manager.register_suggestions_provider(Box::new(
+        ContextualSuggestionsProvider::new(actions_arc.clone()),
+    ));
+
     suggestions_manager
-        .register_suggestions_provider(Box::new(ContextualSuggestionsProvider::new(actions)));
+        .register_suggestions_provider(Box::new(ActionSuggestionsProvider::new(actions_arc)));
 
     let suggestions_manager_ref = Arc::new(Mutex::new(suggestions_manager));
 
