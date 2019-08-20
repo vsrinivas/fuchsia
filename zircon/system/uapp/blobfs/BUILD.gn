@@ -16,6 +16,7 @@ executable("blobfs") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs",
+    "$zx/system/ulib/fs/buffer",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace",

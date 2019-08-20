@@ -9,6 +9,9 @@
 namespace blobfs {
 namespace {
 
+using fs::BlockBuffer;
+using fs::OperationType;
+
 // Number of blocks in the default buffer.
 const size_t kCapacity = 5;
 

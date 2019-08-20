@@ -8,8 +8,8 @@
 #include <zircon/types.h>
 
 #include <blobfs/format.h>
-#include <blobfs/operation.h>
 #include <fbl/vector.h>
+#include <fs/operation/buffered_operation.h>
 
 namespace blobfs {
 

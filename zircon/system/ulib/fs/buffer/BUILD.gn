@@ -1,0 +1,52 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("buffer") {
+  host = true
+  sources = []
+  static = true
+
+  if (is_fuchsia) {
+    sources += [
+      "blocking_ring_buffer.cc",
+      "ring_buffer.cc",
+      "vmo_buffer.cc",
+    ]
+    public_deps = [
+      "$zx/system/ulib/fbl:headers",
+      "$zx/system/ulib/fs/operation:headers",
+      "$zx/system/ulib/fzl:headers",
+      "$zx/system/ulib/zx:headers",
+    ]
+    deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fs",
+      "$zx/system/ulib/fs/operation",
+      "$zx/system/ulib/fzl",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+    ]
+  }
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":fs-buffer",
+  ]
+}
+
+test("fs-buffer") {
+  sources = [
+    "test/blocking_ring_buffer_test.cc",
+    "test/block_buffer_view_test.cc",
+    "test/ring_buffer_test.cc",
+    "test/vmo_buffer_test.cc",
+  ]
+  deps = [
+    ":buffer",
+    "$zx/system/ulib/zxtest",
+  ]
+}

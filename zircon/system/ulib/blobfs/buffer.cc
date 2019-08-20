@@ -53,7 +53,7 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
 
   for (size_t i = 0; i < ops.size(); i++) {
     ZX_DEBUG_ASSERT(ops[i].vmo->get() != ZX_HANDLE_INVALID);
-    ZX_DEBUG_ASSERT(ops[i].op.type == OperationType::kWrite);
+    ZX_DEBUG_ASSERT(ops[i].op.type == fs::OperationType::kWrite);
 
     // Read parameters of the current request.
     size_t vmo_offset = ops[i].op.vmo_offset;
@@ -110,9 +110,9 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
       total_len += buf_len;
 
       // Insert the "new" operation, which is the latter half of the last operation.
-      UnbufferedOperation operation;
+      fs::UnbufferedOperation operation;
       operation.vmo = zx::unowned_vmo(vmo);
-      operation.op.type = OperationType::kWrite;
+      operation.op.type = fs::OperationType::kWrite;
       operation.op.vmo_offset = 0;
       operation.op.dev_offset = dev_offset;
       operation.op.length = buf_len;
@@ -156,7 +156,7 @@ void Buffer::ValidateTransaction(WriteTxn* txn) {
     // If transaction is already buffered, make sure it belongs to this buffer.
     ZX_DEBUG_ASSERT(txn->CheckBuffer(vmoid_));
   } else {
-    fbl::Vector<UnbufferedOperation>& ops = txn->Operations();
+    fbl::Vector<fs::UnbufferedOperation>& ops = txn->Operations();
 
     for (size_t i = 0; i < ops.size(); i++) {
       // Verify that each request references this buffer VMO,

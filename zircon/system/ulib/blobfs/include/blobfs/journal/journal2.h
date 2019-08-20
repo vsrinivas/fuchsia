@@ -12,16 +12,23 @@
 #include <zircon/types.h>
 
 #include <blobfs/background-executor.h>
-#include <blobfs/blocking-ring-buffer.h>
 #include <blobfs/format.h>
 #include <blobfs/journal/superblock.h>
-#include <blobfs/operation.h>
-#include <blobfs/ring-buffer.h>
 #include <blobfs/writeback.h>
 #include <fbl/vector.h>
 #include <fs/block-txn.h>
+#include <fs/buffer/blocking_ring_buffer.h>
+#include <fs/buffer/ring_buffer.h>
+#include <fs/operation/buffered_operation.h>
 
 namespace blobfs {
+
+using fs::BufferedOperation;
+using fs::BlockingRingBuffer;
+using fs::BlockingRingBufferReservation;
+using fs::UnbufferedOperation;
+using fs::Operation;
+
 namespace internal {
 
 // A small container encapsulating a buffered request, along with the reservation that makes the

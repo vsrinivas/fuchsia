@@ -16,10 +16,10 @@
 #include <blobfs/format.h>
 #include <blobfs/iterator/extent-iterator.h>
 #include <blobfs/node-reserver.h>
-#include <blobfs/vmoid-registry.h>
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/vector.h>
+#include <fs/buffer/vmoid_registry.h>
 #include <fs/trace.h>
 #include <fuchsia/blobfs/c/fidl.h>
 #include <id_allocator/id_allocator.h>
@@ -32,7 +32,7 @@ namespace blobfs {
 using BlockRegion = fuchsia_blobfs_BlockRegion;
 
 // An interface which controls actual access to the underlying storage.
-class SpaceManager : public VmoidRegistry {
+class SpaceManager : public fs::VmoidRegistry {
  public:
   virtual ~SpaceManager() = default;
 

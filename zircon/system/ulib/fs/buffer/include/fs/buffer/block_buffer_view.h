@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_BLOCK_BUFFER_VIEW_H_
-#define BLOBFS_BLOCK_BUFFER_VIEW_H_
+#ifndef FS_BUFFER_BLOCK_BUFFER_VIEW_H_
+#define FS_BUFFER_BLOCK_BUFFER_VIEW_H_
 
 #include <zircon/assert.h>
 
-#include <blobfs/block-buffer.h>
+#include <fs/buffer/block_buffer.h>
 
-namespace blobfs {
+namespace fs {
 
 // A wrap-around view into a portion of a BlockBuffer, a block-aligned buffer.
 //
@@ -53,6 +53,6 @@ class BlockBufferView {
   size_t length_ = 0;
 };
 
-}  // namespace blobfs
+}  // namespace fs
 
-#endif  // BLOBFS_BLOCK_BUFFER_VIEW_H_
+#endif  // FS_BUFFER_BLOCK_BUFFER_VIEW_H_

@@ -37,9 +37,9 @@ void WriteTxn::Enqueue(const zx::vmo& vmo, uint64_t relative_block, uint64_t abs
     }
   }
 
-  UnbufferedOperation operation;
+  fs::UnbufferedOperation operation;
   operation.vmo = zx::unowned_vmo(vmo.get());
-  operation.op.type = OperationType::kWrite;
+  operation.op.type = fs::OperationType::kWrite;
   operation.op.vmo_offset = relative_block;
   operation.op.dev_offset = absolute_block;
   operation.op.length = nblocks;

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/vmo-buffer.h>
+#include <fs/buffer/vmo_buffer.h>
 
 #include <lib/zx/vmo.h>
 #include <zxtest/zxtest.h>
 
-namespace blobfs {
+namespace fs {
 namespace {
 
 const vmoid_t kGoldenVmoid = 5;
@@ -162,4 +162,4 @@ TEST(VmoBufferTest, CompareVmoToMapping) {
 }
 
 }  // namespace
-}  // namespace blobfs
+}  // namespace fs

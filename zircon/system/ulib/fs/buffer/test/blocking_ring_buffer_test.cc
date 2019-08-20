@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/blocking-ring-buffer.h>
+#include <fs/buffer/blocking_ring_buffer.h>
 
 #include <atomic>
 #include <thread>
 
-#include <blobfs/unbuffered-operations-builder.h>
-#include <lib/zx/vmo.h>
-#include <zircon/assert.h>
+#include <fs/operation/unbuffered_operations_builder.h>
 #include <zxtest/zxtest.h>
 
-namespace blobfs {
+namespace fs {
 namespace {
 
 const uint32_t kBlockSize = 8192;
@@ -206,4 +204,4 @@ TEST_F(BlockingRingBufferTest, MovingWhileBlockingReservation) {
 }
 
 }  // namespace
-}  // namespace blobfs
+}  // namespace fs

@@ -38,6 +38,8 @@ library("blobfs") {
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
+    "$zx/system/ulib/fs/buffer",
+    "$zx/system/ulib/fs/operation",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/id_allocator",
     "$zx/system/ulib/range",
@@ -55,7 +57,6 @@ library("blobfs") {
       "blob-cache.cc",
       "blob.cc",
       "blobfs.cc",
-      "blocking-ring-buffer.cc",
       "buffer.cc",  # Journal V1
       "cache-node.cc",
       "compression/blob-compressor.cc",
@@ -71,10 +72,6 @@ library("blobfs") {
       "journal/superblock.cc",
       "metrics.cc",
       "mount.cc",
-      "operation.cc",
-      "ring-buffer.cc",
-      "unbuffered-operations-builder.cc",
-      "vmo-buffer.cc",
       "write-txn.cc",  # Journal V1
       "writeback-queue.cc",  # Journal V1
       "writeback-work.cc",  # Journal V1

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/unbuffered-operations-builder.h>
+#include <fs/operation/unbuffered_operations_builder.h>
+
 #include <lib/zx/vmo.h>
 #include <zxtest/zxtest.h>
 
-namespace blobfs {
+namespace fs {
 namespace {
 
 constexpr size_t kVmoSize = 8192;
@@ -580,4 +581,4 @@ TEST(UnbufferedOperationsBuilderTest, RequestCoalescedWithOnlyOneOfTwoMergableRe
 }
 
 }  // namespace
-}  // namespace blobfs
+}  // namespace fs

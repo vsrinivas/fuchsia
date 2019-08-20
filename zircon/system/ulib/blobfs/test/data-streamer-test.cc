@@ -14,7 +14,7 @@
 namespace blobfs {
 namespace {
 
-class MockVmoidRegistry : public VmoidRegistry {
+class MockVmoidRegistry : public fs::VmoidRegistry {
  private:
   zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
     *out = 5;
@@ -73,7 +73,7 @@ class DataStreamerFixture : public zxtest::Test {
                                          "journal-writeback-buffer", &journal_buffer));
     ASSERT_OK(BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlobfsBlockSize,
                                          "data-writeback-buffer", &data_buffer));
-    auto info_block_buffer = std::make_unique<VmoBuffer>();
+    auto info_block_buffer = std::make_unique<fs::VmoBuffer>();
     constexpr size_t kInfoBlockBlockCount = 1;
     ASSERT_OK(info_block_buffer->Initialize(&registry_, kInfoBlockBlockCount, kBlobfsBlockSize,
                                             "info-block"));
@@ -99,7 +99,7 @@ TEST_F(DataStreamerTest, StreamSmallOperationScheduledToWriteback) {
   const uint64_t kOperationLength = 2;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
-  UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const block_fifo_request_t* requests, size_t count) {
         EXPECT_EQ(1, count);
@@ -115,7 +115,7 @@ TEST_F(DataStreamerTest, StreamSmallOperationScheduledToWriteback) {
     DataStreamer streamer(journal.get(), kWritebackLength);
     streamer.StreamData({.vmo = zx::unowned_vmo(vmo.get()),
                          {
-                             .type = OperationType::kWrite,
+                             .type = fs::OperationType::kWrite,
                              .vmo_offset = kVmoOffset,
                              .dev_offset = kDevOffset,
                              .length = kOperationLength,
@@ -131,7 +131,7 @@ TEST_F(DataStreamerTest, StreamOperationAsLargeAsWritebackIsChunked) {
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
-  UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const block_fifo_request_t* requests, size_t count) {
         EXPECT_EQ(1, count);
@@ -155,7 +155,7 @@ TEST_F(DataStreamerTest, StreamOperationAsLargeAsWritebackIsChunked) {
     DataStreamer streamer(journal.get(), kWritebackLength);
     streamer.StreamData({.vmo = zx::unowned_vmo(vmo.get()),
                          {
-                             .type = OperationType::kWrite,
+                             .type = fs::OperationType::kWrite,
                              .vmo_offset = kVmoOffset,
                              .dev_offset = kDevOffset,
                              .length = kOperationLength,
@@ -171,7 +171,7 @@ TEST_F(DataStreamerTest, StreamOperationLargerThanWritebackIsChunkedAndNonBlocki
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
-  UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const block_fifo_request_t* requests, size_t count) {
         EXPECT_EQ(1, count);
@@ -198,7 +198,7 @@ TEST_F(DataStreamerTest, StreamOperationLargerThanWritebackIsChunkedAndNonBlocki
     DataStreamer streamer(journal.get(), kWritebackLength);
     streamer.StreamData({.vmo = zx::unowned_vmo(vmo.get()),
                          {
-                             .type = OperationType::kWrite,
+                             .type = fs::OperationType::kWrite,
                              .vmo_offset = kVmoOffset,
                              .dev_offset = kDevOffset,
                              .length = kOperationLength,
@@ -215,7 +215,7 @@ TEST_F(DataStreamerTest, StreamManySmallOperationsAreMerged) {
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create((kOperationLength * kOperationCount) * kBlockSize, 0, &vmo));
-  UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const block_fifo_request_t* requests, size_t count) {
         EXPECT_EQ(1, count);
@@ -232,7 +232,7 @@ TEST_F(DataStreamerTest, StreamManySmallOperationsAreMerged) {
     for (size_t i = 0; i < kOperationCount; i++) {
       UnbufferedOperation op = {.vmo = zx::unowned_vmo(vmo.get()),
                                 {
-                                    .type = OperationType::kWrite,
+                                    .type = fs::OperationType::kWrite,
                                     .vmo_offset = kVmoOffset + i * kOperationLength,
                                     .dev_offset = kDevOffset + i * kOperationLength,
                                     .length = kOperationLength,
@@ -250,7 +250,7 @@ TEST_F(DataStreamerTest, StreamFailedOperationFailsFlush) {
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
-  UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       [&](const block_fifo_request_t* requests, size_t count) { return ZX_ERR_INTERNAL; },
   };
@@ -261,7 +261,7 @@ TEST_F(DataStreamerTest, StreamFailedOperationFailsFlush) {
     DataStreamer streamer(journal.get(), kWritebackLength);
     UnbufferedOperation op = {.vmo = zx::unowned_vmo(vmo.get()),
                               {
-                                  .type = OperationType::kWrite,
+                                  .type = fs::OperationType::kWrite,
                                   .vmo_offset = kVmoOffset,
                                   .dev_offset = kDevOffset,
                                   .length = kOperationLength,

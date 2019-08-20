@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/ring-buffer.h>
+#include <fs/buffer/ring_buffer.h>
 
 #include <zircon/status.h>
 
@@ -12,7 +12,7 @@
 #include <fbl/auto_lock.h>
 #include <fs/trace.h>
 
-namespace blobfs {
+namespace fs {
 
 zx_status_t internal::RingBufferState::Reserve(uint64_t blocks, RingBufferReservation* out) {
   ZX_DEBUG_ASSERT(blocks > 0);
@@ -77,7 +77,7 @@ void internal::RingBufferState::Free(const RingBufferReservation& reservation) {
 
 bool internal::RingBufferState::IsSpaceAvailableLocked(size_t blocks) const {
   if (blocks > capacity()) {
-    FS_TRACE_WARN("blobfs: Requested reservation too large (%zu > %zu blocks)\n", blocks,
+    FS_TRACE_WARN("fs: Requested reservation too large (%zu > %zu blocks)\n", blocks,
                   capacity());
   }
   return reserved_length_ + blocks <= capacity();
@@ -163,7 +163,7 @@ zx_status_t RingBufferReservation::CopyRequests(
     zx_status_t status =
         vmo->read(ptr, vmo_offset * buffer_->BlockSize(), buf_len * buffer_->BlockSize());
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
+      FS_TRACE_ERROR("fs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
                      vmo_offset, zx_status_get_string(status));
       return status;
     }
@@ -189,7 +189,7 @@ zx_status_t RingBufferReservation::CopyRequests(
       ptr = Data(reservation_offset);
       status = vmo->read(ptr, vmo_offset * buffer_->BlockSize(), buf_len * buffer_->BlockSize());
       if (status != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
+        FS_TRACE_ERROR("fs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
                        vmo_offset, zx_status_get_string(status));
         return status;
       }
@@ -243,4 +243,4 @@ RingBufferRequests::RingBufferRequests(fbl::Vector<BufferedOperation> requests,
                                        RingBufferReservation reservation)
     : requests_(std::move(requests)), reservation_(std::move(reservation)) {}
 
-}  // namespace blobfs
+}  // namespace fs

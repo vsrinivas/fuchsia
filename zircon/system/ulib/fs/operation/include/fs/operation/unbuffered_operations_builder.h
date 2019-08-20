@@ -10,14 +10,14 @@
 
 #include <utility>
 
-#include <blobfs/operation.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
+#include <fs/operation/buffered_operation.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
 
-namespace blobfs {
+namespace fs {
 
 // A builder which helps clients collect and coalesce UnbufferedOperations which target the same
 // in-memory / on-disk structures.
@@ -49,4 +49,4 @@ class UnbufferedOperationsBuilder {
   uint64_t block_count_;
 };
 
-}  // namespace blobfs
+}  // namespace fs

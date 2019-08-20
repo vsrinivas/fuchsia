@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/vmo-buffer.h>
+#include <fs/buffer/vmo_buffer.h>
 
 #include <zircon/assert.h>
 #include <zircon/status.h>
@@ -11,7 +11,7 @@
 
 #include <fs/trace.h>
 
-namespace blobfs {
+namespace fs {
 
 VmoBuffer::VmoBuffer(VmoBuffer&& other)
     : vmoid_registry_(std::move(other.vmoid_registry_)),
@@ -83,4 +83,4 @@ const void* VmoBuffer::Data(size_t index) const {
                                        (index * block_size_));
 }
 
-}  // namespace blobfs
+}  // namespace fs

@@ -11,6 +11,8 @@
 
 namespace blobfs {
 
+using fs::UnbufferedOperation;
+
 JournalEntry::JournalEntry(JournalBase* journal, EntryStatus status, size_t header_index,
                            size_t commit_index, fbl::unique_ptr<WritebackWork> work)
     : journal_(journal),

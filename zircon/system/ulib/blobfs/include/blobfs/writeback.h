@@ -12,12 +12,14 @@
 #include <utility>
 
 #include <blobfs/journal/journal2.h>
-#include <blobfs/operation.h>
-#include <blobfs/unbuffered-operations-builder.h>
 #include <fbl/ref_ptr.h>
 #include <fs/block-txn.h>
+#include <fs/operation/buffered_operation.h>
+#include <fs/operation/unbuffered_operations_builder.h>
 
 namespace blobfs {
+
+using fs::BufferedOperation;
 
 // Wraps a promise with a reference to a ref-counted object.
 //

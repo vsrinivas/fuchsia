@@ -15,6 +15,9 @@
 namespace blobfs {
 namespace {
 
+using fs::OperationType;
+using fs::BlockBufferView;
+
 const vmoid_t kInfoVmoid = 1;
 const vmoid_t kJournalVmoid = 2;
 const vmoid_t kOtherVmoid = 3;

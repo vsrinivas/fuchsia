@@ -6,12 +6,11 @@
 #include <vector>
 
 #include <blobfs/data-streamer.h>
-#include <blobfs/operation.h>
 
 namespace blobfs {
 
-void DataStreamer::StreamData(UnbufferedOperation operation) {
-  ZX_DEBUG_ASSERT(operation.op.type == OperationType::kWrite);
+void DataStreamer::StreamData(fs::UnbufferedOperation operation) {
+  ZX_DEBUG_ASSERT(operation.op.type == fs::OperationType::kWrite);
   const size_t max_chunk_blocks = (3 * writeback_capacity_) / 4;
   uint64_t delta_blocks = fbl::min(operation.op.length, max_chunk_blocks);
   while (operation.op.length > 0) {
@@ -22,9 +21,9 @@ void DataStreamer::StreamData(UnbufferedOperation operation) {
       IssueOperations();
     }
 
-    UnbufferedOperation partial_operation = {.vmo = zx::unowned_vmo(operation.vmo->get()),
+    fs::UnbufferedOperation partial_operation = {.vmo = zx::unowned_vmo(operation.vmo->get()),
                                              {
-                                                 .type = OperationType::kWrite,
+                                                 .type = fs::OperationType::kWrite,
                                                  .vmo_offset = operation.op.vmo_offset,
                                                  .dev_offset = operation.op.dev_offset,
                                                  .length = delta_blocks,

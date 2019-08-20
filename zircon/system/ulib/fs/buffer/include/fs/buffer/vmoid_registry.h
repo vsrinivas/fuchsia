@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_BUFFER_VMOID_REGISTRY_H_
+#define FS_BUFFER_VMOID_REGISTRY_H_
 
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
-namespace blobfs {
+namespace fs {
 
 // An interface which controls attaching and detaching VMOs with the underlying device.
 class VmoidRegistry {
@@ -22,4 +23,6 @@ class VmoidRegistry {
   virtual zx_status_t DetachVmo(vmoid_t vmoid) = 0;
 };
 
-}  // namespace blobfs
+}  // namespace fs
+
+#endif  // FS_BUFFER_VMOID_REGISTRY_H_

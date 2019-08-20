@@ -7,12 +7,14 @@
 
 #include <zircon/types.h>
 
-#include <blobfs/block-buffer.h>
 #include <blobfs/format.h>
 #include <fbl/macros.h>
+#include <fs/buffer/block_buffer.h>
 #include <fs/trace.h>
 
 namespace blobfs {
+
+using fs::BlockBuffer;
 
 // Contains and manages state representing the on-device journal info block.
 class JournalSuperblock {

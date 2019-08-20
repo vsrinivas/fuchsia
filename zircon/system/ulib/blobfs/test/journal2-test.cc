@@ -18,6 +18,8 @@
 namespace blobfs {
 namespace {
 
+using fs::OperationType;
+
 const vmoid_t kJournalVmoid = 1;
 const vmoid_t kWritebackVmoid = 2;
 const vmoid_t kInfoVmoid = 3;

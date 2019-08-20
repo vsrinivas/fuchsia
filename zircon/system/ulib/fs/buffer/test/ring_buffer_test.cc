@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/ring-buffer.h>
+#include <fs/buffer/ring_buffer.h>
 
-#include <blobfs/unbuffered-operations-builder.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
+
+#include <fs/operation/unbuffered_operations_builder.h>
 #include <zxtest/zxtest.h>
 
-namespace blobfs {
+namespace fs {
 namespace {
 
 const uint32_t kBlockSize = 8192;
@@ -165,7 +166,7 @@ void ReserveAndCopyRequests(const fbl::unique_ptr<RingBuffer>& buffer,
                             fbl::Vector<UnbufferedOperation> requests, RingBufferRequests* out) {
   RingBufferReservation reservation;
   ASSERT_OK(buffer->Reserve(BlockCount(requests), &reservation));
-  fbl::Vector<BufferedOperation> buffer_request;
+  fbl::Vector<fs::BufferedOperation> buffer_request;
   ASSERT_OK(reservation.CopyRequests(requests, 0, &buffer_request));
   *out = RingBufferRequests(std::move(buffer_request), std::move(reservation));
 }
@@ -574,7 +575,7 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
   operations[0].op.dev_offset = 0;
   operations[0].op.length = 2;
   builder.Add(operations[0]);
-  fbl::Vector<BufferedOperation> buffer_operation;
+  fbl::Vector<fs::BufferedOperation> buffer_operation;
   ASSERT_OK(reservations[0].CopyRequests(builder.TakeOperations(), 0, &buffer_operation));
 
   // "C"
@@ -648,7 +649,7 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
   operation.op.dev_offset = 1;
   operation.op.length = 1;
   builder.Add(operation);
-  fbl::Vector<BufferedOperation> buffer_operation;
+  fbl::Vector<fs::BufferedOperation> buffer_operation;
   ASSERT_OK(reservation.CopyRequests(builder.TakeOperations(), 1, &buffer_operation));
   ASSERT_EQ(1, buffer_operation.size());
   ASSERT_EQ(1, buffer_operation[0].op.vmo_offset);
@@ -661,4 +662,4 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
 }
 
 }  // namespace
-}  // namespace blobfs
+}  // namespace fs

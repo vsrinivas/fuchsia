@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/operation.h>
+#include <fs/operation/buffered_operation.h>
 
-namespace blobfs {
+namespace fs {
 
 uint64_t BlockCount(const fbl::Vector<UnbufferedOperation>& operations) {
   uint64_t total_length = 0;
@@ -14,4 +14,4 @@ uint64_t BlockCount(const fbl::Vector<UnbufferedOperation>& operations) {
   return total_length;
 }
 
-}  // namespace blobfs
+}  // namespace fs

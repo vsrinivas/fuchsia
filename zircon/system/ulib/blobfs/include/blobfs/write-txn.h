@@ -11,8 +11,8 @@
 #include <utility>
 
 #include <blobfs/transaction-manager.h>
-#include <blobfs/operation.h>
 #include <fbl/vector.h>
+#include <fs/operation/buffered_operation.h>
 #include <lib/zx/vmo.h>
 
 namespace blobfs {
@@ -33,7 +33,7 @@ class WriteTxn {
   void Enqueue(const zx::vmo& vmo, uint64_t relative_block, uint64_t absolute_block,
                uint64_t nblocks);
 
-  fbl::Vector<UnbufferedOperation>& Operations() { return operations_; }
+  fbl::Vector<fs::UnbufferedOperation>& Operations() { return operations_; }
 
   // Returns the first block at which this WriteTxn exists within its VMO buffer.
   // Requires all requests within the transaction to have been copied to a single buffer.
@@ -64,7 +64,7 @@ class WriteTxn {
  private:
   TransactionManager* transaction_manager_;
   vmoid_t vmoid_;
-  fbl::Vector<UnbufferedOperation> operations_;
+  fbl::Vector<fs::UnbufferedOperation> operations_;
   size_t block_count_;
 };
 

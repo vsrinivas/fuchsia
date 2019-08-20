@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_VMO_BUFFER_H_
-#define BLOBFS_VMO_BUFFER_H_
+#ifndef FS_BUFFER_VMO_BUFFER_H_
+#define FS_BUFFER_VMO_BUFFER_H_
 
 #include <lib/fzl/owned-vmo-mapper.h>
 
-#include <utility>
+#include <fs/buffer/block_buffer.h>
+#include <fs/buffer/vmoid_registry.h>
 
-#include <blobfs/block-buffer.h>
-#include <blobfs/vmoid-registry.h>
-
-namespace blobfs {
+namespace fs {
 
 // Block-aligned VMO-backed buffer registered with the underlying device.
 //
@@ -72,6 +70,6 @@ class VmoBuffer final : public BlockBuffer {
   size_t capacity_ = 0;
 };
 
-}  // namespace blobfs
+}  // namespace fs
 
-#endif  // BLOBFS_VMO_BUFFER_H_
+#endif  // FS_BUFFER_VMO_BUFFER_H_

@@ -13,6 +13,8 @@
 namespace blobfs {
 namespace {
 
+using fs::OperationType;
+
 zx_status_t CheckAllWriteOperations(const fbl::Vector<UnbufferedOperation>& operations) {
   for (const auto& operation : operations) {
     if (operation.op.type != OperationType::kWrite) {

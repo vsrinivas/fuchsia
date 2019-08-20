@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fs/operation/unbuffered_operations_builder.h>
+
 #include <algorithm>
 #include <cstdint>
 
-#include <blobfs/unbuffered-operations-builder.h>
 #include <range/range.h>
 
-namespace blobfs {
+namespace fs {
 using range::Range;
 namespace {
 
@@ -71,4 +72,4 @@ fbl::Vector<UnbufferedOperation> UnbufferedOperationsBuilder::TakeOperations() {
   return std::move(operations_);
 }
 
-}  // namespace blobfs
+}  // namespace fs

@@ -2,23 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_RING_BUFFER_H_
-#define BLOBFS_RING_BUFFER_H_
+#ifndef FS_BUFFER_RING_BUFFER_H_
+#define FS_BUFFER_RING_BUFFER_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
 #endif
 
-#include <lib/fzl/owned-vmo-mapper.h>
-
-#include <utility>
-
-#include <blobfs/block-buffer-view.h>
-#include <blobfs/operation.h>
-#include <blobfs/vmo-buffer.h>
 #include <fbl/mutex.h>
+#include <fs/buffer/block_buffer_view.h>
+#include <fs/buffer/vmo_buffer.h>
+#include <fs/operation/buffered_operation.h>
 
-namespace blobfs {
+namespace fs {
 
 class RingBufferReservation;
 
@@ -95,7 +91,7 @@ class RingBufferState {
   // via the RingBufferReservation objects.
   fbl::Mutex lock_;
 
-  // The units of all the following are "Blobfs blocks".
+  // The units of all the following are "filesystem blocks".
   size_t reserved_start_ __TA_GUARDED(lock_) = 0;
   size_t reserved_length_ __TA_GUARDED(lock_) = 0;
   // TODO(ZX-4033): Replace fbl::Vector with a friendlier std container when possible.
@@ -230,6 +226,6 @@ class RingBufferRequests {
   RingBufferReservation reservation_;
 };
 
-}  // namespace blobfs
+}  // namespace fs
 
-#endif  // BLOBFS_RING_BUFFER_H_
+#endif  // FS_BUFFER_RING_BUFFER_H_

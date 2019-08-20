@@ -12,6 +12,10 @@
 namespace blobfs {
 namespace {
 
+using fs::BufferedOperation;
+using fs::Operation;
+using fs::OperationType;
+
 TEST(FlushRequestsTest, FlushNoRequests) {
   class TestTransactionManager : public MockTransactionManager {
     zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {

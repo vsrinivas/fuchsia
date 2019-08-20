@@ -8,12 +8,16 @@
 #include <zircon/types.h>
 
 #include <blobfs/journal/superblock.h>
-#include <blobfs/operation.h>
-#include <blobfs/vmo-buffer.h>
 #include <fbl/vector.h>
 #include <fs/block-txn.h>
+#include <fs/buffer/vmo_buffer.h>
+#include <fs/operation/buffered_operation.h>
 
 namespace blobfs {
+
+using fs::BufferedOperation;
+using fs::VmoBuffer;
+using fs::VmoidRegistry;
 
 // Parses all entries within the journal, and returns the operations which must be
 // replayed to return the filesystem to a consistent state. Additionally returns the sequence number

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_BLOCK_BUFFER_H_
-#define BLOBFS_BLOCK_BUFFER_H_
+#ifndef FS_BUFFER_BLOCK_BUFFER_H_
+#define FS_BUFFER_BLOCK_BUFFER_H_
 
 #include <zircon/device/block.h>
 
-namespace blobfs {
+#include <cstdint>
+
+namespace fs {
 
 // Interface for a block-aligned buffer.
 //
@@ -32,6 +34,6 @@ class BlockBuffer {
   virtual const void* Data(size_t index) const = 0;
 };
 
-}  // namespace blobfs
+}  // namespace fs
 
-#endif  // BLOBFS_BLOCK_BUFFER_H_
+#endif  // FS_BUFFER_BLOCK_BUFFER_H_

@@ -66,6 +66,8 @@ namespace blobfs {
 
 using block_client::BlockDevice;
 using digest::Digest;
+using fs::OperationType;
+using fs::UnbufferedOperationsBuilder;
 
 enum class Writability {
   // Do not write to persistent storage under any circumstances whatsoever.

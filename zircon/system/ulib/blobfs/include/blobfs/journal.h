@@ -17,13 +17,13 @@ static_assert(false, "Fuchsia only header");
 
 #include <blobfs/format.h>
 #include <blobfs/transaction-manager.h>
-#include <blobfs/vmo-buffer.h>
 #include <blobfs/writeback-queue.h>
 #include <blobfs/writeback-work.h>
 #include <blobfs/writeback.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
+#include <fs/buffer/vmo_buffer.h>
 
 namespace blobfs {
 
@@ -273,8 +273,8 @@ class Journal : public JournalBase {
   struct Waiter : public fbl::SinglyLinkedListable<Waiter*> {};
   using ProducerQueue = fs::Queue<Waiter*>;
 
-  Journal(TransactionManager* transaction_manager, VmoBuffer info, fbl::unique_ptr<Buffer> entries,
-          uint64_t start_block)
+  Journal(TransactionManager* transaction_manager, fs::VmoBuffer info,
+          fbl::unique_ptr<Buffer> entries, uint64_t start_block)
       : transaction_manager_(transaction_manager),
         start_block_(start_block),
         info_(std::move(info)),
@@ -366,7 +366,7 @@ class Journal : public JournalBase {
 
   // This buffer contains the data for the journal info block,
   // which is periodically updated and written back to disk.
-  VmoBuffer info_;
+  fs::VmoBuffer info_;
 
   // This buffer contains all journal entry data.
   fbl::unique_ptr<Buffer> entries_;

@@ -7,14 +7,17 @@
 
 #include <zircon/types.h>
 
-#include <blobfs/block-buffer-view.h>
 #include <blobfs/format.h>
 #include <blobfs/journal/superblock.h>
-#include <blobfs/operation.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
+#include <fs/buffer/block_buffer_view.h>
+#include <fs/operation/buffered_operation.h>
 
 namespace blobfs {
+
+using fs::BlockBufferView;
+using fs::BufferedOperation;
 
 // A view into the filesystem journal entry, including the header and footer.
 //

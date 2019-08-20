@@ -9,7 +9,6 @@
 #include <blobfs/format.h>
 #include <blobfs/journal/replay.h>
 #include <blobfs/journal/superblock.h>
-#include <blobfs/operation.h>
 #include <blobfs/writeback.h>
 #include <fbl/vector.h>
 
@@ -17,6 +16,9 @@
 
 namespace blobfs {
 namespace {
+
+using fs::BlockBufferView;
+using fs::OperationType;
 
 // Reads and validates the length of the entry from a header.
 // Ensures the payload length is not zero, and that the entry length does not overflow

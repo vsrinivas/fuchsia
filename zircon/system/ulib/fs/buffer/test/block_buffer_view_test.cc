@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/block-buffer-view.h>
+#include <fs/buffer/block_buffer_view.h>
 
 #include <lib/zx/vmo.h>
 
-#include <blobfs/vmo-buffer.h>
+#include <fs/buffer/vmo_buffer.h>
 #include <zxtest/zxtest.h>
 
-namespace blobfs {
+namespace fs {
 namespace {
 
 const vmoid_t kGoldenVmoid = 5;
@@ -100,4 +100,4 @@ TEST_F(BlockBufferViewTest, WraparoundAtEndView) {
 }
 
 }  // namespace
-}  // namespace blobfs
+}  // namespace fs

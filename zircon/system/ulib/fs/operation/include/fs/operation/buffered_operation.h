@@ -12,7 +12,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 
-namespace blobfs {
+namespace fs {
 
 enum class OperationType {
   kRead,
@@ -22,7 +22,7 @@ enum class OperationType {
 
 // A mapping of an in-memory buffer to an on-disk location.
 //
-// All units are in Blobfs blocks.
+// All units are in filesystem-size blocks.
 struct Operation {
   OperationType type;
   uint64_t vmo_offset = 0;
@@ -52,4 +52,4 @@ struct BufferedOperation {
 // Sums the |length| of all requests.
 uint64_t BlockCount(const fbl::Vector<UnbufferedOperation>& requests);
 
-}  // namespace blobfs
+}  // namespace fs

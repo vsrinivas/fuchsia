@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_BUFFER_BLOCKING_RING_BUFFER_H_
+#define FS_BUFFER_BLOCKING_RING_BUFFER_H_
 
-#include <utility>
-
-#include <blobfs/ring-buffer.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <lib/fzl/owned-vmo-mapper.h>
+#include <fs/buffer/ring_buffer.h>
 
-namespace blobfs {
+namespace fs {
 
 class BlockingRingBufferReservation;
 
@@ -97,4 +95,6 @@ class BlockingRingBufferReservation final : public RingBufferReservation {
   internal::BlockingRingBufferImpl* buffer_ = nullptr;
 };
 
-}  // namespace blobfs
+}  // namespace fs
+
+#endif  // FS_BUFFER_BLOCKING_RING_BUFFER_H_

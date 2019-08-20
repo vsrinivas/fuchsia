@@ -21,6 +21,7 @@ test("blobfs") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs",
+    "$zx/system/ulib/fs/buffer",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs-test-utils",
     "$zx/system/ulib/fvm",

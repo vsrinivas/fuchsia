@@ -1,0 +1,46 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("operation") {
+  host = true
+  sources = []
+  static = true
+
+  if (is_fuchsia) {
+    sources += [
+      "buffered_operation.cc",
+      "unbuffered_operations_builder.cc",
+    ]
+    public_deps = [
+      "$zx/system/ulib/fbl:headers",
+      "$zx/system/ulib/zircon:headers",
+      "$zx/system/ulib/zx:headers",
+    ]
+    deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fit",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/range",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+    ]
+  }
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":fs-operation",
+  ]
+}
+
+test("fs-operation") {
+  sources = [
+    "test/unbuffered_operations_builder_test.cc",
+  ]
+  deps = [
+    ":operation",
+    "$zx/system/ulib/zxtest",
+  ]
+}

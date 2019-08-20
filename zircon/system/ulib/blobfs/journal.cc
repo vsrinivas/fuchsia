@@ -78,7 +78,7 @@ zx_status_t Journal::Create(TransactionManager* transaction_manager, uint64_t jo
   }
 
   // Create another buffer for the journal info block.
-  VmoBuffer info;
+  fs::VmoBuffer info;
   status = info.Initialize(transaction_manager, 1, kBlobfsBlockSize, "blobfs-journal-info");
   if (status != ZX_OK) {
     return status;
