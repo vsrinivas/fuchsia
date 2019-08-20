@@ -533,7 +533,7 @@ static int hold_and_release(void* arg) {
   spin_lock_saved_state_t state;
   spin_lock_irqsave(&pair->second, state);
   while (spin_lock_holder_cpu(&pair->first) != UINT_MAX) {
-    thread_yield();
+    arch_spinloop_pause();
   }
   spin_unlock_irqrestore(&pair->second, state);
   return 0;
@@ -558,9 +558,9 @@ static void spinlock_test(void) {
   ASSERT(!arch_ints_disabled());
 
   // Verify slightly more advanced functionality that requires multiple cores.
-  cpu_mask_t online = mp_get_online_mask();
-  if (!online || ispow2(online)) {
-    printf("skipping rest of spinlock_test, not enough online cpus\n");
+  cpu_mask_t active = mp_get_active_mask();
+  if (!active || ispow2(active)) {
+    printf("skipping rest of spinlock_test, not enough active cpus\n");
     return;
   }
 
@@ -570,9 +570,13 @@ static void spinlock_test(void) {
   thread_t* holder_thread =
       thread_create("hold_and_release", &hold_and_release, &pair, DEFAULT_PRIORITY);
   ASSERT(holder_thread != nullptr);
+  // Right now we have suspended IRQs and so we will not be moved off this cpu. To prevent any
+  // poor decisions by the scheduler that could cause deadlock we set the affinity of the
+  // holder_thread to not include our cpu.
+  thread_set_cpu_affinity(holder_thread, active ^ cpu_num_to_mask(arch_curr_cpu_num()));
   thread_resume(holder_thread);
   while (spin_lock_holder_cpu(&pair.second) == UINT_MAX) {
-    thread_yield();
+    arch_spinloop_pause();
   }
 
   // See that from our perspective "second" is not held.
@@ -708,9 +712,20 @@ static void spin_while(zx_time_t t, T func) {
   }
 }
 
+static cpu_mask_t random_mask(cpu_mask_t active) {
+  cpu_mask_t r;
+  DEBUG_ASSERT(active != 0);
+  // Assuming rand is properly random this should converge in 2 iterations on average.
+  do {
+    r = rand() % active;
+  } while (r == 0);
+  return r;
+}
+
 static int affinity_test_thread(void* arg) {
   thread_t* t = get_current_thread();
   affinity_test_state* state = static_cast<affinity_test_state*>(arg);
+  cpu_mask_t active = mp_get_active_mask();
 
   printf("top of affinity tester %p\n", t);
 
@@ -719,7 +734,7 @@ static int affinity_test_thread(void* arg) {
     switch (rand() % 5) {
       case 0:  // set affinity
         // printf("%p set aff %p\n", t, state->threads[which]);
-        thread_set_cpu_affinity(state->threads[which], (cpu_mask_t)rand());
+        thread_set_cpu_affinity(state->threads[which], (cpu_mask_t)random_mask(active));
         break;
       case 1:  // sleep for a bit
         // printf("%p sleep\n", t);
@@ -755,9 +770,9 @@ static int affinity_test_thread(void* arg) {
 __NO_INLINE static void affinity_test() {
   printf("starting thread affinity test\n");
 
-  cpu_mask_t online = mp_get_online_mask();
-  if (!online || ispow2(online)) {
-    printf("aborting test, not enough online cpus\n");
+  cpu_mask_t active = mp_get_active_mask();
+  if (!active || ispow2(active)) {
+    printf("aborting test, not enough active cpus\n");
     return;
   }
 
@@ -867,9 +882,9 @@ __NO_INLINE static void priority_test() {
   thread_sleep_relative(ZX_MSEC(1));
   ASSERT(t->base_priority == DEFAULT_PRIORITY - 2);
 
-  cpu_mask_t online = mp_get_online_mask();
-  if (!online || ispow2(online)) {
-    printf("skipping rest, not enough online cpus\n");
+  cpu_mask_t active = mp_get_active_mask();
+  if (!active || ispow2(active)) {
+    printf("skipping rest, not enough active cpus\n");
     return;
   }
 
