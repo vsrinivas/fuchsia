@@ -20,7 +20,7 @@ To access this data at runtime, add the feature "build-info" to the
 read these fields.  For example:
 
 ```
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/developer/crashpad_agent/tests/meta/crashpad_agent_unittest.cmx" indented_block="\"sandbox\": {" highlight="2,3" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/developer/feedback/crashpad_agent/tests/meta/crashpad_agent_unittest.cmx" indented_block="\"sandbox\": {" highlight="2,3" %}
 ```
 
 
