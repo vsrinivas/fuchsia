@@ -20,6 +20,7 @@ Specify the interface using `filepath` found in the above step. `-t {sec}` for d
 
 ```shell
 [target] $ netdump -t 10 /dev/class/ethernet/000
+```
 
 #### Dump to a file
 Use `-w {filename}`.
