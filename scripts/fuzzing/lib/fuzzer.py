@@ -12,7 +12,6 @@ import time
 
 from device import Device
 from host import Host
-from log import Log
 
 
 class Fuzzer(object):
@@ -195,13 +194,13 @@ class Fuzzer(object):
         if len(filter(lambda x: not x.startswith('-'), fuzzer_args)) == 0:
             fuzzer_args.append('data/corpus/')
 
-        with Log(self):
-            if self._foreground:
-                self.run(fuzzer_args, logfile=self.results('fuzz-0.log'))
-            else:
-                self.run(fuzzer_args)
-            while self.is_running():
-                time.sleep(2)
+        # TODO(SEC-352): Disable logging until fixed.
+        if self._foreground:
+            self.run(fuzzer_args, logfile=self.results('fuzz-0.log'))
+        else:
+            self.run(fuzzer_args)
+        while self.is_running():
+            time.sleep(2)
 
     def stop(self):
         """Stops any processes with a matching component manifest on the device."""

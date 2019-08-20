@@ -16,13 +16,11 @@ class MockDevice(Device):
 
     def __init__(self, port=22):
         super(MockDevice, self).__init__(MockHost(), '::1', port)
-        self.history = []
         self.toggle = False
 
     def _ssh(self, cmdline, stdout=subprocess.PIPE):
         """ Overrides Device._ssh to provide canned responses."""
-        self.history.append(
-            ' '.join(self.get_ssh_cmd(['ssh', self._addr] + cmdline)))
+        super(MockDevice, self)._ssh(cmdline, stdout)
         if cmdline[0] == 'cs' and self.toggle:
             response = """
   http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#m
@@ -57,7 +55,3 @@ drw-r--r--    2 0        0             13552 Mar 20 01:40 corpus
             ['printf', '\'' + response + '\''],
             stdout=stdout,
             stderr=subprocess.STDOUT)
-
-    def _scp(self, srcs, dst):
-        """ Overrides Device._scp."""
-        self.history.append(' '.join(self.get_ssh_cmd(['scp'] + srcs + [dst])))

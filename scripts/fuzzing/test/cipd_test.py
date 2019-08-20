@@ -22,25 +22,29 @@ class TestCipd(unittest.TestCase):
     def test_instances(self):
         mock_cipd = MockCipd()
         corpus = mock_cipd.corpus
+        fuzzer = corpus.fuzzer
+        host = fuzzer.device.host
 
         output = mock_cipd.instances()
         self.assertIn(
-            mock_cipd._bin + ' instances fuchsia/test_data/fuzzing/' + str(
-                corpus.fuzzer), mock_cipd.history)
+            mock_cipd._bin + ' instances fuchsia/test_data/fuzzing/' +
+            str(fuzzer), host.history)
         self.assertIn('some-version', output)
 
     def test_install(self):
         mock_cipd = MockCipd()
         corpus = mock_cipd.corpus
+        fuzzer = corpus.fuzzer
+        host = fuzzer.device.host
 
         self.assertFalse(mock_cipd.install('latest'))
 
         mock_cipd.add_version('latest')
         self.assertTrue(mock_cipd.install('latest'))
         self.assertIn(
-            'CWD=' + corpus.root + ' ' +
-            mock_cipd._bin + ' install fuchsia/test_data/fuzzing/' + str(
-                corpus.fuzzer) + ' latest', mock_cipd.history)
+            'CWD=' + corpus.root + ' ' + mock_cipd._bin +
+            ' install fuchsia/test_data/fuzzing/' + str(fuzzer) + ' latest',
+            host.history)
 
         mock_cipd.add_version('some-version')
         mock_cipd.install('integration:some-revision')
@@ -48,9 +52,8 @@ class TestCipd(unittest.TestCase):
             ' '.join(
                 [
                     'CWD=' + corpus.root, mock_cipd._bin, 'install',
-                    'fuchsia/test_data/fuzzing/' + str(corpus.fuzzer),
-                    'some-version'
-                ]), mock_cipd.history)
+                    'fuchsia/test_data/fuzzing/' + str(fuzzer), 'some-version'
+                ]), host.history)
 
     def test_create(self):
         mock_cipd = MockCipd()
@@ -61,7 +64,7 @@ class TestCipd(unittest.TestCase):
         self.assertIn(
             mock_cipd._bin + ' create --pkg-def ' + os.path.join(
                 corpus.root, 'cipd.yaml') + ' --ref latest --tag integration:' +
-            host.snapshot(), mock_cipd.history)
+            host.snapshot(), host.history)
 
 
 if __name__ == '__main__':

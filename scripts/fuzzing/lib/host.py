@@ -9,6 +9,8 @@ import os
 import re
 import subprocess
 
+from process import Process
+
 
 class Host(object):
     """Represents a local system with a build of Fuchsia.
@@ -112,6 +114,9 @@ class Host(object):
             self.set_fuzzers_json(json_file)
         self.build_dir = build_dir
 
+    def create_process(self, args, **kwargs):
+        return Process(args, **kwargs)
+
     def zircon_tool(self, cmd, logfile=None):
         """Executes a tool found in the ZIRCON_BUILD_DIR."""
         if not self._zxtools:
@@ -120,15 +125,20 @@ class Host(object):
             cmd[0] = os.path.join(self._zxtools, cmd[0])
         if not os.path.exists(cmd[0]):
             raise Host.ConfigError('Unable to find Zircon host tool: ' + cmd[0])
+        p = self.create_process(cmd)
         if logfile:
-            subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.STDOUT)
+            p.stdout = logfile
+            p.stderr = subprocess.STDOUT
+            p.popen()
         else:
-            return subprocess.check_output(cmd, stderr=Host.DEVNULL).strip()
+            p.stderr = Host.DEVNULL
+            return p.check_output().strip()
 
     def killall(self, process):
         """ Invokes killall on the process name."""
-        subprocess.call(
+        p = self.create_process(
             ['killall', process], stdout=Host.DEVNULL, stderr=Host.DEVNULL)
+        p.call()
 
     def symbolize(self, log_in, log_out):
         """Symbolizes backtraces in a log file using the current build."""
@@ -138,40 +148,35 @@ class Host(object):
             raise Host.ConfigError('Build IDs not set.')
         if not self._llvm_symbolizer:
             raise Host.ConfigError('LLVM symbolizer not set.')
-        subprocess.check_call(
-            [
-                self._symbolizer_exec, '-ids-rel', '-ids', self._ids,
-                '-llvm-symbolizer', self._llvm_symbolizer
-            ],
-            stdin=log_in,
-            stdout=log_out)
+        args = [
+            self._symbolizer_exec, '-ids-rel', '-ids', self._ids,
+            '-llvm-symbolizer', self._llvm_symbolizer
+        ]
+        self.create_process(args, stdin=log_in, stdout=log_out).check_call()
 
     def notify_user(self, title, body):
         """Displays a message to the user in a platform-specific way"""
+        args = ['which', 'notify-send']
+        p = self.create_process(args, stdout=Host.DEVNULL, stderr=Host.DEVNULL)
+
         if not self._platform:
-            return
+            return -1
         elif self._platform == 'mac-x64':
-            subprocess.call(
-                [
-                    'osascript', '-e', 'display notification "' + body +
-                    '" with title "' + title + '"'
-                ])
-        elif subprocess.call(['which', 'notify-send'], stdout=Host.DEVNULL,
-                             stderr=Host.DEVNULL) == 0:
-            subprocess.call(
-                ['notify-send', title, body],
-                stdout=Host.DEVNULL,
-                stderr=Host.DEVNULL)
+            args = [
+                'osascript', '-e',
+                'display notification "' + body + '" with title "' + title + '"'
+            ]
+        elif p.call() == 0:
+            args = ['notify-send', title, body]
         else:
-            subprocess.call(
-                ['wall', title + '; ' + body],
-                stdout=Host.DEVNULL,
-                stderr=Host.DEVNULL)
+            args = ['wall', title + '; ' + body]
+        return self.create_process(
+            args, stdout=Host.DEVNULL, stderr=Host.DEVNULL).call()
 
     def snapshot(self):
         integration = Host.join('integration')
         if not os.path.isdir(integration):
             raise Host.ConfigError('Missing integration repo.')
-        return subprocess.check_output(
-            ['git', 'rev-parse', 'HEAD'], stderr=Host.DEVNULL,
-            cwd=integration).strip()
+        p = self.create_process(
+            ['git', 'rev-parse', 'HEAD'], stderr=Host.DEVNULL, cwd=integration)
+        return p.check_output().strip()

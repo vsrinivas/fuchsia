@@ -145,10 +145,6 @@ class TestHost(unittest.TestCase):
         self.assertEqual(host._llvm_symbolizer, symbolizer)
 
     def test_zircon_tool(self):
-        mock = MockHost()
-        mock.zircon_tool(['mock_tool', 'mock_arg'])
-        self.assertIn(
-            'mock/out/default.zircon/tools/mock_tool mock_arg', mock.history)
         # If a build tree is available, try using a zircon tool for "real".
         host = Host()
         try:
@@ -170,8 +166,11 @@ class TestHost(unittest.TestCase):
         mock = MockHost()
         mock.symbolize('mock_in', 'mock_out')
         self.assertIn(
-            'mock/symbolize-ids-rel -ids mock/ids.txt -llvm-symbolizer ' +
-            'mock/llvm_symbolizer', mock.history)
+            ' '.join(
+                [
+                    'mock/symbolize', '-ids-rel', '-ids', 'mock/ids.txt',
+                    '-llvm-symbolizer', 'mock/llvm_symbolizer'
+                ]), mock.history)
         # If a build tree is available, try doing symbolize for "real".
         host = Host()
         try:

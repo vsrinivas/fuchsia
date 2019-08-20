@@ -8,6 +8,8 @@ import os
 import test_env
 from lib.host import Host
 
+from process_mock import MockProcess
+
 
 class MockHost(Host):
 
@@ -30,14 +32,5 @@ class MockHost(Host):
         ]
         self.history = []
 
-    def zircon_tool(self, cmd, logfile=None):
-        self.history.append(
-            os.path.join(self._zxtools, cmd[0]) + ' ' + ' '.join(cmd[1:]))
-
-    def symbolize(self, log_in, log_out):
-        self.history.append(
-            self._symbolizer_exec + '-ids-rel -ids ' + self._ids +
-            ' -llvm-symbolizer ' + self._llvm_symbolizer)
-
-    def killall(self, process):
-        self.history.append('killall ' + process)
+    def create_process(self, args, **kwargs):
+        return MockProcess(self, args, **kwargs)

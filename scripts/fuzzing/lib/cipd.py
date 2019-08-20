@@ -37,16 +37,22 @@ class Cipd(object):
 
     def _cipd(self, cmd, cwd=None):
         """Runs a CIPD command and returns its output. Sub-classed in tests."""
-        return subprocess.check_output([self._bin] + cmd, cwd=cwd)
+        host = self.corpus.fuzzer.device.host
+        return host.create_process([self._bin] + cmd, cwd=cwd).check_output()
 
     def instances(self):
         """Returns the versioned instances of a fuzzing corpus package."""
         return self._cipd(['instances', self._pkg])
 
     def install(self, label):
-        # Look up version from tag.  Note if multiple versions of the package
-        # have the same tag (e.g. the same integration revision), this will
-        # select the most recent.
+        """ Downloads and unpacks a CIPD package for a Fuchsia fuzzer corpus.
+        Looks up version from tag.  Note if multiple versions of the package
+        have the same tag (e.g. the same integration revision), this will
+        select the most recent.
+
+        Attributes:
+          label: A CIPD version or tag
+        """
         if ':' in label:
             try:
                 output = self._cipd(['search', self._pkg, '-tag', label])
@@ -67,7 +73,9 @@ class Cipd(object):
         except subprocess.CalledProcessError:
             return False
         self._cipd(['install', self._pkg, version], cwd=self.corpus.root)
-        subprocess.check_call(['chmod', '-R', '+w', self.corpus.root])
+        host = self.corpus.fuzzer.device.host
+        host.create_process(['chmod', '-R', '+w',
+                             self.corpus.root]).check_call()
         return True
 
     def create(self):

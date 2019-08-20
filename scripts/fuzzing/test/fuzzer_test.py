@@ -92,7 +92,7 @@ class TestFuzzer(unittest.TestCase):
                         'ssh', '::1', 'run',
                         fuzzer.url(), '-artifact_prefix=data/',
                         '-some-lf-arg=value'
-                    ])), mock_device.history)
+                    ])), mock_device.host.history)
 
     def test_start(self):
         mock_device = MockDevice()
@@ -101,7 +101,6 @@ class TestFuzzer(unittest.TestCase):
             fuzzer = Fuzzer(
                 mock_device, u'mock-package1', u'mock-target2', output=base_dir)
             fuzzer.start(['-some-lf-arg=value'])
-            self.assertTrue(os.path.exists(fuzzer.results('symbolized.log')))
         finally:
             shutil.rmtree(base_dir)
 
@@ -114,7 +113,7 @@ class TestFuzzer(unittest.TestCase):
             ' '.join(
                 mock_device.get_ssh_cmd(
                     ['ssh', '::1', 'kill',
-                     str(pids[fuzzer1.tgt])])), mock_device.history)
+                     str(pids[fuzzer1.tgt])])), mock_device.host.history)
         fuzzer3 = Fuzzer(mock_device, u'mock-package1', u'mock-target3')
         fuzzer3.stop()
 
@@ -130,7 +129,7 @@ class TestFuzzer(unittest.TestCase):
                         'ssh', '::1', 'run',
                         fuzzer.url(), '-artifact_prefix=data/',
                         '-some-lf-arg=value'
-                    ] + artifacts)), mock_device.history)
+                    ] + artifacts)), mock_device.host.history)
 
     def test_merge(self):
         mock_device = MockDevice()
@@ -144,7 +143,7 @@ class TestFuzzer(unittest.TestCase):
                         fuzzer.url(), '-artifact_prefix=data/', '-merge=1',
                         '-merge_control_file=data/.mergefile',
                         '-some-lf-arg=value data/corpus/', 'data/corpus.prev/'
-                    ])), mock_device.history)
+                    ])), mock_device.host.history)
 
 
 if __name__ == '__main__':

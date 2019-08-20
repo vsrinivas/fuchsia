@@ -47,7 +47,8 @@ class TestCorpus(unittest.TestCase):
                 ' '.join(
                     mock.get_ssh_cmd(
                         ['scp', f.name,
-                         '[::1]:' + fuzzer.data_path('corpus')])), mock.history)
+                         '[::1]:' + fuzzer.data_path('corpus')])),
+                mock.host.history)
 
     def test_pull(self):
         mock = MockDevice()
@@ -63,7 +64,7 @@ class TestCorpus(unittest.TestCase):
                     [
                         'scp', '[::1]:' + fuzzer.data_path('corpus/*'),
                         corpus.root
-                    ])), mock.history)
+                    ])), mock.host.history)
 
 
 if __name__ == '__main__':

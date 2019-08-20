@@ -6,7 +6,6 @@
 import os
 import argparse
 import tempfile
-import subprocess
 import shutil
 import errno
 

@@ -17,15 +17,12 @@ class MockCipd(Cipd):
 
     def __init__(self):
         fuzzer = Fuzzer(MockDevice(), u'mock-package1', u'mock-target3')
-        self.history = []
         self.versions = []
         super(MockCipd, self).__init__(Corpus(fuzzer))
 
     def _cipd(self, cmd, cwd=None):
         """Overrides Cipd._exec for testing."""
-        logged = 'CWD=' + cwd + ' ' if cwd else ''
-        logged += self._bin + ' ' + ' '.join(cmd)
-        self.history.append(logged)
+        super(MockCipd, self)._cipd(cmd, cwd)
         if cmd[0] == 'install' or cmd[0] == 'create':
             return 'ok'
         elif cmd[0] == 'instances':

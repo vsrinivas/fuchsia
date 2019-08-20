@@ -90,7 +90,7 @@ class TestDevice(unittest.TestCase):
             ' '.join(
                 mock.get_ssh_cmd(
                     ['ssh', '::1', 'some-command', '--with some-argument'])),
-            mock.history)
+            mock.host.history)
 
     def test_getpids(self):
         mock = MockDevice()
@@ -106,7 +106,7 @@ class TestDevice(unittest.TestCase):
             ' '.join(
                 mock.get_ssh_cmd(
                     ['ssh', '::1', 'ls', '-l', 'path-to-some-corpus'])),
-            mock.history)
+            mock.host.history)
         self.assertTrue('feac37187e77ff60222325cf2829e2273e04f2ea' in files)
         self.assertEqual(
             files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
@@ -118,11 +118,11 @@ class TestDevice(unittest.TestCase):
         mock.fetch('remote-path', '/tmp')
         self.assertIn(
             ' '.join(mock.get_ssh_cmd(['scp', '[::1]:remote-path', '/tmp'])),
-            mock.history)
+            mock.host.history)
         mock.fetch('corpus/*', '/tmp')
         self.assertIn(
             ' '.join(mock.get_ssh_cmd(['scp', '[::1]:corpus/*', '/tmp'])),
-            mock.history)
+            mock.host.history)
 
     def test_store(self):
         mock = MockDevice()
@@ -131,12 +131,12 @@ class TestDevice(unittest.TestCase):
             ' '.join(
                 mock.get_ssh_cmd(
                     ['scp', tempfile.gettempdir(), '[::1]:remote-path'])),
-            mock.history)
+            mock.host.history)
         # Ensure globbing works
-        mock.history = []
+        mock.host.history = []
         with tempfile.NamedTemporaryFile() as f:
             mock.store('{}/*'.format(tempfile.gettempdir()), 'remote-path')
-            for cmd in mock.history:
+            for cmd in mock.host.history:
                 if cmd.startswith('scp'):
                     self.assertIn(f.name, cmd)
         # No copy if glob comes up empty
@@ -145,7 +145,7 @@ class TestDevice(unittest.TestCase):
             ' '.join(
                 mock.get_ssh_cmd(
                     ['scp', tempfile.gettempdir(), '[::1]:remote-path'])),
-            mock.history)
+            mock.host.history)
 
 
 if __name__ == '__main__':

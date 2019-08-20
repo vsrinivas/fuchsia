@@ -106,10 +106,10 @@ class Device(object):
 
     Raises: Same as subprocess.Popen
     """
-        return subprocess.Popen(
-            self.get_ssh_cmd(['ssh', self._addr] + cmdline),
-            stdout=stdout,
-            stderr=subprocess.STDOUT)
+        args = self.get_ssh_cmd(['ssh', self._addr] + cmdline)
+        p = self.host.create_process(
+            args, stdout=stdout, stderr=subprocess.STDOUT)
+        return p.popen()
 
     def ssh(self, cmdline, quiet=True, logfile=None):
         """Runs a command to completion on the device.
@@ -132,8 +132,9 @@ class Device(object):
                 self._ssh(cmdline, stdout=Host.DEVNULL).wait()
         else:
             if logfile:
-                proc = self._ssh(cmdline, stdout=subprocess.PIPE)
-                subprocess.check_call(['tee', logfile], stdin=proc.stdout)
+                p1 = self._ssh(cmdline, stdout=subprocess.PIPE)
+                p2 = self.host.create_process(['tee', logfile], stdin=p1.stdout)
+                p2.check_call()
             else:
                 self._ssh(cmdline, stdout=None).wait()
 
@@ -196,8 +197,9 @@ class Device(object):
       srcs: Local or remote paths to copy from.
       dst: Local or remote path to copy to.
     """
-        cmd = self.get_ssh_cmd(['scp'] + srcs + [dst])
-        subprocess.check_call(cmd, stdout=None, stderr=None)
+        args = self.get_ssh_cmd(['scp'] + srcs + [dst])
+        p = self.host.create_process(args)
+        p.check_call()
 
     def fetch(self, data_src, host_dst):
         """Copies `data_src` on the target to `host_dst` on the host."""
