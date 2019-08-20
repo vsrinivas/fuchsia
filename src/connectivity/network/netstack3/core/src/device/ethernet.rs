@@ -738,6 +738,10 @@ impl<D: EventDispatcher> TimerContext<ArpTimerId<usize, Ipv4Addr>> for Context<D
             _ => false,
         })
     }
+
+    fn scheduled_instant(&self, id: ArpTimerId<usize, Ipv4Addr>) -> Option<D::Instant> {
+        self.dispatcher().scheduled_instant(TimerId::from(DeviceLayerTimerId::from(id)))
+    }
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, ArpFrameMetadata<usize, Mac>>

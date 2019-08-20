@@ -436,6 +436,10 @@ impl<D: EventDispatcher> TimerContext<IgmpTimerId<DeviceId>> for Context<D> {
             _ => false,
         })
     }
+
+    fn scheduled_instant(&self, id: IgmpTimerId<DeviceId>) -> Option<Self::Instant> {
+        self.dispatcher().scheduled_instant(IpLayerTimerId::new_igmp_timer_id(id))
+    }
 }
 
 impl<D: EventDispatcher> TimerContext<MldReportDelay<DeviceId>> for Context<D> {
@@ -456,6 +460,10 @@ impl<D: EventDispatcher> TimerContext<MldReportDelay<DeviceId>> for Context<D> {
             TimerId(TimerIdInner::IpLayer(IpLayerTimerId::MldTimer(id))) => f(id),
             _ => false,
         })
+    }
+
+    fn scheduled_instant(&self, id: MldReportDelay<DeviceId>) -> Option<Self::Instant> {
+        self.dispatcher().scheduled_instant(IpLayerTimerId::new_mld_timer_id(id))
     }
 }
 
@@ -494,6 +502,10 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Con
 
         cancel_timers_with_inner(self, f);
     }
+
+    fn scheduled_instant(&self, key: FragmentCacheKey<A>) -> Option<Self::Instant> {
+        self.dispatcher().scheduled_instant(IpLayerTimerId::new_reassembly_timeout_timer_id(key))
+    }
 }
 
 impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for Context<D> {
@@ -513,6 +525,10 @@ impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for Context<D> {
     fn cancel_timers_with<F: FnMut(&PmtuTimerId<I>) -> bool>(&mut self, f: F) {
         self.dispatcher_mut()
             .cancel_timeouts_with(|id| id == &IpLayerTimerId::new_pmtu_timeout_timer_id::<I>());
+    }
+
+    fn scheduled_instant(&self, _id: PmtuTimerId<I>) -> Option<Self::Instant> {
+        self.dispatcher().scheduled_instant(IpLayerTimerId::new_pmtu_timeout_timer_id::<I>())
     }
 }
 

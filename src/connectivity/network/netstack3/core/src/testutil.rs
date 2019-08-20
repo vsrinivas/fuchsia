@@ -1003,6 +1003,10 @@ impl EventDispatcher for DummyEventDispatcher {
             self.timer_events.drain().filter(|t| !f(&t.1)).collect::<Vec<_>>().into();
     }
 
+    fn scheduled_instant(&self, id: TimerId) -> Option<DummyInstant> {
+        self.timer_events.iter().find_map(|x| if x.1 == id { Some(x.0) } else { None })
+    }
+
     type Rng = FakeCryptoRng<XorShiftRng>;
 
     fn rng(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {

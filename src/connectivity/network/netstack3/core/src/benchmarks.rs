@@ -77,6 +77,10 @@ impl EventDispatcher for BenchmarkEventDispatcher {
         unimplemented!()
     }
 
+    fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
+        unimplemented!()
+    }
+
     type Rng = FakeCryptoRng<XorShiftRng>;
 
     fn rng(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {

@@ -111,6 +111,12 @@ pub(crate) trait TimerContext<Id>: InstantContext {
     /// `cancel_timers_with` calls `f` on each scheduled timer, and cancels any
     /// timer for which `f` returns true.
     fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, f: F);
+
+    /// Get the instant a timer will fire, if one is scheduled.
+    ///
+    /// Returns the [`Instant`] a timer with ID `id` will be invoked. If no timer
+    /// with the given ID exists, `scheduled_instant` will return `None`.
+    fn scheduled_instant(&self, id: Id) -> Option<Self::Instant>;
 }
 
 /// A handler for timer firing events.
@@ -437,6 +443,10 @@ pub(crate) mod testutil {
         fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, mut f: F) {
             self.timers = self.timers.drain().filter(|t| !f(&t.1)).collect::<Vec<_>>().into();
         }
+
+        fn scheduled_instant(&self, id: Id) -> Option<DummyInstant> {
+            self.timers.iter().find_map(|x| if x.1 == id { Some(x.0) } else { None })
+        }
     }
 
     pub(crate) trait DummyTimerContextExt<Id>: AsMut<DummyTimerContext<Id>> + Sized {
@@ -489,8 +499,12 @@ pub(crate) mod testutil {
 
     impl<Id, T: AsMut<DummyTimerContext<Id>>> DummyTimerContextExt<Id> for T {}
 
-    impl<Id: PartialEq, T: AsRef<DummyInstantContext> + AsMut<DummyTimerContext<Id>>>
-        TimerContext<Id> for T
+    impl<
+            Id: PartialEq,
+            T: AsRef<DummyInstantContext>
+                + AsRef<DummyTimerContext<Id>>
+                + AsMut<DummyTimerContext<Id>>,
+        > TimerContext<Id> for T
     {
         fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
             self.as_mut().schedule_timer_instant(time, id)
@@ -502,6 +516,10 @@ pub(crate) mod testutil {
 
         fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, f: F) {
             self.as_mut().cancel_timers_with(f);
+        }
+
+        fn scheduled_instant(&self, id: Id) -> Option<DummyInstant> {
+            <T as AsRef<DummyTimerContext<Id>>>::as_ref(self).scheduled_instant(id)
         }
     }
 
@@ -1034,9 +1052,20 @@ pub(crate) mod testutil {
 
             // When one timer is installed, it should be triggered.
             ctx = Default::default();
+
+            // No timer with id `0` exists yet.
+            assert!(ctx.scheduled_instant(0).is_none());
+
             ctx.schedule_timer(ONE_SEC, 0);
+
+            // Timer with id `0` scheduled to execute at `ONE_SEC_INSTANT`.
+            assert_eq!(ctx.scheduled_instant(0).unwrap(), ONE_SEC_INSTANT);
+
             assert!(ctx.trigger_next_timer::<()>());
             assert_eq!(ctx.get_ref().as_slice(), [(0, ONE_SEC_INSTANT)]);
+
+            // After the timer fires, it should not still be scheduled at some instant.
+            assert!(ctx.scheduled_instant(0).is_none());
 
             // The time should have been advanced.
             assert_eq!(ctx.now(), ONE_SEC_INSTANT);

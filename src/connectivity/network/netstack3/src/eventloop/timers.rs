@@ -153,6 +153,14 @@ where
         });
     }
 
+    /// Gets the time a timer with identifier `timer_id` will be invoked.
+    ///
+    /// If a timer with the provided `timer_id` exists, returns the expiry
+    /// time for it; `None` otherwise.
+    pub(super) fn scheduled_time(&self, timer_id: &T) -> Option<ZxTime> {
+        self.timers.get(timer_id).map(|t| t.instant)
+    }
+
     /// Retrieves the internal timer value of a [`TimerEvent`].
     ///
     /// `commit_timer` will "commit" `event` for consumption, if `event` is
@@ -219,6 +227,33 @@ mod tests {
         assert_eq!(d.commit_timer(t1.0).unwrap(), 1);
         let t2 = rcv.next().await.unwrap();
         assert_eq!(d.commit_timer(t2.0).unwrap(), 2);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_scheduled_instant() {
+        let (snd, mut rcv) = mpsc::unbounded();
+        let mut d = TimerDispatcher::<usize, OuterEvent>::new(snd);
+
+        // Timer 1 is scheduled.
+        let time1 = nanos_from_now(1);
+        assert!(d.schedule_timer(1, time1).is_none());
+        assert_eq!(d.scheduled_time(&1).unwrap(), time1);
+
+        // Timer 2 does not exist yet.
+        assert!(d.scheduled_time(&2).is_none());
+
+        // Timer 1 is scheduled.
+        let time2 = nanos_from_now(2);
+        assert!(d.schedule_timer(2, time2).is_none());
+        assert_eq!(d.scheduled_time(&1).unwrap(), time1);
+        assert_eq!(d.scheduled_time(&2).unwrap(), time2);
+
+        // Cancel Timer 1.
+        assert_eq!(d.cancel_timer(&1).unwrap(), time1);
+        assert!(d.scheduled_time(&1).is_none());
+
+        // Timer 2 should still be scheduled.
+        assert_eq!(d.scheduled_time(&2).unwrap(), time2);
     }
 
     #[fasync::run_singlethreaded(test)]

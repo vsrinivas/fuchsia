@@ -839,6 +839,10 @@ impl EventDispatcher for EventLoopInner {
         self.timers.cancel_timers_with(f);
     }
 
+    fn scheduled_instant(&self, id: TimerId) -> Option<ZxTime> {
+        self.timers.scheduled_time(&id)
+    }
+
     type Rng = OsRng;
 
     fn rng(&mut self) -> &mut OsRng {

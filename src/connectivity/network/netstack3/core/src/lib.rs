@@ -417,6 +417,12 @@ pub trait EventDispatcher:
     /// any timeout for which `f` returns true.
     fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F);
 
+    /// Get the instant a timer will fire, if one is scheduled.
+    ///
+    /// Returns the [`Instant`] a timer with ID `id` will be invoked. If no timer
+    /// with the given ID exists, `scheduled_instant` will return `None`.
+    fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant>;
+
     // TODO(joshlf): If the CSPRNG requirement becomes a performance problem,
     // introduce a second, non-cryptographically secure, RNG.
 
