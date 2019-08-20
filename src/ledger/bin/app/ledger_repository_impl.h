@@ -17,6 +17,7 @@
 #include "src/ledger/bin/app/disk_cleanup_manager.h"
 #include "src/ledger/bin/app/ledger_manager.h"
 #include "src/ledger/bin/app/page_eviction_manager.h"
+#include "src/ledger/bin/app/page_usage_db.h"
 #include "src/ledger/bin/app/sync_watcher_set.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/encryption/impl/encryption_service_factory_impl.h"
@@ -27,6 +28,7 @@
 #include "src/ledger/bin/p2p_sync/public/user_communicator.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/sync_coordinator/public/user_sync.h"
+#include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
 
@@ -40,7 +42,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   // will outlive the given |disk_cleanup_manager|.
   LedgerRepositoryImpl(DetachedPath content_path, Environment* environment,
                        std::unique_ptr<storage::DbFactory> db_factory,
-                       std::unique_ptr<SyncWatcherSet> watchers,
+                       std::unique_ptr<PageUsageDb> db, std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<sync_coordinator::UserSync> user_sync,
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
                        std::vector<PageUsageListener*> page_usage_listeners,
@@ -96,6 +98,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
       SyncableBinding<fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
       bindings_;
   std::unique_ptr<storage::DbFactory> db_factory_;
+  std::unique_ptr<PageUsageDb> db_;
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<sync_coordinator::UserSync> user_sync_;
@@ -110,6 +113,8 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
 
   // Callback set when closing this repository.
   fit::function<void(Status)> close_callback_;
+
+  coroutine::CoroutineManager coroutine_manager_;
 
   inspect_deprecated::Node inspect_node_;
   inspect_deprecated::UIntMetric requests_metric_;

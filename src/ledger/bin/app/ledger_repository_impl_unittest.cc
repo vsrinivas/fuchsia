@@ -25,6 +25,7 @@
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/inspect/inspect.h"
+#include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
@@ -67,6 +68,16 @@ using ::testing::IsEmpty;
                         ChildrenMatch(ElementsAreArray(ledger_expectations)))))));
 }
 
+// Blocks the initialization of the Db. The call of |GetOrCreateDb| will not be finished, as the
+// callback is not being called.
+class BlockingFakeDbFactory : public storage::DbFactory {
+ public:
+  void GetOrCreateDb(ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
+                     fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) override {}
+
+  void Close(fit::closure callback) override {}
+};
+
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryImplTest() {
@@ -76,10 +87,15 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     attachment_node_ =
         top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
 
+    DetachedPath detached_path = DetachedPath(tmpfs_.root_fd());
+    std::unique_ptr<storage::fake::FakeDbFactory> db_factory =
+        std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
+    std::unique_ptr<PageUsageDb> db = std::make_unique<PageUsageDb>(
+        environment_.clock(), db_factory.get(), detached_path.SubPath("page_usage_db"));
+
     repository_ = std::make_unique<LedgerRepositoryImpl>(
-        DetachedPath(tmpfs_.root_fd()), &environment_,
-        std::make_unique<storage::fake::FakeDbFactory>(dispatcher()), nullptr, nullptr,
-        std::move(fake_page_eviction_manager),
+        detached_path.SubPath("ledgers"), &environment_, std::move(db_factory), std::move(db),
+        nullptr, nullptr, std::move(fake_page_eviction_manager),
         std::vector<PageUsageListener*>{disk_cleanup_manager_},
         attachment_node_.CreateChild(kInspectPathComponent));
   }
@@ -365,6 +381,45 @@ TEST_F(LedgerRepositoryImplTest, AliveWithNoCallbacksSet) {
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called2);
   EXPECT_EQ(status2, Status::OK);
+}
+
+// Verifies that the object is not destroyed until the initialization of PageUsageDb is finished.
+TEST_F(LedgerRepositoryImplTest, CloseWhileDbInitRunning) {
+  auto fake_page_eviction_manager = std::make_unique<FakeDiskCleanupManager>();
+  auto disk_cleanup_manager = fake_page_eviction_manager.get();
+  auto top_level_node = inspect_deprecated::Node(kTestTopLevelNodeName);
+  auto attachment_node =
+      top_level_node.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
+
+  DetachedPath detached_path = DetachedPath(tmpfs_.root_fd());
+  // Makes sure that the initialization of PageusageDb will not be completed.
+  std::unique_ptr<BlockingFakeDbFactory> db_factory = std::make_unique<BlockingFakeDbFactory>();
+  std::unique_ptr<PageUsageDb> db = std::make_unique<PageUsageDb>(
+      environment_.clock(), db_factory.get(), detached_path.SubPath("page_usage_database"));
+
+  auto repository = std::make_unique<LedgerRepositoryImpl>(
+      detached_path.SubPath("ledgers"), &environment_, std::move(db_factory), std::move(db),
+      nullptr, nullptr, std::move(fake_page_eviction_manager),
+      std::vector<PageUsageListener*>{disk_cleanup_manager},
+      attachment_node.CreateChild(kInspectPathComponent));
+
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr1;
+
+  repository->BindRepository(ledger_repository_ptr1.NewRequest());
+
+  bool on_empty_called;
+  repository->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+
+  bool ptr1_closed;
+  zx_status_t ptr1_closed_status;
+  ledger_repository_ptr1.set_error_handler(
+      callback::Capture(callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+
+  // The call should not trigger destruction, as the initialization of PageUsageDb is not finished.
+  ledger_repository_ptr1->Close();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(ptr1_closed);
 }
 
 }  // namespace

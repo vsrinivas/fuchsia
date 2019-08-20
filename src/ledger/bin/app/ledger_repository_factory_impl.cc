@@ -296,9 +296,10 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   auto db_factory =
       std::make_unique<storage::LevelDbFactory>(environment_, repository_information.cache_path);
   db_factory->Init();
-  auto disk_cleanup_manager = std::make_unique<DiskCleanupManagerImpl>(
-      environment_, db_factory.get(), repository_information.page_usage_db_path);
-  disk_cleanup_manager->Init();
+  auto db = std::make_unique<PageUsageDb>(environment_->clock(), db_factory.get(),
+                                          repository_information.page_usage_db_path);
+
+  auto disk_cleanup_manager = std::make_unique<DiskCleanupManagerImpl>(environment_, db.get());
 
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync;
@@ -311,8 +312,8 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
 
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
-      repository_information.ledgers_path, environment_, std::move(db_factory), std::move(watchers),
-      std::move(user_sync), std::move(disk_cleanup_manager),
+      repository_information.ledgers_path, environment_, std::move(db_factory), std::move(db),
+      std::move(watchers), std::move(user_sync), std::move(disk_cleanup_manager),
       std::vector<PageUsageListener*>{disk_cleanup_manager_ptr},
       inspect_node_.CreateChild(convert::ToHex(repository_information.name)));
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());

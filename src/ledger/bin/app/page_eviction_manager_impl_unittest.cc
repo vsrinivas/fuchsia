@@ -53,20 +53,25 @@ class PageEvictionManagerTest : public TestWithEnvironment {
  public:
   PageEvictionManagerTest()
       : db_factory_(environment_.dispatcher()),
-        page_eviction_manager_(&environment_, &db_factory_, DetachedPath(tmpfs_.root_fd())),
+        db_(std::make_unique<PageUsageDb>(environment_.clock(), &db_factory_,
+                                          DetachedPath(tmpfs_.root_fd()))),
+        page_eviction_manager_(&environment_, db_.get()),
         policy_(
             NewLeastRecentyUsedPolicy(environment_.coroutine_service(), &page_eviction_manager_)) {}
 
   // TestWithEnvironment:
   void SetUp() override {
-    page_eviction_manager_.Init();
+    Status status;
+    RunInCoroutine([&](coroutine::CoroutineHandler* handler) { status = db_->Init(handler); });
     RunLoopUntilIdle();
+    FXL_DCHECK(status == Status::OK);
     page_eviction_manager_.SetDelegate(&delegate_);
   }
 
  private:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   storage::fake::FakeDbFactory db_factory_;
+  std::unique_ptr<PageUsageDb> db_;
 
  protected:
   FakeDelegate delegate_;

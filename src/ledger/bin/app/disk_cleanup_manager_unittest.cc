@@ -46,18 +46,23 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
  public:
   DiskCleanupManagerTest()
       : db_factory_(environment_.dispatcher()),
-        disk_cleanup_manager_(&environment_, &db_factory_, DetachedPath(tmpfs_.root_fd())) {}
+        db_(std::make_unique<PageUsageDb>(environment_.clock(), &db_factory_,
+                                          DetachedPath(tmpfs_.root_fd()))),
+        disk_cleanup_manager_(&environment_, db_.get()) {}
 
   // gtest::TestLoopFixture:
   void SetUp() override {
-    disk_cleanup_manager_.Init();
+    Status status;
+    RunInCoroutine([&](coroutine::CoroutineHandler* handler) { status = db_->Init(handler); });
     RunLoopUntilIdle();
+    FXL_DCHECK(status == Status::OK);
     disk_cleanup_manager_.SetPageEvictionDelegate(&delegate_);
   }
 
  private:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   storage::fake::FakeDbFactory db_factory_;
+  std::unique_ptr<PageUsageDb> db_;
 
  protected:
   FakeDelegate delegate_;

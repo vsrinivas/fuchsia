@@ -17,12 +17,8 @@ namespace ledger {
 
 class DiskCleanupManagerImpl : public DiskCleanupManager, public PageUsageListener {
  public:
-  DiskCleanupManagerImpl(Environment* environment, storage::DbFactory* db_factory,
-                         DetachedPath db_path);
+  DiskCleanupManagerImpl(Environment* environment, PageUsageDb* db);
   ~DiskCleanupManagerImpl() override;
-
-  // Asynchronously initializes this DiskCleanupManagerImpl.
-  void Init();
 
   // Sets the delegate for PageEvictionManager owned by DiskCleanupManagerImpl.
   // The delegate should outlive this object.

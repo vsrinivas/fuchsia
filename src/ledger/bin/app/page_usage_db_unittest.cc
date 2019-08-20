@@ -10,8 +10,10 @@
 #include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
+#include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/fxl/macros.h"
@@ -22,8 +24,8 @@ namespace {
 class PageUsageDbTest : public TestWithEnvironment {
  public:
   PageUsageDbTest()
-      : db_(environment_.clock(),
-            std::make_unique<storage::fake::FakeDb>(environment_.dispatcher())) {}
+      : db_factory_(dispatcher()),
+        db_(environment_.clock(), &db_factory_, DetachedPath(tmpfs_.root_fd())){};
 
   ~PageUsageDbTest() override {}
 
@@ -34,7 +36,16 @@ class PageUsageDbTest : public TestWithEnvironment {
     return result;
   }
 
+  void SetUp() override {
+    Status status;
+    RunInCoroutine([&](coroutine::CoroutineHandler* handler) { status = db_.Init(handler); });
+    RunLoopUntilIdle();
+    FXL_DCHECK(status == Status::OK);
+  }
+
  protected:
+  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  storage::fake::FakeDbFactory db_factory_;
   PageUsageDb db_;
 
  private:
@@ -171,6 +182,28 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
     }
     EXPECT_EQ(open_pages_count, N - 1);
   });
+}
+
+// Verifies that calls to the Db are correctly queued until an initialization of PageUsageDb is
+// completed.
+TEST_F(PageUsageDbTest, OperationsQueueWhileInitRunning) {
+  storage::fake::FakeDbFactory db_factory(dispatcher());
+  PageUsageDb db(environment_.clock(), &db_factory, DetachedPath(tmpfs_.root_fd()));
+  Status status;
+  std::unique_ptr<storage::Iterator<const PageInfo>> pages;
+
+  // Makes call to uninitialized PageUsageDb via Environment CoroutineService as Test RunInCoroutine
+  // does not allow to have two coroutines at the same time.
+  environment_.coroutine_service()->StartCoroutine(
+      [&](coroutine::CoroutineHandler* handler) { status = db.GetPages(handler, &pages); });
+  EXPECT_EQ(pages, nullptr);
+
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    Status init_status = db.Init(handler);
+    EXPECT_EQ(init_status, Status::OK);
+  });
+  RunLoopUntilIdle();
+  EXPECT_EQ(status, Status::OK);
 }
 
 }  // namespace

@@ -6,15 +6,12 @@
 
 namespace ledger {
 
-DiskCleanupManagerImpl::DiskCleanupManagerImpl(Environment* environment,
-                                               storage::DbFactory* db_factory, DetachedPath db_path)
-    : page_eviction_manager_(environment, db_factory, std::move(db_path)),
+DiskCleanupManagerImpl::DiskCleanupManagerImpl(Environment* environment, PageUsageDb* db)
+    : page_eviction_manager_(environment, db),
       policy_(
           NewLeastRecentyUsedPolicy(environment->coroutine_service(), &page_eviction_manager_)) {}
 
 DiskCleanupManagerImpl::~DiskCleanupManagerImpl() {}
-
-void DiskCleanupManagerImpl::Init() { page_eviction_manager_.Init(); }
 
 void DiskCleanupManagerImpl::SetPageEvictionDelegate(PageEvictionManager::Delegate* delegate) {
   page_eviction_manager_.SetDelegate(delegate);

@@ -12,6 +12,7 @@
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/synchronization/lock.h"
+#include "src/lib/files/directory.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {
@@ -82,21 +83,135 @@ class PageInfoIterator final : public storage::Iterator<const PageInfo> {
   // The current page info served by the iterator.
   std::unique_ptr<PageInfo> page_;
 };
+
+// If the given |status| is not |OK| or |INTERRUPTED|, logs an error message on
+// failure to initialize. Returns true in case of error; false otherwise.
+bool LogOnInitializationError(fxl::StringView operation_description, Status status) {
+  if (status != Status::OK) {
+    if (status != Status::INTERRUPTED) {
+      FXL_LOG(ERROR) << operation_description
+                     << " failed because of initialization error: " << fidl::ToUnderlying(status);
+    }
+    return true;
+  }
+  return false;
+}
 }  // namespace
 
-PageUsageDb::PageUsageDb(timekeeper::Clock* clock, std::unique_ptr<storage::Db> db)
-    : clock_(clock), db_(std::move(db)) {}
+PageUsageDb::Completer::Completer() {}
+
+PageUsageDb::Completer::~Completer() {
+  // We should not call the callbacks: they are SyncCall callbacks, so when we
+  // drop them the caller will receive |INTERRUPTED|.
+}
+
+void PageUsageDb::Completer::Complete(Status status) {
+  FXL_DCHECK(!completed_);
+  // If we get |INTERRUPTED| here, it means the caller did not return as soon as
+  // it received |INTERRUPTED|.
+  FXL_DCHECK(status != Status::INTERRUPTED);
+  CallCallbacks(status);
+}
+
+Status PageUsageDb::Completer::WaitUntilDone(coroutine::CoroutineHandler* handler) {
+  if (completed_) {
+    return status_;
+  }
+
+  auto sync_call_status = coroutine::SyncCall(handler, [this](fit::closure callback) {
+    // SyncCall finishes its execution when the given |callback| is called.
+    // To block the termination of |SyncCall| (and of |WaitUntilDone|), here
+    // we push this |callback| in the vector of |callbacks_|. Once
+    // |Complete| is called, we will call all of these callbacks, which will
+    // eventually unblock all pending |WaitUntilDone| calls.
+    callbacks_.push_back(std::move(callback));
+  });
+  if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERRUPTED;
+  }
+  return status_;
+}
+
+bool PageUsageDb::Completer::IsCompleted() { return completed_; }
+
+void PageUsageDb::Completer::CallCallbacks(Status status) {
+  if (completed_) {
+    return;
+  }
+  completed_ = true;
+  status_ = status;
+  // We need to move the callbacks in the stack since calling any of the
+  // them might lead to the deletion of this object, invalidating callbacks_.
+  std::vector<fit::closure> callbacks = std::move(callbacks_);
+  callbacks_.clear();
+  for (const auto& callback : callbacks) {
+    callback();
+  }
+}
+
+void PageUsageDb::Completer::Cancel() {
+  FXL_DCHECK(!completed_);
+  completed_ = true;
+  status_ = Status::INTERRUPTED;
+  callbacks_.clear();
+}
+
+PageUsageDb::PageUsageDb(timekeeper::Clock* clock, storage::DbFactory* db_factory,
+                         DetachedPath db_path)
+    : clock_(clock),
+      db_factory_(db_factory),
+      db_path_(db_path.SubPath(kPageUsageDbSerializationVersion)) {}
 
 PageUsageDb::~PageUsageDb() {}
 
+Status PageUsageDb::Init(coroutine::CoroutineHandler* handler) {
+  // Initializing the DB and marking pages as closed are slow operations and we
+  // shouldn't wait for them to finish, before returning from initialization:
+  // Start these operations and finalize the initialization completer when done.
+  if (!files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path())) {
+    initialization_completer_.Complete(Status::IO_ERROR);
+    return Status::IO_ERROR;
+  }
+  Status status;
+  if (coroutine::SyncCall(
+          handler,
+          [this](fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) {
+            db_factory_->GetOrCreateDb(
+                std::move(db_path_), storage::DbFactory::OnDbNotFound::CREATE, std::move(callback));
+          },
+          &status, &db_) == coroutine::ContinuationStatus::INTERRUPTED) {
+    initialization_completer_.Cancel();
+    return Status::INTERRUPTED;
+  }
+  if (status != Status::OK) {
+    initialization_completer_.Complete(status);
+    return status;
+  }
+  status = MarkAllPagesClosed(handler);
+  if (status == Status::INTERRUPTED) {
+    initialization_completer_.Cancel();
+    return Status::INTERRUPTED;
+  }
+  initialization_completer_.Complete(status);
+  return status;
+}
+
 Status PageUsageDb::MarkPageOpened(coroutine::CoroutineHandler* handler,
                                    fxl::StringView ledger_name, storage::PageIdView page_id) {
+  Status status = initialization_completer_.WaitUntilDone(handler);
+  if (LogOnInitializationError("MarkPageOpened", status)) {
+    return status;
+  }
   return Put(handler, GetKeyForOpenedPage(ledger_name, page_id),
              storage::SerializeData(PageInfo::kOpenedPageTimestamp));
 }
 
 Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
                                    fxl::StringView ledger_name, storage::PageIdView page_id) {
+  Status status = initialization_completer_.WaitUntilDone(handler);
+  if (LogOnInitializationError("MarkPageClosed", status)) {
+    return status;
+  }
   FXL_DCHECK(page_id.size() == ::fuchsia::ledger::PAGE_ID_SIZE);
   zx::time_utc now;
   if (clock_->Now(&now) != ZX_OK) {
@@ -107,6 +222,10 @@ Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
 
 Status PageUsageDb::MarkPageEvicted(coroutine::CoroutineHandler* handler,
                                     fxl::StringView ledger_name, storage::PageIdView page_id) {
+  Status status = initialization_completer_.WaitUntilDone(handler);
+  if (LogOnInitializationError("TryEvictPage", status)) {
+    return status;
+  }
   return Delete(handler, GetKeyForOpenedPage(ledger_name, page_id));
 }
 
@@ -138,16 +257,22 @@ Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
 
 Status PageUsageDb::GetPages(coroutine::CoroutineHandler* handler,
                              std::unique_ptr<storage::Iterator<const PageInfo>>* pages) {
+  Status status = initialization_completer_.WaitUntilDone(handler);
+  if (LogOnInitializationError("TryEvictPages", status)) {
+    return status;
+  }
   std::unique_ptr<
       storage::Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>>
       it;
-  Status status = db_->GetIteratorAtPrefix(handler, kOpenedPagePrefix, &it);
+  status = db_->GetIteratorAtPrefix(handler, kOpenedPagePrefix, &it);
   if (status != Status::OK) {
     return status;
   }
   *pages = std::make_unique<PageInfoIterator>(std::move(it));
   return Status::OK;
 }
+
+bool PageUsageDb::IsInitialized() { return initialization_completer_.IsCompleted(); }
 
 Status PageUsageDb::Put(coroutine::CoroutineHandler* handler, fxl::StringView key,
                         fxl::StringView value) {

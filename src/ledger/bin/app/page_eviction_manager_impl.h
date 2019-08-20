@@ -24,12 +24,8 @@ namespace ledger {
 
 class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionDelegate {
  public:
-  PageEvictionManagerImpl(Environment* environment, storage::DbFactory* db_factory,
-                          DetachedPath db_path);
+  PageEvictionManagerImpl(Environment* environment, PageUsageDb* db);
   ~PageEvictionManagerImpl() override;
-
-  // Asynchronously initializes this PageEvictionManager.
-  void Init();
 
   // Sets the delegate for this PageEvictionManagerImpl. The delegate should
   // outlive this object.
@@ -52,40 +48,6 @@ class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionD
                     fit::function<void(Status, PageWasEvicted)> callback) override;
 
  private:
-  // A Completer allowing waiting until the target operation is completed.
-  class Completer {
-   public:
-    Completer();
-
-    ~Completer();
-
-    // Completes the operation with the given status and unblocks all pending
-    // |WaitUntilDone| calls. |Complete| can only be called once.
-    void Complete(Status status);
-
-    // Cancels the operation. All WaitUntilDone calls will return
-    // |Status::INTERRUPTED|. If |Cancel| is called, |Complete| should
-    // never be called.
-    void Cancel();
-
-    // Blocks execution until |Complete| is called, and then returns its status.
-    // If the operation is already completed, |WaitUntilDone| returns
-    // immediately with the result status.
-    Status WaitUntilDone(coroutine::CoroutineHandler* handler);
-
-   private:
-    // Marks the Completer as completed with the given status and calls the
-    // pending callbacks.
-    void CallCallbacks(Status status);
-
-    bool completed_ = false;
-    Status status_;
-    // Closures invoked upon completion to unblock the waiting coroutines.
-    std::vector<fit::closure> callbacks_;
-
-    FXL_DISALLOW_COPY_AND_ASSIGN(Completer);
-  };
-
   // Removes the page from the local storage. The caller of this method must
   // ensure that the given page exists.
   void EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
@@ -113,20 +75,11 @@ class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionD
   ExpiringToken NewExpiringToken();
 
   Environment* environment_;
-  // The initialization completer. |Init| method starts marking pages as closed,
-  // and returns before that operation is done. This completer makes sure that
-  // all methods accessing the page usage database wait until the initialization
-  // has finished, before reading or updating information.
-  Completer initialization_completer_;
   // A closure to be called every time all pending operations are completed.
   fit::closure on_empty_callback_;
   ssize_t pending_operations_ = 0;
   PageEvictionManager::Delegate* delegate_ = nullptr;
-  // |db_factory_| and |db_path_| should only be used during initialization.
-  // After Init() has been called their contents are no longer valid.
-  storage::DbFactory* db_factory_;
-  DetachedPath db_path_;
-  std::unique_ptr<PageUsageDb> db_;
+  PageUsageDb* db_;
   coroutine::CoroutineManager coroutine_manager_;
 
   // Must be the last member.

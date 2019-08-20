@@ -31,6 +31,7 @@ std::string GetDirectoryName(fxl::StringView bytes) { return base64url::Base64Ur
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environment* environment,
                                            std::unique_ptr<storage::DbFactory> db_factory,
+                                           std::unique_ptr<PageUsageDb> db,
                                            std::unique_ptr<SyncWatcherSet> watchers,
                                            std::unique_ptr<sync_coordinator::UserSync> user_sync,
                                            std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
@@ -39,11 +40,13 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environmen
     : content_path_(std::move(content_path)),
       environment_(environment),
       db_factory_(std::move(db_factory)),
+      db_(std::move(db)),
       encryption_service_factory_(environment),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)),
       page_usage_listeners_(std::move(page_usage_listeners)),
       disk_cleanup_manager_(std::move(disk_cleanup_manager)),
+      coroutine_manager_(environment_->coroutine_service()),
       inspect_node_(std::move(inspect_node)),
       requests_metric_(
           inspect_node_.CreateUIntMetric(kRequestsInspectPathComponent.ToString(), 0UL)),
@@ -52,6 +55,20 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environmen
   bindings_.set_on_empty([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });
+  // The callback that is to be called once the initialization of this PageUsageDb is completed.
+  // The destructor may be called while a coroutine that is responsable for the PageusageDb
+  // initialization is executed, so we need to wait until the operation is done and then signal
+  // about its completion.
+  fit::function<void(Status)> callback([this](Status status) {
+    if (status != Status::INTERRUPTED) {
+      CheckEmpty();
+    }
+  });
+  coroutine_manager_.StartCoroutine(std::move(callback),
+                                    [db_ptr = db_.get()](coroutine::CoroutineHandler* handler,
+                                                         fit::function<void(Status)> callback) {
+                                      callback(db_ptr->Init(handler));
+                                    });
   children_manager_retainer_ = ledgers_inspect_node_.SetChildrenManager(this);
 }
 
@@ -264,11 +281,13 @@ void LedgerRepositoryImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher
 
 void LedgerRepositoryImpl::CheckEmpty() {
   if (!closing_ && ledger_managers_.empty() && (bindings_.empty() || close_callback_) &&
-      disk_cleanup_manager_->IsEmpty() && (on_empty_callback_ || close_callback_)) {
+      disk_cleanup_manager_->IsEmpty() && db_->IsInitialized() &&
+      (on_empty_callback_ || close_callback_)) {
     closing_ = true;
-    // Both DiskCleanupManager and DbFactory use the filesystem. We need to close them before we can
-    // close ourselves.
+    // Both PageUsageDb and DbFactory use the filesystem. We need to close them before we can
+    // close ourselves, as well as DiskCleanupManager, since it owns the pointer to the db.
     disk_cleanup_manager_.reset();
+    db_.reset();
     db_factory_->Close(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this]() {
       if (close_callback_) {
         close_callback_(Status::OK);
