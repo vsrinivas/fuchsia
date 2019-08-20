@@ -11,7 +11,10 @@ use crate::{
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
         traversal_position::AlphabeticalTraversal,
-        watchers::Watchers,
+        watchers::{
+            event_producers::{SingleNameEventProducer, StaticVecEventProducer},
+            Watchers,
+        },
     },
     execution_scope::ExecutionScope,
     path::Path,
@@ -19,10 +22,7 @@ use crate::{
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME, WATCH_EVENT_ADDED,
-        WATCH_EVENT_REMOVED, WATCH_MASK_ADDED, WATCH_MASK_REMOVED,
-    },
+    fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME},
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     parking_lot::Mutex,
@@ -89,7 +89,7 @@ impl Simple {
             return Err(Status::ALREADY_EXISTS);
         }
 
-        this.watchers.send_event(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, name.clone());
+        this.watchers.send_event(&mut SingleNameEventProducer::added(&name));
 
         let _ = this.entries.insert(name, entry);
         Ok(())
@@ -116,7 +116,7 @@ impl Simple {
 
         let mut this = self.inner.lock();
 
-        this.watchers.send_event(WATCH_MASK_REMOVED, WATCH_EVENT_REMOVED, name.clone());
+        this.watchers.send_event(&mut SingleNameEventProducer::removed(&name));
 
         Ok(this.entries.remove(&name))
     }
@@ -232,11 +232,11 @@ impl DirectoryEntryContainer<AlphabeticalTraversal> for Simple {
     ) -> Status {
         let mut this = self.inner.lock();
 
-        let names = {
+        let mut names = StaticVecEventProducer::existing({
             let entry_names = this.entries.keys();
             iter::once(&".".to_string()).chain(entry_names).cloned().collect()
-        };
-        this.watchers.add(scope, self.clone(), names, mask, channel);
+        });
+        this.watchers.add(scope, self.clone(), &mut names, mask, channel);
 
         Status::OK
     }
