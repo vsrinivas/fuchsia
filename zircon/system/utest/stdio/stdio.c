@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// While not much will work if launchpad isn't already working, this test
-// provides a place for testing aspects of launchpad that aren't necessarily
-// normally used.
-
 #include <errno.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -19,8 +15,7 @@
 #include <zircon/syscalls/object.h>
 
 #include <elfload/elfload.h>
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
+#include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
 #include "threads_impl.h"
@@ -48,20 +43,19 @@ static bool stdio_pipe_test(void) {
   END_TEST;
 }
 
-static zx_status_t transfer_fd(launchpad_t* lp, int fd, int target_fd) {
+static zx_handle_t handle_from_fd(int fd) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
   zx_status_t status = fdio_fd_transfer(fd, &handle);
   if (status != ZX_OK)
-    return status;
-  return launchpad_add_handle(lp, handle, PA_HND(PA_FD, target_fd));
+    tu_fatal("handle from fd", status);
+  return handle;
 }
 
-static bool stdio_launchpad_pipe_test(void) {
+static bool stdio_advanced_pipe_test(void) {
   BEGIN_TEST;
 
   // TODO(kulakowski): Consider another helper process
   const char* file = "/boot/bin/lsusb";
-  launchpad_t* lp = NULL;
 
   zx_handle_t fdio_job = zx_job_default();
   ASSERT_NE(fdio_job, ZX_HANDLE_INVALID, "no fdio job object");
@@ -69,18 +63,6 @@ static bool stdio_launchpad_pipe_test(void) {
   zx_handle_t job_copy = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_handle_duplicate(fdio_job, ZX_RIGHT_SAME_RIGHTS, &job_copy), ZX_OK,
             "zx_handle_duplicate failed");
-
-  ASSERT_EQ(launchpad_create(job_copy, "launchpad_pipe_stdio_test", &lp), ZX_OK,
-            "launchpad_create failed");
-  ASSERT_EQ(launchpad_set_args(lp, 1, &file), ZX_OK, "launchpad_arguments failed");
-  ASSERT_EQ(launchpad_add_vdso_vmo(lp), ZX_OK, "launchpad_add_vdso_vmo failed");
-  ASSERT_EQ(launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE), ZX_OK, "launchpad_clone failed");
-
-  zx_handle_t vmo;
-  ASSERT_EQ(launchpad_vmo_from_file(file, &vmo), ZX_OK, "");
-  ASSERT_EQ(launchpad_elf_load(lp, vmo), ZX_OK, "launchpad_elf_load failed");
-
-  ASSERT_EQ(launchpad_load_vdso(lp, ZX_HANDLE_INVALID), ZX_OK, "launchpad_load_vdso failed");
 
   // stdio pipe fds [ours, theirs]
   int stdin_fds[2];
@@ -91,18 +73,20 @@ static bool stdio_launchpad_pipe_test(void) {
   ASSERT_EQ(stdio_pipe(stdout_fds, false), 0, "stdout pipe creation failed");
   ASSERT_EQ(stdio_pipe(stderr_fds, false), 0, "stderr pipe creation failed");
 
-  // Transfer the child's stdio pipes
-  ASSERT_EQ(transfer_fd(lp, stdin_fds[1], 0), ZX_OK,
-            "failed to transfer stdin pipe to child process");
-  ASSERT_EQ(transfer_fd(lp, stdout_fds[1], 1), ZX_OK,
-            "failed to transfer stdout pipe to child process");
-  ASSERT_EQ(transfer_fd(lp, stderr_fds[1], 2), ZX_OK,
-            "failed to transfer stderr pipe to child process");
+  zx_handle_t handles[] = {
+    handle_from_fd(stdin_fds[1]),
+    handle_from_fd(stdout_fds[1]),
+    handle_from_fd(stderr_fds[1]),
+  };
+  uint32_t handle_ids[] = {
+    PA_HND(PA_FD, 0),
+    PA_HND(PA_FD, 1),
+    PA_HND(PA_FD, 2),
+  };
 
   // Start the process
-  zx_handle_t p = ZX_HANDLE_INVALID;
-  zx_status_t status = launchpad_go(lp, &p, NULL);
-  ASSERT_EQ(status, ZX_OK, "");
+  zx_handle_t p = tu_launch_process(job_copy, "pipe_stdio_test", 1, &file, 0, NULL,
+                                    countof(handles), handles, handle_ids);
   ASSERT_NE(p, ZX_HANDLE_INVALID, "process handle != 0");
 
   // Read the stdio
@@ -211,7 +195,7 @@ static bool stdio_race_on_file_access(void) {
 
 BEGIN_TEST_CASE(stdio_tests)
 RUN_TEST(stdio_pipe_test);
-RUN_TEST(stdio_launchpad_pipe_test);
+RUN_TEST(stdio_advanced_pipe_test);
 RUN_TEST(stdio_handle_to_tid_mapping);
 RUN_TEST(stdio_race_on_file_access);
 END_TEST_CASE(stdio_tests)

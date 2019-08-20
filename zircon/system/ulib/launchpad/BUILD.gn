@@ -32,9 +32,6 @@ library("launchpad") {
     "$zx/system/ulib/elf-search/test:*",
     "$zx/system/ulib/process-launcher:*",
     "$zx/system/ulib/test-utils:*",
-    "$zx/system/utest/stdio:*",
-    "$zx/system/utest/thread-state:*",
-    "$zx/system/utest/usb-virtual-bus:*",
     "$zx/system/utest/vdso-variant:*",
   ]
 }

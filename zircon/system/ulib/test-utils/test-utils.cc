@@ -8,6 +8,7 @@
 #include <lib/backtrace-request/backtrace-request.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
@@ -314,6 +315,25 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
     fidl::VectorView<fidl::VectorView<uint8_t>> env(envc, data);
     fprocess::Launcher::ResultOf::AddEnvirons result = launcher.AddEnvirons(env);
     tu_check("sending environment", result.status());
+  }
+
+  // Add names.
+
+  {
+    fdio_flat_namespace_t* flat;
+    zx_status_t status = fdio_ns_export_root(&flat);
+    tu_check("getting namespace", status);
+    size_t count = flat->count;
+    fprocess::NameInfo data[count];
+    for (size_t i = 0; i < count; i++) {
+      const char* path = flat->path[i];
+      data[i].path = fidl::StringView(strlen(path), path);
+      data[i].directory.reset(flat->handle[i]);
+    }
+    fidl::VectorView<fprocess::NameInfo> names(count, data);
+    fprocess::Launcher::ResultOf::AddNames result = launcher.AddNames(names);
+    tu_check("sending names", result.status());
+    free(flat);
   }
 
   // Add handles.

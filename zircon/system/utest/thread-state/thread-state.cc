@@ -376,7 +376,7 @@ static void __NO_RETURN test_child(void) {
   exit(0);
 }
 
-static launchpad_t* setup_test_child(zx_handle_t job, const char* arg, zx_handle_t* out_channel) {
+static springboard_t* setup_test_child(zx_handle_t job, const char* arg, zx_handle_t* out_channel) {
   unittest_printf("Starting test child %s.\n", arg);
   zx_handle_t our_channel, their_channel;
   tu_channel_create(&our_channel, &their_channel);
@@ -391,16 +391,16 @@ static launchpad_t* setup_test_child(zx_handle_t job, const char* arg, zx_handle
   zx_handle_t handles[1] = {their_channel};
   uint32_t handle_ids[1] = {PA_USER0};
   *out_channel = our_channel;
-  launchpad_t* lp =
-      tu_launch_fdio_init(job, test_child_name, argc, argv, NULL, 1, handles, handle_ids);
+  springboard_t* sb =
+      tu_launch_init(job, test_child_name, argc, argv, 0, NULL, 1, handles, handle_ids);
   unittest_printf("Test child setup.\n");
-  return lp;
+  return sb;
 }
 
 static void start_test_child(zx_handle_t job, const char* arg, zx_handle_t* out_child,
                              zx_handle_t* out_channel) {
-  launchpad_t* lp = setup_test_child(job, arg, out_channel);
-  *out_child = tu_launch_fdio_fini(lp);
+  springboard_t* sb = setup_test_child(job, arg, out_channel);
+  *out_child = tu_launch_fini(sb);
   unittest_printf("Test child started.\n");
 }
 
