@@ -1262,7 +1262,7 @@ mod tests {
     use std::num::NonZeroU16;
 
     use super::*;
-    use crate::device::{set_forwarding_enabled, DeviceId, FrameDestination};
+    use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
     use crate::ip::{receive_ipv4_packet, IpExt};
     use crate::testutil::{
         DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
@@ -1318,7 +1318,7 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         // currently only used by test_ttl_exceeded
         ctx.state_mut().ipv4.inner.forward = true;
-        set_forwarding_enabled::<_, Ipv4>(&mut ctx, device, true);
+        set_routing_enabled::<_, Ipv4>(&mut ctx, device, true);
         receive_ipv4_packet(&mut ctx, device, FrameDestination::Unicast, buffer);
 
         for counter in assert_counters {

@@ -13,7 +13,7 @@ use std::num::NonZeroU8;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr};
 use packet::{BufferMut, Serializer};
 use specialize_ip_macro::specialize_ip;
@@ -275,7 +275,8 @@ pub(crate) fn is_device_initialized<D: EventDispatcher>(
 /// Initialize a device.
 ///
 /// `initialize_device` will start soliciting IPv6 routers on the link if `device` is configured to
-/// be a host.
+/// be a host. If it is configured to be an advertising interface, it will start sending periodic
+/// router advertisements.
 ///
 /// `initialize_device` MUST be called after adding the device to the netstack. A device MUST NOT
 /// be used until it has been initialized.
@@ -298,16 +299,26 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
 
     state.is_initialized = true;
 
-    // RFC 4861 section 6.3.7, it implies only a host sends router
-    // solicitation messages, so if this node is a router, do nothing.
-    if self::can_forward::<_, Ipv6>(ctx, device) {
-        trace!("intialize_device: node is a router so not starting router solicitations");
-        return;
-    }
-
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            ndp::start_soliciting_routers::<_, ethernet::EthernetNdpDevice>(ctx, device.id)
+    if self::is_router_device::<_, Ipv6>(ctx, device) {
+        // If the device is operating as a router, and it is configured to be an advertising
+        // interface, start sending periodic router advertisements.
+        if get_ndp_configurations(ctx, device)
+            .get_router_configurations()
+            .get_should_send_advertisements()
+        {
+            match device.protocol {
+                DeviceProtocol::Ethernet => ndp::start_periodic_router_advertisements::<
+                    _,
+                    ethernet::EthernetNdpDevice,
+                >(ctx, device.id),
+            }
+        }
+    } else {
+        // RFC 4861 section 6.3.7, it implies only a host sends router solicitation messages.
+        match device.protocol {
+            DeviceProtocol::Ethernet => {
+                ndp::start_soliciting_routers::<_, ethernet::EthernetNdpDevice>(ctx, device.id)
+            }
         }
     }
 }
@@ -568,75 +579,135 @@ fn get_common_device_state_mut<D: EventDispatcher>(
     }
 }
 
-/// Is IP packet forwarding enabled on `device`?
+/// Is IP packet routing enabled on `device`?
 ///
-/// Note, `true` does not necessarily mean that `device` is currently forwarding IP packets. It
-/// only means that `device` is allowed to forward packets. To forward packets, this netstack must
-/// be configured to allow IP packets to be forwarded if it was not destined for this node.
-pub(crate) fn is_forwarding_enabled<D: EventDispatcher, I: Ip>(
+/// Note, `true` does not necessarily mean that `device` is currently routing IP packets. It
+/// only means that `device` is allowed to route packets. To route packets, this netstack must
+/// be configured to allow IP packets to be routed if it was not destined for this node.
+pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(
     ctx: &Context<D>,
     device: DeviceId,
 ) -> bool {
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::is_forwarding_enabled::<_, I>(ctx, device.id),
+        DeviceProtocol::Ethernet => self::ethernet::is_routing_enabled::<_, I>(ctx, device.id),
     }
 }
 
-/// Enables or disables IP packet forwarding on `device`.
+/// Enables or disables IP packet routing on `device`.
 ///
-/// `set_forwarding_enabled` does nothing if the new forwarding status, `enabled`, is the same as
-/// the current forwarding status.
+/// `set_routing_enabled` does nothing if the new routing status, `enabled`, is the same as
+/// the current routing status.
 ///
-/// Note, enabling forwarding does not mean that `device` will immediately start forwarding IP
-/// packets. It only means that `device` is allowed to forward packets. To forward packets, this
-/// netstack must be configured to allow IP packets to be forwarded if it was not destined for this
+/// Note, enabling routing does not mean that `device` will immediately start routing IP
+/// packets. It only means that `device` is allowed to route packets. To route packets, this
+/// netstack must be configured to allow IP packets to be routed if it was not destined for this
 /// node.
 #[specialize_ip]
-pub(crate) fn set_forwarding_enabled<D: EventDispatcher, I: Ip>(
+pub(crate) fn set_routing_enabled<D: EventDispatcher, I: Ip>(
     ctx: &mut Context<D>,
     device: DeviceId,
     enabled: bool,
 ) {
-    /// Sets the IP packet forwarding flag on `device`.
-    fn set_forwarding_enabled_inner<D: EventDispatcher, I: Ip>(
-        ctx: &mut Context<D>,
-        device: DeviceId,
-        enabled: bool,
-    ) {
-        match device.protocol {
-            DeviceProtocol::Ethernet => {
-                self::ethernet::set_forwarding_enabled_inner::<_, I>(ctx, device.id, enabled)
-            }
-        }
-    }
-
     // TODO(ghanan): We cannot directly do `I::VERSION` in the `trace!` calls because of a bug in
     //               specialize_ip_macro where it does not properly replace `I` with `Self`. Once
     //               this is fixed, change this.
     let version = I::VERSION;
 
-    if crate::device::is_forwarding_enabled::<_, I>(ctx, device) == enabled {
+    if crate::device::is_routing_enabled::<_, I>(ctx, device) == enabled {
         trace!(
-            "set_forwarding_enabled: {:?} forwarding status unchanged for device {:?}",
+            "set_routing_enabled: {:?} routing status unchanged for device {:?}",
             version,
             device
         );
         return;
     }
 
+    #[ipv4]
+    set_ipv4_routing_enabled(ctx, device, enabled);
+
+    #[ipv6]
+    set_ipv6_routing_enabled(ctx, device, enabled);
+}
+
+/// Sets IPv4 routing on `device`.
+fn set_ipv4_routing_enabled<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    enabled: bool,
+) {
     if enabled {
-        trace!("set_forwarding_enabled: enabling {:?} forwarding for device {:?}", version, device);
+        trace!("set_ipv4_routing_enabled: enabling IPv4 routing for device {:?}", device);
+    } else {
+        trace!("set_ipv4_routing_enabled: disabling IPv4 routing for device {:?}", device);
+    }
 
-        #[ipv6]
-        {
-            // Make sure that the netstack is configured to forward packets before considering this
-            // device a router and stopping router solicitations.
-            if crate::ip::is_forwarding_enabled::<_, Ipv6>(ctx) {
-                // TODO(ghanan): Handle transition from disabled to enabled:
-                //               - start periodic router advertisements (if configured to do so)
+    set_routing_enabled_inner::<_, Ipv4>(ctx, device, enabled);
+}
 
+/// Sets IPv6 routing on `device`.
+///
+/// If the `device` transitions from a router -> host or host -> router, periodic router
+/// advertisements will be stopped or started, and router solicitations will be started or stopped,
+/// depending on `device`'s current and new router state.
+fn set_ipv6_routing_enabled<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    enabled: bool,
+) {
+    let ip_routing = crate::ip::is_routing_enabled::<_, Ipv6>(ctx);
+
+    if enabled {
+        trace!("set_ipv6_routing_enabled: enabling IPv6 routing for device {:?}", device);
+
+        // Make sure that the netstack is configured to route packets before considering this
+        // device a router and stopping router solicitations. If the netstack was not configured
+        // to route packets before, then we would still be considered a host, so we shouldn't
+        // stop soliciting routers.
+        if ip_routing {
+            // TODO(ghanan): Handle transition from disabled to enabled:
+            //               - start periodic router advertisements (if configured to do so)
+
+            match device.protocol {
+                DeviceProtocol::Ethernet => {
+                    ndp::stop_soliciting_routers::<_, ethernet::EthernetNdpDevice>(ctx, device.id)
+                }
+            }
+        }
+
+        // Actually update the routing flag.
+        set_routing_enabled_inner::<_, Ipv6>(ctx, device, true);
+
+        // Make sure that the netstack is configured to route packets before considering this
+        // device a router and starting periodic router advertisements.
+        if ip_routing {
+            if get_ndp_configurations(ctx, device)
+                .get_router_configurations()
+                .get_should_send_advertisements()
+            {
                 match device.protocol {
-                    DeviceProtocol::Ethernet => ndp::stop_soliciting_routers::<
+                    DeviceProtocol::Ethernet => ndp::start_periodic_router_advertisements::<
+                        _,
+                        ethernet::EthernetNdpDevice,
+                    >(ctx, device.id),
+                }
+            }
+        }
+    } else {
+        trace!("set_ipv6_routing_enabled: disabling IPv6 routing for device {:?}", device);
+
+        // Make sure that the netstack is configured to route packets before considering this
+        // device a router and stopping periodic router advertisements. If the netstack was not
+        // configured to route packets before, then we would still be considered a host, so we
+        // wouldn't have any periodic router advertisements to stop.
+        if ip_routing {
+            // Make sure that the device was configured to send advertisements before stopping it.
+            // If it was never configured to stop advertisements, there should be nothing to stop.
+            if get_ndp_configurations(ctx, device)
+                .get_router_configurations()
+                .get_should_send_advertisements()
+            {
+                match device.protocol {
+                    DeviceProtocol::Ethernet => ndp::stop_periodic_router_advertisements::<
                         _,
                         ethernet::EthernetNdpDevice,
                     >(ctx, device.id),
@@ -644,43 +715,48 @@ pub(crate) fn set_forwarding_enabled<D: EventDispatcher, I: Ip>(
             }
         }
 
-        set_forwarding_enabled_inner::<_, I>(ctx, device, true);
-    } else {
-        trace!(
-            "set_forwarding_enabled: disabling {:?} forwarding for device {:?}",
-            version,
-            device
-        );
+        // Actually update the routing flag.
+        set_routing_enabled_inner::<_, Ipv6>(ctx, device, false);
 
-        set_forwarding_enabled_inner::<_, I>(ctx, device, false);
-
-        #[ipv6]
-        {
-            // We only need to start soliciting routers if we were not soliciting them before. We
-            // would only reach this point if there was a change in forwarding status for `device`.
-            // However, if the nestatck does not currently have forwarding enabled, the device would
-            // not have been considered a router before this forwarding change on the device, so it
-            // would have already solicited routers.
-            if crate::ip::is_forwarding_enabled::<_, Ipv6>(ctx) {
-                // On transition from router -> host, start soliciting router information.
-                match device.protocol {
-                    DeviceProtocol::Ethernet => ndp::start_soliciting_routers::<
-                        _,
-                        ethernet::EthernetNdpDevice,
-                    >(ctx, device.id),
+        // We only need to start soliciting routers if we were not soliciting them before. We
+        // would only reach this point if there was a change in routing status for `device`.
+        // However, if the nestatck does not currently have routing enabled, the device would
+        // not have been considered a router before this routing change on the device, so it
+        // would have already solicited routers.
+        if ip_routing {
+            // On transition from router -> host, start soliciting router information.
+            match device.protocol {
+                DeviceProtocol::Ethernet => {
+                    ndp::start_soliciting_routers::<_, ethernet::EthernetNdpDevice>(ctx, device.id)
                 }
             }
         }
     }
 }
 
-/// Can `device` forward IP packets?
+/// Sets the IP packet routing flag on `device`.
+fn set_routing_enabled_inner<D: EventDispatcher, I: Ip>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    enabled: bool,
+) {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            self::ethernet::set_routing_enabled_inner::<_, I>(ctx, device.id, enabled)
+        }
+    }
+}
+
+/// Is `device` currently operating as a router?
 ///
-/// Returns `true` if both the `device` has forwarding enabled AND the netstack is configured to
-/// forward packets not destined for it; returns `false` otherwise.
-pub(crate) fn can_forward<D: EventDispatcher, I: Ip>(ctx: &Context<D>, device: DeviceId) -> bool {
-    (crate::ip::is_forwarding_enabled::<_, I>(ctx)
-        && crate::device::is_forwarding_enabled::<_, I>(ctx, device))
+/// Returns `true` if both the `device` has routing enabled AND the netstack is configured to
+/// route packets not destined for it; returns `false` otherwise.
+pub(crate) fn is_router_device<D: EventDispatcher, I: Ip>(
+    ctx: &Context<D>,
+    device: DeviceId,
+) -> bool {
+    (crate::ip::is_routing_enabled::<_, I>(ctx)
+        && crate::device::is_routing_enabled::<_, I>(ctx, device))
 }
 
 /// Updates the NDP Configurations for a `device`.

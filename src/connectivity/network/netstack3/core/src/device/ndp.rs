@@ -44,7 +44,7 @@ use crate::wire::icmp::ndp::{
 };
 use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
 use crate::wire::ipv6::Ipv6PacketBuilder;
-use crate::{Context, EventDispatcher, StackState, TimerId, TimerIdInner};
+use crate::{Context, EventDispatcher, Instant, StackState, TimerId, TimerIdInner};
 
 //
 // Default Router configurations
@@ -135,6 +135,30 @@ const RTR_SOLICITATION_INTERVAL: Duration = Duration::from_secs(4);
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
 /// [RFC 4861 section 6.3.7]: https://tools.ietf.org/html/rfc4861#section-6.3.7
 const MAX_RTR_SOLICITATION_DELAY: Duration = Duration::from_secs(1);
+
+//
+// Router Constants
+//
+
+/// The number of initial Router Advertisements sent from a device when it transitions into an
+/// advertising interface where the randomly chosen delay before sending the next Router
+/// Advertisement SHOULD be saturated at `MAX_INITIAL_RTR_ADVERT_INTERVAL`.
+///
+/// See [RFC 4861 section 6.3.4] and [RFC 4861 section 10] for more details.
+///
+/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
+/// [RFC 4861 section 6.3.4]: https://tools.ietf.org/html/rfc4861#section-6.3.4
+const MAX_INITIAL_RTR_ADVERTISEMENTS: u64 = 3;
+
+/// The maximum delay before sending the next Router Advertisement for the first
+/// `MAX_INITIAL_RTR_ADVERTISEMENTS` Router Advertisements when an interface transitions into an
+/// advertising interface.
+///
+/// See [RFC 4861 section 6.3.4] and [RFC 4861 section 10] for more details.
+///
+/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
+/// [RFC 4861 section 6.3.4]: https://tools.ietf.org/html/rfc4861#section-6.3.4
+const MAX_INITIAL_RTR_ADVERT_INTERVAL: Duration = Duration::from_secs(16);
 
 /// A link layer address that can be discovered using NDP.
 pub(crate) trait LinkLayerAddress: Copy + Clone + Debug + PartialEq {
@@ -342,8 +366,8 @@ pub(crate) trait NdpDevice: Sized {
     /// Can `device_id` route IP packets not destined for it?
     ///
     /// If `is_router` returns `true`, we know that both the `device_id` and the netstack (`ctx`)
-    /// have forwarding enabled; if `is_router` returns false, either `device_id` or the netstack
-    /// (`ctx`) has forwarding disabled.
+    /// have routing enabled; if `is_router` returns false, either `device_id` or the netstack
+    /// (`ctx`) has routing disabled.
     fn is_router<D: EventDispatcher>(ctx: &Context<D>, device_id: usize) -> bool;
 }
 
@@ -448,7 +472,7 @@ impl NdpConfigurations {
     /// Set the router configurations used by NDP.
     ///
     /// Note, unless the device is operating as a router (both netstack and the device has
-    /// forwarding enabled (See [`crate::device::can_forward`]), these values will not be
+    /// routing enabled (See [`crate::device::can_forward`]), these values will not be
     /// used. However, if a device or netstack configuration update occurs and the device
     /// ends up operating as a router, these values will be used for Router Advertisements.
     pub fn set_router_configurations(&mut self, v: NdpRouterConfigurations) {
@@ -833,12 +857,12 @@ impl NdpRouterConfigurations {
 ///
 /// Each device will contain an `NdpState` object to keep track of discovery
 /// operations.
-pub(crate) struct NdpState<D: NdpDevice> {
+pub(crate) struct NdpState<ND: NdpDevice> {
     //
     // NDP operation data structures.
     //
     /// List of neighbors.
-    neighbors: NeighborTable<D::LinkAddress>,
+    neighbors: NeighborTable<ND::LinkAddress>,
 
     /// List of default routers, indexed by their link-local address.
     default_routers: HashSet<LinkLocalAddr<Ipv6Addr>>,
@@ -852,6 +876,12 @@ pub(crate) struct NdpState<D: NdpDevice> {
 
     /// Number of remaining router solicitation messages to send.
     router_solicitations_remaining: u8,
+
+    /// Number of Router Advertisements sent to the IPv6 all-nodes multicast address.
+    ///
+    /// Note, this value does not include Router Advertisements sent directly to a host (response to
+    /// a Router Solicitation message).
+    all_nodes_transmited_router_advertisements: u64,
 
     //
     // Interace parameters learned from Router Advertisements.
@@ -899,7 +929,7 @@ pub(crate) struct NdpState<D: NdpDevice> {
     configs: NdpConfigurations,
 }
 
-impl<D: NdpDevice> NdpState<D> {
+impl<ND: NdpDevice> NdpState<ND> {
     pub(crate) fn new(configs: NdpConfigurations) -> Self {
         let mut ret = Self {
             neighbors: NeighborTable::default(),
@@ -907,6 +937,7 @@ impl<D: NdpDevice> NdpState<D> {
             dad_transmits_remaining: HashMap::new(),
             on_link_prefixes: HashSet::new(),
             router_solicitations_remaining: 0,
+            all_nodes_transmited_router_advertisements: 0,
 
             base_reachable_time: REACHABLE_TIME_DEFAULT,
             reachable_time: REACHABLE_TIME_DEFAULT,
@@ -1081,6 +1112,8 @@ pub(crate) enum InnerNdpTimerId {
     RouterInvalidation { ip: LinkLocalAddr<Ipv6Addr> },
     /// Timer to invalidate a prefix.
     PrefixInvalidation { addr_subnet: AddrSubnet<Ipv6Addr> },
+    /// Timer to send a Router Advertisement.
+    RouterAdvertisementTransmit,
     // TODO: The RFC suggests that we SHOULD make a random delay to
     // join the solicitation group. When we support MLD, we probably
     // want one for that.
@@ -1137,6 +1170,16 @@ impl NdpTimerId {
         NdpTimerId {
             device_id: ND::get_device_id(device_id),
             inner: InnerNdpTimerId::PrefixInvalidation { addr_subnet },
+        }
+        .into()
+    }
+
+    pub(crate) fn new_router_advertisement_transmit_timer_id<ND: NdpDevice>(
+        device_id: usize,
+    ) -> TimerId {
+        NdpTimerId {
+            device_id: ND::get_device_id(device_id),
+            inner: InnerNdpTimerId::RouterAdvertisementTransmit,
         }
         .into()
     }
@@ -1250,6 +1293,13 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
             // fired so `invalidate_prefix` will not panic.
             ND::get_ndp_state_mut(ctx.state_mut(), device_id).invalidate_prefix(addr_subnet);
         }
+        InnerNdpTimerId::RouterAdvertisementTransmit => {
+            // Send the router advertisement to the IPv6 all-nodes multicast address.
+            send_router_advertisement::<_, ND>(ctx, device_id, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
+
+            // Schedule the next router advertisement.
+            schedule_next_router_advertisements::<_, ND>(ctx, device_id);
+        }
     }
 }
 
@@ -1270,7 +1320,68 @@ pub(crate) fn set_ndp_configurations<D: EventDispatcher, ND: NdpDevice + 'static
     device_id: usize,
     configs: NdpConfigurations,
 ) {
+    let existing_configs = get_ndp_configurations::<_, ND>(ctx, device_id).clone();
+
+    // Update the configurations.
     ND::get_ndp_state_mut(ctx.state_mut(), device_id).configs = configs;
+
+    // If the device was not a router before, then it won't be a router after any NDP configuration
+    // change so we only check router-specific configuration changes if the device is a router.
+    if ND::is_router(ctx, device_id) {
+        let old_rc = existing_configs.get_router_configurations();
+        let new_rc = get_ndp_configurations::<_, ND>(ctx, device_id).get_router_configurations();
+
+        //
+        // Check if device changes advertising interfacee status (should/should't send Router
+        // Advertisements).
+        //
+
+        if !old_rc.get_should_send_advertisements() && new_rc.get_should_send_advertisements() {
+            // If the device is now an advertising interface, start sending router
+            // advertisements.
+            start_periodic_router_advertisements::<_, ND>(ctx, device_id);
+        } else if old_rc.get_should_send_advertisements()
+            && !new_rc.get_should_send_advertisements()
+        {
+            // If the device is now not an advertising interface, stop sending router
+            // advertisements.
+            stop_periodic_router_advertisements::<_, ND>(ctx, device_id);
+        }
+
+        //
+        // Check for a change in min/max interval between sending Router Advertisements.
+        //
+        // If the time from now to the instant when the next Router Advertisement is to be sent is
+        // greater than the new MaxRtrAdvInterval, schedule a new Router Advertisement.
+        //
+        // Note, we intentionally ignore the case when the next Router Advertisement to be sent is
+        // less than the new MinRtrAdvInterval to make sure we do not unintentionally wait too long
+        // before sending the next Router Advertisement.
+        //
+
+        let old_interval = old_rc.get_router_advertisements_interval();
+        let new_interval = get_ndp_configurations::<_, ND>(ctx, device_id)
+            .get_router_configurations()
+            .get_router_advertisements_interval();
+
+        if old_interval != new_interval {
+            // If a Router Advertisement is scheduled, make sure the time it will fire is not
+            // more than MaxRtrAdvInterval from now.
+            if let Some(next_instant) = ctx.dispatcher().scheduled_instant(
+                NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id),
+            ) {
+                let now = ctx.dispatcher().now();
+                let max_instant = now
+                    .checked_add(Duration::from_secs((*new_interval.end()).into()))
+                    .expect("Failed to calculate new max delay before NDP RA transmission");
+
+                if next_instant > max_instant {
+                    // Next RA will be sent too far from now. Reschedule it.
+                    schedule_next_router_advertisements::<_, ND>(ctx, device_id);
+                }
+            }
+        }
+    }
 }
 
 /// Gets the NDP Configurations for a `device_id`.
@@ -1529,14 +1640,124 @@ impl<H> Default for NeighborTable<H> {
     }
 }
 
+/// Start sending periodic router advertisements.
+///
+/// # Panics
+///
+/// Panics if `device_id` is not operating as a router, if it is not configured to send Router
+/// Advertisements, or if it does not have an assigned (non-tentative) link-local address.
+pub(crate) fn start_periodic_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+) {
+    trace!(
+        "ndp::start_periodic_router_advertisements: start sending router advertisements from device: {:?}",
+        ND::get_device_id(device_id)
+    );
+
+    // Reset the number of Router Advertisements transmited to the all-nodes multicast address.
+    ND::get_ndp_state_mut(ctx.state_mut(), device_id).all_nodes_transmited_router_advertisements =
+        0;
+
+    schedule_next_router_advertisements::<_, ND>(ctx, device_id);
+}
+
+/// Stop sending periodic router advertisements.
+///
+/// # Panics
+///
+/// Panics if `device_id` is not currently sending periodic router advertisements.
+pub(crate) fn stop_periodic_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+) {
+    // Cancel the next periodic router advertisement timeout.
+    //
+    // May panic if we are not currently scheduled to send a  periodic router advertisements.
+    ctx.dispatcher_mut()
+        .cancel_timeout(NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id))
+        .unwrap();
+}
+
+/// Schedule next unsolicited Router Advertisement message.
+///
+/// `schedule_next_router_advertisements` will overwrite any existing scheduled Router Advertisement
+/// transmissions.
+///
+/// # Panics
+///
+/// Panics if `device_id` is not operating as a router, if it is not configured to send Router
+/// Advertisements, or if it does not have an assigned (non-tentative) link-local address.
+pub(crate) fn schedule_next_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+) {
+    assert!(ND::is_router(ctx, device_id));
+
+    // If we are attempting to send a router advertisement, we need to have a valid
+    // link-local address, as per RFC 4861 section 4.2. The call to either `unwrap` may
+    // panic if `device_id` does not have an assigned (non-tentative) link-local address,
+    // but this is documented for this method.
+    let _src_ip =
+        ND::get_link_local_addr(ctx.state(), device_id).unwrap().try_into_permanent().unwrap();
+
+    let router_configurations =
+        ND::get_ndp_state(ctx.state(), device_id).configs.get_router_configurations();
+
+    // Device MUST be configured to send router advertisements if we reach this point. If it is not
+    // configured to send router advertisements, we should not have called this method.
+    assert!(router_configurations.get_should_send_advertisements());
+
+    trace!(
+        "ndp::schedule_next_router_advertisements: scheduling the next router advertisement for device {:?}",
+        ND::get_device_id(device_id)
+    );
+
+    // Calculate a random time from the interface's MinRtrAdvInterval and MaxRtrAdvInterval, as per
+    // RFC 4861 section 6.2.4.
+    let tx_range = ND::get_ndp_state(ctx.state_mut(), device_id)
+        .configs
+        .get_router_configurations()
+        .get_router_advertisements_interval();
+
+    let mut delay = Duration::from_secs(
+        ctx.dispatcher_mut().rng().gen_range(tx_range.start(), tx_range.end()).into(),
+    );
+
+    // As per RFC 6.2.4, for the first few advertisements (up to `MAX_INITIAL_RTR_ADVERTISEMENTS`)
+    // sent from an interface when it becomes an advertising interface, if the randomly chosen
+    // interval is greater than `MAX_INITIAL_RTR_ADVERT_INTERVAL`, the timer SHOULD be set to
+    // `MAX_INITIAL_RTR_ADVERT_INTERVAL` instead.  Using a smaller interval for the initial
+    // advertisements increases the likelihood of a router being discovered quickly when it first
+    // becomes available, in the presence of possible packet loss.
+    //
+    // TODO(ghanan): Make the choice to limit the delay of the first few advertisements configurable
+    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    if (ndp_state.all_nodes_transmited_router_advertisements < MAX_INITIAL_RTR_ADVERTISEMENTS)
+        && (delay > MAX_INITIAL_RTR_ADVERT_INTERVAL)
+    {
+        trace!("schedule_next_router_advertisements: still sending the initial batch of router advertisements so limiting delay to MAX_INITIAL_RTR_ADVERT_INTERVAL ({:?})", MAX_INITIAL_RTR_ADVERT_INTERVAL);
+
+        delay = MAX_INITIAL_RTR_ADVERT_INTERVAL;
+    }
+
+    trace!("delay = {:?}", delay);
+
+    // Schedule the timout to send the router advertisement.
+    ctx.dispatcher_mut().schedule_timeout(
+        delay,
+        NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id),
+    );
+}
+
 /// Start soliciting routers.
 ///
-/// Does nothing if a device's MAX_RTR_SOLICITATIONS parameter is `0`.
+/// Does nothing if a device's MAX_RTR_SOLICITATIONS parameters is `0`.
 ///
 /// # Panics
 ///
 /// Panics if we attempt to start router solicitation as a router, or if
-/// router solicitation is already in progress.
+/// the device is already soliciting routers.
 pub(crate) fn start_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
@@ -1549,12 +1770,12 @@ pub(crate) fn start_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
     // MUST NOT already be performing router solicitation.
     assert_eq!(ndp_state.router_solicitations_remaining, 0);
 
-    trace!(
-        "ndp::start_soliciting_routers: start soliciting routers for device: {:?}",
-        ND::get_device_id(device_id)
-    );
-
     if let Some(v) = ndp_state.configs.max_router_solicitations {
+        trace!(
+            "ndp::start_soliciting_routers: start soliciting routers for device: {:?}",
+            ND::get_device_id(device_id)
+        );
+
         ndp_state.router_solicitations_remaining = v.get();
 
         // As per RFC 4861 section 6.3.7, delay the first transmission for a random amount of time
@@ -1568,6 +1789,8 @@ pub(crate) fn start_soliciting_routers<D: EventDispatcher, ND: NdpDevice>(
             .dispatcher_mut()
             .schedule_timeout(delay, NdpTimerId::new_router_solicitation_timer_id::<ND>(device_id))
             .is_none());
+    } else {
+        trace!("ndp::start_soliciting_routers: device {:?} not configured to send any router solicitations", ND::get_device_id(device_id));
     }
 }
 
@@ -1887,8 +2110,9 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
     let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
     let mut options = vec![NdpOption::SourceLinkLayerAddress(src_ll.bytes())];
 
-    let router_configurations =
-        ND::get_ndp_state(ctx.state_mut(), device_id).configs.get_router_configurations();
+    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+
+    let router_configurations = ndp_state.configs.get_router_configurations();
 
     // If the link mtu is set to `None`, do not include the mtu option.
     //
@@ -1918,6 +2142,12 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
         ))
         // The hop limit of a Router Advertisement message is set to `255` by RFC 4861 section 4.2.
         .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 255, IpProto::Icmpv6));
+
+    // If `dst_ip` is the IPv6 all-nodes multicast address, increment the counter for number of
+    // Router Advertisements sent to the IPv6 all-nodes multicast address.
+    if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS {
+        ndp_state.all_nodes_transmited_router_advertisements += 1;
+    }
 
     // Attempt to send the router advertisement message.
     ND::send_ipv6_frame(ctx, device_id, dst_ip, body).unwrap_or_else(|_| {
@@ -2473,13 +2703,15 @@ where
 mod tests {
     use super::*;
 
+    use std::convert::TryFrom;
+
     use net_types::ethernet::Mac;
     use net_types::ip::AddrSubnet;
     use packet::{Buf, Buffer, ParseBuffer};
 
     use crate::device::{
         ethernet::EthernetNdpDevice, get_ip_addr_subnet, get_ipv6_hop_limit, get_mtu,
-        is_forwarding_enabled, is_in_ip_multicast, set_forwarding_enabled, set_ip_addr_subnet,
+        is_in_ip_multicast, is_routing_enabled, set_ip_addr_subnet, set_routing_enabled,
     };
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
@@ -2556,6 +2788,53 @@ mod tests {
         assert_eq!(c.get_advertised_current_hop_limit(), hop_limit);
         assert_eq!(c.get_advertised_default_lifetime(), default_lifetime);
         assert_eq!(c.get_advertised_prefix_list(), prefix_list);
+    }
+
+    /// Validate the initial Router Advertisements sent by `ctx` after making a device
+    /// an advertising interface.
+    ///
+    /// By the time this method returns, 3 packets will be sent.
+    fn validate_initial_ras_after_enable(
+        ctx: &mut Context<DummyEventDispatcher>,
+        device: DeviceId,
+        ndp_configs: &NdpConfigurations,
+        offset: usize,
+    ) {
+        // The first `MAX_INITIAL_RTR_ADVERTISEMENTS` messages will have a delay of at max
+        // `MAX_INITIAL_RTR_ADVERT_INTERVAL`
+        for i in 0..MAX_INITIAL_RTR_ADVERTISEMENTS {
+            assert_eq!(ctx.dispatcher().frames_sent().len(), offset + usize::try_from(i).unwrap());
+            let now = ctx.dispatcher().now();
+            assert_eq!(
+                ctx.dispatcher()
+                    .timer_events()
+                    .filter(|x| (*x.0 <= (now + MAX_INITIAL_RTR_ADVERT_INTERVAL))
+                        && (*x.1
+                            == NdpTimerId::new_router_advertisement_transmit_timer_id::<
+                                EthernetNdpDevice,
+                            >(device.id())))
+                    .count(),
+                1
+            );
+            assert!(trigger_next_timer(ctx));
+        }
+
+        // Should still have the timer set, but now the time must be between the valid interval
+        let interval = ndp_configs.get_router_configurations().get_router_advertisements_interval();
+        let now = ctx.dispatcher().now();
+        assert_eq!(ctx.dispatcher().frames_sent().len(), offset + 3);
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0 >= (now + Duration::from_secs((*interval.start()).into())))
+                    && (*x.0 <= (now + Duration::from_secs((*interval.end()).into())))
+                    && (*x.1
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
+                            EthernetNdpDevice,
+                        >(device.id())))
+                .count(),
+            1
+        );
     }
 
     #[test]
@@ -3390,7 +3669,7 @@ mod tests {
         state_builder.ipv6_builder().forward(true);
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build_with(state_builder, DummyEventDispatcher::default());
-        set_forwarding_enabled::<_, Ipv6>(&mut ctx, DeviceId::new_ethernet(0), true);
+        set_routing_enabled::<_, Ipv6>(&mut ctx, DeviceId::new_ethernet(0), true);
         icmpv6_packet_buf.reset();
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
@@ -4229,9 +4508,9 @@ mod tests {
         // timer doesn't replace the current one.
         let instant = timers[0].0.clone();
 
-        // Enable forwarding on device.
-        set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, true);
-        assert!(is_forwarding_enabled::<_, Ipv6>(&ctx, device));
+        // Enable routing on device.
+        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        assert!(is_routing_enabled::<_, Ipv6>(&ctx, device));
 
         // Should have not send any new packets and still have the original router solicitation
         // timer set.
@@ -4242,7 +4521,7 @@ mod tests {
         assert_eq!(*timers[0].0, instant);
 
         //
-        // Now make the netstack and a device actually forwarding capable.
+        // Now make the netstack and a device actually routing capable.
         //
 
         let mut state_builder = StackStateBuilder::default();
@@ -4278,17 +4557,17 @@ mod tests {
             .unwrap();
         assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 1);
 
-        // Enable forwarding on the device.
-        set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, true);
-        assert!(is_forwarding_enabled::<_, Ipv6>(&ctx, device));
+        // Enable routing on the device.
+        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        assert!(is_routing_enabled::<_, Ipv6>(&ctx, device));
 
         // Should have not sent any new packets, but unset the router solicitation timer.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 0);
 
         // Unsetting routing should succeed.
-        set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, false);
-        assert!(!is_forwarding_enabled::<_, Ipv6>(&ctx, device));
+        set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
+        assert!(!is_routing_enabled::<_, Ipv6>(&ctx, device));
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         let timers: Vec<(&DummyInstant, &TimerId)> =
             ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
@@ -4443,7 +4722,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         // Make `device` a router (netstack is configured to forward packets already).
-        crate::device::set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, true);
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
 
         // Should panic since sending router advertisements is disabled.
         send_router_advertisement::<_, EthernetNdpDevice>(
@@ -4472,7 +4751,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         // Make `device` a router (netstack is configured to forward packets already).
-        crate::device::set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, true);
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
 
         // Enable and send router advertisements.
         EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
@@ -4557,5 +4836,202 @@ mod tests {
         assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
         assert_eq!(code, IcmpUnusedCode);
         assert_eq!(message, RouterAdvertisement::new(75, true, false, 2000, 50, 200));
+    }
+
+    #[test]
+    fn test_sending_unsolicited_router_advertisements() {
+        let mut ndp_configs = NdpConfigurations::default();
+        let mut ndp_rc_configs = NdpRouterConfigurations::default();
+        ndp_rc_configs.set_should_send_advertisements(true);
+        ndp_configs.set_router_configurations(ndp_rc_configs);
+        ndp_configs.set_max_router_solicitations(None);
+
+        //
+        // When netstack is not configured to forward IP packets, should not send router
+        // advertisements.
+        //
+
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+
+        // Setting a non-router device to be an advertising interface should do nothing.
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+
+        //
+        // Test sending router advertisements.
+        //
+
+        let mut state_builder = StackStateBuilder::default();
+        state_builder.ipv6_builder().forward(true);
+        {
+            let mut ndp_configs = NdpConfigurations::default();
+            ndp_configs.set_dup_addr_detect_transmits(None);
+            ndp_configs.set_max_router_solicitations(None);
+            state_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        }
+        let mut ctx = DummyEventDispatcherBuilder::default()
+            .build_with(state_builder, DummyEventDispatcher::default());
+        let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+
+        // Setting a non-router device to be an advertising interface should do nothing.
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+
+        // Setting a non-advertising interface to a router should do nothing.
+        crate::device::set_ndp_configurations(&mut ctx, device, NdpConfigurations::default());
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+
+        // Set to be an advertising interface ().
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 0);
+
+        // Setting to be a non-router should end router advertisements.
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| *x.1
+                    == NdpTimerId::new_router_advertisement_transmit_timer_id::<EthernetNdpDevice>(
+                        device.id()
+                    ))
+                .count(),
+            0
+        );
+
+        // Set back to a router.
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        // Would only have sent 3 packets, but an extra one for the router solicitation when we
+        // turned `device` into a host.
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 3);
+
+        // Setting to be a non-advertising interface should end router advertisements.
+        crate::device::set_ndp_configurations(&mut ctx, device, NdpConfigurations::default());
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+
+        // Set back to being an advertising interface.
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 6);
+    }
+
+    #[test]
+    fn test_updating_ndp_router_config_router_advertisement_interval() {
+        let mut ndp_configs = NdpConfigurations::default();
+        let mut ndp_rc_configs = NdpRouterConfigurations::default();
+        ndp_rc_configs.set_should_send_advertisements(true);
+        ndp_rc_configs.set_router_advertisements_interval(200..=300);
+        ndp_configs.set_router_configurations(ndp_rc_configs.clone());
+        ndp_configs.set_dup_addr_detect_transmits(None);
+        ndp_configs.set_max_router_solicitations(None);
+
+        let mut state_builder = StackStateBuilder::default();
+        state_builder.ipv6_builder().forward(true);
+        state_builder.device_builder().set_default_ndp_configs(ndp_configs.clone());
+        let mut ctx = DummyEventDispatcherBuilder::default()
+            .build_with(state_builder, DummyEventDispatcher::default());
+        let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+
+        // Make device a router so it will start sending router advertisements
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 0);
+        let now = ctx.dispatcher().now();
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0 >= (now + Duration::from_secs(200)))
+                    && (*x.0 <= (now + Duration::from_secs(300)))
+                    && (*x.1
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
+                            EthernetNdpDevice,
+                        >(device.id())))
+                .count(),
+            1
+        );
+
+        // Update the routing interval to some value that will make the timer get rescheduled
+        // (new max delay is less than the time to the next Router Advertisement transmission).
+        ndp_rc_configs.set_router_advertisements_interval(50..=100);
+        ndp_configs.set_router_configurations(ndp_rc_configs.clone());
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0 >= (now + Duration::from_secs(50)))
+                    && (*x.0 <= (now + Duration::from_secs(100)))
+                    && (*x.1
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
+                            EthernetNdpDevice,
+                        >(device.id())))
+                .count(),
+            1
+        );
+
+        // Update the routing interval to some value that will not make the timer get rescheduled
+        // (new max delay is greater than the time to the next Router Advertisement transmission).
+        ndp_rc_configs.set_router_advertisements_interval(25..=300);
+        ndp_configs.set_router_configurations(ndp_rc_configs.clone());
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0 >= (now + Duration::from_secs(50)))
+                    && (*x.0 <= (now + Duration::from_secs(100)))
+                    && (*x.1
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
+                            EthernetNdpDevice,
+                        >(device.id())))
+                .count(),
+            1
+        );
+
+        // Update the routing interval to some value that will not make the timer get rescheduled
+        // (new min delay is greater than the time to the next Router Advertisement transmission).
+        ndp_rc_configs.set_router_advertisements_interval(500..=1000);
+        ndp_configs.set_router_configurations(ndp_rc_configs.clone());
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0 >= (now + Duration::from_secs(50)))
+                    && (*x.0 <= (now + Duration::from_secs(150)))
+                    && (*x.1
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
+                            EthernetNdpDevice,
+                        >(device.id())))
+                .count(),
+            1
+        );
+
+        // Resetting the advertising interface status should use the new updated interval.
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 3);
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| (*x.0 >= (now + Duration::from_secs(500)))
+                    && (*x.0 <= (now + Duration::from_secs(1000)))
+                    && (*x.1
+                        == NdpTimerId::new_router_advertisement_transmit_timer_id::<
+                            EthernetNdpDevice,
+                        >(device.id())))
+                .count(),
+            1
+        );
     }
 }

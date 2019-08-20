@@ -1232,13 +1232,13 @@ fn forward<D: EventDispatcher, A: IpAddress>(
     trace!("ip::forward: destination ip = {:?}", dst_ip);
 
     // Is this netstack configured to foward packets not destined for it?
-    if !crate::ip::is_forwarding_enabled::<_, A::Version>(ctx) {
+    if !crate::ip::is_routing_enabled::<_, A::Version>(ctx) {
         trace!("ip::forward: can't forward because netstack not configured to do so");
         return None;
     }
 
     // Does the interface the packet arrived on have routing enabled?
-    if !crate::device::is_forwarding_enabled::<_, A::Version>(ctx, device_id) {
+    if !crate::device::is_routing_enabled::<_, A::Version>(ctx, device_id) {
         trace!("ip::forward: can't forward because packet arrived on an interface without routing enabled; device = {:?}", device_id);
         return None;
     }
@@ -1661,9 +1661,9 @@ impl<I: IcmpIpExt, B: BufferMut, D: BufferDispatcher<B>> IcmpContext<I, B> for C
     }
 }
 
-/// Is `ctx` configured to forward packets?
+/// Is `ctx` configured to route packets?
 #[specialize_ip]
-pub(crate) fn is_forwarding_enabled<D: EventDispatcher, I: Ip>(ctx: &Context<D>) -> bool {
+pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(ctx: &Context<D>) -> bool {
     get_state_inner::<I, _>(ctx.state()).forward
 }
 
@@ -1696,7 +1696,7 @@ mod tests {
     use packet::{Buf, ParseBuffer};
     use rand::Rng;
 
-    use crate::device::{set_forwarding_enabled, FrameDestination};
+    use crate::device::{set_routing_enabled, FrameDestination};
     use crate::ip::path_mtu::{get_pmtu, min_mtu};
     use crate::testutil::*;
     use crate::wire::ethernet::EthernetFrame;
@@ -2279,7 +2279,7 @@ mod tests {
 
     fn test_ip_reassembly_only_at_destination_host<I: Ip>() {
         // Create a new network with two parties (alice & bob) and
-        // enable IP packet forwarding for alice.
+        // enable IP packet routing for alice.
         let a = "alice";
         let b = "bob";
         let dummy_config = get_dummy_config::<I::Addr>();
@@ -2293,7 +2293,7 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap())
             .build_with(state_builder, DummyEventDispatcher::default());
-        set_forwarding_enabled::<_, I>(&mut alice, device, true);
+        set_routing_enabled::<_, I>(&mut alice, device, true);
         let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
         let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
         let mut net = DummyNetwork::new(contexts, move |net, device_id| {
@@ -2369,7 +2369,7 @@ mod tests {
         dispatcher_builder.add_ndp_table_entry(0, extra_mac.to_ipv6_link_local().get(), extra_mac);
         let mut ctx = dispatcher_builder.build_with(state_builder, DummyEventDispatcher::default());
         let device = DeviceId::new_ethernet(0);
-        set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, true);
+        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
         let frame_dst = FrameDestination::Unicast;
 
         // Construct an IPv6 packet that is too big for our MTU (MTU = 1280; body itself is 5000).

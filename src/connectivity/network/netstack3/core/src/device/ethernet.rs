@@ -74,8 +74,8 @@ create_protocol_enum!(
 pub(crate) struct EthernetDeviceStateBuilder {
     mac: Mac,
     mtu: u32,
-    forward_ipv4: bool,
-    forward_ipv6: bool,
+    route_ipv4: bool,
+    route_ipv6: bool,
     ndp_configs: ndp::NdpConfigurations,
 }
 
@@ -98,8 +98,8 @@ impl EthernetDeviceStateBuilder {
         Self {
             mac,
             mtu,
-            forward_ipv4: false,
-            forward_ipv6: false,
+            route_ipv4: false,
+            route_ipv6: false,
             ndp_configs: ndp::NdpConfigurations::default(),
         }
     }
@@ -110,20 +110,20 @@ impl EthernetDeviceStateBuilder {
         self.ndp_configs = v;
     }
 
-    /// Enable/disable IP packetforwarding.
-    pub(crate) fn set_forward<I: Ip>(&mut self, v: bool) {
+    /// Enable/disable IP packet routing.
+    pub(crate) fn set_route<I: Ip>(&mut self, v: bool) {
         // We implement this method by using an inner function that gets specialized because when
         // `specialize_ip_macro` generates the IP specific code, it doesn't properly handle a type's
         // member functions. Instead lets say we have the following code:
         //
         // ```
         // #[specialize_ip]
-        // pub(crate) fn set_forward<I: Ip>(&mut self, v: bool) {
+        // pub(crate) fn set_route<I: Ip>(&mut self, v: bool) {
         //     #[ipv4]
-        //     self.forward_ipv4 = v;
+        //     self.route_ipv4 = v;
         //
         //     #[ipv6]
-        //     self.forward_ipv6 = v;
+        //     self.route_ipv6 = v;
         // }
         // ```
         //
@@ -131,7 +131,7 @@ impl EthernetDeviceStateBuilder {
         // (code irrelevant to this example has been replaced with "..."):
         //
         // ```
-        // pub(crate) fn set_forward<I: Ip>(&mut self, v: bool) {
+        // pub(crate) fn set_route<I: Ip>(&mut self, v: bool) {
         //     trait Ext: net_types::ip::Ip {
         //         ...
         //         fn f(&mut self, v: bool);
@@ -142,13 +142,13 @@ impl EthernetDeviceStateBuilder {
         //
         //     impl Ext for net_types::ip::Ipv4 {
         //         ...
-        //         fn f(&mut self, v: bool) { self.forward_ipv4 = v; }
+        //         fn f(&mut self, v: bool) { self.route_ipv4 = v; }
         //         ...
         //     }
         //
         //     impl Ext for net_types::ip::Ipv6 {
         //         ...
-        //         fn f(&mut self, v: bool) { self.forward_ipv6 = v; }
+        //         fn f(&mut self, v: bool) { self.route_ipv6 = v; }
         //         ...
         //     }
         //
@@ -165,10 +165,10 @@ impl EthernetDeviceStateBuilder {
         #[specialize_ip]
         fn inner<I: Ip>(builder: &mut EthernetDeviceStateBuilder, v: bool) {
             #[ipv4]
-            builder.forward_ipv4 = v;
+            builder.route_ipv4 = v;
 
             #[ipv6]
-            builder.forward_ipv6 = v;
+            builder.route_ipv6 = v;
         }
 
         inner::<I>(self, v)
@@ -195,8 +195,8 @@ impl EthernetDeviceStateBuilder {
             ipv6_multicast_groups,
             ipv4_arp: ArpState::default(),
             ndp: NdpState::new(self.ndp_configs),
-            forward_ipv4: self.forward_ipv4,
-            forward_ipv6: self.forward_ipv6,
+            route_ipv4: self.route_ipv4,
+            route_ipv6: self.route_ipv6,
             pending_frames: HashMap::new(),
         }
     }
@@ -240,27 +240,27 @@ pub(crate) struct EthernetDeviceState {
     /// (IPv6) NDP state.
     ndp: ndp::NdpState<EthernetNdpDevice>,
 
-    /// A flag indicating whether forwarding of IPv4 packets not destined for this device is
+    /// A flag indicating whether routing of IPv4 packets not destined for this device is
     /// enabled.
     ///
-    /// This flag controls whether or not packets can be forwarded from this device. That is, when a
-    /// packet arrives at a device it is not destined for, the packet can only be forwarded if the
-    /// device it arrived at has forwarding enabled and there exists another device that has a path
-    /// to the packet's destination, regardless the other device's forwarding ability.
+    /// This flag controls whether or not packets can be routed from this device. That is, when a
+    /// packet arrives at a device it is not destined for, the packet can only be routed if the
+    /// device it arrived at has routing enabled and there exists another device that has a path
+    /// to the packet's destination, regardless the other device's routing ability.
     ///
     /// Default: `false`.
-    forward_ipv4: bool,
+    route_ipv4: bool,
 
-    /// A flag indicating whether forwarding of IPv6 packets not destined for this device is
+    /// A flag indicating whether routing of IPv6 packets not destined for this device is
     /// enabled.
     ///
-    /// This flag controls whether or not packets can be forwarded from this device. That is, when a
-    /// packet arrives at a device it is not destined for, the packet can only be forwarded if the
-    /// device it arrived at has forwarding enabled and there exists another device that has a path
-    /// to the packet's destination, regardless the other device's forwarding ability.
+    /// This flag controls whether or not packets can be routed from this device. That is, when a
+    /// packet arrives at a device it is not destined for, the packet can only be routed if the
+    /// device it arrived at has routing enabled and there exists another device that has a path
+    /// to the packet's destination, regardless the other device's routing ability.
     ///
     /// Default: `false`.
-    forward_ipv6: bool,
+    route_ipv6: bool,
 
     // pending_frames stores a list of serialized frames indexed by their
     // desintation IP addresses. The frames contain an entire EthernetFrame
@@ -603,31 +603,31 @@ pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(
     get_device_state(ctx.state(), device_id).ipv6_hop_limit
 }
 
-/// Is IP packet forwarding enabled on `device_id`?
+/// Is IP packet routing enabled on `device_id`?
 ///
-/// Note, `true` does not necessarily mean that `device` is currently forwarding IP packets. It
-/// only means that `device` is allowed to forward packets. To forward packets, this netstack must
-/// be configured to allow IP packets to be forwarded if it was not destined for this node.
+/// Note, `true` does not necessarily mean that `device` is currently routing IP packets. It
+/// only means that `device` is allowed to route packets. To route packets, this netstack must
+/// be configured to allow IP packets to be routed if it was not destined for this node.
 #[specialize_ip]
-pub(crate) fn is_forwarding_enabled<D: EventDispatcher, I: Ip>(
+pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(
     ctx: &Context<D>,
     device_id: usize,
 ) -> bool {
     #[ipv4]
-    return get_device_state(ctx.state(), device_id).forward_ipv4;
+    return get_device_state(ctx.state(), device_id).route_ipv4;
 
     #[ipv6]
-    return get_device_state(ctx.state(), device_id).forward_ipv6;
+    return get_device_state(ctx.state(), device_id).route_ipv6;
 }
 
-/// Sets the IP packet forwarding flag on `device_id`.
+/// Sets the IP packet routing flag on `device_id`.
 ///
 /// This method MUST NOT be called directly. It MUST only only called by
-/// [`crate::device::set_forwarding_enabled`].
+/// [`crate::device::set_routing_enabled`].
 ///
-/// See [`crate::device::set_forwarding_enabled`] for more information.
+/// See [`crate::device::set_routing_enabled`] for more information.
 #[specialize_ip]
-pub(super) fn set_forwarding_enabled_inner<D: EventDispatcher, I: Ip>(
+pub(super) fn set_routing_enabled_inner<D: EventDispatcher, I: Ip>(
     ctx: &mut Context<D>,
     device_id: usize,
     enabled: bool,
@@ -635,10 +635,10 @@ pub(super) fn set_forwarding_enabled_inner<D: EventDispatcher, I: Ip>(
     let state = get_device_state_mut(ctx.state_mut(), device_id);
 
     #[ipv4]
-    state.forward_ipv4 = enabled;
+    state.route_ipv4 = enabled;
 
     #[ipv6]
-    state.forward_ipv6 = enabled;
+    state.route_ipv6 = enabled;
 }
 
 /// Insert a static entry into this device's ARP table.
@@ -969,7 +969,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
     }
 
     fn is_router<D: EventDispatcher>(ctx: &Context<D>, device_id: usize) -> bool {
-        crate::device::can_forward::<_, Ipv6>(ctx, Self::get_device_id(device_id))
+        crate::device::is_router_device::<_, Ipv6>(ctx, Self::get_device_id(device_id))
     }
 }
 
@@ -1044,7 +1044,7 @@ mod tests {
     use specialize_ip_macro::specialize_ip;
 
     use super::*;
-    use crate::device::{is_forwarding_enabled, set_forwarding_enabled};
+    use crate::device::{is_routing_enabled, set_routing_enabled};
     use crate::ip::{receive_ip_packet, IpExt, IpPacketBuilder, IpProto, IPV6_MIN_MTU};
     use crate::testutil::{
         add_arp_or_ndp_table_entry, get_counter_val, get_dummy_config, get_other_ip_address,
@@ -1222,22 +1222,22 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
     }
 
-    fn test_set_ip_forwarding<I: Ip>()
+    fn test_set_ip_routing<I: Ip>()
     where
         I: IcmpIpExt,
         IcmpDestUnreachable: for<'a> IcmpMessage<I, &'a [u8]>,
     {
         #[specialize_ip]
-        fn check_other_is_forwarding_enabled<I: Ip>(
+        fn check_other_is_routing_enabled<I: Ip>(
             ctx: &Context<DummyEventDispatcher>,
             device: DeviceId,
             expected: bool,
         ) {
             #[ipv4]
-            assert_eq!(is_forwarding_enabled::<_, Ipv6>(ctx, device), expected);
+            assert_eq!(is_routing_enabled::<_, Ipv6>(ctx, device), expected);
 
             #[ipv6]
-            assert_eq!(is_forwarding_enabled::<_, Ipv4>(ctx, device), expected);
+            assert_eq!(is_routing_enabled::<_, Ipv4>(ctx, device), expected);
         }
 
         #[specialize_ip]
@@ -1287,8 +1287,8 @@ mod tests {
         let mut ctx = builder.build();
 
         // Should not be a router (default).
-        assert!(!is_forwarding_enabled::<_, I>(&ctx, device));
-        check_other_is_forwarding_enabled::<I>(&ctx, device, false);
+        assert!(!is_routing_enabled::<_, I>(&ctx, device));
+        check_other_is_routing_enabled::<I>(&ctx, device, false);
 
         // Receiving a packet not destined for the node should result in a dest unreachable message.
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
@@ -1297,10 +1297,10 @@ mod tests {
 
         // Attempting to set router should work, but it still won't be able to
         // route packets.
-        set_forwarding_enabled::<_, I>(&mut ctx, device, true);
-        assert!(is_forwarding_enabled::<_, I>(&ctx, device));
+        set_routing_enabled::<_, I>(&mut ctx, device, true);
+        assert!(is_routing_enabled::<_, I>(&ctx, device));
         // Should not update other Ip routing status.
-        check_other_is_forwarding_enabled::<I>(&ctx, device, false);
+        check_other_is_routing_enabled::<I>(&ctx, device, false);
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
         check_icmp::<I>(&ctx.dispatcher().frames_sent()[1].1);
@@ -1322,8 +1322,8 @@ mod tests {
         let mut ctx = builder.build_with(state_builder, DummyEventDispatcher::default());
 
         // Should not be a router (default).
-        assert!(!is_forwarding_enabled::<_, I>(&ctx, device));
-        check_other_is_forwarding_enabled::<I>(&ctx, device, false);
+        assert!(!is_routing_enabled::<_, I>(&ctx, device));
+        check_other_is_routing_enabled::<I>(&ctx, device, false);
 
         // Receiving a packet not destined for the node should result in a dest unreachable message.
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
@@ -1331,12 +1331,12 @@ mod tests {
         check_icmp::<I>(&ctx.dispatcher().frames_sent()[0].1);
 
         // Attempting to set router should work
-        set_forwarding_enabled::<_, I>(&mut ctx, device, true);
-        assert!(is_forwarding_enabled::<_, I>(&ctx, device));
+        set_routing_enabled::<_, I>(&mut ctx, device, true);
+        assert!(is_routing_enabled::<_, I>(&ctx, device));
         // Should not update other Ip routing status.
-        check_other_is_forwarding_enabled::<I>(&ctx, device, false);
+        check_other_is_routing_enabled::<I>(&ctx, device, false);
 
-        // Should forward the packet since routing fully enabled (netstack & device).
+        // Should route the packet since routing fully enabled (netstack & device).
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
         println!("{:?}", buf.as_ref());
@@ -1350,23 +1350,23 @@ mod tests {
         assert_eq!(body, packet_buf);
 
         // Attempt to unset router
-        set_forwarding_enabled::<_, I>(&mut ctx, device, false);
-        assert!(!is_forwarding_enabled::<_, I>(&ctx, device));
-        check_other_is_forwarding_enabled::<I>(&ctx, device, false);
+        set_routing_enabled::<_, I>(&mut ctx, device, false);
+        assert!(!is_routing_enabled::<_, I>(&ctx, device));
+        check_other_is_routing_enabled::<I>(&ctx, device, false);
 
-        // Should not forward packets anymore
+        // Should not route packets anymore
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
         check_icmp::<I>(&ctx.dispatcher().frames_sent()[2].1);
     }
 
     #[test]
-    fn test_set_ipv4_forwarding() {
-        test_set_ip_forwarding::<Ipv4>();
+    fn test_set_ipv4_routing() {
+        test_set_ip_routing::<Ipv4>();
     }
 
     #[test]
-    fn test_set_ipv6_forwarding() {
-        test_set_ip_forwarding::<Ipv6>();
+    fn test_set_ipv6_routing() {
+        test_set_ip_routing::<Ipv6>();
     }
 }
