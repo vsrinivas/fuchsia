@@ -48,6 +48,34 @@ TEST(VmoTestCase, Create) {
   }
 }
 
+TEST(VmoTestCase, ReadWriteBadLen) {
+  zx_status_t status;
+  zx_handle_t vmo;
+
+  // allocate an object and attempt read/write from it, with bad length
+  const size_t len = PAGE_SIZE * 4;
+  status = zx_vmo_create(len, 0, &vmo);
+  EXPECT_OK(status, "vm_object_create");
+
+  char buf[len];
+  for (int i = 1; i <= 2 ; i++) {
+    status = zx_vmo_read(vmo, buf, 0,
+                         std::numeric_limits<size_t>::max() - (PAGE_SIZE / i));
+    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
+    status = zx_vmo_write(vmo, buf, 0,
+                          std::numeric_limits<size_t>::max() - (PAGE_SIZE / i));
+    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
+  }
+  status = zx_vmo_read(vmo, buf, 0, len);
+  EXPECT_OK(status, "vmo_read");
+  status = zx_vmo_write(vmo, buf, 0, len);
+  EXPECT_OK(status, "vmo_write");
+
+  // close the handle
+  status = zx_handle_close(vmo);
+  EXPECT_OK(status, "handle_close");
+}
+
 TEST(VmoTestCase, ReadWrite) {
   zx_status_t status;
   zx_handle_t vmo;

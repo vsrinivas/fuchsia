@@ -82,6 +82,9 @@ zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data, uint64_t 
   // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
   // things, the bug will come back.  We should fix this more properly.
   {
+    // Check to ensure i doesn't overflow and result in an infinite loop below.
+    if (len >= (std::numeric_limits<size_t>::max() - PAGE_SIZE))
+      return ZX_ERR_OUT_OF_RANGE;
     uint8_t byte = 0;
     auto int_data = _data.reinterpret<uint8_t>();
     for (size_t i = 0; i < len; i += PAGE_SIZE) {
@@ -118,6 +121,9 @@ zx_status_t sys_vmo_write(zx_handle_t handle, user_in_ptr<const void> _data, uin
   // TODO(ZX-730): This is a workaround for this bug.  If we start decommitting
   // things, the bug will come back.  We should fix this more properly.
   {
+    // Check to ensure i doesn't overflow and result in an infinite loop below.
+    if (len >= (std::numeric_limits<size_t>::max() - PAGE_SIZE))
+      return ZX_ERR_OUT_OF_RANGE;
     uint8_t byte = 0;
     auto int_data = _data.reinterpret<const uint8_t>();
     for (size_t i = 0; i < len; i += PAGE_SIZE) {
