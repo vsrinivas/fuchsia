@@ -37,10 +37,8 @@ declare -x PATH=$PREBUILT_CMAKE_DIR/cmake/bin:$PATH
 
 export RUSTC=$PREBUILT_RUST_DIR/bin/rustc
 
-(cd $FUCHSIA_DIR; $PREBUILT_RUST_DIR/bin/cargo run \
-  --target-dir $FUCHSIA_DIR/out/cargo_vendor_target \
-  --manifest-path $FUCHSIA_DIR/third_party/rust-mirrors/cargo-vendor/Cargo.toml \
-  -- vendor --sync $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
+(cd $FUCHSIA_DIR; $PREBUILT_RUST_DIR/bin/cargo vendor \
+  --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
   $FUCHSIA_DIR/third_party/rust_crates/vendor)
 
 python $FUCHSIA_DIR/scripts/rust/check_rust_licenses.py \
