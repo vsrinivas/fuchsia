@@ -16,6 +16,7 @@ const size_t kCapacity = 5;
 class Buffer : public BlockBuffer {
  public:
   size_t capacity() const final { return kCapacity; }
+  uint32_t BlockSize() const final { return kBlobfsBlockSize; }
   vmoid_t vmoid() const final { return VMOID_INVALID; }
   void* Data(size_t index) final { return &buffer_[index * kBlobfsBlockSize]; }
   const void* Data(size_t index) const final { return &buffer_[index * kBlobfsBlockSize]; }

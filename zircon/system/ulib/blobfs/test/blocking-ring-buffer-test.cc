@@ -7,7 +7,6 @@
 #include <atomic>
 #include <thread>
 
-#include <blobfs/format.h>
 #include <blobfs/unbuffered-operations-builder.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
@@ -15,6 +14,8 @@
 
 namespace blobfs {
 namespace {
+
+const uint32_t kBlockSize = 8192;
 
 class MockVmoidRegistry : public VmoidRegistry {
  public:
@@ -35,7 +36,7 @@ TEST(BlockingRingBufferEmptyTest, EmptyBuffer) {
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<BlockingRingBuffer> buffer;
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-            BlockingRingBuffer::Create(&vmoid_registry, 0, "test-buffer", &buffer));
+            BlockingRingBuffer::Create(&vmoid_registry, 0, kBlockSize, "test-buffer", &buffer));
 }
 
 TEST(BlockingRingBufferEmptyTest, EmptyReservation) {
@@ -50,7 +51,8 @@ constexpr size_t kBlocks = 5;
 class BlockingRingBufferFixture : public zxtest::Test {
  public:
   void SetUp() override {
-    ASSERT_OK(BlockingRingBuffer::Create(&vmoid_registry_, kBlocks, "test-buffer", &buffer_));
+    ASSERT_OK(
+        BlockingRingBuffer::Create(&vmoid_registry_, kBlocks, kBlockSize, "test-buffer", &buffer_));
   }
 
   BlockingRingBuffer* buffer() { return buffer_.get(); }

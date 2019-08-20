@@ -50,6 +50,8 @@ class RingBufferState {
   // Returns the total amount of pending blocks which may be buffered.
   size_t capacity() const { return buffer_.capacity(); }
 
+  uint32_t BlockSize() const { return buffer_.BlockSize(); }
+
   // Frees |reservation| from the buffer.
   //
   // Only callable by |RingBufferReservation|, since this frees the previously used
@@ -183,9 +185,9 @@ class RingBuffer {
   RingBuffer& operator=(RingBuffer&& other) = delete;
   ~RingBuffer() = default;
 
-  // Initializes the buffer with |blocks| blocks of size kBlobfsBlockSize.
-  static zx_status_t Create(VmoidRegistry* vmoid_registry, const size_t blocks, const char* label,
-                            std::unique_ptr<RingBuffer>* out);
+  // Initializes the buffer with |blocks| blocks of size |block_size|.
+  static zx_status_t Create(VmoidRegistry* vmoid_registry, size_t blocks, uint32_t block_size,
+                            const char* label, std::unique_ptr<RingBuffer>* out);
 
   // Reserves space for |blocks| contiguous blocks in the circular buffer.
   //

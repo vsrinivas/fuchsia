@@ -24,21 +24,28 @@ class VmoBuffer final : public BlockBuffer {
   // Constructor for a pre-registered VMO.
   //
   // Prefer using |VmoBuffer.Initialize|.
-  VmoBuffer(VmoidRegistry* registry, fzl::OwnedVmoMapper mapper, vmoid_t vmoid, size_t capacity)
-      : vmoid_registry_(registry), mapper_(std::move(mapper)), vmoid_(vmoid), capacity_(capacity) {}
+  VmoBuffer(VmoidRegistry* registry, fzl::OwnedVmoMapper mapper, vmoid_t vmoid, size_t capacity,
+            uint32_t block_size)
+      : vmoid_registry_(registry),
+        mapper_(std::move(mapper)),
+        vmoid_(vmoid),
+        block_size_(block_size),
+        capacity_(capacity) {}
+
   VmoBuffer(const VmoBuffer&) = delete;
   VmoBuffer& operator=(const VmoBuffer&) = delete;
   VmoBuffer(VmoBuffer&& other);
   VmoBuffer& operator=(VmoBuffer&& other);
   ~VmoBuffer();
 
-  // Initializes the buffer VMO with |blocks| blocks of size kBlobfsBlockSize.
+  // Initializes the buffer VMO with |blocks| blocks of size |block_size|.
   //
   // Returns an error if the VMO cannot be created, mapped, or attached to the
   // underlying storage device.
   //
   // Should only be called on VmoBuffers which have not been initialized already.
-  zx_status_t Initialize(VmoidRegistry* vmoid_registry, size_t blocks, const char* label);
+  zx_status_t Initialize(VmoidRegistry* vmoid_registry, size_t blocks, uint32_t block_size,
+                         const char* label);
 
   // Returns a const view of the underlying VMO.
   const zx::vmo& vmo() const { return mapper_.vmo(); }
@@ -46,6 +53,8 @@ class VmoBuffer final : public BlockBuffer {
   // BlockBuffer interface:
 
   size_t capacity() const final { return capacity_; }
+
+  uint32_t BlockSize() const final { return block_size_; }
 
   vmoid_t vmoid() const final { return vmoid_; }
 
@@ -59,6 +68,7 @@ class VmoBuffer final : public BlockBuffer {
   VmoidRegistry* vmoid_registry_ = nullptr;
   fzl::OwnedVmoMapper mapper_;
   vmoid_t vmoid_ = VMOID_INVALID;
+  uint32_t block_size_ = 0;
   size_t capacity_ = 0;
 };
 

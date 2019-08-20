@@ -214,7 +214,9 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, VmoidRegi
   // Initialize and read the journal superblock and journal buffer.
   auto journal_superblock_buffer = std::make_unique<VmoBuffer>();
   zx_status_t status =
-      journal_superblock_buffer->Initialize(registry, kJournalMetadataBlocks, "journal-superblock");
+      journal_superblock_buffer->Initialize(registry, kJournalMetadataBlocks,
+                                            transaction_handler->FsBlockSize(),
+                                            "journal-superblock");
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Cannot initialize journal info block: %d\n", status);
     return status;
@@ -222,7 +224,8 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, VmoidRegi
   // Initialize and read the journal itself.
   FS_TRACE_DEBUG("replay: Initializing journal buffer\n");
   VmoBuffer journal_buffer;
-  status = journal_buffer.Initialize(registry, journal_entry_blocks, "journal-buffer");
+  status = journal_buffer.Initialize(registry, journal_entry_blocks,
+                                     transaction_handler->FsBlockSize(), "journal-buffer");
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Cannot initialize journal buffer: %d\n", status);
     return status;

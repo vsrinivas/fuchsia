@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <blobfs/journal/journal2.h>
+
 #include <algorithm>
 #include <array>
 #include <memory>
@@ -10,8 +12,6 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 
-#include <blobfs/format.h>
-#include <blobfs/journal/journal2.h>
 #include <blobfs/journal/replay.h>
 #include <zxtest/zxtest.h>
 
@@ -24,6 +24,7 @@ const vmoid_t kInfoVmoid = 3;
 const vmoid_t kOtherVmoid = 4;
 const size_t kJournalLength = 10;
 const size_t kWritebackLength = 10;
+const uint32_t kBlockSize = 8192;
 
 enum class EscapedBlocks {
   kVerified,
@@ -34,16 +35,16 @@ enum class EscapedBlocks {
 void CheckCircularBufferContents(const zx::vmo& buffer, size_t buffer_blocks, size_t buffer_offset,
                                  const zx::vmo& expected, size_t expected_offset, size_t length,
                                  EscapedBlocks escape) {
-  const size_t buffer_start = kBlobfsBlockSize * buffer_offset;
-  const size_t buffer_capacity = kBlobfsBlockSize * buffer_blocks;
+  const size_t buffer_start = kBlockSize * buffer_offset;
+  const size_t buffer_capacity = kBlockSize * buffer_blocks;
   for (size_t i = 0; i < length; i++) {
-    std::array<char, kBlobfsBlockSize> buffer_buf {};
-    size_t offset = (buffer_start + kBlobfsBlockSize * i) % buffer_capacity;
-    ASSERT_OK(buffer.read(buffer_buf.data(), offset, kBlobfsBlockSize));
+    std::array<char, kBlockSize> buffer_buf {};
+    size_t offset = (buffer_start + kBlockSize * i) % buffer_capacity;
+    ASSERT_OK(buffer.read(buffer_buf.data(), offset, kBlockSize));
 
-    std::array<char, kBlobfsBlockSize> expected_buf {};
-    offset = (expected_offset + i) * kBlobfsBlockSize;
-    ASSERT_OK(expected.read(expected_buf.data(), offset, kBlobfsBlockSize));
+    std::array<char, kBlockSize> expected_buf {};
+    offset = (expected_offset + i) * kBlockSize;
+    ASSERT_OK(expected.read(expected_buf.data(), offset, kBlockSize));
 
     if (escape == EscapedBlocks::kVerified &&
         *reinterpret_cast<uint64_t*>(expected_buf.data()) == kJournalEntryMagic) {
@@ -51,9 +52,9 @@ void CheckCircularBufferContents(const zx::vmo& buffer, size_t buffer_blocks, si
       std::array<char, kSkip> skip_buffer {};
       EXPECT_BYTES_EQ(skip_buffer.data(), buffer_buf.data(), kSkip);
       EXPECT_BYTES_EQ(expected_buf.data() + kSkip, buffer_buf.data() + kSkip,
-                      kBlobfsBlockSize - kSkip);
+                      kBlockSize - kSkip);
     } else {
-      EXPECT_BYTES_EQ(expected_buf.data(), buffer_buf.data(), kBlobfsBlockSize);
+      EXPECT_BYTES_EQ(expected_buf.data(), buffer_buf.data(), kBlockSize);
     }
   }
 }
@@ -72,9 +73,9 @@ class MockVmoidRegistry : public VmoidRegistry {
   VmoBuffer InitializeBuffer(size_t num_blocks) {
     VmoBuffer buffer;
     SetNextVmoid(kOtherVmoid);
-    EXPECT_OK(buffer.Initialize(this, num_blocks, "test-buffer"));
+    EXPECT_OK(buffer.Initialize(this, num_blocks, kBlockSize, "test-buffer"));
     for (size_t i = 0; i < num_blocks; i++) {
-      memset(buffer.Data(i), static_cast<uint8_t>(i), kBlobfsBlockSize);
+      memset(buffer.Data(i), static_cast<uint8_t>(i), kBlockSize);
     }
     return buffer;
   }
@@ -155,17 +156,19 @@ void MockVmoidRegistry::Replay(fbl::Vector<BufferedOperation>* operations,
   zx::vmo info_vmo;
   ASSERT_OK(info_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &info_vmo));
   fzl::OwnedVmoMapper mapper;
-  ASSERT_OK(mapper.Map(std::move(info_vmo), kBlobfsBlockSize));
-  auto info_buffer = std::make_unique<VmoBuffer>(this, std::move(mapper), kInfoVmoid, 1);
+  ASSERT_OK(mapper.Map(std::move(info_vmo), kBlockSize));
+  auto info_buffer =
+      std::make_unique<VmoBuffer>(this, std::move(mapper), kInfoVmoid, 1, kBlockSize);
   JournalSuperblock superblock(std::move(info_buffer));
 
   // Create a clone of the journal, since escaped blocks may be modified. This allows
   // the "clone" to be modified while leaving the original journal untouched.
   zx::vmo journal_vmo;
-  uint64_t length = kBlobfsBlockSize * kJournalLength;
+  uint64_t length = kBlockSize * kJournalLength;
   ASSERT_OK(journal_vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length, &journal_vmo));
   ASSERT_OK(mapper.Map(std::move(journal_vmo), length));
-  VmoBuffer journal_buffer(this, std::move(mapper), kJournalVmoid, kJournalLength);
+  VmoBuffer journal_buffer(this, std::move(mapper), kJournalVmoid, kJournalLength,
+                           kBlockSize);
 
   ASSERT_OK(ParseJournalEntries(&superblock, &journal_buffer, operations, sequence_number));
 }
@@ -190,11 +193,11 @@ class MockTransactionHandler final : public fs::TransactionHandler {
 
   // TransactionHandler interface:
 
-  uint32_t FsBlockSize() const final { return kBlobfsBlockSize; }
+  uint32_t FsBlockSize() const final { return kBlockSize; }
 
   groupid_t BlockGroupID() final { return 1; }
 
-  uint32_t DeviceBlockSize() const final { return kBlobfsBlockSize; }
+  uint32_t DeviceBlockSize() const final { return kBlockSize; }
 
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
     EXPECT_LT(transactions_seen_, transactions_expected_);
@@ -219,16 +222,17 @@ class JournalTest : public zxtest::Test {
  public:
   void SetUp() override {
     registry_.SetNextVmoid(kJournalVmoid);
-    ASSERT_OK(BlockingRingBuffer::Create(&registry_, kJournalLength, "journal-writeback-buffer",
-                                         &journal_buffer_));
+    ASSERT_OK(BlockingRingBuffer::Create(&registry_, kJournalLength, kBlockSize,
+                                         "journal-writeback-buffer", &journal_buffer_));
 
     registry_.SetNextVmoid(kWritebackVmoid);
-    ASSERT_OK(BlockingRingBuffer::Create(&registry_, kWritebackLength, "data-writeback-buffer",
-                                         &data_buffer_));
+    ASSERT_OK(BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlockSize,
+                                         "data-writeback-buffer", &data_buffer_));
 
     auto info_block_buffer = std::make_unique<VmoBuffer>();
     registry_.SetNextVmoid(kInfoVmoid);
-    ASSERT_OK(info_block_buffer->Initialize(&registry_, kJournalMetadataBlocks, "info-block"));
+    ASSERT_OK(info_block_buffer->Initialize(&registry_, kJournalMetadataBlocks, kBlockSize,
+                                            "info-block"));
     info_block_ = JournalSuperblock(std::move(info_block_buffer));
     info_block_.Update(0, 0);
   }
@@ -251,8 +255,8 @@ class JournalTest : public zxtest::Test {
 // Verifies that the info block marks |start| as the beginning of the journal (relative
 // to the start of entries) with a sequence_number of |sequence_number|.
 void CheckInfoBlock(const zx::vmo& info, uint64_t start, uint64_t sequence_number) {
-  std::array<char, kBlobfsBlockSize> buf = {};
-  EXPECT_OK(info.read(buf.data(), 0, kBlobfsBlockSize));
+  std::array<char, kBlockSize> buf = {};
+  EXPECT_OK(info.read(buf.data(), 0, kBlockSize));
   const JournalInfo& journal_info = *reinterpret_cast<const JournalInfo*>(buf.data());
   EXPECT_EQ(kJournalMagic, journal_info.magic);
   EXPECT_EQ(start, journal_info.start_block);
@@ -2435,11 +2439,11 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
         verifier.VerifyJournalWrite(operation, requests, count);
 
         // Verify that the payload is escaped in the journal.
-        std::array<char, kBlobfsBlockSize> buffer = {};
-        uint64_t offset = (verifier.JournalOffset() + kJournalEntryHeaderBlocks) * kBlobfsBlockSize;
-        uint64_t length = kBlobfsBlockSize;
+        std::array<char, kBlockSize> buffer = {};
+        uint64_t offset = (verifier.JournalOffset() + kJournalEntryHeaderBlocks) * kBlockSize;
+        uint64_t length = kBlockSize;
         EXPECT_OK(registry()->journal().read(buffer.data(), offset, length));
-        EXPECT_BYTES_NE(metadata.Data(0), buffer.data(), kBlobfsBlockSize,
+        EXPECT_BYTES_NE(metadata.Data(0), buffer.data(), kBlockSize,
                         "metadata should have been escaped (modified)");
 
         // Verify that if we were to reboot now the operation would be replayed.
@@ -2451,11 +2455,11 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
         verifier.VerifyMetadataWrite(operation, requests, count);
 
         // Verify that the payload is NOT escaped when writing to the final location.
-        std::array<char, kBlobfsBlockSize> buffer = {};
-        uint64_t offset = (verifier.JournalOffset() + kJournalEntryHeaderBlocks) * kBlobfsBlockSize;
-        uint64_t length = kBlobfsBlockSize;
+        std::array<char, kBlockSize> buffer = {};
+        uint64_t offset = (verifier.JournalOffset() + kJournalEntryHeaderBlocks) * kBlockSize;
+        uint64_t length = kBlockSize;
         EXPECT_OK(registry()->journal().read(buffer.data(), offset, length));
-        EXPECT_BYTES_EQ(metadata.Data(0), buffer.data(), kBlobfsBlockSize,
+        EXPECT_BYTES_EQ(metadata.Data(0), buffer.data(), kBlockSize,
                         "Metadata should only be escaped in the journal");
 
         verifier.ExtendJournalOffset(operation.op.length);

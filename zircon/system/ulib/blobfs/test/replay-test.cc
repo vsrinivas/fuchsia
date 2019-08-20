@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <blobfs/journal/replay.h>
+
 #include <lib/zx/vmo.h>
 
 #include <map>
 
-#include <blobfs/format.h>
-#include <blobfs/journal/replay.h>
 #include <zxtest/zxtest.h>
 
 #include "journal/entry-view.h"
@@ -19,6 +19,7 @@ const vmoid_t kInfoVmoid = 1;
 const vmoid_t kJournalVmoid = 2;
 const vmoid_t kOtherVmoid = 3;
 const size_t kJournalLength = 10;
+const uint32_t kBlockSize = 8192;
 const uint64_t kGoldenSequenceNumber = 1337;
 
 class MockVmoidRegistry : public VmoidRegistry {
@@ -52,11 +53,11 @@ class ParseJournalTestFixture : public zxtest::Test {
   void SetUp() override {
     auto info_block_buffer = std::make_unique<VmoBuffer>();
     registry_.SetNextVmoid(kInfoVmoid);
-    ASSERT_OK(info_block_buffer->Initialize(&registry_, 1, "info-block"));
+    ASSERT_OK(info_block_buffer->Initialize(&registry_, 1, kBlockSize, "info-block"));
     info_block_ = JournalSuperblock(std::move(info_block_buffer));
 
     registry_.SetNextVmoid(kJournalVmoid);
-    ASSERT_OK(journal_buffer_.Initialize(&registry_, kJournalLength, "journal"));
+    ASSERT_OK(journal_buffer_.Initialize(&registry_, kJournalLength, kBlockSize, "journal"));
 
     registry_.SetNextVmoid(kOtherVmoid);
   }
@@ -522,11 +523,11 @@ class MockTransactionHandler final : public fs::TransactionHandler {
 
   ~MockTransactionHandler() { EXPECT_EQ(transactions_expected_, transactions_seen_); }
 
-  uint32_t FsBlockSize() const final { return kBlobfsBlockSize; }
+  uint32_t FsBlockSize() const final { return kBlockSize; }
 
   groupid_t BlockGroupID() final { return 1; }
 
-  uint32_t DeviceBlockSize() const final { return kBlobfsBlockSize; }
+  uint32_t DeviceBlockSize() const final { return kBlockSize; }
 
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override {
     EXPECT_LT(transactions_seen_, transactions_expected_);
@@ -566,7 +567,7 @@ class ReplayJournalTest : public ParseJournalTestFixture {
   // Take the contents of the pre-registered journal superblock and transfer
   // it into the requested vmoid.
   void TransferInfoTo(vmoid_t vmoid) {
-    char buf[kBlobfsBlockSize * kJournalMetadataBlocks];
+    char buf[kBlockSize * kJournalMetadataBlocks];
     EXPECT_OK(registry()->GetVmo(kInfoVmoid).read(buf, 0, sizeof(buf)));
     EXPECT_OK(registry()->GetVmo(vmoid).write(buf, 0, sizeof(buf)));
   }
@@ -574,12 +575,12 @@ class ReplayJournalTest : public ParseJournalTestFixture {
   // Take the contents of the pre-registered journal buffer and transfer
   // it into the requested vmoid.
   void TransferEntryTo(vmoid_t vmoid, size_t offset, uint64_t length) {
-    char entry_buf[kBlobfsBlockSize * length];
+    char entry_buf[kBlockSize * length];
     EXPECT_OK(registry()
                   ->GetVmo(kJournalVmoid)
-                  .read(entry_buf, offset * kBlobfsBlockSize, sizeof(entry_buf)));
+                  .read(entry_buf, offset * kBlockSize, sizeof(entry_buf)));
     EXPECT_OK(
-        registry()->GetVmo(vmoid).write(entry_buf, offset * kBlobfsBlockSize, sizeof(entry_buf)));
+        registry()->GetVmo(vmoid).write(entry_buf, offset * kBlockSize, sizeof(entry_buf)));
   }
 };
 

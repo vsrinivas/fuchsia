@@ -69,13 +69,14 @@ class DataStreamerFixture : public zxtest::Test {
   void SetUp() override {
     std::unique_ptr<BlockingRingBuffer> journal_buffer;
     std::unique_ptr<BlockingRingBuffer> data_buffer;
-    ASSERT_OK(
-        BlockingRingBuffer::Create(&registry_, 10, "journal-writeback-buffer", &journal_buffer));
-    ASSERT_OK(BlockingRingBuffer::Create(&registry_, kWritebackLength, "data-writeback-buffer",
-                                         &data_buffer));
+    ASSERT_OK(BlockingRingBuffer::Create(&registry_, 10, kBlobfsBlockSize,
+                                         "journal-writeback-buffer", &journal_buffer));
+    ASSERT_OK(BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlobfsBlockSize,
+                                         "data-writeback-buffer", &data_buffer));
     auto info_block_buffer = std::make_unique<VmoBuffer>();
     constexpr size_t kInfoBlockBlockCount = 1;
-    ASSERT_OK(info_block_buffer->Initialize(&registry_, kInfoBlockBlockCount, "info-block"));
+    ASSERT_OK(info_block_buffer->Initialize(&registry_, kInfoBlockBlockCount, kBlobfsBlockSize,
+                                            "info-block"));
     JournalSuperblock info_block = JournalSuperblock(std::move(info_block_buffer));
     info_block.Update(0, 0);
 

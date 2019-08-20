@@ -54,10 +54,10 @@ BlockingRingBuffer::BlockingRingBuffer(std::unique_ptr<RingBuffer> buffer)
     : buffer_(internal::BlockingRingBufferImpl(std::move(buffer))) {}
 
 zx_status_t BlockingRingBuffer::Create(VmoidRegistry* vmoid_registry, const size_t blocks,
-                                       const char* label,
+                                       uint32_t block_size, const char* label,
                                        std::unique_ptr<BlockingRingBuffer>* out) {
   std::unique_ptr<RingBuffer> buffer;
-  zx_status_t status = RingBuffer::Create(vmoid_registry, blocks, label, &buffer);
+  zx_status_t status = RingBuffer::Create(vmoid_registry, blocks, block_size, label, &buffer);
   if (status != ZX_OK) {
     return status;
   }

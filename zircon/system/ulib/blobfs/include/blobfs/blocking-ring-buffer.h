@@ -58,8 +58,8 @@ class BlockingRingBuffer {
   BlockingRingBuffer& operator=(BlockingRingBuffer&& other) = delete;
   ~BlockingRingBuffer() = default;
 
-  static zx_status_t Create(VmoidRegistry* vmoid_registry, const size_t blocks, const char* label,
-                            std::unique_ptr<BlockingRingBuffer>* out);
+  static zx_status_t Create(VmoidRegistry* vmoid_registry, size_t blocks, uint32_t block_size,
+                            const char* label, std::unique_ptr<BlockingRingBuffer>* out);
 
   // Same as |RingBuffer.Reserve|, but only returns ZX_ERR_NO_SPACE if |blocks| is greater
   // than capacity. In all other cases, blocks the caller until space is available.

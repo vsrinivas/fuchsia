@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <blobfs/block-buffer-view.h>
+
 #include <lib/zx/vmo.h>
 
-#include <blobfs/block-buffer-view.h>
-#include <blobfs/format.h>
 #include <blobfs/vmo-buffer.h>
 #include <zxtest/zxtest.h>
 
@@ -14,6 +14,7 @@ namespace {
 
 const vmoid_t kGoldenVmoid = 5;
 const size_t kCapacity = 3;
+const uint32_t kBlockSize = 8192;
 constexpr char kGoldenLabel[] = "test-vmo";
 
 class MockVmoidRegistry : public VmoidRegistry {
@@ -46,20 +47,20 @@ TEST(BlockBufferViewTest, EmptyView) {
 class BlockBufferViewFixture : public zxtest::Test {
  public:
   void SetUp() override {
-    ASSERT_OK(buffer.Initialize(&registry, kCapacity, kGoldenLabel));
+    ASSERT_OK(buffer.Initialize(&registry, kCapacity, kBlockSize, kGoldenLabel));
     memset(buf_a, 'a', sizeof(buf_a));
     memset(buf_b, 'b', sizeof(buf_b));
     memset(buf_c, 'c', sizeof(buf_c));
-    memcpy(buffer.Data(0), buf_a, kBlobfsBlockSize);
-    memcpy(buffer.Data(1), buf_b, kBlobfsBlockSize);
-    memcpy(buffer.Data(2), buf_c, kBlobfsBlockSize);
+    memcpy(buffer.Data(0), buf_a, kBlockSize);
+    memcpy(buffer.Data(1), buf_b, kBlockSize);
+    memcpy(buffer.Data(2), buf_c, kBlockSize);
   }
 
   MockVmoidRegistry registry;
   VmoBuffer buffer;
-  char buf_a[kBlobfsBlockSize];
-  char buf_b[kBlobfsBlockSize];
-  char buf_c[kBlobfsBlockSize];
+  char buf_a[kBlockSize];
+  char buf_b[kBlockSize];
+  char buf_c[kBlockSize];
 };
 
 using BlockBufferViewTest = BlockBufferViewFixture;
@@ -68,34 +69,34 @@ TEST_F(BlockBufferViewTest, WholeView) {
   BlockBufferView view(&buffer, 0, kCapacity);
   EXPECT_EQ(0, view.start());
   EXPECT_EQ(kCapacity, view.length());
-  EXPECT_EQ(0, memcmp(buf_a, view.Data(0), kBlobfsBlockSize));
-  EXPECT_EQ(0, memcmp(buf_b, view.Data(1), kBlobfsBlockSize));
-  EXPECT_EQ(0, memcmp(buf_c, view.Data(2), kBlobfsBlockSize));
+  EXPECT_EQ(0, memcmp(buf_a, view.Data(0), kBlockSize));
+  EXPECT_EQ(0, memcmp(buf_b, view.Data(1), kBlockSize));
+  EXPECT_EQ(0, memcmp(buf_c, view.Data(2), kBlockSize));
 }
 
 TEST_F(BlockBufferViewTest, PartialView) {
   BlockBufferView view(&buffer, 1, 1);
   EXPECT_EQ(1, view.start());
   EXPECT_EQ(1, view.length());
-  EXPECT_EQ(0, memcmp(buf_b, view.Data(0), kBlobfsBlockSize));
+  EXPECT_EQ(0, memcmp(buf_b, view.Data(0), kBlockSize));
 }
 
 TEST_F(BlockBufferViewTest, WraparoundBeforeEndView) {
   BlockBufferView view(&buffer, 2, kCapacity);
   EXPECT_EQ(2, view.start());
   EXPECT_EQ(kCapacity, view.length());
-  EXPECT_EQ(0, memcmp(buf_c, view.Data(0), kBlobfsBlockSize));
-  EXPECT_EQ(0, memcmp(buf_a, view.Data(1), kBlobfsBlockSize));
-  EXPECT_EQ(0, memcmp(buf_b, view.Data(2), kBlobfsBlockSize));
+  EXPECT_EQ(0, memcmp(buf_c, view.Data(0), kBlockSize));
+  EXPECT_EQ(0, memcmp(buf_a, view.Data(1), kBlockSize));
+  EXPECT_EQ(0, memcmp(buf_b, view.Data(2), kBlockSize));
 }
 
 TEST_F(BlockBufferViewTest, WraparoundAtEndView) {
   BlockBufferView view(&buffer, kCapacity, kCapacity);
   EXPECT_EQ(0, view.start());
   EXPECT_EQ(kCapacity, view.length());
-  EXPECT_EQ(0, memcmp(buf_a, view.Data(0), kBlobfsBlockSize));
-  EXPECT_EQ(0, memcmp(buf_b, view.Data(1), kBlobfsBlockSize));
-  EXPECT_EQ(0, memcmp(buf_c, view.Data(2), kBlobfsBlockSize));
+  EXPECT_EQ(0, memcmp(buf_a, view.Data(0), kBlockSize));
+  EXPECT_EQ(0, memcmp(buf_b, view.Data(1), kBlockSize));
+  EXPECT_EQ(0, memcmp(buf_c, view.Data(2), kBlockSize));
 }
 
 }  // namespace

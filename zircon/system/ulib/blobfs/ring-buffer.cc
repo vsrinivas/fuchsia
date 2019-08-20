@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <blobfs/ring-buffer.h>
+
 #include <zircon/status.h>
 
 #include <algorithm>
 #include <utility>
 
-#include <blobfs/format.h>
-#include <blobfs/ring-buffer.h>
 #include <fbl/auto_lock.h>
 #include <fs/trace.h>
 
@@ -160,7 +160,8 @@ zx_status_t RingBufferReservation::CopyRequests(
     // Write data from the vmo into the buffer.
     void* ptr = Data(reservation_offset);
 
-    zx_status_t status = vmo->read(ptr, vmo_offset * kBlobfsBlockSize, buf_len * kBlobfsBlockSize);
+    zx_status_t status =
+        vmo->read(ptr, vmo_offset * buffer_->BlockSize(), buf_len * buffer_->BlockSize());
     if (status != ZX_OK) {
       FS_TRACE_ERROR("blobfs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
                      vmo_offset, zx_status_get_string(status));
@@ -186,7 +187,7 @@ zx_status_t RingBufferReservation::CopyRequests(
       ZX_DEBUG_ASSERT(buf_len > 0);
 
       ptr = Data(reservation_offset);
-      status = vmo->read(ptr, vmo_offset * kBlobfsBlockSize, buf_len * kBlobfsBlockSize);
+      status = vmo->read(ptr, vmo_offset * buffer_->BlockSize(), buf_len * buffer_->BlockSize());
       if (status != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
                        vmo_offset, zx_status_get_string(status));
@@ -226,10 +227,10 @@ const void* RingBufferReservation::Data(size_t index) const {
   return view_.Data(index);
 }
 
-zx_status_t RingBuffer::Create(VmoidRegistry* vmoid_registry, size_t blocks, const char* label,
-                               std::unique_ptr<RingBuffer>* out) {
+zx_status_t RingBuffer::Create(VmoidRegistry* vmoid_registry, size_t blocks, uint32_t block_size,
+                               const char* label, std::unique_ptr<RingBuffer>* out) {
   VmoBuffer buffer;
-  zx_status_t status = buffer.Initialize(vmoid_registry, blocks, label);
+  zx_status_t status = buffer.Initialize(vmoid_registry, blocks, block_size, label);
   if (status != ZX_OK) {
     return status;
   }

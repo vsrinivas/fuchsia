@@ -13,6 +13,7 @@ class Buffer : public BlockBuffer {
   Buffer() : buffer_(std::make_unique<uint8_t[]>(kBlobfsBlockSize)) {}
 
   size_t capacity() const final { return 1; }
+  uint32_t BlockSize() const final { return kBlobfsBlockSize; }
   vmoid_t vmoid() const final { return VMOID_INVALID; }
   void* Data(size_t index) final { return &buffer_[index * kBlobfsBlockSize]; }
   const void* Data(size_t index) const final { return &buffer_[index * kBlobfsBlockSize]; }

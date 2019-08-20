@@ -16,8 +16,11 @@ class BlockBuffer {
  public:
   virtual ~BlockBuffer() = default;
 
-  // Returns the total amount of pending blocks which may be buffered.
+  // Returns the total amount of blocks which the buffer handles.
   virtual size_t capacity() const = 0;
+
+  // Returns the size of each data block handled by this buffer.
+  virtual uint32_t BlockSize() const = 0;
 
   // Returns the vmoid of the underlying BlockBuffer, if one exists.
   virtual vmoid_t vmoid() const = 0;

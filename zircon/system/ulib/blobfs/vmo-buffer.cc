@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <blobfs/vmo-buffer.h>
+
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <utility>
 
-#include <blobfs/format.h>
-#include <blobfs/vmo-buffer.h>
 #include <fs/trace.h>
 
 namespace blobfs {
@@ -17,6 +17,7 @@ VmoBuffer::VmoBuffer(VmoBuffer&& other)
     : vmoid_registry_(std::move(other.vmoid_registry_)),
       mapper_(std::move(other.mapper_)),
       vmoid_(other.vmoid_),
+      block_size_(other.block_size_),
       capacity_(other.capacity_) {
   other.Reset();
 }
@@ -26,6 +27,7 @@ VmoBuffer& VmoBuffer::operator=(VmoBuffer&& other) {
     vmoid_registry_ = other.vmoid_registry_;
     mapper_ = std::move(other.mapper_);
     vmoid_ = other.vmoid_;
+    block_size_ = other.block_size_;
     capacity_ = other.capacity_;
 
     other.Reset();
@@ -46,10 +48,11 @@ void VmoBuffer::Reset() {
   capacity_ = 0;
 }
 
-zx_status_t VmoBuffer::Initialize(VmoidRegistry* vmoid_registry, size_t blocks, const char* label) {
+zx_status_t VmoBuffer::Initialize(VmoidRegistry* vmoid_registry, size_t blocks, uint32_t block_size,
+                                  const char* label) {
   ZX_DEBUG_ASSERT(vmoid_ == VMOID_INVALID);
   fzl::OwnedVmoMapper mapper;
-  zx_status_t status = mapper.CreateAndMap(blocks * kBlobfsBlockSize, label);
+  zx_status_t status = mapper.CreateAndMap(blocks * block_size, label);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("VmoBuffer: Failed to create vmo %s: %s\n", label, zx_status_get_string(status));
     return status;
@@ -65,7 +68,8 @@ zx_status_t VmoBuffer::Initialize(VmoidRegistry* vmoid_registry, size_t blocks, 
   vmoid_registry_ = vmoid_registry;
   mapper_ = std::move(mapper);
   vmoid_ = vmoid;
-  capacity_ = mapper_.size() / kBlobfsBlockSize;
+  block_size_ = block_size;
+  capacity_ = mapper_.size() / block_size;
   return ZX_OK;
 }
 
@@ -76,7 +80,7 @@ void* VmoBuffer::Data(size_t index) {
 const void* VmoBuffer::Data(size_t index) const {
   ZX_DEBUG_ASSERT(index < capacity_);
   return reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(mapper_.start()) +
-                                       (index * kBlobfsBlockSize));
+                                       (index * block_size_));
 }
 
 }  // namespace blobfs
