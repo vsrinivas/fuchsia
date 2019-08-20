@@ -1,0 +1,155 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io2;
+
+using zx;
+
+/// A [`fuchsia.io2/Node`] that is capable of containing other nodes.
+protocol Directory {
+    compose Node;
+
+    /// Opens or creates a new node relative to this directory node.
+    ///
+    /// + `path` identifies the node to open.
+    ///   If `path` contains multiple segments, then the directory is traversed,
+    ///   one segment at a time, relative to the directory represented by this
+    ///   connection.
+    ///   See [`fuchsia.io2/Path`] for what constitutes a valid path.
+    ///   To open another connection to the current directory, use
+    ///   [`fuchsia.io2/Node.Reopen`] instead.
+    /// + `mode` controls whether to open existing/create new etc.
+    /// + `options` additional options applicable to both `Open` and `Reopen`,
+    ///   including negotiating protocol and restricting rights.
+    ///   See [`fuchsia.io2/ConnectionOptions`].
+    /// + `object_request` is the server end of a channel created for the new
+    ///   connection. The caller may proceed to send messages on the
+    ///   corresponding client end right away.
+    ///
+    /// This method requires the following rights on the current connection:
+    ///
+    /// * [`Rights.ENUMERATE`]
+    /// * [`Rights.TRAVERSE`]
+    ///
+    /// Errors are presented as an epitaph on the `object_request` channel.
+    ///
+    /// * error `ZX_ERR_ACCESS_DENIED` if the requested rights exceeds
+    ///   what is allowed.
+    /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
+    Open(Path path,
+         OpenMode mode,
+         ConnectionOptions options,
+         handle<channel> object_request);
+
+    /// Removes a child node from the this directory's list of entries.
+    ///
+    /// Note: this does not guarantee that the underlying object is destroyed.
+    /// Although the link will be removed from the containing directory,
+    /// objects with multiple references (such as files which are still open)
+    /// will not actually be destroyed until all references are closed.
+    ///
+    /// + `path` identifies the node to be detached.
+    ///   If `path` contains multiple segments, then the directory is traversed,
+    ///   one segment at a time, relative to the directory represented by this
+    ///   connection.
+    ///
+    /// * error `ZX_ERR_ACCESS_DENIED` if the connection does not have
+    ///   [`Rights.WRITE_BYTES`].
+    /// * error `ZX_ERR_NOT_SUPPORTED` if the underlying filesystem does not
+    ///   support writing.
+    /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
+    /// * error `ZX_ERR_NOT_EMPTY` if `path` refers to a non-empty directory.
+    /// * error `ZX_ERR_UNAVAILABLE` if `path` refers to a mount point,
+    ///   containing a remote channel.
+    ///
+    /// Other errors may be returned for filesystem-specific reasons.
+    ///
+    /// This method requires the following rights:
+    ///
+    /// * [`Rights.ENUMERATE`]
+    /// * [`Rights.MODIFY_DIRECTORY`]
+    Unlink(Path path) -> () error zx.status;
+
+    /// Initiates a directory listing operation over the input channel,
+    /// starting at seek offset 0.
+    ///
+    /// This method requires the [`Rights.ENUMERATE`] right. If this right is
+    /// absent, `iterator` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
+    Enumerate(request<DirectoryIterator> iterator);
+
+    /// Renames a node named `src` to the name `dst`, in a directory represented
+    /// by `dst_parent_token`.
+    ///
+    /// `src` and `dst` must be valid node names.
+    /// See [`fuchsia.io2/Name`] for what constitutes a valid name.
+    ///
+    /// This method requires the following rights on both the current
+    /// connection, and the connection identified by `dst_parent_token`:
+    ///
+    /// * [`Rights.ENUMERATE`]
+    /// * [`Rights.MODIFY_DIRECTORY`]
+    ///
+    /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
+    Rename(Name src,
+           Token dst_parent_token,
+           Name dst) -> () error zx.status;
+
+    /// Creates a link to a node named `src` by the name `dst`,
+    /// in a directory represented by `dst_parent_token`.
+    ///
+    /// Directories cannot be linked, to prevent reference cycles.
+    ///
+    /// `src` and `dst` must be valid node names.
+    /// See [`fuchsia.io2/Name`] for what constitutes a valid name.
+    ///
+    /// This method requires the following rights on both the current
+    /// connection, and the connection identified by `dst_parent_token`:
+    ///
+    /// * [`Rights.ENUMERATE`]
+    /// * [`Rights.MODIFY_DIRECTORY`]
+    ///
+    /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
+    /// * error `ZX_ERR_INVALID_ARGS` if `src` is a directory.
+    Link(Name src,
+         Token dst_parent_token,
+         Name dst) -> () error zx.status;
+
+    /// Watches a directory, monitoring events for children being added or
+    /// removed on the server end of the `watcher` channel.
+    ///
+    /// Mask specifies a bit mask of events to observe.
+    ///
+    /// This method requires the [`Rights.ENUMERATE`] right. If this right is
+    /// absent, `watcher` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
+    Watch(DirectoryWatchMask mask,
+          DirectoryWatchOptions options,
+          request<DirectoryWatcher> watcher);
+};
+
+/// Options related to node creation during [`Directory.Open`].
+enum OpenMode : uint32 {
+    /// Only succeed if the object exists.
+    OPEN_EXISTING = 1;
+
+    /// Create the object if it does not exist, otherwise open existing.
+    /// The check and the creation are performed in one atomic step.
+    MAYBE_CREATE = 2;
+
+    /// Assert that the object does not exist, then create it.
+    /// The assertion and creation are performed in one atomic step.
+    ALWAYS_CREATE = 3;
+
+    /// If the object is a mount point, open the local directory
+    /// instead of forwarding the request. The object must be a directory.
+    ///
+    /// This option implies the behavior of `OPEN_EXISTING`.
+    [Deprecated = "Mount points will be replaced by components."]
+    OPEN_MOUNT_POINT = 0x10000000;
+};
+
+/// Auxiliary data for the directory representation of a node.
+/// The selection of this variant in [`Representation`] implies that the
+/// connection speaks the [`fuchsia.io2/Directory`] protocol.
+table DirectoryInfo {
+};

@@ -68,6 +68,7 @@ group("fidl") {
     "fuchsia-hardware-zxcrypt",
     "fuchsia-inspect",
     "fuchsia-io",
+    "fuchsia-io2",
     "fuchsia-kernel",
     "fuchsia-ldsvc",
     "fuchsia-logger",

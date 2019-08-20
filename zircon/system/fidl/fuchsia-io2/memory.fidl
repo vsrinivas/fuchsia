@@ -1,0 +1,34 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io2;
+
+using fuchsia.mem;
+
+/// A file-like node backed by a VMO.
+/// No memory-specific methods are provided by this protocol.
+/// The client should access it via the the [`MemoryInfo.buffer`] object in
+/// [`fuchsia.io2/Representation`].
+protocol Memory {
+    compose Node;
+};
+
+/// Auxiliary data for the memory object representation of a node.
+/// The node is a file which is represented as a VMO.
+/// The selection of this variant in [`Representation`] implies that the
+/// connection speaks the [`fuchsia.io2/Memory`] protocol.
+table MemoryInfo {
+    /// Although a VMO is returned as a part of this structure, that VMO may
+    /// back multiple files. To identify the logical portion of the VMO that
+    /// represents the single file, offset and size are also supplied.
+    ///
+    /// If the range covers the entire VMO (i.e. the offset is zero and the
+    /// length matches the size of the VMO), then all clients must receive a
+    /// VMO with the same koid. This can be a duplicate of the same underlying
+    /// page-aligned VMO.
+    ///
+    /// The rights on this VMO should correspond to the rights on the
+    /// node connection.
+    1: fuchsia.mem.Range buffer;
+};

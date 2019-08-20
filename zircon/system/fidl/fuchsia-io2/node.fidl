@@ -1,0 +1,104 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io2;
+
+using zx;
+
+/// Node defines the minimal protocol for entities which can be accessed
+/// in a filesystem.
+[FragileBase]
+protocol Node {
+    /// Creates another connection to the same node.
+    ///
+    /// + `options` options applicable to both `Open` and `Reopen`,
+    ///   including negotiating protocol and restricting rights.
+    ///   See [`fuchsia.io2/ConnectionOptions`].
+    /// + `object_request` is the server end of a channel created for the new
+    ///   connection. The caller may proceed to send messages on the
+    ///   corresponding client end right away.
+    ///
+    /// For files, the cloned connection and the original connection have
+    /// independent seek offsets.
+    Reopen(ConnectionOptions options,
+           handle<channel> object_request);
+
+    /// Terminates the connection to the node.
+    ///
+    /// After calling `Close`, the client must not send any other requests.
+    /// The result of `Close` arrives as an epitaph, where the channel is closed
+    /// by the server upon processing this operation.
+    ///
+    /// Closing the client end of the channel should be semantically equivalent
+    /// to calling `Close` without monitoring the status epitaph.
+    ///
+    /// This method does not require any rights.
+    Close();
+
+    /// Returns extra connection information and auxiliary handles.
+    ///
+    /// + `query` specifies the fields in `ConnectionInfo` that the caller is
+    ///   interested in.
+    /// - `info` see [`fuchsia.io2/ConnectionInfo`] for details on the fields.
+    ///
+    /// When all known bits in `query` are set, the return value matches
+    /// the one from [`OnConnectionInfo`], as if the caller requested that event
+    /// using [`ConnectionFlags.GET_CONNECTION_INFO`].
+    ///
+    /// If the `Describe` operation fails, the connection is closed with the
+    /// associated error.
+    ///
+    /// This method does not require any rights.
+    Describe(ConnectionInfoQuery query) -> (ConnectionInfo info);
+
+    /// An event produced eagerly by the server if requested by
+    /// [`ConnectionFlags.GET_CONNECTION_INFO`]. This event will be the
+    /// first message from the server, and is sent exactly once.
+    ///
+    /// - `info` See [`fuchsia.io2/ConnectionInfo`] for details on the fields.
+    ///   All members should be present.
+    ///
+    /// Different from [`fuchsia.io/OnOpen`], an error during open/reopen is
+    /// always manifested as an epitaph.
+    -> OnConnectionInfo(ConnectionInfo info);
+
+    /// Acquires a token which can be used to identify this connection at
+    /// a later point in time.
+    ///
+    /// This method does not require any rights. Note that the token identifies
+    /// the connection, hence carries the rights information on this connection.
+    GetToken() -> (Token token) error zx.status;
+
+    /// Acquires information about the node.
+    ///
+    /// The attributes of a node should be stable, independent of the
+    /// specific protocol used to access it.
+    ///
+    /// + `query` a bit-mask specifying which attributes to fetch. The server
+    ///   should not return more than necessary.
+    /// - `attributes` the returned attributes.
+    ///
+    /// This method requires the [`Rights.GET_ATTRIBUTES`] right.
+    GetAttributes(NodeAttributesQuery query)
+        -> (NodeAttributes attributes) error zx.status;
+
+    /// Updates information about the node.
+    ///
+    /// + `attributes` the presence of a table field in `attributes` indicates
+    /// the intent to update the corresponding attribute.
+    ///
+    /// This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
+    UpdateAttributes(NodeAttributes attributes) -> () error zx.status;
+
+    /// Synchronizes updates to the node to the underlying media, if it exists.
+    ///
+    /// This method will return when the filesystem server has flushed the
+    /// relevant updates to the underlying media, but does not guarantee the
+    /// underlying media has persisted the information, nor that any information
+    /// is committed to hardware. Clients may use `Sync` to ensure ordering
+    /// between operations.
+    ///
+    /// This method does not require any rights.
+    Sync() -> () error zx.status;
+};

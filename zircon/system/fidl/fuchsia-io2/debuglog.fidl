@@ -1,0 +1,20 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io2;
+
+/// A node for interacting with the kernel debug log.
+/// It may be manipulated via the debuglog object returned from
+/// the `DebuglogInfo` member in [`fuchsia.io2/Representation`].
+protocol Debuglog {
+    compose Node;
+};
+
+/// The debuglog representation of a node.
+/// The selection of this variant in [`Representation`] implies that the
+/// connection speaks the [`fuchsia.io2/Debuglog`] protocol.
+table DebuglogInfo {
+    /// The backing debuglog kernel object.
+    1: handle<debuglog> debuglog;
+};

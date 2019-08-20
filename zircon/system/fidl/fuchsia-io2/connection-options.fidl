@@ -1,0 +1,124 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io2;
+
+/// Options for [`Directory.Open`] and [`Node.Reopen`].
+table ConnectionOptions {
+    /// Flags which can affect the behavior when opening and reopening.
+    /// If absent, assumes a default of zero.
+    1: ConnectionFlags flags;
+
+    /// Specifies the set of representations accepted by the client, to support
+    /// a form of protocol negotiation on the node being opened.
+    /// Refer to the definition of [`NodeProtocolSet`] for more details.
+    /// It cannot be zero.
+    ///
+    /// In addition, clients may assert the type of the object by setting
+    /// the protocol corresponding to the expected type:
+    ///
+    /// * If the caller expected a directory but the node cannot be accessed
+    ///   as a directory, the error is `ZX_ERR_NOT_DIR`.
+    /// * If the caller expected a file but the node cannot be accessed as a
+    ///   file, the error is `ZX_ERR_NOT_FILE`.
+    /// * In other mismatched cases, the error is `ZX_ERR_WRONG_TYPE`.
+    ///
+    /// During [`Directory.Open`], if a new object is to be created, `protocols`
+    /// determines the type of object to create; it must be present.
+    /// If a valid object type cannot be unambiguously inferred e.g.
+    /// both `DIRECTORY` and `FILE` were set, the request must fail.
+    ///
+    /// During [`Node.Reopen`], clients may specify a different but compatible
+    /// `protocols` to do a "protocol upgrade".
+    ///
+    /// If more than one protocol is present in `protocols`, the resultant
+    /// protocol may become any one of them. Clients should specify
+    /// [`ConnectionFlags.GET_CONNECTION_INFO`] to receive a
+    /// [`Node.OnConnectionInfo`] event, in order to ascertain the protocol.
+    ///
+    /// If absent, indicates that the caller accepts any type of node, and
+    /// the resulting protocol is unspecified.
+    2: NodeProtocolSet protocols;
+
+    /// Requests the specified rights on the new connection. If absent, inherits
+    /// the same rights as the source connection.
+    ///
+    /// ## Rights Hierarchy
+    ///
+    /// Respecting principles of least privileges, `rights` must meet the
+    /// following restrictions:
+    ///
+    /// * A connection must have nonzero rights.
+    /// * Rights must never increase in a derived connection:
+    ///   + During [`Directory.Open`], you may only request the same rights as
+    ///     what the directory connection already has, or a subset of those.
+    ///   + During [`Node.Reopen`], similarly, you may only request the same or
+    ///     a subset of rights possessed by the original connection.
+    /// * Exceeding those rights causes `object_request` to be closed with a
+    ///   `ZX_ERR_ACCESS_DENIED` epitaph.
+    ///
+    /// The proper enforcement of the rights hierarchy is a powerful refinement
+    /// over the existing access control facilities offered by directory
+    /// sandboxing. The rights manipulation should be implemented mechanically
+    /// without knowledge of any specific rights, and servers should propagate
+    /// unknown bits members, to gracefully handle future rights extensions.
+    ///
+    /// ## Rights Inheritance
+    ///
+    /// Absent `rights` field means inheriting the same rights as the source.
+    ///
+    /// * During [`Node.Reopen`], the new connection would have the same rights
+    ///   as the connection where the `Reopen` call is made.
+    /// * During [`Directory.Open`], the connection would have the same
+    ///   rights as the connection where the `Open` call is made.
+    ///
+    /// Note: `rights` limits the set of operations allowed on the new
+    /// connection, but does not guarantee their availability. For convenience,
+    /// clients may query the [`ConnectionInfo.available_operations`] field on a
+    /// new connection, which is the intersection of the rights and abilities
+    /// and indicates the guaranteed set of available operations.
+    ///
+    /// See [`fuchsia.io2/Rights`] and [`fuchsia.io2/Abilities`].
+    3: Rights rights;
+};
+
+/// Flags applicable to both [`Directory.Open`] and [`Node.Reopen`].
+bits ConnectionFlags : uint64 {
+    /// Requests that an [`Node.OnConnectionInfo`] event be sent as the first
+    /// message on the protocol request. Requests all fields in the
+    /// [`ConnectionInfo`] table. Doing so is more efficient than calling
+    /// [`Node.Describe`] later on the connection.
+    GET_CONNECTION_INFO = 0x01;
+
+    /// Connects to the exposed protocol if the node is a Connector.
+    /// It is an error to use this flag with other types of nodes.
+    ///
+    /// If both `GET_CONNECTION_INFO` and `CONNECT` are specified, the channel
+    /// will receive exactly one [`Node.OnConnectionInfo`] event, after which
+    /// the protocol switches from [`fuchsia.io2/Node`] to the intended protocol.
+    /// Message sent by the client prior to receiving [`Node.OnConnectionInfo`]
+    /// are queued and processed after the protocol switch.
+    ///
+    /// `CONNECT` cannot be supplied together with `APPEND`.
+    /// `CONNECT` cannot be supplied together with `TRUNCATE`.
+    ///
+    /// Requires the [`Rights.CONNECT`] right on the connection.
+    CONNECT = 0x02;
+
+    /// Opens the node in append mode, i.e. the connection should seek to the
+    /// end of the node before every write.
+    ///
+    /// If the node does not support appending, it should result in a
+    /// `ZX_ERR_NOT_SUPPORTED` epitaph.
+    /// Currently, only [`fuchsia.io2/NodeProtocolSet.FILE`] connections
+    /// may be configured for appending.
+    APPEND = 0x04;
+
+    /// Truncates the object before usage, by setting its length to 0.
+    /// Requires the [`Rights.WRITE_BYTES`] right on the connection.
+    ///
+    /// If the node does not support truncating, it should result in a
+    /// `ZX_ERR_NOT_SUPPORTED` epitaph.
+    TRUNCATE = 0x08;
+};

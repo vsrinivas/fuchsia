@@ -1,0 +1,50 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// # Library Overview
+///
+library fuchsia.io2;
+
+/// The type for the name of a node, i.e. a single path component.
+/// E.g. `foo`
+///
+/// ## Invariants
+///
+/// A valid node name must meet the following criteria:
+///
+/// * It cannot be longer than [`MAX_NAME_LENGTH`].
+/// * It cannot be empty.
+/// * It cannot be ".." (dot-dot).
+/// * It cannot be "." (single dot).
+/// * It cannot contain "/".
+/// * It cannot contain embedded NUL.
+using Name = string:MAX_NAME_LENGTH;
+
+/// The maximum length, in bytes, of a single filesystem component.
+const uint64 MAX_NAME_LENGTH = 255;
+
+/// A path is a string of one or more components, separated by "/".
+/// E.g. `foo/bar/baz`
+///
+/// ## Invariants
+///
+/// A valid path must meet the following criteria:
+///
+/// * It cannot be empty.
+/// * It cannot be longer than [`MAX_PATH_LENGTH`].
+/// * It cannot have a leading "/".
+/// * It cannot have a trailing "/".
+/// * Each component must be a valid [`Name`].
+///
+/// Paths should be transformed into their canonical forms at client side.
+/// For example, a client should convert `"foo/bar/.././baz/"` to `"foo/baz"`
+/// before using it as a path.
+using Path = string:MAX_PATH_LENGTH;
+
+/// The maximum length, in bytes, of a filesystem path.
+const uint64 MAX_PATH_LENGTH = 4095;
+
+/// The type to identify a connection to a node.
+/// It represents a capability: a reference to a node with associated rights.
+using Token = handle<event>;

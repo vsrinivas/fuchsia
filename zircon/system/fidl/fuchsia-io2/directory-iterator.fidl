@@ -1,0 +1,26 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io2;
+
+using zx;
+
+protocol DirectoryIterator {
+    /// Reads a collection of variably sized directory entries into a buffer.
+    ///
+    /// The number of entries in a directory may be very large: akin to
+    /// calling read multiple times on a file, directories have a seek
+    /// offset which is updated on subsequent calls to `Enumerate`.
+    /// The caller should always use a receiving buffer size as large as the
+    /// maximum channel limit.
+    ///
+    /// When the end of iteration is reached, the returned `entries` vector
+    /// will be empty.
+    ///
+    /// This method does not require any rights, as the rights are checked
+    /// in the [`Directory.Enumerate`] call.
+    GetNext()
+        -> (vector<DirectoryEntry>:MAX_DIRECTORY_BATCH_SIZE entries)
+        error zx.status;
+};

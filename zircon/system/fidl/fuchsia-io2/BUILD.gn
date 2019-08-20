@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl.gni")
+
+fidl_library("fuchsia-io2") {
+  sdk = true
+  sources = [
+    "connection-info.fidl",
+    "connection-options.fidl",
+    "connector.fidl",
+    "debuglog.fidl",
+    "deprecated.fidl",
+    "directory-entry.fidl",
+    "directory-iterator.fidl",
+    "directory-watcher.fidl",
+    "directory.fidl",
+    "file.fidl",
+    "io2.fidl",
+    "memory.fidl",
+    "node-attributes.fidl",
+    "node.fidl",
+    "pipe.fidl",
+    "posix-socket.fidl",
+    "rights-abilities.fidl",
+  ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-mem",
+  ]
+}
