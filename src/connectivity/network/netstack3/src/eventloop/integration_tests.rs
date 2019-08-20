@@ -569,7 +569,7 @@ async fn test_ping() {
     for seq in 1..=4 {
         debug!("sending ping seq {}", seq);
         // send ping request:
-        core_icmp::send_icmp_echo_request::<_, _, Ipv4>(
+        core_icmp::send_icmpv4_echo_request(
             t.ctx(0),
             conn_id,
             seq,

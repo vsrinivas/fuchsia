@@ -9,7 +9,7 @@ use log::{debug, trace};
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{MulticastAddress, SpecifiedAddr};
 use packet::{BufferMut, Serializer, TruncateDirection, TruncatingSerializer};
-use specialize_ip_macro::{specialize_ip, specialize_ip_address};
+use specialize_ip_macro::specialize_ip_address;
 
 use crate::context::{CounterContext, StateContext};
 use crate::device::ndp::NdpPacketHandler;
@@ -251,7 +251,7 @@ pub(crate) fn receive_icmpv4_packet<B: BufferMut, C: Icmpv4Context<B> + PmtuHand
                 let req = *echo_request.message();
                 let code = echo_request.code();
                 let (local_ip, remote_ip) = (dst_ip, src_ip);
-                // TODO(joshlf): Do something if send_ip_packet returns an
+                // TODO(joshlf): Do something if send_icmp_reply returns an
                 // error?
                 ctx.send_icmp_reply(device, remote_ip, local_ip, |src_ip| {
                     buffer.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
@@ -418,7 +418,7 @@ pub(crate) fn receive_icmpv6_packet<
                 let req = *echo_request.message();
                 let code = echo_request.code();
                 let (local_ip, remote_ip) = (dst_ip, src_ip);
-                // TODO(joshlf): Do something if send_ip_packet returns an
+                // TODO(joshlf): Do something if send_icmp_reply returns an
                 // error?
                 ctx.send_icmp_reply(device, remote_ip, local_ip, |src_ip| {
                     buffer.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
@@ -1182,36 +1182,62 @@ fn receive_icmp_echo_reply<
     }
 }
 
-/// Send an ICMP echo request on an existing connection.
+/// Send an ICMPv4 echo request on an existing connection.
 ///
 /// # Panics
 ///
-/// `send_icmp_echo_request` panics if `conn` is not associated with a
-/// connection for this IP version.
-#[specialize_ip]
-pub fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
+/// `send_icmpv4_echo_request` panics if `conn` is not associated with an ICMPv4
+/// connection.
+pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
     conn: IcmpConnId,
     seq_num: u16,
     body: B,
 ) {
-    let conns = get_conns::<_, I::Addr>(ctx.state_mut());
+    let conns = get_conns::<_, Ipv4Addr>(ctx.state_mut());
     let IcmpAddr { remote_addr, icmp_id } =
-        conns.get_by_conn(conn.0).expect("icmp::send_icmp_echo_request: no such conn").clone();
+        conns.get_by_conn(conn.0).expect("icmp::send_icmpv4_echo_request: no such conn").clone();
 
     let req = IcmpEchoRequest::new(icmp_id, seq_num);
-
-    #[ipv4]
-    let proto = IpProto::Icmp;
-    #[ipv6]
-    let proto = IpProto::Icmpv6;
 
     // TODO(brunodalbo) for now, ICMP connections are only bound to remote
     //  addresses, which allow us to just send the IP packet with whatever src
     //  ip we resolve the route to. With sockets v2, IcmpAddr will be bound to a
     //  local address and sending this request out will be done differently.
-    crate::ip::send_ip_packet(ctx, remote_addr, proto, |a| {
-        body.encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(
+    crate::ip::send_ipv4_packet(ctx, remote_addr, IpProto::Icmp, |a| {
+        body.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+            a.into_addr(),
+            remote_addr.get(),
+            IcmpUnusedCode,
+            req,
+        ))
+    });
+}
+
+/// Send an ICMPv6 echo request on an existing connection.
+///
+/// # Panics
+///
+/// `send_icmpv6_echo_request` panics if `conn` is not associated with an ICMPv6
+/// connection.
+pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
+    ctx: &mut Context<D>,
+    conn: IcmpConnId,
+    seq_num: u16,
+    body: B,
+) {
+    let conns = get_conns::<_, Ipv6Addr>(ctx.state_mut());
+    let IcmpAddr { remote_addr, icmp_id } =
+        conns.get_by_conn(conn.0).expect("icmp::send_icmpv6_echo_request: no such conn").clone();
+
+    let req = IcmpEchoRequest::new(icmp_id, seq_num);
+
+    // TODO(brunodalbo) for now, ICMP connections are only bound to remote
+    //  addresses, which allow us to just send the IP packet with whatever src
+    //  ip we resolve the route to. With sockets v2, IcmpAddr will be bound to a
+    //  local address and sending this request out will be done differently.
+    crate::ip::send_ipv6_packet(ctx, remote_addr, IpProto::Icmpv6, |a| {
+        body.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
             a.into_addr(),
             remote_addr.get(),
             IcmpUnusedCode,
@@ -1255,11 +1281,13 @@ fn get_conns<D: EventDispatcher, A: IpAddress>(
 
 #[cfg(test)]
 mod tests {
-    use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-    use packet::{Buf, Serializer};
     use std::fmt::Debug;
     #[cfg(feature = "udp-icmp-port-unreachable")]
     use std::num::NonZeroU16;
+
+    use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use packet::{Buf, Serializer};
+    use specialize_ip_macro::specialize_ip;
 
     use super::*;
     use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
@@ -1361,7 +1389,7 @@ mod tests {
             DUMMY_CONFIG_V4.local_ip.get(),
             64,
             IpProto::Icmp,
-            &["receive_icmpv4_packet::echo_request", "send_ip_packet"],
+            &["receive_icmpv4_packet::echo_request", "send_ipv4_packet"],
             req.reply(),
             IcmpUnusedCode,
             |packet| assert_eq!(packet.original_packet().bytes(), req_body),
@@ -1387,7 +1415,7 @@ mod tests {
             DUMMY_CONFIG_V4.local_ip.get(),
             64,
             IpProto::Icmp,
-            &["receive_icmpv4_packet::timestamp_request", "send_ip_packet"],
+            &["receive_icmpv4_packet::timestamp_request", "send_ipv4_packet"],
             req.reply(0x80000000, 0x80000000),
             IcmpUnusedCode,
             |_| {},
@@ -1576,6 +1604,7 @@ mod tests {
         assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, multicast_ip_1, true));
     }
 
+    #[specialize_ip]
     fn test_icmp_connections<I: Ip>(recv_icmp_packet_name: &str) {
         crate::testutil::set_logger_for_test();
         let config = crate::testutil::get_dummy_config::<I::Addr>();
@@ -1590,12 +1619,10 @@ mod tests {
 
         let echo_body = vec![1, 2, 3, 4];
 
-        send_icmp_echo_request::<_, _, I>(
-            net.context("alice"),
-            conn,
-            7,
-            Buf::new(echo_body.clone(), ..),
-        );
+        #[ipv4]
+        send_icmpv4_echo_request(net.context("alice"), conn, 7, Buf::new(echo_body.clone(), ..));
+        #[ipv6]
+        send_icmpv6_echo_request(net.context("alice"), conn, 7, Buf::new(echo_body.clone(), ..));
 
         net.run_until_idle().unwrap();
         assert_eq!(

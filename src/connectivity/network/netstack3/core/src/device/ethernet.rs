@@ -1706,7 +1706,10 @@ mod tests {
                 .into_inner();
 
             receive_ip_packet::<_, _, A::Version>(ctx, device, FrameDestination::Unicast, buf);
-            assert_eq!(get_counter_val(ctx, dispatch_receive_ip_packet_name::<A::Version>()), expected);
+            assert_eq!(
+                get_counter_val(ctx, dispatch_receive_ip_packet_name::<A::Version>()),
+                expected
+            );
         }
 
         let config = get_dummy_config::<I::Addr>();

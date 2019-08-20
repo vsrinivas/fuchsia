@@ -1498,7 +1498,7 @@ mod tests {
         let mut net = new_dummy_network_from_config("alice", "bob", DUMMY_CONFIG_V4);
 
         // alice sends bob a ping:
-        ip::send_ip_packet(
+        ip::send_ipv4_packet(
             net.context("alice"),
             DUMMY_CONFIG_V4.remote_ip,
             ip::IpProto::Icmp,
@@ -1644,7 +1644,7 @@ mod tests {
         );
 
         // alice sends bob a ping:
-        ip::send_ip_packet(
+        ip::send_ipv4_packet(
             net.context("alice"),
             DUMMY_CONFIG_V4.remote_ip,
             ip::IpProto::Icmp,
