@@ -67,7 +67,6 @@ base_package_labels += [
   "//src/identity/bin:core",
   "//src/recovery/factory_reset",
   "//src/sys/timekeeper",
-  "//src/ui/bin/brightness_manager",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
 ]
 
