@@ -5,11 +5,12 @@
 #include "garnet/lib/ui/gfx/screenshotter.h"
 
 #include <lib/zx/time.h>
-#include <trace/event.h>
 
 #include <functional>
 #include <utility>
 #include <vector>
+
+#include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/engine_renderer.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
@@ -53,8 +54,9 @@ std::vector<uint8_t> rotate_img_vec(const std::vector<uint8_t>& imgvec, uint32_t
   // Trace performance.
   TRACE_DURATION("gfx", "Screenshotter rotate_img_vec");
 
-  // Rotation should always be a multiple of 90 degrees.
-  FXL_CHECK(rotation % 90 == 0 && rotation < 360);
+  // Rotation should always be a multiple of 90 degrees, and not 0.
+  rotation = rotation % 360;
+  FXL_CHECK(rotation % 90 == 0 && rotation != 0);
 
   // Rotation determines which of the width and height
   // are the inner and outer loop.
@@ -67,15 +69,30 @@ std::vector<uint8_t> rotate_img_vec(const std::vector<uint8_t>& imgvec, uint32_t
 
   for (uint32_t i = 0; i < outer; i++) {
     for (uint32_t j = 0; j < inner; j++) {
-      // Determine which loop represents x or y.
-      uint32_t x = (rotation == 180) ? j : i;
-      uint32_t y = (rotation == 180) ? i : j;
+      uint32_t x;
+      uint32_t y;
+      // Because of the order pixels are appended, |j| is the x axis of the new
+      // vector and |i| is the y axis.
+      switch (rotation) {
+        case 90:
+          x = width - i - 1;
+          y = j;
+          break;
 
-      // Take inverse y for 180 or 270 degrees.
-      uint32_t new_y = (rotation == 90) ? y : (height - y - 1);
+        case 180:
+          // x and y depend on different variables in this case.
+          x = width - j - 1;
+          y = height - i - 1;
+          break;
+
+        case 270:
+          x = i;
+          y = height - j - 1;
+          break;
+      };
 
       for (uint32_t b = 0; b < bytes_per_pixel; b++) {
-        result.push_back(imgvec[(x + new_y * width) * bytes_per_pixel + b]);
+        result.push_back(imgvec[(x + y * width) * bytes_per_pixel + b]);
       }
     }
   }
@@ -110,7 +127,7 @@ void Screenshotter::OnCommandBufferDone(
   memcpy(imgvec.data(), row, num_bytes);
 
   // Apply rotation of 90, 180 or 270 degrees counterclockwise.
-  if (rotation > 0) {
+  if (rotation % 360 != 0) {
     imgvec = rotate_img_vec(imgvec, width, height, kBytesPerPixel, rotation);
   }
 

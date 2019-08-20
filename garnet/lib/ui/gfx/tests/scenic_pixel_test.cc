@@ -1074,56 +1074,68 @@ TEST_F(ScenicPixelTest, DISABLED_Compositor) {
 // This test sets up a scene, takes a screenshot, rotates display configuration
 // by 90 degrees and takes a second screenshot, then makes sure that the pixels
 // in both screenshots map onto each other how you would expect.
-TEST_F(ScenicPixelTest, RotationTest) {
-  auto test_session = SetUpTestSession();
-  scenic::Session* const session = &test_session->session;
-  const auto [display_width, display_height] = test_session->display_dimensions;
-  scenic::EntityNode* root_node = &test_session->root_node;
 
-  test_session->SetUpCamera().SetProjection(0);
+class RotationTest : public ScenicPixelTest {
+ public:
+  void TestRotation(uint32_t angle) {
+    auto test_session = SetUpTestSession();
+    scenic::Session* const session = &test_session->session;
+    const auto [display_width, display_height] = test_session->display_dimensions;
+    scenic::EntityNode* root_node = &test_session->root_node;
 
-  const float pane_width = display_width / 5;
-  const float pane_height = display_height;
+    test_session->SetUpCamera().SetProjection(0);
 
-  // For this test, create 5 vertical bands. This is an array of
-  // the rgb colors for each of the five bands that will be
-  // created below.
-  static const float colors[15] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0};
+    const float pane_width = display_width / 5;
+    const float pane_height = display_height;
 
-  for (uint32_t i = 0; i < 5; i++) {
-    scenic::Rectangle pane_shape(session, pane_width, pane_height);
-    scenic::Material pane_material(session);
-    pane_material.SetColor(255 * colors[3 * i], 255 * colors[3 * i + 1], 255 * colors[3 * i + 2],
-                           255);
+    // For this test, create 5 vertical bands. This is an array of
+    // the rgb colors for each of the five bands that will be
+    // created below.
+    static const float colors[15] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0};
 
-    scenic::ShapeNode pane_node(session);
-    pane_node.SetShape(pane_shape);
-    pane_node.SetMaterial(pane_material);
-    pane_node.SetTranslation((i + 0.5) * pane_width, 0.5 * pane_height, -20);
-    root_node->AddChild(pane_node);
-  }
+    for (uint32_t i = 0; i < 5; i++) {
+      scenic::Rectangle pane_shape(session, pane_width, pane_height);
+      scenic::Material pane_material(session);
+      pane_material.SetColor(255 * colors[3 * i], 255 * colors[3 * i + 1], 255 * colors[3 * i + 2],
+                             255);
 
-  // Display unrotated version first.
-  Present(session);
-  scenic::Screenshot prev_screenshot = TakeScreenshot();
+      scenic::ShapeNode pane_node(session);
+      pane_node.SetShape(pane_shape);
+      pane_node.SetMaterial(pane_material);
+      pane_node.SetTranslation((i + 0.5) * pane_width, 0.5 * pane_height, -20);
+      root_node->AddChild(pane_node);
+    }
 
-  test_session->compositor.SetLayoutRotation(90);
+    // Display unrotated version first.
+    Present(session);
+    scenic::Screenshot prev_screenshot = TakeScreenshot();
 
-  // Display rotated version.
-  Present(session, zx::time(1000000));
-  scenic::Screenshot post_screenshot = TakeScreenshot();
+    test_session->compositor.SetLayoutRotation(angle);
 
-  // The pre and post width and height should be the reverse of each other.
-  EXPECT_EQ(prev_screenshot.width(), post_screenshot.height());
-  EXPECT_EQ(prev_screenshot.height(), post_screenshot.width());
+    // Display rotated version.
+    Present(session, zx::time(1000000));
+    scenic::Screenshot post_screenshot = TakeScreenshot();
 
-  // All of the colors should be transposed.
-  for (uint32_t x = 0; x < prev_screenshot.width(); x++) {
-    for (uint32_t y = 0; y < prev_screenshot.height(); y++) {
-      EXPECT_EQ(prev_screenshot[y][x], post_screenshot[x][y]);
+    // The pre and post width and height should be the reverse of each other.
+    EXPECT_EQ(prev_screenshot.width(), post_screenshot.height());
+    EXPECT_EQ(prev_screenshot.height(), post_screenshot.width());
+
+    // All of the colors should be transposed.
+    // Only support 90 and 270 degree rotations here.
+    for (uint32_t x = 0; x < prev_screenshot.width(); x++) {
+      for (uint32_t y = 0; y < prev_screenshot.height(); y++) {
+        uint32_t post_x = angle == 90 ? y : prev_screenshot.height() - y - 1;
+        uint32_t post_y = angle == 90 ? prev_screenshot.width() - x - 1 : x;
+
+        EXPECT_EQ(prev_screenshot[y][x], post_screenshot[post_y][post_x]);
+      }
     }
   }
-}
+};
+
+TEST_F(RotationTest, Test90) { TestRotation(90); }
+
+TEST_F(RotationTest, RotationTest270) { TestRotation(270); }
 
 // Test to make sure scenic can properly render basic shapes like circles.
 TEST_F(ScenicPixelTest, BasicShapeTest) {
