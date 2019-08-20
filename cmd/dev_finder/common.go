@@ -13,6 +13,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -135,6 +136,19 @@ func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
 	return m
 }
 
+func sortDeviceMap(deviceMap map[string]*fuchsiaDevice) []*fuchsiaDevice {
+	keys := make([]string, 0)
+	for k := range deviceMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	res := make([]*fuchsiaDevice, 0)
+	for _, k := range keys {
+		res = append(res, deviceMap[k])
+	}
+	return res
+}
+
 func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet) ([]*fuchsiaDevice, error) {
 	if cmd.mdnsHandler == nil {
 		return nil, fmt.Errorf("packet handler is nil")
@@ -177,20 +191,26 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet)
 		}
 	}
 
-	devices := make([]*fuchsiaDevice, 0)
+	devices := make(map[string]*fuchsiaDevice)
 	for {
 		select {
 		case <-ctx.Done():
 			if len(devices) == 0 {
 				return nil, fmt.Errorf("timeout")
 			}
-			return devices, nil
+			// Devices are returned in sorted order to ensure that results are
+			// deterministic despite using a hashmap (which is non-deterministically
+			// ordered).
+			return sortDeviceMap(devices), nil
 		case err := <-errChan:
 			return nil, err
 		case device := <-devChan:
-			devices = append(devices, device)
+			// Creates a hashable string to remove duplicate devices,
+			// as no two devices on this network should have the same
+			// IP and domain.
+			devices[fmt.Sprintf("%s|%s", string(device.addr), device.domain)] = device
 			if cmd.deviceLimit != 0 && len(devices) == cmd.deviceLimit {
-				return devices, nil
+				return sortDeviceMap(devices), nil
 			}
 		}
 	}

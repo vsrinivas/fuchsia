@@ -154,11 +154,11 @@ func TestListDevices(t *testing.T) {
 	want := []*fuchsiaDevice{
 		{
 			addr:   net.ParseIP("192.168.0.42").To4(),
-			domain: "some.domain",
+			domain: "another.domain",
 		},
 		{
 			addr:   net.ParseIP("192.168.0.42").To4(),
-			domain: "another.domain",
+			domain: "some.domain",
 		},
 	}
 	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
@@ -206,6 +206,40 @@ func TestListDevices_emptyData(t *testing.T) {
 
 	// Must not crash.
 	cmd.listDevices(context.Background())
+}
+
+func TestListDevices_duplicateDevices(t *testing.T) {
+	cmd := listCmd{
+		devFinderCmd: newDevFinderCmd(
+			listMDNSHandler,
+			[]string{
+				"some.domain",
+				"some.domain",
+				"some.domain",
+				"some.domain",
+				"some.domain",
+				"another.domain",
+			},
+			false,
+			false),
+	}
+	got, err := cmd.listDevices(context.Background())
+	if err != nil {
+		t.Fatalf("listDevices: %v", err)
+	}
+	want := []*fuchsiaDevice{
+		{
+			addr:   net.ParseIP("192.168.0.42").To4(),
+			domain: "another.domain",
+		},
+		{
+			addr:   net.ParseIP("192.168.0.42").To4(),
+			domain: "some.domain",
+		},
+	}
+	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
+	}
 }
 
 func TestListDevices_tooShortData(t *testing.T) {
