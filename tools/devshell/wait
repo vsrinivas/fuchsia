@@ -16,7 +16,6 @@ device_addr=""
 until [[ -n "${device_addr}" ]]; do
   device_addr="$(get-fuchsia-device-addr 2>/dev/null)"
 done
-until fx-command-run ssh "${device_addr}" \
-  -o ConnectionAttempts=1 -o ConnectTimeout=1 echo >/dev/null 2>&1; do
+until fx-command-run ssh "${device_addr}" echo >/dev/null 2>&1; do
   echo -n
 done
