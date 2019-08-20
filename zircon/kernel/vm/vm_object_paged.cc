@@ -966,11 +966,22 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
           return ZX_ERR_NEXT;
         }
 
-        for (uint64_t off = gap_start; off < gap_end; off += PAGE_SIZE) {
-          if (HasAttributedAncestorPageLocked(off)) {
-            count++;
-          }
+        // Count any ancestor pages that should be attributed to us in the range. Ideally the whole
+        // range gets processed in one attempt, but in order to prevent unbounded stack growth with
+        // recursion we instead process partial ranges and recalculate the intermediate results.
+        // As a result instead of being O(n) in the number of committed pages it could
+        // pathologically become O(nd) where d is our depth in the vmo hierarchy.
+        uint64_t off = gap_start;
+        while (off < parent_limit_ && off < gap_end) {
+          uint64_t local_count = 0;
+          uint64_t attributed =
+              CountAttributedAncestorPagesLocked(off, gap_end - off, &local_count);
+          // |CountAttributedAncestorPagesLocked| guarantees that it will make progress.
+          DEBUG_ASSERT(attributed > 0);
+          off += attributed;
+          count += local_count;
         }
+
         return ZX_ERR_NEXT;
       },
       offset, offset + new_len);
@@ -978,75 +989,163 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
   return count;
 }
 
-bool VmObjectPaged::HasAttributedAncestorPageLocked(uint64_t offset) const {
-  // For each offset, walk up the ancestor chain to see if there is a page at that offset
-  // that should be attributed to this vmo.
-  //
+uint64_t VmObjectPaged::CountAttributedAncestorPagesLocked(uint64_t offset, uint64_t size,
+                                                           uint64_t* count) const TA_REQ(lock_) {
+  // We need to walk up the ancestor chain to see if there are any pages that should be attributed
+  // to this vmo. We attempt operate on the entire range given to us but should we need to query
+  // the next parent for a range we trim our operating range. Trimming the range is necessary as
+  // we cannot recurse and otherwise have no way to remember where we were up to after processing
+  // the range in the parent. The solution then is to return all the way back up to the caller with
+  // a partial range and then effectively recompute the meta data at the point we were up to.
+
   // Note that we cannot stop just because the page_attribution_user_id_ changes. This is because
   // there might still be a forked page at the offset in question which should be attributed to
   // this vmo. Whenever the attribution user id changes while walking up the ancestors, we need
   // to determine if there is a 'closer' vmo in the sibling subtree to which the offset in
   // question can be attributed, or if it should still be attributed to the current vmo.
+
+  DEBUG_ASSERT(offset < parent_limit_);
   const VmObjectPaged* cur = this;
+  AssertHeld(cur->lock_);
   uint64_t cur_offset = offset;
-  vm_page_t* page = nullptr;
+  uint64_t cur_size = size;
+  // Count of how many pages we attributed as being owned by this vmo.
+  uint64_t attributed_ours = 0;
+  // Count how much we've processed. This is needed to remember when we iterate up the parent list
+  // at an offset.
+  uint64_t attributed = 0;
   while (cur_offset < cur->parent_limit_) {
     // For cur->parent_limit_ to be non-zero, it must have a parent.
     DEBUG_ASSERT(cur->parent_);
     DEBUG_ASSERT(cur->parent_->is_paged());
 
-    auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+    const auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+    AssertHeld(parent->lock_);
     uint64_t parent_offset;
     bool overflowed = add_overflow(cur->parent_offset_, cur_offset, &parent_offset);
     DEBUG_ASSERT(!overflowed);                     // vmo creation should have failed
     DEBUG_ASSERT(parent_offset <= parent->size_);  // parent_limit_ prevents this
 
-    page = parent->page_list_.GetPage(parent_offset);
-    if (parent->page_attribution_user_id_ != cur->page_attribution_user_id_) {
-      bool left = cur == &parent->left_child_locked();
+    const bool left = cur == &parent->left_child_locked();
+    const auto& sib = left ? parent->right_child_locked() : parent->left_child_locked();
 
-      if (page && (page->object.cow_left_split || page->object.cow_right_split)) {
-        // If page has already been split and we can see it, then we know
-        // the sibling subtree can't see the page and thus it should be
-        // attributed to this vmo.
-        return true;
-      } else {
-        auto& sib = left ? parent->right_child_locked() : parent->left_child_locked();
-        DEBUG_ASSERT(sib.page_attribution_user_id_ == parent->page_attribution_user_id_);
-        if (sib.parent_offset_ + sib.parent_start_limit_ <= parent_offset &&
-            parent_offset < sib.parent_offset_ + sib.parent_limit_) {
-          // The offset is visible to the current vmo, so there can't be any migrated
-          // pages in the sibling subtree corresponding to the offset. And since the page
-          // is visible to the sibling, there must be a leaf vmo in its subtree which
-          // can actually see the offset.
-          //
-          // Therefore we know that there is a vmo in the sibling subtree which is
-          // 'closer' to this offset and thus to which this offset can be attributed.
-          return false;
-        } else {
-          if (page) {
-            // If there is a page and it's not accessible by the sibling,
-            // then it is attributed to |this|.
-            return true;
-          } else {
-            // |sib| can't see the offset, but there might be a sibling further up
-            // the ancestor tree that can, so we have to keep looking.
+    // Work out how much of the desired size is actually visible to us in the parent, we just use
+    // this to walk the correct amount of the page_list_
+    const uint64_t parent_size = fbl::min(cur_size, cur->parent_limit_ - cur_offset);
+
+    // By default we expect to process the entire range, hence our next_size is 0. Should we need to
+    // iterate up the stack then these will be set by one of the callbacks.
+    uint64_t next_parent_offset = parent_offset + cur_size;
+    uint64_t next_size = 0;
+    parent->page_list_.ForEveryPageAndGapInRange(
+        [&parent, &cur, &attributed_ours, &sib](const auto page, uint64_t off) {
+          AssertHeld(cur->lock_);
+          AssertHeld(sib.lock_);
+          AssertHeld(parent->lock_);
+          if (
+              // Page is explicitly owned by us
+              (parent->page_attribution_user_id_ == cur->page_attribution_user_id_) ||
+              // If page has already been split and we can see it, then we know
+              // the sibling subtree can't see the page and thus it should be
+              // attributed to this vmo.
+              (page->object.cow_left_split || page->object.cow_right_split) ||
+              // If the sibling cannot access this page then its ours, otherwise we know there's
+              // a vmo in the sibling subtree which is 'closer' to this offset, and to which we will
+              // attribute the page to.
+              !(sib.parent_offset_ + sib.parent_start_limit_ <= off &&
+                off < sib.parent_offset_ + sib.parent_limit_)) {
+            attributed_ours++;
           }
-        }
-      }
-    } else {
-      // If there's a page, it is attributed to |this|. Otherwise keep looking.
-      if (page) {
-        return true;
-      }
+          return ZX_ERR_NEXT;
+        },
+        [&parent, &cur, &next_parent_offset, &next_size, &sib](uint64_t gap_start,
+                                                               uint64_t gap_end) {
+          // Process a gap in the parent VMO.
+          //
+          // A gap in the parent VMO doesn't necessarily mean there are no pages
+          // in this range: our parent's ancestors may have pages, so we need to
+          // walk up the tree to find out.
+          //
+          // We don't always need to walk the tree though: in this this gap, both this VMO
+          // and our sibling VMO will share the same set of ancestor pages. However, the
+          // pages will only be accounted to one of the two VMOs.
+          //
+          // If the parent page_attribution_user_id is the same as us, we need to
+          // keep walking up the tree to perform a more accurate count.
+          //
+          // If the parent page_attribution_user_id is our sibling, however, we
+          // can just ignore the overlapping range: pages may or may not exist in
+          // the range --- but either way, they would be accounted to our sibling.
+          // Instead, we need only walk up ranges not visible to our sibling.
+          AssertHeld(cur->lock_);
+          AssertHeld(sib.lock_);
+          AssertHeld(parent->lock_);
+          uint64_t gap_size = gap_end - gap_start;
+          if (parent->page_attribution_user_id_ == cur->page_attribution_user_id_) {
+            // don't need to consider siblings as we own this range, but we do need to
+            // keep looking up the stack to find any actual pages.
+            next_parent_offset = gap_start;
+            next_size = gap_size;
+            return ZX_ERR_STOP;
+          }
+          // For this entire range we know that the offset is visible to the current vmo, and there
+          // are no committed or migrated pages. We need to check though for what portion of this
+          // range we should attribute to the sibling. Any range that we can attribute to the
+          // sibling we can skip, otherwise we have to keep looking up the stack to see if there are
+          // any pages that could be attributed to us.
+          uint64_t sib_offset, sib_len;
+          if (!GetIntersect(gap_start, gap_size, sib.parent_offset_ + sib.parent_start_limit_,
+                            sib.parent_limit_ - sib.parent_start_limit_, &sib_offset, &sib_len)) {
+            // No sibling ownership, so need to look at the whole range in the parent to find any
+            // pages.
+            next_parent_offset = gap_start;
+            next_size = gap_size;
+            return ZX_ERR_STOP;
+          }
+          // If the whole range is owned by the sibling, any pages that might be in
+          // it won't be accounted to us anyway. Skip the segment.
+          if (sib_len == gap_size) {
+            DEBUG_ASSERT(sib_offset == gap_start);
+            return ZX_ERR_NEXT;
+          }
+
+          // Otherwise, inspect the range not visible to our sibling.
+          if (sib_offset == gap_start) {
+            next_parent_offset = sib_offset + sib_len;
+            next_size = gap_end - next_parent_offset;
+          } else {
+            next_parent_offset = gap_start;
+            next_size = sib_offset - gap_start;
+          }
+          return ZX_ERR_STOP;
+        },
+        parent_offset, parent_offset + parent_size);
+    if (next_size == 0) {
+      // If next_size wasn't set then we don't need to keep looking up the chain as we successfully
+      // looked at the entire range.
+      break;
     }
+    // Count anything up to the next starting point as being processed.
+    attributed += next_parent_offset - parent_offset;
+    // Size should have been reduced by at least the amount we just attributed
+    DEBUG_ASSERT(next_size <= cur_size &&
+                 cur_size - next_size >= next_parent_offset - parent_offset);
 
     cur = parent;
-    cur_offset = parent_offset;
+    cur_offset = next_parent_offset;
+    cur_size = next_size;
   }
+  // Exiting the loop means we either ceased finding a relevant parent for the range, or we were
+  // able to process the entire range without needing to look up to a parent, in either case we
+  // can consider the entire range as attributed.
+  //
+  // The cur_size can be larger than the value of parent_size from the last loop iteration. This is
+  // fine as that range we trivially know has zero pages in it, and therefore has zero pages to
+  // determine attributions off.
+  attributed += cur_size;
 
-  // We didn't find a page at all, so nothing to attribute.
-  return false;
+  *count = attributed_ours;
+  return attributed;
 }
 
 zx_status_t VmObjectPaged::AddPage(vm_page_t* p, uint64_t offset) {

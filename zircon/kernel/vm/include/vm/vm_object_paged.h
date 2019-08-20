@@ -219,11 +219,15 @@ class VmObjectPaged final : public VmObject {
 
   // see AttributedPagesInRange
   size_t AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
-  // Helper function for ::AllocatedPagesInRangeLocked. Returns true if there is a page
-  // in an ancestor vmo at |offset| which should be attributed to this vmo.
-  bool HasAttributedAncestorPageLocked(uint64_t offset) const
-      // Walks the parent chain, which analysis can't handle.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  // Helper function for ::AllocatedPagesInRangeLocked. Counts the number of pages in ancestor's
+  // vmos that should be attributed to this vmo for the specified range. It is an error to pass in a
+  // range that does not need attributing (i.e. offset must be < parent_limit_), although |len| is
+  // permitted to be sized such that the range exceeds parent_limit_.
+  // The return value is the length of the processed region, which will be <= |size| and is
+  // guaranteed to be > 0. The |count| is the number of pages in this region that should be
+  // attributed to this vmo, versus some other vmo.
+  uint64_t CountAttributedAncestorPagesLocked(uint64_t offset, uint64_t size, uint64_t* count) const
+      TA_REQ(lock_);
 
   // internal read/write routine that takes a templated copy function to help share some code
   template <typename T>
