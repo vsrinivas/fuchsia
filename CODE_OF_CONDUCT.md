@@ -5,13 +5,13 @@ welcoming community. Below is our community code of conduct, which applies to
 our repos and organizations, mailing lists, blog content, IRC channel and any
 other Fuchsia-supported communication group, as well as any private
 communication initiated in the context of these spaces.
-Simply put, community discussions should be
+Simply put, community discussions should be the following:
 
- * respectful and kind;
- * about Fuchsia;
- * about features and code, not the individuals involved.
+ * Respectful and kind
+ * About Fuchsia
+ * About features and code, not the individuals involved
 
-## Be respectful and constructive.
+## Be respectful and constructive
 
 Treat everyone with respect. Build on each other's ideas. Each of us has the
 right to enjoy our experience and participate without fear of harassment,
@@ -21,17 +21,18 @@ communicating with someone in their primary language. We all get frustrated
 when working on hard problems, but we cannot allow that frustration to turn
 into personal attacks.
 
-## Speak up if you see or hear something.
+## Speak up if you see or hear something
+
 You are empowered to politely engage when you feel that you or others are
 disrespected. The person making you feel uncomfortable may not be aware of what
-they are doing - politely bringing their behavior to their attention is
+they are doing. Politely bringing their behavior to their attention is
 encouraged.
 
 If you are uncomfortable speaking up, or feel that your concerns are not being
 duly considered, you can email fuchsia-community-managers@google.com to request
 involvement from a community manager. All concerns shared with community
 managers will be kept confidential, but you may also submit an anonymous report
-[here](https://goo.gl/forms/xgisUdowrEWrYgui2).  Please note that without a way
+[here](https://goo.gl/forms/xgisUdowrEWrYgui2). Please note that without a way
 to contact you, an anonymous report may be difficult to act on. You may also
 create a throwaway account to report. In cases where a public response is deemed
 necessary, the identities of victims and reporters will remain confidential
@@ -41,35 +42,39 @@ While all reports will be taken seriously, the Fuchsia community managers may
 not act on complaints that they feel are not violations of this code of
 conduct.
 
-## We will not tolerate harassment of any kind, including but not limited to:
+## Harassment is not tolerated
+
+Harassment is not tolerated, including, but not limited to the
+following:
 
  * Harassing comments
  * Intimidation
- * Encouraging a person to engage in self-harm.
- * Sustained disruption or derailing of threads, channels, lists, etc.
- * Offensive or violent comments, jokes or otherwise
+ * Encouraging a person to engage in self-harm
+ * Sustained disruption or derailing of threads, channels, lists, and similar
+   forums
+ * Offensive or violent comments, jokes, or otherwise
  * Inappropriate sexual content
  * Unwelcome sexual or otherwise aggressive attention
  * Continued one-on-one communication after requests to cease
  * Distribution or threat of distribution of people's personally identifying
-   information, AKA “doxing”
+   information, also known as “doxing”
 
 ## Consequences for failing to comply with this policy
 
-Consequences for failing to comply with this policy may include, at the sole
-discretion of the Fuchsia community managers:
+Consequences for failing to comply with this policy may include any of the
+following, at the sole discretion of the Fuchsia community managers:
 
- * a request for an apology;
- * a private or public warning or reprimand;
- * a temporary ban from the mailing list, blog, Fuchsia repository or
+ * A request for an apology
+ * A private or public warning or reprimand
+ * A temporary ban from the mailing list, blog, Fuchsia repository or
    organization, or other Fuchsia-supported communication group, including
-   loss of committer status;
- * a permanent ban from any of the above, or from all current and future
+   loss of committer status
+ * A permanent ban from any of the above, or from all current and future
    Fuchsia-supported or Google-supported communities, including loss of
    committer status.
 
 Participants warned to stop any harassing behavior are expected to comply
-immediately; failure to do so will result in an escalation of consequences.
+immediately. Failure to do so will result in an escalation of consequences.
 The decisions of the Fuchsia community managers may be appealed via
 fuchsia-community-appeals@google.com.
 
