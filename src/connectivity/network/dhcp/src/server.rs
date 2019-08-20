@@ -38,13 +38,16 @@ pub const DEFAULT_STASH_ID: &str = "dhcpd";
 pub const DEFAULT_STASH_PREFIX: &str = "";
 
 /// This enumerates the actions a DHCP server can take in response to a
-/// received client message. A `SendResponse(Message)` indicates that a
-/// `Message` needs to be sent back to the client. The other two variants
-/// indicate a successful processing of a client `Decline` or `Release`.
+/// received client message. A `SendResponse(Message, Ipv4Addr)` indicates
+/// that a `Message` needs to be delivered back to the client.
+/// The server may optionally send a destination `Ipv4Addr` (if the protocol
+/// warrants it) to direct the response `Message` to.
+/// The other two variants indicate a successful processing of a client
+/// `Decline` or `Release`.
 /// Implements `PartialEq` for test assertions.
 #[derive(Debug, PartialEq)]
 pub enum ServerAction {
-    SendResponse(Message),
+    SendResponse(Message, Option<Ipv4Addr>),
     AddressDecline(Ipv4Addr),
     AddressRelease(Ipv4Addr),
 }
@@ -188,9 +191,46 @@ where
         }
     }
 
+    /// This method calculates the destination address of the server response
+    /// based on the conditions specified in -
+    /// https://tools.ietf.org/html/rfc2131#section-4.1 Page 22, Paragraph 4.
+    fn get_destination_addr(&mut self, client_msg: &Message) -> Option<Ipv4Addr> {
+        if !client_msg.giaddr.is_unspecified() {
+            Some(client_msg.giaddr)
+        } else if !client_msg.ciaddr.is_unspecified() {
+            Some(client_msg.ciaddr)
+        } else if client_msg.bdcast_flag {
+            Some(Ipv4Addr::BROADCAST)
+        } else {
+            client_msg.get_dhcp_type().ok().and_then(|typ| {
+                match typ {
+                    // TODO(fxbug.dev/35087): Revisit the first match arm.
+                    // Instead of returning BROADCAST address, server must update ARP table.
+                    //
+                    // Current Implementation =>
+                    // When client's message has unspecified `giaddr`, 'ciaddr' with
+                    // broadcast bit is not set, we broadcast the response on the subnet.
+                    //
+                    // Desired Implementation =>
+                    // Message should be unicast to client's mac address specified in `chaddr`.
+                    //
+                    // See https://tools.ietf.org/html/rfc2131#section-4.1 Page 22, Paragraph 4.
+                    MessageType::DHCPDISCOVER => Some(Ipv4Addr::BROADCAST),
+                    MessageType::DHCPREQUEST | MessageType::DHCPINFORM => Some(client_msg.yiaddr),
+                    MessageType::DHCPACK
+                    | MessageType::DHCPNAK
+                    | MessageType::DHCPOFFER
+                    | MessageType::DHCPDECLINE
+                    | MessageType::DHCPRELEASE => None,
+                }
+            })
+        }
+    }
+
     fn handle_discover(&mut self, disc: Message) -> Result<ServerAction, ServerError> {
         let client_config = self.client_config(&disc);
         let offered_ip = self.get_addr(&disc)?;
+        let dest = self.get_destination_addr(&disc);
         let mut offer = build_offer(disc, &self.config, &client_config);
         offer.yiaddr = offered_ip;
         match self.store_client_config(
@@ -199,7 +239,7 @@ where
             vec![],
             &client_config,
         ) {
-            Ok(()) => Ok(ServerAction::SendResponse(offer)),
+            Ok(()) => Ok(ServerAction::SendResponse(offer, dest)),
             Err(e) => Err(ServerError::ServerCacheUpdateFailure(StashError { error: e })),
         }
     }
@@ -275,7 +315,8 @@ where
             Err(ServerError::IncorrectDHCPServer(self.config.server_ip))
         } else {
             let () = self.validate_requested_addr_with_client(&req, requested_ip)?;
-            Ok(ServerAction::SendResponse(build_ack(req, requested_ip, &self.config)))
+            let dest = self.get_destination_addr(&req);
+            Ok(ServerAction::SendResponse(build_ack(req, requested_ip, &self.config), dest))
         }
     }
 
@@ -319,25 +360,29 @@ where
             get_requested_ip_addr(&req).ok_or(ServerError::NoRequestedAddrAtInitReboot)?;
         if !is_in_subnet(requested_ip, &self.config) {
             let error_msg = String::from("client and server are in different subnets");
-            return Ok(ServerAction::SendResponse(build_nak(req, &self.config, error_msg)));
+            let (nak, dest) = build_nak(req, &self.config, error_msg);
+            return Ok(ServerAction::SendResponse(nak, dest));
         }
         if !is_client_mac_known(req.chaddr, &self.cache) {
             return Err(ServerError::UnknownClientMac(req.chaddr));
         }
         if self.validate_requested_addr_with_client(&req, requested_ip).is_err() {
             let error_msg = String::from("requested ip is not assigned to client");
-            return Ok(ServerAction::SendResponse(build_nak(req, &self.config, error_msg)));
+            let (nak, dest) = build_nak(req, &self.config, error_msg);
+            return Ok(ServerAction::SendResponse(nak, dest));
         }
-        Ok(ServerAction::SendResponse(build_ack(req, requested_ip, &self.config)))
+        let dest = self.get_destination_addr(&req);
+        Ok(ServerAction::SendResponse(build_ack(req, requested_ip, &self.config), dest))
     }
 
     fn handle_request_renewing(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         let client_ip = req.ciaddr;
-        self.validate_requested_addr_with_client(&req, client_ip)
-            .and(Ok(ServerAction::SendResponse(build_ack(req, client_ip, &self.config))))
+        let () = self.validate_requested_addr_with_client(&req, client_ip)?;
+        let dest = self.get_destination_addr(&req);
+        Ok(ServerAction::SendResponse(build_ack(req, client_ip, &self.config), dest))
     }
 
-    /// TODO(NET-2445) Ensure server behavior is as intended.
+    /// TODO(fxbug.dev/21422): Ensure server behavior is as intended.
     fn handle_decline(&mut self, dec: Message) -> Result<ServerAction, ServerError> {
         let declined_ip =
             get_requested_ip_addr(&dec).ok_or_else(|| ServerError::NoRequestedAddrForDecline)?;
@@ -361,11 +406,12 @@ where
 
     fn handle_inform(&mut self, inf: Message) -> Result<ServerAction, ServerError> {
         // When responding to an INFORM, the server must leave yiaddr zeroed.
-        let yiaddr = Ipv4Addr::new(0, 0, 0, 0);
+        let yiaddr = Ipv4Addr::UNSPECIFIED;
+        let dest = self.get_destination_addr(&inf);
         let mut ack = build_ack(inf, yiaddr, &self.config);
         ack.options.clear();
         add_inform_ack_options(&mut ack, &self.config);
-        Ok(ServerAction::SendResponse(ack))
+        Ok(ServerAction::SendResponse(ack, dest))
     }
 
     /// Releases all allocated IP addresses whose leases have expired back to
@@ -450,7 +496,7 @@ pub struct CachedConfig {
 impl Default for CachedConfig {
     fn default() -> Self {
         CachedConfig {
-            client_addr: Ipv4Addr::new(0, 0, 0, 0),
+            client_addr: Ipv4Addr::UNSPECIFIED,
             options: vec![],
             expiration: std::i64::MAX,
         }
@@ -504,7 +550,7 @@ impl AddressPool {
         }
     }
 
-    /// TODO(NET-2446): The ip should be handed out based on client subnet
+    /// TODO(fxbug.dev/21423): The ip should be handed out based on client subnet
     /// Currently, the server blindly hands out the next available ip
     /// from its available ip pool, without any subnet analysis.
     ///
@@ -560,8 +606,8 @@ fn build_offer(client: Message, config: &ServerConfig, client_config: &ClientCon
     let mut offer = client;
     offer.op = OpCode::BOOTREPLY;
     offer.secs = 0;
-    offer.ciaddr = Ipv4Addr::new(0, 0, 0, 0);
-    offer.siaddr = Ipv4Addr::new(0, 0, 0, 0);
+    offer.ciaddr = Ipv4Addr::UNSPECIFIED;
+    offer.siaddr = Ipv4Addr::UNSPECIFIED;
     offer.sname = String::new();
     offer.file = String::new();
     add_required_options(&mut offer, config, client_config, MessageType::DHCPOFFER);
@@ -663,13 +709,14 @@ fn is_client_mac_known(mac: MacAddr, cache: &CachedClients) -> bool {
     cache.get(&mac).is_some()
 }
 
-fn build_nak(req: Message, config: &ServerConfig, error: String) -> Message {
+fn build_nak(req: Message, config: &ServerConfig, error: String) -> (Message, Option<Ipv4Addr>) {
     let mut nak = req;
     nak.op = OpCode::BOOTREPLY;
     nak.secs = 0;
-    nak.ciaddr = Ipv4Addr::new(0, 0, 0, 0);
-    nak.yiaddr = Ipv4Addr::new(0, 0, 0, 0);
-    nak.siaddr = Ipv4Addr::new(0, 0, 0, 0);
+    nak.ciaddr = Ipv4Addr::UNSPECIFIED;
+    nak.yiaddr = Ipv4Addr::UNSPECIFIED;
+    nak.siaddr = Ipv4Addr::UNSPECIFIED;
+
     nak.options.clear();
     let mut lease = vec![0; 4];
     BigEndian::write_u32(&mut lease, config.default_lease_time);
@@ -683,7 +730,14 @@ fn build_nak(req: Message, config: &ServerConfig, error: String) -> Message {
     });
     nak.options.push(ConfigOption { code: OptionCode::Message, value: error.into_bytes() });
 
-    nak
+    // https://tools.ietf.org/html/rfc2131#section-4.3.2
+    // Page 31, Paragraph 2-3.
+    if nak.giaddr.is_unspecified() {
+        (nak, Some(Ipv4Addr::BROADCAST))
+    } else {
+        nak.bdcast_flag = true;
+        (nak, None)
+    }
 }
 
 fn get_client_state(msg: &Message) -> Result<ClientState, ()> {
@@ -747,7 +801,7 @@ pub mod tests {
     }
 
     fn extract_message(server_response: ServerAction) -> Message {
-        if let ServerAction::SendResponse(message) = server_response {
+        if let ServerAction::SendResponse(message, _destination) = server_response {
             message
         } else {
             panic!("expected a message in server response, received {:?}", server_response)
@@ -975,7 +1029,77 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_returns_correct_offer() -> Result<(), Error> {
+    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_giaddr_when_giaddr_set(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut disc = new_test_discover();
+        disc.giaddr = random_ipv4_generator();
+
+        let offer_ip = random_ipv4_generator();
+
+        server.pool.available_addrs.insert(offer_ip);
+
+        let mut expected_offer = new_test_offer(&disc, &server);
+        expected_offer.yiaddr = offer_ip;
+        expected_offer.giaddr = disc.giaddr;
+
+        let expected_dest = disc.giaddr;
+
+        assert_eq!(
+            server.dispatch(disc),
+            Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_ciaddr_when_giaddr_unspecified(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut disc = new_test_discover();
+        disc.ciaddr = random_ipv4_generator();
+
+        let offer_ip = random_ipv4_generator();
+
+        server.pool.available_addrs.insert(offer_ip);
+
+        let mut expected_offer = new_test_offer(&disc, &server);
+        expected_offer.yiaddr = offer_ip;
+
+        let expected_dest = disc.ciaddr;
+
+        assert_eq!(
+            server.dispatch(disc),
+            Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_broadcast_bit_set_returns_correct_offer_and_dest_broadcast_when_giaddr_and_ciaddr_unspecified(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut disc = new_test_discover();
+        disc.bdcast_flag = true;
+
+        let offer_ip = random_ipv4_generator();
+
+        server.pool.available_addrs.insert(offer_ip);
+
+        let mut expected_offer = new_test_offer(&disc, &server);
+        expected_offer.yiaddr = offer_ip;
+        expected_offer.bdcast_flag = true;
+
+        assert_eq!(
+            server.dispatch(disc),
+            Ok(ServerAction::SendResponse(expected_offer, Some(Ipv4Addr::BROADCAST)))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_broadcast_when_giaddr_and_ciaddr_unspecified_and_broadcast_bit_unset(
+    ) -> Result<(), Error> {
         let mut server = new_test_minimal_server(server_time_provider).await?;
         let disc = new_test_discover();
 
@@ -986,7 +1110,63 @@ pub mod tests {
         let mut expected_offer = new_test_offer(&disc, &server);
         expected_offer.yiaddr = offer_ip;
 
-        assert_eq!(server.dispatch(disc), Ok(ServerAction::SendResponse(expected_offer)));
+        // TODO(fxbug.dev/35087): Instead of returning BROADCAST address, server must update ARP table.
+        assert_eq!(
+            server.dispatch(disc),
+            Ok(ServerAction::SendResponse(expected_offer, Some(Ipv4Addr::BROADCAST)))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_giaddr_if_giaddr_ciaddr_broadcast_bit_is_set(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut disc = new_test_discover();
+        disc.giaddr = random_ipv4_generator();
+        disc.ciaddr = random_ipv4_generator();
+        disc.bdcast_flag = true;
+
+        let offer_ip = random_ipv4_generator();
+
+        server.pool.available_addrs.insert(offer_ip);
+
+        let mut expected_offer = new_test_offer(&disc, &server);
+        expected_offer.yiaddr = offer_ip;
+        expected_offer.giaddr = disc.giaddr;
+        expected_offer.bdcast_flag = true;
+
+        let expected_dest = disc.giaddr;
+
+        assert_eq!(
+            server.dispatch(disc),
+            Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_ciaddr_if_ciaddr_broadcast_bit_is_set(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut disc = new_test_discover();
+        disc.ciaddr = random_ipv4_generator();
+        disc.bdcast_flag = true;
+
+        let offer_ip = random_ipv4_generator();
+
+        server.pool.available_addrs.insert(offer_ip);
+
+        let mut expected_offer = new_test_offer(&disc, &server);
+        expected_offer.yiaddr = offer_ip;
+        expected_offer.bdcast_flag = true;
+
+        let expected_dest = disc.ciaddr;
+
+        assert_eq!(
+            server.dispatch(disc),
+            Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
+        );
         Ok(())
     }
 
@@ -1384,7 +1564,12 @@ pub mod tests {
         expected_ack.ciaddr = requested_ip;
         expected_ack.yiaddr = requested_ip;
 
-        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_ack)));
+        let expected_dest = req.ciaddr;
+
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_ack, Some(expected_dest)))
+        );
         Ok(())
     }
 
@@ -1547,7 +1732,12 @@ pub mod tests {
         let mut expected_ack = new_test_ack(&req, &server);
         expected_ack.yiaddr = init_reboot_client_ip;
 
-        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_ack)));
+        let expected_dest = req.yiaddr;
+
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_ack, Some(expected_dest)))
+        );
         Ok(())
     }
 
@@ -1566,7 +1756,30 @@ pub mod tests {
         // The returned nak should be from this recipient server.
         let expected_nak =
             new_test_nak(&req, &server, "client and server are in different subnets".to_owned());
-        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_nak)));
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_nak, Some(Ipv4Addr::BROADCAST)))
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_init_boot_request_with_giaddr_set_returns_nak_with_broadcast_bit_set(
+    ) -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mut req = new_test_request();
+        req.giaddr = random_ipv4_generator();
+
+        // Update request to have requested ip not on same subnet as server,
+        // to ensure we get a nak.
+        req.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: random_ipv4_generator().octets().to_vec(),
+        });
+
+        let response = server.dispatch(req).unwrap();
+
+        assert!(extract_message(response).bdcast_flag);
         Ok(())
     }
 
@@ -1616,7 +1829,10 @@ pub mod tests {
 
         let expected_nak =
             new_test_nak(&req, &server, "requested ip is not assigned to client".to_owned());
-        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_nak)));
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_nak, Some(Ipv4Addr::BROADCAST)))
+        );
         Ok(())
     }
 
@@ -1643,7 +1859,10 @@ pub mod tests {
         let expected_nak =
             new_test_nak(&req, &server, "requested ip is not assigned to client".to_owned());
 
-        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_nak)));
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_nak, Some(Ipv4Addr::BROADCAST)))
+        );
         Ok(())
     }
 
@@ -1672,7 +1891,10 @@ pub mod tests {
         let expected_nak =
             new_test_nak(&req, &server, "requested ip is not assigned to client".to_owned());
 
-        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_nak)));
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_nak, Some(Ipv4Addr::BROADCAST)))
+        );
         Ok(())
     }
 
@@ -1699,7 +1921,12 @@ pub mod tests {
         expected_ack.yiaddr = bound_client_ip;
         expected_ack.ciaddr = bound_client_ip;
 
-        assert_eq!(server.dispatch(req), Ok(ServerAction::SendResponse(expected_ack)));
+        let expected_dest = req.ciaddr;
+
+        assert_eq!(
+            server.dispatch(req),
+            Ok(ServerAction::SendResponse(expected_ack, Some(expected_dest)))
+        );
         Ok(())
     }
 
@@ -2109,7 +2336,12 @@ pub mod tests {
         let mut expected_ack = new_test_inform_ack(&inform, &server);
         expected_ack.ciaddr = inform_client_ip;
 
-        assert_eq!(server.dispatch(inform), Ok(ServerAction::SendResponse(expected_ack)));
+        let expected_dest = inform.ciaddr;
+
+        assert_eq!(
+            server.dispatch(inform),
+            Ok(ServerAction::SendResponse(expected_ack, Some(expected_dest)))
+        );
         Ok(())
     }
 
@@ -2268,7 +2500,7 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    //TODO(NET_2445) Revisit when decline behavior is verified.
+    // TODO(fxbug.dev/21422): Revisit when decline behavior is verified.
     async fn test_dispatch_with_decline_for_incorrect_server_recepient_deletes_client_binding(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server(server_time_provider).await?;

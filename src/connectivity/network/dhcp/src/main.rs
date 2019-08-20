@@ -20,7 +20,7 @@ use {
     std::{
         cell::RefCell,
         env,
-        net::{IpAddr, Ipv4Addr, SocketAddr},
+        net::{IpAddr, SocketAddr},
     },
     void::Void,
 };
@@ -91,23 +91,23 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
             failure::format_err!("unable to parse buffer {:#x?}", &buf[..received])
         })?;
         fx_log_info!("parsed message: {:?}", msg);
+
         // This call should not block because the server is single-threaded.
         let result = server.borrow_mut().dispatch(msg);
         match result {
             Err(e) => fx_log_err!("error processing client message: {}", e),
             Ok(ServerAction::AddressRelease(addr)) => fx_log_info!("released address: {}", addr),
             Ok(ServerAction::AddressDecline(addr)) => fx_log_info!("allocated address: {}", addr),
-            Ok(ServerAction::SendResponse(message)) => {
+            Ok(ServerAction::SendResponse(message, dest)) => {
                 fx_log_info!("generated response: {:?}", message);
 
-                let response_buffer = message.serialize();
-                // A new DHCP client sending a DHCPDISCOVER message will send
-                // it from 0.0.0.0. In order to respond with a DHCPOFFER, the server
-                // must broadcast the response. See RFC 2131 Section 4.4.1 for further
-                // details.
-                if sender.ip() == IpAddr::V4(Ipv4Addr::UNSPECIFIED) {
-                    sender.set_ip(IpAddr::V4(Ipv4Addr::BROADCAST));
+                // Check if server returned an explicit destination ip.
+                if let Some(addr) = dest {
+                    sender.set_ip(IpAddr::V4(addr));
                 }
+
+                let response_buffer = message.serialize();
+
                 sock.send_to(&response_buffer, sender).await.context("unable to send response")?;
                 fx_log_info!("response sent to: {}", sender);
             }
