@@ -13,6 +13,7 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/usb-peripheral-utils/event-watcher.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/hw/usb.h>
@@ -79,36 +80,6 @@ USBVirtualBusBase::USBVirtualBusBase() {
 
 int USBVirtualBusBase::GetRootFd() { return devmgr_.devfs_root().get(); }
 
-class EventWatcher : public ::llcpp::fuchsia::hardware::usb::peripheral::Events::Interface {
- public:
-  explicit EventWatcher(async::Loop* loop, zx::channel svc, size_t functions)
-      : loop_(loop), functions_(functions) {
-    fidl::Bind(loop->dispatcher(), std::move(svc), this);
-  }
-
-  void FunctionRegistered(FunctionRegisteredCompleter::Sync completer);
-
-  bool all_functions_registered() { return functions_registered_ == functions_; }
-
- private:
-  async::Loop* loop_;
-  const size_t functions_;
-  size_t functions_registered_ = 0;
-
-  bool state_changed_ = false;
-};
-
-void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync completer) {
-  functions_registered_++;
-  if (all_functions_registered()) {
-    state_changed_ = true;
-    loop_->Quit();
-    completer.Close(ZX_ERR_CANCELED);
-  } else {
-    completer.Reply();
-  }
-}
-
 void USBVirtualBusBase::SetupPeripheralDevice(const DeviceDescriptor& device_desc,
                                               std::vector<FunctionDescriptor> function_descs) {
   zx::channel handles[2];
@@ -122,7 +93,7 @@ void USBVirtualBusBase::SetupPeripheralDevice(const DeviceDescriptor& device_des
   ASSERT_FALSE(set_config->result.is_err());
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  EventWatcher watcher(&loop, std::move(handles[0]), function_descs.size());
+  usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), function_descs.size());
   loop.Run();
   ASSERT_TRUE(watcher.all_functions_registered());
 
