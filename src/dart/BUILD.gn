@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("dart") {
+  public_deps = [
+    ":dart_aot",
+    ":dart_aot_product",
+    ":dart_jit",
+    ":dart_jit_product",
+  ]
+}
+
+group("dart_aot") {
+  public_deps = [
+    "//topaz/runtime/dart_runner:dart_aot_runner",
+  ]
+}
+
+group("dart_aot_product") {
+  public_deps = [
+    "//topaz/runtime/dart_runner:dart_aot_product_runner",
+  ]
+}
+
+group("dart_jit") {
+  public_deps = [
+    "//topaz/runtime/dart_runner:dart_jit_runner",
+  ]
+}
+
+group("dart_jit_product") {
+  public_deps = [
+    "//topaz/runtime/dart_runner:dart_jit_product_runner",
+  ]
+}

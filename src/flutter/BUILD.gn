@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("flutter") {
+  public_deps = [
+    ":flutter_aot",
+    ":flutter_aot_product",
+    ":flutter_jit",
+    ":flutter_jit_product",
+  ]
+}
+
+group("flutter_aot") {
+  public_deps = [
+    "//topaz/runtime/flutter_runner:flutter_aot_runner",
+  ]
+}
+
+group("flutter_aot_product") {
+  public_deps = [
+    "//topaz/runtime/flutter_runner:flutter_aot_product_runner",
+  ]
+}
+
+group("flutter_jit") {
+  public_deps = [
+    "//topaz/runtime/flutter_runner:flutter_jit_runner",
+  ]
+}
+
+group("flutter_jit_product") {
+  public_deps = [
+    "//topaz/runtime/flutter_runner:flutter_jit_product_runner",
+  ]
+}

@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("chromium") {
+  public_deps = [
+    ":web_engine",
+    ":web_runner",
+  ]
+}
+
+# TODO: Move the prebuilt_package declaration here.
+group("web_engine") {
+  public_deps = [
+    "//topaz/runtime/chromium",
+  ]
+}
+
+# TODO: Move the prebuilt_package declaration here.
+group("web_runner") {
+  public_deps = [
+    "//topaz/runtime/chromium:web_runner",
+  ]
+}
