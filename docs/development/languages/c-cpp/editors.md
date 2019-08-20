@@ -4,9 +4,8 @@
 
 ## CLion
 
-Follow either the **Compilation Database** (recommended) or **CMake**
-instructions below to create the appropriate project description file in
-the fuchsia root directory.
+Follow the **Compilation Database** instructions below to create the
+appropriate project description file in the fuchsia root directory.
 
 Then in CLion choose *Import Project from Sources* and select the
 fuchsia root directory.
@@ -93,27 +92,6 @@ suggested by vscode.
 You can use [tasks](https://code.visualstudio.com/docs/editor/tasks) to
 configure a compilation step.
 
-## Project Description Files
-
-There are two ways of describing a project's source files that
-can be used with fuchsia - *CMake* or *Compilation Database*. They are
-described below.
-
-Note these approaches are only intended to help the IDE find and parse
-the source files. Building should still be done with `fx build`.
-
-## CMake
-
-The `fuchsia.cmake` file can be used with IDEs that support CMake to include
-most of the fuchsia source files.
-
-To use, create a CMakeLists.txt file in the fuchsia root
-directory with the following contents. Then use it normally with your
-IDE.
-
-    cmake_minimum_required(VERSION 3.9)
-    include(${PROJECT_SOURCE_DIR}/docs/development/languages/c-cpp/fuchsia.cmake)
-
 ## Compilation Database (fx compdb)
 
 A [Compilation
@@ -122,6 +100,9 @@ can be generated using `fx compdb`. This will create/update the file
 `compile_commands.json` in the fuchsia root directory. When you add,
 delete, or rename source files the command needs to be rerun to update
 the `compile_commands.json` file.
+
+Note that this file is only intended to help the IDE find and parse
+the source files. Building should still be done with `fx build`.
 
 Note: There is an ongoing issue where CLion shows compiler errors for a few
 hundred files in the Fuchsia source code. Other files should work
