@@ -362,8 +362,20 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
 
   auto worker_thread = [](void* arg) -> int {
     auto dev = reinterpret_cast<I2cHidbus*>(arg);
-    zx_status_t status;
-    status = dev->ReadI2cHidDesc(&dev->hiddesc_);
+    zx_status_t status = ZX_OK;
+    // Retry the first transaction a few times; in some cases (e.g. on Slate) the device was powered
+    // on explicitly during enumeration, and there is a warmup period after powering on the device
+    // during which the device is not responsive over i2c.
+    // TODO(jfsulliv): It may make more sense to introduce a delay after powering on the device,
+    // rather than here while attempting to bind.
+    int retries = 3;
+    while (retries-- > 0) {
+      if ((status = dev->ReadI2cHidDesc(&dev->hiddesc_)) == ZX_OK) {
+        break;
+      }
+      zx::nanosleep(zx::deadline_after(zx::msec(100)));
+      zxlogf(INFO, "i2c-hid: Retrying reading HID descriptor\n");
+    }
     if (status != ZX_OK) {
       dev->DdkRemove();
       return thrd_error;

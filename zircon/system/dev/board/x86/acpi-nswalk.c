@@ -565,6 +565,42 @@ zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI
   }
 }
 
+static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
+  ACPI_STATUS acpi_status;
+  // Slate workaround: Turn on the HID controller.
+  if (!memcmp(&info->Name, "I2C0", 4)) {
+    ACPI_BUFFER buffer = {
+        .Length = ACPI_ALLOCATE_BUFFER,
+        .Pointer = NULL,
+    };
+    acpi_status = AcpiEvaluateObject(object, (char*)"H00A._PR0", NULL, &buffer);
+    if (acpi_status == AE_OK) {
+      ACPI_OBJECT* pkg = buffer.Pointer;
+      for (unsigned i = 0; i < pkg->Package.Count; i++) {
+        ACPI_OBJECT* ref = &pkg->Package.Elements[i];
+        if (ref->Type != ACPI_TYPE_LOCAL_REFERENCE) {
+          zxlogf(TRACE, "acpi: Ignoring wrong type 0x%x\n", ref->Type);
+        } else {
+          zxlogf(TRACE, "acpi: Enabling HID controller at I2C0.H00A._PR0[%u]\n", i);
+          acpi_status = AcpiEvaluateObject(ref->Reference.Handle, (char*)"_ON", NULL, NULL);
+          if (acpi_status != AE_OK) {
+            zxlogf(ERROR, "acpi: acpi error 0x%x in I2C0._PR0._ON\n", acpi_status);
+          }
+        }
+      }
+      AcpiOsFree(buffer.Pointer);
+    }
+  }
+  // Acer workaround: Turn on the HID controller.
+  else if (!memcmp(&info->Name, "I2C1", 4)) {
+    zxlogf(TRACE, "acpi: Enabling HID controller at I2C1\n");
+    acpi_status = AcpiEvaluateObject(object, (char*)"_PS0", NULL, NULL);
+    if (acpi_status != AE_OK) {
+      zxlogf(ERROR, "acpi: acpi error in I2C1._PS0: 0x%x\n", acpi_status);
+    }
+  }
+}
+
 static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_level, void* context,
                                          void** status) {
   ACPI_DEVICE_INFO* info = NULL;
@@ -578,19 +614,8 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
   zx_device_t* sys_root = ctx->sys_root;
   zx_device_t* platform_bus = ctx->platform_bus;
 
-  // TODO: This is a temporary workaround until we have full ACPI device
-  // enumeration. If this is the I2C1 bus, we run _PS0 so the controller
-  // is active.
-  if (!memcmp(&info->Name, "I2C1", 4)) {
-    acpi_status = AcpiEvaluateObject(object, (char*)"_PS0", NULL, NULL);
-    if (acpi_status != AE_OK) {
-      zxlogf(ERROR, "acpi: acpi error 0x%x in I2C1._PS0\n", acpi_status);
-    }
-
-    // Attach the NHLT table as metadata on the HDA device.
-    // The ACPI node representing the HDA controller is named "HDAS" on Pixelbook.
-    // TODO: This is a temporary workaround for ACPI device enumeration.
-  } else if (!memcmp(&info->Name, "HDAS", 4)) {
+  acpi_apply_workarounds(object, info);
+  if (!memcmp(&info->Name, "HDAS", 4)) {
     // We must have already seen at least one PCI root due to traversal order.
     if (ctx->last_pci == 0xFF) {
       zxlogf(ERROR, "acpi: Found HDAS node, but no prior PCI root was discovered!\n");

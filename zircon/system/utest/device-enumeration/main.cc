@@ -66,6 +66,8 @@ fbl::String GetTestFilter() {
     return "*Visalia*";
   } else if (!strcmp(board_name, "hikey960")) {
     return "*Hikey960*";
+  } else if (!strcmp(board_name, "Nocturne")) {
+    return "*Nocturne*";
   }
 
   return "Unknown";
@@ -392,6 +394,24 @@ TEST_F(DeviceEnumerationTest, Hikey960Test) {
       "sys/platform/02:00:2/hi3660-clk",
       "hikey-usb/dwc3",
       "dwc3/dwc3/usb-peripheral",
+  };
+
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+}
+
+TEST_F(DeviceEnumerationTest, NocturneTest) {
+  static const char* kDevicePaths[] = {
+      "sys/pci/00:1f.3/intel-hda-000/input-stream-002",
+      "sys/pci/00:1f.3/intel-hda-000/output-stream-001",
+      "sys/pci/00:02.0/intel_i915/intel-gpu-core/msd-intel-gen",
+      "sys/pci/00:02.0/intel_i915/display-controller",
+      "sys/platform/acpi/TSR0",
+      "sys/platform/acpi/TSR1",
+      "sys/platform/acpi/TSR2",
+      "sys/platform/acpi/TSR3",
+      "sys/platform/acpi/acpi-lid/hid-device-000",
+      "sys/platform/acpi/acpi-pwrbtn/hid-device-000",
+      "sys/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device-000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
