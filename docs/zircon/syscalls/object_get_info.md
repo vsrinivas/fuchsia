@@ -778,8 +778,6 @@ If *topic* is **ZX_INFO_PROCESS_HANDLE_STATS**, *handle* must be of type **ZX_OB
 
 If *topic* is **ZX_INFO_SOCKET**, *handle* must be of type **ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_INSPECT**.
 
-If *topic* is **ZX_INFO_TIMER**, *handle* must be of type **ZX_OBJ_TYPE_TIMER** and have **ZX_RIGHT_INSPECT**.
-
 ## RETURN VALUE
 
 `zx_object_get_info()` returns **ZX_OK** on success. In the event of

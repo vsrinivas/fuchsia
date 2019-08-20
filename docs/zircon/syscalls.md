@@ -190,6 +190,7 @@
 + [mtrace_control](syscalls/mtrace_control.md)
 
 ## Others/Work in progress
++ [ioports_release](syscalls/ioports_release.md)
 + [pc_firmware_tables](syscalls/pc_firmware_tables.md)
 + [pci_add_subtract_io_range](syscalls/pci_add_subtract_io_range.md)
 + [pci_cfg_pio_rw](syscalls/pci_cfg_pio_rw.md)
@@ -215,5 +216,6 @@
 + [syscall_test_7](syscalls/syscall_test_7.md)
 + [syscall_test_8](syscalls/syscall_test_8.md)
 + [syscall_test_wrapper](syscalls/syscall_test_wrapper.md)
++ [syscall_test_handle_create](syscalls/syscall_test_handle_create.md)
 
 

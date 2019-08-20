@@ -106,6 +106,8 @@ toc:
   path: /docs/zircon/syscalls/interrupt_wait.md
 - title: "zx_iommu_create"
   path: /docs/zircon/syscalls/iommu_create.md
+- title: "zx_ioports_release"
+  path: /docs/zircon/syscalls/ioports_release.md
 - title: "zx_ioports_request"
   path: /docs/zircon/syscalls/ioports_request.md
 - title: "zx_job_create"
@@ -230,6 +232,8 @@ toc:
   path: /docs/zircon/syscalls/syscall_test_8.md
 - title: "zx_syscall_test_wrapper"
   path: /docs/zircon/syscalls/syscall_test_wrapper.md
+- title: "zx_syscall_test_handle_create"
+  path: /docs/zircon/syscalls/syscall_test_handle_create.md
 - title: "zx_system_get_dcache_line_size"
   path: /docs/zircon/syscalls/system_get_dcache_line_size.md
 - title: "zx_system_get_event"

@@ -44,15 +44,16 @@ def parse_args():
     parser.add_argument(
         '--json',
         default=os.path.normpath(
-            os.path.join(SCRIPT_DIR, os.pardir, 'build-gcc', 'user-x64-gcc',
-                         'gen', 'kernel', 'syscalls', 'zircon',
-                         'definitions.json')),
+            os.path.join(SCRIPT_DIR, os.pardir, os.pardir, 'out',
+                         'default.zircon', 'user-x64-clang', 'gen', 'kernel',
+                         'syscalls', 'zircon', 'definitions.json')),
         help='path to abigen .json output')
     parser.add_argument(
         '--docroot',
         default=os.path.normpath(
-            os.path.join(SCRIPT_DIR, os.pardir, 'docs', 'syscalls')),
-        help='root of docs/syscalls/ to be updated')
+            os.path.join(SCRIPT_DIR, os.pardir, os.pardir, 'docs', 'zircon',
+                         'syscalls')),
+        help='root of syscalls/ to be updated')
     parser.add_argument(
         '--generate-missing',
         default=False,
@@ -402,9 +403,9 @@ def make_synopsis_block(syscall_data, warn):
         args = 'void'
     to_format += args + ');'
 
-    CLANG_FORMAT_PATH = os.path.join(SCRIPT_DIR, os.pardir, 'prebuilt',
-                                     'downloads', 'clang', 'bin',
-                                     'clang-format')
+    CLANG_FORMAT_PATH = os.path.join(SCRIPT_DIR, os.pardir, os.pardir,
+                                     'prebuilt', 'third_party', 'clang',
+                                     'linux-x64', 'bin', 'clang-format')
     clang_format = subprocess.Popen([
         CLANG_FORMAT_PATH,
         '-style={BasedOnStyle: Google, BinPackParameters: false}'
@@ -485,6 +486,8 @@ def check_for_orphans(syscalls, root):
     orphan_count = 0
     names = set([x['name'] for x in syscalls])
     for md in os.listdir(root):
+        if md == '_toc.yaml':
+            continue
         if not md.endswith('.md'):
             print >> sys.stderr, 'warning: non .md file %s' % md
         name = md[:-3]
@@ -625,9 +628,10 @@ def build_if_out_of_date(abigen, json):
         return output_time >= input_time
 
     if not is_up_to_date(abigen, json):
-        print '%s out of date vs %s, running build-zircon-x64' % (json, abigen)
-        subprocess.check_call(
-            os.path.relpath(os.path.join(SCRIPT_DIR, 'build-zircon-x64')))
+        print('%s out of date vs %s, running `fx build`\n'
+              'This will only work if using out/default and configured for x64.'
+              % (json, abigen))
+        subprocess.check_call('fx', 'build')
         if not is_up_to_date(abigen, json):
             print '%s still out of date relative to %s!' % (json, abigen)
             raise SystemExit()
