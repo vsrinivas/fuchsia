@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod actions;
 mod addable_directory;
 mod capability;
 pub mod dir_tree;
@@ -22,7 +23,7 @@ pub mod testing;
 pub(crate) mod tests;
 
 pub use self::{
-    capability::*, realm::*, dir_tree::*, error::*, exposed_dir::*, framework_services::*,
-    hub::*, model::*, moniker::*, namespace::*, resolver::*, routing::*, routing_facade::*,
-    runner::*,
+    actions::*, capability::*, dir_tree::*, error::*, exposed_dir::*, framework_services::*,
+    hub::*, model::*, moniker::*, namespace::*, realm::*, resolver::*, routing::*,
+    routing_facade::*, runner::*,
 };

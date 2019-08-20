@@ -8,6 +8,7 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::future::BoxFuture,
     futures::lock::{Mutex, MutexLockFuture},
     std::convert::TryInto,
     std::{collections::HashMap, sync::Arc},
@@ -197,6 +198,36 @@ impl Realm {
     }
 }
 
+/// Register and wait for an action on a realm.
+pub async fn execute_action(
+    model: Model,
+    realm: Arc<Realm>,
+    action: Action,
+) -> Result<(), ModelError> {
+    let nf = register_action(model, realm, action).await?;
+    nf.await
+}
+
+/// Register an action on a realm.
+pub async fn register_action(
+    model: Model,
+    realm: Arc<Realm>,
+    action: Action,
+) -> Result<Notification, ModelError> {
+    // `register_action()` assumes component is resolved.
+    realm.resolve_decl().await?;
+    let mut state = realm.lock_state().await;
+    let state = state.get_mut();
+    state.register_action(model, realm.clone(), action).await
+}
+
+/// Finish an action on a realm.
+pub async fn finish_action(realm: Arc<Realm>, action: &Action, res: Result<(), ModelError>) {
+    let mut state = realm.lock_state().await;
+    let state = state.get_mut();
+    state.finish_action(action, res).await
+}
+
 /// The mutable state of a component.
 pub struct RealmState {
     /// Execution state for the component instance or `None` if not running.
@@ -210,6 +241,8 @@ pub struct RealmState {
     /// The component's meta directory. Evaluated on demand by the `resolve_meta_dir`
     /// getter.
     meta_dir: Option<Arc<DirectoryProxy>>,
+    /// Actions on the realm that must eventually be completed.
+    actions: ActionSet,
     /// The next unique identifier for a dynamic component instance created in the realm.
     /// (Static instances receive identifier 0.)
     next_dynamic_instance_id: u32,
@@ -231,6 +264,7 @@ impl RealmState {
             decl: decl.clone(),
             meta_dir: None,
             next_dynamic_instance_id: 1,
+            actions: ActionSet::new(),
         };
         state.add_static_child_realms(realm, &decl);
         Ok(state)
@@ -329,6 +363,47 @@ impl RealmState {
         for child in decl.children.iter() {
             self.add_child_realm(realm, child, None);
         }
+    }
+
+    /// Register an action on this realm, rolling the action forward if necessary. Returns boxed
+    /// future to allow recursive calls.
+    ///
+    /// REQUIRES: Component has been resolved.
+    fn register_action<'a>(
+        &'a mut self,
+        model: Model,
+        realm: Arc<Realm>,
+        action: Action,
+    ) -> BoxFuture<Result<Notification, ModelError>> {
+        Box::pin(async move {
+            let (nf, needs_roll) = self.actions.register(action.clone());
+            if needs_roll {
+                self.roll_action(model, realm.clone(), &action).await?;
+            }
+            Ok(nf)
+        })
+    }
+
+    /// Finish an action on this realm, which will cause its notifications to be completed.
+    async fn finish_action<'a>(&'a mut self, action: &'a Action, res: Result<(), ModelError>) {
+        self.actions.finish(action, res).await;
+    }
+
+    /// Take any necessary actions for the new action on the given realm ("roll" it forward).
+    /// Should be called after a new action was registered.
+    ///
+    /// The work to fulfill these actions should be scheduled asynchronously, so this method
+    /// should not use `await` for long-running work.
+    ///
+    /// REQUIRES: Component has been resolved.
+    async fn roll_action<'a>(
+        &'a mut self,
+        _model: Model,
+        _realm: Arc<Realm>,
+        _action: &'a Action,
+    ) -> Result<(), ModelError> {
+        // TODO: Implement
+        Ok(())
     }
 }
 
