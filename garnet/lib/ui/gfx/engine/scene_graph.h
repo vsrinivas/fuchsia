@@ -5,8 +5,12 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_SCENE_GRAPH_H_
 #define GARNET_LIB_UI_GFX_ENGINE_SCENE_GRAPH_H_
 
+#include <fuchsia/ui/focus/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
+
 #include <vector>
 
+#include "garnet/lib/ui/gfx/engine/view_tree.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/display_compositor.h"
 
@@ -16,8 +20,11 @@ namespace gfx {
 class SceneGraph;
 using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 
-// SceneGraph stores pointers to all the Compositors created with it as a
-// constructor argument, but it does not hold ownership of them.
+// SceneGraph stores pointers to all the Compositors created with it as a constructor argument, but
+// it does not hold ownership of them.
+//
+// SceneGraph is the source of truth for the tree of ViewRefs, from which a FocusChain is generated.
+// Command processors update this tree, and the input system may read or modify the focus.
 class SceneGraph {
  public:
   SceneGraph();
@@ -49,6 +56,8 @@ class SceneGraph {
   void RemoveCompositor(const CompositorWeakPtr& compositor);
 
   std::vector<CompositorWeakPtr> compositors_;
+
+  ViewTree view_tree_;
 
   fxl::WeakPtrFactory<SceneGraph> weak_factory_;  // Must be last.
 };

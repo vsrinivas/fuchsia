@@ -118,6 +118,7 @@ executable("unittests") {
     "snapshotter_unittest.cc",
     "stereo_camera_unittest.cc",
     "view_clipping_unittest.cc",
+    "view_tree_unittest.cc",
     "view_unittest.cc",
   ]
   deps = [
