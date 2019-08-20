@@ -68,6 +68,7 @@ impl RegisterNotificationCommand {
         &self.event_id
     }
 
+    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn playback_interval(&self) -> u32 {
         self.playback_interval
     }
@@ -120,10 +121,12 @@ pub struct VolumeChangedNotificationResponse {
 }
 
 impl VolumeChangedNotificationResponse {
+    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn new(volume: u8) -> Self {
         Self { volume }
     }
 
+    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn volume(&self) -> u8 {
         self.volume
     }
@@ -225,14 +228,17 @@ pub struct TrackChangedNotificationResponse {
 }
 
 impl TrackChangedNotificationResponse {
+    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn new(identifier: u64) -> Self {
         Self { identifier }
     }
 
+    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn unknown() -> Self {
         Self::new(0x0)
     }
 
+    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn none() -> Self {
         Self::new(u64::MAX)
     }
@@ -289,12 +295,14 @@ pub struct PlaybackPosChangedNotificationResponse {
 }
 
 impl PlaybackPosChangedNotificationResponse {
+    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn new(position: u32) -> Self {
         Self { position }
     }
 
+    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn no_track() -> Self {
-        Self::new(u32::MAX)
+        Self::new(0xFFFFFFFF)
     }
 
     pub fn position(&self) -> u32 {
@@ -336,7 +344,7 @@ impl Encodable for PlaybackPosChangedNotificationResponse {
             return Err(Error::OutOfRange);
         }
 
-        buf[0] = u8::from(&NotificationEventId::EventTrackChanged);
+        buf[0] = u8::from(&NotificationEventId::EventPlaybackPosChanged);
         buf[1..5].copy_from_slice(&self.position.to_be_bytes());
         Ok(())
     }
@@ -348,37 +356,173 @@ mod tests {
 
     #[test]
     fn test_register_notification_encode() {
-        let b = RegisterNotificationCommand::new(NotificationEventId::EventVolumeChanged);
-        assert_eq!(b.encoded_len(), 5);
-        let mut buf = vec![0; b.encoded_len()];
-        assert!(b.encode(&mut buf[..]).is_ok());
+        let cmd = RegisterNotificationCommand::new(NotificationEventId::EventVolumeChanged);
+        assert_eq!(cmd.playback_interval(), 0);
+        assert_eq!(cmd.encoded_len(), 5);
+        let mut buf = vec![0; cmd.encoded_len()];
+        assert!(cmd.encode(&mut buf[..]).is_ok());
         assert_eq!(buf, &[0x0d, 0x00, 0x00, 0x00, 0x00]);
     }
 
     #[test]
     fn test_register_notification_encode_pos_changed() {
-        let b = RegisterNotificationCommand::new_position_changed(102030405);
-        assert_eq!(b.encoded_len(), 5);
-        assert_eq!(b.event_id(), &NotificationEventId::EventPlaybackPosChanged);
-        let mut buf = vec![0; b.encoded_len()];
-        assert!(b.encode(&mut buf[..]).is_ok());
+        let cmd = RegisterNotificationCommand::new_position_changed(102030405);
+        assert_eq!(cmd.playback_interval(), 102030405);
+        assert_eq!(cmd.encoded_len(), 5);
+        assert_eq!(cmd.event_id(), &NotificationEventId::EventPlaybackPosChanged);
+        let mut buf = vec![0; cmd.encoded_len()];
+        assert!(cmd.encode(&mut buf[..]).is_ok());
         assert_eq!(buf, &[0x05, 0x06, 0x14, 0xDC, 0x45]);
     }
 
     #[test]
     fn test_register_notification_decode() {
-        let b = RegisterNotificationCommand::decode(&[0x0d, 0x00, 0x00, 0x00, 0x00])
+        let cmd = RegisterNotificationCommand::decode(&[0x0d, 0x00, 0x00, 0x00, 0x00])
             .expect("unable to decode packet");
-        assert_eq!(b.encoded_len(), 5);
-        assert_eq!(b.event_id(), &NotificationEventId::EventVolumeChanged);
+        assert_eq!(cmd.encoded_len(), 5);
+        assert_eq!(cmd.event_id(), &NotificationEventId::EventVolumeChanged);
+        assert_eq!(cmd.playback_interval(), 0);
     }
 
     #[test]
     fn test_register_notification_decode_pos_changed() {
-        let b = RegisterNotificationCommand::decode(&[0x05, 0x01, 0x00, 0xff, 0x00])
+        let cmd = RegisterNotificationCommand::decode(&[0x05, 0x01, 0x00, 0xff, 0x00])
             .expect("unable to decode packet");
-        assert_eq!(b.encoded_len(), 5);
-        assert_eq!(b.event_id(), &NotificationEventId::EventPlaybackPosChanged);
-        assert_eq!(b.playback_interval(), 16842496);
+        assert_eq!(cmd.encoded_len(), 5);
+        assert_eq!(cmd.event_id(), &NotificationEventId::EventPlaybackPosChanged);
+        assert_eq!(cmd.playback_interval(), 16842496);
+    }
+
+    #[test]
+    fn test_playbackpos_changed_notification_decode() {
+        let cmd = PlaybackPosChangedNotificationResponse::decode(&[0x05, 0x00, 0x00, 0xff, 0x00])
+            .expect("unable to decode packet");
+        assert_eq!(65280, cmd.position());
+    }
+
+    #[test]
+    fn test_playbackpos_changed_notification_encode() {
+        let cmd = PlaybackPosChangedNotificationResponse::new(20);
+        assert_eq!(20, cmd.position());
+        let mut buf = vec![0; cmd.encoded_len()];
+        cmd.encode(&mut buf[..]).expect("unable to encode packet");
+        assert_eq!(buf, &[0x05, 0x00, 0x00, 0x00, 0x14]);
+    }
+
+    #[test]
+    fn test_playbackpos_changed_notification_encode_decode() {
+        let cmd_a = PlaybackPosChangedNotificationResponse::new(30);
+        let mut buf = vec![0; cmd_a.encoded_len()];
+        cmd_a.encode(&mut buf[..]).expect("unable to encode packet");
+        let cmd_b = PlaybackPosChangedNotificationResponse::decode(&buf[..])
+            .expect("unable to decode packet");
+
+        assert_eq!(cmd_a.position(), cmd_b.position());
+    }
+
+    #[test]
+    fn test_volume_changed_notification_decode() {
+        let a = VolumeChangedNotificationResponse::decode(&[0x0d, 0x0f])
+            .expect("unable to decode packet");
+        assert_eq!(15, a.volume());
+    }
+
+    #[test]
+    fn test_volume_changed_notification_encode() {
+        let cmd = VolumeChangedNotificationResponse::new(20);
+        assert_eq!(20, cmd.volume());
+        let mut buf = vec![0; cmd.encoded_len()];
+        cmd.encode(&mut buf[..]).expect("unable to encode packet");
+        assert_eq!(buf, &[0x0d, 0x14]);
+    }
+
+    #[test]
+    fn test_volume_changed_notification_encode_decode() {
+        let cmd = VolumeChangedNotificationResponse::new(30);
+        let mut buf = vec![0; cmd.encoded_len()];
+        cmd.encode(&mut buf[..]).expect("unable to encode packet");
+        let b =
+            VolumeChangedNotificationResponse::decode(&buf[..]).expect("unable to decode packet");
+
+        assert_eq!(cmd.volume(), b.volume());
+    }
+
+    #[test]
+    fn test_track_changed_notification_decode() {
+        let cmd = TrackChangedNotificationResponse::decode(&[
+            0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f,
+        ])
+        .expect("unable to decode packet");
+        assert_eq!(15, cmd.identifier());
+    }
+
+    #[test]
+    fn test_track_changed_notification_encode_id() {
+        let cmd = TrackChangedNotificationResponse::new(20);
+        assert_eq!(20, cmd.identifier());
+        let mut buf = vec![0; cmd.encoded_len()];
+        cmd.encode(&mut buf[..]).expect("unable to encode packet");
+        assert_eq!(buf, &[0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14]);
+    }
+
+    #[test]
+    fn test_track_changed_notification_encode_unknown() {
+        let cmd = TrackChangedNotificationResponse::unknown();
+        assert_eq!(0, cmd.identifier());
+        let mut buf = vec![0; cmd.encoded_len()];
+        cmd.encode(&mut buf[..]).expect("unable to encode packet");
+        assert_eq!(buf, &[0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    }
+
+    #[test]
+    fn test_track_changed_notification_encode_none() {
+        let cmd = TrackChangedNotificationResponse::none();
+        assert_eq!(u64::MAX, cmd.identifier());
+        let mut buf = vec![0; cmd.encoded_len()];
+        cmd.encode(&mut buf[..]).expect("unable to encode packet");
+        assert_eq!(buf, &[0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+    }
+
+    #[test]
+    fn test_track_changed_notification_encode_decode() {
+        let cmd_a = TrackChangedNotificationResponse::new(30);
+        let mut buf = vec![0; cmd_a.encoded_len()];
+        cmd_a.encode(&mut buf[..]).expect("unable to encode packet");
+        let cmd_b =
+            TrackChangedNotificationResponse::decode(&buf[..]).expect("unable to decode packet");
+
+        assert_eq!(cmd_a.identifier(), cmd_b.identifier());
+    }
+    #[test]
+    fn test_playback_status_changed_encode() {
+        let cmd = PlaybackStatusChangedNotificationResponse::new(PlaybackStatus::Playing);
+        assert_eq!(PlaybackStatus::Playing, cmd.playback_status());
+        let mut buf = vec![0; cmd.encoded_len()];
+        cmd.encode(&mut buf[..]).expect("unable to encode packet");
+        assert_eq!(buf, &[0x01, 0x01]);
+    }
+
+    #[test]
+    fn test_playback_status_changed_decode() {
+        let cmd = PlaybackStatusChangedNotificationResponse::decode(&[0x01, 0x02])
+            .expect("unable to decode packet");
+        assert_eq!(PlaybackStatus::Paused, cmd.playback_status());
+    }
+
+    #[test]
+    fn test_playback_status_changed_encode_decode() {
+        let cmd_a = PlaybackStatusChangedNotificationResponse::new(PlaybackStatus::FwdSeek);
+        let mut buf = vec![0; cmd_a.encoded_len()];
+        cmd_a.encode(&mut buf[..]).expect("unable to encode packet");
+        let cmd_b = PlaybackStatusChangedNotificationResponse::decode(&buf[..])
+            .expect("unable to decode packet");
+
+        assert_eq!(cmd_a.playback_status(), cmd_b.playback_status());
+    }
+
+    #[test]
+    fn test_playback_status_changed_invalid() {
+        let cmd = PlaybackStatusChangedNotificationResponse::decode(&[0x01, 0xF1]);
+        assert_eq!(cmd.unwrap_err(), Error::OutOfRange);
     }
 }
