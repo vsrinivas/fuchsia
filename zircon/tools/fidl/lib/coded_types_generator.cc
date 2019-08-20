@@ -319,9 +319,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       }
       break;
     }
-    default: {
-      break;
-    }
+    default: { break; }
   }
 }
 
