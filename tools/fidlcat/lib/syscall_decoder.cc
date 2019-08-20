@@ -66,7 +66,7 @@ void SyscallUse::SyscallInputsDecoded(SyscallDecoder* syscall) {}
 
 void SyscallUse::SyscallOutputsDecoded(SyscallDecoder* syscall) { syscall->Destroy(); }
 
-void SyscallUse::SyscallDecodingError(const SyscallDecoderError& error, SyscallDecoder* syscall) {
+void SyscallUse::SyscallDecodingError(const DecoderError& error, SyscallDecoder* syscall) {
   FXL_LOG(ERROR) << error.message();
   syscall->Destroy();
 }
@@ -82,10 +82,10 @@ void SyscallDecoder::LoadMemory(uint64_t address, size_t size, std::vector<uint8
       [this, address, size, destination](const zxdb::Err& err, zxdb::MemoryDump dump) {
         --pending_request_count_;
         if (!err.ok()) {
-          Error(SyscallDecoderError::Type::kCantReadMemory)
+          Error(DecoderError::Type::kCantReadMemory)
               << "Can't load memory at " << address << ": " << err.msg();
         } else if ((dump.size() != size) || !dump.AllValid()) {
-          Error(SyscallDecoderError::Type::kCantReadMemory)
+          Error(DecoderError::Type::kCantReadMemory)
               << "Can't load memory at " << address << ": not enough data";
         } else {
           MemoryDumpToVector(dump, destination);
@@ -165,7 +165,7 @@ void SyscallDecoder::DoDecode() {
     entry_sp_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kARMv8_sp);
     return_address_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kARMv8_lr);
   } else {
-    Error(SyscallDecoderError::Type::kUnknownArchitecture) << "Unknown architecture";
+    Error(DecoderError::Type::kUnknownArchitecture) << "Unknown architecture";
     use_->SyscallDecodingError(error_, this);
     return;
   }
@@ -196,10 +196,10 @@ void SyscallDecoder::LoadStack() {
       [this, address, stack_size](const zxdb::Err& err, zxdb::MemoryDump dump) {
         --pending_request_count_;
         if (!err.ok()) {
-          Error(SyscallDecoderError::Type::kCantReadMemory)
+          Error(DecoderError::Type::kCantReadMemory)
               << "Can't load stack at " << address << ": " << err.msg();
         } else if ((dump.size() != stack_size) || !dump.AllValid()) {
-          Error(SyscallDecoderError::Type::kCantReadMemory)
+          Error(DecoderError::Type::kCantReadMemory)
               << "Can't load stack at " << address << ": not enough data";
         } else {
           std::vector<uint8_t> data;
@@ -219,7 +219,7 @@ void SyscallDecoder::LoadStack() {
 }
 
 void SyscallDecoder::LoadInputs() {
-  if (error_.type() != SyscallDecoderError::Type::kNone) {
+  if (error_.type() != DecoderError::Type::kNone) {
     if (pending_request_count_ == 0) {
       use_->SyscallDecodingError(error_, this);
     }
@@ -232,7 +232,7 @@ void SyscallDecoder::LoadInputs() {
     return;
   }
   input_arguments_loaded_ = true;
-  if (error_.type() != SyscallDecoderError::Type::kNone) {
+  if (error_.type() != DecoderError::Type::kNone) {
     use_->SyscallDecodingError(error_, this);
   } else {
     StepToReturnAddress();
@@ -282,7 +282,7 @@ void SyscallDecoder::LoadSyscallReturnValue() {
 }
 
 void SyscallDecoder::LoadOutputs() {
-  if (error_.type() != SyscallDecoderError::Type::kNone) {
+  if (error_.type() != DecoderError::Type::kNone) {
     if (pending_request_count_ == 0) {
       use_->SyscallDecodingError(error_, this);
     }
@@ -296,7 +296,7 @@ void SyscallDecoder::LoadOutputs() {
   if (pending_request_count_ > 0) {
     return;
   }
-  if (error_.type() != SyscallDecoderError::Type::kNone) {
+  if (error_.type() != DecoderError::Type::kNone) {
     use_->SyscallDecodingError(error_, this);
   } else {
     DecodeAndDisplay();
@@ -326,67 +326,7 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* syscall) {
 
   if (dispatcher_->decode_options().stack_level != kNoStack) {
     // Display caller locations.
-    for (const auto& location : syscall->caller_locations()) {
-      if (location.is_valid()) {
-        const zxdb::LazySymbol& symbol = location.symbol();
-        const Colors& colors = dispatcher_->colors();
-        os_ << line_header_ << colors.yellow_background << "at " << colors.red;
-        if (location.is_symbolized()) {
-          const zxdb::FileLine& file_line = location.file_line();
-          // Split the file path.
-          std::vector<std::string_view> file;
-          int ignore_leading_dot_dot = 2;
-          size_t pos = 0;
-          for (;;) {
-            size_t start = pos;
-            pos = file_line.file().find('/', pos);
-            if (pos == std::string::npos) {
-              file.push_back(std::string_view(file_line.file().c_str() + start,
-                                              file_line.file().size() - start));
-              break;
-            }
-            std::string_view item(file_line.file().c_str() + start, pos - start);
-            if ((ignore_leading_dot_dot > 0) && (item.compare("..") == 0)) {
-              // The path returned by zxdb are not relative to the Fuchsia root directory.
-              // We must ignore the first two ".." to be relative to the root directory.
-              --ignore_leading_dot_dot;
-            } else {
-              file.push_back(item);
-              // Just in case the path didn't start with two "..".
-              ignore_leading_dot_dot = 0;
-            }
-            ++pos;
-          }
-          // Remove the ".." we can.
-          int destination = 0;
-          for (const auto& item : file) {
-            if (item.compare(".") != 0) {
-              if ((item.compare("..") == 0) && (destination > 0) &&
-                  (file[destination - 1].compare("..") != 0)) {
-                --destination;
-              } else {
-                file[destination++] = item;
-              }
-            }
-          }
-          file.resize(destination);
-          // Display the optimized path.
-          const char* separator = "";
-          for (const auto& item : file) {
-            os_ << separator << item;
-            separator = "/";
-          }
-          os_ << colors.reset << colors.yellow_background << ':' << colors.blue << file_line.line()
-              << colors.reset;
-        } else {
-          os_ << std::hex << location.address() << colors.reset << std::dec;
-        }
-        if (symbol.is_valid()) {
-          os_ << ' ' << symbol.Get()->GetFullName();
-        }
-        os_ << '\n';
-      }
-    }
+    DisplayStackFrame(dispatcher_->colors(), line_header_, syscall->caller_locations(), os_);
   }
 
   // Displays the header and the inline input arguments.
@@ -470,8 +410,7 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* syscall) {
   syscall->Destroy();
 }
 
-void SyscallDisplay::SyscallDecodingError(const SyscallDecoderError& error,
-                                          SyscallDecoder* syscall) {
+void SyscallDisplay::SyscallDecodingError(const DecoderError& error, SyscallDecoder* syscall) {
   std::string message = error.message();
   size_t pos = 0;
   for (;;) {

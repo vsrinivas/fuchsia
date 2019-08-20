@@ -20,6 +20,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
+#include "tools/fidlcat/lib/decoder.h"
 #include "tools/fidlcat/lib/type_decoder.h"
 
 namespace fidlcat {
@@ -30,29 +31,6 @@ class SyscallDecoder;
 class SyscallDecoderDispatcher;
 class SyscallDisplayDispatcher;
 
-class SyscallDecoderError {
- public:
-  enum class Type { kNone, kCantReadMemory, kUnknownArchitecture };
-
-  SyscallDecoderError() = default;
-
-  Type type() const { return type_; }
-  std::string message() const { return message_.str(); }
-
-  std::stringstream& Set(Type type) {
-    if (type_ == Type::kNone) {
-      type_ = type;
-    } else {
-      message_ << '\n';
-    }
-    return message_;
-  }
-
- private:
-  Type type_ = Type::kNone;
-  std::stringstream message_;
-};
-
 class SyscallUse {
  public:
   SyscallUse() = default;
@@ -60,7 +38,7 @@ class SyscallUse {
 
   virtual void SyscallInputsDecoded(SyscallDecoder* syscall);
   virtual void SyscallOutputsDecoded(SyscallDecoder* syscall);
-  virtual void SyscallDecodingError(const SyscallDecoderError& error, SyscallDecoder* syscall);
+  virtual void SyscallDecodingError(const DecoderError& error, SyscallDecoder* syscall);
 };
 
 // Handles the decoding of a syscall argument. At the end, it holds the value
@@ -132,7 +110,7 @@ class SyscallDecoder {
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
 
-  std::stringstream& Error(SyscallDecoderError::Type type) { return error_.Set(type); }
+  std::stringstream& Error(DecoderError::Type type) { return error_.Set(type); }
 
   // Load the value for a buffer or a struct (field or argument).
   void LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination);
@@ -237,7 +215,7 @@ class SyscallDecoder {
   uint64_t syscall_return_value_ = 0;
   int pending_request_count_ = 0;
   bool input_arguments_loaded_ = false;
-  SyscallDecoderError error_;
+  DecoderError error_;
 };
 
 class SyscallDisplay : public SyscallUse {
@@ -247,7 +225,7 @@ class SyscallDisplay : public SyscallUse {
 
   void SyscallInputsDecoded(SyscallDecoder* syscall) override;
   void SyscallOutputsDecoded(SyscallDecoder* syscall) override;
-  void SyscallDecodingError(const SyscallDecoderError& error, SyscallDecoder* syscall) override;
+  void SyscallDecodingError(const DecoderError& error, SyscallDecoder* syscall) override;
 
  private:
   SyscallDisplayDispatcher* const dispatcher_;

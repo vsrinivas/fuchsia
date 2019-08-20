@@ -37,12 +37,14 @@ static_library("lib") {
 if (current_toolchain == host_toolchain) {
   static_library("host_lib") {
     public = [
+      "decoder.h",
       "interception_workflow.h",
       "syscall_decoder.h",
       "syscall_decoder_dispatcher.h",
     ]
 
     sources = [
+      "decoder.cc",
       "interception_workflow.cc",
       "syscall_decoder.cc",
       "syscall_decoder_dispatcher.cc",

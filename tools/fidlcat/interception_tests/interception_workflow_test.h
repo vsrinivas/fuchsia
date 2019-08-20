@@ -473,7 +473,7 @@ class SyscallCheck : public SyscallUse {
     }
   }
 
-  void SyscallDecodingError(const SyscallDecoderError& error, SyscallDecoder* decoder) override {
+  void SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) override {
     SyscallUse::SyscallDecodingError(error, decoder);
     FAIL();
   }
