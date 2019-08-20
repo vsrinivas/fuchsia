@@ -157,17 +157,17 @@ func logEventCountMulti(metric metricID, periodDurationMicros int64, count int64
 		return
 	}
 
+	var eventPayload cobalt.EventPayload
+	eventPayload.SetEventCount(cobalt.CountEvent{
+		PeriodDurationMicros: periodDurationMicros,
+		Count:                count,
+	})
+
 	event := cobalt.CobaltEvent{
 		MetricId:   uint32(metric),
 		EventCodes: eventCodes,
 		Component:  &component,
-		Payload: cobalt.EventPayload{
-			EventPayloadTag: cobalt.EventPayloadEventCount,
-			EventCount: cobalt.CountEvent{
-				PeriodDurationMicros: periodDurationMicros,
-				Count:                count,
-			},
-		},
+		Payload:    eventPayload,
 	}
 	status, err := logger.LogCobaltEvent(event)
 	if err != nil {
@@ -197,14 +197,14 @@ func logElapsedTimeMulti(metric metricID, duration time.Duration, eventCodes []u
 		return
 	}
 
+	var eventPayload cobalt.EventPayload
+	eventPayload.SetElapsedMicros(duration.Nanoseconds() / time.Microsecond.Nanoseconds())
+
 	event := cobalt.CobaltEvent{
 		MetricId:   uint32(metric),
 		EventCodes: eventCodes,
 		Component:  &component,
-		Payload: cobalt.EventPayload{
-			EventPayloadTag: cobalt.EventPayloadElapsedMicros,
-			ElapsedMicros:   duration.Nanoseconds() / time.Microsecond.Nanoseconds(),
-		},
+		Payload:    eventPayload,
 	}
 	status, err := logger.LogCobaltEvent(event)
 	if err != nil {
@@ -215,7 +215,7 @@ func logElapsedTimeMulti(metric metricID, duration time.Duration, eventCodes []u
 }
 
 func valueString(value cobalt.Value) (string, string) {
-	switch value.ValueTag {
+	switch value.Which() {
 	case cobalt.ValueStringValue:
 		return "STRING", value.StringValue
 	case cobalt.ValueIntValue:
