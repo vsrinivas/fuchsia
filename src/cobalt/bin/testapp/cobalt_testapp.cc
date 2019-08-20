@@ -89,12 +89,19 @@ void CobaltTestApp::SetChannel(const std::string &current_channel) {
 }
 
 bool CobaltTestApp::DoChannelFilteringTests() {
-  uint32_t num_added = 0;
+  // TODO(rudominer) The Channel Mapper functionality is being replaced by
+  // different functionality and this test is in a transitional state.
+  // The transitional steps are:
+  // (1) Have this test stop expecting Channel Mapper to work. That is the
+  // current state. This allows step (2) below to succeed.
+  // (2) Roll fxr/311408 which makes Channel Mapper stop working and adds
+  // a new constructor to SystemData.
+  // (3) Submit fxr/311648 which removes the use of Channel Mapper from the
+  // Fuchsia repo, uses the new constructor introduced in step (2) and changes
+  // this test to a test of the new SystemData constructor.
+  // (4) Remove Channel Mapper from the Cobalt repo.
   SetChannel("prod");
-  TRY_TEST(TestChannelFiltering(&logger_, 0, &cobalt_controller_, &num_added));
-  SetChannel("devhost");
-  TRY_TEST(TestChannelFiltering(&logger_, num_added, &cobalt_controller_));
-
+  TRY_TEST(TestChannelFiltering(&logger_, 0, &cobalt_controller_));
   return true;
 }
 
