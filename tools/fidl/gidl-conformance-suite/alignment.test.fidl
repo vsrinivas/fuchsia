@@ -1,0 +1,44 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library conformance;
+
+struct ThreeByte {
+    uint8 elem1;
+    uint8 elem2;
+    uint8 elem3;
+};
+
+struct FiveByte {
+    uint32 elem1;
+    uint8 elem2;
+};
+
+struct ThreeByteInStruct {
+  ThreeByte elem1;
+  ThreeByte elem2;
+  ThreeByte elem3;
+};
+
+struct FiveByteInStruct {
+  FiveByte elem1;
+  FiveByte elem2;
+  FiveByte elem3;
+};
+
+struct ThreeByteInVector {
+    vector<ThreeByte> elems;
+};
+
+struct FiveByteInVector {
+    vector<FiveByte> elems;
+};
+
+struct ThreeByteInArray {
+    array<ThreeByte>:3 elems;
+};
+
+struct FiveByteInArray {
+    array<FiveByte>:3 elems;
+};

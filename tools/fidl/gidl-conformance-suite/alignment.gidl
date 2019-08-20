@@ -1,0 +1,153 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("3ByteObjectAlignmentInStruct") {
+    value = ThreeByteInStruct {
+        elem1: ThreeByte {
+            elem1: 0x01,
+            elem2: 0x02,
+            elem3: 0x03,
+        },
+        elem2: ThreeByte {
+            elem1: 0x04,
+            elem2: 0x05,
+            elem3: 0x06,
+        },
+        elem3: ThreeByte {
+            elem1: 0x07,
+            elem2: 0x08,
+            elem3: 0x09,
+        },
+    }
+    bytes = {
+        0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,
+        0x09,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    }
+}
+
+success("5ByteObjectAlignmentInStruct") {
+    value = FiveByteInStruct {
+        elem1: FiveByte {
+            elem1: 0x01020304,
+            elem2: 0x05,
+        },
+        elem2: FiveByte {
+            elem1: 0x06070809,
+            elem2: 0x0a,
+        },
+        elem3: FiveByte {
+            elem1: 0x0b0c0d0e,
+            elem2: 0x0f,
+        },
+    }
+    bytes = {
+        0x04,0x03,0x02,0x01,0x05,0x00,0x00,0x00,
+        0x09,0x08,0x07,0x06,0x0a,0x00,0x00,0x00,
+        0x0e,0x0d,0x0c,0x0b,0x0f,0x00,0x00,0x00,
+    }
+}
+
+success("3ByteObjectAlignmentInVector") {
+    value = ThreeByteInVector{
+        elems: [
+            ThreeByte {
+                elem1: 0x01,
+                elem2: 0x02,
+                elem3: 0x03,
+            },
+            ThreeByte {
+                elem1: 0x04,
+                elem2: 0x05,
+                elem3: 0x06,
+            },
+            ThreeByte {
+                elem1: 0x07,
+                elem2: 0x08,
+                elem3: 0x09,
+            },
+        ],
+    }
+    bytes = {
+        0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+        0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,
+        0x09,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    }
+}
+
+success("5ByteObjectAlignmentInVector") {
+    value = FiveByteInVector{
+        elems: [
+            FiveByte {
+                elem1: 0x01020304,
+                elem2: 0x05,
+            },
+            FiveByte {
+                elem1: 0x06070809,
+                elem2: 0x0a,
+            },
+            FiveByte {
+                elem1: 0x0b0c0d0e,
+                elem2: 0x0f,
+            },
+        ],
+    }
+    bytes = {
+        0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+        0x04,0x03,0x02,0x01,0x05,0x00,0x00,0x00,
+        0x09,0x08,0x07,0x06,0x0a,0x00,0x00,0x00,
+        0x0e,0x0d,0x0c,0x0b,0x0f,0x00,0x00,0x00,
+    }
+}
+
+success("3ByteObjectAlignmentInArray") {
+    value = ThreeByteInArray{
+        elems: [
+            ThreeByte {
+                elem1: 0x01,
+                elem2: 0x02,
+                elem3: 0x03,
+            },
+            ThreeByte {
+                elem1: 0x04,
+                elem2: 0x05,
+                elem3: 0x06,
+            },
+            ThreeByte {
+                elem1: 0x07,
+                elem2: 0x08,
+                elem3: 0x09,
+            },
+        ],
+    }
+    bytes = {
+        0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,
+        0x09,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    }
+}
+
+success("5ByteObjectAlignmentInArray") {
+    value = FiveByteInArray{
+        elems: [
+            FiveByte {
+                elem1: 0x01020304,
+                elem2: 0x05,
+            },
+            FiveByte {
+                elem1: 0x06070809,
+                elem2: 0x0a,
+            },
+            FiveByte {
+                elem1: 0x0b0c0d0e,
+                elem2: 0x0f,
+            },
+        ],
+    }
+    bytes = {
+        0x04,0x03,0x02,0x01,0x05,0x00,0x00,0x00,
+        0x09,0x08,0x07,0x06,0x0a,0x00,0x00,0x00,
+        0x0e,0x0d,0x0c,0x0b,0x0f,0x00,0x00,0x00,
+    }
+}

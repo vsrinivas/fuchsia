@@ -9,6 +9,514 @@
 #include <conformance/cpp/fidl.h>
 #include <gtest/gtest.h>
 
+TEST(Conformance, 3ByteObjectAlignmentInStruct_Encoding) {
+  conformance::ThreeByteInStruct v1;
+
+  conformance::ThreeByte v2;
+
+  uint8_t v3 = 1ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 2ull;
+  v2.elem2 = std::move(v4);
+
+  uint8_t v5 = 3ull;
+  v2.elem3 = std::move(v5);
+  v1.elem1 = std::move(v2);
+
+  conformance::ThreeByte v6;
+
+  uint8_t v7 = 4ull;
+  v6.elem1 = std::move(v7);
+
+  uint8_t v8 = 5ull;
+  v6.elem2 = std::move(v8);
+
+  uint8_t v9 = 6ull;
+  v6.elem3 = std::move(v9);
+  v1.elem2 = std::move(v6);
+
+  conformance::ThreeByte v10;
+
+  uint8_t v11 = 7ull;
+  v10.elem1 = std::move(v11);
+
+  uint8_t v12 = 8ull;
+  v10.elem2 = std::move(v12);
+
+  uint8_t v13 = 9ull;
+  v10.elem3 = std::move(v13);
+  v1.elem3 = std::move(v10);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+      0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, 3ByteObjectAlignmentInStruct_Decoding) {
+  auto input = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+      0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::ThreeByteInStruct v1;
+
+  conformance::ThreeByte v2;
+
+  uint8_t v3 = 1ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 2ull;
+  v2.elem2 = std::move(v4);
+
+  uint8_t v5 = 3ull;
+  v2.elem3 = std::move(v5);
+  v1.elem1 = std::move(v2);
+
+  conformance::ThreeByte v6;
+
+  uint8_t v7 = 4ull;
+  v6.elem1 = std::move(v7);
+
+  uint8_t v8 = 5ull;
+  v6.elem2 = std::move(v8);
+
+  uint8_t v9 = 6ull;
+  v6.elem3 = std::move(v9);
+  v1.elem2 = std::move(v6);
+
+  conformance::ThreeByte v10;
+
+  uint8_t v11 = 7ull;
+  v10.elem1 = std::move(v11);
+
+  uint8_t v12 = 8ull;
+  v10.elem2 = std::move(v12);
+
+  uint8_t v13 = 9ull;
+  v10.elem3 = std::move(v13);
+  v1.elem3 = std::move(v10);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, 5ByteObjectAlignmentInStruct_Encoding) {
+  conformance::FiveByteInStruct v1;
+
+  conformance::FiveByte v2;
+
+  uint32_t v3 = 16909060ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.elem2 = std::move(v4);
+  v1.elem1 = std::move(v2);
+
+  conformance::FiveByte v5;
+
+  uint32_t v6 = 101124105ull;
+  v5.elem1 = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.elem2 = std::move(v7);
+  v1.elem2 = std::move(v5);
+
+  conformance::FiveByte v8;
+
+  uint32_t v9 = 185339150ull;
+  v8.elem1 = std::move(v9);
+
+  uint8_t v10 = 15ull;
+  v8.elem2 = std::move(v10);
+  v1.elem3 = std::move(v8);
+
+  auto expected = std::vector<uint8_t>{
+      0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
+      0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, 5ByteObjectAlignmentInStruct_Decoding) {
+  auto input = std::vector<uint8_t>{
+      0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
+      0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::FiveByteInStruct v1;
+
+  conformance::FiveByte v2;
+
+  uint32_t v3 = 16909060ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.elem2 = std::move(v4);
+  v1.elem1 = std::move(v2);
+
+  conformance::FiveByte v5;
+
+  uint32_t v6 = 101124105ull;
+  v5.elem1 = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.elem2 = std::move(v7);
+  v1.elem2 = std::move(v5);
+
+  conformance::FiveByte v8;
+
+  uint32_t v9 = 185339150ull;
+  v8.elem1 = std::move(v9);
+
+  uint8_t v10 = 15ull;
+  v8.elem2 = std::move(v10);
+  v1.elem3 = std::move(v8);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, 3ByteObjectAlignmentInVector_Encoding) {
+  conformance::ThreeByteInVector v1;
+
+  conformance::ThreeByte v2;
+
+  uint8_t v3 = 1ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 2ull;
+  v2.elem2 = std::move(v4);
+
+  uint8_t v5 = 3ull;
+  v2.elem3 = std::move(v5);
+  conformance::ThreeByte v6;
+
+  uint8_t v7 = 4ull;
+  v6.elem1 = std::move(v7);
+
+  uint8_t v8 = 5ull;
+  v6.elem2 = std::move(v8);
+
+  uint8_t v9 = 6ull;
+  v6.elem3 = std::move(v9);
+  conformance::ThreeByte v10;
+
+  uint8_t v11 = 7ull;
+  v10.elem1 = std::move(v11);
+
+  uint8_t v12 = 8ull;
+  v10.elem2 = std::move(v12);
+
+  uint8_t v13 = 9ull;
+  v10.elem3 = std::move(v13);
+  auto v14 = std::vector<conformance::ThreeByte>{v2, v6, v10};
+  v1.elems = std::move(v14);
+
+  auto expected = std::vector<uint8_t>{
+      0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+      0x07, 0x08, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, 3ByteObjectAlignmentInVector_Decoding) {
+  auto input = std::vector<uint8_t>{
+      0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+      0x07, 0x08, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::ThreeByteInVector v1;
+
+  conformance::ThreeByte v2;
+
+  uint8_t v3 = 1ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 2ull;
+  v2.elem2 = std::move(v4);
+
+  uint8_t v5 = 3ull;
+  v2.elem3 = std::move(v5);
+  conformance::ThreeByte v6;
+
+  uint8_t v7 = 4ull;
+  v6.elem1 = std::move(v7);
+
+  uint8_t v8 = 5ull;
+  v6.elem2 = std::move(v8);
+
+  uint8_t v9 = 6ull;
+  v6.elem3 = std::move(v9);
+  conformance::ThreeByte v10;
+
+  uint8_t v11 = 7ull;
+  v10.elem1 = std::move(v11);
+
+  uint8_t v12 = 8ull;
+  v10.elem2 = std::move(v12);
+
+  uint8_t v13 = 9ull;
+  v10.elem3 = std::move(v13);
+  auto v14 = std::vector<conformance::ThreeByte>{v2, v6, v10};
+  v1.elems = std::move(v14);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, 5ByteObjectAlignmentInVector_Encoding) {
+  conformance::FiveByteInVector v1;
+
+  conformance::FiveByte v2;
+
+  uint32_t v3 = 16909060ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.elem2 = std::move(v4);
+  conformance::FiveByte v5;
+
+  uint32_t v6 = 101124105ull;
+  v5.elem1 = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.elem2 = std::move(v7);
+  conformance::FiveByte v8;
+
+  uint32_t v9 = 185339150ull;
+  v8.elem1 = std::move(v9);
+
+  uint8_t v10 = 15ull;
+  v8.elem2 = std::move(v10);
+  auto v11 = std::vector<conformance::FiveByte>{v2, v5, v8};
+  v1.elems = std::move(v11);
+
+  auto expected = std::vector<uint8_t>{
+      0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
+      0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, 5ByteObjectAlignmentInVector_Decoding) {
+  auto input = std::vector<uint8_t>{
+      0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
+      0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::FiveByteInVector v1;
+
+  conformance::FiveByte v2;
+
+  uint32_t v3 = 16909060ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.elem2 = std::move(v4);
+  conformance::FiveByte v5;
+
+  uint32_t v6 = 101124105ull;
+  v5.elem1 = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.elem2 = std::move(v7);
+  conformance::FiveByte v8;
+
+  uint32_t v9 = 185339150ull;
+  v8.elem1 = std::move(v9);
+
+  uint8_t v10 = 15ull;
+  v8.elem2 = std::move(v10);
+  auto v11 = std::vector<conformance::FiveByte>{v2, v5, v8};
+  v1.elems = std::move(v11);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, 3ByteObjectAlignmentInArray_Encoding) {
+  conformance::ThreeByteInArray v1;
+
+  conformance::ThreeByte v2;
+
+  uint8_t v3 = 1ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 2ull;
+  v2.elem2 = std::move(v4);
+
+  uint8_t v5 = 3ull;
+  v2.elem3 = std::move(v5);
+  conformance::ThreeByte v6;
+
+  uint8_t v7 = 4ull;
+  v6.elem1 = std::move(v7);
+
+  uint8_t v8 = 5ull;
+  v6.elem2 = std::move(v8);
+
+  uint8_t v9 = 6ull;
+  v6.elem3 = std::move(v9);
+  conformance::ThreeByte v10;
+
+  uint8_t v11 = 7ull;
+  v10.elem1 = std::move(v11);
+
+  uint8_t v12 = 8ull;
+  v10.elem2 = std::move(v12);
+
+  uint8_t v13 = 9ull;
+  v10.elem3 = std::move(v13);
+  auto v14 = std::array<conformance::ThreeByte, 3>{v2, v6, v10};
+  v1.elems = std::move(v14);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+      0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, 3ByteObjectAlignmentInArray_Decoding) {
+  auto input = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+      0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::ThreeByteInArray v1;
+
+  conformance::ThreeByte v2;
+
+  uint8_t v3 = 1ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 2ull;
+  v2.elem2 = std::move(v4);
+
+  uint8_t v5 = 3ull;
+  v2.elem3 = std::move(v5);
+  conformance::ThreeByte v6;
+
+  uint8_t v7 = 4ull;
+  v6.elem1 = std::move(v7);
+
+  uint8_t v8 = 5ull;
+  v6.elem2 = std::move(v8);
+
+  uint8_t v9 = 6ull;
+  v6.elem3 = std::move(v9);
+  conformance::ThreeByte v10;
+
+  uint8_t v11 = 7ull;
+  v10.elem1 = std::move(v11);
+
+  uint8_t v12 = 8ull;
+  v10.elem2 = std::move(v12);
+
+  uint8_t v13 = 9ull;
+  v10.elem3 = std::move(v13);
+  auto v14 = std::array<conformance::ThreeByte, 3>{v2, v6, v10};
+  v1.elems = std::move(v14);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, 5ByteObjectAlignmentInArray_Encoding) {
+  conformance::FiveByteInArray v1;
+
+  conformance::FiveByte v2;
+
+  uint32_t v3 = 16909060ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.elem2 = std::move(v4);
+  conformance::FiveByte v5;
+
+  uint32_t v6 = 101124105ull;
+  v5.elem1 = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.elem2 = std::move(v7);
+  conformance::FiveByte v8;
+
+  uint32_t v9 = 185339150ull;
+  v8.elem1 = std::move(v9);
+
+  uint8_t v10 = 15ull;
+  v8.elem2 = std::move(v10);
+  auto v11 = std::array<conformance::FiveByte, 3>{v2, v5, v8};
+  v1.elems = std::move(v11);
+
+  auto expected = std::vector<uint8_t>{
+      0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
+      0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
+
+  };
+
+  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+}
+
+TEST(Conformance, 5ByteObjectAlignmentInArray_Decoding) {
+  auto input = std::vector<uint8_t>{
+      0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
+      0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::FiveByteInArray v1;
+
+  conformance::FiveByte v2;
+
+  uint32_t v3 = 16909060ull;
+  v2.elem1 = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.elem2 = std::move(v4);
+  conformance::FiveByte v5;
+
+  uint32_t v6 = 101124105ull;
+  v5.elem1 = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.elem2 = std::move(v7);
+  conformance::FiveByte v8;
+
+  uint32_t v9 = 185339150ull;
+  v8.elem1 = std::move(v9);
+
+  uint8_t v10 = 15ull;
+  v8.elem2 = std::move(v10);
+  auto v11 = std::array<conformance::FiveByte, 3>{v2, v5, v8};
+  v1.elems = std::move(v11);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
 TEST(Conformance, EmptyStruct_Encoding) {
   conformance::EmptyStruct v1;
 
