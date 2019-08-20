@@ -174,8 +174,6 @@ mod tests {
     const ENV_NAME: &str = "settings_service_test_environment";
 
     enum Services {
-        Manager(fidl_fuchsia_device_display::ManagerRequestStream),
-        Display(DisplayRequestStream),
         Timezone(fidl_fuchsia_timezone::TimezoneRequestStream),
         Intl(IntlRequestStream),
     }
@@ -187,41 +185,50 @@ mod tests {
         const STARTING_BRIGHTNESS: f32 = 0.5;
         const CHANGED_BRIGHTNESS: f32 = 0.8;
 
-        let stored_brightness_value: Arc<RwLock<f64>> =
-            Arc::new(RwLock::new(STARTING_BRIGHTNESS.into()));
-
-        let stored_brightness_value_clone = stored_brightness_value.clone();
-
         let service_gen = move |service_name: &str, channel: zx::Channel| {
-            if service_name != fidl_fuchsia_device_display::ManagerMarker::NAME {
+            if service_name != fidl_fuchsia_ui_brightness::ControlMarker::NAME {
                 return Err(format_err!("unsupported!"));
             }
 
             let mut manager_stream =
-                ServerEnd::<fidl_fuchsia_device_display::ManagerMarker>::new(channel)
+                ServerEnd::<fidl_fuchsia_ui_brightness::ControlMarker>::new(channel)
                     .into_stream()?;
 
-            let stored_brightness_value_clone = stored_brightness_value_clone.clone();
             fasync::spawn(async move {
+                let mut stored_brightness_value: f32 = STARTING_BRIGHTNESS;
+                let mut auto_brightness_on = false;
+
                 while let Some(req) = manager_stream.try_next().await.unwrap() {
                     #[allow(unreachable_patterns)]
                     match req {
-                        fidl_fuchsia_device_display::ManagerRequest::GetBrightness {
+                        fidl_fuchsia_ui_brightness::ControlRequest::WatchCurrentBrightness {
                             responder,
                         } => {
-                            responder
-                                .send(true, (*stored_brightness_value_clone.read().unwrap()).into())
-                                .unwrap();
+                            responder.send(stored_brightness_value).unwrap();
                         }
-                        fidl_fuchsia_device_display::ManagerRequest::SetBrightness {
-                            brightness,
+                        fidl_fuchsia_ui_brightness::ControlRequest::SetManualBrightness {
+                            value,
+                            control_handle: _,
+                        } => {
+                            stored_brightness_value = value;
+                            auto_brightness_on = false;
+                        }
+                        fidl_fuchsia_ui_brightness::ControlRequest::SetAutoBrightness {
+                            control_handle: _,
+                        } => {
+                            auto_brightness_on = true;
+                        }
+
+                        fidl_fuchsia_ui_brightness::ControlRequest::WatchAutoBrightness {
                             responder,
                         } => {
-                            *stored_brightness_value_clone.write().unwrap() = brightness;
-                            responder.send(true).unwrap();
+                            responder.send(auto_brightness_on).unwrap();
                         }
+                        _ => {}
                     }
+
                 }
+
             });
 
             Ok(())
@@ -253,6 +260,17 @@ mod tests {
             display_proxy.watch().await.expect("watch completed").expect("watch successful");
 
         assert_eq!(settings.brightness_value, Some(CHANGED_BRIGHTNESS));
+
+        let mut display_settings = DisplaySettings::empty();
+        display_settings.auto_brightness = Some(true);
+        display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
+
+
+        let settings =
+            display_proxy.watch().await.expect("watch completed").expect("watch successful");
+
+        assert_eq!(settings.auto_brightness, Some(true));
+
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

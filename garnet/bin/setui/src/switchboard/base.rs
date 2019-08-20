@@ -45,6 +45,19 @@ pub enum BrightnessInfo {
     AutoBrightness,
 }
 
+/// Creates a brightness info enum.
+pub fn brightness_info(auto_brightness: bool, value: Option<f32>) -> BrightnessInfo {
+    if auto_brightness {
+        BrightnessInfo::AutoBrightness
+    } else {
+        if let Some(brightness_value) = value {
+            BrightnessInfo::ManualBrightness(brightness_value)
+        } else {
+            panic!("No brightness specified for manual brightness")
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct IntlInfo {
     pub time_zone_id: String,
