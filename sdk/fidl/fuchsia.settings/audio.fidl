@@ -1,0 +1,61 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+using fuchsia.media;
+
+/// Settings related to audio.
+[Discoverable]
+protocol Audio {
+    /// Gets the current [AudioSettings]. Returns immediately on first call;
+    /// subsequent calls return when the value changes.
+    Watch() -> (AudioSettings settings) error Error;
+
+    /// Sets audio settings. Any field not explicitly set in the table performs a
+    /// no-op, and will not make any changes.
+    Set(AudioSettings settings) -> () error Error;
+};
+
+/// The source of the volume settings. The volume is set according to the source.
+enum AudioStreamSettingSource {
+    /// The volume is default.
+    DEFAULT = 0;
+
+    /// The volume is set by the user. When the |source| in AudioStreamSettings is
+    /// set to this, the audio volume is set to |user_volume|.
+    USER = 1;
+
+    /// The system takes control of the volume. This is used when the system constantly
+    /// calculates and changes the volume. The volume is not stored for this source.
+    SYSTEM = 2;
+};
+
+table Volume {
+    /// The volume level ranged [0.0, 1.0]. The level maps to a dbfs value from a volume
+    /// curve in the setting service.
+    1: float32 level;
+
+    /// True if the volume should be muted. If this is true, then the volume is silent,
+    /// regardless of |level|.
+    2: bool muted;
+};
+
+table AudioStreamSettings {
+    /// The audio stream which the settings are applying to.
+    1: fuchsia.media.AudioRenderUsage stream;
+
+    /// The volume of |stream| is set according to the volume settings from |source|.
+    2: AudioStreamSettingSource source;
+
+    /// User level volume setting. If the |source| is USER, then the volume is set to
+    /// |user_volume|.
+    3: Volume user_volume;
+};
+
+table AudioSettings {
+    /// Contains the volume setting for all audio stream settings. There should only be
+    /// one AudioStreamSettings for each fuchsia.media.AudioRenderUsage.
+    1: vector<AudioStreamSettings>:5 streams;
+};

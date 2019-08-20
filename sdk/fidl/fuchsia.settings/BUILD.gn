@@ -9,6 +9,7 @@ fidl("fuchsia.settings") {
 
   sources = [
     "accessibility.fidl",
+    "audio.fidl",
     "display.fidl",
     "do_not_disturb.fidl",
     "intl.fidl",
@@ -19,6 +20,7 @@ fidl("fuchsia.settings") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.ui.types",
   ]
 }
