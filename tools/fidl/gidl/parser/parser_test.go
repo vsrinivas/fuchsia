@@ -152,6 +152,40 @@ func TestParseSuccessCase(t *testing.T) {
 			},
 		},
 		},
+		EncodeSuccess: []ir.EncodeSuccess{{
+			Name: "OneStringOfMaxLengthFive-empty",
+			Value: ir.Object{
+				Name: "OneStringOfMaxLengthFive",
+				Fields: []ir.Field{
+					{
+						Name:  "first",
+						Value: "four",
+					},
+				},
+			},
+			Bytes: []byte{
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			},
+		},
+		},
+		DecodeSuccess: []ir.DecodeSuccess{{
+			Name: "OneStringOfMaxLengthFive-empty",
+			Value: ir.Object{
+				Name: "OneStringOfMaxLengthFive",
+				Fields: []ir.Field{
+					{
+						Name:  "first",
+						Value: "four",
+					},
+				},
+			},
+			Bytes: []byte{
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			},
+		},
+		},
 	}
 	checkMatch(t, all, expectedAll, err)
 }
@@ -296,6 +330,46 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 	all, err := parse(gidl)
 	expectedAll := ir.All{
 		Success: []ir.Success{
+			{
+				Name: "OneStringOfMaxLengthFive-empty",
+				Value: ir.Object{
+					Name: "OneStringOfMaxLengthFive",
+					Fields: []ir.Field{
+						{
+							Name:  "first",
+							Value: "four",
+						},
+					},
+				},
+				Bytes: []byte{
+					0, 0, 0, 0, 0, 0, 0, 0, // length
+					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+				},
+				BindingsAllowlist: &[]string{"go", "rust"},
+				BindingsDenylist:  &[]string{"go"},
+			},
+		},
+		EncodeSuccess: []ir.EncodeSuccess{
+			{
+				Name: "OneStringOfMaxLengthFive-empty",
+				Value: ir.Object{
+					Name: "OneStringOfMaxLengthFive",
+					Fields: []ir.Field{
+						{
+							Name:  "first",
+							Value: "four",
+						},
+					},
+				},
+				Bytes: []byte{
+					0, 0, 0, 0, 0, 0, 0, 0, // length
+					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+				},
+				BindingsAllowlist: &[]string{"go", "rust"},
+				BindingsDenylist:  &[]string{"go"},
+			},
+		},
+		DecodeSuccess: []ir.DecodeSuccess{
 			{
 				Name: "OneStringOfMaxLengthFive-empty",
 				Value: ir.Object{

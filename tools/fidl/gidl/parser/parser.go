@@ -169,6 +169,22 @@ var sections = map[string]sectionMetadata{
 				BindingsDenylist:  body.BindingsDenylist,
 			}
 			all.Success = append(all.Success, success)
+			encodeSuccess := ir.EncodeSuccess{
+				Name:              name,
+				Value:             body.Value,
+				Bytes:             body.Bytes,
+				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
+			}
+			all.EncodeSuccess = append(all.EncodeSuccess, encodeSuccess)
+			decodeSuccess := ir.DecodeSuccess{
+				Name:              name,
+				Value:             body.Value,
+				Bytes:             body.Bytes,
+				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
+			}
+			all.DecodeSuccess = append(all.DecodeSuccess, decodeSuccess)
 		},
 	},
 	"encode_success": {
