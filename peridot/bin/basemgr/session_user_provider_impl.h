@@ -122,8 +122,6 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   OnInitializeCallback on_initialize_;
   OnLoginCallback on_login_;
 
-  fxl::WeakPtrFactory<SessionUserProviderImpl> weak_factory_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionUserProviderImpl);
 };
 

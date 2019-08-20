@@ -22,34 +22,29 @@
 namespace modular::testing {
 
 // Provides the |TestHarness| service.
-class TestHarnessImpl final : fuchsia::modular::testing::TestHarness,
-                              public modular::LifecycleImpl::Delegate {
+class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
  public:
   // |parent_env| is the environment under which a new hermetic test harness
   // environment is launched. |parent_env| must outlive this instance, otherwise
   // the test harness environment dies.
   //
-  // |on_exit| is called if a running session instance terminates, or if the TestHarness interface
-  // is closed, or terminates. This can happen if the TestHarness client drops their side of the
-  // connection, or this class closes it due to an error; In this case, the error is sent as an
-  // epitaph. See the |TestHarness| protocol documentation for more details.
-  TestHarnessImpl(const fuchsia::sys::EnvironmentPtr& parent_env, fit::function<void()> on_exit);
+  // |test_harness_request| is implemented by this class. The TestHarness
+  // FIDL interface is the way to interact with the TestHarness API.
+  //
+  // |on_exit| is called when the TestHarness interface is closed.
+  // This can happen if the TestHarness client drops their side of the
+  // connection, or this class closes it due to an error; In this case, the
+  // error is sent as an epitaph. See the |TestHarness| protocol documentation
+  // for more details.
+  TestHarnessImpl(const fuchsia::sys::EnvironmentPtr& parent_env,
+                  fidl::InterfaceRequest<TestHarness> test_harness_request,
+                  fit::function<void()> on_disconnected);
 
   virtual ~TestHarnessImpl() override;
 
   // Not copyable.
   TestHarnessImpl(const TestHarnessImpl&) = delete;
   void operator=(const TestHarnessImpl&) = delete;
-
-  // |request| is served by this class. The TestHarness FIDL interface is the way to interact with
-  // the TestHarness API.
-  void Bind(fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness> request);
-
-  // Terminate the running instance of the test harness. If there is a running session, it is asked
-  // to terminate.
-  //
-  // |modular::LifecycleImpl::Delegate|
-  void Terminate() override;
 
  private:
   class InterceptedComponentImpl;
@@ -165,7 +160,7 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness,
   fidl::Binding<fuchsia::modular::testing::TestHarness> binding_;
   fuchsia::modular::testing::TestHarnessSpec spec_;
 
-  fit::function<void()> on_exit_;
+  fit::function<void()> on_disconnected_;
 
   // This map manages InterceptedComponent bindings (and their
   // implementations). When a |InterceptedComponent| connection is closed, it
@@ -180,7 +175,6 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness,
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env_;
   std::unique_ptr<vfs::PseudoDir> basemgr_config_dir_;
   fuchsia::sys::ComponentControllerPtr basemgr_ctrl_;
-  fuchsia::modular::LifecyclePtr basemgr_lifecycle_;
 
   InterceptedSessionAgentInfo intercepted_session_agent_info_;
 

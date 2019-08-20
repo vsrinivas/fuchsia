@@ -10,8 +10,6 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
-#include <zircon/status.h>
-
 #include <peridot/lib/modular_config/modular_config.h>
 #include <peridot/lib/modular_config/modular_config_constants.h>
 #include <peridot/lib/modular_config/modular_config_xdr.h>
@@ -22,6 +20,7 @@
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/substitute.h>
+#include <zircon/status.h>
 
 namespace modular::testing {
 namespace {
@@ -100,15 +99,14 @@ class TestHarnessImpl::InterceptedSessionAgent final {
   void Terminate(const fit::function<void()>& done) { done(); }
 };
 
-TestHarnessImpl::TestHarnessImpl(const fuchsia::sys::EnvironmentPtr& parent_env,
-                                 fit::function<void()> on_exit)
+TestHarnessImpl::TestHarnessImpl(
+    const fuchsia::sys::EnvironmentPtr& parent_env,
+    fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness> request,
+    fit::function<void()> on_disconnected)
     : parent_env_(parent_env),
-      binding_(this),
-      on_exit_(std::move(on_exit)),
-      interceptor_(sys::testing::ComponentInterceptor::CreateWithEnvironmentLoader(parent_env_)) {}
-
-void TestHarnessImpl::Bind(fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness> request) {
-  binding_.Bind(std::move(request));
+      binding_(this, std::move(request)),
+      on_disconnected_(std::move(on_disconnected)),
+      interceptor_(sys::testing::ComponentInterceptor::CreateWithEnvironmentLoader(parent_env_)) {
   binding_.set_error_handler([this](zx_status_t status) { CloseBindingIfError(status); });
 }
 
@@ -134,23 +132,13 @@ void TestHarnessImpl::ConnectToEnvironmentService(std::string service_name, zx::
   enclosing_env_->ConnectToService(service_name, std::move(request));
 }
 
-void TestHarnessImpl::Terminate() {
-  // if basemgr is alive, send it a termination signal.
-  if (basemgr_lifecycle_) {
-    basemgr_lifecycle_->Terminate();
-    // When basemgr exits, |basemgr_ctrl_| will be notified and will |on_exit_|.
-  } else {
-    on_exit_();
-  }
-}
-
 bool TestHarnessImpl::CloseBindingIfError(zx_status_t status) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Destroying TestHarness because of error: " << zx_status_get_string(status);
     binding_.Close(status);
     // destory |enclosing_env_| should kill all processes.
     enclosing_env_.reset();
-    on_exit_();
+    on_disconnected_();
     return true;
   }
   return false;
@@ -206,9 +194,9 @@ zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServic
     if (added_svcs.find(svc_component.first) != added_svcs.end()) {
       continue;
     }
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = svc_component.second;
-    env_services->AddServiceWithLaunchInfo(std::move(launch_info), svc_component.first);
+    fuchsia::sys::LaunchInfo info;
+    info.url = svc_component.second;
+    env_services->AddServiceWithLaunchInfo(std::move(info), svc_component.first);
   }
 
   return ZX_OK;
@@ -230,13 +218,13 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithComponents(
     }
     added_svcs->insert(svc.name);
 
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = svc.url;
-    env_services->AddServiceWithLaunchInfo(std::move(launch_info), svc.name);
+    fuchsia::sys::LaunchInfo info;
+    info.url = svc.url;
+    env_services->AddServiceWithLaunchInfo(std::move(info), svc.name);
   }
 
   return ZX_OK;
-}
+}  // namespace modular::testing
 
 std::vector<std::string> GetDirListing(fuchsia::io::Directory* dir) {
   // Make a clone of |dir| since translating to a POSIX fd is destructive.
@@ -344,19 +332,13 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   basemgr_config_dir_ = MakeBasemgrConfigDir(spec_);
   basemgr_config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(request));
 
-  fuchsia::io::DirectoryPtr basemgr_svc_dir;
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = kBasemgrUrl;
-  launch_info.directory_request = basemgr_svc_dir.NewRequest().TakeChannel();
-  launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
-  launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
-  launch_info.flat_namespace->directories.push_back(std::move(client));
+  fuchsia::sys::LaunchInfo info;
+  info.url = kBasemgrUrl;
+  info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+  info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
+  info.flat_namespace->directories.push_back(std::move(client));
 
-  sys::ServiceDirectory basemgr_svc(basemgr_svc_dir.Unbind().TakeChannel());
-  basemgr_lifecycle_ = basemgr_svc.Connect<fuchsia::modular::Lifecycle>();
-
-  basemgr_ctrl_ = enclosing_env_->CreateComponent(std::move(launch_info));
-  basemgr_ctrl_.set_error_handler([this](zx_status_t err) { on_exit_(); });
+  basemgr_ctrl_ = enclosing_env_->CreateComponent(std::move(info));
 }
 
 zx::channel TakeSvcFromFlatNamespace(fuchsia::sys::FlatNamespace* flat_namespace) {

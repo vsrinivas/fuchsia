@@ -23,20 +23,12 @@ TestHarnessLauncher::TestHarnessLauncher(fuchsia::sys::LauncherPtr launcher)
                             test_harness_ctrl_.NewRequest(test_harness_loop_.dispatcher()));
 
   test_harness_svc_->Connect(test_harness_.NewRequest());
-  test_harness_svc_->Connect(lifecycle_.NewRequest(test_harness_loop_.dispatcher()));
 
   test_harness_ctrl_.set_error_handler([this](zx_status_t) { test_harness_loop_.Quit(); });
 }
 
 TestHarnessLauncher::~TestHarnessLauncher() {
-  if (lifecycle_) {
-    lifecycle_->Terminate();
-    // Upon Lifecycle/Terminate(), the modular test harness will ask basemgr to terminate, and
-    // force-kill it if it doesn't terminate after some time.
-  } else {
-    test_harness_ctrl_->Kill();
-  }
-
+  test_harness_ctrl_->Kill();
   test_harness_loop_.JoinThreads();
 }
 

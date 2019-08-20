@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iostream>
+#include <memory>
+
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
@@ -11,7 +14,6 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
-
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
 #include <trace-provider/provider.h>
@@ -159,38 +161,12 @@ std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
       std::move(config), component_context->svc(),
       component_context->svc()->Connect<fuchsia::sys::Launcher>(), std::move(presenter),
       std::move(device_settings_manager), std::move(wlan), std::move(account_manager),
-      std::move(administrator),
-      [loop, cobalt_cleanup = std::move(cobalt_cleanup), component_context]() mutable {
+      std::move(administrator), [&loop, &cobalt_cleanup, component_context] {
         cobalt_cleanup.call();
         component_context->outgoing()->debug_dir()->RemoveEntry(modular_config::kBasemgrConfigName);
         loop->Quit();
       });
 }
-
-// Delegates lifecycle requests to BasemgrImpl if available. Otherwise, exits the given async loop.
-class LifecycleImpl : public fuchsia::modular::Lifecycle {
- public:
-  LifecycleImpl(async::Loop* loop, sys::ComponentContext* component_context) : loop_(loop) {
-    component_context->outgoing()->AddPublicService<fuchsia::modular::Lifecycle>(
-        bindings_.GetHandler(this));
-  }
-
-  void set_delegate(modular::BasemgrImpl* basemgr) { basemgr_ = basemgr; }
-
- private:
-  // |fuchsia::modular::Lifecycle|
-  void Terminate() override {
-    if (basemgr_) {
-      basemgr_->Terminate();
-    } else {
-      loop_->Quit();
-    }
-  }
-
-  modular::BasemgrImpl* basemgr_ = nullptr;
-  async::Loop* loop_;
-  fidl::BindingSet<fuchsia::modular::Lifecycle> bindings_;
-};
 
 int main(int argc, const char** argv) {
   fuchsia::modular::session::BasemgrConfig config;
@@ -221,11 +197,7 @@ int main(int argc, const char** argv) {
 
   fuchsia::setui::SetUiServicePtr setui;
   std::unique_ptr<modular::BasemgrImpl> basemgr_impl;
-
-  LifecycleImpl lifecycle_impl(&loop, component_context.get());
-
-  auto initialize_basemgr = [&config, &loop, &component_context, &basemgr_impl, &lifecycle_impl,
-                             &setui,
+  auto initialize_basemgr = [&config, &loop, &component_context, &basemgr_impl, &setui,
                              ran = false](fuchsia::setui::SettingsObject settings_obj) mutable {
     if (ran) {
       return;
@@ -237,8 +209,8 @@ int main(int argc, const char** argv) {
 
     std::unique_ptr<modular::BasemgrImpl> basemgr =
         ConfigureBasemgr(config, component_context.get(), &loop);
+
     basemgr_impl = std::move(basemgr);
-    lifecycle_impl.set_delegate(basemgr_impl.get());
 
     component_context->outgoing()->debug_dir()->AddEntry(
         modular_config::kBasemgrConfigName,
@@ -249,7 +221,7 @@ int main(int argc, const char** argv) {
         }));
   };
 
-  setui.set_error_handler([&initialize_basemgr](zx_status_t) {
+  setui.set_error_handler([&initialize_basemgr](zx_status_t status) {
     // In case of error, log event and continue as if no user setting is
     // present.
     FXL_LOG(ERROR) << "Error retrieving user set login override, defaulting to "

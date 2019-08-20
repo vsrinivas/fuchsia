@@ -50,6 +50,7 @@ class TestHarnessLauncherTest : public gtest::RealLoopFixture {
     fake_launcher_.RegisterComponent(
         kTestHarnessUrl, [this](fuchsia::sys::LaunchInfo info,
                                 fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+          info_ = std::move(info);
           fake_ctrl_ = std::make_unique<FakeController>(std::move(ctrl));
         });
   }
@@ -66,6 +67,7 @@ class TestHarnessLauncherTest : public gtest::RealLoopFixture {
  private:
   sys::testing::FakeLauncher fake_launcher_;
   std::unique_ptr<FakeController> fake_ctrl_;
+  fuchsia::sys::LaunchInfo info_;
 };
 
 // Test that the TestHarnessLauncher is able to launch modular_test_harness.cmx.

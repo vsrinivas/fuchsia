@@ -8,13 +8,12 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
-
-#include <memory>
-
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/split_string.h>
 #include <trace-provider/provider.h>
+
+#include <memory>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/sessionmgr_impl.h"
@@ -100,7 +99,7 @@ int main(int argc, const char** argv) {
   modular::AppDriver<modular::SessionmgrImpl> driver(
       component_context->outgoing(),
       std::make_unique<modular::SessionmgrImpl>(component_context.get(), std::move(config)),
-      [&loop, cobalt_cleanup = std::move(cobalt_cleanup)]() mutable {
+      [&loop, &cobalt_cleanup] {
         cobalt_cleanup.call();
         loop.Quit();
       });

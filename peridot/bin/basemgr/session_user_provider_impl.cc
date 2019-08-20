@@ -4,10 +4,10 @@
 
 #include "peridot/bin/basemgr/session_user_provider_impl.h"
 
+#include <utility>
+
 #include <lib/fit/function.h>
 #include <zircon/status.h>
-
-#include <utility>
 
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
@@ -84,8 +84,7 @@ SessionUserProviderImpl::SessionUserProviderImpl(
       authentication_context_provider_binding_(this),
       account_listener_binding_(this),
       on_initialize_(std::move(on_initialize)),
-      on_login_(std::move(on_login)),
-      weak_factory_(this) {
+      on_login_(std::move(on_login)) {
   FXL_CHECK(account_manager_);
   FXL_CHECK(token_manager_factory_);
   FXL_CHECK(authentication_context_provider_);
@@ -108,10 +107,7 @@ SessionUserProviderImpl::SessionUserProviderImpl(
   options.add_account = true;
   account_manager_->RegisterAccountListener(
       account_listener_binding_.NewBinding(), std::move(options),
-      [weak_this = weak_factory_.GetWeakPtr()](fuchsia::auth::account::Status status) {
-        if (!weak_this) {
-          return;
-        }
+      [](fuchsia::auth::account::Status status) {
         if (status == fuchsia::auth::account::Status::OK) {
           FXL_LOG(INFO) << "AccountListener registered.";
         } else {
@@ -131,12 +127,9 @@ void SessionUserProviderImpl::AddUser(fuchsia::modular::auth::IdentityProvider i
       authentication_context_provider_binding_.NewBinding(),
       MapIdentityProviderToAuthProviderType(identity_provider),
       fuchsia::auth::account::Lifetime::PERSISTENT,
-      [weak_this = weak_factory_.GetWeakPtr(), callback = std::move(callback)](
+      [callback = std::move(callback)](
           fuchsia::auth::account::Status status,
           std::unique_ptr<fuchsia::auth::account::LocalAccountId> account_id) mutable {
-        if (weak_this) {
-          return;
-        }
         if (status != fuchsia::auth::account::Status::OK || !account_id) {
           FXL_LOG(ERROR) << "Failed to provision new account from wuth "
                             "provider with status: "
@@ -228,18 +221,15 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
 void SessionUserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
   joined_personas_.clear();
   account_manager_->GetAccountIds(
-      [weak_this = weak_factory_.GetWeakPtr(), callback = std::move(callback)](
+      [this, callback = std::move(callback)](
           std::vector<fuchsia::auth::account::LocalAccountId> account_ids) mutable {
-        if (!weak_this) {
-          return;
-        }
         if (account_ids.empty()) {
           callback();
           return;
         }
 
         // We only expect there to be one account at most.
-        weak_this->account_manager_->RemoveAccount(
+        account_manager_->RemoveAccount(
             account_ids.at(0), true, /* Force account removal */
             [callback = std::move(callback)](fuchsia::auth::account::Status) { callback(); });
       });
