@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/factory_store_providers"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.boot.FactoryItems",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

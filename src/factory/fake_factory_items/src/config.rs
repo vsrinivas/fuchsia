@@ -23,6 +23,8 @@ pub struct Config {
 struct FactoryItem {
     extra: u32,
     path: String,
+    #[serde(default)]
+    r#type: String,
 }
 
 impl Config {
@@ -37,7 +39,13 @@ impl Into<ConfigMapValue> for Config {
         let mut map = HashMap::new();
 
         for item in self.manifest {
-            let contents = std::fs::read(&item.path).unwrap();
+            let mut contents = std::fs::read(&item.path).unwrap();
+
+            if item.r#type == "zbi" {
+                // For ZBI files, we expect the file to contain a single payload.
+                // We strip 2 ZBI headers from the file, leaving only the payload.
+                contents = contents[64..].to_vec();
+            }
 
             let vmo =
                 zx::Vmo::create(contents.len() as u64).expect("Failed to create factory file vmo");

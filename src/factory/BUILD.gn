@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("factory") {
+  deps = [
+    "factory_store_providers",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "factory_store_providers:tests",
+    "fake_factory_items:fake_factory_items_tests",
+  ]
+}

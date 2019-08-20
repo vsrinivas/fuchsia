@@ -1,0 +1,9 @@
+{
+  "manifest": [
+    {
+      "path": "/pkg/data/items.zbi",
+      "extra": 0,
+      "type": "zbi"
+    }
+  ]
+}

@@ -13,10 +13,8 @@ use {
         DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MAX_BUF, MODE_TYPE_DIRECTORY,
         MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
     },
-    fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     std::path::{Component, Path},
-    std::str::from_utf8,
 };
 
 // Reexported from fidl_fuchsia_io for convenience
@@ -123,10 +121,10 @@ pub fn open_file_in_namespace(path: &str, flags: u32) -> Result<FileProxy, Error
     node_to_file(open_node_in_namespace(path, flags)?)
 }
 
-pub async fn read_file(file: &FileProxy) -> Result<String, Error> {
-    let mut out = String::new();
+pub async fn read_file_bytes(file: &FileProxy) -> Result<Vec<u8>, Error> {
+    let mut out = Vec::new();
     loop {
-        let (status, bytes) = file.read(MAX_BUF).await.map_err(|e| Error::from(e))?;
+        let (status, mut bytes) = file.read(MAX_BUF).await.map_err(|e| Error::from(e))?;
         let status = zx::Status::from_raw(status);
         if status != zx::Status::OK {
             return Err(format_err!("failed to read file: {}", status));
@@ -134,8 +132,14 @@ pub async fn read_file(file: &FileProxy) -> Result<String, Error> {
         if bytes.is_empty() {
             break;
         }
-        out.push_str(from_utf8(&bytes).map_err(|e| Error::from(e))?);
+        out.append(&mut bytes);
     }
+    Ok(out)
+}
+
+pub async fn read_file(file: &FileProxy) -> Result<String, Error> {
+    let bytes = read_file_bytes(file).await?;
+    let out = String::from_utf8(bytes).map_err(|e| Error::from(e))?;
     Ok(out)
 }
 

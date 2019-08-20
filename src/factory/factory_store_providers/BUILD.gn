@@ -1,0 +1,188 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/config/fuchsia/zbi.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "factory_store_providers"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-bootfs",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot-rustc",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+package("factory_store_providers") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "factory_store_providers"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/factory_store_providers.cmx")
+      dest = "factory_store_providers.cmx"
+    },
+  ]
+}
+
+config_data("config") {
+  for_pkg = "sysmgr"
+
+  sources = [
+    "factory_store_providers.config",
+  ]
+}
+
+rustc_test("factory_store_providers_test") {
+  edition = "2018"
+  source_root = "tests/factory_store_providers_test.rs"
+
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
+    "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+zbi("items") {
+  testonly = true
+  complete = false
+  compress = false
+
+  inputs = [
+    rebase_path("testdata/input"),
+  ]
+}
+
+items_zbi_outputs = get_target_outputs(":items")
+
+test_package("factory_store_providers_tests") {
+  deps = [
+    ":bin",
+    ":factory_store_providers_test",
+    ":items",
+    "//src/factory/fake_factory_items:bin",
+  ]
+
+  data_deps = [
+    ":factory_store_providers_tests_config",
+  ]
+
+  binaries = [
+    {
+      name = "factory_store_providers"
+    },
+    {
+      name = "fake_factory_items"
+    },
+  ]
+
+  resources = [
+    {
+      path = items_zbi_outputs[0]
+      dest = "items.zbi"
+    },
+    {
+      path = rebase_path("testdata/input/another_cast_file")
+      dest = "another_cast_file"
+    },
+    {
+      path = rebase_path("testdata/fake_factory_items.json")
+      dest = "fake_factory_items.json"
+    },
+    {
+      path = rebase_path("testdata/input/other/misc")
+      dest = "misc"
+    },
+    {
+      path = rebase_path("testdata/input/pr/file1")
+      dest = "file1"
+    },
+    {
+      path = rebase_path("testdata/input/some_cast_file")
+      dest = "some_cast_file"
+    },
+    {
+      path = rebase_path("testdata/input/widevine_file")
+      dest = "widevine_file"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/factory_store_providers.cmx")
+      dest = "factory_store_providers.cmx"
+    },
+    {
+      path = rebase_path("../fake_factory_items/meta/fake_factory_items.cmx")
+      dest = "fake_factory_items.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "factory_store_providers_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+config_data("factory_store_providers_tests_config") {
+  for_pkg = "factory_store_providers_tests"
+
+  sources = [
+    "testdata/fuchsia.factory.CastCredentialsFactoryStoreProvider.config",
+    "testdata/fuchsia.factory.MiscFactoryStoreProvider.config",
+    "testdata/fuchsia.factory.PlayReadyFactoryStoreProvider.config",
+    "testdata/fuchsia.factory.WidevineFactoryStoreProvider.config",
+  ]
+
+  outputs = [
+    "{{source_file_part}}",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":factory_store_providers_tests",
+    ":factory_store_providers_tests_config",
+  ]
+}
