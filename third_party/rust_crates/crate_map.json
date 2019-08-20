@@ -41,6 +41,11 @@
             "package_name": "clap"
         },
         {
+            "crate_name": "crc",
+            "crate_type": "lib",
+            "package_name": "crc"
+        },
+        {
             "crate_name": "criterion",
             "crate_type": "lib",
             "package_name": "criterion"
@@ -531,6 +536,11 @@
             "crate_name": "clap",
             "crate_type": "lib",
             "package_name": "clap"
+        },
+        {
+            "crate_name": "crc",
+            "crate_type": "lib",
+            "package_name": "crc"
         },
         {
             "crate_name": "criterion",
