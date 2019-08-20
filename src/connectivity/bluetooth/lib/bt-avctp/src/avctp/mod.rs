@@ -8,7 +8,7 @@ use {
     fuchsia_zircon as zx,
     futures::{
         ready,
-        stream::Stream,
+        stream::{FusedStream, Stream},
         task::{Context, Poll, Waker},
     },
     parking_lot::Mutex,
@@ -27,16 +27,18 @@ use crate::{Decodable, Encodable, Error, Result};
 
 use self::types::AV_REMOTE_PROFILE;
 
-pub use self::types::{Header, MessageType, TxLabel};
-use futures::stream::FusedStream;
+pub use self::types::{Header, MessageType, PacketType, TxLabel};
 
+/// Peer connection to a remote device uses AVCTP protocol over an L2CAP socket. Used by the AVC
+/// peer that encapsulates this peer connection and directly in AVRCP for non AV\C connections like
+/// the browse channel.
 #[derive(Debug)]
 pub struct Peer {
     inner: Arc<PeerInner>,
 }
 
 #[derive(Debug)]
-pub struct PeerInner {
+struct PeerInner {
     /// Socket to the remote device owned by this peer object.
     socket: fasync::Socket,
 
@@ -54,7 +56,7 @@ pub struct PeerInner {
 }
 
 impl Peer {
-    /// Create a new peer from a channel socket.
+    /// Create a new peer object from a established L2CAP socket with the peer.
     pub fn new(socket: zx::Socket) -> result::Result<Peer, zx::Status> {
         Ok(Peer {
             inner: Arc::new(PeerInner {
@@ -331,7 +333,7 @@ impl Command {
     }
 
     pub fn send_response(&self, body: &[u8]) -> Result<()> {
-        let response_header = self.avctp_header.create_response();
+        let response_header = self.avctp_header.create_response(PacketType::Single);
         self.peer.send_packet(&response_header, body)
     }
 }

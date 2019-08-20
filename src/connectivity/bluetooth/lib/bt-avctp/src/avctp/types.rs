@@ -103,12 +103,12 @@ impl Header {
     }
 
     /// Creates a new header from this header with it's message type set to response.
-    pub(crate) fn create_response(&self) -> Header {
+    pub(crate) fn create_response(&self, packet_type: PacketType) -> Header {
         Header {
             label: self.label.clone(),
             profile_id: self.profile_id.clone(),
             message_type: MessageType::Response,
-            packet_type: PacketType::Single,
+            packet_type,
             invalid_profile_id: false,
             num_packets: 1,
         }
@@ -250,7 +250,7 @@ mod test {
     fn test_header_encode_response() {
         let header =
             Header::new(TxLabel(15), AV_REMOTE_PROFILE.clone(), MessageType::Command, false);
-        let header = header.create_response();
+        let header = header.create_response(PacketType::Single);
         assert!(!header.is_invalid_profile_id());
         assert!(header.is_single());
         assert!(header.is_type(&MessageType::Response));

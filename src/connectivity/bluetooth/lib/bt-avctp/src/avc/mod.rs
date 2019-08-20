@@ -33,6 +33,7 @@ pub type CommandStream = FilterMap<
     fn(Result<AvctpCommand>) -> Ready<Option<Result<Command>>>,
 >;
 
+/// Represents a received AVC Command from a `Peer`.
 #[derive(Debug)]
 pub struct Command {
     inner: AvctpCommand,
@@ -111,16 +112,24 @@ impl TryFrom<AvctpPacket> for CommandResponse {
     }
 }
 
+/// Represents a peer connection to a remote device that uses the AV\C protocol over AVCTP encoded
+/// L2CAP socket. Primarily used for the the control channel in AVRCP.
 #[derive(Debug)]
 pub struct Peer {
+    /// The encapsulated AVCTP peer connection to the remote peer.
     inner: AvctpPeer,
 }
 
 impl Peer {
+    /// Create a new peer object from a established L2CAP socket with the peer.
     pub fn new(socket: zx::Socket) -> result::Result<Peer, zx::Status> {
         Ok(Peer { inner: AvctpPeer::new(socket)? })
     }
 
+    /// Decodes AV\C commands received over encapsulated AVCTP socket. Invalid AV|C commands are
+    /// converted to errors.
+    /// Note: Unit info and subunit info are responded to directly and swallowed since they return a
+    /// static response.
     fn filter_internal_responses(
         avct_command_result: Result<AvctpCommand>,
     ) -> Option<Result<Command>> {

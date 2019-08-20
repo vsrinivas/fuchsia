@@ -11,13 +11,14 @@ mod avc;
 mod avctp;
 
 pub use crate::avctp::{
-    Command as AvctpCommand, CommandStream as AvctpCommandStream, Peer as AvctpPeer,
+    Command as AvctpCommand, CommandStream as AvctpCommandStream, PacketType as AvctpPacketType,
+    Peer as AvctpPeer,
 };
 
 pub use crate::avc::{
     Command as AvcCommand, CommandResponse as AvcCommandResponse,
-    CommandStream as AvcCommandStream, CommandType as AvcCommandType, PacketType as AvcPacketType,
-    Peer as AvcPeer, ResponseType as AvcResponseType,
+    CommandStream as AvcCommandStream, CommandType as AvcCommandType, OpCode as AvcOpCode,
+    PacketType as AvcPacketType, Peer as AvcPeer, ResponseType as AvcResponseType,
 };
 
 /// The error type of the AVCTP library.

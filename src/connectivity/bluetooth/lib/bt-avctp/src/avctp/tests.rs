@@ -203,7 +203,7 @@ fn receive_command_send_response() {
             0x48, // panel subunit_type 9 (<< 3), subunit_id 0
             0x00, // op code: VendorDependent
             0x00, 0x19, 0x58, // bit sig company id
-        ])
+        ],)
         .is_ok());
     expect_remote_recv(
         &[
