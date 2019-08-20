@@ -13,7 +13,7 @@
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "src/lib/fxl/logging.h"
-#include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/geometry/intersection.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -321,6 +321,15 @@ void Node::RemoveImport(Import* import) {
   delegate->parent_ = nullptr;
 
   delegate->InvalidateGlobalTransform();
+}
+
+bool Node::ClipsRay(const escher::ray4& ray) const {
+  for (auto& plane : clip_planes_) {
+    if (!escher::IntersectRayPlane(ray, plane, nullptr)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 Node::IntersectionInfo Node::GetIntersection(const escher::ray4& ray,

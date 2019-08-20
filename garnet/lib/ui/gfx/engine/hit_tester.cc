@@ -154,7 +154,7 @@ void HitTester::AccumulateHitsLocal(Node* node) {
 }
 
 void HitTester::AccumulateHitsInner(Node* node) {
-  if (node->clip_to_self())
+  if (node->clip_to_self() && node->ClipsRay(ray_info_->ray))
     return;
 
   Node::IntersectionInfo* outer_intersection = intersection_info_;

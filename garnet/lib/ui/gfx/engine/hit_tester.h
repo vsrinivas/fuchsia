@@ -74,25 +74,6 @@ class HitTester {
   // |ray_info_| must be in the node's local coordinate system.
   void AccumulateHitsInner(Node* node);
 
-  // Returns true if the ray passes through the node's clipped content.
-  // |ray| must be in the parent's local coordinate system.
-  //
-  // TODO(SCN-207): The way this works only makes geometric sense if the ray
-  // is parallel to the camera projection at the point being sampled.
-  //
-  // TODO(SCN-1493): Get rid of node "parts". This function only runs on
-  // node parts.
-  static bool IsRayWithinClippedContentOuter(const Node* node, const escher::ray4& ray,
-                                             const Node::IntersectionInfo& intersection);
-
-  // Returns true if the ray passes through the node's clipped content.
-  // |ray| must be in the node's local coordinate system.
-  //
-  // TODO(SCN-1493): Get rid of node "parts". This function only runs on
-  // node parts.
-  static bool IsRayWithinClippedContentInner(const Node* node, const escher::ray4& ray,
-                                             const Node::IntersectionInfo& intersection);
-
   // The vector which accumulates hits.
   std::vector<Hit> hits_;
 

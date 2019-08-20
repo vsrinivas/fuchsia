@@ -140,4 +140,12 @@ bool IntersectRayTriangle(const escher::ray4& ray, const glm::vec3& v0, const gl
   return true;
 }
 
+bool IntersectRayPlane(const escher::ray4& ray, const escher::plane3& plane, float* out_distance) {
+  float distance = IntersectLinePlane<vec3>(vec3(ray.origin), vec3(ray.direction), plane);
+  if (out_distance) {
+    *out_distance = distance;
+  }
+  return distance >= 0 && distance < FLT_MAX;
+}
+
 }  // namespace escher

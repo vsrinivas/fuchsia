@@ -40,6 +40,10 @@ float IntersectLinePlane(const VecT& ray_origin, const VecT& ray_direction,
              : (plane.dist() - glm::dot(ray_origin, plane.dir())) / denominator;
 }
 
+// Convenient wrapper function for the above IntersectLinePlane function to allow
+// for a more idiomatic way to test ray-plane intersections.
+bool IntersectRayPlane(const escher::ray4& ray, const escher::plane3& plane, float* out_distance);
+
 }  // namespace escher
 
 #endif  // SRC_UI_LIB_ESCHER_GEOMETRY_INTERSECTION_H_

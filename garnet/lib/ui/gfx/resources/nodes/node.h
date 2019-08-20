@@ -105,6 +105,9 @@ class Node : public Resource {
   void AddImport(Import* import, ErrorReporter* error_reporter) override;
   void RemoveImport(Import* import) override;
 
+  // Tests if the ray is clipped by the node's clip planes.
+  bool ClipsRay(const escher::ray4& ray) const;
+
   // Computes the closest point of intersection between the ray's origin
   // and the front side of the node's own content, excluding its descendants.
   // Does not apply clipping.
@@ -114,7 +117,6 @@ class Node : public Resource {
   //
   // Returns true if there is an intersection, otherwise returns false and
   // leaves |out_distance| unmodified.
-
   virtual IntersectionInfo GetIntersection(const escher::ray4& ray,
                                            const IntersectionInfo& parent_intersection) const;
 
