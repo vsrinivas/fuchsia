@@ -17,6 +17,8 @@
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager_impl.h"
 #include "src/ui/a11y/lib/settings/settings_manager_impl.h"
+#include "src/ui/a11y/lib/tts/log_engine.h"
+#include "src/ui/a11y/lib/tts/tts_manager_impl.h"
 
 namespace a11y_manager {
 
@@ -46,9 +48,20 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   std::unique_ptr<sys::ComponentContext> startup_context_;
 
   // Pointer to Settings Manager Implementation.
-  std::unique_ptr<a11y::SettingsManagerImpl> settings_manager_impl_;
+  std::unique_ptr<a11y::SettingsManagerImpl> settings_manager_;
+
   // Pointer to Semantics Manager Implementation.
-  std::unique_ptr<a11y::SemanticsManagerImpl> semantics_manager_impl_;
+  std::unique_ptr<a11y::SemanticsManagerImpl> semantics_manager_;
+
+  // Pointer to Screen Reader.
+  std::unique_ptr<a11y::ScreenReader> screen_reader_;
+
+  // Pointer to TTS Manager.
+  std::unique_ptr<a11y::TtsManager> tts_manager_;
+
+  // A simple Tts engine which logs output.
+  // this object is constructed when Init() is called.
+  std::unique_ptr<a11y::LogEngine> log_engine_;
 
   fidl::BindingSet<fuchsia::accessibility::SettingsWatcher> settings_watcher_bindings_;
 
@@ -57,9 +70,7 @@ class App : public fuchsia::accessibility::SettingsWatcher {
 
   // Pointer to SettingsManager service, which will be used for connecting App
   // to settings manager as a Watcher.
-  fuchsia::accessibility::SettingsManagerPtr settings_manager_;
-
-  std::unique_ptr<a11y::ScreenReader> screen_reader_;
+  fuchsia::accessibility::SettingsManagerPtr settings_manager_ptr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

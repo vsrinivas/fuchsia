@@ -24,6 +24,7 @@ LogEngine::LogEngine(sys::ComponentContext* startup_context) {
   FXL_CHECK(startup_context);
   registry_ = startup_context->svc()->Connect<fuchsia::accessibility::tts::EngineRegistry>();
   auto engine_handle = bindings_.AddBinding(this);
+  FXL_LOG(INFO) << "Registering the Tts Log Engine";
   registry_->RegisterEngine(std::move(engine_handle), [](auto) {});
 }
 

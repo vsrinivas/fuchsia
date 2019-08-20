@@ -13,8 +13,10 @@ const float kDefaultMagnificationZoomFactor = 1.0;
 
 App::App(std::unique_ptr<sys::ComponentContext> context)
     : startup_context_(std::move(context)),
-      settings_manager_impl_(std::make_unique<a11y::SettingsManagerImpl>()),
-      semantics_manager_impl_(std::make_unique<a11y::SemanticsManagerImpl>()) {
+      settings_manager_(std::make_unique<a11y::SettingsManagerImpl>()),
+      semantics_manager_(std::make_unique<a11y::SemanticsManagerImpl>()),
+      // TtsManager publishes the services it offers upon initialization.
+      tts_manager_(std::make_unique<a11y::TtsManager>(startup_context_.get())) {
   Initialize();
 }
 
@@ -22,27 +24,31 @@ void App::Initialize() {
   // Add Settings Manager service.
   startup_context_->outgoing()->AddPublicService<fuchsia::accessibility::SettingsManager>(
       [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request) {
-        settings_manager_impl_->AddBinding(std::move(request));
+        settings_manager_->AddBinding(std::move(request));
       });
 
   // Add Semantics Manager service.
-  semantics_manager_impl_->SetDebugDirectory(startup_context_->outgoing()->debug_dir());
+  semantics_manager_->SetDebugDirectory(startup_context_->outgoing()->debug_dir());
   startup_context_->outgoing()
       ->AddPublicService<fuchsia::accessibility::semantics::SemanticsManager>(
           [this](
               fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticsManager> request) {
-            semantics_manager_impl_->AddBinding(std::move(request));
+            semantics_manager_->AddBinding(std::move(request));
           });
 
   // Connect to Settings manager service and register a watcher.
-  settings_manager_impl_->AddBinding(settings_manager_.NewRequest());
-  settings_manager_.set_error_handler([](zx_status_t status) {
+  settings_manager_->AddBinding(settings_manager_ptr_.NewRequest());
+  settings_manager_ptr_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "Cannot connect to SettingsManager with status:"
                    << zx_status_get_string(status);
   });
   fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher_handle;
   settings_watcher_bindings_.AddBinding(this, watcher_handle.NewRequest());
-  settings_manager_->Watch(std::move(watcher_handle));
+  settings_manager_ptr_->Watch(std::move(watcher_handle));
+
+  // For now, we use a simple Tts Engine which only logs the output.
+  // On initialization, it registers itself with the Tts manager.
+  log_engine_ = std::make_unique<a11y::LogEngine>(startup_context_.get());
 }
 
 fuchsia::accessibility::SettingsPtr App::GetSettings() {
@@ -80,7 +86,7 @@ void App::SetSettings(fuchsia::accessibility::Settings provided_settings) {
 
 void App::OnScreenReaderEnabled(bool enabled) {
   // Reset SemanticsTree and registered views in SemanticsManagerImpl.
-  semantics_manager_impl_->SetSemanticsManagerEnabled(enabled);
+  semantics_manager_->SetSemanticsManagerEnabled(enabled);
 
   // Reset ScreenReader.
   if (enabled) {
