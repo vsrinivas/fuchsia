@@ -84,20 +84,20 @@ std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e) {
 }
 
 bool operator==(const Entry& lhs, const Entry& rhs) {
-  return std::tie(lhs.key, lhs.object_identifier, lhs.priority) ==
-         std::tie(rhs.key, rhs.object_identifier, rhs.priority);
+  return std::tie(lhs.key, lhs.object_identifier, lhs.priority, lhs.entry_id) ==
+         std::tie(rhs.key, rhs.object_identifier, rhs.priority, rhs.entry_id);
 }
 
 bool operator!=(const Entry& lhs, const Entry& rhs) { return !(lhs == rhs); }
 
 std::ostream& operator<<(std::ostream& os, const Entry& e) {
   return os << "Entry{key: " << e.key << ", value: " << e.object_identifier
-            << ", priority: " << (e.priority == KeyPriority::EAGER ? "EAGER" : "LAZY") << "}";
+            << ", priority: " << (e.priority == KeyPriority::EAGER ? "EAGER" : "LAZY")
+            << ", entry_id: " << convert::ToHex(e.entry_id) << "}";
 }
 
 bool operator==(const EntryChange& lhs, const EntryChange& rhs) {
-  return lhs.deleted == rhs.deleted &&
-         (lhs.deleted ? lhs.entry.key == rhs.entry.key : lhs.entry == rhs.entry);
+  return std::tie(lhs.deleted, lhs.entry) == std::tie(rhs.deleted, rhs.entry);
 }
 
 bool operator!=(const EntryChange& lhs, const EntryChange& rhs) { return !(lhs == rhs); }

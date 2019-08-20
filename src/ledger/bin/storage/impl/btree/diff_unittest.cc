@@ -103,7 +103,7 @@ TEST_F(DiffTest, ForEachDiff) {
         if (e.deleted) {
           EXPECT_EQ(e.entry.key, other_changes[current_change].entry.key);
         } else {
-          EXPECT_EQ(e.entry, other_changes[current_change].entry);
+          EXPECT_EQ(WithoutEntryId(e.entry), other_changes[current_change].entry);
         }
         ++current_change;
         return true;
@@ -146,7 +146,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
       {base_root_identifier, PageStorage::Location::Local()},
       {other_root_identifier, PageStorage::Location::Local()}, "key0",
       [&changes, &current_change](EntryChange e) {
-        EXPECT_EQ(e.entry, changes[current_change++].entry);
+        EXPECT_EQ(WithoutEntryId(e.entry), changes[current_change++].entry);
         return true;
       },
       callback::Capture(callback::SetWhenCalled(&called), &status));
@@ -161,7 +161,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
       {base_root_identifier, PageStorage::Location::Local()},
       {other_root_identifier, PageStorage::Location::Local()}, "key60",
       [&changes](EntryChange e) {
-        EXPECT_EQ(e.entry, changes[1].entry);
+        EXPECT_EQ(WithoutEntryId(e.entry), changes[1].entry);
         return true;
       },
       callback::Capture(callback::SetWhenCalled(&called), &status));
@@ -197,7 +197,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
       {base_root_identifier, PageStorage::Location::Local()},
       {other_root_identifier, PageStorage::Location::Local()}, "key01",
       [&changes](EntryChange e) {
-        EXPECT_EQ(e.entry, changes[0].entry);
+        EXPECT_EQ(WithoutEntryId(e.entry), changes[0].entry);
         return true;
       },
       callback::Capture(callback::SetWhenCalled(&called), &status));
@@ -288,18 +288,18 @@ TEST_F(DiffTest, ForEachTwoWayDiff) {
 
   // Updating key01 was the first change.
   ASSERT_NE(found_changes[0].base, nullptr);
-  EXPECT_EQ(*found_changes[0].base, base_changes[1].entry);
+  EXPECT_EQ(WithoutEntryId(*found_changes[0].base), base_changes[1].entry);
   ASSERT_NE(found_changes[0].target, nullptr);
-  EXPECT_EQ(*found_changes[0].target, other_changes[0].entry);
+  EXPECT_EQ(WithoutEntryId(*found_changes[0].target), other_changes[0].entry);
 
   // Inserting key255 was the second change:
   EXPECT_EQ(found_changes[1].base, nullptr);
   ASSERT_NE(found_changes[1].target, nullptr);
-  EXPECT_EQ(*(found_changes[1].target), other_changes[1].entry);
+  EXPECT_EQ(WithoutEntryId(*(found_changes[1].target)), other_changes[1].entry);
 
   // Removing key40 was the last change:
   ASSERT_NE(found_changes[2].base, nullptr);
-  EXPECT_EQ(*(found_changes[2].base), base_changes[40].entry);
+  EXPECT_EQ(WithoutEntryId(*(found_changes[2].base)), base_changes[40].entry);
   EXPECT_EQ(found_changes[2].target, nullptr);
 }
 
@@ -337,7 +337,7 @@ TEST_F(DiffTest, ForEachTwoWayDiffMinKey) {
         change_count++;
         EXPECT_EQ(e.base, nullptr);
         EXPECT_NE(e.target, nullptr);
-        EXPECT_EQ(*e.target, changes[1].entry);
+        EXPECT_EQ(WithoutEntryId(*e.target), changes[1].entry);
         return true;
       },
       callback::Capture(callback::SetWhenCalled(&called), &status));
@@ -424,7 +424,7 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
         if (current_change >= expected_three_way_changes.size()) {
           return false;
         }
-        EXPECT_EQ(e, expected_three_way_changes[current_change]);
+        EXPECT_EQ(WithoutEntryIds(e), expected_three_way_changes[current_change]);
         current_change++;
         return true;
       },
@@ -501,7 +501,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
         if (current_change >= expected_three_way_changes.size()) {
           return false;
         }
-        EXPECT_EQ(e, expected_three_way_changes[current_change]);
+        EXPECT_EQ(WithoutEntryIds(e), expected_three_way_changes[current_change]);
         current_change++;
         return true;
       },
@@ -637,7 +637,7 @@ TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
         if (current_change >= expected_three_way_changes.size()) {
           return false;
         }
-        EXPECT_EQ(e, expected_three_way_changes[current_change]);
+        EXPECT_EQ(WithoutEntryIds(e), expected_three_way_changes[current_change]);
         current_change++;
         return true;
       },

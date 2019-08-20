@@ -83,6 +83,15 @@ EntryChange NewEntryChange(std::string key, std::string object_digest, KeyPriori
 // Creates and returns a new EntryChange removing the entry with the given key.
 EntryChange NewRemoveEntryChange(std::string key);
 
+// Removes entry ids in a vector of Entry.
+std::vector<Entry> WithoutEntryIds(std::vector<Entry> entries);
+
+// Removes entry ids in a ThreeWayChange.
+ThreeWayChange WithoutEntryIds(const ThreeWayChange& change);
+
+// Removes the entry id in an Entry.
+Entry WithoutEntryId(Entry entry);
+
 // A TestLoopFixture providing some additional utility functions on PageStorage.
 //
 // All utility functions in this class return an |AssertionResult| meaning that

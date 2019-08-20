@@ -105,7 +105,7 @@ TEST_F(TreeNodeTest, GetEntry) {
   ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
   EXPECT_EQ(node->GetKeyCount(), size);
   for (int i = 0; i < size; ++i) {
-    EXPECT_EQ(GetEntry(node.get(), i), entries[i]);
+    EXPECT_EQ(WithoutEntryId(GetEntry(node.get(), i)), entries[i]);
   }
 }
 
@@ -167,7 +167,7 @@ TEST_F(TreeNodeTest, Serialization) {
   std::map<size_t, ObjectIdentifier> parsed_children;
   EXPECT_TRUE(DecodeNode(data, fake_storage_.GetObjectIdentifierFactory(), &level, &parsed_entries,
                          &parsed_children));
-  EXPECT_EQ(parsed_entries, entries);
+  EXPECT_EQ(WithoutEntryIds(parsed_entries), entries);
   EXPECT_EQ(parsed_children, children);
 }
 

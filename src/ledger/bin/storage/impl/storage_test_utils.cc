@@ -143,6 +143,35 @@ EntryChange NewRemoveEntryChange(std::string key) {
                      true};
 }
 
+std::vector<Entry> WithoutEntryIds(std::vector<Entry> entries) {
+  for (auto& entry : entries) {
+    entry.entry_id = "";
+  }
+  return entries;
+}
+
+ThreeWayChange WithoutEntryIds(const ThreeWayChange& change) {
+  ThreeWayChange result;
+  if (change.base) {
+    result.base = std::make_unique<Entry>(*change.base);
+    result.base->entry_id = "";
+  }
+  if (change.left) {
+    result.left = std::make_unique<Entry>(*change.left);
+    result.left->entry_id = "";
+  }
+  if (change.right) {
+    result.right = std::make_unique<Entry>(*change.right);
+    result.right->entry_id = "";
+  }
+  return result;
+}
+
+Entry WithoutEntryId(Entry e) {
+  e.entry_id = "";
+  return e;
+}
+
 StorageTest::StorageTest() {}
 
 StorageTest::~StorageTest() {}

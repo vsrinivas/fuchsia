@@ -58,7 +58,7 @@ TEST(EncodingTest, SingleEntry) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(WithoutEntryIds(res_entries), entries);
   EXPECT_EQ(res_children, children);
 }
 
@@ -83,7 +83,7 @@ TEST(EncodingTest, MoreEntries) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(WithoutEntryIds(res_entries), entries);
   EXPECT_EQ(res_children, children);
 }
 
@@ -108,12 +108,12 @@ TEST(EncodingTest, MoreEntriesWithEntryId) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(WithoutEntryIds(res_entries), WithoutEntryIds(entries));
   EXPECT_EQ(res_children, children);
 }
 
 // TODO(LE-823): Remove when we break compatibility with nodes not holding an entry_id.
-TEST(EncodingTest, BackwordCompatibilityWithoutEntryId) {
+TEST(EncodingTest, BackwardCompatibilityWithoutEntryId) {
   // In old versions, nodes will have |nullptr| for entry_id. Build an "old" version node and make
   // sure it is decoded correctly.
   flatbuffers::FlatBufferBuilder builder;
@@ -169,7 +169,7 @@ TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(WithoutEntryIds(res_entries), entries);
   EXPECT_EQ(res_children, children);
 }
 
@@ -191,7 +191,7 @@ TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(WithoutEntryIds(res_entries), entries);
   EXPECT_EQ(res_children, children);
 }
 
@@ -210,7 +210,7 @@ TEST(EncodingTest, ZeroByte) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(res_entries, entries);
+  EXPECT_EQ(WithoutEntryIds(res_entries), entries);
   EXPECT_EQ(res_children, children);
 }
 
