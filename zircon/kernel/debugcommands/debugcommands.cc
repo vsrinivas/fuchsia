@@ -36,6 +36,7 @@ static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 0
+STATIC_COMMAND_MASKED("dd", "display memory in dwords", &cmd_display_mem, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("dw", "display memory in words", &cmd_display_mem, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("dh", "display memory in halfwords", &cmd_display_mem, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("db", "display memory in bytes", &cmd_display_mem, CMD_AVAIL_ALWAYS)
@@ -69,7 +70,9 @@ static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags) {
   }
 
   int size;
-  if (strcmp(argv[0].str, "dw") == 0) {
+  if (strcmp(argv[0].str, "dd") == 0) {
+    size = 8;
+  } else if (strcmp(argv[0].str, "dw") == 0) {
     size = 4;
   } else if (strcmp(argv[0].str, "dh") == 0) {
     size = 2;
@@ -113,6 +116,12 @@ static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags) {
     if (count == 0)
       printf("0x%08lx: ", address);
     switch (size) {
+      case 8: {
+        uint64_t val =
+            (byte_order != BYTE_ORDER) ? SWAP_64(*(uint64_t *)address) : *(uint64_t *)address;
+        printf("%016lx ", val);
+        break;
+      }
       case 4: {
         uint32_t val =
             (byte_order != BYTE_ORDER) ? SWAP_32(*(uint32_t *)address) : *(uint32_t *)address;
