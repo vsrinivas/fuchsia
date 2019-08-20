@@ -473,7 +473,8 @@ DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid, zx_koid_t 
 }
 
 zx_status_t DebugAgent::AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job) {
-  auto job = std::make_unique<DebuggedJob>(this, job_koid, std::move(zx_job));
+  ObjectProvider* provider = ObjectProvider::Get();
+  auto job = std::make_unique<DebuggedJob>(provider, this, job_koid, std::move(zx_job));
   zx_status_t status = job->Init();
   if (status != ZX_OK)
     return status;

@@ -21,50 +21,48 @@ class ObjectProvider {
  public:
   static ObjectProvider* Get();
 
-  zx::thread ThreadForKoid(zx_handle_t process, zx_koid_t thread_koid);
+  virtual zx::thread ThreadForKoid(zx_handle_t process, zx_koid_t thread_koid);
 
-  zx_koid_t KoidForObject(zx_handle_t object);
+  virtual zx_koid_t KoidForObject(zx_handle_t object);
   inline zx_koid_t KoidForObject(const zx::object_base& object) {
     return KoidForObject(object.get());
   }
 
   // Returns the empty string on failure. The empty string might also be a valid
   // name, so this is intended for cases where failure isn't critical to detect.
-  std::string NameForObject(zx_handle_t object);
+  virtual std::string NameForObject(zx_handle_t object);
   inline std::string NameForObject(const zx::object_base& object) {
     return NameForObject(object.get());
   }
 
   // Returns a process handle for the given process koid.
   // The process will be not is_valid() on failure.
-  zx::process GetProcessFromKoid(zx_koid_t koid);
+  virtual zx::process GetProcessFromKoid(zx_koid_t koid);
 
   // Returns a job handle for the given job koid. The job will be not is_valid() on failure.
-  zx::job GetJobFromKoid(zx_koid_t koid);
+  virtual zx::job GetJobFromKoid(zx_koid_t koid);
 
   // Returns the KOID associated with the given job. Returns 0 on failure.
-  zx::job GetRootJob();
-  zx_koid_t GetRootJobKoid();
-  zx_koid_t GetComponentJobKoid();
+  virtual zx::job GetRootJob();
+  virtual zx_koid_t GetRootJobKoid();
+  virtual zx_koid_t GetComponentJobKoid();
 
   // Returns the koids of the child objects of the given parent object. The child kind is passed to
   // zx_object_get_info. It is typically ZX_INFO_PROCESS_THREADS, ZX_INFO_JOB_CHILDREN, or
   // ZX_INFO_JOB_PROCESSES.
-  std::vector<zx_koid_t> GetChildKoids(zx_handle_t parent, uint32_t child_kind);
+  virtual std::vector<zx_koid_t> GetChildKoids(zx_handle_t parent, uint32_t child_kind);
 
   // Returns the specified kind of child objects.
-  std::vector<zx::job> GetChildJobs(zx_handle_t job);
-  std::vector<zx::process> GetChildProcesses(zx_handle_t job);
-  std::vector<zx::thread> GetChildThreads(zx_handle_t process);
+  virtual std::vector<zx::job> GetChildJobs(zx_handle_t job);
+  virtual std::vector<zx::process> GetChildProcesses(zx_handle_t job);
+  virtual std::vector<zx::thread> GetChildThreads(zx_handle_t process);
 
-  zx::process GetProcessFromException(zx_handle_t exception_token);
-  zx::thread GetThreadFromException(zx_handle_t exception_token);
+  virtual zx::process GetProcessFromException(zx_handle_t exception_token);
+  virtual zx::thread GetThreadFromException(zx_handle_t exception_token);
 
  protected:
   ObjectProvider();
-
 };
-
 
 }  // namespace debug_agent
 

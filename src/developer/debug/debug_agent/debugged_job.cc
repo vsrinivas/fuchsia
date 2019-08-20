@@ -15,8 +15,9 @@
 
 namespace debug_agent {
 
-DebuggedJob::DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid, zx::job job)
-    : handler_(handler), koid_(job_koid), job_(std::move(job)) {}
+DebuggedJob::DebuggedJob(ObjectProvider* provider, ProcessStartHandler* handler, zx_koid_t job_koid,
+                         zx::job job)
+    : provider_(provider), handler_(handler), koid_(job_koid), job_(std::move(job)) {}
 
 DebuggedJob::~DebuggedJob() = default;
 
@@ -24,11 +25,9 @@ zx_status_t DebuggedJob::Init() {
   debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
   FXL_DCHECK(loop);  // Loop must be created on this thread first.
 
-  ObjectProvider* provider = ObjectProvider::Get();
-
   // Register for debug exceptions.
   debug_ipc::MessageLoopTarget::WatchJobConfig config;
-  config.job_name = provider->NameForObject(job_);
+  config.job_name = provider_->NameForObject(job_);
   config.job_handle = job_.get();
   config.job_koid = koid_;
   config.watcher = this;
@@ -46,11 +45,10 @@ bool DebuggedJob::FilterInfo::Matches(const std::string& proc_name) {
 
 void DebuggedJob::OnProcessStarting(zx::exception exception_token,
                                     zx_exception_info_t exception_info) {
-  ObjectProvider* provider = ObjectProvider::Get();
-  zx::process process = provider->GetProcessFromException(exception_token.get());
-  auto proc_name = provider->NameForObject(process);
+  zx::process process = provider_->GetProcessFromException(exception_token.get());
+  auto proc_name = provider_->NameForObject(process);
 
-  zx::thread initial_thread = provider->GetThreadFromException(exception_token.get());
+  zx::thread initial_thread = provider_->GetThreadFromException(exception_token.get());
 
   // Tools like fx serve will connect every second or so to the target, spamming
   // logging for this with a lot of "/boot/bin/sh" starting.
@@ -85,25 +83,31 @@ void DebuggedJob::OnProcessStarting(zx::exception exception_token,
   exception_token.reset();
 }
 
-void DebuggedJob::ApplyToJob(FilterInfo& filter, zx::job& job) {
-  ObjectProvider* provider = ObjectProvider::Get();
-  for (auto& child : provider->GetChildProcesses(job.get())) {
-    auto proc_name = provider->NameForObject(child);
+std::set<zx_koid_t> DebuggedJob::ApplyToJob(FilterInfo& filter, zx::job& job) {
+  std::set<zx_koid_t> matches;
+  for (auto& child : provider_->GetChildProcesses(job.get())) {
+    auto proc_name = provider_->NameForObject(child);
     if (filter.Matches(proc_name)) {
       DEBUG_LOG(Job) << "New filter " << filter.filter << " matches process " << proc_name
                      << ". Attaching.";
+      matches.insert(provider_->KoidForObject(child));
       handler_->OnProcessStart(filter.filter, std::move(child));
     }
   }
 
-  for (auto& child : provider->GetChildJobs(job.get())) {
-    ApplyToJob(filter, child);
+  for (auto& child : provider_->GetChildJobs(job.get())) {
+    auto m = ApplyToJob(filter, child);
+    matches.insert(m.begin(), m.end());
   }
+
+  return matches;
 }
 
-void DebuggedJob::SetFilters(std::vector<std::string> filters) {
+std::set<zx_koid_t> DebuggedJob::SetFilters(std::vector<std::string> filters) {
   filters_.clear();
   filters_.reserve(filters.size());
+
+  std::set<zx_koid_t> matches;
 
   for (auto& filter : filters) {
     // We check if this is a package url. If that is the case, me only need
@@ -121,8 +125,11 @@ void DebuggedJob::SetFilters(std::vector<std::string> filters) {
     FilterInfo filter_info = {};
     filter_info.filter = std::move(filter);
     filter_info.regex = std::move(regex);
-    ApplyToJob(filters_.emplace_back(std::move(filter_info)), job_);
+    auto m = ApplyToJob(filters_.emplace_back(std::move(filter_info)), job_);
+    matches.insert(m.begin(), m.end());
   }
+
+  return matches;
 }
 
 void DebuggedJob::AppendFilter(std::string filter) {

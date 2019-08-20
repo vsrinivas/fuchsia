@@ -8,8 +8,8 @@
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 
-#include <map>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include "src/developer/debug/shared/message_loop.h"
@@ -20,6 +20,7 @@
 namespace debug_agent {
 
 class DebuggedJob;
+class ObjectProvider;
 
 class ProcessStartHandler {
  public:
@@ -44,13 +45,16 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
   };
 
   // Caller must call Init immediately after construction and delete the object if that fails.
-  DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid, zx::job job);
+  DebuggedJob(ObjectProvider* provider, ProcessStartHandler* handler, zx_koid_t job_koid,
+              zx::job job);
   virtual ~DebuggedJob();
 
   zx_koid_t koid() const { return koid_; }
   zx::job& job() { return job_; }
 
-  void SetFilters(std::vector<std::string> filters);
+  // Returns the set of koids of currently running processes that matches any of the |filters|.
+  std::set<zx_koid_t> SetFilters(std::vector<std::string> filters);
+
   void AppendFilter(std::string filter);
   const std::vector<FilterInfo>& filters() const { return filters_; }
 
@@ -62,8 +66,10 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
   void OnProcessStarting(zx::exception exception_token,
                          zx_exception_info_t exception_info) override;
 
-  void ApplyToJob(FilterInfo& filter, zx::job& job);
+  // Returns the set of koids of currently running processes that matches any of the |filters|.
+  std::set<zx_koid_t> ApplyToJob(FilterInfo& filter, zx::job& job);
 
+  ObjectProvider* provider_;      // Non-owning.
   ProcessStartHandler* handler_;  // Non-owning.
   zx_koid_t koid_;
   zx::job job_;
