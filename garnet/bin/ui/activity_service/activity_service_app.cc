@@ -4,6 +4,7 @@
 
 #include "garnet/bin/ui/activity_service/activity_service_app.h"
 
+#include <lib/zx/clock.h>
 #include <src/lib/fxl/logging.h>
 
 namespace activity_service {
