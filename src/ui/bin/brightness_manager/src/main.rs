@@ -70,7 +70,9 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
                 let adjusted_value = convert_to_old_backlight_value(value);
                 let nits = num_traits::clamp(adjusted_value, 0, 255);
                 let backlight_clone = backlight.clone();
-                set_brightness(nits, backlight_clone).await?;
+                let backlight = backlight_clone.lock().await;
+                backlight::set_brightness(&backlight, nits)
+                    .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
             }
             BrightnessControlRequest::WatchCurrentBrightness { responder } => {
                 // Hanging get is not implemented yet. We want to get autobrightness into team-food.
@@ -91,14 +93,14 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
 
 /// Converts from our FIDL's 0.0-1.0 value to backlight's 0-255 value
 /// This will be removed when backlight uses 0.0-1.0
-fn convert_to_old_backlight_value(value : f32) -> u16 {
+fn convert_to_old_backlight_value(value: f32) -> u16 {
     let value = num_traits::clamp(value, 0.0, 1.0);
     (value * 255.0) as u16
 }
 
 /// Converts from backlight's 0-255 value to our FIDL's 0.0-1.0 value
 /// This will be removed when backlight uses 0.0-1.0
-fn convert_from_old_backlight_value(value : u8) -> f32 {
+fn convert_from_old_backlight_value(value: u8) -> f32 {
     let value = num_traits::clamp(value, 0, 255);
     value as f32 / 255.0
 }
