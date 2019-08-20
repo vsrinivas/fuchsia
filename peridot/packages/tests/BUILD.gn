@@ -12,6 +12,7 @@ group("re2") {
   ]
 }
 
+# WARNING: Known to infrastructure.
 group("ledger") {
   testonly = true
   public_deps = [
@@ -33,6 +34,7 @@ group("voila") {
   ]
 }
 
+# WARNING: Known to infrastructure.
 group("all") {
   testonly = true
   public_deps = [
