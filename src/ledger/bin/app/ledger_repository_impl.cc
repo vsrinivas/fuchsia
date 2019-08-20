@@ -264,7 +264,7 @@ void LedgerRepositoryImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher
 
 void LedgerRepositoryImpl::CheckEmpty() {
   if (!closing_ && ledger_managers_.empty() && (bindings_.empty() || close_callback_) &&
-      disk_cleanup_manager_->IsEmpty()) {
+      disk_cleanup_manager_->IsEmpty() && (on_empty_callback_ || close_callback_)) {
     closing_ = true;
     // Both DiskCleanupManager and DbFactory use the filesystem. We need to close them before we can
     // close ourselves.

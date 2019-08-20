@@ -324,5 +324,48 @@ TEST_F(LedgerRepositoryImplTest, CloseEmpty) {
   EXPECT_FALSE(ptr1_closed);
 }
 
+// Verifies that the callback on closure is called, even if the on_empty_callback is not set.
+TEST_F(LedgerRepositoryImplTest, CloseWithoutOnEmptyCallback) {
+  bool ptr1_closed;
+  Status ptr1_closed_status;
+
+  repository_->Close(callback::Capture(callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(ptr1_closed);
+}
+
+// Verifies that the object remains alive is the no on_empty_callback nor close_callback are set.
+TEST_F(LedgerRepositoryImplTest, AliveWithNoCallbacksSet) {
+  // Make a first call to DiskCleanUp.
+  bool callback_called1 = false;
+  Status status1;
+  repository_->DiskCleanUp(callback::Capture(callback::SetWhenCalled(&callback_called1), &status1));
+
+  // Make sure it starts running.
+  RunLoopUntilIdle();
+
+  // The call must wait for the cleanup manager.
+  EXPECT_FALSE(callback_called1);
+
+  // Call the cleanup manager callback and expect to see an ok status for a pending callback.
+  disk_cleanup_manager_->cleanup_callback(Status::OK);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called1);
+  EXPECT_EQ(status1, Status::OK);
+
+  bool callback_called2 = false;
+  Status status2;
+  // This call should not fail as the object is still alive, because none of the callbacks triggered
+  // in |CheckEmpty()| are set.
+  repository_->DiskCleanUp(callback::Capture(callback::SetWhenCalled(&callback_called2), &status2));
+  RunLoopUntilIdle();
+
+  disk_cleanup_manager_->cleanup_callback(Status::OK);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called2);
+  EXPECT_EQ(status2, Status::OK);
+}
+
 }  // namespace
 }  // namespace ledger
