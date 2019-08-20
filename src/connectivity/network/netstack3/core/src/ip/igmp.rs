@@ -612,7 +612,7 @@ mod tests {
         // We have received a query, hence we are falling back to Delay Member state.
         let group_state = ctx
             .state
-            .ip
+            .ipv4
             .get_igmp_state_mut(dev_id.id())
             .groups
             .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
@@ -646,7 +646,7 @@ mod tests {
         // Since we have heard from the v1 router, we should have set our flag
         let group_state = ctx
             .state
-            .ip
+            .ipv4
             .get_igmp_state_mut(dev_id.id())
             .groups
             .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
@@ -676,7 +676,7 @@ mod tests {
         // After the second timer, we should reset our flag for v1 routers.
         let group_state = ctx
             .state
-            .ip
+            .ipv4
             .get_igmp_state_mut(dev_id.id())
             .groups
             .get(&MulticastAddr::new(GROUP_ADDR).unwrap())

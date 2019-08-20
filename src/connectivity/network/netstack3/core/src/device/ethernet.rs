@@ -1306,7 +1306,8 @@ mod tests {
         //
 
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ip_builder().forward(true);
+        state_builder.ipv4_builder().forward(true);
+        state_builder.ipv6_builder().forward(true);
         // Most tests do not need NDP's DAD or router solicitation so disable it here.
         let mut ndp_configs = ndp::NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);

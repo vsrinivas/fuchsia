@@ -530,7 +530,7 @@ mod tests {
         use crate::wire::icmp::testdata::ndp_neighbor::*;
         let mut buf = &SOLICITATION_IP_PACKET_BYTES[..];
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
-        let ip_builder = ip.builder();
+        let ipv6_builder = ip.builder();
         let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
         let icmp = buf
             .parse_with::<_, IcmpPacket<_, _, NeighborSolicitation>>(IcmpParseArgs::new(
@@ -556,7 +556,7 @@ mod tests {
                 IcmpUnusedCode,
                 *icmp.message(),
             ))
-            .encapsulate(ip_builder)
+            .encapsulate(ipv6_builder)
             .serialize_vec_outer()
             .unwrap()
             .as_ref()
@@ -569,7 +569,7 @@ mod tests {
         use crate::wire::icmp::testdata::ndp_neighbor::*;
         let mut buf = &ADVERTISEMENT_IP_PACKET_BYTES[..];
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
-        let ip_builder = ip.builder();
+        let ipv6_builder = ip.builder();
         let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
         let icmp = buf
             .parse_with::<_, IcmpPacket<_, _, NeighborAdvertisement>>(IcmpParseArgs::new(
@@ -587,7 +587,7 @@ mod tests {
                 IcmpUnusedCode,
                 *icmp.message(),
             ))
-            .encapsulate(ip_builder)
+            .encapsulate(ipv6_builder)
             .serialize_vec_outer()
             .unwrap()
             .as_ref()
@@ -600,7 +600,7 @@ mod tests {
         use crate::wire::icmp::testdata::ndp_router::*;
         let mut buf = &ADVERTISEMENT_IP_PACKET_BYTES[..];
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
-        let ip_builder = ip.builder();
+        let ipv6_builder = ip.builder();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         let icmp = buf
             .parse_with::<_, IcmpPacket<_, _, RouterAdvertisement>>(IcmpParseArgs::new(
@@ -637,7 +637,7 @@ mod tests {
                 IcmpUnusedCode,
                 *icmp.message(),
             ))
-            .encapsulate(ip_builder)
+            .encapsulate(ipv6_builder)
             .serialize_vec_outer()
             .unwrap()
             .as_ref()

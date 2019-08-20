@@ -3387,7 +3387,7 @@ mod tests {
         //
 
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ip_builder().forward(true);
+        state_builder.ipv6_builder().forward(true);
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build_with(state_builder, DummyEventDispatcher::default());
         set_forwarding_enabled::<_, Ipv6>(&mut ctx, DeviceId::new_ethernet(0), true);
@@ -4192,7 +4192,7 @@ mod tests {
         //
 
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ip_builder().forward(false);
+        state_builder.ipv6_builder().forward(false);
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
@@ -4246,7 +4246,7 @@ mod tests {
         //
 
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ip_builder().forward(true);
+        state_builder.ipv6_builder().forward(true);
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
@@ -4404,7 +4404,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        stack_builder.ip_builder().forward(true);
+        stack_builder.ipv6_builder().forward(true);
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
@@ -4437,7 +4437,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        stack_builder.ip_builder().forward(true);
+        stack_builder.ipv6_builder().forward(true);
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
@@ -4466,7 +4466,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        stack_builder.ip_builder().forward(true);
+        stack_builder.ipv6_builder().forward(true);
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);

@@ -50,7 +50,8 @@ pub use crate::device::{
 };
 pub use crate::error::NetstackError;
 pub use crate::ip::{
-    icmp, EntryDest, EntryDestEither, EntryEither, IpLayerEventDispatcher, IpStateBuilder,
+    icmp, EntryDest, EntryDestEither, EntryEither, IpLayerEventDispatcher, Ipv4StateBuilder,
+    Ipv6StateBuilder,
 };
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
@@ -62,7 +63,7 @@ use rand::{CryptoRng, RngCore};
 use std::time;
 
 use crate::device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder};
-use crate::ip::{IpLayerState, IpLayerTimerId};
+use crate::ip::{IpLayerTimerId, Ipv4State, Ipv6State};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
 
 /// Map an expression over either version of one or more addresses.
@@ -122,14 +123,20 @@ macro_rules! map_addr_version {
 /// A builder for [`StackState`].
 #[derive(Default, Clone)]
 pub struct StackStateBuilder {
-    ip: IpStateBuilder,
+    ipv4: Ipv4StateBuilder,
+    ipv6: Ipv6StateBuilder,
     device: DeviceStateBuilder,
 }
 
 impl StackStateBuilder {
-    /// Get the builder for the IP state.
-    pub fn ip_builder(&mut self) -> &mut IpStateBuilder {
-        &mut self.ip
+    /// Get the builder for the IPv4 state.
+    pub fn ipv4_builder(&mut self) -> &mut Ipv4StateBuilder {
+        &mut self.ipv4
+    }
+
+    /// Get the builder for the IPv6 state.
+    pub fn ipv6_builder(&mut self) -> &mut Ipv6StateBuilder {
+        &mut self.ipv6
     }
 
     /// Get the builder for the device state.
@@ -141,7 +148,8 @@ impl StackStateBuilder {
     pub fn build<D: EventDispatcher>(self) -> StackState<D> {
         StackState {
             transport: TransportLayerState::default(),
-            ip: self.ip.build(),
+            ipv4: self.ipv4.build(),
+            ipv6: self.ipv6.build(),
             device: self.device.build(),
             #[cfg(test)]
             test_counters: testutil::TestCounters::default(),
@@ -152,7 +160,8 @@ impl StackStateBuilder {
 /// The state associated with the network stack.
 pub struct StackState<D: EventDispatcher> {
     transport: TransportLayerState,
-    ip: IpLayerState<D>,
+    ipv4: Ipv4State<D::Instant>,
+    ipv6: Ipv6State<D::Instant>,
     device: DeviceLayerState,
     #[cfg(test)]
     test_counters: testutil::TestCounters,

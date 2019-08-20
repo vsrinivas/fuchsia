@@ -619,7 +619,7 @@ mod tests {
         // We have received a query, hence we are falling back to Delay Member state.
         let group_state = ctx
             .state
-            .ip
+            .ipv6
             .get_mld_state_mut(dev_id.id())
             .groups
             .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
@@ -652,7 +652,7 @@ mod tests {
         // into Idle state again
         let group_state = ctx
             .state
-            .ip
+            .ipv6
             .get_mld_state_mut(dev_id.id())
             .groups
             .get(&MulticastAddr::new(GROUP_ADDR).unwrap())

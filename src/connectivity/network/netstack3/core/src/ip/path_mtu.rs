@@ -427,10 +427,10 @@ mod tests {
         dst_ip: A,
     ) -> Option<D::Instant> {
         #[ipv4addr]
-        let ret = ctx.state.ip.v4.path_mtu.get_last_updated(src_ip, dst_ip);
+        let ret = ctx.state.ipv4.inner.path_mtu.get_last_updated(src_ip, dst_ip);
 
         #[ipv6addr]
-        let ret = ctx.state.ip.v6.path_mtu.get_last_updated(src_ip, dst_ip);
+        let ret = ctx.state.ipv6.inner.path_mtu.get_last_updated(src_ip, dst_ip);
 
         ret
     }

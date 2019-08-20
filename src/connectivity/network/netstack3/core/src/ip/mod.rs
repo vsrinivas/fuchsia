@@ -35,7 +35,7 @@ use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, IcmpContext, IcmpEventDispatcher,
-    IcmpState, IcmpStateBuilder, Icmpv4State, Icmpv6State,
+    Icmpv4State, Icmpv4StateBuilder, Icmpv6State,
 };
 use crate::ip::igmp::{IgmpContext, IgmpInterface, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
@@ -169,133 +169,175 @@ impl<D: EventDispatcher> IpDeviceIdContext for Context<D> {
     type DeviceId = DeviceId;
 }
 
-/// A builder for IP layer state.
-#[derive(Clone)]
-pub struct IpStateBuilder {
-    forward_v4: bool,
-    forward_v6: bool,
-    icmp: IcmpStateBuilder,
+/// A builder for IPv4 state.
+#[derive(Copy, Clone)]
+pub struct Ipv4StateBuilder {
+    forward: bool,
+    icmp: Icmpv4StateBuilder,
 }
 
-impl Default for IpStateBuilder {
-    fn default() -> IpStateBuilder {
-        IpStateBuilder { forward_v4: false, forward_v6: false, icmp: IcmpStateBuilder::default() }
+impl Default for Ipv4StateBuilder {
+    fn default() -> Ipv4StateBuilder {
+        // NOTE: We implement `Default` manually even though this implementation
+        // is equivalent to what `#[derive(Default)]` would produce in order to
+        // make the default values explicit.
+        Ipv4StateBuilder { forward: false, icmp: Icmpv4StateBuilder::default() }
     }
 }
 
-impl IpStateBuilder {
+impl Ipv4StateBuilder {
     /// Enable or disable IP packet forwarding (default: disabled).
     ///
     /// If `forward` is true, then an incoming IP packet whose destination
     /// address identifies a remote host will be forwarded to that host.
     pub fn forward(&mut self, forward: bool) -> &mut Self {
-        self.forward_v4 = forward;
-        self.forward_v6 = forward;
+        self.forward = forward;
         self
     }
 
-    /// Get the builder for the ICMP state.
-    pub fn icmp_builder(&mut self) -> &mut IcmpStateBuilder {
+    /// Get the builder for the ICMPv4 state.
+    pub fn icmp_builder(&mut self) -> &mut Icmpv4StateBuilder {
         &mut self.icmp
     }
 
-    pub(crate) fn build<D: EventDispatcher>(self) -> IpLayerState<D> {
-        IpLayerState {
-            v4: IpLayerStateInner {
-                forward: self.forward_v4,
-                table: ForwardingTable::default(),
-                fragment_cache: IpLayerFragmentCache::new(),
-                path_mtu: IpLayerPathMtuCache::new(),
-            },
-            v6: IpLayerStateInner {
-                forward: self.forward_v6,
+    pub(crate) fn build<Instant: crate::Instant>(self) -> Ipv4State<Instant> {
+        Ipv4State {
+            inner: IpStateInner {
+                forward: self.forward,
                 table: ForwardingTable::default(),
                 fragment_cache: IpLayerFragmentCache::new(),
                 path_mtu: IpLayerPathMtuCache::new(),
             },
             icmp: self.icmp.build(),
             igmp: IdMap::default(),
+        }
+    }
+}
+
+/// A builder for IPv6 state.
+#[derive(Copy, Clone)]
+pub struct Ipv6StateBuilder {
+    forward: bool,
+}
+
+impl Default for Ipv6StateBuilder {
+    fn default() -> Ipv6StateBuilder {
+        // NOTE: We implement `Default` manually even though this implementation
+        // is equivalent to what `#[derive(Default)]` would produce in order to
+        // make the default values explicit.
+        Ipv6StateBuilder { forward: false }
+    }
+}
+
+impl Ipv6StateBuilder {
+    /// Enable or disable IPv6 packet forwarding (default: disabled).
+    ///
+    /// If `forward` is true, then an incoming IPv6 packet whose destination
+    /// address identifies a remote host will be forwarded to that host.
+    pub fn forward(&mut self, forward: bool) -> &mut Self {
+        self.forward = forward;
+        self
+    }
+
+    pub(crate) fn build<Instant: crate::Instant>(self) -> Ipv6State<Instant> {
+        Ipv6State {
+            inner: IpStateInner {
+                forward: self.forward,
+                table: ForwardingTable::default(),
+                fragment_cache: IpLayerFragmentCache::new(),
+                path_mtu: IpLayerPathMtuCache::new(),
+            },
+            icmp: Icmpv6State::default(),
             mld: IdMap::default(),
         }
     }
 }
 
-/// The state associated with the IP layer.
-pub(crate) struct IpLayerState<D: EventDispatcher> {
-    v4: IpLayerStateInner<Ipv4, D>,
-    v6: IpLayerStateInner<Ipv6, D>,
-    icmp: IcmpState,
-    igmp: IdMap<IgmpInterface<D::Instant>>,
-    mld: IdMap<MldInterface<D::Instant>>,
+pub(crate) struct Ipv4State<Instant: crate::Instant> {
+    inner: IpStateInner<Ipv4, Instant>,
+    icmp: Icmpv4State,
+    igmp: IdMap<IgmpInterface<Instant>>,
 }
 
-impl<D: EventDispatcher> IpLayerState<D> {
+impl<Instant: crate::Instant> Ipv4State<Instant> {
     /// Get the IGMP state associated with the device immutably.
-    pub(crate) fn get_igmp_state(&self, device_id: usize) -> &IgmpInterface<D::Instant> {
+    pub(crate) fn get_igmp_state(&self, device_id: usize) -> &IgmpInterface<Instant> {
         self.igmp.get(device_id).unwrap()
     }
 
     /// Get the IGMP state associated with the device mutably.
-    pub(crate) fn get_igmp_state_mut(
-        &mut self,
-        device_id: usize,
-    ) -> &mut IgmpInterface<D::Instant> {
+    pub(crate) fn get_igmp_state_mut(&mut self, device_id: usize) -> &mut IgmpInterface<Instant> {
         self.igmp.entry(device_id).or_insert(IgmpInterface::default())
     }
+}
 
+pub(crate) struct Ipv6State<Instant: crate::Instant> {
+    inner: IpStateInner<Ipv6, Instant>,
+    icmp: Icmpv6State,
+    mld: IdMap<MldInterface<Instant>>,
+}
+
+impl<Instant: crate::Instant> Ipv6State<Instant> {
     /// Get the MLD state associated with the device immutably.
-    pub(crate) fn get_mld_state(&self, device_id: usize) -> &MldInterface<D::Instant> {
+    fn get_mld_state(&self, device_id: usize) -> &MldInterface<Instant> {
         self.mld.get(device_id).unwrap()
     }
 
     /// Get the MLD state associated with the device mutably.
-    pub(crate) fn get_mld_state_mut(&mut self, device_id: usize) -> &mut MldInterface<D::Instant> {
+    fn get_mld_state_mut(&mut self, device_id: usize) -> &mut MldInterface<Instant> {
         self.mld.entry(device_id).or_insert(MldInterface::default())
+
+        // if self.mld.get(device_id).is_none() {
+        //     self.mld.insert(device_id, MldInterface::default());
+        // }
+        // self.mld.get_mut(device_id).unwrap()
     }
 }
 
-struct IpLayerStateInner<I: Ip, D: EventDispatcher> {
+struct IpStateInner<I: Ip, Instant: crate::Instant> {
     forward: bool,
     table: ForwardingTable<I>,
     fragment_cache: IpLayerFragmentCache<I>,
-    path_mtu: IpLayerPathMtuCache<I, D::Instant>,
+    path_mtu: IpLayerPathMtuCache<I, Instant>,
 }
 
 #[specialize_ip]
-fn get_state_inner<I: Ip, D: EventDispatcher>(state: &StackState<D>) -> &IpLayerStateInner<I, D> {
+fn get_state_inner<I: Ip, D: EventDispatcher>(
+    state: &StackState<D>,
+) -> &IpStateInner<I, D::Instant> {
     #[ipv4]
-    return &state.ip.v4;
+    return &state.ipv4.inner;
     #[ipv6]
-    return &state.ip.v6;
+    return &state.ipv6.inner;
 }
 
 #[specialize_ip]
 fn get_state_inner_mut<I: Ip, D: EventDispatcher>(
     state: &mut StackState<D>,
-) -> &mut IpLayerStateInner<I, D> {
+) -> &mut IpStateInner<I, D::Instant> {
     #[ipv4]
-    return &mut state.ip.v4;
+    return &mut state.ipv4.inner;
     #[ipv6]
-    return &mut state.ip.v6;
+    return &mut state.ipv6.inner;
 }
 
 impl<D: EventDispatcher> StateContext<DeviceId, IgmpInterface<D::Instant>> for Context<D> {
     fn get_state(&self, device: DeviceId) -> &IgmpInterface<D::Instant> {
-        self.state().ip.get_igmp_state(device.id())
+        self.state().ipv4.get_igmp_state(device.id())
     }
 
     fn get_state_mut(&mut self, device: DeviceId) -> &mut IgmpInterface<D::Instant> {
-        self.state_mut().ip.get_igmp_state_mut(device.id())
+        self.state_mut().ipv4.get_igmp_state_mut(device.id())
     }
 }
 
 impl<D: EventDispatcher> StateContext<DeviceId, MldInterface<D::Instant>> for Context<D> {
     fn get_state(&self, device: DeviceId) -> &MldInterface<D::Instant> {
-        self.state().ip.get_mld_state(device.id())
+        self.state().ipv6.get_mld_state(device.id())
     }
 
     fn get_state_mut(&mut self, device: DeviceId) -> &mut MldInterface<D::Instant> {
-        self.state_mut().ip.get_mld_state_mut(device.id())
+        self.state_mut().ipv6.get_mld_state_mut(device.id())
     }
 }
 
@@ -1488,21 +1530,21 @@ where
 
 impl<D: EventDispatcher> StateContext<(), Icmpv4State> for Context<D> {
     fn get_state(&self, _id: ()) -> &Icmpv4State {
-        &self.state().ip.icmp.v4
+        &self.state().ipv4.icmp
     }
 
     fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv4State {
-        &mut self.state_mut().ip.icmp.v4
+        &mut self.state_mut().ipv4.icmp
     }
 }
 
 impl<D: EventDispatcher> StateContext<(), Icmpv6State> for Context<D> {
     fn get_state(&self, _id: ()) -> &Icmpv6State {
-        &self.state().ip.icmp.v6
+        &self.state().ipv6.icmp
     }
 
     fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv6State {
-        &mut self.state_mut().ip.icmp.v6
+        &mut self.state_mut().ipv6.icmp
     }
 }
 
@@ -2226,7 +2268,8 @@ mod tests {
         let b = "bob";
         let dummy_config = get_dummy_config::<I::Addr>();
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ip_builder().forward(true);
+        state_builder.ipv4_builder().forward(true);
+        state_builder.ipv6_builder().forward(true);
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
@@ -2298,7 +2341,7 @@ mod tests {
 
         let dummy_config = get_dummy_config::<Ipv6Addr>();
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ip_builder().forward(true);
+        state_builder.ipv6_builder().forward(true);
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);

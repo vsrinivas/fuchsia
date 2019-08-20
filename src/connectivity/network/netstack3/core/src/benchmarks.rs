@@ -84,18 +84,18 @@ impl EventDispatcher for BenchmarkEventDispatcher {
     }
 }
 
-// Benchmark the minimum possible time to forward by stripping out all
-// interesting computation. We have the simplest possible setup - a forwarding
-// table with a single entry, and a single device - and we receive an IP packet
-// frame which we expect will be parsed and forwarded without requiring any new
-// buffers to be allocated.
+// Benchmark the minimum possible time to forward an IPv4 packet by stripping
+// out all interesting computation. We have the simplest possible setup - a
+// forwarding table with a single entry, and a single device - and we receive an
+// IPv4 packet frame which we expect will be parsed and forwarded without
+// requiring any new buffers to be allocated.
 //
 // As of Change-Id Iaa22ea23620405dadd0b4f58d112781b29890a46, on a 2018 MacBook
 // Pro, this benchmark takes in the neighborhood of 96ns - 100ns for all frame
 // sizes.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let mut state_builder = StackStateBuilder::default();
-    state_builder.ip_builder().forward(true);
+    state_builder.ipv4_builder().forward(true);
 
     // Most tests do not need NDP's DAD or router solicitation so disable it here.
     let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
