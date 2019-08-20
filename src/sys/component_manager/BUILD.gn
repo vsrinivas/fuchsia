@@ -127,6 +127,8 @@ package("component_manager") {
 }
 
 test_package("component_manager_tests") {
+  rootjob_svc = "//build"
+
   deps = [
     ":lib_test",
     "//examples/components/basic:hello_world_bin",

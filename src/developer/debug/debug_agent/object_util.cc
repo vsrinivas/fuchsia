@@ -5,7 +5,7 @@
 #include "src/developer/debug/debug_agent/object_util.h"
 
 #include <fcntl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -195,7 +195,7 @@ zx_koid_t ObjectProvider::GetComponentJobKoid() {
 // this hack to get the root job handle. It will likely need to be updated
 // when a better way to get the root job is found.
 zx::job ObjectProvider::GetRootJob() {
-  int fd = open("/dev/misc/sysinfo", O_RDWR);
+  int fd = open("/svc/fuchsia.boot.RootJob", O_RDWR);
   if (fd < 0) {
     FXL_NOTREACHED();
     return zx::job();
@@ -209,8 +209,8 @@ zx::job ObjectProvider::GetRootJob() {
   }
 
   zx_handle_t root_job;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
-  if (fidl_status != ZX_OK || status != ZX_OK) {
+  zx_status_t fidl_status = fuchsia_boot_RootJobGet(channel.get(), &root_job);
+  if (fidl_status != ZX_OK) {
     FXL_NOTREACHED();
     return zx::job();
   }

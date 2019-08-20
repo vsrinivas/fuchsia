@@ -1,14 +1,21 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootJob"
+            ]
+        }
+     },
     "program": {
         "binary": "bin/nested_environment_test"
     },
     "sandbox": {
-        "dev": [ "misc/sysinfo" ],
         "features": [
             "isolated-persistent-storage",
             "system-temp"
         ],
         "services": [
+            "fuchsia.boot.RootJob",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.tracing.controller.Controller"
         ]

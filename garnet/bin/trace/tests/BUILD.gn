@@ -330,6 +330,7 @@ executable("shared_provider_integration_tests") {
 
 test_package("trace_tests") {
   deprecated_shell = "//build"
+  rootjob_svc = "//build"
 
   deps = [
     ":basic_integration_test_app",

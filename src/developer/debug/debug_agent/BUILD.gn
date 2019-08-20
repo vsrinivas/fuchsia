@@ -85,7 +85,7 @@ static_library("lib") {
     "//src/developer/debug/ipc:agent",
     "//src/developer/debug/shared",
     "//src/lib/fxl",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ngunwind",
   ]
@@ -123,6 +123,7 @@ executable("bin") {
 
 package("debug_agent") {
   deprecated_shell = "//build"
+  rootjob_svc = "//build"
 
   deps = [
     ":bin",
@@ -177,6 +178,7 @@ executable("unit_tests") {
 
 test_package("debug_agent_tests") {
   deprecated_shell = "//build"
+  rootjob_svc = "//build"
 
   package_name = "debug_agent_tests"
   deps = []

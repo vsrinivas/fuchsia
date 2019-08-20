@@ -8,21 +8,22 @@
                 "fuchsia.tracing.provider.Registry": [
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
                 ]
-            }
+            },
+            "system-services": [
+                "fuchsia.boot.RootJob"
+            ]
         }
     },
     "program": {
         "binary": "bin/memory_usage_test_benchmark"
     },
     "sandbox": {
-        "dev": [
-            "misc/sysinfo"
-        ],
         "features": [
             "isolated-persistent-storage",
             "system-temp"
         ],
         "services": [
+            "fuchsia.boot.RootJob",
             "fuchsia.tracing.controller.Controller",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.sys.Launcher"
