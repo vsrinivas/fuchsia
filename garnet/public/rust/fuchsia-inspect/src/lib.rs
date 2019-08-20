@@ -6,7 +6,10 @@
 
 use {
     crate::{
-        block::{ArrayFormat, PropertyFormat},
+        format::{
+            block::{ArrayFormat, PropertyFormat},
+            constants,
+        },
         heap::Heap,
         state::State,
     },
@@ -20,11 +23,11 @@ use {
     std::{cmp::max, sync::Arc},
 };
 
-mod bitfields;
-mod block;
-mod block_type;
+#[cfg(test)]
+use crate::format::block::Block;
+
 pub mod component;
-mod constants;
+pub mod format;
 pub mod health;
 mod heap;
 pub mod reader;
@@ -148,7 +151,7 @@ macro_rules! inspect_type_impl {
 
             #[cfg(test)]
             impl $name {
-                pub fn get_block(&self) -> Option<crate::block::Block<Arc<Mapping>>> {
+                pub fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
                     self.inner.as_ref().and_then(|inner| {
                         inner.state.lock().heap.get_block(inner.block_index).ok()
                     })
@@ -686,7 +689,7 @@ macro_rules! linear_histogram_property {
                 }
 
                 #[cfg(test)]
-                fn get_block(&self) -> Option<crate::block::Block<Arc<Mapping>>> {
+                fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
                     self.array.get_block()
                 }
             }
@@ -722,7 +725,7 @@ macro_rules! exponential_histogram_property {
                 }
 
                 #[cfg(test)]
-                fn get_block(&self) -> Option<crate::block::Block<Arc<Mapping>>> {
+                fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
                     self.array.get_block()
                 }
             }
@@ -743,7 +746,10 @@ exponential_histogram_property!(Uint, u64);
 mod tests {
     use {
         super::*,
-        crate::{block_type::BlockType, constants, heap::Heap},
+        crate::{
+            format::{block_type::BlockType, constants},
+            heap::Heap,
+        },
         fuchsia_async::{self as fasync, futures::StreamExt},
         mapped_vmo::Mapping,
     };

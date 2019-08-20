@@ -4,9 +4,11 @@
 
 use {
     crate::{
-        block::{ArrayFormat, Block, PropertyFormat},
-        block_type::BlockType,
-        constants,
+        format::{
+            block::{ArrayFormat, Block, PropertyFormat},
+            block_type::BlockType,
+            constants,
+        },
         heap::Heap,
         utils,
     },

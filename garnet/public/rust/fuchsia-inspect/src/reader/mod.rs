@@ -4,8 +4,7 @@
 
 use {
     crate::{
-        block::PropertyFormat,
-        block_type::BlockType,
+        format::{block::PropertyFormat, block_type::BlockType},
         reader::snapshot::{ScannedBlock, Snapshot},
         utils, Inspector,
     },
@@ -14,7 +13,7 @@ use {
     std::{cmp::min, collections::BTreeMap, convert::TryFrom},
 };
 
-pub use crate::block::ArrayFormat;
+pub use crate::format::block::ArrayFormat;
 
 pub mod snapshot;
 
@@ -355,8 +354,8 @@ mod tests {
     use {
         super::*,
         crate::{
-            bitfields::Payload, constants, ArrayProperty, ExponentialHistogramParams,
-            HistogramProperty, LinearHistogramParams,
+            format::{bitfields::Payload, constants},
+            ArrayProperty, ExponentialHistogramParams, HistogramProperty, LinearHistogramParams,
         },
     };
 

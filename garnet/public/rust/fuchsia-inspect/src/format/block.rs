@@ -4,9 +4,12 @@
 
 use {
     crate::{
-        bitfields::{BlockHeader, Payload},
-        block_type::BlockType,
-        constants, utils,
+        format::{
+            bitfields::{BlockHeader, Payload},
+            block_type::BlockType,
+            constants,
+        },
+        utils,
     },
     byteorder::{ByteOrder, LittleEndian},
     failure::{bail, Error},
@@ -414,7 +417,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     }
 
     #[cfg(test)]
-    pub(super) fn set_header_magic(&self, value: u32) -> Result<(), Error> {
+    pub(crate) fn set_header_magic(&self, value: u32) -> Result<(), Error> {
         self.check_type(BlockType::Header)?;
         let mut header = self.read_header();
         header.set_header_magic(value);

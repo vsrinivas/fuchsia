@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{block::Block, block_type::BlockType, constants, utils},
+    crate::{
+        format::{block::Block, block_type::BlockType, constants},
+        utils,
+    },
     failure::{bail, Error},
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
@@ -186,7 +189,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            bitfields::{BlockHeader, Payload},
+            format::bitfields::{BlockHeader, Payload},
             reader::snapshot::BlockIterator,
         },
     };

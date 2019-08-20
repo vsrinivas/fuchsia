@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{block::Block, block_type::BlockType, constants, utils, Inspector},
+    crate::{
+        format::{block::Block, block_type::BlockType, constants},
+        utils, Inspector,
+    },
     failure::{self, bail, format_err, Error},
     fuchsia_zircon::Vmo,
     std::convert::TryFrom,
