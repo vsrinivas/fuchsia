@@ -15,6 +15,7 @@ pub mod fuchsia_pkg_resolver;
 pub mod klog;
 pub mod model;
 pub mod startup;
+pub mod work_scheduler;
 
 mod constants;
 mod process_launcher;
