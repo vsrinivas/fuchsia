@@ -47,6 +47,23 @@ impl DeviceState {
         }
     }
 
+    pub fn take_event_stream(&mut self) -> fidl_fuchsia_net_stack::StackEventStream {
+        self.hal.take_event_stream()
+    }
+
+    pub async fn update_state_for_stack_event(
+        &mut self,
+        event: fidl_fuchsia_net_stack::StackEvent,
+    ) {
+        match event {
+            fidl_fuchsia_net_stack::StackEvent::OnInterfaceStatusChange { info } => {
+                if let Some(iface_info) = self.hal.get_interface(info.id).await {
+                    self.lif_manager.update_lif_at_port(info.id, iface_info.into())
+                }
+            }
+        }
+    }
+
     /// populate_state populates the state based on lower layers state.
     pub async fn populate_state(&mut self) -> error::Result<()> {
         for p in self.hal.ports().await?.iter() {

@@ -42,28 +42,28 @@ use futures::channel::mpsc;
 use futures::prelude::*;
 use router_manager_core::{hal::NetCfg, lifmgr::LIFType, portmgr::PortId, DeviceState};
 
+macro_rules! router_error {
+    ($code:ident, $desc:expr) => {
+        Some(fidl::encoding::OutOfLine(&mut fidl_fuchsia_router_config::Error {
+            code: fidl_fuchsia_router_config::ErrorCode::$code,
+            description: $desc,
+        }))
+    };
+}
+
 macro_rules! not_supported {
     () => {
-        Some(fidl::encoding::OutOfLine(&mut fidl_fuchsia_router_config::Error {
-            code: fidl_fuchsia_router_config::ErrorCode::NotSupported,
-            description: None,
-        }))
+        router_error!(NotSupported, None)
     };
 }
 macro_rules! not_found {
     () => {
-        Some(fidl::encoding::OutOfLine(&mut fidl_fuchsia_router_config::Error {
-            code: fidl_fuchsia_router_config::ErrorCode::NotFound,
-            description: None,
-        }))
+        router_error!(NotFound, None)
     };
 }
 macro_rules! internal_error {
     ($s:expr) => {
-        Some(fidl::encoding::OutOfLine(&mut fidl_fuchsia_router_config::Error {
-            code: fidl_fuchsia_router_config::ErrorCode::Internal,
-            description: Some($s.to_string()),
-        }))
+        router_error!(Internal, Some($s.to_string()))
     };
 }
 
@@ -73,11 +73,13 @@ pub enum Event {
     FidlRouterAdminEvent(RouterAdminRequest),
     /// A request from the fuchsia.router.config State FIDL interface
     FidlRouterStateEvent(RouterStateRequest),
+    /// fuchsia.net.stack.StackEvent
+    StackObservable(<fidl_fuchsia_net_stack::StackEventStream as futures::Stream>::Item),
 }
 
 /// The event loop.
 pub struct EventLoop {
-    event_recv: mpsc::UnboundedReceiver<Event>,
+    event_recv: Option<mpsc::UnboundedReceiver<Event>>,
     device: DeviceState,
     packet_filter: PacketFilter,
 }
@@ -92,21 +94,40 @@ impl EventLoop {
         let netcfg = NetCfg::new()?;
         let packet_filter =
             PacketFilter::start().context("router_manager failed to start packet filter!").unwrap();
-        Ok(EventLoop { event_recv, device: DeviceState::new(netcfg), packet_filter })
+        Ok(EventLoop {
+            event_recv: Some(event_recv),
+            device: DeviceState::new(netcfg),
+            packet_filter,
+        })
     }
 
     pub async fn run(mut self) -> Result<(), Error> {
         self.device.populate_state().await?;
+        let mut select_stream = futures::stream::select(
+            self.event_recv.take().unwrap(),
+            self.device.take_event_stream().map(|e| Event::StackObservable(e)),
+        );
         loop {
-            match self.event_recv.next().await {
+            match select_stream.next().await {
                 Some(Event::FidlRouterAdminEvent(req)) => {
                     self.handle_fidl_router_admin_request(req).await;
                 }
                 Some(Event::FidlRouterStateEvent(req)) => {
                     self.handle_fidl_router_state_request(req).await;
                 }
+                Some(Event::StackObservable(event)) => self.handle_stack_event(event).await,
                 None => bail!("Stream of events ended unexpectedly"),
             }
+        }
+    }
+
+    async fn handle_stack_event(
+        &mut self,
+        event: <fidl_fuchsia_net_stack::StackEventStream as futures::Stream>::Item,
+    ) {
+        match event {
+            Ok(e) => self.device.update_state_for_stack_event(e).await,
+            Err(e) => warn!("error from stack observer: {:?}", e),
         }
     }
 

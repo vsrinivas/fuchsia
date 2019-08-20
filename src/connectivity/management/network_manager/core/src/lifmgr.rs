@@ -9,6 +9,7 @@
 
 use crate::portmgr::PortId;
 use crate::{error, ElementId, Version, UUID};
+use fidl_fuchsia_net_stack::InterfaceAddress;
 use fidl_fuchsia_router_config;
 use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
@@ -52,31 +53,33 @@ impl LIF {
         vlan: u16,
         properties: Option<LIFProperties>,
     ) -> error::Result<Self> {
-        let prop: LIFProperties;
         match l_type {
             LIFType::WAN => {
                 if port_list.len() != 1 {
                     return Err(error::RouterManager::LIF(error::Lif::InvalidNumberOfPorts));
-                }
-                prop = match properties {
-                    None => LIFProperties { enabled: true, ..Default::default() },
-                    Some(i) => i,
                 }
             }
             LIFType::LAN => {
                 if port_list.len() < 1 {
                     return Err(error::RouterManager::LIF(error::Lif::InvalidNumberOfPorts));
                 }
-                prop = match properties {
-                    None => LIFProperties { enabled: true, ..Default::default() },
-                    Some(i) => i,
-                }
             }
             _ => return Err(error::RouterManager::LIF(error::Lif::TypeNotSupported)),
         };
         let ports: HashSet<PortId> = port_list.iter().cloned().collect();
         let id = ElementId::new(v);
-        Ok(LIF { id, l_type, name: name.to_string(), pid, ports, vlan, properties: prop })
+        Ok(LIF {
+            id,
+            l_type,
+            name: name.to_string(),
+            pid,
+            ports,
+            vlan,
+            properties: match properties {
+                None => LIFProperties { enabled: true, ..Default::default() },
+                Some(p) => p,
+            },
+        })
     }
 
     fn add_port(&mut self, v: Version, p: PortId) -> error::Result<()> {
@@ -179,6 +182,22 @@ impl LIF {
 pub struct LifIpAddr {
     pub address: IpAddr,
     pub prefix: u8,
+}
+
+impl From<&InterfaceAddress> for LifIpAddr {
+    fn from(addr: &InterfaceAddress) -> Self {
+        LifIpAddr {
+            address: match addr.ip_address {
+                fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr }) => {
+                    IpAddr::from(addr)
+                }
+                fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }) => {
+                    IpAddr::from(addr)
+                }
+            },
+            prefix: addr.prefix_len,
+        }
+    }
 }
 
 impl From<&fidl_fuchsia_router_config::CidrAddress> for LifIpAddr {
@@ -332,6 +351,14 @@ impl LIFManager {
     /// lifs gets all LIFs.
     pub fn all_lifs(&self) -> impl Iterator<Item = &LIF> {
         self.lifs.iter().map(|(_, l)| l)
+    }
+
+    pub fn update_lif_at_port(&mut self, port: u64, properties: LIFProperties) {
+        if let Some((_, lif)) = self.lifs.iter_mut().find(|(_, lif)| lif.pid.to_u64() == port) {
+            let dhcp = lif.properties.dhcp;
+            lif.properties = properties;
+            lif.properties.dhcp = dhcp;
+        }
     }
 }
 
@@ -674,5 +701,43 @@ mod tests {
         let got = lm.remove_lif(5 as UUID);
         assert_eq!(lm.lifs.len(), 3);
         assert_eq!(got, None);
+    }
+
+    #[test]
+    fn test_update_lif_at_port() {
+        let pm = create_ports();
+        let mut lm = LIFManager::new();
+        let lif = &LIF::new(
+            3,
+            LIFType::LAN,
+            "lan1",
+            PortId::from(33),
+            vec![PortId::from(1), PortId::from(2), PortId::from(33)],
+            0,
+            Some(LIFProperties {
+                dhcp: true,
+                address: Some(LifIpAddr { address: IpAddr::from([4, 3, 2, 1]), prefix: 24 }),
+                enabled: true,
+            }),
+        )
+        .unwrap();
+        lm.add_lif(lif);
+        lm.update_lif_at_port(
+            33,
+            LIFProperties {
+                dhcp: false,
+                address: Some(LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 }),
+                enabled: false,
+            },
+        );
+        // DHCP field must not be updated, but all other fields should have the new value.
+        assert_eq!(
+            lm.lif(&lif.id.uuid).unwrap().properties,
+            LIFProperties {
+                dhcp: true,
+                address: Some(LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 }),
+                enabled: false,
+            }
+        );
     }
 }

@@ -4,11 +4,11 @@
 
 //! A simple port manager.
 
-use crate::lifmgr;
-use crate::{error, lifmgr::LifIpAddr};
+use crate::error;
+use crate::lifmgr::{self, LIFProperties, LifIpAddr};
 use failure::{Error, ResultExt};
 use fidl_fuchsia_net;
-use fidl_fuchsia_net_stack::{StackMarker, StackProxy};
+use fidl_fuchsia_net_stack::{InterfaceInfo, StackMarker, StackProxy};
 use fidl_fuchsia_netstack::{NetstackMarker, NetstackProxy};
 use fuchsia_component::client::connect_to_service;
 use std::collections::HashSet;
@@ -98,6 +98,50 @@ pub struct Interface {
     pub id: PortId,
     pub name: String,
     pub addr: Option<LifIpAddr>,
+    pub enabled: bool,
+}
+
+impl From<&InterfaceInfo> for Interface {
+    fn from(iface: &InterfaceInfo) -> Self {
+        Interface {
+            id: iface.id.into(),
+            name: iface.properties.topopath.clone(),
+            addr:
+                iface
+                    .properties
+                    .addresses
+                    .iter()
+                    .find(|&addr| match addr {
+                        // Only return interfaces with an IPv4 address
+                        // TODO(dpradilla) support IPv6 and interfaces with multiple IPs? (is there
+                        // a use case given this context?)
+                        fidl_fuchsia_net_stack::InterfaceAddress {
+                            ip_address:
+                                fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                                    addr,
+                                }),
+                            ..
+                        } => {
+                            let ip_address = IpAddr::from(*addr);
+                            !ip_address.is_loopback()
+                                && !ip_address.is_unspecified()
+                                && !ip_address.is_multicast()
+                        }
+                        _ => false,
+                    })
+                    .map(|addr| addr.into()),
+            enabled: match iface.properties.administrative_status {
+                fidl_fuchsia_net_stack::AdministrativeStatus::Enabled => true,
+                fidl_fuchsia_net_stack::AdministrativeStatus::Disabled => false,
+            },
+        }
+    }
+}
+
+impl Into<LIFProperties> for Interface {
+    fn into(self) -> LIFProperties {
+        LIFProperties { dhcp: false, address: self.addr, enabled: self.enabled }
+    }
 }
 
 impl NetCfg {
@@ -108,6 +152,18 @@ impl NetCfg {
             .context("router_manager failed to connect to netstack")?;
         Ok(NetCfg { stack, netstack, id_in_use: HashSet::new() })
     }
+
+    pub fn take_event_stream(&mut self) -> fidl_fuchsia_net_stack::StackEventStream {
+        self.stack.take_event_stream()
+    }
+
+    pub async fn get_interface(&mut self, port: u64) -> Option<Interface> {
+        match self.stack.get_interface_info(port).await {
+            Ok((Some(info), _)) => Some((&(*info)).into()),
+            _ => None,
+        }
+    }
+
     // ports gets all physical ports in the system.
     pub async fn ports(&self) -> error::Result<Vec<Port>> {
         let ports = self.stack.list_interfaces().await.map_err(|_| error::Hal::OperationFailed)?;
@@ -127,47 +183,7 @@ impl NetCfg {
             .await
             .map_err(|_| error::Hal::OperationFailed)?
             .iter()
-            .filter_map(|i| {
-                let id = StackPortId::from(i.id);
-                self.id_in_use.insert(id);
-                // Only return interfaces with an IPv4 address
-                // TODO(dpradilla) support IPv6 and interfaces with multiple IPs? (is there a use
-                // case given this context?)
-                i.properties
-                        .addresses
-                        .iter()
-                        .filter_map(|ip| {
-                            match ip {
-                                fidl_fuchsia_net_stack::InterfaceAddress {
-                                    ip_address:
-                                        fidl_fuchsia_net::IpAddress::Ipv4(
-                                            fidl_fuchsia_net::Ipv4Address { addr },
-                                        ),
-                                    prefix_len,
-                                } => {
-                                    let ip_address = IpAddr::from(*addr);
-                                    if ip_address.is_loopback()
-                                        || ip_address.is_unspecified()
-                                        || ip_address.is_multicast()
-                                    {
-                                        None
-                                    } else {
-                                        Some(Interface {
-                                            id: id.into(),
-                                            name: i.properties.topopath.clone(),
-                                            addr: Some(LifIpAddr {
-                                                address: IpAddr::from(*addr),
-                                                prefix: *prefix_len,
-                                            }),
-                                        })
-                                    }
-                                }
-                                // Only IPv4 for now.
-                                _ => None,
-                            }
-                        })
-                        .nth(0)
-            })
+            .map(|i| i.into())
             .collect();
         Ok(ifs)
     }
@@ -179,13 +195,10 @@ impl NetCfg {
         // Find out what was the interface created, as there is no indication from above API.
         let ifs = self.stack.list_interfaces().await.map_err(|_| error::Hal::OperationFailed)?;
         if let Some(i) = ifs.iter().find(|x| self.id_in_use.insert(StackPortId::from(x.id))) {
-            return Ok(Interface {
-                id: StackPortId::from(i.id).into(),
-                name: i.properties.topopath.clone(),
-                addr: None,
-            });
+            Ok(i.into())
+        } else {
+            Err(error::RouterManager::HAL(error::Hal::BridgeNotFound))
         }
-        Err(error::RouterManager::HAL(error::Hal::BridgeNotFound))
     }
 
     /// delete_bridge deletes a bridge.
@@ -329,5 +342,71 @@ impl NetCfg {
             self.set_interface_state(pid, properties.enabled).await?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl_fuchsia_net as net;
+    use fidl_fuchsia_net_stack as stack;
+
+    #[test]
+    fn test_net_interface_info_into_hal_interface() {
+        let info = InterfaceInfo {
+            id: 42,
+            properties: stack::InterfaceProperties {
+                topopath: "test/interface/info".to_string(),
+                addresses: vec![
+                    // Unspecified addresses are skipped.
+                    stack::InterfaceAddress {
+                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [0, 0, 0, 0] }),
+                        prefix_len: 24,
+                    },
+                    // Multicast addresses are skipped.
+                    stack::InterfaceAddress {
+                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [224, 0, 0, 5] }),
+                        prefix_len: 24,
+                    },
+                    // Loopback addresses are skipped.
+                    stack::InterfaceAddress {
+                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [127, 0, 0, 1] }),
+                        prefix_len: 24,
+                    },
+                    // IPv6 addresses are skipped.
+                    stack::InterfaceAddress {
+                        ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
+                            addr: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+                        }),
+                        prefix_len: 8,
+                    },
+                    // First valid address, should be picked.
+                    stack::InterfaceAddress {
+                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [4, 3, 2, 1] }),
+                        prefix_len: 24,
+                    },
+                    // A valid address is already available, so this address should be skipped.
+                    stack::InterfaceAddress {
+                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
+                        prefix_len: 24,
+                    },
+                ],
+                administrative_status: stack::AdministrativeStatus::Enabled,
+
+                // Unused fields
+                name: "ethtest".to_string(),
+                filepath: "/some/file".to_string(),
+                mac: None,
+                mtu: 0,
+                features: 0,
+                physical_status: stack::PhysicalStatus::Down,
+            },
+        };
+
+        let iface: Interface = (&info).into();
+        assert_eq!(iface.name, "test/interface/info");
+        assert_eq!(iface.enabled, true);
+        assert_eq!(iface.addr, Some(LifIpAddr { address: IpAddr::from([4, 3, 2, 1]), prefix: 24 }));
+        assert_eq!(iface.id.to_u64(), 42);
     }
 }
