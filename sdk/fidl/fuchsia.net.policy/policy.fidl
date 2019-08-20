@@ -8,14 +8,6 @@ using fuchsia.net.stack;
 using fuchsia.hardware.ethernet;
 using zx;
 
-struct InterfaceInfo {
-    /// Interface name.
-    string name;
-
-    /// All info of an interface except the interface name.
-    fuchsia.net.stack.InterfaceProperties properties;
-};
-
 /// Event for interface name update.
 struct InterfaceNameUpdate {
     /// The new name.
@@ -38,7 +30,7 @@ union EthernetControllerRequest {
 [FragileBase]
 protocol BaseInterfaceController {
     /// Retrieve info about an interface.
-    GetInterfaceInfo() -> (InterfaceInfo info);
+    GetInterfaceInfo() -> (fuchsia.net.stack.InterfaceInfo info);
 
     /// Set the administrative status for an interfance.
     /// If enabled, the interface starts processing packets.
@@ -72,10 +64,10 @@ protocol BridgeInterfaceController {
 // and the first-class clients like sysUI.
 protocol Observer {
     /// Retrieve info of all the interfaces.
-    ListInterfaces() -> (vector<InterfaceInfo>? infos, zx.status status);
+    ListInterfaces() -> (vector<fuchsia.net.stack.InterfaceInfo> infos, zx.status status);
 
     /// Retrieve info of a specific interface.
-    GetInterfaceInfo(string name) -> (InterfaceInfo? info, zx.status status);
+    GetInterfaceInfo(string name) -> (fuchsia.net.stack.InterfaceInfo? info, zx.status status);
 
     -> OnChange(string interface, Events events);
 };

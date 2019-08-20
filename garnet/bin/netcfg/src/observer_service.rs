@@ -4,7 +4,7 @@
 
 use {
     fidl::encoding::OutOfLine,
-    fidl_fuchsia_net_policy::{InterfaceInfo, ObserverRequest, ObserverRequestStream},
+    fidl_fuchsia_net_policy::{ObserverRequest, ObserverRequestStream},
     fidl_fuchsia_net_stack::StackProxy,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
@@ -14,71 +14,36 @@ use {
     std::sync::Arc,
 };
 
-const EMPTY: &str = "";
-
 pub async fn serve_fidl_requests(
     stack: StackProxy,
     stream: ObserverRequestStream,
-    interface_ids: Arc<Mutex<HashMap<String, u64>>>,
+    _interface_ids: Arc<Mutex<HashMap<String, u64>>>,
 ) -> Result<(), fidl::Error> {
-    stream.try_for_each(|req| {
-        async {
-            let interface_ids_lock = interface_ids.lock().await;
-            match req {
-                ObserverRequest::ListInterfaces { responder } => {
-                    let (mut infos, status) = if let Ok(infos) = stack.list_interfaces().await {
-                        let infos = infos
-                            .into_iter()
-                            .filter_map(|info| {
-                                match interface_ids_lock.iter().find(|(_name, id)| &&info.id == id)
-                                {
-                                    Some((name, _)) => Some(InterfaceInfo {
-                                        name: name.to_owned(),
-                                        properties: info.properties,
-                                    }),
-
-                                    None => {
-                                        fx_log_err!("faild to find nic {}", info.id,);
-                                        Some(InterfaceInfo {
-                                            name: EMPTY.to_owned(),
-                                            properties: info.properties,
-                                        })
-                                    }
-                                }
-                            })
-                            .collect::<Vec<InterfaceInfo>>();
-                        (Some(infos), zx::sys::ZX_OK)
-                    } else {
-                        fx_log_err!("failed to get response from netstack: list_interface");
-                        (None, zx::sys::ZX_ERR_INTERNAL)
-                    };
-                    responder.send(
-                        infos
-                            .as_mut()
-                            .map(|x| x.iter_mut())
-                            .as_mut()
-                            .map(|x| x as &mut dyn ExactSizeIterator<Item = &mut InterfaceInfo>),
-                        status,
-                    )
-                }
-                ObserverRequest::GetInterfaceInfo { name, responder } => {
-                    let (mut info, status) = if let Some(&id) = interface_ids_lock.get(&name) {
-                        if let Ok((info, None)) = stack.get_interface_info(id).await {
-                            (
-                                Some(InterfaceInfo { name, properties: info.unwrap().properties }),
-                                zx::sys::ZX_OK,
-                            )
+    stream
+        .try_for_each(|req| {
+            async {
+                match req {
+                    ObserverRequest::ListInterfaces { responder } => {
+                        let mut ifaces = stack.list_interfaces().await?;
+                        responder.send(&mut ifaces.iter_mut(), zx::sys::ZX_OK)
+                    }
+                    ObserverRequest::GetInterfaceInfo { name, responder } => {
+                        let mut ifaces = stack.list_interfaces().await?;
+                        ifaces.retain(|i| i.properties.name == name);
+                        let (mut result, status) = if ifaces.len() == 0 {
+                            (None, zx::sys::ZX_ERR_NOT_FOUND)
+                        } else if ifaces.len() == 1 {
+                            (ifaces.pop(), zx::sys::ZX_OK)
                         } else {
+                            fx_log_err!("{} nics have the same name {}", ifaces.len(), name);
                             (None, zx::sys::ZX_ERR_INTERNAL)
-                        }
-                    } else {
-                        (None, zx::sys::ZX_ERR_NOT_FOUND)
-                    };
-                    responder.send(info.as_mut().map(OutOfLine), status)
+                        };
+                        responder.send(result.as_mut().map(OutOfLine), status)
+                    }
                 }
             }
-        }
-    }).await
+        })
+        .await
 }
 
 #[cfg(test)]
@@ -88,8 +53,8 @@ mod tests {
         fidl::endpoints::create_proxy,
         fidl_fuchsia_net_policy::{ObserverMarker, ObserverProxy},
         fidl_fuchsia_net_stack::{
-            AdministrativeStatus, InterfaceAddress, PhysicalStatus, StackMarker, StackRequest,
-            StackRequestStream,
+            AdministrativeStatus, InterfaceAddress, InterfaceInfo, InterfaceProperties,
+            PhysicalStatus, StackMarker, StackRequest, StackRequestStream,
         },
         fuchsia_async as fasync,
         futures::task::Poll,
@@ -99,14 +64,12 @@ mod tests {
 
     const ID1: u64 = 1;
     const ID2: u64 = 2;
-    const ID3: u64 = 3; // No match in interface_ids
     const NAME1: &str = "lo";
     const NAME2: &str = "eth";
-    const UNKNOWN: &str = "";
 
-    fn build_interface_properties() -> fidl_fuchsia_net_stack::InterfaceProperties {
-        fidl_fuchsia_net_stack::InterfaceProperties {
-            name: "eth000".to_owned(),
+    fn build_interface_properties(name: String) -> InterfaceProperties {
+        InterfaceProperties {
+            name: name,
             topopath: "/all/the/way/home".to_owned(),
             filepath: "/dev/class/ethernet/123".to_owned(),
             mac: Some(Box::new(fidl_fuchsia_hardware_ethernet::MacAddress {
@@ -125,26 +88,8 @@ mod tests {
         }
     }
 
-    fn build_interface_info() -> fidl_fuchsia_net_stack::InterfaceInfo {
-        fidl_fuchsia_net_stack::InterfaceInfo { id: ID2, properties: build_interface_properties() }
-    }
-
-    fn build_no_match_interface_info() -> fidl_fuchsia_net_stack::InterfaceInfo {
-        fidl_fuchsia_net_stack::InterfaceInfo { id: ID3, properties: build_interface_properties() }
-    }
-
-    fn expect_interface_info() -> fidl_fuchsia_net_policy::InterfaceInfo {
-        fidl_fuchsia_net_policy::InterfaceInfo {
-            name: NAME2.to_owned(),
-            properties: build_interface_properties(),
-        }
-    }
-
-    fn expect_interface_info_no_match() -> fidl_fuchsia_net_policy::InterfaceInfo {
-        fidl_fuchsia_net_policy::InterfaceInfo {
-            name: UNKNOWN.to_owned(),
-            properties: build_interface_properties(),
-        }
+    fn build_interface_info(id: u64, name: String) -> InterfaceInfo {
+        InterfaceInfo { id: id, properties: build_interface_properties(name) }
     }
 
     fn setup_interface_tests() -> (fasync::Executor, impl Future, ObserverProxy, StackRequestStream)
@@ -200,7 +145,7 @@ mod tests {
         match event {
             StackRequest::ListInterfaces { responder } => {
                 responder
-                    .send(&mut vec![build_interface_info()].iter_mut())
+                    .send(&mut vec![build_interface_info(ID2, NAME2.to_string())].iter_mut())
                     .expect("failed to send list interface response");
             }
             _ => panic!("Unexpected stack call!"),
@@ -214,52 +159,7 @@ mod tests {
             other => panic!("Expected a response from observer fidl call, but got {:?}!", other),
         };
         assert_eq!(zx::sys::ZX_OK, status);
-        assert_eq!(vec![expect_interface_info()], infos.unwrap());
-    }
-
-    #[test]
-    fn list_interfaces_no_match_test() {
-        let (mut exec, observer_service_task, observer_proxy, mut stack_stream) =
-            setup_interface_tests();
-
-        // Call observer FIDL call.
-        let client_fut = observer_proxy.list_interfaces();
-
-        // Let observer client run to stall.
-        pin_mut!(client_fut);
-        assert!(exec.run_until_stalled(&mut client_fut).is_pending());
-
-        // Let observer server run to stall.
-        pin_mut!(observer_service_task);
-        assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
-
-        // Let stack server run to stall and check that we got an appropriate FIDL call.
-        let event = match exec.run_until_stalled(&mut stack_stream.next()) {
-            Poll::Ready(Some(Ok(req))) => req,
-            _ => panic!("Expected a stack fidl call, but there is none!"),
-        };
-
-        match event {
-            StackRequest::ListInterfaces { responder } => {
-                responder
-                    .send(
-                        &mut vec![build_interface_info(), build_no_match_interface_info()]
-                            .iter_mut(),
-                    )
-                    .expect("failed to send list interface response");
-            }
-            _ => panic!("Unexpected stack call!"),
-        };
-
-        assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
-
-        // Let observer client run until ready, and check that we got an expected response.
-        let (infos, status) = match exec.run_until_stalled(&mut client_fut) {
-            Poll::Ready(Ok(req)) => req,
-            other => panic!("Expected a response from observer fidl call, but got {:?}!", other),
-        };
-        assert_eq!(zx::sys::ZX_OK, status);
-        assert_eq!(vec![expect_interface_info(), expect_interface_info_no_match()], infos.unwrap());
+        assert_eq!(vec![build_interface_info(ID2, NAME2.to_string())], infos);
     }
 
     #[test]
@@ -285,9 +185,9 @@ mod tests {
         };
 
         match event {
-            StackRequest::GetInterfaceInfo { id: _, responder } => {
+            StackRequest::ListInterfaces { responder } => {
                 responder
-                    .send(Some(OutOfLine(&mut build_interface_info())), None)
+                    .send(&mut vec![build_interface_info(ID2, NAME2.to_string())].iter_mut())
                     .expect("failed to send list interface response");
             }
             _ => panic!("Unexpected stack call!"),
@@ -296,16 +196,17 @@ mod tests {
         assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
 
         // Let observer client run until ready, and check that we got an expected response.
-        let response = match exec.run_until_stalled(&mut client_fut) {
+        let (response, status) = match exec.run_until_stalled(&mut client_fut) {
             Poll::Ready(Ok(req)) => req,
             other => panic!("Expected a response from observer fidl call, but got {:?}", other),
         };
-        assert_eq!(expect_interface_info(), *response.0.unwrap());
+        assert_eq!(zx::sys::ZX_OK, status);
+        assert_eq!(build_interface_info(ID2, NAME2.to_string()), *response.unwrap());
     }
 
     #[test]
     fn get_interface_info_not_found_test() {
-        let (mut exec, observer_service_task, observer_proxy, mut _stack_stream) =
+        let (mut exec, observer_service_task, observer_proxy, mut stack_stream) =
             setup_interface_tests();
 
         // Call observer FIDL call.
@@ -319,12 +220,27 @@ mod tests {
         pin_mut!(observer_service_task);
         assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
 
+        // Let stack server run to stall and check that we got an appropriate FIDL call.
+        let event = match exec.run_until_stalled(&mut stack_stream.next()) {
+            Poll::Ready(Some(Ok(req))) => req,
+            _ => panic!("Expected a stack fidl call, but there is none!"),
+        };
+        match event {
+            StackRequest::ListInterfaces { responder } => {
+                responder
+                    .send(&mut vec![build_interface_info(ID2, NAME2.to_string())].iter_mut())
+                    .expect("failed to send list interface response");
+            }
+            _ => panic!("Unexpected stack call: {:?}", event),
+        };
+        assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
+
         // Let observer client run to stall and check that we got an expected response.
-        let response = match exec.run_until_stalled(&mut client_fut) {
+        let (_response, status) = match exec.run_until_stalled(&mut client_fut) {
             Poll::Ready(Ok(req)) => req,
             other => panic!("Expected a response from observer fidl call, but got {:?}", other),
         };
 
-        assert_eq!(zx::Status::NOT_FOUND.into_raw(), response.1);
+        assert_eq!(zx::Status::NOT_FOUND.into_raw(), status);
     }
 }

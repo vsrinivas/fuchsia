@@ -42,7 +42,6 @@ group("fidlext_tests") {
   public_deps = [
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext:fidl_fuchsia_hardware_ethernet_ext_tests",
     "//garnet/lib/rust/fidl_fuchsia_net_ext:fidl_fuchsia_net_ext_tests",
-    "//garnet/lib/rust/fidl_fuchsia_net_policy_ext:fidl_fuchsia_net_policy_ext_tests",
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext:fidl_fuchsia_net_stack_ext_tests",
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext:fidl_fuchsia_netstack_ext_tests",
   ]
