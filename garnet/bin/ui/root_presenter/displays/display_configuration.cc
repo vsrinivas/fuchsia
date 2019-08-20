@@ -6,6 +6,7 @@
 
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/trim.h"
 
 namespace root_presenter {
 namespace display_configuration {
@@ -79,8 +80,9 @@ fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in
   // TODO(SCN-16): Need to have a database of devices and a more robust way
   // of identifying and classifying them.
   {
-    std::string display_usage;
-    if (files::ReadFileToString("/config/data/display_usage", &display_usage)) {
+    std::string raw_display_usage;
+    if (files::ReadFileToString("/config/data/display_usage", &raw_display_usage)) {
+      fxl::StringView display_usage = fxl::TrimString(raw_display_usage, "\n ");
       if (display_usage == "handheld") {
         return fuchsia::ui::policy::DisplayUsage::kHandheld;
       } else if (display_usage == "close") {
