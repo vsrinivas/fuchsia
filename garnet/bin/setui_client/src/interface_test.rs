@@ -13,6 +13,7 @@ use {
     futures::prelude::*,
 };
 
+mod accessibility;
 mod client;
 mod display;
 mod intl;
@@ -20,6 +21,7 @@ mod system;
 
 enum Services {
     SetUi(fidl_fuchsia_setui::SetUiServiceRequestStream),
+    Accessibility(AccessibilityRequestStream),
     Display(DisplayRequestStream),
     System(SystemRequestStream),
     Intl(IntlRequestStream),
@@ -32,13 +34,16 @@ async fn main() -> Result<(), Error> {
     println!("account mutation tests");
     validate_account_mutate(
         "autologinguest".to_string(),
-        fidl_fuchsia_setui::LoginOverride::AutologinGuest
-    ).await?;
-    validate_account_mutate(
-        "auth".to_string(),
-        fidl_fuchsia_setui::LoginOverride::AuthProvider
-    ).await?;
+        fidl_fuchsia_setui::LoginOverride::AutologinGuest,
+    )
+    .await?;
+    validate_account_mutate("auth".to_string(), fidl_fuchsia_setui::LoginOverride::AuthProvider)
+        .await?;
     validate_account_mutate("none".to_string(), fidl_fuchsia_setui::LoginOverride::None).await?;
+
+    println!("accessibility service tests");
+    println!("  client calls set audio_description");
+    validate_accessibility(Some(true)).await?;
 
     println!("display service tests");
     println!("  client calls display watch");
@@ -138,12 +143,8 @@ async fn validate_temperature_unit() -> Result<(), Error> {
     let intl_service =
         env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
 
-    intl::command(
-        intl_service,
-        None,
-        Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
-        vec![]
-    ).await?;
+    intl::command(intl_service, None, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius), vec![])
+        .await?;
 
     Ok(())
 }
@@ -184,6 +185,38 @@ async fn validate_display(
     Ok(())
 }
 
+async fn validate_accessibility(expected_audio_description: Option<bool>) -> Result<(), Error> {
+    let env = create_service!(
+        Services::Accessibility, AccessibilityRequest::Set { settings, responder, } => {
+            if let (Some(audio_description), Some(expected_audio_description_value)) =
+              (settings.audio_description, expected_audio_description) {
+                assert_eq!(audio_description, expected_audio_description_value);
+                responder.send(&mut Ok(()))?;
+            } else {
+                panic!("Unexpected call to set");
+            }
+        },
+        AccessibilityRequest::Watch { responder } => {
+            responder.send(&mut Ok(AccessibilitySettings {
+                audio_description: Some(false),
+                screen_reader: None,
+                color_inversion: None,
+                enable_magnification: None,
+                color_correction: None,
+                captions_settings: None,
+            }))?;
+        }
+    );
+
+    let accessibility_service = env
+        .connect_to_service::<AccessibilityMarker>()
+        .context("Failed to connect to accessibility service")?;
+
+    accessibility::command(accessibility_service, expected_audio_description).await?;
+
+    Ok(())
+}
+
 async fn validate_account_mutate(
     specified_type: String,
     expected_override: fidl_fuchsia_setui::LoginOverride,
@@ -217,40 +250,44 @@ fn serve_check_login_override_mutate(
 ) -> impl Future<Output = ()> {
     stream
         .err_into::<failure::Error>()
-        .try_for_each(move |req| async move {
-            match req {
-                fidl_fuchsia_setui::SetUiServiceRequest::Mutate {
-                    setting_type,
-                    mutation,
-                    responder,
-                } => {
-                    assert_eq!(setting_type, fidl_fuchsia_setui::SettingType::Account);
+        .try_for_each(move |req| {
+            async move {
+                match req {
+                    fidl_fuchsia_setui::SetUiServiceRequest::Mutate {
+                        setting_type,
+                        mutation,
+                        responder,
+                    } => {
+                        assert_eq!(setting_type, fidl_fuchsia_setui::SettingType::Account);
 
-                    match mutation {
-                        fidl_fuchsia_setui::Mutation::AccountMutationValue(account_mutation) => {
-                            if let (Some(login_override), Some(operation)) =
-                                (account_mutation.login_override, account_mutation.operation)
-                            {
-                                assert_eq!(login_override, expected_override);
-                                assert_eq!(
-                                    operation,
-                                    fidl_fuchsia_setui::AccountOperation::SetLoginOverride
-                                );
+                        match mutation {
+                            fidl_fuchsia_setui::Mutation::AccountMutationValue(
+                                account_mutation,
+                            ) => {
+                                if let (Some(login_override), Some(operation)) =
+                                    (account_mutation.login_override, account_mutation.operation)
+                                {
+                                    assert_eq!(login_override, expected_override);
+                                    assert_eq!(
+                                        operation,
+                                        fidl_fuchsia_setui::AccountOperation::SetLoginOverride
+                                    );
+                                }
+                            }
+                            _ => {
+                                panic!("unexpected data for account mutation");
                             }
                         }
-                        _ => {
-                            panic!("unexpected data for account mutation");
-                        }
+                        responder
+                            .send(&mut fidl_fuchsia_setui::MutationResponse {
+                                return_code: fidl_fuchsia_setui::ReturnCode::Ok,
+                            })
+                            .context("sending response")?;
                     }
-                    responder
-                        .send(&mut fidl_fuchsia_setui::MutationResponse {
-                            return_code: fidl_fuchsia_setui::ReturnCode::Ok,
-                        })
-                        .context("sending response")?;
-                }
-                _ => {}
-            };
-            Ok(())
+                    _ => {}
+                };
+                Ok(())
+            }
         })
         .unwrap_or_else(|e: failure::Error| panic!("error running setui server: {:?}", e))
 }

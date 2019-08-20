@@ -9,6 +9,7 @@ use {
     structopt::StructOpt,
 };
 
+mod accessibility;
 mod client;
 mod display;
 mod intl;
@@ -43,6 +44,12 @@ pub enum SettingClient {
     System {
         #[structopt(short = "m", long = "login_mode")]
         login_mode: Option<String>,
+    },
+
+    #[structopt(name = "accessibility")]
+    Accessibility {
+        #[structopt(short = "a", long = "audio_description")]
+        audio_description: Option<bool>,
     },
 
     // Operations that use the new interfaces.
@@ -113,6 +120,13 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                 .context("Failed to connect to intl service")?;
             let output = intl::command(intl_service, time_zone, temperature_unit, locales).await?;
             println!("Intl: {}", output);
+        }
+        SettingClient::Accessibility { audio_description } => {
+            let accessibility_service =
+                connect_to_service::<fidl_fuchsia_settings::AccessibilityMarker>()
+                    .context("Failed to connect to accessibility service")?;
+            let output = accessibility::command(accessibility_service, audio_description).await?;
+            println!("Accessibility: {}", output);
         }
     }
     Ok(())
