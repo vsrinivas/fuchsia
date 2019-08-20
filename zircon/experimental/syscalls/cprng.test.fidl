@@ -10,8 +10,9 @@ library zz;
 
 [Transport="Syscall"]
 protocol Cprng {
-    [Internal]
-    DrawOnce() -> (status status, vector<byte> buffer);
+    [Internal,
+     In0="mutable<vector<byte>>"]
+    DrawOnce(vector<byte> buffer) -> (status status);
 
     /// Draw from the kernel's CPRNG.
     [Vdsocall,

@@ -16,28 +16,32 @@
 #include "rapidjson/document.h"
 #include "src/lib/fxl/macros.h"
 
+class Struct;
 class SyscallLibrary;
 
-class TypeVoid {};
 class TypeBool {};
 class TypeChar {};
-class TypeUint8 {};
-class TypeUint16 {};
 class TypeInt32 {};
-class TypeUint32 {};
 class TypeInt64 {};
-class TypeUint64 {};
 class TypeSizeT {};
-class TypeString {};
+class TypeUint16 {};
+class TypeUint32 {};
+class TypeUint64 {};
+class TypeUint8 {};
+class TypeUintptrT {};
+class TypeVoid {};
+class TypeZxBasicAlias;
 
 class TypeHandle;
-class TypeVector;
 class TypePointer;
-using Type = std::variant<std::monostate, TypeBool, TypeChar, TypeUint8, TypeUint16, TypeInt32,
-                          TypeUint32, TypeInt64, TypeUint64, TypeSizeT, TypeHandle, TypeVector,
-                          TypeString, TypeVoid, TypePointer>;
+class TypeString {};
+class TypeVector;
+using TypeData =
+    std::variant<std::monostate, TypeBool, TypeChar, TypeInt32, TypeInt64, TypeSizeT, TypeUint16,
+                 TypeUint32, TypeUint64, TypeUint8, TypeUintptrT, TypeVoid, TypeZxBasicAlias,
+                 TypeHandle, TypePointer, TypeString, TypeVector>;
 
-Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type);
+class Type;
 
 class TypeHandle {
  public:
@@ -47,17 +51,6 @@ class TypeHandle {
 
  private:
   std::string handle_type_;
-};
-
-class TypeVector {
- public:
-  explicit TypeVector(const Type& contained_type)
-      : contained_type_(std::make_shared<Type>(contained_type)) {}
-
-  const Type& contained_type() const;
-
- private:
-  std::shared_ptr<Type> contained_type_;
 };
 
 class TypePointer {
@@ -71,51 +64,114 @@ class TypePointer {
   std::shared_ptr<Type> pointed_to_type_;
 };
 
+class TypeVector {
+ public:
+  explicit TypeVector(const Type& contained_type)
+      : contained_type_(std::make_shared<Type>(contained_type)) {}
+
+  const Type& contained_type() const;
+
+ private:
+  std::shared_ptr<Type> contained_type_;
+};
+
+class TypeZxBasicAlias {
+ public:
+  explicit TypeZxBasicAlias(const std::string& name) : name_("zx_" + name + "_t") {}
+
+  const std::string& name() const { return name_; }
+
+ private:
+  std::string name_;
+};
+
 inline const Type& TypeVector::contained_type() const { return *contained_type_; }
 inline const Type& TypePointer::pointed_to_type() const { return *pointed_to_type_; }
 
+enum class Constness {
+  kUnspecified,
+  kConst,
+  kMutable,
+};
+
+enum class Optionality {
+  kUnspecified,
+  kInputArgument,
+  kOutputNonOptional,
+  kOutputOptional,
+};
+
+class Type {
+ public:
+  Type() = default;
+  explicit Type(TypeData type_data) : type_data_(std::move(type_data)) {}
+  Type(TypeData type_data, Constness constness)
+      : type_data_(std::move(type_data)), constness_(constness) {}
+  Type(TypeData type_data, Constness constness, Optionality optionality)
+      : type_data_(std::move(type_data)), constness_(constness), optionality_(optionality) {}
+  ~Type() = default;
+
+  const TypeData& type_data() const { return type_data_; }
+  void set_type_data(const TypeData& type_data) { type_data_ = type_data; }
+
+  Optionality optionality() const { return optionality_; }
+  void set_optionality(Optionality optionality) { optionality_ = optionality; }
+
+  Constness constness() const { return constness_; }
+  void set_constness(Constness constness) { constness_ = constness; }
+
+  bool IsChar() const { return std::holds_alternative<TypeChar>(type_data_); }
+  bool IsVoid() const { return std::holds_alternative<TypeVoid>(type_data_); }
+  bool IsVector() const { return std::holds_alternative<TypeVector>(type_data_); }
+  bool IsPointer() const { return std::holds_alternative<TypePointer>(type_data_); }
+  bool IsString() const { return std::holds_alternative<TypeString>(type_data_); }
+
+  const TypeVector& DataAsVector() const { return std::get<TypeVector>(type_data_); }
+
+  bool IsSimpleType() const {
+    return !IsVector() && !IsString(); /* TODO(scottmg): && !IsStruct() */
+  }
+
+ private:
+  TypeData type_data_;
+  Constness constness_{Constness::kUnspecified};
+  Optionality optionality_{Optionality::kUnspecified};
+};
+
 class StructMember {
  public:
-  StructMember() {}
+  StructMember() = default;
   StructMember(const std::string& name, const Type& type) : name_(name), type_(type) {}
-  ~StructMember() {}
+  ~StructMember() = default;
 
   const std::string& name() const { return name_; }
+
   const Type& type() const { return type_; }
-
-  bool optional() const { return optional_; }
-  void set_optional(bool optional) { optional_ = optional; }
-
-  const std::string& handle_use() const { return handle_use_; }
-  void set_handle_use(const std::string& handle_use) { handle_use_ = handle_use; }
-
-  StructMember CopyAsPointerTo() const {
-    StructMember copy = *this;
-    copy.type_ = Type(TypePointer(type_));
-    return copy;
-  }
+  void set_type(const Type& type) { type_ = type; }
 
  private:
   friend class SyscallLibraryLoader;
 
   std::string name_;
-  std::string handle_use_;
   Type type_;
-  bool optional_{false};
 };
 
 class Struct {
  public:
-  Struct() {}
-  ~Struct() {}
+  Struct() = default;
+  ~Struct() = default;
 
+  const std::string& id() const { return id_; }
+  const std::string& original_name() const { return original_name_; }
   const std::string& name() const { return name_; }
   const std::vector<StructMember>& members() const { return members_; }
 
  private:
   friend class SyscallLibraryLoader;
 
-  std::string name_;
+  std::string id_;                  // "zx/HandleInfo"
+  std::string original_name_;       // "HandleInfo"
+  std::string name_;                // "zx_handle_info_t"
   std::vector<StructMember> members_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Struct);
@@ -129,7 +185,7 @@ class Syscall {
   const std::string& short_description() const { return short_description_; }
   const std::map<std::string, std::string>& attributes() const { return attributes_; }
 
-  const std::string& original_interface() const { return original_interface_; }
+  const std::string& id() const { return id_; }
   const std::string& original_name() const { return original_name_; }
   const std::string& category() const { return category_; }
   const std::string& name() const { return name_; }
@@ -139,12 +195,15 @@ class Syscall {
 
   bool HasAttribute(const char* attrib_name) const;
 
-  size_t NumKernelArgs() const;
+  const Type& kernel_return_type() const { return kernel_return_type_; }
+  const std::vector<StructMember>& kernel_arguments() const { return kernel_arguments_; }
+  size_t num_kernel_args() const { return kernel_arguments_.size(); }
 
  private:
   friend class SyscallLibraryLoader;
+  bool MapRequestResponseToKernelAbi();
 
-  std::string original_interface_;  // "zx/Object"
+  std::string id_;                  // "zx/Object"
   std::string original_name_;       // "GetInfo"
   std::string category_;            // "object"
   std::string name_;                // "object_get_info"
@@ -153,6 +212,10 @@ class Syscall {
   std::map<std::string, std::string> attributes_;
   Struct request_;
   Struct response_;
+
+  // request_ and response_ mapped to C/Kernel-style call style.
+  Type kernel_return_type_;
+  std::vector<StructMember> kernel_arguments_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Syscall);
 };
@@ -186,6 +249,8 @@ class SyscallLibraryLoader {
                        bool match_original_order = false);
 
  private:
+  static bool LoadInterfaces(const rapidjson::Document& document, SyscallLibrary* library);
+
   // TODO(syscall-fidl-transition): A temporary measure during transition that
   // maps the possibly-arbitrary order that the syscalls are in in the JSON IR,
   // and puts them into the order they are in in syscalls.abigen. This is useful

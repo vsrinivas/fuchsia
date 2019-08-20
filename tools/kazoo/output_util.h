@@ -17,13 +17,6 @@ bool CopyrightHeaderWithCppComments(Writer* writer);
 // success, or false with an error logged.
 bool CopyrightHeaderWithHashComments(Writer* writer);
 
-// Maps FIDL-style request and response structs (i.e. inputs and outputs) to
-// their expression in C. This means 0 or 1 basic types to be as the native
-// return value, output parameters as pointers after the input parameters, and
-// so on.
-void MapRequestResponseToCAbi(const Struct& request, const Struct& response, Type* return_type,
-                              std::vector<StructMember>* arguments);
-
 // Converts |input| to lowercase, assuming it's entirely ASCII.
 std::string ToLowerAscii(const std::string& input);
 

@@ -17,14 +17,10 @@ bool AsmOutput(const SyscallLibrary& library, Writer* writer) {
       continue;
     }
 
-    Type return_type;
-    std::vector<StructMember> arguments;
-    MapRequestResponseToCAbi(syscall->request(), syscall->response(), &return_type, &arguments);
-
     bool is_private = syscall->HasAttribute("Blocking") || syscall->HasAttribute("Internal") ||
                      syscall->name() == "syscall_test_wrapper";  // This is hardcoded in abigen.
-    writer->Printf("m_syscall zx_%s %zu %zu %d\n", syscall->name().c_str(), i, arguments.size(),
-                   is_private ? 0 : 1);
+    writer->Printf("m_syscall zx_%s %zu %zu %d\n", syscall->name().c_str(), i,
+                   syscall->num_kernel_args(), is_private ? 0 : 1);
     ++i;
   }
 

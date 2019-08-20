@@ -7,6 +7,8 @@
 #include <zircon/compiler.h>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "tools/kazoo/output_util.h"
 
@@ -26,6 +28,12 @@ bool ValidateTransport(const rapidjson::Value& interface) {
   return false;
 }
 
+std::string StripLibraryName(const std::string& full_name) {
+  // "zx/" or "zz/".
+  constexpr size_t kPrefixLen = 3;
+  return full_name.substr(kPrefixLen, full_name.size() - kPrefixLen);
+}
+
 std::string GetCategory(const rapidjson::Value& interface, const std::string& interface_name) {
   if (interface.HasMember("maybe_attributes")) {
     for (const auto& attrib : interface["maybe_attributes"].GetArray()) {
@@ -35,10 +43,7 @@ std::string GetCategory(const rapidjson::Value& interface, const std::string& in
     }
   }
 
-  // "zx/" or "zz/".
-  constexpr size_t kPrefixLen = 3;
-  return ToLowerAscii(
-      interface_name.substr(kPrefixLen, interface_name.size() - kPrefixLen));
+  return ToLowerAscii(StripLibraryName(interface_name));
 }
 
 std::string GetDocAttribute(const rapidjson::Value& method) {
@@ -53,8 +58,6 @@ std::string GetDocAttribute(const rapidjson::Value& method) {
   }
   return std::string();
 }
-
-}  // namespace
 
 Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type) {
   if (!type.HasMember("kind")) {
@@ -77,8 +80,6 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type) {
       return Type(TypeInt64{});
     } else if (subtype == "uint64") {
       return Type(TypeUint64{});
-    } else if (subtype == "usize") {
-      return Type(TypeSizeT{});
     } else if (subtype == "bool") {
       return Type(TypeBool{});
     } else {
@@ -100,26 +101,122 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type) {
   return Type();
 }
 
+}  // namespace
+
 bool Syscall::HasAttribute(const char* attrib_name) const {
   return attributes_.find(attrib_name) != attributes_.end();
 }
 
-size_t Syscall::NumKernelArgs() const {
-  if (is_noreturn()) {
-    return request_.members().size();
+// Converts from FIDL style to C/Kernel style:
+// - string to pointer+size
+// - vector to pointer+size
+// - structs become pointer-to-struct (const on input, mutable on output)
+// - etc.
+bool Syscall::MapRequestResponseToKernelAbi() {
+  FXL_DCHECK(kernel_arguments_.empty());
+
+  // Used for input arguments, which default to const unless alread specified mutable.
+  auto default_to_const = [](Constness constness) {
+    if (constness == Constness::kUnspecified) {
+      return Constness::kConst;
+    }
+    return constness;
+  };
+
+  auto output_optionality =
+      [](Optionality optionality) {
+        // If explicitly made optional then leave it alone, otherwise mark non-optional.
+        if (optionality == Optionality::kOutputOptional) {
+          return optionality;
+        }
+        return Optionality::kOutputNonOptional;
+      };
+
+  // Used for output arguments: can't be explicitly const.
+  auto ensure_mutable = [](Constness constness) {
+    FXL_DCHECK(constness == Constness::kUnspecified || constness == Constness::kMutable);
+    return Constness::kMutable;
+  };
+
+  auto input_vector_and_string_expand = [&default_to_const](
+                                            const StructMember& member,
+                                            std::vector<StructMember>* into) {
+    const Type& type = member.type();
+    if (type.IsVector()) {
+      Type pointer_to_subtype(TypePointer(type.DataAsVector().contained_type()),
+                              default_to_const(type.constness()), Optionality::kInputArgument);
+      into->emplace_back(member.name(), pointer_to_subtype);
+      std::string prefix, suffix;
+      // If it's a char* or void*, blah_size seems more natural, otherwise, num_blahs is moreso.
+      if ((type.DataAsVector().contained_type().IsChar() ||
+           type.DataAsVector().contained_type().IsVoid()) &&
+          (member.name() != "bytes")) {
+        suffix = "_size";
+      } else {
+        prefix = "num_";
+      }
+      into->emplace_back(prefix + member.name() + suffix, Type(TypeSizeT{}));
+    } else if (type.IsString()) {
+      // char*, using the same constness as the string was specified as.
+      into->emplace_back(member.name(),
+                         Type(TypePointer(Type(TypeChar{})), default_to_const(type.constness()),
+                              Optionality::kInputArgument));
+      into->emplace_back(member.name() + "_size", Type(TypeSizeT{}));
+    } else {
+      // Otherwise, just copy it over.
+      into->push_back(member);
+    }
+  };
+
+  std::vector<StructMember> kernel_request;
+  std::vector<StructMember> kernel_response;
+
+  // First, map from FIDL request_/response_ to kernel_request/kernel_response converting string and
+  // vectors. At the same time, make all input parameters const (unless specified to be mutable),
+  // and ensure output parameters are mutable.
+  for (const auto& m : request_.members()) {
+    input_vector_and_string_expand(m, &kernel_request);
+  }
+  for (const auto& m : response_.members()) {
+    // Vector and string outputs are currently disallowed, as it's not clear who'd be allocating
+    // those (this is typically expressed by a mutable input into which the output is stored).
+    FXL_CHECK(!m.type().IsString() && !m.type().IsVector());
+    // Otherwise, copy the response member and ensure it's mutable.
+    kernel_response.emplace_back(m.name(),
+                                 Type(m.type().type_data(), ensure_mutable(m.type().constness()),
+                                      output_optionality(m.type().optionality())));
   }
 
-  // The first return value is passed as the ordinary C return
-  // value, but only if there is at least one return value.
-  size_t ret_values = response_.members().size();
-  if (ret_values > 0) {
-    --ret_values;
+  // Now from these vectors into kernel_arguments_ making pointers to structs as necessary on input
+  // (again, with the correct constness).
+  for (const auto& m : kernel_request) {
+    // TODO(scottmg): Struct stuff here, otherwise copy it over unchanged.
+    kernel_arguments_.push_back(m);
   }
-  return request_.members().size() + ret_values;
+
+  // For output arguments:
+  // - Return type is either void or the actual type (we disallow non-simple returns for now, as
+  // it's not entirely clear if they should be by pointer or value, and this doesn't happen in
+  // current syscalls).
+  // - Otherwise, output parameter T is mapped to (mutable) T*.
+  if (kernel_response.size() == 0) {
+    kernel_return_type_ = Type(TypeVoid{});
+  } else {
+    kernel_return_type_ = kernel_response[0].type();
+    FXL_CHECK(kernel_return_type_.IsSimpleType());
+    for (size_t i = 1; i < kernel_response.size(); ++i) {
+      const StructMember& m = kernel_response[i];
+      kernel_arguments_.emplace_back(
+          m.name(), Type(TypePointer(m.type()), ensure_mutable(m.type().constness()),
+                         output_optionality(m.type().optionality())));
+    }
+  }
+
+  return true;
 }
 
 Type SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
-  // TODO: Load struct, enum, union, usings and return one of them here!
+  // TODO: Load struct, union, usings and return one of them here!
   return Type();
 }
 
@@ -145,6 +242,20 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
 
   FXL_DCHECK(library->syscalls_.empty());
 
+  if (!LoadInterfaces(document, library)) {
+    return false;
+  }
+
+  if (match_original_order && !MakeSyscallOrderMatchOldDeclarationOrder(library)) {
+    return false;
+  }
+
+  return true;
+}
+
+// static
+bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
+                                          SyscallLibrary* library) {
   for (const auto& interface : document["interface_declarations"].GetArray()) {
     if (!ValidateTransport(interface)) {
       FXL_LOG(ERROR) << "Expected Transport to be Syscall.";
@@ -156,7 +267,7 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
 
     for (const auto& method : interface["methods"].GetArray()) {
       auto syscall = std::make_unique<Syscall>();
-      syscall->original_interface_ = interface_name;
+      syscall->id_ = interface_name;
       syscall->original_name_ = method["name"].GetString();
       syscall->category_ = category;
       syscall->name_ =
@@ -172,42 +283,29 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
       FXL_CHECK(method["has_request"].GetBool());  // Events are not expected in syscalls.
 
       auto add_struct_members = [&library](Struct* strukt, const rapidjson::Value& arg) {
-        Type type = TypeFromJson(*library, arg["type"]);
-        if (std::holds_alternative<TypeVector>(type)) {
-          std::string name(arg["name"].GetString());
-          Type subtype(TypePointer(std::get<TypeVector>(type).contained_type()));
-          strukt->members_.emplace_back(name, std::move(subtype));
-          strukt->members_.emplace_back("num_" + name, Type(TypeSizeT{}));
-        } else if (std::holds_alternative<TypeString>(type)) {
-          std::string name(arg["name"].GetString());
-          Type subtype(TypePointer(Type(TypeChar{})));
-          strukt->members_.emplace_back(name, subtype);
-          strukt->members_.emplace_back(name + "_size", Type(TypeSizeT{}));
-        } else {
-          strukt->members_.emplace_back(arg["name"].GetString(), std::move(type));
-        }
+        strukt->members_.emplace_back(arg["name"].GetString(), TypeFromJson(*library, arg["type"]));
       };
 
       Struct& req = syscall->request_;
-      req.name_ = syscall->original_name_ + "#request";
+      req.id_ = syscall->original_name_ + "#request";
       for (const auto& arg : method["maybe_request"].GetArray()) {
         add_struct_members(&req, arg);
       }
 
       if (method["has_response"].GetBool()) {
         Struct& resp = syscall->response_;
-        resp.name_ = syscall->original_name_ + "#response";
+        resp.id_ = syscall->original_name_ + "#response";
         for (const auto& arg : method["maybe_response"].GetArray()) {
           add_struct_members(&resp, arg);
         }
       }
 
+      if (!syscall->MapRequestResponseToKernelAbi()) {
+        return false;
+      }
+
       library->syscalls_.push_back(std::move(syscall));
     }
-  }
-
-  if (match_original_order && !MakeSyscallOrderMatchOldDeclarationOrder(library)) {
-    return false;
   }
 
   return true;

@@ -15,7 +15,7 @@ bool KtraceOutput(const SyscallLibrary& library, Writer* writer) {
     if (syscall->HasAttribute("Vdsocall")) {
       continue;
     }
-    writer->Printf("{%zu, %zu, \"%s\"},\n", i, syscall->NumKernelArgs(), syscall->name().c_str());
+    writer->Printf("{%zu, %zu, \"%s\"},\n", i, syscall->num_kernel_args(), syscall->name().c_str());
     ++i;
   }
 

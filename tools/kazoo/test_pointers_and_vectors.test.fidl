@@ -1,0 +1,14 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zz;
+
+using zx;
+
+[Transport="Syscall"]
+protocol TypeMappings {
+    Func0(vector<byte> bytes, string str) -> (zx.status status);
+    Func1(vector<handle> ins) -> (zx.status status);
+    Func2();
+};

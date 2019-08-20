@@ -88,6 +88,7 @@ if (current_toolchain == host_toolchain) {
       "test_one_protocol_one_method.test.fidl",
       "test_one_protocol_two_methods.test.fidl",
       "test_one_protocol_two_methods_with_internal.test.fidl",
+      "test_pointers_and_vectors.test.fidl",
       "test_various_categories.test.fidl",
     ]
   }

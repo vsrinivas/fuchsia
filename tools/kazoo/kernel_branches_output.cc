@@ -15,7 +15,8 @@ bool KernelBranchesOutput(const SyscallLibrary& library, Writer* writer) {
     if (syscall->HasAttribute("Vdsocall")) {
       continue;
     }
-    writer->Printf("syscall_dispatch %zu %s\n", syscall->NumKernelArgs(), syscall->name().c_str());
+    writer->Printf("syscall_dispatch %zu %s\n", syscall->num_kernel_args(),
+                   syscall->name().c_str());
   }
 
   // TODO(syscall-fidl-transition): Original file has an extra \n, add one here
