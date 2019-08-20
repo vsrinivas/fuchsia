@@ -39,7 +39,7 @@ impl Watchers {
         &mut self,
         scope: ExecutionScope,
         directory: Arc<dyn DirectoryEntryContainer<TraversalPosition>>,
-        existing_event: &mut EventProducer,
+        existing_event: &mut dyn EventProducer,
         mask: u32,
         channel: Channel,
     ) where
@@ -77,7 +77,7 @@ impl Watchers {
     ///
     /// In case of a communication error with any of the watchers, connection to this watcher is
     /// closed.
-    pub fn send_event(&mut self, producer: &mut EventProducer) {
+    pub fn send_event(&mut self, producer: &mut dyn EventProducer) {
         while producer.prepare_for_next_buffer() {
             let mut consumed_any = false;
 
