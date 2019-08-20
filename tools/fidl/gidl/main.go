@@ -28,21 +28,18 @@ import (
 // --language (go|cpp)  language to output
 type GIDLFlags struct {
 	JSONPath *string
-	GIDLPath *string
 	Language *string
 }
 
 // Valid indicates whether the parsed Flags are valid to be used.
-func (flags GIDLFlags) Valid() bool {
-	return len(*flags.JSONPath) != 0 && len(*flags.GIDLPath) != 0
+func (gidlFlags GIDLFlags) Valid() bool {
+	return len(*gidlFlags.JSONPath) != 0 && flag.NArg() != 0
 }
 
 var flags = func() GIDLFlags {
 	return GIDLFlags{
 		JSONPath: flag.String("json", "",
 			"relative path to the FIDL intermediate representation."),
-		GIDLPath: flag.String("gidl", "",
-			"relative path to the GIDL source."),
 		Language: flag.String("language", "", "target language (go/cpp)"),
 	}
 }()
@@ -71,55 +68,6 @@ func parseFidlJSONIr(filename string) fidlir.Root {
 	return result
 }
 
-func filterByBinding(input gidlir.All, binding string) gidlir.All {
-	var output gidlir.All
-	for _, def := range input.Success {
-		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
-			output.Success = append(output.Success, def)
-		}
-	}
-	for _, def := range input.EncodeSuccess {
-		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
-			output.EncodeSuccess = append(output.EncodeSuccess, def)
-		}
-	}
-	for _, def := range input.DecodeSuccess {
-		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
-			output.DecodeSuccess = append(output.DecodeSuccess, def)
-		}
-	}
-	for _, def := range input.EncodeFailure {
-		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
-			output.EncodeFailure = append(output.EncodeFailure, def)
-		}
-	}
-	for _, def := range input.DecodeFailure {
-		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
-			output.DecodeFailure = append(output.DecodeFailure, def)
-		}
-	}
-	return output
-}
-
-func shouldKeep(binding string, allowlist *[]string, denylist *[]string) bool {
-	if denylist != nil {
-		for _, item := range *denylist {
-			if binding == item {
-				return false
-			}
-		}
-	}
-	if allowlist != nil {
-		for _, item := range *allowlist {
-			if binding == item {
-				return true
-			}
-		}
-		return false
-	}
-	return true
-}
-
 func main() {
 	flag.Parse()
 
@@ -128,11 +76,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Parse GIDL and JSON IR.
-	var (
-		gidl = filterByBinding(parseGidlIr(*flags.GIDLPath), *flags.Language)
-		fidl = parseFidlJSONIr(*flags.JSONPath)
-	)
+	fidl := parseFidlJSONIr(*flags.JSONPath)
+
+	var parsedGidlFiles []gidlir.All
+	for _, path := range flag.Args() {
+		parsedGidlFiles = append(parsedGidlFiles, parseGidlIr(path))
+	}
+	gidl := gidlir.FilterByBinding(gidlir.Merge(parsedGidlFiles), *flags.Language)
 
 	// For simplicity, we do not allow FIDL that GIDL depends on to have
 	// dependent libraries. This makes it much simpler to have everything

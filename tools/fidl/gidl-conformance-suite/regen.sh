@@ -40,8 +40,7 @@ fi
 readonly \
     EXAMPLE_DIR="${FUCHSIA_DIR}/tools/fidl/gidl-conformance-suite"
 
-# TODO(FIDL-621): Support multiple .gidl sources.
-readonly GIDL_PATH="${EXAMPLE_DIR}/conformance.gidl"
+readonly GIDL_SRCS=${EXAMPLE_DIR}/*.gidl
 
 readonly \
     GO_IMPL="${FUCHSIA_DIR}/third_party/go/src/syscall/zx/fidl/conformance/impl.go"
@@ -119,14 +118,14 @@ echo "$go_generated_source_header" > "${GO_TEST_PATH}"
 ${GIDL} \
     -language go \
     -json "${json_path}" \
-    -gidl "${GIDL_PATH}" | ${GOFMT} >> "${GO_TEST_PATH}"
+    ${GIDL_SRCS} | ${GOFMT} >> "${GO_TEST_PATH}"
 
 # C++
 echo "$generated_source_header" > "${CPP_TEST_PATH}"
 ${GIDL} \
     -language cpp \
     -json "${json_path}" \
-    -gidl "${GIDL_PATH}" >> "${CPP_TEST_PATH}"
+    ${GIDL_SRCS} >> "${CPP_TEST_PATH}"
 fx format-code --files="$CPP_TEST_PATH"
 
 # Dart
@@ -140,5 +139,5 @@ echo "$generated_source_header" > "${DART_TEST_PATH}"
 ${GIDL} \
     -language dart \
     -json "${json_path}" \
-    -gidl "${GIDL_PATH}" >> "${DART_TEST_PATH}"
+    ${GIDL_SRCS} >> "${DART_TEST_PATH}"
 ${FUCHSIA_DIR}/prebuilt/third_party/dart/linux-x64/bin/dartfmt -w ${DART_TEST_PATH} > /dev/null
