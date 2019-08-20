@@ -87,6 +87,13 @@ config("compiler") {
   # This is the default already on Fuchsia and maybe others, but never hurts.
   cflags = [ "-fno-common" ]
 
+  # Enable the new pass manager.
+  # TODO(35102): Remove `-fexperimental-new-pass-manager` once it is enabled
+  # by default in Clang or our toolchain.
+  if (!is_gcc) {
+    cflags += [ "-fexperimental-new-pass-manager" ]
+  }
+
   configs = [
     ":color_diagnostics",
     # TODO: "$current_os:compiler",

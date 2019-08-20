@@ -28,7 +28,13 @@ if (!is_fuchsia) {
 
 config("compiler") {
   asmflags = []
-  cflags = [ "-fcolor-diagnostics" ]
+
+  # TODO(35102): Remove `-fexperimental-new-pass-manager` once it is enabled
+  # by default in Clang or our toolchain.
+  cflags = [
+    "-fcolor-diagnostics",
+    "-fexperimental-new-pass-manager",
+  ]
   cflags_c = []
   cflags_cc = [ "-fvisibility-inlines-hidden" ]
   cflags_objc = []
