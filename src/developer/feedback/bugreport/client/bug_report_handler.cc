@@ -35,25 +35,6 @@ std::optional<std::string> PrettyPrintJson(const JsonNode& json_node) {
   return std::nullopt;
 }
 
-// Annotations are meant to be joined into a single target.
-template <typename JsonNode>
-std::optional<Target> ParseAnnotations(const JsonNode& annotations) {
-  if (!annotations.IsObject()) {
-    FXL_LOG(ERROR) << "Annotations are not an object.";
-    return std::nullopt;
-  }
-
-  auto contents = PrettyPrintJson(annotations);
-  if (!contents)
-    return std::nullopt;
-
-  Target target;
-  target.name = "annotations.json";
-  target.contents = std::move(*contents);
-
-  return target;
-}
-
 // Each attachment is big enough to warrant its own target.
 template <typename JsonNode>
 std::optional<std::vector<Target>> ParseAttachments(const JsonNode& attachments) {
@@ -158,22 +139,13 @@ std::optional<std::vector<Target>> ProcessBugReport(const std::string& input) {
 
   std::vector<Target> targets;
 
-  // Annotations.
-  if (document.HasMember("annotations")) {
-    auto annotations = ParseAnnotations(document["annotations"]);
-    if (annotations)
-      targets.push_back(std::move(*annotations));
-  }
-
   // Attachments.
-  if (document.HasMember("attachments")) {
-    auto attachments = ParseAttachments(document["attachments"]);
-    if (attachments)
-      targets.insert(targets.end(), attachments->begin(), attachments->end());
-  }
+  auto attachments = ParseAttachments(document);
+  if (attachments)
+    targets.insert(targets.end(), attachments->begin(), attachments->end());
 
   if (targets.empty())
-    FXL_LOG(WARNING) << "No annotations or attachments are present.";
+    FXL_LOG(WARNING) << "No attachments are present.";
   return targets;
 }
 

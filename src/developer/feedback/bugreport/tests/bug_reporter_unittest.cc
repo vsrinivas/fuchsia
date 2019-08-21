@@ -87,24 +87,12 @@ TEST_F(BugReporterTest, Basic) {
   EXPECT_TRUE(document.Accept(validator));
 
   // Content verification.
-  ASSERT_TRUE(document.HasMember("annotations"));
-  ASSERT_TRUE(document["annotations"].HasMember("annotation.1.key"));
-  ASSERT_TRUE(document["annotations"].HasMember("annotation.2.key"));
-  ASSERT_TRUE(document["annotations"].HasMember("annotation.3.key"));
-  ASSERT_TRUE(document["annotations"]["annotation.1.key"].IsString());
-  ASSERT_TRUE(document["annotations"]["annotation.2.key"].IsString());
-  ASSERT_TRUE(document["annotations"]["annotation.3.key"].IsString());
-  EXPECT_STREQ(document["annotations"]["annotation.1.key"].GetString(), "annotation.1.value");
-  EXPECT_STREQ(document["annotations"]["annotation.2.key"].GetString(), "annotation.2.value");
-  EXPECT_STREQ(document["annotations"]["annotation.3.key"].GetString(), "annotation.3.value");
-
-  ASSERT_TRUE(document.HasMember("attachments"));
-  ASSERT_TRUE(document["attachments"].HasMember("attachment.1.key"));
-  ASSERT_TRUE(document["attachments"].HasMember("attachment.2.key"));
-  ASSERT_TRUE(document["attachments"]["attachment.1.key"].IsString());
-  ASSERT_TRUE(document["attachments"]["attachment.2.key"].IsString());
-  EXPECT_STREQ(document["attachments"]["attachment.1.key"].GetString(), "attachment.1.value");
-  EXPECT_STREQ(document["attachments"]["attachment.2.key"].GetString(), "attachment.2.value");
+  ASSERT_TRUE(document.HasMember("attachment.1.key"));
+  ASSERT_TRUE(document.HasMember("attachment.2.key"));
+  ASSERT_TRUE(document["attachment.1.key"].IsString());
+  ASSERT_TRUE(document["attachment.2.key"].IsString());
+  EXPECT_STREQ(document["attachment.1.key"].GetString(), "attachment.1.value");
+  EXPECT_STREQ(document["attachment.2.key"].GetString(), "attachment.2.value");
 }
 
 TEST_F(BugReporterTest, RestrictedAttachments) {
@@ -129,10 +117,9 @@ TEST_F(BugReporterTest, RestrictedAttachments) {
   ASSERT_TRUE(files::ReadFileToString(json_path_, &output));
   rapidjson::Document document;
   ASSERT_FALSE(document.Parse(output.c_str()).HasParseError());
-  ASSERT_TRUE(document.HasMember("attachments"));
-  ASSERT_FALSE(document["attachments"].HasMember("attachment.key.filtered"));
-  ASSERT_TRUE(document["attachments"].HasMember("attachment.key.kept"));
-  ASSERT_FALSE(document["attachments"].HasMember("attachment.key.ignored"));
+  ASSERT_FALSE(document.HasMember("attachment.key.filtered"));
+  ASSERT_TRUE(document.HasMember("attachment.key.kept"));
+  ASSERT_FALSE(document.HasMember("attachment.key.ignored"));
 }
 
 }  // namespace

@@ -9,25 +9,9 @@ namespace bugreport {
 
 constexpr char kBugReportJsonSchema[] = R"({
   "type": "object",
-  "properties": {
-    "annotations": {
-      "type": "object",
-      "additionalProperties" : {
-        "type" : "string"
-      }
-    },
-    "attachments": {
-      "type": "object",
-      "additionalProperties" : {
-        "type" : "string"
-      }
-    }
-  },
-  "required": [
-    "annotations",
-    "attachments"
-  ],
-  "additionalProperties": false
+  "additionalProperties" : {
+    "type" : "string"
+  }
 })";
 
 }  // namespace bugreport

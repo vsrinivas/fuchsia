@@ -22,16 +22,8 @@ std::optional<std::string> ReadWholeFile(const std::filesystem::path& path) {
 
 constexpr char kValidDocument[] = R"(
   {
-    "annotations":
-    {
-      "annotation.1.key": "annotation.1.value",
-      "annotation.2.key": "annotation.2.value"
-    },
-    "attachments":
-    {
-      "attachment.1.key": "{\"embedded\": [\"array\"], \"another\": \"key\"}",
-      "attachment.2.key": "attachment.2.value"
-    }
+    "attachment.1.key": "{\"embedded\": [\"array\"], \"another\": \"key\"}",
+    "attachment.2.key": "attachment.2.value"
   }
 )";
 
@@ -39,73 +31,19 @@ constexpr char kValidDocument[] = R"(
 // during load. This long (valid) document is meant to test that case.
 constexpr char kValidDocumentLongDocument[] = R"(
   {
-    "annotations":
-    {
-      "annotation.1.key": "annotation.1.value",
-      "annotation.2.key": "annotation.2.value"
-    },
-    "attachments":
-    {
       "attachment.1.key": "{\"embedded\": [\"array\"], \"another\": \"key\",\"embedded\": [\"array\"], \"another\": \"key\",\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"}",
-      "attachment.2.key": "attachment.2.value"
-    }
+    "attachment.2.key": "attachment.2.value"
   }
 )";
 
 constexpr char kEmpty[] = R"(
-  {
-    "annotations": { },
-    "attachments": { }
-  }
-)";
-
-constexpr char kMissingAnnotations[] = R"(
-  {
-    "attachments":
-    {
-      "attachment.1.key": "{\"embedded\": [\"json\", \"array\"]}",
-      "attachment.2.key": "attachment.2.value"
-    }
-  }
-)";
-
-constexpr char kMissingAttachments[] = R"(
-  {
-    "annotations":
-    {
-      "annotation.1.key": "annotation.1.value",
-      "annotation.2.key": "annotation.2.value"
-    }
-  }
-)";
-
-constexpr char kWrongAnnotationType[] = R"(
-  {
-    "annotations":
-    {
-      "annotation.1.key": {"not": "string"},
-      "annotation.2.key": "annotation.2.value"
-    },
-    "attachments":
-    {
-      "attachment.1.key": "{\"embedded\": \"json\"}",
-      "attachment.2.key": "attachment.2.value"
-    }
-  }
+  {}
 )";
 
 constexpr char kWrongAttachmentType[] = R"(
   {
-    "annotations":
-    {
-      "annotation.1.key": "annotation.1.value",
-      "annotation.2.key": "annotation.2.value"
-    },
-    "attachments":
-    {
-      "attachment.1.key": {"not": "string"},
-      "attachment.2.key": "attachment.2.value"
-    }
+    "attachment.1.key": {"not": "string"},
+    "attachment.2.key": "attachment.2.value"
   }
 )";
 
@@ -141,17 +79,9 @@ TEST_F(BugReportClientTest, ProcessBugReport_ValidDocument) {
   auto targets = ProcessBugReport(kValidDocument);
   ASSERT_TRUE(targets);
 
-  ASSERT_EQ(targets->size(), 3u);
+  ASSERT_EQ(targets->size(), 2u);
 
-  auto& annotation = targets->at(0);
-  EXPECT_EQ(annotation.name, "annotations.json");
-  EXPECT_EQ(annotation.contents,
-            R"({
-    "annotation.1.key": "annotation.1.value",
-    "annotation.2.key": "annotation.2.value"
-})");
-
-  auto attachment1 = targets->at(1);
+  auto attachment1 = targets->at(0);
   EXPECT_EQ(attachment1.name, "attachment.1.key");
   EXPECT_EQ(attachment1.contents,
             R"({
@@ -161,7 +91,7 @@ TEST_F(BugReportClientTest, ProcessBugReport_ValidDocument) {
     "another": "key"
 })");
 
-  auto attachment2 = targets->at(2);
+  auto attachment2 = targets->at(1);
   EXPECT_EQ(attachment2.name, "attachment.2.key");
   EXPECT_EQ(attachment2.contents, "attachment.2.value");
 }
@@ -169,9 +99,6 @@ TEST_F(BugReportClientTest, ProcessBugReport_ValidDocument) {
 TEST_F(BugReportClientTest, ProcessBugReport_EdgeCases) {
   EXPECT_TRUE(ProcessBugReport(kEmpty));
   EXPECT_FALSE(ProcessBugReport("{{{{"));
-  EXPECT_FALSE(ProcessBugReport(kMissingAnnotations));
-  EXPECT_FALSE(ProcessBugReport(kMissingAttachments));
-  EXPECT_FALSE(ProcessBugReport(kWrongAnnotationType));
   EXPECT_FALSE(ProcessBugReport(kWrongAttachmentType));
 }
 
@@ -180,7 +107,7 @@ TEST_F(BugReportClientTest, Export) {
 
   auto targets = ProcessBugReport(kValidDocument);
   ASSERT_TRUE(targets);
-  ASSERT_EQ(targets->size(), 3u);
+  ASSERT_EQ(targets->size(), 2u);
 
   targets_ = std::move(*targets);
 
@@ -202,13 +129,6 @@ TEST_F(BugReportClientTest, Export) {
   } else {
     EXPECT_EQ(*contents, targets_.at(1).contents);
   }
-
-  contents = ReadWholeFile(base_path_ / targets_.at(2).name);
-  if (!contents) {
-    ADD_FAILURE() << "Error for: " << targets_.at(2).name;
-  } else {
-    EXPECT_EQ(*contents, targets_.at(2).contents);
-  }
 }
 
 TEST_F(BugReportClientTest, HandleBugReport_ValidDocument) {
@@ -217,6 +137,7 @@ TEST_F(BugReportClientTest, HandleBugReport_ValidDocument) {
   std::istringstream iss(kValidDocument);
   auto targets = HandleBugReport(base_path_, &iss);
   ASSERT_TRUE(targets);
+  ASSERT_EQ(targets->size(), 2u);
   targets_ = std::move(*targets);
 
   // Verify.
@@ -234,13 +155,6 @@ TEST_F(BugReportClientTest, HandleBugReport_ValidDocument) {
     ADD_FAILURE() << "Error for: " << targets_.at(1).name;
   } else {
     EXPECT_EQ(*contents, targets_.at(1).contents);
-  }
-
-  contents = ReadWholeFile(base_path_ / targets_.at(2).name);
-  if (!contents) {
-    ADD_FAILURE() << "Error for: " << targets_.at(2).name;
-  } else {
-    EXPECT_EQ(*contents, targets_.at(2).contents);
   }
 }
 
@@ -250,6 +164,7 @@ TEST_F(BugReportClientTest, HandleBugReport_LongDocument) {
   std::istringstream iss(kValidDocumentLongDocument);
   auto targets = HandleBugReport(base_path_, &iss);
   ASSERT_TRUE(targets);
+  ASSERT_EQ(targets->size(), 2u);
   targets_ = std::move(*targets);
 
   // Verify.
@@ -267,13 +182,6 @@ TEST_F(BugReportClientTest, HandleBugReport_LongDocument) {
     ADD_FAILURE() << "Error for: " << targets_.at(1).name;
   } else {
     EXPECT_EQ(*contents, targets_.at(1).contents);
-  }
-
-  contents = ReadWholeFile(base_path_ / targets_.at(2).name);
-  if (!contents) {
-    ADD_FAILURE() << "Error for: " << targets_.at(2).name;
-  } else {
-    EXPECT_EQ(*contents, targets_.at(2).contents);
   }
 }
 

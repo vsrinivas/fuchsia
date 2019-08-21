@@ -12,8 +12,8 @@ namespace {
 
 constexpr char kUsage[] = R"($0
 
-    Dumps in stdout a JSON file containing the feedback data (annotations and
-    attachments) collected from fuchsia.feedback.DataProvider.
+    Dumps in stdout a JSON file containing all the feedback data collected from
+    fuchsia.feedback.DataProvider.
 
 Usage:
 
@@ -21,8 +21,8 @@ Usage:
 
 Arguments:
 
-    --minimal    Restricts the attachments to the Inspect data only (no logs,
-                 no build snapshot, etc.). Annotations are preserved.
+    --minimal    Restricts the output to the annotations and the Inspect data
+                 only (no logs, no build snapshot, etc.).
 
 )";
 

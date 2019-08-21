@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     case Mode::HELP:
       return EXIT_SUCCESS;
     case Mode::MINIMAL:
-      attachment_allowlist = {"inspect.json"};
+      attachment_allowlist = {"annotations.json", "inspect.json"};
     case Mode::DEFAULT:
       auto environment_services = ::sys::ServiceDirectory::CreateFromNamespace();
 

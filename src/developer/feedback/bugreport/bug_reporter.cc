@@ -20,20 +20,10 @@ namespace fuchsia {
 namespace bugreport {
 namespace {
 
-void AddAnnotations(const std::vector<fuchsia::feedback::Annotation>& annotations,
-                    rapidjson::Document* document) {
-  rapidjson::Value json_annotations(rapidjson::kObjectType);
-  for (const auto& annotation : annotations) {
-    json_annotations.AddMember(rapidjson::StringRef(annotation.key), annotation.value,
-                               document->GetAllocator());
-  }
-  document->AddMember("annotations", json_annotations, document->GetAllocator());
-}
-
-void AddAttachments(const std::vector<fuchsia::feedback::Attachment>& attachments,
-                    const std::set<std::string>& attachment_allowlist,
-                    rapidjson::Document* document) {
-  rapidjson::Value json_attachments(rapidjson::kObjectType);
+rapidjson::Document MakeJson(const std::vector<fuchsia::feedback::Attachment>& attachments,
+                             const std::set<std::string>& attachment_allowlist) {
+  rapidjson::Document json;
+  json.SetObject();
   for (const auto& attachment : attachments) {
     if (!attachment_allowlist.empty() &&
         attachment_allowlist.find(attachment.key) == attachment_allowlist.end()) {
@@ -46,23 +36,19 @@ void AddAttachments(const std::vector<fuchsia::feedback::Attachment>& attachment
               attachment.key.c_str());
       continue;
     }
-    json_attachments.AddMember(rapidjson::StringRef(attachment.key), value,
-                               document->GetAllocator());
+    json.AddMember(rapidjson::StringRef(attachment.key), value, json.GetAllocator());
   }
-  document->AddMember("attachments", json_attachments, document->GetAllocator());
+  return json;
 }
 
 bool MakeAndWriteJson(const fuchsia::feedback::Data& feedback_data,
                       const std::set<std::string>& attachment_allowlist, FILE* out_file) {
-  rapidjson::Document document;
-  document.SetObject();
-  AddAnnotations(feedback_data.annotations(), &document);
-  AddAttachments(feedback_data.attachments(), attachment_allowlist, &document);
+  rapidjson::Document json = MakeJson(feedback_data.attachments(), attachment_allowlist);
 
   char buffer[65536];
   rapidjson::FileWriteStream output_stream(out_file, buffer, sizeof(buffer));
   rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(output_stream);
-  document.Accept(writer);
+  json.Accept(writer);
   if (!writer.IsComplete()) {
     fprintf(stderr, "Failed to write JSON\n");
     return false;
