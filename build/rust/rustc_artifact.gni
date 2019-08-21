@@ -20,7 +20,7 @@ import("//build/testing/test_spec.gni")
 #     consistency with other target types. This file should NOT have been
 #     copied prior to this target, or we may waste space.
 #
-#    outputs
+#   outputs
 #     Required: A single destination to copy the file to. This is only a list
 #     for consistency with other target types.
 #
@@ -66,7 +66,9 @@ template("copy_with_build_id") {
       sources = srcs
       outputs = outs
       args = [
-        "--strip-all",
+        # TODO(tmandry): If we start producing .so's,
+        # we need to use --strip-all here for them.
+        "--strip-sections",
         rebase_path(srcs[0]),
         rebase_path(outs[0]),
       ]
