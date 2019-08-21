@@ -38,6 +38,7 @@ class FullscreenStory extends StatelessWidget {
                     return TileChrome(
                       name: story.name,
                       focused: story.focused,
+                      fullscreen: true,
                       editing: story.editStateNotifier.value &&
                           story.useInProcessStoryShell,
                       child: story.useInProcessStoryShell
@@ -51,6 +52,7 @@ class FullscreenStory extends StatelessWidget {
                             ),
                       onDelete: story.delete,
                       onMinimize: story.restore,
+                      onFullscreen: story.maximize,
                       onEdit: story.edit,
                       onCancelEdit: () => confirmEditNotifier.value = false,
                       onConfirmEdit: () => confirmEditNotifier.value = true,

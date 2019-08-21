@@ -4,7 +4,6 @@
 
 import 'package:flutter/material.dart';
 
-import '../../utils/elevations.dart';
 import '../../utils/styles.dart';
 
 /// Defines a widget that builds the tile chrome for a story.
@@ -59,7 +58,7 @@ class TileChrome extends StatelessWidget {
           // Border.
           Positioned.fill(
             child: Container(
-              padding: showTitle && !fullscreen
+              padding: showTitle
                   ? EdgeInsets.only(
                       top: ErmineStyle.kStoryTitleHeight,
                       left: ErmineStyle.kBorderWidth,
@@ -80,15 +79,7 @@ class TileChrome extends StatelessWidget {
             top: 0,
             right: 0,
             height: ErmineStyle.kStoryTitleHeight,
-            child: showTitle
-                ? fullscreen // Display title bar on top of story.
-                    ? Material(
-                        elevation: elevations.systemOverlayElevation,
-                        color: ErmineStyle.kStoryTitleBackgroundColor,
-                        child: _buildTitlebar(context),
-                      )
-                    : _buildTitlebar(context)
-                : Offstage(),
+            child: showTitle ? _buildTitlebar(context) : Offstage(),
           )
         ],
       ),
@@ -119,8 +110,7 @@ class TileChrome extends StatelessWidget {
 
           // Minimize button.
           if (!editing && focused)
-            _buildIconButton(
-                context, false, fullscreen ? onMinimize : onDelete),
+            _buildIconButton(maximize: false, onTap: onDelete),
 
           // Cancel edit button.
           if (editing)
@@ -136,7 +126,10 @@ class TileChrome extends StatelessWidget {
 
           // Maximize button.
           if (!editing && focused)
-            _buildIconButton(context, true, onFullscreen),
+            _buildIconButton(
+              maximize: true,
+              onTap: fullscreen ? onMinimize : onFullscreen,
+            ),
 
           // Done edit button.
           if (editing)
@@ -171,18 +164,23 @@ class TileChrome extends StatelessWidget {
         ),
       );
 
-  Widget _buildIconButton(
-    BuildContext context,
+  Widget _buildIconButton({
     bool maximize,
     VoidCallback onTap,
-  ) =>
+  }) =>
       GestureDetector(
         child: Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: ErmineStyle.kStoryTitleColor,
-            shape: maximize ? BoxShape.rectangle : BoxShape.circle,
+          width: ErmineStyle.kStoryTitleHeight,
+          height: ErmineStyle.kStoryTitleHeight,
+          color: ErmineStyle.kStoryTitleBackgroundColor,
+          alignment: maximize ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: ErmineStyle.kStoryTitleColor,
+              shape: maximize ? BoxShape.rectangle : BoxShape.circle,
+            ),
           ),
         ),
         onTap: onTap?.call,

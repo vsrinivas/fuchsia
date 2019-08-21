@@ -19,9 +19,11 @@ class KeyboardHelp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double bottom() => model.isFullscreen
-        ? MediaQuery.of(context).size.height
-        : model.topbarModel.keyboardButtonRect.bottom;
+    double bottom() => !model.isFullscreen || model.peekNotifier.value
+        ? model.topbarModel.keyboardButtonRect.bottom
+        : MediaQuery.of(context).size.height -
+            ErmineStyle.kTopBarHeight -
+            ErmineStyle.kStoryTitleHeight;
     return Stack(
       children: <Widget>[
         AnimatedBuilder(
@@ -45,8 +47,8 @@ class KeyboardHelp extends StatelessWidget {
                             width: ErmineStyle.kOverlayBorderWidth,
                           )),
                           padding: EdgeInsets.all(16),
-                          width: 300,
-                          height: 400,
+                          width: 400,
+                          height: 500,
                           child: SingleChildScrollView(
                             child: Text(
                               model.keyboardShortcuts,

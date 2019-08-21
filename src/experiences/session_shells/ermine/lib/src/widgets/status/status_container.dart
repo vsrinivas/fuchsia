@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/app_model.dart';
+import '../../utils/styles.dart';
 import '../support/animation_driver.dart';
 import 'status.dart';
 
@@ -18,9 +19,11 @@ class StatusContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double bottom() => model.isFullscreen
-        ? MediaQuery.of(context).size.height
-        : model.topbarModel.statusButtonRect.bottom;
+    double bottom() => !model.isFullscreen || model.peekNotifier.value
+        ? model.topbarModel.statusButtonRect.bottom
+        : MediaQuery.of(context).size.height -
+            ErmineStyle.kTopBarHeight -
+            ErmineStyle.kStoryTitleHeight;
     return Stack(
       children: <Widget>[
         AnimatedBuilder(
