@@ -1,0 +1,6 @@
+{
+  "tests": [
+    "fuchsia-pkg://fuchsia.com/example-tests#meta/passing-test-example.cmx",
+    "fuchsia-pkg://fuchsia.com/example-tests#meta/failing-test-example.cmx"
+  ]
+}

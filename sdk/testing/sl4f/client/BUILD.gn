@@ -25,6 +25,7 @@ dart_library("client") {
     "src/sl4f_client.dart",
     "src/ssh.dart",
     "src/storage.dart",
+    "src/test.dart",
     "src/webdriver.dart",
   ]
 
@@ -50,6 +51,7 @@ dart_test("sl4f_client_tests") {
     "sl4f_client_test.dart",
     "ssh_test.dart",
     "storage_test.dart",
+    "test_test.dart",
     "webdriver_test.dart",
   ]
 

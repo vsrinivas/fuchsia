@@ -1494,6 +1494,10 @@
           "name": "src/storage.dart",
           "type": "ExportDirectiveImpl"
         },
+        "src/test.dart": {
+          "name": "src/test.dart",
+          "type": "ExportDirectiveImpl"
+        },
         "src/webdriver.dart": {
           "name": "src/webdriver.dart",
           "type": "ExportDirectiveImpl"
@@ -2258,6 +2262,194 @@
         }
       },
       "name": "storage.dart",
+      "type": "file"
+    },
+    "test.dart": {
+      "ClassDeclarationImpl": {
+        "Test": {
+          "ConstructorDeclarationImpl": {
+            "Test": {
+              "SimpleFormalParameterImpl": {
+                "sl4f": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "sl4f",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Sl4f"
+                }
+              },
+              "name": "Test",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "runTest": {
+              "SimpleFormalParameterImpl": {
+                "test": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "test",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "runTest",
+              "returnType": "Future<TestResult>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Test",
+          "type": "ClassDeclarationImpl"
+        },
+        "TestResult": {
+          "MethodDeclarationImpl": {
+            "toJson": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toJson",
+              "returnType": "dynamic",
+              "type": "MethodDeclarationImpl"
+            },
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "duration_ms": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "duration_ms",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
+            "outcome": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "outcome",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "primary_log_path": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "primary_log_path",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "steps": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "steps",
+              "type": "VariableDeclarationImpl",
+              "varType": "List<TestStep>"
+            }
+          },
+          "name": "TestResult",
+          "type": "ClassDeclarationImpl"
+        },
+        "TestStep": {
+          "MethodDeclarationImpl": {
+            "toJson": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toJson",
+              "returnType": "dynamic",
+              "type": "MethodDeclarationImpl"
+            },
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "artifacts": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "artifacts",
+              "type": "VariableDeclarationImpl",
+              "varType": "Map<String, String>"
+            },
+            "duration_ms": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "duration_ms",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
+            "name": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "name",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "outcome": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "outcome",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "primary_log_path": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "primary_log_path",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            }
+          },
+          "name": "TestStep",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "test.dart",
       "type": "file"
     },
     "webdriver.dart": {
