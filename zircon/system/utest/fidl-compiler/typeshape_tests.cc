@@ -124,32 +124,32 @@ struct EmptyWithOtherThings {
                                                                  }));
   ASSERT_EQ(empty_with_other_things->members.size(), 8);
   // bool a;
-  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[0].fieldshape, ExpectedField{}));
+  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[0].fieldshape(), ExpectedField{}));
   // Empty b;
-  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[1].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[1].fieldshape(), ExpectedField{
                                                                                   .offset = 1,
                                                                               }));
   // int16 c;
-  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[2].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[2].fieldshape(), ExpectedField{
                                                                                   .offset = 2,
                                                                               }));
   // Empty d;
-  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[3].fieldshape,
+  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[3].fieldshape(),
                               ExpectedField{.offset = 4, .padding = 3}));
   // int32 e;
-  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[4].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[4].fieldshape(), ExpectedField{
                                                                                   .offset = 8,
                                                                               }));
   // int16 f;
-  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[5].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[5].fieldshape(), ExpectedField{
                                                                                   .offset = 12,
                                                                               }));
   // Empty g;
-  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[6].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[6].fieldshape(), ExpectedField{
                                                                                   .offset = 14,
                                                                               }));
   // Empty h;
-  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[7].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(empty_with_other_things->members[7].fieldshape(), ExpectedField{
                                                                                   .offset = 15,
                                                                               }));
 
@@ -190,7 +190,7 @@ struct BoolAndU64 {
                                                       .alignment = 1,
                                                   }));
   ASSERT_EQ(one_bool->members.size(), 1);
-  EXPECT_TRUE(CheckFieldShape(one_bool->members[0].fieldshape, ExpectedField{}));
+  EXPECT_TRUE(CheckFieldShape(one_bool->members[0].fieldshape(), ExpectedField{}));
 
   auto two_bools = test_library.LookupStruct("TwoBools");
   ASSERT_NONNULL(two_bools);
@@ -199,8 +199,8 @@ struct BoolAndU64 {
                                                        .alignment = 1,
                                                    }));
   ASSERT_EQ(two_bools->members.size(), 2);
-  EXPECT_TRUE(CheckFieldShape(two_bools->members[0].fieldshape, ExpectedField{}));
-  EXPECT_TRUE(CheckFieldShape(two_bools->members[1].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(two_bools->members[0].fieldshape(), ExpectedField{}));
+  EXPECT_TRUE(CheckFieldShape(two_bools->members[1].fieldshape(), ExpectedField{
                                                                     .offset = 1,
                                                                 }));
 
@@ -212,8 +212,8 @@ struct BoolAndU64 {
                                                           .has_padding = true,
                                                       }));
   ASSERT_EQ(bool_and_u32->members.size(), 2);
-  EXPECT_TRUE(CheckFieldShape(bool_and_u32->members[0].fieldshape, ExpectedField{.padding = 3}));
-  EXPECT_TRUE(CheckFieldShape(bool_and_u32->members[1].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(bool_and_u32->members[0].fieldshape(), ExpectedField{.padding = 3}));
+  EXPECT_TRUE(CheckFieldShape(bool_and_u32->members[1].fieldshape(), ExpectedField{
                                                                        .offset = 4,
                                                                    }));
 
@@ -225,8 +225,8 @@ struct BoolAndU64 {
                                                           .has_padding = true,
                                                       }));
   ASSERT_EQ(bool_and_u64->members.size(), 2);
-  EXPECT_TRUE(CheckFieldShape(bool_and_u64->members[0].fieldshape, ExpectedField{.padding = 7}));
-  EXPECT_TRUE(CheckFieldShape(bool_and_u64->members[1].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(bool_and_u64->members[0].fieldshape(), ExpectedField{.padding = 7}));
+  EXPECT_TRUE(CheckFieldShape(bool_and_u64->members[1].fieldshape(), ExpectedField{
                                                                        .offset = 8,
                                                                    }));
 
@@ -265,7 +265,7 @@ struct ThreeHandlesOneOptional {
                                                         .max_handles = 1,
                                                     }));
   ASSERT_EQ(one_handle->members.size(), 1);
-  EXPECT_TRUE(CheckFieldShape(one_handle->members[0].fieldshape, ExpectedField{}));
+  EXPECT_TRUE(CheckFieldShape(one_handle->members[0].fieldshape(), ExpectedField{}));
 
   auto two_handles = test_library.LookupStruct("TwoHandles");
   ASSERT_NONNULL(two_handles);
@@ -275,8 +275,8 @@ struct ThreeHandlesOneOptional {
                                                          .max_handles = 2,
                                                      }));
   ASSERT_EQ(two_handles->members.size(), 2);
-  EXPECT_TRUE(CheckFieldShape(two_handles->members[0].fieldshape, ExpectedField{}));
-  EXPECT_TRUE(CheckFieldShape(two_handles->members[1].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(two_handles->members[0].fieldshape(), ExpectedField{}));
+  EXPECT_TRUE(CheckFieldShape(two_handles->members[1].fieldshape(), ExpectedField{
                                                                       .offset = 4,
                                                                   }));
 
@@ -288,11 +288,11 @@ struct ThreeHandlesOneOptional {
                                                                         .max_handles = 3,
                                                                     }));
   ASSERT_EQ(three_handles_one_optional->members.size(), 3);
-  EXPECT_TRUE(CheckFieldShape(three_handles_one_optional->members[0].fieldshape, ExpectedField{}));
-  EXPECT_TRUE(CheckFieldShape(three_handles_one_optional->members[1].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(three_handles_one_optional->members[0].fieldshape(), ExpectedField{}));
+  EXPECT_TRUE(CheckFieldShape(three_handles_one_optional->members[1].fieldshape(), ExpectedField{
                                                                                      .offset = 4,
                                                                                  }));
-  EXPECT_TRUE(CheckFieldShape(three_handles_one_optional->members[2].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(three_handles_one_optional->members[2].fieldshape(), ExpectedField{
                                                                                      .offset = 8,
                                                                                  }));
 
@@ -715,12 +715,12 @@ table TableWithOptionalUnion {
                                                  }));
   ASSERT_EQ(a_union->members.size(), 2);
   EXPECT_TRUE(
-      CheckFieldShape(a_union->members[0].fieldshape,
+      CheckFieldShape(a_union->members[0].fieldshape(),
                       ExpectedField{
                           .offset = 8,
                           .padding = 15  // The other variant, |BoolAndU64|, has a size of 16 bytes.
                       }));
-  EXPECT_TRUE(CheckFieldShape(a_union->members[1].fieldshape,
+  EXPECT_TRUE(CheckFieldShape(a_union->members[1].fieldshape(),
                               ExpectedField{
                                   .offset = 8,
                                   .padding = 0  // This is the biggest variant.
@@ -781,17 +781,17 @@ union ManyHandleUnion {
                                                               .has_padding = true,
                                                           }));
   ASSERT_EQ(one_handle_union->members.size(), 3);
-  EXPECT_TRUE(CheckFieldShape(one_handle_union->members[0].fieldshape,
+  EXPECT_TRUE(CheckFieldShape(one_handle_union->members[0].fieldshape(),
                               ExpectedField{
                                   .offset = 4,
                                   .padding = 0  // This is the biggest variant.
                               }));
-  EXPECT_TRUE(CheckFieldShape(one_handle_union->members[1].fieldshape,
+  EXPECT_TRUE(CheckFieldShape(one_handle_union->members[1].fieldshape(),
                               ExpectedField{
                                   .offset = 4,
                                   .padding = 3  // The other variants all have size of 4.
                               }));
-  EXPECT_TRUE(CheckFieldShape(one_handle_union->members[2].fieldshape,
+  EXPECT_TRUE(CheckFieldShape(one_handle_union->members[2].fieldshape(),
                               ExpectedField{
                                   .offset = 4,
                                   .padding = 0  // This is the biggest variant.
@@ -809,18 +809,18 @@ union ManyHandleUnion {
                                                            }));
   ASSERT_EQ(many_handle_union->members.size(), 3);
   EXPECT_TRUE(CheckFieldShape(
-      many_handle_union->members[0].fieldshape,
+      many_handle_union->members[0].fieldshape(),
       ExpectedField{
           .offset = 8,
           .padding = 28  // The biggest variant, |array<handle>:8|, has a size of 32.
       }));
-  EXPECT_TRUE(CheckFieldShape(many_handle_union->members[1].fieldshape,
+  EXPECT_TRUE(CheckFieldShape(many_handle_union->members[1].fieldshape(),
                               ExpectedField{
                                   .offset = 8,
                                   .padding = 0  // This is the biggest variant.
                               }));
   EXPECT_TRUE(CheckFieldShape(
-      many_handle_union->members[2].fieldshape,
+      many_handle_union->members[2].fieldshape(),
       ExpectedField{
           .offset = 8,
           .padding = 16  // This biggest variant, |array<handle>:8|, has a size of 32.
@@ -1356,7 +1356,7 @@ xunion XUnionWithoutPayloadPadding {
                                                       .has_flexible_envelope = true,
                                                   }));
   ASSERT_EQ(one_bool->members.size(), 1);
-  EXPECT_TRUE(CheckFieldShape(one_bool->members[0].fieldshape, ExpectedField{.padding = 7}));
+  EXPECT_TRUE(CheckFieldShape(one_bool->members[0].fieldshape(), ExpectedField{.padding = 7}));
 
   auto opt_one_bool = test_library.LookupStruct("StructWithOptionalXUnionWithOneBool");
   ASSERT_NONNULL(opt_one_bool);
@@ -1705,7 +1705,7 @@ protocol MessagePort {
                                                          .max_handles = 1,
                                                      }));
   ASSERT_EQ(web_message->members.size(), 1);
-  EXPECT_TRUE(CheckFieldShape(web_message->members[0].fieldshape, ExpectedField{}));
+  EXPECT_TRUE(CheckFieldShape(web_message->members[0].fieldshape(), ExpectedField{}));
 
   auto message_port = library.LookupProtocol("MessagePort");
   ASSERT_NONNULL(message_port);
@@ -1720,7 +1720,7 @@ protocol MessagePort {
                                                                   .has_padding = true,
                                                               }));
   ASSERT_EQ(post_message_request->members.size(), 1);
-  EXPECT_TRUE(CheckFieldShape(post_message_request->members[0].fieldshape,
+  EXPECT_TRUE(CheckFieldShape(post_message_request->members[0].fieldshape(),
                               ExpectedField{.offset = 16, .padding = 4}));
 
   END_TEST;
@@ -1872,7 +1872,7 @@ struct TheStruct {
                          .depth = std::numeric_limits<uint32_t>::max(),
                      }));
   ASSERT_EQ(the_struct->members.size(), 1);
-  EXPECT_TRUE(CheckFieldShape(the_struct->members[0].fieldshape, ExpectedField{}));
+  EXPECT_TRUE(CheckFieldShape(the_struct->members[0].fieldshape(), ExpectedField{}));
 
   END_TEST;
 }
@@ -1902,10 +1902,10 @@ struct TheStruct {
                .depth = std::numeric_limits<uint32_t>::max(),
                .has_padding = true}));
   ASSERT_EQ(the_struct->members.size(), 2);
-  EXPECT_TRUE(CheckFieldShape(the_struct->members[0].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(the_struct->members[0].fieldshape(), ExpectedField{
                                                                      .padding = 4,
                                                                  }));
-  EXPECT_TRUE(CheckFieldShape(the_struct->members[1].fieldshape, ExpectedField{
+  EXPECT_TRUE(CheckFieldShape(the_struct->members[1].fieldshape(), ExpectedField{
                                                                      .offset = 8,
                                                                  }));
 

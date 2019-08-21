@@ -353,11 +353,11 @@
                     }
                 },
                 "maybe_request_size": {
-                    "description": "Size of interface method request parameters, if any present",
+                    "description": "Size of the method's transactional message (header and optional payload), if one is present",
                     "$ref": "#/definitions/count"
                 },
                 "maybe_request_alignment": {
-                    "description": "Alignment of interface method request parameters, if any present",
+                    "description": "Alignment of the method's transactional message (header and optional payload), if one is present",
                     "$ref": "#/definitions/count"
                 },
                 "maybe_request_has_padding": {

@@ -135,6 +135,19 @@ class FieldShape {
   uint32_t padding_;
 };
 
+// An object that has a FieldShape is a FieldShapeContainer. See the documentation above on
+// |TypeShapeContainer| for more details; this is the same thing, for FieldShape.
+class FieldShapeContainer {
+ public:
+  virtual const FieldShape& fieldshape() const { return fieldshape_; }
+  virtual FieldShape& mutable_fieldshape() { return fieldshape_; }
+
+  virtual ~FieldShapeContainer() = default;
+
+ private:
+  mutable FieldShape fieldshape_;
+};
+
 constexpr uint32_t kMessageAlign = 8u;
 
 uint32_t AlignTo(uint64_t size, uint64_t alignment);

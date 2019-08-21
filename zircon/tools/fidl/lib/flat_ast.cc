@@ -193,11 +193,6 @@ TypeShape Union::Shape(std::vector<FieldShape*>* fields) {
   return TypeShape(builder);
 }
 
-TypeShape FidlMessageTypeShape(std::vector<FieldShape*>* fields) {
-  auto struct_shape = Struct::Shape(fields);
-  return AlignTypeshape(struct_shape, fields, kMessageAlign);
-}
-
 TypeShape PointerTypeShape(const TypeShape& element, uint32_t max_element_count = 1u) {
   // Because FIDL supports recursive data structures, we might not have
   // computed the TypeShape for the element we're pointing to. In that case,
@@ -267,7 +262,8 @@ TypeShape Table::Shape(std::vector<TypeShape*>* fields, types::Strictness strict
   return Struct::Shape(&header, extra_handles);
 }
 
-TypeShape XUnion::Shape(std::vector<FieldShape*>* fields, types::Strictness strictness,
+TypeShape XUnion::Shape(std::vector<FieldShape*>* fields,
+                        types::Strictness strictness,
                         uint32_t extra_handles) {
   TypeShapeBuilder builder{.inline_size = 24, .alignment = 8};
   for (auto& field : *fields) {
@@ -889,7 +885,7 @@ bool SimpleLayoutConstraint(ErrorReporter* error_reporter, const raw::Attribute&
   auto struct_decl = static_cast<const Struct*>(decl);
   bool ok = true;
   for (const auto& member : struct_decl->members) {
-    if (!IsSimple(member.type_ctor.get()->type, member.fieldshape)) {
+    if (!IsSimple(member.type_ctor.get()->type, member.fieldshape())) {
       std::string message("member '");
       message.append(member.name.data());
       message.append("' is not simple");
@@ -3133,7 +3129,7 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       for (auto& param : message->members) {
         if (!scope.Insert(param.name.data(), param.name).ok())
           return Fail(param.name, "Multiple parameters with the same name in a method");
-        if (!CompileTypeConstructor(param.type_ctor.get(), &param.fieldshape.Typeshape()))
+        if (!CompileTypeConstructor(param.type_ctor.get(), &param.mutable_fieldshape().Typeshape()))
           return false;
       }
       return true;
@@ -3181,7 +3177,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
     if (!name_result.ok())
       return Fail(member.name, "Multiple struct fields with the same name; previous was at " +
                                    name_result.previous_occurrence().position_str());
-    if (!CompileTypeConstructor(member.type_ctor.get(), &member.fieldshape.Typeshape()))
+    if (!CompileTypeConstructor(member.type_ctor.get(), &member.mutable_fieldshape().Typeshape()))
       return false;
     if (member.maybe_default_value) {
       const auto* default_value_type = member.type_ctor.get()->type;
@@ -3195,7 +3191,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
         return false;
       }
     }
-    fidl_struct.push_back(&member.fieldshape);
+    fidl_struct.push_back(&member.mutable_fieldshape());
   }
 
   if (struct_declaration->recursive) {
@@ -3269,14 +3265,14 @@ bool Library::CompileUnion(Union* union_declaration) {
     if (!name_result.ok())
       return Fail(member.name, "Multiple union members with the same name; previous was at " +
                                    name_result.previous_occurrence().position_str());
-    if (!CompileTypeConstructor(member.type_ctor.get(), &member.fieldshape.Typeshape()))
+    if (!CompileTypeConstructor(member.type_ctor.get(), &member.mutable_fieldshape().Typeshape()))
       return false;
   }
 
   auto tag = FieldShape(PrimitiveType::Shape(types::PrimitiveSubtype::kUint32));
   std::vector<FieldShape*> fields;
   for (auto& member : union_declaration->members) {
-    fields.push_back(&member.fieldshape);
+    fields.push_back(&member.mutable_fieldshape());
   }
   union_declaration->membershape = FieldShape(Union::Shape(&fields));
   uint32_t extra_handles = 0;
@@ -3305,7 +3301,7 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
       return Fail(member.name, "Multiple xunion members with the same name; previous was at " +
                                    name_result.previous_occurrence().position_str());
 
-    if (!CompileTypeConstructor(member.type_ctor.get(), &member.fieldshape.Typeshape()))
+    if (!CompileTypeConstructor(member.type_ctor.get(), &member.mutable_fieldshape().Typeshape()))
       return false;
   }
 
@@ -3319,7 +3315,7 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
 
   std::vector<FieldShape*> fields;
   for (auto& member : xunion_declaration->members) {
-    fields.push_back(&member.fieldshape);
+    fields.push_back(&member.mutable_fieldshape());
   }
   xunion_declaration->mutable_typeshape() =
       XUnion::Shape(&fields, xunion_declaration->strictness, max_member_handles);
@@ -3393,8 +3389,10 @@ bool Library::Compile() {
         std::vector<FieldShape*> message_struct;
         message_struct.push_back(&header_field_shape);
         for (auto& param : message->members)
-          message_struct.push_back(&param.fieldshape);
-        message->mutable_typeshape() = FidlMessageTypeShape(&message_struct);
+          message_struct.push_back(&param.mutable_fieldshape());
+
+        auto struct_shape = Struct::Shape(&message_struct);
+        message->mutable_typeshape() = AlignTypeshape(struct_shape, &message_struct, kMessageAlign);
       };
       if (method_with_info.method->maybe_request)
         FixupMessage(method_with_info.method->maybe_request);

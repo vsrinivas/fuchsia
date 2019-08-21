@@ -213,9 +213,9 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
             auto coded_parameter_type =
                 CompileType(parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
             if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways)
-              request_fields.emplace_back(coded_parameter_type, parameter.fieldshape.InlineSize(),
-                                          parameter.fieldshape.Offset(),
-                                          parameter.fieldshape.Padding());
+              request_fields.emplace_back(coded_parameter_type, parameter.fieldshape().InlineSize(),
+                                          parameter.fieldshape().Offset(),
+                                          parameter.fieldshape().Padding());
           }
           // We move the coded_message to coded_types_ so that we'll generate tables for the
           // message in the proper order.
@@ -245,12 +245,13 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
           [[maybe_unused]] auto is_primitive =
               coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in struct coding table!");
-          struct_fields.emplace_back(coded_member_type, member.fieldshape.InlineSize(),
-                                     member.fieldshape.Offset(), member.fieldshape.Padding());
-        } else if (member.fieldshape.Padding() > 0) {
+          struct_fields.emplace_back(coded_member_type, member.fieldshape().InlineSize(),
+                                     member.fieldshape().Offset(), member.fieldshape().Padding());
+        } else if (member.fieldshape().Padding() > 0) {
           // The type does not need coding, but the field needs padding zeroing.
-          struct_fields.emplace_back(nullptr, member.fieldshape.InlineSize(),
-                                     member.fieldshape.Offset(), member.fieldshape.Padding());
+          struct_fields.emplace_back(nullptr, member.fieldshape().InlineSize(),
+                                     member.fieldshape().Offset(),
+                                     member.fieldshape().Padding());
         }
       }
       break;
@@ -268,11 +269,11 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
           [[maybe_unused]] auto is_primitive =
               coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in union coding table!");
-          union_members.emplace_back(coded_member_type, member.fieldshape.Padding());
+          union_members.emplace_back(coded_member_type, member.fieldshape().Padding());
         } else {
           // We need union_members.size() to match union_decl->members.size() because
           // the coding tables will use the union |tag| to index into the member array.
-          union_members.emplace_back(nullptr, member.fieldshape.Padding());
+          union_members.emplace_back(nullptr, member.fieldshape().Padding());
         }
       }
       break;

@@ -397,11 +397,11 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.maybe_default_value)
       GenerateObjectMember("maybe_default_value", value.maybe_default_value);
-    GenerateObjectMember("size", value.fieldshape.InlineSize());
-    GenerateObjectMember("max_out_of_line", value.fieldshape.MaxOutOfLine());
-    GenerateObjectMember("alignment", value.fieldshape.Alignment());
-    GenerateObjectMember("offset", value.fieldshape.Offset());
-    GenerateObjectMember("max_handles", value.fieldshape.MaxHandles());
+    GenerateObjectMember("size", value.fieldshape().InlineSize());
+    GenerateObjectMember("max_out_of_line", value.fieldshape().MaxOutOfLine());
+    GenerateObjectMember("alignment", value.fieldshape().Alignment());
+    GenerateObjectMember("offset", value.fieldshape().Offset());
+    GenerateObjectMember("max_handles", value.fieldshape().MaxHandles());
   });
 }
 
@@ -465,10 +465,10 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("size", value.fieldshape.InlineSize());
-    GenerateObjectMember("max_out_of_line", value.fieldshape.MaxOutOfLine());
-    GenerateObjectMember("alignment", value.fieldshape.Alignment());
-    GenerateObjectMember("offset", value.fieldshape.Offset());
+    GenerateObjectMember("size", value.fieldshape().InlineSize());
+    GenerateObjectMember("max_out_of_line", value.fieldshape().MaxOutOfLine());
+    GenerateObjectMember("alignment", value.fieldshape().Alignment());
+    GenerateObjectMember("offset", value.fieldshape().Offset());
   });
 }
 
@@ -495,10 +495,10 @@ void JSONGenerator::Generate(const flat::XUnion::Member& value) {
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("size", value.fieldshape.InlineSize());
-    GenerateObjectMember("max_out_of_line", value.fieldshape.MaxOutOfLine());
-    GenerateObjectMember("alignment", value.fieldshape.Alignment());
-    GenerateObjectMember("offset", value.fieldshape.Offset());
+    GenerateObjectMember("size", value.fieldshape().InlineSize());
+    GenerateObjectMember("max_out_of_line", value.fieldshape().MaxOutOfLine());
+    GenerateObjectMember("alignment", value.fieldshape().Alignment());
+    GenerateObjectMember("offset", value.fieldshape().Offset());
   });
 }
 

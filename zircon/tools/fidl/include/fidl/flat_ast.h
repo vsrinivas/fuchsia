@@ -478,6 +478,7 @@ struct Decl {
 struct TypeDecl : public Decl, public virtual TypeShapeContainer {
   TypeDecl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
       : Decl(kind, std::move(attributes), std::move(name)) {}
+
   bool recursive = false;
 };
 
@@ -786,7 +787,7 @@ struct Service final : public TypeDecl {
 };
 
 struct Struct final : public TypeDecl {
-  struct Member {
+  struct Member : public virtual FieldShapeContainer {
     Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
            std::unique_ptr<Constant> maybe_default_value,
            std::unique_ptr<raw::AttributeList> attributes)
@@ -798,7 +799,6 @@ struct Struct final : public TypeDecl {
     SourceLocation name;
     std::unique_ptr<Constant> maybe_default_value;
     std::unique_ptr<raw::AttributeList> attributes;
-    FieldShape fieldshape;
   };
 
   Struct(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members,
@@ -857,7 +857,7 @@ struct Table final : public TypeDecl {
 };
 
 struct Union final : public TypeDecl {
-  struct Member {
+  struct Member : public virtual FieldShapeContainer {
     Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
            std::unique_ptr<raw::AttributeList> attributes)
         : type_ctor(std::move(type_ctor)),
@@ -866,7 +866,6 @@ struct Union final : public TypeDecl {
     std::unique_ptr<TypeConstructor> type_ctor;
     SourceLocation name;
     std::unique_ptr<raw::AttributeList> attributes;
-    FieldShape fieldshape;
   };
 
   Union(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
@@ -882,7 +881,7 @@ struct Union final : public TypeDecl {
 };
 
 struct XUnion final : public TypeDecl {
-  struct Member {
+  struct Member : public virtual FieldShapeContainer {
     Member(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
            SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
         : ordinal(std::move(ordinal)),
@@ -893,7 +892,6 @@ struct XUnion final : public TypeDecl {
     std::unique_ptr<TypeConstructor> type_ctor;
     SourceLocation name;
     std::unique_ptr<raw::AttributeList> attributes;
-    FieldShape fieldshape;
   };
 
   XUnion(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members,
@@ -905,7 +903,8 @@ struct XUnion final : public TypeDecl {
   std::vector<Member> members;
   const types::Strictness strictness;
 
-  static TypeShape Shape(std::vector<FieldShape*>* fields, types::Strictness strictness,
+  static TypeShape Shape(std::vector<FieldShape*>* fields,
+                         types::Strictness strictness,
                          uint32_t extra_handles = 0u);
 };
 
