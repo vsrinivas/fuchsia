@@ -1,17 +1,14 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 package parser
 
 import (
 	"fmt"
+	"gidl/ir"
+	"github.com/google/go-cmp/cmp"
 	"strings"
 	"testing"
-
-	"gidl/ir"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 func TestParseValues(t *testing.T) {
@@ -76,7 +73,6 @@ func TestParseValues(t *testing.T) {
 		})
 	}
 }
-
 func TestParseBytes(t *testing.T) {
 	type testCase struct {
 		gidl          string
@@ -121,7 +117,6 @@ func TestParseBytes(t *testing.T) {
 		})
 	}
 }
-
 func TestParseSuccessCase(t *testing.T) {
 	gidl := `
 	success("OneStringOfMaxLengthFive-empty") {
@@ -189,7 +184,6 @@ func TestParseSuccessCase(t *testing.T) {
 	}
 	checkMatch(t, all, expectedAll, err)
 }
-
 func TestParseEncodeSuccessCase(t *testing.T) {
 	gidl := `
 	encode_success("OneStringOfMaxLengthFive-empty") {
@@ -224,7 +218,6 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 	}
 	checkMatch(t, all, expectedAll, err)
 }
-
 func TestParseDecodeSuccessCase(t *testing.T) {
 	gidl := `
 	decode_success("OneStringOfMaxLengthFive-empty") {
@@ -258,7 +251,6 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 	}
 	checkMatch(t, all, expectedAll, err)
 }
-
 func TestParseEncodeFailureCase(t *testing.T) {
 	gidl := `
 	encode_failure("OneStringOfMaxLengthFive-too-long") {
@@ -286,7 +278,6 @@ func TestParseEncodeFailureCase(t *testing.T) {
 	}
 	checkMatch(t, all, expectedAll, err)
 }
-
 func TestParseDecodeFailureCase(t *testing.T) {
 	gidl := `
 	decode_failure("OneStringOfMaxLengthFive-wrong-length") {
@@ -313,7 +304,6 @@ func TestParseDecodeFailureCase(t *testing.T) {
 	}
 	checkMatch(t, all, expectedAll, err)
 }
-
 func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 	gidl := `
 	success("OneStringOfMaxLengthFive-empty") {
@@ -392,7 +382,6 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 	}
 	checkMatch(t, all, expectedAll, err)
 }
-
 func TestParseFailsExtraKind(t *testing.T) {
 	gidl := `
 	success("OneStringOfMaxLengthFive-empty") {
@@ -408,7 +397,6 @@ func TestParseFailsExtraKind(t *testing.T) {
 	_, err := parse(gidl)
 	checkFailure(t, err, "'type' does not apply")
 }
-
 func TestParseFailsMissingKind(t *testing.T) {
 	gidl := `
 	success("OneStringOfMaxLengthFive-empty") {
@@ -419,7 +407,6 @@ func TestParseFailsMissingKind(t *testing.T) {
 	_, err := parse(gidl)
 	checkFailure(t, err, "missing required parameter 'bytes'")
 }
-
 func TestParseFailsUnknownErrorCode(t *testing.T) {
 	input := `
 	encode_failure("OneStringOfMaxLengthFive-too-long") {
@@ -434,14 +421,12 @@ func TestParseFailsUnknownErrorCode(t *testing.T) {
 		t.Errorf("expected 'unknown error code' error, but got %v", err)
 	}
 }
-
 func parse(gidlInput string) (ir.All, error) {
 	p := NewParser("", strings.NewReader(gidlInput))
 	var all ir.All
 	err := p.parseSection(&all)
 	return all, err
 }
-
 func checkMatch(t *testing.T, actual, expected interface{}, err error) {
 	if err != nil {
 		t.Fatal(err)
@@ -452,7 +437,6 @@ func checkMatch(t *testing.T, actual, expected interface{}, err error) {
 		t.Errorf("expected != actual (-want +got)\n%s", diff)
 	}
 }
-
 func checkFailure(t *testing.T, err error, errorSubstr string) {
 	if err == nil {
 		t.Errorf("expected error: %s", errorSubstr)
@@ -462,7 +446,6 @@ func checkFailure(t *testing.T, err error, errorSubstr string) {
 		t.Errorf("expected error containing %s, instead got %s", errorSubstr, err.Error())
 	}
 }
-
 func TestTokenizationSuccess(t *testing.T) {
 	cases := map[string][]token{
 		"1,2,3": {
@@ -495,7 +478,6 @@ func TestTokenizationSuccess(t *testing.T) {
 		})
 	}
 }
-
 func TestVariousStringFuncs(t *testing.T) {
 	cases := map[fmt.Stringer]string{
 		tComma:                          ",",

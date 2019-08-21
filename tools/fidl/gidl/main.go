@@ -68,6 +68,55 @@ func parseFidlJSONIr(filename string) fidlir.Root {
 	return result
 }
 
+func filterByBinding(input gidlir.All, binding string) gidlir.All {
+	var output gidlir.All
+	for _, def := range input.Success {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
+			output.Success = append(output.Success, def)
+		}
+	}
+	for _, def := range input.EncodeSuccess {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
+			output.EncodeSuccess = append(output.EncodeSuccess, def)
+		}
+	}
+	for _, def := range input.DecodeSuccess {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
+			output.DecodeSuccess = append(output.DecodeSuccess, def)
+		}
+	}
+	for _, def := range input.EncodeFailure {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
+			output.EncodeFailure = append(output.EncodeFailure, def)
+		}
+	}
+	for _, def := range input.DecodeFailure {
+		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
+			output.DecodeFailure = append(output.DecodeFailure, def)
+		}
+	}
+	return output
+}
+
+func shouldKeep(binding string, allowlist *[]string, denylist *[]string) bool {
+	if denylist != nil {
+		for _, item := range *denylist {
+			if binding == item {
+				return false
+			}
+		}
+	}
+	if allowlist != nil {
+		for _, item := range *allowlist {
+			if binding == item {
+				return true
+			}
+		}
+		return false
+	}
+	return true
+}
+
 func main() {
 	flag.Parse()
 

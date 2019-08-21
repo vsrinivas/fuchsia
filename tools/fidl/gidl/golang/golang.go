@@ -28,11 +28,11 @@ import (
 	"syscall/zx/fidl"
 )
 
-func TestAllSuccessCases(t *testing.T) {
-{{ range .SuccessCases }}
+func TestAllEncodeSuccessCases(t *testing.T) {
+{{ range .EncodeSuccessCases }}
 {
 {{ .ValueBuild }}
-successCase{
+encodeSuccessCase{
 	name: {{ .Name }},
 	input: &{{ .Value }},
 	bytes: {{ .Bytes }},
@@ -41,7 +41,20 @@ successCase{
 {{ end }}
 }
 
-func TestAllEncodingFailureCases(t *testing.T) {
+func TestAllDecodeSuccessCases(t *testing.T) {
+	{{ range .DecodeSuccessCases }}
+	{
+	{{ .ValueBuild }}
+	decodeSuccessCase{
+		name: {{ .Name }},
+		input: &{{ .Value }},
+		bytes: {{ .Bytes }},
+	}.check(t)
+	}
+	{{ end }}
+	}
+
+func TestAllEncodeFailureCases(t *testing.T) {
 {{ range .EncodeFailureCases }}
 {
 {{ .ValueBuild }}
@@ -54,7 +67,7 @@ encodeFailureCase{
 {{ end }}
 }
 
-func TestAllDecodingFailureCases(t *testing.T) {
+func TestAllDecodeFailureCases(t *testing.T) {
 {{ range .DecodeFailureCases }}
 {
 decodeFailureCase{
@@ -69,12 +82,17 @@ decodeFailureCase{
 `))
 
 type tmplInput struct {
-	SuccessCases       []successCase
+	EncodeSuccessCases []encodeSuccessCase
+	DecodeSuccessCases []decodeSuccessCase
 	EncodeFailureCases []encodeFailureCase
 	DecodeFailureCases []decodeFailureCase
 }
 
-type successCase struct {
+type encodeSuccessCase struct {
+	Name, ValueBuild, Value, Bytes string
+}
+
+type decodeSuccessCase struct {
 	Name, ValueBuild, Value, Bytes string
 }
 
@@ -88,7 +106,11 @@ type decodeFailureCase struct {
 
 // Generate generates Go tests.
 func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
-	successCases, err := successCases(gidl.Success, fidl)
+	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, fidl)
+	if err != nil {
+		return err
+	}
+	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, fidl)
 	if err != nil {
 		return err
 	}
@@ -100,32 +122,55 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	if err != nil {
 		return err
 	}
-	return tmpl.Execute(wr, tmplInput{
-		SuccessCases:       successCases,
+	input := tmplInput{
+		EncodeSuccessCases: encodeSuccessCases,
+		DecodeSuccessCases: decodeSuccessCases,
 		EncodeFailureCases: encodeFailureCases,
 		DecodeFailureCases: decodeFailureCases,
-	})
+	}
+	return tmpl.Execute(wr, input)
 }
 
-func successCases(gidlSuccesses []gidlir.Success, fidl fidlir.Root) ([]successCase, error) {
-	var successCases []successCase
-	for _, success := range gidlSuccesses {
-		decl, err := gidlmixer.ExtractDeclaration(success.Value, fidl)
+func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.Root) ([]encodeSuccessCase, error) {
+	var encodeSuccessCases []encodeSuccessCase
+	for _, encodeSuccess := range gidlEncodeSuccesses {
+		decl, err := gidlmixer.ExtractDeclaration(encodeSuccess.Value, fidl)
 		if err != nil {
-			return nil, fmt.Errorf("success %s: %s", success.Name, err)
+			return nil, fmt.Errorf("encodeSuccess %s: %s", encodeSuccess.Name, err)
 		}
 
 		var valueBuilder goValueBuilder
-		gidlmixer.Visit(&valueBuilder, success.Value, decl)
+		gidlmixer.Visit(&valueBuilder, encodeSuccess.Value, decl)
 
-		successCases = append(successCases, successCase{
-			Name:       strconv.Quote(success.Name),
+		encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
+			Name:       strconv.Quote(encodeSuccess.Name),
 			ValueBuild: valueBuilder.String(),
 			Value:      valueBuilder.lastVar,
-			Bytes:      bytesBuilder(success.Bytes),
+			Bytes:      bytesBuilder(encodeSuccess.Bytes),
 		})
 	}
-	return successCases, nil
+	return encodeSuccessCases, nil
+}
+
+func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.Root) ([]decodeSuccessCase, error) {
+	var decodeSuccessCases []decodeSuccessCase
+	for _, decodeSuccess := range gidlDecodeSuccesses {
+		decl, err := gidlmixer.ExtractDeclaration(decodeSuccess.Value, fidl)
+		if err != nil {
+			return nil, fmt.Errorf("decodeSuccess %s: %s", decodeSuccess.Name, err)
+		}
+
+		var valueBuilder goValueBuilder
+		gidlmixer.Visit(&valueBuilder, decodeSuccess.Value, decl)
+
+		decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
+			Name:       strconv.Quote(decodeSuccess.Name),
+			ValueBuild: valueBuilder.String(),
+			Value:      valueBuilder.lastVar,
+			Bytes:      bytesBuilder(decodeSuccess.Bytes),
+		})
+	}
+	return decodeSuccessCases, nil
 }
 
 func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.Root) ([]encodeFailureCase, error) {
