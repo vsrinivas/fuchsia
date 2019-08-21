@@ -1,0 +1,7 @@
+# Factory
+
+## factory_store_providers
+Components that implement protocols in the fuchsia.factory library.
+
+## fake_factory_items
+A component that implements fuchsia.boot.FactoryItems and is used to write tests that depend on this protocol without relying on the real implementation in Zircon.

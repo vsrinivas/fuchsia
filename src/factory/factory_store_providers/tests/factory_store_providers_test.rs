@@ -87,6 +87,26 @@ async fn read_factory_files_from_misc_store() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn read_factory_files_from_misc_store_passed_file_appears() -> Result<(), Error> {
+    let dir_proxy = connect_to_factory_store_provider!(MiscFactoryStoreProviderMarker);
+
+    let path = format!("{}/{}", DATA_FILE_PATH, "passed_misc_file");
+    let expected_contents =
+        fs::read(&path).expect(&format!("Unable to read expected file: {}", &path));
+
+    let contents = read_file_from_proxy(&dir_proxy, "passed/file").await?;
+    assert_eq!(expected_contents, contents);
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn read_factory_files_from_misc_store_ignored_file_missing() -> Result<(), Error> {
+    let dir_proxy = connect_to_factory_store_provider!(MiscFactoryStoreProviderMarker);
+    read_file_from_proxy(&dir_proxy, "ignored").await.unwrap_err();
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn read_factory_files_from_misc_store_missing_fails() -> Result<(), Error> {
     let dir_proxy = connect_to_factory_store_provider!(MiscFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "cast.blk").await.unwrap_err();
@@ -142,5 +162,34 @@ async fn read_factory_files_from_widevine_store_missing_files_fail() -> Result<(
     read_file_from_proxy(&dir_proxy, "misc.bin").await.unwrap_err();
     read_file_from_proxy(&dir_proxy, "pr3.dat").await.unwrap_err();
     read_file_from_proxy(&dir_proxy, "nonexistant").await.unwrap_err();
+    Ok(())
+}
+
+/// The "multi_validated_file" file is validated in 2 places:
+/// - In fuchsia.factory.PlayReadyFactoryStoreProvider where it must be UTF-8 formatted.
+/// - In fuchsia.factory.WidevineFactoryStoreProvider where it must meet a size requirement.
+///   The required size for multi_validated_file is set such that it will fail validation for that
+///   protocol (file must be at least 1TB in size which is quite large especially for this test
+///   suite); however this file should still appear in PlayReadyFactoryStoreProvider.
+///
+/// This test ensures 2 things:
+/// 1. That a file goes through both a positive and negative validation case. This is to ensure that
+///    the file has actually been processed and not that the file is simply missing from the test
+///    environment.
+/// 2. Configurations between the protocols are separate and distinct. In practice, it's unlikely
+///    the same file will appear in multiple protocols.
+#[fasync::run_singlethreaded(test)]
+async fn multi_validated_file_is_processed_properly() -> Result<(), Error> {
+    let widevine_dir_proxy = connect_to_factory_store_provider!(WidevineFactoryStoreProviderMarker);
+    read_file_from_proxy(&widevine_dir_proxy, "multi_validated_file").await.unwrap_err();
+
+    let path = format!("{}/{}", DATA_FILE_PATH, "multi_validated_file");
+    let expected_contents =
+        fs::read(&path).expect(&format!("Unable to read expected file: {}", &path));
+
+    let playready_dir_proxy =
+        connect_to_factory_store_provider!(PlayReadyFactoryStoreProviderMarker);
+    let contents = read_file_from_proxy(&playready_dir_proxy, "multi_validated_file").await?;
+    assert_eq!(expected_contents, contents);
     Ok(())
 }

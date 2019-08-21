@@ -96,6 +96,7 @@ items_zbi_outputs = get_target_outputs(":items")
 test_package("factory_store_providers_tests") {
   deps = [
     ":bin",
+    ":bin_test",
     ":factory_store_providers_test",
     ":items",
     "//src/factory/fake_factory_items:bin",
@@ -132,6 +133,14 @@ test_package("factory_store_providers_tests") {
       dest = "misc"
     },
     {
+      path = rebase_path("testdata/input/passed_misc_file")
+      dest = "passed_misc_file"
+    },
+    {
+      path = rebase_path("testdata/input/multi_validated_file")
+      dest = "multi_validated_file"
+    },
+    {
       path = rebase_path("testdata/input/pr/file1")
       dest = "file1"
     },
@@ -159,6 +168,10 @@ test_package("factory_store_providers_tests") {
   tests = [
     {
       name = "factory_store_providers_test"
+      environments = basic_envs
+    },
+    {
+      name = "factory_store_providers_bin_test"
       environments = basic_envs
     },
   ]

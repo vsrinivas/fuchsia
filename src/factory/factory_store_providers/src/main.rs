@@ -5,9 +5,10 @@
 #![feature(async_await)]
 
 mod config;
+mod validators;
 
 use {
-    config::Config,
+    config::{Config, ConfigContext},
     failure::{format_err, Error},
     fidl::endpoints::{create_proxy, Request, RequestStream, ServerEnd, ServiceMarker},
     fidl_fuchsia_boot::FactoryItemsMarker,
@@ -170,27 +171,49 @@ async fn fetch_new_factory_item() -> Result<zx::Vmo, Error> {
     vmo_opt.ok_or(format_err!("Failed to get a valid VMO from service"))
 }
 
-async fn create_dir_from_config<'a>(
-    config: &'a Config,
+async fn create_dir_from_context<'a>(
+    context: &'a ConfigContext,
     items: &'a HashMap<String, Vec<u8>>,
 ) -> Result<Box<dyn DirectoryEntry>, Error> {
     let mut dir_builder = DirectoryTreeBuilder::empty_dir();
 
-    for file_spec in &config.files {
-        let contents = match items.get(&file_spec.path) {
+    for (path, dest) in &context.file_path_map {
+        let contents = match items.get(path) {
             Some(contents) => contents,
             None => {
-                syslog::fx_log_err!("Failed to find {}, skipping", &file_spec.path);
+                syslog::fx_log_err!("Failed to find {}, skipping", &path);
                 continue;
             }
         };
 
-        // TODO(mbrunson): Validate files before exposing them here.
-        let dest = file_spec.dest.as_ref().unwrap_or_else(|| &file_spec.path);
-        let path_parts: Vec<&str> = dest.split("/").collect();
-        dir_builder.add_file(&path_parts, contents.to_vec()).unwrap_or_else(|err| {
-            syslog::fx_log_err!("Failed to add file {} to directory: {}", dest, err);
-        });
+        let mut failed_validation = false;
+        let mut validated = false;
+
+        for validator_context in &context.validator_contexts {
+            if validator_context.paths_to_validate.contains(path) {
+                syslog::fx_log_info!(
+                    "Validating {} with {} validator",
+                    &path,
+                    &validator_context.name
+                );
+                if let Err(err) = validator_context.validator.validate(&path, &contents) {
+                    syslog::fx_log_err!("{}", err);
+                    failed_validation = true;
+                    break;
+                }
+                validated = true;
+            }
+        }
+
+        // Do not allow files that failed validation or have not been validated at all.
+        if !failed_validation && validated {
+            let path_parts: Vec<&str> = dest.split("/").collect();
+            dir_builder.add_file(&path_parts, contents.to_vec()).unwrap_or_else(|err| {
+                syslog::fx_log_err!("Failed to add file {} to directory: {}", dest, err);
+            });
+        } else if !validated {
+            syslog::fx_log_err!("{} was never validated, ignored", &path);
+        }
     }
 
     dir_builder.build()
@@ -202,14 +225,15 @@ fn apply_config(config: Config, items: Arc<Mutex<HashMap<String, Vec<u8>>>>) -> 
     fasync::spawn(async move {
         let items_mtx = items.clone();
 
-        // We only want to hold this lock to create dir so limit the scope of `items_ref`.
+        // We only want to hold this lock to create `dir` so limit the scope of `items_ref`.
         let mut dir = {
             let items_ref = items_mtx.lock().await;
-            create_dir_from_config(&config, &*items_ref).await.unwrap_or_else(|err| {
+            let context = config.into_context().expect("Failed to convert config into context");
+            create_dir_from_context(&context, &*items_ref).await.unwrap_or_else(|err| {
                 syslog::fx_log_err!(
                     "Failed to create directory from config: {}, {:?}",
                     err,
-                    config
+                    context
                 );
                 Box::new(directory::simple::empty())
             })
