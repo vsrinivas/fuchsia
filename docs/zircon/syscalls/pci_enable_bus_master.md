@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-TODO(ZX-3106)
+TODO(fxbug.dev/32938)
 
 ## SYNOPSIS
 
@@ -18,7 +18,7 @@ zx_status_t zx_pci_enable_bus_master(zx_handle_t handle, bool enable);
 
 ## DESCRIPTION
 
-TODO(ZX-3106)
+TODO(fxbug.dev/32938)
 
 ## RIGHTS
 
@@ -28,13 +28,13 @@ TODO(ZX-3106)
 
 ## RETURN VALUE
 
-TODO(ZX-3106)
+TODO(fxbug.dev/32938)
 
 ## ERRORS
 
-TODO(ZX-3106)
+TODO(fxbug.dev/32938)
 
 ## SEE ALSO
 
 
-TODO(ZX-3106)
+TODO(fxbug.dev/32938)

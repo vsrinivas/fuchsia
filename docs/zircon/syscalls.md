@@ -150,9 +150,9 @@
 + [debuglog_create](syscalls/debuglog_create.md) - create a kernel managed debuglog reader or writer
 + [debuglog_write](syscalls/debuglog_write.md) - write log entry to debuglog
 + [debuglog_read](syscalls/debuglog_read.md) - read log entries from debuglog
-+ [debug_read](syscalls/debug_read.md) - TODO(ZX-3106)
-+ [debug_write](syscalls/debug_write.md) - TODO(ZX-3106)
-+ [debug_send_command](syscalls/debug_send_command.md) - TODO(ZX-3106)
++ [debug_read](syscalls/debug_read.md) - TODO(fxbug.dev/32938)
++ [debug_write](syscalls/debug_write.md) - TODO(fxbug.dev/32938)
++ [debug_send_command](syscalls/debug_send_command.md) - TODO(fxbug.dev/32938)
 
 ## Multi-function
 + [vmar_unmap_handle_close_thread_exit](syscalls/vmar_unmap_handle_close_thread_exit.md) - three-in-one

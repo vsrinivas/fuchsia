@@ -340,7 +340,7 @@ def make_name_block(syscall_data, warn):
                 desc += ' '
             desc += x
     if not desc:
-        desc = 'TODO(ZX-3106)'
+        desc = 'TODO(fxbug.dev/32938)'
     else:
         if desc[0].upper() != desc[0]:
             warn('short description (#^) should start with a capital')
@@ -459,21 +459,21 @@ def generate_stub(md):
 
 ## DESCRIPTION
 
-TODO(ZX-3106)
+TODO(fxbug.dev/32938)
 
 ## RIGHTS
 
 ## RETURN VALUE
 
-TODO(ZX-3106)
+TODO(fxbug.dev/32938)
 
 ## ERRORS
 
-TODO(ZX-3106)
+TODO(fxbug.dev/32938)
 
 ## SEE ALSO
 
-TODO(ZX-3106)
+TODO(fxbug.dev/32938)
 '''
     with open(md, 'wb') as f:
         f.write(stub)
@@ -570,7 +570,7 @@ def update_syscall_references(lines, syscall, all_syscall_names, warn):
     """Attempts to update all syscall references to a canonical format, and
     linkifies them to their corresponding syscall.
 
-    TODO(ZX-3106): It'd be nice to do the references from outside of
+    TODO(fxbug.dev/32938): It'd be nice to do the references from outside of
     docs/syscalls/ into syscalls too, in a similar style.
     """
 
