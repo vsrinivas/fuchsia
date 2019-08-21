@@ -66,15 +66,20 @@ type SwitchingOrdinalsStub struct {
 }
 
 func (s_ *SwitchingOrdinalsStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
+	return msg, err
+}
+
+func (s_ *SwitchingOrdinalsStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case SwitchingOrdinalsOrdinalFiveOrdinal:
 		err_ := s_.Impl.OrdinalFive()
-		return nil, err_
+		return nil, false, err_
 	case SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal:
 		err_ := s_.Impl.OnlyGeneratedOrdinal()
-		return nil, err_
+		return nil, false, err_
 	}
-	return nil, _bindings.ErrUnknownOrdinal
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 type SwitchingOrdinalsService struct {
 	_bindings.BindingSet

@@ -181,6 +181,11 @@ type {{ .StubName }} struct {
 }
 
 func (s_ *{{ .StubName }}) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
+	return msg, err
+}
+
+func (s_ *{{ .StubName }}) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}
@@ -194,7 +199,7 @@ func (s_ *{{ .StubName }}) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_z
 		{{- if len .Request.Members }}
 		in_ := {{ .Request.Name }}{}
 		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
-			return nil, err_
+			return nil, false, err_
 		}
 		{{- end }}
 		{{- end }}
@@ -215,17 +220,17 @@ func (s_ *{{ .StubName }}) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_z
 		{{- range .Response.Members }}
 		out_.{{ .Name }} = {{ .PrivateName }}
 		{{- end }}
-		return &out_, err_
+		return &out_, true, err_
 		{{- else }}
-		return nil, err_
+		return nil, true, err_
 		{{- end }}
 		{{- else }}
-		return nil, err_
+		return nil, false, err_
 		{{- end }}
 	{{- end }}
 	{{- end }}
 	}
-	return nil, _bindings.ErrUnknownOrdinal
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 {{- if eq .ProxyType "ChannelProxy" }}

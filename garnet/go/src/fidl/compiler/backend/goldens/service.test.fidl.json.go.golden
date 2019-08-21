@@ -44,12 +44,17 @@ type FirstProtocolStub struct {
 }
 
 func (s_ *FirstProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
+	return msg, err
+}
+
+func (s_ *FirstProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case FirstProtocolMethodOnFirstOrdinal:
 		err_ := s_.Impl.MethodOnFirst()
-		return nil, err_
+		return nil, false, err_
 	}
-	return nil, _bindings.ErrUnknownOrdinal
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 type FirstProtocolService struct {
 	_bindings.BindingSet
@@ -101,12 +106,17 @@ type SecondProtocolStub struct {
 }
 
 func (s_ *SecondProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
+	return msg, err
+}
+
+func (s_ *SecondProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case SecondProtocolMethodOnSecondOrdinal:
 		err_ := s_.Impl.MethodOnSecond()
-		return nil, err_
+		return nil, false, err_
 	}
-	return nil, _bindings.ErrUnknownOrdinal
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 type SecondProtocolService struct {
 	_bindings.BindingSet

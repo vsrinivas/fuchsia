@@ -36,9 +36,14 @@ type ChildStub struct {
 }
 
 func (s_ *ChildStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
+	return msg, err
+}
+
+func (s_ *ChildStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	}
-	return nil, _bindings.ErrUnknownOrdinal
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 type ChildService struct {
 	_bindings.BindingSet
@@ -164,33 +169,38 @@ type ParentStub struct {
 }
 
 func (s_ *ParentStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
+	return msg, err
+}
+
+func (s_ *ParentStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case ParentGetChildOrdinal:
 		c, err_ := s_.Impl.GetChild()
 		out_ := parentGetChildResponse{}
 		out_.C = c
-		return &out_, err_
+		return &out_, true, err_
 	case ParentGetChildRequestOrdinal:
 		r, err_ := s_.Impl.GetChildRequest()
 		out_ := parentGetChildRequestResponse{}
 		out_.R = r
-		return &out_, err_
+		return &out_, true, err_
 	case ParentTakeChildOrdinal:
 		in_ := parentTakeChildRequest{}
 		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
-			return nil, err_
+			return nil, false, err_
 		}
 		err_ := s_.Impl.TakeChild(in_.C)
-		return nil, err_
+		return nil, false, err_
 	case ParentTakeChildRequestOrdinal:
 		in_ := parentTakeChildRequestRequest{}
 		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
-			return nil, err_
+			return nil, false, err_
 		}
 		err_ := s_.Impl.TakeChildRequest(in_.R)
-		return nil, err_
+		return nil, false, err_
 	}
-	return nil, _bindings.ErrUnknownOrdinal
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 type ParentService struct {
 	_bindings.BindingSet

@@ -152,12 +152,17 @@ type InterfaceStub struct {
 }
 
 func (s_ *InterfaceStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
+	return msg, err
+}
+
+func (s_ *InterfaceStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case InterfaceMethodOrdinal:
 		err_ := s_.Impl.Method()
-		return nil, err_
+		return nil, false, err_
 	}
-	return nil, _bindings.ErrUnknownOrdinal
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 type InterfaceService struct {
 	_bindings.BindingSet
