@@ -46,6 +46,39 @@ void fill_out_clac_instruction(const CodePatchInfo* patch) {
     memset(patch->dest_addr, kNopInstruction, kSize);
   }
 }
+
+extern zx_status_t _x86_copy_to_or_from_user(void*, const void*, size_t, void**);
+
+void x86_usercopy_select(const CodePatchInfo* patch) {
+  // The user copy patch area is 16-byte aligned; make sure the block is 16-bytes in size too, to
+  // ensure that the jump that exits it jumps to a 16-byte aligned address, per recommendations in
+  // the AMD Family 17h and the Intel Optimization guides.
+  const size_t kSize = 16;
+  DEBUG_ASSERT(patch->dest_size == kSize);
+
+  memset(patch->dest_addr, kNopInstruction, kSize);
+  if (x86_feature_test(X86_FEATURE_ERMS) || (x86_microarch == X86_MICROARCH_AMD_ZEN)) {
+    patch->dest_addr[0] = 0xf3;  // rep movsb %ds:(%rsi),%es:(%rdi)
+    patch->dest_addr[1] = 0xa4;
+  } else {
+    patch->dest_addr[0] = 0x48;  // shrq $3, %rcx
+    patch->dest_addr[1] = 0xc1;
+    patch->dest_addr[2] = 0xe9;
+    patch->dest_addr[3] = 0x03;
+    patch->dest_addr[4] = 0xf3;  // rep movsq %ds:(%rsi),%es:(%rdi)
+    patch->dest_addr[5] = 0x48;
+    patch->dest_addr[6] = 0xa5;
+    patch->dest_addr[7] = 0x83;  // andl $7, %edx
+    patch->dest_addr[8] = 0xe2;
+    patch->dest_addr[9] = 0x07;
+    patch->dest_addr[10] = 0x74;  // je +04  -- jumps to aligned 16by after this fragment
+    patch->dest_addr[11] = 0x04;
+    patch->dest_addr[12] = 0x89;  // movl %edx, %ecx
+    patch->dest_addr[13] = 0xd1;
+    patch->dest_addr[14] = 0xf3;  // rep movsb %ds:(%rsi),%es:(%rdi)
+    patch->dest_addr[15] = 0xa4;
+  }
+}
 }
 
 static inline bool ac_flag(void) { return x86_save_flags() & X86_FLAGS_AC; }

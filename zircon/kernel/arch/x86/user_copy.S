@@ -37,13 +37,10 @@ FUNCTION(_x86_copy_to_or_from_user)
     // registers, without any knowledge of where between these two points we
     // faulted.
 
-    // Perform the actual copy
-    cld
-    // %rdi and %rsi already contain the destination and source addresses.
     movq %rdx, %rcx
-    rep movsb  // while (rcx-- > 0) *rdi++ = *rsi++;
-
-    mov $ZX_OK, %rax
+.align 16
+    APPLY_CODE_PATCH_FUNC(x86_usercopy_select, 16)
+    xorl %eax, %eax
 
 .Lcleanup_copy:
     // Re-enable SMAP protection
@@ -51,7 +48,6 @@ FUNCTION(_x86_copy_to_or_from_user)
 
     // Reset fault return
     movq $0, (%r10)
-
     ret
 
 .Lfault_copy:
