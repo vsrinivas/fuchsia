@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "utils.h"
+
 #include <limits.h>
 #include <string.h>
+#include <zircon/types.h>
 
 #include <crypto/aead.h>
 #include <crypto/bytes.h>
@@ -11,9 +14,6 @@
 #include <crypto/digest.h>
 #include <crypto/hkdf.h>
 #include <crypto/hmac.h>
-#include <zircon/types.h>
-
-#include "utils.h"
 
 namespace crypto {
 namespace testing {
@@ -107,6 +107,16 @@ zx_status_t GenerateKeyMaterial(AEAD::Algorithm cipher, Secret* key, Bytes* iv) 
   }
 
   return ZX_OK;
+}
+
+bool AllEqual(const Bytes& buf, uint8_t val, zx_off_t off, size_t len) {
+  for (size_t i = 0; i < len; ++i) {
+    if (buf[off] != val) {
+      return false;
+    }
+    off++;
+  }
+  return true;
 }
 
 }  // namespace testing

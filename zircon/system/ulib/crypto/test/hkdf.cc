@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include <stddef.h>
+#include <zircon/device/block.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <crypto/bytes.h>
 #include <crypto/digest.h>
 #include <crypto/hkdf.h>
-#include <unittest/unittest.h>
-#include <zircon/device/block.h>
-#include <zircon/errors.h>
-#include <zircon/types.h>
+#include <zxtest/zxtest.h>
 
 #include "utils.h"
 
@@ -18,8 +18,7 @@ namespace crypto {
 namespace testing {
 namespace {
 
-bool TestInit(void) {
-  BEGIN_TEST;
+TEST(HKDF, Init) {
   size_t md_size;
   ASSERT_OK(digest::GetDigestLen(digest::kSHA256, &md_size));
 
@@ -30,11 +29,11 @@ bool TestInit(void) {
 
   // Bad version
   HKDF hkdf;
-  EXPECT_ZX(hkdf.Init(digest::kUninitialized, ikm, salt), ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(hkdf.Init(digest::kUninitialized, ikm, salt), ZX_ERR_INVALID_ARGS);
 
   // Bad input key material
   ASSERT_OK(ikm.Generate(md_size - 1));
-  EXPECT_ZX(hkdf.Init(digest::kSHA256, ikm, salt), ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(hkdf.Init(digest::kSHA256, ikm, salt), ZX_ERR_INVALID_ARGS);
   ASSERT_OK(ikm.Generate(md_size));
 
   // Salt is optional
@@ -43,15 +42,13 @@ bool TestInit(void) {
   ASSERT_OK(salt.Randomize(GUID_LEN));
 
   // Invalid flags
-  EXPECT_ZX(hkdf.Init(digest::kSHA256, ikm, salt, 0x8000), ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(hkdf.Init(digest::kSHA256, ikm, salt, 0x8000), ZX_ERR_INVALID_ARGS);
 
   // Valid
   EXPECT_OK(hkdf.Init(digest::kSHA256, ikm, salt));
-  END_TEST;
 }
 
-bool TestDerive(void) {
-  BEGIN_TEST;
+TEST(HKDF, Derive) {
   size_t md_size;
   ASSERT_OK(digest::GetDigestLen(digest::kSHA256, &md_size));
 
@@ -62,7 +59,7 @@ bool TestDerive(void) {
   ASSERT_OK(salt.Randomize(GUID_LEN));
 
   // Uninitialized
-  EXPECT_ZX(hkdf.Derive("init", md_size, &key1), ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(hkdf.Derive("init", md_size, &key1), ZX_ERR_INVALID_ARGS);
   ASSERT_OK(hkdf.Init(digest::kSHA256, ikm, salt));
 
   // Label is optional
@@ -79,12 +76,10 @@ bool TestDerive(void) {
   EXPECT_OK(hkdf.Derive("diff", md_size, &key3));
   EXPECT_EQ(key1.len(), key3.len());
   EXPECT_NE(memcmp(key1.get(), key3.get(), key1.len()), 0);
-  END_TEST;
 }
 
 // Based on RFC 5869, Appendix A.2: Test with SHA-256 and longer inputs/outputs
-bool TestRfc5869_TC1(void) {
-  BEGIN_TEST;
+TEST(HKDF, Rfc5869_TC1) {
   HKDF hkdf;
   Secret ikm, okm;
   Bytes salt;
@@ -104,12 +99,10 @@ bool TestRfc5869_TC1(void) {
   EXPECT_OK(hkdf.Init(digest::kSHA256, ikm, salt, HKDF::ALLOW_WEAK_KEY));
   EXPECT_OK(hkdf.Derive(info, sizeof(expected), &okm));
   EXPECT_EQ(memcmp(okm.get(), expected, sizeof(expected)), 0);
-  END_TEST;
 }
 
 // Based on RFC 5869, Appendix A.2: Basic test case with SHA-256
-bool TestRfc5869_TC2(void) {
-  BEGIN_TEST;
+TEST(HKDF, Rfc5869_TC2) {
   HKDF hkdf;
   Secret ikm, okm;
   Bytes salt;
@@ -139,12 +132,10 @@ bool TestRfc5869_TC2(void) {
   EXPECT_OK(hkdf.Init(digest::kSHA256, ikm, salt));
   EXPECT_OK(hkdf.Derive(info, sizeof(expected), &okm));
   EXPECT_EQ(memcmp(okm.get(), expected, sizeof(expected)), 0);
-  END_TEST;
 }
 
 // Based on RFC 5869, Appendix A.3: Test with SHA-256 and zero-length salt/info
-bool TestRfc5869_TC3(void) {
-  BEGIN_TEST;
+TEST(HKDF, Rfc5869_TC3) {
   HKDF hkdf;
   Secret ikm, okm;
   Bytes salt;
@@ -160,16 +151,7 @@ bool TestRfc5869_TC3(void) {
   EXPECT_OK(hkdf.Init(digest::kSHA256, ikm, salt, HKDF::ALLOW_WEAK_KEY));
   EXPECT_OK(hkdf.Derive(info, sizeof(expected), &okm));
   EXPECT_EQ(memcmp(okm.get(), expected, sizeof(expected)), 0);
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(KdfTest)
-RUN_TEST(TestInit)
-RUN_TEST(TestDerive)
-RUN_TEST(TestRfc5869_TC1)
-RUN_TEST(TestRfc5869_TC2)
-RUN_TEST(TestRfc5869_TC3)
-END_TEST_CASE(KdfTest)
 
 }  // namespace
 }  // namespace testing

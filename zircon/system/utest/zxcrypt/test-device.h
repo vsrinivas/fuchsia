@@ -5,17 +5,10 @@
 #ifndef ZIRCON_SYSTEM_UTEST_ZXCRYPT_TEST_DEVICE_H_
 #define ZIRCON_SYSTEM_UTEST_ZXCRYPT_TEST_DEVICE_H_
 
-#include <block-client/client.h>
-#include <crypto/secret.h>
-#include <fbl/macros.h>
-#include <fbl/mutex.h>
-#include <fbl/unique_fd.h>
-#include <fvm/format.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-#include <ramdevice-client/ramdisk.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <threads.h>
@@ -23,9 +16,47 @@
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+
+#include <block-client/client.h>
+#include <crypto/secret.h>
+#include <fbl/macros.h>
+#include <fbl/mutex.h>
+#include <fbl/unique_fd.h>
+#include <fvm/format.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zxcrypt/fdio-volume.h>
 
-#include "crypto/test/utils.h"
+// TODO(34273): Replace these with *_STATUS, *_OK in zxtest.
+#define EXPECT_ZX(expr, status) EXPECT_EQ(expr, status)
+#define ASSERT_ZX(expr, status) ASSERT_EQ(expr, status)
+#define EXPECT_OK(expr) EXPECT_EQ(expr, ZX_OK)
+#define ASSERT_OK(expr) ASSERT_EQ(expr, ZX_OK)
+
+// Value-parameterized tests: Consumers of this file can define an 'EACH_PARAM' macro as follows:
+//   #define EACH_PARAM(OP, Test)
+//   OP(Test, Class, Param1)
+//   OP(Test, Class, Param2)
+//   ...
+//   OP(Test, Class, ParamN)
+// where |Param1| corresponds to an enum constant |Class::kParam1|, etc.
+//
+// Consumers can then use the following macros to automatically define and run tests for each
+// parameter:
+//   bool TestSomething(Param param) {
+//       BEGIN_TEST;
+//       ...
+//       END_TEST;
+//   }
+//   DEFINE_EACH(TestSomething)
+//   ...
+//   BEGIN_TEST_CASE(SomeTest)
+//   RUN_EACH(TestSomething)
+//   END_TEST_CASE(SomeTest)
+#define DEFINE_TEST_PARAM(Test, Class, Param) \
+  bool Test##_##Param(void) { return Test(Class::k##Param); }
+#define RUN_TEST_PARAM(Test, Class, Param) RUN_TEST(Test##_##Param)
+#define DEFINE_EACH(Test) EACH_PARAM(DEFINE_TEST_PARAM, Test)
+#define RUN_EACH(Test) EACH_PARAM(RUN_TEST_PARAM, Test)
 
 #define DEFINE_EACH_DEVICE(Test)                                                         \
   bool Test##Raw(Volume::Version version) { return Test(version, false /* not FVM */); } \
