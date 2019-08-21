@@ -7,6 +7,7 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
@@ -16,6 +17,11 @@
 
 namespace ledger {
 namespace {
+
+using ::testing::Each;
+using ::testing::IsEmpty;
+using ::testing::IsFalse;
+using ::testing::SizeIs;
 
 constexpr char kLedgerName[] = "test_ledger_name";
 
@@ -503,6 +509,45 @@ TEST_F(ActivePageManagerContainerTest, DestroyedWhileCallingPageUsageListener) {
     }
   }
   EXPECT_FALSE(on_empty_called);
+}
+
+TEST_F(ActivePageManagerContainerTest, OnlyInternalRequestCallbacks) {
+  auto bit_generator = environment_.random()->NewBitGenerator<size_t>();
+  const size_t internal_request_count = std::uniform_int_distribution(2u, 10u)(bit_generator);
+  std::vector<Status> internal_request_statuses;
+  std::vector<ActivePageManager*> internal_request_active_page_managers;
+  bool on_empty_called;
+  std::vector<bool> on_empty_called_during_internal_request_callbacks;
+
+  ActivePageManagerContainer active_page_manager_container = ActivePageManagerContainer(
+      kLedgerName, page_id_, std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
+  active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+
+  size_t requested_internal_requests = 0;
+  while (requested_internal_requests < internal_request_count) {
+    active_page_manager_container.NewInternalRequest(
+        [&](Status status, ExpiringToken token, ActivePageManager* active_page_manager) {
+          internal_request_statuses.push_back(status);
+          // Note whether or not the |ActivePageManagerContainer|'s on-empty callback has been
+          // called both before destroying the token...
+          on_empty_called_during_internal_request_callbacks.push_back(on_empty_called);
+          // ... and after destroying the token.
+          token.call();
+          on_empty_called_during_internal_request_callbacks.push_back(on_empty_called);
+        });
+    requested_internal_requests++;
+  }
+  RunLoopUntilIdle();
+  EXPECT_THAT(on_empty_called_during_internal_request_callbacks, IsEmpty());
+  active_page_manager_container.SetActivePageManager(Status::OK, std::move(active_page_manager_));
+  EXPECT_THAT(on_empty_called_during_internal_request_callbacks,
+              SizeIs(internal_request_count * 2));
+  EXPECT_THAT(on_empty_called_during_internal_request_callbacks, Each(IsFalse()));
+  EXPECT_EQ(fake_disk_cleanup_manager_.externally_used_count, 0);
+  EXPECT_EQ(fake_disk_cleanup_manager_.externally_unused_count, 0);
+  EXPECT_EQ(fake_disk_cleanup_manager_.internally_used_count, 1);
+  EXPECT_EQ(fake_disk_cleanup_manager_.internally_unused_count, 1);
+  EXPECT_TRUE(on_empty_called);
 }
 
 TEST_F(ActivePageManagerContainerTest, MultiplePageUsageListeners) {

@@ -59,7 +59,7 @@ void ActivePageManagerContainer::BindPage(fidl::InterfaceRequest<Page> page_requ
 void ActivePageManagerContainer::NewInternalRequest(
     fit::function<void(Status, ExpiringToken, ActivePageManager*)> callback) {
   if (status_ != Status::OK) {
-    callback(status_, fit::defer<fit::closure>([] {}), nullptr);
+    callback(status_, ExpiringToken(), nullptr);
     return;
   }
 
@@ -79,43 +79,62 @@ void ActivePageManagerContainer::NewInternalRequest(
 void ActivePageManagerContainer::SetActivePageManager(
     Status status, std::unique_ptr<ActivePageManager> active_page_manager) {
   TRACE_DURATION("ledger", "active_page_manager_container_set_page_manager");
-
   FXL_DCHECK(!active_page_manager_is_set_);
   FXL_DCHECK((status != Status::OK) == !active_page_manager);
   FXL_DCHECK(token_manager_.IsEmpty());
-  status_ = status;
-  active_page_manager_ = std::move(active_page_manager);
-  active_page_manager_is_set_ = true;
 
   for (auto& [page_impl, callback] : page_impls_) {
-    if (active_page_manager_) {
-      active_page_manager_->AddPageImpl(std::move(page_impl), std::move(callback));
+    if (active_page_manager) {
+      active_page_manager->AddPageImpl(std::move(page_impl), std::move(callback));
     } else {
-      callback(status_);
+      callback(status);
     }
   }
   page_impls_.clear();
 
   if (!internal_request_callbacks_.empty()) {
-    if (!active_page_manager_) {
+    if (!active_page_manager) {
       for (auto& internal_request_callback : internal_request_callbacks_) {
-        internal_request_callback(status_, ExpiringToken(), nullptr);
+        internal_request_callback(status, ExpiringToken(), nullptr);
       }
     } else {
       for (PageUsageListener* page_usage_listener : page_usage_listeners_) {
         page_usage_listener->OnInternallyUsed(ledger_name_, page_id_);
       }
+      // We allocate all the tokens to be passed to the internal request callbacks before making the
+      // calls to the internal request callbacks because some internal request callbacks destroy
+      // their tokens during their call and when looping over multiple such callbacks an "allocate
+      // one for one call, then make the call, then allocate another for the next call, then make
+      // that next call..." strategy would cause the outstanding token count to dither between zero
+      // and one which would then cause token_manager_'s on-empty callback to be called several
+      // times. Calling all the internal request callbacks should cause token_manager_'s on-empty
+      // callback to be called at most once (specifically in the case of every internal request
+      // callback destroying its token during its call).
+      std::vector<ExpiringToken> tokens;
+      tokens.reserve(internal_request_callbacks_.size());
+      for (size_t index = 0; index < internal_request_callbacks_.size(); index++) {
+        tokens.emplace_back(token_manager_.CreateToken());
+      }
+      size_t index = 0;
       for (auto& internal_request_callback : internal_request_callbacks_) {
-        internal_request_callback(status_, token_manager_.CreateToken(),
-                                  active_page_manager_.get());
+        internal_request_callback(status, std::move(tokens[index]), active_page_manager.get());
+        index++;
       }
     }
     internal_request_callbacks_.clear();
   }
 
+  // Only after assigning these fields is this |ActivePageManagerContainer| able to become empty.
+  // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=35152): Make these fields unable to
+  // represent illegal state.
+  status_ = status;
+  active_page_manager_ = std::move(active_page_manager);
+  active_page_manager_is_set_ = true;
+
   if (active_page_manager_) {
     active_page_manager_->set_on_empty(
         [this] { OnExternallyUnused(/*conditionally_check_empty=*/true); });
+    CheckEmpty();
   } else {
     OnExternallyUnused(/*conditionally_check_empty=*/false);
   }
