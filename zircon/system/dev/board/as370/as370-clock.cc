@@ -26,10 +26,15 @@ zx_status_t As370::ClockInit() {
           .base = as370::kAudioGlobalBase,
           .length = as370::kAudioGlobalSize,
       },
+      {
+          .base = as370::kCpuBase,
+          .length = as370::kCpuSize,
+      },
   };
   static const clock_id_t clock_ids[] = {
       {as370::As370Clk::kClkAvpll0},
       {as370::As370Clk::kClkAvpll1},
+      {as370::As370Clk::kClkCpu},
   };
   static const pbus_metadata_t clock_metadata[] = {
       {

@@ -5,11 +5,12 @@
 #ifndef ZIRCON_SYSTEM_DEV_CLK_SYN_CLK_SYN_CLK_H_
 #define ZIRCON_SYSTEM_DEV_CLK_SYN_CLK_SYN_CLK_H_
 
+#include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/clockimpl.h>
 #include <fbl/mutex.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <soc/as370/as370-clk.h>
 
 namespace clk {
@@ -37,18 +38,22 @@ class SynClk : public DeviceType, public ddk::ClockImplProtocol<SynClk, ddk::bas
 
   // Protected for unit tests.
  protected:
-  SynClk(zx_device_t* parent, ddk::MmioBuffer global_mmio, ddk::MmioBuffer avio_mmio)
+  SynClk(zx_device_t* parent, ddk::MmioBuffer global_mmio, ddk::MmioBuffer avio_mmio,
+         ddk::MmioBuffer cpu_mmio)
       : DeviceType(parent),
         global_mmio_(std::move(global_mmio)),
-        avio_mmio_(std::move(avio_mmio)) {}
+        avio_mmio_(std::move(avio_mmio)),
+        cpu_mmio_(std::move(cpu_mmio)) {}
 
  private:
   zx_status_t AvpllClkEnable(bool avpll0, bool enable);
   zx_status_t AvpllSetRate(bool avpll0, uint64_t rate);
+  zx_status_t CpuSetRate(uint64_t rate);
 
   fbl::Mutex lock_;
   ddk::MmioBuffer global_mmio_ TA_GUARDED(lock_);
   ddk::MmioBuffer avio_mmio_ TA_GUARDED(lock_);
+  ddk::MmioBuffer cpu_mmio_ TA_GUARDED(lock_);
 };
 
 }  // namespace clk

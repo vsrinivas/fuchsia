@@ -12,9 +12,11 @@ namespace clk {
 
 class SynClkTest : public SynClk {
  public:
-  SynClkTest(ddk_mock::MockMmioRegRegion& global_mmio, ddk_mock::MockMmioRegRegion& audio_mmio)
+  SynClkTest(ddk_mock::MockMmioRegRegion& global_mmio, ddk_mock::MockMmioRegRegion& audio_mmio,
+             ddk_mock::MockMmioRegRegion& cpu_mmio)
       : SynClk(nullptr, ddk::MmioBuffer(global_mmio.GetMmioBuffer()),
-               ddk::MmioBuffer(audio_mmio.GetMmioBuffer())) {}
+               ddk::MmioBuffer(audio_mmio.GetMmioBuffer()),
+               ddk::MmioBuffer(cpu_mmio.GetMmioBuffer())) {}
 };
 
 TEST(ClkSynTest, AvpllClkEnable) {
@@ -22,7 +24,8 @@ TEST(ClkSynTest, AvpllClkEnable) {
   auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize / 4);
   ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize / 4);
   ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize / 4);
-  SynClkTest test(global_region, audio_region);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(global_region, audio_region, unused);
 
   global_regs[0x0530 / 4].ExpectRead(0x00000000).ExpectWrite(0x00000001);  // Enable AVIO clock.
   global_regs[0x0088 / 4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffe);  // Not sysPll power down.
@@ -40,7 +43,8 @@ TEST(ClkSynTest, AvpllClkDisable) {
   auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize / 4);
   ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize / 4);
   ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize / 4);
-  SynClkTest test(global_region, audio_region);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(global_region, audio_region, unused);
 
   audio_regs[0x0044 / 4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffb);  // Disable AVPLL.
   audio_regs[0x0000 / 4].ExpectRead(0xffffffff).ExpectWrite(0xffffffdf);  // Disable AVPLL Clock.
@@ -56,7 +60,8 @@ TEST(ClkSynTest, AvpllClkDisablePll1) {
   auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize / 4);
   ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize / 4);
   ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize / 4);
-  SynClkTest test(global_region, audio_region);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(global_region, audio_region, unused);
 
   audio_regs[0x0044 / 4].ExpectRead(0xffffffff).ExpectWrite(0xfffffff7);  // Disable AVPLL 1.
   audio_regs[0x0020 / 4].ExpectRead(0xffffffff).ExpectWrite(0xffffffdf);  // Disable AVPLL Clock.
@@ -72,7 +77,8 @@ TEST(ClkSynTest, AvpllSetRateBad) {
   auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize / 4);
   ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize / 4);
   ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize / 4);
-  SynClkTest test(global_region, audio_region);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(global_region, audio_region, unused);
 
   EXPECT_NOT_OK(test.ClockImplSetRate(0, 800'000'001));  // Too high.
 }
@@ -82,7 +88,8 @@ TEST(ClkSynTest, AvpllSetRateGood) {
   auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize / 4);
   ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize / 4);
   ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize / 4);
-  SynClkTest test(global_region, audio_region);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(global_region, audio_region, unused);
 
   audio_regs[0x0044 / 4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffb);  // Clock disable.
   audio_regs[0x0018 / 4].ExpectRead(0x00000000).ExpectWrite(0x00000001);  // Bypass.
@@ -105,7 +112,8 @@ TEST(ClkSynTest, AvpllSetRateFractionalFor48KHz) {
   auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize / 4);
   ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize / 4);
   ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize / 4);
-  SynClkTest test(global_region, audio_region);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(global_region, audio_region, unused);
 
   audio_regs[0x0044 / 4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffb);  // Clock disable.
   audio_regs[0x0018 / 4].ExpectRead(0x00000000).ExpectWrite(0x00000001);  // Bypass.
@@ -131,7 +139,8 @@ TEST(ClkSynTest, AvpllSetRateFractionalFor44100Hz) {
   auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize / 4);
   ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize / 4);
   ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize / 4);
-  SynClkTest test(global_region, audio_region);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(global_region, audio_region, unused);
 
   audio_regs[0x0044 / 4].ExpectRead(0xffffffff).ExpectWrite(0xfffffffb);  // Clock disable.
   audio_regs[0x0018 / 4].ExpectRead(0x00000000).ExpectWrite(0x00000001);  // Bypass.
@@ -157,7 +166,8 @@ TEST(ClkSynTest, AvpllSetRatePll1) {
   auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize / 4);
   ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize / 4);
   ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize / 4);
-  SynClkTest test(global_region, audio_region);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(global_region, audio_region, unused);
 
   audio_regs[0x0044 / 4].ExpectRead(0xffffffff).ExpectWrite(0xfffffff7);  // Clock disable.
   audio_regs[0x0038 / 4].ExpectRead(0x00000000).ExpectWrite(0x00000001);  // Bypass.
@@ -173,6 +183,36 @@ TEST(ClkSynTest, AvpllSetRatePll1) {
   EXPECT_OK(test.ClockImplSetRate(1, 800'000'000));
 
   audio_region.VerifyAll();
+}
+
+TEST(ClkSynTest, CpuPllSetRate1800) {
+  auto cpu_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kCpuSize / 4);
+  ddk_mock::MockMmioRegRegion cpu_region(cpu_regs.get(), 4, as370::kCpuSize / 4);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(unused, unused, cpu_region);
+
+  cpu_regs[0x2000 / 4].ExpectWrite(0x00404806);
+  cpu_regs[0x2004 / 4].ExpectWrite(0x00000000);
+  cpu_regs[0x200c / 4].ExpectWrite(0x22000000);
+
+  EXPECT_OK(test.ClockImplSetRate(2, 1'800'000'000));
+
+  cpu_region.VerifyAll();
+}
+
+TEST(ClkSynTest, CpuPllSetRate1000) {
+  auto cpu_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kCpuSize / 4);
+  ddk_mock::MockMmioRegRegion cpu_region(cpu_regs.get(), 4, as370::kCpuSize / 4);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(unused, unused, cpu_region);
+
+  cpu_regs[0x2000 / 4].ExpectWrite(0x00402806);
+  cpu_regs[0x2004 / 4].ExpectWrite(0x00000000);
+  cpu_regs[0x200c / 4].ExpectWrite(0x22000000);
+
+  EXPECT_OK(test.ClockImplSetRate(2, 1'000'000'000));
+
+  cpu_region.VerifyAll();
 }
 
 }  // namespace clk

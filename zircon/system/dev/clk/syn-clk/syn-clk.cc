@@ -4,6 +4,8 @@
 
 #include "syn-clk.h"
 
+#include <lib/device-protocol/pdev.h>
+
 #include <numeric>
 
 #include <ddk/binding.h>
@@ -15,7 +17,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/bitfields.h>
-#include <lib/device-protocol/pdev.h>
 #include <soc/as370/as370-audio-regs.h>
 #include <soc/as370/as370-clk-regs.h>
 #include <soc/as370/as370-clk.h>
@@ -29,7 +30,7 @@ zx_status_t SynClk::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  std::optional<ddk::MmioBuffer> global_mmio, avio_mmio;
+  std::optional<ddk::MmioBuffer> global_mmio, avio_mmio, cpu_mmio;
   auto status = pdev.MapMmio(0, &global_mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to map mmio index 0 %d\n", __FILE__, status);
@@ -40,9 +41,14 @@ zx_status_t SynClk::Create(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "%s: failed to map mmio index 1 %d\n", __FILE__, status);
     return status;
   }
+  status = pdev.MapMmio(2, &cpu_mmio);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to map mmio index 2 %d\n", __FILE__, status);
+    return status;
+  }
 
   std::unique_ptr<SynClk> device(
-      new SynClk(parent, *std::move(global_mmio), *std::move(avio_mmio)));
+      new SynClk(parent, *std::move(global_mmio), *std::move(avio_mmio), *std::move(cpu_mmio)));
 
   status = device->DdkAdd("synaptics-clk");
   if (status != ZX_OK) {
@@ -82,6 +88,32 @@ zx_status_t SynClk::AvpllClkEnable(bool avpll0, bool enable) {
       .set_clkEn(enable)
       .WriteTo(&avio_mmio_);
 
+  return ZX_OK;
+}
+
+zx_status_t SynClk::CpuSetRate(uint64_t rate) {
+  if (rate < 1'000'000'000 || rate > 1'800'000'000) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  auto dn = static_cast<uint32_t>(rate) / 1'000 * 72 / 1'800'000;
+  CPU_WRP_PLL_REG_ctrl::Get()
+      .FromValue(0)
+      .set_FRAC_READY(1)
+      .set_MODE(0)
+      .set_DN(dn)
+      .set_DM(1)
+      .set_RESETN(1)
+      .WriteTo(&cpu_mmio_);
+  CPU_WRP_PLL_REG_ctrl1::Get().FromValue(0).set_FRAC(0).WriteTo(&cpu_mmio_);
+  CPU_WRP_PLL_REG_ctrl3::Get()
+      .FromValue(0)
+      .set_DP1(1)
+      .set_PDDP1(0)
+      .set_DP(1)
+      .set_PDDP(0)
+      .set_SLOPE(0)
+      .WriteTo(&cpu_mmio_);
+  zxlogf(TRACE, "%s %luHz dn %u  dm %u  dp %u\n", __FILE__, rate, dn, 1, 1);
   return ZX_OK;
 }
 
@@ -233,6 +265,8 @@ zx_status_t SynClk::ClockImplSetRate(uint32_t index, uint64_t hz) {
       return AvpllSetRate(true, hz);
     case as370::kClkAvpll1:
       return AvpllSetRate(false, hz);
+    case as370::kClkCpu:
+      return CpuSetRate(hz);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -244,6 +278,7 @@ void SynClk::DdkUnbind() {
 
   global_mmio_.reset();
   avio_mmio_.reset();
+  cpu_mmio_.reset();
 
   DdkRemove();
 }

@@ -25,6 +25,10 @@ constexpr uint32_t kAudioGlobalSize = fbl::round_up<uint32_t, uint32_t>(0x2'0000
 constexpr uint32_t kAudioI2sBase = 0xf744'0000;
 constexpr uint32_t kAudioI2sSize = fbl::round_up<uint32_t, uint32_t>(0x2'0000, PAGE_SIZE);
 
+// CPU Sub-System Registers (CPUSS) Registers.
+constexpr uint32_t kCpuBase = 0xf792'0000;
+constexpr uint32_t kCpuSize = fbl::round_up<uint32_t, uint32_t>(0x2'0000, PAGE_SIZE);
+
 constexpr uint32_t kDhubIrq = 32 + 11;
 
 }  // namespace as370
