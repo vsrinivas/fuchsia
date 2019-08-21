@@ -56,6 +56,14 @@ sdk_documentation("musl_license") {
   ]
 }
 
+sdk_molecule("license") {
+  visibility = [ ":*" ]
+  deps = [
+    ":musl_license",
+    ":open_source",
+  ]
+}
+
 sdk("zircon_sysroot") {
   category = "internal"
 
@@ -128,27 +136,9 @@ sdk("e2e_testing") {
   ]
 }
 
-# TODO(DX-1667): break this target down into smaller chunks.
-sdk("core") {
-  id = sdk_id
-
-  category = "partner"
-
-  api = "core.api"
-
-  testonly = true
-
+sdk_molecule("fidl") {
+  visibility = [ ":*" ]
   deps = [
-    ":musl_license",
-    ":open_source",
-    "devices",
-    "docs",
-    "tools:dev_finder_sdk($host_toolchain)",
-    "tools:symbolize_sdk($host_toolchain)",
-    "//garnet/bin/far:bin_sdk($host_toolchain)",
-    "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
-    "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
-    "//garnet/lib/vulkan:vulkan_layers",
     "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.auth.oldtokens:fuchsia.auth.oldtokens_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt_sdk($fidl_toolchain)",
@@ -188,18 +178,6 @@ sdk("core") {
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.web:fuchsia.web_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service_sdk($fidl_toolchain)",
-    "//sdk/lib/fidl/cpp:cpp_sdk",
-    "//sdk/lib/svc:svc_sdk",
-    "//sdk/lib/sys/cpp:cpp_sdk",
-    "//sdk/lib/sys/cpp/testing:unit_sdk",
-    "//sdk/lib/ui/scenic/cpp:cpp_sdk",
-    "//sdk/lib/vfs/cpp:cpp_sdk",
-    "//src/developer/debug/zxdb:zxdb_sdk($host_toolchain)",
-    "//src/developer/feedback/bugreport:client_sdk($host_toolchain)",
-    "//src/sys/cmc:cmc_sdk($host_toolchain)",
-    "//third_party/Vulkan-Loader:libvulkan_sdk",
-    "//third_party/Vulkan-Loader:vulkan_license",
-    "//tools/fidlcat:fidlcat_sdk($host_toolchain)",
     "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-crash:fuchsia-crash_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-hardware-goldfish-address-space:fuchsia-hardware-goldfish-address-space_sdk($fidl_toolchain)",
@@ -211,6 +189,40 @@ sdk("core") {
     "//zircon/public/fidl/fuchsia-process:fuchsia-process_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_sdk($fidl_toolchain)",
     "//zircon/public/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider_sdk($fidl_toolchain)",
+  ]
+}
+
+sdk_molecule("core_tools") {
+  visibility = [ ":*" ]
+  deps = [
+    "tools:dev_finder_sdk($host_toolchain)",
+    "tools:symbolize_sdk($host_toolchain)",
+    "//garnet/bin/far:bin_sdk($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
+    "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
+    "//src/developer/debug/zxdb:zxdb_sdk($host_toolchain)",
+    "//src/developer/feedback/bugreport:client_sdk($host_toolchain)",
+    "//src/sys/cmc:cmc_sdk($host_toolchain)",
+    "//tools/fidlcat:fidlcat_sdk($host_toolchain)",
+    "//zircon/public/tool/bootserver:bootserver_sdk($host_toolchain)",
+    "//zircon/public/tool/fidl-format:fidl-format_sdk($host_toolchain)",
+    "//zircon/public/tool/fidlc:fidlc_sdk($host_toolchain)",
+    "//zircon/public/tool/fvm:fvm_sdk($host_toolchain)",
+    "//zircon/public/tool/loglistener:loglistener_sdk($host_toolchain)",
+    "//zircon/public/tool/merkleroot:merkleroot_sdk($host_toolchain)",
+    "//zircon/public/tool/minfs:minfs_sdk($host_toolchain)",
+    "//zircon/public/tool/zbi:zbi_sdk($host_toolchain)",
+  ]
+}
+sdk_molecule("core_lib") {
+  visibility = [ ":*" ]
+  deps = [
+    "//sdk/lib/fidl/cpp:cpp_sdk",
+    "//sdk/lib/svc:svc_sdk",
+    "//sdk/lib/sys/cpp:cpp_sdk",
+    "//sdk/lib/sys/cpp/testing:unit_sdk",
+    "//sdk/lib/ui/scenic/cpp:cpp_sdk",
+    "//sdk/lib/vfs/cpp:cpp_sdk",
     "//zircon/public/lib/async:async_sdk",
     "//zircon/public/lib/async-cpp:async-cpp_sdk",
     "//zircon/public/lib/async-default:async-default_sdk",
@@ -224,15 +236,29 @@ sdk("core") {
     "//zircon/public/lib/trace:trace_sdk",
     "//zircon/public/lib/trace-engine:trace-engine_sdk",
     "//zircon/public/lib/trace-provider-so:trace-provider-so_sdk",
+  ]
+}
+
+sdk("core") {
+  id = sdk_id
+
+  category = "partner"
+
+  api = "core.api"
+
+  testonly = true
+
+  deps = [
+    ":core_lib",
+    ":core_tools",
+    ":fidl",
+    ":license",
+    "devices",
+    "docs",
+    "//garnet/lib/vulkan:vulkan_layers",
+    "//third_party/Vulkan-Loader:libvulkan_sdk",
+    "//third_party/Vulkan-Loader:vulkan_license",
     "//zircon/public/sysroot:sysroot_sdk",
-    "//zircon/public/tool/bootserver:bootserver_sdk($host_toolchain)",
-    "//zircon/public/tool/fidl-format:fidl-format_sdk($host_toolchain)",
-    "//zircon/public/tool/fidlc:fidlc_sdk($host_toolchain)",
-    "//zircon/public/tool/fvm:fvm_sdk($host_toolchain)",
-    "//zircon/public/tool/loglistener:loglistener_sdk($host_toolchain)",
-    "//zircon/public/tool/merkleroot:merkleroot_sdk($host_toolchain)",
-    "//zircon/public/tool/minfs:minfs_sdk($host_toolchain)",
-    "//zircon/public/tool/zbi:zbi_sdk($host_toolchain)",
   ]
 }
 
