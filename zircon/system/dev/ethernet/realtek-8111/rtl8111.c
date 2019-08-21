@@ -242,7 +242,7 @@ static zx_status_t rtl8111_start(void* ctx, const ethernet_ifc_protocol_t* ifc) 
 static void rtl8111_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
                              ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
   size_t length = netbuf->data_size;
-  if (length > ETH_BUF_SIZE) {
+  if (length > (size_t)ETH_BUF_SIZE) {
     zxlogf(ERROR, "rtl8111: Unsupported packet length %zu\n", length);
     completion_cb(cookie, ZX_ERR_INVALID_ARGS, netbuf);
     return;

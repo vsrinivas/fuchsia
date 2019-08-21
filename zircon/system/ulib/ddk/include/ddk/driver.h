@@ -224,8 +224,16 @@ zx_status_t device_add_composite(zx_device_t* dev, const char* name, const zx_de
                                  size_t props_count, const device_component_t* components,
                                  size_t components_count, uint32_t coresident_device_index);
 
-#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
-#define ROUNDDOWN(a, b) ((a) & ~((b)-1))
+#define ROUNDUP(a, b) \
+    ({ const __typeof (a) _a = (a); \
+       const __typeof (b) _b = (b); \
+       (_a + (_a % _b == 0 ? 0 : (_b - (_a % _b)))); \
+    })
+#define ROUNDDOWN(a, b) \
+    ({ const __typeof (a) _a = (a); \
+       const __typeof (b) _b = (b); \
+       _a - (_a % _b); \
+    })
 #define ALIGN(a, b) ROUNDUP(a, b)
 
 // temporary accessor for root resource handle
