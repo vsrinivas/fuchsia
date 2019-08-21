@@ -33,7 +33,7 @@ percpu::percpu(cpu_num_t cpu_num) {
   next_timer_deadline = ZX_TIME_INFINITE;
 
 #if WITH_FAIR_SCHEDULER
-  fair_runqueue.this_cpu_ = cpu_num;
+  scheduler.this_cpu_ = cpu_num;
 #endif
 
 #if WITH_LOCK_DEP

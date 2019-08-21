@@ -3,8 +3,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_TASK_STATE_H_
-#define ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_TASK_STATE_H_
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_STATE_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_STATE_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -54,18 +54,18 @@ constexpr auto SchedMs(T milliseconds) {
   return ffl::FromInteger(ZX_MSEC(milliseconds));
 }
 
-// Per-thread state used by FairScheduler.
-class FairTaskState {
+// Per-thread state used by Scheduler.
+class SchedulerState {
  public:
   // The key type of this node operated on by WAVLTree.
   using KeyType = std::pair<SchedTime, uint64_t>;
 
-  FairTaskState() = default;
+  SchedulerState() = default;
 
-  explicit FairTaskState(SchedWeight weight) : weight_{weight} {}
+  explicit SchedulerState(SchedWeight weight) : weight_{weight} {}
 
-  FairTaskState(const FairTaskState&) = delete;
-  FairTaskState& operator=(const FairTaskState&) = delete;
+  SchedulerState(const SchedulerState&) = delete;
+  SchedulerState& operator=(const SchedulerState&) = delete;
 
   SchedWeight weight() const { return weight_; }
 
@@ -99,7 +99,7 @@ class FairTaskState {
   uint64_t generation() const { return generation_; }
 
  private:
-  friend class FairScheduler;
+  friend class Scheduler;
 
   // WAVLTree node state.
   fbl::WAVLTreeNodeState<thread_t*> run_queue_node_;
@@ -107,7 +107,7 @@ class FairTaskState {
   // The current weight of the thread.
   SchedWeight weight_{0};
 
-  // Flag indicating whether this thread is associated with a runqueue.
+  // Flag indicating whether this thread is associated with a run queue.
   bool active_{false};
 
   // TODO(eieio): Some of the values below are only relevant when running,
@@ -125,9 +125,9 @@ class FairTaskState {
   // The remainder of timeslice allocated to the thread when it blocked.
   SchedDuration lag_time_ns_{0};
 
-  // Takes the value of FairScheduler::generation_count_ + 1 at the time this
-  // node is added to the run queue.
+  // Takes the value of Scheduler::generation_count_ + 1 at the time this node
+  // is added to the run queue.
   uint64_t generation_{0};
 };
 
-#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_TASK_STATE_H_
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_STATE_H_

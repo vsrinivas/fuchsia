@@ -3,8 +3,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_SCHEDULER_H_
-#define ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_SCHEDULER_H_
+#ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_
+#define ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_
 
 #include <platform.h>
 #include <stdint.h>
@@ -13,13 +13,13 @@
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <ffl/fixed.h>
-#include <kernel/fair_task_state.h>
+#include <kernel/scheduler_state.h>
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
 
 // Guard the definition of this class because TaskTraits directly refers to
-// thread_t::fair_task_state, which is not present when the fair scheduler is
+// thread_t::scheduler_state, which is not present when the fair scheduler is
 // disabled.
 #if WITH_FAIR_SCHEDULER
 
@@ -27,7 +27,7 @@ struct percpu;
 
 // Implements a fair scheduling algorithm with weight-based relative bandwidth
 // allocation and manages the associated per-CPU state.
-class FairScheduler {
+class Scheduler {
  public:
   // Default minimum granularity of time slices.
   static constexpr SchedDuration kDefaultMinimumGranularity = SchedUs(750);
@@ -40,11 +40,11 @@ class FairScheduler {
 
   static_assert(kDefaultPeakLatency >= kDefaultTargetLatency);
 
-  FairScheduler() = default;
-  ~FairScheduler() = default;
+  Scheduler() = default;
+  ~Scheduler() = default;
 
-  FairScheduler(const FairScheduler&) = delete;
-  FairScheduler& operator=(const FairScheduler&) = delete;
+  Scheduler(const Scheduler&) = delete;
+  Scheduler& operator=(const Scheduler&) = delete;
 
   // Accessors for total weight and number of runnable tasks.
   SchedWeight GetTotalWeight() const TA_EXCL(thread_lock);
@@ -110,11 +110,11 @@ class FairScheduler {
   // Returns the current system time as a SchedTime value.
   static SchedTime CurrentTime() { return SchedTime{current_time()}; }
 
-  // Returns the FairScheduler instance for the current CPU.
-  static FairScheduler* Get();
+  // Returns the Scheduler instance for the current CPU.
+  static Scheduler* Get();
 
-  // Returns the FairScheduler instance for the given CPU.
-  static FairScheduler* Get(cpu_num_t cpu);
+  // Returns the Scheduler instance for the given CPU.
+  static Scheduler* Get(cpu_num_t cpu);
 
   // Returns a CPU to run the given thread on.
   static cpu_num_t FindTargetCpu(thread_t* thread) TA_REQ(thread_lock);
@@ -170,11 +170,11 @@ class FairScheduler {
   // Traits type to adapt the WAVLTree to thread_t with node state in the
   // fair_task_state member.
   struct TaskTraits {
-    using KeyType = FairTaskState::KeyType;
-    static KeyType GetKey(const thread_t& thread) { return thread.fair_task_state.key(); }
+    using KeyType = SchedulerState::KeyType;
+    static KeyType GetKey(const thread_t& thread) { return thread.scheduler_state.key(); }
     static bool LessThan(KeyType a, KeyType b) { return a < b; }
     static bool EqualTo(KeyType a, KeyType b) { return a == b; }
-    static auto& node_state(thread_t& thread) { return thread.fair_task_state.run_queue_node_; }
+    static auto& node_state(thread_t& thread) { return thread.scheduler_state.run_queue_node_; }
   };
 
   // Alias of the WAVLTree type for the runqueue.
@@ -258,4 +258,4 @@ class FairScheduler {
 
 #endif
 
-#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_SCHEDULER_H_
+#endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_

@@ -23,9 +23,9 @@ source_set("kernel") {
   ]
 
   if (enable_fair_scheduler) {
-    sources += [ "fair_scheduler.cc" ]
+    sources += [ "scheduler.cc" ]
   } else {
-    sources += [ "sched.cc" ]
+    sources += [ "legacy_scheduler.cc" ]
   }
 
   deps = [

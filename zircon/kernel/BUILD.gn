@@ -37,7 +37,7 @@ if (current_toolchain == default_toolchain) {
         # <kernel/spinlock.h> has #include <lockdep/lock_policy.h>.
         "$zx/system/ulib/lockdep:headers.config",
 
-        # <kernel/{fair_scheduler,fair_task_state.h> has #include <ffl/fixed.h>.
+        # <kernel/{scheduler.h,scheduler_state.h> has #include <ffl/fixed.h>.
         "$zx/system/ulib/ffl:headers.config",
 
         # <kernel/thread.h> has #include <vm/kstack.h>.

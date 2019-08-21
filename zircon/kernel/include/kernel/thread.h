@@ -19,7 +19,7 @@
 #include <arch/thread.h>
 #include <fbl/intrusive_double_list.h>
 #include <kernel/cpu.h>
-#include <kernel/fair_task_state.h>
+#include <kernel/scheduler_state.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
 #include <kernel/wait.h>
@@ -131,12 +131,12 @@ struct thread_t {
   int inherited_priority;
 
 #if WITH_FAIR_SCHEDULER
-  // state used by the fair scheduler.
+  // state used by the new scheduler.
   // TODO(eieio): Find a way to abstract the O(1) scheduler state so that code
   // outside of the sched implementation uses a uniform interface to
   // manipulate priority. This makes it possible to eliminate redundant state
   // when one scheduler or another is enabled.
-  FairTaskState fair_task_state;
+  SchedulerState scheduler_state;
 #endif
 
   // current cpu the thread is either running on or in the ready queue, undefined otherwise

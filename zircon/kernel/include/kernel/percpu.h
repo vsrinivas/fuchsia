@@ -14,7 +14,7 @@
 #include <arch/ops.h>
 #include <kernel/align.h>
 #include <kernel/event.h>
-#include <kernel/fair_scheduler.h>
+#include <kernel/scheduler.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
@@ -41,7 +41,7 @@ struct percpu {
   uint32_t run_queue_bitmap;
 
 #if WITH_FAIR_SCHEDULER
-  FairScheduler fair_runqueue;
+  Scheduler scheduler;
 #endif
 
 #if WITH_LOCK_DEP

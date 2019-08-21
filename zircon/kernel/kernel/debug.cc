@@ -136,8 +136,8 @@ static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
     printf("\ttimer interrupts: %lu\n", percpu.stats.timer_ints);
     printf("\ttimers: %lu\n", percpu.stats.timers);
 #if WITH_FAIR_SCHEDULER
-    printf("\ttotal weight: %" PRIi64 "\n", percpu.fair_runqueue.GetTotalWeight().raw_value());
-    printf("\trunnable tasks: %zu\n", percpu.fair_runqueue.GetRunnableTasks());
+    printf("\ttotal weight: %" PRIi64 "\n", percpu.scheduler.GetTotalWeight().raw_value());
+    printf("\trunnable tasks: %zu\n", percpu.scheduler.GetRunnableTasks());
 #endif
   }
 
@@ -281,7 +281,7 @@ static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
       }
 
       printf("thread queue cpu %2u:\n", i);
-      percpu::Get(i).fair_runqueue.Dump();
+      percpu::Get(i).scheduler.Dump();
     }
     printf("\n");
   });
