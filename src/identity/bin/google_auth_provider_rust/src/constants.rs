@@ -41,4 +41,7 @@ lazy_static! {
     /// URL for OpenID user info requests.
     pub static ref USER_INFO_URI: Url =
         Url::parse("https://www.googleapis.com/oauth2/v3/userinfo").unwrap();
+    pub static ref FIREBASE_TOKEN_URI: Url =
+        Url::parse("https://www.googleapis.com/identitytoolkit/\
+            v3/relyingparty/verifyAssertion").unwrap();
 }

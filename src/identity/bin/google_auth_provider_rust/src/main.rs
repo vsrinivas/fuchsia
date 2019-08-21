@@ -13,6 +13,7 @@ mod auth_provider;
 mod auth_provider_factory;
 mod constants;
 mod error;
+mod firebase;
 mod http;
 mod oauth;
 mod openid;

@@ -6,6 +6,7 @@ use crate::constants::{
     FUCHSIA_CLIENT_ID, OAUTH_AUTHORIZE_URI, OAUTH_DEFAULT_SCOPES, REDIRECT_URI,
 };
 use crate::error::{AuthProviderError, ResultExt};
+use crate::firebase::{build_firebase_token_request, parse_firebase_token_response};
 use crate::http::HttpClient;
 use crate::oauth::{
     build_request_with_auth_code, build_request_with_refresh_token, build_revocation_request,
@@ -15,7 +16,7 @@ use crate::oauth::{
 };
 use crate::openid::{
     build_id_token_request, build_user_info_request, parse_id_token_response,
-    parse_user_info_response,
+    parse_user_info_response, IdToken,
 };
 use crate::web::StandaloneWebFrame;
 use failure::Error;
@@ -203,11 +204,16 @@ where
     /// interface.
     async fn get_app_firebase_token(
         &self,
-        _id_token: String,
-        _firebase_api_key: String,
+        id_token: String,
+        firebase_api_key: String,
     ) -> AuthProviderResult<FirebaseToken> {
-        // TODO(satsukiu): implement
-        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
+        if id_token.is_empty() || firebase_api_key.is_empty() {
+            return Err(AuthProviderError::new(AuthProviderStatus::BadRequest));
+        }
+
+        let request = build_firebase_token_request(IdToken(id_token), firebase_api_key)?;
+        let (response_body, status) = self.http_client.request(request).await?;
+        parse_firebase_token_response(response_body, status)
     }
 
     /// Implementation of `RevokeAppOrPersistentCredential` method for the
@@ -860,10 +866,48 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_get_app_firebase_token() -> Result<(), Error> {
-        let auth_provider = get_auth_provider_proxy(None, None);
+    async fn test_get_app_firebase_token_success() -> Result<(), Error> {
+        let response_body = "{\"idToken\": \"test-firebase-token\", \"localId\": \"test-id\",\
+                             \"email\": \"test@example.com\", \"expiresIn\": \"3600\"}";
+        let mock_http = TestHttpClient::with_response(Some(response_body), StatusCode::OK);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+
+        let (status, result_token) =
+            auth_provider.get_app_firebase_token("id_token", "api_key").await?;
+        assert_eq!(status, AuthProviderStatus::Ok);
+        assert_eq!(
+            result_token.unwrap(),
+            Box::new(FirebaseToken {
+                id_token: "test-firebase-token".to_string(),
+                email: Some("test@example.com".to_string()),
+                local_id: Some("test-id".to_string()),
+                expires_in: 3600,
+            })
+        );
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_app_firebase_token_failures() -> Result<(), Error> {
+        // Invalid request
+        let mock_http = TestHttpClient::with_error(AuthProviderStatus::InternalError);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+        let result = auth_provider.get_app_firebase_token("", "").await?;
+        assert_eq!(result.0, AuthProviderStatus::BadRequest);
+
+        // Error response
+        let http_result = "{\"message\": \"invalid api key\"}";
+        let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::BAD_REQUEST);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
         let result = auth_provider.get_app_firebase_token("id_token", "api_key").await?;
-        assert_eq!(result.0, AuthProviderStatus::InternalError);
+        assert_eq!(result.0, AuthProviderStatus::OauthServerError);
+
+        // Network error
+        let mock_http = TestHttpClient::with_error(AuthProviderStatus::NetworkError);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+        let result = auth_provider.get_app_firebase_token("id_token", "api_key").await?;
+        assert_eq!(result.0, AuthProviderStatus::NetworkError);
+
         Ok(())
     }
 
