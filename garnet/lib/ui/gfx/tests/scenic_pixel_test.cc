@@ -652,6 +652,14 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
 }
 
 TEST_F(ScenicPixelTest, Opacity) {
+  constexpr auto COMPARE_COLOR = [](const scenic::Color& color_1, const scenic::Color& color_2,
+                                    int max_error) {
+    EXPECT_TRUE(abs(color_1.r - color_2.r) <= max_error &&
+                abs(color_1.g - color_2.g) <= max_error &&
+                abs(color_1.b - color_2.b) <= max_error && abs(color_1.a - color_2.a) <= max_error)
+        << "Color " << color_1 << " and " << color_2 << " don't match.";
+  };
+
   constexpr int kNumTests = 3;
 
   // We use the same background/foreground color for each test iteration, but
@@ -677,9 +685,8 @@ TEST_F(ScenicPixelTest, Opacity) {
     // a more meaningful failure.
     std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
 
-    EXPECT_GT(histogram[expected_colors[i]], 0u);
-    histogram.erase(expected_colors[i]);
-    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+    // There should be only one color here in the histogram.
+    COMPARE_COLOR(histogram.begin()->first, expected_colors[i], 1);
   }
 }
 
