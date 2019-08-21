@@ -9,7 +9,9 @@ use core::fmt::{self, Debug, Display, Formatter};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::ip::{IpAddress, Ipv6Addr};
-use crate::{BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, UnicastAddress};
+use crate::{
+    BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, UnicastAddress, Witness,
+};
 
 /// A media access control (MAC) address.
 ///

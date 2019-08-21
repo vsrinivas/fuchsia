@@ -14,7 +14,7 @@ use std::time::Duration;
 use failure::Fail;
 use log::{debug, error};
 use net_types::ip::{Ip, Ipv6, Ipv6Addr};
-use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, SpecifiedAddress};
+use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
 use rand::Rng;

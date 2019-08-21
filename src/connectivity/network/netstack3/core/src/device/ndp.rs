@@ -29,7 +29,7 @@ use log::{debug, error, trace};
 use net_types::ip::{AddrSubnet, Ip, Ipv6, Ipv6Addr};
 use net_types::{
     LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress, SpecifiedAddr,
-    SpecifiedAddress,
+    SpecifiedAddress, Witness,
 };
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use rand::{thread_rng, Rng};

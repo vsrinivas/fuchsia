@@ -25,6 +25,28 @@ mod sealed {
     pub trait Sealed {}
 }
 
+/// A type which is a witness to some property about an address.
+///
+/// A type which implements `Witness<A>` wraps an address of type `A` and
+/// guarantees some property about the wrapped address. It is implemented by
+/// [`SpecifiedAddr`], [`UnicastAddr`], [`MulticastAddr`], and
+/// [`LinkLocalAddr`].
+pub trait Witness<A>: Deref<Target = A> + sealed::Sealed + Sized {
+    /// Constructs a new witness type..
+    ///
+    /// `new` returns `None` if `addr` does not satisfy the property guaranteed
+    /// by `Self`.
+    fn new(addr: A) -> Option<Self>;
+
+    /// Get a clone of the address.
+    fn get(&self) -> A
+    where
+        A: Clone;
+
+    /// Consumes this witness and returns the contained `A`.
+    fn into_addr(self) -> A;
+}
+
 // NOTE: The "witness" types UnicastAddr, MulticastAddr, and LinkLocalAddr -
 // which provide the invariant that the value they contain is a unicast,
 // multicast, or link-local address, respectively - cannot actually guarantee
@@ -172,6 +194,30 @@ pub trait LinkLocalAddress {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct SpecifiedAddr<A>(A);
 
+impl<A: SpecifiedAddress> sealed::Sealed for SpecifiedAddr<A> {}
+impl<A: SpecifiedAddress> Witness<A> for SpecifiedAddr<A> {
+    #[inline]
+    fn new(addr: A) -> Option<SpecifiedAddr<A>> {
+        if !addr.is_specified() {
+            return None;
+        }
+        Some(SpecifiedAddr(addr))
+    }
+
+    #[inline]
+    fn get(&self) -> A
+    where
+        A: Clone,
+    {
+        self.0.clone()
+    }
+
+    #[inline]
+    fn into_addr(self) -> A {
+        self.0
+    }
+}
+
 impl<A> SpecifiedAddr<A> {
     /// Constructs a new `SpecifiedAddr` without checking to see if `addr` is
     /// actually a specified address.
@@ -184,34 +230,6 @@ impl<A> SpecifiedAddr<A> {
     #[inline]
     pub const unsafe fn new_unchecked(addr: A) -> SpecifiedAddr<A> {
         SpecifiedAddr(addr)
-    }
-
-    /// Consumes this `SpecifiedAddr` and returns the contained `A`.
-    #[inline]
-    pub fn into_addr(self) -> A {
-        self.0
-    }
-}
-
-impl<A: SpecifiedAddress> SpecifiedAddr<A> {
-    /// Constructs a new `SpecifiedAddr`.
-    ///
-    /// `new` returns `None` if `addr` is not a specified address according to
-    /// [`SpecifiedAddress::is_specified`].
-    #[inline]
-    pub fn new(addr: A) -> Option<SpecifiedAddr<A>> {
-        if !addr.is_specified() {
-            return None;
-        }
-        Some(SpecifiedAddr(addr))
-    }
-}
-
-impl<A: Clone> SpecifiedAddr<A> {
-    /// Get a clone of the address.
-    #[inline]
-    pub fn get(&self) -> A {
-        self.0.clone()
     }
 }
 
@@ -240,6 +258,30 @@ impl<A: SpecifiedAddress + Display> Display for SpecifiedAddr<A> {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct UnicastAddr<A>(A);
 
+impl<A: UnicastAddress> sealed::Sealed for UnicastAddr<A> {}
+impl<A: UnicastAddress> Witness<A> for UnicastAddr<A> {
+    #[inline]
+    fn new(addr: A) -> Option<UnicastAddr<A>> {
+        if !addr.is_unicast() {
+            return None;
+        }
+        Some(UnicastAddr(addr))
+    }
+
+    #[inline]
+    fn get(&self) -> A
+    where
+        A: Clone,
+    {
+        self.0.clone()
+    }
+
+    #[inline]
+    fn into_addr(self) -> A {
+        self.0
+    }
+}
+
 impl<A> UnicastAddr<A> {
     /// Constructs a new `UnicastAddr` without checking to see if `addr` is
     /// actually a unicast address.
@@ -252,34 +294,6 @@ impl<A> UnicastAddr<A> {
     #[inline]
     pub const unsafe fn new_unchecked(addr: A) -> UnicastAddr<A> {
         UnicastAddr(addr)
-    }
-
-    /// Consumes this `UnicastAddr` and returns the contained `A`.
-    #[inline]
-    pub fn into_addr(self) -> A {
-        self.0
-    }
-}
-
-impl<A: UnicastAddress> UnicastAddr<A> {
-    /// Constructs a new `UnicastAddr`.
-    ///
-    /// `new` returns `None` if `addr` is not a unicast address according to
-    /// [`UnicastAddress::is_unicast`].
-    #[inline]
-    pub fn new(addr: A) -> Option<UnicastAddr<A>> {
-        if !addr.is_unicast() {
-            return None;
-        }
-        Some(UnicastAddr(addr))
-    }
-}
-
-impl<A: Clone> UnicastAddr<A> {
-    /// Get a clone of the address.
-    #[inline]
-    pub fn get(&self) -> A {
-        self.0.clone()
     }
 }
 
@@ -308,6 +322,30 @@ impl<A: UnicastAddress + Display> Display for UnicastAddr<A> {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct MulticastAddr<A>(A);
 
+impl<A: MulticastAddress> sealed::Sealed for MulticastAddr<A> {}
+impl<A: MulticastAddress> Witness<A> for MulticastAddr<A> {
+    #[inline]
+    fn new(addr: A) -> Option<MulticastAddr<A>> {
+        if !addr.is_multicast() {
+            return None;
+        }
+        Some(MulticastAddr(addr))
+    }
+
+    #[inline]
+    fn get(&self) -> A
+    where
+        A: Clone,
+    {
+        self.0.clone()
+    }
+
+    #[inline]
+    fn into_addr(self) -> A {
+        self.0
+    }
+}
+
 impl<A> MulticastAddr<A> {
     /// Construct a new `MulticastAddr` without checking to see if `addr` is
     /// actually a multicast address.
@@ -321,12 +359,6 @@ impl<A> MulticastAddr<A> {
     pub const unsafe fn new_unchecked(addr: A) -> MulticastAddr<A> {
         MulticastAddr(addr)
     }
-
-    /// Consumes this `MulticastAddr` and returns the contained `A`.
-    #[inline]
-    pub fn into_addr(self) -> A {
-        self.0
-    }
 }
 
 impl<A: SpecifiedAddress> MulticastAddr<A> {
@@ -338,28 +370,6 @@ impl<A: SpecifiedAddress> MulticastAddr<A> {
     #[inline]
     pub fn into_specified(self) -> SpecifiedAddr<A> {
         SpecifiedAddr(self.0)
-    }
-}
-
-impl<A: MulticastAddress> MulticastAddr<A> {
-    /// Constructs a new `MulticastAddr`.
-    ///
-    /// `new` returns `None` if `addr` is not a multicast address according to
-    /// [`MulticastAddress::is_multicast`].
-    #[inline]
-    pub fn new(addr: A) -> Option<MulticastAddr<A>> {
-        if !addr.is_multicast() {
-            return None;
-        }
-        Some(MulticastAddr(addr))
-    }
-}
-
-impl<A: Clone> MulticastAddr<A> {
-    /// Get a clone of the address.
-    #[inline]
-    pub fn get(&self) -> A {
-        self.0.clone()
     }
 }
 
@@ -394,6 +404,30 @@ impl<A: SpecifiedAddress> From<MulticastAddr<A>> for SpecifiedAddr<A> {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct LinkLocalAddr<A>(A);
 
+impl<A: LinkLocalAddress> sealed::Sealed for LinkLocalAddr<A> {}
+impl<A: LinkLocalAddress> Witness<A> for LinkLocalAddr<A> {
+    #[inline]
+    fn new(addr: A) -> Option<LinkLocalAddr<A>> {
+        if !addr.is_linklocal() {
+            return None;
+        }
+        Some(LinkLocalAddr(addr))
+    }
+
+    #[inline]
+    fn get(&self) -> A
+    where
+        A: Clone,
+    {
+        self.0.clone()
+    }
+
+    #[inline]
+    fn into_addr(self) -> A {
+        self.0
+    }
+}
+
 impl<A> LinkLocalAddr<A> {
     /// Construct a new `LinkLocalAddr` without checking to see if `addr` is
     /// actually a link-local address.
@@ -407,12 +441,6 @@ impl<A> LinkLocalAddr<A> {
     pub const unsafe fn new_unchecked(addr: A) -> LinkLocalAddr<A> {
         LinkLocalAddr(addr)
     }
-
-    /// Consumes this `LinkLocalAddr` and returns the contained `A`.
-    #[inline]
-    pub fn into_addr(self) -> A {
-        self.0
-    }
 }
 
 impl<A: SpecifiedAddress> LinkLocalAddr<A> {
@@ -424,28 +452,6 @@ impl<A: SpecifiedAddress> LinkLocalAddr<A> {
     #[inline]
     pub fn into_specified(self) -> SpecifiedAddr<A> {
         SpecifiedAddr(self.0)
-    }
-}
-
-impl<A: LinkLocalAddress> LinkLocalAddr<A> {
-    /// Constructs a new `LinkLocalAddr`.
-    ///
-    /// `new` returns `None` if `addr` is not a link-local address according to
-    /// [`LinkLocalAddress::is_linklocal`].
-    #[inline]
-    pub fn new(addr: A) -> Option<LinkLocalAddr<A>> {
-        if !addr.is_linklocal() {
-            return None;
-        }
-        Some(LinkLocalAddr(addr))
-    }
-}
-
-impl<A: Clone> LinkLocalAddr<A> {
-    /// Get a clone of the address.
-    #[inline]
-    pub fn get(&self) -> A {
-        self.0.clone()
     }
 }
 

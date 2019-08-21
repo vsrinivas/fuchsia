@@ -14,7 +14,7 @@ use std::time::Duration;
 use failure::Fail;
 use log::{debug, error};
 use net_types::ip::{AddrSubnet, Ipv4Addr};
-use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress};
+use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder};
 use rand::Rng;
 use rand_xorshift::XorShiftRng;

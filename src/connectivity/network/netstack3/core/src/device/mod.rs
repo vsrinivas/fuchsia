@@ -14,7 +14,7 @@ use std::num::NonZeroU8;
 use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr};
+use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, Witness};
 use packet::{BufferMut, Serializer};
 use specialize_ip_macro::specialize_ip;
 

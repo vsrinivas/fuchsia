@@ -7,7 +7,7 @@
 use byteorder::{ByteOrder, NetworkEndian};
 use log::{debug, trace};
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::{MulticastAddress, SpecifiedAddr};
+use net_types::{MulticastAddress, SpecifiedAddr, Witness};
 use packet::{BufferMut, Serializer, TruncateDirection, TruncatingSerializer};
 use specialize_ip_macro::specialize_ip_address;
 

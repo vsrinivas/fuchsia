@@ -7,7 +7,7 @@
 use std::num::NonZeroU16;
 
 use net_types::ip::{Ip, IpAddress};
-use net_types::SpecifiedAddr;
+use net_types::{SpecifiedAddr, Witness};
 use packet::{BufferMut, ParsablePacket, Serializer};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::ByteSlice;

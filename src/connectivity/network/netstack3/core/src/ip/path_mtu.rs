@@ -406,7 +406,7 @@ mod tests {
     use super::*;
 
     use net_types::ip::{Ipv4, Ipv6};
-    use net_types::SpecifiedAddr;
+    use net_types::{SpecifiedAddr, Witness};
     use specialize_ip_macro::specialize_ip_address;
 
     use crate::testutil::{

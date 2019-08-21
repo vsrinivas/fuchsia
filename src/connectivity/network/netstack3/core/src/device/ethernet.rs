@@ -13,7 +13,8 @@ use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{
-    BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, SpecifiedAddr, UnicastAddress,
+    BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, SpecifiedAddr,
+    UnicastAddress, Witness,
 };
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};

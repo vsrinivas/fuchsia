@@ -5,7 +5,7 @@
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
-use net_types::SpecifiedAddr;
+use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{Context, DeviceId, EntryDest, EntryDestEither, EntryEither};
 use never::Never;
 use std::convert::TryFrom;

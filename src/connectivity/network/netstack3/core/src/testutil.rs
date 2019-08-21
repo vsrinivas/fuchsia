@@ -16,7 +16,7 @@ use byteorder::{ByteOrder, NativeEndian};
 use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither};
-use net_types::SpecifiedAddr;
+use net_types::{SpecifiedAddr, Witness};
 use packet::{Buf, BufferMut, ParsablePacket, ParseBuffer, Serializer};
 use rand::{self, CryptoRng, RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;

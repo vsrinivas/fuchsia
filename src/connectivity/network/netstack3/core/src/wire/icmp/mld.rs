@@ -240,6 +240,7 @@ impl<M: Mldv1MessageType> PacketBuilder for Mldv1MessageBuilder<M> {
 
 #[cfg(test)]
 mod tests {
+    use net_types::Witness;
     use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
     use std::convert::TryInto;
     use std::fmt::Debug;

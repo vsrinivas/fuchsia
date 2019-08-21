@@ -722,6 +722,7 @@ impl Ord for PacketBodyFragment {
 #[cfg(test)]
 mod tests {
     use net_types::ip::{IpAddress, Ipv4, Ipv6};
+    use net_types::Witness;
     use packet::{Buf, ParseBuffer, Serializer};
     use specialize_ip_macro::specialize_ip;
 

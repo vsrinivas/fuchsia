@@ -59,7 +59,7 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::{
     sealed, LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress, SpecifiedAddr,
-    SpecifiedAddress, UnicastAddress,
+    SpecifiedAddress, UnicastAddress, Witness,
 };
 
 // NOTE on passing by reference vs by value: Clippy advises us to pass IPv4
@@ -1002,69 +1002,104 @@ impl<A: IpAddress> From<Subnet<A>> for SubnetEither {
 ///
 /// An `AddrSubnet` is a pair of an address and a subnet which maintains the
 /// invariant that the address is guaranteed to be a unicast address in the
-/// subnet.
+/// subnet. `S` is the type of address ([`Ipv4Addr`] or [`Ipv6Addr`]), and `A`
+/// is the type of the address in the subnet, which is always a witness wrapper
+/// around `S`. By default, it is `SpecifiedAddr<S>`.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub struct AddrSubnet<A: IpAddress> {
+pub struct AddrSubnet<S: IpAddress, A: Witness<S> = SpecifiedAddr<S>> {
     // TODO(joshlf): Would it be more performant to store these as just an
     // address and subnet mask? It would make the object smaller and so cheaper
     // to pass around, but it would make certain operations more expensive.
-    addr: SpecifiedAddr<A>,
-    subnet: Subnet<A>,
+    addr: A,
+    subnet: Subnet<S>,
 }
 
-impl<A: IpAddress> AddrSubnet<A> {
+impl<S: IpAddress, A: Witness<S>> AddrSubnet<S, A> {
     /// Creates a new `AddrSubnet`.
     ///
     /// `new` creates a new `AddrSubnet` with the given address and prefix
     /// length. The network address of the subnet is taken to be the first
     /// `prefix` bits of the address. It returns `None` if `prefix` is longer
     /// than the number of bits in this type of IP address (32 for IPv4 and 128
-    /// for IPv6) or if `addr` is not a unicast address in the resulting subnet
-    /// (see [`IpAddress::is_unicast_in_subnet`]).
+    /// for IPv6), if `addr` is not a unicast address in the resulting subnet
+    /// (see [`IpAddress::is_unicast_in_subnet`]), or if `addr` does not satisfy
+    /// the requirements of the witness type `A`.
     #[inline]
-    pub fn new(addr: A, prefix: u8) -> Option<AddrSubnet<A>> {
-        if prefix > A::BYTES * 8 {
+    pub fn new(addr: S, prefix: u8) -> Option<AddrSubnet<S, A>> {
+        if prefix > S::BYTES * 8 {
             return None;
         }
         let subnet = Subnet { network: addr.mask(prefix), prefix };
         if !addr.is_unicast_in_subnet(&subnet) {
             return None;
         }
-        let addr = SpecifiedAddr::new(addr)?;
+        let addr = A::new(addr)?;
         Some(AddrSubnet { addr, subnet })
-    }
-
-    /// Gets the address.
-    #[inline]
-    pub fn addr(&self) -> SpecifiedAddr<A> {
-        self.addr
     }
 
     /// Gets the subnet.
     #[inline]
-    pub fn subnet(&self) -> Subnet<A> {
+    pub fn subnet(&self) -> Subnet<S> {
         self.subnet
     }
 
     /// Consumes the `AddrSubnet` and returns the address.
     #[inline]
-    pub fn into_addr(self) -> SpecifiedAddr<A> {
+    pub fn into_addr(self) -> A {
         self.addr
     }
 
     /// Consumes the `AddrSubnet` and returns the subnet.
     #[inline]
-    pub fn into_subnet(self) -> Subnet<A> {
+    pub fn into_subnet(self) -> Subnet<S> {
         self.subnet
     }
 
     /// Consumes the `AddrSubnet` and returns the address and subnet
     /// individually.
     #[inline]
-    pub fn into_addr_subnet(self) -> (SpecifiedAddr<A>, Subnet<A>) {
+    pub fn into_addr_subnet(self) -> (A, Subnet<S>) {
         (self.addr, self.subnet)
     }
 }
+
+impl<S: IpAddress, A: Witness<S> + Copy> AddrSubnet<S, A> {
+    /// Gets the address.
+    #[inline]
+    pub fn addr(&self) -> A {
+        self.addr
+    }
+}
+
+/// A type which is a witness to some property about an `IpAddress`.
+///
+/// `IpAddrWitness` extends [`Witness`] by adding associated types for the IPv4-
+/// and IPv6-specific versions of the same witness type. For example, the
+/// following implementation is provided for `SpecifiedAddr<IpAddr>`:
+///
+/// ```rust,ignore
+/// impl IpAddrWitness for SpecifiedAddr<IpAddr> {
+///     type V4 = SpecifiedAddr<Ipv4Addr>;
+///     type V6 = SpecifiedAddr<Ipv6Addr>;
+/// }
+/// ```
+pub trait IpAddrWitness: Witness<IpAddr> {
+    type V4: Witness<Ipv4Addr> + Into<Self>;
+    type V6: Witness<Ipv6Addr> + Into<Self>;
+}
+
+macro_rules! impl_ip_addr_witness {
+    ($witness:ident) => {
+        impl IpAddrWitness for $witness<IpAddr> {
+            type V4 = $witness<Ipv4Addr>;
+            type V6 = $witness<Ipv6Addr>;
+        }
+    };
+}
+
+impl_ip_addr_witness!(SpecifiedAddr);
+impl_ip_addr_witness!(MulticastAddr);
+impl_ip_addr_witness!(LinkLocalAddr);
 
 /// An address and that address' subnet, either IPv4 or IPv6.
 ///
@@ -1074,21 +1109,19 @@ impl<A: IpAddress> AddrSubnet<A> {
 /// [`AddrSubnet<Ipv4Addr>`]: crate::ip::AddrSubnet
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub enum AddrSubnetEither {
-    V4(AddrSubnet<Ipv4Addr>),
-    V6(AddrSubnet<Ipv6Addr>),
+pub enum AddrSubnetEither<A: IpAddrWitness = SpecifiedAddr<IpAddr>> {
+    V4(AddrSubnet<Ipv4Addr, A::V4>),
+    V6(AddrSubnet<Ipv6Addr, A::V6>),
 }
 
-impl AddrSubnetEither {
+impl<A: IpAddrWitness> AddrSubnetEither<A> {
     /// Creates a new `AddrSubnetEither`.
     ///
     /// `new` creates a new `AddrSubnetEither` with the given address and prefix
-    /// length. The network address of the subnet is taken to be the first
-    /// `prefix` bits of the address. It returns `None` if `prefix` is longer
-    /// than the number of bits in this type of IP address (32 for IPv4 and 128
-    /// for IPv6).
+    /// length. It returns `None` under the same conditions as
+    /// [`AddrSubnet::new`].
     #[inline]
-    pub fn new(addr: IpAddr, prefix: u8) -> Option<AddrSubnetEither> {
+    pub fn new(addr: IpAddr, prefix: u8) -> Option<AddrSubnetEither<A>> {
         Some(match addr {
             IpAddr::V4(addr) => AddrSubnetEither::V4(AddrSubnet::new(addr, prefix)?),
             IpAddr::V6(addr) => AddrSubnetEither::V6(AddrSubnet::new(addr, prefix)?),
@@ -1097,7 +1130,7 @@ impl AddrSubnetEither {
 
     /// Gets the contained IP address and prefix in this `AddrSubnetEither`.
     #[inline]
-    pub fn into_addr_prefix(self) -> (SpecifiedAddr<IpAddr>, u8) {
+    pub fn into_addr_prefix(self) -> (A, u8) {
         match self {
             AddrSubnetEither::V4(v4) => (v4.addr.into(), v4.subnet.prefix),
             AddrSubnetEither::V6(v6) => (v6.addr.into(), v6.subnet.prefix),
@@ -1106,7 +1139,7 @@ impl AddrSubnetEither {
 
     /// Gets the IP address and subnet in this `AddrSubnetEither`.
     #[inline]
-    pub fn into_addr_subnet(self) -> (SpecifiedAddr<IpAddr>, SubnetEither) {
+    pub fn into_addr_subnet(self) -> (A, SubnetEither) {
         match self {
             AddrSubnetEither::V4(v4) => (v4.addr.into(), SubnetEither::V4(v4.subnet)),
             AddrSubnetEither::V6(v6) => (v6.addr.into(), SubnetEither::V6(v6.subnet)),
@@ -1179,30 +1212,42 @@ mod tests {
         // Network address has more than top 8 bits set
         assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 8), None);
 
-        AddrSubnet::new(Ipv4Addr::new([1, 2, 3, 4]), 32).unwrap();
+        AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32).unwrap();
         // The unspecified address is not considered to be a unicast address in
         // any subnet (use assert, not assert_eq, because AddrSubnet doesn't
         // impl Debug)
-        assert!(AddrSubnet::new(Ipv4::UNSPECIFIED_ADDRESS, 16) == None);
-        assert!(AddrSubnet::new(Ipv6::UNSPECIFIED_ADDRESS, 64) == None);
+        assert!(AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4::UNSPECIFIED_ADDRESS, 16) == None);
+        assert!(AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv6::UNSPECIFIED_ADDRESS, 64) == None);
         // Prefix exceeds 32/128 bits
-        assert!(AddrSubnet::new(Ipv4Addr::new([1, 2, 3, 4]), 33) == None);
+        assert!(AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 33) == None);
         assert!(
-            AddrSubnet::new(
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(
                 Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
                 129
             ) == None
         );
         // Global broadcast
-        assert!(AddrSubnet::new(Ipv4::GLOBAL_BROADCAST_ADDRESS.into_addr(), 16) == None);
-        // Subnet broadcast
-        assert!(AddrSubnet::new(Ipv4Addr::new([192, 168, 255, 255]), 16) == None);
-        // Multicast
-        assert!(AddrSubnet::new(Ipv4Addr::new([224, 0, 0, 1]), 16) == None);
         assert!(
-            AddrSubnet::new(Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]), 64)
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4::GLOBAL_BROADCAST_ADDRESS.into_addr(), 16)
                 == None
         );
+        // Subnet broadcast
+        assert!(
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([192, 168, 255, 255]), 16) == None
+        );
+        // Multicast
+        assert!(AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([224, 0, 0, 1]), 16) == None);
+        assert!(
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(
+                Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+                64
+            ) == None
+        );
+
+        // If we use the `LinkLocalAddr` witness type, then non link-local
+        // addresses are rejected. Note that this address was accepted above
+        // when `SpecifiedAddr` was used.
+        assert!(AddrSubnet::<_, LinkLocalAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32) == None);
     }
 
     #[test]

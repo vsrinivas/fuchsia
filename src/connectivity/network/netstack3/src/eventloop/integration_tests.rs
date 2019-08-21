@@ -11,7 +11,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::client;
 use futures::{future, Future, FutureExt, StreamExt};
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr};
-use net_types::SpecifiedAddr;
+use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::icmp::{self as core_icmp, IcmpConnId};
 use packet::Buf;
 use pin_utils::pin_mut;

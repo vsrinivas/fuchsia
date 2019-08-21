@@ -367,6 +367,8 @@ pub(crate) enum Ipv4OptionData<'a> {
 
 #[cfg(test)]
 mod tests {
+    use net_types::Witness;
+
     use super::*;
 
     #[test]
