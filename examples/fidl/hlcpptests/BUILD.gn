@@ -20,8 +20,8 @@ executable("unittests") {
   ]
 
   deps = [
-    "//examples/fidl/fuchsia.examples",
     "//examples/fidl/fostr/fuchsia.examples",
+    "//examples/fidl/fuchsia.examples",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
