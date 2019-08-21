@@ -15,7 +15,7 @@ use fidl_fuchsia_pkg_ext::BlobId;
 use fuchsia_async as fasync;
 use fuchsia_zircon::Status;
 use futures::stream::TryStreamExt;
-use parking_lot::Mutex;
+use parking_lot::{Mutex, RwLock};
 use serde::Serialize;
 use serde_json;
 use std::collections::HashMap;
@@ -68,8 +68,8 @@ impl Package {
 
 #[derive(Debug)]
 pub(crate) struct MockAmber {
-    source: Repository,
     repos: HashMap<String, (RepositoryConfig, Arc<Repository>)>,
+    mode: Arc<RwLock<MockAmberMode>>,
 }
 
 impl MockAmber {
@@ -100,16 +100,22 @@ impl MockAmber {
             panic!("repo does not exist");
         };
 
+        let mode = Arc::clone(&self.mode);
+
         fasync::spawn(async move {
             let mut stream = repo.into_stream().unwrap();
 
             while let Some(req) = stream.try_next().await.unwrap() {
-                Self::process_repo_request(&opened_repo, req).expect("amber failed");
+                Self::process_repo_request(&opened_repo, req, *mode.read()).expect("amber failed");
             }
         });
     }
 
-    fn process_repo_request(repo: &Repository, req: OpenedRepositoryRequest) -> Result<(), Error> {
+    fn process_repo_request(
+        repo: &Repository,
+        req: OpenedRepositoryRequest,
+        mode: MockAmberMode,
+    ) -> Result<(), Error> {
         match req {
             OpenedRepositoryRequest::GetUpdateComplete {
                 name,
@@ -118,6 +124,13 @@ impl MockAmber {
                 result,
                 control_handle: _,
             } => {
+                assert_eq!(
+                    mode,
+                    MockAmberMode::GetUpdateComplete,
+                    "unexpected call to GetUpdateComplete, configured for {:?}",
+                    mode
+                );
+
                 let variant = variant.unwrap_or_else(|| "0".to_string());
 
                 let (_, result_control_channel) = result.into_stream_and_control_handle()?;
@@ -140,21 +153,56 @@ impl MockAmber {
 
                 Ok(())
             }
-            _ => panic!("unexpected call to {:?}", req),
+            OpenedRepositoryRequest::MerkleFor { name, variant, responder } => {
+                assert_eq!(
+                    mode,
+                    MockAmberMode::MerkleFor,
+                    "unexpected call to MerkleFor, configured for {:?}",
+                    mode
+                );
+
+                let variant = variant.unwrap_or_else(|| "0".to_string());
+
+                if let Some(package) = repo.get(name, variant)? {
+                    match package.kind {
+                        PackageKind::Ok => {
+                            panic!("positive responses for MerkleFor not implemented");
+                        }
+                        PackageKind::Error(status, ref msg) => {
+                            responder.send(status.into_raw(), msg, "", 0)?;
+                        }
+                    }
+                } else {
+                    responder.send(
+                        Status::NOT_FOUND.into_raw(),
+                        "merkle not found for package",
+                        "",
+                        0,
+                    )?;
+                }
+
+                Ok(())
+            }
         }
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub(crate) enum MockAmberMode {
+    GetUpdateComplete,
+    MerkleFor,
 }
 
 #[derive(Debug)]
 pub(crate) struct MockAmberBuilder {
     pkgfs: Arc<TempDir>,
-    packages: Vec<Package>,
     repos: HashMap<String, (RepositoryConfig, Arc<Repository>)>,
+    mode: Option<Arc<RwLock<MockAmberMode>>>,
 }
 
 impl MockAmberBuilder {
     pub(crate) fn new(pkgfs: Arc<TempDir>) -> Self {
-        MockAmberBuilder { pkgfs, packages: vec![], repos: HashMap::new() }
+        MockAmberBuilder { pkgfs, repos: HashMap::new(), mode: None }
     }
 
     pub(crate) fn repo(mut self, config: RepositoryConfig, packages: Vec<Package>) -> Self {
@@ -164,8 +212,15 @@ impl MockAmberBuilder {
         self
     }
 
+    pub(crate) fn mode(mut self, mode: Arc<RwLock<MockAmberMode>>) -> Self {
+        self.mode = Some(mode);
+        self
+    }
+
     pub(crate) fn build(self) -> MockAmber {
-        MockAmber { source: Repository::new(self.pkgfs, self.packages), repos: self.repos }
+        let mode =
+            self.mode.unwrap_or_else(|| Arc::new(RwLock::new(MockAmberMode::GetUpdateComplete)));
+        MockAmber { repos: self.repos, mode }
     }
 }
 
@@ -189,7 +244,7 @@ impl Repository {
         if let Some(package) = self.packages.get(&(name, variant)) {
             if package.kind == PackageKind::Ok {
                 // Create blob dir with a single file.
-                let blob_path = self.pkgfs.path().join(&package.merkle);
+                let blob_path = self.pkgfs.path().join("versions").join(&package.merkle);
                 if let Err(e) = fs::create_dir(&blob_path) {
                     if e.kind() != io::ErrorKind::AlreadyExists {
                         return Err(e.into());
@@ -226,8 +281,13 @@ impl MockPackageCache {
                 let node_request = ServerEnd::new(dir.into_channel());
                 let flags =
                     fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
-                let merkle = BlobId::from(meta_far_blob_id.merkle_root).to_string();
-                let status = match self.pkgfs.open(flags, 0, &merkle, node_request) {
+                let merkle = BlobId::from(meta_far_blob_id.merkle_root);
+                let status = match self.pkgfs.open(
+                    flags,
+                    0,
+                    &format!("versions/{}", merkle),
+                    node_request,
+                ) {
                     Ok(()) => Status::OK,
                     Err(e) => {
                         eprintln!("Cache lookup failed: {}", e);

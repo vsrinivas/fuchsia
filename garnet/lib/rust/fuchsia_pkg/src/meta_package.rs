@@ -36,6 +36,16 @@ impl MetaPackage {
         Ok(MetaPackage { name, variant })
     }
 
+    /// Returns the package's name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns the package's variant.
+    pub fn variant(&self) -> &str {
+        &self.variant
+    }
+
     /// Deserializes a `MetaPackage` from json.
     ///
     /// # Examples
@@ -132,6 +142,13 @@ mod tests {
             MetaPackage::from_name_and_variant(name, variant).unwrap(),
             MetaPackage { name: name.to_string(), variant: variant.to_string() }
         );
+    }
+
+    #[test]
+    fn test_accessors() {
+        let meta_package = MetaPackage::from_name_and_variant("foo", "bar").unwrap();
+        assert_eq!(meta_package.name(), "foo");
+        assert_eq!(meta_package.variant(), "bar");
     }
 
     #[test]

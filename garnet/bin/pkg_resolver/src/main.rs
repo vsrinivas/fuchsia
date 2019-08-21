@@ -6,6 +6,7 @@
 
 use {
     failure::{Error, ResultExt},
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_pkg::PackageCacheMarker,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
@@ -14,11 +15,11 @@ use {
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::{StreamExt, TryFutureExt},
     parking_lot::RwLock,
-    std::io,
-    std::sync::Arc,
+    std::{io, sync::Arc},
 };
 
 mod amber_connector;
+mod cache;
 mod experiment;
 mod font_package_manager;
 mod repository_manager;
@@ -31,6 +32,7 @@ mod rewrite_service;
 mod test_util;
 
 use crate::amber_connector::AmberConnector;
+use crate::cache::PackageCache;
 use crate::experiment::Experiments;
 use crate::font_package_manager::{FontPackageManager, FontPackageManagerBuilder};
 use crate::repository_manager::{RepositoryManager, RepositoryManagerBuilder};
@@ -54,8 +56,11 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
-    let cache =
+    let pkg_cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
+    let pkgfs_install = connect_to_pkgfs("install").context("error connecting to pkgfs/install")?;
+    let pkgfs_needs = connect_to_pkgfs("needs").context("error connecting to pkgfs/needs")?;
+    let cache = PackageCache::new(pkg_cache, pkgfs_install, pkgfs_needs);
 
     let inspector = fuchsia_inspect::Inspector::new();
     let rewrite_inspect_node = inspector.root().create_child("rewrite_manager");
@@ -152,6 +157,13 @@ fn main() -> Result<(), Error> {
     let () = executor.run(fs.collect(), SERVER_THREADS);
 
     Ok(())
+}
+
+fn connect_to_pkgfs(subdir: &str) -> Result<DirectoryProxy, Error> {
+    io_util::open_directory_in_namespace(
+        &format!("/pkgfs/{}", subdir),
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+    )
 }
 
 fn load_repo_manager(

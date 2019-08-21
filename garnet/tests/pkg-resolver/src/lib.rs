@@ -20,10 +20,11 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_pkg_testing::{pkgfs::TestPkgFs, PackageBuilder, RepositoryBuilder},
+    fuchsia_pkg_testing::{pkgfs::TestPkgFs, Package, PackageBuilder, RepositoryBuilder},
     fuchsia_zircon::Status,
     futures::prelude::*,
     matches::assert_matches,
+    std::io::{self, Read},
 };
 
 struct Proxies {
@@ -125,6 +126,14 @@ impl TestEnv {
         self.env.launcher()
     }
 
+    async fn set_experiment_state(&self, experiment: Experiment, state: bool) {
+        self.proxies
+            .resolver_admin
+            .set_experiment_state(experiment, state)
+            .await
+            .expect("experiment state to toggle");
+    }
+
     async fn resolve_package(&self, url: &str) -> Result<DirectoryProxy, Status> {
         let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
         let selectors: Vec<&str> = vec![];
@@ -180,19 +189,10 @@ async fn test_package_resolution() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
-async fn test_download_blob_experiment_fails() -> Result<(), Error> {
+async fn verify_download_blob_resolve(pkg: Package) -> Result<(), Error> {
     let env = TestEnv::new();
 
-    let repo = RepositoryBuilder::new()
-        .add_package(
-            PackageBuilder::new("rolldice")
-                .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())?
-                .build()
-                .await?,
-        )
-        .build()
-        .await?;
+    let repo = RepositoryBuilder::new().add_package(&pkg).build().await?;
     let served_repository = repo.serve(env.launcher()).await?;
 
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
@@ -200,13 +200,98 @@ async fn test_download_blob_experiment_fails() -> Result<(), Error> {
 
     env.proxies.repo_manager.add(repo_config.into()).await?;
 
-    env.proxies
-        .resolver_admin
-        .set_experiment_state(Experiment::DownloadBlob, true)
-        .await
-        .expect("experiment state to toggle");
+    env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
-    assert_matches!(env.resolve_package("fuchsia-pkg://test/rolldice").await, Err(_));
+    let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
+    let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
+
+    pkg.verify_contents(&package_dir).await.expect("correct package contents");
+    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_download_blob_meta_far_only() -> Result<(), Error> {
+    verify_download_blob_resolve(PackageBuilder::new("uniblob").build().await?).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_download_blob_meta_far_and_empty_blob() -> Result<(), Error> {
+    verify_download_blob_resolve(
+        PackageBuilder::new("emptyblob")
+            .add_resource_at("data/empty", "".as_bytes())?
+            .build()
+            .await?,
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_download_blob_experiment_large_blobs() -> Result<(), Error> {
+    verify_download_blob_resolve(
+        PackageBuilder::new("numbers")
+            .add_resource_at("bin/numbers", "#!/boot/bin/sh\necho 4\n".as_bytes())?
+            .add_resource_at("data/ones", io::repeat(1).take(1 * 1024 * 1024))?
+            .add_resource_at("data/twos", io::repeat(2).take(2 * 1024 * 1024))?
+            .add_resource_at("data/threes", io::repeat(3).take(3 * 1024 * 1024))?
+            .build()
+            .await?,
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_download_blob_experiment_many_blobs() -> Result<(), Error> {
+    let mut pkg = PackageBuilder::new("all-the-blobs");
+    for i in 0..200 {
+        pkg = pkg.add_resource_at(
+            format!("data/file{}", i),
+            format!("contents of file {}", i).as_bytes(),
+        )?;
+    }
+    verify_download_blob_resolve(pkg.build().await?).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_download_blob_experiment_identity() -> Result<(), Error> {
+    verify_download_blob_resolve(Package::identity().await?).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_download_blob_experiment_uses_cached_package() -> Result<(), Error> {
+    let env = TestEnv::new();
+
+    let pkg = PackageBuilder::new("resolve-twice")
+        .add_resource_at("data/foo", "bar".as_bytes())?
+        .build()
+        .await?;
+    let repo = RepositoryBuilder::new().add_package(&pkg).build().await?;
+    let served_repository = repo.serve(env.launcher()).await?;
+
+    let repo_url = "fuchsia-pkg://test".parse().unwrap();
+    let repo_config = served_repository.make_repo_config(repo_url);
+
+    env.set_experiment_state(Experiment::DownloadBlob, true).await;
+
+    // the package can't be resolved before the repository is configured.
+    assert_matches!(
+        env.resolve_package("fuchsia-pkg://test/resolve-twice").await,
+        Err(Status::NOT_FOUND)
+    );
+
+    env.proxies.repo_manager.add(repo_config.into()).await?;
+
+    // package resolves as expected.
+    let package_dir =
+        env.resolve_package("fuchsia-pkg://test/resolve-twice").await.expect("package to resolve");
+    pkg.verify_contents(&package_dir).await.expect("correct package contents");
+
+    // if no mirrors are accessible, the cached package is returned.
+    served_repository.stop().await;
+    let package_dir =
+        env.resolve_package("fuchsia-pkg://test/resolve-twice").await.expect("package to resolve");
+    pkg.verify_contents(&package_dir).await.expect("correct package contents");
 
     Ok(())
 }

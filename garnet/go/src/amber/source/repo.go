@@ -205,6 +205,12 @@ func (r Repository) MerkleFor(name, version, merkle string) (string, int64, erro
 	}
 
 	src := r.source
+
+	if err := src.UpdateIfStale(); err != nil {
+		log.Printf("repo: could not update TUF metadata: %s", err)
+		// try to continue anyway
+	}
+
 	m, l, err := src.MerkleFor(name, version)
 	if err != nil {
 		if err == ErrUnknownPkg {
@@ -232,8 +238,6 @@ func (r Repository) GetUpdateComplete(name string, ver, mer *string) (string, zx
 	if mer != nil {
 		merkle = *mer
 	}
-
-	r.source.UpdateIfStale()
 
 	root, length, err := r.MerkleFor(name, version, merkle)
 	if err != nil {

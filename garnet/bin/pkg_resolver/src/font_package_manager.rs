@@ -203,7 +203,7 @@ pub mod tests {
         tempfile::{self, TempDir},
     };
 
-   macro_rules! assert_matches(
+    macro_rules! assert_matches(
        ($e:expr, $p:pat => $a:expr) => (
            match $e {
                $p => $a,
@@ -348,5 +348,4 @@ pub mod tests {
 
         Ok(())
     }
-
 }

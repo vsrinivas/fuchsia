@@ -38,11 +38,16 @@ fn amberctl() -> AppBuilder {
 
 struct Mounts {
     misc: tempfile::TempDir,
+    pkgfs: tempfile::TempDir,
 }
 
 impl Mounts {
     fn new() -> Self {
-        Self { misc: tempfile::tempdir().expect("/tmp to exist") }
+        let misc = tempfile::tempdir().expect("/tmp to exist");
+        let pkgfs = tempfile::tempdir().expect("/tmp to exist");
+        std::fs::create_dir(pkgfs.path().join("install")).expect("mkdir pkgfs/install");
+        std::fs::create_dir(pkgfs.path().join("needs")).expect("mkdir pkgfs/needs");
+        Self { misc, pkgfs }
     }
 }
 
@@ -134,7 +139,12 @@ impl TestEnv {
         let mut pkg_resolver = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg_resolver_integration_test.cmx"
                 .to_owned(),
-        );
+        )
+        .add_dir_to_namespace(
+            "/pkgfs".to_owned(),
+            File::open(mounts.pkgfs.path()).expect("/pkgfs temp dir to open"),
+        )
+        .expect("/pkgfs to mount");
 
         let mut fs = ServiceFs::new();
         fs.add_proxy_service_to::<AmberMarker, _>(amber.directory_request().unwrap().clone())

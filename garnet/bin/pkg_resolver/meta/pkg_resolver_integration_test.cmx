@@ -4,12 +4,14 @@
     },
     "sandbox": {
         "features": [
-            "isolated-persistent-storage"
+            "isolated-persistent-storage",
+            "root-ssl-certificates"
         ],
         "services": [
             "fuchsia.amber.Control",
             "fuchsia.logger.LogSink",
-            "fuchsia.pkg.PackageCache"
+            "fuchsia.pkg.PackageCache",
+            "fuchsia.posix.socket.Provider"
         ]
     }
 }

@@ -5,7 +5,7 @@
 use {
     failure::Error,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self, DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_io::{DirectoryEvent, DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_pkg::{NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream},
     fidl_fuchsia_pkg_ext::{BlobId, BlobInfo},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
@@ -67,13 +67,45 @@ async fn open<'a>(
         fx_log_warn!("resolve does not support selectors yet");
     }
 
-    // FIXME: this is a bit of a hack but there isn't a formal way to convert a Directory request
-    // into a Node request.
-    let node_request = ServerEnd::new(dir_request.into_channel());
+    // open the package using a local handle so we can intercept the NOT_FOUND case.
+    let (dir, server_end) =
+        fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(|_| Status::INTERNAL)?;
+    let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE
+        | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
+        | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
+    pkgfs
+        .open(flags, 0, &meta_far_blob_id.to_string(), ServerEnd::new(server_end.into_channel()))
+        .map_err(|err| {
+            fx_log_err!("error opening {}: {:?}", meta_far_blob_id, err);
+            Status::INTERNAL
+        })?;
 
-    let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
-    pkgfs.open(flags, 0, &meta_far_blob_id.to_string(), node_request).map_err(|err| {
-        fx_log_err!("error opening {}: {:?}", meta_far_blob_id, err);
+    // wait for the directory to open and report success.
+    let mut events = dir.take_event_stream();
+    let DirectoryEvent::OnOpen_ { s: status, info: _ } = events
+        .next()
+        .await
+        .ok_or_else(|| {
+            fx_log_err!("package dir event stream closed prematurely");
+            Err(Status::INTERNAL)
+        })?
+        .map_err(|e| {
+            fx_log_err!("failed to read package OnOpen event: {:?}", e);
+            Err(Status::INTERNAL)
+        })?;
+
+    let () = Status::ok(status).map_err(|status| match status {
+        Status::NOT_FOUND => Status::NOT_FOUND,
+        status => {
+            fx_log_err!("unexpected error opening package directory: {:?}", status);
+            Status::INTERNAL
+        }
+    })?;
+
+    // serve the directory on the client provided handle.
+    let node_request = ServerEnd::new(dir_request.into_channel());
+    dir.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, node_request).map_err(|err| {
+        fx_log_err!("error cloning dir handle {}: {:?}", meta_far_blob_id, err);
         Status::INTERNAL
     })?;
 

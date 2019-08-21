@@ -6,6 +6,7 @@
 
 use {
     crate::package::Package,
+    bytes::Buf,
     failure::{bail, format_err, Error, ResultExt},
     fidl_fuchsia_pkg_ext::{
         MirrorConfigBuilder, RepositoryBlobKey, RepositoryConfig, RepositoryConfigBuilder,
@@ -13,12 +14,13 @@ use {
     },
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_component::client::{launcher, App, AppBuilder},
+    fuchsia_component::client::{launcher, App, AppBuilder, ExitStatus},
     fuchsia_merkle::Hash,
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::DurationNum,
     futures::{
         compat::{Future01CompatExt, Stream01CompatExt},
+        future::BoxFuture,
         prelude::*,
     },
     hyper::{Body, Request, StatusCode},
@@ -296,18 +298,15 @@ impl Repository {
         }
 
         let pm = pm.spawn(launcher)?;
-        let repo = ServedRepository { repo: self, port, _indir: indir, pm };
 
         // Wait for "pm serve" to either respond to HTTP requests (giving up after RETRY_COUNT) or
         // exit, whichever happens first.
 
-        let wait_pm_down = fuchsia_component::client::ExitStatus::from_event_stream(
-            repo.pm.controller().take_event_stream(),
-        );
+        let wait_pm_down = ExitStatus::from_event_stream(pm.controller().take_event_stream());
 
         let wait_pm_up = async {
             for i in 1.. {
-                match repo.get("config.json").await {
+                match get(format!("http://127.0.0.1:{}/config.json", port)).await {
                     Ok(_) => {
                         println!("server up on attempt {}", i);
                         return Ok(());
@@ -325,16 +324,18 @@ impl Repository {
             })
             .boxed();
 
-        match future::select(wait_pm_up, wait_pm_down).await {
-            future::Either::Left((res, _)) => {
+        let wait_pm_down = match future::select(wait_pm_up, wait_pm_down).await {
+            future::Either::Left((res, wait_pm_down)) => {
                 res?;
+                wait_pm_down
             }
             future::Either::Right((exit_status, _)) => {
                 bail!("{}", exit_status?);
             }
         }
+        .boxed();
 
-        Ok(repo)
+        Ok(ServedRepository { repo: self, port, _indir: indir, pm, wait_pm_down })
     }
 }
 
@@ -344,30 +345,14 @@ pub struct ServedRepository<'a> {
     port: u16,
     _indir: TempDir,
     pm: App,
+    wait_pm_down: BoxFuture<'a, Result<ExitStatus, Error>>,
 }
 
 impl<'a> ServedRepository<'a> {
     /// Request the given path served by the repository over HTTP.
     pub async fn get(&self, path: impl AsRef<str>) -> Result<Vec<u8>, Error> {
-        let uri = format!("http://127.0.0.1:{}/{}", self.port, path.as_ref());
-        let request = Request::get(uri).body(Body::empty()).map_err(|e| Error::from(e))?;
-        let client = fuchsia_hyper::new_client();
-        let response = client.request(request).compat().await?;
-
-        if response.status() != StatusCode::OK {
-            bail!("unexpected status code: {:?}", response.status());
-        }
-
-        let body = response
-            .into_body()
-            .compat()
-            .try_fold(Vec::new(), |mut vec, chunk| {
-                vec.extend_from_slice(&chunk);
-                future::ready(Ok(vec))
-            })
-            .await?;
-
-        Ok(body)
+        let url = format!("http://127.0.0.1:{}/{}", self.port, path.as_ref());
+        get(url).await
     }
 
     /// Returns a sorted vector of all packages contained in this repository.
@@ -399,6 +384,26 @@ impl<'a> ServedRepository<'a> {
         }
         builder.add_mirror(mirror.build()).build()
     }
+
+    /// Kill the pm component and wait for it to exit.
+    pub async fn stop(mut self) {
+        self.pm.kill().expect("pm to have been running");
+        self.wait_pm_down.await.expect("pm to exit with an exit status");
+    }
+}
+
+async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
+    let request = Request::get(url.as_ref()).body(Body::empty()).map_err(|e| Error::from(e))?;
+    let client = fuchsia_hyper::new_client();
+    let response = client.request(request).compat().await?;
+
+    if response.status() != StatusCode::OK {
+        bail!("unexpected status code: {:?}", response.status());
+    }
+
+    let body = response.into_body().compat().try_concat().await?.collect();
+
+    Ok(body)
 }
 
 #[cfg(test)]

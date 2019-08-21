@@ -4,6 +4,7 @@
 
 use {
     crate::amber_connector::AmberConnect,
+    crate::cache::PackageCache,
     crate::font_package_manager::FontPackageManager,
     crate::repository_manager::RepositoryManager,
     crate::rewrite_manager::RewriteManager,
@@ -11,7 +12,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self, DirectoryMarker},
     fidl_fuchsia_pkg::{
-        FontResolverRequest, FontResolverRequestStream, PackageCacheProxy, PackageResolverRequest,
+        FontResolverRequest, FontResolverRequestStream, PackageResolverRequest,
         PackageResolverRequestStream, UpdatePolicy,
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
@@ -25,7 +26,7 @@ use {
 pub async fn run_resolver_service<A>(
     rewrites: Arc<RwLock<RewriteManager>>,
     repo_manager: Arc<RwLock<RepositoryManager<A>>>,
-    cache: PackageCacheProxy,
+    cache: PackageCache,
     mut stream: PackageResolverRequestStream,
 ) -> Result<(), Error>
 where
@@ -57,7 +58,7 @@ where
 async fn resolve<'a, A>(
     rewrites: &'a Arc<RwLock<RewriteManager>>,
     repo_manager: &'a Arc<RwLock<RepositoryManager<A>>>,
-    cache: &'a PackageCacheProxy,
+    cache: &'a PackageCache,
     pkg_url: String,
     selectors: Vec<String>,
     _update_policy: UpdatePolicy,
@@ -81,7 +82,7 @@ where
         fx_log_warn!("resolve does not support selectors yet");
     }
 
-    let merkle = repo_manager.read().get_package(&url).await?;
+    let merkle = repo_manager.read().get_package(&url, cache).await?;
 
     fx_log_info!(
         "resolved {} as {} with the selectors {:?} to {}",
@@ -91,13 +92,7 @@ where
         merkle
     );
 
-    cache
-        .open(&mut merkle.into(), &mut selectors.iter().map(|s| s.as_str()), dir_request)
-        .await
-        .map_err(|err| {
-            fx_log_err!("error opening {}: {:?}", merkle, err);
-            Status::INTERNAL
-        })?;
+    cache.open(merkle, &selectors, dir_request).await?;
 
     Ok(())
 }
@@ -107,7 +102,7 @@ pub async fn run_font_resolver_service<A>(
     font_package_manager: Arc<FontPackageManager>,
     rewrites: Arc<RwLock<RewriteManager>>,
     repo_manager: Arc<RwLock<RepositoryManager<A>>>,
-    cache: PackageCacheProxy,
+    cache: PackageCache,
     mut stream: FontResolverRequestStream,
 ) -> Result<(), Error>
 where
@@ -136,7 +131,7 @@ async fn resolve_font<'a, A>(
     font_package_manager: &'a Arc<FontPackageManager>,
     rewrites: &'a Arc<RwLock<RewriteManager>>,
     repo_manager: &'a Arc<RwLock<RepositoryManager<A>>>,
-    cache: &'a PackageCacheProxy,
+    cache: &'a PackageCache,
     package_url: String,
     directory_request: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Status>
@@ -178,7 +173,8 @@ mod tests {
     use crate::repository_manager::RepositoryManagerBuilder;
     use crate::rewrite_manager::{tests::make_rule_config, RewriteManagerBuilder};
     use crate::test_util::{
-        create_dir, MockAmberBuilder, MockAmberConnector, MockPackageCache, Package, PackageKind,
+        create_dir, MockAmberBuilder, MockAmberConnector, MockAmberMode, MockPackageCache, Package,
+        PackageKind,
     };
     use fidl::endpoints;
     use fidl_fuchsia_amber::FetchResultProxy;
@@ -231,7 +227,7 @@ mod tests {
         rewrite_manager: Arc<RwLock<RewriteManager>>,
         repo_manager: Arc<RwLock<RepositoryManager<MockAmberConnector>>>,
         font_package_manager: Arc<FontPackageManager>,
-        cache_proxy: PackageCacheProxy,
+        cache: PackageCache,
         pkgfs: Arc<TempDir>,
     }
 
@@ -313,7 +309,7 @@ mod tests {
             let res = resolve(
                 &self.rewrite_manager,
                 &self.repo_manager,
-                &self.cache_proxy,
+                &self.cache,
                 url.to_string(),
                 selectors,
                 update_policy,
@@ -337,7 +333,7 @@ mod tests {
                 &self.font_package_manager,
                 &self.rewrite_manager,
                 &self.repo_manager,
-                &self.cache_proxy,
+                &self.cache,
                 url.to_string(),
                 dir_server_end,
             )
@@ -363,6 +359,9 @@ mod tests {
     impl ResolveTestBuilder {
         fn new() -> Self {
             let pkgfs = Arc::new(TempDir::new().expect("failed to create tmp dir"));
+            fs::create_dir(pkgfs.path().join("install")).expect("failed to create pkgfs/install");
+            fs::create_dir(pkgfs.path().join("needs")).expect("failed to create pkgfs/needs");
+            fs::create_dir(pkgfs.path().join("versions")).expect("failed to create pkgfs/versions");
             let amber = MockAmberBuilder::new(pkgfs.clone());
             ResolveTestBuilder {
                 pkgfs: pkgfs.clone(),
@@ -399,6 +398,11 @@ mod tests {
             self
         }
 
+        fn amber_mode(mut self, mode: Arc<RwLock<MockAmberMode>>) -> Self {
+            self.amber = self.amber.mode(mode);
+            self
+        }
+
         fn static_rewrite_rules<I: IntoIterator<Item = Rule>>(mut self, rules: I) -> Self {
             self.static_rewrite_rules.extend(rules);
             self
@@ -427,6 +431,24 @@ mod tests {
                     }
                 })
                 .expect("failed to spawn handler");
+            let pkgfs_install = {
+                let f = fs::File::open(self.pkgfs.path().join("install")).expect("pkgfs to open");
+                let chan = fuchsia_async::Channel::from_channel(
+                    fdio::clone_channel(&f).expect("pkgfs channel to clone"),
+                )
+                .unwrap();
+                DirectoryProxy::new(chan)
+            };
+            let pkgfs_needs = {
+                let f = fs::File::open(self.pkgfs.path().join("needs")).expect("pkgfs to open");
+                let chan = fuchsia_async::Channel::from_channel(
+                    fdio::clone_channel(&f).expect("pkgfs channel to clone"),
+                )
+                .unwrap();
+                DirectoryProxy::new(chan)
+            };
+
+            let cache = PackageCache::new(cache_proxy, pkgfs_install, pkgfs_needs);
 
             let dynamic_rule_config = make_rule_config(self.dynamic_rewrite_rules);
             let rewrite_manager = RewriteManagerBuilder::new(&dynamic_rule_config)
@@ -463,7 +485,7 @@ mod tests {
                 repo_manager: Arc::new(RwLock::new(repo_manager)),
                 font_package_manager: Arc::new(font_package_manager),
                 pkgfs: self.pkgfs,
-                cache_proxy,
+                cache,
             }
         }
     }
@@ -501,7 +523,10 @@ mod tests {
         test.check_amber_update("nonexistent", None, None, Err(Status::NOT_FOUND)).await;
 
         // no merkle('d') since we didn't ask to update "buz".
-        test.check_dir(test.pkgfs.path(), &vec![gen_merkle('a'), gen_merkle('b'), gen_merkle('c')]);
+        test.check_dir(
+            &test.pkgfs.path().join("versions"),
+            &vec![gen_merkle('a'), gen_merkle('b'), gen_merkle('c')],
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -526,23 +551,35 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_download_blob_experiment_fails() {
+    async fn test_download_blob_experiment_calls_correct_amber_api() {
         let experiments = Arc::new(RwLock::new(crate::experiment::State::new_test()));
+        let mode = Arc::new(RwLock::new(MockAmberMode::GetUpdateComplete));
 
         let test = ResolveTestBuilder::new()
-            .source_packages(vec![Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok)])
+            .source_packages(vec![
+                Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
+                Package::new(
+                    "bar",
+                    "0",
+                    &gen_merkle('b'),
+                    PackageKind::Error(Status::NOT_FOUND, "test merkle for not found".to_string()),
+                ),
+            ])
             .experiments(Arc::clone(&experiments).into())
+            .amber_mode(Arc::clone(&mode))
             .build();
 
         // Succeeds without experiment enabled.
         test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Ok(vec![gen_merkle_file('a')])).await;
 
-        // Picks up new experiment state and fails as expected.
+        // Picks up new experiment state, calls the correct amber API, and fails as expected.
         experiments.write().set_state(Experiment::DownloadBlob, true);
-        test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Err(Status::INTERNAL)).await;
+        *mode.write() = MockAmberMode::MerkleFor;
+        test.run_resolve("fuchsia-pkg://fuchsia.com/bar", Err(Status::NOT_FOUND)).await;
 
         // Succeeds after disabling experiment.
         experiments.write().set_state(Experiment::DownloadBlob, false);
+        *mode.write() = MockAmberMode::GetUpdateComplete;
         test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Ok(vec![gen_merkle_file('a')])).await;
     }
 

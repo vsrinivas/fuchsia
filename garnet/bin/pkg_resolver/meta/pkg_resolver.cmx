@@ -5,12 +5,19 @@
     "sandbox": {
         "features": [
             "config-data",
-            "isolated-persistent-storage"
+            "isolated-persistent-storage",
+            "root-ssl-certificates"
+        ],
+        "pkgfs": [
+            "install",
+            "needs"
         ],
         "services": [
             "fuchsia.amber.Control",
             "fuchsia.logger.LogSink",
-            "fuchsia.pkg.PackageCache"
+            "fuchsia.net.NameLookup",
+            "fuchsia.pkg.PackageCache",
+            "fuchsia.posix.socket.Provider"
         ]
     }
 }
