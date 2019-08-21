@@ -19,7 +19,7 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
     return bindings_.GetHandler(this);
   }
 
-  void File(fuchsia::feedback::CrashReport crash_report, FileCallback callback) override;
+  void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 
   const std::string& kernel_panic_crash_log() { return kernel_panic_crash_log_; };
 
@@ -33,14 +33,14 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
 
 class StubCrashReporterClosesConnection : public StubCrashReporter {
  public:
-  void File(fuchsia::feedback::CrashReport crash_report, FileCallback callback) override {
+  void File(fuchsia::feedback::CrashReport report, FileCallback callback) override {
     CloseAllConnections();
   }
 };
 
 class StubCrashReporterAlwaysReturnsError : public StubCrashReporter {
  public:
-  void File(fuchsia::feedback::CrashReport crash_report, FileCallback callback) override;
+  void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 };
 
 }  // namespace feedback

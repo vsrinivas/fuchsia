@@ -86,11 +86,9 @@ std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
 
 std::map<std::string, std::string> BuildAnnotations(const fuchsia::feedback::CrashReport& report,
                                                     const fuchsia::feedback::Data& feedback_data) {
-  const std::string program_name = ExtractProgramName(report);
-
   // Default annotations common to all crash reports.
   std::map<std::string, std::string> annotations =
-      MakeDefaultAnnotations(feedback_data, program_name);
+      MakeDefaultAnnotations(feedback_data, report.program_name());
 
   // Optional annotations filled by the client.
   ExtractAnnotations(report, &annotations);

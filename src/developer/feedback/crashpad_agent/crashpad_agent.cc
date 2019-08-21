@@ -202,8 +202,8 @@ void CrashpadAgent::OnManagedRuntimeException(std::string component_url,
 }
 
 void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
-  if (!IsValid(report)) {
-    FX_LOGS(ERROR) << "Invalid crash report. Won't file.";
+  if (!report.has_program_name()) {
+    FX_LOGS(ERROR) << "Invalid crash report. No program name. Won't file.";
     CrashReporter_File_Result result;
     result.set_err(ZX_ERR_INVALID_ARGS);
     callback(std::move(result));
@@ -336,8 +336,7 @@ fit::promise<void> CrashpadAgent::OnManagedRuntimeException(std::string componen
 }
 
 fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
-  const std::string program_name = ExtractProgramName(report);
-  FX_LOGS(INFO) << "generating crash report for " << program_name;
+  FX_LOGS(INFO) << "generating crash report for " << report.program_name();
 
   // Create local Crashpad report.
   std::unique_ptr<crashpad::CrashReportDatabase::NewReport> crashpad_report;
@@ -350,8 +349,7 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
 
   return GetFeedbackData(dispatcher_, services_,
                          zx::msec(config_.feedback_data_collection_timeout_in_milliseconds))
-      .then([this, report = std::move(report), program_name = std::move(program_name),
-             crashpad_report = std::move(crashpad_report)](
+      .then([this, report = std::move(report), crashpad_report = std::move(crashpad_report)](
                 fit::result<Data>& result) mutable -> fit::result<void> {
         Data feedback_data;
         if (result.is_ok()) {
@@ -371,7 +369,7 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
           return fit::error();
         }
 
-        if (!UploadReport(local_report_id, program_name, &annotations,
+        if (!UploadReport(local_report_id, report.program_name(), &annotations,
                           /*read_annotations_from_minidump=*/false)) {
           return fit::error();
         }

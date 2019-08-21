@@ -43,12 +43,8 @@ TEST(CrashpadAgentIntegrationTest, CrashReporter_SmokeTest) {
   auto environment_services = ::sys::ServiceDirectory::CreateFromNamespace();
   environment_services->Connect(crash_reporter.NewRequest());
 
-  // We use a generic crash report to smoke test the service is up and running because it has the
-  // least expectations.
-  fuchsia::feedback::GenericCrashReport generic_report;
-  generic_report.set_program_name("crashing_program_generic");
   fuchsia::feedback::CrashReport report;
-  report.set_generic(std::move(generic_report));
+  report.set_program_name("crashing_program");
 
   fuchsia::feedback::CrashReporter_File_Result out_result;
   ASSERT_EQ(crash_reporter->File(std::move(report), &out_result), ZX_OK);

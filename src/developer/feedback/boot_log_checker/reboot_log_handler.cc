@@ -86,16 +86,19 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
       crash_reporting_done_.completer.complete_error();
     });
 
-    fuchsia::feedback::GenericCrashReport generic_report;
-    generic_report.set_program_name("kernel");
+    // Build the crash report attachment.
     fuchsia::feedback::Attachment attachment;
     attachment.key = "kernel_panic_crash_log";
     attachment.value = std::move(reboot_log_).ToTransport();
     std::vector<fuchsia::feedback::Attachment> attachments;
     attachments.push_back(std::move(attachment));
-    generic_report.set_attachments(std::move(attachments));
+
+    // Build the crash report.
+    // TODO(fxb/35227): set the signature to "fuchsia-kernel-panic" or "fuchsia-oom"
+    // once we distinguish between the two.
     fuchsia::feedback::CrashReport report;
-    report.set_generic(std::move(generic_report));
+    report.set_program_name("kernel");
+    report.set_attachments(std::move(attachments));
 
     crash_reporter_->File(
         std::move(report), [this](fuchsia::feedback::CrashReporter_File_Result result) {

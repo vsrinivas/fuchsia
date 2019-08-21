@@ -11,14 +11,12 @@
 
 namespace feedback {
 
-void StubCrashReporter::File(fuchsia::feedback::CrashReport crash_report, FileCallback callback) {
-  FXL_CHECK(crash_report.is_generic());
-  FXL_CHECK(crash_report.generic().has_attachments());
-  FXL_CHECK(crash_report.generic().attachments().size() == 1u);
+void StubCrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
+  FXL_CHECK(report.has_attachments());
+  FXL_CHECK(report.attachments().size() == 1u);
 
   fuchsia::feedback::CrashReporter_File_Result result;
-  if (!fsl::StringFromVmo(crash_report.generic().attachments()[0].value,
-                          &kernel_panic_crash_log_)) {
+  if (!fsl::StringFromVmo(report.attachments()[0].value, &kernel_panic_crash_log_)) {
     FX_LOGS(ERROR) << "error parsing feedback log VMO as string";
     result.set_err(ZX_ERR_INTERNAL);
   } else {
@@ -28,7 +26,7 @@ void StubCrashReporter::File(fuchsia::feedback::CrashReport crash_report, FileCa
   callback(std::move(result));
 }
 
-void StubCrashReporterAlwaysReturnsError::File(fuchsia::feedback::CrashReport crash_report,
+void StubCrashReporterAlwaysReturnsError::File(fuchsia::feedback::CrashReport report,
                                                FileCallback callback) {
   fuchsia::feedback::CrashReporter_File_Result result;
   result.set_err(ZX_ERR_INTERNAL);

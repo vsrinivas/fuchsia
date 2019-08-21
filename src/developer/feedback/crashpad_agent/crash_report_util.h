@@ -5,24 +5,14 @@
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASH_REPORT_UTIL_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <fuchsia/mem/cpp/fidl.h>
 
 #include <map>
-#include <optional>
 #include <string>
 
 #include "third_party/crashpad/client/crash_report_database.h"
 
 namespace fuchsia {
 namespace crash {
-
-// Checks whether |report| is a valid fuchsia.feedback.CrashReport.
-//
-// In practice this means the report is one of the valid xunion types.
-bool IsValid(const fuchsia::feedback::CrashReport& report);
-
-// Extracts the program name from a fuchsia.feedback.CrashReport.
-std::string ExtractProgramName(const fuchsia::feedback::CrashReport& report);
 
 // Extracts the annotations from a fuchsia.feedback.CrashReport if present and upsert them into
 // |annotations|.
