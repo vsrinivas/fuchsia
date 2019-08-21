@@ -278,7 +278,9 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 			return fmt.Errorf("address %s doesn't exist on NIC ID %d", addr, nic)
 		}
 
-		ns.DelRouteLocked(route)
+		if err := ns.DelRouteLocked(route); err != nil {
+			// The route might have been removed by user action. Continue.
+		}
 
 		if err := ns.mu.stack.RemoveAddress(nic, addr); err == tcpip.ErrUnknownNICID {
 			panic(fmt.Sprintf("stack.RemoveAddress(_): NIC [%d] not found", nic))
@@ -323,7 +325,7 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkP
 			// Same address but different prefix. Remove the address and re-add it
 			// with the new prefix (below).
 			if err := ns.mu.stack.RemoveAddress(nic, addr); err != nil {
-				syslog.Infof("NIC %d: failed to remove address %s: %s", nic, addr, err)
+				return fmt.Errorf("NIC %d: failed to remove address %s: %s", nic, addr, err)
 			}
 		}
 
