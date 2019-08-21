@@ -28,6 +28,7 @@
 #include "third_party/cobalt/src/observation_store/file_observation_store.h"
 #include "third_party/cobalt/src/registry/project_configs.h"
 #include "third_party/cobalt/src/system_data/client_secret.h"
+#include "third_party/cobalt/src/system_data/system_data.h"
 #include "third_party/cobalt/src/uploader/shipping_manager.h"
 
 namespace cobalt {
@@ -87,7 +88,11 @@ class CobaltApp {
   //
   //           Example: 20190220_01_RC00
   //
-  // |debug_channels| The list of channels that should be considered DEBUG.
+  // |release_stage| The release stage of the system. This is used to determine
+  //                 which metrics are allowed to be collected. For example a
+  //                 metric with |max_release_stage| set to DEBUG will only be
+  //                 allowed to be collected on a system whose release_stage
+  //                 is DEBUG.
   //
   // REQUIRED:
   //   0 <= min_interval <= target_interval <= kMaxSeconds
@@ -97,7 +102,7 @@ class CobaltApp {
             size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
             bool use_memory_observation_store, size_t max_bytes_per_observation_store,
             const std::string& product_name, const std::string& board_name,
-            const std::string& version, const std::vector<std::string>& debug_channels);
+            const std::string& version, cobalt::ReleaseStage release_stage);
 
  private:
   static encoder::ClientSecret getClientSecret();

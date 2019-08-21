@@ -51,7 +51,7 @@ class CobaltTestApp {
                bool start_event_aggregator_worker = false, uint32_t initial_interval_seconds = 0);
 
   void SetChannel(const std::string &current_channel);
-  bool DoChannelFilteringTests();
+  bool DoDebugMetricTest();
   bool DoLocalAggregationTests(const size_t backfill_days);
 
   std::unique_ptr<sys::ComponentContext> context_;

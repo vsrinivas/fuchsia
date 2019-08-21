@@ -41,9 +41,11 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger);
 
 bool TestLogCobaltEvent(CobaltTestAppLogger* logger);
 
-bool TestChannelFiltering(CobaltTestAppLogger* logger, uint32_t expect_more_than,
-                          fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                          uint32_t* num_added = nullptr);
+// Tests that using a Cobalt metric registered as being debug-only either
+// does or does not result in an Observation added to the Observation Store,
+// depending on the expectation specified by |should_succeed|.
+bool TestDebugMetric(CobaltTestAppLogger* logger, bool should_succeed,
+                     fuchsia::cobalt::ControllerSyncPtr* cobalt_controller);
 
 // Tests of local aggregation.
 //

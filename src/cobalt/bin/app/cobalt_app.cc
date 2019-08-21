@@ -81,9 +81,8 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds target
                      size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
                      bool use_memory_observation_store, size_t max_bytes_per_observation_store,
                      const std::string& product_name, const std::string& board_name,
-                     const std::string& version, const std::vector<std::string>& debug_channels)
-    : system_data_(product_name, board_name, version,
-                   std::make_unique<logger::ChannelMapper>(debug_channels)),
+                     const std::string& version, cobalt::ReleaseStage release_stage)
+    : system_data_(product_name, board_name, release_stage, version),
       context_(sys::ComponentContext::Create()),
       system_clock_(FuchsiaSystemClock(context_.get())),
       network_wrapper_(dispatcher, std::make_unique<backoff::ExponentialBackoff>(),

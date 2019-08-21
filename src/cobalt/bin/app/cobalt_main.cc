@@ -33,6 +33,7 @@
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/observation_store/file_observation_store.h"
 #include "third_party/cobalt/src/observation_store/memory_observation_store.h"
+#include "third_party/cobalt/src/system_data/system_data.h"
 
 // Command-line flags
 
@@ -76,16 +77,6 @@ const size_t kEventAggregatorBackfillDaysDefault(2);
 // We normally start the EventAggregator's worker thread after constructing the
 // EventAggregator.
 constexpr bool kStartEventAggregatorWorkerDefault(true);
-
-// This is a set of channel names that are known to have DEBUG semantics.
-//
-// - devhost is the channel for development devices.
-// - fishfood-release is the main fishfood channel.
-// - teamfood-release is the main teamfood channel.
-// - qa-daily is a daily QA release.
-// - cobalt-test-lab mirrors fishfood-release.
-const std::vector<std::string> kDebugChannels({"devhost", "fishfood-release", "teamfood-release",
-                                               "qa-daily", "cobalt-test-lab"});
 
 // ReadBoardName returns the board name of the currently running device.
 //
@@ -131,6 +122,14 @@ std::string ReadBuildInfo(std::string value) {
   } else {
     return "";
   }
+}
+
+// Returns the ReleaseStage of the currently running system. This is used
+// to determine which Cobalt metrics are allowed to be collected.
+cobalt::ReleaseStage DetermineReleaseStage() {
+  // TODO(fxb/34960) Fuchsia needs a mechanism by which to determine whether
+  // or not the currently running system is considered debug/dev.
+  return cobalt::ReleaseStage::DEBUG;
 }
 
 int main(int argc, const char** argv) {
@@ -209,13 +208,16 @@ int main(int argc, const char** argv) {
     }
   }
 
+  auto release_stage = DetermineReleaseStage();
+
   FX_LOGS(INFO) << "Cobalt is starting with the following parameters: "
                 << "schedule_interval=" << schedule_interval.count()
                 << " seconds, min_interval=" << min_interval.count()
                 << " seconds, initial_interval=" << initial_interval.count()
                 << " seconds, max_bytes_per_observation_store=" << max_bytes_per_observation_store
                 << ", event_aggregator_backfill_days=" << event_aggregator_backfill_days
-                << ", start_event_aggregator_worker=" << start_event_aggregator_worker << ".";
+                << ", start_event_aggregator_worker=" << start_event_aggregator_worker
+                << ", release_stage=" << release_stage << ".";
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cobalt_fidl_provider");
@@ -223,7 +225,7 @@ int main(int argc, const char** argv) {
                         event_aggregator_backfill_days, start_event_aggregator_worker,
                         use_memory_observation_store, max_bytes_per_observation_store,
                         ReadBuildInfo("product"), ReadBoardName(), ReadBuildInfo("version"),
-                        kDebugChannels);
+                        release_stage);
   loop.Run();
   return 0;
 }

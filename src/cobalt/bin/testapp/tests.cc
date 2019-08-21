@@ -307,26 +307,14 @@ bool TestLogCobaltEvent(CobaltTestAppLogger* logger) {
   return SendAndCheckSuccess("TestLogCobaltEvent", logger);
 }
 
-bool TestChannelFiltering(CobaltTestAppLogger* logger, uint32_t expect_more_than,
-                          fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                          uint32_t* num_added) {
+bool TestDebugMetric(CobaltTestAppLogger* logger, bool should_succeed,
+                     fuchsia::cobalt::ControllerSyncPtr* cobalt_controller) {
   uint64_t num_obs_at_start = 0;
   (*cobalt_controller)->GetNumObservationsAdded(&num_obs_at_start);
   FX_LOGS(INFO) << "========================";
-  FX_LOGS(INFO) << "TestChannelFiltering (expecting more than " << expect_more_than
-                << " observations)";
-  for (uint32_t index : kErrorOccurredIndicesToUse) {
-    if (!logger->LogEvent(cobalt_registry::kErrorOccurredMetricId, index)) {
-      FX_LOGS(INFO) << "TestChannelFiltering: FAIL";
-      return false;
-    }
-  }
-  if (logger->LogEvent(cobalt_registry::kErrorOccurredMetricId, kErrorOccurredInvalidIndex)) {
-    FX_LOGS(INFO) << "TestChannelFiltering: FAIL";
-    return false;
-  }
-
-  if (!SendAndCheckSuccess("TestChannelFiltering", logger)) {
+  FX_LOGS(INFO) << "TestDebugMetric: should_succeed: " << should_succeed;
+  if (!logger->LogEvent(cobalt_registry::kErrorOccurredMetricId, 1)) {
+    FX_LOGS(INFO) << "TestDebugMetric: FAIL";
     return false;
   }
 
@@ -334,16 +322,15 @@ bool TestChannelFiltering(CobaltTestAppLogger* logger, uint32_t expect_more_than
   (*cobalt_controller)->GetNumObservationsAdded(&num_obs_at_end);
   uint64_t num_obs = num_obs_at_end - num_obs_at_start;
 
-  if (num_added) {
-    *num_added = num_obs;
-  }
-
-  if (num_obs <= expect_more_than) {
-    FX_LOGS(INFO) << "Expected more than " << expect_more_than << " saw " << num_obs;
-    FX_LOGS(INFO) << "TestChannelFiltering: FAIL";
+  if (num_obs == 0 && should_succeed) {
+    FX_LOGS(INFO) << "Expected Observations but got none";
+    return false;
+  } else if (num_obs > 0 && !should_succeed) {
+    FX_LOGS(INFO) << "Expected no Observations but got some";
     return false;
   }
 
+  FX_LOGS(INFO) << "TestDebugMetric: PASS";
   return true;
 }
 

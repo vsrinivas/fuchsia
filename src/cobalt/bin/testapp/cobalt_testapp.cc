@@ -73,7 +73,7 @@ bool CobaltTestApp::RunTests() {
   TRY_TEST(TestLogIntHistogram(&logger_));
   TRY_TEST(TestLogCustomEvent(&logger_));
   TRY_TEST(TestLogCobaltEvent(&logger_));
-  TRY_TEST(DoChannelFilteringTests());
+  TRY_TEST(DoDebugMetricTest());
 
   if (!DoLocalAggregationTests(kEventAggregatorBackfillDays)) {
     return false;
@@ -88,20 +88,15 @@ void CobaltTestApp::SetChannel(const std::string &current_channel) {
   FXL_CHECK(status == fuchsia::cobalt::Status::OK) << "Unable to set channel";
 }
 
-bool CobaltTestApp::DoChannelFilteringTests() {
-  // TODO(rudominer) The Channel Mapper functionality is being replaced by
-  // different functionality and this test is in a transitional state.
-  // The transitional steps are:
-  // (1) Have this test stop expecting Channel Mapper to work. That is the
-  // current state. This allows step (2) below to succeed.
-  // (2) Roll fxr/311408 which makes Channel Mapper stop working and adds
-  // a new constructor to SystemData.
-  // (3) Submit fxr/311648 which removes the use of Channel Mapper from the
-  // Fuchsia repo, uses the new constructor introduced in step (2) and changes
-  // this test to a test of the new SystemData constructor.
-  // (4) Remove Channel Mapper from the Cobalt repo.
+bool CobaltTestApp::DoDebugMetricTest() {
+  // Currently Cobalt is hard-coded to always allow debug metrics.
+  // Here we test that setting the channel (the mechanism that we used
+  // to use to determine debug/non-debug) actually has no effect.
+  bool should_succeed = true;
   SetChannel("prod");
-  TRY_TEST(TestChannelFiltering(&logger_, 0, &cobalt_controller_));
+  TRY_TEST(TestDebugMetric(&logger_, should_succeed, &cobalt_controller_));
+  SetChannel("devhost");
+  TRY_TEST(TestDebugMetric(&logger_, should_succeed, &cobalt_controller_));
   return true;
 }
 
