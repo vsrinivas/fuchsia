@@ -18,7 +18,8 @@ async fn verify_ethernet() {
 
     // Create wlan_tap device which will in turn create ethernet device.
     let _helper =
-        test_utils::TestHelper::begin_test(create_wlantap_config_client(HW_MAC_ADDR)).await;
+        test_utils::TestHelper::begin_test(create_wlantap_config_client("eth-dev", HW_MAC_ADDR))
+            .await;
     let () = loop_until_iface_is_found().await;
 
     let mut retry = test_utils::RetryWithBackoff::new(5.seconds());

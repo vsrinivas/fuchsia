@@ -37,7 +37,8 @@ async fn set_country() {
     const ALPHA2: &[u8; 2] = b"RS";
 
     let mut helper =
-        test_utils::TestHelper::begin_test(create_wlantap_config_client(HW_MAC_ADDR)).await;
+        test_utils::TestHelper::begin_test(create_wlantap_config_client("country", HW_MAC_ADDR))
+            .await;
     let svc = connect_to_service::<DeviceServiceMarker>()
         .expect("Failed to connect to wlanstack_dev_svc");
 

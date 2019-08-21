@@ -24,12 +24,12 @@ pub const HW_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
 pub const CHANNEL: WlanChan = WlanChan { primary: 1, secondary80: 0, cbw: Cbw::Cbw20 };
 
-pub fn create_wlantap_config_client(mac: [u8; 6]) -> WlantapPhyConfig {
-    config::create_wlantap_config(mac, MacRole::Client)
+pub fn create_wlantap_config_client<S: ToString>(name: S, mac: [u8; 6]) -> WlantapPhyConfig {
+    config::create_wlantap_config(name.to_string(), mac, MacRole::Client)
 }
 
-pub fn create_wlantap_config_ap(mac: [u8; 6]) -> WlantapPhyConfig {
-    config::create_wlantap_config(mac, MacRole::Ap)
+pub fn create_wlantap_config_ap<S: ToString>(name: S, mac: [u8; 6]) -> WlantapPhyConfig {
+    config::create_wlantap_config(name.to_string(), mac, MacRole::Ap)
 }
 
 pub fn create_rx_info(channel: &WlanChan) -> WlanRxInfo {

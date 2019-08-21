@@ -52,7 +52,7 @@ async fn open_ap_connect() {
 
     // Create wlantap PHY
     let mut helper =
-        test_utils::TestHelper::begin_test(create_wlantap_config_ap(HW_MAC_ADDR)).await;
+        test_utils::TestHelper::begin_test(create_wlantap_config_ap("ap-open", HW_MAC_ADDR)).await;
 
     // Wait until iface is created from wlantap PHY
     let mut watcher_event_stream = watcher_proxy.take_event_stream();

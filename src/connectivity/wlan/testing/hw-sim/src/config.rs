@@ -10,7 +10,8 @@ use {
     fidl_fuchsia_wlan_tap as wlantap,
 };
 
-pub fn create_wlantap_config(
+pub(crate) fn create_wlantap_config(
+    name: String,
     hw_mac_address: [u8; 6],
     mac_role: wlan_device::MacRole,
 ) -> wlantap::WlantapPhyConfig {
@@ -36,7 +37,7 @@ pub fn create_wlantap_config(
             caps: vec![],
             bands: vec![create_2_4_ghz_band_info()],
         },
-        name: String::from("wlantap0"),
+        name,
         quiet: false,
     }
 }

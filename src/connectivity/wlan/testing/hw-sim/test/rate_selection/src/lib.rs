@@ -143,7 +143,7 @@ async fn rate_selection() {
         connect_to_service::<WlanMarker>().expect("Error connecting to wlan service");
     let mut helper = test_utils::TestHelper::begin_test(WlantapPhyConfig {
         quiet: true,
-        ..create_wlantap_config_client(HW_MAC_ADDR)
+        ..create_wlantap_config_client("minstrel", HW_MAC_ADDR)
     })
     .await;
     let () = loop_until_iface_is_found().await;

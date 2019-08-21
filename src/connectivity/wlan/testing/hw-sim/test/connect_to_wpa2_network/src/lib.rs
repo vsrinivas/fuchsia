@@ -18,8 +18,11 @@ async fn connect_to_wpa2_network() {
     const SSID: &[u8] = b"wpa2ssid";
 
     let wlan_service = connect_to_service::<WlanMarker>().expect("Connect to WLAN service");
-    let mut helper =
-        test_utils::TestHelper::begin_test(create_wlantap_config_client(HW_MAC_ADDR)).await;
+    let mut helper = test_utils::TestHelper::begin_test(create_wlantap_config_client(
+        "connect-wpa2",
+        HW_MAC_ADDR,
+    ))
+    .await;
     let () = loop_until_iface_is_found().await;
 
     let phy = helper.proxy();

@@ -111,7 +111,8 @@ async fn verify_tx_and_rx(client: &mut ethernet::Client, helper: &mut test_utils
 #[fuchsia_async::run_singlethreaded(test)]
 async fn ethernet_tx_rx() {
     let mut helper =
-        test_utils::TestHelper::begin_test(create_wlantap_config_client(HW_MAC_ADDR)).await;
+        test_utils::TestHelper::begin_test(create_wlantap_config_client("eth-pkt", HW_MAC_ADDR))
+            .await;
     let () = loop_until_iface_is_found().await;
 
     let wlan_service =

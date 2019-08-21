@@ -53,7 +53,7 @@ async fn scan(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn simulate_scan() {
     let mut helper =
-        test_utils::TestHelper::begin_test(create_wlantap_config_client(HW_MAC_ADDR)).await;
+        test_utils::TestHelper::begin_test(create_wlantap_config_client("scan", HW_MAC_ADDR)).await;
 
     let wlan_service =
         connect_to_service::<WlanMarker>().expect("Failed to connect to wlan service");

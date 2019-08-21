@@ -16,8 +16,11 @@ async fn connect_to_open_network() {
     const BSS: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
     const SSID: &[u8] = b"open";
 
-    let mut helper =
-        test_utils::TestHelper::begin_test(create_wlantap_config_client(HW_MAC_ADDR)).await;
+    let mut helper = test_utils::TestHelper::begin_test(create_wlantap_config_client(
+        "connect-open",
+        HW_MAC_ADDR,
+    ))
+    .await;
     let () = loop_until_iface_is_found().await;
 
     let wlan_service =
