@@ -181,8 +181,27 @@ impl NeighborAdvertisement {
     pub(crate) const FLAG_OVERRIDE: u8 = 0x20;
 
     /// Creates a new neighbor advertisement message with the provided
-    /// `flags_rso` and `target_address`.
-    pub(crate) fn new(flags_rso: u8, target_address: Ipv6Addr) -> Self {
+    /// `router_flag`, `solicited_flag`, `override_flag` and `target_address`.
+    pub(crate) fn new(
+        router_flag: bool,
+        solicited_flag: bool,
+        override_flag: bool,
+        target_address: Ipv6Addr,
+    ) -> Self {
+        let mut flags_rso = 0;
+
+        if router_flag {
+            flags_rso |= Self::FLAG_ROUTER;
+        }
+
+        if solicited_flag {
+            flags_rso |= Self::FLAG_SOLICITED;
+        }
+
+        if override_flag {
+            flags_rso |= Self::FLAG_OVERRIDE;
+        }
+
         Self { flags_rso, _reserved: [0; 3], target_address }
     }
 

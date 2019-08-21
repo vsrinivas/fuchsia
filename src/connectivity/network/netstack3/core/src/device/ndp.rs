@@ -1035,7 +1035,7 @@ impl<ND: NdpDevice, D: EventDispatcher> NdpState<ND, D> {
     /// # Panics
     ///
     /// Panics if the router has not yet been discovered.
-    fn invalidate_default_router(&mut self, ip: LinkLocalAddr<Ipv6Addr>) {
+    fn invalidate_default_router(&mut self, ip: &LinkLocalAddr<Ipv6Addr>) {
         // As per RFC 4861 section 6.3.5:
         // Whenever the Lifetime of an entry in the Default Router List expires,
         // that entry is discarded.  When removing a router from the Default
@@ -1043,7 +1043,12 @@ impl<ND: NdpDevice, D: EventDispatcher> NdpState<ND, D> {
         // that all entries using the router perform next-hop determination
         // again rather than continue sending traffic to the (deleted) router.
 
-        self.remove_default_router(&ip);
+        self.remove_default_router(ip);
+
+        // If a neighbor entry exists for the router, unmark it as a router.
+        if let Some(state) = self.neighbors.get_neighbor_state_mut(&ip.get()) {
+            state.is_router = false;
+        }
     }
 
     /// Do we already know about this prefix?
@@ -1338,7 +1343,7 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
             // Advertisement from a router with a valid lifetime > 0, at which point this timeout.
             // would have been set. Givem this, we know that `invalidate_default_router` will not
             // panic.
-            ND::get_ndp_state_mut(ctx.state_mut(), device_id).invalidate_default_router(ip)
+            ND::get_ndp_state_mut(ctx.state_mut(), device_id).invalidate_default_router(&ip)
         }
         InnerNdpTimerId::PrefixInvalidation { addr_subnet } => {
             // Invalidate the prefix.
@@ -1560,6 +1565,20 @@ impl<H> NeighborState<H> {
             link_address: None,
         }
     }
+
+    /// Is the neighbor incomplete (waiting for address resolution)?
+    fn is_incomplete(&self) -> bool {
+        if let NeighborEntryState::Incomplete { .. } = self.state {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Is the neighbor reachable?
+    fn is_reachable(&self) -> bool {
+        self.state == NeighborEntryState::Reachable
+    }
 }
 
 /// The various states a Neighbor cache entry can be in.
@@ -1626,16 +1645,6 @@ enum NeighborEntryState {
     /// RetransTimer milliseconds until a reachability
     /// confirmation is received.
     Probe,
-}
-
-impl NeighborEntryState {
-    fn is_incomplete(self) -> bool {
-        if let NeighborEntryState::Incomplete { .. } = self {
-            true
-        } else {
-            false
-        }
-    }
 }
 
 struct NeighborTable<H> {
@@ -2216,8 +2225,6 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
     // NOTE: this assertion may need change if more messages are to be allowed in the future.
     debug_assert!(dst_ip.is_valid_unicast() || (!solicited && dst_ip.is_multicast()));
 
-    // TODO(brunodalbo) if we're a router, flags must also set FLAG_ROUTER.
-    let flags = if solicited { NeighborAdvertisement::FLAG_SOLICITED } else { 0x00 };
     // We must call into the higher level send_ndp_packet function because it is
     // not guaranteed that we have actually saved the link layer address of the
     // destination ip. Typically, the solicitation request will carry that
@@ -2231,7 +2238,7 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
         device_id,
         device_addr,
         dst_ip,
-        NeighborAdvertisement::new(flags, device_addr),
+        NeighborAdvertisement::new(ND::is_router(ctx, device_id), solicited, false, device_addr),
         &options[..],
     );
 }
@@ -2622,7 +2629,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                     // default router, but we will only reach here if the router is already in our
                     // list of default routers, so we know `invalidate_default_router` will not
                     // panic.
-                    ndp_state.invalidate_default_router(src_ip);
+                    ndp_state.invalidate_default_router(&src_ip);
                 } else {
                     trace!("receive_ndp_packet_inner: NDP RA has zero-valued router lifetime, but the router {:?} is unknown so doing nothing", src_ip);
                 }
@@ -2898,15 +2905,16 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
             let target_address = message.target_address();
             match ND::ipv6_addr_state(ctx.state(), device_id, target_address) {
                 AddressState::Tentative => {
+                    trace!("receive_ndp_packet_inner: NDP NA has a target address {:?} that is tentative on device {:?}", target_address, ND::get_device_id(device_id));
                     duplicate_address_detected::<_, ND>(ctx, device_id, *target_address);
                     return;
                 }
                 AddressState::Assigned => {
                     // RFC 4862 says this situation is out of the scope, so we
-                    // just log out the situation.
+                    // just log out the situation for now.
                     //
                     // TODO(ghanan): Signal to bindings that a duplicate address is detected?
-                    error!("A duplicated address found when we are not in DAD process!");
+                    error!("receive_ndp_packet_inner: NDP NA: A duplicated address {:?} found on device {:?} when we are not in DAD process!", target_address, ND::get_device_id(device_id));
                     return;
                 }
                 // Do nothing
@@ -2914,47 +2922,141 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
             }
 
             increment_counter!(ctx, "ndp::rx_neighbor_advertisement");
-            let state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
-            match state.neighbors.get_neighbor_state_mut(&src_ip) {
-                None => {
-                    // If the neighbor is not in the cache, we just ignore the
-                    // advertisement, as we're not interested in communicating
-                    // with it.
-                    trace!("receive_ndp_packet_inner: Ignoring NDP NA from {:?} does not already exist in our list of neighbors, so discarding", src_ip);
+
+            let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+
+            let neighbor_state = if let Some(state) =
+                ndp_state.neighbors.get_neighbor_state_mut(&src_ip)
+            {
+                state
+            } else {
+                // If the neighbor is not in the cache, we just ignore the advertisement, as
+                // we're not yet interested in communicating with it, as per RFC 4861 section
+                // 7.2.5.
+                trace!("receive_ndp_packet_inner: Ignoring NDP NA from {:?} does not already exist in our list of neighbors, so discarding", src_ip);
+                return;
+            };
+
+            let target_ll = get_target_link_layer_option::<ND, _>(p.body());
+
+            if neighbor_state.is_incomplete() {
+                // If we are in the Incomplete state, we should not have ever learned about a
+                // link-layer address.
+                assert!(neighbor_state.link_address.is_none());
+
+                if let Some(address) = target_ll {
+                    // Set the IsRouter flag as per RFC 4861 section 7.2.5.
+                    trace!(
+                        "receive_ndp_packet_inner: NDP RS from {:?} indicicates it {:?} a router",
+                        src_ip,
+                        if message.router_flag() { "is" } else { "isn't" }
+                    );
+                    neighbor_state.is_router = message.router_flag();
+
+                    // Record the link-layer address.
+                    //
+                    // If the advertisement's Solicited flag is set, the state of the
+                    // entry is set to REACHABLE; otherwise, it is set to STALE, as
+                    // per RFC 4861 section 7.2.5.
+                    //
+                    // Note, since the neighbor's link address was `None` before, we will definitely
+                    // update the address, so the state will be set to STALE if the solicited flag
+                    // is unset.
+                    trace!(
+                        "receive_ndp_packet_inner: Resolving link address of {:?} to {:?}",
+                        src_ip,
+                        address
+                    );
+                    ndp_state.neighbors.set_link_address(src_ip, address, message.solicited_flag());
+
+                    // Cancel the resolution timeout.
+                    ctx.dispatcher.cancel_timeout(
+                        NdpTimerId::new_link_address_resolution_timer_id::<ND>(device_id, src_ip),
+                    );
+
+                    // Send any packets queued for the neighbor awaiting address resolution.
+                    ND::address_resolved(ctx, device_id, &src_ip, address);
+                } else {
+                    trace!("receive_ndp_packet_inner: Performing address resolution but the NDP NA from {:?} does not have a target link layer address option, so discarding", src_ip);
+                    return;
                 }
-                Some(NeighborState { state, link_address, is_router }) if state.is_incomplete() => {
-                    if let Some(address) = get_target_link_layer_option::<ND, _>(p.body()) {
-                        *link_address = Some(address);
 
-                        // If the advertisement's Solicited flag is set, the state of the
-                        // entry is set to REACHABLE; otherwise, it is set to STALE, as
-                        // per RFC 4861 section 7.2.5.
-                        if message.solicited_flag() {
-                            *state = NeighborEntryState::Reachable;
-                        } else {
-                            *state = NeighborEntryState::Stale;
-                        }
+                return;
+            }
 
-                        // Set ths IsRouter flag as per RFC 4861 section 7.2.5.
-                        *is_router = message.router_flag();
+            // If we are not in the Incomplete state, we should have (at some point) learned about a
+            // link-layer address.
+            assert!(neighbor_state.link_address.is_some());
 
-                        // Cancel the resolution timeout.
-                        ctx.dispatcher.cancel_timeout(
-                            NdpTimerId::new_link_address_resolution_timer_id::<ND>(
-                                device_id, src_ip,
-                            ),
-                        );
-
-                        ND::address_resolved(ctx, device_id, &src_ip, address);
+            if !message.override_flag() {
+                // As per RFC 4861 section 7.2.5:
+                //
+                // If the Override flag is clear and the supplied link-layer address differs from
+                // that in the cache, then one of two actions takes places:
+                //
+                // a) If the state of the entry is REACHABLE, set it to STALE, but do not update the
+                //    entry in any other way.
+                //
+                // b) Otherwise, the received advertisement should be ignored and MUST NOT update
+                //    cache.
+                if target_ll.map_or(false, |x| neighbor_state.link_address != Some(x)) {
+                    if neighbor_state.is_reachable() {
+                        trace!("receive_ndp_packet_inner: NDP RS from known reachable neighbor {:?} does not have override set, but supplied link addr is different, setting state to stale", src_ip);
+                        neighbor_state.state = NeighborEntryState::Stale;
                     } else {
-                        trace!("receive_ndp_packet_inner: Performing address resolution but the NDP NA from {:?} does not have a target link layer address option, so discarding", src_ip);
+                        trace!("receive_ndp_packet_inner: NDP RS from known neighbor {:?} (with reachability unknown) does not have override set, but supplied link addr is different, ignoring", src_ip);
                     }
                 }
-                _ => {
-                    // TODO(brunodalbo) In any other case, the neighbor
-                    //  advertisement is used to update reachability and router
-                    //  status in the cache.
-                    log_unimplemented!((), "Received already known neighbor advertisement")
+            }
+
+            // Ignore this unless `target_ll` is `Some`.
+            let mut is_same = false;
+
+            // If override is set, the link-layer address MUST be inserted into the cache (if one is
+            // supplied and differs from the alreadt recoded address).
+            if let Some(address) = target_ll {
+                let address = Some(address);
+
+                is_same = (neighbor_state.link_address == address);
+
+                if !is_same && message.override_flag() {
+                    neighbor_state.link_address = address;
+                }
+            }
+
+            // If the override flag is set, or the supplied link-layer address is the same as that
+            // in the cache, or no Target Link-Layer Address option was supplied:
+            if message.override_flag() || target_ll.is_none() || is_same {
+                // - If the solicited flag is set, the state of the entry MUST be set to REACHABLE.
+                // - Else, if it was unset, and the link address was updated, the state MUST be set
+                //   to STALE.
+                // - Otherwise, the state remains the same.
+                if message.solicited_flag() {
+                    trace!("receive_ndp_packet_inner: NDP RS from {:?} is solicited and either has override set, link address isn't provided, or the provided address is not different, updating state to Reachable", src_ip);
+                    neighbor_state.state = NeighborEntryState::Reachable;
+                } else if message.override_flag() && target_ll.is_some() && !is_same {
+                    trace!("receive_ndp_packet_inner: NDP RS from {:?} is unsolicited and the link address was updated, updating state to Stale", src_ip);
+
+                    neighbor_state.state = NeighborEntryState::Stale;
+                } else {
+                    trace!("receive_ndp_packet_inner: NDP RS from {:?} is unsolicited and the link address was not updated, doing nothing", src_ip);
+                }
+
+                // Check if the neighbor transitioned from a router -> host.
+                if neighbor_state.is_router && !message.router_flag() {
+                    trace!("receive_ndp_packet_inner: NDP RS from {:?} informed us that it is no longer a router, updating is_router flag", src_ip);
+                    neighbor_state.is_router = false;
+
+                    if let Some(router_ll) = LinkLocalAddr::new(src_ip) {
+                        // Invalidate the router as a default router if it is one of our default
+                        // routers.
+                        if ndp_state.has_default_router(&router_ll) {
+                            trace!("receive_ndp_packet_inner: NDP RS from {:?} (known as a default router) informed us that it is no longer a router, invaliding the default router", src_ip);
+                            ndp_state.invalidate_default_router(&router_ll);
+                        }
+                    }
+                } else {
+                    neighbor_state.is_router = message.router_flag();
                 }
             }
         }
@@ -3060,6 +3162,35 @@ mod tests {
             .serialize_vec_outer()
             .unwrap()
             .into_inner()
+    }
+
+    fn neighbor_advertisement_message(
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+        router_flag: bool,
+        solicited_flag: bool,
+        override_flag: bool,
+        mac: Option<Mac>,
+    ) -> Buf<Vec<u8>> {
+        let mac = mac.map(|x| x.bytes());
+
+        let mut options = Vec::new();
+
+        if let Some(ref mac) = mac {
+            options.push(NdpOption::TargetLinkLayerAddress(mac));
+        }
+
+        OptionsSerializer::new(options.iter())
+            .into_serializer()
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                src_ip,
+                dst_ip,
+                IcmpUnusedCode,
+                NeighborAdvertisement::new(router_flag, solicited_flag, override_flag, src_ip),
+            ))
+            .serialize_vec_outer()
+            .unwrap()
+            .unwrap_b()
     }
 
     fn check_router_config(
@@ -4472,6 +4603,17 @@ mod tests {
         assert!(neighbor.is_router);
         // Router should be marked stale as a neighbor.
         assert_eq!(neighbor.state, NeighborEntryState::Stale);
+
+        // Trigger router invalidation.
+        assert!(trigger_next_timer(&mut ctx));
+
+        // Neighbor entry shouldn't change except for `is_router` which should now be `false`.
+        let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device_id);
+        assert!(!ndp_state.has_default_router(&src_ip));
+        let neighbor = ndp_state.neighbors.get_neighbor_state(&src_ip).unwrap();
+        assert_eq!(neighbor.link_address.unwrap(), src_mac);
+        assert!(!neighbor.is_router);
+        assert_eq!(neighbor.state, NeighborEntryState::Stale);
     }
 
     #[test]
@@ -5808,5 +5950,315 @@ mod tests {
         let router_ll = dummy_config.remote_mac.to_ipv6_link_local();
         assert!(!EthernetNdpDevice::get_ndp_state(net.context("host").state(), device.id())
             .has_default_router(&router_ll));
+    }
+
+    #[test]
+    fn test_receiving_neighbor_advertisements() {
+        fn test_receiving_na_from_known_neighbor(
+            ctx: &mut Context<DummyEventDispatcher>,
+            src_ip: Ipv6Addr,
+            dst_ip: SpecifiedAddr<Ipv6Addr>,
+            device: DeviceId,
+            router_flag: bool,
+            solicited_flag: bool,
+            override_flag: bool,
+            mac: Option<Mac>,
+            expected_state: NeighborEntryState,
+            expected_router: bool,
+            expected_link_addr: Option<Mac>,
+        ) {
+            let mut buf = neighbor_advertisement_message(
+                src_ip,
+                dst_ip.get(),
+                router_flag,
+                solicited_flag,
+                override_flag,
+                mac,
+            );
+            let packet =
+                buf.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)).unwrap();
+            ctx.receive_ndp_packet(Some(device), src_ip, dst_ip, packet);
+
+            let neighbor_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+                .neighbors
+                .get_neighbor_state(&src_ip)
+                .unwrap();
+            assert_eq!(neighbor_state.state, expected_state);
+            assert_eq!(neighbor_state.is_router, expected_router);
+            assert_eq!(neighbor_state.link_address, expected_link_addr);
+        }
+
+        let config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        let neighbor_mac = config.remote_mac;
+        let neighbor_ip = neighbor_mac.to_ipv6_link_local().get();
+        let all_nodes_addr = SpecifiedAddr::new(Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS).unwrap();
+
+        // Should not know about the neighbor yet.
+        assert!(EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+            .neighbors
+            .get_neighbor_state(&neighbor_ip)
+            .is_none());
+
+        //
+        // Receiving unsolicited NA from a neighbor we don't care about yet should do nothing.
+        //
+
+        // Receive the NA.
+        let mut buf = neighbor_advertisement_message(
+            neighbor_ip,
+            all_nodes_addr.get(),
+            false,
+            false,
+            false,
+            None,
+        );
+        let packet = buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(neighbor_ip, all_nodes_addr))
+            .unwrap();
+        ctx.receive_ndp_packet(Some(device), neighbor_ip, all_nodes_addr, packet);
+
+        // We still do not know about the neighbor since the NA was unsolicited and we never were
+        // interested in the neighbor yet.
+        assert!(EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+            .neighbors
+            .get_neighbor_state(&neighbor_ip)
+            .is_none());
+
+        //
+        // Receiving solicited NA from a neighbor we don't care about yet should do nothing (should
+        // never happen).
+        //
+
+        // Receive the NA.
+        let mut buf = neighbor_advertisement_message(
+            neighbor_ip,
+            all_nodes_addr.get(),
+            false,
+            true,
+            false,
+            None,
+        );
+        let packet = buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(neighbor_ip, all_nodes_addr))
+            .unwrap();
+        ctx.receive_ndp_packet(Some(device), neighbor_ip, all_nodes_addr, packet);
+
+        // We still do not know about the neighbor since the NA was unsolicited and we never were
+        // interested in the neighbor yet.
+        assert!(EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+            .neighbors
+            .get_neighbor_state(&neighbor_ip)
+            .is_none());
+
+        //
+        // Receiving solicited NA from a neighbor we are trying to resolve, but no target link addr.
+        //
+        // Should do nothing (still INCOMPLETE).
+        //
+
+        // Create incomplete neighbor entry.
+        let neighbors =
+            &mut EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id()).neighbors;
+        neighbors.add_incomplete_neighbor_state(neighbor_ip);
+
+        test_receiving_na_from_known_neighbor(
+            &mut ctx,
+            neighbor_ip,
+            config.local_ip,
+            device,
+            false,
+            true,
+            false,
+            None,
+            NeighborEntryState::Incomplete { transmit_counter: 1 },
+            false,
+            None,
+        );
+
+        //
+        // Receiving solicited NA from a neighbor we are resolving, but with target link addr.
+        //
+        // Should update link layer address and set state to REACHABLE.
+        //
+
+        test_receiving_na_from_known_neighbor(
+            &mut ctx,
+            neighbor_ip,
+            config.local_ip,
+            device,
+            false,
+            true,
+            false,
+            Some(neighbor_mac),
+            NeighborEntryState::Reachable,
+            false,
+            Some(neighbor_mac),
+        );
+
+        //
+        // Receive unsolicited NA from a neighbor with router flag updated (no target link addr).
+        //
+        // Should update is_router to true.
+        //
+
+        test_receiving_na_from_known_neighbor(
+            &mut ctx,
+            neighbor_ip,
+            config.local_ip,
+            device,
+            true,
+            false,
+            false,
+            None,
+            NeighborEntryState::Reachable,
+            true,
+            Some(neighbor_mac),
+        );
+
+        //
+        // Receive unsolicited NA from a neighbor without router flag set and same target link addr.
+        //
+        // Should update is_router, state should be unchanged.
+        //
+
+        test_receiving_na_from_known_neighbor(
+            &mut ctx,
+            neighbor_ip,
+            config.local_ip,
+            device,
+            false,
+            false,
+            false,
+            Some(neighbor_mac),
+            NeighborEntryState::Reachable,
+            false,
+            Some(neighbor_mac),
+        );
+
+        //
+        // Receive unsolicted NA from a neighbor with new target link addr.
+        //
+        // Should NOT update link layer addr, but set state to STALE.
+        //
+
+        let new_mac = Mac::new([99, 98, 97, 96, 95, 94]);
+
+        test_receiving_na_from_known_neighbor(
+            &mut ctx,
+            neighbor_ip,
+            config.local_ip,
+            device,
+            false,
+            false,
+            false,
+            Some(new_mac),
+            NeighborEntryState::Stale,
+            false,
+            Some(neighbor_mac),
+        );
+
+        //
+        // Receive unsolicted NA from a neighbor with new target link addr and override set.
+        //
+        // Should update link layer addr and set state to STALE.
+        //
+
+        test_receiving_na_from_known_neighbor(
+            &mut ctx,
+            neighbor_ip,
+            config.local_ip,
+            device,
+            false,
+            false,
+            true,
+            Some(new_mac),
+            NeighborEntryState::Stale,
+            false,
+            Some(new_mac),
+        );
+
+        //
+        // Receive solicted NA from a neighbor with the same link layer addr.
+        //
+        // Should not update link layer addr, but set state to REACHABLE.
+        //
+
+        test_receiving_na_from_known_neighbor(
+            &mut ctx,
+            neighbor_ip,
+            config.local_ip,
+            device,
+            false,
+            true,
+            false,
+            Some(new_mac),
+            NeighborEntryState::Reachable,
+            false,
+            Some(new_mac),
+        );
+
+        //
+        // Receive unsolicted NA from a neighbor with new target link addr and override set.
+        //
+        // Should update link layer addr, and set state to Stale.
+        //
+
+        test_receiving_na_from_known_neighbor(
+            &mut ctx,
+            neighbor_ip,
+            config.local_ip,
+            device,
+            false,
+            false,
+            true,
+            Some(neighbor_mac),
+            NeighborEntryState::Stale,
+            false,
+            Some(neighbor_mac),
+        );
+
+        //
+        // Receive solicted NA from a neighbor with new target link addr and override set.
+        //
+        // Should set state to Reachable.
+        //
+
+        test_receiving_na_from_known_neighbor(
+            &mut ctx,
+            neighbor_ip,
+            config.local_ip,
+            device,
+            false,
+            true,
+            true,
+            Some(neighbor_mac),
+            NeighborEntryState::Reachable,
+            false,
+            Some(neighbor_mac),
+        );
+
+        //
+        // Receive unsolicted NA from a neighbor with no target link addr and overide set.
+        //
+        // Should do nothing..
+        //
+
+        test_receiving_na_from_known_neighbor(
+            &mut ctx,
+            neighbor_ip,
+            config.local_ip,
+            device,
+            false,
+            false,
+            true,
+            None,
+            NeighborEntryState::Reachable,
+            false,
+            Some(neighbor_mac),
+        );
     }
 }
