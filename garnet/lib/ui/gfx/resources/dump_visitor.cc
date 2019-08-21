@@ -244,29 +244,17 @@ void DumpVisitor::Visit(Material* r) {
   WriteProperty("green") << r->green();
   WriteProperty("blue") << r->blue();
   WriteProperty("alpha") << r->alpha();
+  BeginSection("image");
+  if (auto backing_image = r->texture_image()) {
+    backing_image->Accept(this);
+  } else {
+    WriteProperty("image.value") << "(null)";
+  }
+  EndSection();
   if (auto texture = r->escher_material()->texture()) {
-    BeginSection("image");
-    if (auto backing_image = r->texture_image()) {
-      if (auto image = backing_image->As<Image>()) {
-        Visit(image.get());
-      } else if (auto image_pipe = backing_image->As<ImagePipe>()) {
-        Visit(image_pipe.get());
-      }
-    } else {
-      WriteProperty("image.value") << "(null)";
-    }
-    EndSection();
     WriteProperty("texture.width") << texture->width();
     WriteProperty("texture.height") << texture->height();
     WriteProperty("texture.size") << texture->image()->size();
-  } else if (auto backing_image = r->texture_image()) {
-    BeginSection("image");
-    if (auto image = backing_image->As<Image>()) {
-      Visit(image.get());
-    } else if (auto image_pipe = backing_image->As<ImagePipe>()) {
-      Visit(image_pipe.get());
-    }
-    EndSection();
   }
   VisitResource(r);
   EndItem();

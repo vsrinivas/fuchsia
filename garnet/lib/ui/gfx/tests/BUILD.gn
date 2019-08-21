@@ -93,6 +93,7 @@ executable("unittests") {
     "camera_unittest.cc",
     "compositor_unittest.cc",
     "default_frame_scheduler_unittest.cc",
+    "dump_visitor_unittest.cc",
     "duration_predictor_unittest.cc",
     "escher_vulkan_smoke_test.cc",
     "frame_predictor_unittest.cc",

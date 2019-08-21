@@ -14,6 +14,10 @@
 namespace scenic_impl {
 namespace gfx {
 
+namespace test {
+class DumpVisitorTest;
+}
+
 class HostImage;
 using HostImagePtr = fxl::RefPtr<Image>;
 using ImageConversionFunction = fit::function<void(void*, void*, uint32_t, uint32_t)>;
@@ -50,6 +54,7 @@ class HostImage : public Image {
   bool UpdatePixels(escher::BatchGpuUploader* gpu_uploader) override;
 
  private:
+  friend class scenic_impl::gfx::test::DumpVisitorTest;
   // Create an Image object from a escher::Image.
   // |session| is the Session that this image can be referenced from.
   // |id| is the ID assigned to the resource.
