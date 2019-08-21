@@ -136,6 +136,8 @@ namespace {
 //
 // This is only necessary to use directly if you need to do something between creating
 // and starting the thread - otherwise just use start_thread() for simplicity.
+//
+// See comment on start_thread (below) about constraints on the entry point.
 class ThreadStarter {
  public:
   bool CreateThread(zxr_thread_t* thread_out, zx_handle_t* thread_h, bool start_suspended = false) {
@@ -187,6 +189,12 @@ class ThreadStarter {
 
 }  // namespace
 
+// NOTE!  The entry point code here must be built specially so it doesn't
+// require full proper ABI setup, which ThreadStarter does not do.  The
+// thread-functions.cc functions are fine, since that file is explicitly built
+// without instrumentation or fancy ABI features.  Anything else must be
+// annotated with __NO_SAFESTACK and not call any other function not so
+// annotated, which basically means nothing but the raw vDSO entry points.
 static bool start_thread(zxr_thread_entry_t entry, void* arg, zxr_thread_t* thread_out,
                          zx_handle_t* thread_h) {
   ThreadStarter starter;
@@ -459,11 +467,11 @@ static bool TestGetLastScheduledCpu() {
 
   // State to synchronize with the worker thread.
   struct WorkerState {
-    zx::event started;
-    zx::event should_stop;
+    zx_handle_t started;
+    zx_handle_t should_stop;
   } state;
-  ASSERT_EQ(zx::event::create(0, &state.started), ZX_OK);
-  ASSERT_EQ(zx::event::create(0, &state.should_stop), ZX_OK);
+  ASSERT_EQ(zx_event_create(0, &state.started), ZX_OK);
+  ASSERT_EQ(zx_event_create(0, &state.should_stop), ZX_OK);
 
   // Create a thread.
   zxr_thread_t thread;
@@ -479,15 +487,20 @@ static bool TestGetLastScheduledCpu() {
   ASSERT_EQ(info.last_scheduled_cpu, ZX_INFO_INVALID_CPU);
 
   // Start the thread.
+  // NOTE! This function can only call vDSO entry points.  Any other function
+  // might be compiled with shadow-call-stack or other instrumentation that
+  // requires full proper ABI setup, which ThreadStarter does not do.
   auto thread_body = [](void* arg) __NO_SAFESTACK -> void {
     auto* state = static_cast<WorkerState*>(arg);
-    state->started.signal(0, ZX_USER_SIGNAL_0);
-    state->should_stop.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), /*pending=*/nullptr);
+    zx_object_signal(state->started, 0, ZX_USER_SIGNAL_0);
+    zx_object_wait_one(state->should_stop, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE,
+                       /*pending=*/nullptr);
   };
   ASSERT_TRUE(starter.StartThread(thread_body, &state));
 
   // Wait for worker to start.
-  ASSERT_EQ(state.started.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), /*pending=*/nullptr),
+  ASSERT_EQ(zx_object_wait_one(state.started, ZX_USER_SIGNAL_0,
+                               ZX_TIME_INFINITE, /*pending=*/nullptr),
             ZX_OK);
 
   // Ensure the last-reported thread looks reasonable.
@@ -498,7 +511,7 @@ static bool TestGetLastScheduledCpu() {
   ASSERT_LT(info.last_scheduled_cpu, ZX_CPU_SET_MAX_CPUS);
 
   // Shut down and clean up.
-  ASSERT_EQ(state.should_stop.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
+  ASSERT_EQ(zx_object_signal(state.should_stop, 0, ZX_USER_SIGNAL_0), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 
@@ -733,40 +746,28 @@ static bool TestSuspendPortCall() {
   END_TEST;
 }
 
-struct TestWritingThreadArg {
-  std::atomic<int> v;
-};
-
-__NO_SAFESTACK static void TestWritingThreadFn(void* arg_) {
-  TestWritingThreadArg* arg = static_cast<TestWritingThreadArg*>(arg_);
-  while (true) {
-    arg->v = 1;
-  }
-  __builtin_trap();
-}
-
 static bool TestSuspendStopsThread() {
   BEGIN_TEST;
 
   zxr_thread_t thread;
 
-  TestWritingThreadArg arg = {.v = 0};
+  std::atomic<int> value = 0;
   zx_handle_t thread_h;
-  ASSERT_TRUE(start_thread(TestWritingThreadFn, &arg, &thread, &thread_h));
+  ASSERT_TRUE(start_thread(&threads_test_atomic_store, &value, &thread, &thread_h));
 
-  while (arg.v != 1) {
+  while (value != 1) {
     zx_nanosleep(0);
   }
 
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_suspend_token(thread_h, &suspend_token), ZX_OK);
-  while (arg.v != 2) {
-    arg.v = 2;
+  while (value != 2) {
+    value = 2;
     // Give the thread a chance to clobber the value
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
   }
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
-  while (arg.v != 1) {
+  while (value != 1) {
     zx_nanosleep(0);
   }
 
@@ -886,13 +887,13 @@ static bool TestSuspendAfterDeath() {
 static bool TestKillSuspendedThread() {
   BEGIN_TEST;
 
+  std::atomic<int> value = 0;
   zxr_thread_t thread;
-  TestWritingThreadArg arg = {.v = 0};
   zx_handle_t thread_h;
-  ASSERT_TRUE(start_thread(TestWritingThreadFn, &arg, &thread, &thread_h));
+  ASSERT_TRUE(start_thread(&threads_test_atomic_store, &value, &thread, &thread_h));
 
-  // Wait until the thread has started and has modified arg.v.
-  while (arg.v != 1) {
+  // Wait until the thread has started and has modified value.
+  while (value != 1) {
     zx_nanosleep(0);
   }
 
@@ -906,13 +907,13 @@ static bool TestKillSuspendedThread() {
             ZX_OK);
 
   // Reset the test memory location.
-  arg.v = 100;
+  value = 100;
   ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
   // Wait for the thread termination to complete.
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
   // Check for the bug.  The thread should not have resumed execution and
-  // so should not have modified arg.v.
-  EXPECT_EQ(arg.v.load(), 100);
+  // so should not have modified value.
+  EXPECT_EQ(value.load(), 100);
 
   // Check that the thread is reported as exiting and not as resumed.
   zx_handle_t exception;
@@ -941,8 +942,8 @@ static bool TestStartSuspendedThread() {
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_suspend(thread_h, &suspend_token), ZX_OK);
 
-  TestWritingThreadArg arg = {.v = 0};
-  ASSERT_TRUE(starter.StartThread(TestWritingThreadFn, &arg));
+  std::atomic<int> value = 0;
+  ASSERT_TRUE(starter.StartThread(&threads_test_atomic_store, &value));
 
   // Make sure the thread goes directly to suspended state without executing at all.
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, NULL), ZX_OK);
@@ -953,7 +954,7 @@ static bool TestStartSuspendedThread() {
   // Make sure the thread still resumes properly.
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_RUNNING, ZX_TIME_INFINITE, NULL), ZX_OK);
-  while (arg.v != 1) {
+  while (value != 1) {
     zx_nanosleep(0);
   }
 
@@ -980,10 +981,10 @@ static bool TestStartSuspendedAndResumedThread() {
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
 
   // Start the thread, it should behave normally.
-  TestWritingThreadArg arg = {.v = 0};
-  ASSERT_TRUE(starter.StartThread(TestWritingThreadFn, &arg));
+  std::atomic<int> value = 0;
+  ASSERT_TRUE(starter.StartThread(&threads_test_atomic_store, &value));
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_RUNNING, ZX_TIME_INFINITE, NULL), ZX_OK);
-  while (arg.v != 1) {
+  while (value != 1) {
     zx_nanosleep(0);
   }
 
@@ -1474,12 +1475,12 @@ static bool TestWritingArmFlagsRegister() {
   BEGIN_TEST;
 
 #if defined(__aarch64__)
-  TestWritingThreadArg arg = {.v = 0};
+  std::atomic<int> value = 0;
   zxr_thread_t thread;
   zx_handle_t thread_handle;
-  ASSERT_TRUE(start_thread(TestWritingThreadFn, &arg, &thread, &thread_handle));
+  ASSERT_TRUE(start_thread(&threads_test_atomic_store, &value, &thread, &thread_handle));
   // Wait for the thread to start executing and enter its main loop.
-  while (arg.v != 1) {
+  while (value != 1) {
     ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_USEC(1))), ZX_OK);
   }
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
@@ -1510,10 +1511,10 @@ static bool TestWritingArmFlagsRegister() {
   // zx_thread_write_state() set the interrupt disable flags, then if the
   // thread gets scheduled, it will never get interrupted and we will not
   // be able to kill and join the thread.
-  arg.v = 0;
+  value = 0;
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
   // Wait until the thread has actually resumed execution.
-  while (arg.v != 1) {
+  while (value != 1) {
     ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_USEC(1))), ZX_OK);
   }
   ASSERT_EQ(zx_task_kill(thread_handle), ZX_OK);

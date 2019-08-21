@@ -3,8 +3,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-#include <string.h>
+#include <atomic>
+#include <cstddef>
+#include <cstring>
 
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
@@ -106,4 +107,12 @@ void threads_test_channel_call_fn(void* arg_) {
   }
 
   zx_handle_close(arg->channel);
+}
+
+void threads_test_atomic_store(void* arg) {
+  auto* p = static_cast<std::atomic<int>*>(arg);
+  while (true) {
+    *p = 1;
+  }
+  __builtin_trap();
 }
