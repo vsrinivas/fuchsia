@@ -45,8 +45,6 @@ class FdioHidDecoder : public HidDecoder {
   // |HidDecoder|
   BootMode ReadBootMode() const override { return boot_mode_; }
   // |HidDecoder|
-  void SetupDevice(Device device) override;
-  // |HidDecoder|
   const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) override;
   // |HidDecoder|
   const std::vector<uint8_t>& Read(int* bytes_read) override;

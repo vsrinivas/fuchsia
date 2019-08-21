@@ -101,22 +101,6 @@ zx::event FdioHidDecoder::GetEvent() {
   return event;
 }
 
-void FdioHidDecoder::SetupDevice(Device device) {
-  switch (device) {
-    case Device::EYOYO:
-      setup_eyoyo_touch(caller_.fd().get());
-      break;
-    case Device::SAMSUNG:
-      setup_samsung_touch(caller_.fd().get());
-      break;
-    case Device::FT3X27:
-      setup_ft3x27_touch(caller_.fd().get());
-      break;
-    default:
-      break;
-  }
-}
-
 const std::vector<uint8_t>& FdioHidDecoder::ReadReportDescriptor(int* bytes_read) {
   *bytes_read = report_descriptor_.size();
   return report_descriptor_;

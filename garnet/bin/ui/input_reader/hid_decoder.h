@@ -52,12 +52,6 @@ class HidDecoder {
   // through generic HID parsers.
   virtual BootMode ReadBootMode() const = 0;
 
-  // Some devices require that data is sent back to the device. At the moment
-  // we don't have a general framework for this so we have hardcoded support
-  // for 3 devices. This should be removed when the generic parsers are
-  // complete.
-  virtual void SetupDevice(Device device) = 0;
-
   // Reads the Report descriptor from the device.
   virtual const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) = 0;
 

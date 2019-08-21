@@ -33,9 +33,6 @@ zx::event MockHidDecoder::GetEvent() {
 
 HidDecoder::BootMode MockHidDecoder::ReadBootMode() const { return boot_mode_; }
 
-// We don't test this function so it is a stub for now.
-void MockHidDecoder::SetupDevice(Device device) { return; }
-
 const std::vector<uint8_t>& MockHidDecoder::ReadReportDescriptor(int* bytes_read) {
   FXL_CHECK(report_descriptor_.length != 0);
   *bytes_read = report_descriptor_.length;

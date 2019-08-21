@@ -22,30 +22,12 @@ enum class Protocol : uint32_t {
   MediaButtons,
   // The ones below are hacks that need to be removed.
   BootMouse,
-  Acer12Touch,
-  SamsungTouch,
-  ParadiseV1Touch,
-  ParadiseV2Touch,
-  ParadiseV3Touch,
-  EgalaxTouch,
-  ParadiseV1TouchPad,
-  ParadiseV2TouchPad,
   ParadiseSensor,
-  EyoyoTouch,
-  Ft3x27Touch,
 };
 
 enum class TouchDeviceType {
   NONE,
   HID,
-  ACER12,
-  PARADISEv1,
-  PARADISEv2,
-  PARADISEv3,
-  SAMSUNG,
-  EGALAX,
-  EYOYO,
-  FT3X27,
 };
 
 enum class MouseDeviceType { NONE, BOOT, HID, TOUCH, PARADISEv1, PARADISEv2, GAMEPAD };
