@@ -7,6 +7,7 @@ package dhcp
 import (
 	"context"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,8 +22,13 @@ import (
 	"github.com/google/netstack/waiter"
 )
 
-const nicid = tcpip.NICID(1)
-const serverAddr = tcpip.Address("\xc0\xa8\x03\x01")
+const (
+	nicid      = tcpip.NICID(1)
+	serverAddr = tcpip.Address("\xc0\xa8\x03\x01")
+
+	defaultAcquireTimeout = 1000 * time.Millisecond
+	defaultRetryTime      = 100 * time.Millisecond
+)
 
 func createTestStack(t *testing.T) *stack.Stack {
 	s, linkEP := createTestStackWithChannel(t)
@@ -93,7 +99,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 			t.Fatalf("could not create NIC: %s", err)
 		}
 		const clientLinkAddr = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-		c := NewClient(s, clientNicid, clientLinkAddr, nil)
+		c := NewClient(s, clientNicid, clientLinkAddr, defaultAcquireTimeout, defaultRetryTime, nil)
 		go func() {
 			// Packets from the clients get sent to the server.
 			for pkt := range clientLinkEP.C {
@@ -170,7 +176,7 @@ func TestDHCP(t *testing.T) {
 	}
 
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-	c0 := NewClient(s, nicid, clientLinkAddr0, nil)
+	c0 := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaultRetryTime, nil)
 	{
 		{
 			cfg, err := c0.acquire(ctx, initSelecting)
@@ -200,7 +206,7 @@ func TestDHCP(t *testing.T) {
 
 	{
 		const clientLinkAddr1 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x53")
-		c1 := NewClient(s, nicid, clientLinkAddr1, nil)
+		c1 := NewClient(s, nicid, clientLinkAddr1, defaultAcquireTimeout, defaultRetryTime, nil)
 		cfg, err := c1.acquire(ctx, initSelecting)
 		if err != nil {
 			t.Fatal(err)
@@ -254,19 +260,37 @@ func equalConfig(c0, c1 Config) bool {
 	return true
 }
 
-func TestRefresh(t *testing.T) {
-	for _, rebind := range []bool{false, true} {
-		name := "Renew"
-		if rebind {
+func TestStateTransition(t *testing.T) {
+	type testType int
+	const (
+		testRenew testType = iota
+		testRebind
+		testLeaseExpire
+	)
+
+	for _, typ := range []testType{testRenew, testRebind, testLeaseExpire} {
+		var name string
+		switch typ {
+		case testRenew:
+			name = "Renew"
+		case testRebind:
 			name = "Rebind"
+		case testLeaseExpire:
+			name = "LeaseExpire"
+		default:
+			t.Fatalf("unknown test type %d", typ)
 		}
 		t.Run(name, func(t *testing.T) {
 			s, linkEP := createTestStackWithChannel(t)
 			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02"}
 
+			var blockData uint32 = 0
 			go func() {
 				for pkt := range linkEP.C {
-					if rebind {
+					if atomic.LoadUint32(&blockData) == 1 {
+						continue
+					}
+					if typ == testRebind {
 						// Only pass broadcast packets back into the stack. This simulates
 						// packet loss during the Client's unicast RENEWING state, forcing
 						// it into broadcast REBINDING state.
@@ -283,9 +307,9 @@ func TestRefresh(t *testing.T) {
 				SubnetMask:    "\xff\xff\xff\x00",
 				Gateway:       "\xc0\xa8\x03\xF0",
 				DNS:           []tcpip.Address{"\x08\x08\x08\x08"},
-				LeaseLength:   3 * time.Second,
-				RebindingTime: 2 * time.Second,
-				RenewalTime:   1 * time.Second,
+				LeaseLength:   6 * defaultAcquireTimeout,
+				RebindingTime: 4 * defaultAcquireTimeout,
+				RenewalTime:   2 * defaultAcquireTimeout,
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -300,11 +324,10 @@ func TestRefresh(t *testing.T) {
 				if oldAddr != curAddr {
 					t.Fatalf("aquisition %d: curAddr=%s, oldAddr=%s", count, curAddr, oldAddr)
 				}
-				if cfg.LeaseLength != serverCfg.LeaseLength {
-					t.Fatalf("aquisition %d: lease length: %s, want %s", count, cfg.LeaseLength, serverCfg.LeaseLength)
-				}
+
 				count++
 				curAddr = newAddr
+
 				// Any address acquired by the DHCP client must be added to the stack, because the DHCP client
 				// will need to send from that address when it tries to renew its lease.
 				if curAddr != oldAddr {
@@ -313,19 +336,28 @@ func TestRefresh(t *testing.T) {
 							t.Fatalf("RemoveAddress(%s): %s", oldAddr.Address, err)
 						}
 					}
-					protocolAddress := tcpip.ProtocolAddress{
-						Protocol:          ipv4.ProtocolNumber,
-						AddressWithPrefix: curAddr,
-					}
-					if err := s.AddProtocolAddress(nicid, protocolAddress); err != nil {
-						t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+
+					if curAddr != (tcpip.AddressWithPrefix{}) {
+						protocolAddress := tcpip.ProtocolAddress{
+							Protocol:          ipv4.ProtocolNumber,
+							AddressWithPrefix: curAddr,
+						}
+						if err := s.AddProtocolAddress(nicid, protocolAddress); err != nil {
+							t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+						}
 					}
 				}
-				addrCh <- newAddr
+
+				if curAddr != (tcpip.AddressWithPrefix{}) {
+					if cfg.LeaseLength != serverCfg.LeaseLength {
+						t.Fatalf("aquisition %d: lease length: %s, want %s", count, cfg.LeaseLength, serverCfg.LeaseLength)
+					}
+				}
+				addrCh <- curAddr
 			}
 
 			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-			c := NewClient(s, nicid, clientLinkAddr0, acquiredFunc)
+			c := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaultRetryTime, acquiredFunc)
 
 			c.Run(ctx)
 
@@ -337,16 +369,28 @@ func TestRefresh(t *testing.T) {
 				t.Fatal("timeout acquiring initial address")
 			}
 
-			timeout := serverCfg.RenewalTime
-			if rebind {
+			wantAddr := addr
+			var timeout time.Duration
+			switch typ {
+			case testRenew:
+				timeout = serverCfg.RenewalTime
+			case testRebind:
 				timeout = serverCfg.RebindingTime
+			case testLeaseExpire:
+				timeout = serverCfg.LeaseLength
+				wantAddr = tcpip.AddressWithPrefix{}
+				// Cut the data flow to block request packets during renew/rebind.
+				// TODO(ckuiper): This has the potential for a race between when the thread that injects
+				// data into the link EP reads the new "blockData" value and when the DHCP client thread's
+				// timers expire, triggering a renewal request.
+				atomic.StoreUint32(&blockData, 1)
 			}
 
 			select {
 			case newAddr := <-addrCh:
-				t.Logf("got renewal: %s", newAddr)
-				if newAddr != addr {
-					t.Fatalf("renewal address is %s, want %s", newAddr, addr)
+				t.Logf("got new acquisition: %s", newAddr)
+				if newAddr != wantAddr {
+					t.Fatalf("incorrect new address: got = %s, want = %s", newAddr, wantAddr)
 				}
 			case <-time.After(5 * timeout):
 				t.Fatal("timeout acquiring renewed address")
@@ -472,7 +516,7 @@ func TestTwoServers(t *testing.T) {
 	}
 
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-	c := NewClient(s, nicid, clientLinkAddr0, nil)
+	c := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaultRetryTime, nil)
 	if _, err := c.acquire(ctx, initSelecting); err != nil {
 		t.Fatal(err)
 	}

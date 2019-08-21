@@ -15,7 +15,7 @@ import (
 	"github.com/google/netstack/tcpip"
 )
 
-var testRouteTable = []routes.ExtendedRoute{
+var testRouteTable = routes.ExtendedRouteTable{
 	// nic, subnet, gateway, metric, tracksInterface, dynamic, enabled
 	createExtendedRoute(1, "127.0.0.1/32", "", 100, true, false, true),                 // loopback
 	createExtendedRoute(4, "192.168.1.0/24", "", 100, true, true, true),                // DHCP IP (eth)
@@ -104,7 +104,7 @@ func TestExtendedRouteMatch(t *testing.T) {
 			er := createExtendedRoute(1, tc.subnet, "", 100, true, true, true)
 			addr := ipStringToAddress(tc.addr)
 			if got := er.Match(addr); got != tc.want {
-				t.Errorf("got match addr %v in subnet %v = %v, want = %v", tc.addr, tc.subnet, got, tc.want)
+				t.Errorf("got match addr %s in subnet %s = %t, want = %t", tc.addr, tc.subnet, got, tc.want)
 			}
 		})
 	}
@@ -162,17 +162,17 @@ func TestSortingLess(t *testing.T) {
 		{"2511:5f32:4:6:124::2:1/128", 100, 1, "2511:5f32:4:6:124::2:1/128", 100, 2, true},
 		{"2511:5f32:4:6:124::2:1/128", 100, 2, "2511:5f32:4:6:124::2:1/128", 100, 1, false},
 	} {
-		name := fmt.Sprintf("Test-%s@nic%v[m:%v]_<_%s@nic%v[m:%v]", tc.subnet1, tc.nic1, tc.metric1, tc.subnet2, tc.nic2, tc.metric2)
+		name := fmt.Sprintf("Test-%s@nic%d[m:%d]_<_%s@nic%d[m:%d]", tc.subnet1, tc.nic1, tc.metric1, tc.subnet2, tc.nic2, tc.metric2)
 		t.Run(name, func(t *testing.T) {
 			e1 := createExtendedRoute(tc.nic1, tc.subnet1, "", tc.metric1, true, true, true)
 			e2 := createExtendedRoute(tc.nic2, tc.subnet2, "", tc.metric2, true, true, true)
 			if got := routes.Less(&e1, &e2); got != tc.want {
-				t.Errorf("got Less(%v, %v) = %v, want = %v", &e1, &e2, got, tc.want)
+				t.Errorf("got Less(%s, %s) = %t, want = %t", &e1, &e2, got, tc.want)
 			}
 			// reverse test
 			reverseWant := !tc.want
 			if got := routes.Less(&e2, &e1); got != reverseWant {
-				t.Errorf("Less(%v, %v) = %v, want = %v", e2, e1, got, reverseWant)
+				t.Errorf("got Less(%s, %s) = %t, want = %t", &e2, &e1, got, reverseWant)
 			}
 		})
 	}
@@ -189,12 +189,12 @@ func TestIsSameRoute(t *testing.T) {
 	nics := []tcpip.NICID{1, 2}
 
 	for _, nic1 := range nics {
-		t.Run(fmt.Sprintf("nic1=%v", nic1), func(t *testing.T) {
+		t.Run(fmt.Sprintf("nic1=%d", nic1), func(t *testing.T) {
 			for _, gp1 := range gatewaysWithPrefix {
-				t.Run(fmt.Sprintf("gp1=%v", gp1), func(t *testing.T) {
+				t.Run(fmt.Sprintf("gp1=%s", gp1), func(t *testing.T) {
 					ip, s, err := net.ParseCIDR(gp1)
 					if err != nil {
-						t.Fatalf("net.ParseCIDR(%v) failed", gp1)
+						t.Fatalf("net.ParseCIDR(%s) failed", gp1)
 					}
 					route1 := tcpip.Route{
 						Destination: tcpip.Address(ipToAddress(s.IP)),
@@ -204,32 +204,32 @@ func TestIsSameRoute(t *testing.T) {
 					}
 
 					if got := routes.IsSameRoute(route1, route1); got != true {
-						t.Fatalf("got IsSameRoute(%v, %v) = %v, want = %v", route1, route1, got, true)
+						t.Fatalf("got IsSameRoute(%s, %s) = %t, want = %t", routes.RouteStringer(&route1), routes.RouteStringer(&route1), got, true)
 					}
 					// Change the NIC
 					route2 := route1
 					route2.NIC = route1.NIC + 1
 					if got := routes.IsSameRoute(route1, route2); got != false {
-						t.Errorf("got IsSameRoute(%v, %v) = %v, want = %v", route1, route2, got, false)
+						t.Errorf("got IsSameRoute(%s, %s) = %t, want = %t", routes.RouteStringer(&route1), routes.RouteStringer(&route2), got, false)
 					}
 					// Change destination.
 					route2 = route1
 					route2.Destination = tcpip.Address(changeByte([]byte(route2.Destination)))
 					if got := routes.IsSameRoute(route1, route2); got != false {
-						t.Errorf("got IsSameRoute(%v, %v) = %v, want = %v", route1, route2, got, false)
+						t.Errorf("got IsSameRoute(%s, %s) = %t, want = %t", routes.RouteStringer(&route1), routes.RouteStringer(&route2), got, false)
 					}
 					// Change gateway.
 					route2 = route1
 					route2.Gateway = tcpip.Address(changeByte([]byte(route2.Gateway)))
 					if got := routes.IsSameRoute(route1, route2); got != false {
-						t.Errorf("got IsSameRoute(%v, %v) = %v, want = %v", route1, route2, got, false)
+						t.Errorf("got IsSameRoute(%s, %s) = %t, want = %t", routes.RouteStringer(&route1), routes.RouteStringer(&route2), got, false)
 					}
 					// Remove gateway if possible
 					if !util.IsAny(route1.Gateway) {
 						route2 = route1
 						route2.Gateway = tcpip.Address("")
 						if got := routes.IsSameRoute(route1, route2); got != false {
-							t.Errorf("got IsSameRoute(%v, %v) = %v, want = %v", route1, route2, got, false)
+							t.Errorf("got IsSameRoute(%s, %s) = %t, want = %t", routes.RouteStringer(&route1), routes.RouteStringer(&route2), got, false)
 						}
 					}
 				})
@@ -289,10 +289,10 @@ func TestAddRoute(t *testing.T) {
 			tableWanted := testRouteTable
 			tableGot := tb.GetExtendedRouteTable()
 			if len(tableGot) != len(tableWanted) {
-				t.Fatalf("got len(table) = %v, want len(table) = %v", len(tableGot), len(tableWanted))
+				t.Fatalf("got len(table) = %d, want len(table) = %d", len(tableGot), len(tableWanted))
 			}
 			if !isSameRouteTable(tableGot, tableWanted) {
-				t.Errorf("got\n%v, want\n%v", tableGot, tableWanted)
+				t.Errorf("got\n%s, want\n%s", tableGot, tableWanted)
 			}
 		})
 	}
@@ -309,20 +309,20 @@ func TestAddRoute(t *testing.T) {
 			tableWanted := testRouteTable
 			tableGot := tb.GetExtendedRouteTable()
 			if tableGot[i].Dynamic != r.Dynamic {
-				t.Errorf("got tableGot[%d].Dynamic = %v, want %v", i, tableGot[i].Dynamic, r.Dynamic)
+				t.Errorf("got tableGot[%d].Dynamic = %t, want %t", i, tableGot[i].Dynamic, r.Dynamic)
 			}
 			if !isSameRouteTableSkippingAttributes(tableGot, tableWanted) {
-				t.Errorf("got\n%v, want\n%v", tableGot, tableWanted)
+				t.Errorf("got\n%s, want\n%s", tableGot, tableWanted)
 			}
 
 			r.Enabled = !r.Enabled
 			tb.AddRoute(r.Route, r.Metric, r.MetricTracksInterface, r.Dynamic, r.Enabled)
 			tableGot = tb.GetExtendedRouteTable()
 			if tableGot[i].Enabled != r.Enabled {
-				t.Errorf("got tableGot[%d].Enabled = %v, want %v", i, tableGot[i].Enabled, r.Enabled)
+				t.Errorf("got tableGot[%d].Enabled = %t, want %t", i, tableGot[i].Enabled, r.Enabled)
 			}
 			if !isSameRouteTableSkippingAttributes(tableGot, tableWanted) {
-				t.Errorf("got\n%v, want\n%v", tableGot, tableWanted)
+				t.Errorf("got\n%s, want\n%s", tableGot, tableWanted)
 			}
 		}
 	})
@@ -338,7 +338,7 @@ func TestAddRoute(t *testing.T) {
 		tb.AddRoute(r1, 200, true, true, true)
 		tableGot := tb.GetExtendedRouteTable()
 		if !routes.IsSameRoute(r0, tableGot[0].Route) || !routes.IsSameRoute(r1, tableGot[1].Route) {
-			t.Errorf("got %v, %v, want %v, %v", tableGot[0].Route, tableGot[1].Route, r0, r1)
+			t.Errorf("got %s, %s, want %s, %s", routes.RouteStringer(&tableGot[0].Route), routes.RouteStringer(&tableGot[1].Route), routes.RouteStringer(&r0), routes.RouteStringer(&r1))
 		}
 
 		// 2.test - r1 gets lower metric.
@@ -347,7 +347,7 @@ func TestAddRoute(t *testing.T) {
 		tb.AddRoute(r1, 100, true, true, true)
 		tableGot = tb.GetExtendedRouteTable()
 		if !routes.IsSameRoute(r0, tableGot[1].Route) || !routes.IsSameRoute(r1, tableGot[0].Route) {
-			t.Errorf("got %v, %v, want %v, %v", tableGot[0].Route, tableGot[1].Route, r1, r0)
+			t.Errorf("got %s, %s, want %s, %s", routes.RouteStringer(&tableGot[0].Route), routes.RouteStringer(&tableGot[1].Route), routes.RouteStringer(&r1), routes.RouteStringer(&r0))
 		}
 	})
 }
@@ -379,14 +379,14 @@ func TestDelRoute(t *testing.T) {
 				validRoutes[d] = false
 			}
 			tableGot := tb.GetExtendedRouteTable()
-			tableWant := []routes.ExtendedRoute{}
+			tableWant := routes.ExtendedRouteTable{}
 			for i, valid := range validRoutes {
 				if valid {
 					tableWant = append(tableWant, testRouteTable[i])
 				}
 			}
 			if !isSameRouteTable(tableGot, tableWant) {
-				t.Errorf("got\n%v, want\n%v", tableGot, tableWant)
+				t.Errorf("got\n%s, want\n%s", tableGot, tableWant)
 			}
 		})
 	}
@@ -416,10 +416,10 @@ func TestUpdateMetricByInterface(t *testing.T) {
 					continue
 				}
 				if !r.MetricTracksInterface && r.Metric == newMetric {
-					t.Errorf("got MetricTracksInterface==false && Metric=%v, want metric!=%v", r.Metric, newMetric)
+					t.Errorf("got MetricTracksInterface==false && Metric=%d, want metric!=%d", r.Metric, newMetric)
 				}
 				if r.MetricTracksInterface && r.Metric != newMetric {
-					t.Errorf("got MetricTracksInterface==true && Metric=%v, want metric=%v", r.Metric, newMetric)
+					t.Errorf("got MetricTracksInterface==true && Metric=%d, want metric=%d", r.Metric, newMetric)
 				}
 			}
 		})
@@ -436,7 +436,7 @@ func TestUpdateMetricByInterface(t *testing.T) {
 		tb.AddRoute(r1, 200, true, true, true)
 		tableGot := tb.GetExtendedRouteTable()
 		if !routes.IsSameRoute(r0, tableGot[0].Route) || !routes.IsSameRoute(r1, tableGot[1].Route) {
-			t.Errorf("got %v, %v, want %v, %v", tableGot[0].Route, tableGot[1].Route, r0, r1)
+			t.Errorf("got %s, %s, want %s, %s", routes.RouteStringer(&tableGot[0].Route), routes.RouteStringer(&tableGot[1].Route), routes.RouteStringer(&r0), routes.RouteStringer(&r1))
 		}
 
 		// Lowering nic1's metric should be reflected in r1's metric and promote it
@@ -444,7 +444,7 @@ func TestUpdateMetricByInterface(t *testing.T) {
 		tb.UpdateMetricByInterface(1, 50)
 		tableGot = tb.GetExtendedRouteTable()
 		if !routes.IsSameRoute(r0, tableGot[1].Route) || !routes.IsSameRoute(r1, tableGot[0].Route) {
-			t.Errorf("got %v, %v, want %v, %v", tableGot[0].Route, tableGot[1].Route, r1, r0)
+			t.Errorf("got %s, %s, want %s, %s", routes.RouteStringer(&tableGot[0].Route), routes.RouteStringer(&tableGot[1].Route), routes.RouteStringer(&r1), routes.RouteStringer(&r0))
 		}
 	})
 }
@@ -459,14 +459,31 @@ func TestUpdateRoutesByInterface(t *testing.T) {
 			tb.Set(testRouteTable)
 			tableGot := tb.GetExtendedRouteTable()
 			for _, r := range tableGot {
-				if !r.Enabled {
-					t.Errorf("Error: Route %v is disabled before test start", r)
+				if got, want := r.Enabled, true; got != want {
+					t.Errorf("got Enabled = %t, want = %t, route = %s", got, want, &r)
 				}
 			}
 
-			// Down -> Remove dynamic routes and disable static ones.
-			tb.UpdateRoutesByInterface(nicid, routes.ActionDeleteDynamicDisableStatic)
+			// Down -> 1.Remove dynamic routes.
+			tb.UpdateRoutesByInterface(nicid, routes.ActionDeleteDynamic)
 
+			// Verify all dynamic routes to this NIC are gone, and static ones are
+			// still enabled.
+			tableGot = tb.GetExtendedRouteTable()
+			for _, r := range tableGot {
+				if r.Route.NIC != nicid {
+					continue
+				}
+				if got, want := r.Enabled, true; got != want {
+					t.Errorf("got Enabled = %t, want = %t, route = %s", got, want, &r)
+				}
+				if got, want := r.Dynamic, false; got != want {
+					t.Errorf("got Dynamic = %t, want = %t, route = %s", got, want, &r)
+				}
+			}
+
+			// Down -> 2.Disable static ones.
+			tb.UpdateRoutesByInterface(nicid, routes.ActionDisableStatic)
 			// Verify all dynamic routes to this NIC are gone, and static ones are
 			// disabled.
 			tableGot = tb.GetExtendedRouteTable()
@@ -474,11 +491,11 @@ func TestUpdateRoutesByInterface(t *testing.T) {
 				if r.Route.NIC != nicid {
 					continue
 				}
-				if r.Enabled {
-					t.Errorf("got %v = enabled, want = disabled", r)
+				if got, want := r.Enabled, false; got != want {
+					t.Errorf("got Enabled = %t, want = %t, route = %s", got, want, &r)
 				}
-				if r.Dynamic {
-					t.Errorf("got dynamic %v, want it removed", r.Metric)
+				if got, want := r.Dynamic, false; got != want {
+					t.Errorf("got Dynamic = %t, want = %t, route = %s", got, want, &r)
 				}
 			}
 
@@ -492,11 +509,11 @@ func TestUpdateRoutesByInterface(t *testing.T) {
 				if r.Route.NIC != nicid {
 					continue
 				}
-				if !r.Enabled {
-					t.Errorf("got %v = enabled, want = disabled", r)
+				if got, want := r.Enabled, true; got != want {
+					t.Errorf("got Enabled = %t, want = %t, route = %s", got, want, &r)
 				}
-				if r.Dynamic {
-					t.Errorf("got dynamic %v, want it removed", r.Metric)
+				if got, want := r.Dynamic, false; got != want {
+					t.Errorf("got Dynamic = %t, want = %t, route = %s", got, want, &r)
 				}
 			}
 		})
@@ -508,8 +525,8 @@ func TestUpdateRoutesByInterface(t *testing.T) {
 			tb.Set(testRouteTable)
 			tableGot := tb.GetExtendedRouteTable()
 			for _, r := range tableGot {
-				if !r.Enabled {
-					t.Errorf("Error: Route %v is disabled before test start", r)
+				if got, want := r.Enabled, true; got != want {
+					t.Errorf("got Enabled = %t, want = %t, route = %s", got, want, &r)
 				}
 			}
 
@@ -520,7 +537,7 @@ func TestUpdateRoutesByInterface(t *testing.T) {
 			tableGot = tb.GetExtendedRouteTable()
 			for _, r := range tableGot {
 				if r.Route.NIC == nicid {
-					t.Errorf("got route %v pointing to NIC-%d, want none", r, nicid)
+					t.Errorf("got route pointing to NIC-%d, want none, route = %s", nicid, &r)
 				}
 			}
 		})
@@ -560,7 +577,7 @@ func TestGetNetstackTable(t *testing.T) {
 			for _, r := range testRouteTable2 {
 				if r.Enabled {
 					if !routes.IsSameRoute(tableGot[i], r.Route) {
-						t.Errorf("got = %v, want = %v", tableGot[i], r.Route)
+						t.Errorf("got = %s, want = %s", routes.RouteStringer(&tableGot[i]), routes.RouteStringer(&r.Route))
 					}
 					i += 1
 				}
@@ -593,9 +610,9 @@ func TestFindNIC(t *testing.T) {
 
 			nicGot, err := tb.FindNIC(ipStringToAddress(tc.addr))
 			if err != nil && tc.nicWanted > 0 {
-				t.Errorf("got nic = <unknown>, want = %v", tc.nicWanted)
+				t.Errorf("got nic = <unknown>, want = %d", tc.nicWanted)
 			} else if err == nil && tc.nicWanted != nicGot {
-				t.Errorf("got nic = %d, want = %v", nicGot, tc.nicWanted)
+				t.Errorf("got nic = %d, want = %d", nicGot, tc.nicWanted)
 			}
 		})
 	}

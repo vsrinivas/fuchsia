@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall/zx"
+	"time"
 
 	"syslog"
 
@@ -48,6 +49,9 @@ const (
 
 	ipv4Loopback tcpip.Address = "\x7f\x00\x00\x01"
 	ipv6Loopback tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+
+	dhcpAcquireTimeout = 3 * time.Second
+	dhcpRetryTime      = 1 * time.Second
 )
 
 var ipv4LoopbackBytes = func() [4]byte {
@@ -94,8 +98,7 @@ type ifState struct {
 	features uint32
 	mu       struct {
 		sync.Mutex
-		state          link.State
-		hasDynamicAddr bool
+		state link.State
 		// metric is used by default for routes that originate from this NIC.
 		metric     routes.Metric
 		dnsServers []tcpip.Address
@@ -365,12 +368,15 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 	} else {
 		if oldAddr != (tcpip.AddressWithPrefix{}) {
 			if err := ifs.ns.mu.stack.RemoveAddress(ifs.nicid, oldAddr.Address); err != nil {
-				syslog.Infof("NIC %s: failed to remove expired DHCP address %s: %s", name, oldAddr, err)
+				syslog.Infof("NIC %s: failed to remove DHCP address %s: %s", name, oldAddr, err)
 			} else {
-				syslog.Infof("NIC %s: removed expired DHCP address %s", name, oldAddr)
+				syslog.Infof("NIC %s: removed DHCP address %s", name, oldAddr)
 			}
-			// TODO(ckuiper): remove the routes.
+
+			// Remove the dynamic routes for this interface.
+			ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionDeleteDynamic)
 		}
+
 		if newAddr != (tcpip.AddressWithPrefix{}) {
 			if err := ifs.ns.mu.stack.AddProtocolAddressWithOptions(ifs.nicid, tcpip.ProtocolAddress{
 				Protocol:          ipv4.ProtocolNumber,
@@ -389,8 +395,6 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 					syslog.Infof("error adding routes for DHCP address/gateway: %s", err)
 				}
 			}
-		} else {
-			syslog.Errorf("NIC %s: DHCP could not acquire address", name)
 		}
 		ifs.ns.OnInterfacesChanged(ifs.ns.getNetInterfaces2Locked())
 	}
@@ -407,9 +411,8 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 		}
 	}
 	if !sameDNS {
-		syslog.Infof("NIC %s: Adding DNS servers: %v", name, config.DNS)
+		syslog.Infof("NIC %s: setting DNS servers: %s", name, config.DNS)
 
-		ifs.mu.hasDynamicAddr = true
 		ifs.mu.dnsServers = config.DNS
 
 	}
@@ -462,23 +465,22 @@ func (ifs *ifState) stateChange(s link.State) {
 		fallthrough
 	case link.StateDown:
 		syslog.Infof("NIC %s: link.StateDown", name)
+
+		// Stop DHCP, this triggers the removal of all dynamically obtained configuration (IP, routes,
+		// DNS servers).
 		ifs.mu.dhcp.cancel()
 
 		// TODO(crawshaw): more cleanup to be done here:
 		// 	- remove link endpoint
 		//	- reclaim NICID?
 
-		if ifs.mu.hasDynamicAddr || s == link.StateClosed {
-			syslog.Infof("removing IP from NIC %d", ifs.nicid)
-			ifs.mu.dnsServers = nil
-		}
-
 		if s == link.StateClosed {
 			// The interface is removed, force all of its routes to be removed.
 			ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionDeleteAll)
 		} else {
-			// The interface is down, delete dynamic routes, disable static ones.
-			ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionDeleteDynamicDisableStatic)
+			// The interface is down, disable static routes (dynamic ones are handled
+			// by the cancelled DHCP server).
+			ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionDisableStatic)
 		}
 
 	case link.StateStarted:
@@ -723,7 +725,7 @@ func (ns *Netstack) addEndpoint(
 			return nil, fmt.Errorf("NIC %s: adding solicited-node IPv6 %s (link-local IPv6 %s) failed: %s", name, snaddr, lladdr, err)
 		}
 
-		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, ifs.nicid, linkAddr, ifs.dhcpAcquired)
+		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, ifs.nicid, linkAddr, dhcpAcquireTimeout, dhcpRetryTime, ifs.dhcpAcquired)
 
 		syslog.Infof("NIC %s: link-local IPv6: %s", name, lladdr)
 	}
