@@ -1014,7 +1014,7 @@ impl<ND: NdpDevice, D: EventDispatcher> NdpState<ND, D> {
     //
 
     /// Do we know about the default router identified by `ip`?
-    fn has_default_router(&mut self, ip: &LinkLocalAddr<Ipv6Addr>) -> bool {
+    fn has_default_router(&self, ip: &LinkLocalAddr<Ipv6Addr>) -> bool {
         self.default_routers.contains(&ip)
     }
 
@@ -5734,5 +5734,79 @@ mod tests {
         assert_eq!(neighbor.link_address.unwrap(), dummy_config.remote_mac);
         assert_eq!(neighbor.state, NeighborEntryState::Stale);
         assert_eq!(neighbor.is_router, false);
+    }
+
+    #[test]
+    fn test_router_discovery() {
+        let dummy_config = get_dummy_config::<Ipv6Addr>();
+        let mut host = DummyEventDispatcherBuilder::default()
+            .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
+        let mut state_builder = StackStateBuilder::default();
+        state_builder.ipv6_builder().forward(true);
+        let mut router = DummyEventDispatcherBuilder::default()
+            .build_with(state_builder, DummyEventDispatcher::default());
+        let device = DeviceId::new_ethernet(0);
+        let mut net =
+            DummyNetwork::new(vec![("host", host), ("router", router)].into_iter(), |ctx, dev| {
+                if *ctx == "host" {
+                    ("router", device, None)
+                } else {
+                    ("host", device, None)
+                }
+            });
+
+        // Create an interface that is configured to be an advertising interface.
+        assert_eq!(
+            device,
+            net.context("router")
+                .state_mut()
+                .add_ethernet_device(dummy_config.remote_mac, IPV6_MIN_MTU)
+        );
+        crate::device::initialize_device(net.context("router"), device);
+        set_routing_enabled::<_, Ipv6>(net.context("router"), device, true);
+        let mut ndp_configs = NdpConfigurations::default();
+        let mut ndp_rc_configs = NdpRouterConfigurations::default();
+        ndp_rc_configs.set_should_send_advertisements(true);
+        ndp_configs.set_router_configurations(ndp_rc_configs);
+        ndp_configs.set_max_router_solicitations(None);
+        ndp_configs.set_dup_addr_detect_transmits(None);
+        crate::device::set_ndp_configurations(net.context("router"), device, ndp_configs);
+
+        // Create an interface to be the host.
+        assert_eq!(
+            device,
+            net.context("host")
+                .state_mut()
+                .add_ethernet_device(dummy_config.local_mac, IPV6_MIN_MTU)
+        );
+        crate::device::initialize_device(net.context("host"), device);
+
+        // Host should not know about the router yet.
+        let router_ll = dummy_config.remote_mac.to_ipv6_link_local();
+        assert!(!EthernetNdpDevice::get_ndp_state(net.context("host").state(), device.id())
+            .has_default_router(&router_ll));
+
+        // Run the network for `MAX_RA_DELAY_TIME`.
+        net.run_for(MAX_RA_DELAY_TIME);
+
+        // Host should now know about the router
+        assert!(EthernetNdpDevice::get_ndp_state(net.context("host").state(), device.id())
+            .has_default_router(&router_ll));
+
+        // Making the router a non-advertising interface should make host remove it from its default
+        // router list.
+        set_routing_enabled::<_, Ipv6>(net.context("router"), device, false);
+
+        // Only need to run for `MAX_INITIAL_RTR_ADVERT_INTERVAL` time since router is still
+        // currently sending the first `MAX_INITIAL_RTR_ADVERTISEMENTS` RAs so the interval between
+        // RAs will be set to at max `MAX_INITIAL_RTR_ADVERT_INTERVAL`. We know the interval will
+        // definitely be set to `MAX_INITIAL_RTR_ADVERT_INTERVAL` because the normally generated
+        // value would be at minimum 200s (see `ROUTER_ADVERTISEMENTS_INTERVAL_DEFAULT`).
+        net.run_for(MAX_INITIAL_RTR_ADVERT_INTERVAL);
+
+        // Host should not know about the router anymore.
+        let router_ll = dummy_config.remote_mac.to_ipv6_link_local();
+        assert!(!EthernetNdpDevice::get_ndp_state(net.context("host").state(), device.id())
+            .has_default_router(&router_ll));
     }
 }

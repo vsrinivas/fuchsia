@@ -13,7 +13,7 @@ use std::sync::Once;
 use std::time::Duration;
 
 use byteorder::{ByteOrder, NativeEndian};
-use log::debug;
+use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither};
 use net_types::SpecifiedAddr;
@@ -1180,7 +1180,9 @@ where
         // a time in the past.
         assert!(next_step >= self.current_time);
         let mut ret = StepResult::new(next_step.duration_since(self.current_time), 0, 0);
+
         // move time forward:
+        trace!("testutil::DummyNetwork::step: current time = {:?}", next_step);
         self.current_time = next_step;
         for (_, ctx) in self.contexts.iter_mut() {
             ctx.dispatcher.current_time = next_step;
@@ -1192,6 +1194,7 @@ where
             if *t > self.current_time {
                 break;
             }
+
             // we can unwrap because we just peeked.
             let mut frame = self.pending_frames.pop().unwrap().1;
             crate::receive_frame(
@@ -1262,7 +1265,9 @@ where
     /// Returns the smallest `DummyInstant` greater than or equal to
     /// `current_time` for which an event is available. If no events are
     /// available, returns `None`.
-    fn next_step(&self) -> Option<DummyInstant> {
+    fn next_step(&mut self) -> Option<DummyInstant> {
+        self.collect_frames();
+
         // get earliest timer in all contexts:
         let next_timer = self
             .contexts
@@ -1283,6 +1288,29 @@ where
             None => next_packet_due,
         }
         .map(|t| t.max(self.current_time))
+    }
+
+    /// Runs the dummy network for `duration` time.
+    ///
+    /// Runs `step` until `duration` time has passed since the call of `run_for`.
+    pub(crate) fn run_for(&mut self, duration: Duration) {
+        let start_time = self.current_time;
+        let end_time = start_time + duration;
+
+        while let Some(next_step) = self.next_step() {
+            if next_step <= end_time {
+                assert!(!self.step().is_idle());
+                assert!(self.current_time <= end_time);
+            } else {
+                break;
+            }
+        }
+
+        // Move time to the end time.
+        self.current_time = end_time;
+        for (_, ctx) in self.contexts.iter_mut() {
+            ctx.dispatcher.current_time = end_time;
+        }
     }
 
     /// Runs the dummy network simulation until it is starved of events.

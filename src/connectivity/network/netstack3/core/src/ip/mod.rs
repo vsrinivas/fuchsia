@@ -1211,9 +1211,6 @@ fn deliver_ipv6<D: EventDispatcher>(
     // TODO(brunodalbo):
     // Along with the host model described above, we need to be able to have
     // multiple IPs per interface, it becomes imperative for IPv6.
-    //
-    // Also, only when we're a router we should accept
-    // Ipv6::ALL_ROUTERS_LINK_LOCAL.
     crate::device::get_ip_addr_subnet(ctx, device)
         .map(AddrSubnet::into_addr_subnet)
         .map_or(false, |(addr, _)| dst_ip == addr)

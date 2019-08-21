@@ -694,6 +694,13 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
         // Make sure that the netstack is configured to route packets before considering this
         // device a router and starting periodic router advertisements.
         if ip_routing {
+            // Now that `device` is a router, join the all-routers multicast group.
+            join_ip_multicast(
+                ctx,
+                device,
+                MulticastAddr::new(Ipv6::ALL_ROUTERS_LINK_LOCAL_ADDRESS).unwrap(),
+            );
+
             if get_ndp_configurations(ctx, device)
                 .get_router_configurations()
                 .get_should_send_advertisements()
@@ -727,6 +734,13 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
                     >(ctx, device.id),
                 }
             }
+
+            // Now that `device` is a host, leave the all-routers multicast group.
+            leave_ip_multicast(
+                ctx,
+                device,
+                MulticastAddr::new(Ipv6::ALL_ROUTERS_LINK_LOCAL_ADDRESS).unwrap(),
+            );
         }
 
         // Actually update the routing flag.
