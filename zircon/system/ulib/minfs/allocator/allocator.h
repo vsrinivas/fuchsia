@@ -13,7 +13,7 @@
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <fs/block-txn.h>
+#include <fs/transaction/block_transaction.h>
 #include <minfs/allocator-promise.h>
 #include <minfs/block-txn.h>
 #include <minfs/format.h>

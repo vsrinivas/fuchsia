@@ -11,7 +11,7 @@
 #include <bitmap/storage.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
-#include <fs/block-txn.h>
+#include <fs/transaction/block_transaction.h>
 #include <zircon/types.h>
 
 #include <assert.h>

@@ -33,8 +33,8 @@
 #include <digest/merkle-tree.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
-#include <fs/block-txn.h>
 #include <fs/ticker.h>
+#include <fs/transaction/block_transaction.h>
 #include <fvm/client.h>
 
 #define ZXDEBUG 0

@@ -17,8 +17,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-#include <fs/block-txn.h>
 #include <fs/trace.h>
+#include <fs/transaction/block_transaction.h>
 #include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__

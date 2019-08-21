@@ -17,8 +17,8 @@
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fs/block-txn.h>
 #include <fs/trace.h>
+#include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <minfs/format.h>

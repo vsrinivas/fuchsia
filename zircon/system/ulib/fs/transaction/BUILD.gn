@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("transaction") {
+  host = true
+  sources = []
+  static = true
+
+  sources = [
+    "block_transaction.cc",
+  ]
+
+  public_deps = [
+    "$zx/system/ulib/fbl:headers",
+  ]
+
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon-internal",
+  ]
+}

@@ -13,9 +13,9 @@
 
 #include <blobfs/journal/journal2.h>
 #include <fbl/ref_ptr.h>
-#include <fs/block-txn.h>
 #include <fs/operation/buffered_operation.h>
 #include <fs/operation/unbuffered_operations_builder.h>
+#include <fs/transaction/block_transaction.h>
 
 namespace blobfs {
 

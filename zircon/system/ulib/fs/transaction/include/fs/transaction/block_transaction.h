@@ -10,8 +10,6 @@
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 
-#include <fs/vfs.h>
-
 namespace fs {
 
 // Access the "blkno"-th block within data.

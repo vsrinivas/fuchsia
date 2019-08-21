@@ -36,6 +36,7 @@ library("fvm-host") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs",
+    "$zx/system/ulib/fs/transaction",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/zircon:headers",

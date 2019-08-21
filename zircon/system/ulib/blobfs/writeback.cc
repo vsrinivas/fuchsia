@@ -7,7 +7,6 @@
 
 #include <blobfs/writeback.h>
 #include <fbl/vector.h>
-#include <fs/block-txn.h>
 
 namespace blobfs {
 

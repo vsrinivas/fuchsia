@@ -18,6 +18,7 @@ library("blobfs") {
   public_deps = [
     "$zx/system/ulib/bitmap:headers",
     "$zx/system/ulib/fs:headers",
+    "$zx/system/ulib/fs/transaction:headers",
     "$zx/system/ulib/id_allocator:headers",
     "$zx/system/ulib/range:headers",
 
@@ -40,6 +41,7 @@ library("blobfs") {
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs/buffer",
     "$zx/system/ulib/fs/operation",
+    "$zx/system/ulib/fs/transaction",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/id_allocator",
     "$zx/system/ulib/range",

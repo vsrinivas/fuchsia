@@ -10,7 +10,7 @@
 #include <blobfs/fsck.h>
 #include <blobfs/writeback.h>
 #include <fbl/ref_ptr.h>
-#include <fs/block-txn.h>
+#include <fs/transaction/block_transaction.h>
 #include <fvm/client.h>
 
 namespace blobfs {

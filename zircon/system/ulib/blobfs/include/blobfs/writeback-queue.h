@@ -14,8 +14,8 @@
 #include <blobfs/transaction-manager.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
-#include <fs/block-txn.h>
 #include <fs/queue.h>
+#include <fs/transaction/block_transaction.h>
 
 namespace blobfs {
 

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fs/transaction/block_transaction.h>
+
 #include <zircon/device/block.h>
+
+#include <utility>
+
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
-
-#include <fs/block-txn.h>
-#include <fs/vfs.h>
-
-#include <utility>
 
 namespace fs {
 

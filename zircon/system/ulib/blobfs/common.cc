@@ -11,8 +11,8 @@
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
-#include <fs/block-txn.h>
 #include <fs/trace.h>
+#include <fs/transaction/block_transaction.h>
 
 #ifdef __Fuchsia__
 #include <fuchsia/hardware/block/c/fidl.h>

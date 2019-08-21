@@ -13,7 +13,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
-#include <fs/block-txn.h>
+#include <fs/transaction/block_transaction.h>
 #include <safemath/checked_math.h>
 #include <zircon/device/vfs.h>
 #include <zircon/time.h>

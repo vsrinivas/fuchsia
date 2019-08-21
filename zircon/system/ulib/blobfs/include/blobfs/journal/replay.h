@@ -9,9 +9,9 @@
 
 #include <blobfs/journal/superblock.h>
 #include <fbl/vector.h>
-#include <fs/block-txn.h>
 #include <fs/buffer/vmo_buffer.h>
 #include <fs/operation/buffered_operation.h>
+#include <fs/transaction/block_transaction.h>
 
 namespace blobfs {
 

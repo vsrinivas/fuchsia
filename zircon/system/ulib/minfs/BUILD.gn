@@ -35,6 +35,7 @@ library("minfs") {
     "$zx/system/ulib/disk-inspector:headers",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fs:headers",
+    "$zx/system/ulib/fs/transaction:headers",
     "$zx/system/ulib/storage-metrics:headers",
 
     # <minfs/bcache.h> has #include <fvm/client.h>.
@@ -45,6 +46,7 @@ library("minfs") {
     "$zx/system/ulib/disk-inspector",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fs",
+    "$zx/system/ulib/fs/transaction",
     "$zx/system/ulib/storage-metrics",
     "$zx/system/ulib/zircon-internal",
     "$zx/third_party/ulib/safemath",

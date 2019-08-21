@@ -54,10 +54,10 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <fs/block-txn.h>
 #include <fs/managed-vfs.h>
 #include <fs/metrics/cobalt-metrics.h>
 #include <fs/trace.h>
+#include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <trace/event.h>

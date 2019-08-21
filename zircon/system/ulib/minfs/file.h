@@ -11,8 +11,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fs/block-txn.h>
 #include <fs/trace.h>
+#include <fs/transaction/block_transaction.h>
 #include <fs/vnode.h>
 #include <lib/zircon-internal/fnv1hash.h>
 #include <minfs/format.h>

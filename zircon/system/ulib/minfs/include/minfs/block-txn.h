@@ -7,7 +7,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 
-#include <fs/block-txn.h>
+#include <fs/transaction/block_transaction.h>
 
 #include <minfs/bcache.h>
 #include <minfs/format.h>
