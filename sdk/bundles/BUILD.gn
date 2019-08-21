@@ -18,12 +18,12 @@ group("tools") {
     "//garnet/packages/products:devtools",
     "//garnet/packages/testing:run_test_component",
     "//peridot/packages/prod:sessionctl",
+    "//src/chromium",
     "//src/connectivity/network/mdns/bundles:utils",
+    "//src/dart",
+    "//src/flutter",
     "//src/fonts",
     "//src/modular/bundles:framework",
     "//src/modular/bundles:tools",
-    "//topaz/packages/prod:chromium",
-    "//topaz/packages/prod:dart_runner",
-    "//topaz/packages/prod:flutter",
   ]
 }
