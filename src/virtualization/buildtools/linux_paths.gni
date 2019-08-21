@@ -2,25 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Construct "" or "-asan" string
-_variant = ""
-_variants = select_variant + [ "" ]
-if (_variants[0] == "asan") {
-  _variant = "-asan"
-} else if (_variants[0] == "profile") {
-  _variant = "-profile"
-} else if (_variants[0] == "lto") {
-  _variant = "-lto"
-} else if (_variants[0] == "thinlto") {
-  _variant = "-thinlto"
-}
-
 linux_lib_toolchain = "//build/toolchain:linux_${current_cpu}-shared"
-linux_exe_toolchain = "//build/toolchain:linux_${current_cpu}${_variant}"
+linux_exe_toolchain = "//build/toolchain:linux_${current_cpu}"
 linux_lib_path = "${root_build_dir}/linux_${current_cpu}-shared"
-linux_exe_path = "${root_build_dir}/linux_${current_cpu}${_variant}"
-
-if (is_debug) {
-  linux_lib_path = "${linux_lib_path}/lib.unstripped"
-  linux_exe_path = "${linux_exe_path}/exe.unstripped"
-}
+linux_exe_path = "${root_build_dir}/linux_${current_cpu}"
