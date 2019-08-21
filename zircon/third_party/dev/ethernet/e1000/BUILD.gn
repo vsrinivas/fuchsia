@@ -26,8 +26,11 @@ driver("e1000") {
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/dev/lib/device-protocol-pci",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
-    "$zx/system/dev/lib/device-protocol-pci",
   ]
+
+  # This code doesn't use the annotation attribute.
+  configs -= [ "$zx/public/gn/config:warn-implicit-fallthrough" ]
 }

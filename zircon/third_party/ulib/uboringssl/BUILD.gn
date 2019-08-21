@@ -90,4 +90,7 @@ library("uboringssl") {
       ]
     }
   }
+
+  # This code doesn't use the annotation attribute.
+  configs -= [ "$zx/public/gn/config:warn-implicit-fallthrough" ]
 }

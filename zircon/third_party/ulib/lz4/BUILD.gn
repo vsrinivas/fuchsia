@@ -26,4 +26,7 @@ library("lz4") {
     "LZ4_DLL_IMPORT=1",
     "__declspec(x)=",
   ]
+
+  # This code doesn't use the annotation attribute.
+  configs -= [ "$zx/public/gn/config:warn-implicit-fallthrough" ]
 }

@@ -438,11 +438,14 @@ config("default_warnings") {
       "-Wno-format-truncation",
     ]
   } else {
-    cflags += [
-      "-Wnewline-eof",
-      "-Wimplicit-fallthrough",
-    ]
+    cflags += [ "-Wnewline-eof" ]
   }
+}
+
+config("warn-implicit-fallthrough") {
+  # TODO(35262): This is temporarily disabled for a soft transition.
+  # After the new Clang toolchain lands, this will be re-enabled.
+  #cflags = [ "-Wimplicit-fallthrough" ]
 }
 
 config("default_template_backtrace_limit") {

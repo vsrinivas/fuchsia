@@ -62,6 +62,9 @@ library("zstd") {
   ]
 
   configs += [ ":zstd-config" ]
+
+  # This code doesn't use the annotation attribute.
+  configs -= [ "$zx/public/gn/config:warn-implicit-fallthrough" ]
 }
 
 host_tool("zstdcli") {

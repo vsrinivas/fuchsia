@@ -52,6 +52,9 @@ executable("dash") {
     "$zx/system/ulib/zircon-internal",
     "$zx/third_party/ulib/linenoise",
   ]
+
+  # This code doesn't use the annotation attribute.
+  configs -= [ "$zx/public/gn/config:warn-implicit-fallthrough" ]
 }
 
 config("config") {

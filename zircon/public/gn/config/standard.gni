@@ -75,6 +75,7 @@ standard_configs = [
   "$zx/public/gn/config:no_rtti",
   "$zx/public/gn/config:no_threadsafe_statics",
   "$zx/public/gn/config:thread_safety_annotations",
+  "$zx/public/gn/config:warn-implicit-fallthrough",
 
   # TODO(ZX-1895): "$zx/public/gn/config:symbol_visibility_hidden",
 
