@@ -828,6 +828,11 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
     return ZX_ERR_INTERNAL;
   }
 
+  AUD_VLOG_OBJ(TRACE, this) << "for audio " << (owner_->is_input() ? "input" : "output")
+                            << " -- fifo_depth_bytes:" << fifo_depth_bytes_
+                            << ", fifo_depth_frames:" << fifo_depth_frames_
+                            << ", bytes_per_frame:" << bytes_per_frame_;
+
   // Request the ring buffer.
   audio_rb_cmd_get_buffer_req_t req;
   req.hdr.cmd = AUDIO_RB_CMD_GET_BUFFER;

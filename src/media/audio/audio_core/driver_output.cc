@@ -140,12 +140,11 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         int64_t fifo_limit_miss = rd_limit_miss + fifo_frames;
         int64_t low_water_limit_miss = rd_limit_miss + low_water_frames_;
 
-        FXL_LOG(ERROR) << "UNDERFLOW: Missed mix target by (Rd, Fifo, LowWater) = (" << std::fixed
-                       << std::setprecision(3)
-                       << cm2frames.Inverse().Scale(rd_limit_miss) / 1000000.0 << ", "
-                       << cm2frames.Inverse().Scale(fifo_limit_miss) / 1000000.0 << ", "
-                       << cm2frames.Inverse().Scale(low_water_limit_miss) / 1000000.0
-                       << ") mSec.  Cooling down for at least " << kUnderflowCooldown / 1000000.0
+        FXL_LOG(ERROR) << "UNDERFLOW: Missed mix target by (Rd, Fifo, LowWater) = ("
+                       << cm2frames.Inverse().Scale(rd_limit_miss) / ZX_MSEC(1) << ", "
+                       << cm2frames.Inverse().Scale(fifo_limit_miss) / ZX_MSEC(1) << ", "
+                       << cm2frames.Inverse().Scale(low_water_limit_miss) / ZX_MSEC(1)
+                       << ") mSec.  Cooling down for at least " << kUnderflowCooldown / ZX_MSEC(1)
                        << " mSec.";
 
         underflow_start_time_ = now;
@@ -174,8 +173,8 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         return false;
       } else {
         // Looks like we recovered.  Log and go back to mixing.
-        FXL_LOG(INFO) << "UNDERFLOW: Recovered after " << std::fixed << std::setprecision(3)
-                      << static_cast<double>(now - underflow_start_time_) / 1000000.0 << " mSec.";
+        FXL_LOG(WARNING) << "UNDERFLOW: Recovered after "
+                         << (now - underflow_start_time_) / ZX_MSEC(1) << " mSec.";
         underflow_start_time_ = 0;
         underflow_cooldown_deadline_ = 0;
       }
