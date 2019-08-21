@@ -4,31 +4,13 @@
 
 #pragma once
 
-#ifndef __Fuchsia__
-#error Fuchsia-only Header
-#endif
-
-#include <fbl/vector.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 
+#include <fbl/vector.h>
+#include <fs/operation/operation.h>
+
 namespace fs {
-
-enum class OperationType {
-  kRead,
-  kWrite,
-  kTrim,  // Unimplemented.
-};
-
-// A mapping of an in-memory buffer to an on-disk location.
-//
-// All units are in filesystem-size blocks.
-struct Operation {
-  OperationType type;
-  uint64_t vmo_offset = 0;
-  uint64_t dev_offset = 0;
-  uint64_t length = 0;
-};
 
 // An operation paired with a source vmo.
 //
