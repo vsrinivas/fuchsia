@@ -32,6 +32,8 @@ void main() {
     // so here we use sessionctl to do guest login. Once final
     // OOBE UI is established for Ermine, this could be revisited
     // so as to provide for more robust testing of no-auth login.
+    await sl4fDriver.ssh.run('sessionctl restart_session');
+
     final result = await sl4fDriver.ssh.run('sessionctl login_guest');
 
     if (result.exitCode != 0) {
@@ -39,11 +41,14 @@ void main() {
     }
 
     // allow time for shell to startup and ask bar to show
-    await Future.delayed(Duration(seconds: 5));
+    await Future.delayed(Duration(seconds: 3));
+
+    // Inspect shell to see if Ask has started.
+    final inspect = Inspect(sl4fDriver.ssh);
+    var json = await inspect.inspectComponentRoot('ermine');
 
     // verify that ask bar is active
-    bool askBarActive = await _checkActiveComponent(
-        driver: sl4fDriver, name: 'ermine_ask_module');
+    bool askBarActive = json['ask'] != null;
 
     if (!askBarActive) {
       fail('ask bar is not active');
@@ -72,7 +77,7 @@ void main() {
     await sl4fDriver.ssh.run('input keyevent 40');
 
     // allow time for simple_browser to startup
-    await Future.delayed(Duration(seconds: 10));
+    await Future.delayed(Duration(seconds: 5));
 
     // verify that simple_browser is active
     bool browserActive =

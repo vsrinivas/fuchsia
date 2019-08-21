@@ -104,6 +104,7 @@ dart_library("ermine_library") {
     "//third_party/dart-pkg/pub/flutter_svg",
     "//third_party/dart-pkg/pub/uuid",
     "//topaz/lib/tiler",
+    "//topaz/public/dart/fuchsia_inspect",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_modular",
     "//topaz/public/dart/fuchsia_modular_flutter",

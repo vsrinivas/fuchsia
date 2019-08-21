@@ -7,15 +7,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show RawKeyDownEvent, RawKeyEventDataFuchsia;
+import 'package:fuchsia_inspect/inspect.dart';
 
 import '../utils/styles.dart';
 import '../utils/suggestions.dart';
+import '../utils/utils.dart';
 
 /// Defines a model that holds the state for the [Ask] widget.
 ///
 /// Holds the list of suggestions and auto-complete entries retrieved from the
 /// suggestion engine.
-class AskModel extends ChangeNotifier {
+class AskModel extends ChangeNotifier implements Inspectable {
   /// The [TextEditingController] used by Ask [TextField] widget.
   final TextEditingController controller = TextEditingController();
 
@@ -41,6 +43,9 @@ class AskModel extends ChangeNotifier {
   /// Callback when a suggestion item needs to be removed from an
   /// [AnimatedListState].
   final ValueChanged<int> onRemoveItem;
+
+  /// The [GlobalKey] associated with [Ask] widget.
+  final GlobalKey key = GlobalKey(debugLabel: 'ask');
 
   // Keyboard HID usage values defined in:
   // https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
@@ -199,5 +204,17 @@ class AskModel extends ChangeNotifier {
       onRemoveItem != null ? onRemoveItem(index) : _removeItem(index);
     }
     suggestions.value = <Suggestion>[];
+  }
+
+  @override
+  void onInspect(Node node) {
+    if (visibility.value) {
+      final rect = rectFromGlobalKey(key);
+      node
+          .stringProperty('rect')
+          .setValue('${rect.left},${rect.top},${rect.width},${rect.height}');
+    } else {
+      node.delete();
+    }
   }
 }

@@ -6,14 +6,16 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:fidl_fuchsia_memory/fidl_async.dart' as mem;
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_services/services.dart';
 
+import '../utils/utils.dart';
 import '../widgets/status/status_graph_visualizer.dart';
 import '../widgets/status/status_progress_bar_visualizer.dart';
 
 // Model that manages the Status menu state of this session shell.
-class StatusModel extends ChangeNotifier {
+class StatusModel extends ChangeNotifier implements Inspectable {
   // TODO(FL-272): Mock data for visualization.
   // Data values
   final String _networkValue = 'WIRELESS';
@@ -41,6 +43,9 @@ class StatusModel extends ChangeNotifier {
   StatusProgressBarVisualizerModel dummyVolumeModel;
   StatusProgressBarVisualizerModel dummyBrightnessModel;
   StatusGraphVisualizerModel dummyCpuModel;
+
+  /// The [GlobalKey] associated with [Status] widget.
+  final GlobalKey key = GlobalKey(debugLabel: 'ask');
 
   StatusModel({this.statusMemoryService}) {
     statusMemoryService
@@ -197,6 +202,18 @@ class StatusModel extends ChangeNotifier {
 
   String _bytesToGB(int bytes) {
     return (bytes / pow(1024, 3)).toStringAsPrecision(3);
+  }
+
+  @override
+  void onInspect(Node node) {
+    if (key.currentContext != null) {
+      final rect = rectFromGlobalKey(key);
+      node
+          .stringProperty('rect')
+          .setValue('${rect.left},${rect.top},${rect.width},${rect.height}');
+    } else {
+      node.delete();
+    }
   }
 }
 

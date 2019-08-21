@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:fuchsia_inspect/inspect.dart';
 
 import '../utils/utils.dart';
 import 'app_model.dart';
 
 /// Model that manages the state of the Topbar UX.
-class TopbarModel {
+class TopbarModel implements Inspectable {
   /// Provides access to [AppModel].
   final AppModel appModel;
 
@@ -43,4 +44,22 @@ class TopbarModel {
 
   /// Display the status panel.
   void showStatus() => appModel.onStatus();
+
+  @override
+  void onInspect(Node node) {
+    Rect rect = rectFromGlobalKey(askButtonKey);
+    node
+        .stringProperty('askButtonRect')
+        .setValue('${rect.left},${rect.top},${rect.width},${rect.height}');
+
+    rect = rectFromGlobalKey(statusButtonKey);
+    node
+        .stringProperty('statusButtonRect')
+        .setValue('${rect.left},${rect.top},${rect.width},${rect.height}');
+
+    rect = rectFromGlobalKey(keyboardButtonKey);
+    node
+        .stringProperty('keyboardButtonRect')
+        .setValue('${rect.left},${rect.top},${rect.width},${rect.height}');
+  }
 }

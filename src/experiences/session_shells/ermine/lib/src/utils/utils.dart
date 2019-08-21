@@ -4,11 +4,13 @@
 
 import 'package:flutter/material.dart';
 
+import 'package:fuchsia_inspect/inspect.dart';
+
 /// Returns [Rect] in global coordinates from the supplied [GlobalKey].
 ///
 /// Returns [null] if associated RenderObject was never rendered.
 Rect rectFromGlobalKey(GlobalKey key) {
-  RenderBox box = key.currentContext.findRenderObject();
+  RenderBox box = key.currentContext?.findRenderObject();
   if (box != null && box.hasSize) {
     return MatrixUtils.transformRect(
       box.getTransformTo(null),
@@ -25,4 +27,9 @@ RelativeRect relativeRectFromGlobalKey(GlobalKey key) {
     return RelativeRect.fromRect(rect, screenRect);
   }
   return null;
+}
+
+/// Defines an interface to allow adding state to [Inspect] on demand.
+abstract class Inspectable extends Object {
+  void onInspect(Node node);
 }

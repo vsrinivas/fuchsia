@@ -11,6 +11,7 @@ import 'package:fidl_fuchsia_app_discover/fidl_async.dart'
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 
 import 'package:flutter/material.dart';
+import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_modular_flutter/session_shell.dart' show SessionShell;
 import 'package:fuchsia_modular_flutter/story_shell.dart' show StoryShell;
 
@@ -133,6 +134,9 @@ class AppModel {
       clustersModel.fullscreenStoryNotifier,
       peekNotifier,
     ]).addListener(onCancel);
+
+    // Add inspect data when requested.
+    inspect.Inspect.onDemand('ermine', _onInspect);
   }
 
   void onFullscreen() {
@@ -249,5 +253,19 @@ class AppModel {
       }
     }
     return true;
+  }
+
+  void _onInspect(inspect.Node node) {
+    // Session.
+    node.stringProperty('session').setValue('started');
+
+    // Ask.
+    askModel.onInspect(node.child('ask'));
+
+    // Status.
+    status.onInspect(node.child('status'));
+
+    // Topbar.
+    topbarModel.onInspect(node.child('topbar'));
   }
 }

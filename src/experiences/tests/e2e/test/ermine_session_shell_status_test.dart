@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:image/image.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
@@ -11,17 +10,9 @@ import 'package:test/test.dart';
 ///  - show the status menu
 void main() {
   Sl4f sl4fDriver;
-  int ermineBlack;
-  int ermineGray;
-  int ermineWhite;
-  int ermineLightGray;
 
   setUp(() async {
     sl4fDriver = Sl4f.fromEnvironment();
-    ermineBlack = Color.fromRgb(0, 0, 0);
-    ermineGray = Color.fromRgb(48, 48, 48);
-    ermineWhite = Color.fromRgb(255, 255, 255);
-    ermineLightGray = Color.fromRgb(158, 158, 158);
     await sl4fDriver.startServer();
   });
 
@@ -35,6 +26,8 @@ void main() {
     // so here we use sessionctl to do guest login. Once final
     // OOBE UI is established for Ermine, this could be revisited
     // so as to provide for more robust testing of no-auth login.
+    await sl4fDriver.ssh.run('sessionctl restart_session');
+
     final result = await sl4fDriver.ssh.run('sessionctl login_guest');
 
     if (result.exitCode != 0) {
@@ -42,7 +35,7 @@ void main() {
     }
 
     // allow time for shell to startup
-    await Future.delayed(Duration(seconds: 5));
+    await Future.delayed(Duration(seconds: 3));
 
     // Note sl4f library 'input' support doesn't currently support
     // text or keyevents. In addition to that, input keyevent doesn't
@@ -55,20 +48,13 @@ void main() {
     // allow time for ask to dismiss
     await Future.delayed(Duration(seconds: 1));
 
-    // Get state of screen before launching status menu
-    // through histrogram of (color => number of pixels)
-    Image image = await Scenic(sl4fDriver).takeScreenshot();
-    final Map<int, int> histogram = {};
-    for (int i = 0; i < image.length; i += 4) {
-      final color = image[i];
-      histogram[color] = (histogram[color] ?? 0) + 1;
+    // Get state of screen before launching status menu. Status should be
+    // missing.
+    final inspect = Inspect(sl4fDriver.ssh);
+    var json = await inspect.inspectComponentRoot('ermine');
+    if (json['status'] != null) {
+      fail('Status should not be visible at start');
     }
-
-    // Store initial distribution of central colors for test
-    final initialErmineWhitePixels = histogram[ermineWhite] ?? 0;
-    final initialErmineBlackPixels = histogram[ermineBlack] ?? 0;
-    final initialErmineGrayPixels = histogram[ermineGray] ?? 0;
-    final initialErmineLightGrayPixels = histogram[ermineLightGray] ?? 0;
 
     // Inject 'F5' to trigger launching status.
     await sl4fDriver.ssh.run('input keyevent 62');
@@ -76,27 +62,10 @@ void main() {
     // allow time for status startup
     await Future.delayed(Duration(seconds: 1));
 
-    // Get state of screen after launching status menu
-    // through histogram of (color => number of pixels)
-    image = await Scenic(sl4fDriver).takeScreenshot();
-    histogram.clear();
-    for (int i = 0; i < image.length; i += 4) {
-      final color = image[i];
-      histogram[color] = (histogram[color] ?? 0) + 1;
+    json = await inspect.inspectComponentRoot('ermine');
+    if (json['status'] == null) {
+      fail('Status did not launch');
     }
-
-    // Store updated distribution of central colors for test
-    final finalErmineWhitePixels = histogram[ermineWhite] ?? 0;
-    final finalErmineBlackPixels = histogram[ermineBlack] ?? 0;
-    final finalErmineGrayPixels = histogram[ermineGray] ?? 0;
-    final finalErmineLightGrayPixels = histogram[ermineLightGray] ?? 0;
-
-    // Test to see if color distribution of pixels changed,
-    // which confirms status menu launch was successful
-    expect(initialErmineWhitePixels, lessThan(finalErmineWhitePixels));
-    expect(initialErmineBlackPixels, lessThan(finalErmineBlackPixels));
-    expect(initialErmineGrayPixels, greaterThan(finalErmineGrayPixels));
-    expect(initialErmineLightGrayPixels, lessThan(finalErmineLightGrayPixels));
 
     // Logout for next test
     await sl4fDriver.ssh.run('input keyevent 63');

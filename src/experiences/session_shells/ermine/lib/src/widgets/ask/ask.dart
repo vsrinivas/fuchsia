@@ -19,6 +19,7 @@ class Ask extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
+      key: model.key,
       color: ErmineStyle.kOverlayBorderColor,
       elevation: elevations.systemOverlayElevation,
       child: Column(
