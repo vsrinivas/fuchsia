@@ -1204,7 +1204,10 @@ mod tests {
 
     use super::*;
     use crate::device::{is_routing_enabled, set_routing_enabled};
-    use crate::ip::{receive_ip_packet, IpExt, IpPacketBuilder, IpProto, IPV6_MIN_MTU};
+    use crate::ip::{
+        dispatch_receive_ip_packet_name, receive_ip_packet, IpExt, IpPacketBuilder, IpProto,
+        IPV6_MIN_MTU,
+    };
     use crate::testutil::{
         add_arp_or_ndp_table_entry, get_counter_val, get_dummy_config, get_other_ip_address,
         new_rng, parse_icmp_packet_in_ip_packet_in_ethernet_frame,
@@ -1562,12 +1565,12 @@ mod tests {
         // Accept packet destined for this device if promiscuous mode is off.
         crate::device::set_promiscuous_mode(&mut ctx, device, false);
         crate::device::receive_frame(&mut ctx, device, buf.clone());
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Accept packet destined for this device if promiscuous mode is on.
         crate::device::set_promiscuous_mode(&mut ctx, device, true);
         crate::device::receive_frame(&mut ctx, device, buf.clone());
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         let buf = Buf::new(Vec::new(), ..)
             .encapsulate(<I as IpExt>::PacketBuilder::new(
@@ -1585,12 +1588,12 @@ mod tests {
         // Reject packet not destined for this device if promiscuous mode is off.
         crate::device::set_promiscuous_mode(&mut ctx, device, false);
         crate::device::receive_frame(&mut ctx, device, buf.clone());
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         // Accept packet not destined for this device if promiscuous mode is on.
         crate::device::set_promiscuous_mode(&mut ctx, device, true);
         crate::device::receive_frame(&mut ctx, device, buf.clone());
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 3);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 3);
     }
 
     #[test]
@@ -1703,7 +1706,7 @@ mod tests {
                 .into_inner();
 
             receive_ip_packet::<_, _, A::Version>(ctx, device, FrameDestination::Unicast, buf);
-            assert_eq!(get_counter_val(ctx, "dispatch_receive_ip_packet"), expected);
+            assert_eq!(get_counter_val(ctx, dispatch_receive_ip_packet_name::<A::Version>()), expected);
         }
 
         let config = get_dummy_config::<I::Addr>();

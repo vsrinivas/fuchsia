@@ -537,7 +537,7 @@ impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for Context<D> {
 // particular, they may accidentally pass a parse_metadata argument which
 // corresponds to a single extension header rather than all of the IPv6 headers.
 
-/// Dispatch a received IP packet to the appropriate protocol.
+/// Dispatch a received IPv4 packet to the appropriate protocol.
 ///
 /// `device` is the device the packet was received on. `parse_metadata` is the
 /// parse metadata associated with parsing the IP headers. It is used to undo
@@ -548,33 +548,27 @@ impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for Context<D> {
 ///
 /// # Panics
 ///
-/// `dispatch_receive_ip_packet` panics if the protocol is unrecognized and
-/// `parse_metadata` is `None`.
-/// If an IGMP message is received but it is not coming from a device, i.e.,
-/// `device` given is `None`, `dispatch_receive_ip_packet` will also panic.
-#[specialize_ip_address]
-fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress>(
+/// `dispatch_receive_ipv4_packet` panics if the protocol is unrecognized and
+/// `parse_metadata` is `None`. If an IGMP message is received but it is not
+/// coming from a device, i.e., `device` given is `None`,
+/// `dispatch_receive_ip_packet` will also panic.
+fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
     device: Option<DeviceId>,
     frame_dst: FrameDestination,
-    src_ip: A,
-    dst_ip: SpecifiedAddr<A>,
+    src_ip: Ipv4Addr,
+    dst_ip: SpecifiedAddr<Ipv4Addr>,
     proto: IpProto,
     mut buffer: B,
     parse_metadata: Option<ParseMetadata>,
 ) {
-    increment_counter!(ctx, "dispatch_receive_ip_packet");
+    increment_counter!(ctx, "dispatch_receive_ipv4_packet");
 
     let res = match proto {
-        // IPv4-only.
-        #[ipv4addr]
         IpProto::Icmp => {
             icmp::receive_icmpv4_packet(ctx, device, src_ip, dst_ip, buffer);
             Ok(())
         }
-
-        // IPv4-only.
-        #[ipv4addr]
         IpProto::Igmp => {
             igmp::receive_igmp_packet(
                 ctx,
@@ -585,22 +579,6 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
             );
             Ok(())
         }
-
-        // IPv6-only.
-        #[ipv6addr]
-        IpProto::Icmpv6 => {
-            icmp::receive_icmpv6_packet(ctx, device, src_ip, dst_ip, buffer);
-            Ok(())
-        }
-
-        // A value of `IpProto::NoNextHeader` tells us that there is no header whatsoever
-        // following the last lower-level header so we stop processing here.
-        //
-        // IPv6-only.
-        #[ipv6addr]
-        IpProto::NoNextHeader => Ok(()),
-
-        // IPv4 and IPv6.
         IpProto::Udp => crate::transport::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
 
         _ => {
@@ -608,7 +586,6 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
             // contains the entire original IP packet.
             let meta = parse_metadata.unwrap();
             buffer.undo_parse(meta);
-            #[ipv4addr]
             icmp::send_icmpv4_protocol_unreachable(
                 ctx,
                 device.unwrap(),
@@ -619,7 +596,65 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
                 buffer,
                 meta.header_len(),
             );
-            #[ipv6addr]
+            Ok(())
+        }
+    };
+
+    if let Err(mut buffer) = res {
+        // TODO(joshlf): What if we're called from a loopback handler, and
+        // device and parse_metadata are None? In other words, what happens if
+        // we attempt to send to a loopback port which is unreachable? We will
+        // eventually need to restructure the control flow here to handle that
+        // case.
+
+        // udp::receive_ip_packet promises to return the buffer in the same
+        // state it was in when they were called. Thus, all we have to do is
+        // undo the parsing of the IP packet header, and the buffer will be back
+        // to containing the entire original IP packet.
+        let meta = parse_metadata.unwrap();
+        buffer.undo_parse(meta);
+        icmp::send_icmpv4_port_unreachable(
+            ctx,
+            device.unwrap(),
+            frame_dst,
+            src_ip,
+            dst_ip,
+            buffer,
+            meta.header_len(),
+        );
+    }
+}
+
+/// Dispatch a received IPv6 packet to the appropriate protocol.
+///
+/// `dispatch_receive_ipv6_packet` has the same semantics as
+/// `dispatch_receive_ipv4_packet`, but for IPv6.
+fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
+    ctx: &mut Context<D>,
+    device: Option<DeviceId>,
+    frame_dst: FrameDestination,
+    src_ip: Ipv6Addr,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
+    proto: IpProto,
+    mut buffer: B,
+    parse_metadata: Option<ParseMetadata>,
+) {
+    increment_counter!(ctx, "dispatch_receive_ipv6_packet");
+
+    let res = match proto {
+        IpProto::Icmpv6 => {
+            icmp::receive_icmpv6_packet(ctx, device, src_ip, dst_ip, buffer);
+            Ok(())
+        }
+        // A value of `IpProto::NoNextHeader` tells us that there is no header whatsoever
+        // following the last lower-level header so we stop processing here.
+        IpProto::NoNextHeader => Ok(()),
+        IpProto::Udp => crate::transport::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
+        _ => {
+            // Undo the parsing of the IP packet header so that the buffer
+            // contains the entire original IP packet.
+            let meta = parse_metadata.unwrap();
+            buffer.undo_parse(meta);
             icmp::send_icmpv6_protocol_unreachable(
                 ctx,
                 device.unwrap(),
@@ -647,18 +682,6 @@ fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress
         // to containing the entire original IP packet.
         let meta = parse_metadata.unwrap();
         buffer.undo_parse(meta);
-        #[ipv4addr]
-        icmp::send_icmpv4_port_unreachable(
-            ctx,
-            device.unwrap(),
-            frame_dst,
-            src_ip,
-            dst_ip,
-            buffer,
-            meta.header_len(),
-        );
-
-        #[ipv6addr]
         icmp::send_icmpv6_port_unreachable(ctx, device.unwrap(), frame_dst, src_ip, dst_ip, buffer);
     }
 }
@@ -685,7 +708,7 @@ macro_rules! drop_packet_and_undo_parse {
 /// are ready to do so. If the packet isn't fragmented, or a packet was
 /// reassembled, attempt to dispatch the packet.
 macro_rules! process_fragment {
-    ($ctx:expr, $device:expr, $frame_dst:expr, $buffer:expr, $packet:expr, $dst_ip:expr, $ip:ident) => {{
+    ($ctx:expr, $dispatch:ident, $device:expr, $frame_dst:expr, $buffer:expr, $packet:expr, $dst_ip:expr, $ip:ident) => {{
         match process_fragment::<$ip, _, &mut [u8]>($ctx, $packet) {
             // Handle the packet right away since reassembly is not needed.
             FragmentProcessingState::NotNeeded(packet) => {
@@ -693,7 +716,7 @@ macro_rules! process_fragment {
                 // TODO(joshlf):
                 // - Check for already-expired TTL?
                 let (src_ip, _, proto, meta) = packet.into_metadata();
-                dispatch_receive_ip_packet(
+                $dispatch(
                     $ctx,
                     Some($device),
                     $frame_dst,
@@ -718,7 +741,7 @@ macro_rules! process_fragment {
                         // TODO(joshlf):
                         // - Check for already-expired TTL?
                         let (src_ip, _, proto, meta) = packet.into_metadata();
-                        dispatch_receive_ip_packet::<Buf<Vec<u8>>, _, _>(
+                        $dispatch::<Buf<Vec<u8>>, _>(
                             $ctx,
                             Some($device),
                             $frame_dst,
@@ -875,7 +898,16 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
         // because the fragment data is in the fixed header so it is always
         // present (even if the fragment data has values that implies that the
         // packet is not fragmented).
-        process_fragment!(ctx, device, frame_dst, buffer, packet, dst_ip, Ipv4);
+        process_fragment!(
+            ctx,
+            dispatch_receive_ipv4_packet,
+            device,
+            frame_dst,
+            buffer,
+            packet,
+            dst_ip,
+            Ipv4
+        );
     } else if let Some(dest) = forward(ctx, device, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
@@ -1046,7 +1078,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 //   protocol?
                 // - Check for already-expired TTL?
                 let (src_ip, _, proto, meta) = packet.into_metadata();
-                dispatch_receive_ip_packet(
+                dispatch_receive_ipv6_packet(
                     ctx,
                     Some(device),
                     frame_dst,
@@ -1077,7 +1109,16 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 // TODO(ghanan): Handle extension headers again since there
                 //               could be some more in a reassembled packet
                 //               (after the fragment header).
-                process_fragment!(ctx, device, frame_dst, buffer, packet, dst_ip, Ipv6);
+                process_fragment!(
+                    ctx,
+                    dispatch_receive_ipv6_packet,
+                    device,
+                    frame_dst,
+                    buffer,
+                    packet,
+                    dst_ip,
+                    Ipv6
+                );
             }
         }
     } else if let Some(dest) = forward(ctx, device, packet.dst_ip()) {
@@ -1312,17 +1353,19 @@ pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(ctx: &Context<D>, 
 /// callback. It computes the routing information, and invokes the callback with
 /// the computed destination address. The callback returns a
 /// `SerializationRequest`, which is serialized in a new IP packet and sent.
-pub(crate) fn send_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A, S, F>(
+#[specialize_ip_address]
+pub(crate) fn send_ip_packet<
+    B: BufferMut,
+    D: BufferDispatcher<B>,
+    A: IpAddress,
+    S: Serializer<Buffer = B>,
+    F: FnOnce(SpecifiedAddr<A>) -> S,
+>(
     ctx: &mut Context<D>,
     dst_ip: SpecifiedAddr<A>,
     proto: IpProto,
     get_body: F,
-) -> Result<(), S>
-where
-    A: IpAddress,
-    S: Serializer<Buffer = B>,
-    F: FnOnce(SpecifiedAddr<A>) -> S,
-{
+) -> Result<(), S> {
     trace!("send_ip_packet({}, {})", dst_ip, proto);
     increment_counter!(ctx, "send_ip_packet");
     if A::Version::LOOPBACK_SUBNET.contains(&dst_ip) {
@@ -1358,8 +1401,9 @@ where
         // become `B` from the perspective of `dispatch_receive_ip_packet`, so
         // it would need to support `Either<Either<B, Vec<u8>>, Vec<u8>>`, and
         // so on. This match allows us to break that type recursion.
+        #[ipv4addr]
         match buffer {
-            Either::A(buffer) => dispatch_receive_ip_packet(
+            Either::A(buffer) => dispatch_receive_ipv4_packet(
                 ctx,
                 None,
                 FrameDestination::Unicast,
@@ -1369,7 +1413,30 @@ where
                 buffer,
                 None,
             ),
-            Either::B(buffer) => dispatch_receive_ip_packet::<Buf<Vec<u8>>, _, _>(
+            Either::B(buffer) => dispatch_receive_ipv4_packet::<Buf<Vec<u8>>, _>(
+                ctx,
+                None,
+                FrameDestination::Unicast,
+                A::Version::LOOPBACK_ADDRESS.into_addr(),
+                dst_ip,
+                proto,
+                buffer,
+                None,
+            ),
+        }
+        #[ipv6addr]
+        match buffer {
+            Either::A(buffer) => dispatch_receive_ipv6_packet(
+                ctx,
+                None,
+                FrameDestination::Unicast,
+                A::Version::LOOPBACK_ADDRESS.into_addr(),
+                dst_ip,
+                proto,
+                buffer,
+                None,
+            ),
+            Either::B(buffer) => dispatch_receive_ipv6_packet::<Buf<Vec<u8>>, _>(
                 ctx,
                 None,
                 FrameDestination::Unicast,
@@ -1687,6 +1754,16 @@ fn get_hop_limit<D: EventDispatcher, I: Ip>(ctx: &Context<D>, device: DeviceId) 
     return crate::device::get_ipv6_hop_limit(ctx, device).get();
 }
 
+// Used in testing in other modules.
+#[cfg(test)]
+#[specialize_ip]
+pub(crate) fn dispatch_receive_ip_packet_name<I: Ip>() -> &'static str {
+    #[ipv4]
+    return "dispatch_receive_ipv4_packet";
+    #[ipv6]
+    return "dispatch_receive_ipv6_packet";
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1921,7 +1998,8 @@ mod tests {
 
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_parameter_problem"), 0);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), 0);
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 0);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 0);
     }
 
     #[test]
@@ -1998,7 +2076,7 @@ mod tests {
         );
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
         assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
 
         //
@@ -2103,7 +2181,7 @@ mod tests {
         //
 
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_parameter_problem"), 0);
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
     }
 
     fn test_ip_packet_reassembly_not_needed<I: Ip>() {
@@ -2112,7 +2190,7 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
         //
         // Test that a non fragmented packet gets dispatched right away.
@@ -2121,7 +2199,7 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 1);
 
         // Make sure the packet got dispatched.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
     }
 
     #[test]
@@ -2152,14 +2230,14 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 1, 3);
 
         // Make sure no packets got dispatched yet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
         // Process fragment #2
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 2, 3);
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been 'received'.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
     }
 
     #[test]
@@ -2196,33 +2274,33 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_1, 0, 3);
 
         // Make sure no packets got dispatched yet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
         // Process a packet that does not require reassembly (packet #2, fragment #0).
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_2, 0, 1);
 
         // Make packet #1 got dispatched since it didn't need reassembly.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Process packet #0, fragment #2
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_0, 2, 3);
 
         // Make sure no other packets got dispatched yet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Process packet #0, fragment #0
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_0, 0, 3);
 
         // Make sure that packet #0 finally got dispatched now that the final
         // fragment has been 'received'.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         // Process packet #1, fragment #1
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_1, 1, 3);
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been 'received'.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 3);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 3);
     }
 
     #[test]
@@ -2268,7 +2346,7 @@ mod tests {
         // though we technically received all the fragments, this fragment
         // (#2) arrived too late and the reassembly timeout was triggered,
         // causing the prior fragment data to be discarded.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
     }
 
     #[test]
@@ -2326,8 +2404,14 @@ mod tests {
         assert!(!net.step().is_idle());
 
         // Make sure no packets got dispatched yet.
-        assert_eq!(get_counter_val(&mut net.context("alice"), "dispatch_receive_ip_packet"), 0);
-        assert_eq!(get_counter_val(&mut net.context("bob"), "dispatch_receive_ip_packet"), 0);
+        assert_eq!(
+            get_counter_val(&mut net.context("alice"), dispatch_receive_ip_packet_name::<I>()),
+            0
+        );
+        assert_eq!(
+            get_counter_val(&mut net.context("bob"), dispatch_receive_ip_packet_name::<I>()),
+            0
+        );
 
         // Process fragment #2
         process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 2, 3);
@@ -2335,8 +2419,14 @@ mod tests {
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been received by bob.
-        assert_eq!(get_counter_val(&mut net.context("alice"), "dispatch_receive_ip_packet"), 0);
-        assert_eq!(get_counter_val(&mut net.context("bob"), "dispatch_receive_ip_packet"), 1);
+        assert_eq!(
+            get_counter_val(&mut net.context("alice"), dispatch_receive_ip_packet_name::<I>()),
+            0
+        );
+        assert_eq!(
+            get_counter_val(&mut net.context("bob"), dispatch_receive_ip_packet_name::<I>()),
+            1
+        );
 
         // Make sure there are no more events.
         assert!(net.step().is_idle());
@@ -2390,7 +2480,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, frame_dst, ipv6_packet_buf.clone());
 
         // Should not have dispatched the packet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 0);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_packet_too_big"), 1);
 
         // Should have sent out one frame though.
@@ -2493,7 +2583,7 @@ mod tests {
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
             get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
@@ -2518,7 +2608,7 @@ mod tests {
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         // The PMTU should not have updated to `new_mtu2`
         assert_eq!(
@@ -2544,7 +2634,7 @@ mod tests {
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 3);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 3);
 
         // The PMTU should have updated to 1900.
         assert_eq!(
@@ -2593,7 +2683,7 @@ mod tests {
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert!(
             get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).is_none(),
@@ -2651,7 +2741,7 @@ mod tests {
         receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 1);
 
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
@@ -2677,7 +2767,7 @@ mod tests {
         receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 2);
 
         // Should not have updated PMTU as there is no other valid
         // lower PMTU value.
@@ -2703,7 +2793,7 @@ mod tests {
         receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 3);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 3);
 
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
@@ -2731,7 +2821,7 @@ mod tests {
         receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 4);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 4);
 
         // Should not have updated the PMTU as the current PMTU is lower.
         assert_eq!(
@@ -2768,7 +2858,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
 
         // Should not have dispatched the packet.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 0);
 
         // In IPv6, the next header value (ICMP(v4)) would have been considered
         // unrecognized so an ICMP parameter problem response SHOULD be sent, but
@@ -2806,7 +2896,7 @@ mod tests {
         receive_ipv4_packet(&mut ctx, device, frame_dst, buf);
 
         // Should have dispatched the packet but resulted in an ICMP error.
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 1);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_dest_unreachable"), 1);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let buf = &ctx.dispatcher.frames_sent()[0].1[..];
@@ -2858,19 +2948,19 @@ mod tests {
         // multicast group `multi_addr`.
         assert!(!crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
         receive_frame(&mut ctx, device, buf.clone());
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
         // Join the multicast group and receive the packet, we should dispatch it.
         crate::device::join_ip_multicast(&mut ctx, device, multi_addr);
         assert!(crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
         receive_frame(&mut ctx, device, buf.clone());
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Leave the multicast group and receive the packet, we should not dispatch it.
         crate::device::leave_ip_multicast(&mut ctx, device, multi_addr);
         assert!(!crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
         receive_frame(&mut ctx, device, buf.clone());
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
     }
 
     #[test]
@@ -2935,7 +3025,7 @@ mod tests {
 
         // Received packet should have been dispatched.
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
 
         // Set the new IP (this should trigger DAD).
         let ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
@@ -2949,13 +3039,13 @@ mod tests {
 
         // Received packet should not have been dispatched.
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
 
         // Make sure all timers are done (DAD to complete on the interface due to new IP).
         trigger_timers_until(&mut ctx, |_| false);
 
         // Received packet should have been dispatched.
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 2);
     }
 }
