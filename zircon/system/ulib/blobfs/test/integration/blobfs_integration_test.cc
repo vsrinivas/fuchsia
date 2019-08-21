@@ -23,6 +23,7 @@
 #include <zxtest/zxtest.h>
 
 #include "blobfs_test.h"
+#include "test_support.h"
 
 namespace {
 
@@ -1521,42 +1522,53 @@ static bool TestFragmentation(BlobfsTest* blobfsTest) {
     END_HELPER;
 }
 
-static bool QueryDevicePath(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    fbl::unique_fd dirfd(open(MOUNT_PATH "/.", O_RDONLY | O_ADMIN));
-    ASSERT_TRUE(dirfd, "Cannot open root directory");
+*/
 
-    char device_buffer[1024];
-    char* device_path = static_cast<char*>(device_buffer);
-    zx_status_t status;
-    size_t path_len;
-    fzl::FdioCaller caller(std::move(dirfd));
-    ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
-                                                     device_path, sizeof(device_buffer),
-                                                     &path_len), ZX_OK);
-    dirfd = caller.release();
-    ASSERT_OK(status);
-    ASSERT_GT(path_len, 0, "Device path not found");
+zx_status_t DirectoryAdminGetDevicePath(fbl::unique_fd directory, std::string* path) {
+  char buffer[fuchsia_io_MAX_PATH];
+  zx_status_t status;
+  size_t path_len;
+  fzl::FdioCaller caller(std::move(directory));
 
-    char actual_path[PATH_MAX];
-    ASSERT_TRUE(blobfsTest->GetDevicePath(actual_path, PATH_MAX));
-    ASSERT_EQ(strncmp(actual_path, device_path, path_len), 0, "Unexpected device path");
-    ASSERT_EQ(close(dirfd.release()), 0);
+  zx_status_t io_status = fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
+                                                                 buffer, sizeof(buffer), &path_len);
 
-    dirfd.reset(open(MOUNT_PATH "/.", O_RDONLY));
-    ASSERT_TRUE(dirfd, "Cannot open root directory");
-    caller.reset(std::move(dirfd));
-    ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
-                                                     device_path, sizeof(device_buffer),
-                                                     &path_len), ZX_OK);
-    dirfd = caller.release();
-    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
-    ASSERT_EQ(path_len, 0);
-    ASSERT_EQ(close(dirfd.release()), 0);
-    END_HELPER;
+  if (io_status != ZX_OK) {
+    return io_status;
+  }
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  std::string device_path(buffer, path_len);
+  path->assign(device_path);
+  return ZX_OK;
 }
 
-*/
+void RunQueryDevicePathTest(const std::string& device_path) {
+  fbl::unique_fd root_fd(open(kMountPath, O_RDONLY | O_ADMIN));
+  ASSERT_TRUE(root_fd, "Cannot open root directory");
+
+  std::string path;
+  ASSERT_OK(DirectoryAdminGetDevicePath(std::move(root_fd), &path));
+  ASSERT_FALSE(path.empty());
+
+  ASSERT_STR_EQ(device_path.c_str(), path.c_str());
+  printf("device_path %s\n", device_path.c_str());
+
+  root_fd.reset(open(kMountPath, O_RDONLY));
+  ASSERT_TRUE(root_fd, "Cannot open root directory");
+
+  ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, DirectoryAdminGetDevicePath(std::move(root_fd), &path));
+}
+
+TEST_F(BlobfsTest, QueryDevicePath) { RunQueryDevicePathTest(device_path()); }
+
+TEST_F(BlobfsTestWithFvm, QueryDevicePath) {
+  // Make sure the two paths to compare are in the same form.
+  RunQueryDevicePathTest(GetTopologicalPath(device_path()));
+}
 
 void RunReadOnlyTest(BlobfsTest* test) {
   // Mount the filesystem as read-write. We can create new blobs.
@@ -2027,7 +2039,6 @@ RUN_TESTS(LARGE, CreateUmountRemountLarge)
 RUN_TESTS(LARGE, CreateUmountRemountLargeMultithreaded)
 RUN_TESTS(LARGE, NoSpace)
 RUN_TESTS(LARGE, TestFragmentation)
-RUN_TESTS(MEDIUM, QueryDevicePath)
 RUN_TEST_FVM(MEDIUM, CorruptAtMount)
 RUN_TESTS(LARGE, CreateWriteReopen)
 RUN_TEST_MEDIUM(TestCreateFailure)

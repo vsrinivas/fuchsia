@@ -68,6 +68,7 @@ test("blobfs-integration") {
     "integration/blobfs_test.cc",
     "integration/environment.cc",
     "integration/integration_main.cc",
+    "integration/test_support.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",

@@ -14,26 +14,9 @@
 #include <zircon/status.h>
 #include <zxtest/zxtest.h>
 
+#include "test_support.h"
+
 namespace {
-
-std::string GetTopologicalPath(zx_handle_t channel) {
-  zx_status_t status;
-  size_t path_len;
-  char disk_path[PATH_MAX];
-  zx_status_t io_status = fuchsia_device_ControllerGetTopologicalPath(
-      channel, &status, disk_path, sizeof(disk_path) - 1, &path_len);
-  if (io_status != ZX_OK) {
-    status = io_status;
-  }
-  if (status != ZX_OK || path_len > sizeof(disk_path) - 1) {
-    printf("Could not acquire topological path of block device: %s\n",
-           zx_status_get_string(status));
-    return std::string();
-  }
-
-  disk_path[path_len] = 0;
-  return std::string(disk_path);
-}
 
 bool GetBlockInfo(zx_handle_t channel, fuchsia_hardware_block_BlockInfo* block_info) {
   zx_status_t status;

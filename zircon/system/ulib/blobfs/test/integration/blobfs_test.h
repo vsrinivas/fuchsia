@@ -42,6 +42,7 @@ class BlobfsTest : public zxtest::Test {
   void Remount();
 
   void set_read_only(bool read_only) { read_only_ = read_only; }
+  const std::string& device_path() const { return device_path_; }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsTest);
 
@@ -65,6 +66,8 @@ class BlobfsTestWithFvm : public BlobfsTest {
   // zxtest::Test interface:
   void SetUp() override;
   void TearDown() override;
+
+  const std::string& partition_path() const { return partition_path_; }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsTestWithFvm);
 
