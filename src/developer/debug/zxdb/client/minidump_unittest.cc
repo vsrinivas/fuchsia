@@ -7,20 +7,29 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
+#include "src/developer/debug/zxdb/client/system_observer.h"
+#include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/common/host_util.h"
 
 namespace zxdb {
 
-class MinidumpTest : public testing::Test {
+class MinidumpTest : public testing::Test,
+                     public ProcessObserver,
+                     public ThreadObserver,
+                     public SystemObserver {
  public:
   MinidumpTest();
   virtual ~MinidumpTest();
 
   debug_ipc::PlatformMessageLoop& loop() { return loop_; }
   Session& session() { return *session_; }
+  debug_ipc::NotifyException::Type last_hit() { return last_hit_; }
 
   Err TryOpen(const std::string& filename);
 
@@ -29,7 +38,18 @@ class MinidumpTest : public testing::Test {
                  void (RemoteAPI::*handler)(const RequestType&,
                                             fit::callback<void(const Err&, ReplyType)>));
 
+  // ProcessObserver implementation.
+  void DidCreateThread(Process*, Thread* thread) override;
+
+  // ThreadObserver implementation.
+  void OnThreadStopped(Thread*, debug_ipc::NotifyException::Type type,
+                       const std::vector<fxl::WeakPtr<Breakpoint>>&) override;
+
+  // SystemObserver implementation.
+  void GlobalDidCreateProcess(Process* process) override;
+
  private:
+  debug_ipc::NotifyException::Type last_hit_ = debug_ipc::NotifyException::Type::kNone;
   debug_ipc::PlatformMessageLoop loop_;
   std::unique_ptr<Session> session_;
 };
@@ -37,6 +57,7 @@ class MinidumpTest : public testing::Test {
 MinidumpTest::MinidumpTest() {
   loop_.Init();
   session_ = std::make_unique<Session>();
+  session().system().AddObserver(this);
 }
 
 MinidumpTest::~MinidumpTest() { loop_.Cleanup(); }
@@ -47,12 +68,9 @@ Err MinidumpTest::TryOpen(const std::string& filename) {
   Err err;
   auto path = (data_dir / filename).string();
 
-  session().OpenMinidump(path, [&err](const Err& got) {
-    err = got;
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
+  session().OpenMinidump(path, [&err](const Err& got) { err = got; });
 
-  loop().Run();
+  loop().RunUntilNoTasks();
 
   return err;
 }
@@ -64,10 +82,18 @@ void MinidumpTest::DoRequest(
   (session().remote_api()->*handler)(request, [&reply, &err](const Err& e, ReplyType r) {
     err = e;
     reply = r;
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
-  loop().Run();
+  loop().RunUntilNoTasks();
 }
+
+void MinidumpTest::DidCreateThread(Process*, Thread* thread) { thread->AddObserver(this); }
+
+void MinidumpTest::OnThreadStopped(Thread*, debug_ipc::NotifyException::Type type,
+                                   const std::vector<fxl::WeakPtr<Breakpoint>>&) {
+  last_hit_ = type;
+}
+
+void MinidumpTest::GlobalDidCreateProcess(Process* process) { process->AddObserver(this); }
 
 template <typename Data>
 std::vector<uint8_t> AsData(Data d) {
@@ -107,6 +133,8 @@ TEST_F(MinidumpTest, Load) {
 TEST_F(MinidumpTest, ProcessTreeRecord) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+
   Err err;
   debug_ipc::ProcessTreeReply reply;
   DoRequest(debug_ipc::ProcessTreeRequest(), reply, err, &RemoteAPI::ProcessTree);
@@ -121,6 +149,8 @@ TEST_F(MinidumpTest, ProcessTreeRecord) {
 
 TEST_F(MinidumpTest, AttachDetach) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
 
   Err err;
   debug_ipc::AttachRequest request;
@@ -152,6 +182,8 @@ TEST_F(MinidumpTest, AttachDetach) {
 TEST_F(MinidumpTest, AttachFail) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+
   Err err;
   debug_ipc::AttachRequest request;
   debug_ipc::AttachReply reply;
@@ -165,6 +197,8 @@ TEST_F(MinidumpTest, AttachFail) {
 
 TEST_F(MinidumpTest, Threads) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
 
   Err err;
   debug_ipc::ThreadsRequest request;
@@ -186,6 +220,8 @@ TEST_F(MinidumpTest, Threads) {
 
 TEST_F(MinidumpTest, Registers) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
 
   Err err;
   debug_ipc::ReadRegistersRequest request;
@@ -285,6 +321,8 @@ TEST_F(MinidumpTest, Registers) {
 TEST_F(MinidumpTest, Modules) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump_new_cvrecord.dmp"));
 
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kSoftware, last_hit());
+
   Err err;
   debug_ipc::ModulesRequest request;
   debug_ipc::ModulesReply reply;
@@ -343,6 +381,8 @@ TEST_F(MinidumpTest, Modules) {
 
 TEST_F(MinidumpTest, AddressSpace) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump_with_aspace.dmp"));
+
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
 
   Err err;
   debug_ipc::AddressSpaceRequest request;
@@ -449,6 +489,8 @@ TEST_F(MinidumpTest, AddressSpace) {
 TEST_F(MinidumpTest, ReadMemory) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+
   Err err;
   debug_ipc::ReadMemoryRequest request;
   debug_ipc::ReadMemoryReply reply;
@@ -489,6 +531,8 @@ TEST_F(MinidumpTest, ReadMemory) {
 TEST_F(MinidumpTest, ReadMemory_Short) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+
   const uint32_t kOverReadSize = kTestExampleMinidumpStackSize + 36;
 
   Err err;
@@ -521,6 +565,8 @@ TEST_F(MinidumpTest, ReadMemory_Short) {
 TEST_F(MinidumpTest, SysInfo) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+
   Err err;
   debug_ipc::SysInfoRequest request;
   debug_ipc::SysInfoReply reply;
@@ -543,6 +589,8 @@ TEST_F(MinidumpTest, Backtrace) {
   session().system().settings().SetList(ClientSettings::System::kSymbolPaths, {core_dir});
 
   ASSERT_ZXDB_SUCCESS(TryOpen(core_dir / "core.dmp"));
+
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
 
   Err err;
   debug_ipc::ThreadStatusRequest request;

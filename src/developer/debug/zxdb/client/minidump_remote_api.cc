@@ -16,6 +16,7 @@
 #include "garnet/third_party/libunwindstack/include/unwindstack/UcontextX86_64.h"
 #include "garnet/third_party/libunwindstack/include/unwindstack/Unwinder.h"
 #include "src/developer/debug/ipc/client_protocol.h"
+#include "src/developer/debug/ipc/decode_exception.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
@@ -26,6 +27,43 @@
 namespace zxdb {
 
 namespace {
+
+class X64ExceptionInfo : public debug_ipc::X64ExceptionInfo {
+ public:
+  X64ExceptionInfo(const crashpad::ExceptionSnapshot* snapshot) : snapshot_(snapshot) {}
+
+  bool AddrIsWatchpoint(uint64_t addr) override {
+    // TODO: Find out if there's a way to get a list of set watchpoints out of minidump.
+    return false;
+  }
+
+  std::optional<debug_ipc::X64ExceptionInfo::DebugRegs> FetchDebugRegs() override {
+    debug_ipc::X64ExceptionInfo::DebugRegs ret;
+    auto context = snapshot_->Context()->x86_64;
+
+    ret.dr0 = context->dr0;
+    ret.dr1 = context->dr1;
+    ret.dr2 = context->dr2;
+    ret.dr3 = context->dr3;
+    ret.dr6 = context->dr6;
+    ret.dr7 = context->dr7;
+
+    return ret;
+  }
+
+ private:
+  const crashpad::ExceptionSnapshot* snapshot_;
+};
+
+class Arm64ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
+ public:
+  Arm64ExceptionInfo(const crashpad::ExceptionSnapshot* snapshot) : snapshot_(snapshot) {}
+
+  std::optional<uint32_t> FetchESR() override { return snapshot_->ExceptionInfo(); }
+
+ private:
+  const crashpad::ExceptionSnapshot* snapshot_;
+};
 
 Err ErrNoLive() { return Err(ErrType::kNoConnection, "System is no longer live"); }
 
@@ -682,8 +720,22 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
   mod_notification.modules = GetModules();
 
   if (auto exception = minidump_->Exception()) {
-    // TODO(sadmac): Break out the code interpretation stuff from the debug agent and use it here.
-    exception_notification.type = debug_ipc::NotifyException::Type::kGeneral;
+    switch (exception->Context()->architecture) {
+      case crashpad::CPUArchitecture::kCPUArchitectureARM64: {
+        Arm64ExceptionInfo info(exception);
+        exception_notification.type = debug_ipc::DecodeException(exception->Exception(), &info);
+        break;
+      }
+      case crashpad::CPUArchitecture::kCPUArchitectureX86_64: {
+        X64ExceptionInfo info(exception);
+        exception_notification.type = debug_ipc::DecodeException(exception->Exception(), &info);
+        break;
+      }
+      default:
+        exception_notification.type = debug_ipc::NotifyException::Type::kGeneral;
+        break;
+    }
+
     exception_notification.thread.process_koid = minidump_->ProcessID();
     exception_notification.thread.thread_koid = exception->ThreadID();
     exception_notification.thread.state = debug_ipc::ThreadRecord::State::kCoreDump;
