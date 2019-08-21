@@ -23,6 +23,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/wlanphyimpl.h>
 
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 
@@ -35,7 +36,8 @@ class Device : public ::ddk::Device<Device, ::ddk::Unbindable>,
  public:
   // Static factory function for Device instances. This factory does not return an owned instance,
   // as on successful invocation the instance will have its lifecycle maanged by the devhost.
-  static zx_status_t Create(zx_device_t* parent_device, Device** device_out);
+  static zx_status_t Create(zx_device_t* parent_device, Device** device_out,
+                            simulation::Environment* env = nullptr);
   explicit Device(std::unique_ptr<::async::Loop> dispatcher, std::unique_ptr<brcmf_pub> brcmf_pub,
                   std::unique_ptr<brcmf_bus> brcmf_bus);
 

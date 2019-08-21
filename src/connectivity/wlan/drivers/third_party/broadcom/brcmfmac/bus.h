@@ -22,6 +22,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 
 #include "netbuf.h"
 
@@ -208,7 +209,8 @@ static inline zx_status_t brcmf_bus_device_add(struct brcmf_bus* bus, zx_device_
 }
 
 // Interface to the system bus.
-zx_status_t brcmf_bus_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus);
+zx_status_t brcmf_bus_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
+                               ::wlan::simulation::Environment* env);
 void brcmf_bus_exit(brcmf_bus* bus);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_

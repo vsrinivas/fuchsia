@@ -25,6 +25,7 @@
 #include "common.h"
 #include "debug.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 
 #define BUS_OP(bus) bus->bus_priv.sim->sim_fw
 static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
@@ -70,13 +71,14 @@ zx_status_t brcmf_sim_probe(struct brcmf_bus* bus) {
 }
 
 // Allocate necessary memory and initialize simulator-specific structures
-zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus) {
+zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
+                               ::wlan::simulation::Environment* env) {
   zx_status_t status = ZX_OK;
   auto simdev = std::make_unique<brcmf_simdev>();
   auto bus_if = std::make_unique<brcmf_bus>();
 
   // Initialize inter-structure pointers
-  simdev->sim_fw = std::make_unique<SimFirmware>();
+  simdev->sim_fw = std::make_unique<::wlan::brcmfmac::SimFirmware>(env);
   bus_if->bus_priv.sim = simdev.get();
 
   BRCMF_DBG(SIM, "Registering simulator target\n");

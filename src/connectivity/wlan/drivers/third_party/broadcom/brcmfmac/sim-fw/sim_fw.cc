@@ -25,6 +25,8 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 
+namespace wlan::brcmfmac {
+
 void SimFirmware::GetChipInfo(uint32_t* chip, uint32_t* chiprev) {
   *chip = BRCM_CC_4356_CHIP_ID;
   *chiprev = 2;
@@ -241,3 +243,5 @@ zx_status_t SimFirmware::IovarsGet(const char* name, void* value_out, size_t val
   }
   return ZX_OK;
 }
+
+}  // namespace wlan::brcmfmac

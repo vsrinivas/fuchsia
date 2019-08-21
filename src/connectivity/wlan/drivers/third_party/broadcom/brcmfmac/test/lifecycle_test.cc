@@ -30,8 +30,9 @@ namespace {
 TEST(LifecycleTest, StartStop) {
   zx_status_t status = ZX_OK;
   Device* device = nullptr;
+  simulation::Environment env;
 
-  status = Device::Create(nullptr, &device);
+  status = Device::Create(nullptr, &device, &env);
   EXPECT_EQ(status, ZX_OK);
 
   device->SimUnbind();

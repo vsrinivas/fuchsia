@@ -23,7 +23,7 @@
 #include "sim-fw/sim_fw.h"
 
 struct brcmf_simdev {
-  std::unique_ptr<SimFirmware> sim_fw;
+  std::unique_ptr<::wlan::brcmfmac::SimFirmware> sim_fw;
   struct brcmf_mp_device* settings;
 };
 

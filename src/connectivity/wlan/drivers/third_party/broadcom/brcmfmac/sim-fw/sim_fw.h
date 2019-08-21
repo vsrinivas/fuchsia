@@ -23,8 +23,11 @@
 #include <zircon/types.h>
 
 #include "sim_hw.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+
+namespace wlan::brcmfmac {
 
 class SimFirmware {
   class BcdcResponse {
@@ -46,6 +49,8 @@ class SimFirmware {
   };
 
  public:
+  explicit SimFirmware(simulation::Environment* env) : hw_(env) {}
+
   void GetChipInfo(uint32_t* chip, uint32_t* chiprev);
 
   // Bus operations
@@ -75,5 +80,7 @@ class SimFirmware {
   // Simulated hardware state
   SimHardware hw_;
 };
+
+}  // namespace wlan::brcmfmac
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_FW_SIM_FW_H_

@@ -21,7 +21,8 @@ namespace wlan {
 namespace brcmfmac {
 
 // static
-zx_status_t Device::Create(zx_device_t* parent_device, Device** device_out) {
+zx_status_t Device::Create(zx_device_t* parent_device, Device** device_out,
+                           simulation::Environment* env) {
   zx_status_t status = ZX_OK;
 
   auto dispatcher = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToThread);
@@ -45,7 +46,7 @@ zx_status_t Device::Create(zx_device_t* parent_device, Device** device_out) {
   }
 
   std::unique_ptr<brcmf_bus> bus;
-  if ((status = brcmf_bus_register(pub.get(), &bus)) != ZX_OK) {
+  if ((status = brcmf_bus_register(pub.get(), &bus, env)) != ZX_OK) {
     BRCMF_ERR("brcmf_bus_register() returned %s\n", zx_status_get_string(status));
     return status;
   }

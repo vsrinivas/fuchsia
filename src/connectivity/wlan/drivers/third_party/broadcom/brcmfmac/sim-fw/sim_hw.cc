@@ -20,6 +20,8 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 
+namespace wlan::brcmfmac {
+
 zx_status_t SimHardware::SetMacAddr(const uint8_t* mac_addr) {
   std::memcpy(mac_addr_, mac_addr, ETH_ALEN);
   return ZX_OK;
@@ -45,3 +47,5 @@ void SimHardware::GetRevInfo(brcmf_rev_info_le* rev_info) {
   rev_info->chippkg = 2;
   rev_info->nvramrev = 0x5b2b4;
 }
+
+}  // namespace wlan::brcmfmac
