@@ -91,6 +91,7 @@ static bool recv_msg(zx_handle_t channel, Message* msg) {
 
   uint32_t data;
   uint32_t num_bytes = sizeof(data);
+  msg->num_handles = MAX_NUM_MSG_HANDLES;
   tu_channel_read(channel, 0, &data, &num_bytes, &msg->handles[0], &msg->num_handles);
   if (num_bytes != sizeof(data)) {
     unittest_printf("ERROR: unexpected message size, %u != %zu\n", num_bytes, sizeof(data));
