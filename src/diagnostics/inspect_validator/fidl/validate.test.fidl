@@ -2,9 +2,58 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// The Inspect VMO Validator program starts and controls a "puppet" program to
+/// exercise each Inspect library. This file defines the protocol to exercise
+/// the library (and report the result of commands). (After executing some
+/// commands, the Validator program will analyze the VMO contents for
+/// correctness and memory-packing efficiency.)
 library test.inspect.validate;
+
+/// InitializationParams tells how to initialize the Inspect library.
+table InitializationParams {
+    1: uint64 vmoSize;
+};
+
+/// TestResult tells the result of executing an Initialize or Act command.
+enum TestResult {
+    /// The function call completed without error.
+    OK = 0;
+    /// The Inspect library doesn't implement a requested feature.
+    NOT_IMPLEMENTED = 1;
+    /// The Inspect library reported a failure executing the function.
+    FAILED = 2;
+    /// The driver and/or puppet-wrapper was in an illegal state.
+    ILLEGAL = 3;
+};
+
+/// The data in the VMO is tree-structured, so some nodes are under the root.
+/// ROOT_ID identifies the root node.
+const uint32 ROOT_ID = 0;
+
+/// Tells the puppet to create a Node with the given name, parentage, and ID
+/// (the id is specified so other nodes can later be created under it).
+struct CreateNode {
+    uint32 parent;
+    uint32 id;
+    string name;
+};
+
+/// Tells the puppet to delete the given node.
+struct DeleteNode {
+    uint32 id;
+};
+
+/// Tells the puppet to do something to modify the VMO.
+xunion Action {
+    CreateNode create_node;
+    DeleteNode delete_node;
+};
 
 [Discoverable]
 protocol Validate {
-    EchoTheString(string:256? value) -> (string:256? response);
+    /// Initializes the Inspect library being tested by the puppet.
+    Initialize(InitializationParams params) -> (handle? vmo, TestResult result);
+
+    /// Modifies the contents of the VMO.
+    Act(Action action) -> (TestResult result);
 };

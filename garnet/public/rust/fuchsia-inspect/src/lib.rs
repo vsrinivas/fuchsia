@@ -71,6 +71,18 @@ impl Inspector {
         }
     }
 
+    /// To be used by tests only. Tries to return a ZX handle suitable for passing through FIDL.
+    pub fn vmo_handle_for_test(&self) -> Option<zx::Handle> {
+        self.vmo
+            .as_ref()
+            .map(|bar| {
+                bar.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)
+                    .ok()
+                    .map(|v| v.into_handle())
+            })
+            .unwrap_or(None)
+    }
+
     /// Exports the VMO backing this Inspector at the standard location in the
     /// supplied ServiceFs.
     pub fn export<ServiceObjTy: ServiceObjTrait>(&self, service_fs: &mut ServiceFs<ServiceObjTy>) {
@@ -1144,5 +1156,4 @@ mod tests {
         let heap = Heap::new(mapping).unwrap();
         Arc::new(Mutex::new(State::create(heap).unwrap()))
     }
-
 }

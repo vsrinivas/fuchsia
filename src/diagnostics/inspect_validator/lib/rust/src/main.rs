@@ -6,21 +6,33 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_test_inspect_validate::{ValidateRequest, ValidateRequestStream},
+    fidl_test_inspect_validate::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::Inspector,
     fuchsia_syslog as syslog,
     futures::prelude::*,
     log::*,
 };
 
-async fn run_echo_server(mut stream: ValidateRequestStream) -> Result<(), Error> {
-    while let Some(ValidateRequest::EchoTheString { value, responder }) =
-        stream.try_next().await.context("error running validator server")?
-    {
-        debug!("Received validator request for string {:?}", value);
-        responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
-        debug!("validator response sent successfully");
+async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Error> {
+    while let Some(event) = stream.try_next().await? {
+        match event {
+            ValidateRequest::Initialize { params, responder } => {
+                let inspector = match params.vmo_size {
+                    Some(size) => Inspector::new_with_size(size as usize),
+                    None => Inspector::new(),
+                };
+                responder
+                    .send(inspector.vmo_handle_for_test(), TestResult::Ok)
+                    .context("responding to initialize")?
+            }
+            ValidateRequest::Act { action, responder } => {
+                info!("Act was called: {:?}", action);
+                // TODO(CF-911): Implement these actions.
+                responder.send(TestResult::Ok)?;
+            }
+        }
     }
     Ok(())
 }
@@ -43,7 +55,7 @@ async fn main() -> Result<(), Error> {
     const MAX_CONCURRENT: usize = 1;
     info!("Puppet about to wait for connection");
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::Validate(stream)| {
-        run_echo_server(stream).unwrap_or_else(|e| println!("ERROR in puppet's main: {:?}", e))
+        run_driver_service(stream).unwrap_or_else(|e| error!("ERROR in puppet's main: {:?}", e))
     });
 
     fut.await;
