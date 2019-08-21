@@ -115,6 +115,60 @@ data that is read out of an Inspect hierarchy in tests.
 [cpp-5]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/health.h
 [cpp-6]: /sdk/lib/inspect/testing
 
+### Reading Support
+
+The [reading library][cpp-reading-1] supports parsing an Inspect File
+into a [Hierarchy][cpp-reading-2]. `Hierarchy`s contain `NodeValue`s
+and `PropertyValues`, which are the parsed versions of `Node`s and
+`Property`s respectively.
+
+The `Hierarchy`'s `NodeValue` is returned by `node()` and child
+`Hierarchy`s are returned in a vector by `children()`. The `GetByPath`
+function supports reading a specific child hierarchy by path.
+
+The properties for a particular `NodeValue` are available through the
+`properties()` accessor. You may determine if a property contains a
+certain type by passing the corresponding `PropertyValue` type as the
+template parameter to the `Contains<T>()` method:
+
+```
+// Returns true if the first property of the hierarchy's node is an INT value.
+if (hierarchy.node().properties()[0].Contains<IntPropertyValue>()) {
+  // ...
+}
+```
+
+Use the `Get<T>()` method to obtain the property:
+
+```
+// Get the IntPropertyValue of the first property on the node.
+// Note: This causes a runtime exception if the property does not contain
+// the given type, crashing the program.
+hierarchy.node().properties()[0].Get<IntPropertyValue>();
+```
+
+You may also switch based on the different possible format types:
+
+```
+const auto& property = hierarchy.node().properties()[0];
+switch (property.format()) {
+  case FormatType::INT:
+    const auto& value = property.Get<IntPropertyValue>();
+    /* ... */
+    break;
+  /* ... */
+}
+
+Array types may be specially formatted to contain histograms. The
+`GetBuckets()` method supports returning an array of histogram buckets
+from `{Int,Uint,Double}ArrayValue` types. The array will be empty if
+the underlying array is not a specially formatted histogram.
+```
+
+
+[cpp-reading-1]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/reader.h
+[cpp-reading-2]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/hierarchy.h
+
 ## [Rust](/garnet/public/rust/fuchsia-inspect)
 
 The Rust Inspect Library provides full [writing][rust-1] and
