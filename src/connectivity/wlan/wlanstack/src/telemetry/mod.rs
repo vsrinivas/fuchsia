@@ -465,7 +465,7 @@ fn log_connect_attempts_stats(sender: &mut CobaltSender, connect_stats: &Connect
     };
     let is_multi_bss_dim = convert_bool_dim(is_multi_bss);
     let protection_dim = convert_protection(&bss.get_protection());
-    let channel_band_dim = convert_channel_band(&bss.chan.cbw);
+    let channel_band_dim = convert_channel_band(bss.chan.primary);
 
     sender.log_event_count(
         metrics::CONNECTION_ATTEMPTS_METRIC_ID,
@@ -534,7 +534,7 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
 
     let is_multi_bss_dim = convert_bool_dim(is_multi_bss);
     let protection_dim = convert_protection(&bss.get_protection());
-    let channel_band_dim = convert_channel_band(&bss.chan.cbw);
+    let channel_band_dim = convert_channel_band(bss.chan.primary);
     let rssi_dim = convert_rssi(bss.rssi_dbm);
     sender.with_component().log_event_count(
         metrics::CONNECTION_RESULT_POST_NETWORK_SELECTION_METRIC_ID,

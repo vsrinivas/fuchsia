@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::warn,
     wlan_common::bss::Protection,
     wlan_metrics_registry as metrics,
@@ -66,16 +66,13 @@ pub(super) fn convert_connect_failure(
 //
 // The same applies to other methods below that may return dimension used by multiple metrics.
 pub(super) fn convert_channel_band(
-    band: &fidl_common::Cbw,
+    channel: u8,
 ) -> metrics::ConnectionSuccessWithAttemptsBreakdownMetricDimensionChannelBand {
     use metrics::ConnectionSuccessWithAttemptsBreakdownMetricDimensionChannelBand::*;
-    match band {
-        fidl_common::Cbw::Cbw20 => Cbw20,
-        fidl_common::Cbw::Cbw40 => Cbw40,
-        fidl_common::Cbw::Cbw40Below => Cbw40Below,
-        fidl_common::Cbw::Cbw80 => Cbw80,
-        fidl_common::Cbw::Cbw160 => Cbw160,
-        fidl_common::Cbw::Cbw80P80 => Cbw80P80,
+    if channel > 14 {
+        Band5Ghz
+    } else {
+        Band2Dot4Ghz
     }
 }
 
