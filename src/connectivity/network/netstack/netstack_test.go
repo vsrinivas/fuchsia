@@ -683,17 +683,14 @@ func TestDHCPAcquired(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			// save current route table for later
+			originalRouteTable := ifState.ns.GetExtendedRouteTable()
+
+			// Update the DHCP address to the given test values and verify it took
+			// effect.
 			ifState.dhcpAcquired(test.oldAddr, test.newAddr, test.config)
-			ifState.mu.Lock()
-			hasDynamicAddr := ifState.mu.hasDynamicAddr
-			dnsServers := ifState.mu.dnsServers
-			ifState.mu.Unlock()
 
-			if got, want := hasDynamicAddr, true; got != want {
-				t.Errorf("got ifState.mu.hasDynamicAddr = %t, want = %t", got, want)
-			}
-
-			if diff := cmp.Diff(dnsServers, test.config.DNS); diff != "" {
+			if diff := cmp.Diff(ifState.mu.dnsServers, test.config.DNS); diff != "" {
 				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)
 			}
 
@@ -719,6 +716,33 @@ func TestDHCPAcquired(t *testing.T) {
 
 				if !found {
 					t.Errorf("new address %s was not added to NIC addresses %v", test.newAddr, info.ProtocolAddresses)
+				}
+			} else {
+				t.Errorf("NIC %d not found in %v", ifState.nicid, infoMap)
+			}
+
+			// Remove the address and verify everything is cleaned up correctly.
+			remAddr := test.newAddr
+			ifState.dhcpAcquired(remAddr, tcpip.AddressWithPrefix{}, dhcp.Config{})
+
+			if diff := cmp.Diff(ifState.mu.dnsServers, ifState.mu.dnsServers[:0]); diff != "" {
+				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)
+			}
+
+			if diff := cmp.Diff(ifState.ns.GetExtendedRouteTable(), originalRouteTable); diff != "" {
+				t.Errorf("GetExtendedRouteTable() mismatch (-want +got):\n%s", diff)
+			}
+
+			ns.mu.Lock()
+			infoMap = ns.mu.stack.NICInfo()
+			ns.mu.Unlock()
+			if info, ok := infoMap[ifState.nicid]; ok {
+				for _, address := range info.ProtocolAddresses {
+					if address.Protocol == ipv4.ProtocolNumber {
+						if address.AddressWithPrefix == remAddr {
+							t.Errorf("address %s/%d was not removed from NIC addresses %v", remAddr.Address, remAddr.PrefixLen, info.ProtocolAddresses)
+						}
+					}
 				}
 			} else {
 				t.Errorf("NIC %d not found in %v", ifState.nicid, infoMap)

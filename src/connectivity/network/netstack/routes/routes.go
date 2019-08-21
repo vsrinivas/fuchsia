@@ -22,7 +22,8 @@ type Action uint32
 
 const (
 	ActionDeleteAll Action = iota
-	ActionDeleteDynamicDisableStatic
+	ActionDeleteDynamic
+	ActionDisableStatic
 	ActionEnableStatic
 )
 
@@ -75,27 +76,43 @@ func (er *ExtendedRoute) Match(addr tcpip.Address) bool {
 	return true
 }
 
+// Temporary stringer helper until tcpip.Route implements one.
+func RouteStringer(r *tcpip.Route) string {
+	var out strings.Builder
+	fmt.Fprintf(&out, "%s/%d", r.Destination, util.PrefixLength(r.Mask))
+	if len(r.Gateway) > 0 {
+		fmt.Fprintf(&out, " via %s", r.Gateway)
+	}
+	fmt.Fprintf(&out, " nic %d", r.NIC)
+	return out.String()
+}
+
 func (er *ExtendedRoute) String() string {
 	var out strings.Builder
-	out.WriteString(fmt.Sprintf("  %v/%v", er.Route.Destination, util.PrefixLength(er.Route.Mask)))
-	if len(er.Route.Gateway) > 0 {
-		out.WriteString(fmt.Sprintf(" via %v", er.Route.Gateway))
-	}
-	out.WriteString(fmt.Sprintf(" nic %v", er.Route.NIC))
+	fmt.Fprintf(&out, "%s", RouteStringer(&er.Route))
 	if er.MetricTracksInterface {
-		out.WriteString(fmt.Sprintf(" metric[if] %v", er.Metric))
+		fmt.Fprintf(&out, " metric[if] %d", er.Metric)
 	} else {
-		out.WriteString(fmt.Sprintf(" metric[static] %v", er.Metric))
+		fmt.Fprintf(&out, " metric[static] %d", er.Metric)
 	}
 	if er.Dynamic {
-		out.WriteString(" (dynamic)")
+		fmt.Fprintf(&out, " (dynamic)")
 	} else {
-		out.WriteString(" (static)")
+		fmt.Fprintf(&out, " (static)")
 	}
 	if !er.Enabled {
-		out.WriteString(" (disabled)")
+		fmt.Fprintf(&out, " (disabled)")
 	}
-	out.WriteString("\n")
+	return out.String()
+}
+
+type ExtendedRouteTable []ExtendedRoute
+
+func (rt ExtendedRouteTable) String() string {
+	var out strings.Builder
+	for _, r := range rt {
+		fmt.Fprintf(&out, "%s\n", &r)
+	}
 	return out.String()
 }
 
@@ -104,21 +121,23 @@ func (er *ExtendedRoute) String() string {
 type RouteTable struct {
 	mu struct {
 		sync.Mutex
-		routes []ExtendedRoute
+		routes ExtendedRouteTable
 	}
 }
 
 func (rt *RouteTable) String() string {
-	var out strings.Builder
-	for _, r := range rt.mu.routes {
-		out.WriteString(fmt.Sprintf("%v", &r))
-	}
-	return out.String()
+	rt.mu.Lock()
+	defer rt.mu.Unlock()
+	return rt.mu.routes.String()
 }
 
 // For debugging.
 func (rt *RouteTable) Dump() {
-	syslog.VLogTf(syslog.TraceVerbosity, tag, "Current Route Table:\n%v", rt)
+	if rt == nil {
+		syslog.VLogTf(syslog.TraceVerbosity, tag, "Current Route Table:<nil>")
+	} else {
+		syslog.VLogTf(syslog.TraceVerbosity, tag, "Current Route Table:\n%s", rt)
+	}
 }
 
 // For testing.
@@ -132,7 +151,7 @@ func (rt *RouteTable) Set(r []ExtendedRoute) {
 // route already exists, it simply updates that route's metric, dynamic and
 // enabled fields.
 func (rt *RouteTable) AddRoute(route tcpip.Route, metric Metric, tracksInterface bool, dynamic bool, enabled bool) {
-	syslog.VLogTf(syslog.TraceVerbosity, tag, "RouteTable:Adding route %+v with metric:%d, trackIf=%v, dynamic=%v, enabled=%v", route, metric, tracksInterface, dynamic, enabled)
+	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Adding route %s with metric:%d, trackIf=%t, dynamic=%t, enabled=%t", RouteStringer(&route), metric, tracksInterface, dynamic, enabled)
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -175,7 +194,7 @@ func (rt *RouteTable) AddRoute(route tcpip.Route, metric Metric, tracksInterface
 
 // DelRoute removes the given route from the route table.
 func (rt *RouteTable) DelRoute(route tcpip.Route) error {
-	syslog.VLogTf(syslog.TraceVerbosity, tag, "RouteTable:Deleting route %+v", route)
+	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Deleting route %s", RouteStringer(&route))
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -206,7 +225,7 @@ func (rt *RouteTable) DelRoute(route tcpip.Route) error {
 }
 
 // GetExtendedRouteTable returns a copy of the current extended route table.
-func (rt *RouteTable) GetExtendedRouteTable() []ExtendedRoute {
+func (rt *RouteTable) GetExtendedRouteTable() ExtendedRouteTable {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 
@@ -229,7 +248,7 @@ func (rt *RouteTable) GetNetstackTable() []tcpip.Route {
 		}
 	}
 
-	syslog.VLogTf(syslog.TraceVerbosity, tag, "RouteTable:Netstack route table: %+v", t)
+	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Netstack route table: %+v", t)
 
 	return t
 }
@@ -237,7 +256,7 @@ func (rt *RouteTable) GetNetstackTable() []tcpip.Route {
 // UpdateMetricByInterface changes the metric for all routes that track a
 // given interface.
 func (rt *RouteTable) UpdateMetricByInterface(nicid tcpip.NICID, metric Metric) {
-	syslog.VLogf(syslog.TraceVerbosity, "RouteTable:Update route table on nic-%d metric change to %d", nicid, metric)
+	syslog.VLogf(syslog.DebugVerbosity, "RouteTable:Update route table on nic-%d metric change to %d", nicid, metric)
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -255,7 +274,7 @@ func (rt *RouteTable) UpdateMetricByInterface(nicid tcpip.NICID, metric Metric) 
 
 // UpdateRoutesByInterface applies an action to the routes pointing to an interface.
 func (rt *RouteTable) UpdateRoutesByInterface(nicid tcpip.NICID, action Action) {
-	syslog.VLogTf(syslog.TraceVerbosity, tag, "RouteTable:Update route table for routes to nic-%d with action:%d", nicid, action)
+	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Update route table for routes to nic-%d with action:%d", nicid, action)
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -267,11 +286,14 @@ func (rt *RouteTable) UpdateRoutesByInterface(nicid tcpip.NICID, action Action) 
 			switch action {
 			case ActionDeleteAll:
 				continue // delete
-			case ActionDeleteDynamicDisableStatic:
+			case ActionDeleteDynamic:
 				if er.Dynamic {
 					continue // delete
 				}
-				er.Enabled = false
+			case ActionDisableStatic:
+				if !er.Dynamic {
+					er.Enabled = false
+				}
 			case ActionEnableStatic:
 				if !er.Dynamic {
 					er.Enabled = true
@@ -302,7 +324,7 @@ func (rt *RouteTable) FindNIC(addr tcpip.Address) (tcpip.NICID, error) {
 			return er.Route.NIC, nil
 		}
 	}
-	return 0, fmt.Errorf("cannot find NIC with valid destination route to %v", addr)
+	return 0, fmt.Errorf("cannot find NIC with valid destination route to %s", addr)
 }
 
 func (rt *RouteTable) sortRouteTableLocked() {

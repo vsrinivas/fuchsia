@@ -30,15 +30,20 @@ type AcquiredFunc func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config)
 
 // Client is a DHCP client.
 type Client struct {
-	stack        *stack.Stack
-	nicid        tcpip.NICID
-	linkAddr     tcpip.LinkAddress
-	acquiredFunc AcquiredFunc
+	stack          *stack.Stack
+	nicid          tcpip.NICID
+	linkAddr       tcpip.LinkAddress
+	acquireTimeout time.Duration
+	retryTime      time.Duration
+	acquiredFunc   AcquiredFunc
 
 	wq waiter.Queue
 
 	addr   tcpip.AddressWithPrefix
 	server tcpip.Address
+
+	// The address reported in the last call to acquiredFunc.
+	oldAddr tcpip.AddressWithPrefix
 
 	// Used to ensure that only one Run goroutine per interface may be
 	// permitted to run at a time. In certain cases, rapidly flapping the
@@ -64,13 +69,15 @@ const (
 //
 // TODO: use (*stack.Stack).NICInfo()[nicid].LinkAddress instead of passing
 // linkAddr when broadcasting on multiple interfaces works.
-func NewClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkAddress, acquiredFunc AcquiredFunc) *Client {
+func NewClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkAddress, acquireTimeout, retryTime time.Duration, acquiredFunc AcquiredFunc) *Client {
 	return &Client{
-		stack:        s,
-		nicid:        nicid,
-		linkAddr:     linkAddr,
-		acquiredFunc: acquiredFunc,
-		sem:          make(chan struct{}, 1),
+		stack:          s,
+		nicid:          nicid,
+		linkAddr:       linkAddr,
+		acquireTimeout: acquireTimeout,
+		retryTime:      retryTime,
+		acquiredFunc:   acquiredFunc,
+		sem:            make(chan struct{}, 1),
 	}
 }
 
@@ -91,12 +98,14 @@ func (c *Client) Run(ctx context.Context) {
 	go func() {
 		c.sem <- struct{}{}
 		defer func() { <-c.sem }()
-
-		var oldAddr tcpip.AddressWithPrefix
+		defer func() {
+			syslog.WarnTf(tag, "client is stopping, cleaning up")
+			c.cleanup()
+		}()
 
 		for {
 			if err := func() error {
-				ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+				ctx, cancel := context.WithTimeout(ctx, c.acquireTimeout)
 				defer cancel()
 
 				cfg, err := c.acquire(ctx, clientState)
@@ -146,12 +155,15 @@ func (c *Client) Run(ctx context.Context) {
 				rebindTimer.Reset(cfg.RebindingTime)
 
 				if fn := c.acquiredFunc; fn != nil {
-					fn(oldAddr, c.addr, cfg)
+					fn(c.oldAddr, c.addr, cfg)
 				}
-				oldAddr = c.addr
+				c.oldAddr = c.addr
 
 				return nil
 			}(); err != nil {
+				if ctx.Err() != nil {
+					return
+				}
 				var timer *time.Timer
 				switch clientState {
 				case initSelecting:
@@ -163,21 +175,20 @@ func (c *Client) Run(ctx context.Context) {
 				default:
 					panic(fmt.Sprintf("unknown client state: clientState=%s", clientState))
 				}
-				timer.Reset(time.Second)
+				timer.Reset(c.retryTime)
 				syslog.WarnTf(tag, "%s; retrying", err)
 			}
 
 			// Attempt complete. Wait for the next event.
 
-			// In the error case, a one second retry timer will have been set. If a state
-			// transition timer fires at the same time as the retry timer, then the non-determinism
-			// of the selection between the two timers could lead to the client incorrectly bouncing back
-			// and forth between two states, e.g. RENEW->REBIND->RENEW. Accordingly, we must check for
-			// validity before allowing a state transition to occur.
+			// In the error case, a retry timer will have been set. If a state transition timer fires at the
+			// same time as the retry timer, then the non-determinism of the selection between the two timers
+			// could lead to the client incorrectly bouncing back and forth between two states, e.g.
+			// RENEW->REBIND->RENEW. Accordingly, we must check for validity before allowing a state
+			// transition to occur.
 			var next dhcpClientState
 			select {
 			case <-ctx.Done():
-				// Client was stopped.
 				return
 			case <-initSelectingTimer.C:
 				next = initSelecting
@@ -186,11 +197,29 @@ func (c *Client) Run(ctx context.Context) {
 			case <-rebindTimer.C:
 				next = rebinding
 			}
+
+			if clientState != initSelecting && next == initSelecting {
+				syslog.WarnTf(tag, "lease time expired, cleaning up")
+				c.cleanup()
+			}
+
 			if clientState <= next || next == initSelecting {
 				clientState = next
 			}
 		}
 	}()
+}
+
+func (c *Client) cleanup() {
+	if c.oldAddr == (tcpip.AddressWithPrefix{}) {
+		return
+	}
+
+	// Remove the old address and configuration.
+	if fn := c.acquiredFunc; fn != nil {
+		fn(c.oldAddr, tcpip.AddressWithPrefix{}, Config{})
+	}
+	c.oldAddr = tcpip.AddressWithPrefix{}
 }
 
 func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Config, error) {
