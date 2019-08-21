@@ -753,6 +753,11 @@
             "package_name": "timebomb"
         },
         {
+            "crate_name": "tokio",
+            "crate_type": "lib",
+            "package_name": "tokio"
+        },
+        {
             "crate_name": "unic_char_range",
             "crate_type": "lib",
             "package_name": "unic-char-range"

@@ -138,6 +138,7 @@ quote = "0.6.10"
 syn = { version = "0.15.25", features = ["full", "visit-mut"] }
 synstructure = "0.10.1"
 tar = "0.4.25"
+tokio = "0.1.22"
 
 # For crates that we don't want to vendor, create a dummy package in tiny_mirrors/ (see existing
 # examples).
