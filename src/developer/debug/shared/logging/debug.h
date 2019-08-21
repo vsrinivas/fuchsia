@@ -13,6 +13,8 @@
 
 namespace debug_ipc {
 
+class LogStatement;
+
 // This API controls and queries the debug functionality of the debug tools within the debug ipc.
 
 // Activate this flag to activate debug output.
@@ -82,8 +84,30 @@ void SetLogCategories(std::initializer_list<LogCategory>);
 
 bool IsLogCategoryActive(LogCategory);
 
+// Log Tree ----------------------------------------------------------------------------------------
+//
+// To facilitate logging, messages are appended to a tree and actually filled on the logging
+// instance destructor. This permits to correctly track under which block each message was logged
+// and give better context on output.
+//
+// The pop gets the message information because the logging logic using ostreams. This means that
+// the actual message is constructored *after* the loggging object has been constructed, which is
+// the obvious message to push an entry. Plus, this logic permits to do messages that have
+// information that it's only present after the block is done (like timing information).
+//
+// IMPORTANT: Because this delays when the log output, any abnormal termination (eg. crash) might
+//            eat the latest batch of logs that is currently on the stack. Possible workaround is
+//            having an exception handler in fuchsia and/or a signal handler in linux to flush the
+//            rest of the output in the case of a crash.
+void PushLogEntry(LogStatement* statement);
+void PopLogEntry(LogCategory, const FileLineFunction& origin, const std::string& msg, double time);
+
+// Force the printing of the current entries.
+void FlushLogEntries();
+
 // Creates a preamble with padding that all logging statements should use:
-std::string LogPreamble(LogCategory, const FileLineFunction& origin);
+std::string LogWithPreamble(LogCategory, const FileLineFunction& origin, const std::string& msg,
+                            double time, int indent = 0);
 
 // Timing ------------------------------------------------------------------------------------------
 

@@ -13,6 +13,10 @@
 
 namespace debug_agent {
 
+#define PRINT_FLUSH(...) \
+  printf(__VA_ARGS__);   \
+  fflush(stdout);
+
 // Socket Server -----------------------------------------------------------------------------------
 
 bool SocketServer::Init(uint16_t port) {
@@ -41,13 +45,12 @@ bool SocketServer::Init(uint16_t port) {
 
 void SocketServer::Run(ConnectionConfig config) {
   // Wait for one connection.
-  printf("Waiting on port %d for zxdb connection...\n", config.port);
-  fflush(stdout);
+  PRINT_FLUSH("Waiting on port %d for zxdb connection...\n", config.port);
   connection_ = std::make_unique<SocketConnection>(config.debug_agent);
   if (!connection_->Accept(config.message_loop, server_socket_.get()))
     return;
 
-  printf("Connection established.\n");
+  PRINT_FLUSH("Connection established.\n");
 }
 
 void SocketServer::Reset() { connection_.reset(); }
@@ -104,7 +107,7 @@ bool SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serv
         debug_agent->Connect(&buffer_.stream());
       });
 
-  printf("Accepted connection.\n");
+  PRINT_FLUSH("Accepted connection.\n");
   connected_ = true;
   return true;
 }

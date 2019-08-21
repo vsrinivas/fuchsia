@@ -9,6 +9,7 @@ source_set("logging") {
     "debug.h",
     "file_line_function.h",
     "logging.h",
+    "macros.h",
   ]
 
   sources = [

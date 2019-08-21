@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cmdline/args_parser.h>
+#include <lib/zx/thread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include <memory>
 #include <thread>
+
+#include <cmdline/args_parser.h>
 
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/socket_connection.h"
@@ -81,6 +85,48 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   return cmdline::Status::Ok();
 }
 
+void ExceptionWatcherFunction(zx::channel* exception_channel) {
+  // Watch the exception channel.
+  zx_status_t status = exception_channel->wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), 0);
+  if (status != ZX_OK && status != ZX_ERR_CANCELED) {
+    printf("Stopped listening on main thread's exception channel: %s\n",
+           zx_status_get_string(status));
+    return;
+  }
+
+  // If the channel was canceled, it means the main loop exited.
+  if (status == ZX_ERR_CANCELED)
+    return;
+
+  zx::exception exception;
+  zx_exception_info_t info;
+  status = exception_channel->read(0, &info, exception.reset_and_get_address(), sizeof(info), 1,
+                                   nullptr, nullptr);
+  if (status != ZX_OK) {
+    printf("Could not read main thread's exception: %s\n", zx_status_get_string(status));
+    return;
+  }
+
+  // Flush the debug log.
+  printf("********** Main thread excepted! Flushing logs... *************\n");
+  fflush(stdout);
+  FlushLogEntries();
+
+  // Resume the exception (will propagate the crash) and terminate the process.
+  exception.reset();
+  zx_process_exit(1);
+}
+
+std::unique_ptr<std::thread> CreateExceptionWatcher(zx::channel* out) {
+  zx_status_t status = zx::thread::self()->create_exception_channel(0, out);
+  if (status != ZX_OK) {
+    printf("Could not bind to main thread's exception channel: %s\n", zx_status_get_string(status));
+    return nullptr;
+  }
+
+  return std::make_unique<std::thread>(ExceptionWatcherFunction, out);
+}
+
 }  // namespace
 }  // namespace debug_agent
 
@@ -113,6 +159,9 @@ int main(int argc, const char* argv[]) {
 
   if (options.port) {
     auto services = sys::ServiceDirectory::CreateFromNamespace();
+
+    zx::channel exception_channel;
+    auto exception_watcher = debug_agent::CreateExceptionWatcher(&exception_channel);
 
     auto message_loop = std::make_unique<MessageLoopTarget>();
     zx_status_t status = message_loop->InitTarget();
@@ -168,6 +217,12 @@ int main(int argc, const char* argv[]) {
       }
     }
     message_loop->Cleanup();
+
+    // Clean up the exception watcher.
+    if (exception_watcher) {
+      exception_channel.reset();  // This will stop the thread from waiting on this channel.
+      exception_watcher->join();
+    }
   } else {
     fprintf(stderr, "ERROR: --port=<port-number> required. See debug_agent --help.\n\n");
     return 1;

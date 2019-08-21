@@ -9,18 +9,28 @@
 namespace debug_ipc {
 
 LogStatement::LogStatement(FileLineFunction origin, LogCategory category)
-    : origin_(std::move(origin)), category_(category) {}
-
-LogStatement::~LogStatement() {
-  // If we're not on debug mode, we don't output anything.
-  if (!IsDebugModeActive())
-    return;
-
+    : origin_(std::move(origin)), category_(category) {
+  should_log_ = false;
   if (!IsLogCategoryActive(category_))
     return;
 
-  auto preamble = LogPreamble(category_, origin_);
-  fprintf(stderr, "\r%s %s\r\n", preamble.c_str(), stream_.str().c_str());
+  time_ = SecondsSinceStart();
+  should_log_ = true;
+  PushLogEntry(this);
+}
+
+std::string LogStatement::GetMsg() {
+  return stream_.str();
+}
+
+LogStatement::~LogStatement() {
+  if (!IsLogCategoryActive(category_))
+    return;
+
+  if (!should_log_)
+    return;
+
+  PopLogEntry(category_, origin_, stream_.str(), time_);
 }
 
 }  // namespace debug_ipc

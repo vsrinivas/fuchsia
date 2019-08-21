@@ -10,25 +10,27 @@
 
 namespace debug_ipc {
 
-BlockTimer::BlockTimer(FileLineFunction origin)
-    : origin_(origin), should_log_(IsDebugModeActive()) {
+BlockTimer::BlockTimer(FileLineFunction origin) : origin_(origin) {
+  should_log_ = false;
+  if (!IsLogCategoryActive(LogCategory::kTiming))
+    return;
+
   timer_.Start();
+  should_log_ = true;
+  time_ = SecondsSinceStart();
+  PushLogEntry(nullptr);
 }
 
-BlockTimer::~BlockTimer() { EndTimer(); }
-
-double BlockTimer::EndTimer() {
-  if (!should_log_)
-    return 0;
-
-  // The timer won't trigger again.
-  should_log_ = false;
-
+BlockTimer::~BlockTimer() {
   if (!IsLogCategoryActive(LogCategory::kTiming))
-    return 0;
+    return;
+
+  if (!should_log_)
+    return;
+
+  double time = EndTimer();
 
   const char* unit = "ms";
-  double time = timer_.Elapsed().ToMillisecondsF();
   // We see if seconds makes more sense.
   if (time > 1000) {
     time /= 1000;
@@ -37,18 +39,15 @@ double BlockTimer::EndTimer() {
     unit = "seconds";
   }
 
-  auto preamble = LogPreamble(LogCategory::kTiming, origin_);
   auto context = stream_.str();
-
   std::stringstream ss;
-  ss << "\r" << preamble;
   if (!context.empty())
     ss << "[" << context << "] ";
-  ss << fxl::StringPrintf("Took %.3f %s.\r\n", time, unit);
-  printf("%s", ss.str().c_str());
-  fflush(stdout);
+  ss << fxl::StringPrintf("Took %.3f %s.", time, unit);
 
-  return time;
+  PopLogEntry(LogCategory::kTiming, origin_, ss.str(), time_);
 }
+
+double BlockTimer::EndTimer() { return timer_.Elapsed().ToMillisecondsF(); }
 
 }  // namespace debug_ipc

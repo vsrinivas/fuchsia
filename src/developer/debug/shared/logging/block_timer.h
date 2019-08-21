@@ -8,6 +8,7 @@
 #include <sstream>
 
 #include "src/developer/debug/shared/logging/file_line_function.h"
+#include "src/developer/debug/shared/logging/macros.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/time/stopwatch.h"
 
@@ -36,16 +37,15 @@ class BlockTimer {
   std::ostream& stream() { return stream_; }
 
  private:
-  FileLineFunction origin_;  // Where this timer was called from.
+  FileLineFunction origin_;   // Where this timer was called from.
   fxl::Stopwatch timer_;
   bool should_log_;
+  double time_;               // When the even occurred.
 
   std::ostringstream stream_;
 };
 
 // We use this macro to ensure the concatenation of the values. Oh macros :)
-#define TIME_BLOCK_TOKEN(x, y) x##y
-#define TIME_BLOCK_TOKEN2(x, y) TIME_BLOCK_TOKEN(x, y)
 
 // Meant to be used at a scope.
 // Foo() {
@@ -54,7 +54,7 @@ class BlockTimer {
 //  <REST OF FUNCTION>
 //  ...
 // }  <-- Logs the timing on the destructor.
-#define TIME_BLOCK() TIME_BLOCK_WITH_NAME(TIME_BLOCK_TOKEN2(__timer__, __LINE__))
+#define TIME_BLOCK() TIME_BLOCK_WITH_NAME(STRINGIFY(__timer__, __LINE__))
 
 // Useful for calling timing on code that is not easily "scopable":
 //
