@@ -133,7 +133,7 @@ TEST_F(MinidumpTest, Load) {
 TEST_F(MinidumpTest, ProcessTreeRecord) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
-  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kUndefinedInstruction, last_hit());
 
   Err err;
   debug_ipc::ProcessTreeReply reply;
@@ -150,7 +150,7 @@ TEST_F(MinidumpTest, ProcessTreeRecord) {
 TEST_F(MinidumpTest, AttachDetach) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
-  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kUndefinedInstruction, last_hit());
 
   Err err;
   debug_ipc::AttachRequest request;
@@ -182,7 +182,7 @@ TEST_F(MinidumpTest, AttachDetach) {
 TEST_F(MinidumpTest, AttachFail) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
-  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kUndefinedInstruction, last_hit());
 
   Err err;
   debug_ipc::AttachRequest request;
@@ -198,7 +198,7 @@ TEST_F(MinidumpTest, AttachFail) {
 TEST_F(MinidumpTest, Threads) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
-  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kUndefinedInstruction, last_hit());
 
   Err err;
   debug_ipc::ThreadsRequest request;
@@ -221,7 +221,7 @@ TEST_F(MinidumpTest, Threads) {
 TEST_F(MinidumpTest, Registers) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
-  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kUndefinedInstruction, last_hit());
 
   Err err;
   debug_ipc::ReadRegistersRequest request;
@@ -382,7 +382,7 @@ TEST_F(MinidumpTest, Modules) {
 TEST_F(MinidumpTest, AddressSpace) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump_with_aspace.dmp"));
 
-  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kPageFault, last_hit());
 
   Err err;
   debug_ipc::AddressSpaceRequest request;
@@ -489,7 +489,7 @@ TEST_F(MinidumpTest, AddressSpace) {
 TEST_F(MinidumpTest, ReadMemory) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
-  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kUndefinedInstruction, last_hit());
 
   Err err;
   debug_ipc::ReadMemoryRequest request;
@@ -531,7 +531,7 @@ TEST_F(MinidumpTest, ReadMemory) {
 TEST_F(MinidumpTest, ReadMemory_Short) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
-  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kUndefinedInstruction, last_hit());
 
   const uint32_t kOverReadSize = kTestExampleMinidumpStackSize + 36;
 
@@ -565,7 +565,7 @@ TEST_F(MinidumpTest, ReadMemory_Short) {
 TEST_F(MinidumpTest, SysInfo) {
   ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
-  EXPECT_EQ(debug_ipc::NotifyException::Type::kGeneral, last_hit());
+  EXPECT_EQ(debug_ipc::NotifyException::Type::kUndefinedInstruction, last_hit());
 
   Err err;
   debug_ipc::SysInfoRequest request;

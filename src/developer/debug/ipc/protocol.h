@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 11;
+constexpr uint32_t kProtocolVersion = 12;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -374,7 +374,22 @@ struct NotifyException {
     // No current exception, used as placeholder or to indicate not set.
     kNone = 0,
 
+    // Zircon defines this as a sort of catch-all exception.
     kGeneral,
+
+    // The usual band of execution traps.
+    kPageFault,
+    kUndefinedInstruction,
+    kUnalignedAccess,
+
+    // Indicates the process was killed due to misusing a syscall, e.g. passing a bad handle.
+    kPolicyError,
+
+    // Synthetic exeptions used by zircon to communicated with the debugger. The debug agent
+    // generally shouldn't pass these on, but we should recognize them at least.
+    kThreadStarting,
+    kThreadExiting,
+    kProcessStarting,
 
     // Hardware breakpoints are issues by the CPU via debug registers.
     kHardware,
@@ -395,9 +410,13 @@ struct NotifyException {
     // should be updated as if it hit an exception.
     kSynthetic,
 
+    // For exception codes the debugger doesn't recognize.
+    kUnknown,
+
     kLast  // Not an actual exception type, for range checking.
   };
   static const char* TypeToString(Type);
+  static bool IsDebug(Type);
 
   // Holds the state and a minimal stack (up to 2 frames) of the thread at the
   // moment of notification.

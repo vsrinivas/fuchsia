@@ -93,12 +93,44 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
   return nullptr;
 }
 
+bool NotifyException::IsDebug(NotifyException::Type type) {
+  switch (type) {
+    // There's an argument to be had about whether these belong here.
+    case NotifyException::Type::kThreadStarting:
+    case NotifyException::Type::kThreadExiting:
+    case NotifyException::Type::kProcessStarting:
+
+    case NotifyException::Type::kHardware:
+    case NotifyException::Type::kWatchpoint:
+    case NotifyException::Type::kSingleStep:
+    case NotifyException::Type::kSoftware:
+    case NotifyException::Type::kSynthetic:
+      return true;
+    default:
+      return false;
+  }
+}
+
 const char* NotifyException::TypeToString(NotifyException::Type type) {
   switch (type) {
     case NotifyException::Type::kNone:
       return "None";
     case NotifyException::Type::kGeneral:
       return "General";
+    case NotifyException::Type::kPageFault:
+      return "Fatal Page Fault";
+    case NotifyException::Type::kUndefinedInstruction:
+      return "Undefined Instruction";
+    case NotifyException::Type::kUnalignedAccess:
+      return "Unaligned Access";
+    case NotifyException::Type::kPolicyError:
+      return "Policy Error";
+    case NotifyException::Type::kThreadStarting:
+      return "Thread Starting";
+    case NotifyException::Type::kThreadExiting:
+      return "Thread Exiting";
+    case NotifyException::Type::kProcessStarting:
+      return "Process Starting";
     case NotifyException::Type::kHardware:
       return "Hardware";
     case NotifyException::Type::kWatchpoint:
@@ -109,6 +141,8 @@ const char* NotifyException::TypeToString(NotifyException::Type type) {
       return "Software";
     case NotifyException::Type::kSynthetic:
       return "Synthetic";
+    case NotifyException::Type::kUnknown:
+      return "Unknown";
     case NotifyException::Type::kLast:
       return "kLast";
   }

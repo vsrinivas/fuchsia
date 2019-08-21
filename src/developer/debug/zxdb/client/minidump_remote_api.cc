@@ -732,7 +732,7 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
         break;
       }
       default:
-        exception_notification.type = debug_ipc::NotifyException::Type::kGeneral;
+        exception_notification.type = debug_ipc::NotifyException::Type::kUnknown;
         break;
     }
 

@@ -18,8 +18,24 @@ NotifyException::Type DecodeZircon(uint32_t code) {
     return NotifyException::Type::kSoftware;
   } else if (code == ZX_EXCP_HW_BREAKPOINT) {
     return NotifyException::Type::kLast;
-  } else {
+  } else if (code == ZX_EXCP_GENERAL) {
     return NotifyException::Type::kGeneral;
+  } else if (code == ZX_EXCP_FATAL_PAGE_FAULT) {
+    return NotifyException::Type::kPageFault;
+  } else if (code == ZX_EXCP_UNDEFINED_INSTRUCTION) {
+    return NotifyException::Type::kUndefinedInstruction;
+  } else if (code == ZX_EXCP_UNALIGNED_ACCESS) {
+    return NotifyException::Type::kUnalignedAccess;
+  } else if (code == ZX_EXCP_THREAD_STARTING) {
+    return NotifyException::Type::kThreadStarting;
+  } else if (code == ZX_EXCP_PROCESS_STARTING) {
+    return NotifyException::Type::kProcessStarting;
+  } else if (code == ZX_EXCP_THREAD_EXITING) {
+    return NotifyException::Type::kThreadExiting;
+  } else if (code == ZX_EXCP_POLICY_ERROR) {
+    return NotifyException::Type::kPolicyError;
+  } else {
+    return NotifyException::Type::kUnknown;
   }
 }
 
@@ -48,7 +64,7 @@ NotifyException::Type DecodeESR(uint32_t esr) {
       break;
   }
 
-  return NotifyException::Type::kGeneral;
+  return NotifyException::Type::kUnknown;
 }
 
 }  // namespace
@@ -105,7 +121,7 @@ NotifyException::Type DecodeException(uint32_t code, Arm64ExceptionInfo* info) {
   if (auto got = info->FetchESR()) {
     esr = *got;
   } else {
-    return NotifyException::Type::kGeneral;
+    return NotifyException::Type::kUnknown;
   }
 
   auto decoded_type = DecodeESR(esr);
@@ -116,7 +132,7 @@ NotifyException::Type DecodeException(uint32_t code, Arm64ExceptionInfo* info) {
   }
 
   FXL_NOTREACHED() << "Received invalid ESR value: 0x" << std::hex << esr;
-  return debug_ipc::NotifyException::Type::kGeneral;
+  return debug_ipc::NotifyException::Type::kUnknown;
 }
 
 }  // namespace debug_ipc

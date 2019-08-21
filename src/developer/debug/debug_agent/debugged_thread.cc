@@ -124,15 +124,15 @@ void DebuggedThread::OnException(zx::exception exception_token,
       return HandleSoftwareBreakpoint(&exception, &regs);
     case debug_ipc::NotifyException::Type::kHardware:
       return HandleHardwareBreakpoint(&exception, &regs);
-    case debug_ipc::NotifyException::Type::kGeneral:
-    // TODO(donosoc): Should synthetic be general or invalid?
-    case debug_ipc::NotifyException::Type::kSynthetic:
-      return HandleGeneralException(&exception, &regs);
     case debug_ipc::NotifyException::Type::kWatchpoint:
       return HandleWatchpoint(&exception, &regs);
     case debug_ipc::NotifyException::Type::kNone:
     case debug_ipc::NotifyException::Type::kLast:
       break;
+    // TODO(donosoc): Should synthetic be general or invalid?
+    case debug_ipc::NotifyException::Type::kSynthetic:
+    default:
+      return HandleGeneralException(&exception, &regs);
   }
 
   FXL_NOTREACHED() << "Invalid exception notification type: "

@@ -324,7 +324,7 @@ void ThreadImpl::OnException(debug_ipc::NotifyException::Type type,
   // Non-debug exceptions also mean the thread should always stop (check this
   // after running the controllers for the same reason as the breakpoint check
   // above).
-  if (type == debug_ipc::NotifyException::Type::kGeneral)
+  if (!debug_ipc::NotifyException::IsDebug(type))
     should_stop = true;
 
   if (should_stop) {

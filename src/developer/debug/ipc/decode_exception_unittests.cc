@@ -36,13 +36,17 @@ TEST(DecodeException, Arm64) {
   // Exceptions that require no decoding.
   EXPECT_EQ(NotifyException::Type::kSoftware, DecodeException(ZX_EXCP_SW_BREAKPOINT, &info));
   EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_GENERAL, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_FATAL_PAGE_FAULT, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_UNDEFINED_INSTRUCTION, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_UNALIGNED_ACCESS, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_THREAD_STARTING, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_THREAD_EXITING, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_POLICY_ERROR, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_PROCESS_STARTING, &info));
+  EXPECT_EQ(NotifyException::Type::kPageFault, DecodeException(ZX_EXCP_FATAL_PAGE_FAULT, &info));
+  EXPECT_EQ(NotifyException::Type::kUndefinedInstruction,
+            DecodeException(ZX_EXCP_UNDEFINED_INSTRUCTION, &info));
+  EXPECT_EQ(NotifyException::Type::kUnalignedAccess,
+            DecodeException(ZX_EXCP_UNALIGNED_ACCESS, &info));
+  EXPECT_EQ(NotifyException::Type::kThreadStarting,
+            DecodeException(ZX_EXCP_THREAD_STARTING, &info));
+  EXPECT_EQ(NotifyException::Type::kThreadExiting, DecodeException(ZX_EXCP_THREAD_EXITING, &info));
+  EXPECT_EQ(NotifyException::Type::kPolicyError, DecodeException(ZX_EXCP_POLICY_ERROR, &info));
+  EXPECT_EQ(NotifyException::Type::kProcessStarting,
+            DecodeException(ZX_EXCP_PROCESS_STARTING, &info));
 
   // Hardware breakpoints. The meaty stuff.
   info.esr = 0b110000 << 26;
@@ -62,13 +66,17 @@ TEST(DecodeException, X64) {
   // Exceptions that require no decoding.
   EXPECT_EQ(NotifyException::Type::kSoftware, DecodeException(ZX_EXCP_SW_BREAKPOINT, &info));
   EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_GENERAL, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_FATAL_PAGE_FAULT, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_UNDEFINED_INSTRUCTION, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_UNALIGNED_ACCESS, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_THREAD_STARTING, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_THREAD_EXITING, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_POLICY_ERROR, &info));
-  EXPECT_EQ(NotifyException::Type::kGeneral, DecodeException(ZX_EXCP_PROCESS_STARTING, &info));
+  EXPECT_EQ(NotifyException::Type::kPageFault, DecodeException(ZX_EXCP_FATAL_PAGE_FAULT, &info));
+  EXPECT_EQ(NotifyException::Type::kUndefinedInstruction,
+            DecodeException(ZX_EXCP_UNDEFINED_INSTRUCTION, &info));
+  EXPECT_EQ(NotifyException::Type::kUnalignedAccess,
+            DecodeException(ZX_EXCP_UNALIGNED_ACCESS, &info));
+  EXPECT_EQ(NotifyException::Type::kThreadStarting,
+            DecodeException(ZX_EXCP_THREAD_STARTING, &info));
+  EXPECT_EQ(NotifyException::Type::kThreadExiting, DecodeException(ZX_EXCP_THREAD_EXITING, &info));
+  EXPECT_EQ(NotifyException::Type::kPolicyError, DecodeException(ZX_EXCP_POLICY_ERROR, &info));
+  EXPECT_EQ(NotifyException::Type::kProcessStarting,
+            DecodeException(ZX_EXCP_PROCESS_STARTING, &info));
 
   // Hardware breakpoints. The meaty stuff.
   info.regs.dr0 = 0x1111111111111111;
