@@ -170,6 +170,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/zx/test",
       "$zx/system/ulib/zxio/test",
       "$zx/system/ulib/zxtest/test",
+      "$zx/third_party/ulib/lz4:test",
       "abigen",
       "backtrace-request:backtrace-request-integration",
       "biotime",

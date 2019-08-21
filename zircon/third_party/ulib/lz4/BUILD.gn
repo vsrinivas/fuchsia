@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
+
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
 lz4_lib = "$zx/../third_party/lz4/lib"
 
@@ -29,4 +31,30 @@ library("lz4") {
 
   # This code doesn't use the annotation attribute.
   configs -= [ "$zx/public/gn/config:warn-implicit-fallthrough" ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":lz4-decompress-fuzzer",
+    ":lz4-fuzzer",
+  ]
+}
+
+fuzzer("lz4-decompress-fuzzer") {
+  sources = [
+    "lz4-decompress-fuzzer.cc",
+  ]
+  deps = [
+    ":lz4",
+  ]
+}
+
+fuzzer("lz4-fuzzer") {
+  sources = [
+    "lz4-fuzzer.cc",
+  ]
+  deps = [
+    ":lz4",
+  ]
 }
