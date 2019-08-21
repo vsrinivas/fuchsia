@@ -28,8 +28,6 @@ enum Status {
 
 struct DvfsOpp {
     uint32 freq_hz;
-    // TODO(bradenkell): Remove this after soft transition.
-    uint32 volt_mv;
     uint32 volt_uv;
 };
 
