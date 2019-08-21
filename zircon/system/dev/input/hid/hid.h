@@ -40,7 +40,7 @@ struct HidInstance : public fbl::DoublyLinkedListable<HidInstance*> {
 
 using DeviceType = ddk::Device<HidDevice, ddk::Unbindable, ddk::Openable>;
 
-class HidDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_INPUT> {
+class HidDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_HID_DEVICE> {
  public:
   explicit HidDevice(zx_device_t* parent) : DeviceType(parent) {}
   ~HidDevice() = default;

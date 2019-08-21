@@ -351,7 +351,7 @@ zx_status_t HidDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   args.name = "hid";
   args.ctx = inst;
   args.ops = &hid_instance_proto;
-  args.proto_id = ZX_PROTOCOL_INPUT;
+  args.proto_id = ZX_PROTOCOL_HID_DEVICE;
   args.flags = DEVICE_ADD_INSTANCE;
 
   zx_status_t status = device_add(zxdev_, &args, &inst->zxdev);
