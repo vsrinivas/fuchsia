@@ -24,30 +24,33 @@ class StatusContainer extends StatelessWidget {
         : MediaQuery.of(context).size.height -
             ErmineStyle.kTopBarHeight -
             ErmineStyle.kStoryTitleHeight;
-    return Stack(
-      children: <Widget>[
-        AnimatedBuilder(
-          animation: model.statusVisibility,
-          builder: (context, child) => model.statusVisibility.value
-              ? Positioned(
-                  bottom: bottom(),
-                  right: model.topbarModel.statusButtonRect.right,
-                  child: AnimationDriver(
-                    tween:
-                        Tween<Offset>(begin: Offset(0, 0), end: Offset(0, 1)),
-                    builder: (context, animation) => FractionalTranslation(
-                      translation: animation.value,
-                      child: Container(
-                        width: 377,
-                        height: 432,
-                        child: Status(model: model.status),
+    final status = Container(
+      width: 377,
+      height: 432,
+      child: Status(model: model.status),
+    );
+    return RepaintBoundary(
+      child: Stack(
+        children: <Widget>[
+          AnimatedBuilder(
+            animation: model.statusVisibility,
+            builder: (context, child) => model.statusVisibility.value
+                ? Positioned(
+                    bottom: bottom(),
+                    right: model.topbarModel.statusButtonRect.right,
+                    child: AnimationDriver(
+                      tween:
+                          Tween<Offset>(begin: Offset(0, 0), end: Offset(0, 1)),
+                      builder: (context, animation) => FractionalTranslation(
+                        translation: animation.value,
+                        child: status,
                       ),
                     ),
-                  ),
-                )
-              : Offstage(),
-        ),
-      ],
+                  )
+                : Offstage(),
+          ),
+        ],
+      ),
     );
   }
 }
