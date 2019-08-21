@@ -733,6 +733,12 @@ void PaperRenderer::GraphDebugData() {
 void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
   TRACE_DURATION("gfx", "PaperRenderer::GenerateDebugCommands");
 
+  // Exit early if there is no debug rendering to be done.
+  if (frame_data_->texts.size() == 0 && frame_data_->lines.size() == 0 &&
+      debug_times_.size() == 0) {
+    return;
+  }
+
   const FramePtr& frame = frame_data_->frame;
   frame->AddTimestamp("started debug render pass");
 
