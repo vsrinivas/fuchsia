@@ -55,11 +55,11 @@ constexpr fuchsia_hardware_thermal_ThermalDeviceInfo thermal_dev_info =
                      {// See section 3.6 (MTCMOS Domains) of the functional specification document.
                       .opp =
                           {
-                              [0] = {.freq_hz = 598000000, .volt_mv = 1150000},
-                              [1] = {.freq_hz = 747500000, .volt_mv = 1150000},
-                              [2] = {.freq_hz = 1040000000, .volt_mv = 1200000},
-                              [3] = {.freq_hz = 1196000000, .volt_mv = 1250000},
-                              [4] = {.freq_hz = 1300000000, .volt_mv = 1300000},
+                              [0] = {.freq_hz = 598000000, .volt_uv = 1150000},
+                              [1] = {.freq_hz = 747500000, .volt_uv = 1150000},
+                              [2] = {.freq_hz = 1040000000, .volt_uv = 1200000},
+                              [3] = {.freq_hz = 1196000000, .volt_uv = 1250000},
+                              [4] = {.freq_hz = 1300000000, .volt_uv = 1300000},
                           },
                       .latency = 0,
                       .count = 5},

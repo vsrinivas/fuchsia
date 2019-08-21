@@ -60,11 +60,11 @@ class ThermalCliTest : public zxtest::Test {
 
     fuchsia_hardware_thermal_OperatingPointEntry entry0{
         .freq_hz = 100,
-        .volt_mv = 42,
+        .volt_uv = 42,
     };
     fuchsia_hardware_thermal_OperatingPointEntry entry1{
         .freq_hz = 200,
-        .volt_mv = 42,
+        .volt_uv = 42,
     };
     fuchsia_hardware_thermal_OperatingPoint op_info{
         .opp = {entry0, entry1},

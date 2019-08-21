@@ -377,7 +377,7 @@ zx_status_t MtkThermal::SetDvfsOpp(uint16_t op_idx) {
   }
 
   uint32_t new_freq = opps.opp[op_idx].freq_hz;
-  uint32_t new_volt = opps.opp[op_idx].volt_mv;
+  uint32_t new_volt = opps.opp[op_idx].volt_uv;
 
   if (new_volt > VprocCon10::kMaxVoltageUv || new_volt < VprocCon10::kMinVoltageUv) {
     return ZX_ERR_OUT_OF_RANGE;

@@ -28,7 +28,7 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
   uint32_t old_frequency = cpufreq_scaling_->GetFrequency();
 
   // Get new settings.
-  uint32_t new_voltage = opp_info_.opps[opp_idx].volt_mv;
+  uint32_t new_voltage = opp_info_.opps[opp_idx].volt_uv;
   uint32_t new_frequency = opp_info_.opps[opp_idx].freq_hz;
 
   zxlogf(INFO, "Scaling from %d MHz, %u mV, --> %d MHz, %u mV\n", old_frequency / 1000000,

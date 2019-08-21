@@ -125,57 +125,57 @@ static aml_opp_info_t aml_opp_info = {
             {
                 // 0
                 .freq_hz = 100000000,
-                .volt_mv = 731000,
+                .volt_uv = 731000,
             },
             {
                 // 1
                 .freq_hz = 250000000,
-                .volt_mv = 731000,
+                .volt_uv = 731000,
             },
             {
                 // 2
                 .freq_hz = 500000000,
-                .volt_mv = 731000,
+                .volt_uv = 731000,
             },
             {
                 // 3
                 .freq_hz = 667000000,
-                .volt_mv = 731000,
+                .volt_uv = 731000,
             },
             {
                 // 4
                 .freq_hz = 1000000000,
-                .volt_mv = 731000,
+                .volt_uv = 731000,
             },
             {
                 // 5
                 .freq_hz = 1200000000,
-                .volt_mv = 731000,
+                .volt_uv = 731000,
             },
             {
                 // 6
                 .freq_hz = 1398000000,
-                .volt_mv = 761000,
+                .volt_uv = 761000,
             },
             {
                 // 7
                 .freq_hz = 1512000000,
-                .volt_mv = 791000,
+                .volt_uv = 791000,
             },
             {
                 // 8
                 .freq_hz = 1608000000,
-                .volt_mv = 831000,
+                .volt_uv = 831000,
             },
             {
                 // 9
                 .freq_hz = 1704000000,
-                .volt_mv = 861000,
+                .volt_uv = 861000,
             },
             {
                 // 10
                 .freq_hz = 1896000000,
-                .volt_mv = 981000,
+                .volt_uv = 981000,
             },
         },
     .voltage_table =

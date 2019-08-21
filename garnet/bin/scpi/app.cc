@@ -126,7 +126,7 @@ void App::GetDvfsInfo(const uint32_t power_domain, GetDvfsInfoCallback callback)
   for (uint32_t i = 0; i < opps.count; i++) {
     fuchsia::scpi::DvfsOpp opp;
     opp.freq_hz = opps.opp[i].freq_hz;
-    opp.volt_mv = opps.opp[i].volt_mv;
+    opp.volt_uv = opps.opp[i].volt_uv;
     result.push_back(std::move(opp));
   }
   callback(fuchsia::scpi::Status::OK, std::move(result));

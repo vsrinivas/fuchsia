@@ -41,8 +41,8 @@ struct OperatingPoint {
 struct OperatingPointEntry {
     /// The operating point frequency in Hz.
     uint32 freq_hz;
-    /// The operating point voltage in millivolts.
-    uint32 volt_mv;
+    /// The operating point voltage in microvolts.
+    uint32 volt_uv;
 };
 
 /// Temperature units are degrees Celsius.
