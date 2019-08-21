@@ -11,7 +11,7 @@ library zz;
 [Transport="Syscall"]
 protocol Timer {
     /// Create a timer.
-    Create(uint32 options, ClockKind clock_id) -> (status status, handle<timer> out);
+    Create(uint32 options, clock clock_id) -> (status status, handle<timer> out);
 
     /// Start a timer.
     [In0="handle<timer>:rights=WRITE"]

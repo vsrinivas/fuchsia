@@ -16,5 +16,6 @@ bool CategoryOutput(const SyscallLibrary& library, Writer* writer);
 bool KernelBranchesOutput(const SyscallLibrary& library, Writer* writer);
 bool KtraceOutput(const SyscallLibrary& library, Writer* writer);
 bool SyscallNumbersOutput(const SyscallLibrary& library, Writer* writer);
+bool VdsoHeaderOutput(const SyscallLibrary& library, Writer* writer);
 
 #endif  // TOOLS_KAZOO_OUTPUTS_H_

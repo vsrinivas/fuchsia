@@ -19,6 +19,7 @@ struct CommandLineOptions {
   std::optional<std::string> kernel_branches;
   std::optional<std::string> ktrace;
   std::optional<std::string> syscall_numbers;
+  std::optional<std::string> vdso_header;
   std::optional<std::string> x86_asm;
 };
 
@@ -46,6 +47,9 @@ constexpr const char kKtraceHelp[] = R"(  --ktrace=FILENAME
 constexpr const char kSyscallNumbersHelp[] = R"(  --syscall-numbers=FILENAME
     The output name for the .h file used for syscall numbers.)";
 
+constexpr const char kVdsoHeaderHelp[] = R"(  --vdso-header=FILENAME
+    The output name for the .h file used for syscall numbers.)";
+
 constexpr const char kX86AsmHelp[] = R"(  --x86-asm=FILENAME
     The output name for the .S file x86-64 syscalls.)";
 
@@ -61,6 +65,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("kernel-branches", 0, kKernelBranchesHelp, &CommandLineOptions::kernel_branches);
   parser.AddSwitch("ktrace", 0, kKtraceHelp, &CommandLineOptions::ktrace);
   parser.AddSwitch("syscall-numbers", 0, kSyscallNumbersHelp, &CommandLineOptions::syscall_numbers);
+  parser.AddSwitch("vdso-header", 0, kVdsoHeaderHelp, &CommandLineOptions::vdso_header);
   parser.AddSwitch("x86-asm", 0, kX86AsmHelp, &CommandLineOptions::x86_asm);
   bool requested_help = false;
   parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
@@ -110,6 +115,7 @@ int main(int argc, const char* argv[]) {
       {&options.kernel_branches, KernelBranchesOutput},
       {&options.ktrace, KtraceOutput},
       {&options.syscall_numbers, SyscallNumbersOutput},
+      {&options.vdso_header, VdsoHeaderOutput},
       {&options.x86_asm, AsmOutput},
   };
 

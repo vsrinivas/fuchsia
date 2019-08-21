@@ -35,6 +35,7 @@ if (current_toolchain == host_toolchain) {
       "syscall_library.cc",
       "syscall_library.h",
       "syscall_numbers_output.cc",
+      "vdso_header_output.cc",
       "writer.cc",
       "writer.h",
     ]
@@ -68,6 +69,7 @@ if (current_toolchain == host_toolchain) {
       "output_util_test.cc",
       "syscall_library_test.cc",
       "syscall_numbers_output_test.cc",
+      "vdso_header_output_test.cc",
       "writer_test.cc",
     ]
   }
@@ -93,6 +95,7 @@ if (current_toolchain == host_toolchain) {
       "test_one_protocol_two_methods.test.fidl",
       "test_one_protocol_two_methods_with_internal.test.fidl",
       "test_pointers_and_vectors.test.fidl",
+      "test_selection.test.fidl",
       "test_various_categories.test.fidl",
     ]
   }

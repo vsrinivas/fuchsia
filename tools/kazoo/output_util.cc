@@ -97,6 +97,7 @@ std::string GetCName(const Type& type) {
     void operator()(const TypeVoid&) { ret = "void"; }
     void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.name(); }
 
+    void operator()(const TypeEnum& enm) { ret = enm.enum_data().name(); }
     void operator()(const TypeHandle& handle) {
       ret = "zx_handle_t";
       // TOOD(syscall-fidl-transition): Once we're not trying to match abigen, it might be nice to

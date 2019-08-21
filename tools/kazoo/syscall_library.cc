@@ -266,10 +266,78 @@ bool Syscall::MapRequestResponseToKernelAbi() {
     }
   }
 
+  // TODO(syscall-fidl-transition): Now that we've got all the arguments in their natural order,
+  // honor the "ArgReorder" attribute, which reorders arguments arbitrarily to match existing
+  // declaration order.
+  return HandleArgReorder();
+}
+
+bool Syscall::HandleArgReorder() {
+  constexpr const char kReorderAttribName[] = "ArgReorder";
+  if (HasAttribute(kReorderAttribName)) {
+    const std::string& target_order_string = GetAttribute(kReorderAttribName);
+    std::vector<fxl::StringView> target_order =
+        fxl::SplitString(target_order_string, ",", fxl::WhiteSpaceHandling::kTrimWhitespace,
+                         fxl::SplitResult::kSplitWantAll);
+    if (kernel_arguments_.size() != target_order.size()) {
+      FXL_LOG(ERROR) << "Attempting to reorder arguments for '" << name() << "', and there's "
+                     << kernel_arguments_.size() << " kernel arguments, but " << target_order.size()
+                     << " arguments in the reorder spec.";
+      return false;
+    }
+
+    std::vector<StructMember> new_kernel_arguments;
+    for (const auto& target : target_order) {
+      bool found = false;
+      for (const auto& ka : kernel_arguments_) {
+        if (ka.name() == target) {
+          new_kernel_arguments.push_back(ka);
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        FXL_LOG(ERROR) << "Attempting to reorder arguments for '" << name() << "', but '" << target
+                       << "' wasn't one of the kernel arguments.";
+        return false;
+      }
+    }
+
+    kernel_arguments_ = std::move(new_kernel_arguments);
+  }
+
   return true;
 }
 
+void Enum::AddMember(const std::string& member_name, int value) {
+  FXL_DCHECK(!HasMember(member_name));
+  members_[member_name] = value;
+}
+
+bool Enum::HasMember(const std::string& member_name) const {
+  return members_.find(member_name) != members_.end();
+}
+
+int Enum::ValueForMember(const std::string& member_name) const {
+  FXL_CHECK(HasMember(member_name));
+  return members_.find(member_name)->second;
+}
+
 Type SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
+  for (const auto& bits : bits_) {
+    if (bits->id() == id) {
+      // TODO(scottmg): Consider if we need to separate bits from enum here.
+      return Type(TypeEnum{bits.get()});
+    }
+  }
+
+  for (const auto& enm : enums_) {
+    if (enm->id() == id) {
+      return Type(TypeEnum{enm.get()});
+    }
+  }
+
   for (const auto& strukt : structs_) {
     if (strukt->id() == id) {
       return Type(TypeStruct(strukt.get()));
@@ -302,6 +370,17 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
 
   FXL_DCHECK(library->syscalls_.empty());
 
+  // The order of these loads is significant. For example, enums must be loaded to be able to be
+  // referred to by interface methods.
+
+  if (!LoadBits(document, library)) {
+    return false;
+  }
+
+  if (!LoadEnums(document, library)) {
+    return false;
+  }
+
   if (!LoadStructs(document, library)) {
     return false;
   }
@@ -314,6 +393,41 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
     return false;
   }
 
+  return true;
+}
+
+// 'bits' are currently handled the same as enums, so just use Enum for now as the underlying
+// data storage.
+//
+// static
+std::unique_ptr<Enum> SyscallLibraryLoader::ConvertBitsOrEnumMember(const rapidjson::Value& json) {
+  auto obj = std::make_unique<Enum>();
+  std::string full_name = json["name"].GetString();
+  obj->id_ = full_name;
+  obj->original_name_ = StripLibraryName(full_name);
+  obj->name_ = TypeNameToZirconStyle(obj->original_name_);
+  for (const auto& member : json["members"].GetArray()) {
+    FXL_CHECK(member["value"]["kind"] == "literal") << "TODO: More complex value expressions";
+    int member_value = fxl::StringToNumber<int>(
+        fxl::StringView(member["value"]["literal"]["value"].GetString()));
+    obj->AddMember(member["name"].GetString(), member_value);
+  }
+  return obj;
+}
+
+// static
+bool SyscallLibraryLoader::LoadBits(const rapidjson::Document& document, SyscallLibrary* library) {
+  for (const auto& bits_json : document["bits_declarations"].GetArray()) {
+    library->bits_.push_back(ConvertBitsOrEnumMember(bits_json));
+  }
+  return true;
+}
+
+// static
+bool SyscallLibraryLoader::LoadEnums(const rapidjson::Document& document, SyscallLibrary* library) {
+  for (const auto& enum_json : document["enum_declarations"].GetArray()) {
+    library->enums_.push_back(ConvertBitsOrEnumMember(enum_json));
+  }
   return true;
 }
 

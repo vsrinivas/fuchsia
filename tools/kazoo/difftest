@@ -30,6 +30,7 @@ out/default/host_x64/exe.unstripped/kazoo \
   --kernel-branches=/tmp/kernel-branches.S \
   --ktrace=/tmp/ktrace.inc \
   --syscall-numbers=/tmp/syscall-numbers.h \
+  --vdso-header=/tmp/vdso-definitions.h \
   --x86-asm=/tmp/x86-asm.S \
   /tmp/syscalls.json
 
@@ -52,6 +53,10 @@ compare "ktrace" \
 compare "syscall-numbers" \
         "out/default.zircon/kernel-x64-clang/gen/kernel/syscalls/zircon/zx-syscall-numbers.h" \
         "/tmp/syscall-numbers.h"
+
+compare "vdso-header" \
+        "out/default.zircon/user-x64-clang/gen/system/ulib/zircon/zircon/syscall-vdso-definitions.h" \
+        "/tmp/vdso-definitions.h"
 
 compare "x86-asm" \
         "out/default.zircon/user-x64-clang/gen/system/ulib/zircon/zircon/syscalls-x86-64.S" \

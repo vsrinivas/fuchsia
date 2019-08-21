@@ -16,6 +16,7 @@
 #include "rapidjson/document.h"
 #include "src/lib/fxl/macros.h"
 
+class Enum;
 class Struct;
 class SyscallLibrary;
 
@@ -32,6 +33,7 @@ class TypeUintptrT {};
 class TypeVoid {};
 class TypeZxBasicAlias;
 
+class TypeEnum;
 class TypeHandle;
 class TypePointer;
 class TypeString {};
@@ -40,9 +42,19 @@ class TypeVector;
 using TypeData =
     std::variant<std::monostate, TypeBool, TypeChar, TypeInt32, TypeInt64, TypeSizeT, TypeUint16,
                  TypeUint32, TypeUint64, TypeUint8, TypeUintptrT, TypeVoid, TypeZxBasicAlias,
-                 TypeHandle, TypePointer, TypeString, TypeStruct, TypeVector>;
+                 TypeEnum, TypeHandle, TypePointer, TypeString, TypeStruct, TypeVector>;
 
 class Type;
+
+class TypeEnum {
+ public:
+  explicit TypeEnum(const Enum* enum_data) : enum_(enum_data) {}
+
+  const Enum& enum_data() const { return *enum_; }
+
+ private:
+  const Enum* enum_;
+};
 
 class TypeHandle {
  public:
@@ -220,6 +232,7 @@ class Syscall {
  private:
   friend class SyscallLibraryLoader;
   bool MapRequestResponseToKernelAbi();
+  bool HandleArgReorder();
 
   std::string id_;                  // "zx/Object"
   std::string original_name_;       // "GetInfo"
@@ -238,6 +251,29 @@ class Syscall {
   FXL_DISALLOW_COPY_AND_ASSIGN(Syscall);
 };
 
+class Enum {
+ public:
+  Enum() = default;
+  ~Enum() = default;
+
+  const std::string& id() const { return id_; }                        // "zx/ProfileInfoType"
+  const std::string& original_name() const { return original_name_; }  // "ProfileInfoType"
+  const std::string& name() const { return name_; }                    // "zx_profile_info_type_t"
+
+  void AddMember(const std::string& member_name, int value);
+
+  bool HasMember(const std::string& member_name) const;
+  int ValueForMember(const std::string& member_name) const;
+
+ private:
+  friend class SyscallLibraryLoader;
+
+  std::string id_;
+  std::string original_name_;
+  std::string name_;
+  std::map<std::string, int> members_;  // Maps enumeration name to value (kWhatever = 12).
+};
+
 class SyscallLibrary {
  public:
   SyscallLibrary() = default;
@@ -252,6 +288,8 @@ class SyscallLibrary {
   friend class SyscallLibraryLoader;
 
   std::string name_;
+  std::vector<std::unique_ptr<Enum>> bits_;
+  std::vector<std::unique_ptr<Enum>> enums_;
   std::vector<std::unique_ptr<Struct>> structs_;
   std::vector<std::unique_ptr<Syscall>> syscalls_;
 
@@ -268,8 +306,12 @@ class SyscallLibraryLoader {
                        bool match_original_order = false);
 
  private:
+  static bool LoadBits(const rapidjson::Document& document, SyscallLibrary* library);
+  static bool LoadEnums(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadInterfaces(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadStructs(const rapidjson::Document& document, SyscallLibrary* library);
+
+  static std::unique_ptr<Enum> ConvertBitsOrEnumMember(const rapidjson::Value& json);
 
   // TODO(syscall-fidl-transition): A temporary measure during transition that
   // maps the possibly-arbitrary order that the syscalls are in in the JSON IR,

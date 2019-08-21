@@ -8,7 +8,7 @@
 
 library zz;
 
-enum ClockKind : uint32 {
+enum clock : uint32 {
     MONOTONIC = 0;
     UTC = 1;
     THREAD = 2;
@@ -17,11 +17,11 @@ enum ClockKind : uint32 {
 [Transport="Syscall"]
 protocol Clock {
     /// Acquire the current time.
-    Get(ClockKind clock_id) -> (status status, time out);
+    Get(clock clock_id) -> (status status, time out);
 
     /// Acquire the current monotonic time.
     GetMonotonic() -> (time time);
 
     [In0="handle<resource>:kind=ROOT"]
-    Adjust(handle<resource> handle, ClockKind clock_id, int64 offset) -> (status status);
+    Adjust(handle<resource> handle, clock clock_id, int64 offset) -> (status status);
 };
