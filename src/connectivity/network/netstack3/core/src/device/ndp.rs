@@ -28,7 +28,8 @@ use log::{debug, error, trace};
 
 use net_types::ip::{AddrSubnet, Ip, Ipv6, Ipv6Addr};
 use net_types::{
-    LinkLocalAddr, LinkLocalAddress, MulticastAddress, SpecifiedAddr, SpecifiedAddress,
+    LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress, SpecifiedAddr,
+    SpecifiedAddress,
 };
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use rand::{thread_rng, Rng};
@@ -45,6 +46,19 @@ use crate::wire::icmp::ndp::{
 use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
 use crate::wire::ipv6::Ipv6PacketBuilder;
 use crate::{Context, EventDispatcher, Instant, StackState, TimerId, TimerIdInner};
+
+/// The IP packet hop limit for all NDP packets.
+///
+/// See [RFC 4861 section 4.1], [RFC 4861 section 4.2], [RFC 4861 section 4.2],
+/// [RFC 4861 section 4.3], [RFC 4861 section 4.4], and [RFC 4861 section 4.5]
+/// for more information.
+///
+/// [RFC 4861 section 4.1]: https://tools.ietf.org/html/rfc4861#section-4.1
+/// [RFC 4861 section 4.2]: https://tools.ietf.org/html/rfc4861#section-4.2
+/// [RFC 4861 section 4.3]: https://tools.ietf.org/html/rfc4861#section-4.3
+/// [RFC 4861 section 4.4]: https://tools.ietf.org/html/rfc4861#section-4.4
+/// [RFC 4861 section 4.5]: https://tools.ietf.org/html/rfc4861#section-4.5
+const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
 
 //
 // Default Router configurations
@@ -238,12 +252,7 @@ impl AddressState {
 /// An `NdpDevice` is a device layer protocol which can support NDP.
 pub(crate) trait NdpDevice: Sized {
     /// The link-layer address type used by this device.
-    type LinkAddress: LinkLayerAddress;
-    /// The broadcast value for link addresses on this device.
-    // NOTE(brunodalbo): RFC 4861 mentions the possibility of running NDP on
-    // link types that do not support broadcasts, but this implementation does
-    // not cover that for simplicity.
-    const BROADCAST: Self::LinkAddress;
+    type LinkAddress: LinkLayerAddress + for<'a> From<&'a MulticastAddr<Ipv6Addr>>;
 
     /// Get a reference to a device's NDP state.
     fn get_ndp_state<D: EventDispatcher>(
@@ -290,23 +299,6 @@ pub(crate) trait NdpDevice: Sized {
         device_id: usize,
         address: &Ipv6Addr,
     ) -> AddressState;
-
-    /// Send a packet in a device layer frame to a destination `LinkAddress`.
-    ///
-    /// `send_ipv6_frame_to` accepts a device ID, a destination hardware
-    /// address, and a `Serializer`. Implementers are expected simply to form
-    /// a link-layer frame and encapsulate the provided IPv6 body.
-    ///
-    /// # Panics
-    ///
-    /// May panic if `device_id` is not intialized. See [`crate::device::initialize_device`]
-    /// for more information.
-    fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
-        ctx: &mut Context<D>,
-        device_id: usize,
-        dst: Self::LinkAddress,
-        body: S,
-    ) -> Result<(), S>;
 
     /// Send a packet in a device layer frame.
     ///
@@ -1475,12 +1467,10 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
 ) -> Option<ND::LinkAddress> {
     trace!("ndp::lookup: {:?}", lookup_addr);
 
-    // An IPv6 multicast address should always be sent on a broadcast
-    // link address.
-    if lookup_addr.is_multicast() {
-        // TODO(brunodalbo): this is currently out of spec, we need to form a
-        //  MAC multicast from the lookup address conforming to RFC 2464.
-        return Some(ND::BROADCAST);
+    // If `lookup_addr` is a multicast address, get the corresponding
+    // destination multicast mac address.
+    if let Some(multicast_addr) = MulticastAddr::new(lookup_addr) {
+        return Some(ND::LinkAddress::from(&multicast_addr));
     }
 
     // TODO(brunodalbo): Figure out what to do if a frame can't be sent
@@ -2076,7 +2066,6 @@ fn send_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
             device_id,
             src_ip,
             Ipv6::ALL_ROUTERS_LINK_LOCAL_ADDRESS,
-            ND::BROADCAST,
             RouterSolicitation::default(),
             &[],
         );
@@ -2087,7 +2076,6 @@ fn send_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
             device_id,
             src_ip,
             Ipv6::ALL_ROUTERS_LINK_LOCAL_ADDRESS,
-            ND::BROADCAST,
             RouterSolicitation::default(),
             &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
         );
@@ -2167,7 +2155,6 @@ fn do_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
         device_id,
         Ipv6::UNSPECIFIED_ADDRESS,
         tentative_addr.to_solicited_node_address().get(),
-        ND::BROADCAST,
         NeighborSolicitation::new(tentative_addr),
         &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
     );
@@ -2203,7 +2190,6 @@ fn send_neighbor_solicitation<D: EventDispatcher, ND: NdpDevice>(
             device_id,
             device_addr,
             dst_ip,
-            ND::BROADCAST,
             NeighborSolicitation::new(lookup_addr),
             &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
         );
@@ -2232,7 +2218,7 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
 
     // TODO(brunodalbo) if we're a router, flags must also set FLAG_ROUTER.
     let flags = if solicited { NeighborAdvertisement::FLAG_SOLICITED } else { 0x00 };
-    // We must call into the higher level send_ipv6_frame function because it is
+    // We must call into the higher level send_ndp_packet function because it is
     // not guaranteed that we have actually saved the link layer address of the
     // destination ip. Typically, the solicitation request will carry that
     // information, but it is not necessary. So it is perfectly valid that
@@ -2240,17 +2226,14 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
     // solicitation to be sent.
     let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
     let options = [NdpOption::TargetLinkLayerAddress(src_ll.bytes())];
-    let body = ndp::OptionsSerializer::<_>::new(options.iter())
-        .into_serializer()
-        .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-            device_addr,
-            dst_ip,
-            IcmpUnusedCode,
-            NeighborAdvertisement::new(flags, device_addr),
-        ))
-        .encapsulate(Ipv6PacketBuilder::new(device_addr, dst_ip, 1, IpProto::Icmpv6));
-    ND::send_ipv6_frame(ctx, device_id, dst_ip, body)
-        .unwrap_or_else(|_| debug!("Failed to send neighbor advertisement: MTU exceeded"));
+    send_ndp_packet::<_, ND, &[u8], _>(
+        ctx,
+        device_id,
+        device_addr,
+        dst_ip,
+        NeighborAdvertisement::new(flags, device_addr),
+        &options[..],
+    );
 }
 
 /// Send a router advertisement message from `device_id` to `dst_ip`.
@@ -2321,17 +2304,6 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
 
     let message = router_configurations.new_router_advertisement(is_final_ra_batch);
 
-    let body = ndp::OptionsSerializer::<_>::new(options.iter())
-        .into_serializer()
-        .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-            src_ip,
-            dst_ip,
-            IcmpUnusedCode,
-            message,
-        ))
-        // The hop limit of a Router Advertisement message is set to `255` by RFC 4861 section 4.2.
-        .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 255, IpProto::Icmpv6));
-
     // If `dst_ip` is the IPv6 all-nodes multicast address, increment the counter for number of
     // Router Advertisements sent to the IPv6 all-nodes multicast address.
     if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS {
@@ -2339,7 +2311,9 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
     }
 
     // Attempt to send the router advertisement message.
-    if ND::send_ipv6_frame(ctx, device_id, dst_ip, body).is_ok() {
+    if send_ndp_packet::<_, ND, &[u8], _>(ctx, device_id, src_ip, dst_ip, message, &options[..])
+        .is_ok()
+    {
         if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS {
             let now = ctx.dispatcher().now();
             let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
@@ -2356,23 +2330,24 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
     };
 }
 
-/// Helper function to send ndp packet over an NdpDevice
+/// Helper function to send ndp packet over an NdpDevice to `dst_ip`.
 fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B: ByteSlice, M>(
     ctx: &mut Context<D>,
     device_id: usize,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,
-    link_addr: ND::LinkAddress,
     message: M,
     options: &[NdpOption],
-) where
+) -> Result<(), ()>
+where
     M: IcmpMessage<Ipv6, B, Code = IcmpUnusedCode>,
 {
     trace!("send_ndp_packet: src_ip={:?} dst_ip={:?}", src_ip, dst_ip);
-    ND::send_ipv6_frame_to(
+
+    ND::send_ipv6_frame(
         ctx,
         device_id,
-        link_addr,
+        dst_ip,
         ndp::OptionsSerializer::<_>::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, B, M>::new(
@@ -2381,8 +2356,14 @@ fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B: ByteSlice, M>(
                 IcmpUnusedCode,
                 message,
             ))
-            .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Icmpv6)),
-    );
+            .encapsulate(Ipv6PacketBuilder::new(
+                src_ip,
+                dst_ip,
+                REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+                IpProto::Icmpv6,
+            )),
+    )
+    .map_err(|_| ())
 }
 
 /// A handler for incoming NDP packets.
@@ -2457,6 +2438,9 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 ) where
     B: ByteSlice,
 {
+    // TODO(ghanan): Make sure the IP packet's hop limit was set to 255 as per RFC 4861 sections
+    //               4.1, 4.2, 4.3, 4.4, and 4.5 (each type of NDP packet).
+
     match packet {
         Icmpv6Packet::RouterSolicitation(p) => {
             trace!("receive_ndp_packet_inner: Received NDP RS");

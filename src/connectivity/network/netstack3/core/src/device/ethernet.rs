@@ -856,7 +856,6 @@ pub(crate) struct EthernetNdpDevice;
 
 impl ndp::NdpDevice for EthernetNdpDevice {
     type LinkAddress = Mac;
-    const BROADCAST: Mac = Mac::BROADCAST;
 
     fn get_ndp_state_mut<D: EventDispatcher>(
         state: &mut StackState<D>,
@@ -925,24 +924,6 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         }
 
         ndp::AddressState::Unassigned
-    }
-
-    fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
-        ctx: &mut Context<D>,
-        device_id: usize,
-        dst: Mac,
-        body: S,
-    ) -> Result<(), S> {
-        // `device_id` must be initialized.
-        assert!(is_device_initialized(ctx.state(), Self::get_device_id(device_id)));
-
-        let src = get_device_state(ctx.state(), device_id).mac;
-        ctx.dispatcher_mut()
-            .send_frame(
-                DeviceId::new_ethernet(device_id),
-                body.encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Ipv6)),
-            )
-            .map_err(Nested::into_inner)
     }
 
     fn send_ipv6_frame<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
