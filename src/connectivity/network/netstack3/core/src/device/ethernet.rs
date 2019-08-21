@@ -176,10 +176,14 @@ impl EthernetDeviceStateBuilder {
 
     /// Build the `EthernetDeviceState` from this builder.
     pub(crate) fn build<D: EventDispatcher>(self) -> EthernetDeviceState<D> {
-        let mut ipv6_multicast_groups = HashSet::new();
+        let solicited_node_link_local_addr =
+            self.mac.to_ipv6_link_local().get().to_solicited_node_address();
 
-        ipv6_multicast_groups
-            .insert(self.mac.to_ipv6_link_local().get().to_solicited_node_address());
+        let mut ipv6_multicast_groups = HashSet::new();
+        ipv6_multicast_groups.insert(solicited_node_link_local_addr);
+
+        let mut link_multicast_groups = HashSet::new();
+        link_multicast_groups.insert(MulticastAddr::from(&solicited_node_link_local_addr));
 
         // TODO(ghanan): Perform NDP's DAD on the link local address BEFORE receiving
         //               packets destined to it.
@@ -193,11 +197,13 @@ impl EthernetDeviceStateBuilder {
             ipv6_addr_sub: None,
             ipv4_multicast_groups: HashSet::new(),
             ipv6_multicast_groups,
+            link_multicast_groups,
             ipv4_arp: ArpState::default(),
             ndp: NdpState::new(self.ndp_configs),
             route_ipv4: self.route_ipv4,
             route_ipv6: self.route_ipv6,
             pending_frames: HashMap::new(),
+            promiscuous_mode: false,
         }
     }
 }
@@ -231,8 +237,11 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     /// IPv4 multicast groups this device has joined.
     ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
 
-    /// IPv6 multicast groups this device has joined,
+    /// IPv6 multicast groups this device has joined.
     ipv6_multicast_groups: HashSet<MulticastAddr<Ipv6Addr>>,
+
+    /// Link multicast groups this device has joined.
+    link_multicast_groups: HashSet<MulticastAddr<Mac>>,
 
     /// IPv4 ARP state.
     ipv4_arp: ArpState<Ipv4Addr, Mac>,
@@ -266,6 +275,10 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     // desintation IP addresses. The frames contain an entire EthernetFrame
     // body and the MTU check is performed before queueing them here.
     pending_frames: HashMap<IpAddr, VecDeque<Buf<Vec<u8>>>>,
+
+    /// A flag indicating whether the device will accept all ethernet frames that it receives,
+    /// regardless of the ethernet frame's destination MAC address.
+    promiscuous_mode: bool,
 }
 
 impl<D: EventDispatcher> EthernetDeviceState<D> {
@@ -297,6 +310,26 @@ impl<D: EventDispatcher> EthernetDeviceState<D> {
             Some(mut buff) => Some(buff.into_iter()),
             None => None,
         }
+    }
+
+    /// Is a packet with a destination MAC address, `dst`, destined for this device?
+    ///
+    /// Returns `true` if this device is has `dst_mac` as its assigned MAC address, `dst_mac` is the
+    /// broadcast MAC address, or it is one of the multicast MAC addresses the device has joined.
+    fn should_accept(&self, dst_mac: &Mac) -> bool {
+        (self.mac == *dst_mac)
+            || dst_mac.is_broadcast()
+            || (MulticastAddr::new(*dst_mac)
+                .map(|a| self.link_multicast_groups.contains(&a))
+                .unwrap_or(false))
+    }
+
+    /// Should a packet with destination MAC address, `dst`, be accepted by this device?
+    ///
+    /// Returns `true` if this device is in promiscuous mode or the frame is destined for this
+    /// device.
+    fn should_deliver(&self, dst_mac: &Mac) -> bool {
+        self.promiscuous_mode || self.should_accept(dst_mac)
     }
 }
 
@@ -334,6 +367,8 @@ pub(crate) fn send_ip_frame<
     local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
+    trace!("ethernet::send_ip_frame: local_addr = {:?}; device = {:?}", local_addr, device_id);
+
     let state = get_device_state_mut(ctx.state_mut(), device_id);
     let (local_mac, mtu) = (state.mac, state.mtu);
 
@@ -398,20 +433,23 @@ pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
     device_id: usize,
     mut buffer: B,
 ) {
+    trace!("ethernet::receive_frame: device_id = {:?}", device_id);
     let frame = if let Ok(frame) = buffer.parse::<EthernetFrame<_>>() {
         frame
     } else {
-        trace!("ethernet::receive_frame: failed to parse frame");
+        trace!("ethernet::receive_frame: failed to parse ethernet frame");
         // TODO(joshlf): Do something else?
         return;
     };
 
     let (src, dst) = (frame.src_mac(), frame.dst_mac());
     let device = DeviceId::new_ethernet(device_id);
-    if dst != get_device_state(ctx.state(), device_id).mac && !dst.is_broadcast() {
-        // TODO(joshlf): What about multicast MACs?
+
+    if !get_device_state(ctx.state(), device_id).should_deliver(&dst) {
+        trace!("ethernet::receive_frame: destination mac {:?} not for device {:?}", dst, device_id);
         return;
     }
+
     let frame_dst = FrameDestination::from(dst);
 
     match frame.ethertype() {
@@ -433,6 +471,15 @@ pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
         Some(EtherType::Ipv6) => crate::ip::receive_ipv6_packet(ctx, device, frame_dst, buffer),
         Some(EtherType::Other(_)) | None => {} // TODO(joshlf)
     }
+}
+
+/// Set the promiscuous mode flag on `device_id`.
+pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    enabled: bool,
+) {
+    get_device_state_mut(ctx.state_mut(), device_id).promiscuous_mode = enabled;
 }
 
 /// Get the IP address and subnet associated with this device.
@@ -545,12 +592,22 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
     multicast_addr: MulticastAddr<A>,
 ) {
     let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+    let mac = MulticastAddr::from(&multicast_addr);
+
+    trace!(
+        "ethernet::join_ip_multicast: joining IP multicast {:?} and MAC multicast {:?}",
+        multicast_addr,
+        mac
+    );
 
     #[ipv4addr]
     device_state.ipv4_multicast_groups.insert(multicast_addr);
 
     #[ipv6addr]
     device_state.ipv6_multicast_groups.insert(multicast_addr);
+
+    // TODO(ghanan): Make `EventDispatcher` aware of this to maintain a single source of truth.
+    device_state.link_multicast_groups.insert(mac);
 }
 
 /// Remove `device` from a multicast group `multicast_addr`.
@@ -564,6 +621,16 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     multicast_addr: MulticastAddr<A>,
 ) {
     let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+    let mac = MulticastAddr::from(&multicast_addr);
+
+    trace!(
+        "ethernet::leave_ip_multicast: leaving IP multicast {:?} and MAC multicast {:?}",
+        multicast_addr,
+        mac
+    );
+
+    // TODO(ghanan): Make `EventDispatcher` aware of this to maintain a single source of truth.
+    device_state.link_multicast_groups.remove(&mac);
 
     #[ipv4addr]
     device_state.ipv4_multicast_groups.remove(&multicast_addr);
@@ -1368,5 +1435,79 @@ mod tests {
     #[test]
     fn test_set_ipv6_routing() {
         test_set_ip_routing::<Ipv6>();
+    }
+
+    fn test_promiscuous_mode<I: Ip>() {
+        //
+        // Test that frames not destined for a device will still be accepted when
+        // the device is put into promiscuous mode. In all cases, frames that are
+        // destined for a device must always be accepted.
+        //
+
+        let config = get_dummy_config::<I::Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
+            .build::<DummyEventDispatcher>();
+        let device = DeviceId::new_ethernet(0);
+        let other_mac = Mac::new([13, 14, 15, 16, 17, 18]);
+
+        let buf = Buf::new(Vec::new(), ..)
+            .encapsulate(<I as IpExt>::PacketBuilder::new(
+                config.remote_ip.get(),
+                config.local_ip.get(),
+                64,
+                IpProto::Tcp,
+            ))
+            .encapsulate(EthernetFrameBuilder::new(
+                config.remote_mac,
+                config.local_mac,
+                I::ETHER_TYPE,
+            ))
+            .serialize_vec_outer()
+            .ok()
+            .unwrap()
+            .unwrap_b();
+
+        // Accept packet destined for this device if promiscuous mode is off.
+        crate::device::set_promiscuous_mode(&mut ctx, device, false);
+        crate::device::receive_frame(&mut ctx, device, buf.clone());
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+
+        // Accept packet destined for this device if promiscuous mode is on.
+        crate::device::set_promiscuous_mode(&mut ctx, device, true);
+        crate::device::receive_frame(&mut ctx, device, buf.clone());
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
+
+        let buf = Buf::new(Vec::new(), ..)
+            .encapsulate(<I as IpExt>::PacketBuilder::new(
+                config.remote_ip.get(),
+                config.local_ip.get(),
+                64,
+                IpProto::Tcp,
+            ))
+            .encapsulate(EthernetFrameBuilder::new(config.remote_mac, other_mac, I::ETHER_TYPE))
+            .serialize_vec_outer()
+            .ok()
+            .unwrap()
+            .unwrap_b();
+
+        // Reject packet not destined for this device if promiscuous mode is off.
+        crate::device::set_promiscuous_mode(&mut ctx, device, false);
+        crate::device::receive_frame(&mut ctx, device, buf.clone());
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
+
+        // Accept packet not destined for this device if promiscuous mode is on.
+        crate::device::set_promiscuous_mode(&mut ctx, device, true);
+        crate::device::receive_frame(&mut ctx, device, buf.clone());
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 3);
+    }
+
+    #[test]
+    fn test_promiscuous_mode_ipv4() {
+        test_promiscuous_mode::<Ipv4>();
+    }
+
+    #[test]
+    fn test_promiscuous_mode_ipv6() {
+        test_promiscuous_mode::<Ipv6>();
     }
 }

@@ -1696,10 +1696,11 @@ mod tests {
     use packet::{Buf, ParseBuffer};
     use rand::Rng;
 
-    use crate::device::{set_routing_enabled, FrameDestination};
+    use crate::device::ethernet::EthernetIpExt;
+    use crate::device::{receive_frame, set_routing_enabled, FrameDestination};
     use crate::ip::path_mtu::{get_pmtu, min_mtu};
     use crate::testutil::*;
-    use crate::wire::ethernet::EthernetFrame;
+    use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
     use crate::wire::icmp::{
         IcmpDestUnreachable, IcmpEchoRequest, IcmpPacketBuilder, IcmpParseArgs, IcmpUnusedCode,
         Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblemCode,
@@ -2825,12 +2826,17 @@ mod tests {
             return Ipv6Addr::new([255, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
         }
 
+        //
+        // Test receiving a packet destined to a multicast IP (and corresponding multicast MAC).
+        //
+
         let config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
         let multi_addr = get_multicast_addr::<I::Addr>();
+        let dst_mac = Mac::from(&MulticastAddr::new(multi_addr).unwrap());
         let buf = Buf::new(vec![0; 10], ..)
             .encapsulate(<I as IpExt>::PacketBuilder::new(
                 config.remote_ip.get(),
@@ -2838,6 +2844,7 @@ mod tests {
                 64,
                 IpProto::Udp,
             ))
+            .encapsulate(EthernetFrameBuilder::new(config.remote_mac, dst_mac, I::ETHER_TYPE))
             .serialize_vec_outer()
             .ok()
             .unwrap()
@@ -2847,19 +2854,19 @@ mod tests {
         // Should not have dispatched the packet since we are not in the
         // multicast group `multi_addr`.
         assert!(!crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
+        receive_frame(&mut ctx, device, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
 
         // Join the multicast group and receive the packet, we should dispatch it.
         crate::device::join_ip_multicast(&mut ctx, device, multi_addr);
         assert!(crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
+        receive_frame(&mut ctx, device, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
 
         // Leave the multicast group and receive the packet, we should not dispatch it.
         crate::device::leave_ip_multicast(&mut ctx, device, multi_addr);
         assert!(!crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
+        receive_frame(&mut ctx, device, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
     }
 

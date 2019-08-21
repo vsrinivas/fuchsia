@@ -169,6 +169,17 @@ impl BroadcastAddress for Mac {
 impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for Mac {
     /// Convert a multicast IP address to a MAC address.
     ///
+    /// Calling this method is equivalent to calling the `get` method on the return of
+    /// [`MulticastAddr::<Mac>::from`] for `addr`.
+    #[inline]
+    fn from(addr: &'a MulticastAddr<A>) -> Mac {
+        MulticastAddr::<Mac>::from(addr).get()
+    }
+}
+
+impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for MulticastAddr<Mac> {
+    /// Converts a multicast IP address to a multicast MAC address.
+    ///
     /// When a multicast IP packet is sent over an Ethernet link, the frame's
     /// destination MAC address is a multicast MAC address that is derived from
     /// the destination IP address. This function performs that conversion.
@@ -179,8 +190,11 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for Mac {
     /// [RFC 7042 Section 2.1.1]: https://tools.ietf.org/html/rfc7042#section-2.1.1
     /// [Section 2.3.1]: https://tools.ietf.org/html/rfc7042#section-2.3.1
     #[inline]
-    fn from(addr: &'a MulticastAddr<A>) -> Mac {
-        Mac::new(addr.with(
+    fn from(addr: &'a MulticastAddr<A>) -> MulticastAddr<Mac> {
+        // We know the call to `unwrap` will not panic becase we are generating a multicast MAC
+        // as defined in RFC 7042 section 2.1.1 and section 2.3.1 for IPv4 and IPv6 addresses,
+        // respectively.
+        MulticastAddr::new(Mac::new(addr.with(
             |a| {
                 let ip_bytes = a.clone().ipv4_bytes();
                 let mut mac_bytes = [0; 6];
@@ -203,7 +217,8 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for Mac {
                 mac_bytes[5] = ip_bytes[15];
                 mac_bytes
             },
-        ))
+        )))
+        .unwrap()
     }
 }
 

@@ -299,6 +299,9 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
 
     state.is_initialized = true;
 
+    // All nodes should join the all-nodes multicast group.
+    join_ip_multicast(ctx, device, MulticastAddr::new(Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS).unwrap());
+
     if self::is_router_device::<_, Ipv6>(ctx, device) {
         // If the device is operating as a router, and it is configured to be an advertising
         // interface, start sending periodic router advertisements.
@@ -392,6 +395,17 @@ pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
 
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::receive_frame(ctx, device.id, buffer),
+    }
+}
+
+/// Set the promiscuous mode flag on `device`.
+pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    enabled: bool,
+) {
+    match device.protocol {
+        DeviceProtocol::Ethernet => self::ethernet::set_promiscuous_mode(ctx, device.id, enabled),
     }
 }
 
