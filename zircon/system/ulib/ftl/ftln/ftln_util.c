@@ -4,6 +4,7 @@
 
 #include <stdarg.h>
 #include <string.h>
+#include <zircon/compiler.h>
 
 #include "ftlnp.h"
 
@@ -165,7 +166,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
 
       // Clear the 'mounted' flag.
       ftl->flags &= ~FTLN_MOUNTED;
-      // FALLTHROUGH
+      __FALLTHROUGH;
 
     case FS_SYNC: {
       // Prepare to write all dirty map cache pages. Return -1 if err.
