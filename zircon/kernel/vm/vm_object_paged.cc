@@ -570,7 +570,11 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     // TODO: ZX-692 make sure that the accumulated parent offset of the entire
     // parent chain doesn't wrap 64bit space.
     vmo->parent_offset_ = offset;
-    vmo->parent_limit_ = fbl::min(size, size_ - offset);
+    if (offset > size_) {
+      vmo->parent_limit_ = 0;
+    } else {
+      vmo->parent_limit_ = fbl::min(size, size_ - offset);
+    }
 
     VmObjectPaged* clone_parent;
     if (type == CloneType::CopyOnWrite) {

@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <elf.h>
-#include <fbl/auto_call.h>
-#include <fbl/function.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/pager.h>
@@ -12,10 +10,14 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <link.h>
-#include <utility>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
+
+#include <utility>
+
+#include <fbl/auto_call.h>
+#include <fbl/function.h>
 #include <zxtest/zxtest.h>
 
 extern "C" __WEAK zx_handle_t get_root_resource(void);
@@ -710,6 +712,45 @@ TEST_F(VmoClone2TestCase, Overflow) {
   ASSERT_EQ(VmoCommittedBytes(clone2), 3 * ZX_PAGE_SIZE);
   if (original) {
     ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, KmemVmoMemUsage());
+  }
+}
+
+// Test that a clone that does not overlap the parent at all behaves correctly.
+TEST_F(VmoClone2TestCase, OutOfBounds) {
+  const uint64_t original = KmemVmoMemUsage();
+
+  zx::vmo vmo;
+  ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(1, &vmo));
+
+  zx::vmo clone;
+  ASSERT_OK(
+      vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 2 * ZX_PAGE_SIZE, 2 * ZX_PAGE_SIZE, &clone));
+
+  // Check that the child has the right data.
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(clone, 0));
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(clone, 0, ZX_PAGE_SIZE));
+
+  // Write to the child and then clone it.
+  ASSERT_NO_FATAL_FAILURES(VmoWrite(clone, 2, ZX_PAGE_SIZE));
+  zx::vmo clone2;
+  ASSERT_OK(clone.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, 3 * ZX_PAGE_SIZE, &clone2));
+
+  // Check that the second clone is correct.
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(clone2, 0));
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(clone2, 2, ZX_PAGE_SIZE));
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(clone2, 0, 2 * ZX_PAGE_SIZE));
+
+  // Write the dedicated page in 2nd child and then check that accounting is correct.
+  ASSERT_NO_FATAL_FAILURES(VmoWrite(clone2, 3, 2 * ZX_PAGE_SIZE));
+  ASSERT_NO_FATAL_FAILURES(VmoCheck(clone2, 3, 2 * ZX_PAGE_SIZE));
+
+  // Check that accounting is correct.
+  ASSERT_EQ(VmoCommittedBytes(vmo), ZX_PAGE_SIZE);
+  ASSERT_EQ(VmoCommittedBytes(clone), ZX_PAGE_SIZE);
+  ASSERT_EQ(VmoCommittedBytes(clone2), ZX_PAGE_SIZE);
+
+  if (original) {
+    ASSERT_EQ(original + 3 * ZX_PAGE_SIZE, KmemVmoMemUsage());
   }
 }
 
