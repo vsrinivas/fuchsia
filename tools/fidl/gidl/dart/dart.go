@@ -28,15 +28,25 @@ import 'gidl.dart';
 
 void main() {
 	group('conformance', () {
-		group('success cases', () {
-	{{ range .SuccessCases }}
-	SuccessCase.run(
-		{{.Name}},
-		{{.Value}},
-		{{.ValueType}},
-		{{.Bytes}});
-	{{ end }}
-		});
+	group('encode success cases', () {
+		{{ range .EncodeSuccessCases }}
+		EncodeSuccessCase.run(
+			{{.Name}},
+			{{.Value}},
+			{{.ValueType}},
+			{{.Bytes}});
+		{{ end }}
+			});
+
+	group('decode success cases', () {
+		{{ range .DecodeSuccessCases }}
+		DecodeSuccessCase.run(
+			{{.Name}},
+			{{.Value}},
+			{{.ValueType}},
+			{{.Bytes}});
+		{{ end }}
+			});
 
 		group('encode failure cases', () {
 	{{ range .EncodeFailureCases }}
@@ -64,12 +74,17 @@ void main() {
 `))
 
 type tmplInput struct {
-	SuccessCases       []successCase
+	EncodeSuccessCases       []encodeSuccessCase
+	DecodeSuccessCases       []decodeSuccessCase
 	EncodeFailureCases []encodeFailureCase
 	DecodeFailureCases []decodeFailureCase
 }
 
-type successCase struct {
+type encodeSuccessCase struct {
+	Name, Value, ValueType, Bytes string
+}
+
+type decodeSuccessCase struct {
 	Name, Value, ValueType, Bytes string
 }
 
@@ -83,7 +98,11 @@ type decodeFailureCase struct {
 
 // Generate generates dart tests.
 func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
-	successCases, err := successCases(gidl.Success, fidl)
+	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, fidl)
+	if err != nil {
+		return err
+	}
+	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, fidl)
 	if err != nil {
 		return err
 	}
@@ -96,28 +115,47 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 		return err
 	}
 	return tmpl.Execute(wr, tmplInput{
-		SuccessCases:       successCases,
+		EncodeSuccessCases: encodeSuccessCases,
+		DecodeSuccessCases: decodeSuccessCases,
 		EncodeFailureCases: encodeFailureCases,
 		DecodeFailureCases: decodeFailureCases,
 	})
 }
 
-func successCases(gidlSuccesses []gidlir.Success, fidl fidlir.Root) ([]successCase, error) {
-	var successCases []successCase
-	for _, success := range gidlSuccesses {
-		decl, err := gidlmixer.ExtractDeclaration(success.Value, fidl)
+func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.Root) ([]encodeSuccessCase, error) {
+	var encodeSuccessCases []encodeSuccessCase
+	for _, encodeSuccess := range gidlEncodeSuccesses {
+		decl, err := gidlmixer.ExtractDeclaration(encodeSuccess.Value, fidl)
 		if err != nil {
-			return nil, fmt.Errorf("success %s: %s", success.Name, err)
+			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
-		valueStr := visit(success.Value, decl)
-		successCases = append(successCases, successCase{
-			Name:      fidlcommon.SingleQuote(success.Name),
+		valueStr := visit(encodeSuccess.Value, decl)
+		encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
+			Name:      fidlcommon.SingleQuote(encodeSuccess.Name),
 			Value:     valueStr,
 			ValueType: typeName(decl.(*gidlmixer.StructDecl)),
-			Bytes:     bytesBuilder(success.Bytes),
+			Bytes:     bytesBuilder(encodeSuccess.Bytes),
 		})
 	}
-	return successCases, nil
+	return encodeSuccessCases, nil
+}
+
+func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.Root) ([]decodeSuccessCase, error) {
+	var decodeSuccessCases []decodeSuccessCase
+	for _, decodeSuccess := range gidlDecodeSuccesses {
+		decl, err := gidlmixer.ExtractDeclaration(decodeSuccess.Value, fidl)
+		if err != nil {
+			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
+		}
+		valueStr := visit(decodeSuccess.Value, decl)
+		decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
+			Name:      fidlcommon.SingleQuote(decodeSuccess.Name),
+			Value:     valueStr,
+			ValueType: typeName(decl.(*gidlmixer.StructDecl)),
+			Bytes:     bytesBuilder(decodeSuccess.Bytes),
+		})
+	}
+	return decodeSuccessCases, nil
 }
 
 func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.Root) ([]encodeFailureCase, error) {
