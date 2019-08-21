@@ -177,7 +177,7 @@ protocol Api {
     [rights="Every entry of items must have a handle field with ZX_RIGHT_WAIT.",
      blocking,
      argtype="items INOUT"]
-    object_wait_many(array<zx_wait_item_t>:count items, usize count, zx.time deadline) ->
+    object_wait_many(array<zx_wait_item_t>:num_items items, usize num_items, zx.time deadline) ->
         (zx.status status);
 
     /// Subscribe for signals on an object.
@@ -460,7 +460,7 @@ protocol Api {
     [rights="handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_SET_POLICY.",
      argtype="policy IN"]
     job_set_policy(handle<job>handle, uint32 options, uint32 topic,
-                   array<voidptr>:count policy, uint32 count) ->
+                   array<voidptr>:policy_size policy, uint32 policy_size) ->
         (zx.status status);
 
 
@@ -990,7 +990,7 @@ protocol Api {
      rights="If options & ZX_BTI_PERM_EXECUTE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.",
      argtype="addrs OUT"]
     bti_pin(handle<bti> handle, uint32 options, handle<vmo> vmo, uint64 offset, uint64 size,
-            array<zx.paddr>:addrs_count addrs, usize addrs_count) ->
+            array<zx.paddr>:num_addrs addrs, usize num_addrs) ->
         (zx.status status, handle<pmt> pmt);
 
     /// Releases all quarantined PMTs.
