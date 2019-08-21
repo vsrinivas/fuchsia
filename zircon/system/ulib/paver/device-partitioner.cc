@@ -586,14 +586,6 @@ zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* 
     ERROR("Failed to rebind GPT\n");
     return response.status;
   }
-  // Manually re-bind the GPT driver, since it is almost certainly
-  // too late to be noticed by the block watcher.
-  auto result2 = ::llcpp::fuchsia::device::Controller::Call::Bind(
-      Channel(), fidl::StringView(strlen(kGptDriverName), kGptDriverName));
-  if (result2.status() != ZX_OK || result2.value().status != ZX_OK) {
-    ERROR("Failed to bind GPT\n");
-    return ZX_ERR_BAD_STATE;
-  }
 
   return ZX_OK;
 }

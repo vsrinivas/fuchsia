@@ -153,7 +153,7 @@ class EfiPartitionerTests : public zxtest::Test {
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
     args.driver_search_paths.push_back("/boot/driver");
     args.use_system_svchost = true;
-    args.disable_block_watcher = true;
+    args.disable_block_watcher = false;
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 
     fbl::unique_fd fd;
