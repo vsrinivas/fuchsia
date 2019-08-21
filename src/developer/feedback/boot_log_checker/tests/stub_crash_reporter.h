@@ -21,14 +21,16 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
 
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 
-  const std::string& kernel_panic_crash_log() { return kernel_panic_crash_log_; };
+  const std::string& signature() { return signature_; };
+  const std::string& reboot_log() { return reboot_log_; };
 
  protected:
   void CloseAllConnections() { bindings_.CloseAll(); }
 
  private:
   fidl::BindingSet<fuchsia::feedback::CrashReporter> bindings_;
-  std::string kernel_panic_crash_log_;
+  std::string signature_;
+  std::string reboot_log_;
 };
 
 class StubCrashReporterClosesConnection : public StubCrashReporter {

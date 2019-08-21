@@ -50,7 +50,7 @@ class RebootLogHandlerTest : public gtest::TestLoopFixture {
     }
   }
 
-  void WriteRebootLogContents(const std::string& contents = "irrelevant") {
+  void WriteRebootLogContents(const std::string& contents = "ZIRCON KERNEL PANIC") {
     ASSERT_TRUE(tmp_dir_.NewTempFileWithData(contents, &reboot_log_path_));
   }
 
@@ -80,8 +80,8 @@ TEST_F(RebootLogHandlerTest, Succeed_NoRebootLog) {
   EXPECT_EQ(HandleRebootLog("non-existent/file").state(), kOk);
 }
 
-TEST_F(RebootLogHandlerTest, Succeed_RebootLogPresent) {
-  const std::string reboot_log = "contents";
+TEST_F(RebootLogHandlerTest, Succeed_KernelPanicCrashLogPresent) {
+  const std::string reboot_log = "ZIRCON KERNEL PANIC";
   WriteRebootLogContents(reboot_log);
   ResetNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
   ResetCrashReporter(std::make_unique<StubCrashReporter>());
@@ -92,7 +92,40 @@ TEST_F(RebootLogHandlerTest, Succeed_RebootLogPresent) {
   stub_network_reachability_provider_->TriggerOnNetworkReachable(true);
   RunLoopUntilIdle();
   EXPECT_EQ(result.state(), kOk);
-  EXPECT_STREQ(stub_crash_reporter_->kernel_panic_crash_log().c_str(), reboot_log.c_str());
+  EXPECT_STREQ(stub_crash_reporter_->signature().c_str(), "fuchsia-kernel-panic");
+  EXPECT_STREQ(stub_crash_reporter_->reboot_log().c_str(), reboot_log.c_str());
+}
+
+TEST_F(RebootLogHandlerTest, Succeed_OutOfMemoryLogPresent) {
+  const std::string reboot_log = "ZIRCON OOM";
+  WriteRebootLogContents(reboot_log);
+  ResetNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
+  ResetCrashReporter(std::make_unique<StubCrashReporter>());
+
+  fit::result<void> result = HandleRebootLog(reboot_log_path_);
+  EXPECT_EQ(result.state(), kPending);
+
+  stub_network_reachability_provider_->TriggerOnNetworkReachable(true);
+  RunLoopUntilIdle();
+  EXPECT_EQ(result.state(), kOk);
+  EXPECT_STREQ(stub_crash_reporter_->signature().c_str(), "fuchsia-oom");
+  EXPECT_STREQ(stub_crash_reporter_->reboot_log().c_str(), reboot_log.c_str());
+}
+
+TEST_F(RebootLogHandlerTest, Succeed_UnrecognizedCrashTypeInRebootLog) {
+  const std::string reboot_log = "UNRECOGNIZED CRASH TYPE";
+  WriteRebootLogContents(reboot_log);
+  ResetNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
+  ResetCrashReporter(std::make_unique<StubCrashReporter>());
+
+  fit::result<void> result = HandleRebootLog(reboot_log_path_);
+  EXPECT_EQ(result.state(), kPending);
+
+  stub_network_reachability_provider_->TriggerOnNetworkReachable(true);
+  RunLoopUntilIdle();
+  EXPECT_EQ(result.state(), kOk);
+  EXPECT_STREQ(stub_crash_reporter_->signature().c_str(), "fuchsia-kernel-panic");
+  EXPECT_STREQ(stub_crash_reporter_->reboot_log().c_str(), reboot_log.c_str());
 }
 
 TEST_F(RebootLogHandlerTest, Pending_NetworkNotReachable) {
@@ -116,6 +149,11 @@ TEST_F(RebootLogHandlerTest, Fail_CallHandleTwice) {
   handler.Handle("irrelevant");
   ASSERT_DEATH(handler.Handle("irrelevant"),
                testing::HasSubstr("Handle() is not intended to be called twice"));
+}
+
+TEST_F(RebootLogHandlerTest, Fail_EmptyRebootLog) {
+  WriteRebootLogContents("");
+  EXPECT_EQ(HandleRebootLog(reboot_log_path_).state(), kError);
 }
 
 TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderNotAvailable) {
