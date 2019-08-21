@@ -81,19 +81,6 @@ class TestFuzzer(unittest.TestCase):
         fuzzer2.require_stopped()
         fuzzer3.require_stopped()
 
-    def test_run(self):
-        mock_device = MockDevice()
-        fuzzer = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
-        fuzzer.run(['-some-lf-arg=value'])
-        self.assertIn(
-            ' '.join(
-                mock_device.get_ssh_cmd(
-                    [
-                        'ssh', '::1', 'run',
-                        fuzzer.url(), '-artifact_prefix=data/',
-                        '-some-lf-arg=value'
-                    ])), mock_device.host.history)
-
     def test_start(self):
         mock_device = MockDevice()
         base_dir = tempfile.mkdtemp()
@@ -103,6 +90,155 @@ class TestFuzzer(unittest.TestCase):
             fuzzer.start(['-some-lf-arg=value'])
         finally:
             shutil.rmtree(base_dir)
+
+    def test_symbolize_log_no_mutation_sequence(self):
+        mock_device = MockDevice()
+        base_dir = tempfile.mkdtemp()
+        fuzzer = Fuzzer(
+            mock_device, u'mock-package1', u'mock-target2', output=base_dir)
+        os.mkdir(fuzzer.results())
+        with tempfile.TemporaryFile() as tmp_out:
+            with tempfile.TemporaryFile() as tmp_in:
+                tmp_in.write("""
+A line
+Another line
+Yet another line
+""")
+                tmp_in.flush()
+                tmp_in.seek(0)
+                fuzzer.symbolize_log(tmp_in, tmp_out)
+            tmp_out.flush()
+            tmp_out.seek(0)
+            self.assertEqual(
+                tmp_out.read(), """
+A line
+Another line
+Yet another line
+""")
+
+    def test_symbolize_log_no_process_id(self):
+        mock_device = MockDevice()
+        base_dir = tempfile.mkdtemp()
+        fuzzer = Fuzzer(
+            mock_device, u'mock-package1', u'mock-target2', output=base_dir)
+        os.mkdir(fuzzer.results())
+        with tempfile.TemporaryFile() as tmp_out:
+            with tempfile.TemporaryFile() as tmp_in:
+                tmp_in.write(
+                    """
+A line
+Another line
+MS: 1 SomeMutation; base unit: foo
+Yet another line
+artifact_prefix='data/'; Test unit written to data/crash-aaaa
+""")
+                tmp_in.flush()
+                tmp_in.seek(0)
+                fuzzer.symbolize_log(tmp_in, tmp_out)
+            tmp_out.flush()
+            tmp_out.seek(0)
+            self.assertIn(
+                ' '.join(
+                    mock_device.get_ssh_cmd(
+                        [
+                            'scp', '[::1]:' + fuzzer.data_path('crash-aaaa'),
+                            fuzzer.results()
+                        ])), mock_device.host.history)
+            self.assertEqual(
+                tmp_out.read(), """
+A line
+Another line
+Symbolized line 1
+Symbolized line 2
+Symbolized line 3
+MS: 1 SomeMutation; base unit: foo
+Yet another line
+artifact_prefix='data/'; Test unit written to data/crash-aaaa
+""")
+
+    def test_symbolize_log_pid_from_stacktrace(self):
+        mock_device = MockDevice()
+        base_dir = tempfile.mkdtemp()
+        fuzzer = Fuzzer(
+            mock_device, u'mock-package1', u'mock-target2', output=base_dir)
+        os.mkdir(fuzzer.results())
+        with tempfile.TemporaryFile() as tmp_out:
+            with tempfile.TemporaryFile() as tmp_in:
+                tmp_in.write(
+                    """
+A line
+Another line
+==12345== INFO: libfuzzer stack trace:
+MS: 1 SomeMutation; base unit: foo
+Yet another line
+artifact_prefix='data/'; Test unit written to data/crash-bbbb
+""")
+                tmp_in.flush()
+                tmp_in.seek(0)
+                fuzzer.symbolize_log(tmp_in, tmp_out)
+            tmp_out.flush()
+            tmp_out.seek(0)
+            self.assertIn(
+                ' '.join(
+                    mock_device.get_ssh_cmd(
+                        [
+                            'scp', '[::1]:' + fuzzer.data_path('crash-bbbb'),
+                            fuzzer.results()
+                        ])), mock_device.host.history)
+            self.assertEqual(
+                tmp_out.read(), """
+A line
+Another line
+==12345== INFO: libfuzzer stack trace:
+Symbolized line 1
+Symbolized line 2
+Symbolized line 3
+MS: 1 SomeMutation; base unit: foo
+Yet another line
+artifact_prefix='data/'; Test unit written to data/crash-bbbb
+""")
+
+    def test_symbolize_log_pid_from_deadly_signal(self):
+        mock_device = MockDevice()
+        base_dir = tempfile.mkdtemp()
+        fuzzer = Fuzzer(
+            mock_device, u'mock-package1', u'mock-target2', output=base_dir)
+        os.mkdir(fuzzer.results())
+        with tempfile.TemporaryFile() as tmp_out:
+            with tempfile.TemporaryFile() as tmp_in:
+                tmp_in.write(
+                    """
+A line
+Another line
+==67890== ERROR: libFuzzer: deadly signal
+MS: 1 SomeMutation; base unit: foo
+Yet another line
+artifact_prefix='data/'; Test unit written to data/crash-cccc
+""")
+                tmp_in.flush()
+                tmp_in.seek(0)
+                fuzzer.symbolize_log(tmp_in, tmp_out)
+            tmp_out.flush()
+            tmp_out.seek(0)
+            self.assertIn(
+                ' '.join(
+                    mock_device.get_ssh_cmd(
+                        [
+                            'scp', '[::1]:' + fuzzer.data_path('crash-cccc'),
+                            fuzzer.results()
+                        ])), mock_device.host.history)
+            self.assertEqual(
+                tmp_out.read(), """
+A line
+Another line
+==67890== ERROR: libFuzzer: deadly signal
+Symbolized line 1
+Symbolized line 2
+Symbolized line 3
+MS: 1 SomeMutation; base unit: foo
+Yet another line
+artifact_prefix='data/'; Test unit written to data/crash-cccc
+""")
 
     def test_stop(self):
         mock_device = MockDevice()

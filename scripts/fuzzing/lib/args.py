@@ -32,6 +32,8 @@ class Args:
             '--staging',
             help='Host directory to use for un/packing corpus bundles. Defaults '
             + 'to a temporary directory.')
+        parser.add_argument(
+            '--monitor', action='store_true', help=argparse.SUPPRESS)
         name_help = (
             'Fuzzer name to match.  This can be part of the package and/or ' +
             'target name, e.g. "foo", "bar", and "foo/bar" all match ' +

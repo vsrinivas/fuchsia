@@ -85,7 +85,7 @@ class TestDevice(unittest.TestCase):
 
     def test_ssh(self):
         mock = MockDevice()
-        mock.ssh(['some-command', '--with', 'some-argument'])
+        mock.ssh(['some-command', '--with', 'some-argument']).check_call()
         self.assertIn(
             ' '.join(
                 mock.get_ssh_cmd(
@@ -110,6 +110,21 @@ class TestDevice(unittest.TestCase):
         self.assertTrue('feac37187e77ff60222325cf2829e2273e04f2ea' in files)
         self.assertEqual(
             files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
+
+    def test_rm(self):
+        mock = MockDevice()
+        mock.rm('path-to-some-file')
+        mock.rm('path-to-some-directory', recursive=True)
+        self.assertIn(
+            ' '.join(
+                mock.get_ssh_cmd(
+                    ['ssh', '::1', 'rm', '-f', 'path-to-some-file'])),
+            mock.host.history)
+        self.assertIn(
+            ' '.join(
+                mock.get_ssh_cmd(
+                    ['ssh', '::1', 'rm', '-rf', 'path-to-some-directory'])),
+            mock.host.history)
 
     def test_fetch(self):
         mock = MockDevice()

@@ -47,10 +47,10 @@ class Host(object):
         return os.path.join(fuchsia, *segments)
 
     def __init__(self):
-        self._ids = None
+        self._ids = []
         self._llvm_symbolizer = None
-        self._symbolizer_exec = None
         self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
+        self._symbolizer_exec = None
         self._zxtools = None
         self.fuzzers = []
         self.build_dir = None
@@ -65,11 +65,10 @@ class Host(object):
         with open(build_dir, 'r') as f:
             return Host.join(f.read().strip())
 
-    def set_build_ids(self, build_ids):
+    def add_build_ids(self, build_ids):
         """Sets the build IDs used to symbolize logs."""
-        if not os.path.exists(build_ids):
-            raise Host.ConfigError('Unable to find builds IDs.')
-        self._ids = build_ids
+        if os.path.exists(build_ids):
+            self._ids.append(build_ids)
 
     def set_zxtools(self, zxtools):
         """Sets the location of the Zircon host tools directory."""
@@ -100,14 +99,17 @@ class Host(object):
 
     def set_build_dir(self, build_dir):
         """Configure the host using data from a build directory."""
-        self.set_build_ids(Host.join(build_dir, 'ids.txt'))
         self.set_zxtools(Host.join(build_dir + '.zircon', 'tools'))
+        clang_dir = os.path.join(
+            'prebuilt', 'third_party', 'clang', self._platform)
         self.set_symbolizer(
             Host.join(
                 'prebuilt', 'tools', 'symbolize', self._platform, 'symbolize'),
-            Host.join(
-                'prebuilt', 'third_party', 'clang', self._platform, 'bin',
-                'llvm-symbolizer'))
+            Host.join(clang_dir, 'bin', 'llvm-symbolizer'))
+        self.add_build_ids(Host.join('prebuilt_build_ids'))
+        self.add_build_ids(Host.join(clang_dir, 'lib', 'debug', '.build-id'))
+        self.add_build_ids(Host.join(build_dir, '.build-id'))
+        self.add_build_ids(Host.join(build_dir + '.zircon', '.build-id'))
         json_file = Host.join(build_dir, 'fuzzers.json')
         # fuzzers.json isn't emitted in release builds
         if os.path.exists(json_file):
@@ -140,28 +142,42 @@ class Host(object):
             ['killall', process], stdout=Host.DEVNULL, stderr=Host.DEVNULL)
         p.call()
 
-    def symbolize(self, log_in, log_out):
-        """Symbolizes backtraces in a log file using the current build."""
+    def symbolize(self, raw):
+        """Symbolizes backtraces in a log file using the current build.
+
+        Attributes:
+            raw: Bytes representing unsymbolized lines.
+
+        Returns:
+            Bytes representing symbolized lines.
+        """
         if not self._symbolizer_exec:
             raise Host.ConfigError('Symbolizer executable not set.')
-        if not self._ids:
+        if len(self._ids) == 0:
             raise Host.ConfigError('Build IDs not set.')
         if not self._llvm_symbolizer:
             raise Host.ConfigError('LLVM symbolizer not set.')
+
+        # Symbolize
         args = [
-            self._symbolizer_exec, '-ids-rel', '-ids', self._ids,
-            '-llvm-symbolizer', self._llvm_symbolizer
+            self._symbolizer_exec, '-llvm-symbolizer', self._llvm_symbolizer
         ]
-        self.create_process(args, stdin=log_in, stdout=log_out).check_call()
+        for build_id_dir in self._ids:
+            args += ['-build-id-dir', build_id_dir]
+        p = self.create_process(args)
+        p.stdin = subprocess.PIPE
+        p.stdout = subprocess.PIPE
+        out, _ = p.popen().communicate(raw)
+        if p.returncode != 0:
+            out = ''
+        return re.sub(r'[0-9\[\]\.]*\[klog\] INFO: ', '', out)
 
     def notify_user(self, title, body):
         """Displays a message to the user in a platform-specific way"""
         args = ['which', 'notify-send']
         p = self.create_process(args, stdout=Host.DEVNULL, stderr=Host.DEVNULL)
 
-        if not self._platform:
-            return -1
-        elif self._platform == 'mac-x64':
+        if self._platform == 'mac-x64':
             args = [
                 'osascript', '-e',
                 'display notification "' + body + '" with title "' + title + '"'

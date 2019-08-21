@@ -15,7 +15,7 @@ class MockHost(Host):
 
     def __init__(self):
         super(MockHost, self).__init__()
-        self._ids = os.path.join('mock', 'ids.txt')
+        self._ids = [os.path.join('mock', '.build-id')]
         self._llvm_symbolizer = os.path.join('mock', 'llvm_symbolizer')
         self._symbolizer_exec = os.path.join('mock', 'symbolize')
         self._platform = 'mock'
@@ -33,4 +33,12 @@ class MockHost(Host):
         self.history = []
 
     def create_process(self, args, **kwargs):
-        return MockProcess(self, args, **kwargs)
+        p = MockProcess(self, args, **kwargs)
+        if ' '.join(args) == 'git rev-parse HEAD':
+            p.response = 'da39a3ee5e6b4b0d3255bfef95601890afd80709'
+        elif args[0] == self._symbolizer_exec:
+            p.response = """[000001.234567][123][456][klog] INFO: Symbolized line 1
+[000001.234568][123][456][klog] INFO: Symbolized line 2
+[000001.234569][123][456][klog] INFO: Symbolized line 3
+"""
+        return p

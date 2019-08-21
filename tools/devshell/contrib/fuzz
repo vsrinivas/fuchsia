@@ -117,7 +117,7 @@ case "$cmd" in
     python ${FUZZING_DIR}/fetch_corpus.py "$@"
     ;;
   start)
-    python ${FUZZING_DIR}/start_fuzzer.py "$@" &
+    python ${FUZZING_DIR}/start_fuzzer.py "$@"
     ;;
   check)
     python ${FUZZING_DIR}/check_fuzzer.py "$@"
@@ -137,7 +137,7 @@ case "$cmd" in
   *)
     name="$cmd"
     if python ${FUZZING_DIR}/list_fuzzers.py "$name" ; then
-      python ${FUZZING_DIR}/start_fuzzer.py "$name" "$@" &
+      python ${FUZZING_DIR}/start_fuzzer.py "$name" "$@"
     else
       fx-command-help
     fi

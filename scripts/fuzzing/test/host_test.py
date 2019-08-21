@@ -40,18 +40,18 @@ class TestHost(unittest.TestCase):
         print(host.find_build_dir())
         self.assertTrue(os.path.isdir(host.find_build_dir()))
 
-    def test_set_build_ids(self):
+    def test_add_build_ids(self):
         host = Host()
-        with self.assertRaises(Host.ConfigError):
-            host.set_build_ids('no_such_ids')
+        host.add_build_ids('no_such_ids')
+        self.assertNotIn('no_such_ids', host._ids)
         if not os.getenv('FUCHSIA_DIR'):
             return
         build_dir = host.find_build_dir()
-        build_ids = Host.join(build_dir, 'ids.txt')
+        build_ids = Host.join(build_dir, '.build-id')
         if not os.path.exists(build_ids):
             return
-        host.set_build_ids(build_ids)
-        self.assertEqual(host._ids, build_ids)
+        host.add_build_ids(build_ids)
+        self.assertIn(build_ids, host._ids)
 
     def test_set_zxtools(self):
         host = Host()
@@ -126,7 +126,6 @@ class TestHost(unittest.TestCase):
             return
         build_dir = host.find_build_dir()
         ssh_config = Host.join(build_dir, 'ssh-keys', 'ssh_config')
-        build_ids = Host.join(build_dir, 'ids.txt')
         zxtools = Host.join(build_dir + '.zircon', 'tools')
         platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
         executable = Host.join(
@@ -134,15 +133,13 @@ class TestHost(unittest.TestCase):
         symbolizer = Host.join(
             'prebuilt', 'third_party', 'clang', platform, 'bin',
             'llvm-symbolizer')
-        if not os.path.exists(ssh_config) or not os.path.exists(
-                build_ids) or not os.path.isdir(zxtools):
-            return
         host.set_build_dir(build_dir)
-        self.assertEqual(host._ids, build_ids)
-        self.assertEqual(host._zxtools, zxtools)
-        self.assertEqual(host._platform, platform)
-        self.assertEqual(host._symbolizer_exec, executable)
-        self.assertEqual(host._llvm_symbolizer, symbolizer)
+        self.assertNotEqual(len(host._ids), 0)
+        for id in host._ids:
+            self.assertTrue(os.path.exists(id))
+        self.assertIsNotNone(host._zxtools)
+        self.assertTrue(os.path.exists(host._symbolizer_exec))
+        self.assertTrue(os.path.exists(host._llvm_symbolizer))
 
     def test_zircon_tool(self):
         # If a build tree is available, try using a zircon tool for "real".
@@ -164,22 +161,17 @@ class TestHost(unittest.TestCase):
 
     def test_symbolize(self):
         mock = MockHost()
-        mock.symbolize('mock_in', 'mock_out')
+        stacktrace = ['a line', 'another line', 'yet another line']
+        mock.symbolize('\n'.join(stacktrace))
         self.assertIn(
             ' '.join(
                 [
-                    'mock/symbolize', '-ids-rel', '-ids', 'mock/ids.txt',
-                    '-llvm-symbolizer', 'mock/llvm_symbolizer'
+                    'mock/symbolize', '-llvm-symbolizer',
+                    'mock/llvm_symbolizer', '-build-id-dir', 'mock/.build-id'
                 ]), mock.history)
-        # If a build tree is available, try doing symbolize for "real".
-        host = Host()
-        try:
-            host.set_build_dir(host.find_build_dir())
-        except Host.ConfigError:
-            return
-        tmp_in = tempfile.TemporaryFile()
-        tmp_out = tempfile.TemporaryFile()
-        host.symbolize(tmp_in, tmp_out)
+        for line in stacktrace:
+            for c in line:
+                self.assertIn(' < ' + c, mock.history)
 
     def test_notify_user(self):
         host = Host()

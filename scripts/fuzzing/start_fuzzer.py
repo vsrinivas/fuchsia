@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import subprocess
 import sys
 
 from lib.args import Args
@@ -24,29 +25,39 @@ def main():
     device = Device.from_args(host, args)
     fuzzer = Fuzzer.from_args(device, args)
 
-    with Corpus.from_args(fuzzer, args) as corpus:
-        cipd = Cipd(corpus)
-        if not args.no_cipd:
-            cipd.install('latest')
-        corpus.push()
+    if not args.monitor:
+        with Corpus.from_args(fuzzer, args) as corpus:
+            cipd = Cipd(corpus)
+            if not args.no_cipd:
+                cipd.install('latest')
+            corpus.push()
 
-    print('\n****************************************************************')
-    print(' Starting ' + str(fuzzer) + '.')
-    print(' Outputs will be written to:')
-    print('   ' + fuzzer.results())
-    if not args.foreground:
-        print(' You should be notified when the fuzzer stops.')
         print(
-            ' To check its progress, use `fx fuzz check ' + str(fuzzer) + '`.')
-        print(' To stop it manually, use `fx fuzz stop ' + str(fuzzer) + '`.')
-    print('****************************************************************\n')
-    fuzzer.start(fuzzer_args)
-
-    title = str(fuzzer) + ' has stopped.'
-    body = 'Output written to ' + fuzzer.results() + '.'
-    print(title)
-    print(body)
-    host.notify_user(title, body)
+            '\n****************************************************************'
+        )
+        print(' Starting ' + str(fuzzer) + '.')
+        print(' Outputs will be written to:')
+        print('   ' + fuzzer.results())
+        if not args.foreground:
+            print(' You should be notified when the fuzzer stops.')
+            print(
+                ' To check its progress, use `fx fuzz check ' + str(fuzzer) +
+                '`.')
+            print(
+                ' To stop it manually, use `fx fuzz stop ' + str(fuzzer) + '`.')
+        print(
+            '****************************************************************\n'
+        )
+        fuzzer.start(fuzzer_args)
+        if not args.foreground:
+            subprocess.Popen(['python', sys.argv[0], '--monitor', str(fuzzer)])
+    else:
+        fuzzer.monitor()
+        title = str(fuzzer) + ' has stopped.'
+        body = 'Output written to ' + fuzzer.results() + '.'
+        print(title)
+        print(body)
+        host.notify_user(title, body)
     return 0
 
 

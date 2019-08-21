@@ -91,52 +91,22 @@ class Device(object):
                     result.append(arg)
         return result + cmd[1:]
 
-    def _ssh(self, cmdline, stdout=subprocess.PIPE):
-        """Internal wrapper around _rexec that adds the ssh command and config.
+    def ssh(self, cmdline, **kwargs):
+        """Creates a Process with added SSH arguments.
 
-    Don't call this directly. This method exists to be overridden in testing.
+    Provides the additional arguments to handle connecting the device and other
+    SSH options. The returned Process represents a command that can be run on
+    the remote device.
 
     Args:
       cmdline: List of command line arguments to execute on device
-      stdout: Same as for subprocess.Popen
+      kwargs: Same as for subprocess.Popen
 
     Returns:
-      If check was false, a subprocess.Popen object representing the running
-      child process.
-
-    Raises: Same as subprocess.Popen
+      A Process object.
     """
         args = self.get_ssh_cmd(['ssh', self._addr] + cmdline)
-        p = self.host.create_process(
-            args, stdout=stdout, stderr=subprocess.STDOUT)
-        return p.popen()
-
-    def ssh(self, cmdline, quiet=True, logfile=None):
-        """Runs a command to completion on the device.
-
-    Connects to the target device and executes a shell command.  Output from
-    the shell command is sent to stdout, and may optionally be saved to a file
-    via the POSIX utility 'tee'.
-
-    Args:
-      cmdline: A list of command line arguments, starting with the command to
-        execute.
-      logfile: An optional pathname to save a copy of the command output to. The
-        output will also still be sent to stdout.
-    """
-        if quiet:
-            if logfile:
-                with open(logfile, 'w') as f:
-                    self._ssh(cmdline, stdout=f).wait()
-            else:
-                self._ssh(cmdline, stdout=Host.DEVNULL).wait()
-        else:
-            if logfile:
-                p1 = self._ssh(cmdline, stdout=subprocess.PIPE)
-                p2 = self.host.create_process(['tee', logfile], stdin=p1.stdout)
-                p2.check_call()
-            else:
-                self._ssh(cmdline, stdout=None).wait()
+        return self.host.create_process(args, **kwargs)
 
     def getpids(self):
         """Maps names to process IDs for running fuzzers.
@@ -151,7 +121,7 @@ class Device(object):
       A dict mapping fuzz target names to process IDs. May be empty if no
       fuzzers are running.
     """
-        out, _ = self._ssh(['cs'], stdout=subprocess.PIPE).communicate()
+        out = self.ssh(['cs']).check_output()
         pids = {}
         for fuzzer in self.host.fuzzers:
             tgt = (fuzzer[1] + '.cmx')[:32]
@@ -177,8 +147,7 @@ class Device(object):
     """
         results = {}
         try:
-            out, _ = self._ssh(['ls', '-l', path],
-                               stdout=subprocess.PIPE).communicate()
+            out = self.ssh(['ls', '-l', path]).check_output()
             for line in str(out).split('\n'):
                 # Line ~= '-rw-r--r-- 1 0 0 8192 Mar 18 22:02 some-name'
                 parts = line.split()
@@ -187,6 +156,42 @@ class Device(object):
         except subprocess.CalledProcessError:
             pass
         return results
+
+    def rm(self, pathname, recursive=False):
+        """Removes a file or directory from the device."""
+        args = ['rm']
+        if recursive:
+            args.append('-rf')
+        else:
+            args.append('-f')
+        args.append(pathname)
+        self.ssh(args).check_call()
+
+    def dump_log(self, args):
+        """Retrieve a syslog from the device."""
+        p = self.ssh(
+            ['log_listener', '--dump_logs', 'yes', '--pretty', 'no'] + args)
+        return p.check_output()
+
+    def guess_pid(self):
+        """Tries to guess the fuzzer process ID from the device syslog.
+
+        This will assume the last line which contained one of the strings
+        '{{{reset}}}', 'libFuzzer', or 'Sanitizer' is the fuzzer process, and
+        try to extract its PID.
+
+        Returns:
+          The PID of the process suspected to be the fuzzer, or -1 if no
+          suitable candidate was found.
+        """
+        out = self.dump_log(['--only', 'reset,Fuzzer,Sanitizer'])
+        pid = -1
+        for line in out.split('\n'):
+            # Log lines are like '[timestamp][pid][tid][name] data'
+            parts = line.split('][')
+            if len(parts) > 2:
+                pid = int(parts[1])
+        return pid
 
     def _scp(self, srcs, dst):
         """Copies `src` to `dst`.
@@ -209,7 +214,7 @@ class Device(object):
 
     def store(self, host_src, data_dst):
         """Copies `host_src` on the host to `data_dst` on the target."""
-        self.ssh(['mkdir', '-p', data_dst])
+        self.ssh(['mkdir', '-p', data_dst]).check_call()
         srcs = glob.glob(host_src)
         if len(srcs) == 0:
             return

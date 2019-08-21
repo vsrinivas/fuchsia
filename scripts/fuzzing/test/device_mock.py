@@ -8,6 +8,7 @@ import subprocess
 
 import test_env
 from lib.device import Device
+from lib.process import Process
 
 from host_mock import MockHost
 
@@ -18,11 +19,11 @@ class MockDevice(Device):
         super(MockDevice, self).__init__(MockHost(), '::1', port)
         self.toggle = False
 
-    def _ssh(self, cmdline, stdout=subprocess.PIPE):
+    def ssh(self, cmdline):
         """ Overrides Device._ssh to provide canned responses."""
-        super(MockDevice, self)._ssh(cmdline, stdout)
+        p = super(MockDevice, self).ssh(cmdline)
         if cmdline[0] == 'cs' and self.toggle:
-            response = """
+            p.response = r"""
   http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#m
   mock-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/mock-p
   mock-target2.cmx[7412222]: fuchsia-pkg://fuchsia.com/mock-p
@@ -30,28 +31,30 @@ class MockDevice(Device):
 """
             self.toggle = False
         elif cmdline[0] == 'cs':
-            response = """
+            p.response = r"""
   http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#m
   mock-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/mock-p
   an-extremely-verbose-target-name[7412223]: fuchsia-pkg://fuchsia.com/mock-p
 """
             self.toggle = True
         elif cmdline[0] == 'ls' and cmdline[-1].endswith('corpus'):
-            response = """
+            p.response = r"""
 -rw-r--r--    1 0        0              1796 Mar 19 17:25 feac37187e77ff60222325cf2829e2273e04f2ea
 -rw-r--r--    1 0        0               124 Mar 18 22:02 ff415bddb30e9904bccbbd21fb5d4aa9bae9e5a5
 """
         elif cmdline[0] == 'ls':
-            response = """
+            p.response = r"""
 drw-r--r--    2 0        0             13552 Mar 20 01:40 corpus
 -rw-r--r--    1 0        0               918 Mar 20 01:40 fuzz-0.log
 -rw-r--r--    1 0        0              1337 Mar 20 01:40 crash-deadbeef
 -rw-r--r--    1 0        0              1729 Mar 20 01:40 leak-deadfa11
 -rw-r--r--    1 0        0             31415 Mar 20 01:40 oom-feedface
 """
-        else:
-            response = ''
-        return subprocess.Popen(
-            ['printf', '\'' + response + '\''],
-            stdout=stdout,
-            stderr=subprocess.STDOUT)
+        elif cmdline[0] == 'log_listener':
+            p.response = r"""
+[0:0] {{{reset}}}
+[0:0] {{{a line to symbolize}}}
+[0:0] {{{another line to symbolize}}}
+[0:0] {{{yet another line to symbolize}}}
+"""
+        return p

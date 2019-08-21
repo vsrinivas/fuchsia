@@ -6,7 +6,9 @@
 import argparse
 import datetime
 import errno
+import glob
 import os
+import re
 import subprocess
 import time
 
@@ -148,17 +150,19 @@ class Fuzzer(object):
     def url(self):
         return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (self.pkg, self.tgt)
 
-    def run(self, fuzzer_args, logfile=None):
+    def _create(self, fuzzer_args, logfile=None):
         fuzz_cmd = ['run', self.url(), '-artifact_prefix=data/'] + fuzzer_args
         print('+ ' + ' '.join(fuzz_cmd))
-        self.device.ssh(fuzz_cmd, quiet=False, logfile=logfile)
+        return self.device.ssh(fuzz_cmd)
 
     def start(self, fuzzer_args):
         """Runs the fuzzer.
 
-      Executes a fuzzer in the "normal" fuzzing mode. It creates a log context,
-      and waits after spawning the fuzzer until it completes. As a result,
-      callers will typically want to run this in a background process.
+      Executes a fuzzer in the "normal" fuzzing mode. If the fuzzer is being
+      run in the foreground, it will block until the fuzzer exits. If the
+      fuzzer is being run in the background, it will return immediately after
+      the fuzzer has been started, and callers should subsequently call
+      Fuzzer.monitor().
 
       The command will be like:
       run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
@@ -168,8 +172,12 @@ class Fuzzer(object):
 
       Args:
         fuzzer_args: Command line arguments to pass to libFuzzer
+
+      Returns:
+        The fuzzer's process ID. May be 0 if the fuzzer stops immediately.
     """
         self.require_stopped()
+        self.device.rm(self.data_path('fuzz-*.log'))
         results = os.path.join(
             self._output,
             datetime.datetime.utcnow().isoformat())
@@ -190,23 +198,87 @@ class Fuzzer(object):
                 fuzzer_args.append('-jobs=0')
             else:
                 fuzzer_args.append('-jobs=1')
-        self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
+        self.device.ssh(['mkdir', '-p', self.data_path('corpus')]).check_call()
         if len(filter(lambda x: not x.startswith('-'), fuzzer_args)) == 0:
             fuzzer_args.append('data/corpus/')
 
-        # TODO(SEC-352): Disable logging until fixed.
+        # Fuzzer logs are saved to fuzz-*.log when running in the background.
+        # We tee the output to fuzz-0.log when running in the foreground to
+        # make the rest of the plumbing look the same.
+        cmd = self._create(fuzzer_args)
         if self._foreground:
-            self.run(fuzzer_args, logfile=self.results('fuzz-0.log'))
-        else:
-            self.run(fuzzer_args)
+            cmd.stderr = subprocess.PIPE
+        proc = cmd.popen()
+        if self._foreground:
+            logfile = self.results('fuzz-0.log')
+            with open(logfile, 'w') as fd_out:
+                self.symbolize_log(proc.stderr, fd_out, echo=True)
+            proc.wait()
+
+    def symbolize_log(self, fd_in, fd_out, echo=False):
+        """Constructs a symbolized fuzzer log from a device.
+
+        Merges the provided fuzzer log with the symbolized system log for the
+        fuzzer process.
+
+        Args:
+          fd_in: An object supporting readline(), such as a file or pipe.
+          fd_out: An object supporting write(), such as a file.
+          echo: If true, display text being written to fd_out.
+        """
+        pid = -1
+        sym = None
+        artifacts = []
+        pid_pattern = re.compile(r'==([0-9]*)==')
+        mut_pattern = re.compile(r'^MS: [0-9]*')  # Fuzzer::DumpCurrentUnit
+        art_pattern = re.compile(r'Test unit written to data/(\S*)')
+        for line in iter(fd_in.readline, ''):
+            pid_match = pid_pattern.search(line)
+            mut_match = mut_pattern.search(line)
+            art_match = art_pattern.search(line)
+            if pid_match:
+                pid = int(pid_match.group(1))
+            if mut_match:
+                if pid <= 0:
+                    pid = self.device.guess_pid()
+                if not sym:
+                    raw = self.device.dump_log(['--pid', str(pid)])
+                    sym = self.host.symbolize(raw)
+                    fd_out.write(sym)
+                    if echo:
+                        print(sym.strip())
+            if art_match:
+                artifacts.append(art_match.group(1))
+            fd_out.write(line)
+            if echo:
+                print(line.strip())
+        for artifact in artifacts:
+            self.device.fetch(self.data_path(artifact), self.results())
+
+    def monitor(self):
+        """Waits for a fuzzer to complete and symbolizes its logs.
+
+        Polls the device to determine when the fuzzer stops. Retrieves,
+        combines and symbolizes the associated fuzzer and kernel logs. Fetches
+        any referenced test artifacts, e.g. crashes.
+        """
         while self.is_running():
             time.sleep(2)
+        self.device.fetch(self.data_path('fuzz-*.log'), self.results())
+        logs = glob.glob(self.results('fuzz-*.log'))
+        artifacts = []
+        for log in logs:
+            tmp = log + '.tmp'
+            with open(log, 'r') as fd_in:
+                with open(tmp, 'w') as fd_out:
+                    self.symbolize_log(fd_in, fd_out, echo=False)
+            os.rename(tmp, log)
 
     def stop(self):
         """Stops any processes with a matching component manifest on the device."""
         pids = self.device.getpids()
         if self.tgt in pids:
-            self.device.ssh(['kill', str(pids[self.tgt])])
+            self.device.ssh(['kill', str(pids[self.tgt])]).check_call()
 
     def repro(self, fuzzer_args):
         """Runs the fuzzer with test input artifacts.
@@ -220,8 +292,9 @@ class Fuzzer(object):
       Returns: Number of test input artifacts found.
     """
         artifacts = self.list_artifacts()
-        if len(artifacts) != 0:
-            self.run(fuzzer_args + ['data/' + a for a in artifacts])
+        if len(artifacts) == 0:
+            return 0
+        self._create(fuzzer_args + ['data/' + a for a in artifacts]).call()
         return len(artifacts)
 
     def merge(self, fuzzer_args):
@@ -240,21 +313,21 @@ class Fuzzer(object):
         self.require_stopped()
         if self.measure_corpus() == (0, 0):
             return (0, 0)
-        self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
-        self.device.ssh(['mkdir', '-p', self.data_path('corpus.prev')])
+        self.device.ssh(['mkdir', '-p', self.data_path('corpus')]).check_call()
+        self.device.ssh(['mkdir', '-p',
+                         self.data_path('corpus.prev')]).check_call()
         self.device.ssh(
             ['mv',
              self.data_path('corpus/*'),
-             self.data_path('corpus.prev')])
-        self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
+             self.data_path('corpus.prev')]).check_call()
         # Save mergefile in case we are interrupted
         fuzzer_args = [
             '-merge=1', '-merge_control_file=data/.mergefile'
         ] + fuzzer_args
         fuzzer_args.append('data/corpus/')
         fuzzer_args.append('data/corpus.prev/')
-        self.run(fuzzer_args)
+        self._create(fuzzer_args).check_call()
         # Cleanup
-        self.device.ssh(['rm', self.data_path('.mergefile')])
-        self.device.ssh(['rm', '-r', self.data_path('corpus.prev')])
+        self.device.rm(self.data_path('.mergefile'))
+        self.device.rm(self.data_path('corpus.prev'), recursive=True)
         return self.measure_corpus()
