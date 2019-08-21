@@ -452,7 +452,7 @@ class Compressor final {
 
   struct Config {
     // Default for -c with no argument (or no switches at all).
-    using Default = Lz4f;
+    using Default = Zstd;
 
     Algo algo_ = Default::kAlgo;
     int level_ = Default::DefaultLevel();

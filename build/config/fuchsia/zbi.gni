@@ -8,7 +8,7 @@ declare_args() {
   # Compression setting for ZBI "storage" items.
   # This can be either "lz4f" or "zstd", optionally followed by ".LEVEL"
   # where `LEVEL` can be an integer or "max".
-  zbi_compression = "lz4f"
+  zbi_compression = "zstd"
 }
 
 # Template for assembling a Zircon Boot Image file from various inputs.

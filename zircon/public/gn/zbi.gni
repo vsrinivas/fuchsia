@@ -16,7 +16,7 @@ declare_args() {
   # So using the default during rapid development (quick builds, pretty
   # good compression) and "max' for production builds (slow builds, best
   # compression available) probably makes sense.
-  zbi_compression = "lz4f"
+  zbi_compression = "zstd"
 }
 
 # The compression algorithm part of the $zbi_compression setting.
