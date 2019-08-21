@@ -446,6 +446,33 @@ name may be left off: `ProtocolName.Method`.
 Similarly, when referring to a method in the same protocol as the comment,
 the library name and protocol name may be left off: `Method`.
 
+#### Library Overview
+
+You can provide a library overview as a documentation comment on the
+`library` statement. The 'library' statement starts FIDL files. For example:
+
+```fidl
+/// Overview of fuchsia.library.
+library fuchsia.library;
+
+...
+```
+
+Library overviews should provide general documentation to define the library.
+They may also provide a detailed introduction to various messages, defined
+protocols, and how the messages and protocols are used together.
+
+While a library can be broken down in multiple FIDL [Files](#files), there
+can only be a single library overview. Consider these recommendations for library
+overviews:
+
+ * If the overview is short and the library consists of a single file, you can
+   place the overview in the `library` statement at the top of the library file.
+
+ * If the library consists of multiple files, create a standalone file
+   `overview.fidl` to document the library. The 'overview.fidl' file should not
+   contain any declarations, type aliases, or protocol definitions.
+
 #### Non flow-through comments
 
 If your comments are meant for library authors, use the simpler comments `//`
@@ -478,7 +505,7 @@ struct Widget {
 };
 ```
 
-### Files
+### Files <a name="files"></a>
 
 A library is comprised of one or more files.  The files are stored in a
 directory hierarchy with the following conventions:
