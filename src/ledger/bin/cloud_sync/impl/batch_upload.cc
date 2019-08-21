@@ -273,24 +273,27 @@ void BatchUpload::EncodeCommit(
         callback(EncryptionStatusToUploadStatus(status));
       }));
 
+  // This callback needs an additional level of scoping because EncodeDiff accesses the storage.
   storage_->GetDiffForCloud(
       commit,
-      waiter->MakeScoped([this, waiter, callback = waiter->NewCallback(), remote_commit_ptr](
-                             storage::Status status, storage::CommitIdView base_commit,
-                             std::vector<storage::EntryChange> changes) mutable {
-        if (status != storage::Status::OK) {
-          callback(LedgerStatusToUploadStatus(status));
-          return;
-        }
-        EncodeDiff(base_commit, std::move(changes),
-                   waiter->MakeScoped([callback = std::move(callback), remote_commit_ptr](
-                                          UploadStatus status, cloud_provider::Diff diff) {
-                     if (status == UploadStatus::OK) {
-                       remote_commit_ptr->set_diff(std::move(diff));
-                     }
-                     callback(status);
-                   }));
-      }));
+      callback::MakeScoped(
+          weak_ptr_factory_.GetWeakPtr(),
+          waiter->MakeScoped([this, waiter, callback = waiter->NewCallback(), remote_commit_ptr](
+                                 storage::Status status, storage::CommitIdView base_commit,
+                                 std::vector<storage::EntryChange> changes) mutable {
+            if (status != storage::Status::OK) {
+              callback(LedgerStatusToUploadStatus(status));
+              return;
+            }
+            EncodeDiff(base_commit, std::move(changes),
+                       waiter->MakeScoped([callback = std::move(callback), remote_commit_ptr](
+                                              UploadStatus status, cloud_provider::Diff diff) {
+                         if (status == UploadStatus::OK) {
+                           remote_commit_ptr->set_diff(std::move(diff));
+                         }
+                         callback(status);
+                       }));
+          })));
 
   waiter->Finalize([remote_commit = std::move(remote_commit),
                     commit_callback = std::move(commit_callback)](UploadStatus status) mutable {

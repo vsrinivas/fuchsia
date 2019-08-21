@@ -502,7 +502,7 @@ TEST_F(BatchUploadTest, FailedCommitUploadWithStorageError) {
 }
 
 // Test objects upload that get an error from storage.
-TEST_F(BatchUploadTest, FailedObjectUploadWitStorageError) {
+TEST_F(BatchUploadTest, FailedObjectUploadWithStorageError) {
   storage_.should_fail_mark_piece_synced = true;
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
@@ -623,6 +623,53 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 
   // Verify that no calls were made to attempt to upload the commit.
   EXPECT_EQ(page_cloud_.add_commits_calls, 0u);
+}
+
+class PageStorageBlockingGetDiff : public TestPageStorage {
+ public:
+  PageStorageBlockingGetDiff(async_dispatcher_t* dispatcher) : TestPageStorage(dispatcher) {}
+
+  void GetDiffForCloud(
+      const storage::Commit& commit,
+      fit::function<void(ledger::Status, storage::CommitIdView, std::vector<storage::EntryChange>)>
+          callback) override {
+    get_diff_callbacks[commit.GetId()] = std::move(callback);
+  }
+
+  std::map<storage::CommitId, fit::function<void(ledger::Status, storage::CommitIdView,
+                                                 std::vector<storage::EntryChange>)>>
+      get_diff_callbacks;
+};
+
+TEST_F(BatchUploadTest, BatchUploadCancellation) {
+  PageStorageBlockingGetDiff storage(dispatcher());
+
+  // Test that, when cancelled during GetDiffFromCloud because of an error, we do not crash.
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage.NewCommit("bad_commit", "content", true));
+  commits.push_back(storage.NewCommit("good_commit", "content", true));
+
+  auto batch_upload = MakeBatchUploadWithStorage(&storage, std::move(commits));
+  batch_upload->Start();
+  RunLoopUntilIdle();
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 0u);
+  EXPECT_THAT(storage.get_diff_callbacks, SizeIs(2));
+  ASSERT_TRUE(storage.get_diff_callbacks["bad_commit"]);
+  ASSERT_TRUE(storage.get_diff_callbacks["good_commit"]);
+
+  storage.get_diff_callbacks["bad_commit"](ledger::Status::INTERNAL_NOT_FOUND, "", {});
+  RunLoopUntilIdle();
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 1u);
+
+  batch_upload.reset();
+  auto id = MakeObjectIdentifier("obj_digest");
+  storage.get_diff_callbacks["good_commit"](
+      ledger::Status::OK, "other_commit",
+      std::vector<storage::EntryChange>{{{"key", id, storage::KeyPriority::EAGER, "entry"}, true}});
+  RunLoopUntilIdle();
+  // This should not crash.
 }
 
 class FailingEncryptCommitEncryptionService : public encryption::FakeEncryptionService {
