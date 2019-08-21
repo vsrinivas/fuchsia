@@ -43,7 +43,10 @@ async fn main() -> Result<(), Error> {
 
     println!("accessibility service tests");
     println!("  client calls set audio_description");
-    validate_accessibility(Some(true)).await?;
+    validate_accessibility(Some(true), None).await?;
+    println!("  client calls set color_correction");
+    validate_accessibility(None, Some(fidl_fuchsia_settings::ColorBlindnessType::Protanomaly))
+        .await?;
 
     println!("display service tests");
     println!("  client calls display watch");
@@ -185,12 +188,19 @@ async fn validate_display(
     Ok(())
 }
 
-async fn validate_accessibility(expected_audio_description: Option<bool>) -> Result<(), Error> {
+async fn validate_accessibility(
+    expected_audio_description: Option<bool>,
+    expected_color_correction: Option<fidl_fuchsia_settings::ColorBlindnessType>,
+) -> Result<(), Error> {
     let env = create_service!(
         Services::Accessibility, AccessibilityRequest::Set { settings, responder, } => {
             if let (Some(audio_description), Some(expected_audio_description_value)) =
               (settings.audio_description, expected_audio_description) {
                 assert_eq!(audio_description, expected_audio_description_value);
+                responder.send(&mut Ok(()))?;
+            } else if let (Some(color_correction), Some(expected_color_correction_value)) =
+                (settings.color_correction, expected_color_correction) {
+                assert_eq!(color_correction, expected_color_correction_value);
                 responder.send(&mut Ok(()))?;
             } else {
                 panic!("Unexpected call to set");
@@ -202,7 +212,7 @@ async fn validate_accessibility(expected_audio_description: Option<bool>) -> Res
                 screen_reader: None,
                 color_inversion: None,
                 enable_magnification: None,
-                color_correction: None,
+                color_correction: Some(fidl_fuchsia_settings::ColorBlindnessType::None),
                 captions_settings: None,
             }))?;
         }
@@ -212,7 +222,12 @@ async fn validate_accessibility(expected_audio_description: Option<bool>) -> Res
         .connect_to_service::<AccessibilityMarker>()
         .context("Failed to connect to accessibility service")?;
 
-    accessibility::command(accessibility_service, expected_audio_description).await?;
+    accessibility::command(
+        accessibility_service,
+        expected_audio_description,
+        expected_color_correction,
+    )
+    .await?;
 
     Ok(())
 }

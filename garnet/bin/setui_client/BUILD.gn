@@ -31,6 +31,7 @@ rustc_library("lib") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",

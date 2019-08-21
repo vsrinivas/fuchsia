@@ -7,6 +7,7 @@ use {failure::Error, fidl_fuchsia_settings::*};
 pub async fn command(
     proxy: AccessibilityProxy,
     audio_description: Option<bool>,
+    color_correction: Option<ColorBlindnessType>,
 ) -> Result<String, Error> {
     let mut output = String::new();
 
@@ -19,6 +20,18 @@ pub async fn command(
             Ok(_) => output.push_str(&format!(
                 "Successfully set audio_description to {}",
                 audio_description_value
+            )),
+            Err(err) => output.push_str(&format!("{:?}", err)),
+        }
+    } else if let Some(color_correction_value) = color_correction {
+        let mut settings = AccessibilitySettings::empty();
+        settings.color_correction = Some(color_correction_value);
+
+        let mutate_result = proxy.set(settings).await?;
+        match mutate_result {
+            Ok(_) => output.push_str(&format!(
+                "Successfully set color_correction to {}",
+                describe_color_blindness_type(&color_correction_value)
             )),
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
@@ -46,7 +59,23 @@ fn describe_accessibility_setting(accessibility_setting: &AccessibilitySettings)
         output.push_str(&format!("audio_description: {} ", audio_description))
     }
 
+    if let Some(color_correction) = accessibility_setting.color_correction {
+        output.push_str(&format!(
+            "color_correction: {} ",
+            describe_color_blindness_type(&color_correction)
+        ))
+    }
+
     output.push_str("}");
 
     return output;
+}
+
+fn describe_color_blindness_type(color_blindness_type: &ColorBlindnessType) -> String {
+    match color_blindness_type {
+        fidl_fuchsia_settings::ColorBlindnessType::None => "none".into(),
+        fidl_fuchsia_settings::ColorBlindnessType::Protanomaly => "protanomaly".into(),
+        fidl_fuchsia_settings::ColorBlindnessType::Deuteranomaly => "deuteranomaly".into(),
+        fidl_fuchsia_settings::ColorBlindnessType::Tritanomaly => "tritanomaly".into(),
+    }
 }
