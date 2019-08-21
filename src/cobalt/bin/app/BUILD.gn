@@ -36,6 +36,7 @@ source_set("lib") {
     "//garnet/public/lib/network_wrapper",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/cobalt/bin/utils:clock",
     "//src/cobalt/bin/utils:fuchsia_http_client",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/lib/fxl",

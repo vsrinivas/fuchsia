@@ -20,6 +20,7 @@
 #include "src/cobalt/bin/app/logger_factory_impl.h"
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
+#include "src/cobalt/bin/utils/clock.h"
 #include "third_party/cobalt/src/lib/util/consistent_proto_store.h"
 #include "third_party/cobalt/src/logger/encoder.h"
 #include "third_party/cobalt/src/logger/event_aggregator.h"
@@ -110,6 +111,8 @@ class CobaltApp {
   encoder::SystemData system_data_;
 
   std::unique_ptr<sys::ComponentContext> context_;
+
+  FuchsiaSystemClock system_clock_;
 
   network_wrapper::NetworkWrapperImpl network_wrapper_;
   std::unique_ptr<encoder::ObservationStore> observation_store_;

@@ -2,10 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_UTILS_CLOCK_H_
-#define GARNET_BIN_COBALT_UTILS_CLOCK_H_
+#ifndef SRC_COBALT_BIN_UTILS_CLOCK_H_
+#define SRC_COBALT_BIN_UTILS_CLOCK_H_
+
+#include <lib/fit/defer.h>
+#include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <chrono>
+#include <optional>
+
+#include "fuchsia/time/cpp/fidl.h"
+#include "third_party/cobalt/src/lib/util/clock.h"
 
 namespace cobalt {
 
@@ -23,6 +31,29 @@ class RealSteadyClock : public SteadyClock {
   std::chrono::steady_clock::time_point Now() override { return std::chrono::steady_clock::now(); }
 };
 
+class FuchsiaSystemClock : public util::ValidatedClockInterface {
+ public:
+  explicit FuchsiaSystemClock(sys::ComponentContext* context);
+
+  // Returns the current time once the Fuchsia timekeeper service reports that
+  // the system clock has been initialized from an external source.
+  std::optional<std::chrono::system_clock::time_point> now() override;
+
+  // Wait for the system clock to become accurate, then call the callback.
+  //
+  // Uses the timekeeper (fuchsia.time.Utc) service to wait for the clock to be
+  // initialized from a suitably accurate external time source.
+  void AwaitExternalSource(std::function<void()> callback);
+
+ private:
+  void WatchStateCallback(const fuchsia::time::UtcState& utc_state);
+
+  sys::ComponentContext* context_;
+  fuchsia::time::UtcPtr utc_;
+  std::function<void()> callback_;
+  bool accurate_ = false;
+};
+
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_UTILS_CLOCK_H_
+#endif  // SRC_COBALT_BIN_UTILS_CLOCK_H_

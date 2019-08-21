@@ -85,6 +85,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds target
     : system_data_(product_name, board_name, version,
                    std::make_unique<logger::ChannelMapper>(debug_channels)),
       context_(sys::ComponentContext::Create()),
+      system_clock_(FuchsiaSystemClock(context_.get())),
       network_wrapper_(dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
                        [this] { return context_->svc()->Connect<http::HttpService>(); }),
       // TODO(pesk): Observations for UniqueActives reports are of comparable
@@ -130,11 +131,24 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds target
   observation_store_->ResetInternalMetrics(internal_logger_.get());
   clearcut_shipping_manager_.ResetInternalMetrics(internal_logger_.get());
 
+  auto current_time =
+      std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  FX_LOGS(INFO) << "Waiting for the system clock to become accurate at: "
+                << std::put_time(std::localtime(&current_time), "%F %T %z");
+  system_clock_.AwaitExternalSource([this, start_event_aggregator_worker]() {
+    auto current_time =
+        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    FX_LOGS(INFO) << "The system clock has become accurate, now at: "
+                  << std::put_time(std::localtime(&current_time), "%F %T %z");
+
+    // Now that the clock is accurate, start workers that need an accurate clock.
+    if (start_event_aggregator_worker) {
+      event_aggregator_.Start(std::make_unique<util::SystemClock>());
+    }
+  });
+
   // Start workers.
   clearcut_shipping_manager_.Start();
-  if (start_event_aggregator_worker) {
-    event_aggregator_.Start();
-  }
 
   // Create LoggerFactory.
   logger_factory_impl_.reset(
