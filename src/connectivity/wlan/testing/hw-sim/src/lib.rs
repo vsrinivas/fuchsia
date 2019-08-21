@@ -271,9 +271,11 @@ fn handle_connect_events(
                             let frame_rx =
                                 eapol::KeyFrameRx::parse(mic_size as usize, llc_frame.body)
                                     .expect("parsing EAPOL frame");
-                            authenticator
+                            if let Err(e) = authenticator
                                 .on_eapol_frame(&mut updates, eapol::Frame::Key(frame_rx))
-                                .expect("sending EAPOL frame to authenticator");
+                            {
+                                println!("error sending EAPOL frame to authenticator: {}", e);
+                            }
                             process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
                                 .expect("processing authenticator updates after EAPOL frame");
                         }
@@ -299,7 +301,7 @@ pub async fn connect(
     let connect_fut = wlan_service.connect(&mut connect_config);
     let error = helper
         .run_until_complete_or_timeout(
-            10.seconds(),
+            30.seconds(),
             format!("connect to {}({:2x?})", String::from_utf8_lossy(ssid), bssid),
             |event| {
                 handle_connect_events(event, &phy, ssid, bssid, passphrase, &mut authenticator);
@@ -307,7 +309,7 @@ pub async fn connect(
             connect_fut,
         )
         .await
-        .unwrap();
+        .expect("connecting via wlancfg service");
     assert_eq!(error.code, ErrCode::Ok, "connect failed: {:?}", error);
 }
 
