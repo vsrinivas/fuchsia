@@ -40,7 +40,6 @@ group("netcfg") {
   public_deps = [
     "//garnet/bin/netcfg",
     "//garnet/bin/netcfg:config",
-    "//garnet/bin/netcfg:filter_config",
     "//garnet/packages/config:services",
   ]
 }
