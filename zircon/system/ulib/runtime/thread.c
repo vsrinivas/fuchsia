@@ -205,7 +205,7 @@ zx_status_t zxr_thread_join(zxr_thread_t* external_thread) {
         // prior to EXITING was JOINABLE, and act as if we had
         // successfully transitioned to JOINED.
         wait_for_done(thread, EXITING);
-        // Fall-through to DONE case
+        __FALLTHROUGH;
       case DONE:
         break;
       default:
@@ -243,9 +243,9 @@ zx_status_t zxr_thread_detach(zxr_thread_t* thread) {
           }
           return ret;
         }
+      }
         // Fall-through to DONE case.
         __FALLTHROUGH;
-      }
       case DONE:
         return ZX_ERR_BAD_STATE;
       default:
