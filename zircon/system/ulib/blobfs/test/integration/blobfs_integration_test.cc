@@ -1556,77 +1556,53 @@ static bool QueryDevicePath(BlobfsTest* blobfsTest) {
     END_HELPER;
 }
 
-static bool TestReadOnly(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    // Mount the filesystem as read-write.
-    // We can create new blobs.
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 10, &info));
-    fbl::unique_fd blob_fd;
-    ASSERT_TRUE(MakeBlob(info.get(), &blob_fd));
-    ASSERT_TRUE(fs_test_utils::VerifyContents(blob_fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(blob_fd.release()), 0);
+*/
 
-    blobfsTest->SetReadOnly(true);
-    ASSERT_TRUE(blobfsTest->Remount());
+void RunReadOnlyTest(BlobfsTest* test) {
+  // Mount the filesystem as read-write. We can create new blobs.
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 10, &info));
+  fbl::unique_fd blob_fd;
+  ASSERT_NO_FAILURES(MakeBlob(info.get(), &blob_fd));
+  ASSERT_TRUE(fs_test_utils::VerifyContents(blob_fd.get(), info->data.get(), info->size_data));
+  blob_fd.reset();
 
-    // We can read old blobs
-    blob_fd.reset(open(info->path, O_RDONLY));
-    ASSERT_GE(blob_fd.get(), 0);
-    ASSERT_TRUE(fs_test_utils::VerifyContents(blob_fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(blob_fd.release()), 0);
+  test->set_read_only(true);
+  ASSERT_NO_FAILURES(test->Remount());
 
-    // We cannot create new blobs
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 10, &info));
-    ASSERT_LT(open(info->path, O_CREAT | O_RDWR), 0);
-    END_HELPER;
+  // We can read old blobs
+  blob_fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(blob_fd);
+  ASSERT_TRUE(fs_test_utils::VerifyContents(blob_fd.get(), info->data.get(), info->size_data));
+
+  // We cannot create new blobs
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 10, &info));
+  blob_fd.reset(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_FALSE(blob_fd);
 }
+
+TEST_F(BlobfsTest, ReadOnly) { RunReadOnlyTest(this); }
+
+TEST_F(BlobfsTestWithFvm, ReadOnly) { RunReadOnlyTest(this); }
 
 // This tests growing both additional inodes and blocks
-static bool ResizePartition(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    ASSERT_EQ(blobfsTest->GetType(), FsTestType::kFvm);
+TEST_F(BlobfsTestWithFvm, ResizePartition) {
+  // Create 1000 blobs. Test slices are small enough that this will require both inodes and
+  // blocks to be added.
+  // TODO(rvargas): Verify the number of used slices.
+  for (int i = 0; i < 1000; i++) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 64, &info));
 
-    // Create 1000 blobs. Test slices are small enough that this will require both inodes and
-    // blocks to be added
-    for (size_t d = 0; d < 1000; d++) {
-        if (d % 100 == 0) {
-            printf("Creating blob: %lu\n", d);
-        }
+    fbl::unique_fd fd;
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+  }
 
-        fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 64, &info));
-
-        fbl::unique_fd fd;
-        ASSERT_TRUE(MakeBlob(info.get(), &fd));
-        ASSERT_EQ(close(fd.release()), 0);
-    }
-
-    // Remount partition
-    ASSERT_TRUE(blobfsTest->Remount(), "Could not re-mount blobfs");
-
-    DIR* dir = opendir(MOUNT_PATH);
-    ASSERT_NONNULL(dir);
-    unsigned entries_deleted = 0;
-    char path[PATH_MAX];
-    struct dirent* de;
-
-    // Unlink all blobs
-    while ((de = readdir(dir)) != nullptr) {
-        if (entries_deleted % 100 == 0) {
-            printf("Unlinking blob: %u\n", entries_deleted);
-        }
-        strcpy(path, MOUNT_PATH "/");
-        strcat(path, de->d_name);
-        ASSERT_EQ(unlink(path), 0);
-        entries_deleted++;
-    }
-
-    printf("Completing test\n");
-    ASSERT_EQ(closedir(dir), 0);
-    ASSERT_EQ(entries_deleted, 1000);
-    END_HELPER;
+  // Remount partition.
+  ASSERT_NO_FAILURES(Remount(), "Could not re-mount blobfs");
 }
+
+/*
 
 static bool CorruptAtMount(BlobfsTest* blobfsTest) {
     BEGIN_HELPER;
@@ -2052,8 +2028,6 @@ RUN_TESTS(LARGE, CreateUmountRemountLargeMultithreaded)
 RUN_TESTS(LARGE, NoSpace)
 RUN_TESTS(LARGE, TestFragmentation)
 RUN_TESTS(MEDIUM, QueryDevicePath)
-RUN_TESTS(MEDIUM, TestReadOnly)
-RUN_TEST_FVM(MEDIUM, ResizePartition)
 RUN_TEST_FVM(MEDIUM, CorruptAtMount)
 RUN_TESTS(LARGE, CreateWriteReopen)
 RUN_TEST_MEDIUM(TestCreateFailure)

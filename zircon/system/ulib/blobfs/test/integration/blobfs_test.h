@@ -41,6 +41,8 @@ class BlobfsTest : public zxtest::Test {
   // Unmounts and remounts the filesystem.
   void Remount();
 
+  void set_read_only(bool read_only) { read_only_ = read_only; }
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsTest);
 
  protected:
