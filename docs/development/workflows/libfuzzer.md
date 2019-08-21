@@ -3,7 +3,7 @@
 ## Quick-start guide
 
 1. Pass fuzzed inputs to your library by implementing
-[LLVMFuzzerTestOneInput](#q-what-do-i-need-to-write-to-create-a-fuzzer-).
+[LLVMFuzzerTestOneInput](#q-what-do-i-need-to-write-to-create-a-fuzzer).
 1. Add a fuzzer build rule:
   * Add a [`fuzzer`][gn fuzzer] to the appropriate BUILD.gn.
   * Fuchsia: Create or extend a [`fuzzers_package`][gn fuzzers package] in an appropriate BUILD.gn.
@@ -27,7 +27,7 @@
 
 [TOC]
 
-## Q: What is fuzzing?
+## Q: What is fuzzing? {#q-what-is-fuzzing}
 
 A: Fuzzing or fuzz testing is style of testing that stochastically generates inputs to targeted
 interfaces in order to automatically find defects and/or vulnerabilities.  In this document,
@@ -41,7 +41,7 @@ instrumented for coverage. The fuzzing engine can observe when inputs increase t
 coverage and use those inputs as the basis for generating further inputs.  This group of "seed"
 inputs is collectively referred to as a corpus.
 
-## Q: What is libFuzzer?
+## Q: What is libFuzzer? {#q-what-is-libfuzzer}
 
 A: [LibFuzzer] is an in-process fuzzing engine integrated within LLVM as a compiler runtime.
 [Compiler runtimes][compiler-rt] are libraries that are invoked by hooks that compiler adds to the
@@ -49,7 +49,7 @@ code it builds.  Other examples include [sanitizers] such as [ASan], which detec
 and memory corruptions. LibFuzzer uses these sanitizers both for [coverage data][sancov] provided by
 sanitizer-common, as well as to detect when inputs trigger a defect.
 
-## Q: What do I need to write to create a fuzzer?
+## Q: What do I need to write to create a fuzzer? {#q-what-do-i-need-to-write-to-create-a-fuzzer}
 
 A: LibFuzzer can be used to make a coverage-based fuzzer binary by combining it with a sanitized
 library and the implementation of the [fuzz target] function:
@@ -69,7 +69,7 @@ LibFuzzer then be able to generate, submit, and monitor inputs to the library co
 
 Developer-provided components are in green.
 
-## Q: What should I fuzz with libFuzzer?
+## Q: What should I fuzz with libFuzzer? {#q-what-should-i-fuzz-with-libfuzzer}
 
 A: Coverage based fuzzing works best when fuzzing targets resemble [unit tests][fuzzer scope].  If
 your code is already organized to make it easy to unit test, you can add targets for each of the
@@ -95,7 +95,7 @@ With a corpus of JSON inputs, `Data` may be close to what the `Metadata` object 
 If not, the fuzzer will eventually discover what inputs are meaningful to it through random
 mutations, trial and error, and code coverage data.
 
-### Q: How do I fuzz more complex interfaces?
+### Q: How do I fuzz more complex interfaces?  {#q-how-do-i-fuzz-more-complex-interfaces}
 
 A: It is easy to map portions of the provided `Data` to ["plain old data" (POD)][pod] types.  The
 data can also be sliced into variable length arrays. More complex objects can almost always be
@@ -142,7 +142,7 @@ state will be carried over from iteration to iteration.  This can be useful as i
 bugs that depend on the library's persisted state, but it may also make bugs harder to reproduce
 when they depend on a sequence of inputs rather than a single one.
 
-### Q: How should I scope my fuzzer?
+### Q: How should I scope my fuzzer? {#q-how-should-i-scope-my-fuzzer}
 
 A: In general, an in-process coverage-based fuzzer, iterations should be __short__ and __focused__.
 The more focused a [fuzz target] is, the faster libFuzzer will be able to find "interesting" inputs
@@ -158,7 +158,7 @@ amount of shallow fuzzing by being guided towards the interesting inputs.
 Note: Currently, libFuzzer can be used in Fuchsia to fuzz C/C++ code. Additional language
 support is [planned][todo].
 
-## Q: LibFuzzer isn't quite right; what else could I use?
+## Q: LibFuzzer isn't quite right; what else could I use? {#q-libfuzzer-isnt-quite-right-what-else-could-i-use}
 
 A: There's many other fuzzing engines out there:
 
@@ -177,7 +177,7 @@ continuously under [ClusterFuzz].
 
 Note: ClusterFuzz integration is in [development][todo].
 
-## Q: How do I create a Fuchsia fuzzer?
+## Q: How do I create a Fuchsia fuzzer? {#q-how-do-i-create-a-fuchsia-fuzzer}
 
 A: First, create your [fuzz target] function.  It's recommended that the fuzzer's target is clear
 from file name.  If the library code already has a directory for unit tests, you should use a
@@ -193,7 +193,7 @@ Libfuzzer already [provides tips][fuzz target] on writing the fuzz target functi
 Next, add the build instructions to the library's BUILD.gn file.  Adding an import to
 [//build/fuzzing/fuzzer.gni][fuzzer.gni] will provide two templates:
 
-### The fuzzer GN template
+### The fuzzer GN template {#the-fuzzer-gn-template}
 
 The `fuzzer` [template][fuzzer.gni] is used to build the fuzzer executable.  Given a fuzz target
 function in a source file and the library under test as a dependency, it will provided the correct
@@ -241,7 +241,7 @@ When you use the [fx fuzz tool], libFuzzer's `merge`, `jobs`, `dict`, and `artif
 are set automatically. You do not need to specify these options unless they differ from the default
 values.
 
-### The fuzzers_package GN template
+### The fuzzers_package GN template {#the-fuzzers-package-gn-template}
 
 The `fuzzers_package` [template][fuzzer.gni] bundles fuzzers into a Fuchsia package in the same way
 that a normal
@@ -268,9 +268,10 @@ $ fx set core.x64 --fuzz-with asan --with //bundles:tests
 $ fx build
 ```
 
-## Q: How do I create a Zircon fuzzer?
+## Q: How do I create a Zircon fuzzer? {#q-how-do-i-create-a-zircon-fuzzer}
 
 Zircon has an equivalent [template][zircon_fuzzer.gni] to that of Fuchsia, and is used similarly:
+
 ```python
 fuzzer("zx_fuzzer") {
   sources = [ "zx_fuzzer.cpp" ]
@@ -280,12 +281,13 @@ fuzzer("zx_fuzzer") {
 
 Zircon fuzzers will be built with all supported sanitizers automatically. These fuzzers can be included in a
 Fuchsia instance by includong the `zircon_fuzzers` package, e.g.:
+
 ```
 $ fx set core.x64 --with //garnet/tests/zircon:zircon_fuzzers
 $ fx build
 ```
 
-## Q: How do I run a fuzzer?
+## Q: How do I run a fuzzer? {#q-how-do-i-run-a-fuzzer}
 
 A: Use the `fx fuzz` tool which knows how to find fuzzing related files and various common options.
 
@@ -308,7 +310,7 @@ fuzzer.
 When starting a fuzzer, the tool will echo the command it is invoking, prefixed by `+`.  This can be
 useful if you need to manually reproduce the bug with modified libFuzzer [options].
 
-## Q: How can I reproduce crashes found by the fuzzer?
+## Q: How can I reproduce crashes found by the fuzzer? {#q-how-can-i-reproduce-crashes-found-by-the-fuzzer}
 
 A: Use the [fx fuzz tool]:
 
@@ -323,7 +325,7 @@ The test artifact are also copied to `//test_data/fuzzing/<package>/<fuzzer>/<ti
 As with `fx fuzz start`, the fuzzer will echo the command it is invoking, prefixed by `+`.  This can
 be useful if you need to manually reproduce the bug with modified parameters.
 
-## Q: What should I do with these bugs?
+## Q: What should I do with these bugs? {#q-what-should-i-do-with-these-bugs}
 
 A: File them, then fix them!
 
@@ -342,7 +344,7 @@ As with all potential security issues, don't wait for triage to begin fixing the
 don't forget to link to the bug in the commit message.  This may also be a good time to consider
 minimizing and uploading your corpus at the same time (see the next section).
 
-## Q: How do I manage my corpus?
+## Q: How do I manage my corpus? {#q-how-do-i-manage-my-corpus}
 
 A: When you first begin fuzzing a new target, the fuzzer may crash very quickly.  Typically, fuzzing
 has a large initial spike of defects found followed by a long tail.  Fixing these initial, shallow
@@ -360,7 +362,7 @@ When uploaded, the corpus is tagged with the current revision of the integration
 you can retrieve older versions of the corpus relating to a specific version of the code:
   `fx fuzz fetch <package>/<fuzzer> <integration-revision>`
 
-## Q: Can I use an existing third party corpus?
+## Q: Can I use an existing third party corpus?  {#q-can-i-use-an-existing-third-party-corpus}
 
 A: Yes! by , and then performing a normal corpus update:
 
@@ -369,7 +371,7 @@ A: Yes! by , and then performing a normal corpus update:
 1. Upload the corpus to [CIPD].
 * `fx fuzz merge [package]/[fuzzer]`
 
-## Q: Can I run my fuzzer on host?
+## Q: Can I run my fuzzer on host? {#q-can-i-run-my-fuzzer-on-host}
 
 A: Yes, although the extra tooling of `fx fuzz` is not currently supported.  This means you can
 build host fuzzers with the GN templates, but you'll need to manually run them, reproduce the bugs
@@ -388,7 +390,7 @@ fuzzers_package("overnet_fuzzers") {
 Upon building, the host fuzzers with can be found in in the host variant output directory, e.g.
 `//out/default/host_x64-asan-fuzzer`.
 
-## Q: How do make my fuzzer better?
+## Q: How do I make my fuzzer better? {#q-how-do-i-make-my-fuzzer-better}
 
 A: Once crashes begin to become infrequent, it may be because almost all the bugs have been
 fixed, but it may also be because the fuzzer isn't reaching new code that still has bugs.  Code
@@ -418,7 +420,7 @@ updating their corpora, filing bugs for crashes, and closing them when fixed.
 
 Note: ClusterFuzz integration is in [development][todo].
 
-## Q: What can I expect in the future for fuzzing in Fuchsia?
+## Q: What can I expect in the future for fuzzing in Fuchsia? {#q-what-can-i-expect-in-the-future-for-fuzzing-in-fuchsia}
 
 A: As you can see from the various notes in this document, there's still plenty more to do!
 
@@ -441,19 +443,19 @@ become available.
 [afl]: http://lcamtuf.coredump.cx/afl/
 [FIDL]: ../languages/fidl/README.md
 [syzkaller]: https://github.com/google/syzkaller
-[todo]: #q-what-can-i-expect-in-the-future-for-fuzzing-in-fuchsia-
+[todo]: #q-what-can-i-expect-in-the-future-for-fuzzing-in-fuchsia
 [thin-air]: https://lcamtuf.blogspot.com/2014/11/pulling-jpegs-out-of-thin-air.html
 [startup initialization]: https://llvm.org/docs/LibFuzzer.html#startup-initialization
 [fuzzer.gni]: /build/fuzzing/fuzzer.gni
 [build macro]: https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
 [compiler flags]: /build/config/sanitizers/BUILD.gn
 [corpus]: https://llvm.org/docs/LibFuzzer.html#corpus
-[3p-corpus]: #q-can-i-use-an-existing-third-party-corpus-
+[3p-corpus]: #q-can-i-use-an-existing-third-party-corpus
 [dictionaries]: https://llvm.org/docs/LibFuzzer.html#dictionaries
 [options]: https://llvm.org/docs/LibFuzzer.html#options
-[fuzz tool]: #q-how-do-i-run-a-fuzzer-
+[fuzz tool]: #q-how-do-i-run-a-fuzzer
 [gn fuzzer]: #the-fuzzer-gn-template
-[gn fuzzers package]: #the-fuzzers_package-gn-template
+[gn fuzzers package]: #the-fuzzers-package-gn-template
 [source-based code coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
 [clusterfuzz]: https://github.com/google/oss-fuzz/blob/master/docs/furthur-reading/clusterfuzz.md
 [rust-fuzzing]: https://github.com/rust-fuzz/libFuzzer-sys
@@ -465,7 +467,7 @@ become available.
 [issue 27001]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=27001
 [pod]: http://www.cplusplus.com/reference/type_traits/is_pod/
 [security project]: https://fuchsia.atlassian.net/browse/SEC
-[latest corpus]: #q-how-do-i-manage-my-corpus-
-[fx fuzz tool]: #q-how-do-i-run-a-fuzzer-
-[fuzzer scope]: #q-how-should-i-scope-my-fuzzer?
+[latest corpus]: #q-how-do-i-manage-my-corpus
+[fx fuzz tool]: #q-how-do-i-run-a-fuzzer
+[fuzzer scope]: #q-how-should-i-scope-my-fuzzer
 [zircon_fuzzer.gni]: /zircon/public/gn/fuzzer.gni
