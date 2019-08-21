@@ -11,22 +11,17 @@ library zz;
 [Transport="Syscall"]
 protocol Socket {
     /// Create a socket.
-    [Out1="handle:acquire",
-     Out2="handle:acquire"]
     Create(uint32 options) -> (status status, handle out0, handle out1);
 
     /// Write data to a socket.
-    [In0="handle<socket>:rights=WRITE",
-     Out1="optional<usize>"]
-    Write(handle<socket> handle, uint32 options, vector<byte> buffer) ->
-        (status status, usize actual);
+    [In0="handle<socket>:rights=WRITE"]
+    Write(handle<socket> handle, uint32 options, vector_void buffer) ->
+        (status status, optional_usize actual);
 
     /// Read data from a socket.
-    [In0="handle<socket>:rights=READ",
-     In2="mutable<vector<byte>>",
-     Out1="optional<usize>"]
-    Read(handle<socket> handle, uint32 options, vector<byte> buffer) ->
-        (status status, usize actual);
+    [In0="handle<socket>:rights=READ"]
+    Read(handle<socket> handle, uint32 options, mutable_vector_void buffer) ->
+        (status status, optional_usize actual);
 
     /// Prevent reading or writing.
     [In0="handle<socket>:rights=WRITE"]

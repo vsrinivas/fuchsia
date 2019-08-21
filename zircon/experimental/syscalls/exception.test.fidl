@@ -11,10 +11,8 @@ library zz;
 [Transport="Syscall"]
 protocol Exception {
     /// Create a handle for the exception's thread.
-    [Out1="handle<thread>:acquire"]
     GetThread(handle<exception> handle) -> (status status, handle<thread> out);
 
     /// Create a handle for the exception's process.
-    [Out1="handle<process>:acquire"]
     GetProcess(handle<exception> handle) -> (status status, handle<process> out);
 };

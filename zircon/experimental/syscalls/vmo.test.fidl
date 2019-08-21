@@ -11,7 +11,6 @@ library zz;
 [Transport="Syscall"]
 protocol Vmo {
     /// Create a VM object.
-    [Out1="handle<vmo>:acquire"]
     Create(uint64 size, uint32 options) -> (status status, handle<vmo> out);
 
     // TODO(scottmg): This syscall is very weird, it's currently:
@@ -24,14 +23,15 @@ protocol Vmo {
     /// Read bytes from the VMO.
     [Blocking,
      In0="handle<vmo>:rights=READ",
-     In1="mutable<vector<byte>>"]
-    Read(handle<vmo> handle, vector<byte> buffer, uint64 offset) -> (status status);
+     ArgReorder="handle,buffer,offset,buffer_size"]
+    Read(handle<vmo> handle, mutable_vector_void buffer, uint64 offset) -> (status status);
 
     // TODO(scottmg): Same probelm as Read() above.
     /// Write bytes to the VMO.
     [Blocking,
-     In0="handle<vmo>:rights=WRITE"]
-    Write(handle<vmo> handle, vector<byte> buffer, uint64 offset) -> (status status);
+     In0="handle<vmo>:rights=WRITE",
+     ArgReorder="handle,buffer,offset,buffer_size"]
+    Write(handle<vmo> handle, vector_void buffer, uint64 offset) -> (status status);
 
     // TODO(ZX-2967): No rights required?
     /// Read the current size of a VMO object.
@@ -42,14 +42,16 @@ protocol Vmo {
     SetSize(handle<vmo> handle, uint64 size) -> (status status);
 
     /// Perform an operation on a range of a VMO.
-    [Blocking,
-     In4="mutable<vector<byte>>"]
-    OpRange(handle<vmo> handle, uint32 op, uint64 offset, uint64 size, vector<byte> buffer) ->
+    [Blocking]
+    OpRange(handle<vmo> handle,
+            uint32 op,
+            uint64 offset,
+            uint64 size,
+            mutable_vector_void buffer) ->
         (status status);
 
     /// Create a child of a VM Object.
-    [In0="handle<vmo>:rights=DUPLICATE,READ",
-     Out1="handle<vmo>:acquire"]
+    [In0="handle<vmo>:rights=DUPLICATE,READ"]
     CreateChild(handle<vmo> handle, uint32 options, uint64 offset, uint64 size) ->
         (status status, handle<vmo> out);
 
@@ -60,20 +62,16 @@ protocol Vmo {
     // TODO(ZX-2967): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
     // TODO(ZX-2967): vmex == ZX_HANDLE_INVALID also accepted.
     /// Add execute rights to a VMO.
-    [In0="handle<vmo>:release_always",
-     In1="handle<resource>:kind=VMEX",
-     Out1="handle:acquire"]
+    [In1="handle<resource>:kind=VMEX"]
     ReplaceAsExecutable(handle<vmo> handle, handle<resource> vmex) ->
         (status status, handle<vmo> out);
 
-    [In0="handle<bti>:rights=MAP",
-     Out1="handle<vmo>:acquire"]
+    [In0="handle<bti>:rights=MAP"]
     CreateContiguous(handle<bti> bti, usize size, uint32 alignment_log2) ->
         (status status, handle<vmo> out);
 
     /// Create a VM object referring to a specific contiguous range of physical memory.
-    [In0="handle<resource>:kind=MMIO",
-     Out1="handle<vmo>:acquire"]
+    [In0="handle<resource>:kind=MMIO"]
     CreatePhysical(handle<resource> resource, paddr paddr, usize size) ->
         (status status, handle<vmo> out);
 };

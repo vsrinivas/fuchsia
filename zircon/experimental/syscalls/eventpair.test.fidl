@@ -11,7 +11,5 @@ library zz;
 [Transport="Syscall"]
 protocol Eventpair {
     /// Create an event pair.
-    [Out1="handle<event>:acquire",
-     Out2="handle<event>:acquire"]
     Create(uint32 options) -> (status status, handle<event> out0, handle<event> out1);
 };

@@ -11,6 +11,5 @@ library zz;
 [Transport="Syscall"]
 protocol Event {
     /// Create an event.
-    [Out1="handle<event>:acquire"]
     Create(uint32 options) -> (status status, handle<event> out);
 };

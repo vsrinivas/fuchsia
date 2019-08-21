@@ -10,8 +10,7 @@ library zz;
 
 [Transport="Syscall"]
 protocol Cache {
-    // TODO(scottmg): Something to tell In0 to be a void* in C.
     /// Flush CPU data and/or instruction caches.
     [Vdsocall]
-    Flush(vaddr addr, usize size, uint32 options) -> (status status);
+    Flush(const_voidptr addr, usize size, uint32 options) -> (status status);
 };

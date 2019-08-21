@@ -10,12 +10,11 @@ library zz;
 
 [Transport="Syscall"]
 protocol Mtrace {
-    [In0="handle<resource>:kind=ROOT",
-     In4="mutable<vector<byte>>"]
+    [In0="handle<resource>:kind=ROOT"]
     Control(handle<resource> handle,
             uint32 kind,
             uint32 action,
             uint32 options,
-            vector<byte> ptr) ->
+            mutable_vector_void ptr) ->
         (status status);
 };

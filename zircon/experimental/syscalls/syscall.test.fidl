@@ -34,6 +34,5 @@ protocol Syscall {
 
     TestWrapper(int32 a, int32 b, int32 c) -> (status status);
 
-    [Out1="handle<event>:acquire"]
     TestHandleCreate(status return_value) -> (status status, handle<event> out);
 };

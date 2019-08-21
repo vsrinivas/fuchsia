@@ -32,19 +32,17 @@ protocol Misc {
     DeadlineAfter(duration nanoseconds) -> (time time);
 
     /// Unmap memory, close handle, exit.
-    [Vdsocall,
-     In3="handle:release"]
+    [Vdsocall]
     VmarUnmapHandleCloseThreadExit(handle<vmar> vmar_handle,
-                                   vaddr vaddr, usize usize,
+                                   vaddr addr, usize size,
                                    handle close_handle) ->
         (status status);
 
     /// Write to futex, wake futex, close handle, exit.
     [Vdsocall,
      Noreturn,
-     In0="box<Futex>",
-     In3="handle:release"]
-    FutexWakeHandleCloseThreadExit(Futex value_ptr,
+     In0="box<Futex>"]
+    FutexWakeHandleCloseThreadExit(const_futexptr value_ptr,
                                    uint32 wake_count,
                                    int32 new_value,
                                    handle close_handle);

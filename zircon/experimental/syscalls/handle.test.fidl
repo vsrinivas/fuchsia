@@ -11,19 +11,15 @@ library zz;
 [Transport="Syscall"]
 protocol Handle {
     /// Close a handle.
-    [In0="handle:release_always"]
     Close(handle handle) -> (status status);
 
     /// Close a number of handles.
     CloseMany(vector<handle> handles) -> (status status);
 
     /// Duplicate a handle.
-    [In0="handle:rights=DUPLICATE",
-     Out1="handle:acquire"]
+    [In0="handle:rights=DUPLICATE"]
     Duplicate(handle handle, rights rights) -> (status status, handle out);
 
     /// Replace a handle.
-    [In0="handle:release_always",
-     Out1="handle:acquire"]
     Replace(handle handle, rights rights) -> (status status, handle out);
 };

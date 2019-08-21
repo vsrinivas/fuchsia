@@ -15,14 +15,13 @@ protocol Ktrace {
     // rather than:
     //   (handle, data, data_size, offset).
     [In0="handle<resource>:kind=ROOT",
-     In1="mutable<vector<byte>>"]
-    Read(handle<resource> handle, vector<byte> data, uint32 offset) ->
+     ArgReorder="handle,data,offset,data_size,actual"]
+    Read(handle<resource> handle, mutable_vector_void data, uint32 offset) ->
         (status status, usize actual);
 
     // TODO(scottmg): syscalls.banjo had the length of |ptr| being |action|?
-    [In0="handle<resource>:kind=ROOT",
-     In3="mutable<byte>"]
-    Control(handle<resource> handle, uint32 action, uint32 options, byte ptr) -> (status status);
+    [In0="handle<resource>:kind=ROOT"]
+    Control(handle<resource> handle, uint32 action, uint32 options, voidptr ptr) -> (status status);
 
     [In0="handle<resource>:kind=ROOT"]
     Write(handle<resource> handle, uint32 id, uint32 arg0, uint32 arg1) -> (status status);

@@ -16,29 +16,26 @@ protocol Process {
 
     // TODO(ZX-2967): job with ZX_RIGHT_WRITE is also accepted.
     /// Create a new process.
-    [In0="handle<job>:rights=MANAGE_PROCESS",
-     Out1="handle<process>:acquire",
-     Out2="handle<vmar>:acquire"]
+    [In0="handle<job>:rights=MANAGE_PROCESS"]
     Create(handle<job> job, string name, uint32 options) ->
         (status status, handle<process> proc_handle, handle<vmar> vmar_handle);
 
     /// Start execution on a process.
     [In0="handle<process>:rights=WRITE",
      In1="handle<process>:rights=WRITE",
-     In4="handle:release_always:rights=TRANSFER"]
+     In4="handle:rights=TRANSFER"]
     Start(handle<process> handle, handle<thread> thread,
           vaddr entry, vaddr stack,
           handle arg1, uintptr arg2) ->
         (status status);
 
     /// Read from the given process's address space.
-    [In0="handle<process>:rights=READ,WRITE",
-     In2="mutable<vector<byte>>"]
-    ReadMemory(handle<process> handle, vaddr vaddr, vector<byte> buffer) ->
+    [In0="handle<process>:rights=READ,WRITE"]
+    ReadMemory(handle<process> handle, vaddr vaddr, mutable_vector_void buffer) ->
         (status status, usize actual);
 
     /// Write into the given process's address space.
     [In0="handle<process>:rights=WRITE"]
-    WriteMemory(handle<process> handle, vaddr vaddr, vector<byte> buffer) ->
+    WriteMemory(handle<process> handle, vaddr vaddr, vector_void buffer) ->
         (status status, usize actual);
 };

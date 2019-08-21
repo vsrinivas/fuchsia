@@ -132,7 +132,6 @@ struct PortPacket {
 [Transport="Syscall"]
 protocol Port {
     /// Create an IO port.
-    [Out1="handle<port>:acquire"]
     Create(uint32 options) -> (status status, handle<port> out);
 
     /// Queue a packet to a port.
@@ -143,7 +142,7 @@ protocol Port {
     /// Wait for a packet arrival in a port.
     [Blocking,
      In0="handle<port>:rights=READ"]
-    Wait(handle<port> handle, time deadline) -> (status status, PortPacket packet);
+    Wait(handle<port> handle, time deadline) -> (status status, optional_PortPacket packet);
 
     /// Cancels async port notifications on an object.
     [In0="handle<port>:rights=WRITE"]

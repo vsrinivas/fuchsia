@@ -26,9 +26,9 @@ struct HandleInfo {
 struct ChannelCallArgs {
     vector<byte> wr_bytes;
     vector<handle> wr_handles;
-    // TODO(scottmg): mutable<vector<byte>>
+    // TODO(scottmg): mutable_vector_void
     vector<byte> rd_bytes;
-    // TODO(scottmg): mutable<vector<handle>>
+    // TODO(scottmg): mutable_vector_handle
     vector<handle> rd_handles;
 };
 
@@ -43,67 +43,58 @@ struct HandleDisposition {
 [Transport="Syscall"]
 protocol Channel {
     /// Create a channel.
-    [Out1="handle:acquire",
-     Out2="handle:acquire"]
     Create(uint32 options) -> (status status, handle out0, handle out1);
 
     /// Read a message from a channel.
     [In0="handle:rights=READ",
-     In2="mutable<vector<byte>>",
-     In3="mutable<vector<handle>>",
-     Out1="optional<uint32>",
-     Out2="optional<uint32>"]
+     ArgReorder="handle,options,bytes,handles,num_bytes,num_handles,actual_bytes,actual_handles"]
     Read(handle<channel> handle,
          uint32 options,
-         vector<byte> bytes,
-         vector<handle> handles) ->
-        (status status, uint32 actual_bytes, uint32 actual_handles);
+         mutable_vector_void_u32size bytes,
+         mutable_vector_handle_u32size handles) ->
+        (status status, optional_uint32 actual_bytes, optional_uint32 actual_handles);
 
     /// Read a message from a channel.
     [In0="handle:rights=READ",
-     In2="mutable<vector<byte>>",
-     In3="mutable<vector<HandleInfo>>",
-     Out1="optional<uint32>",
-     Out2="optional<uint32>"]
+     ArgReorder="handle,options,bytes,handles,num_bytes,num_handles,actual_bytes,actual_handles"]
     ReadEtc(handle<channel> handle,
             uint32 options,
-            vector<byte> bytes,
-            vector<HandleInfo> handles) ->
-        (status status, uint32 actual_bytes, uint32 actual_handles);
+            mutable_vector_void_u32size bytes,
+            mutable_vector_HandleInfo_u32size handles) ->
+        (status status, optional_uint32 actual_bytes, optional_uint32 actual_handles);
 
     /// Write a message to a channel.
     [In0="handle:rights=WRITE"]
     // TODO(scottmg): "Every entry of |handles| must have ZX_RIGHT_TRANSFER."
-    Write(handle<channel> handle, uint32 options, vector<byte> bytes, vector<handle> handles) ->
+    Write(handle<channel> handle,
+          uint32 options,
+          vector_void_u32size bytes,
+          vector_handle_u32size handles) ->
         (status status);
 
     /// Write a message to a channel.
-    [In0="handle:rights=WRITE",
-     In3="mutable<vector<HandleDisposition>>"]
+    [In0="handle:rights=WRITE"]
     // TODO(scottmg): "Every entry of |handles| must have ZX_RIGHT_TRANSFER."
     WriteEtc(handle<channel> handle,
              uint32 options,
-             vector<byte> bytes,
-             vector<HandleDisposition> handles) ->
+             vector_void_u32size bytes,
+             mutable_vector_HandleDisposition_u32size handles) ->
         (status status);
 
     [Internal,
-     In0="handle:rights=READ,WRITE",
-     In3="mutable<ChannelCallArgs>"]
+     In0="handle:rights=READ,WRITE"]
     // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
     CallNoretry(handle<channel> handle, uint32 options, time deadline, ChannelCallArgs args) ->
         (status status, uint32 actual_bytes, uint32 actual_handles);
 
-    [Internal,
-     In1="mutable<ChannelCallArgs>"]
+    [Internal]
     CallFinish(time deadline, ChannelCallArgs args) ->
         (status status, uint32 actual_bytes, uint32 actual_handles);
 
     /// Send a message to a channel and await a reply.
     [Blocking,
      Vdsocall,
-     In0="handle<channel>:rights=READ,WRITE",
-     In3="mutable<ChannelCallArgs>"]
+     In0="handle<channel>:rights=READ,WRITE"]
     // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
     Call(handle handle, uint32 options, time deadline, ChannelCallArgs args) ->
         (status status, uint32 actual_bytes, uint32 actual_handles);

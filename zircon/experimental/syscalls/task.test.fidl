@@ -19,13 +19,11 @@ protocol Task {
         (status status);
 
     /// Suspend the given task. Currently only thread or process handles may be suspended.
-    [In0="handle:rights=WRITE",
-     Out1="handle:acquire"]
+    [In0="handle:rights=WRITE"]
     Suspend(handle handle) -> (status status, handle token);
 
     /// Suspend the given task. Currently only thread or process handles may be suspended.
-    [In0="handle:rights=WRITE",
-     Out1="handle:acquire"]
+    [In0="handle:rights=WRITE"]
     SuspendToken(handle handle) -> (status status, handle token);
 
     /// Resume the given task after an exception has been reported.
@@ -35,8 +33,7 @@ protocol Task {
         (status status);
 
     /// Create an exception channel for a given job, process, or thread.
-    [In0="handle:rights=DUPLICATE,INSPECT,MANAGE_THREAD,TRANSFER",
-     Out1="handle<channel>:acquire"]
+    [In0="handle:rights=DUPLICATE,INSPECT,MANAGE_THREAD,TRANSFER"]
     // TODO(scottmg): Express "If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must
     // have ZX_RIGHT_ENUMERATE."
     CreateExceptionChannel(handle handle, uint32 options) -> (status status, handle<channel> out);

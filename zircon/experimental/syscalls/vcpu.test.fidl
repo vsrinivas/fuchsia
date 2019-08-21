@@ -11,8 +11,7 @@ library zz;
 [Transport="Syscall"]
 protocol Vcpu {
     /// Create a VCPU.
-    [In0="handle<guest>:rights=MANAGE_PROCESS",
-     Out1="handle<vcpu>:acquire"]
+    [In0="handle<guest>:rights=MANAGE_PROCESS"]
     Create(handle<guest> guest, uint32 options, vaddr entry) -> (status status, handle<vcpu> out);
 
     // See port.fidl for definition of PortPacket.
@@ -26,11 +25,10 @@ protocol Vcpu {
     Interrupt(handle<vcpu> handle, uint32 vector) -> (status status);
 
     /// Read the state of a VCPU.
-    [In0="handle<vcpu>:rights=READ",
-     In2="mutable<vector<byte>>"]
-    ReadState(handle<vcpu> handle, uint32 kind, vector<byte> buffer) -> (status status);
+    [In0="handle<vcpu>:rights=READ"]
+    ReadState(handle<vcpu> handle, uint32 kind, mutable_vector_void buffer) -> (status status);
 
     /// Write the state of a VCPU.
     [In0="handle<vcpu>:rights=WRITE"]
-    WriteState(handle<vcpu> handle, uint32 kind, vector<byte> buffer) -> (status status);
+    WriteState(handle<vcpu> handle, uint32 kind, vector_void buffer) -> (status status);
 };

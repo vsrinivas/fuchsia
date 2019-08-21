@@ -11,9 +11,7 @@ library zz;
 [Transport="Syscall"]
 protocol Guest {
     /// Create a guest.
-    [In0="handle<resource>:kind=HYPERVISOR",
-     Out1="handle<guest>:acquire",
-     Out2="handle<vmar>:acquire"]
+    [In0="handle<resource>:kind=HYPERVISOR"]
     Create(handle<resource> resource, uint32 options) ->
         (status status, handle<guest> guest_handle, handle<vmar> vmar_handle);
 

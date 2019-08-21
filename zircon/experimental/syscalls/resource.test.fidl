@@ -11,12 +11,11 @@ library zz;
 [Transport="Syscall"]
 protocol Resource {
     /// Create a resource object.
-    [In0="handle<resource>:rights=WRITE",
-     Out1="handle<resource>:acquire"]
+    [In0="handle<resource>:rights=WRITE"]
     Create(handle<resource> parent_rsrc,
            uint32 options,
            uint64 base,
            usize size,
-           vector<uint8> name) ->
+           string name) ->
         (status status, handle<resource> resource_out);
 };

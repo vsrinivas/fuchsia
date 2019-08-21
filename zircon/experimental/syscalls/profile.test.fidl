@@ -40,9 +40,7 @@ struct ProfileInfo {
 [Transport="Syscall"]
 protocol Profile {
     /// Create a scheduler profile.
-    [In0="handle<job>:rights=MANAGE_PROCESS",
-     In2="box<ProfileInfo>",
-     Out1="handle<profile>:acquire"]
+    [In0="handle<job>:rights=MANAGE_PROCESS"]
     Create(handle<job> root_job, uint32 options, ProfileInfo profile) ->
         (status status, handle<profile> out);
 };

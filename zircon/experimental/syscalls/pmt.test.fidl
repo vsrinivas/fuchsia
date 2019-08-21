@@ -12,6 +12,5 @@ library zz;
 protocol Pmt {
     // TODO(ZX-2967): handle ZX_OBJ_TYPE_PMT; No rights required?
     /// Unpin pages and revoke device access to them.
-    [In0="handle<pmt>:release_always"]
     Unpin(handle<pmt> handle) -> (status status);
 };

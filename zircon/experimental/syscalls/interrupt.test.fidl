@@ -23,9 +23,8 @@ protocol Interrupt {
 
     /// Wait for an interrupt.
     [Blocking,
-     In0="handle<interrupt>:rights=WAIT",
-     Out1="optional<time> time"]
-    Wait(handle<interrupt> handle) -> (status status, time out_timestamp);
+     In0="handle<interrupt>:rights=WAIT"]
+    Wait(handle<interrupt> handle) -> (status status, optional_time out_timestamp);
 
     // TODO(ZX-2967): No DESTROY rights here.
     /// Destroys an interrupt object.

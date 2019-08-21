@@ -11,24 +11,19 @@ library zz;
 [Transport="Syscall"]
 protocol Fifo {
     /// Create a fifo.
-    [Out1="handle<fifo>:acquire",
-     Out2="handle<fifo>:acquire"]
     Create(usize elem_count, usize elem_size, uint32 options) ->
         (status status, handle<fifo> out0, handle<fifo> out1);
 
-    // TODO(scottmg): Size of |data| is tricky here! In particular it's a
-    // elem_size * count large as if it were data<T> where sizeof(T) == elem_size.
+    // Note: |data| isn't a vector because its size in bytes is
+    // elem_size*count (i.e. vector<T> but runtime-determined T)
     /// Read data from a fifo.
-    [In0="handle<fifo>:rights=READ",
-     In2="mutable<vector<byte>>",
-     Out1="optional<usize>"]
-    Read(handle<fifo> handle, usize elem_size, vector<byte> data) ->
-        (status status, usize actual_count);
+    [In0="handle<fifo>:rights=READ"]
+    Read(handle<fifo> handle, usize elem_size, voidptr data, usize count) ->
+        (status status, optional_usize actual_count);
 
-    // TODO(scottmg): Same as above for size of |data|.
+    // Note: Same as above regarding |data|.
     /// Write data to a fifo.
-    [In0="handle<fifo>:rights=WRITE",
-     Out1="optional<usize>"]
-    Write(handle<fifo> handle, usize elem_size, vector<byte> data) ->
-        (status status, usize actual_count);
+    [In0="handle<fifo>:rights=WRITE"]
+    Write(handle<fifo> handle, usize elem_size, const_voidptr data, usize count) ->
+        (status status, optional_usize actual_count);
 };

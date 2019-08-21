@@ -40,9 +40,6 @@ using uintptr = uint64;
 // TODO(scottmg): Maybe a void for vector<void> (or vector<any>?) to distinguish
 // polymorphic arguments that are passed as void* from buffers of bytes.
 
-// TODO(scottmg): Instead of handle:acquire on (almost?) all out handles,
-// consider no_acquire to indicate ownership not transeferring.
-
 using signals = uint32;
 // TODO(scottmg): Lots of aliases/variations required here. Not sure if bits
 // make sense.

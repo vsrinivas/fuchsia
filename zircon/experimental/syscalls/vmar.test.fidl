@@ -15,7 +15,6 @@ using VmOption = uint32;
 [Transport="Syscall"]
 protocol Vmar {
     /// Allocate a new subregion.
-    [Out1="handle<vmar>:acquire"]
     Allocate(handle<vmar> parent_vmar, VmOption options, uint64 offset, uint64 size) ->
         (status status, handle<vmar> child_vmar, vaddr child_addr);
 

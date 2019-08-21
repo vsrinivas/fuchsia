@@ -10,15 +10,13 @@ library zz;
 
 [Transport="Syscall"]
 protocol Cprng {
-    [Internal,
-     In0="mutable<vector<byte>>"]
-    DrawOnce(vector<byte> buffer) -> (status status);
+    [Internal]
+    DrawOnce(mutable_vector_void buffer) -> (status status);
 
     /// Draw from the kernel's CPRNG.
-    [Vdsocall,
-     In0="mutable<vector<byte>>"]
-    Draw(vector<byte> buffer) -> ();
+    [Vdsocall]
+    Draw(mutable_vector_void buffer) -> ();
 
     /// Add entropy to the kernel CPRNG.
-    AddEntropy(vector<byte> buffer) -> (status status);
+    AddEntropy(vector_void buffer) -> (status status);
 };

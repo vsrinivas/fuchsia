@@ -35,9 +35,8 @@ protocol System {
     GetNumCpus() -> (uint32 count);
 
     /// Get version string for system.
-    [Vdsocall,
-     In0="mutable<string>"]
-    GetVersion(string version) -> (status status);
+    [Vdsocall]
+    GetVersion(mutable_string version) -> (status status);
 
     /// Get amount of physical memory on the system.
     [Vdsocall]
@@ -59,11 +58,9 @@ protocol System {
         (status status);
 
     /// Return a ZBI containing ZBI entries necessary to boot this system.
-    [In0="handle<resource>:kind=ROOT",
-     In1="mutable<vector<byte>>"]
-    MexecPayloadGet(handle<resource> resource, vector<byte> buffer) -> (status status);
+    [In0="handle<resource>:kind=ROOT"]
+    MexecPayloadGet(handle<resource> resource, mutable_vector_void buffer) -> (status status);
 
-    [In0="handle<resource>:kind=ROOT",
-     In2="box<SystemPowerctlArg>"]
+    [In0="handle<resource>:kind=ROOT"]
     Powerctl(handle<resource> resource, uint32 cmd, SystemPowerctlArg arg) -> (status status);
 };

@@ -67,8 +67,7 @@ struct PciInitArg {
 
 [Transport="Syscall"]
 protocol Pci {
-    [In0="handle<resource>:kind=ROOT",
-     Out2="handle<pcidevice>:acquire"]
+    [In0="handle<resource>:kind=ROOT"]
     GetNthDevice(handle<resource> handle, uint32 index) ->
         (status status, PcieDeviceInfo out_info, handle out_handle);
 
@@ -78,34 +77,37 @@ protocol Pci {
     [rights="handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE."]
     ResetDevice(handle<pcidevice> handle) -> (status status);
 
+    // TODO(scottmg): In banjo/abigen out_val wasn't optional, but was an input
+    // OUT, so didn't get the __NONNULL() tag, so we match by making it optional
+    // here. I think this is probably not the intention, and it should be
+    // non-optional.
     [In0="handle<pcidevice>:rights=READ,WRITE"]
     ConfigRead(handle<pcidevice> handle, uint16 offset, usize width) ->
-        (status status, uint32 out_val);
+        (status status, optional_uint32 out_val);
 
-    [In0=",andle<pcidevice>:rights=READ,WRITE"]
+    [In0="handle<pcidevice>:rights=READ,WRITE"]
     ConfigWrite(handle<pcidevice> handle, uint16 offset, usize width, uint32 val) ->
         (status status);
 
-    [In0="handle<resource>:kind=ROOT",
-     In5="mutable<int32>"]
+    [In0="handle<resource>:kind=ROOT"]
     CfgPioRw(handle<resource> handle,
              uint8 bus,
              uint8 dev,
              uint8 func,
              uint8 offset,
-             uint32 val,
+             mutable_uint32 val,
              usize width,
              bool write) ->
         (status status);
 
     // TODO(scottmg): type of out_handle?
-    [In0="handle<pcidevice>:rights=READ,WRITE",
-     Out2="handle:acquire"]
+    // TODO(scottmg): In banjo/abigen out_bar wasn't optional, but was an input
+    // OUT, so has no __NONNULL(). I think this is probably not the intention.
+    [In0="handle<pcidevice>:rights=READ,WRITE"]
     GetBar(handle<pcidevice> handle, uint32 bar_num) ->
-        (status status, PciBar out_bar, handle out_handle);
+        (status status, optional_PciBar out_bar, handle out_handle);
 
-    [In0="handle<pcidevice>:rights=READ",
-     Out1="handle:acquire"]
+    [In0="handle<pcidevice>:rights=READ"]
     MapInterrupt(handle<pcidevice> handle, int32 which_irq) -> (status status, handle out_handle);
 
     [In0="handle<pcidevice>:rights=READ"]
@@ -115,9 +117,10 @@ protocol Pci {
     SetIrqMode(handle<pcidevice> handle, uint32 mode, uint32 requested_irq_count) ->
         (status status);
 
-    // TODO(scottmg): vector size is uint32, not size_t.
+    // Note that init_buf isn't a vector of PciInitArg, it's a variable sized
+    // structure starting with a zx_pci_init_arg_t.
     [In0="handle<resource>:kind=ROOT"]
-    Init(handle<resource> handle, vector<PciInitArg> init_buf) -> (status status);
+    Init(handle<resource> handle, PciInitArg init_buf, uint32 len) -> (status status);
 
     [In0="handle<resource>:kind=ROOT"]
     AddSubtractIoRange(handle<resource> handle, bool mmio, uint64 base, uint64 len, bool add) ->

@@ -11,14 +11,12 @@ library zz;
 [Transport="Syscall"]
 protocol Debuglog {
     // TODO(ZX-2967): handle == ZX_HANDLE_INVALID accepted.
-    [In0="handle<resource>:kind=ROOT",
-     Out1="handle<debuglog>:acquire"]
+    [In0="handle<resource>:kind=ROOT"]
     Create(handle<resource> resource, uint32 options) -> (status status, handle<debuglog> out);
 
     [In0="handle<debuglog>:rights=WRITE"]
-    Write(handle<debuglog> handle, uint32 options, vector<byte> buffer) -> (status status);
+    Write(handle<debuglog> handle, uint32 options, vector_void buffer) -> (status status);
 
-    [In0="handle<debuglog>:rights=READ",
-     In2="mutable<vector<byte>>"]
-    Read(handle<debuglog> handle, uint32 options, vector<byte> buffer) -> (status status);
+    [In0="handle<debuglog>:rights=READ"]
+    Read(handle<debuglog> handle, uint32 options, mutable_vector_void buffer) -> (status status);
 };

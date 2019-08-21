@@ -11,8 +11,7 @@ library zz;
 [Transport="Syscall"]
 protocol Iommu {
     /// Create a new IOMMU object in the kernel.
-    [In0="handle<resource>:kind=ROOT",
-     Out1="handle<iommu>:acquire"]
-    Create(handle<resource> resource, uint32 type, vector<byte> desc) ->
+    [In0="handle<resource>:kind=ROOT"]
+    Create(handle<resource> resource, uint32 type, vector_void desc) ->
         (status status, handle<iommu> out);
 };
