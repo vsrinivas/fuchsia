@@ -475,7 +475,7 @@ pub fn add_ip_addr_subnet<D: EventDispatcher>(
 /// Adds a route to the forwarding table.
 pub fn add_route<D: EventDispatcher>(
     ctx: &mut Context<D>,
-    entry: EntryEither,
+    entry: EntryEither<DeviceId>,
 ) -> Result<(), error::NetstackError> {
     let (subnet, dest) = entry.into_subnet_dest();
     match dest {
@@ -509,7 +509,7 @@ pub fn del_device_route<D: EventDispatcher>(
 /// Get all the routes.
 pub fn get_all_routes<'a, D: EventDispatcher>(
     ctx: &'a Context<D>,
-) -> impl 'a + Iterator<Item = EntryEither> {
+) -> impl 'a + Iterator<Item = EntryEither<DeviceId>> {
     let v4_routes = ip::iter_all_routes::<_, Ipv4Addr>(ctx);
     let v6_routes = ip::iter_all_routes::<_, Ipv6Addr>(ctx);
     v4_routes.cloned().map(From::from).chain(v6_routes.cloned().map(From::from))

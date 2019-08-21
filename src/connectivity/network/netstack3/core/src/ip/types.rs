@@ -10,7 +10,6 @@ use never::Never;
 use packet::{PacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{ByteSlice, ByteSliceMut};
 
-use crate::device::DeviceId;
 use crate::error::IpParseError;
 use crate::wire::ipv4::{Ipv4Header, Ipv4Packet, Ipv4PacketBuilder};
 use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
@@ -35,20 +34,20 @@ impl<I: Ip> Default for IpVersionMarker<I> {
 /// `EntryDest` can either be a device or another network address.
 #[allow(missing_docs)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum EntryDest<A> {
-    Local { device: DeviceId },
+pub enum EntryDest<A, D> {
+    Local { device: D },
     Remote { next_hop: SpecifiedAddr<A> },
 }
 
 /// A local forwarding destination, or a remote forwarding destination that can
 /// be an IPv4 or an IPv6 address.
-pub type EntryDestEither = EntryDest<IpAddr>;
+pub type EntryDestEither<D> = EntryDest<IpAddr, D>;
 
-impl<A: IpAddress> EntryDest<A>
+impl<A: IpAddress, D> EntryDest<A, D>
 where
     SpecifiedAddr<IpAddr>: From<SpecifiedAddr<A>>,
 {
-    fn into_ip_addr(self) -> EntryDest<IpAddr> {
+    fn into_ip_addr(self) -> EntryDest<IpAddr, D> {
         match self {
             EntryDest::Local { device } => EntryDest::Local { device },
             EntryDest::Remote { next_hop } => EntryDest::Remote { next_hop: next_hop.into() },
@@ -60,25 +59,25 @@ where
 ///
 /// `Entry` is a `Subnet` paired with an `EntryDest`.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct Entry<A: IpAddress> {
+pub struct Entry<A: IpAddress, D> {
     pub subnet: Subnet<A>,
-    pub dest: EntryDest<A>,
+    pub dest: EntryDest<A, D>,
 }
 
 /// An IPv4 forwarding entry or an IPv6 forwarding entry.
 #[allow(missing_docs)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum EntryEither {
-    V4(Entry<Ipv4Addr>),
-    V6(Entry<Ipv6Addr>),
+pub enum EntryEither<D> {
+    V4(Entry<Ipv4Addr, D>),
+    V6(Entry<Ipv6Addr, D>),
 }
 
-impl EntryEither {
+impl<D> EntryEither<D> {
     /// Creates a new [`EntryEither`] with the given `subnet` and `destination`.
     ///
     /// Returns `None` if `subnet` and `destination` are not the same IP version
     /// (both `V4` or both `V6`) when `destination` is a remote value.
-    pub fn new(subnet: SubnetEither, destination: EntryDestEither) -> Option<EntryEither> {
+    pub fn new(subnet: SubnetEither, destination: EntryDestEither<D>) -> Option<EntryEither<D>> {
         match destination {
             EntryDest::Local { device } => match subnet {
                 SubnetEither::V4(subnet) => {
@@ -101,7 +100,7 @@ impl EntryEither {
     }
 
     /// Gets the subnet and destination for this [`EntryEither`].
-    pub fn into_subnet_dest(self) -> (SubnetEither, EntryDestEither) {
+    pub fn into_subnet_dest(self) -> (SubnetEither, EntryDestEither<D>) {
         match self {
             EntryEither::V4(entry) => (entry.subnet.into(), entry.dest.into_ip_addr()),
             EntryEither::V6(entry) => (entry.subnet.into(), entry.dest.into_ip_addr()),
@@ -109,14 +108,14 @@ impl EntryEither {
     }
 }
 
-impl From<Entry<Ipv4Addr>> for EntryEither {
-    fn from(entry: Entry<Ipv4Addr>) -> EntryEither {
+impl<D> From<Entry<Ipv4Addr, D>> for EntryEither<D> {
+    fn from(entry: Entry<Ipv4Addr, D>) -> EntryEither<D> {
         EntryEither::V4(entry)
     }
 }
 
-impl From<Entry<Ipv6Addr>> for EntryEither {
-    fn from(entry: Entry<Ipv6Addr>) -> EntryEither {
+impl<D> From<Entry<Ipv6Addr, D>> for EntryEither<D> {
+    fn from(entry: Entry<Ipv6Addr, D>) -> EntryEither<D> {
         EntryEither::V6(entry)
     }
 }
@@ -379,11 +378,11 @@ mod tests {
             Subnet::new(Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
                 .unwrap()
                 .into();
-        let entry_v4 = EntryDest::Remote {
+        let entry_v4: EntryDest<_, ()> = EntryDest::Remote {
             next_hop: SpecifiedAddr::new(Ipv4Addr::new([192, 168, 0, 1])).unwrap(),
         }
         .into_ip_addr();
-        let entry_v6 = EntryDest::Remote {
+        let entry_v6: EntryDest<_, ()> = EntryDest::Remote {
             next_hop: SpecifiedAddr::new(Ipv6Addr::new([
                 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
             ]))

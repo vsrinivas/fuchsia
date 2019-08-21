@@ -296,7 +296,7 @@ impl<Instant: crate::Instant> Ipv6State<Instant> {
 
 struct IpStateInner<I: Ip, Instant: crate::Instant> {
     forward: bool,
-    table: ForwardingTable<I>,
+    table: ForwardingTable<I, DeviceId>,
     fragment_cache: IpLayerFragmentCache<I>,
     path_mtu: IpLayerPathMtuCache<I, Instant>,
 }
@@ -1268,7 +1268,7 @@ fn forward<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: DeviceId,
     dst_ip: A,
-) -> Option<Destination<A>> {
+) -> Option<Destination<A, DeviceId>> {
     trace!("ip::forward: destination ip = {:?}", dst_ip);
 
     // Is this netstack configured to foward packets not destined for it?
@@ -1299,7 +1299,7 @@ fn forward<D: EventDispatcher, A: IpAddress>(
 pub(crate) fn lookup_route<A: IpAddress, D: EventDispatcher>(
     ctx: &Context<D>,
     dst_ip: SpecifiedAddr<A>,
-) -> Option<Destination<A>> {
+) -> Option<Destination<A, DeviceId>> {
     get_state_inner::<A::Version, _>(ctx.state()).table.lookup(dst_ip)
 }
 
@@ -1335,7 +1335,7 @@ pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
 /// Return all the routes for the provided `IpAddress` type
 pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
-) -> std::slice::Iter<Entry<A>> {
+) -> std::slice::Iter<Entry<A, DeviceId>> {
     get_state_inner::<A::Version, _>(ctx.state()).table.iter_installed()
 }
 
@@ -2988,7 +2988,7 @@ mod tests {
     fn test_lookup_table_address<A: IpAddress>(
         cfg: DummyEventDispatcherConfig<A>,
         ip_address: SpecifiedAddr<A>,
-    ) -> Option<Destination<A>> {
+    ) -> Option<Destination<A, DeviceId>> {
         let mut ctx =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
         lookup_route(&ctx, ip_address)

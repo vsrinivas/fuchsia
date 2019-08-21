@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use std::collections::HashSet;
+use std::fmt::Debug;
 
 use net_types::ip::{Ip, IpAddress, Subnet};
 use net_types::SpecifiedAddr;
 
-use crate::device::DeviceId;
 use crate::ip::*;
 
 // TODO(joshlf):
@@ -29,27 +29,27 @@ use crate::ip::*;
 /// if the destination is not on the local network, the `next_hop` will be the
 /// IP address of the next IP router on the way to the destination.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) struct Destination<A: IpAddress> {
+pub(crate) struct Destination<A: IpAddress, D> {
     pub(crate) next_hop: SpecifiedAddr<A>,
-    pub(crate) device: DeviceId,
+    pub(crate) device: D,
 }
 
 /// An active forwarding entry.
 ///
 /// See [`ForwardingTable::active`].
 #[derive(Debug, PartialEq, Eq)]
-struct ActiveEntry<A: IpAddress> {
+struct ActiveEntry<A: IpAddress, D> {
     subnet: Subnet<A>,
-    dest: ActiveEntryDest<A>,
+    dest: ActiveEntryDest<A, D>,
 }
 
 /// An active forwarding entry's destination.
 ///
 /// See [`ActiveEntry`] and [`ForwardingTable::active`].
 #[derive(Debug, PartialEq, Eq)]
-enum ActiveEntryDest<A: IpAddress> {
-    Local { device: DeviceId },
-    Remote { dest: Destination<A> },
+enum ActiveEntryDest<A: IpAddress, D> {
+    Local { device: D },
+    Remote { dest: Destination<A, D> },
 }
 
 /// An IP forwarding table.
@@ -57,39 +57,44 @@ enum ActiveEntryDest<A: IpAddress> {
 /// `ForwardingTable` maps destination subnets to the nearest IP hosts (on the
 /// local network) able to route IP packets to those subnets.
 // TODO(ghanan): Use metrics to determine active route?
-#[derive(Default)]
-pub(crate) struct ForwardingTable<I: Ip> {
+pub(crate) struct ForwardingTable<I: Ip, D> {
     /// A cache of the active routes to use when forwarding a packet.
     ///
     /// `active` MUST NOT have redundant (even if unique) paths to the same destination to ensure
     /// that all packets to the same destination use the same path (assuming no changes happen to
     /// the forwarding table between packets).
     // TODO(ghanan): Loosen this restriction and support load balancing?
-    active: Vec<ActiveEntry<I::Addr>>,
+    active: Vec<ActiveEntry<I::Addr, D>>,
 
     /// All the routes available to forward a packet.
     ///
     /// `installed` may have redundant, but unique, paths to the same destination. Only the best
     /// routes should be put into `active`.
-    installed: Vec<Entry<I::Addr>>,
+    installed: Vec<Entry<I::Addr, D>>,
 }
 
-impl<I: Ip> ForwardingTable<I> {
+impl<I: Ip, D> Default for ForwardingTable<I, D> {
+    fn default() -> ForwardingTable<I, D> {
+        ForwardingTable { active: Vec::new(), installed: Vec::new() }
+    }
+}
+
+impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     /// Do we already have the route installed in our forwarding table?
     ///
     /// `contains_entry` returns `true` if this `ForwardingTable` is already aware of the exact
     /// route by `entry`.
-    fn contains_entry(&self, entry: &Entry<I::Addr>) -> bool {
+    fn contains_entry(&self, entry: &Entry<I::Addr, D>) -> bool {
         self.installed.iter().any(|e| e == entry)
     }
 
     /// Get the current active route to a subnet, if one exists.
-    fn get_active_to(&self, subnet: &Subnet<I::Addr>) -> Option<&ActiveEntry<I::Addr>> {
+    fn get_active_to(&self, subnet: &Subnet<I::Addr>) -> Option<&ActiveEntry<I::Addr, D>> {
         self.active.iter().find(|e| e.subnet == *subnet)
     }
 
     /// Adds `entry` to the forwarding table if it does not already exist.
-    fn add_entry(&mut self, entry: Entry<I::Addr>) -> Result<(), ExistsError> {
+    fn add_entry(&mut self, entry: Entry<I::Addr, D>) -> Result<(), ExistsError> {
         if self.contains_entry(&entry) {
             // If we already have this exact route, don't add it again.
             Err(ExistsError)
@@ -123,9 +128,9 @@ impl<I: Ip> ForwardingTable<I> {
     pub(crate) fn add_device_route(
         &mut self,
         subnet: Subnet<I::Addr>,
-        device: DeviceId,
+        device: D,
     ) -> Result<(), ExistsError> {
-        debug!("adding device route: {} -> {}", subnet, device);
+        debug!("adding device route: {} -> {:?}", subnet, device);
         self.add_entry(Entry { subnet, dest: EntryDest::Local { device } })
     }
 
@@ -170,15 +175,15 @@ impl<I: Ip> ForwardingTable<I> {
     pub(crate) fn del_device_route(
         &mut self,
         subnet: Subnet<I::Addr>,
-        device: DeviceId,
+        device: D,
     ) -> Result<(), NotFoundError> {
-        debug!("deleting device route: {} -> {}", subnet, device);
+        debug!("deleting device route: {} -> {:?}", subnet, device);
         self.del_entry(Entry { subnet, dest: EntryDest::Local { device } })
     }
 
     /// Delete a route (`entry`) from this `ForwardingTable`, returning `Err` if the route did not
     /// already exist.
-    fn del_entry(&mut self, entry: Entry<I::Addr>) -> Result<(), NotFoundError> {
+    fn del_entry(&mut self, entry: Entry<I::Addr, D>) -> Result<(), NotFoundError> {
         let old_len = self.installed.len();
         self.installed.retain(|e| *e != entry);
         let new_len = self.installed.len();
@@ -222,7 +227,10 @@ impl<I: Ip> ForwardingTable<I> {
     /// be properly routed without consulting the forwarding table, and traffic
     /// from the network with a loopback destination address is invalid and
     /// should be dropped before consulting the forwarding table.
-    pub(crate) fn lookup(&self, address: SpecifiedAddr<I::Addr>) -> Option<Destination<I::Addr>> {
+    pub(crate) fn lookup(
+        &self,
+        address: SpecifiedAddr<I::Addr>,
+    ) -> Option<Destination<I::Addr, D>> {
         assert!(
             !I::LOOPBACK_SUBNET.contains(&address),
             "loopback addresses should be handled before consulting the forwarding table"
@@ -239,22 +247,22 @@ impl<I: Ip> ForwardingTable<I> {
 
         match best_match {
             Some(ActiveEntryDest::Local { device }) => {
-                Some(Destination { next_hop: address, device: *device })
+                Some(Destination { next_hop: address, device: device.clone() })
             }
-            Some(ActiveEntryDest::Remote { dest }) => Some(*dest),
+            Some(ActiveEntryDest::Remote { dest }) => Some(dest.clone()),
             None => None,
         }
     }
 
     /// Get an iterator over the active forwarding entries ([`Entry`]) this `ForwardingTable`
     /// knows about.
-    fn iter_active(&self) -> std::slice::Iter<ActiveEntry<I::Addr>> {
+    fn iter_active(&self) -> std::slice::Iter<ActiveEntry<I::Addr, D>> {
         self.active.iter()
     }
 
     /// Get an iterator over all of the forwarding entries ([`Entry`]) this `ForwardingTable`
     /// knows about.
-    pub(crate) fn iter_installed(&self) -> std::slice::Iter<Entry<I::Addr>> {
+    pub(crate) fn iter_installed(&self) -> std::slice::Iter<Entry<I::Addr, D>> {
         self.installed.iter()
     }
 
@@ -296,15 +304,15 @@ impl<I: Ip> ForwardingTable<I> {
     /// by inspecting the installed table.
     ///
     /// Preference will be given to an on-link destination.
-    fn regen_active_helper(&self, subnet: &Subnet<I::Addr>) -> Option<ActiveEntryDest<I::Addr>> {
+    fn regen_active_helper(&self, subnet: &Subnet<I::Addr>) -> Option<ActiveEntryDest<I::Addr, D>> {
         // The best route requiring a next-hop node.
         let mut best_remote = None;
 
         for e in self.installed.iter().filter(|e| e.subnet == *subnet) {
-            match e.dest {
+            match &e.dest {
                 EntryDest::Local { device } => {
                     // Return routes that consider `subnet` as on-link immediately.
-                    return Some(ActiveEntryDest::Local { device });
+                    return Some(ActiveEntryDest::Local { device: device.clone() });
                 }
                 EntryDest::Remote { next_hop } => {
                     // If we already have a route going through a next-hop node, skip.
@@ -316,7 +324,7 @@ impl<I: Ip> ForwardingTable<I> {
                     // hop. If no route exists, ignore this potential match as we have no path to
                     // `next_hop` with this route. If a route exists, store it to return if no
                     // route exists that considers `subnet` an on-link subnet.
-                    if let Some(dest) = self.installed_lookup(next_hop) {
+                    if let Some(dest) = self.installed_lookup(*next_hop) {
                         best_remote = Some(ActiveEntryDest::Remote { dest });
                     }
                 }
@@ -328,7 +336,7 @@ impl<I: Ip> ForwardingTable<I> {
 
     /// Find the destination a packet destined to `address` should be routed to by inspecting the
     /// installed table.
-    fn installed_lookup(&self, address: SpecifiedAddr<I::Addr>) -> Option<Destination<I::Addr>> {
+    fn installed_lookup(&self, address: SpecifiedAddr<I::Addr>) -> Option<Destination<I::Addr, D>> {
         let mut observed = vec![false; self.installed.len()];
         self.installed_lookup_helper(address, &mut observed)
     }
@@ -341,14 +349,14 @@ impl<I: Ip> ForwardingTable<I> {
         &self,
         address: SpecifiedAddr<I::Addr>,
         observed: &mut Vec<bool>,
-    ) -> Option<Destination<I::Addr>> {
+    ) -> Option<Destination<I::Addr, D>> {
         // Get all potential routes we could take to reach `address`.
         let q = self.installed.iter().enumerate().filter(|(i, e)| e.subnet.contains(&address));
 
         // The best route to reach `address` so far.
         //
         // Tuple of (ADDRESS_PREFIX, `Destination`).
-        let mut best_so_far: Option<(u8, Destination<I::Addr>)> = None;
+        let mut best_so_far: Option<(u8, Destination<I::Addr, D>)> = None;
 
         for (i, e) in q {
             // Check if we already observed this entry.
@@ -364,7 +372,7 @@ impl<I: Ip> ForwardingTable<I> {
             // Mark the entry as now observed.
             observed[i] = true;
 
-            match e.dest {
+            match &e.dest {
                 EntryDest::Local { device } => {
                     // If we have a best route so far and its subnet prefix is greater than the one
                     // we are looking at right now, skip. Otherwise, if the the subnet prefix is
@@ -378,19 +386,23 @@ impl<I: Ip> ForwardingTable<I> {
                         {
                             // If the prefixes are equal, we know this is a remote because for local
                             // destinations, the next hop MUST match `address`.
-                            *best_so_far =
-                                (e.subnet.prefix(), Destination { next_hop: address, device });
+                            *best_so_far = (
+                                e.subnet.prefix(),
+                                Destination { next_hop: address, device: device.clone() },
+                            );
                         }
                     } else {
                         // No best route exists, this is the best so far.
-                        best_so_far =
-                            Some((e.subnet.prefix(), Destination { next_hop: address, device }));
+                        best_so_far = Some((
+                            e.subnet.prefix(),
+                            Destination { next_hop: address, device: device.clone() },
+                        ));
                     }
                 }
                 EntryDest::Remote { next_hop } => {
                     // If we have a best route so far and its subnet prefix is greater than or equal
                     // to the one we are looking at right now, skip.
-                    if let Some(best_so_far) = best_so_far {
+                    if let Some(best_so_far) = best_so_far.clone() {
                         if best_so_far.0 >= e.subnet.prefix() {
                             continue;
                         }
@@ -400,7 +412,7 @@ impl<I: Ip> ForwardingTable<I> {
                     // hop. If no route exists, ignore this potential match as we have no path to
                     // `address` with this route. If a route exists, keep it as the best route so
                     // far.
-                    if let Some(dest) = self.installed_lookup_helper(next_hop, observed) {
+                    if let Some(dest) = self.installed_lookup_helper(*next_hop, observed) {
                         best_so_far = Some((e.subnet.prefix(), dest));
                     }
                 }
@@ -416,9 +428,10 @@ impl<I: Ip> ForwardingTable<I> {
 mod tests {
     use super::*;
 
+    use crate::device::DeviceId;
     use crate::testutil::get_dummy_config;
 
-    impl<I: Ip> ForwardingTable<I> {
+    impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         /// Print the active and installed forwarding table.
         pub(crate) fn print(&self) {
             self.print_installed();
@@ -499,7 +512,7 @@ mod tests {
     }
 
     fn test_add_del_lookup_simple_ip<I: Ip>() {
-        let mut table = ForwardingTable::<I>::default();
+        let mut table = ForwardingTable::<I, DeviceId>::default();
 
         let config = get_dummy_config::<I::Addr>();
         let subnet = config.subnet;
@@ -605,7 +618,7 @@ mod tests {
     }
 
     fn test_max_depth_for_forwarding_table_ip<I: Ip>() {
-        let mut table = ForwardingTable::<I>::default();
+        let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
         let device1 = DeviceId::new_ethernet(1);
         let (addr1, sub1) = next_hop_addr_sub::<I>(1, 24);
@@ -777,7 +790,7 @@ mod tests {
     }
 
     fn test_find_active_route_if_it_exists_ip<I: Ip>() {
-        let mut table = ForwardingTable::<I>::default();
+        let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
         let device1 = DeviceId::new_ethernet(1);
         let (addr1, sub1_s24) = next_hop_addr_sub::<I>(1, 24);
@@ -933,7 +946,7 @@ mod tests {
     }
 
     fn test_use_most_specific_route_ip<I: Ip>() {
-        let mut table = ForwardingTable::<I>::default();
+        let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
         let device1 = DeviceId::new_ethernet(1);
         let (addr7, sub7_s24) = next_hop_addr_sub::<I>(7, 24);
@@ -1276,7 +1289,7 @@ mod tests {
     }
 
     fn test_cycle_ip<I: Ip>() {
-        let mut table = ForwardingTable::<I>::default();
+        let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
         let (addr1, sub1) = next_hop_addr_sub::<I>(1, 24);
         let (addr2, sub2) = next_hop_addr_sub::<I>(2, 24);
@@ -1390,7 +1403,7 @@ mod tests {
     }
 
     fn test_default_route_ip<I: Ip>() {
-        let mut table = ForwardingTable::<I>::default();
+        let mut table = ForwardingTable::<I, DeviceId>::default();
         let device0 = DeviceId::new_ethernet(0);
         let (addr1, sub1) = next_hop_addr_sub::<I>(1, 24);
         let (addr2, sub2) = next_hop_addr_sub::<I>(2, 24);

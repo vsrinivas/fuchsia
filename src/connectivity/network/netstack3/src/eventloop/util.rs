@@ -313,7 +313,7 @@ impl From<ForwardingConversionError> for fidl_net_stack::Error {
     }
 }
 
-impl ContextFidlCompatible<fidl_net_stack::ForwardingDestination> for EntryDestEither {
+impl ContextFidlCompatible<fidl_net_stack::ForwardingDestination> for EntryDestEither<DeviceId> {
     type FromError = ForwardingConversionError;
     type IntoError = DeviceNotFoundError;
 
@@ -347,7 +347,7 @@ impl ContextFidlCompatible<fidl_net_stack::ForwardingDestination> for EntryDestE
     }
 }
 
-impl ContextFidlCompatible<fidl_net_stack::ForwardingEntry> for EntryEither {
+impl ContextFidlCompatible<fidl_net_stack::ForwardingEntry> for EntryEither<DeviceId> {
     type FromError = ForwardingConversionError;
     type IntoError = DeviceNotFoundError;
 
@@ -468,25 +468,25 @@ mod tests {
     fn create_local_dest_entry(
         binding: u64,
         core: DeviceId,
-    ) -> (EntryDestEither, fidl_net_stack::ForwardingDestination) {
-        let core = EntryDest::<IpAddr>::Local { device: core };
+    ) -> (EntryDestEither<DeviceId>, fidl_net_stack::ForwardingDestination) {
+        let core = EntryDest::<IpAddr, _>::Local { device: core };
         let fidl = fidl_net_stack::ForwardingDestination::DeviceId(binding);
         (core, fidl)
     }
 
     fn create_remote_dest_entry(
         addr: (IpAddr, fidl_net::IpAddress),
-    ) -> (EntryDestEither, fidl_net_stack::ForwardingDestination) {
+    ) -> (EntryDestEither<DeviceId>, fidl_net_stack::ForwardingDestination) {
         let (core, fidl) = addr;
-        let core = EntryDest::<IpAddr>::Remote { next_hop: SpecifiedAddr::new(core).unwrap() };
+        let core = EntryDest::<IpAddr, _>::Remote { next_hop: SpecifiedAddr::new(core).unwrap() };
         let fidl = fidl_net_stack::ForwardingDestination::NextHop(fidl);
         (core, fidl)
     }
 
     fn create_forwarding_entry(
         subnet: (SubnetEither, fidl_net::Subnet),
-        dest: (EntryDestEither, fidl_net_stack::ForwardingDestination),
-    ) -> (EntryEither, fidl_net_stack::ForwardingEntry) {
+        dest: (EntryDestEither<DeviceId>, fidl_net_stack::ForwardingDestination),
+    ) -> (EntryEither<DeviceId>, fidl_net_stack::ForwardingEntry) {
         let (core_s, fidl_s) = subnet;
         let (core_d, fidl_d) = dest;
         (
