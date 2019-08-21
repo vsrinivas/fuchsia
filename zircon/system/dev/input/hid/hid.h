@@ -75,6 +75,7 @@ class HidDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_INPUT
   zx_status_t ProcessReportDescriptor();
   zx_status_t InitReassemblyBuffer();
   void ReleaseReassemblyBuffer();
+  zx_status_t SetReportDescriptor();
 
   hid_info_t info_ = {};
   ddk::HidbusProtocolClient hidbus_;

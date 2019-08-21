@@ -10,6 +10,7 @@
 
 #include <ddktl/protocol/hidbus.h>
 #include <hid/boot.h>
+#include <hid/paradise.h>
 #include <zxtest/zxtest.h>
 
 namespace hid_driver {
@@ -268,6 +269,62 @@ TEST(HidDeviceTest, FailToRegister) {
   fake_hidbus.SetStartStatus(ZX_ERR_INTERNAL);
   auto client = ddk::HidbusProtocolClient(fake_hidbus.GetProto());
   ASSERT_EQ(device.Bind(client), ZX_ERR_INTERNAL);
+}
+
+// This tests that we can set the boot mode for a non-boot device, and that the device will
+// have it's report descriptor set to the boot mode descriptor. For this, we will take an
+// arbitrary descriptor and claim that it can be set to a boot-mode keyboard. We then
+// test that the report descriptor we get back is for the boot keyboard.
+// (The descriptor doesn't matter, as long as a device claims its a boot device it should
+//  support this transformation in hardware).
+TEST_F(HidDeviceTest, SettingBootModeMouse) {
+  size_t desc_size;
+  const uint8_t* desc = get_paradise_touchpad_v1_report_desc(&desc_size);
+  fake_hidbus_.SetDescriptor(desc, desc_size);
+
+  // This info is the reason why the device will be set to a boot mouse mode.
+  hid_info_t info = {};
+  info.device_class = HID_DEVICE_CLASS_POINTER;
+  info.boot_device = true;
+  fake_hidbus_.SetHidInfo(info);
+
+  ASSERT_OK(device_->Bind(client_));
+
+  size_t boot_mouse_desc_size;
+  const uint8_t* boot_mouse_desc = get_boot_mouse_report_desc(&boot_mouse_desc_size);
+  ASSERT_EQ(boot_mouse_desc_size, device_->GetReportDescLen());
+  const uint8_t* received_desc = device_->GetReportDesc();
+  for (size_t i = 0; i < boot_mouse_desc_size; i++) {
+    ASSERT_EQ(boot_mouse_desc[i], received_desc[i]);
+  }
+}
+
+// This tests that we can set the boot mode for a non-boot device, and that the device will
+// have it's report descriptor set to the boot mode descriptor. For this, we will take an
+// arbitrary descriptor and claim that it can be set to a boot-mode keyboard. We then
+// test that the report descriptor we get back is for the boot keyboard.
+// (The descriptor doesn't matter, as long as a device claims its a boot device it should
+//  support this transformation in hardware).
+TEST_F(HidDeviceTest, SettingBootModeKbd) {
+  size_t desc_size;
+  const uint8_t* desc = get_paradise_touchpad_v1_report_desc(&desc_size);
+  fake_hidbus_.SetDescriptor(desc, desc_size);
+
+  // This info is the reason why the device will be set to a boot mouse mode.
+  hid_info_t info = {};
+  info.device_class = HID_DEVICE_CLASS_KBD;
+  info.boot_device = true;
+  fake_hidbus_.SetHidInfo(info);
+
+  ASSERT_OK(device_->Bind(client_));
+
+  size_t boot_kbd_desc_size;
+  const uint8_t* boot_kbd_desc = get_boot_kbd_report_desc(&boot_kbd_desc_size);
+  ASSERT_EQ(boot_kbd_desc_size, device_->GetReportDescLen());
+  const uint8_t* received_desc = device_->GetReportDesc();
+  for (size_t i = 0; i < boot_kbd_desc_size; i++) {
+    ASSERT_EQ(boot_kbd_desc[i], received_desc[i]);
+  }
 }
 
 }  // namespace hid_driver
