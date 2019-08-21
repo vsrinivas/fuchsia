@@ -65,7 +65,7 @@ pub(crate) fn new(
         .map(|()| Controller { mask, commands: sender })
 }
 
-pub(crate) struct Controller {
+pub struct Controller {
     mask: u32,
     commands: UnboundedSender<Command>,
 }

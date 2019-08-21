@@ -236,7 +236,11 @@ impl DirectoryEntryContainer<AlphabeticalTraversal> for Simple {
             let entry_names = this.entries.keys();
             iter::once(&".".to_string()).chain(entry_names).cloned().collect()
         });
-        this.watchers.add(scope, self.clone(), &mut names, mask, channel);
+
+        if let Some(controller) = this.watchers.add(scope, self.clone(), mask, channel) {
+            controller.send_event(&mut names);
+            controller.send_event(&mut SingleNameEventProducer::idle());
+        }
 
         Status::OK
     }

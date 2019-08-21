@@ -8,21 +8,19 @@
 pub mod event_producers;
 
 mod watcher;
+pub use watcher::Controller;
 
 use crate::{
-    directory::{
-        connection::DirectoryEntryContainer,
-        watchers::event_producers::{EventProducer, SingleNameEventProducer},
-    },
+    directory::{connection::DirectoryEntryContainer, watchers::event_producers::EventProducer},
     execution_scope::ExecutionScope,
 };
 
-use {fidl_fuchsia_io::WATCH_EVENT_EXISTING, fuchsia_async::Channel, slab::Slab, std::sync::Arc};
+use {fuchsia_async::Channel, slab::Slab, std::sync::Arc};
 
 /// Wraps all watcher connections observing one directory.  The directory is responsible for
 /// calling [`add`] and [`send_event`]/[`send_events`] methods when appropriate to make sure
 /// watchers are observing a consistent view.
-pub struct Watchers(Slab<watcher::Controller>);
+pub struct Watchers(Slab<Controller>);
 
 impl Watchers {
     /// Constructs a new Watchers instance with no connected watchers.
@@ -30,19 +28,30 @@ impl Watchers {
         Watchers(Slab::new())
     }
 
-    /// Connects a new watcher (connected over the `channel`) to the list of watchers.  This
-    /// watcher will receive the `WATCH_EVENT_EXISTING` event with all the names provided by the
-    /// `existing_event` producer.  This producer must be configured to use `WATCH_EVENT_EXISTING`
-    /// as the event for buffer construction - `add` will call [`EventProducer::event()`] to check
-    /// that.  `mask` is the event mask this watcher has requested.
+    /// Connects a new watcher (connected over the `channel`) to the list of watchers.  It is the
+    /// responsibility of the caller to also send `WATCH_EVENT_EXISTING` and `WATCH_MASK_IDLE`
+    /// events on the returned [`Controller`] to the newly connected watcher using the
+    /// [`send_event`] methods.  This `mask` is the event mask this watcher has requested.
+    ///
+    /// Return value of `None` means the executor did not accept a new task, so the watcher has
+    /// been dropped.
+    ///
+    /// NOTE The reason `add` can not send both events on it's own by consuming an
+    /// [`EventProducer`] is because a lazy directory needs async context to generate a list of
+    /// it's entries.  Meaning we need a async version of the [`EventProducer`] - and that is a lot
+    /// of additional managing of functions and state.  Traits do not support async methods yet, so
+    /// we would need to manage futures returned by the [`EventProducer`] methods explicitly.
+    /// Plus, for the [`Simple`] directory it is all unnecessary.
+    #[must_use = "Caller of add() must send WATCH_EVENT_EXISTING and WATCH_MASK_IDLE on the \
+                  returned controller"]
     pub fn add<TraversalPosition>(
         &mut self,
         scope: ExecutionScope,
         directory: Arc<dyn DirectoryEntryContainer<TraversalPosition>>,
-        existing_event: &mut dyn EventProducer,
         mask: u32,
         channel: Channel,
-    ) where
+    ) -> Option<&mut Controller>
+    where
         TraversalPosition: Default + Send + Sync + 'static,
     {
         let entry = self.0.vacant_entry();
@@ -52,20 +61,15 @@ impl Watchers {
             directory.unregister_watcher(key);
         };
 
-        let controller = match watcher::new(scope, mask, channel, done) {
-            Ok(controller) => entry.insert(controller),
+        match watcher::new(scope, mask, channel, done) {
+            Ok(controller) => Some(entry.insert(controller)),
             Err(_err) => {
                 // If we failed to add a watcher, it should only happen due to the executor been
                 // shutdown.  Nothing we can do here.  Slab will not add an entry, unless we call
                 // `entry.insert()`.
-                return;
+                None
             }
-        };
-
-        debug_assert!(existing_event.event() == WATCH_EVENT_EXISTING);
-
-        controller.send_event(existing_event);
-        controller.send_event(&mut SingleNameEventProducer::idle());
+        }
     }
 
     /// Informs all the connected watchers about the specified event.  While `mask` and `event`
