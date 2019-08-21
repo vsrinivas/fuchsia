@@ -18,12 +18,13 @@ use crate::{
 use crate::{
     directory::{
         entry::{DirectoryEntry, EntryInfo},
-        test_utils::{run_client, run_server_client, DirentsSameInodeBuilder},
+        test_utils::{run_server_client, DirentsSameInodeBuilder},
     },
     execution_scope::ExecutionScope,
     file::asynchronous::{read_only_static, read_write, write_only},
     path::Path,
-    test_utils::open_get_proxy,
+    test_utils::node::open_get_proxy,
+    test_utils::run_client,
 };
 
 use {

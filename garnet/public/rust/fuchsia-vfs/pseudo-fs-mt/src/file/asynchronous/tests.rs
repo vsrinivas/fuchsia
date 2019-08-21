@@ -18,9 +18,7 @@ use crate::{
 use crate::{
     directory::entry::DirectoryEntry,
     execution_scope::ExecutionScope,
-    file::test_utils::{
-        run_client, run_client_with_executor, run_server_client, run_server_client_with_executor,
-    },
+    file::test_utils::{run_client, run_server_client, test_client, test_server_client},
     path::Path,
 };
 
@@ -84,12 +82,10 @@ fn read_only_ignore_posix_flag() {
 
 #[test]
 fn read_only_read_no_status() {
-    let exec = Executor::new().expect("Executor creation failed");
     let (check_event_send, check_event_recv) = oneshot::channel::<()>();
 
-    run_server_client_with_executor(
+    test_server_client(
         OPEN_RIGHT_READABLE,
-        exec,
         read_only(|| future::ready(Ok(b"Read only test".to_vec()))),
         |proxy| {
             async move {
@@ -100,12 +96,13 @@ fn read_only_read_no_status() {
                 // need to be updated after ZX-3923 is completed.
             }
         },
-        |run_until_stalled_assert| {
-            run_until_stalled_assert(false);
-            check_event_send.send(()).unwrap();
-            run_until_stalled_assert(false);
-        },
-    );
+    )
+    .coordinator(|mut controller| {
+        controller.run_until_stalled();
+        check_event_send.send(()).unwrap();
+        controller.run_until_stalled_and_forget();
+    })
+    .run();
 }
 
 #[test]
@@ -1107,14 +1104,13 @@ fn node_reference_ignores_write_access() {
 /// we want to make sure that they get individual buffers. The file content will be different every
 /// time a new buffer is created, as `init_buffer` returns a string with an invocation count in it.
 ///
-/// [`run_server_client_with_executor`] is used to control relative execution of the clients and
-/// the server. Clients wait before they open the file, read the file content and then wait before
-/// reading the file content once again.
+/// A `coordinator` is used to control relative execution of the clients and the server. Clients
+/// wait before they open the file, read the file content and then wait before reading the file
+/// content once again.
 ///
 /// `run_until_stalled` and `oneshot::channel` are used to make sure that the test execution does
 /// not have race conditions. We check that the futures are still running and check the
-/// `init_buffer` invocation counter. See `coordinator` argument of the
-/// `run_server_client_with_executor` invocation.
+/// `init_buffer` invocation counter.
 #[test]
 fn mock_directory_with_one_file_and_two_connections() {
     let exec = Executor::new().expect("Executor creation failed");
@@ -1176,41 +1172,47 @@ fn mock_directory_with_one_file_and_two_connections() {
     let (get_client1, client1_start, client1_read_and_close) = create_client("Content 0");
     let (get_client2, client2_start, client2_read_and_close) = create_client("Content 1");
 
-    run_client_with_executor(
-        exec,
-        || {
-            async move {
-                let client1 = get_client1();
-                let client2 = get_client2();
+    test_client(|| {
+        async move {
+            let client1 = get_client1();
+            let client2 = get_client2();
 
-                let _ = join(client1, client2).await;
-            }
-        },
-        |run_until_stalled_assert| {
-            let mut run_and_check_read_count = |expected_count, should_complete: bool| {
-                run_until_stalled_assert(should_complete);
+            let _ = join(client1, client2).await;
+        }
+    })
+    .exec(exec)
+    .coordinator(|controller| {
+        let mut run_and_check_read_count = {
+            let mut controller = Some(controller);
+            move |expected_count, should_complete: bool| {
+                if !should_complete {
+                    controller.as_mut().unwrap().run_until_stalled();
+                } else {
+                    controller = None;
+                }
                 assert_eq!(read_count.load(Ordering::Relaxed), expected_count);
-            };
+            }
+        };
 
-            run_and_check_read_count(0, false);
+        run_and_check_read_count(0, false);
 
-            client1_start();
+        client1_start();
 
-            run_and_check_read_count(1, false);
+        run_and_check_read_count(1, false);
 
-            client2_start();
+        client2_start();
 
-            run_and_check_read_count(2, false);
+        run_and_check_read_count(2, false);
 
-            client1_read_and_close();
+        client1_read_and_close();
 
-            run_and_check_read_count(2, false);
+        run_and_check_read_count(2, false);
 
-            client2_read_and_close();
+        client2_read_and_close();
 
-            run_and_check_read_count(2, true)
-        },
-    );
+        run_and_check_read_count(2, true)
+    })
+    .run();
 }
 
 /// This test creates an init_buffer future that doesn't return `Ready` with the result of the
@@ -1220,16 +1222,13 @@ fn mock_directory_with_one_file_and_two_connections() {
 /// filled with what we expect.
 #[test]
 fn slow_init_buffer() {
-    let exec = Executor::new().expect("Executor creation failed");
-
     let read_counter = Arc::new(AtomicUsize::new(0));
     let client_counter = Arc::new(AtomicUsize::new(0));
     let (finish_future_sender, finish_future_receiver) = oneshot::channel::<()>();
     let finish_future_receiver = finish_future_receiver.shared();
 
-    run_server_client_with_executor(
+    test_server_client(
         OPEN_RIGHT_READABLE,
-        exec,
         read_only({
             let read_counter = read_counter.clone();
             move || {
@@ -1261,39 +1260,37 @@ fn slow_init_buffer() {
                 }
             }
         },
-        |run_until_stalled_assert| {
-            let check_read_client_counts = |expected_read, expected_client| {
-                assert_eq!(read_counter.load(Ordering::Relaxed), expected_read);
-                assert_eq!(client_counter.load(Ordering::Relaxed), expected_client);
-            };
-            run_until_stalled_assert(false);
+    )
+    .coordinator(|mut controller| {
+        let check_read_client_counts = |expected_read, expected_client| {
+            assert_eq!(read_counter.load(Ordering::Relaxed), expected_read);
+            assert_eq!(client_counter.load(Ordering::Relaxed), expected_client);
+        };
+        controller.run_until_stalled();
 
-            // init_buffer is waiting yet, as well as the client.
-            check_read_client_counts(1, 1);
+        // init_buffer is waiting yet, as well as the client.
+        check_read_client_counts(1, 1);
 
-            finish_future_sender.send(()).unwrap();
-            run_until_stalled_assert(true);
+        finish_future_sender.send(()).unwrap();
+        controller.run_until_complete();
 
-            // Both have reached the end.
-            check_read_client_counts(2, 2);
-        },
-    );
+        // Both have reached the end.
+        check_read_client_counts(2, 2);
+    })
+    .run();
 }
 
 /// This test is very similar to the `slow_init_buffer` above, except that it lags the update call
 /// instead.
 #[test]
 fn slow_update() {
-    let exec = Executor::new().expect("Executor creation failed");
-
     let write_counter = Arc::new(AtomicUsize::new(0));
     let client_counter = Arc::new(AtomicUsize::new(0));
     let (finish_future_sender, finish_future_receiver) = oneshot::channel::<()>();
     let finish_future_receiver = finish_future_receiver.shared();
 
-    run_server_client_with_executor(
+    test_server_client(
         OPEN_RIGHT_WRITABLE,
-        exec,
         write_only(100, {
             let write_counter = write_counter.clone();
             let finish_future_receiver = finish_future_receiver.shared();
@@ -1324,22 +1321,23 @@ fn slow_update() {
                 }
             }
         },
-        |run_until_stalled_assert| {
-            let check_write_client_counts = |expected_write, expected_client| {
-                assert_eq!(write_counter.load(Ordering::Relaxed), expected_write);
-                assert_eq!(client_counter.load(Ordering::Relaxed), expected_client);
-            };
+    )
+    .coordinator(|mut controller| {
+        let check_write_client_counts = |expected_write, expected_client| {
+            assert_eq!(write_counter.load(Ordering::Relaxed), expected_write);
+            assert_eq!(client_counter.load(Ordering::Relaxed), expected_client);
+        };
 
-            run_until_stalled_assert(false);
+        controller.run_until_stalled();
 
-            // The server and the client are waiting.
-            check_write_client_counts(1, 1);
+        // The server and the client are waiting.
+        check_write_client_counts(1, 1);
 
-            finish_future_sender.send(()).unwrap();
-            run_until_stalled_assert(true);
+        finish_future_sender.send(()).unwrap();
+        controller.run_until_complete();
 
-            // The server and the client are done.
-            check_write_client_counts(2, 2);
-        },
-    );
+        // The server and the client are done.
+        check_write_client_counts(2, 2);
+    })
+    .run();
 }
